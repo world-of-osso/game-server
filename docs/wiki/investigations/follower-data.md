@@ -1,5 +1,9 @@
 # Retail follower data and approved spec bridge
 
+## Nokhud journal UiMap identity — 2026-10-22
+
+Authenticated JournalEncounter rows2477/2478/2497/2498 identify UiMap2093 directly. It has no UiMapGroupMember floor; that is not permission to guess among sibling maps or fabricate floor0. Preserve the exact journal UiMap and a null group-floor index. Wowhead comparisons use the same sourced bounds after area-map and available floor checks. Original comparison erroneously demanded a unique group floor and crashed on actual Balakar data; targeted source/placement RED retained. [Manifest](../../../content/follower-placements/nokhud.json) pins four supported actors with own Normal1 stats and explicit Lua/journal identities. Teera's joint-marker placement decision and packet GREEN remain pending.
+
 ## Halls and Vexamus source-floor selection — 2026-10-22
 
 New packets use `FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP`: authenticated70448 JournalEncounter markers and exact UiMap assignments precede rounded Wowhead observations. Source rows/hashes and cached comparison residuals remain in receipts; disagreements over5yd become named findings. `FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR` validates pinned LittleWigs2777a9d entry/encounter/journal and a unique exact-name actor. Runtime TDB models remain110696 for Goliath and109099 for Vexamus; separate journal displays are103584/107525. Model equality is not required for these explicitly identified actors; no Corrupted Manafiend alias or model replacement.

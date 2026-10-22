@@ -58,14 +58,22 @@ def select_surface_query(record, marker, queries):
     return next(iter(reachable.values())) if len(reachable) == 1 else None
 
 
-def compare_wowhead_marker(record, tables, cache, map_id, xy):
+def compare_wowhead_marker(record, tables, cache, map_id, assignments, xy):
     page = read_cached_npc(cache, record['entry'])
     if page['cache_sha256'] != record['cache_sha256']:
         raise ValueError('pinned Wowhead comparison evidence changed')
     comparison = dict(page=page, status='NO_INDIVIDUAL_WOWHEAD_MARKER')
     if len(page['markers']) == 1:
         marker = page['markers'][0]
-        observed = transform_marker(marker, select_assignment(tables, map_id, marker))
+        area = next(r for r in tables['AreaTable'] if int(r['ID']) == marker['zone'])
+        if int(area['ContinentID']) != map_id:
+            raise ValueError('Wowhead comparison marker belongs to a different map')
+        ui_maps = {a['UiMapID'] for a in assignments}
+        floors = {int(g['FloorIndex']) for g in tables['UiMapGroupMember'] if g['UiMapID'] in ui_maps}
+        if floors and marker['floor'] not in floors:
+            comparison.update(status='DIFFERENT_SOURCED_FLOOR', finding='FOLLOWER_JOURNAL_WOWHEAD_FLOOR_DISAGREEMENT')
+            return comparison
+        observed = transform_marker(marker, assignments)
         distance = sum((a - b) ** 2 for a, b in zip(xy, observed)) ** 0.5
         comparison.update(status='COMPARED', wowhead_xy=observed, distance_yards=distance)
         if distance > 5:
@@ -96,7 +104,7 @@ def derive_placement(record, manifest, tables, cache, polygons, route, nav, entr
                      assignments=assignments, wow_xy=[x, y], all_surface_heights=all_heights,
                      surface_queries=queries, status='MISSING_OR_AMBIGUOUS_SURFACE')
     if manifest['placement_policy'] == JOURNAL_PLACEMENT_POLICY and 'cache_sha256' in record:
-        placement['wowhead_comparison'] = compare_wowhead_marker(record, tables, cache, manifest['map_id'], [x, y])
+        placement['wowhead_comparison'] = compare_wowhead_marker(record, tables, cache, manifest['map_id'], assignments, [x, y])
     if 'source_floor_evidence' in record:
         placement['source_floor_evidence'] = record['source_floor_evidence']
     if selected is not None:

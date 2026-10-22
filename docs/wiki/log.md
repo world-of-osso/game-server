@@ -1,3 +1,7 @@
+## 2026-10-22 — Nokhud explicit journal UiMap
+
+[Nokhud journal identity](investigations/follower-data.md#nokhud-journal-uimap-identity--2026-10-22): actual Balakar comparison failed because exact journal UiMap2093 lacks UiMapGroupMember; comparison now uses the sourced UiMap bounds with no invented floor. Missing four-primary data RED retained; next packet pending.
+
 ## 2026-10-22 — Halls partial and Vexamus placement packets
 
 [Source-floor selection](investigations/follower-data.md#halls-and-vexamus-source-floor-selection--2026-10-22):0067db4a7 source/identity/anchor9GREEN0.598s; fresh `halls-packet-3`12rows/three primaries and `vexamus-packet-3`4rows/one primary replay3× exactly. fc4656d0c actual-copy Halls2GREEN0.045s + Vexamus3GREEN0.035s cover precise journal poses, native stats/models, native room floor, later script owner and conflicting-pose SQL refusal. Primal remains unresolved; Irideus route passes, three other routes fail. Prepared only; no canonical publication or dungeon-completion claim.

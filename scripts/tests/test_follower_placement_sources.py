@@ -87,6 +87,19 @@ class FollowerPlacementSources(unittest.TestCase):
                 self.assertEqual(result['page']['source_table'], 'JournalEncounter')
                 self.assertEqual(result['page']['source_row']['ID'], str(journal_id))
 
+    def test_nokhud_journal_uses_explicit_uimap_without_inventing_a_group_floor(self):
+        from follower_placements import derive_placement, read_binding_tables
+        binding_tables, _ = read_binding_tables(Path(os.environ['FOLLOWER_PLACEMENT_DB2']))
+        page = read_cached_npc(self.cache, 186151)
+        record = dict(entry=186151, journal_encounter_id=2477, cache_sha256=page['cache_sha256'])
+        manifest = dict(map_id=2516, placement_policy='FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP')
+        result = derive_placement(record, manifest, self.tables | binding_tables, self.cache, [],
+                                  Path('unused'), Path('unused'), dict(LocX=0, LocY=0, LocZ=0))
+        self.assertEqual(result['wow_xy'], [-536.0531378044291, 4163.211154128592])
+        self.assertIsNone(result['marker']['floor'])
+        self.assertEqual({a['UiMapID'] for a in result['assignments']}, {'2093'})
+        self.assertEqual(result['wowhead_comparison']['status'], 'COMPARED')
+
     def test_halls_upward_floor_triangles_exclude_ceilings_and_ambiguous_nav_surfaces(self):
         manifest_path = Path(__file__).resolve().parents[2] / 'content/follower-placements/halls-of-infusion.json'
         records = {r['entry']: r for r in json.loads(manifest_path.read_text())['entries']}

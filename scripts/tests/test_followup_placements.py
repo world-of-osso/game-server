@@ -39,7 +39,11 @@ class FollowupPlacementAcceptance(unittest.TestCase):
                 self.assertEqual(tuning, native_tuning)
                 self.assertEqual(runtime_display, native_display)
                 self.assertEqual(display, {189719: 106801, 189722: 103584, 189727: 107064,
-                                           189729: 106934, 194181: 107525}[entry])
+                                           189729: 106934, 194181: 107525, 186151: 107680,
+                                           186338: 105722, 186615: 107145, 186616: 105823}[entry])
+
+    def test_nokhud_four_source_supported_primaries_keep_own_native_identity_and_budget(self):
+        self.assert_source_primaries(2516, (186151, 186338, 186615, 186616))
 
     def test_halls_four_primary_bosses_keep_own_native_identity_and_budget(self):
         self.assert_source_primaries(2527, (189719, 189722, 189727, 189729))
