@@ -36,6 +36,10 @@ Three new failures are explicit empower release-script boundaries:250/1263824 Co
 
 Valid isolated `round-4/` holds exact command/protocol/binary SHA, raw receipts/log/exit, frozen classification, delta/cause/spec matrices and `round-3-transitions.json`. Admission, no-active-probe check and exclusive new directory enforce one writer. Canonical publication remains lead-owned; no source data edited. Dispatch PASS is not complete ability/script/UDP parity.
 
+### Five cumulative regression attribution
+
+Exact round4 master23c75e20e alone (without the current504/50/345/308 changes) reproduces all five identical failures with a five-membership subset of the frozen manifest: probe1PASS162.64s/exit0, compile2m52s/no warnings. Frozen classifier confirms102/202770 and263/196884 were already FAIL in round3 and remain FAIL; only250/1263824,269/1217413,1473/396286 are new PASS→FAIL transitions. All three new receipts reach `empower.rs:68–72`, introduced in masterf9015c42551aebd10519680d640bea610ecede8a along with unconditional native-stage routing in `begin_validated_cast`; master rangee7fffe2da..23c75e20e contains it. This is actual master-alone reproduction plus source-blamed causal introduction, not a compiled commit-parent bisect. No current tail batch fix is required by this attribution. Evidence: staging `regression-attribution/{attribution.md,attribution.json,manifest-five.json,master-23c75e20e/}` including exact command/protocol/binary SHA, raw receipts, log/exit and classified causes. Lead accepted attribution and separately assigned the three empower failures next.
+
 ## Named gaps
 
 | Cause | Roots | Disposition and evidence |
