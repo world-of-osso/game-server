@@ -52,6 +52,13 @@ class NativeSourceDamageRoleTests(unittest.TestCase):
                 self.assertIsNotNone(row)
                 self.assertEqual(row[4], 'utility')
 
+    def test_override_alias_preserves_the_later_native_blessing_interval_key(self):
+        rows = native_rows(66)
+        self.assertIsNone(action_at(rows, 1022, 22))
+        self.assertIsNotNone(action_at(rows, 1022, 23))
+        self.assertTrue(any(row[1] == 1022 and row[2] == 28 for row in rows),
+                        'controller family extension must not remove the native level28 interval key')
+
     def test_established_damage_heal_and_utility_examples_keep_their_roles(self):
         cases = ((63, 133, 'attack'), (105, 8936, 'heal'), (63, 1953, 'utility'))
         for spec, spell, expected in cases:
