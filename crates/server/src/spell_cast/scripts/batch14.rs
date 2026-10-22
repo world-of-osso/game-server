@@ -101,7 +101,12 @@ pub(super) fn wild_thrash(world: &mut World, caster: Entity, target: Entity, dep
             continue;
         }
         let reachable = spell_cast::plan_targets(world, pet, &child, Some(target), false)
-            .is_ok_and(|plan| plan.iter().any(|effect| effect.units.contains(&target)));
+            .is_ok_and(|plan| {
+                plan.iter().any(|effect| {
+                    child.effects[effect.index].effect == spell_cast::effects::EFFECT_SCHOOL_DAMAGE
+                        && effect.units.contains(&target)
+                })
+            });
         if reachable {
             cast_owned_pet_command(world, caster, pet, target, WILD_THRASH_PET, depth);
         }
