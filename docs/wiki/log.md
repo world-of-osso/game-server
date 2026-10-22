@@ -1,3 +1,7 @@
+## 2026-10-21 — Native DPS parity adapter
+
+[Adapter](systems/dungeon-simulator.md#native-dps-parity-adapter--2026-10-21): source-qualified instance/linked effects and physical armor enchants; separate allocated/effective SimC traits. Real NPC follower and native living out-of-range controller avoid first-tick-only false acceptance. Merged24controls GREEN; actual pet absence/no learned casts and missing30s add replacement give three explicit ignored REDs. Existing pet systems/native metadata and timed native summon retirement wired; GREEN pending. Stable-key Duck174884 SQL/receipt only, no canonical mutation or fabricated stats. SimC18 reference runs retained; health-phase/consumable/item-option differences and whole40-spec acceptance remain open.
+
 ## 2026-10-21 — Companion native-level flag counterexample
 
 [Toys](systems/toys.md#published-companion-fixture-reconciliation-2026-10-21): exact3141flag0x100 skips TC's owner-clamp block. Initial ordinary53453 birth1 oracle lacked terrain; ordinary temporary zone spawning skips source regional tuning and is a separate gap. Generic717a791a5 correctly refuses missing context. Corrected native99104 fixture uses actual map1220/area7558/tuning332/native45 versus caster10; Keg Pony/Stored Wisdom fixtures use real Northshire/native30. Corrected RED10vs45→GREEN7/7 (49.30s) atf73b54cb7/master9eabe0146; check/fmt pass with inherited unused-function warning. Census519's +268455 comes from inherited mastere73367de4 effect16, not native-level support. No invented min/max or whole99104cast claim.

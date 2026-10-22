@@ -2,6 +2,14 @@
 
 Transport-free Stockade qualification runs a plain Bevy App inside the server test executable. It registers real combat, spell/aura, threat, scripted creature AI and follower systems directly. The game-server entry point, ServerPlugins and ProtocolPlugin are not used. [Contract](../../specs/dungeon-simulator.md).
 
+## Native DPS parity adapter — 2026-10-21
+
+The [DPS contract](../../specs/dps-parity.md) uses a separate ignored300s fixture over this App and `followers::simulator`. Exact reference item instances traverse production Stats; allocated and effective SimC talent ranks remain distinct. One actual NPC follower owns the damage measurement. Its native Player controller stays outside melee range, with zero controller damage required; a missing-Health controller had its attack intent removed on the first tick and produced misleading zero/two-hit runs.
+
+Targets are native31146 training dummies with their real armor, level and health-loss script. The three-target adapter keeps its main dummy and normally summons/retires two adds every30s; receipts require10 waves,20 distinct add identities and actual retirement. Pet catalog/level-up tables and the ordinary HunterPet/PetControl systems are installed explicitly. Private native Duck174884 closure has a stable-key SQL delta/receipt, never a canonical mutation. Native pet execution and wave qualification remain pending, not accepted DPS parity.
+
+The current master merge has24 targeted GREEN cases including the original party initializer and equipment/link/source controls. Normal SimC fight health phases versus a full-health native dummy, unmodeled consumables/item options, and remaining kit/class effects stay explicit measurement gaps. See [character stats](character-stats.md#instance-properties--2026-10-21) for equipment proof instead of treating nominal item IDs as equal effective gear.
+
 ## Frozen geometry
 
 `content/dungeons/stockade-34.json` contains 143 Normal source packs and 367 native-query walk-distance edges (70 KB). Pack identity matches source formations, never proximity clusters. Extraction retains a minimum spanning forest plus four nearest neighbours; every node is connected. Only the explicitly ignored extraction test opens the nav bake. Runtime positions are flattened to a plane; travel consumes source speeds and frozen edge distances, not the straight-line endpoint distance.
@@ -51,12 +59,14 @@ Evidence: `/home/osso/.worktrees/logs/stockade-simulator-2026-10-20/sim-batch2/{
 - [Simulator spec](../../specs/dungeon-simulator.md)
 - [Follower policy](../../specs/follower-dungeons.md#shared-tank-pull-project-policies)
 - [Runtime](../../../crates/server/src/dungeon_simulator/runtime.rs)
+- [DPS adapter](../../../crates/server/src/dungeon_simulator/dps_parity/mod.rs), [native inputs](../../../crates/server/src/dungeon_simulator/dps_parity/inputs.rs), [pet source delta](../../../scripts/dps_parity_duck_174884.sql)
 - [Route/report](../../../crates/server/src/dungeon_simulator/campaign.rs)
 - [Frozen graph](../../../content/dungeons/stockade-34.json)
 
 ## See Also
 
 - [[follower-data]] — full native class/spec kits and tank policies.
+- [[character-stats]] — source-qualified instance gear and equipment auras.
 
 ## Ready pulls and recovery — 2026-10-20
 

@@ -7,38 +7,62 @@ use std::collections::BTreeMap;
 use std::time::Instant;
 
 const TICKS: u32 = 6_000;
-const LAST_30S_START: u32 = TICKS - 600;
+const ADD_WAVE_TICKS: u32 = 600;
+const LAST_30S_START: u32 = TICKS - ADD_WAVE_TICKS;
 const DUMMY_ENTRY: u32 = 31_146;
 
 struct Run {
     app: App,
     actor: Entity,
     targets: Vec<Entity>,
+    damage_targets: Vec<Entity>,
     target_waves: Vec<Value>,
     profile: inputs::Profile,
     gaps: Vec<String>,
 }
 
-fn spawn_targets(app: &mut App, actor: Entity, count: usize) -> Result<Vec<Entity>, String> {
-    let mut targets = Vec::with_capacity(count);
-    for index in 0..count {
-        let target = crate::zones::summon_creature(
-            app.world_mut(),
-            actor,
-            DUMMY_ENTRY,
-            [1.5, index as f32, 0.0, std::f32::consts::PI],
-        )
-        .ok_or("native training dummy31146 could not spawn")?;
-        if app
-            .world()
-            .get::<crate::creature_scripts::TrainingDummy>(target)
-            .is_none()
-        {
-            return Err("native31146 lacks its actual training-dummy script".into());
-        }
-        targets.push(target);
+fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, String> {
+    let target = crate::zones::summon_creature(
+        app.world_mut(),
+        actor,
+        DUMMY_ENTRY,
+        [1.5, index as f32, 0.0, std::f32::consts::PI],
+    )
+    .ok_or("native training dummy31146 could not spawn")?;
+    if app
+        .world()
+        .get::<crate::creature_scripts::TrainingDummy>(target)
+        .is_none()
+    {
+        return Err("native31146 lacks its actual training-dummy script".into());
     }
-    Ok(targets)
+    Ok(target)
+}
+
+fn spawn_targets(app: &mut App, actor: Entity, count: usize) -> Result<Vec<Entity>, String> {
+    (0..count)
+        .map(|index| spawn_dummy(app, actor, index))
+        .collect()
+}
+
+fn replace_add_wave(run: &mut Run, at: f64) -> Result<(), String> {
+    let retired = run.targets.split_off(1);
+    for &unit in &retired {
+        crate::zones::unsummon(run.app.world_mut(), unit);
+    }
+    for index in 1..3 {
+        let unit = spawn_dummy(&mut run.app, run.actor, index)?;
+        run.targets.push(unit);
+        run.damage_targets.push(unit);
+    }
+    let retired_still_present = retired
+        .iter()
+        .filter(|&&unit| run.app.world().get_entity(unit).is_ok())
+        .count();
+    run.target_waves.push(json!({"at": at,
+        "entities": run.targets.iter().map(|unit| unit.to_bits()).collect::<Vec<_>>(),
+        "retired_still_present": retired_still_present}));
+    Ok(())
 }
 
 fn read_reference(spec_id: u32) -> Result<(inputs::Profile, Vec<inputs::AllocatedTrait>), String> {
@@ -81,6 +105,7 @@ fn prepare(spec_id: u32, count: usize) -> Result<Run, String> {
     Ok(Run {
         app,
         actor,
+        damage_targets: targets.clone(),
         targets,
         target_waves,
         profile,
@@ -124,7 +149,7 @@ fn target_snapshot(run: &Run) -> Vec<Value> {
         .collect()
 }
 
-fn advance_combat(run: &mut Run) -> (f64, BTreeMap<u32, f64>, Vec<Value>) {
+fn advance_combat(run: &mut Run) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>), String> {
     let start_time = run
         .app
         .world()
@@ -134,6 +159,10 @@ fn advance_combat(run: &mut Run) -> (f64, BTreeMap<u32, f64>, Vec<Value>) {
     let mut samples = vec![report::engagement(run.app.world(), run.actor, &run.targets)];
     for tick in 1..=TICKS {
         run.app.update();
+        let pack_boundary = tick < TICKS && tick % ADD_WAVE_TICKS == 0;
+        if pack_boundary && run.targets.len() == 3 {
+            replace_add_wave(run, f64::from(tick) / 20.0)?;
+        }
         report::sample_buffs(run.app.world(), run.actor, &mut buffs);
         if matches!(tick, 1 | 20 | LAST_30S_START | TICKS) {
             samples.push(report::engagement(run.app.world(), run.actor, &run.targets));
@@ -149,7 +178,7 @@ fn advance_combat(run: &mut Run) -> (f64, BTreeMap<u32, f64>, Vec<Value>) {
         .into_iter()
         .map(|(spell, ticks)| (spell, f64::from(ticks) * 100.0 / f64::from(TICKS)))
         .collect();
-    (seconds, buff_uptimes, samples)
+    Ok((seconds, buff_uptimes, samples))
 }
 
 fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
@@ -159,14 +188,14 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     let targets = target_snapshot(&run);
     engage(&mut run);
     let started = Instant::now();
-    let (seconds, buff_uptimes, engagement_samples) = advance_combat(&mut run);
-    let combat = report::combat(run.app.world(), &run.targets, seconds);
+    let (seconds, buff_uptimes, engagement_samples) = advance_combat(&mut run)?;
+    let combat = report::combat(run.app.world(), &run.damage_targets, seconds);
     Ok(
         json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "wall_seconds": started.elapsed().as_secs_f64(), "seed": 70448, "combat": combat,
         "stats_before": before, "stats_after": report::stats(run.app.world(), run.actor),
         "targets_before": targets, "targets_after": target_snapshot(&run),
-        "target_waves": run.target_waves, "pet": report::pet(run.app.world(), run.actor, &run.targets),
+        "target_waves": run.target_waves, "pet": report::pet(run.app.world(), run.actor, &run.damage_targets),
         "buff_uptime_pct": buff_uptimes, "engagement_samples": engagement_samples, "gaps": run.gaps,
         "reference_race": run.profile.race, "server_build": 70448, "simc_build": 70391}),
     )
@@ -211,6 +240,12 @@ fn dps_parity_native_bis_dummy_records_300s() {
         let mut adds = std::collections::BTreeSet::new();
         for (index, wave) in waves.iter().enumerate() {
             assert_eq!(wave["at"].as_f64().unwrap(), index as f64 * 30.0);
+            if index > 0 {
+                assert_eq!(
+                    wave["retired_still_present"], 0,
+                    "old wave must actually despawn"
+                );
+            }
             assert_eq!(
                 wave["entities"][0].as_u64().unwrap(),
                 main,
