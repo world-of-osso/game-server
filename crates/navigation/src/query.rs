@@ -454,6 +454,9 @@ mod seam_tests;
 #[cfg(all(test, feature = "bake"))]
 #[path = "gorek_diagnostic.rs"]
 mod gorek_diagnostic;
+#[cfg(all(test, feature = "bake"))]
+#[path = "gorek_iterative_diagnostic.rs"]
+mod gorek_iterative_diagnostic;
 
 #[cfg(all(test, feature = "bake"))]
 mod tests {

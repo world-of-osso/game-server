@@ -110,3 +110,149 @@ fn neltharus_gorek_native_query_trace() {
         }
     }
 }
+
+fn tile_and_poly(nav: &NavigationMap, reference: dtPolyRef) -> (*const dtMeshTile, *const dtPoly) {
+    let mut tile = std::ptr::null();
+    let mut poly = std::ptr::null();
+    // SAFETY: reference is from this owned mesh's nearest query or its native links.
+    let result = unsafe { (*nav.mesh).getTileAndPolyByRef(reference, &mut tile, &mut poly) };
+    status(result, "diagnostic graph polygon").unwrap();
+    (tile, poly)
+}
+
+fn linked_polygons(
+    nav: &NavigationMap,
+    reference: dtPolyRef,
+    filter: &dtQueryFilter,
+) -> Vec<dtPolyRef> {
+    let (tile, poly) = tile_and_poly(nav, reference);
+    let mut output = Vec::new();
+    // SAFETY: native links and headers are owned by the initialized immutable mesh.
+    unsafe {
+        let mut index = (*poly).firstLink;
+        while index != DT_NULL_LINK {
+            assert!(index < (*(*tile).header).maxLinkCount as u32);
+            let link = &*(*tile).links.add(index as usize);
+            if link.ref_ != 0 {
+                let (_, neighbor) = tile_and_poly(nav, link.ref_);
+                let flags = (*neighbor).flags;
+                let included = flags & filter.m_includeFlags != 0;
+                let excluded = flags & filter.m_excludeFlags != 0;
+                if included && !excluded {
+                    output.push(link.ref_);
+                }
+            }
+            index = link.next;
+        }
+    }
+    output.sort_unstable();
+    output
+}
+
+fn connected_polygons(
+    nav: &NavigationMap,
+    start: dtPolyRef,
+    filter: &dtQueryFilter,
+) -> std::collections::HashMap<dtPolyRef, dtPolyRef> {
+    use std::collections::{HashMap, VecDeque, hash_map::Entry};
+    let mut parents = HashMap::from([(start, 0)]);
+    let mut queue = VecDeque::from([start]);
+    while let Some(current) = queue.pop_front() {
+        for neighbor in linked_polygons(nav, current, filter) {
+            if let Entry::Vacant(entry) = parents.entry(neighbor) {
+                entry.insert(current);
+                queue.push_back(neighbor);
+            }
+        }
+    }
+    parents
+}
+
+#[test]
+#[ignore = "requires canonical2519 assets and FOLLOWER_GOREK_DIAGNOSTICS output directory"]
+fn neltharus_gorek_native_connectivity_and_source_limit_probe() {
+    let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
+    let output = PathBuf::from(std::env::var_os("FOLLOWER_GOREK_DIAGNOSTICS").unwrap());
+    let mut trace = std::fs::File::create(output.join("connectivity-probe.txt")).unwrap();
+    let start = Vec3::new(70.6448, 72.6027, 779.064);
+    let end = Vec3::new(-264.45807, 125.19722, 503.5);
+    let mut nav = NavigationMap::open(&root.join("2519")).unwrap();
+    nav.load_around(start, end).unwrap();
+    let filter = filter();
+    let (start_ref, start_pos) = nav.nearest(start, &filter).unwrap();
+    let (end_ref, end_pos) = nav.nearest(end, &filter).unwrap();
+    let parents = connected_polygons(&nav, start_ref, &filter);
+    let graph_reaches_target = parents.contains_key(&end_ref);
+    writeln!(
+        trace,
+        "native_link_graph_component_polygons={} target_in_component={graph_reaches_target}",
+        parents.len()
+    )
+    .unwrap();
+    if graph_reaches_target {
+        let mut refs = vec![end_ref];
+        while *refs.last().unwrap() != start_ref {
+            refs.push(parents[refs.last().unwrap()]);
+        }
+        refs.reverse();
+        writeln!(trace, "native_link_graph_corridor_polygons={}", refs.len()).unwrap();
+        match nav.pull_corners(&start_pos, &end_pos, &refs) {
+            Ok(points) => {
+                let mut file = std::fs::File::create(
+                    output.join("native-link-graph-route-diagnostic-only.csv"),
+                )
+                .unwrap();
+                for point in points {
+                    writeln!(file, "{},{},{}", point.x, point.y, point.z).unwrap();
+                }
+            }
+            Err(error) => writeln!(trace, "native_link_graph_corner_error={error}").unwrap(),
+        }
+    }
+    // Diagnostic only, never a production retry/fallback. Pinned DetourNode.h makes
+    // dtNodeIndex unsigned short/DT_NULL_IDX=~0; Query.cpp171-174 accepts at most that.
+    let source_max_nodes = i32::from(u16::MAX);
+    // SAFETY: same owned query/mesh, explicit supported diagnostic resource ceiling.
+    status(
+        unsafe { (*nav.query).init(nav.mesh, source_max_nodes) },
+        "source max-node diagnostic init",
+    )
+    .unwrap();
+    let mut corridor = [0; MAX_PATH];
+    let mut count = 0;
+    // SAFETY: all refs, positions and output buffers belong to this owned mesh/query.
+    let result = unsafe {
+        (*nav.query).findPath(
+            start_ref,
+            end_ref,
+            start_pos.as_ptr(),
+            end_pos.as_ptr(),
+            &filter,
+            corridor.as_mut_ptr(),
+            &mut count,
+            MAX_PATH as i32,
+        )
+    };
+    status(result, "source max-node diagnostic path").unwrap();
+    let reached = count > 0 && corridor[count as usize - 1] == end_ref;
+    writeln!(trace, "diagnostic_only_max_nodes={source_max_nodes} status={result:#x} partial={} out_of_nodes={} buffer_too_small={} reached_end={reached} corridor_count={count}", result & DT_PARTIAL_RESULT != 0, result & DT_OUT_OF_NODES != 0, result & DT_BUFFER_TOO_SMALL != 0).unwrap();
+    if reached {
+        assert!(
+            graph_reaches_target,
+            "native path must stay in native link component"
+        );
+        let points = nav
+            .pull_corners(&start_pos, &end_pos, &corridor[..count as usize])
+            .unwrap();
+        let mut file =
+            std::fs::File::create(output.join("source-max-node-route-diagnostic-only.csv"))
+                .unwrap();
+        for point in points {
+            writeln!(file, "{},{},{}", point.x, point.y, point.z).unwrap();
+        }
+    }
+    eprintln!(
+        "Gorek native-link component={} target_in_component={graph_reaches_target}; diagnostic maxnodes={source_max_nodes} status={result:#x} reached={reached} count={count}",
+        parents.len()
+    );
+}
