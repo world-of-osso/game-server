@@ -247,12 +247,53 @@ fn navigation_nokhud_186616_partial_corridor_walks_and_repaths() {
 
 #[test]
 #[ignore = "requires canonical2521 assets and FOLLOWER_NAV_CANONICAL"]
-fn navigation_ruby_partial_corridor_walks_and_repaths() {
-    assert_canonical_route_arrives(
-        2521,
-        wow(1386.2, -169.719, 131.0),
-        wow(1773.8756, 18.689396, 313.123),
+fn navigation_ruby_repeated_partial_endpoint_stops_bounded_continuation() {
+    let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
+    let mut nav = Navigation::new(&root);
+    let actor = Entity::from_bits(99);
+    let start = wow(1386.2, -169.719, 131.0);
+    let mut from = start;
+    let target = wow(1773.8756, 18.689396, 313.123);
+    let mut blocked = false;
+    for _ in 0..2000 {
+        let mut movement = request(2521, from, target);
+        movement.distance = 1.0;
+        movement.reach = 0.0;
+        let step = nav.advance(actor, movement);
+        nav.drain_until_idle();
+        match step {
+            Step::Moved { position, reached } => {
+                assert!(!reached, "repeated partial endpoint is not the boss");
+                let next = point(position);
+                assert!(next.distance(from) < 3.0);
+                from = next;
+            }
+            Step::Blocked => {
+                blocked = true;
+                break;
+            }
+            Step::Pending => {}
+            Step::Unbaked => panic!("canonical Ruby bake missing"),
+        }
+    }
+    assert!(
+        blocked,
+        "must not loop indefinitely on the same partial end"
     );
+    assert!(
+        from.distance(start) > 100.0,
+        "resource-limited prefix must still move"
+    );
+    assert!(
+        from.distance(target) > 100.0,
+        "Ruby remains a named route gap"
+    );
+    for _ in 0..5 {
+        assert!(matches!(
+            nav.advance(actor, request(2521, from, target)),
+            Step::Blocked
+        ));
+    }
 }
 
 #[test]
