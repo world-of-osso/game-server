@@ -55,12 +55,14 @@ struct CombatRef {
     suppressed: bool,
 }
 
-/// TC a352b1fa Unit.h:1071 -> CombatManager.cpp:236-243: pair membership,
-/// independent of a threat list or current victim (also for suppressed references).
-pub(crate) fn is_in_combat_with(world: &World, unit: Entity, other: Entity) -> bool {
+/// TC a352b1fa Unit.h:1071 / CombatManager.cpp:236-243 identify the pair;
+/// HasPvECombat/GetAnyTarget (:155-187) exclude references suppressed for this unit.
+/// A missile target engages on impact, not launch (Spell.cpp:2763-2764).
+pub(crate) fn has_active_reference_to(world: &World, unit: Entity, other: Entity) -> bool {
     world
         .get::<CombatRefs>(unit)
-        .is_some_and(|refs| refs.0.contains_key(&other))
+        .and_then(|refs| refs.0.get(&other))
+        .is_some_and(|reference| !reference.suppressed)
 }
 
 /// `CombatManager::SetInCombatWith`: `a` and `b` are in combat with each other, and a

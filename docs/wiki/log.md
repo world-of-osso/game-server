@@ -1,3 +1,7 @@
+## 2026-10-22 — Active party combat references
+
+Updated [follower admission](investigations/follower-data.md#active-party-combat-reference-admission--2026-10-22) and its contract: actual31146 count RED and native missile-launch RED distinguish active references from target-side suppression. Membership-only Stockade regression isolated on identical authentic data; active-pair fix committed, GREEN/current-master controls pending.
+
 ## 2026-10-21 — Continuous frozen walk endpoints
 
 [Native endpoint/time boundary](systems/dungeon-simulator.md#continuous-frozen-walk-endpoints-2026-10-21): full Azure1 ownerDeath RED106.58s plus two exact recorded-position REDs0.12s prove goal-anchor overshoot and full-edge-time restart. Walking now shares continuous existing-edge endpoints/proportional native yards between safety qualification and movement; no new component links or changed book hops. At5f7d4ff85 recorded controls2GREEN0.01s, fullnative Azure1 Sapling GREEN110.78s, Stockade safe-path+full50 bothGREEN135.84s, graph4+weighted1+six retained native movement controls GREEN. New seeded qualification pending; prior2f443Stockade50/50 is not current proof after this geometry change.

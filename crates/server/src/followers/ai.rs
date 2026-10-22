@@ -296,9 +296,9 @@ pub(super) fn engaged_enemies(
         })
         .filter(|&(enemy, victim)| {
             owner_victim == Some(enemy)
-                || party
-                    .iter()
-                    .any(|&member| crate::combat_refs::is_in_combat_with(world, enemy, member))
+                || party.iter().any(|&member| {
+                    crate::combat_refs::has_active_reference_to(world, enemy, member)
+                })
                 || victim.is_some_and(|victim| party.contains(&victim))
                 || world
                     .get::<shared::components::ThreatTable>(enemy)

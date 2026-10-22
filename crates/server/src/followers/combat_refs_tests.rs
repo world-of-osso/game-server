@@ -55,7 +55,6 @@ fn spawn_dummy(h: &mut Harness, unit: Entity, index: usize) -> Entity {
 }
 
 #[test]
-#[ignore = "RED: suppressed projectile references are not active enemy combat"]
 fn follower_combatrefs_native_missile_launch_waits_for_enemy_combat() {
     let _rng_scope = crate::random::seed_scope(1);
     let (mut h, unit, targets) = native_dummies();
