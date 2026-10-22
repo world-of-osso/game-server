@@ -702,6 +702,36 @@ def import_aldryr(connection):
     return [210271]
 
 
+def import_benk(connection):
+    """Local2777a9d Lua primary; journal preview never replaces live120557."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2661, entry=218002, encounter_id=2931, bit=3,
+                   script='', ai='', journal_id=2588, actor_id=5697, display_id=117818,
+                   spawn_guid=10002463, spawn_difficulties='1,2,8,23')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute(
+        'SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=218002'
+    ).fetchone()
+    if runtime not in [('Benk Buzzbee', '', '', 64),
+                       ('Benk Buzzbee', '', 'littlewigs_benk', 64)]:
+        raise ValueError('Benk runtime binding or source flags changed')
+    models = connection.execute('''SELECT CreatureDisplayID FROM content_creature_template_model
+        WHERE CreatureID=218002 ORDER BY Idx''').fetchall()
+    if models != [(120557,)]:
+        raise ValueError('Benk runtime actual model changed')
+    native = connection.execute('''SELECT Effect,ImplicitTarget_0,ImplicitTarget_1
+        FROM spell_effect WHERE SpellID=438025 AND DifficultyID=0 AND EffectIndex=0''').fetchone()
+    if native != (3, 87, 0):
+        raise ValueError('Benk native Snack Time438025 identity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='littlewigs_benk' WHERE entry=218002")
+    return [218002]
+
+
 def import_kyrioss_schedule(connection):
     """LittleWigs2777a9d5 Kyrioss: explicit local schedule, never a claimed TC AI.
 
@@ -731,7 +761,7 @@ def import_kyrioss_schedule(connection):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry','aldryr'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry','aldryr','benk'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -763,6 +793,8 @@ def main():
                 entries = import_dailcry(conn)
             elif args.encounter == 'aldryr':
                 entries = import_aldryr(conn)
+            elif args.encounter == 'benk':
+                entries = import_benk(conn)
             elif args.encounter == 'azureblade':
                 entries = import_azureblade(conn)
             elif args.encounter == 'umbrelskul':
