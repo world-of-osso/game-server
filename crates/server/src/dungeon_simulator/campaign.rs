@@ -1363,8 +1363,17 @@ pub(super) fn run_cached(
 ) -> Result<Report, String> {
     let _rng_scope = crate::random::seed_scope(seed);
     let started = std::time::Instant::now();
-    let mut run = spawn_run(seed, catalogs)?;
+    let run = spawn_run(seed, catalogs)?;
     let setup = started.elapsed();
+    run_prepared(run, catalogs, started, setup)
+}
+
+fn run_prepared(
+    mut run: Run,
+    catalogs: &mut Option<super::catalogs::Catalogs>,
+    started: std::time::Instant,
+    setup: std::time::Duration,
+) -> Result<Report, String> {
     let mut timings = [std::time::Duration::ZERO; 3];
     let mut ticks = 0;
     for tick in 0..MAX_TICKS {
