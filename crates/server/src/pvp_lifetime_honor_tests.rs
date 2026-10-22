@@ -171,6 +171,7 @@ fn lifetime_total(world: &World, player: Entity) -> serde_json::Value {
 
 fn reopen_and_relog(app: &mut App, (character, player): (u64, Entity), path: &std::path::Path) {
     let database = app.world_mut().remove_resource::<GameDatabase>().unwrap();
+    crate::test_data::drain_persistence(&database);
     let mut achievements = crate::persistence::load_achievements(&database.db, character);
     // Discard derived113 only: login must reconstruct it from persisted lifetime authority.
     achievements.criteria_progress.remove(&13253);

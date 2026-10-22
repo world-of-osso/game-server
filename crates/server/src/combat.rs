@@ -1011,8 +1011,9 @@ fn target_armor(
 ) -> f32 {
     match (creature, player) {
         (Some(armor), _) => {
-            let multiplier = crate::auras::base_armor::pet_multiplier(modifiers, hunter, summon);
-            target.armor_against(armor.0 * multiplier, attacker)
+            let armor =
+                crate::auras::base_armor::unscaled_armor(armor.0, modifiers, hunter, summon);
+            target.armor_against(armor, attacker)
                 * crate::auras::base_armor::total_multiplier(modifiers)
         }
         (None, Some(stats)) => stats.armor,
@@ -1028,12 +1029,27 @@ pub(crate) fn armor_mitigated(
     attacker: &UnitScaling,
     target: &UnitScaling,
     constants: Option<&ArmorConstants>,
+    attacker_mods: Option<&AuraStatMods>,
 ) -> f32 {
+    let penetration = attacker_mods.map_or(0.0, |mods| mods.armor_penetration_pct);
+    let armor = armor_after_penetration(armor, target.level_against(attacker), penetration);
     constants
         .and_then(|constants| constants.at(attacker.level_against(target)))
         .map_or(damage, |constant| {
             melee::armor_reduced_damage(damage, armor, constant)
         })
+}
+
+/// TC Unit.cpp1731–1742: percentage applies only to the victim-level armor cap.
+fn armor_after_penetration(armor: f32, victim_level: u8, percent: f32) -> f32 {
+    let level = f32::from(victim_level);
+    let level_constant = if victim_level < 60 {
+        400.0 + 85.0 * level
+    } else {
+        400.0 + 85.0 * level + 4.5 * 85.0 * (level - 59.0)
+    };
+    let penetrable = ((armor + level_constant) / 3.0).min(armor);
+    armor - penetrable * percent.clamp(0.0, 100.0) / 100.0
 }
 
 /// The hit-table result of a swing (Unit::RollMeleeOutcomeAgainst): a creature's
@@ -1298,10 +1314,13 @@ fn roll_critical_block_damage(
     auras: Option<&crate::auras::ActiveAuras>,
     damage: f32,
     blocked: f32,
+    attacker_mods: Option<&AuraStatMods>,
 ) -> (f32, f32) {
     if roll_critical_block(auras) {
-        // Autoswings double AFTER the ordinary block amount was truncated.
-        (damage - blocked, blocked * 2.0)
+        // TC doubles the truncated block, then applies the attacker's638 multiplier.
+        let multiplier = attacker_mods.map_or(1.0, |mods| mods.critical_block_amount_mult);
+        let critical_blocked = (blocked * 2.0 * multiplier).trunc();
+        (damage - (critical_blocked - blocked), critical_blocked)
     } else {
         (damage, blocked)
     }
@@ -1484,6 +1503,7 @@ fn try_swing(
         &attacker_scaling,
         &target,
         context.armor_constants,
+        attacker.mods,
     );
     let sitting = stand_state.is_some_and(|state| !state.0.is_stand());
     let victim = swing_victim(is_npc, armor.1, level_difference, sitting);
@@ -1523,7 +1543,12 @@ fn try_swing(
         blocked_pct(victim, &attacker_scaling, &target, context.armor_constants),
     );
     let (outcome_damage, blocked) = if kind == MeleeOutcome::Block && !immune {
-        roll_critical_block_damage(avoidance.1.as_deref(), outcome_damage, blocked)
+        roll_critical_block_damage(
+            avoidance.1.as_deref(),
+            outcome_damage,
+            blocked,
+            attacker.mods,
+        )
     } else {
         (outcome_damage, blocked)
     };
@@ -1581,7 +1606,10 @@ fn try_swing(
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
     // Commit health-sensitive limits and real rescue children in swing order.
     let incoming_loss = health_loss(training_dummy, scaled_loss);
-    reset_swing_timers(auto_attack, hand, attacker.swing_time(&weapon));
+    let pet_time = context
+        .summon_modifiers
+        .pet_melee_time_multiplier(attacker.entity);
+    reset_swing_timers(auto_attack, hand, attacker.swing_time(&weapon) * pet_time);
     let outcome = SwingOutcome {
         hand,
         kind,

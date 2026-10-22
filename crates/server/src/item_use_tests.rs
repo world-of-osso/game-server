@@ -116,6 +116,7 @@ fn achievements_criteria_companion_item_learns_new_pet_species_through_native_us
     assert_eq!(progress(&eater, 33626), Some(1));
     eater.h.advance(5);
     assert_eq!(progress(&eater, 33626), Some(1));
+    crate::test_data::drain_persistence(eater.h.app.world().resource::<GameDatabase>());
     let db = &eater.h.app.world().resource::<GameDatabase>().db;
     assert_eq!(
         crate::battle_pets::load_journal(db, account).count_species(1928),
@@ -233,6 +234,7 @@ fn achievements_criteria_item_use_counts_accepted_native_uses_not_refusals() {
         Some(&1)
     );
     let character = eater.character_id;
+    crate::test_data::drain_persistence(eater.h.app.world().resource::<GameDatabase>());
     let db = &eater.h.app.world().resource::<GameDatabase>().db;
     assert_eq!(
         persistence::load_achievements(db, character)

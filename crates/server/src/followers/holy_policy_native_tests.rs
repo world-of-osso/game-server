@@ -102,12 +102,7 @@ fn form_native_party(h: &mut Harness, members: &[Entity], level: u8) {
     for &unit in members.iter().filter(|&&unit| unit != owner) {
         let follower = h.app.world().get::<super::Follower>(unit).unwrap();
         let member = super::Follower::member_id(unit);
-        let display_id = h
-            .app
-            .world()
-            .get::<shared::components::ModelDisplay>(unit)
-            .expect("spawned follower display")
-            .display_id;
+        let display_id = super::native_fixture::template_display(follower.profile.entry);
         view.insert(member, follower.online(unit, level, 1, display_id));
         companions.push((member, follower.profile.role));
     }

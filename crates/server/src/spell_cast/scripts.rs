@@ -26,6 +26,7 @@ mod batch8;
 mod batch9;
 mod chrono_flame;
 mod clearcasting;
+mod empower_evoker;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
@@ -46,7 +47,9 @@ mod windwalker;
 
 mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
-pub(crate) use windwalker::ordinary_combo_cast;
+pub(crate) use windwalker::{
+    DANCE_OF_CHIJI, after_dance_cast_event, check_dance_proc, ordinary_combo_cast,
+};
 
 pub(super) use batch9::update_ground_pulses;
 pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
@@ -517,6 +520,18 @@ pub(crate) fn preserve_unadmitted_proc(
 }
 
 /// `SpellCastFn` on `AfterCast`: runs once on the caster after the spell resolved.
+pub(super) type EmpowerCompleteHook =
+    fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> Result<(), super::CastFailure>;
+
+pub(super) fn empower_completion(spell_id: u32) -> Option<EmpowerCompleteHook> {
+    match spell_id {
+        357208 | 382266 | 359073 | 382411 => Some(empower_evoker::release),
+        _ => None,
+    }
+}
+
+pub(super) use empower_evoker::damage_bonus as empower_damage_bonus;
+
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
