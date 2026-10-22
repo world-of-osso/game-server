@@ -143,7 +143,6 @@ fn rotation_selection_262_native_ascendance_after_stormkeeper() {
 }
 
 #[test]
-#[ignore = "native Ascendance entry effects RED before implementation"]
 fn rotation_selection_262_native_ascendance_entry_hits_six_enemies() {
     let (mut h, caster, targets) = prepare(209053, 7);
     for &target in &targets {
@@ -216,7 +215,6 @@ fn rotation_selection_262_native_ascendance_entry_hits_six_enemies() {
 }
 
 #[test]
-#[ignore = "native Ascendance half-effectiveness Lava Burst RED before implementation"]
 fn rotation_selection_262_native_ascendance_entry_uses_half_lava_burst_damage() {
     let (mut h, caster, _) = prepare(209053, 1);
     crate::spell_cast::cast_triggered(h.app.world_mut(), caster, 188389, Some(h.npc), 1);

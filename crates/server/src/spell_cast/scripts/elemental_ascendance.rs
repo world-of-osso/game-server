@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use shared::components::CombatStatus;
 
 use crate::spell_cast::{self, Sight, SpellModOp, targets};
-use crate::spell_info::{SpellInfo, SpellStore};
+use crate::spell_info::SpellStore;
 
 pub(super) const ASCENDANCE: u32 = 1219480;
 const FLAME_SHOCK: u32 = 188389;
