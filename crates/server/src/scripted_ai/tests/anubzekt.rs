@@ -125,6 +125,11 @@ fn encounter_coverage_anubzekt_first_impale_uses_current_lua_clock() {
 fn encounter_coverage_anubzekt_ongoing_lanes_native_damage_and_copy_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = anubzekt_copy(difficulty);
+        let initial_infestations = completed_casts(&h, boss, INFESTATION);
+        assert_eq!(
+            initial_infestations, 1,
+            "source immediate-on-pull cast precedes fixture observer"
+        );
         let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
         h.app
             .insert_resource(super::cast_admission::CastAdmissions {
@@ -133,24 +138,68 @@ fn encounter_coverage_anubzekt_ongoing_lanes_native_damage_and_copy_credit() {
                 entries: Vec::new(),
             });
         h.engage(boss);
-        h.advance(105.0);
+        h.advance(130.0);
         let attempts = &h
             .app
             .world()
             .resource::<super::cast_admission::CastAdmissions>()
             .entries;
         eprintln!("ANUBZEKT difficulty{difficulty} {attempts:?}");
-        for (spell, minimum) in [(IMPALE, 10), (INFESTATION, 8), (BURROW, 2), (EYE, 1)] {
+        let lanes = [
+            (
+                IMPALE,
+                &[
+                    4.55, 13.05, 21.85, 27.65, 42.55, 51.05, 59.55, 68.05, 76.55, 85.35, 91.15,
+                    99.65, 108.15, 116.95, 122.75,
+                ][..],
+            ),
+            (
+                INFESTATION,
+                &[
+                    10.1, 21.05, 38.95, 47.45, 55.95, 64.45, 72.95, 84.55, 95.15, 103.65, 116.15,
+                    126.75,
+                ][..],
+            ),
+            (BURROW, &[17.05, 80.55, 112.15][..]),
+            (EYE, &[31.65, 112.15][..]),
+        ];
+        assert_eq!(
+            attempts.len(),
+            32,
+            "all sourced requests, including ordinary second-Eye rejection"
+        );
+        for (spell, times) in lanes {
             let lane: Vec<_> = attempts.iter().filter(|a| a.spell == spell).collect();
-            assert!(
-                lane.len() >= minimum,
-                "ongoing sourced lane{spell}: {lane:?}"
-            );
-            assert!(
-                lane.iter().all(|a| a.result.is_ok()),
-                "native admission lane{spell}: {lane:?}"
-            );
-            assert_eq!(completed_casts(&h, boss, spell), lane.len());
+            assert_eq!(lane.len(), times.len(), "source lane{spell}: {lane:?}");
+            for (index, (attempt, expected)) in lane.iter().zip(times).enumerate() {
+                assert!(
+                    (attempt.time - expected).abs() <= 0.15,
+                    "source countdown/native occupancy {attempt:?}, expected{expected}"
+                );
+                if spell == EYE && index == 1 {
+                    assert!(
+                        matches!(
+                            attempt.result,
+                            Err(crate::spell_cast::CastFailure::NotEnoughPower(
+                                shared::components::PowerType::Energy
+                            ))
+                        ),
+                        "source actor has no automatic regeneration; no second energy grant: {attempt:?}"
+                    );
+                } else {
+                    assert!(
+                        attempt.result.is_ok(),
+                        "ordinary native admission {attempt:?}"
+                    );
+                }
+            }
+            let accepted = lane.iter().filter(|a| a.result.is_ok()).count();
+            let initial = if spell == INFESTATION {
+                initial_infestations
+            } else {
+                0
+            };
+            assert_eq!(completed_casts(&h, boss, spell), accepted + initial);
         }
         assert!(
             attempts
