@@ -38,14 +38,14 @@ fn toy_coverage_eyes_visual_payload_or_absent_visual_refuses_without_effects() {
 }
 
 #[test]
-fn toy_coverage_eyes_visual_census_retains_heating_orb_audience_and_dummy_gaps() {
+fn toy_coverage_eyes_visual_census_retains_heating_audience_and_dummy_gaps() {
     let report = report_toy_census(&crate::test_data::world_db_path(), "TOY_EYES_VISUAL_REPORT");
     let rows = report["toys"].as_array().unwrap();
-    for item in [EYES, 129111, 210411, 202711] {
+    for item in [EYES, 136928, 129111, 210411, 202711] {
         let row = rows.iter().find(|row| row["item_id"] == item).unwrap();
         assert!(row["unavailable"].is_null(), "{row}");
     }
-    for item in [180873, 136928, 86565, 18986] {
+    for item in [180873, 86565, 18986] {
         let row = rows.iter().find(|row| row["item_id"] == item).unwrap();
         assert!(!row["unavailable"].is_null(), "{row}");
     }

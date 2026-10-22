@@ -836,6 +836,7 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
         can_proc: true,
         periodic: false,
         damage: outcome.scaled_loss,
+        heal: None,
         reflected: false,
     }];
     if outcome.npc_died || outcome.player_died {
@@ -848,6 +849,7 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
             can_proc: true,
             periodic: false,
             damage: 0.0,
+            heal: None,
             reflected: false,
         });
     }
