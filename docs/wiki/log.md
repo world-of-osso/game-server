@@ -97,6 +97,21 @@
 ## 2026-10-22 — Halls and Vexamus source-floor policies
 
 [Source-floor selection](investigations/follower-data.md#halls-and-vexamus-source-floor-selection--2026-10-22): approved unique DB2 floor-group upward triangle matching and Vexamus-only two-native-anchor selection; original ambiguous packet attempts refused SQL, Primal remains unresolved. Source/packet GREEN pending.
+## 2026-10-22 — Spotlight and native target57 qualified
+
+[Toys](systems/toys.md#spotlight-source-recipient-and-environmental-boundary-2026-10-22): separate generic4db754ace/exact25c96a187, correctedRED4/control4PASS102.82s→8GREEN112.11s at25c96a187/protocol2abc7fa. Native1022 rejects foreign ally while21/10060 remains allowed; actual grouped recipient apply/replicate/CancelAura/invariants/recovery refusal, foreign no substitute and2drifts pass. Check133s/0warnings/fmt/readabilityPASS. Exact542→543 only230924,630 unadmitted; named SPELL_ATTR0_ONLY_OUTDOORS_UNENFORCED_NO_INDOOR_STATE persists in census/ledger. No outdoor/native/full30min expiry/hour reuse claim. Original379 current partition25visual/2ports/1identity/155zero-payload/196script gaps, with exact source ledgers.
+
+## 2026-10-22 — Authored removal lifecycle and source-classification reconciliation
+
+[Visual rule](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21) fourth criterion now follows source-authored removal: successful CancelAura where allowed, otherwise real refusal plus natural expiry. Documents landed Amani behavior without changing code or source flags. Exact final ledger admission sets/proof tips reconcile21 stale original379 source rows:20visual plus Coyote core port. Current542 partition24visual/2ports/1identity/156zero-payload/196script gaps; no native/universal lifecycle claim. Spotlight remains pending GREEN.
+
+## 2026-10-22 — Spotlight source recipient boundary
+
+[Toys](systems/toys.md#spotlight-source-recipient-and-environmental-boundary-2026-10-22): source230924/467730 selected raid recipient/30min aura/1h recovery;95rows27tables6residentmodels,10raw identity/clock/effect snapshots. Exact visual entry follows separate generic57 correction4db754ace; correctedRED4/control4PASS102.82s, GREEN pending. Lead permits pipeline admission with named SPELL_ATTR0_ONLY_OUTDOORS_UNENFORCED_NO_INDOOR_STATE census/ledger gap; no fake indoor state/outdoor eligibility/native pixels/full-hour reuse claim. Qualified census542 retained until proof.
+
+## 2026-10-22 — Native target57 raid-recipient correction
+
+[Toys](systems/toys.md#native-target57-raid-recipient-correction-2026-10-22): source57 raid relation was aliased to ordinary ally21; actual1022 on foreign ally returnsOk, while21/10060 control passes. Corrected6bdac3cf8 batch4RED/control4PASS102.82s, including separate Spotlight preflight REDs; compile-only0611502ac API errors excluded. Generic Raid relation now checks existing membership/assist and rejects explicit foreign targets without caster substitution; GREEN pending. No Spotlight entry yet, no mixed-mask/universal controlled-unit claim.
 ## 2026-10-22 — Ki'katal source-clock partial
 
 [Ki'katal](investigations/follower-data.md#kikatal-source-clock-partial--2026-10-22): ignored native firstWebsRED→5b036e1ea3/3GREEN57.40s, eleven90s requests perNormal/Follower, nativeVolley/Singularity damage, evade/rearm, actualcopy-credit/corpse proof. Binding-only producer1/1GREEN preserves source/native/population; lower-bound alerts and absentcontrollers remain gaps. Canonical database untouched.
