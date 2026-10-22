@@ -190,6 +190,8 @@ mod catalog_tests;
 #[cfg(test)]
 mod cc_tests;
 #[cfg(test)]
+mod combat_refs_tests;
+#[cfg(test)]
 mod control_cast_stop_tests;
 #[cfg(test)]
 mod defensive_tests;
