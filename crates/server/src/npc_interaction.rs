@@ -31,6 +31,7 @@ use crate::faction::{FactionTemplates, Reaction};
 use crate::game_objects::{GAME_OBJECT_INTERACT_DISTANCE, GameObjectBounds, wow_position};
 use crate::networking::PlayerLink;
 
+pub(crate) mod azure_translocation;
 mod gossip;
 mod spellclick;
 pub(crate) use spellclick::{SpellClickCatalog, load_spellclick_catalog};
@@ -772,6 +773,17 @@ fn process_gossip_selections(
                 }
             };
             let opening = match action {
+                GossipAction::AzureTranslocation => {
+                    current = None;
+                    let player = link.0;
+                    commands.queue(move |world: &mut World| {
+                        if let Err(error) = azure_translocation::traverse(world, player, npc) {
+                            warn!(?player, ?npc, %error, "Azure book translocation refused");
+                        }
+                        close_gossip_menu(world, player, npc);
+                    });
+                    continue;
+                }
                 GossipAction::Submenu(menu_id) => world.catalog.submenu(menu_id, flags),
                 GossipAction::Role(role) => Opening {
                     kind: InteractionKind::Role(role),

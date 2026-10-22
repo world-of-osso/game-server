@@ -68,6 +68,7 @@ pub const EFFECT_TRIGGER_MISSILE: u32 = 32;
 pub const EFFECT_DISPEL: u32 = 38;
 pub const EFFECT_WEAPON_DAMAGE: u32 = 58;
 pub const EFFECT_SEND_EVENT: u32 = 61;
+pub const EFFECT_THREAT: u32 = 63;
 pub const EFFECT_TRIGGER_SPELL: u32 = 64;
 pub const EFFECT_INTERRUPT_CAST: u32 = 68;
 pub const EFFECT_NORMALIZED_WEAPON_DMG: u32 = 121;
@@ -139,6 +140,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         // missile's spell hits the unit target synchronously.
         EFFECT_TRIGGER_MISSILE => trigger_spell,
         EFFECT_SEND_EVENT => send_game_event,
+        EFFECT_THREAT => add_fixed_threat,
         EFFECT_INTERRUPT_CAST => interrupt_cast,
         EFFECT_HEAL_PCT => heal_pct,
         EFFECT_FORCE_CAST => force_cast,
@@ -158,6 +160,54 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         crate::hunter_pet::EFFECT_DISMISS_PET => crate::hunter_pet::effect_dismiss_pet,
         _ => return None,
     })
+}
+
+/// TC SpellEffects.cpp2948–2964 and ThreatManager.cpp382–409: computed value,
+/// no threat modifiers, damage or forced victim. Redirects remain unmodelled.
+fn add_fixed_threat(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    let living_caster = world
+        .get::<Health>(ctx.caster)
+        .is_some_and(|health| health.current > 0.0);
+    if !living_caster || world.get::<Npc>(target).is_none() {
+        return;
+    }
+    if super::attributes(ctx.spell, 1) & super::SPELL_ATTR1_NO_THREAT != 0 {
+        return;
+    }
+    let no_initial_threat =
+        super::attributes(ctx.spell, 2) & super::SPELL_ATTR2_NO_INITIAL_THREAT != 0;
+    let engaged = world
+        .get::<shared::components::CombatStatus>(target)
+        .is_some_and(|status| status.0);
+    if no_initial_threat && !engaged {
+        return;
+    }
+    let amount = roll_base_points(world, ctx.caster, ctx.spell, effect);
+    crate::creature_aggro::add_unmodified_threat(world, target, ctx.caster, amount);
+}
+
+/// Build70448 SpellTargetRestrictions: exclude levels before hit/combat bookkeeping.
+/// Pinned TC loads this field but does not consume it; this is DB2-backed behavior.
+pub(super) fn retain_threat_level_targets(
+    world: &World,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    units: &mut Vec<Entity>,
+) {
+    if effect.effect != EFFECT_THREAT {
+        return;
+    }
+    let cap = spell
+        .target_restrictions
+        .as_ref()
+        .map_or(0, |data| data.max_target_level);
+    if cap != 0 {
+        units.retain(|target| {
+            world
+                .get::<shared::components::UnitLevel>(*target)
+                .is_some_and(|level| u32::from(level.0) <= cap)
+        });
+    }
 }
 
 /// TC EffectInstaKill hit-target branch. The existing Unit::Kill path handles

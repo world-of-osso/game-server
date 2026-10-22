@@ -734,7 +734,7 @@ fn nearby_entry_unit(
     let range = spell_range(spell, negative != 0).1;
     let origin = position(world, caster)?;
     let candidates = area_units(world, caster, origin, range, Relation::Any, 0);
-    let qualifying = filter_entry_targets(world, candidates, spell.id, effect.index);
+    let qualifying = filter_entry_targets(world, caster, candidates, spell.id, effect.index);
     limit_implicit_targets(world, spell, caster, qualifying, 1)
         .into_iter()
         .next()
@@ -743,6 +743,7 @@ fn nearby_entry_unit(
 /// The spell's implicit target conditions for `effect_index` (part of TC CheckTarget).
 fn filter_entry_targets(
     world: &World,
+    caster: Entity,
     candidates: Vec<Entity>,
     spell_id: u32,
     effect_index: u8,
@@ -750,7 +751,7 @@ fn filter_entry_targets(
     let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
     candidates
         .into_iter()
-        .filter(|&unit| conditions.target_meets(world, spell_id, effect_index, unit))
+        .filter(|&unit| conditions.target_meets(world, spell_id, effect_index, unit, caster))
         .collect()
 }
 
@@ -900,7 +901,8 @@ fn raid_corpses(
         })
         .collect();
     let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
-    bodies.retain(|&(_, unit)| conditions.target_meets(world, spell.id, effect.index, unit));
+    bodies
+        .retain(|&(_, unit)| conditions.target_meets(world, spell.id, effect.index, unit, caster));
     bodies.sort_by(|a, b| a.0.total_cmp(&b.0));
     if cap > 0 {
         bodies.truncate(cap as usize);
@@ -1000,7 +1002,7 @@ fn entry_area_units(
     let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
     targets
         .into_iter()
-        .filter(|&target| conditions.target_meets(world, spell.id, effect.index, target))
+        .filter(|&target| conditions.target_meets(world, spell.id, effect.index, target, caster))
         .collect()
 }
 
@@ -1046,7 +1048,7 @@ fn cone_entry_units(
     let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
     in_cone
         .into_iter()
-        .filter(|&unit| conditions.target_meets(world, spell.id, effect.index, unit))
+        .filter(|&unit| conditions.target_meets(world, spell.id, effect.index, unit, caster))
         .filter(|&unit| implicit_target_allowed(world, caster, spell, unit))
         .collect()
 }
