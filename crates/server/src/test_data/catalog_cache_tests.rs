@@ -126,6 +126,29 @@ fn identical_bytes_at_another_path_do_not_inherit_database_authority() {
 }
 
 #[test]
+fn same_length_rewrite_with_preserved_mtime_loads_new_content() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("world.db");
+    write_catalog(&path);
+    let original_mtime = path.metadata().unwrap().modified().unwrap();
+    let before = catalog_cache::load(&path, || read_catalog(&readonly(&path))).unwrap();
+    Connection::open(&path)
+        .unwrap()
+        .execute(
+            "UPDATE catalog_rows SET name = 'Firebolt' WHERE id = 133",
+            [],
+        )
+        .unwrap();
+    std::fs::File::open(&path)
+        .unwrap()
+        .set_modified(original_mtime)
+        .unwrap();
+    let after = catalog_cache::load(&path, || read_catalog(&readonly(&path))).unwrap();
+    assert_eq!(before.0[0].1, "Fireball");
+    assert_eq!(after.0[0].1, "Firebolt");
+}
+
+#[test]
 fn new_content_at_the_same_path_preserves_old_apps_and_loads_new_rows() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("world.db");
