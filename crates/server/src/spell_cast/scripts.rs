@@ -34,7 +34,7 @@ pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
-pub(super) use hot_streak::record_fire_hit;
+pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 pub(crate) mod prayer_of_mending;
 mod scourge_strike;
@@ -117,6 +117,7 @@ pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u
         && batch13::effect_enabled(spell, index)
         && batch15::effect_enabled(world, caster, spell, index)
         && batch23::effect_enabled(world, caster, spell, index)
+        && super::guardian::effect_enabled(world, caster, spell, index)
 }
 
 use bevy::prelude::*;
@@ -545,7 +546,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
             Some(essence_burst::roll_essence_burst)
         }
         hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE => {
-            Some(hot_streak::consume_admitted_hot_streak)
+            Some(hot_streak::consume_procs_and_roll_pyroclasm)
         }
         lava_surge::LAVA_BURST => Some(lava_surge::restore_deferred_charge),
         IMPENDING_VICTORY => Some(heal_and_consume_victorious),

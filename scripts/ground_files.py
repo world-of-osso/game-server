@@ -233,8 +233,14 @@ def main():
     parser.add_argument(
         "--missing", action="store_true", help="print `map id<TAB>path` of the uncached files instead"
     )
+    parser.add_argument(
+        "--print-map-ids", action="store_true", help="print the selected map IDs, one per line, and exit"
+    )
     add_map_selection(parser)
     args = parser.parse_args()
+    if args.print_map_ids:
+        print("\n".join(str(map_id) for map_id, _wdt, _product in selected_map_sources(args.world_db, args.map_ids, args.registered)))
+        return
     files = GroundFiles(args.cache)
     maps = selected_map_sources(args.world_db, args.map_ids, args.registered)
     for map_id, wdt, _product in maps:

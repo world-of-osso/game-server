@@ -11,6 +11,10 @@ use crate::networking::CombatTarget;
 const PROJECT_URGENT_HEAL_THRESHOLD: f32 = 0.40;
 
 #[cfg(test)]
+#[path = "cast_while_casting_tests.rs"]
+mod cast_while_casting_tests;
+
+#[cfg(test)]
 #[path = "healer_triage_tests.rs"]
 mod healer_triage_tests;
 #[cfg(test)]
@@ -259,6 +263,7 @@ pub(super) fn conditions_met(
 ) -> bool {
     let condition = &entry.conditions;
     if !action_history_allows(world, unit, entry)
+        || !cooldown_allows(world, unit, entry)
         || !entry
             .conditions
             .resources
@@ -281,6 +286,21 @@ pub(super) fn conditions_met(
     enough_injured
         && (condition.min_enemies == 0
             || super::kit_area::allows(world, unit, target, enemies, entry))
+}
+
+fn cooldown_allows(world: &World, unit: Entity, entry: &Entry) -> bool {
+    let Some(threshold) = &entry.conditions.cooldown_remaining_above else {
+        return true;
+    };
+    let Some(history) = world.get::<crate::spell_cast::SpellHistory>(unit) else {
+        return false;
+    };
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(threshold.spell_id)
+        .expect("kit cooldown predicate requires native spell metadata");
+    let deadline = crate::spell_cast::history_now(world) + threshold.seconds;
+    history.on_cooldown(spell, deadline)
 }
 
 fn resource_allows(world: &World, unit: Entity, rule: &ResourceCondition) -> bool {
@@ -547,7 +567,12 @@ fn attempt_cast(
                 .conditions
                 .health_below
                 .is_some_and(|health| health <= PROJECT_URGENT_HEAL_THRESHOLD));
-    if world.get::<CastState>(unit).is_some() && !urgent {
+    let allows_parallel_cast = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(entry.spell_id)
+        .is_some_and(crate::spell_cast::allows_cast_while_casting);
+    let may_start_while_casting = urgent || allows_parallel_cast;
+    if world.get::<CastState>(unit).is_some() && !may_start_while_casting {
         return false;
     }
     if target != unit
@@ -562,7 +587,7 @@ fn attempt_cast(
     {
         return false;
     }
-    let result = if urgent {
+    let result = if urgent && !allows_parallel_cast {
         crate::spell_cast::creature_cast_interrupting_self(
             world,
             unit,
