@@ -63,6 +63,9 @@ def dps_rotation_policy(spec, name):
         return policy('aoe', 85, min_enemies=3, ground=True, required_self_aura=48108)
     if spec == 63 and name == 'Arcane Explosion':
         return policy('utility', 1000)
+    # apl_hunter.cpp104/109/119/132: min own Barbed DoT, not a missing-only gate.
+    if spec == 253 and name == 'Barbed Shot':
+        return policy('attack', 100, target_if_min_aura=217200)
     # apl_shaman.cpp100–102: maintain own Flame Shock before filler/spenders.
     if spec == 262 and name in {'Flame Shock', 'Voltaic Blaze'}:
         return policy('attack', 84, refreshable_aura=188389)

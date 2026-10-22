@@ -6,10 +6,14 @@ use shared::components::{Health, ModelDisplay, UnitAuras};
 
 #[path = "toys_dh_visual_tests.rs"]
 mod dh_visual;
+#[path = "toys_eyes_visual_tests.rs"]
+mod eyes_visual;
 #[path = "toys_horn_visual_tests.rs"]
 mod horn_visual;
 #[path = "toys_pennant_visual_tests.rs"]
 mod pennant_visual;
+#[path = "toys_ring_visual_tests.rs"]
+mod ring_visual;
 #[path = "toys_seed_visual_tests.rs"]
 mod seed_visual;
 
@@ -201,6 +205,8 @@ fn toy_coverage_visual_payload_or_absent_visual_refuses_without_effects() {
         (168014, 295037),
         (202022, 396236),
         (242323, 1232024),
+        (228789, 465642),
+        (235041, 1215495),
     ] {
         for absent_visual in [true, false] {
             let dir = tempfile::tempdir().unwrap();

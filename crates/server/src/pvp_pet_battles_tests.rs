@@ -1257,6 +1257,7 @@ fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() 
             .criteria_progress
             .contains_key(&19724)
     );
+    crate::test_data::drain_persistence(app.world().resource::<GameDatabase>());
     assert_eq!(
         crate::persistence::load_achievements(
             &app.world().resource::<GameDatabase>().db,

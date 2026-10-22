@@ -158,6 +158,9 @@ mod dummy9_tests;
 mod dummy_tests;
 pub mod effects;
 pub(crate) mod efflorescence;
+mod empower;
+#[cfg(test)]
+mod empower_input_tests;
 #[cfg(test)]
 mod excluded_aura_spell_tests;
 #[cfg(test)]
@@ -296,8 +299,9 @@ use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
 pub(crate) use creature::{
-    AiTarget, ai_spell_target, creature_cast, creature_cast_ignoring_cooldowns,
-    creature_cast_ignoring_in_progress, creature_cast_interrupting_self,
+    AiTarget, ai_spell_target, creature_cast, creature_cast_empowered,
+    creature_cast_ignoring_cooldowns, creature_cast_ignoring_in_progress,
+    creature_cast_interrupting_self,
 };
 use effects::{EffectCtx, UnhandledEffects};
 use targets::{Dest, Relation};
@@ -372,7 +376,12 @@ impl Plugin for SpellCastPlugin {
             .add_systems(FixedPreUpdate, charge::release_finished)
             .add_systems(
                 Update,
-                (receive_cast_requests, receive_stop_requests).chain(),
+                (
+                    receive_cast_requests,
+                    empower::receive_release_requests,
+                    receive_stop_requests,
+                )
+                    .chain(),
             )
             .add_systems(Update, history_store::queue_restore)
             .add_systems(
@@ -1704,7 +1713,6 @@ fn validate_start(
 }
 
 /// Read ordinary native cast eligibility without casting, retargeting or spending.
-#[cfg(test)]
 pub(crate) fn read_native_cast_start(
     world: &mut World,
     caster: Entity,
@@ -2228,6 +2236,9 @@ fn begin_validated_cast(
     admitted.cast_proc_mods = scripts::snapshot_proc_modifiers(world, caster, spell);
     let spell = &admitted;
     crate::stand_state::stand_to_cast(world, caster, attributes(spell, 0));
+    if !spell.empower_stages.is_empty() {
+        return empower::begin(world, caster, spell, target);
+    }
     start_gcd(world, caster, spell);
     let cast_ms = cast_time_ms(world, caster, spell);
     if cast_ms > 0 {
@@ -3576,8 +3587,11 @@ fn send_spell_failure(
 
 /// Remove an active cast without reporting it: a channel ran out or handed over.
 pub(crate) fn end_cast(world: &mut World, caster: Entity) -> Option<CastState> {
+    empower::cancel(world, caster);
     crate::crafting_orders::interrupt(world, caster);
-    world.entity_mut(caster).remove::<PendingCastSpell>();
+    world
+        .entity_mut(caster)
+        .remove::<(PendingCastSpell, empower::EmpowerProgress)>();
     world
         .entity_mut(caster)
         .remove::<crate::profession::CraftQueue>();
@@ -3668,6 +3682,9 @@ pub(crate) fn advance_casts(world: &mut World) {
 }
 
 fn tick_and_resolve_cast(world: &mut World, caster: Entity, dt: f32) {
+    if empower::advance(world, caster, dt) {
+        return;
+    }
     let Some(mut cast) = world.get_mut::<CastState>(caster) else {
         return;
     };
@@ -3680,21 +3697,23 @@ fn tick_and_resolve_cast(world: &mut World, caster: Entity, dt: f32) {
     match result {
         // Channel periodic effects tick as auras (`crate::auras`).
         CastTickResult::InProgress | CastTickResult::ChannelTick => {}
-        CastTickResult::ChannelComplete => {
-            crate::auras::channel_completed(world, caster, spell_id);
-            end_cast(world, caster);
-            crate::scripted_ai::dispatch(
-                world,
-                caster,
-                crate::scripted_ai::Hook::ChannelFinished { spell_id },
-            );
-        }
+        CastTickResult::ChannelComplete => finish_channel(world, caster, spell_id),
         CastTickResult::Completed => {
             debug!(caster = ?caster, spell_id, target = ?target, "Cast state completed");
             world.entity_mut(caster).remove::<CastState>();
             complete_cast(world, caster, spell_id, target);
         }
     }
+}
+
+fn finish_channel(world: &mut World, caster: Entity, spell_id: u32) {
+    crate::auras::channel_completed(world, caster, spell_id);
+    end_cast(world, caster);
+    crate::scripted_ai::dispatch(
+        world,
+        caster,
+        crate::scripted_ai::Hook::ChannelFinished { spell_id },
+    );
 }
 
 /// The spell snapshot belonging to a cast bar, including casting-item scaling.
