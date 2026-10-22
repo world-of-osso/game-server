@@ -1,3 +1,7 @@
+## 2026-10-22 — Altar own-marker trash published
+
+[Altar density packet](investigations/follower-data.md#altar-individual-marker-density-packet--2026-10-22):49 actual observed single-Z spawns/12native templates/12models, per-type clone cap leaves108shortfall from157budget. Actual49missing RED→whole49/native/density/gap plus SQLownership/pose2GREEN0.305s at71ec9669c; fresh canonical-copy replay3× and current artifact hashes verified. Lead confirmed publication/replay identical; no groups/entrance/routes/canonical writes by producer.
+
 ## 2026-10-22 — Muro placement / native Nekraxx binding-only packet
 
 [Maisara duo](investigations/follower-data.md#muro-placement-and-native-nekraxx-binding-only--2026-10-22): actual2missing RED0.007s→source2GREEN0.204s/actual-copy2GREEN0.019s atce8bc6ece. Fresh-copy5stable rows/replay3×: only Muro gains spawn/template/model; authored Nekraxx runtime31000176 pose/masks/Verified66431 remain unchanged, binding-only. Both native0CT5071/faction16/class4/health27 retained; independent rounded page markers and precise journalXY recorded separately. Null entrance/named gap/no route query; lead confirmed5inserts published and canonical sqldiff identical to replayed copy.

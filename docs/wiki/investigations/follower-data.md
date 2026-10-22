@@ -1,5 +1,11 @@
 # Retail follower data and approved spec bridge
 
+## Altar individual-marker density packet — 2026-10-22
+
+[Altar manifest](../../../content/follower-placements/altar-trash.json) pins17 valid own NPC mapper pages/3012 markers. Ritual Snake268358 has no mapper variable: preserve its body hash and unknown-count gap, never invent empty coordinates. Raw covering witness2233 polygons matches the earlier580184-polygon stream;1191 exact marker projections have one baked Z and1821 remain floor gaps. Per-type MDT clone caps select49 actual points across12 native types, excluding1142. Total clone budget157 is not a target count:108 per-type shortfalls remain. An independent exhaustive nearest-to-selected oracle agrees with all49 selected marker keys; no production selector imported.
+
+At71ec9669c `altar-trash-packet-1` prepares73INSERTs (12templates/12models/49spawns), fresh canonical-copy replay3× exact. GUID63993100–63993148; own native0 CT0/classes/modifiers/models preserved, faction16 donation only. Existing Rav'i/bindings and spawn groups unchanged; no invented groups, entrance or route queries. Actual49missing RED1/0.053s→whole actual-row/density/source/native/gap proof plus SQL later-combat-owner/changed-pose refusal2GREEN0.305s. Current producer/helpers/manifest/nav/SQL/replayed hashes match; only delta/receipt/replayed retained. Lead confirmed PUBLISHED49spawns/12templates/12models, replay identical. [Contract](../../specs/follower-dungeons.md#derived-missing-source-placements-2026-10-22).
+
 ## Blinding stable-GUID density correction — 2026-10-22
 
 [Correction manifest](../../../content/follower-placements/blinding-density.json) pins the previous803-row packet's receipt, SQL and replayed database. [Ownership loader](../../../scripts/follower_trash_ownership.py) restricts the operation to2859/63859100–63859999, checks every complete baseline row against the published source, rejects unowned/missing/changed rows, and proves that current qualified marker identities/poses are unchanged. Density selection keeps215 existing GUIDs and full rows, removing588 excess owned rows only. It skips template/model reconstruction: all templates/models/bindings and groups fingerprint identically before/prepared/replayed. Magisters remains untouched.
