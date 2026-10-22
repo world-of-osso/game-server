@@ -1,3 +1,4 @@
+- [Class4 zone-only ingress](investigations/follower-data.md#class4-zone-only-ingress--2026-10-22) — shared entry tolerates absent spell-runtime metadata without fabricated pools.
 - [Remaining follower boss ingress](investigations/follower-data.md#remaining-boss-source-ingress--2026-10-21) — all27 maps/98 Normal encounters inventoried; remainingDF17 placement blocks and CityPC-immunity retained, Anub'zekt native partial5/5 proven, controller gaps retained.
 - [Deios source ingress boundary](systems/boss-scripts.md#deios-source-ingress-boundary--2026-10-21) — native outgoingWing/control2PASS, first6.3sWingRED; source PC immunity320 preserved, no invented unlock or combat proof.
 - [Emberon current Lua partial](systems/boss-scripts.md#emberon-current-lua-partial--2026-10-21) — firstClapRED→composite7GREEN Normal/Follower; native24.3s aura cap, ongoing counts/second phase/reset/copy-credit; absent395681/controller gaps explicit.
