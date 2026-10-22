@@ -74,7 +74,6 @@ fn create_peer_copy(h: &mut Harness, difficulty: u32) -> InMap {
 }
 
 #[test]
-#[ignore = "RED: TC Orator AI JustAppeared and combat are not ported"]
 fn encounter_coverage_orator_source_appearance_and_first_subjugate_normal_projected205() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = orator_copy(difficulty);
@@ -128,7 +127,6 @@ fn encounter_coverage_orator_source_appearance_and_first_subjugate_normal_projec
 }
 
 #[test]
-#[ignore = "Qualification: native Subjugate effects, not a boss timer port"]
 fn encounter_coverage_orator_native_subjugate_damage_aura_and_copy_isolation() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = orator_copy(difficulty);
@@ -164,7 +162,6 @@ fn encounter_coverage_orator_native_subjugate_damage_aura_and_copy_isolation() {
 }
 
 #[test]
-#[ignore = "RED: TC Orator energy and ongoing request lanes not ported"]
 fn encounter_coverage_orator_ongoing_two_energy_phases_native_damage_and_copy_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = orator_copy(difficulty);
@@ -290,7 +287,6 @@ fn encounter_coverage_orator_ongoing_two_energy_phases_native_damage_and_copy_cr
 }
 
 #[test]
-#[ignore = "RED: TC Orator reset and source counters not ported"]
 fn encounter_coverage_orator_generic_evade_rearms_clock_without_forging_respawn_energy() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = orator_copy(difficulty);
