@@ -9,6 +9,10 @@
 ## 2026-10-22 — Qualified added-action publication
 
 [Stable-key publication](investigations/follower-data.md#scoped-rotation-kit-publication--2026-10-21): native producer-qualified new actions can be inserted idempotently without removing/renaming existing intervals. Genuine added-key RED, then4GREEN0.364s at4b49e7097; complete-state oracle corrected to include additions, original source/unrelated-table/refusal guards retained. Pending Ascendance projection/runtime is not claimed complete.
+## 2026-10-22 — Binding Heals native transfer
+
+[Binding Heals](investigations/holy-priest-follower-ai.md#binding-heals-native-transfer--2026-10-22): actual Henry90 Flash Heal12778/overheal4958 missing-child RED; native resolved-heal payload, pinned TC priest-family6/mask0x1800 and20%368276 child give6GREEN34.76s at a1f941b13, including self/periodic/foreign-family/unlearned controls and enabled PoH lifetime regression. Post-master167612f27 passes10native cases37.16s/checkEXIT0/1m15s/no warnings/fmtPASS; [exact ledger](../../docs/handoffs/healer-binding-heals-proof-ledger.md). No Holy policy, canonical DB or invented mastery changes; Echo producer remains open.
+
 ## 2026-10-22 — Amani mask source cancellation boundary
 
 [Toys](systems/toys.md#ancient-amani-mask-source-cancellation-boundary-2026-10-22): complete72row28table4model visual metadata, literal Attr0 NO_AURA_CANCEL and source10min aura/15min recovery. ActualUseToy/censusRED2/control4PASS72.40s at47322144f; exact1303320 registry entry only. Atbff34c2bc/protocol2abc7fa6GREEN63.44s proves actual no-cancel/natural10min expiry/15min recovery reuse, owner invariants/replication/drift plus retained Orb/Cyrce/Gadgetzan. Check9.35s/no warnings/fmt/readabilityPASS; census541→542 only279052. No canonical writes/native pixels claim.
