@@ -76,7 +76,8 @@ fn early_release(spell_id: u32, class: u8, stage_one_frames: usize, total_durati
 
 #[test]
 fn census_empower_native_consumption_three_stages_and_early_release() {
-    early_release(CONSUMPTION, 6, 15, 3.25);
+    // Duration39 is2000ms: native last stage receives the remaining500ms.
+    early_release(CONSUMPTION, 6, 15, 3.0);
 }
 
 #[test]
