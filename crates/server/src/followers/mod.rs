@@ -36,6 +36,7 @@ mod kit_rotation_tests;
 mod pack_identity;
 mod party;
 mod positioning;
+mod power_budget;
 #[cfg(test)]
 mod power_budget_tests;
 mod pull_admission;
@@ -94,6 +95,7 @@ mod group_buff_tests;
 pub(crate) use ai::FollowerReach;
 pub(crate) use catalog::FollowerCatalog;
 pub(crate) use party::{queue_player, stage_follower_party};
+pub(crate) use power_budget::primary_budget_bonus;
 
 #[derive(Clone, Debug)]
 pub(crate) struct Profile {

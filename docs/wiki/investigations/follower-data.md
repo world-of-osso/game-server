@@ -1,5 +1,13 @@
 # Retail follower data and approved spec bridge
 
+## Expected primary-budget policy — 2026-10-22
+
+Lead-approved `FOLLOWER_EXPECTED_STAT_PLAYER_BUDGET` is explicitly project policy, not recovered Retail follower gear or scaling. The maintained stat-data generator now emits default ExpansionID−2 `ExpectedStat.PlayerPrimaryStat` rows from70448 alongside byte-unchanged existing class/game tables. A shared pure delta (`expected total − race0 class base`) feeds only the specialization's existing gear-primary input at follower initialization and ordinary NPC-follower stat refresh. It is reevaluated on level changes; player refresh, HP/mana policy, secondary ratings, mastery, weapons and pets remain unchanged. No item identity, arbitrary ilvl or damage scalar is introduced. [Contract](../../specs/follower-power-budget.md).
+
+Source audit: templateCT0 inherits Azure MapDifficulty5417→CT2155; LFG2498's CT2939 is admission data, not NPC equipment. Both CTs use mod12 with player-primary modifier1. DB2/TDB proves generic NPC HP/armor/weapon budgets, not a complete follower player-kit stat sheet; creature spell budgets are not player SP. Full evidence remains `game-engine/data/diagnostics/follower-power-scaling-2026-10-22/report.md`.
+
+Actual pre-implementation RED at90b7a757d: Garrick35 primary70 versus sourced180.685135 and Meredy70 primary145 versus375.046387. GREEN, kit/stat regressions and paired Azure70/Stockade32 seed1 controls remain pending; the simulator's fifth actor is a Player/LeaderProfile, so its ordinary player refresh is not boosted by this NPC-only policy.
+
 ## Brackenhide source floors and route gaps — 2026-10-22
 
 `brackenhide-packet-2` in engine `data/diagnostics/follower-placements-2026-10-22/` prepares24stable-key rows for all six boss actors186116/186120/186121/186122/186124/186125. Own TDB Normal1 class/budget/CT2550/models and70448 journal bindings are retained; only absent faction uses approved same-react DF donors. [Manifest](../../../content/follower-placements/brackenhide.json) pins all six Wowhead bodies. The three War-band pages explicitly share36/40.5 on floor0, so their derived positions coincide; no unsupported actor offsets were invented.

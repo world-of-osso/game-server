@@ -961,7 +961,20 @@ pub(crate) fn update_character_stats(
         let class = class_info(classes.as_deref(), class_id);
         let (primary_stat, mastery_coefficient) = spec_inputs(class, spec_id, spells.as_deref());
         let gear = items.gear(equipped, instance_modifiers, level.0);
-        let (gear_primary, gear_ratings) = sum_equipment_stats(&gear.blocks);
+        let (mut gear_primary, gear_ratings) = sum_equipment_stats(&gear.blocks);
+        if let (None, Some(_)) = (player, follower) {
+            let bonus = primary_stat.and_then(|primary| {
+                crate::followers::primary_budget_bonus(class_id, level.0, primary)
+            });
+            let Some(bonus) = bonus else {
+                warn!(
+                    "follower class {class_id} level {} lacks primary budget; stats unchanged",
+                    level.0
+                );
+                continue;
+            };
+            gear_primary = bonus;
+        }
         let input = StatInputs {
             class: class_id,
             race,

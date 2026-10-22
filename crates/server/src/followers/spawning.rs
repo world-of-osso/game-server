@@ -171,18 +171,24 @@ pub(super) fn class_stats(
         .iter()
         .find(|spec| spec.spec_id == profile.spec_id)
         .ok_or_else(|| format!("follower specialization {} absent", profile.spec_id))?;
+    let primary_stat = crate::stats::PrimaryStat::from_priority(spec.primary_stat_priority);
+    let gear_primary = super::primary_budget_bonus(profile.class_id, level, primary_stat)
+        .ok_or_else(|| {
+            format!(
+                "follower class {} level{level} lacks primary budget",
+                profile.class_id
+            )
+        })?;
     let input = crate::stats::StatInputs {
         class: profile.class_id,
         race: 0,
         level,
-        primary_stat: Some(crate::stats::PrimaryStat::from_priority(
-            spec.primary_stat_priority,
-        )),
+        primary_stat: Some(primary_stat),
         mastery_coefficient: 0.0,
         attack_power_per_strength: class.attack_power_per_strength,
         attack_power_per_agility: class.attack_power_per_agility,
         ranged_attack_power_per_agility: class.ranged_attack_power_per_agility,
-        gear_primary: Default::default(),
+        gear_primary,
         gear_ratings: Default::default(),
     };
     let stats = crate::stats::compute_character_stats(&input, None)

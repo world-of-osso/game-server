@@ -9,10 +9,13 @@ Sources:
   data/gametables/{hppersta,basemp,combatratings}.txt.
 - Item-level game tables (FDIDs 1391670, 1980632, 1391643), saved as
   data/gametables/{combatratingsmultbyilvl,staminamultbyilvl,itemsocketcostperlevel}.txt.
+- DB2 12.1.5.70448 ExpectedStat.PlayerPrimaryStat default ExpansionID -2 rows:
+  the explicitly named FOLLOWER_EXPECTED_STAT_PLAYER_BUDGET project policy.
 
-Usage: scripts/gen_character_stat_tables.py [SIMC_DIR] [GAMETABLES_DIR]
+Usage: scripts/gen_character_stat_tables.py [SIMC_DIR] [GAMETABLES_DIR] [EXPECTED_STAT_CSV]
 """
 
+import csv
 import re
 import sys
 from pathlib import Path
@@ -20,6 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SIMC = Path(sys.argv[1] if len(sys.argv) > 1 else Path.home() / "Repos/simc")
 GAMETABLES = Path(sys.argv[2] if len(sys.argv) > 2 else ROOT / "data/gametables")
+EXPECTED_STAT = Path(sys.argv[3] if len(sys.argv) > 3 else ROOT.parent / "game-engine/data/db2/12.1.5.70448/ExpectedStat.csv")
 OUT = ROOT / "crates/server/src/character_stats_data.rs"
 LEVELS = 90
 CLASSES = 13
@@ -110,6 +114,16 @@ def fmt_floats(values):
     return ", ".join(repr(float(v)) for v in values)
 
 
+def expected_player_primary():
+    with EXPECTED_STAT.open() as stream:
+        rows = sorted(csv.DictReader(stream), key=lambda row: int(row["ID"]))
+    by_level = {
+        int(row["Lvl"]): row["PlayerPrimaryStat"]
+        for row in rows if int(row["ExpansionID"]) == -2
+    }
+    return [by_level[level] for level in range(1, LEVELS + 1)]
+
+
 def main():
     extra = (SIMC / "engine/dbc/sc_extra_data.inc").read_text()
     stats = class_stats(extra)
@@ -173,6 +187,13 @@ def main():
         "/// Stat budget one socket costs, `[item level - 1]` (gtItemSocketCostPerLevel).",
         "#[rustfmt::skip]",
         f"pub(crate) const SOCKET_COST_BY_ILVL: [f32; {len(socket)}] = [{fmt_floats(r['Socket Cost'] for r in socket)}];",
+    ]
+    out += [
+        "",
+        "/// DB2 12.1.5.70448 ExpectedStat.PlayerPrimaryStat, ExpansionID -2, `[level - 1]`.",
+        "/// FOLLOWER_EXPECTED_STAT_PLAYER_BUDGET: project policy, not Retail NPC gear.",
+        "#[rustfmt::skip]",
+        f"pub(crate) const EXPECTED_PLAYER_PRIMARY: [f32; {LEVELS}] = [{fmt_floats(expected_player_primary())}];",
     ]
     OUT.write_text("\n".join(out) + "\n")
     print(f"wrote {OUT}")

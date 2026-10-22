@@ -1,3 +1,7 @@
+## 2026-10-22 — Approved follower expected-primary budget
+
+[Policy](investigations/follower-data.md#expected-primary-budget-policy--2026-10-22): explicit project interpretation of70448 default ExpectedStat primary, no Retail follower-gear claim. Genuine two-case RED90b7a757d precedes level-driven shared gear-primary delta; HP/resources/secondary/mastery/pets/player refresh unchanged. GREEN and paired Azure70/Stockade32 seed1 controls remain pending.
+
 ## 2026-10-22 — Ascendance samples and current-master gate boundary
 
 [Measurements](investigations/follower-data.md#elemental-ascendance-projection--2026-10-22): only Elemental3 affected samples refreshed,3PASS29.75s; real1219480 cast1/up12.458% on both90 scenarios, none at32. Source revisioncacbac0b0/base0c2 preserved with exact ledger/hashes. Laterfc5e87cc1 aura/stat/power changes merged as317ae34b7; current integration gate remains pending, not replaced by pre-merge proof. Entry Shock/Lava Burst and complete APL remain open.

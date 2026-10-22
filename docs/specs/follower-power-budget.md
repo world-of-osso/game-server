@@ -18,12 +18,14 @@
 ## Implementation inventory
 
 - `scripts/gen_character_stat_tables.py` — maintained native class/game-table generator; the primary-budget data must retain its explicit DB2 provenance.
+- `crates/server/src/character_stats_data.rs` — generated level-indexed default ExpectedStat primary budgets, alongside unchanged class/game tables.
+- `crates/server/src/followers/power_budget.rs` — pure specialization-primary delta; missing class/level returns an error to initialization or an explicit refresh diagnostic.
 - `crates/server/src/followers/spawning.rs` — initial follower stat inputs.
 - `crates/server/src/stats.rs` — ordinary player/follower stat refresh.
 
 ## Tests asserting this spec
 
-- `crates/server/src/followers/power_budget_tests.rs` — concrete five-follower35/70 initial-sheet and refresh/level-change behavior; RED proof pending capacity.
+- `crates/server/src/followers/power_budget_tests.rs` — concrete five-follower35/70 initial-sheet and refresh/level-change behavior; both cases produced genuine RED at90b7a757d before implementation.
 
 ## Known gaps (current cycle)
 
