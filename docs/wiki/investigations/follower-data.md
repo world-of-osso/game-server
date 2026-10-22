@@ -2,7 +2,7 @@
 
 ## Nokhud journal UiMap identity — 2026-10-22
 
-Authenticated JournalEncounter rows2477/2478/2497/2498 identify UiMap2093 directly. It has no UiMapGroupMember floor; that is not permission to guess among sibling maps or fabricate floor0. Preserve the exact journal UiMap and a null group-floor index. Wowhead comparisons use the same sourced bounds after area-map and available floor checks. Original comparison erroneously demanded a unique group floor and crashed on actual Balakar data; targeted source/placement RED retained. [Manifest](../../../content/follower-placements/nokhud.json) pins four supported actors with own Normal1 stats and explicit Lua/journal identities. Teera's joint-marker placement decision and packet GREEN remain pending.
+Authenticated JournalEncounter rows2477/2478/2497/2498 identify UiMap2093 directly. It has no UiMapGroupMember floor; that is not permission to guess among sibling maps or fabricate floor0. Preserve the exact journal UiMap and a null group-floor index. Wowhead comparisons use the same sourced bounds after area-map and available floor checks. Original comparison erroneously demanded a unique group floor and crashed on actual Balakar data; targeted source/placement RED retained. [Manifest](../../../content/follower-placements/nokhud.json) pins Balakar186151, Maruuk186338 and Granyth186616 with own Normal1 stats and explicit Lua/journal identities. First packet correctly blocked SQL because Tempest186615 has no baked support at exact journalXY(-2469.250356,2774.111445); do not shift the source point. Teera's joint-marker placement decision remains pending. All three supported locations have incomplete entrance corridors; packet GREEN remains pending.
 
 ## Halls and Vexamus source-floor selection — 2026-10-22
 

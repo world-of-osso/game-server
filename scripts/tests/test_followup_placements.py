@@ -45,6 +45,22 @@ class FollowupPlacementAcceptance(unittest.TestCase):
     def test_nokhud_four_source_supported_primaries_keep_own_native_identity_and_budget(self):
         self.assert_source_primaries(2516, (186151, 186338, 186615, 186616))
 
+    def test_nokhud_three_supported_primaries_keep_exact_journal_poses_and_missing_cases_visible(self):
+        self.assert_source_primaries(2516, (186151, 186338, 186616))
+        path = Path(os.environ['FOLLOWUP_PLACEMENT_DB']).resolve(strict=True)
+        receipt = json.loads((path.parent / 'receipt.json').read_text())
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
+            poses = db.execute('SELECT guid,id1,position_x,position_y,position_z FROM content_creature '
+                               'WHERE map=2516 AND guid BETWEEN 63516000 AND 63516999 ORDER BY guid').fetchall()
+            self.assertEqual(poses, [
+                (63516000, 186151, -536.0531378044291, 4163.211154128592, 381.202345311977),
+                (63516001, 186338, -2095.4968717149695, 4335.885373101182, 536.0469244723145),
+                (63516004, 186616, -1167.5642312417303, 1356.6360801056499, 390.72347992372613),
+            ])
+        self.assertEqual({g['entry'] for g in receipt['source_gaps']}, {186339, 186615})
+        self.assertEqual(set(receipt['navigation_gaps']), {'FOLLOWER_ROUTE_INCOMPLETE_2516_186151',
+                         'FOLLOWER_ROUTE_INCOMPLETE_2516_186338', 'FOLLOWER_ROUTE_INCOMPLETE_2516_186616'})
+
     def test_halls_four_primary_bosses_keep_own_native_identity_and_budget(self):
         self.assert_source_primaries(2527, (189719, 189722, 189727, 189729))
 

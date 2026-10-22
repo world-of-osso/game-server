@@ -38,22 +38,6 @@
       "donor_reason": "No native Nokhud population; sourced Dragonflight boss faction16 with matching hostile A/H react. Own Normal1 class, ContentTuning and budget retained."
     },
     {
-      "entry": 186615,
-      "ordinal": 3,
-      "source_url": "db2:12.1.5.70448/JournalEncounter#2497",
-      "journal_encounter_id": 2497,
-      "cache_sha256": "0dd245f4fe9baf5354ce1d9d9e6d4eece3c0912567cf118c5b853aa361c7b3df",
-      "journal_actor_source": {
-        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
-        "path": "/home/osso/Repos/LittleWigs/Dragonflight/TheNokhudOffensive/TheRagingTempest.lua",
-        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
-        "sha256": "2ec4b9769099c203dbe896824a074dd98f505ebe773a8580c63cfb453424c536",
-        "journal_actor_id": 5383
-      },
-      "faction_donor": 189232,
-      "donor_reason": "No native Nokhud population; sourced Dragonflight boss faction16 with matching hostile A/H react. Own Normal1 class, ContentTuning and budget retained."
-    },
-    {
       "entry": 186616,
       "ordinal": 4,
       "source_url": "db2:12.1.5.70448/JournalEncounter#2498",
@@ -71,7 +55,8 @@
     }
   ],
   "source_gaps": [
-    {"entry": 186339, "reserved_ordinal": 2, "name": "FOLLOWER_PLACEMENT_JOINT_MARKER_POLICY_PENDING_2516_186339", "reason": "Teera has no individual cached marker. Joint JournalEncounter2478 marker exists; co-location policy approval pending. No invented offset or actor alias."}
+    {"entry": 186339, "reserved_ordinal": 2, "name": "FOLLOWER_PLACEMENT_JOINT_MARKER_POLICY_PENDING_2516_186339", "reason": "Teera has no individual cached marker. Joint JournalEncounter2478 marker exists; co-location policy approval pending. No invented offset or actor alias."},
+    {"entry": 186615, "reserved_ordinal": 3, "name": "FOLLOWER_PLACEMENT_NO_BAKED_SUPPORT_2516_186615", "journal_encounter_id": 2497, "wow_xy": [-2469.25035560143, 2774.111445334274], "reason": "No baked walkable polygon covers precise authenticated JournalEncounter2497 XY. No source coordinate shift or height invented; initial packet receipt retains the empty support list."}
   ],
   "calibration_entries": [188252, 189232]
 }
