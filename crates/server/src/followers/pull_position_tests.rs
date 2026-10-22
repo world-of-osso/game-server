@@ -200,6 +200,8 @@ fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachab
     crate::creature_ai::install_follower_follow_fixture(&mut f.h.app);
     let mut nearest = before_distance;
     let mut acquired_caster = false;
+    let first_cast = f.h.inbox.go.len();
+    let first_event = f.h.inbox.log.len();
     for _ in 0..10 {
         f.h.advance(1);
         let point = f.h.app.world().get::<Position>(f.tank).unwrap();
@@ -221,7 +223,19 @@ fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachab
     );
     assert!(
         acquired_caster,
-        "actual native tank victim must agree with the caster chase"
+        "actual native tank victim must agree with the caster chase; remaining_cast={:?}, interrupts={:?}, casts={:?}",
+        f.h.app
+            .world()
+            .get::<CastState>(caster)
+            .map(|cast| cast.spell_id),
+        f.h.inbox.log[first_event..]
+            .iter()
+            .filter(|event| event.kind == shared::protocol::CombatLogKind::Interrupt)
+            .collect::<Vec<_>>(),
+        f.h.inbox.go[first_cast..]
+            .iter()
+            .map(|event| (event.caster, event.spell_id, event.target))
+            .collect::<Vec<_>>()
     );
     assert!(
         nearest < before_distance,
