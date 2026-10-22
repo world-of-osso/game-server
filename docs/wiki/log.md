@@ -1,3 +1,7 @@
+## 2026-10-22 — Authored removal lifecycle and source-classification reconciliation
+
+[Visual rule](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21) fourth criterion now follows source-authored removal: successful CancelAura where allowed, otherwise real refusal plus natural expiry. Documents landed Amani behavior without changing code or source flags. Exact final ledger admission sets/proof tips reconcile21 stale original379 source rows:20visual plus Coyote core port. Current542 partition24visual/2ports/1identity/156zero-payload/196script gaps; no native/universal lifecycle claim. Spotlight remains pending GREEN.
+
 ## 2026-10-22 — Spotlight source recipient boundary
 
 [Toys](systems/toys.md#spotlight-source-recipient-and-environmental-boundary-2026-10-22): source230924/467730 selected raid recipient/30min aura/1h recovery;95rows27tables6residentmodels,10raw identity/clock/effect snapshots. Exact visual entry follows separate generic57 correction4db754ace; correctedRED4/control4PASS102.82s, GREEN pending. Lead permits pipeline admission with named SPELL_ATTR0_ONLY_OUTDOORS_UNENFORCED_NO_INDOOR_STATE census/ledger gap; no fake indoor state/outdoor eligibility/native pixels/full-hour reuse claim. Qualified census542 retained until proof.

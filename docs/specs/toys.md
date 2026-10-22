@@ -41,7 +41,7 @@ Actor-only admission does not certify Blingtron gifts/combat, clone stacking, ju
 
 ## Server-scope visual-only census rule
 
-A dummy aura counts as satisfied at server scope only when all four conditions hold: source contract is visual/audio only; authored visual chain resolves completely; slots have no trigger/misc/item/mechanic/gameplay payload; actual UseToy applies and replicates the aura and real CancelAura removes it. Native pixels/audio remain a separate proof boundary. Successful cast, aura4 alone or zero-valued slots are insufficient.
+A dummy aura counts as satisfied at server scope only when all four conditions hold: source contract is visual/audio only; authored visual chain resolves completely; slots have no trigger/misc/item/mechanic/gameplay payload; actual UseToy applies and replicates the aura and proves its authored removal lifecycle: successful real CancelAura where the source allows it, otherwise a real cancellation refusal plus natural expiry. Native pixels/audio remain a separate proof boundary. Successful cast, aura4 alone or zero-valued slots are insufficient.
 
 - [x] Gleaming Arcanocrystal201927/395705: hold/refract the source crystal; complete70448 visual119030/event/kit/ordinary models/positioners/animation and sound graph, source20000ms owner aura and120000ms recovery.
 - [x] Lost Compass202711/399041: hold out the source compass; complete70448 visual125287/event/kit/model/positioner/AnimKit graph, source indefinite owner aura and1000ms recovery. This does not admit Wayfinder's Compass388275 or implement navigation.
