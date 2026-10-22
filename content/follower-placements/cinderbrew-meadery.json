@@ -1,0 +1,36 @@
+{
+  "map_id": 2661,
+  "entrance_id": 81002661,
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "entries": [
+    {
+      "entry": 210267,
+      "ordinal": 0,
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2587",
+      "journal_encounter_id": 2587,
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/WarWithin/CinderbrewMeadery/Ipa.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "a0ffad1273e4e0f26e81f429ae12adb5b97e7e8b87bc5ab623eed47b35c90247",
+        "journal_actor_id": 5645
+      }
+    },
+    {
+      "entry": 214661,
+      "ordinal": 1,
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2589",
+      "journal_encounter_id": 2589,
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/WarWithin/CinderbrewMeadery/GoldieBaronbottom.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "850c748339d4ed9e6f73dc9d827af859a37bcf2e2d8f3a1d2fad324ad77e3fed",
+        "journal_actor_id": 5630
+      }
+    }
+  ],
+  "calibration_entries": [188252, 189232]
+}

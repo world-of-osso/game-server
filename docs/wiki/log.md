@@ -1,3 +1,7 @@
+## 2026-10-22 — Remaining positive-scaling TWW sources
+
+[Source manifests](investigations/follower-data.md#remaining-positive-scaling-tww-placement-sources--2026-10-22): Avanoxx0/CT2977, I'pa+Goldie0/CT2718 (native Goldie faction14), Taah'bat1/CT2718; own native stats/models, no donor scaling. Existing A'wazj preserved, Soul-ScribeCT0 remains named gap. Three actual missing-placement REDs0.031s; packet qualification pending. Lead confirmed Darkflame12rows published/integrityOK.
+
 ## 2026-10-22 — Darkflame packet qualification
 
 [Darkflame sources](investigations/follower-data.md#darkflame-native-primary-sources--2026-10-22):55d981923 scoped consensus/8yd-native-anchor2GREEN0.268s;8473befb0 actual-copy native stats/models/factions/poses/source1+0 rows/helper exclusion/SQL owner+posecollision2GREEN0.031s. Fresh canonical-copy12-row packet/replay3× exact; sourceDifficulty1/0/0 retained, no synthetic1. Waxbeard route passes, Blazikon and Darkness incomplete. Prepared, publication pending; no dungeon clear.

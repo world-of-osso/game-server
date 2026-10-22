@@ -1,0 +1,27 @@
+{
+  "map_id": 2830,
+  "entrance_id": 81002830,
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "entries": [
+    {
+      "entry": 234933,
+      "ordinal": 0,
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2676",
+      "journal_encounter_id": 2676,
+      "cache_sha256": "056a7a1322259345d8bd19b3e0dd83831d1aef5dfe20a47bdcb0ad6e733525dc",
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/WarWithin/EcoDomeAldani/TaahbatAndAwazj.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "30496e3fa26ef6dae2bb5b35a0fcd9474a17799cbceca96843fc3dfc40bbcef0",
+        "journal_actor_id": 5894
+      }
+    }
+  ],
+  "source_gaps": [
+    {"entry": 234935, "reserved_ordinal": 1, "name": "FOLLOWER_PLACEMENT_SCALING_SOURCE_MISSING_234935", "source_difficulty_id": 0, "ContentTuningID": 0, "HealthModifier": 42.0, "reason": "Soul-Scribe has only native0 with CT0. Keep the scaling gap; do not invent or donate scaling. Existing A'wazj237514 authored spawn is preserved, never co-located from a shared marker."}
+  ],
+  "calibration_entries": [188252, 189232]
+}

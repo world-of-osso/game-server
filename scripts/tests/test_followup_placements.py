@@ -61,7 +61,34 @@ class FollowupPlacementAcceptance(unittest.TestCase):
                 self.assertEqual(display, {189719: 106801, 189722: 103584, 189727: 107064,
                                            189729: 106934, 194181: 107525, 186151: 107680,
                                            186338: 105722, 186615: 107145, 186616: 105823,
-                                           190485: 108318, 208743: 115888, 208747: 117773, 210149: 114171}[entry])
+                                           190485: 108318, 208743: 115888, 208747: 117773, 210149: 114171,
+                                           213179: 119793, 210267: 117177, 214661: 118000, 234933: 123825}[entry])
+
+    def test_avanoxx_keeps_own_native_zero_difficulty_budget_and_identity(self):
+        self.assert_source_primaries(2660, (213179,), source_difficulty=0)
+        path = Path(os.environ['FOLLOWUP_PLACEMENT_DB']).resolve(strict=True)
+        receipt = json.loads((path.parent / 'receipt.json').read_text())
+        self.assertEqual({p['entry']: p['source_difficulty_id'] for p in receipt['source_difficulties']}, {213179: 0})
+        self.assertEqual(receipt['donors'], [])
+
+    def test_cinderbrew_missing_primaries_keep_native_zero_rows_and_goldie_faction(self):
+        self.assert_source_primaries(2661, (210267, 214661), source_difficulty=0)
+        path = Path(os.environ['FOLLOWUP_PLACEMENT_DB']).resolve(strict=True)
+        receipt = json.loads((path.parent / 'receipt.json').read_text())
+        self.assertEqual({p['entry']: p['source_difficulty_id'] for p in receipt['source_difficulties']}, {210267: 0, 214661: 0})
+        self.assertEqual(receipt['donors'], [])
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
+            self.assertEqual(db.execute('SELECT faction FROM content_creature_template WHERE entry=214661').fetchone(), (14,))
+
+    def test_taahbat_keeps_native_identity_existing_awazj_and_soul_scribe_scaling_gap(self):
+        self.assert_source_primaries(2830, (234933,))
+        path = Path(os.environ['FOLLOWUP_PLACEMENT_DB']).resolve(strict=True)
+        receipt = json.loads((path.parent / 'receipt.json').read_text())
+        self.assertEqual([g['name'] for g in receipt['source_gaps']], ['FOLLOWER_PLACEMENT_SCALING_SOURCE_MISSING_234935'])
+        self.assertEqual(receipt['donors'], [])
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
+            self.assertEqual(db.execute('SELECT id1,map,position_x,position_y,position_z FROM content_creature WHERE guid=30006707').fetchone(),
+                             (237514, 2830, 878.045, -614.084, 999.058))
 
     def test_darkflame_missing_primaries_keep_native_one_and_zero_source_rows(self):
         self.assert_source_primaries(2651, (208743,))
