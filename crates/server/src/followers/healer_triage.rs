@@ -77,6 +77,35 @@ impl TriageContext<'_> {
                 .is_some_and(|spell| ready(self.world, self.caster, spell))
     }
 
+    pub fn choose_dispel_target(&self, spell_id: u32) -> Option<Entity> {
+        let entry = self
+            .entries
+            .iter()
+            .find(|entry| entry.spell_id == spell_id)?;
+        if !self.ready(spell_id) {
+            return None;
+        }
+        let eligible = self
+            .patients
+            .iter()
+            .filter(|patient| {
+                kit_ai::patient_is_eligible(self.world, self.caster, patient.entity, entry)
+            })
+            .enumerate();
+        eligible
+            .max_by_key(|(rank, patient)| {
+                let harm = super::utility_interrupt::dispel_harm(
+                    self.world,
+                    self.caster,
+                    patient.entity,
+                    &entry.conditions.dispel_types,
+                );
+                // Patients already carry triage order; keep it for equal native harm.
+                (harm, std::cmp::Reverse(*rank))
+            })
+            .map(|(_, patient)| patient.entity)
+    }
+
     pub fn own_aura_on(
         &self,
         target: Entity,
