@@ -408,7 +408,8 @@ fn load_categories(conn: &Connection, spells: &mut Spells) -> rusqlite::Result<(
         spells,
         "SELECT s.SpellID, s.Category, s.StartRecoveryCategory, s.ChargeCategory,
                 s.DefenseType, s.DiminishType, s.DispelType, s.Mechanic, s.PreventionType,
-                COALESCE(c.MaxCharges, 0), COALESCE(c.ChargeRecoveryTime, 0)
+                COALESCE(c.MaxCharges, 0), COALESCE(c.ChargeRecoveryTime, 0),
+                COALESCE(c.TypeMask, 0)
          FROM spell_categories s LEFT JOIN spell_category c ON c.ID = s.ChargeCategory
          WHERE s.DifficultyID = 0",
         |r| {
@@ -423,6 +424,7 @@ fn load_categories(conn: &Connection, spells: &mut Spells) -> rusqlite::Result<(
                 prevention_type: uint(r, 8)?,
                 max_charges: uint(r, 9)?,
                 charge_recovery_ms: uint(r, 10)?,
+                charge_type_mask: uint(r, 11)?,
             })
         },
         |spell, categories| spell.categories = Some(Box::new(categories)),
