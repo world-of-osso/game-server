@@ -112,6 +112,12 @@ fn follower_trash_azure_conjured_lasher_natively_casts_mystic_vapors() {
 }
 
 #[test]
+fn follower_trash_azure_arcane_tender_natively_casts_tc_wild_eruption() {
+    // TC a352b1fa boss_leymor.cpp npc_arcane_tender: Wild Eruption at12s.
+    assert_native_trash_cast(191164, 2515, 375652);
+}
+
+#[test]
 fn follower_trash_stockade_riverpaw_shaman_natively_casts_lightning_bolt() {
     // Cached https://www.wowhead.com/npc=46252 Abilities:12167,23381; DB2 times.
     assert_native_trash_cast(46252, 34, 12167);
