@@ -115,6 +115,9 @@ pub struct AuraEvent {
     pub spell_id: Option<u32>,
     /// False for events of triggered spells (they interrupt but never proc).
     pub can_proc: bool,
+    /// The launch snapshot actually used an admitted cast-time proc modifier.
+    /// This is local event provenance, not replicated spell or aura state.
+    pub cast_used_proc_modifier: bool,
     pub periodic: bool,
     /// Damage the event dealt to `target` after absorbs, in its health units (level
     /// scaling); 0 for no damage.
