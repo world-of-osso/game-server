@@ -48,7 +48,6 @@ fn spawn_dummy(h: &mut Harness, unit: Entity, index: usize) -> Entity {
 }
 
 #[test]
-#[ignore = "RED: follower admission omits native CombatRefs"]
 fn follower_combatrefs_native_three_targets_reach_area_policy() {
     let (mut h, unit, targets) = native_dummies();
     let owner = h.caster;

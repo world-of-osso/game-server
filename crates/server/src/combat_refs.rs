@@ -45,6 +45,14 @@ struct CombatRef {
     suppressed: bool,
 }
 
+/// TC a352b1fa Unit.h:1071 -> CombatManager.cpp:236-243: pair membership,
+/// independent of a threat list or current victim (also for suppressed references).
+pub(crate) fn is_in_combat_with(world: &World, unit: Entity, other: Entity) -> bool {
+    world
+        .get::<CombatRefs>(unit)
+        .is_some_and(|refs| refs.0.contains_key(&other))
+}
+
 /// `CombatManager::SetInCombatWith`: `a` and `b` are in combat with each other, and a
 /// timed reference between them restarts its timeout (`RefreshTimer`). Refused like
 /// `CombatManager::CanBeginCombat` (CombatManager.cpp:24-58) for the same unit twice, a
