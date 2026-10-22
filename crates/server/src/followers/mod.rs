@@ -265,6 +265,8 @@ mod navigation_tests;
 #[cfg(test)]
 mod passive_stats_tests;
 #[cfg(test)]
+mod pet_coverage_tests;
+#[cfg(test)]
 mod pet_tests;
 #[cfg(test)]
 mod profile_behavior_tests;
