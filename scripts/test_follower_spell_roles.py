@@ -18,14 +18,16 @@ class IntrinsicSpellRoleTests(unittest.TestCase):
         self.assertIn(385954, {row['spell_id'] for row in facts['role_evidence']})
 
     def test_native_health_leech_keeps_damage_and_self_heal_roles(self):
-        # One exact native effect isolates the effect9 hit+heal contract from scripts.
-        with closing(sqlite3.connect(':memory:', uri=True)) as db:
-            db.execute('ATTACH DATABASE ? AS native', ((ROOT / 'data/world.db').resolve().as_uri() + '?mode=ro',))
-            spell, effect = db.execute('SELECT SpellID,ID FROM native.spell_effect WHERE DifficultyID=0 AND Effect=9 AND EffectTriggerSpell=0 ORDER BY ID LIMIT 1').fetchone()
-            db.execute('CREATE TABLE spell_effect AS SELECT * FROM native.spell_effect WHERE ID=?', (effect,))
-            facts = SpellRoleCatalog(db, dict(edges=[], unresolved_calls=[])).read_role(spell)
-        self.assertEqual(facts['intrinsic'], 'mixed', 'TC EffectHealthLeech also HealBySpell to caster')
-        self.assertEqual({row['role'] for row in facts['role_evidence']}, {'damage', 'heal'})
+        # Exact native direct/periodic effects isolate the hit+heal contract from scripts.
+        for effect_type, aura_type in ((9, 0), (6, 53)):
+            with self.subTest(effect=effect_type, aura=aura_type):
+                with closing(sqlite3.connect(':memory:', uri=True)) as db:
+                    db.execute('ATTACH DATABASE ? AS native', ((ROOT / 'data/world.db').resolve().as_uri() + '?mode=ro',))
+                    spell, effect = db.execute('SELECT SpellID,ID FROM native.spell_effect WHERE DifficultyID=0 AND Effect=? AND EffectAura=? AND EffectTriggerSpell=0 ORDER BY ID LIMIT 1', (effect_type, aura_type)).fetchone()
+                    db.execute('CREATE TABLE spell_effect AS SELECT * FROM native.spell_effect WHERE ID=?', (effect,))
+                    facts = SpellRoleCatalog(db, dict(edges=[], unresolved_calls=[])).read_role(spell)
+                self.assertEqual(facts['intrinsic'], 'mixed', 'TC leech also heals its caster')
+                self.assertEqual({row['role'] for row in facts['role_evidence']}, {'damage', 'heal'})
 
 
 if __name__ == '__main__':

@@ -22,17 +22,13 @@ def read_tc_child_artifact(path):
     return data
 
 
-def effect_role(effect):
-    if effect['Effect'] in DAMAGE_EFFECTS:
-        return 'damage'
-    if effect['Effect'] in HEAL_EFFECTS:
-        return 'heal'
-    if effect['Effect'] in AURA_EFFECTS:
-        if effect['EffectAura'] in DAMAGE_AURAS:
-            return 'damage'
-        if effect['EffectAura'] in HEAL_AURAS:
-            return 'heal'
-    return 'utility'
+def effect_roles(effect):
+    aura = effect['EffectAura'] if effect['Effect'] in AURA_EFFECTS else 0
+    damage = effect['Effect'] in DAMAGE_EFFECTS or aura in DAMAGE_AURAS
+    # TC SpellEffects.cpp1332–1370: health leech deals damage then HealBySpell.
+    healing = effect['Effect'] in HEAL_EFFECTS or aura in HEAL_AURAS
+    healing = healing or effect['Effect'] == 9
+    return tuple(role for role, applies in (('damage', damage), ('heal', healing)) if applies)
 
 
 class SpellRoleCatalog:
@@ -56,9 +52,8 @@ class SpellRoleCatalog:
     @lru_cache(maxsize=None)
     def read_role(self, spell):
         facts = self.read_closure(spell)
-        labeled = ((row, effect_role(row)) for row in facts['closure_effects'])
         evidence = [dict(spell_id=row['SpellID'], effect_id=row['ID'], role=role)
-                    for row, role in labeled if role != 'utility']
+                    for row in facts['closure_effects'] for role in effect_roles(row)]
         roles = {row['role'] for row in evidence}
         if len(roles) == 2:
             intrinsic = 'mixed'
