@@ -1,3 +1,5 @@
+- [Class4 zone-only ingress](investigations/follower-data.md#class4-zone-only-ingress--2026-10-22) — shared entry tolerates absent spell-runtime metadata without fabricated pools.
+- [Remaining follower boss ingress](investigations/follower-data.md#remaining-boss-source-ingress--2026-10-21) — all27 maps/98 Normal encounters inventoried; remainingDF17 placement blocks and CityPC-immunity retained, Anub'zekt native partial5/5 proven, controller gaps retained.
 - [Pyroclasm policy](systems/auras.md#pyroclasm-hot-streak-policy--2026-10-21) — named SimC trigger/hardcast consumer on native15%/230%/two-stack data; launch snapshot preserves consumed bonus; native RED2, GREEN pending.
 - [RPPM haste rows](systems/auras.md#rppm-haste-modifiers--2026-10-21) — native Type1 Param/Coeff scaling, not Flags; actual learned55 Dance RED reproduced, enabled GREEN pending; other modifier types remain gaps.
 - [FoF SimC cadence](systems/auras.md#fists-of-fury-simc-cadence--2026-10-21) — named113656/117418 damage-period policy preserves native coefficients and generic toy bridge;25vs5 native RED, GREEN pending.
@@ -30,8 +32,6 @@
 - [Holy Priest follower AI](investigations/holy-priest-follower-ai.md) — bounded43GREEN/1shared PoH lifetime RED, full frozen80-report comparisons; no clears/overall-quality claim, Azure deaths25→34,18 named script gaps retained.
 - [Follower healer triage](systems/follower-healer-triage.md) — named project policy design, pending behavioral proof; [complete Crenna70448 kit census](reference/follower-resto-70448-kit.md).
 - [Azure translocation](systems/azure-translocation.md) — explicit book/POI endpoint policy, source gossip derivation, staged-nav components and native interaction RED/GREEN ledger.
-- [Class4 zone-only ingress](investigations/follower-data.md#class4-zone-only-ingress--2026-10-22) — shared entry tolerates absent spell-runtime metadata without fabricated pools.
-- [Remaining follower boss ingress](investigations/follower-data.md#remaining-boss-source-ingress--2026-10-21) — all27 maps/98 Normal encounters inventoried; remainingDF17 placement blocks and CityPC-immunity retained, Anub'zekt native partial5/5 proven, controller gaps retained.
 - [Deios source ingress boundary](systems/boss-scripts.md#deios-source-ingress-boundary--2026-10-21) — native outgoingWing/control2PASS, first6.3sWingRED; source PC immunity320 preserved, no invented unlock or combat proof.
 - [Emberon current Lua partial](systems/boss-scripts.md#emberon-current-lua-partial--2026-10-21) — firstClapRED→composite7GREEN Normal/Follower; native24.3s aura cap, ongoing counts/second phase/reset/copy-credit; absent395681/controller gaps explicit.
 - [Talondras current Lua partial](systems/boss-scripts.md#talondras-current-lua-partial--2026-10-21) — ignoredRED→native5GREEN Normal/Follower; exact category1152 successes/rejections, native damage/reset/credit, no cooldown bypass; model/Orb/energy boundaries explicit.
