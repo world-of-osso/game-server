@@ -48,6 +48,8 @@ pub(crate) const WORLD_DB_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../
 /// One already matched charged spell modifier, retained by its launched cast.
 #[derive(Debug, Clone)]
 pub(crate) struct ChargedSpellModifier {
+    /// Actual native source of the already matched modifier, not a live-aura guess.
+    pub aura_spell_id: u32,
     pub op: i32,
     pub percent: bool,
     pub amount: f32,
