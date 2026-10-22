@@ -97,6 +97,11 @@
 ## 2026-10-22 — Halls and Vexamus source-floor policies
 
 [Source-floor selection](investigations/follower-data.md#halls-and-vexamus-source-floor-selection--2026-10-22): approved unique DB2 floor-group upward triangle matching and Vexamus-only two-native-anchor selection; original ambiguous packet attempts refused SQL, Primal remains unresolved. Source/packet GREEN pending.
+## 2026-10-22 — Prismatic Echoes learned bonus
+
+[Prismatic Echoes](investigations/holy-priest-follower-ai.md#prismatic-echoes-learned-bonus--2026-10-22): separate871560575 native61 tick81vs85 RED/control60PASS37.36s→97a246aa5 actualowned5% new-contribution multiplier. Merged53a0ee990 passes15native cases84.14s; rawmastery/Renew/oldpool/AI unchanged. Frozen cf561ec943 candidate remains separate; no effectiveness claim.
+
+- [Echo/native rolling carry](investigations/holy-priest-follower-ai.md#echo-of-light-producer-and-shared-rolling-carry--2026-10-22) — live mastery producer and one flag-driven damage/heal unpaid-pool refresh; native RED→19GREEN, Barbed/335467 normalization preserved; Ignite producer/effectiveness separate.
 ## 2026-10-22 — Native parity recipient accounting
 
 [Recipient boundary](systems/dungeon-simulator.md#real-player-dps-bridge-and-fixed-time-health-2026-10-22): existing combat JSON discarded victims, preventing actual3-target output proof. Concrete77e8b0623 RED1/1 at the missing recipient field preserves600existing damage; unchanged testGREEN1/1 at96d695ee6/0warnings; new additive `damage_by_target` totals/hits retain retired and zero-output target IDs while excluding heals/off-target/targetless events. Actor/spell/cast totals and mechanics unchanged. Collector unit proof and CombatRefs-conditioned three-target execution remain separate; actual3-target runs still pending, old receipts untouched.
