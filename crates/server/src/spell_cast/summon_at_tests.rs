@@ -442,10 +442,10 @@ fn summon_at_summon_and_area_are_removed_when_owner_leaves_map() {
     }
 }
 
-/// 12.1.5 authors SummonProperties 3001 with Title -1 (TC `int32 Title`); startup must load it
-/// and report it unsupported instead of aborting the whole table.
+/// Native3001 retains signed Title -1 and JoinSummonerSpawnGroup (0x200).
+/// TC a352b1fa SpellEffects.cpp1947–1952 chooses Guardian before the title switch.
 #[test]
-fn installed_summon_properties_load_signed_title_as_unsupported() {
+fn installed_summon_properties_load_signed_title_as_joined_guardian() {
     let conn = rusqlite::Connection::open_with_flags(
         concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/world.db"),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -454,5 +454,11 @@ fn installed_summon_properties_load_signed_title_as_unsupported() {
     let store = super::summon::load_summon_properties(&conn).unwrap();
     let properties = store.0[&3001];
     assert_eq!((properties.control, properties.title), (1, -1));
-    assert!(!properties.is_supported());
+    assert_ne!(
+        properties.flags & 0x200,
+        0,
+        "native joined-spawn-group flag"
+    );
+    assert!(properties.is_supported());
+    assert!(properties.is_guardian());
 }

@@ -134,9 +134,21 @@ pub(crate) fn spawn_party(
     at: Position,
 ) -> Result<Party, String> {
     let configuration = PartyConfiguration::read()?;
+    let difficulty_id = world
+        .resource::<crate::maps::InstanceManager>()
+        .copy_difficulty(copy)
+        .ok_or("simulator copy lacks native difficulty")?
+        .difficulty_id;
     let profiles = read_party_profiles(world, configuration.entries)?;
     let leader = profiles[4].clone();
-    let owner = initialize_player_owner(world, &leader, configuration.level, copy, at)?;
+    let owner = initialize_player_owner(
+        world,
+        &leader,
+        configuration.level,
+        copy,
+        at,
+        crate::maps::DungeonDifficulty(difficulty_id),
+    )?;
     world.entity_mut(owner).insert(LeaderProfile(leader));
     let members = spawning::spawn_members(world, owner, &profiles[..4])?;
     party::join_members(world, owner, shared::group::GroupRole::Dps, &members)?;
@@ -174,8 +186,14 @@ pub(crate) fn spawn_parity_attacker(
     copy: crate::maps::InMap,
     actor: ParityActor,
 ) -> Result<Entity, String> {
+    let difficulty_id = world
+        .resource::<crate::maps::InstanceManager>()
+        .copy_difficulty(copy)
+        .ok_or("simulator copy lacks native difficulty")?
+        .difficulty_id;
+    let difficulty = crate::maps::DungeonDifficulty(difficulty_id);
     if let ParityActor::Player { race } = actor {
-        return spawn_parity_player(world, spec_id, level, race, copy);
+        return spawn_parity_player(world, spec_id, level, race, copy, difficulty);
     }
     let profile = world
         .resource::<FollowerCatalog>()
@@ -194,6 +212,7 @@ pub(crate) fn spawn_parity_attacker(
             y: 0.0,
             z: 0.0,
         },
+        difficulty,
     )?;
     let unit = spawning::spawn(world, owner, profile)?;
     // A living native owner can maintain /startattack without landing out-of-range swings.
@@ -220,6 +239,7 @@ fn spawn_parity_player(
     level: u8,
     race: u8,
     copy: crate::maps::InMap,
+    difficulty: crate::maps::DungeonDifficulty,
 ) -> Result<Entity, String> {
     let class = world
         .resource::<crate::spell_info::ClassSpells>()
@@ -252,7 +272,7 @@ fn spawn_parity_player(
             },
             copy,
             crate::persistence::ClientId(1),
-            crate::maps::DungeonDifficulty(1),
+            difficulty,
             crate::networking::CombatTarget::default(),
             crate::networking::Moving(false),
             shared::components::PlayerStandState::default(),
@@ -286,16 +306,9 @@ fn initialize_player_owner(
     level: u8,
     copy: crate::maps::InMap,
     at: Position,
+    difficulty: crate::maps::DungeonDifficulty,
 ) -> Result<Entity, String> {
-    let difficulty_id = world
-        .resource::<crate::maps::InstanceManager>()
-        .copy_difficulty(copy)
-        .ok_or("simulator copy lacks native difficulty")?
-        .difficulty_id;
-    let owner = spawn_player_identity(world, profile, level, copy, at);
-    world
-        .entity_mut(owner)
-        .insert(crate::maps::DungeonDifficulty(difficulty_id));
+    let owner = spawn_player_identity(world, profile, level, copy, at, difficulty);
     // Run native Player initialization before the profile installs PowerPools;
     // otherwise its Without<PowerPools> query never installs health regeneration.
     world
@@ -316,6 +329,7 @@ fn spawn_player_identity(
     level: u8,
     copy: crate::maps::InMap,
     at: Position,
+    difficulty: crate::maps::DungeonDifficulty,
 ) -> Entity {
     world
         .spawn((
@@ -331,7 +345,7 @@ fn spawn_player_identity(
             at,
             copy,
             crate::persistence::ClientId(1),
-            crate::maps::DungeonDifficulty(1),
+            difficulty,
             crate::networking::CombatTarget::default(),
             crate::networking::Moving(false),
             shared::components::UnitPowers::default(),
