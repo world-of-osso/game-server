@@ -151,7 +151,6 @@ fn census_tail_280_native_npc_does_not_gain_player_armor_penetration() {
 }
 
 #[test]
-#[ignore = "RED:22 physicalflatarmor must reach the actual NPC mitigation consumer"]
 fn census_tail_22_native_npc_physical_mitigation_uses_flat_then_total_armor() {
     let mut h = fixture(&[28790, 52022]);
     let target = h.npc;

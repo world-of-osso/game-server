@@ -129,7 +129,6 @@ fn census_tail_198_native_split_versatility_destination_is_not_applied_to_all_ve
 }
 
 #[test]
-#[ignore = "RED:22 native signed physicalarmor changes are reversible; authoredzero stayszero"]
 fn census_tail_22_native_physical_resistance_adds_signed_armor_then_removes() {
     let mut h = fixture(&[360827, 28790, 5480]);
     let ratings = CombatRatings {
@@ -160,7 +159,6 @@ fn census_tail_22_native_physical_resistance_adds_signed_armor_then_removes() {
 }
 
 #[test]
-#[ignore = "RED:22 TOTAL_VALUE is afterbase142 and beforetotal101"]
 fn census_tail_22_native_flat_armor_preserves_base_and_total_percentage_order() {
     let mut h = fixture(&[360827, 28790, 52022]);
     apply(&mut h, 360827, 1);
@@ -180,7 +178,6 @@ fn census_tail_22_native_flat_armor_preserves_base_and_total_percentage_order() 
 }
 
 #[test]
-#[ignore = "RED control:22 nonphysical resistance cannot become armor or a fake modeled stat"]
 fn census_tail_22_native_fire_resistance_retains_unrepresented_school_warning() {
     let mut h = fixture(&[29127]);
     apply(&mut h, 29127, 0);

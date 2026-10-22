@@ -1011,8 +1011,9 @@ fn target_armor(
 ) -> f32 {
     match (creature, player) {
         (Some(armor), _) => {
-            let multiplier = crate::auras::base_armor::pet_multiplier(modifiers, hunter, summon);
-            target.armor_against(armor.0 * multiplier, attacker)
+            let armor =
+                crate::auras::base_armor::unscaled_armor(armor.0, modifiers, hunter, summon);
+            target.armor_against(armor, attacker)
                 * crate::auras::base_armor::total_multiplier(modifiers)
         }
         (None, Some(stats)) => stats.armor,

@@ -101,6 +101,8 @@ pub struct StatModifiers {
     pub armor_from_primary_stat_pct: f32,
     /// Aura142: composed base/gear armor percentage, excluding stat-derived armor.
     pub base_armor_pct: f32,
+    /// Aura22 physical: signed TOTAL_VALUE armor, after BASE_PCT and stat-derived armor.
+    pub total_armor_flat: f32,
     /// Aura466: composed final armor percentage, applied after stat-derived armor.
     pub bonus_armor_pct: f32,
     /// Aura101 physical: composed armor TOTAL_PCT, applied after stat-derived armor.
@@ -528,7 +530,8 @@ pub fn compute_character_stats(
         avoidance_pct: tertiary_rating_value(ratings.avoidance, AVOIDANCE_RATING[level]),
         speed_pct: tertiary_rating_value(ratings.speed, SPEED_RATING[level]),
         armor: ((ratings.armor * (1.0 + mods.base_armor_pct / 100.0)
-            + armor_from_stats(&primary, input.primary_stat, &mods))
+            + armor_from_stats(&primary, input.primary_stat, &mods)
+            + mods.total_armor_flat)
             * (1.0 + mods.total_armor_pct / 100.0)
             * (1.0 + mods.bonus_armor_pct / 100.0))
             .floor(),

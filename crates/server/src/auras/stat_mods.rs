@@ -471,6 +471,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_BONUS_ARMOR_PCT => {
                 stats.bonus_armor_pct += amount * (1.0 + stats.bonus_armor_pct / 100.0);
             }
+            MOD_RESISTANCE if misc & 1 != 0 => stats.total_armor_flat += amount,
             MOD_BASE_RESISTANCE_PCT => {
                 if misc & 1 != 0 {
                     // Native independent aura factors multiply; retain a percentage value.

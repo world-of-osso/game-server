@@ -1,5 +1,10 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Physical resistance/armor slice — 2026-10-21
+
+- Native22 physical school adds signed TOTAL_VALUE armor after base142/stat-derived armor and before total101/bonus466. Use the same flat value for Player stats and NPC physical mitigation/autoattack armor paths. Removal restores prior values; native360827's authored0 remains0.
+- Real28790+700,5480−200 and52022 total20% qualify signed changes/order and actual NPC mitigation. **AURA_22_NONPHYSICAL_RESISTANCE_POOLS_ABSENT** remains explicit for nonphysical masks; do not turn fire resistance into armor or register a warning-only field. Blistering Scales donor-armor/script behavior is not derived from descriptions or certified here. [Source and proof](../diagnostics/census-tail-70448.md).
+
 ## Charge recovery type-mask slice — 2026-10-21
 
 - Native205 adds signed recovery milliseconds when its MiscValue mask intersects actual SpellCategory.TypeMask, before existing charge multipliers/haste. Keep category-specific453 independent. Load TypeMask for native DB2 and TDB spells through their existing category joins; no substitute category cache or inferred masks.

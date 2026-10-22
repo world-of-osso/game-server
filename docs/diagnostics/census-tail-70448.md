@@ -57,6 +57,14 @@ At Rusta7eaa7ef5 (later commits only proof docs/ignored638 tests), second compil
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
 
+## Aura22 RESISTANCE — physical armor
+
+TC `SpellAuraEffects.cpp:3651–3660` adds matching-school TOTAL_VALUE. Physical armor uses `StatSystem.cpp:255–276`: base armor×142, stat-derived contribution, then22 flat value, then101/466 total factors. Existing Player armor and NPC physical-damage/autoattack armor consumers share that ordering; NPC pet BASE_PCT remains pet-only. No resistance subsystem or source catalog change.
+
+Ignored RED07c5ac93e `census_tail_22_native --include-ignored`1PASS/3FAIL28.67s. Actual28790 Holy Power+700 leaves Player armor1000 instead1700;360827 BASE14220%+700+52022 TOTAL10120% leaves1440 instead2280. NPC300+700 then20% yields existing mitigation243 instead source-equivalent149 at1200 armor. Native360827 index0 amount0 stays0 and native5480−200/removal are retained checks. Fire-only29127 leaves armor unchanged and unsupported warning present (control passes). `/home/osso/.worktrees/logs/census-tail/22-red.log`; native compile13m17s/no warnings. Minimal physical consumer/enabled four cases committed; GREEN pending.
+
+**AURA_22_NONPHYSICAL_RESISTANCE_POOLS_ABSENT**: source mask4 fire and other nonphysical schools have no runtime resistance pools. Mixed masks may contribute their physical armor part but remain explicitly unsupported/logged for the missing schools; physical-only mask1 is qualified. Native360827's zero armor contribution is not a license to invent donor-armor scaling from its description or claim its whole script complete.
+
 ## Aura205 CHARGE_RECOVERY_BY_TYPE_MASK
 
 TC `SpellHistory.cpp:985–994` adds matching205 amount (milliseconds) where MiscA intersects the charge category's TypeMask, before existing454/haste/rate factors. Actual TypeMask was absent from SpellCategories despite source column presence; load it from the existing native/TDB category joins, then use it in existing ChargeMods. No new category cache, source producer or canonical data write. Keep source453 matching category ID, not type bits. Like453,205 has no immediate handler: pending clocks retain their launch duration, future consumption reads updated modifiers.

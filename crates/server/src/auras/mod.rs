@@ -792,12 +792,15 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
                 effect.misc_values[0] as u32,
                 effect.misc_values[1] as u32,
             );
+        let resistance_supported =
+            effect.aura_type != handlers::MOD_RESISTANCE || effect.misc_values[0] & !1 == 0;
         let handled = handlers::is_handled(effect.aura_type)
             && [
                 supported_amount,
                 duration_supported,
                 immunity_supported,
                 rating_supported,
+                resistance_supported,
             ]
             .into_iter()
             .all(|supported| supported);
@@ -819,6 +822,9 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
 }
 
 fn describe_unhandled_aura(effect: &AuraEffectState) -> String {
+    if effect.aura_type == handlers::MOD_RESISTANCE {
+        return "has nonphysical resistance schools without runtime resistance pools".into();
+    }
     if effect.aura_type == handlers::MOD_COMBAT_RATING_FROM_COMBAT_RATING {
         return "has unrepresented source or split destination rating masks".into();
     }
