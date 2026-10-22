@@ -5,6 +5,7 @@ from pathlib import Path
 import sqlite3
 import unittest
 from scripts.follower_spec_kits import combat_policy, kit_rows
+from scripts.test_follower_source_roles import action_at, native_rows
 
 
 class HunterSecondaryTargetPolicyTests(unittest.TestCase):
@@ -47,8 +48,8 @@ class WindwalkerRotationPolicyTests(unittest.TestCase):
         self.assertLess(priority('Fists of Fury', 113656), priority('Spinning Crane Kick', 101546))
 
     def test_other_specs_do_not_gain_combo_restrictions(self):
-        _, _, conditions = combat_policy(66, 'Judgment', 275779, [], [])
-        self.assertNotIn('no_repeat_group', conditions)
+        row = action_at(native_rows(66), 275779, 32)
+        self.assertNotIn('no_repeat_group', json.loads(row[6]))
 
 
 class ElementalActionProjectionTests(unittest.TestCase):

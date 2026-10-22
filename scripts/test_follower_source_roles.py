@@ -44,6 +44,13 @@ class NativeSourceDamageRoleTests(unittest.TestCase):
                 self.assertEqual(action[4], 'attack', 'nativeFrenzy child274838 is damage, not utility')
                 self.assertLess(action[5], 1000)
 
+    def test_self_damage_and_fire_apl_exclusions_are_not_enemy_fillers(self):
+        for spec, spell in ((266, 111400), (63, 116), (63, 1449)):
+            with self.subTest(spec=spec, spell=spell):
+                row = action_at(native_rows(spec), spell, 90)
+                self.assertIsNotNone(row)
+                self.assertEqual(row[4], 'utility')
+
     def test_established_damage_heal_and_utility_examples_keep_their_roles(self):
         cases = ((63, 133, 'attack'), (105, 8936, 'heal'), (63, 1953, 'utility'))
         for spec, spell, expected in cases:
