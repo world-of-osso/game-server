@@ -418,17 +418,17 @@ fn guardians2_unbound_demon_is_not_an_imp_substitution() {
         .world_mut()
         .get_mut::<shared::components::Npc>(actor)
         .unwrap()
-        .template_id = 55659;
+        .template_id = 98035;
     h.app
         .world_mut()
         .get_mut::<super::summon::SummonedCreature>(actor)
         .unwrap()
-        .spell_id = 104317;
+        .spell_id = 193332;
     super::guardian::initialize(h.app.world_mut(), actor);
     h.advance(45);
     assert_eq!(
         h.health(h.npc),
         5000.0,
-        "Wild Imp has no proved Fel Firebolt binding"
+        "unbound Dreadstalker must not substitute Imp Firebolt"
     );
 }

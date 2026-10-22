@@ -70,11 +70,15 @@ fn toy_coverage_dh_visual_payload_or_absent_visual_refuses_eligible_character() 
 fn toy_coverage_dh_visual_census_retains_unsourced_siblings() {
     let report = report_toy_census(&crate::test_data::world_db_path(), "TOY_DH_VISUAL_REPORT");
     let rows = report["toys"].as_array().unwrap();
-    for &(item, _) in DH_VISUALS {
+    for item in DH_VISUALS
+        .iter()
+        .map(|&(item, _)| item)
+        .chain([228789, 235041])
+    {
         let row = rows.iter().find(|r| r["item_id"] == item).unwrap();
         assert!(row["unavailable"].is_null(), "{row}");
     }
-    for item in [180873, 228789, 235041, 18986] {
+    for item in [180873, 18986] {
         let row = rows.iter().find(|r| r["item_id"] == item).unwrap();
         assert!(!row["unavailable"].is_null(), "{row}");
     }

@@ -5,6 +5,40 @@
 ## 2026-10-22 — Qualified added-action publication
 
 [Stable-key publication](investigations/follower-data.md#scoped-rotation-kit-publication--2026-10-21): native producer-qualified new actions can be inserted idempotently without removing/renaming existing intervals. Genuine added-key RED, then4GREEN0.364s at4b49e7097; complete-state oracle corrected to include additions, original source/unrelated-table/refusal guards retained. Pending Ascendance projection/runtime is not claimed complete.
+- [rd902 Imp fixture identities](investigations/follower-data.md#rd902-native-roster-fixture-identities--2026-10-22) — native handles1-versus3 RED→parallel11GREEN66.08s; signed3001 joined Guardian1GREEN/retained3GREEN, zero native/toy references; tests/fixtures only.
+- [Base Tyrant owner SP](investigations/follower-data.md#base-tyrant-owner-spell-power--2026-10-21) — native270481 actual7vs47.305897 RED→merged11GREEN106.38s; retained guardian11GREEN35.07s; merged ST/3T8864/13204 reports equal91cf, no Demonbolt/Core sample or isolated/statistical claim.
+- [Native Wild Imp binding/SP](investigations/follower-data.md#wild-imp-binding-and-owner-sp--2026-10-21) — actual104317/55659→104318 and constructor1.2SP; genuine2RED→2GREEN25.48s plus retained11GREEN13.66s, no HoG/Core/Tyrant/lifetime parity; copy-only template closure.
+## 2026-10-21 — Continuous frozen walk endpoints
+
+[Native endpoint/time boundary](systems/dungeon-simulator.md#continuous-frozen-walk-endpoints-2026-10-21): full Azure1 ownerDeath RED106.58s plus two exact recorded-position REDs0.12s prove goal-anchor overshoot and full-edge-time restart. Walking now shares continuous existing-edge endpoints/proportional native yards between safety qualification and movement; no new component links or changed book hops. At5f7d4ff85 recorded controls2GREEN0.01s, fullnative Azure1 Sapling GREEN110.78s, Stockade safe-path+full50 bothGREEN135.84s, graph4+weighted1+six retained native movement controls GREEN. New seeded qualification pending; prior2f443Stockade50/50 is not current proof after this geometry change.
+
+## 2026-10-21 — Path-candidate Stockade qualification
+
+[Stockade current cohort](systems/dungeon-simulator.md#qualified-path-candidate-stockade-cohort-2026-10-21): same-code2f443fb5a/P03cebdb/frozen40d95b0 clears50/50,150native boss Deaths,0failures. Fresh1–49 batch2575.069794s plus retained native seed50 receipt83.707545s; no invented contiguous50wall. Actual34/1/level32 verified for all50. Azure and live acceptance remain open.
+
+## 2026-10-21 — Post-path Azure qualification
+
+[Azure candidate](systems/dungeon-simulator.md#post-path-azure-qualification-2026-10-21): same frozen inputs2f443fb5a,seeds1–10/jobs2 gives0clear/7DeadMember stalls/3tankabsence blocks/0boss Deaths,all10reports,570.406761s wall. Seed1 native Sapling29001840 kills isolated Austin while healer remains behind. Native-order movement diagnostic regression added; no further production fix or reliability claim.
+
+## 2026-10-21 — Stockade queued credit versus durable reconnect reads
+
+[Durability boundary](systems/dungeon-achievements.md#stockade-reconnect-durability-boundary--2026-10-21): debug-profile held-writer reproduction preserves live633 and native criterion credit; full durable equality passes after the real FIFO receipt fence, while the old pre-fence equality fails31.19s. Offline fixture reads now fence at reconnect and final comparison; no production credit, death, timing or resource change. Combined Restoration/group-cancel source1ed0df205 gives34debug-profile native passes78.29s including the previously failing exact Stockade case; format passes. The held-writer control proves pending credit directly, not merely a favorable optimized timing.
+
+## 2026-10-21 — Native multi-recipient heal completion
+
+[Shared healer lifetime](systems/follower-healer-triage.md#native-multi-recipient-heal-completion): lead13605 full-party native596 counterexample reproduced RED7.80s ataf2608e50, then shared prepared-cast/native-target-plan fix GREEN25.44s without Holy policy edits. Five native area/chain/radius/Wild Growth/Tranquility controls plus existing single-target topped-cancel/no-restart controls7GREEN19.01s; check/fmtPASS with inherited lead-excluded helper warning. No spell-ID exception or map-wide injury count; closes `FOLLOWER_GROUP_HEAL_TOPPED_ANCHOR_CANCELS`. New branch fromd13 keeps the earlier Restoration gate separate.
+
+## 2026-10-21 — Native Restoration decisions and frozen paired metrics
+
+[Healer triage](systems/follower-healer-triage.md): actual native Lifebloom bloom/upkeep, NS/Regrowth, Cure, Innervate, Abundance, Germination, personal/external defense, safe Tranquility, Tree5420/81097 lifecycle and Efflo47649→81262→owner81269 placement/cap/priority/replacement now qualified;39integrated native passes58.74s, check/fmt PASS with sole lead-excluded inherited helper warning. [Frozen comparison](../../docs/handoffs/healer-resto-depth-proof-ledger.md)655→2d4:20seeds/jobs2 each, all40reports; clears11→10/deaths1→1/overheal50.875→51.673%, tankLifebloom78.52→95.76%, medianpackendmana87.84→89.35%. No survival/clear/overheal benefit claimed; native RNG/route differences explicit. DB/40geometry hashes unchanged; native navigation, utility Rebirth, unlearned Convoke and unqualified SotF/WG/NPC-priority subcases remain named gaps.
+
+## 2026-10-21 — Corrected ring modifier source typing
+
+[Toys](systems/toys.md#ring-modifier-interpretation-and-source-boundary-2026-10-21): earlier missingrace56 gap was an audit typing error; ModifierTree9/asset56 tests TRANSFORM aura, not ChrRaces. Corrected Coldflame/Cyrce graph95rows/29tables/two resident models/zero missingrefs, existing Arm Upgrade customization choices resolved. Tests929660d7f committed before production; actual twoUseToy/censusUnsupportedAura4 RED3/control3PASS637.43s (all16 drift cases retained) at929660d7f. Two exact entries01e7cf4e1/mastercf1c78478 GREEN8/8 at e5e5095ee/protocol177550e (264.94s), checkEXIT0/1m06s/no warnings emitted/fmtPASS; actual permanent owner auras/cancel/CDrefusal/Cyrcezero-CDreuse,16 drift cases and retained controls. Prior03c compile failure preserved, no compatibility fallback. Reconciled537→539 exactly228789/235041/zero other changes,634gaps; native metal-hand/shape rendering/fullColdflame reuse unproved.
+
+## 2026-10-21 — All-Seeing Eyes source boundary
+
+[Toys](systems/toys.md#all-seeing-eyes-source-boundary-2026-10-21): source175140/318571 isolated279rows/26tables/one resident ordinary model,27 visual conditions/32 ModifierTrees. Test-firsta6546659a/doc219450110 RED2/control3PASS59.00s: actualUseToy/censusUnsupportedAura4, drift/Compass/Gadgetzan retained. One exact318571 registry entrya270fee70/mastere5112781e GREEN6/6 (33.00s), checkEXIT0/37.73s/fmtPASS; owner amount0/replication/cancel/invariants/CDrefusal and drift/Compass/Gadgetzan/Seed controls. Reconciled536→537 exactly175140/zero other changes,636gaps; inherited unused-function warning retained. Shape/race/gender visual selectors do not imply new gameplay; Smolderheart's separate343642 heating stacks remain a gap. Native selection/10-minute expiry/30-minute reuse unproved. After master0828d1bdc merge548508311, final10/10GREEN59.85s at6403f001c covers Eyes+Kvaldir/controls; checkEXIT0/25.87s/no warnings emitted/fmtPASS, census unchanged537. Earlier warning fixed upstream670ea430c, not suppressed here.
 
 ## 2026-10-21 — Barbed native ownership, control and range proof
 
@@ -3667,6 +3701,13 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 - 2026-10-21: Deios source qualification2PASS/firstWingRED34.10s Normal/Follower: preservedflags320 block ordinary threat ingress; outgoingWing damage is not engagement/credit proof. Named source unlock gap, no combat port or fabricated state.
 
+## 2026-10-22 — First sourced follower placement packet
+
+[Derived Neltharus placements](investigations/follower-data.md#derived-neltharus-placement-packet--2026-10-22): cached Wowhead/70448 floor provenance, baked heights, own Normal1 stats and explicit donor faction; four reserved-GUID primaries plus journal bindings. Actual missing-placement RED→placement2GREEN/fresh-copy SQL replay3×; three routes pass, Gorek sourcefloor1 remains `NELTHARUS_GOREK_ROUTE_INCOMPLETE`. No canonical publication or scripts.
+
+## 2026-10-22 — Eight native portal-derived entrances
+
+[Interior portal policy](investigations/follower-data.md#interior-portals-as-derived-entrances--2026-10-22): exact nativeTDB portalXYZ for8/18missingentrances, reserved81000000+mapIDs and sourced facing anchors. Genuine missing-eight RED→twoGREEN, fresh-copy replay3× preserves all unrelated safe locations. Ten source gaps and navigation qualification remain explicit; no canonical write.
 ## 2026-10-22 — Trading Post residue classification
 
 [Private-account residue](investigations/trading-post-residue.md): vendors1615/1608 already have October46 membership and complete70448 item/transmog rows. Cached Wowhead agrees; historical fb_tpui_mod expired ownership is test-state residue. No code, SQL, state repair or RED→GREEN claim.

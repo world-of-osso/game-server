@@ -76,6 +76,8 @@ pub(crate) mod charge;
 #[cfg(test)]
 mod charge_rate_tests;
 #[cfg(test)]
+mod charge_type_mask_tests;
+#[cfg(test)]
 mod chrono_flame_tests;
 #[cfg(test)]
 mod class_completeness_probe;
@@ -157,6 +159,7 @@ mod dummy9_tests;
 #[cfg(test)]
 mod dummy_tests;
 pub mod effects;
+pub(crate) mod efflorescence;
 mod empower;
 #[cfg(test)]
 mod empower_input_tests;
@@ -182,6 +185,8 @@ mod impending_victory_tests;
 mod interruptibility;
 #[cfg(test)]
 mod invigorating_fury_tests;
+#[cfg(test)]
+mod periodic_healing_taken_tests;
 mod sanctuary;
 pub(crate) use interruptibility::can_interrupt_cast;
 #[cfg(test)]
@@ -759,7 +764,7 @@ impl SpellHistory {
         if !state.pending.is_empty() && state.recovery_mult != mods.recovery_mult {
             state.retime(now, mods.recovery_mult);
         }
-        // Aura453 has no immediate handler: only future consumption changes.
+        // Flat453/205 have no immediate handler: only future consumption changes.
         state.recovery_ms = recovery_ms;
         state.recovery_mult = mods.recovery_mult;
         Some(state)
@@ -768,7 +773,8 @@ impl SpellHistory {
 
 fn charge_mods(world: &World, caster: Entity, spell: &SpellInfo) -> ChargeMods {
     let category = spell.categories.as_ref().map_or(0, |c| c.charge_category);
-    crate::auras::charge_mods(world, caster, category)
+    let type_mask = spell.categories.as_ref().map_or(0, |c| c.charge_type_mask);
+    crate::auras::charge_mods(world, caster, category, type_mask)
 }
 
 /// Refresh existing category clocks/maxima, never discover known spells here.
@@ -921,7 +927,7 @@ pub(crate) fn interrupt_channel_with_flags(world: &mut World, caster: Entity, fl
 }
 
 /// TC Unit::CanCastSpellWhileMoving:330 uses a family mask;307 uses Misc0
-/// SpellLabel without a family constraint. Neither selector depends on amount.
+/// SpellLabel without a family constraint;377 permits every spell. None depends on amount.
 fn aura_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     const NO_DISABLE_MOVEMENT_INTERRUPT: u32 = 0x0800_0000;
     if attributes(spell, 13) & NO_DISABLE_MOVEMENT_INTERRUPT != 0 {
@@ -935,13 +941,15 @@ fn aura_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool 
     ) || world
         .get::<crate::auras::ActiveAuras>(caster)
         .is_some_and(|auras| {
-            auras.iter().any(|aura| {
-                aura.effects.iter().any(|effect| {
-                    effect.aura_type == crate::auras::handlers::CAST_WHILE_WALKING_BY_SPELL_LABEL
-                        && u32::try_from(effect.misc_values[0])
-                            .is_ok_and(|label| spell.labels.binary_search(&label).is_ok())
+            auras.has_type(crate::auras::handlers::CAST_WHILE_WALKING_ALL)
+                || auras.iter().any(|aura| {
+                    aura.effects.iter().any(|effect| {
+                        effect.aura_type
+                            == crate::auras::handlers::CAST_WHILE_WALKING_BY_SPELL_LABEL
+                            && u32::try_from(effect.misc_values[0])
+                                .is_ok_and(|label| spell.labels.binary_search(&label).is_ok())
+                    })
                 })
-            })
         })
 }
 
@@ -1774,6 +1782,27 @@ pub(crate) fn read_targets_include(
     Ok(false)
 }
 
+/// Re-plan only the active cast's recipients; no effects, resources or cooldowns execute.
+/// Use its prepared spell so requested destinations and native modifiers are retained.
+pub(crate) fn read_active_direct_heal_targets(
+    world: &mut World,
+    caster: Entity,
+    explicit: Option<Entity>,
+) -> Result<Vec<Entity>, CastFailure> {
+    let spell = world
+        .get::<PendingCastSpell>(caster)
+        .map(|pending| pending.spell.clone())
+        .ok_or_else(|| {
+            CastFailure::Unsupported("active heal lacks its prepared native spell".into())
+        })?;
+    let plan = plan_targets(world, caster, &spell, explicit, false)?;
+    Ok(plan
+        .into_iter()
+        .filter(|planned| spell.effects[planned.index].effect == 10)
+        .flat_map(|planned| planned.units)
+        .collect())
+}
+
 fn read_periodic_trigger(
     world: &World,
     effect: &crate::spell_info::SpellEffect,
@@ -2162,7 +2191,8 @@ pub(crate) fn applicable_costs(
             None => school_modified,
         };
         let modified = if pool == CostPool::Power(PowerType::Mana) {
-            scripts::mana_cost(world, caster, spell, modified)
+            let modified = scripts::mana_cost(world, caster, spell, modified);
+            school_costs::modify_mana_cost(world, caster, modified)
         } else {
             modified
         };
@@ -2179,6 +2209,11 @@ pub(crate) fn applicable_costs(
             }
         } else {
             0.0
+        };
+        let optional = if pool == CostPool::Power(PowerType::Mana) {
+            school_costs::modify_mana_cost(world, caster, optional).max(0.0)
+        } else {
+            optional
         };
         let amount = amount + optional.min((current - amount).max(0.0));
         costs.push((pool, amount, current));
@@ -2448,7 +2483,9 @@ pub(crate) fn execute_cast(
             reflected: false,
         },
     );
+    let previous_efflo_summons = efflorescence::read_previous_summons(world, caster, spell.id);
     missiles::launch(world, caster, spell, plan, 0);
+    efflorescence::initialize_new_summons(world, caster, previous_efflo_summons);
     scripts::refund_execute(world, caster, spell, explicit, &costs);
     if let Some(hook) = scripts::after_cast(spell.id) {
         hook(world, caster, spell);
@@ -2643,6 +2680,9 @@ fn plan_targets(
         effects::retain_threat_level_targets(world, spell, effect, &mut units);
         if let Some(filter) = scripts::area_target_filter(spell.id, effect.index) {
             filter(world, spell, explicit, &mut units);
+        }
+        if spell.id == efflorescence::HEAL && effect.index == 0 {
+            efflorescence::filter_heal_targets(world, caster, &mut units);
         }
         warrior_stuns::filter_storm_bolt_targets(
             world, caster, spell, effect, explicit, &mut units,

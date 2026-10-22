@@ -13,6 +13,9 @@ const PROJECT_URGENT_HEAL_THRESHOLD: f32 = 0.40;
 #[cfg(test)]
 #[path = "healer_triage_tests.rs"]
 mod healer_triage_tests;
+#[cfg(test)]
+#[path = "resto_policy_tests.rs"]
+mod resto_policy_tests;
 
 pub(super) fn update(
     world: &mut World,

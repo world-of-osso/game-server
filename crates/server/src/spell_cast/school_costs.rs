@@ -1,4 +1,16 @@
-//! TC a352b1fa SpellInfo.cpp:4185, before SpellModOp::PowerCost.
+//! TC a352b1fa SpellInfo.cpp:4185 school costs and4242 global mana multiplier.
+
+/// Aura423 changes only mana, after school and SpellModOp cost modifiers.
+/// TC truncates the scaled cost to integer before its existing sign check.
+pub(super) fn modify_mana_cost(world: &World, caster: Entity, amount: f32) -> f32 {
+    use crate::auras::{ActiveAuras, handlers::MOD_MANA_COST_PCT};
+    world
+        .get::<ActiveAuras>(caster)
+        .filter(|auras| auras.has_type(MOD_MANA_COST_PCT))
+        .map_or(amount, |auras| {
+            (amount * (1.0 + auras.modifier(MOD_MANA_COST_PCT) / 100.0)).trunc()
+        })
+}
 use super::*;
 
 pub(super) fn modify_school_cost(
