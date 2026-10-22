@@ -1,3 +1,7 @@
+## 2026-10-21 — Stockade queued credit versus durable reconnect reads
+
+[Durability boundary](systems/dungeon-achievements.md#stockade-reconnect-durability-boundary--2026-10-21): debug-profile held-writer reproduction preserves live633 and native criterion credit; full durable equality passes after the real FIFO receipt fence, while the old pre-fence equality fails31.19s. Offline fixture reads now fence at reconnect and final comparison; no production credit, death, timing or resource change. Combined Restoration/group-cancel source1ed0df205 gives34debug-profile native passes78.29s including the previously failing exact Stockade case; format passes. The held-writer control proves pending credit directly, not merely a favorable optimized timing.
+
 ## 2026-10-21 — Native multi-recipient heal completion
 
 [Shared healer lifetime](systems/follower-healer-triage.md#native-multi-recipient-heal-completion): lead13605 full-party native596 counterexample reproduced RED7.80s ataf2608e50, then shared prepared-cast/native-target-plan fix GREEN25.44s without Holy policy edits. Five native area/chain/radius/Wild Growth/Tranquility controls plus existing single-target topped-cancel/no-restart controls7GREEN19.01s; check/fmtPASS with inherited lead-excluded helper warning. No spell-ID exception or map-wide injury count; closes `FOLLOWER_GROUP_HEAL_TOPPED_ANCHOR_CANCELS`. New branch fromd13 keeps the earlier Restoration gate separate.

@@ -32,3 +32,9 @@ Raw outputs: `baseline-framework-655258480/`, `candidate-resto-depth/`; aggregat
 Remaining exclusions: Convoke absent from kit; SotF Wild Growth bonus unqualified; Rebirth decision/execution utility-owned; NPC treat-as-raid Efflo priority subcase unqualified. Production navigation/pixels are not inferred from frozen-plane simulation.
 
 Final code gate06cd80b2b/masterc6bc60006:39targetedPASS/0FAIL/0ignored58.74s, compile5m15s; scoped sim checkEXIT0/45.12s with sole pre-existing lead-excluded13179 `has_uncleared_fight` warning; cargo fmt --all --check PASS; changed Rust manual readability audit (CLI unavailable), no suppression. Tests include actual Efflo cap3/player priority and full native field/lifecycle chain. Subsequent changes are documentation only.
+
+## ha879 / gc884 follow-up
+
+Both parent debug gates exposed the Stockade fixture's offline durable read before native FIFO credit commits. Debug causal9ffc38d33: after release+`test_data::drain_persistence` full persisted state matched live, then the retained pre-fence equality failed31.19s. This proves queued-not-lost633/24762 credit; no production changes.3f9550c65 fences both fixture DB reads and retains a controlled pending-writer observation plus exact24760/24762 assertions.
+
+One combined source1ed0df205 merges healer-group-cancel157b5bc51 into healer-ai:34debug/test-profile targeted native passes78.29s, including exactStockade, Resto depth and group/single-target/WildGrowth/Tranquility controls. Format passes. Evidence `stockade-credit/{held-writer-causal-red,combined-debug-native-green,combined-final-check,combined-format-check}.log`; the default check result is in its receipt, not inferred from test compilation.
