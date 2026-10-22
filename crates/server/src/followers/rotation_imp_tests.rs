@@ -188,6 +188,14 @@ fn rotation_fidelity_wild_imp_exhausts_native_energy_without_regeneration_and_de
 fn rotation_fidelity_tyrant_demonic_power_tracks_real_owned_imp_lifecycle() {
     let (mut h, owner) = warlock(32);
     let imps: Vec<_> = (0..3).map(|_| summon_imp(&mut h, owner)).collect();
+    assert_eq!(
+        imps.iter()
+            .copied()
+            .collect::<std::collections::HashSet<_>>()
+            .len(),
+        3,
+        "each ordinary summon must identify its own distinct native Imp actor"
+    );
     crate::spell_cast::creature_cast(h.app.world_mut(), owner, 265187, Some(owner), false)
         .expect("actual native Tyrant summon with three living owned Imps");
     let mut tyrant = None;
@@ -218,6 +226,10 @@ fn rotation_fidelity_tyrant_demonic_power_tracks_real_owned_imp_lifecycle() {
         "native Demonic Power must count actual owned Imps at Tyrant arise"
     );
     let later = summon_imp(&mut h, owner);
+    assert!(
+        !imps.contains(&later),
+        "later actual summon is distinct from the initial native roster"
+    );
     assert_eq!(
         stacks(h.app.world()),
         4,
