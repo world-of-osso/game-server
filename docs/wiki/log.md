@@ -1,3 +1,7 @@
+## 2026-10-22 — Qualified added-action publication
+
+[Stable-key publication](investigations/follower-data.md#scoped-rotation-kit-publication--2026-10-21): native producer-qualified new actions can be inserted idempotently without removing/renaming existing intervals. Genuine added-key RED, then4GREEN0.364s at4b49e7097; complete-state oracle corrected to include additions, original source/unrelated-table/refusal guards retained. Pending Ascendance projection/runtime is not claimed complete.
+
 ## 2026-10-21 — Barbed native ownership, control and range proof
 
 [Target boundaries](investigations/follower-data.md#barbed-shot-secondary-targets--2026-10-21):4PASS62.29s at0eff6315f proves original secondary shot, foreign DoT not own, actual Polymorph protected and owner-selected80yd target excluded. Only BM3 affected production-stat samples refreshed,3PASS65.31s; ST/3T1045.342/1031.508, pet16935/16542, unpaired starter samples—not a causal DPS comparison. Broader APL and lead gates remain open.

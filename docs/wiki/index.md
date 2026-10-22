@@ -1,3 +1,4 @@
+- [Qualified cast-action additions](investigations/follower-data.md#scoped-rotation-kit-publication--2026-10-21) — stable-key addition/replay RED→4GREEN0.364s; existing interval-removal guard retained, pending Ascendance runtime not certified.
 - [Barbed native target boundaries](investigations/follower-data.md#barbed-shot-secondary-targets--2026-10-21) — original/foreignDoT/actualPolymorph/80yd controls4PASS62.29s; affected BM StatsPlugin3PASS65.31s, no equalgear/causal DPS claim.
 - [Barbed Shot secondary targets](investigations/follower-data.md#barbed-shot-secondary-targets--2026-10-21) — real Duck/primaryDoT nativeRED47.19s→secondaryShot+ownDoT GREEN56.39s; single stable-key253 interval, broader APL/metrics pending.
 - [Empower cancellation charge recovery](investigations/follower-data.md#native-empower-pipeline--2026-10-21) — actual Fire NoCharges after cancel, natural30s recovery then real damage1PASS35.31s; conditional paid-power proof remains named.
