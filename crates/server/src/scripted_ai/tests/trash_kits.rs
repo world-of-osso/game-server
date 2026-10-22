@@ -140,6 +140,58 @@ fn follower_trash_azure_arcane_tender_natively_casts_tc_wild_eruption() {
 }
 
 #[test]
+fn follower_trash_destination_trigger_uses_actual_npc_enemy_victim() {
+    let (mut h, actor) = trash_actor(191164, 2515, 375652);
+    h.engage(actor);
+    let position = *h.app.world().get::<Position>(actor).unwrap();
+    let before = h.health(h.player()).current;
+    let minimum_flight = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(375650)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
+        .min_duration;
+    let step = h
+        .app
+        .world()
+        .resource::<Time<Fixed>>()
+        .timestep()
+        .as_secs_f32();
+    crate::spell_cast::cast_triggered_at_destination(
+        h.app.world_mut(),
+        actor,
+        375650,
+        Vec3::new(position.x, position.y, position.z),
+        0,
+    );
+    h.advance(minimum_flight - step);
+    assert!(
+        !h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(375647) && event.kind == CombatLogKind::Damage),
+        "native minimum missile duration is retained"
+    );
+    h.advance(step * 2.0);
+    assert!(
+        h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(h.player().to_bits())
+                && event.spell_id == Some(375647)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "NPC destination-triggered53 must use the actual victim and release native375647"
+    );
+    assert!(h.health(h.player()).current < before);
+}
+
+#[test]
 fn follower_trash_azure_wild_eruption_releases_native_missile_damage() {
     let (mut h, actor) = trash_actor(191164, 2515, 375652);
     let before = h.health(h.player()).current;
