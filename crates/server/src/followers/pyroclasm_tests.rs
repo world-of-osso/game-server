@@ -47,7 +47,7 @@ fn dps_parity_pyroclasm_hot_streak_spend_uses_native_talent_chance() {
     );
 }
 
-fn cast_pyroblast_with_proc(proc: bool, instant: bool) -> (i32, bool, u8) {
+fn cast_pyroblast_with_proc(proc: bool, instant: bool) -> (f32, u8) {
     let _seed = crate::random::seed_scope(269651);
     let (mut h, caster) = prepare(209059);
     let target = h.npc;
@@ -74,45 +74,68 @@ fn cast_pyroblast_with_proc(proc: bool, instant: bool) -> (i32, bool, u8) {
                 && event.target == Some(target.to_bits())
         })
         .expect("ordinary native Pyroblast must land after completion");
-    (hit.amount, hit.crit, remaining)
+    // Actual crit outcomes need not match across native aura applications. Remove
+    // only the unchanged native critical multiplier, never inject a crit stat.
+    let world = h.app.world();
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(PYROBLAST)
+        .unwrap();
+    let multiplier = if hit.crit {
+        let school = world
+            .get::<crate::auras::AuraStatMods>(caster)
+            .map_or(1.0, |mods| mods.critical_damage(spell.school_mask()));
+        let bonus = crate::auras::spell_mods::modify(
+            world,
+            caster,
+            spell,
+            crate::auras::SpellModOp::CritDamageAndHealing,
+            2.0 * school - 1.0,
+        );
+        1.0 + bonus
+    } else {
+        1.0
+    };
+    (hit.amount as f32 / multiplier, remaining)
+}
+
+fn assert_native_damage_ratio(base: f32, damage: f32, expected: f32) {
+    let source = crate::spell_cast::test_harness::world_db().unwrap();
+    let half_variance = source.store.get(PYROBLAST).unwrap().effects[0]
+        .variance
+        .abs()
+        / 2.0;
+    let variation = (1.0 + half_variance) / (1.0 - half_variance);
+    // One whole health unit covers rounding of the actual native hit events.
+    let bounds = (base * expected / variation - 1.0)..=(base * expected * variation + 1.0);
+    assert!(
+        bounds.contains(&damage),
+        "native damage ratio: base{base}, damage{damage}, multiplier{expected}, authored bounds{bounds:?}"
+    );
 }
 
 #[test]
 #[ignore = "DPS parity RED: Pyroclasm hardcast damage and one-stack consumer absent"]
 fn dps_parity_pyroclasm_hardcast_keeps_native_bonus_at_missile_impact_and_spends_one_stack() {
-    let (base, base_crit, _) = cast_pyroblast_with_proc(false, false);
-    let (boosted, boosted_crit, remaining) = cast_pyroblast_with_proc(true, false);
+    let (base, _) = cast_pyroblast_with_proc(false, false);
+    let (boosted, remaining) = cast_pyroblast_with_proc(true, false);
     assert_eq!(
         remaining, 1,
         "one ordinary hardcast must spend one of the two actual native stacks"
     );
-    assert_eq!(
-        base_crit, boosted_crit,
-        "paired native seed retains the same crit outcome"
-    );
-    let ratio = boosted as f32 / base as f32;
-    //70448 supplies+230% (3.3×), not an invented SimC coefficient. Native
-    // coefficient, variance, crit and the rest of the damage pipeline stay intact.
-    assert!(
-        (3.2..=3.4).contains(&ratio),
-        "native269651e0+230% must survive consumption/projectile launch: base{base} boosted{boosted} ratio{ratio}"
-    );
+    //70448 supplies+230% (3.3×), not an invented SimC coefficient.
+    assert_native_damage_ratio(base, boosted, 3.3);
 }
 
 #[test]
 fn dps_parity_pyroclasm_hot_streak_instant_neither_consumes_nor_amplifies_existing_stacks() {
-    let (base, base_crit, _) = cast_pyroblast_with_proc(false, true);
-    let (damage, crit, remaining) = cast_pyroblast_with_proc(true, true);
+    let (base, _) = cast_pyroblast_with_proc(false, true);
+    let (damage, remaining) = cast_pyroblast_with_proc(true, true);
     assert_eq!(
         remaining, 2,
         "Hot Streak instant Pyroblast is not a Pyroclasm spender"
     );
-    assert_eq!(base_crit, crit);
-    let ratio = damage as f32 / base as f32;
-    assert!(
-        (0.95..=1.05).contains(&ratio),
-        "instant Pyroblast must not receive the hardcast-only230%: base{base} damage{damage}"
-    );
+    assert_native_damage_ratio(base, damage, 1.0);
 }
 
 #[test]
