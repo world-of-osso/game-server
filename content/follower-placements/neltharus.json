@@ -1,0 +1,46 @@
+{
+  "map_id": 2519,
+  "entrance_id": 100028,
+  "placement_policy": "FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "entries": [
+    {
+      "entry": 181861,
+      "ordinal": 0,
+      "source_url": "https://www.wowhead.com/npc=181861",
+      "cache_sha256": "b26933380bb6b932fef8713105f9c4f7c860f435c496415c47636a915bd852aa",
+      "faction_donor": 186644,
+      "donor_reason": "Ground-bound non-humanoid DF boss; same hostile A/H reaction; source class/stats retained"
+    },
+    {
+      "entry": 189340,
+      "ordinal": 1,
+      "source_url": "https://www.wowhead.com/npc=189340",
+      "cache_sha256": "64ca5ba4de9a398c9c6bb2b9c2f267b468cab3b762a2ba27e00dbcf5f15aa628",
+      "faction_donor": 184124,
+      "donor_reason": "DF giant boss with matching native class4; same hostile A/H reaction"
+    },
+    {
+      "entry": 189478,
+      "ordinal": 2,
+      "source_url": "https://www.wowhead.com/npc=189478",
+      "cache_sha256": "059fb2e6000f2ebc9fbd0dce6578e0ff796e0def73a31976206ab911b01625fd",
+      "faction_donor": 184124,
+      "donor_reason": "DF giant boss; same hostile A/H reaction; source class1/stats retained"
+    },
+    {
+      "entry": 189901,
+      "ordinal": 3,
+      "source_url": "https://www.wowhead.com/npc=189901",
+      "cache_sha256": "4f2281fe33ac273e623ab9b79cf31e347505451012f14b44f00b531d1957fce1",
+      "faction_donor": 189232,
+      "donor_reason": "DF humanoid boss with matching native class4; same hostile A/H reaction"
+    }
+  ],
+  "calibration_entries": [
+    188252,
+    189232
+  ],
+  "inventory": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/df-bosses-2-2026-10-21/follower-source-inventory.json"
+}
