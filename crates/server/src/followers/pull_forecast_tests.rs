@@ -258,6 +258,23 @@ fn tank_pull_forecast_lifetime_does_not_blanket_refuse_for_a_pure_native_hot() {
 #[test]
 fn census_tail_345_native_forecast_uses_only_source_casters_armor_bypass() {
     let (mut h, tank, enemy) = source_fixture(46249);
+    let constants = h
+        .app
+        .world()
+        .resource::<WorldData>()
+        .expected_stats
+        .armor_constants();
+    let level = h.app.world().get::<UnitLevel>(enemy).unwrap().0;
+    assert!(constants.at(level).unwrap() > 0.0);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::level_scaling::CreatureArmor>(tank)
+            .unwrap()
+            .0
+            > 0.0
+    );
+    h.app.insert_resource(constants);
     let before = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
     let foreign = h.caster;
     crate::auras::apply_aura(
