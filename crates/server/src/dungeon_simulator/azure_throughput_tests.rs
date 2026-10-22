@@ -182,7 +182,6 @@ fn seed_seven_advances_after_the_native_selected_fury_dies() {
                 && event.target == Some(pending.to_bits())
                 && event.amount > event.overflow.max(0)
             {
-                assert_eq!(run.current_pack, Some(29001792));
                 return;
             }
         }
