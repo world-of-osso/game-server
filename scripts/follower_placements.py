@@ -20,6 +20,7 @@ LUA_BINDING_POLICY = 'FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR'
 NATIVE_BINDING_POLICY = 'FOLLOWER_BINDING_EXACT_NATIVE_NAME_DISPLAY_TO_JOURNAL_ACTOR'
 FACTION_POLICY = 'FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR'
 JOURNAL_HOSTILITY_POLICY = 'FOLLOWER_BOSS_HOSTILE_FROM_JOURNAL_ENCOUNTER'
+TRASH_HOSTILITY_POLICY = 'FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE'
 MAP_TUNING_POLICY = 'FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY'
 TABLE_KEYS = {'content_creature_template': ('entry',),
               'content_creature_template_model': ('CreatureID', 'Idx'),
@@ -271,6 +272,37 @@ def qualify_journal_hostility(target, record, tables):
                       for name, row in rows.items()})
 
 
+def qualify_mdt_hostility(target, record, tables):
+    evidence = record['mdt_enemy_source']
+    roots = {'0ec5f50dea16cfc19f288de91125c70fa7455961': Path('/home/osso/.worktrees/mdt-0ec5f50'),
+             'c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f': Path('/home/osso/.worktrees/mdt-c6cccca'),
+             'cb3c6cd723698178ff8ea500b62d28ef792edce8': Path('/home/osso/.worktrees/mdt-cb3c6cd72369')}
+    path = Path(evidence['path']).resolve()
+    root = roots.get(evidence['revision'])
+    if evidence['policy'] != TRASH_HOSTILITY_POLICY or root is None or not path.is_relative_to(root.resolve()) or digest(path) != evidence['sha256']:
+        raise ValueError('MDT enemy source is not the approved pinned file/revision/hash')
+    text = path.read_text()
+    challenge = re.search(r'\bmapID = (\d+)', text)
+    maps = [r for r in tables['MapChallengeMode'] if challenge and int(r['ID']) == int(challenge[1]) and int(r['MapID']) == record['map_id']]
+    if len(maps) != 1:
+        raise ValueError('MDT challenge-mode row does not identify the requested dungeon')
+    start = text.index('MDT.dungeonEnemies[dungeonIndex] = {')
+    entries = []
+    for match in re.finditer(r'^    \["id"\] = (\d+),', text[start:], re.M):
+        if int(match[1]) == record['entry']:
+            entries.append(start + match.start())
+    if len(entries) != 1 or text[:entries[0]].count('\n') + 1 != evidence['source_line']:
+        raise ValueError('MDT table lacks the unique enemy entry at its pinned source line')
+    before = text[:entries[0]].splitlines()
+    name = re.fullmatch(r'    \["name"\] = "(.*)",', before[-1])
+    native = target.execute('SELECT name FROM tdb_creature_template WHERE entry=?', (record['entry'],)).fetchone()
+    if name is None or native is None or name[1] != native[0]:
+        raise ValueError('MDT enemy does not match its own native template name')
+    return dict(policy=TRASH_HOSTILITY_POLICY, source=evidence,
+                mdt_enemy=dict(entry=record['entry'], name=native[0], source_line=evidence['source_line']),
+                db2_rows=dict(MapChallengeMode=maps[0]))
+
+
 def prepare_templates(target, records, cache, tables=None):
     entries = ','.join(str(r['entry']) for r in records)
     difficulties = stage_source_difficulties(target, records)
@@ -279,17 +311,20 @@ def prepare_templates(target, records, cache, tables=None):
     donors = []
     for record in records:
         native_faction = target.execute('SELECT faction FROM tdb_creature_template WHERE entry=?', (record['entry'],)).fetchone()[0]
-        if native_faction > 0:
+        if native_faction != 0:
             continue
         donor = read_cached_npc(cache, record['faction_donor'])
         faction = target.execute('SELECT faction FROM tdb_creature_template WHERE entry=?', (record['faction_donor'],)).fetchone()[0]
         hostility = None
-        if record.get('faction_policy') == JOURNAL_HOSTILITY_POLICY:
+        if record.get('faction_policy') in (JOURNAL_HOSTILITY_POLICY, TRASH_HOSTILITY_POLICY):
             if tables is None:
-                raise ValueError('journal hostility requires authenticated binding and map tables')
-            hostility = qualify_journal_hostility(target, record, tables)
+                raise ValueError('source hostility requires authenticated DB2 tables')
+            if record['faction_policy'] == TRASH_HOSTILITY_POLICY:
+                hostility = qualify_mdt_hostility(target, record, tables)
+            else:
+                hostility = qualify_journal_hostility(target, record, tables)
             if faction != 16 or donor['entity']['react'] != [-1, -1]:
-                raise ValueError('journal hostility donor must have native faction16 and sourced hostile A/H reaction')
+                raise ValueError('known-hostile donor must have native faction16 and sourced hostile A/H reaction')
         else:
             actor = read_cached_npc(cache, record['entry'])
             if actor['entity']['react'] != [-1, -1] or donor['entity']['react'] != actor['entity']['react'] or faction <= 0:
