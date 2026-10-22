@@ -81,6 +81,9 @@ class XenasPlacementAcceptance(unittest.TestCase):
                              [(63915000, 241542, 443.9852565, 7.346653899999978, 148.82808)])
             self.assertEqual(db.execute('SELECT unit_class,ContentTuningID,HealthModifier,faction FROM content_creature_template WHERE entry=241542').fetchone(),
                              (1, 0, 100.0, 16))
+            self.assertEqual(db.execute('SELECT DamageModifier,ArmorModifier,ManaModifier FROM content_creature_template WHERE entry=241542').fetchone(),
+                             db.execute('SELECT DamageModifier,ArmorModifier,ManaModifier FROM tdb_creature_template_difficulty WHERE Entry=241542 AND DifficultyID=0').fetchone())
+            self.assertEqual(db.execute('SELECT DifficultyID,ContentTuningID,HealthModifier FROM tdb_creature_template_difficulty WHERE Entry=241542').fetchall(), [(0, 0, 100.0)])
             self.assertEqual(db.execute('SELECT * FROM content_creature_template_model WHERE CreatureID=241542').fetchall(),
                              db.execute('SELECT * FROM tdb_creature_template_model WHERE CreatureID=241542').fetchall())
             self.assertEqual(db.execute('SELECT creature_entry,journal_encounter_id,display_id FROM raid_encounter_creature WHERE map_id=2915').fetchall(),
@@ -90,7 +93,12 @@ class XenasPlacementAcceptance(unittest.TestCase):
         self.assertEqual(receipt['sql_replay_count'], 3)
         self.assertEqual(receipt['entrance_gaps'], ['FOLLOWER_ENTRANCE_UNSOURCED_2915'])
         self.assertEqual(receipt['placements'][0]['all_surface_heights'], [148.82808])
-        self.assertEqual(receipt['donors'][0]['hostility_source']['identity_source']['conflict_candidates'], [254227])
+        identity = receipt['donors'][0]['hostility_source']['identity_source']
+        self.assertEqual(identity['conflict_candidates'], [254227])
+        self.assertEqual(identity['conflicting_native_budgets'][0]['source_difficulties'],
+                         [dict(DifficultyID=0, ContentTuningID=0, HealthModifier=240.0)])
+        self.assertEqual(receipt['source_difficulties'][0]['effective_content_tuning']['map_difficulty_row']['ContentTuningID'], 5143)
+        self.assertEqual({gap['journal_encounter_id'] for gap in receipt['source_gaps']}, {2813, 2815})
 
 
 if __name__ == '__main__':
