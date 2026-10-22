@@ -35,6 +35,19 @@ pub(crate) struct CannotReachTarget {
     target: u64,
     elapsed: Duration,
 }
+/// Record a continuously blocked chase without restarting its native evade clock.
+pub(crate) fn mark_chase_blocked(world: &mut World, entity: Entity, target: u64) {
+    if world
+        .get::<CannotReachTarget>(entity)
+        .is_none_or(|blocked| blocked.target != target)
+    {
+        world.entity_mut(entity).insert(CannotReachTarget {
+            target,
+            elapsed: Duration::ZERO,
+        });
+    }
+}
+
 /// Idle pause range in seconds after reaching a wander destination.
 const IDLE_MIN_SECS: f32 = 2.0;
 const IDLE_MAX_SECS: f32 = 5.0;
@@ -902,12 +915,9 @@ pub(crate) fn chase_system(
                 Step::Blocked => {
                     let stride = Stride::still(*pos);
                     queues.apply(entity, &mut pos, bearing, stride);
-                    if cannot_reach.is_none_or(|blocked| blocked.target != target) {
-                        commands.entity(entity).insert(CannotReachTarget {
-                            target,
-                            elapsed: Duration::ZERO,
-                        });
-                    }
+                    commands.queue(move |world: &mut World| {
+                        mark_chase_blocked(world, entity, target);
+                    });
                     continue;
                 }
             },
@@ -954,7 +964,7 @@ type Chaser = (
 
 /// `Creature::Update`: no-path evade after five seconds, never on raid maps.
 /// Reachable paths remove the flag; a new chase records a fresh timeout.
-fn no_path_evade_system(
+pub(crate) fn no_path_evade_system(
     time: Res<Time>,
     maps: Res<MapStore>,
     nav: Option<Res<Navigation>>,

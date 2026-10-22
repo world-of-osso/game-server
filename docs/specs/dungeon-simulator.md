@@ -48,6 +48,8 @@ Moving or following a target partway along a frozen walk edge must use only the 
 
 ## Native evade movement
 
+An NPC chase without a walking path must hold its actual position and use the existing server cannot-reach/evade/home-arrival lifecycle, not abort the process or cross a disconnected component. Preserve the native timeout and map/state conditions; do not invent a Rune-specific exception or a new clock.
+
 Evading actors must travel frozen edges at their native speed to the native home destination (explicit HomePosition, then escort home, then spawn). Arrival must leave Returning, stop motion, restore home facing and run the same native mana/health/addon/pose/JustReachedHome behavior as production; regenerating actors do not receive an invented instant full heal. No runtime physical-navigation system may be installed to satisfy arrival.
 
 ## Native pet utility

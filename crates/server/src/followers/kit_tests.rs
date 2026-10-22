@@ -12,7 +12,7 @@ fn level32_with_plugins(entry: u32, configure: impl FnOnce(&mut App)) -> (Harnes
     at_level(entry, 32, configure)
 }
 
-pub(super) fn at_level(
+pub(crate) fn at_level(
     entry: u32,
     level: u8,
     configure: impl FnOnce(&mut App),
