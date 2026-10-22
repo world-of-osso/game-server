@@ -432,9 +432,31 @@ def prepare_templates(target, records, cache, tables=None):
     return donors, difficulties
 
 
+def read_preserved_placement_entries(target, manifest):
+    preserved = {}
+    lower = manifest['guid_base'] + manifest['map_id'] * 1000
+    for evidence in manifest.get('preserved_placement_sources', []):
+        path = Path(evidence['receipt'])
+        if digest(path) != evidence['sha256']:
+            raise ValueError('preserved placement receipt hash changed')
+        receipt = json.loads(path.read_text())
+        if receipt['map_id'] != manifest['map_id']:
+            raise ValueError('preserved placement receipt belongs to a different map')
+        for point in receipt['placements']:
+            guid = point['guid']
+            comment = f"{receipt['policy']}; {point['page']['url']}; floor={point['marker']['floor']}; percent={point['marker']['percent']}"
+            row = target.execute('SELECT id1,map,position_x,position_y,position_z,Comment FROM content_creature WHERE guid=?', (guid,)).fetchone()
+            expected = (point['entry'], manifest['map_id'], *point['wow_xyz'], comment)
+            if not lower <= guid <= lower + 999 or row is None or tuple(row) != expected or guid in preserved:
+                raise ValueError('preserved placement differs from its pinned source receipt')
+            preserved[guid] = point['entry']
+    return preserved
+
+
 def write_placements(target, manifest, placements, bindings):
     lower = manifest['guid_base'] + manifest['map_id'] * 1000
-    expected = {lower + r['ordinal']: r['entry'] for r in manifest['entries']}
+    expected = read_preserved_placement_entries(target, manifest)
+    expected.update({lower + r['ordinal']: r['entry'] for r in manifest['entries']})
     occupied = target.execute('SELECT guid,id1,map FROM content_creature WHERE guid BETWEEN ? AND ?', (lower, lower + 999)).fetchall()
     if any(guid not in expected or entry != expected[guid] or map_id != manifest['map_id'] for guid, entry, map_id in occupied):
         raise ValueError('reserved map GUID namespace overlaps unrelated content')
@@ -682,6 +704,7 @@ def prepare(args):
                        route_binary_sha256=digest(args.route), entrance=entrance, placements=placements,
                        native_room_anchors=native_room_anchors, native_binding_only=native_bindings,
                        source_relationships=source_relationships, source_gaps=manifest.get('source_gaps', []),
+                       preserved_placement_sources=manifest.get('preserved_placement_sources', []),
                        source_database=str(args.source_db.resolve()), baseline_sha256=digest(baseline_path), canonical_modified=False)
         receipt['navigation_gaps'] = [p['navigation_gap'] for p in placements if 'navigation_gap' in p]
         receipt['entrance_gaps'] = sorted({p['entrance_gap'] for p in placements if 'entrance_gap' in p})

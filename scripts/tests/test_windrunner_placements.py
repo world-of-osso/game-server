@@ -9,7 +9,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from follower_placement_sources import read_db2, read_surface_polygons
-from follower_placements import derive_binding, derive_placement, qualify_journal_hostility, read_binding_tables, validate_sourced_duo
+from follower_placements import derive_binding, derive_placement, qualify_journal_hostility, read_binding_tables, validate_sourced_duo, write_placements
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -139,6 +139,34 @@ class WindrunnerAdditionalFloor(unittest.TestCase):
         unsupported = {k:v for k,v in manifest['entries'][0].items() if k not in ('source_floor_evidence','source_floor_z_bounds')}
         with self.assertRaisesRegex(ValueError,'requires one'):
             derive_placement(unsupported,manifest,tables,Path(os.environ['FOLLOWER_PLACEMENT_CACHE']),polygons,Path('/unused'),Path('/unused'),None)
+
+    @unittest.skipUnless('MIDNIGHT_SOURCE_DB' in os.environ,'requires published Emberdawn fixture')
+    def test_partial_map_packet_preserves_receipt_pinned_ember_and_refuses_drift_or_unknown_guid(self):
+        import copy
+        manifest=json.loads((ROOT/'content/follower-placements/windrunner-duo.json').read_text())
+        tables,_=read_db2(Path(os.environ['FOLLOWER_PLACEMENT_DB2']),('JournalEncounter',))
+        polygons=read_surface_polygons(Path(manifest['surface_proof']['path']).with_suffix('.csv'))
+        points=[derive_placement(r,manifest,tables,Path(os.environ['FOLLOWER_PLACEMENT_CACHE']),polygons,Path('/unused'),Path('/unused'),None) for r in manifest['entries']]
+        bindings=[(2805,231626,3057,1,2656,5839,91068),(2805,231629,3057,1,2656,5840,125198)]
+        with closing(sqlite3.connect(Path(os.environ['MIDNIGHT_SOURCE_DB']).resolve().as_uri()+'?mode=ro',uri=True)) as source, closing(sqlite3.connect(':memory:')) as target:
+            for table in ('content_creature','raid_encounter_creature'):
+                target.execute(source.execute('SELECT sql FROM sqlite_master WHERE name=?',(table,)).fetchone()[0])
+            ember=source.execute('SELECT * FROM content_creature WHERE guid=63805000').fetchone()
+            target.execute(f"INSERT INTO content_creature VALUES({','.join('?' for _ in ember)})",ember)
+            write_placements(target,manifest,points,bindings)
+            self.assertEqual(target.execute('SELECT * FROM content_creature WHERE guid=63805000').fetchone(),ember)
+            self.assertEqual(target.execute('SELECT guid,id1 FROM content_creature ORDER BY guid').fetchall(),[(63805000,231606),(63805001,231626),(63805002,231629)])
+            changed=copy.deepcopy(manifest)
+            changed['preserved_placement_sources'][0]['sha256']='0'*64
+            with self.assertRaisesRegex(ValueError,'preserved placement receipt'):
+                write_placements(target,changed,points,bindings)
+            target.execute('UPDATE content_creature SET position_x=position_x+1 WHERE guid=63805000')
+            with self.assertRaisesRegex(ValueError,'preserved placement'):
+                write_placements(target,manifest,points,bindings)
+            target.execute('UPDATE content_creature SET position_x=position_x-1 WHERE guid=63805000')
+            target.execute('INSERT INTO content_creature(guid,id1,map) VALUES(63805998,232070,2805)')
+            with self.assertRaisesRegex(ValueError,'overlaps unrelated'):
+                write_placements(target,manifest,points,bindings)
 
     def test_kroluk_and_heart_upward_consensus_keep_raw_candidates(self):
         tables, _ = read_db2(Path(os.environ['FOLLOWER_PLACEMENT_DB2']), ('JournalEncounter',))

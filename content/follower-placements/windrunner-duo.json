@@ -230,5 +230,11 @@
     "path": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/midnight-2805-2656-covering-surfaces.json",
     "sha256": "60d1db2f9fc873aa892c2c5de361b8397c128769248e0dc91ad1acfc25c007b1"
   },
-  "duo_placement_policy": "FOLLOWER_PLACEMENT_DUO_INDIVIDUALLY_SOURCED_SAME_MARKER"
+  "duo_placement_policy": "FOLLOWER_PLACEMENT_DUO_INDIVIDUALLY_SOURCED_SAME_MARKER",
+  "preserved_placement_sources": [
+    {
+      "receipt": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/windrunner-emberdawn-packet-1/receipt.json",
+      "sha256": "235883b460003bad2da13c470f814b2145e6ca1af16e4108cd954a6f4a4651db"
+    }
+  ]
 }
