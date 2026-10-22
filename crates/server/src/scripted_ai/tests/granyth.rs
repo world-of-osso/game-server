@@ -55,7 +55,6 @@ fn completed_casts(h: &Harness, boss: Entity, spell: u32) -> usize {
 }
 
 #[test]
-#[ignore = "Granyth native input qualification"]
 fn encounter_coverage_granyth_projected_native_damage_and_isolation() {
     for difficulty in [1, 205] {
         for spell in [SHARDS, STOMP] {
@@ -86,7 +85,6 @@ fn encounter_coverage_granyth_projected_native_damage_and_isolation() {
 }
 
 #[test]
-#[ignore = "RED before native Granyth scripting"]
 fn encounter_coverage_granyth_projected_first_shards_source_clock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = projected_granyth(difficulty);
@@ -106,7 +104,6 @@ fn encounter_coverage_granyth_projected_first_shards_source_clock() {
 }
 
 #[test]
-#[ignore = "RED before native Granyth scripting"]
 fn encounter_coverage_granyth_projected_finite_lanes_credit_and_corpse() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_granyth(difficulty);
@@ -174,7 +171,6 @@ fn encounter_coverage_granyth_projected_finite_lanes_credit_and_corpse() {
 }
 
 #[test]
-#[ignore = "RED before native Granyth scripting"]
 fn encounter_coverage_granyth_projected_evade_rearms_first_shards() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_granyth(difficulty);
