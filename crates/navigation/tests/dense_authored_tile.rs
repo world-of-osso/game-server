@@ -47,7 +47,7 @@ fn city_of_threads_dense_authored_tile_bakes_walkable_navigation() {
         .sum::<glam::Vec3>()
         / polygon.len() as f32;
     let path = nav
-        .path(center, center)
+        .complete_path(center, center)
         .expect("baked floor must be queryable");
     assert!(!path.is_empty());
 }

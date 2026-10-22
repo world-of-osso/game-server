@@ -2,6 +2,9 @@
 
 [Cast boundary](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22): actualownMastery/SK/Lightning damage passes,45284absent; genuine1RED/removedMastery1positive8.51s/zero warnings. TC400ms/defaultNONE callback and native effect amounts qualified; first188196→45284 consequence445c3ccc6 uses actual charged-modifier provenance, no livebuff guess. Timingcontrolbf4098b52 and targetedGREEN pending; other roots/additionaloverloads/fullAPL remain open. Inundate prior packet landed through leadin962.
 
+## 2026-10-22 — Partial corridor continuation
+
+[Navigation](systems/navigation.md#partial-corridor-continuation--2026-10-22): Gorek native graph26936polygons connected; unchanged8192pool reaches in296/263/84polygons over three queries. Production library+mover RED reproduce discarded partial corridor/immediate Blocked. Typed resource-limited partial paths and segment-end repath keep asset/pool/tolerance values; completed-search disconnects stay immediately Blocked. At884178a15 Gorek path/mover and three Brackenhide movers GREEN, genuine-disconnect/complete-leg controls GREEN; combined48controls40PASS/8existing ignored Stockade/current-victim FAIL. Baseline/follower/check gates pending, no overall acceptance.
 ## 2026-10-22 — Inundate native targeted GREEN, known foreign FoF flake
 
 [Eligibility](investigations/follower-data.md#inundate-resource-eligibility--2026-10-22): Inundate3GREEN at329a06527 inside13PASS/1FAIL44.51s/zero warnings; failedFoF Damage-only4vs5 is lead-confirmed known Miss/Dodge oracle issue owned14179, not suppressed here. Proved3 enabled5074f1354. Affected Ele70samples2PASS37.46s/native378777events0/ST666.900/3T1007.367DPS, unpaired not causal-total proof. Newmaster6e73cc9b5 integrated043b63a88 requires current parent gate; full efficiency remains open.
@@ -10,6 +13,33 @@
 
 [Eligibility](investigations/follower-data.md#inundate-resource-eligibility--2026-10-22): actualLightningwrong378777 gain is genuineRED, actualWindShearinterrupt grantsnative8positive;1PASS1FAIL23.95s/zero warnings. PinnedTCscript and signedTDBspell_proc row absent (168534positive parser control), so approved named native-description successful-utility/combat policy, not invented family mask.978da27ef committed; removed-passive control48c9f1219/GREEN pending. No utilityAI rewrite or broadAPL certificate.
 
+## 2026-10-22 — Existing three-spec stat/coverage/formula evidence
+
+[Decomposition](systems/dungeon-simulator.md#existing-three-spec-stat-coverage-and-formula-decomposition-2026-10-22) preserves32b2a678f receipts: level90 matches,47 item identities match,45 explicit plus2 bonus-derived levels match; AP/SP budgets differ2.93–10.19%, with secondary/redirected-stat differences unresolved. Power-only hypothetical scaling does not close5–16x DPS gaps. Conserved channel/count/per-hit accounting is not causal attribution;42 non-Meteor base-effect rows agree while effective modifiers remain unproved. Partial recipient coverage remains open. Meteor handed to13122; no duplicated mechanism work, builds, simulations or production edits.
+
+## 2026-10-22 — Native trait-edge divergence and precedence
+
+[Finding](systems/dungeon-simulator.md#simc_profile_trait_edge_divergence-2026-10-22): official251CleavingStrikes76073 lacks nativeparent76072(edge119101);1480ImprovedConsume108144 lacks110172(edge136693). Parents absent from completeexports, not active-rank filtering. NativeDB2wins; originalprofiles/exports unchanged, derivedtwo-node omissions attempted withordinarystrictvalidator.1480reachesrule80974/type54;251revealsnextorphan76069(edges119098/119103). Parentapprovediterative native-parent closure/no parents:251drops76073→76069→76061, thenrow gate76076/19531needs8earlier-rowpoints/1spent. Parentstopsfurtherdeletion:SIMC_PROFILE_NOT_NATIVE_LEGAL/referencegap/excludedscore;1480one-dropnativelegal/rule80974unverified. Finalreceiptlistsalleverydrop/edge/iteration/affected-channel exposure;40-rowv5matrixupdated, no profile rebuilding. Consume10929.34referenceDPS bounds fixed-cast+10%removal≈993.58DPS, not full cast-time feedback; Frost recorded affected direct channels unobserved, no universalzero-effect claim. No production changes or officialSimCreruns.
+
+## 2026-10-22 — All-opponent fixture engagement proof
+
+[Engagement repair](systems/dungeon-simulator.md#zero-add-root-boundary-and-fixture-engagement): unchanged ignored4-test RED e43→GREEN32b2a678f4/4 in325.52s/0warnings; initial/replacement mutualCombatRefs use ordinary API, passive31146/noThreatTable and fresh-pack veto unchanged. Exactly73/63/103 three-target reruns pass300s execution: DPS40403.36/22604.97/46227.06 versus reference214978.87/371058.54/247748.82. Actual add coverage18/8/18 of20, not full AoE parity;57Clap+158Revenge,10Meteor+8Flamestrike,181CatSwipe+38PrimalWrath now cast. Meteor remains0hits/0damage; normal five-second passive-reference expiry retained/no heartbeat. Three new factor partitions/source hashes/conservation and exact historical deltas stored separately; no extra cells/reference reruns or production mechanics changes. Collector current-master integration672/co948 is a separate parent-owned gate.
+
+## 2026-10-22 — Parity fixture engagement root boundary
+
+[Zero-add trace](systems/dungeon-simulator.md#zero-add-root-boundary-and-fixture-engagement): existing73/63/103 kitAoE is blocked by only-main engagement plus intentional fresh-pack safety; all five saved add snapshots lackCombatRefs/victim/threat. BM already castsWildThrash20times/0damage, separate missing pet-child script chain assigned upstream. Parent retains `AOE_HITS_ONLY_IN_COMBAT_UNITS` and passive31146/noThreatTable; authorizes fixture-only mutualCombatRefs for every initial/replacement opponent. Ignored native4-test RED pushed first, actuale43c2ceec4FAIL on engagement/AoE; minimal ordinary-API seam implemented, GREEN/new73/63/103three-target receipts pending. No production/kit/targeting policy change or retrospective upgrade of cbf output.
+
+## 2026-10-22 — CombatRefs-integrated timed-three-target receipts
+
+[Current cohort](systems/dungeon-simulator.md#combatrefs-integrated-three-target-receipts-2026-10-22): cbf70f94f/P2abc7fa includes landed admission/suppression fixes and other parent-owned mechanics. Source/snapshot/profile hashes sealed;6nativecontrolsGREEN149.08s/check46.67s/fmt/0warnings. Authorized8three-target cells all300s/final30positive/owner0/10waves20adds, but recipient coverage differs:66/262/266all20adds,26918adds/8completewaves,73/63/253/103zeroadds. No AoE/equal-condition parity from execution; DPS82.98–97.02% below pinned references. Eight actor-aware gap partitions conserve damage with raw guardian weighting, exact source/report hashes and descriptive historical count deltas; no isolated CombatRefs attribution or extra single/reference runs. Comparison and40-rowv3receipt index preserve historicalsingle and currentthree proof separately. Parent notified; full parity remains open.
+
+## 2026-10-22 — Transport-free leader pet ownership
+
+[Native pet wiring](systems/dungeon-simulator.md#transport-free-leader-pet-initialization-2026-10-22): actual BM leader CallPet/damage RED22.81s→fresh/cached GREEN12.52s after native runtime-only stable/HunterPetPlugin/PetCatalog integration.0b includes mastery'sa4; build8m05/no warnings and5retained controls pass. Authentic Duck fixture input only, no canonical data writes, fake character, AP/rotation or class-script change. Actual WildThrash3casts/0childdamage after summon remains a mechanics-owner gap. New pet-enabled Azure cohort pending.
+
+## 2026-10-22 — Native blocked-chase parity and Azure horizon
+
+[Shared native evade](systems/dungeon-simulator.md#disconnected-chase-parity-2026-10-22): original first-book fixture failed setup; corrected second-book539bRED11.79s→1bfGREEN16.62s. Reuses production marker/no-path system, no new clock or physical navigation. Retained simulator controls23PASS. [Fresh Azure10](systems/dungeon-simulator.md#post-evade-azure-qualification-2026-10-22) yields8valid1h timeouts/2tankabsence blocks,8Leymor Deaths,1239.244563s wall, no missing reports. Live trash remains at the horizon; seed4 tank dies near active healer under4native melee actors. SamecodeStockade49+retained50 qualifies50/50clears/150boss Deaths, fresh49batch3319.356736s plus retained50individual114.473154s; no Azure/live acceptance.
 ## 2026-10-22 — Prismatic Echoes learned bonus
 
 [Prismatic Echoes](investigations/holy-priest-follower-ai.md#prismatic-echoes-learned-bonus--2026-10-22): separate871560575 native61 tick81vs85 RED/control60PASS37.36s→97a246aa5 actualowned5% new-contribution multiplier. Merged53a0ee990 passes15native cases84.14s; rawmastery/Renew/oldpool/AI unchanged. Frozen cf561ec943 candidate remains separate; no effectiveness claim.
@@ -87,7 +117,15 @@
 ## 2026-10-22 — Ki'katal source-clock partial
 
 [Ki'katal](investigations/follower-data.md#kikatal-source-clock-partial--2026-10-22): ignored native firstWebsRED→5b036e1ea3/3GREEN57.40s, eleven90s requests perNormal/Follower, nativeVolley/Singularity damage, evade/rearm, actualcopy-credit/corpse proof. Binding-only producer1/1GREEN preserves source/native/population; lower-bound alerts and absentcontrollers remain gaps. Canonical database untouched.
+## 2026-10-22 — Attacked controlled-unit owners and pet PvE references
+
+[Combat](systems/combat.md#attacked-controlled-unit-owners--2026-10-22): separate TC-sourced owner-engagement and PvE-lifetime fixes follow pushed ignored REDs. Native melee/direct/133impact/lethal owner-zero-threat cases plus30squietPvE/bothcontrolledPvP give6GREEN31.60s at56e758740. No followercoverage/healerpolicy/stat changes; dungeon controls pending.
+
 ## 2026-10-22 — Active party combat references
+
+## 2026-10-22 — Fire Ignite producer and shared rolling integration
+
+Ordinary Fireball→Ignite RED precedes per-spell producer; native4GREEN covers exact9ticks, no self-cascade, consumed HotStreak doubling and actual unpaid refresh. Shared flag-driven carry reused from13191, not forked. Controlled naked70 baseline/decomposition and integrated single-seed observation qualify stats, idle and nohero reference differences. See [Fire70](investigations/follower-data.md#fire70-ignite-producer-and-controlled-baseline--2026-10-22).
 
 Updated [follower admission](investigations/follower-data.md#active-party-combat-reference-admission--2026-10-22) and its contract: actual31146 count RED and native missile-launch RED distinguish active references from target-side suppression. Membership-only Stockade regression isolated on identical authentic data; active-pair fix4405dca61 gives native2GREEN, Stockade3/3 with all5alive,685native controls plus Leymor1PASS. Full genuine Henry roster also clears3/3 at2384.60sim_s with all5alive on approved authentic6bf39eb8 input. Final master merge carries later schema/population-oracle updates; check/integration proof is recorded separately.
 
