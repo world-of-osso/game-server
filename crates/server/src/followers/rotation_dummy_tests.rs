@@ -9,6 +9,7 @@ use shared::protocol::CombatLogKind;
 use std::collections::BTreeMap;
 
 const DURATION_SECONDS: f64 = 120.0;
+const AUTO_SHOT: u32 = 75;
 const DUMMY_HEALTH: f32 = 1_000_000_000.0;
 
 #[derive(Default, Serialize)]
@@ -198,6 +199,75 @@ fn prepare_follower(entry: u32, spec: u32, level: u8) -> (Harness, Entity) {
                 crate::creature_ai::CreatureAiPlugin,
             ));
     })
+}
+
+#[test]
+fn rotation_fidelity_253_engagement_starts_native_auto_shot_without_resetting_repeat() {
+    let (mut h, caster) = prepare_follower(209065, 253, 32);
+    prepare_dummies(&mut h, 1);
+    let stats = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(caster)
+        .unwrap();
+    let base = if stats.main_hand.kind == shared::components::WeaponType::Ranged {
+        stats.main_hand.speed
+    } else {
+        2.0 // TC BASE_ATTACK_TIME when no ranged main hand supplies the clock.
+    };
+    let frame_seconds = match h.app.world().resource::<bevy::time::TimeUpdateStrategy>() {
+        bevy::time::TimeUpdateStrategy::ManualDuration(step) => step.as_secs_f32(),
+        _ => panic!("native fixture requires its manual frame clock"),
+    };
+    let interval_frames = crate::melee::swing_time(base, stats.haste_pct) / frame_seconds;
+    let interval = interval_frames.floor() as usize..=interval_frames.ceil() as usize;
+    let mut shots = Vec::new();
+    for frame in 0..200 {
+        let first = h.inbox.go.len();
+        super::update_ai(h.app.world_mut());
+        h.advance(1);
+        shots.extend(h.inbox.go[first..].iter().filter_map(|event| {
+            (event.caster == caster.to_bits() && event.spell_id == AUTO_SHOT).then_some(frame)
+        }));
+    }
+    assert!(
+        shots.len() >= 3,
+        "engaged native BM must start and repeat Auto Shot: {shots:?}"
+    );
+    for pair in shots.windows(2) {
+        assert!(
+            interval.contains(&(pair[1] - pair[0])),
+            "native ranged clock, not AI-tick recasts: {shots:?}"
+        );
+    }
+    assert!(
+        h.inbox.log.iter().any(|event| {
+            event.source == Some(caster.to_bits())
+                && event.spell_id == Some(AUTO_SHOT)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        }),
+        "actual native follower Auto Shot damage"
+    );
+}
+
+#[test]
+fn rotation_fidelity_253_selection_alone_does_not_start_auto_shot() {
+    let (mut h, caster, _) =
+        super::profile_behavior_tests::spawn_profile_fixture_with_plugins(209065, |app| {
+            app.add_plugins(crate::stats::StatsPlugin);
+        });
+    for _ in 0..120 {
+        super::update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        !h.inbox
+            .go
+            .iter()
+            .any(|event| { event.caster == caster.to_bits() && event.spell_id == AUTO_SHOT }),
+        "owner selection without native engagement must not start Auto Shot"
+    );
 }
 
 #[test]
