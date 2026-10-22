@@ -78,6 +78,12 @@ fn authored_placement_native_status_probe() {
             wow(793.443, -1081.09, 1002.57),
             wow(860.9113, -671.994, 998.26935),
         ),
+        (
+            2648,
+            207205,
+            wow(2799.96, -2174.89, 266.837),
+            wow(2805.148, -1643.4467, 142.1265),
+        ),
     ] {
         let mut nav = NavigationMap::open(&root.join(map_id.to_string())).unwrap();
         nav.load_around(start, end).unwrap();
