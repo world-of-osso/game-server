@@ -1,3 +1,7 @@
+## 2026-10-22 — Native blocked-chase parity and Azure horizon
+
+[Shared native evade](systems/dungeon-simulator.md#disconnected-chase-parity-2026-10-22): original first-book fixture failed setup; corrected second-book539bRED11.79s→1bfGREEN16.62s. Reuses production marker/no-path system, no new clock or physical navigation. Retained simulator controls23PASS. [Fresh Azure10](systems/dungeon-simulator.md#post-evade-azure-qualification-2026-10-22) yields8valid1h timeouts/2tankabsence blocks,8Leymor Deaths,1239.244563s wall, no missing reports. Live trash remains at the horizon; seed4 tank dies near active healer under4native melee actors. Stockade49+retained50 qualification running; no Azure/live acceptance.
+
 ## 2026-10-22 — Continuous-edge cohorts and disconnected chase
 
 [Archived5f7 qualification](systems/dungeon-simulator.md#continuous-edge-seeded-qualification-2026-10-22): Stockade50/50,150boss Deaths,0failures;1–49batch3083.914376s plus retained50 individual124.597531s. Azure10requested yields9process panics/missingreports and1valid tank-absence block,1323.826085s. [Separate Rune blocked-chase parity](systems/dungeon-simulator.md#disconnected-chase-parity-2026-10-22) now has an ignored native book-hop regression; no synthetic connector, policy exception or timer. RED pending.
