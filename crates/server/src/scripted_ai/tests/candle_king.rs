@@ -1,4 +1,6 @@
 //! TC a352b1fa boss_the_candle_king.cpp; native70448 source actor208745.
+//! Follower205 actor is explicitly projected from the authored Normal placement;
+//! no205 spawn, stats or difficulty rows are fabricated or published.
 use super::*;
 
 const CANDLE_KING: u32 = 208745;
@@ -21,7 +23,7 @@ fn candle_copy(difficulty: u32) -> (Harness, Entity, InMap) {
 
 #[test]
 #[ignore = "RED: TC Candle King handler not ported"]
-fn encounter_coverage_candle_king_first_molds_uses_tc_clock() {
+fn encounter_coverage_candle_king_first_molds_normal_and_projected205_tc_clock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = candle_copy(difficulty);
         h.engage(boss);
