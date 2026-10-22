@@ -192,7 +192,10 @@ fn ruby_resource_limited_tail_native_component_probe() {
     );
 }
 
-fn tile_and_poly(nav: &NavigationMap, reference: dtPolyRef) -> (*const dtMeshTile, *const dtPoly) {
+pub(super) fn tile_and_poly(
+    nav: &NavigationMap,
+    reference: dtPolyRef,
+) -> (*const dtMeshTile, *const dtPoly) {
     let mut tile = std::ptr::null();
     let mut poly = std::ptr::null();
     // SAFETY: reference is from this owned mesh's nearest query or its native links.
@@ -232,7 +235,7 @@ fn linked_polygons(
     output
 }
 
-fn connected_polygons(
+pub(super) fn connected_polygons(
     nav: &NavigationMap,
     start: dtPolyRef,
     filter: &dtQueryFilter,
