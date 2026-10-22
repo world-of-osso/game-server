@@ -1,3 +1,7 @@
+## 2026-10-22 — Current-kit selection boundary and reusable TC edges
+
+[Source-role boundary](systems/dungeon-simulator.md#source-role-census-and-shared-tc-child-edges-2026-10-22): fresh lead-binary73/103 runs give54569.60/49373.95DPS and18/20adds. Shield Charge exists only as skippedutility; Feral Frenzy ends56 because native starter selects its explicit override57+, alsoutility. ProducerRED exposes6role/window failures with existing-role controlPASS; fixes remain active. Shared pinnedTC artifact verifies12sourcefiles/822bindings,553constantedges/68unresolvedcalls, with4contractGREEN. Exact Shield chainTC385952→385953→DB2385954 corrects earlier direct-child shorthand. No runtime effectiveness or all-green gate claim.
+
 ## 2026-10-22 — Existing three-spec stat/coverage/formula evidence
 
 [Decomposition](systems/dungeon-simulator.md#existing-three-spec-stat-coverage-and-formula-decomposition-2026-10-22) preserves32b2a678f receipts: level90 matches,47 item identities match,45 explicit plus2 bonus-derived levels match; AP/SP budgets differ2.93–10.19%, with secondary/redirected-stat differences unresolved. Power-only hypothetical scaling does not close5–16x DPS gaps. Conserved channel/count/per-hit accounting is not causal attribution;42 non-Meteor base-effect rows agree while effective modifiers remain unproved. Partial recipient coverage remains open. Meteor handed to13122; no duplicated mechanism work, builds, simulations or production edits.
