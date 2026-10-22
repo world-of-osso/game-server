@@ -1,11 +1,13 @@
 """Read actual authenticated70448/cached NPC evidence without network requests."""
+import copy
+import json
 import os
 from pathlib import Path
 import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from follower_placement_sources import read_cached_npc, read_db2, select_assignment, transform_marker
+from follower_placement_sources import read_cached_npc, read_db2, read_source_floor_support, select_assignment, transform_marker
 
 
 @unittest.skipUnless('FOLLOWER_PLACEMENT_DB2' in os.environ and 'FOLLOWER_PLACEMENT_CACHE' in os.environ,
@@ -44,6 +46,24 @@ class FollowerPlacementSources(unittest.TestCase):
                 actual = transform_marker(page['markers'][0], assignment)
                 self.assertAlmostEqual(actual[0], expected[0], places=6)
                 self.assertAlmostEqual(actual[1], expected[1], places=6)
+
+    def test_wratheye_source_wmo_floor_rejects_roofs_wrong_floor_and_changed_evidence(self):
+        manifest_path = Path(__file__).resolve().parents[2] / 'content/follower-placements/brackenhide.json'
+        record = next(r for r in json.loads(manifest_path.read_text())['entries'] if r['entry'] == 186121)
+        marker = read_cached_npc(self.cache, 186121)['markers'][0]
+        assignments = select_assignment(self.tables, 2520, marker)
+        observed = [111.17662182231342, 246.987919, 263.096514]
+        self.assertEqual(read_source_floor_support(record, marker, assignments, observed), [observed[0]])
+        with self.assertRaisesRegex(ValueError, 'marker floor'):
+            read_source_floor_support(record, dict(marker, floor=0), assignments, observed)
+        damaged = copy.deepcopy(record)
+        damaged['source_floor_evidence']['source_files'][0]['sha256'] = '0' * 64
+        with self.assertRaisesRegex(ValueError, 'evidence file changed'):
+            read_source_floor_support(damaged, marker, assignments, observed)
+        damaged = copy.deepcopy(record)
+        damaged['source_floor_z_bounds'][1] += 1
+        with self.assertRaisesRegex(ValueError, 'recorded WMO transform'):
+            read_source_floor_support(damaged, marker, assignments, observed)
 
     def test_teera_actual_empty_mapper_is_an_explicit_source_gap_not_a_crash(self):
         try:
