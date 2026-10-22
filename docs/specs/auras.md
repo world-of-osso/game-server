@@ -10,7 +10,7 @@ This is shared aura execution, not an Echo/Ignite proc or learned-spell grant.
 - [ ] Native Attr10 `ROLLING_PERIODIC` selects one shared carry path for periodic damage/healing, including335467 leech.
 - [ ] Settle old due ticks once, then add the same caster/spell/effect's unpaid stored amount over the refreshed scheduled ticks; retain the existing native phase.
 - [ ] Preserve Barbed's authored five-amount normalization and seven-initial/six-refreshed clock; never apply its normalization to other spells or carry its old pool twice.
-- [ ] Unflagged periodic healing and foreign caster pools remain independent; periodic values round after carry as sourced.
+- [ ] Unflagged periodic healing and foreign caster pools remain independent; preserve existing fractional snapshots and payment rounding rather than requantizing them during refresh.
 - [ ] Ordinary native child aura/cast execution gains this behavior automatically, including flagged12654; class producers still own their sourced incoming amount.
 
 Generic native boundary assertions:

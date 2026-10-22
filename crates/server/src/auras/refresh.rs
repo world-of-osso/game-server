@@ -2,7 +2,7 @@
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, Health};
 
-use super::{ActiveAuras, AuraInstance, aura_now, handlers, periodic};
+use super::{ActiveAuras, AuraInstance, aura_now, periodic};
 use crate::spell_info::SpellInfo;
 
 const ROLLING_PERIODIC: u32 = 0x4000;
@@ -46,7 +46,6 @@ pub(super) fn prepare_application(
     }
     if rolling {
         roll_remaining_periodic(world, target, new);
-        round_periodic_amounts(new);
     }
 }
 
@@ -121,18 +120,6 @@ fn roll_remaining_periodic(world: &World, target: Entity, new: &mut AuraInstance
         let future = remaining_ticks(prior.next_tick_at(), new_expiry, prior.period_ms);
         if future > 0 {
             fresh.amount += prior.amount * old.stack_multiplier() * unpaid as f32 / future as f32;
-        }
-    }
-}
-
-/// TC rounds these stored periodic amounts after rolling (SpellAuraEffects.cpp859–873).
-fn round_periodic_amounts(new: &mut AuraInstance) {
-    for effect in &mut new.effects {
-        if matches!(
-            effect.aura_type,
-            handlers::PERIODIC_DAMAGE | handlers::PERIODIC_HEAL | handlers::PERIODIC_LEECH
-        ) {
-            effect.amount = effect.amount.round();
         }
     }
 }
