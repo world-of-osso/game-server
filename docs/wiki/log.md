@@ -1,3 +1,7 @@
+## 2026-10-22 — Murder density packet qualified
+
+[Murder marker population](investigations/follower-data.md#murder-individual-marker-density-packet--2026-10-22):128actual poses/24own native types/92per-type shortfall, fresh-copy216INSERTs/replay3×. ActualmissingRED→whole128/native/density1GREEN0.284s atac5226092; SQLowner/pose control passed separately. Real zone-15 absentAreaTable StopIteration→explicit source gap3GREEN1.909s at74fd; no guessed frame. Native255050 template/boss234648binding preserved; no groups/entrance/routes/canonical writes.
+
 ## 2026-10-22 — Altar own-marker trash published
 
 [Altar density packet](investigations/follower-data.md#altar-individual-marker-density-packet--2026-10-22):49 actual observed single-Z spawns/12native templates/12models, per-type clone cap leaves108shortfall from157budget. Actual49missing RED→whole49/native/density/gap plus SQLownership/pose2GREEN0.305s at71ec9669c; fresh canonical-copy replay3× and current artifact hashes verified. Lead confirmed publication/replay identical; no groups/entrance/routes/canonical writes by producer.
