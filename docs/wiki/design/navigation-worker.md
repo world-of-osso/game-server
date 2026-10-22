@@ -36,11 +36,11 @@ Tests directly using server queries: `scripted_ai/waypoint_path_tests.rs`252/271
 
 Catch and log a worker panic; detect worker exit/disconnection as well. Fail every outstanding/current request with an explicit worker-unavailable error, and reject future requests with that error rather than leaving Pending forever. Do not restart silently or add synchronous fallback. A worker-death control checks all pending and subsequent requests terminate explicitly.
 
-## Proof and exclusions
+## Worker-migration proof and exclusions
 
 First RED: real baked tile read held at its actual IO boundary while an App advances fixed ticks. Assert ticks advance and no path publishes while held; release, drain only in the test, run the next fixed tick, and assert the real path publishes and movement resumes. Before the fix, a bounded rescue releases the read and demonstrates stalled tick advancement rather than hanging the suite. Add behavioral controls for existing-route continuation, latest-request wins, stale completion rejection, stable publication order, unchanged errors, fear/hazard/waypoint continuations and drain isolation.
 
-No timeout, bake, Detour algorithm, geometry, LOS/ground IO, unrelated actor, protocol or sight/faction CPU changes. `SIGHT_FACTION_MAIN_THREAD_CPU` remains a separately measured next candidate. No claim this slice alone cures historical ten-second gaps.
+The worker-migration slice did not change timeout, bake, Detour algorithm, geometry, LOS/ground IO, unrelated actor, protocol or sight/faction CPU behavior. The separately approved encoded-grid extension below changes bake tiling, not that worker ownership contract. `SIGHT_FACTION_MAIN_THREAD_CPU` remains a separately measured next candidate; neither slice claims to cure all historical ten-second gaps.
 
 ## Encoded navigation grid contract
 
@@ -50,7 +50,7 @@ Lead-approved refinement starts each complete map at the existing4×4 grid. Only
 
 `OSSONAV3` retains its packet framing. Each existing Detour packet already encodes bounds and grid coordinates. The worker initializes its map's Detour tile width from the first validated nonempty packet, normalizes only floating-point coordinate-rounding error to the encoded power-of-two grid, and rejects any subsequently loaded packet with a different grid. Packet-count validation is bounded by actual artifact length, not the former16-packet assumption. Empty tiles do not select a grid or permit a direct route. A wholly empty loaded map fails explicitly before a Detour query. No simulation-thread IO/query path is introduced.
 
-At `84b5a36ba`, targeted acceptance is3/3 GREEN with0ignored: productionCLI real2669tile31_37 bake/query (151.89s), generated refined-grid routes across a WoW tile boundary in both directions, and explicit mixed-grid rejection. A fresh patchedAzure2515 bake retains4×4 and all four `.nav` hashes exactly match the original private/first-pass artifacts; ordinary-grid byte identity is observed, not inferred. Receipts: `refined-green-84b5a36ba.log` and `ordinary_grid_byte_identity` in `navmesh-receipts.json`. Four full failed-map fresh staging bakes and final gates remain pending. Partial failed maps are not publishable; refined maps require this updated runtime before publication.
+At `84b5a36ba`, targeted acceptance is3/3 GREEN with0ignored: productionCLI real2669tile31_37 bake/query (151.89s), generated refined-grid routes across a WoW tile boundary in both directions, and explicit mixed-grid rejection. A fresh patchedAzure2515 bake retains4×4 and all four `.nav` hashes exactly match the original private/first-pass artifacts; ordinary-grid byte identity is observed, not inferred. Receipts: `refined-green-84b5a36ba.log` and `ordinary_grid_byte_identity` in `navmesh-receipts.json`. Fresh full-map repairs pass with uniform8×8 grids:2669=20,2660=49,2874=30,2859=15 WoW tiles. All27 requested maps now have1100nav/1100LOS/1100M2-floor tiles; all19119final Detour packets retain the original float32 body height/radius/climb. Each repaired output set rehashes with0mismatches and exactly matches its LOS-selected tile names. `publication-manifest.json` lists3300 exact source/destination/hash files without publishing them. Sanity remains qualified:20authored entrance→boss queries yield8PASS/12unavailable;18maps lack an authored entrance and4lack Normal boss spawns. No endpoint or connector is invented. Final bounded gates remain pending; refined maps require the updated runtime before lead-owned publication.
 
 ## Sources
 
