@@ -21,13 +21,15 @@ The lead authorized copying (not hardlinking) `game-server-verify2/target/debug/
 | Test / scope | Before | After | Status |
 |---|---:|---:|---|
 | Campaign authored route order, cold process |29.101s|pending|baseline PASS|
-| Full native Stockade clear |pending|pending|baseline running|
-| Nethekurse native aggro, Normal + Heroic |pending|pending|baseline queued|
+| Full native Stockade clear |aborted after919.72s sampled CPU|pending|no passing baseline receipt|
+| Nethekurse native aggro, Normal + Heroic |pending|pending|safe baseline queued|
 | Full gate-filter union |reported40–64min|pending|not accepted|
 
 The copied executable's machine-readable nextest census selects2748 enabled tests in the game-server binary. Its total census contains5397 cases, including mismatches and pre-existing ignored cases. `baseline-union-census.json` and `union-filter.txt` retain exact selection semantics: `(fu913 OR sm894) minus their existing opening-admission skip`, union `rd912`. Other workspace binaries still require their own census and acceptance;2748 is not presented as the entire workspace count.
 
 During the baseline Stockade test, `/proc` reported peakRSS626396KiB but currentRSS95996KiB plus520608KiB swap. Shared-host reclaim therefore confounds wall comparisons; RSS alone does not describe its resident-plus-swapped footprint. A profile speedup must be measured, not inferred from the sample.
+
+That first run was stopped after917.28s user+2.44s system CPU when its embedded `CARGO_MANIFEST_DIR` was found to point checkpoint/preparation output at the original checkout's target directory. The partial run is diagnostic evidence, not a passing before receipt. The corrected baseline uses a private `bwrap` mount mapping the original checkout path onto the private checkout, read-only host root, and explicit private `DUNGEON_SIMULATOR_OUTPUT`. A mount-identity/write probe confirmed its target output exists only in the private checkout. The bounded matching cohort is authored-route initialization plus Normal/Heroic Nethekurse aggro; the optimized full Stockade test remains additional absolute-budget coverage. Per-case `/proc` samples track CPU, peakRSS and swap; a fresh timer supplies exact whole-cohort child CPU and peakRSS.
 
 ## Gate invocation and remaining slow cases
 
