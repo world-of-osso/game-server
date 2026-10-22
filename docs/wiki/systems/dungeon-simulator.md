@@ -42,6 +42,8 @@ The frozen-view continuation atc04ecc5b9 attempted exactly eight authorized sing
 
 Reports and exact terminal proofs are `native-frozen-source-v2/<spec>.native.1.json` and `cohort-<spec>-player.proof.json`. Native3-target parity remains separate from these single-target/source-view controls and awaits the parent-owned CombatRefs admission integration.
 
+For those later runs, native `combat.damage_by_target` records each measurement target's real damage and hit count, including retired adds and zero-output targets. Actor/spell action totals and casts are unchanged; heals, unrelated victims and targetless events are excluded. This is additive accounting, not an AI/admission change or proof that three spawned targets took damage. The concrete accounting test at77e8b0623 first failed on the missing recipient field, with the existing600damage total intact; collector GREEN and actual3-target execution remain separate gates.
+
 ## Qualified path-candidate Stockade cohort —2026-10-21
 
 Production2f443fb5a, protocol03cebdb, frozen worldDB40d95b0, unchanged native Stockade32/default five: **50/50clears,150native boss Deaths,0failures**, with actual34/1/level32 verified in every report. Fresh seeds1–49/jobs2 clear49/49 in2575.069794s batch wall; same-code seed50 was already qualified by the full native regression (83.707545s individual wall) and is retained without rerunning it. There is no contiguous50-run batch wall. This qualifies that simulator cohort, not Azure or live acceptance. The subsequent mid-edge walking correction intersects these paths, so this is historical2f443fb5a evidence, not qualification of that correction.

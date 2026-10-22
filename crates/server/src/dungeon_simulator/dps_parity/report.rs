@@ -1,7 +1,7 @@
 //! Actual combat log accounting; no inferred hits or fabricated stat contributions.
 use bevy::prelude::*;
 use serde_json::{Value, json};
-use shared::protocol::CombatLogKind;
+use shared::protocol::{CombatLogEvent, CombatLogKind};
 use std::collections::BTreeMap;
 
 pub(super) fn stats(world: &World, actor: Entity) -> Value {
@@ -83,6 +83,29 @@ pub(super) fn sample_buffs(world: &World, actor: Entity, counts: &mut BTreeMap<u
     }
 }
 
+fn summarize_target_damage(events: &[CombatLogEvent], targets: &[Entity]) -> Value {
+    let mut recipients: BTreeMap<_, (u64, u32)> = targets
+        .iter()
+        .map(|target| (target.to_bits(), (0, 0)))
+        .collect();
+    for event in events
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Damage)
+    {
+        let Some((damage, hits)) = event.target.and_then(|target| recipients.get_mut(&target))
+        else {
+            continue;
+        };
+        *damage += u64::try_from(event.amount).expect("nonnegative damage log");
+        *hits += 1;
+    }
+    let rows: Vec<_> = recipients
+        .into_iter()
+        .map(|(target, (damage, hits))| json!({"target": target, "damage": damage, "hits": hits}))
+        .collect();
+    json!(rows)
+}
+
 pub(super) fn combat(world: &World, targets: &[Entity], seconds: f64) -> Value {
     let events = &world
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
@@ -109,7 +132,7 @@ pub(super) fn combat(world: &World, targets: &[Entity], seconds: f64) -> Value {
             "share_pct": if total > 0 { damage as f64 * 100.0 / total as f64 } else { 0.0 }})
     }).collect();
     json!({"dps": total as f64 / seconds, "total_damage": total, "actions": actions,
-        "event_count": events.len()})
+        "event_count": events.len(), "damage_by_target": summarize_target_damage(events, targets)})
 }
 
 pub(super) fn gaps(profile: &super::inputs::Profile, is_player: bool) -> Vec<String> {
@@ -147,8 +170,6 @@ pub(super) fn gaps(profile: &super::inputs::Profile, is_player: bool) -> Vec<Str
 
 #[test]
 fn native_damage_recipient_accounting_preserves_retired_and_zero_output_targets() {
-    use shared::protocol::CombatLogEvent;
-
     let mut world = World::new();
     let actor = world.spawn_empty().id();
     let pet = world.spawn_empty().id();
