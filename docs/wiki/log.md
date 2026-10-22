@@ -1,3 +1,7 @@
+## 2026-10-22 — Prismatic Echoes learned bonus
+
+[Prismatic Echoes](investigations/holy-priest-follower-ai.md#prismatic-echoes-learned-bonus--2026-10-22): separate871560575 native61 tick81vs85 RED/control60PASS37.36s→97a246aa5 actualowned5% new-contribution multiplier. Merged53a0ee990 passes15native cases84.14s; rawmastery/Renew/oldpool/AI unchanged. Frozen cf561ec943 candidate remains separate; no effectiveness claim.
+
 - [Echo/native rolling carry](investigations/holy-priest-follower-ai.md#echo-of-light-producer-and-shared-rolling-carry--2026-10-22) — live mastery producer and one flag-driven damage/heal unpaid-pool refresh; native RED→19GREEN, Barbed/335467 normalization preserved; Ignite producer/effectiveness separate.
 ## 2026-10-22 — Midnight clock authority
 

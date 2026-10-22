@@ -319,9 +319,9 @@ Reduces the cooldown of your Holy Words by ${$s1/-1000} sec.
 
 Increases the healing done by your Mastery: Echo of Light by $s1% and your Renew by $s2%.
 
-- [ ] Actual owned learned390967 effect0 multiplies each new Echo contribution by `1+nativePercentage/100`, following SimC76f8118 `sc_priest.cpp:3704–3711`.
-- [ ] Below the native selected-kit level61 boundary, Echo keeps its base amount; never grant the talent to satisfy this condition.
-- [ ] Do not rewrite raw mastery points/77485 or apply the multiplier again to a carried old pool; the separate native effect1 Renew modifier remains unchanged.
+- [x] Actual owned learned390967 effect0 multiplies each new Echo contribution by `1+nativePercentage/100`, following SimC76f8118 `sc_priest.cpp:3704–3711`.
+- [x] Below the native selected-kit level61 boundary, Echo keeps its base amount; never grant the talent to satisfy this condition.
+- [x] Do not rewrite raw mastery points/77485 or apply the multiplier again to a carried old pool; the separate native effect1 Renew modifier remains unchanged.
 
 Proof uses actual level60/61 Henry Flash Heal→77489 ticks and the native90
 refresh/ownership controls in `holy_policy_native_tests/echo_of_light.rs`.
