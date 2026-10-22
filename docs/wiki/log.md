@@ -5,6 +5,14 @@
 ## 2026-10-22 — CritterGUID source and slot audit
 
 [Toys](systems/toys.md#critterguid-source-identity-and-slot-boundary-2026-10-22): source Companion-title GUID setter/matching removal,90explicit identity/no self default and150auto lookup. Journal3221/5028/5085 slot5 versus legacy0/5/6 means no blanket slot6/cross-slot removal or older-actor restoration. Hidden344 has ordinary Ally title0, not critter/guardian; three journal roots lack effects even raw70448. Test-firsta955bb1b2 adds real owned-journal RPC +native Coyote/Hare/three-Skeleton lifecycle/negative cases; RED pending, no implementation/admission claim.
+- [Echo/native rolling carry](investigations/holy-priest-follower-ai.md#echo-of-light-producer-and-shared-rolling-carry--2026-10-22) — live mastery producer and one flag-driven damage/heal unpaid-pool refresh; native RED→19GREEN, Barbed/335467 normalization preserved; Ignite producer/effectiveness separate.
+## 2026-10-22 — Feel the Burn targeted GREEN and affected samples
+
+[Native boundaries](investigations/follower-data.md#feel-the-burn-native-eligibility-and-overlap--2026-10-22): native11GREEN41.86s/c43cc8dcb/zero warnings includes4Feel cases plus7 ordinary proc/cadence controls; proved4 enabled25c4d4fb4. Only affected Fire StatsPlugin3PASS86.45s,90ST/3T3261.958/3011.958 DPS and final mastery_points13/11, explicitly unpaired starter samples. Later996ec234 merge requires integration proof. New Elemental70 diagnostic2PASS31.84s atsamecompiledscope; analysis separatescaster/guardian attribution and actualstat mismatch rather than declaring parity.
+
+## 2026-10-22 — Feel the Burn native eligibility and async stack RED
+
+[Native boundaries](investigations/follower-data.md#feel-the-burn-native-eligibility-and-overlap--2026-10-22): actualFireBlast2mastery4s positive; actualFireballwrongproc and independent4s application2vs1 are genuine2RED/21.74s. [Generic native490](systems/auras.md#native-asynchronous-stack-expirations--2026-10-22) has pinned SimC authority plus exact70448 flag, no guessed per-spell timer. Runtimeac5eb241d/source/spec committed; GREEN pending, cases remain ignored. Frozen Ascendance entry packetb11 unchanged.
 ## 2026-10-22 — Native power receipt observability
 ## 2026-10-22 — Utility Attr4 master refresh
 
@@ -17,6 +25,10 @@
 ## 2026-10-21 — Follower utility and scoped geometry
 
 [Utility scheduler](systems/follower-utility.md): named project policy over actual70448 spellbooks; direct native follower/player resurrection and16-case GREEN, with later strict-OOC/source-guard requalification tracked independently. Native pet initialization RED→fresh/cached89766GREEN; Bo first-fight pursuit/damage RED→qualified player-race geometry GREEN5.32s, full identical seed11 timeout→all3bosses2646.1sim/77.84wall. [Ordinary model-info finding](investigations/ordinary-model-info-gap.md) remains separate:1051 used source gaps, no ordinary-NPC sizing extension. Final matched comparison and final integration gates remain open in the proof ledger.
+## 2026-10-22 — Midnight identity/population recheck
+
+[Updated native evidence](investigations/follower-data.md#updated-native-identityplacement-evidence--verified2026-10-22): b365fd5f2 pre-packet census adds19 exact unique JEC/TDB joins/11 single-floor encounter XYs; blanket candidate-only identity gaps superseded for qualified actors. Canonical11:25CDT source/runtime counts: MurderRow2/2,Den217/217,Maisara376/376,other6maps0/0. Placement publication and missing server-clock anchors remain separate; no external guide authority used.
+
 ## 2026-10-22 — Midnight clock authority
 
 [Source matrix](investigations/follower-data.md#midnight-clock-authority--2026-10-22):31 incoming-timeline LittleWigs modules lack authored start/repeat anchors;160 native EncounterEvent alert rows do not provide them. Existing Kystia TC authority retained; other30 remain explicit clock/identity/placement gaps, not fabricated schedules. Historical DF-only task exclusion corrected for current27-map scope.
