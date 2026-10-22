@@ -1,3 +1,10 @@
+## 2026-10-21 — Holy frozen policy qualification
+
+[Holy Priest](investigations/holy-priest-follower-ai.md#frozen-native-and-cohort-qualification-at-d765e1901): native d76543PASS/1named shared PoH anchor-cancellation RED41.70s; real Purify-first, aggregate596 selection/consequence and self-targetNova/safety qualified. Frozen4×20 reports/context validations complete with same catalog/profile/roster; onlyHoly production diff. Stockade deaths25→25, Azure25→34, no clears; both-source overheal/mana/CDR/procs and route/pull/death/sim taxonomy preserved. No overall-quality/live/goal-completion claim; lead gate and common lifetime blocker remain.
+
+## 2026-10-21 — Holy native policy boundary
+
+[Holy Priest](investigations/holy-priest-follower-ai.md): native temporary-threat2GREEN and native90 damage/stat controlGREEN atf53b75c0b; six policy REDs justify the real-context adapter. Integration GREEN pending; target118 Fortitude coverage ignored pending generic correction, never replaced by individual buffs.
 ## 2026-10-21 — Actual scripted boss alert clocks
 
 [Boss alerts](systems/bossmod-data.md#scripted-clock-continuation--2026-10-21): explicit six current-Lua scripts publish selected EventMap requests with source labels/colors/counts; other SmartAI-only clocks stay excluded. Canonical catalog absent; retained private Kokia legacy clocks cannot supply current requests. Real Kokia missing-snapshot RED→post-master2/2GREEN; actual private5981 Kokia205 both-skin1920 countdown/actual warnings/kill-clear accepted with ten inspected originals; source gaps retained.
@@ -51,6 +58,11 @@
 
 [Kokia](systems/boss-scripts.md#kokia-current-retail-partial--2026-10-21): ignored firstSearingRED precedes currentRetail partial065cf3fc9. Native5/5GREEN78.66s atd1af8bded proves Normal/Follower140s ongoing lanes, native aura23 weapon damage/reset/source-order rearm/isolated2606bit0/corpse. Producer1PASS12.435s; authenticated primary/localLua binding only, all actor inputs retained. No legacy timing or unsourced Ritual/Firestorm/projectile forwarding; conditional context and final gate/publication remain explicit.
 
+## 2026-10-21 — Azure translocation policy
+
+[Source book gossip and qualified endpoint derivation](systems/azure-translocation.md): nine directed links from13 source books, including authenticated AreaPOI7116 in the final component; missing ActionSets remain named. Native ingress three REDs before implementation; GREEN pending.
+
+-2026-10-20: [Non-tank positioning](systems/dungeon-simulator.md#non-tank-sight-envelope-positioning): native sight-circle approach hold RED→GREEN on20375760; accidental recovery retained, post-change10/10seeded clears.
 ## 2026-10-21 — Follower population source audit
 
 [All27 follower maps](investigations/follower-data.md#follower-population-source-audit--2026-10-21): source-only copy producer and native catalog reconstruction test; missing authentic population/entrance data stays named, not fabricated.
@@ -3527,6 +3539,11 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 - 2026-10-20: property197 actual last-hit Power percentages, data-over-prose conflict note, real997/2432 RED/GREEN and1908/1046 census.
 
+- 2026-10-21: Holy257/Henry215011 selected70448 inventory and source corrections; native Surge/Apotheosis2RED9f32cff77; candidate00848e6cd awaiting targeted proof. See [[holy-priest-follower-ai]].
+
+- 2026-10-21: Holy core at66f0:6pure+4Henry+4Word+2observer GREEN; natural2-use half-cost/one-use and requested/applied counters. New native group/threat failures are fixture missing class-level stats, not behavioral REDs. Named selected-script gaps recorded in [[holy-priest-follower-ai]].
+
+- 2026-10-21: e959 native103 HenryFade/MeredyMirrorImage2genuineRED6.32s; Player-only temporary-threat gate identified. Genericlisted-unit fix pendingGREEN; group-owner stat-query shape corrected separately. [[holy-priest-follower-ai]].
 - 2026-10-21: Academy current Retail partial: Doragosa native ignoredRED→COMPOSITE6GREEN Normal1/Follower205, explicit native projectile flight, ongoing lanes/credit/reset/corpse. Ancient/Crawth immunity ingress remains blocked; Vexamus placement source gap. See [boss scripts](systems/boss-scripts.md#academy-current-retail-partial--2026-10-21).
 ## 2026-10-21 — TWW Rookery Kyrioss
 
