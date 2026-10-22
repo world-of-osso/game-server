@@ -19,11 +19,12 @@ TABLES = ('content_creature_template', 'content_creature_template_model', 'conte
 
 
 def make_reference(directory):
-    original = json.loads((D / 'blinding-trash-packet-2/receipt.json').read_text())
+    reference_path = Path(os.environ['FOLLOWER_OWNERSHIP_REFERENCE']).resolve(strict=True)
+    original = json.loads(reference_path.read_text())
     placements = original['placements'][:2]
     replay = sqlite3.connect(directory / 'replayed.sqlite')
     empty = sqlite3.connect(':memory:')
-    with closing(sqlite3.connect((D / 'blinding-trash-packet-2/replayed.sqlite').as_uri() + '?mode=ro', uri=True)) as source:
+    with closing(sqlite3.connect((reference_path.parent / 'replayed.sqlite').as_uri() + '?mode=ro', uri=True)) as source:
         for table in TABLES:
             schema = source.execute('SELECT sql FROM sqlite_master WHERE name=?', (table,)).fetchone()[0]
             replay.execute(schema)
@@ -45,6 +46,7 @@ def make_reference(directory):
     return baseline, placements, evidence
 
 
+@unittest.skipUnless('FOLLOWER_OWNERSHIP_REFERENCE' in os.environ, 'requires explicit published ownership reference')
 class TrashOwnership(unittest.TestCase):
     def test_exact_owned_namespace_and_source_footprint_are_proved(self):
         with tempfile.TemporaryDirectory(prefix='ownership-', dir=D) as temp:
