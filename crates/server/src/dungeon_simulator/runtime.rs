@@ -80,10 +80,7 @@ fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>, include_p
         crate::stats::StatsPlugin,
     ));
     if include_pets {
-        app.add_plugins((
-            crate::hunter_pet::HunterPetPlugin,
-            crate::pet_control::PetControlPlugin,
-        ));
+        app.add_plugins(crate::hunter_pet::HunterPetPlugin);
     }
     app.init_resource::<crate::maps::InstanceManager>();
     app.init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
