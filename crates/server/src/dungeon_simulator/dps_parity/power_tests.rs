@@ -8,7 +8,7 @@ const CALL_PET: u32 = 883;
 const COBRA_SHOT: u32 = 193455;
 const PACK_TACTICS_ENERGIZE: u32 = 1282660;
 
-fn prepare_hunter_and_pet() -> (Run, Entity) {
+pub(super) fn prepare_hunter_and_pet() -> (Run, Entity) {
     let (profile, traits) = read_reference(253).unwrap();
     let mut run = prepare_reference(
         profile,

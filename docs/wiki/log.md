@@ -1,3 +1,6 @@
+## 2026-10-22 — Partial corridor continuation
+
+[Navigation](systems/navigation.md#partial-corridor-continuation--2026-10-22): Gorek native graph26936polygons connected; unchanged8192pool reaches in296/263/84polygons over three queries. Production library+mover RED reproduce discarded partial corridor/immediate Blocked. Typed resource-limited partial paths and segment-end repath keep asset/pool/tolerance values; completed-search disconnects stay immediately Blocked. At884178a15 Gorek path/mover and three Brackenhide movers GREEN, genuine-disconnect/complete-leg controls GREEN; combined48controls40PASS/8existing ignored Stockade/current-victim FAIL. Baseline/follower/check gates pending, no overall acceptance.
 ## 2026-10-22 — Inundate native targeted GREEN, known foreign FoF flake
 
 [Eligibility](investigations/follower-data.md#inundate-resource-eligibility--2026-10-22): Inundate3GREEN at329a06527 inside13PASS/1FAIL44.51s/zero warnings; failedFoF Damage-only4vs5 is lead-confirmed known Miss/Dodge oracle issue owned14179, not suppressed here. Proved3 enabled5074f1354. Affected Ele70samples2PASS37.46s/native378777events0/ST666.900/3T1007.367DPS, unpaired not causal-total proof. Newmaster6e73cc9b5 integrated043b63a88 requires current parent gate; full efficiency remains open.

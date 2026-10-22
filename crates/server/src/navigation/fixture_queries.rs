@@ -23,7 +23,7 @@ impl Navigation {
         to: Vec3,
     ) -> Result<Option<Vec<Vec3>>, String> {
         match self.drain_query(map_id, Query::Path { from, to })? {
-            Some(Output::Path(points)) => Ok(Some(points)),
+            Some(Output::Path(path)) => path.into_complete().map(Some),
             None => Ok(None),
             Some(_) => Err("test path returned a non-path result".into()),
         }
