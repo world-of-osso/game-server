@@ -1,3 +1,4 @@
+- [RPPM haste rows](systems/auras.md#rppm-haste-modifiers--2026-10-21) — native Type1 Param/Coeff scaling, not Flags; actual learned55 Dance RED reproduced, enabled GREEN pending; other modifier types remain gaps.
 - [FoF SimC cadence](systems/auras.md#fists-of-fury-simc-cadence--2026-10-21) — named113656/117418 damage-period policy preserves native coefficients and generic toy bridge;25vs5 native RED, GREEN pending.
 - [Cast while casting](systems/spell-casting.md#cast-while-casting--2026-10-21) — native Attr4 admission shared by creature/player/kit paths, without delaying Fire Blast behind the active cast; three native RED reproduced, GREEN pending.
 - [Follower mastery amounts](systems/character-stats.md#follower-mastery-amount-refresh--2026-10-21) — Player-only amount/refresh gate excluded approved class-stat followers; native AP/damage RED reproduced, generic fix committed with GREEN pending.

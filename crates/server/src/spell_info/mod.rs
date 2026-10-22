@@ -243,10 +243,18 @@ pub struct SpellAuraOptions {
     pub proc_type_mask: [u32; 2],
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct ProcsPerMinute {
     pub base_proc_rate: f32,
     pub flags: u32,
+    /// SpellProcsPerMinuteMod Type1; never infer haste scaling from Flags.
+    pub haste_modifiers: Vec<ProcsPerMinuteHasteModifier>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct ProcsPerMinuteHasteModifier {
+    pub parameter: u32,
+    pub coefficient: f32,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]

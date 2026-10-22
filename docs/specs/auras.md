@@ -13,6 +13,10 @@ Pinned TC a352b1fa and native70448, without spell-ID branches:
 
 [Source matrix, remaining dependencies and proof](../wiki/systems/auras.md#census-generic-resource-state-duration-and-sanctuary--2026-10-20).
 
+## Data-driven RPPM haste
+
+For positive native RPPM rates, `SpellProcsPerMinuteMod` Type1 must scale the effective rate using its actual Param/Coeff rows before both attempt probability and bad-luck interval calculations. Params1–5 read the existing unified derived haste representation; do not infer scaling from `SpellProcsPerMinute.Flags`. Keep native timers, cooldowns, proc masks and charges unchanged. Native325201/PPM57/mod221 and learned1272685 haste30 provide the regression. Non-haste modifier types remain unimplemented, not certified by this slice. [Implementation and proof](../wiki/systems/auras.md#rppm-haste-modifiers--2026-10-21).
+
 ## Fists of Fury damage cadence
 
 `FISTS_OF_FURY_SIMC_TICK_CADENCE` governs only113656's117418 damage trigger: base1s periodic ticks including tick0, five hits over the native4s channel, before ordinary period/duration modifiers. Keep native damage coefficients, costs, target selection and the166ms control heartbeat unchanged; do not change generic226 toy behavior. Source: SimC76f8118 `monk/sc_monk.cpp1789–1796`. TC has no FoF script and its226 dummy is handled via scripts, so this is an explicit project policy rather than a DB2 timer correction. [Implementation and proof](../wiki/systems/auras.md#fists-of-fury-simc-cadence--2026-10-21).

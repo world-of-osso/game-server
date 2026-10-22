@@ -3,7 +3,6 @@ use super::proc_chance;
 use crate::auras::{ActiveAuras, aura_now};
 
 #[test]
-#[ignore = "DPS parity RED: native RPPM modifier221 is not applied"]
 fn rotation_fidelity_windwalker_dance_rppm_uses_native_regen_haste_modifier() {
     // Native Martial Agility1272685 is learned55 and supplies aura342/base30.
     // Level41 has genuinely zero haste; do not fabricate a stat to exercise scaling.
@@ -32,6 +31,7 @@ fn rotation_fidelity_windwalker_dance_rppm_uses_native_regen_haste_modifier() {
         .as_ref()
         .unwrap()
         .procs_per_minute
+        .as_ref()
         .unwrap()
         .base_proc_rate;
     let haste = world

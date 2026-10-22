@@ -1,3 +1,7 @@
+## 2026-10-21 — Generic native RPPM haste rows
+
+[Auras](systems/auras.md#rppm-haste-modifiers--2026-10-21): load Type1 Param/Coeff rows and scale the RPPM rate before probability/bad-luck math. Donor native325201/PPM57/mod221 with real learned55 haste30 gives RED94.78624 expected vs42.625 actual. No Flags inference or timer changes; GREEN pending; non-haste types remain gaps.
+
 ## 2026-10-21 — FoF named SimC cadence
 
 [Auras](systems/auras.md#fists-of-fury-simc-cadence--2026-10-21):113656/117418 uses the approved1s damage cadence/tick0 from SimC76f8118, not every native166ms dummy heartbeat. Source TC has no FoF script and leaves226 to scripts. Ignored native25-hit RED reproduced; enabled GREEN pending; generic toy bridge unchanged.

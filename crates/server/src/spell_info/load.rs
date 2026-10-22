@@ -139,31 +139,56 @@ impl Lookups {
                 ))
             },
         )?;
-        let procs_per_minute = collect(
-            conn,
-            "SELECT ID, BaseProcRate, Flags FROM spell_procs_per_minute",
-            |r| {
-                Ok((
-                    uint(r, 0)?,
-                    ProcsPerMinute {
-                        base_proc_rate: real(r, 1)?,
-                        flags: uint(r, 2)?,
-                    },
-                ))
-            },
-        )?;
+        let procs_per_minute = load_procs_per_minute(conn)?;
         Ok(Self {
             cast_times: cast_times.into_iter().collect(),
             durations: durations.into_iter().collect(),
             ranges: ranges.into_iter().collect(),
             radii: radii.into_iter().collect(),
-            procs_per_minute: procs_per_minute.into_iter().collect(),
+            procs_per_minute,
         })
     }
 }
 
-fn lookup<T: Copy>(table: &HashMap<u32, T>, id: u32) -> Option<T> {
-    table.get(&id).copied()
+fn load_procs_per_minute(conn: &Connection) -> rusqlite::Result<HashMap<u32, ProcsPerMinute>> {
+    let entries = collect(
+        conn,
+        "SELECT ID, BaseProcRate, Flags FROM spell_procs_per_minute",
+        |row| {
+            Ok((
+                uint(row, 0)?,
+                ProcsPerMinute {
+                    base_proc_rate: real(row, 1)?,
+                    flags: uint(row, 2)?,
+                    ..Default::default()
+                },
+            ))
+        },
+    )?;
+    let mut entries: HashMap<_, _> = entries.into_iter().collect();
+    let modifiers = collect(
+        conn,
+        "SELECT SpellProcsPerMinuteID, Param, Coeff FROM spell_procs_per_minute_mod WHERE Type=1 ORDER BY ID",
+        |row| {
+            Ok((
+                uint(row, 0)?,
+                ProcsPerMinuteHasteModifier {
+                    parameter: uint(row, 1)?,
+                    coefficient: real(row, 2)?,
+                },
+            ))
+        },
+    )?;
+    for (id, modifier) in modifiers {
+        if let Some(entry) = entries.get_mut(&id) {
+            entry.haste_modifiers.push(modifier);
+        }
+    }
+    Ok(entries)
+}
+
+fn lookup<T: Clone>(table: &HashMap<u32, T>, id: u32) -> Option<T> {
+    table.get(&id).cloned()
 }
 
 pub(super) fn load_spell_store(conn: &Connection) -> rusqlite::Result<SpellStore> {

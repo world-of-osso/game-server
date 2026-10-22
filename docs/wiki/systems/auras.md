@@ -1,5 +1,9 @@
 # Auras
 
+## RPPM haste modifiers — 2026-10-21
+
+`SpellInfo::ProcsPerMinute` now retains the native Type1 Param/Coeff rows, loaded once with the base-rate catalog. TC a352b1fa `SpellInfo.cpp4292–4308/4358–4371` multiplies the rate by each selected haste factor before computing probability and bad-luck protection. Params1–5 use this engine's existing unified derived haste; Flags are not haste semantics. All159 current70448 Type1 rows have PlayerConditionID0. Native325201 PPM57/mod221 with actual learned55 Martial Agility1272685 (30% haste) reproduced expected94.78624% vs42.625% before implementation. The inherited donor test is enabled; GREEN pending. Other modifier types2–8 remain named unsupported work, including selected73 aura202560's Type8 row. [Contract](../../specs/auras.md#data-driven-rppm-haste); test `auras/dance_rppm_tests.rs`.
+
 ## Fists of Fury SimC cadence — 2026-10-21
 
 `FISTS_OF_FURY_SIMC_TICK_CADENCE` overrides only the base period for113656's117418 damage trigger to1000ms before ordinary period modifiers. Native70448's166ms PERIODIC_DUMMY heartbeat previously produced25 damage hits per4s channel. SimC76f8118 `monk/sc_monk.cpp1789–1796` supplies1s ticks with tick0 (five over4s); native Attributes5 already supplies the initial tick. The control heartbeat120086, native damage/cost/duration and generic226 toy bridge stay unchanged. TC a352b1fa has no FoF script; `SpellAuraEffects.cpp1324–1326` leaves226 handled via scripts. Ignored native RED confirms25vs5; enabled GREEN pending. [Contract](../../specs/auras.md#fists-of-fury-damage-cadence); test `followers/kit_proc_fidelity_tests.rs::dps_parity_fists_of_fury_simc_tick_cadence_preserves_five_native_damage_hits`.
