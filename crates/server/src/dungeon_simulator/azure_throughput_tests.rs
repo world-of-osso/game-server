@@ -160,7 +160,20 @@ fn seed_seven_resumes_the_native_pending_fury_after_its_pet_dies() {
             .0;
         for event in &events[cursor..] {
             if event.kind == CombatLogKind::Death {
-                pet_died |= pet.is_some_and(|pet| event.target == Some(pet.to_bits()));
+                let pet_death = pet.is_some_and(|pet| event.target == Some(pet.to_bits()));
+                if pet_death {
+                    println!(
+                        "NATIVE_PET_DEATH {}",
+                        serde_json::json!({
+                            "at":run.now(),
+                            "pet":pet.map(|unit| super::super::diagnostics::inspect_unit(run.app.world(),None,unit)),
+                            "attacker":event.source.and_then(bevy::prelude::Entity::try_from_bits)
+                                .map(|unit| super::super::diagnostics::inspect_unit(run.app.world(),None,unit)),
+                            "party":run.members().map(|unit| super::super::diagnostics::inspect_unit(run.app.world(),None,unit)).collect::<Vec<_>>(),
+                        })
+                    );
+                }
+                pet_died |= pet_death;
                 selected_died |= event.target == Some(selected.to_bits());
             }
             if pet_died
