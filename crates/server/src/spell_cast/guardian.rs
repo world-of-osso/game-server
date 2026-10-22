@@ -10,6 +10,8 @@ use super::summon::SummonedCreature;
 
 #[path = "guardian_core.rs"]
 pub(super) mod core;
+#[path = "guardian_tyrant.rs"]
+pub(super) mod tyrant;
 
 const SUMMON_DEMONIC_TYRANT: u32 = 265187;
 const ANTORAN_ARMAMENTS: u32 = 1250921;
@@ -108,6 +110,7 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
     if entry == 29264 {
         initialize_spirit_wolf(world, actor, owner);
     }
+    tyrant::on_spawn(world, actor);
     let summon = world.get::<SummonedCreature>(actor).unwrap();
     let spells = match (summon.spell_id, entry) {
         // SimC76f8118 sc_warlock_pets.cpp721/867: sourced Wild Imp only.

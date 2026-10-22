@@ -1,5 +1,10 @@
 # Retail follower data and approved spec bridge
 
+### Native Tyrant Demonic Power roster — 2026-10-21
+
+At45ca3e00d three actual owned104317 Imps plus ordinary265187/135002 Tyrant give zero1276788 stacks instead of three (1genuineRED12.58s/zero warnings). Native1276788 is aura79/base10/cumulative99: ordinary applications supply the amount/limit without synthesizing damage. Pinned SimC actions3580–3640/pets924–928,954–959 counts living owned Imp/Dreadstalker actors and initial actual Felguard, then increments/decrements active Tyrants on Imp/Dreadstalker arise/removal. Exact source identities/owner/alive filters now maintain that native aura through ordinary casts/spend_stack. Initial3→later4→natural fade decrement GREEN pending. No Vilefiend/Implosion bug exception, Antoran attack, SP inheritance or duration-extension certification.
+
+
 ### Demo lifecycle production-stat continuation — 2026-10-21
 
 Fixture165a32309 restores the historical production StatsPlugin/pet-runtime measurement, limited to Demo ST/3targets and adding authenticated copy-only Imp closure. One seed1/level32/60s on matched sim/serverO1/depsO3 yields totals8660/12847 versus old baseline7550/8027 and historical pre-lifecycle candidate6988/8627; actual owned actors observed1→20, zero dummy retaliation, identical initial AP/SP/crit/haste. Thirteen historical native row scopes remain exactly equal. Run1PASS30.60s/zero warnings; reports `production-stats-demo-lifecycle-comparison.{md,json}` and `demo165-metadata-scope-comparison.json` under the rotation diagnostic directory. Current cohort includes intervening master8e3777ef6 changes, so this is not an isolated marginal-effect experiment. Neither60s sample casts Demonbolt or samples Core; preserve that negative observation despite separate natural84-fade Core proof. No full APL/Retail/statistical parity or tank mitigation claim.

@@ -938,6 +938,7 @@ pub(crate) fn despawn_summon(world: &mut World, entity: Entity) {
             "Despawn summon {entity}: spell {}, properties {}",
             summon.spell_id, summon.properties_id
         );
+        super::guardian::tyrant::on_despawn(world, entity);
     }
     crate::combat::combat_stop(world, entity);
     world.entity_mut(entity).despawn();
