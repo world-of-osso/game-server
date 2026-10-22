@@ -19,7 +19,7 @@ class IntrinsicSpellRoleTests(unittest.TestCase):
 
     def test_native_health_leech_keeps_damage_and_self_heal_roles(self):
         # One exact native effect isolates the effect9 hit+heal contract from scripts.
-        with closing(sqlite3.connect(':memory:')) as db:
+        with closing(sqlite3.connect(':memory:', uri=True)) as db:
             db.execute('ATTACH DATABASE ? AS native', ((ROOT / 'data/world.db').resolve().as_uri() + '?mode=ro',))
             spell, effect = db.execute('SELECT SpellID,ID FROM native.spell_effect WHERE DifficultyID=0 AND Effect=9 AND EffectTriggerSpell=0 ORDER BY ID LIMIT 1').fetchone()
             db.execute('CREATE TABLE spell_effect AS SELECT * FROM native.spell_effect WHERE ID=?', (effect,))
