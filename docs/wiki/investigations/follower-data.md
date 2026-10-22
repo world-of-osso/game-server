@@ -1,5 +1,9 @@
 # Retail follower data and approved spec bridge
 
+### Base Tyrant owner spell power — 2026-10-21
+
+Native ordinary265187/135002→270481 atcdcea8a9d reaches genuine1RED13.16s: level31 production ownerSP70.686 gives noncritical7 versus native-coefficient expectation47.305897. Pinned SimC76f8118 `sc_warlock_pets.cpp:19,1510–1526` keeps base owner SP1.0 for Tyrant, unlike Wild Imp's constructor override1.2. Approved `WARLOCK_TYRANT_OWNER_SP_SIMC` now selects1.0 only for265187/135002; other demons/AP/health/native coefficients stay unchanged. Native31→34 scaling and retained lifecycle GREEN pending. Antoran250289 attack/inheritance remains unqualified.
+
 ### Native Tyrant Demonic Power roster — 2026-10-21
 
 At45ca3e00d three actual owned104317 Imps plus ordinary265187/135002 Tyrant give zero1276788 stacks instead of three (1genuineRED12.58s/zero warnings). Native1276788 is aura79/base10/cumulative99: ordinary applications supply the amount/limit without synthesizing damage. Pinned SimC actions3580–3640/pets924–928,954–959 counts living owned Imp/Dreadstalker actors and initial actual Felguard, then increments/decrements active Tyrants on Imp/Dreadstalker arise/removal. Exact source identities/owner/alive filters now maintain that native aura through ordinary casts/spend_stack. At43a458c75 actual3→later4→natural fade decrement is GREEN with Tyrant3PASS49.98s and retained Imp7PASS51.71s. The original compile runner exited after producing a completed binary but lost its captured command result; native snapshot hashes/fingerprint verify43a, and bounded direct executable reruns recovered the missing test proof without recompilation (tyrant43a-compiled-recovery-receipt.json). No claim about unavailable original compile output. No Vilefiend/Implosion bug exception, Antoran attack, SP inheritance or duration-extension certification.
@@ -12,7 +16,7 @@ Fixture165a32309 restores the historical production StatsPlugin/pet-runtime meas
 
 ### Base Tyrant Demonfire binding — 2026-10-21
 
-At6a0ec7e69 actual learned265187 summons base135002 but emits no270481 damage (1genuineRED14.58s/zero warnings). Exact265187/135002 now binds native270481 from pinned SimC pets1520–1533. Actual cast time/cost/coefficient remain native; no substitute Imp/Firebolt, no fabricated cadence. Atf1a03c3c8 native2GREEN17.12s/zero warnings proves base270481 damage and retained32/35 single-variant admission. This is attack-binding proof only: base Tyrant still has existing generic demon inheritance rather than a newly approved actor-specific SP policy; Antoran250289 Burning Cleave, Demonic Power roster and orchestration remain open.
+At6a0ec7e69 actual learned265187 summons base135002 but emits no270481 damage (1genuineRED14.58s/zero warnings). Exact265187/135002 now binds native270481 from pinned SimC pets1520–1533. Actual cast time/cost/coefficient remain native; no substitute Imp/Firebolt, no fabricated cadence. Atf1a03c3c8 native2GREEN17.12s/zero warnings proves base270481 damage and retained32/35 single-variant admission. That run is attack-binding proof only; later [owner-SP qualification](#base-tyrant-owner-spell-power--2026-10-21) and [Demonic Power roster](#native-tyrant-demonic-power-roster--2026-10-21) are separate slices. Antoran250289 Burning Cleave and orchestration remain open.
 
 
 ### Tyrant native alternative summon admission — 2026-10-21

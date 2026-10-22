@@ -268,6 +268,7 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
                 .map(|npc| npc.template_id);
             let spell_share = match (summon.spell_id, entry) {
                 (104317, Some(55659)) => WILD_IMP_OWNER_SPELL_POWER,
+                (265187, Some(135002)) => TYRANT_OWNER_SPELL_POWER,
                 _ => DEMON_OWNER_SPELL_POWER,
             };
             return demon_power_stats(world, summon.owner, spell_share);
@@ -299,7 +300,7 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
 
 /// Guardian::UpdateAttackPowerAndDamage (TC StatSystem.cpp:1358-1367): demons
 /// inherit 15% spell bonus and 57% AP from the owner's fire/shadow spell power.
-/// The source-qualified Wild Imp uses its explicit SimC SP policy instead.
+/// Source-qualified Wild Imp and base Tyrant use their explicit SimC SP policies.
 /// CharacterStats currently exposes one spell-power value, not school-specific values.
 fn demon_power_stats(world: &World, owner: Entity, spell_share: f32) -> (f32, f32) {
     let power = world
@@ -311,6 +312,8 @@ fn demon_power_stats(world: &World, owner: Entity, spell_share: f32) -> (f32, f3
 // WARLOCK_WILD_IMP_OWNER_SP_SIMC: constructor705 overrides base19.
 // Keep native104318 coefficient; do not adopt SimC's unvalidated AP share.
 const WILD_IMP_OWNER_SPELL_POWER: f32 = 1.2;
+// WARLOCK_TYRANT_OWNER_SP_SIMC: constructor1510 retains base19 SP1.0.
+const TYRANT_OWNER_SPELL_POWER: f32 = 1.0;
 const DEMON_OWNER_SPELL_POWER: f32 = 0.15;
 const DEMON_OWNER_ATTACK_POWER: f32 = 0.57;
 
