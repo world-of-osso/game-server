@@ -108,8 +108,11 @@ def derive_placement(record, manifest, tables, cache, polygons, route, nav, entr
         source_consensus_single = (isinstance(evidence, dict)
             and evidence.get('policy') == 'FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_UPWARD_CONSENSUS'
             and len(heights) == 1)
-        if len(all_heights) != 1 and not source_consensus_single:
-            raise ValueError('entrance-unsourced placement requires one raw or source-consensus-qualified baked surface at journal XY')
+        sourced_windrunner_duo = (manifest['map_id'] == 2805 and record['entry'] in (231626, 231629)
+            and manifest.get('duo_placement_policy') == 'FOLLOWER_PLACEMENT_DUO_INDIVIDUALLY_SOURCED_SAME_MARKER'
+            and 'source_floor_z_bounds' in record and len(heights) == 1)
+        if len(all_heights) != 1 and not source_consensus_single and not sourced_windrunner_duo:
+            raise ValueError('entrance-unsourced placement requires one raw or approved source-qualified baked surface at journal XY')
         queries = [dict(height=z, exit_code=None, corners=[], status='NOT_QUERIED_ENTRANCE_UNSOURCED') for z in heights]
     else:
         start = [entrance['LocX'], entrance['LocZ'], -entrance['LocY']]
@@ -483,12 +486,31 @@ def read_native_binding_entries(source, manifest):
     return proofs
 
 
+def validate_windrunner_duo(manifest, placements, native_bindings, cache):
+    records = sorted(manifest['entries'], key=lambda row: row['entry'])
+    if [r['entry'] for r in records] != [231626, 231629] or native_bindings or len(placements) != 2:
+        raise ValueError('Windrunner same-marker policy requires exactly Kalis and Latch placements')
+    pages = []
+    for record in records:
+        page = read_cached_npc(cache, record['entry'])
+        if page['cache_sha256'] != record['cache_sha256'] or len(page['markers']) != 1 or record['journal_encounter_id'] != 2656:
+            raise ValueError('duo individual marker source changed or is absent')
+        pages.append(page)
+    if pages[0]['markers'] != pages[1]['markers'] or placements[0]['wow_xyz'] != placements[1]['wow_xyz']:
+        raise ValueError('Windrunner individual pages and precise journal poses must agree without offsets')
+    return [dict(policy=manifest['duo_placement_policy'], individual_pages=pages,
+                 journal_marker=placements[0]['marker'], journal_xy=placements[0]['wow_xy'],
+                 marker_precision_scope='Both own pages share rounded52.4/88.5floor4; unchanged precise journal XY and nav-sampled Z, no offsets.')]
+
+
 def validate_sourced_duo(manifest, placements, native_bindings, cache):
     policy = manifest.get('duo_placement_policy')
     if policy is None:
         return []
+    if policy == 'FOLLOWER_PLACEMENT_DUO_INDIVIDUALLY_SOURCED_SAME_MARKER' and manifest['map_id'] == 2805:
+        return validate_windrunner_duo(manifest, placements, native_bindings, cache)
     if policy != 'FOLLOWER_PLACEMENT_DUO_INDIVIDUALLY_SOURCED_SAME_MARKER' or manifest['map_id'] != 2874:
-        raise ValueError('individually sourced same-marker policy is approved only for Muro/Nekraxx')
+        raise ValueError('individually sourced same-marker policy is approved only for Muro/Nekraxx or Kalis/Latch')
     records = manifest['entries'] + manifest.get('native_binding_only_entries', [])
     if sorted(record['entry'] for record in records) != [247570, 247572]:
         raise ValueError('same-marker policy requires both individually identified Muro/Nekraxx actors')

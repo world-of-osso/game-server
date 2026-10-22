@@ -9,7 +9,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from follower_placement_sources import read_db2, read_surface_polygons
-from follower_placements import derive_binding, derive_placement, qualify_journal_hostility, read_binding_tables
+from follower_placements import derive_binding, derive_placement, qualify_journal_hostility, read_binding_tables, validate_sourced_duo
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -114,6 +114,71 @@ class WindrunnerPreviewIdentity(unittest.TestCase):
             db.execute(f"INSERT INTO tdb_creature_template VALUES({','.join('?' for _ in row)})", row)
             with self.assertRaisesRegex(ValueError,'unique native name'):
                 derive_binding(db,{},self.tables,2805,231631,self.identity(2657,5845))
+
+
+@unittest.skipUnless('FOLLOWER_PLACEMENT_DB2' in os.environ and 'FOLLOWER_PLACEMENT_CACHE' in os.environ,
+                     'requires authenticated source and fixed geometry')
+class WindrunnerAdditionalFloor(unittest.TestCase):
+    def test_duo_bounds_select_nav_floor_and_both_individual_pages(self):
+        manifest = json.loads((ROOT / 'content/follower-placements/windrunner-duo.json').read_text())
+        tables, _ = read_db2(Path(os.environ['FOLLOWER_PLACEMENT_DB2']), ('JournalEncounter',))
+        polygons = read_surface_polygons(Path(manifest['surface_proof']['path']).with_suffix('.csv'))
+        points = [derive_placement(r,manifest,tables,Path(os.environ['FOLLOWER_PLACEMENT_CACHE']),polygons,Path('/route-must-not-run'),Path('/nav-must-not-open'),None) for r in manifest['entries']]
+        self.assertEqual([p['wow_xyz'] for p in points], [[5044.337123386993,-3161.0082888735,101.4178188648423]]*2)
+        for p in points:
+            self.assertEqual(p['all_surface_heights'], [25.73321858713429,89.07200098565106,101.4178188648423])
+            self.assertEqual([g['supported_baked_candidates'] for g in p['source_floor_evidence']['corroborating_assigned_group_bounds']], [[101.4178188648423]]*2)
+        proof = validate_sourced_duo(manifest,points,[],Path(os.environ['FOLLOWER_PLACEMENT_CACHE']))
+        self.assertEqual([p['entry'] for p in proof[0]['individual_pages']], [231626,231629])
+        self.assertEqual(proof[0]['individual_pages'][0]['markers'], [dict(zone=15808,floor=4,percent=[52.4,88.5])])
+        import copy
+        changed = copy.deepcopy(manifest)
+        changed['entries'][1]['cache_sha256'] = '0'*64
+        with self.assertRaisesRegex(ValueError, 'marker source changed'):
+            validate_sourced_duo(changed,points,[],Path(os.environ['FOLLOWER_PLACEMENT_CACHE']))
+        unsupported = {k:v for k,v in manifest['entries'][0].items() if k not in ('source_floor_evidence','source_floor_z_bounds')}
+        with self.assertRaisesRegex(ValueError,'requires one'):
+            derive_placement(unsupported,manifest,tables,Path(os.environ['FOLLOWER_PLACEMENT_CACHE']),polygons,Path('/unused'),Path('/unused'),None)
+
+    def test_kroluk_and_heart_upward_consensus_keep_raw_candidates(self):
+        tables, _ = read_db2(Path(os.environ['FOLLOWER_PLACEMENT_DB2']), ('JournalEncounter',))
+        for label,z,raw_count in (('kroluk',100.26369,8),('heart',342.57331613991164,7)):
+            with self.subTest(label=label):
+                m=json.loads((ROOT/f'content/follower-placements/windrunner-{label}.json').read_text())
+                polygons=read_surface_polygons(Path(m['surface_proof']['path']).with_suffix('.csv'))
+                p=derive_placement(m['entries'][0],m,tables,Path(os.environ['FOLLOWER_PLACEMENT_CACHE']),polygons,Path('/unused'),Path('/unused'),None)
+                self.assertEqual(p['wow_xyz'][2],z)
+                self.assertEqual(len(p['all_surface_heights']),raw_count)
+                self.assertEqual(p['status'],'SOURCE_PLACEMENT_ENTRANCE_UNSOURCED')
+
+
+@unittest.skipUnless('WINDRUNNER_PREVIEW_DB' in os.environ,'requires explicit source/prepared database')
+class WindrunnerPreviewPlacementAcceptance(unittest.TestCase):
+    def test_packet_keeps_native_models_modifiers_preview_binding_and_source_pose(self):
+        path=Path(os.environ['WINDRUNNER_PREVIEW_DB']).resolve(strict=True)
+        expected={231626:(63805001,5044.337123386993,-3161.0082888735,101.4178188648423,91068),
+                  231629:(63805002,5044.337123386993,-3161.0082888735,101.4178188648423,125198),
+                  231631:(63805003,5216.794991273334,-3116.47772139,100.26369,139034),
+                  231636:(63805004,5216.4426994,-3137.70755135,342.57331613991164,125200)}
+        label=os.environ['WINDRUNNER_PACKET_LABEL']
+        entries={'duo':[231626,231629],'kroluk':[231631],'heart':[231636]}[label]
+        with closing(sqlite3.connect(path.as_uri()+'?mode=ro',uri=True)) as db:
+            for entry in entries:
+                guid,x,y,z,preview=expected[entry]
+                self.assertEqual(db.execute('SELECT guid,position_x,position_y,position_z FROM content_creature WHERE map=2805 AND id1=?',(entry,)).fetchall(),[(guid,x,y,z)])
+                self.assertEqual(db.execute('SELECT t.unit_class,d.ContentTuningID,d.HealthModifier,d.DamageModifier,d.ArmorModifier,d.ManaModifier FROM tdb_creature_template t JOIN tdb_creature_template_difficulty d ON d.Entry=t.entry WHERE t.entry=? AND d.DifficultyID=0',(entry,)).fetchone(),
+                                 db.execute('SELECT unit_class,ContentTuningID,HealthModifier,DamageModifier,ArmorModifier,ManaModifier FROM content_creature_template WHERE entry=? AND faction=16',(entry,)).fetchone())
+                self.assertEqual(db.execute('SELECT * FROM content_creature_template_model WHERE CreatureID=?',(entry,)).fetchall(),db.execute('SELECT * FROM tdb_creature_template_model WHERE CreatureID=?',(entry,)).fetchall())
+                self.assertEqual(db.execute('SELECT display_id FROM raid_encounter_creature WHERE map_id=2805 AND creature_entry=?',(entry,)).fetchone(),(preview,))
+                self.assertNotIn(preview,[r[0] for r in db.execute('SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID=?',(entry,))])
+        receipt=json.loads((path.parent/'receipt.json').read_text())
+        self.assertEqual(receipt['sql_replay_count'],3)
+        self.assertEqual(receipt['entrance_gaps'],['FOLLOWER_ENTRANCE_UNSOURCED_2805'])
+        self.assertEqual(receipt['navigation_gaps'],[])
+        for p in receipt['placements']:
+            self.assertTrue(p['preview_identity']['display_mismatch'])
+            self.assertEqual(p['preview_identity']['display_role'],'JOURNAL_PREVIEW_ONLY_RUNTIME_MODELS_PRESERVED')
+        if label=='duo':self.assertEqual(len(receipt['source_relationships'][0]['individual_pages']),2)
 
 
 if __name__ == '__main__':
