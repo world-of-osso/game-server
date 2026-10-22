@@ -28,6 +28,8 @@ mod kit_interrupt;
 mod kit_overrides;
 
 #[cfg(test)]
+mod formation_tests;
+#[cfg(test)]
 mod kit_proc_fidelity_tests;
 #[cfg(test)]
 mod kit_rotation_fidelity_tests;
@@ -241,7 +243,7 @@ mod kit_swiftmend_consumption_tests;
 #[cfg(test)]
 mod kit_swiftmend_tests;
 #[cfg(test)]
-mod kit_tests;
+pub(crate) mod kit_tests;
 #[cfg(test)]
 mod kit_tranquil_mind_tests;
 #[cfg(test)]
@@ -258,6 +260,8 @@ mod passive_stats_tests;
 mod pet_tests;
 #[cfg(test)]
 mod profile_behavior_tests;
+#[cfg(test)]
+mod pyroclasm_tests;
 #[cfg(test)]
 mod rotation_defense_tests;
 #[cfg(test)]

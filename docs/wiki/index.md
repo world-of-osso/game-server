@@ -1,4 +1,11 @@
 - [Active party combat-reference admission](investigations/follower-data.md#active-party-combat-reference-admission--2026-10-22) — real31146 count1→3 and native launch RED→2GREEN; Stockade/Crenna and genuine Henry rosters clear3/3 with all5alive after excluding suppressed references; final integration lead-owned.
+- [Class4 zone-only ingress](investigations/follower-data.md#class4-zone-only-ingress--2026-10-22) — shared entry tolerates absent spell-runtime metadata without fabricated pools.
+- [Remaining follower boss ingress](investigations/follower-data.md#remaining-boss-source-ingress--2026-10-21) — all27 maps/98 Normal encounters inventoried; remainingDF17 placement blocks and CityPC-immunity retained, Anub'zekt native partial5/5 proven, controller gaps retained.
+- [Pyroclasm policy](systems/auras.md#pyroclasm-hot-streak-policy--2026-10-21) — named SimC trigger/hardcast consumer on native15%/230%/two-stack data; launch snapshot preserves consumed bonus; native RED2, GREEN pending.
+- [RPPM haste rows](systems/auras.md#rppm-haste-modifiers--2026-10-21) — native Type1 Param/Coeff scaling, not Flags; actual learned55 Dance RED reproduced, enabled GREEN pending; other modifier types remain gaps.
+- [FoF SimC cadence](systems/auras.md#fists-of-fury-simc-cadence--2026-10-21) — named113656/117418 damage-period policy preserves native coefficients and generic toy bridge;25vs5 native RED, GREEN pending.
+- [Cast while casting](systems/spell-casting.md#cast-while-casting--2026-10-21) — native Attr4 admission shared by creature/player/kit paths, without delaying Fire Blast behind the active cast; three native RED reproduced, GREEN pending.
+- [Follower mastery amounts](systems/character-stats.md#follower-mastery-amount-refresh--2026-10-21) — Player-only amount/refresh gate excluded approved class-stat followers; native AP/damage RED reproduced, generic fix committed with GREEN pending.
 - [Ascendance revision-scoped measurements](investigations/follower-data.md#elemental-ascendance-projection--2026-10-22) — Ele StatsPlugin3PASS29.75s/real ASC+SK uptimes; laterfc5 master merge awaits integration gate, entry effects/full APL remain open.
 - [Elemental Ascendance projection](investigations/follower-data.md#elemental-ascendance-projection--2026-10-22) — native parent114050→actual1219480, SK>15s aura/learn/sync-window RED→3GREEN36.50s; entry damage/complete APL still open.
 - [Qualified cast-action additions](investigations/follower-data.md#scoped-rotation-kit-publication--2026-10-21) — stable-key addition/replay RED→4GREEN0.364s; existing interval-removal guard retained, pending Ascendance runtime not certified.
@@ -1013,3 +1020,5 @@ Debug logs and root cause analyses.
 - [Aura world/XP native70448](systems/auras.md#aura-worldxp-native70448--2026-10-20) — generic200/291/348 reward consumers,144/58/179 consumers and server-only world flags; native15GREEN, explicit TCNULL/client gaps.
 
 - [Census effect77](systems/spell-casting.md#census-effect77--2026-10-20) —44-root source mapping, Subduing Grasp E1 partial port; unmatched slots stay named gaps.
+
+- [Ruby entrance follow/formation](investigations/follower-data.md#ruby-entrance-follow-and-formation--2026-10-22) — absent runtime bake freezes admission; native23s RED proves identical pet follow points independently stack all4. Approved deterministic party slots; native23s GREEN,464controlsPASS, Stockade/Henry simulator clears and all-targets/fmtPASS.
