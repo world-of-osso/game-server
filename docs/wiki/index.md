@@ -1,4 +1,4 @@
-- [Power receipts](systems/dungeon-simulator.md#power-receipts--2026-10-22) — authoritative actor/pet raw pools/tick rates and source-attributed Energize amounts/overflow; native RED2, GREEN pending; not integrated regeneration.
+- [Power receipts](systems/dungeon-simulator.md#power-receipts--2026-10-22) — authoritative actor/pet raw pools/tick rates and source-attributed Energize amounts/overflow; native RED2→integrated3GREEN/check/fmt; not integrated regeneration.
 - [Pyroclasm policy](systems/auras.md#pyroclasm-hot-streak-policy--2026-10-21) — named SimC trigger/hardcast consumer on native15%/230%/two-stack data; launch snapshot preserves consumed bonus; native RED2→four enabled GREEN cases.
 - [RPPM haste rows](systems/auras.md#rppm-haste-modifiers--2026-10-21) — native Type1 Param/Coeff scaling, not Flags; actual learned55 Dance RED→GREEN and retained control PASS; other modifier types remain gaps.
 - [FoF SimC cadence](systems/auras.md#fists-of-fury-simc-cadence--2026-10-21) — named113656/117418 damage-period policy preserves native coefficients and generic toy bridge;25vs5 native RED→enabled GREEN.

@@ -1,6 +1,6 @@
 ## 2026-10-22 — Native power receipt observability
 
-[DPS power receipts](systems/dungeon-simulator.md#power-receipts--2026-10-22) preserve actual actor/pet raw pools and tick rates, plus source/recipient/spell-attributed Energize requested/overflow/effective integer gains. No inferred total regeneration or gameplay change. Native profile/pet/Cobra/grant RED2 at a8365f874 precedes receipt implementation; GREEN pending.
+[DPS power receipts](systems/dungeon-simulator.md#power-receipts--2026-10-22) preserve actual actor/pet raw pools and tick rates, plus source/recipient/spell-attributed Energize requested/overflow/effective integer gains. No inferred total regeneration or gameplay change. Native profile/pet/Cobra/grant RED2 at a8365f874 precedes receipt implementation; integrated14e20fbca GREEN3/3 includes native66 Mana, with retained source/parallel6PASS and all-target check/fmtPASS. No resource mechanics or300s parity claim.
 
 ## 2026-10-21 — Pyroclasm named trigger/consumer policy
 
