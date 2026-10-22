@@ -246,6 +246,25 @@ class FollowupPlacementAcceptance(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'evidence changed'):
                     derive_binding(source, inventory, tables, manifest['map_id'], entry, dict(identity, sha256='0' * 64))
 
+    def test_taahbat_native_room_uses_only_its_twelve_yard_limit_and_separate_corroboration(self):
+        path = Path(os.environ['FOLLOWUP_PLACEMENT_DB']).resolve(strict=True)
+        manifest_path = Path(__file__).resolve().parents[2] / 'content/follower-placements/ecodome-taahbat.json'
+        manifest = json.loads(manifest_path.read_text())
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as source:
+            proofs = validate_native_room_anchors(source, manifest)
+            self.assertEqual([p['entry'] for p in proofs], [234933])
+            self.assertEqual({a['entry'] for a in proofs[0]['anchors']}, {210931, 234960})
+            self.assertGreater(proofs[0]['anchors'][1]['horizontal_distance_yards'], 10.9)
+            narrowed = copy.deepcopy(manifest)
+            narrowed['entries'][0]['source_floor_evidence']['maximum_horizontal_distance_yards'] = 8
+            with self.assertRaisesRegex(ValueError, 'do not agree'):
+                validate_native_room_anchors(source, narrowed)
+            corroboration = manifest['entries'][0]['source_floor_evidence']['corroboration']
+            self.assertEqual(source.execute('SELECT id,map,position_x,position_y,position_z FROM tdb_creature '
+                                            'WHERE guid=?', (corroboration['guid'],)).fetchone(),
+                             (237514, 2830, *corroboration['wow_xyz']))
+            self.assertLess(abs(corroboration['wow_xyz'][2] - proofs[0]['reference_floor_height']), 1)
+
     def test_blazikon_native_room_uses_only_its_explicit_eight_yard_limit(self):
         path = Path(os.environ['FOLLOWUP_PLACEMENT_DB']).resolve(strict=True)
         manifest_path = Path(__file__).resolve().parents[2] / 'content/follower-placements/darkflame-cleft.json'

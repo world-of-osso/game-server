@@ -1,3 +1,7 @@
+## 2026-10-22 — Avanoxx equivalent bounds and Taah'bat anchors
+
+[TWW source packets](investigations/follower-data.md#remaining-positive-scaling-tww-placement-sources--2026-10-22): actual Avanoxx reader refused submillimeter assignment differences. Approved every-component0.001yd equivalence selects exact native lowestOrderIndex without averaging, retaining raw67rows/spread/ID. Taah'bat alone permits12yd two-native-anchor support for998.269351; A'wazj corroborates, remains unmoved. New proofs pending.
+
 ## 2026-10-22 — Cinderbrew packet qualification
 
 [TWW source packets](investigations/follower-data.md#remaining-positive-scaling-tww-placement-sources--2026-10-22):edfb882f1 fresh-copy8row I'pa/Goldie packet/replay3× exact, native0 CT2718 and Goldie faction14 retained; actual-copy stats/models/poses/provenance/SQL owner+collision2GREEN0.023s. Goldie floor group69970 upward consensus excludes roof after90-degree source transform. I'pa route passes, Goldie incomplete; publication pending.

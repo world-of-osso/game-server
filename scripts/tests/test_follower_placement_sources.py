@@ -87,6 +87,31 @@ class FollowerPlacementSources(unittest.TestCase):
                 self.assertEqual(result['page']['source_table'], 'JournalEncounter')
                 self.assertEqual(result['page']['source_row']['ID'], str(journal_id))
 
+    def test_avanoxx_equivalent_assignment_bounds_choose_native_order_without_averaging(self):
+        from follower_placements import derive_placement, read_binding_tables
+        binding_tables, _ = read_binding_tables(Path(os.environ['FOLLOWER_PLACEMENT_DB2']))
+        tables = self.tables | binding_tables
+        record = dict(entry=213179, journal_encounter_id=2583)
+        manifest = dict(map_id=2660, placement_policy='FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP')
+        result = derive_placement(record, manifest, tables, self.cache, [], Path('unused'), Path('unused'),
+                                  dict(LocX=0, LocY=0, LocZ=0))
+        self.assertEqual(result['wow_xy'], [-103.24485721595764, 424.63702790355273])
+        resolution = result['page']['assignment_resolution']
+        self.assertEqual(resolution['policy'], 'FOLLOWER_PLACEMENT_EQUIVALENT_UIMAP_ASSIGNMENTS')
+        self.assertEqual(resolution['chosen_assignment_id'], 68441)
+        self.assertEqual(result['assignments'][0]['OrderIndex'], '0')
+        self.assertEqual(len(result['assignments']), 67)
+        self.assertEqual({a['Region_1'] for a in result['assignments']}, {'124.999763', '125'})
+        self.assertGreater(resolution['projected_axis_spread_yards']['y'], 0)
+        self.assertLessEqual(max(resolution['component_spread_yards'].values()), 0.001)
+        for key, value in [('Region_1', '125.01'), ('UiMin_0', '0.00001')]:
+            divergent = copy.deepcopy(tables)
+            assignment = next(a for a in divergent['UiMapAssignment'] if a['ID'] == '68460')
+            assignment[key] = value
+            with self.assertRaisesRegex(ValueError, 'not equivalent'):
+                derive_placement(record, manifest, divergent, self.cache, [], Path('unused'), Path('unused'),
+                                 dict(LocX=0, LocY=0, LocZ=0))
+
     def test_darkness_upward_consensus_requires_every_hit_and_one_baked_candidate(self):
         from follower_placements import read_binding_tables
         from follower_placement_sources import read_journal_marker

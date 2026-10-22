@@ -88,6 +88,39 @@ def select_assignment(tables, map_id, marker):
     return candidates
 
 
+def measure_assignment_spread_yards(assignments):
+    keys = ('UiMin_0', 'UiMin_1', 'UiMax_0', 'UiMax_1', 'Region_0', 'Region_1', 'Region_3', 'Region_4')
+    values = {key: [float(a[key]) for a in assignments] for key in keys}
+    if not all(math.isfinite(v) for column in values.values() for v in column):
+        raise ValueError('journal assignments have nonfinite horizontal bounds')
+    widths = [[float(a[f'UiMax_{i}']) - float(a[f'UiMin_{i}']) for i in (0, 1)] for a in assignments]
+    if any(width <= 0 for pair in widths for width in pair):
+        raise ValueError('journal assignments have degenerate UI bounds')
+    u_scale = max(abs(float(a['Region_4']) - float(a['Region_1'])) / w[0] for a, w in zip(assignments, widths))
+    v_scale = max(abs(float(a['Region_3']) - float(a['Region_0'])) / w[1] for a, w in zip(assignments, widths))
+    spreads = {key: max(column) - min(column) for key, column in values.items()}
+    for axis, scale in ((0, u_scale), (1, v_scale)):
+        for edge in ('UiMin', 'UiMax'):
+            spreads[f'{edge}_{axis}'] *= scale
+    return spreads
+
+
+def resolve_journal_assignments(assignments, marker):
+    if not assignments:
+        raise ValueError('journal UiMap has no assignment on the requested map')
+    spread = measure_assignment_spread_yards(assignments)
+    if any(value > 0.001 for value in spread.values()):
+        raise ValueError('journal UiMap horizontal bounds are not equivalent within0.001yd')
+    chosen = min(assignments, key=lambda a: int(a['OrderIndex']))
+    points = [transform_marker(marker, [a]) for a in assignments]
+    projected = {axis: max(p[i] for p in points) - min(p[i] for p in points) for i, axis in enumerate(('x', 'y'))}
+    proof = dict(policy='FOLLOWER_PLACEMENT_EQUIVALENT_UIMAP_ASSIGNMENTS', bounds_tolerance_yards=0.001,
+                 component_spread_yards=spread, projected_axis_spread_yards=projected,
+                 chosen_assignment_id=int(chosen['ID']), chosen_order_index=int(chosen['OrderIndex']),
+                 order_source='TC a352b1fa DB2Stores.cpp:3154-3157; exact lowest-OrderIndex row, no averaging')
+    return [chosen] + [a for a in assignments if a is not chosen], proof
+
+
 def read_journal_marker(tables, map_id, entry, journal_id):
     rows = [r for r in tables['JournalEncounter'] if int(r['ID']) == journal_id]
     if len(rows) != 1:
@@ -95,10 +128,6 @@ def read_journal_marker(tables, map_id, entry, journal_id):
     row = rows[0]
     assignments = [a for a in tables['UiMapAssignment']
                    if a['UiMapID'] == row['UiMapID'] and int(a['MapID']) == map_id]
-    bounds = {tuple(a[key] for key in ('UiMin_0', 'UiMin_1', 'UiMax_0', 'UiMax_1',
-                                      'Region_0', 'Region_1', 'Region_3', 'Region_4')) for a in assignments}
-    if len(bounds) != 1:
-        raise ValueError('journal UiMap does not have unique horizontal bounds on the requested map')
     floors = {int(g['FloorIndex']) for g in tables['UiMapGroupMember'] if g['UiMapID'] == row['UiMapID']}
     if len(floors) > 1:
         raise ValueError('journal UiMap has ambiguous floor identities')
@@ -106,7 +135,8 @@ def read_journal_marker(tables, map_id, entry, journal_id):
     if not all(math.isfinite(v) and 0 <= v <= 100 for v in percent):
         raise ValueError('journal marker is outside its UiMap')
     marker = dict(ui_map_id=int(row['UiMapID']), floor=next(iter(floors)) if floors else None, percent=percent)
-    page = dict(entry=entry, source_table='JournalEncounter', source_row=row,
+    assignments, resolution = resolve_journal_assignments(assignments, marker)
+    page = dict(entry=entry, source_table='JournalEncounter', source_row=row, assignment_resolution=resolution,
                 source_row_sha256=hashlib.sha256(json.dumps(row, sort_keys=True).encode()).hexdigest(),
                 url=f'db2:{BUILD}/JournalEncounter#{journal_id}', markers=[marker])
     return page, marker, assignments
