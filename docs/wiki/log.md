@@ -1,6 +1,6 @@
 ## 2026-10-22 — Amani mask source cancellation boundary
 
-[Toys](systems/toys.md#ancient-amani-mask-source-cancellation-boundary-2026-10-22): complete72row28table4model visual metadata, literal Attr0 NO_AURA_CANCEL and source10min aura/15min recovery. ActualUseToy/censusRED2/control4PASS72.40s at47322144f; exact1303320 registry entry only, native no-cancel/natural expiry/reuse GREEN pending. No canonical writes/native pixels claim; census541 retained until proof.
+[Toys](systems/toys.md#ancient-amani-mask-source-cancellation-boundary-2026-10-22): complete72row28table4model visual metadata, literal Attr0 NO_AURA_CANCEL and source10min aura/15min recovery. ActualUseToy/censusRED2/control4PASS72.40s at47322144f; exact1303320 registry entry only. Atbff34c2bc/protocol2abc7fa6GREEN63.44s proves actual no-cancel/natural10min expiry/15min recovery reuse, owner invariants/replication/drift plus retained Orb/Cyrce/Gadgetzan. Check9.35s/no warnings/fmt/readabilityPASS; census541→542 only279052. No canonical writes/native pixels claim.
 
 ## 2026-10-22 — Orb source-affinity owner contract
 
