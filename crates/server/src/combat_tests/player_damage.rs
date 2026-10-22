@@ -72,7 +72,7 @@ fn a_players_swing_is_weapon_plus_attack_power_through_the_creatures_armor() {
 
 #[test]
 fn the_swing_timer_is_the_weapon_speed_over_haste() {
-    for (haste_pct, expected) in [(0.0, 2.6), (30.0, 2.0)] {
+    for (haste_pct, expected_millis) in [(0.0, 2600), (30.0, 2000)] {
         let mut app = setup_app();
         let hogger = armored_hogger(&mut app);
         let player = level_10_player(
@@ -86,9 +86,10 @@ fn the_swing_timer_is_the_weapon_speed_over_haste() {
         );
         run_attack_tick(&mut app);
         let timer = app.world().get::<AutoAttack>(player).unwrap().timer;
-        assert!(
-            (timer - expected).abs() < 1e-4,
-            "haste {haste_pct}: {timer}"
+        assert_eq!(
+            timer,
+            std::time::Duration::from_millis(expected_millis),
+            "haste {haste_pct}"
         );
     }
 }
@@ -129,20 +130,21 @@ fn an_off_hand_weapon_swings_at_half_damage_200_ms_after_the_main_hand() {
     run_attack_tick(&mut app);
     // The main hand swings; the off hand waits ATTACK_DISPLAY_DELAY.
     let auto = app.world().get::<AutoAttack>(player).unwrap();
-    assert!((auto.timer - 2.6).abs() < 1e-4 && (auto.off_hand_timer - 0.2).abs() < 1e-4);
+    assert_eq!(auto.timer, std::time::Duration::from_millis(2600));
+    assert_eq!(auto.off_hand_timer, std::time::Duration::from_millis(200));
     let after_main = app.world().get::<Health>(target).unwrap().current;
     assert!([10_000.0, 9_900.0].contains(&after_main), "{after_main}");
     app.world_mut()
         .get_mut::<AutoAttack>(player)
         .unwrap()
-        .off_hand_timer = 0.0;
+        .off_hand_timer = std::time::Duration::ZERO;
     run_attack_tick(&mut app);
     // 100 × 0.5 = 50 against a target without armor or avoidance (a player
     // target only misses: 5% + 19% dual wield).
     let off_hand = after_main - app.world().get::<Health>(target).unwrap().current;
     assert!([0.0, 50.0].contains(&off_hand), "{off_hand}");
     let auto = app.world().get::<AutoAttack>(player).unwrap();
-    assert!((auto.off_hand_timer - 2.6).abs() < 1e-4);
+    assert_eq!(auto.off_hand_timer, std::time::Duration::from_millis(2600));
 }
 
 /// Worn Shortsword (25) from world.db, the Retail warrior starting weapon.
@@ -195,7 +197,7 @@ fn a_level_10_warrior_with_the_starting_sword_kills_hogger_in_about_133_swings()
     let player = level_10_player(&mut app, hogger, stats);
     let mut swings = 0;
     while app.world().get::<Health>(hogger).unwrap().current > 0.0 && swings < 1_000 {
-        app.world_mut().get_mut::<AutoAttack>(player).unwrap().timer = 0.0;
+        app.world_mut().get_mut::<AutoAttack>(player).unwrap().timer = std::time::Duration::ZERO;
         run_attack_tick(&mut app);
         swings += 1;
     }

@@ -43,6 +43,12 @@ Qualification75546aaad3PASS16.13s first: native8s/-30% actual700 damage/120s rec
 
 Sources: [contract](../../specs/class-completeness.md#invigorating-fury-consequence-active70448), `crates/server/src/spell_cast/{scripts.rs,invigorating_fury_tests.rs,invigorating_fury_behavior_tests.rs}`; pinned TC a352b1fa `spell_warrior.cpp77–78/1380–1405`; engine diagnostics `data/diagnostics/class-coverage-b-2026-10-17/invigorating-fury-*` include nine CSV hashes matching accepted active70448 receipt (not per-table authentication claims), native rows and exact proof commands/receipts. Wider Enraged Regeneration/Bloodthirst interactions remain unqualified; aura248 deferred.
 
+## Exact attack countdowns — 2026-10-22
+
+`AutoAttack.timer/off_hand_timer` and `AutoRepeat.ready_in` are `Duration`, not floating seconds. Shared `melee::attack_timer_duration` truncates resets to integer milliseconds like TC a352b1fa `Unit.cpp:670–673`/`Unit.h:710–713,1541`; both executors subtract actual `Time.delta()` with saturating exact arithmetic. Remaining creature-timer rescaling and200ms off-hand staggering retain the same native units; forecast publishes remaining seconds via `as_secs_f64` without changing its external units.
+
+Production melee RED at29443d178 leaves90HP rather than80 at exactly40×50ms after its first native2s swing; this calls `auto_attack_system`, not the legacy test helper's duplicate countdown. BM also exposed repeat frames[0,40,81,122,163]. `f32` subtraction left7.8231e−7s after40ticks. No tolerance widening or named gap substitutes for the generic fix. Exact40/80 boundary, melee/offhand/rescale, nativeAutoShot and BM GREEN pending; policy and proc-mask ownership remain separate.
+
 ## Auto Shot autorepeat — 2026-10-19
 
 `spell_cast/auto_repeat.rs`: `execute_cast` success on an Attr2 0x20 spell inserts `AutoRepeat {spell_id, target, ready_in}` on the caster. `auto_repeat::update` (FixedUpdate after `start_queued_casts`) counts `ready_in` down and refires through `execute_cast`; success re-enters `on_cast`, resetting the timer to `swing_time(ranged main-hand speed or 2s, haste)`. A failed Auto Shot only skips; other autorepeat spells cancel. `stop_all_casts` (StopSpellCast, first stun, fear, confuse) removes the component then cancels the active cast. Spec gaps: [player-damage](../../specs/player-damage.md#known-gaps-current-cycle).

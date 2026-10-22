@@ -21,7 +21,7 @@
 //! actual summoner), and 28 DEST_DYNOBJ_ENEMY (the units a persistent
 //! area aura affects, `spell_cast::area_aura`). Target56 selects the caster's group;
 //!118 UNIT_TARGET_ALLY_OR_RAID selects the group around a grouped explicit ally,
-//! otherwise just that ally. Target57 selects an explicit ally;120 selects the caster.
+//! otherwise just that ally. Target57 selects an explicit raid member;120 selects the caster.
 //! Every other ID is unsupported and fails the cast.
 
 mod ordered_destination;
@@ -69,6 +69,7 @@ fn implicit_target_allowed(world: &World, caster: Entity, spell: &SpellInfo, uni
 pub enum Relation {
     Enemy,
     Ally,
+    Raid,
     Any,
 }
 
@@ -154,7 +155,8 @@ fn selector(id: u32) -> Option<Selector> {
         49 => Selector::CasterOffset(-std::f32::consts::FRAC_PI_2),
         50 => Selector::CasterOffset(std::f32::consts::FRAC_PI_2),
         6 => Selector::Explicit(Enemy),
-        21 | 57 => Selector::Explicit(Ally),
+        21 => Selector::Explicit(Ally),
+        57 => Selector::Explicit(Raid),
         118 => Selector::AllyOrRaid,
         25 => Selector::Explicit(Any),
         18 | 22 | 62 => Selector::CenterCaster,
@@ -311,6 +313,10 @@ pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation:
     let arena = crate::pvp::arena_combat::relation(world, caster, target);
     if caster == target {
         return relation != Relation::Enemy;
+    }
+    // TC CheckExplicitTarget: a raid unit must also be a valid assist target.
+    if relation == Relation::Raid && !shares_raid(world, caster, target) {
+        return false;
     }
     if !crate::auras::invisibility::can_detect(world, caster, target) {
         return false;

@@ -542,6 +542,67 @@ fn evaluate(
     }
 }
 
+/// Evaluate allocated reference ranks through native grants, budgets and overrides.
+/// A failed config is an explicit measurement gap, never a default-loadout fallback.
+#[cfg(test)]
+pub(crate) fn evaluate_reference_traits(
+    classes: &ClassSpells,
+    profile: &crate::followers::Profile,
+    level: u8,
+    allocated: &[Purchase],
+) -> Result<(KnownSpells, TraitLoadout), String> {
+    // Followers retain the original source-neutral race0 identity.
+    let identity = Player {
+        name: String::new(),
+        class: profile.class_id,
+        race: 0,
+        appearance: Default::default(),
+    };
+    evaluate_player_reference_traits(classes, &identity, profile.spec_id, level, allocated)
+}
+
+#[cfg(test)]
+pub(crate) fn evaluate_player_reference_traits(
+    classes: &ClassSpells,
+    identity: &Player,
+    spec_id: u32,
+    level: u8,
+    allocated: &[Purchase],
+) -> Result<(KnownSpells, TraitLoadout), String> {
+    let class = class_info(classes, identity.class).ok_or("reference class absent")?;
+    let ctx = TraitContext { spec_id, level };
+    let purchases = reference_purchases(&class.traits, ctx, allocated);
+    build_config(&class.traits, ctx, &purchases)?;
+    let evaluated = evaluate(classes, identity, level, spec_id, |_| purchases);
+    if evaluated.traits_reset || evaluated.spec.0 != spec_id {
+        return Err("native reference progression reset or changed requested spec".into());
+    }
+    let known = KnownSpells::fixture(evaluated.known.iter().map(|spell| spell.spell_id).collect());
+    Ok((known, evaluated.traits))
+}
+
+#[cfg(test)]
+fn reference_purchases(
+    tree: &crate::spell_info::TraitTree,
+    ctx: TraitContext,
+    allocated: &[Purchase],
+) -> Vec<Purchase> {
+    let grants = granted_entries(tree, ctx);
+    allocated
+        .iter()
+        .map(|entry| {
+            let granted = grants
+                .iter()
+                .find(|grant| grant.node_id == entry.node_id && grant.entry_id == entry.entry_id)
+                .map_or(0, |grant| grant.granted);
+            Purchase {
+                ranks: entry.ranks.saturating_sub(granted),
+                ..*entry
+            }
+        })
+        .collect()
+}
+
 /// `(SpecializationSpells.OverridesSpellID, SpellID)` of the spec spells learned at
 /// `level` (TrinityCore `Player::LearnSpecializationSpells` → `AddOverrideSpell`):
 /// Havoc's Demon's Bite 162243 replaces the baseline 344859 like a talent override.
