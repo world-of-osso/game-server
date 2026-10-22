@@ -101,7 +101,6 @@ Source and implementation: [smooth script waypoints](../wiki/systems/navigation.
 
 - [ ] Lead-owned release/publication; requested27 follower maps are staged with complete LOS/M2/nav tile coverage, not full gameplay reachability. Their20authored entrance→boss queries yield8PASS/12unavailable;18maps lack an authored entrance and4lack Normal boss spawns. [Receipts/grid boundary](../wiki/design/navigation-worker.md#encoded-navigation-grid-contract).
 - [ ] Lead must preserve vendored native build/config inputs in the release snapshot; see [deployment boundary](../wiki/systems/navigation.md#lead-owned-shipping).
-- [ ] Full workspace formatting has an unchanged inherited module-order failure; only changed-file formatting is passing.
 
 ## Out of scope
 
