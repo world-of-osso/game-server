@@ -20,16 +20,18 @@ The lead authorized copying (not hardlinking) `game-server-verify2/target/debug/
 
 | Test / scope | Before | After | Status |
 |---|---:|---:|---|
-| Campaign authored route order, cold process |29.101s|pending|baseline PASS|
+| Campaign authored route order, cold process |27.024s wall /20.50s sampled CPU /614624KiB HWM|pending|safe baseline PASS|
 | Full native Stockade clear |aborted after919.72s sampled CPU|pending|no passing baseline receipt|
-| Nethekurse native aggro, Normal + Heroic |pending|pending|safe baseline queued|
+| Nethekurse native aggro, Normal + Heroic |48.535s wall /41.25s sampled CPU /1457520KiB HWM|pending|safe baseline PASS|
 | Full gate-filter union |reported40–64min|pending|not accepted|
 
 The copied executable's machine-readable nextest census selects2748 enabled tests in the game-server binary. Its total census contains5397 cases, including mismatches and pre-existing ignored cases. `baseline-union-census.json` and `union-filter.txt` retain exact selection semantics: `(fu913 OR sm894) minus their existing opening-admission skip`, union `rd912`. Other workspace binaries still require their own census and acceptance;2748 is not presented as the entire workspace count.
 
 During the baseline Stockade test, `/proc` reported peakRSS626396KiB but currentRSS95996KiB plus520608KiB swap. Shared-host reclaim therefore confounds wall comparisons; RSS alone does not describe its resident-plus-swapped footprint. A profile speedup must be measured, not inferred from the sample.
 
-That first run was stopped after917.28s user+2.44s system CPU when its embedded `CARGO_MANIFEST_DIR` was found to point checkpoint/preparation output at the original checkout's target directory. The partial run is diagnostic evidence, not a passing before receipt. The corrected baseline uses a private `bwrap` mount mapping the original checkout path onto the private checkout, read-only host root, and explicit private `DUNGEON_SIMULATOR_OUTPUT`. A mount-identity/write probe confirmed its target output exists only in the private checkout. The bounded matching cohort is authored-route initialization plus Normal/Heroic Nethekurse aggro; the optimized full Stockade test remains additional absolute-budget coverage. Per-case `/proc` samples track CPU, peakRSS and swap; a fresh timer supplies exact whole-cohort child CPU and peakRSS.
+That first run was stopped after917.28s user+2.44s system CPU when its embedded `CARGO_MANIFEST_DIR` was found to point checkpoint/preparation output at the original checkout's target directory. The partial run is diagnostic evidence, not a passing before receipt. The corrected baseline uses a private `bwrap` mount mapping the original checkout path onto the private checkout, read-only host root, and explicit private `DUNGEON_SIMULATOR_OUTPUT`. A mount-identity/write probe confirmed its target output exists only in the private checkout. The bounded matching cohort is authored-route initialization plus Normal/Heroic Nethekurse aggro; the optimized full Stockade test remains additional absolute-budget coverage. Safe baseline **2/2PASS**,75.771s timer wall,62.376182s exact child CPU (56.933442user+5.442740system),1452960KiB child `ru_maxrss`; wrapper wall75.946s. Per-case `/proc` CPU is a sampled lower bound, and HWM may differ slightly from the exit-time resource metric. Maximum sampled swap is2760KiB for route setup and668KiB for Nethekurse.
+
+Both safe sides use a private SQLite online backup created before the safe baseline executed:886865920bytes, SHA256`09dac63b0337dee505bd704ad7766abe2bc3cf6a71dfbf3acd84de5690ef12f0`, mode0444, under the private target. Other asset directories remain read-only source links. This freezes canonical imports without mutating source data. The optimized build is admitted separately after the safe baseline finishes; initial compile remains pending.
 
 ## Gate invocation and remaining slow cases
 
