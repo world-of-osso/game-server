@@ -1,5 +1,13 @@
 # Auras
 
+## Native asynchronous stack expirations — 2026-10-22
+
+Native attribute490 is `Attributes_15 & 0x400`: SimC76f8118 `data_enums.hh:1910` names `SX_ASYNCHRONOUS_STACKING_AURA`; `buff.cpp:777–782` enables asynchronous lifetimes when native maximum stacks exceed1. Pinned TC a352 labels the same bit `ATTR15_UNK10`; no TC semantic claim is inferred from that label.
+
+`AuraInstance.stack_expirations` stores absolute deadlines for finite flagged applications. Refresh adds incoming deadlines rather than extending old ones, replacing oldest slots on native-cap overflow (`buff.cpp:2649–2692`). Ordinary aura updates decrement expired stacks and refresh derived stats/replicated views; zero remaining stacks enter the existing expiration/removal path. Nonflagged auras retain ordinary refresh behavior. No new timer constants, spell-ID whitelist or wire fields. Implementationac5eb241d is committed; targeted native GREEN remains pending. This does not certify every flagged spell's producer, periodic phase or consumption behavior.
+
+[Feel the Burn native RED](../investigations/follower-data.md#feel-the-burn-native-eligibility-and-overlap--2026-10-22) exercises this generic lifetime boundary through two real Fire Blasts. [Contract](../../specs/auras.md#feel-the-burn-and-asynchronous-stacks).
+
 ## Pyroclasm Hot Streak policy — 2026-10-21
 
 `MAGE_PYROCLASM_SIMC_HOT_STREAK_TRIGGER` extends the existing Hot Streak cast-boundary hook, not generic proc masks. A true admitted48108 consumption rolls active269650 effect0 (native15%) and casts269651 with its native duration/two-stack cap. SimC76f8118 `sc_mage.cpp2326–2428,6444–6446` supplies the policy; pinned TC has no script and native269650 is DUMMY4 without proc options or a trigger. Native269651's230% value wins over reference numbers.
