@@ -46,6 +46,58 @@ fn native_bm_leader_summons_and_uses_its_pet_without_transport_identity() {
             "native BM leader must summon through Call Pet and deal real pet damage in cached world{iteration}; preparation={:?}",
             crate::hunter_pet::provision_follower_duck(run.app.world_mut(), owner)
         );
+        // Observe the existing pet-spell path after ownership is real. Missing
+        // Wild Thrash damage is reported to its mechanics owner, not fixed here.
+        for _ in 0..600 {
+            run.control().unwrap();
+            run.app.update();
+        }
+        let pet = crate::hunter_pet::summoned_pet(run.app.world(), owner).unwrap();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let wild_thrash_casts = events
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::CastSuccess
+                    && event.source == Some(owner.to_bits())
+                    && event.spell_id == Some(1264359)
+            })
+            .count();
+        let wild_thrash_damage: i64 = events
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.source == Some(pet.to_bits())
+                    && event.spell_id == Some(1264355)
+            })
+            .map(|event| i64::from(event.amount))
+            .sum();
+        let sheets: Vec<_> = run
+            .members()
+            .map(|unit| {
+                let stats = run
+                    .app
+                    .world()
+                    .get::<crate::stats::CharacterStats>(unit)
+                    .unwrap();
+                serde_json::json!({"entity":unit.to_bits(), "primary":stats.primary,
+                "spell_power":stats.spell_power,"attack_power":stats.attack_power,
+                "ranged_attack_power":stats.ranged_attack_power,"crit_pct":stats.crit_pct,
+                "haste_pct":stats.haste_pct,"mastery_points":stats.mastery_points,
+                "mastery_pct":stats.mastery_pct,"versatility_pct":stats.versatility_pct,
+                "max_health":stats.max_health,"max_mana":stats.max_mana})
+            })
+            .collect();
+        println!(
+            "NATIVE_PET_WIRING {}",
+            serde_json::json!({"iteration":iteration,
+            "sim_s":run.now(),"owner":owner.to_bits(),"pet":pet.to_bits(),
+            "wild_thrash_casts":wild_thrash_casts,"wild_thrash_pet_damage":wild_thrash_damage,
+            "party_stat_sheets":sheets})
+        );
         let stable = run
             .app
             .world()

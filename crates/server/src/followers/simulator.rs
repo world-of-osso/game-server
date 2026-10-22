@@ -168,6 +168,10 @@ pub(crate) fn spawn_party(
             format!("initialize simulator leader through native player powers: {error}")
         })?;
     spawning::initialize(world, owner, owner, leader.clone())?;
+    // Preserve the native runtime-only stable before removing NPC ownership.
+    // This headless player has no transport InWorld/character identity.
+    crate::hunter_pet::init_pet_stable(world, owner)
+        .ok_or("initialize simulator leader runtime pet stable")?;
     world
         .entity_mut(owner)
         .remove::<(Follower, shared::components::UnitSummonedBy)>()
