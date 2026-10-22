@@ -8,6 +8,30 @@ const EXPULSION: u32 = 385958;
 
 fn projected_vexamus(difficulty: u32) -> (Harness, Entity, InMap) {
     let (mut h, boss, map) = bound_boss_at_difficulty(VEXAMUS, MAP, 0, difficulty, None);
+    let maps = h.app.world().resource::<MapStore>().clone();
+    let other_map = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::maps::InstanceManager>()
+        .create_map(
+            &maps,
+            MAP,
+            crate::maps::instances::InstanceEntrant {
+                character_id: 2002,
+                leader: 2002,
+                difficulty_id: difficulty,
+                ..Default::default()
+            },
+            crate::maps::instances::Now {
+                elapsed: 0.0,
+                unix: 0,
+            },
+        )
+        .expect("actual separate Academy instance")
+        .map;
+    assert_ne!(map, other_map);
+    let other_player = h.players[1].0;
+    h.app.world_mut().entity_mut(other_player).insert(other_map);
     let position = *h.app.world().get::<Position>(boss).unwrap();
     for (player, _, _) in &h.players {
         *h.app.world_mut().get_mut::<Position>(*player).unwrap() = Position {
