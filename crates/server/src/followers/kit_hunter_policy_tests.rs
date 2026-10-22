@@ -1,7 +1,10 @@
 //! FOLLOWER_HUNTER_PET_SIMC_DEFAULT: real native125 Waterfowl, ordinary Call Pet.
 use super::kit_tests::at_level;
+use crate::auras::ActiveAuras;
 use crate::hunter_pet::{HunterPet, HunterPetPlugin, PetStable, summoned_pet};
-use shared::components::{Npc, UnitLevel};
+use crate::spell_cast::test_harness::{Harness, spawn_npc};
+use bevy::prelude::Entity;
+use shared::components::{Health, Npc, ThreatTable, UnitLevel, UnitPowers};
 
 const AUSTIN: u32 = 209065;
 const NATIVE_DUCK: u32 = 174884;
@@ -81,71 +84,161 @@ fn check_native_duck(level: u8) {
     prepare_native_duck(level);
 }
 
-#[test]
-fn rotation_fidelity_253_barbed_shot_targets_engaged_undotted_secondary() {
-    use crate::spell_cast::test_harness::spawn_npc;
-    use shared::components::{Health, ThreatTable};
+fn durable_target(h: &mut Harness, target: Entity) {
+    h.app.world_mut().entity_mut(target).insert(Health {
+        current: 1_000_000_000.0,
+        max: 1_000_000_000.0,
+    });
+}
 
-    let (mut h, caster, _) = prepare_native_duck(21);
-    let primary = h.npc;
-    let secondary = spawn_npc(&mut h.app, 4.0);
-    // Inside native shot range, outside ordinary creature proximity aggro.
-    let unengaged = spawn_npc(&mut h.app, 30.0);
-    for target in [primary, secondary, unengaged] {
-        h.app.world_mut().entity_mut(target).insert(Health {
-            current: 1_000_000_000.0,
-            max: 1_000_000_000.0,
-        });
-    }
+fn spawn_engaged_target(h: &mut Harness, x: f32) -> Entity {
+    let target = spawn_npc(&mut h.app, x);
+    durable_target(h, target);
     let mut threat = ThreatTable::default();
     threat.add_threat(h.caster.to_bits(), 1.0);
-    h.app.world_mut().entity_mut(secondary).insert(threat);
+    h.app.world_mut().entity_mut(target).insert(threat);
+    target
+}
+
+fn has_owned_barbed(h: &Harness, caster: Entity, target: Entity) -> bool {
+    h.app
+        .world()
+        .get::<ActiveAuras>(target)
+        .is_some_and(|auras| {
+            auras
+                .iter()
+                .any(|aura| aura.spell_id == 217200 && aura.caster == caster)
+        })
+}
+
+fn apply_primary_barbed(h: &mut Harness, caster: Entity) {
     // Let the real Call Pet GCD expire; do not reset charges or resources.
     h.advance(40);
+    let primary = h.npc;
     crate::spell_cast::creature_cast(h.app.world_mut(), caster, 217200, Some(primary), false)
         .unwrap();
     h.advance(10);
     assert!(
-        h.app
-            .world()
-            .get::<crate::auras::ActiveAuras>(primary)
-            .unwrap()
-            .iter()
-            .any(|aura| aura.spell_id == 217200 && aura.caster == caster),
+        has_owned_barbed(h, caster, primary),
         "first ordinary Barbed Shot must actually apply this hunter's native DoT"
     );
+}
+
+fn spawn_barbed_targets() -> (Harness, Entity, Entity, Entity) {
+    let (mut h, caster, _) = prepare_native_duck(21);
+    let primary = h.npc;
+    durable_target(&mut h, primary);
+    let secondary = spawn_engaged_target(&mut h, 4.0);
+    // Inside native shot range, outside ordinary creature proximity aggro.
+    let unengaged = spawn_npc(&mut h.app, 30.0);
+    durable_target(&mut h, unengaged);
+    apply_primary_barbed(&mut h, caster);
     assert!(!crate::auras::has_aura(h.app.world(), secondary, 217200));
     assert!(!crate::auras::has_aura(h.app.world(), unengaged, 217200));
+    (h, caster, secondary, unengaged)
+}
+
+fn next_ai_barbed_target(h: &mut Harness, caster: Entity) -> Option<u64> {
     let before = h.inbox.go.len();
     for _ in 0..80 {
         super::update_ai(h.app.world_mut());
         h.advance(1);
-        if h.inbox.go[before..]
+        if let Some(shot) = h.inbox.go[before..]
             .iter()
-            .any(|event| event.caster == caster.to_bits() && event.spell_id == 217200)
+            .find(|event| event.caster == caster.to_bits() && event.spell_id == 217200)
         {
-            break;
+            return shot.target;
         }
     }
-    let shot = h.inbox.go[before..]
-        .iter()
-        .find(|event| event.caster == caster.to_bits() && event.spell_id == 217200);
+    None
+}
+
+fn assert_next_barbed_applies_to(h: &mut Harness, caster: Entity, target: Entity) {
     assert_eq!(
-        shot.and_then(|event| event.target),
-        Some(secondary.to_bits()),
-        "SimC Barbed target_if=min:dot.barbed_shot.remains must use the engaged undotted secondary, not wait for the primary or pull an unengaged creature"
+        next_ai_barbed_target(h, caster),
+        Some(target.to_bits()),
+        "SimC minimum-own-DoT selection must choose the eligible engaged secondary"
     );
     h.advance(20);
     assert!(
-        h.app
-            .world()
-            .get::<crate::auras::ActiveAuras>(secondary)
-            .unwrap()
-            .iter()
-            .any(|aura| aura.spell_id == 217200 && aura.caster == caster),
+        has_owned_barbed(h, caster, target),
         "secondary selection must produce its real native DoT"
     );
+}
+
+#[test]
+fn rotation_fidelity_253_barbed_shot_targets_engaged_undotted_secondary() {
+    let (mut h, caster, secondary, unengaged) = spawn_barbed_targets();
+    assert_next_barbed_applies_to(&mut h, caster, secondary);
     assert!(!crate::auras::has_aura(h.app.world(), unengaged, 217200));
+}
+
+#[test]
+#[ignore = "native foreign-owned DoT target qualification"]
+fn rotation_fidelity_253_barbed_shot_does_not_count_another_hunters_dot() {
+    let (mut h, caster, secondary, _) = spawn_barbed_targets();
+    let profile = h
+        .app
+        .world()
+        .get::<super::Follower>(caster)
+        .unwrap()
+        .profile
+        .clone();
+    let peer = spawn_npc(&mut h.app, 1.0);
+    h.app.world_mut().entity_mut(peer).insert((
+        Npc {
+            template_id: profile.entry,
+            name: profile.name.clone(),
+        },
+        UnitPowers::default(),
+    ));
+    let owner = h.caster;
+    super::spawning::initialize(h.app.world_mut(), owner, peer, profile).unwrap();
+    crate::spell_cast::creature_cast(h.app.world_mut(), peer, 217200, Some(secondary), false)
+        .unwrap();
+    h.advance(10);
+    assert!(has_owned_barbed(&h, peer, secondary));
+    assert!(!has_owned_barbed(&h, caster, secondary));
+    assert_next_barbed_applies_to(&mut h, caster, secondary);
+}
+
+#[test]
+#[ignore = "native range preflight target qualification"]
+fn rotation_fidelity_253_barbed_shot_skips_out_of_range_minimum() {
+    let (mut h, caster, secondary, _) = spawn_barbed_targets();
+    let distant = spawn_engaged_target(&mut h, 80.0);
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = Some(distant);
+    assert_next_barbed_applies_to(&mut h, caster, secondary);
+    assert!(!has_owned_barbed(&h, caster, distant));
+}
+
+#[test]
+#[ignore = "native breakable control target qualification"]
+fn rotation_fidelity_253_barbed_shot_preserves_native_breakable_control() {
+    let (mut h, caster, secondary, _) = spawn_barbed_targets();
+    let protected = spawn_engaged_target(&mut h, 2.0);
+    let mage = h.caster;
+    crate::spell_cast::creature_cast(h.app.world_mut(), mage, 118, Some(protected), false).unwrap();
+    h.advance(45);
+    assert!(
+        crate::auras::has_breakable_by_damage_cc(h.app.world(), protected),
+        "real native Polymorph must protect the otherwise-undotted first candidate"
+    );
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(mage)
+        .unwrap()
+        .0 = Some(protected);
+    assert_next_barbed_applies_to(&mut h, caster, secondary);
+    assert!(crate::auras::has_breakable_by_damage_cc(
+        h.app.world(),
+        protected
+    ));
+    assert!(!has_owned_barbed(&h, caster, protected));
 }
 
 #[test]
