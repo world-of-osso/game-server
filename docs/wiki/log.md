@@ -3715,3 +3715,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-22 — Trading Post residue classification
 
 [Private-account residue](investigations/trading-post-residue.md): vendors1615/1608 already have October46 membership and complete70448 item/transmog rows. Cached Wowhead agrees; historical fb_tpui_mod expired ownership is test-state residue. No code, SQL, state repair or RED→GREEN claim.
+
+## 2026-10-22 — Brackenhide source-floor packet
+
+[Six boss placements](investigations/follower-data.md#brackenhide-source-floors-and-route-gaps--2026-10-22): exact source marker/floor transforms and own TDB stats; authored WMO group bounds disambiguate Wratheye from outdoor roofs without supplying Z. Actual missing-six RED→six-primary GREEN, replay3×; three route gaps remain separate. No unsupported War-band offsets, canonical writes or dungeon-clear claim.
