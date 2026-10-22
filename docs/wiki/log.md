@@ -1,3 +1,7 @@
+## 2026-10-22 — Vexamus projected native partial
+
+[Vexamus](systems/boss-scripts.md#vexamus-projected-native-partial--2026-10-22): ignored firstExpulsion/Bomb RED before source5→18/15→18 lanes. Post-master d1336fa13 native4GREEN49.02s Normal1/projectedFollower205, real cone damage,82s ongoing completions, actual second copy, credit/corpse/native-home-reset; producer1GREEN and stable-key SQL receipt. Energy/MaxdormuOrbs/Bombdummy/timeline context remain gaps, no whole-fight/publication claim.
+
 ## 2026-10-22 — Class4 zone-only ingress
 
 [Optional power metadata](investigations/follower-data.md#class4-zone-only-ingress--2026-10-22): az914b real205 VaultRune summon exposed a shared zone-entry resource panic. Production now preserves source stats/identity and explicitly warns/leaves power absent when SpellCastPlugin is not installed; no fake pools or fixture-only patch. Present-table native initialization is unchanged. Native832762da4 reproof: real failingRune1/1 (17.91s), present-table class4Energy+Anub4 controls5/5 (70.99s); no duplicate broad gate.

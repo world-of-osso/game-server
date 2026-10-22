@@ -46,7 +46,6 @@ fn projected_vexamus(difficulty: u32) -> (Harness, Entity, InMap) {
 }
 
 #[test]
-#[ignore = "RED before native Vexamus scripting"]
 fn encounter_coverage_vexamus_projected_first_expulsion_current_alert_clock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = projected_vexamus(difficulty);
@@ -74,7 +73,6 @@ fn completed_casts(h: &Harness, boss: Entity, spell: u32) -> usize {
 }
 
 #[test]
-#[ignore = "RED before Vexamus Bomb lane and ongoing encounter lifecycle"]
 fn encounter_coverage_vexamus_projected_ongoing_lanes_credit_and_corpse() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_vexamus(difficulty);
@@ -141,7 +139,6 @@ fn encounter_coverage_vexamus_projected_ongoing_lanes_credit_and_corpse() {
 }
 
 #[test]
-#[ignore = "Vexamus reset proof pending scripting"]
 fn encounter_coverage_vexamus_projected_evade_rearms_first_expulsion() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_vexamus(difficulty);
@@ -198,7 +195,6 @@ fn encounter_coverage_vexamus_projected_evade_rearms_first_expulsion() {
 }
 
 #[test]
-#[ignore = "native Vexamus input qualification"]
 fn encounter_coverage_vexamus_projected_native_expulsion_damage_and_isolation() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = projected_vexamus(difficulty);
