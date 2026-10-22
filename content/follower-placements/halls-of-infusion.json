@@ -18,6 +18,27 @@
       "ordinal": 1,
       "source_url": "https://www.wowhead.com/npc=189722",
       "cache_sha256": "5f1ecd948ad54eb24d9c183e65f4ddf49a082b8807b5888cf38df15b19a43e4a",
+      "source_floor": 1,
+      "source_floor_evidence": {
+        "policy": "FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_GROUP_UPWARD_TRIANGLE",
+        "db2_assignment_id": 66826,
+        "wmo_group_id": 67900,
+        "placement_unique_id": 33746373,
+        "wmo_root_fdid": 4325339,
+        "wmo_group_fdid": 4497420,
+        "maximum_height_difference_yards": 1.0,
+        "triangles": [
+          {"triangle_index": 23150, "world_vertices": [[-356.3553771972656,-157.35658264160156,33.5052490234375],[-347.08343505859375,-151.298828125,37.56370162963867],[-343.6763916015625,-166.4009552001953,38.43018341064453]]},
+          {"triangle_index": 30074, "world_vertices": [[-350.8045349121094,-166.67315673828125,-67.45830535888672],[-349.5392761230469,-151.11087036132812,-67.45830535888672],[-361.484619140625,-163.59922790527344,-67.45830535888672]]}
+        ],
+        "source_files": [
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/4290690.wdt", "sha256": "8ea62fb708f6c083b6791fec73d5a19a47493d301fd52cad821bf9194a188244"},
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/4330641.adt", "sha256": "5d6d61645b4931821824106c42356efda0a921fc5e80665effae858a8f89b096"},
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/models/4325339.wmo", "sha256": "e693b34fd55e89661ba39e2b963789e54cb58e1413081cdb0d3ceed0db8997ca"},
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/models/4497420.wmo", "sha256": "6d01a8d80a1855c641b8dfaf9ab6c0583f3a1ab95340c4a93826064cac0fb9c5"}
+        ],
+        "transform": "Unit scale; MODF position [17066.666015625,0,17066.666015625], rotation [0,0,0]. Server placement heading-180 maps file XYZ to WoW[-X,-Y,Z]. Both triangle hits retained; downward ceiling excluded. Final height is baked nav, not source triangle."
+      },
       "faction_donor": 189232,
       "donor_reason": "No native Halls population; sourced Dragonflight boss faction16 with matching hostile A/H react. Own Normal1 class, ContentTuning and budget retained."
     },
@@ -26,17 +47,33 @@
       "ordinal": 2,
       "source_url": "https://www.wowhead.com/npc=189727",
       "cache_sha256": "89d9504f6950abe97d225e1c452ca00c702576123b0ccb56945aa4e6bbf3c58a",
-      "faction_donor": 189232,
-      "donor_reason": "No native Halls population; sourced Dragonflight boss faction16 with matching hostile A/H react. Own Normal1 class, ContentTuning and budget retained."
-    },
-    {
-      "entry": 189729,
-      "ordinal": 3,
-      "source_url": "https://www.wowhead.com/npc=189729",
-      "cache_sha256": "0adff4b1e1eec90970c30de2beb8781544041b20dc69f5a4b8c25138861321fe",
+      "source_floor": 1,
+      "source_floor_evidence": {
+        "policy": "FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_GROUP_UPWARD_TRIANGLE",
+        "db2_assignment_id": 66667,
+        "wmo_group_id": 67901,
+        "placement_unique_id": 33746373,
+        "wmo_root_fdid": 4325339,
+        "wmo_group_fdid": 4532805,
+        "maximum_height_difference_yards": 1.0,
+        "triangles": [
+          {"triangle_index": 34818, "world_vertices": [[-323.3751525878906,165.81939697265625,13.743550300598145],[-317.4434814453125,169.4837646484375,13.440083503723145],[-306.5339050292969,148.58242797851562,12.85080337524414]]},
+          {"triangle_index": 39684, "world_vertices": [[-319.8089599609375,169.715576171875,-100.93144989013672],[-317.94732666015625,158.04881286621094,-100.93144989013672],[-307.8504943847656,165.36293029785156,-100.93144226074219]]}
+        ],
+        "source_files": [
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/4290690.wdt", "sha256": "8ea62fb708f6c083b6791fec73d5a19a47493d301fd52cad821bf9194a188244"},
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/4330641.adt", "sha256": "5d6d61645b4931821824106c42356efda0a921fc5e80665effae858a8f89b096"},
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/models/4325339.wmo", "sha256": "e693b34fd55e89661ba39e2b963789e54cb58e1413081cdb0d3ceed0db8997ca"},
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/models/4532805.wmo", "sha256": "174c06fab9e0ae4f4610f1230350b29ad63ed83a8d34eb344e27a7a24b692301"}
+        ],
+        "transform": "Unit scale; MODF position [17066.666015625,0,17066.666015625], rotation [0,0,0]. Server placement heading-180 maps file XYZ to WoW[-X,-Y,Z]. Both triangle hits retained; downward ceiling excluded. Final height is baked nav, not source triangle."
+      },
       "faction_donor": 189232,
       "donor_reason": "No native Halls population; sourced Dragonflight boss faction16 with matching hostile A/H react. Own Normal1 class, ContentTuning and budget retained."
     }
+  ],
+  "source_gaps": [
+    {"entry": 189729, "name": "FOLLOWER_PLACEMENT_FLOOR_UNRESOLVED_2527_189729", "reason": "Primal Tsunami has two upward source surfaces (-158.8745 collision-only, -137.0672 rendered); no unique floor selection approved. No placement emitted.", "cache_sha256": "0adff4b1e1eec90970c30de2beb8781544041b20dc69f5a4b8c25138861321fe"}
   ],
   "calibration_entries": [188252, 189232]
 }

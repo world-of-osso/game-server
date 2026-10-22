@@ -1,5 +1,13 @@
 # Retail follower data and approved spec bridge
 
+## Halls and Vexamus source-floor selection — 2026-10-22
+
+[Halls manifest](../../../content/follower-placements/halls-of-infusion.json) pins Irideus189719, Goliath189722 and Khajin189727. Goliath DB2assignment66826/group67900/file4497420 and Khajin66667/67901/file4532805 share source placement33746373/root4325339. At each unchanged sourceXY, the assigned group has one upward floor and one downward ceiling. `FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_GROUP_UPWARD_TRIANGLE` rejects ceilings and requires one baked height within1yd of the unique upward hit; source vertices, triangle indices, transform and hashes are retained. All native stats remain their own Normal1 rows. Primal Tsunami retains `FOLLOWER_PLACEMENT_FLOOR_UNRESOLVED_2527_189729`: two upward surfaces, no emitted placement. Four-primary acceptance remains open.
+
+[Vexamus manifest](../../../content/follower-placements/vexamus.json) uses explicitly approved `FOLLOWER_PLACEMENT_Z_FROM_SAME_ROOM_NATIVE_ANCHORS`: native Magic Book195416/guid9001421 and Professor Maxdormu189668/guid9001226 both stand atZ903.52, within5yd of unchanged markerXY. They support baked904.007789 and reject807.192797. Producer validates both exact native rows, proximity and vertical agreement; receipt records distances. This per-instance rule is not a general nearest-height shortcut. Normal1 stats/models and own journal binding remain native; faction alone uses same-Academy Echo of Doragosa190609 with sourced hostile A/H reaction. `FOLLOWER_ROUTE_INCOMPLETE_2526_194181` remains separate.
+
+Initial Halls/Vexamus source drafts correctly produced no SQL when floor selection remained ambiguous. Source and packet GREEN proofs are pending for these new policies. [Producer](../../../scripts/follower_placements.py), [source reader](../../../scripts/follower_placement_sources.py), [contract](../../specs/follower-dungeons.md#derived-missing-source-placements-2026-10-22). Evidence: engine `data/diagnostics/follower-placements-2026-10-22/halls-oriented-triangle-evidence.json` and initial packet receipts.
+
 ## Brackenhide source floors and route gaps — 2026-10-22
 
 `brackenhide-packet-2` in engine `data/diagnostics/follower-placements-2026-10-22/` prepares24stable-key rows for all six boss actors186116/186120/186121/186122/186124/186125. Own TDB Normal1 class/budget/CT2550/models and70448 journal bindings are retained; only absent faction uses approved same-react DF donors. [Manifest](../../../content/follower-placements/brackenhide.json) pins all six Wowhead bodies. The three War-band pages explicitly share36/40.5 on floor0, so their derived positions coincide; no unsupported actor offsets were invented.

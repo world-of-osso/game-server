@@ -1,3 +1,7 @@
+## 2026-10-22 — Halls and Vexamus source-floor policies
+
+[Source-floor selection](investigations/follower-data.md#halls-and-vexamus-source-floor-selection--2026-10-22): approved unique DB2 floor-group upward triangle matching and Vexamus-only two-native-anchor selection; original ambiguous packet attempts refused SQL, Primal remains unresolved. Source/packet GREEN pending.
+
 ## 2026-10-21 — Continuous frozen walk endpoints
 
 [Native endpoint/time boundary](systems/dungeon-simulator.md#continuous-frozen-walk-endpoints-2026-10-21): full Azure1 ownerDeath RED106.58s plus two exact recorded-position REDs0.12s prove goal-anchor overshoot and full-edge-time restart. Walking now shares continuous existing-edge endpoints/proportional native yards between safety qualification and movement; no new component links or changed book hops. At5f7d4ff85 recorded controls2GREEN0.01s, fullnative Azure1 Sapling GREEN110.78s, Stockade safe-path+full50 bothGREEN135.84s, graph4+weighted1+six retained native movement controls GREEN. New seeded qualification pending; prior2f443Stockade50/50 is not current proof after this geometry change.

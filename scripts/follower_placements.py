@@ -41,6 +41,12 @@ def select_surface_query(record, marker, queries):
         selected = [q for q in queries if abs(q['height'] - record['source_floor_surface_height']) < 0.000001]
         if len(selected) != 1 or marker['floor'] != record['source_floor']:
             raise ValueError('approved source-floor surface no longer matches baked geometry')
+        evidence = record.get('source_floor_evidence')
+        if isinstance(evidence, dict) and evidence.get('policy') == 'FOLLOWER_PLACEMENT_Z_FROM_SAME_ROOM_NATIVE_ANCHORS':
+            supported = [q for q in queries if all(abs(q['height'] - a['wow_xyz'][2]) <=
+                         evidence['maximum_vertical_difference_yards'] for a in evidence['anchors'])]
+            if len(supported) != 1 or supported != selected:
+                raise ValueError('same-room native anchors must support exactly one baked candidate')
         return selected[0]
     if len(queries) == 1:
         return queries[0]
@@ -55,6 +61,10 @@ def derive_placement(record, manifest, tables, cache, polygons, route, nav, entr
     marker = page['markers'][0]
     assignments = select_assignment(tables, manifest['map_id'], marker)
     x, y = transform_marker(marker, assignments)
+    evidence = record.get('source_floor_evidence')
+    if isinstance(evidence, dict) and evidence.get('policy') == 'FOLLOWER_PLACEMENT_Z_FROM_SAME_ROOM_NATIVE_ANCHORS':
+        if [x, y] != evidence['marker_wow_xy']:
+            raise ValueError('same-room anchor evidence differs from current source XY')
     all_heights = sample_surfaces(polygons, x, y, assignments)
     heights = read_source_floor_support(record, marker, assignments, all_heights)
     start = [entrance['LocX'], entrance['LocZ'], -entrance['LocY']]
@@ -194,6 +204,32 @@ def make_sql(baseline, prepared):
     return '\n'.join(statements) + '\n', changed
 
 
+def validate_native_room_anchors(source, manifest):
+    proofs = []
+    for record in manifest['entries']:
+        evidence = record.get('source_floor_evidence')
+        if not isinstance(evidence, dict) or evidence.get('policy') != 'FOLLOWER_PLACEMENT_Z_FROM_SAME_ROOM_NATIVE_ANCHORS':
+            continue
+        anchors = evidence['anchors']
+        if len({a['guid'] for a in anchors}) < 2:
+            raise ValueError('same-room floor policy requires at least two distinct native anchors')
+        x, y = evidence['marker_wow_xy']
+        floor = record['source_floor_surface_height']
+        observed = []
+        for anchor in anchors:
+            native = source.execute('SELECT id,map,position_x,position_y,position_z FROM tdb_creature WHERE guid=?',
+                                    (anchor['guid'],)).fetchone()
+            if native is None or tuple(native) != (anchor['entry'], manifest['map_id'], *anchor['wow_xyz']):
+                raise ValueError('same-room native anchor differs from recorded source')
+            distance = ((x - native[2]) ** 2 + (y - native[3]) ** 2) ** 0.5
+            vertical = abs(floor - native[4])
+            if distance > evidence['maximum_horizontal_distance_yards'] or vertical > evidence['maximum_vertical_difference_yards']:
+                raise ValueError('same-room native anchors do not agree on the supported floor')
+            observed.append(dict(anchor, horizontal_distance_yards=distance, vertical_difference_yards=vertical))
+        proofs.append(dict(entry=record['entry'], policy=evidence['policy'], anchors=observed))
+    return proofs
+
+
 def prepare(args):
     if args.output.exists():
         raise ValueError('output directory must be new; never overwrite proof or inputs')
@@ -211,6 +247,7 @@ def prepare(args):
     with closing(open_readonly(baseline_path)) as baseline:
         baseline.row_factory = sqlite3.Row
         entrance = dict(baseline.execute('SELECT * FROM tdb_world_safe_locs WHERE ID=? AND MapID=?', (manifest['entrance_id'], manifest['map_id'])).fetchone())
+        native_room_anchors = validate_native_room_anchors(baseline, manifest)
         placements = [derive_placement(r, manifest, tables, args.cache, polygons, args.route, args.nav, entrance) for r in manifest['entries']]
         receipt = dict(map_id=manifest['map_id'], policy=PLACEMENT_POLICY, db2_authentication=auth | binding_auth,
                        producer_sha256=digest(__file__), source_reader_sha256=digest(Path(__file__).with_name('follower_placement_sources.py')),
@@ -221,6 +258,7 @@ def prepare(args):
                        manifest_sha256=digest(args.manifest), inventory_sha256=digest(args.inventory),
                        surface_file=str(args.surfaces), surface_sha256=digest(args.surfaces),
                        route_binary_sha256=digest(args.route), entrance=entrance, placements=placements,
+                       native_room_anchors=native_room_anchors, source_gaps=manifest.get('source_gaps', []),
                        source_database=str(args.source_db.resolve()), baseline_sha256=digest(baseline_path), canonical_modified=False)
         receipt['navigation_gaps'] = [p['navigation_gap'] for p in placements if 'navigation_gap' in p]
         if any('wow_xyz' not in p for p in placements):

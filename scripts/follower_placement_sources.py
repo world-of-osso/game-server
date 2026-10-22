@@ -118,10 +118,35 @@ def triangle_height(point, triangle):
     return wa * a[1] + wb * b[1] + wc * c[1]
 
 
+def match_upward_source_floor(evidence, marker, assignments, heights):
+    x, y = transform_marker(marker, assignments)
+    upward = []
+    for triangle in evidence['triangles']:
+        a, b, c = triangle['world_vertices']
+        normal_z = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+        if normal_z <= 0:
+            continue
+        bevy = [(v[0], v[2], -v[1]) for v in (a, b, c)]
+        height = triangle_height((x, -y), bevy)
+        if height is not None:
+            upward.append(height)
+    if len(upward) != 1:
+        raise ValueError('source floor group requires exactly one upward triangle at source XY')
+    tolerance = evidence['maximum_height_difference_yards']
+    if not math.isfinite(tolerance) or tolerance <= 0:
+        raise ValueError('source floor matching tolerance must be finite and positive')
+    matched = [z for z in heights if abs(z - upward[0]) <= tolerance]
+    if len(matched) != 1:
+        raise ValueError('source upward floor requires exactly one baked candidate within tolerance')
+    return matched
+
+
 def read_source_floor_support(record, marker, assignments, heights):
-    if 'source_floor_z_bounds' not in record:
+    evidence = record.get('source_floor_evidence')
+    triangle_policy = (isinstance(evidence, dict) and evidence.get('policy') ==
+                       'FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_GROUP_UPWARD_TRIANGLE')
+    if 'source_floor_z_bounds' not in record and not triangle_policy:
         return heights
-    evidence = record['source_floor_evidence']
     if marker['floor'] != record['source_floor']:
         raise ValueError('source WMO floor differs from the cached marker floor')
     matching = [a for a in assignments if int(a['WMOGroupID']) == evidence['wmo_group_id']
@@ -131,6 +156,8 @@ def read_source_floor_support(record, marker, assignments, heights):
     for artifact in evidence['source_files']:
         if digest(artifact['path']) != artifact['sha256']:
             raise ValueError('source WMO floor evidence file changed')
+    if triangle_policy:
+        return match_upward_source_floor(evidence, marker, assignments, heights)
     if evidence['rotation_degrees'][0] != 0 or evidence['rotation_degrees'][2] != 0:
         raise ValueError('floor bounds require an explicit vertical transform for tilted placements')
     bounds = [evidence['placement_position_z'] + z * evidence['scale'] for z in evidence['group_local_z']]

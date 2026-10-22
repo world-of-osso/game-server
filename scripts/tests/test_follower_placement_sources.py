@@ -65,6 +65,32 @@ class FollowerPlacementSources(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'recorded WMO transform'):
             read_source_floor_support(damaged, marker, assignments, observed)
 
+    def test_halls_upward_floor_triangles_exclude_ceilings_and_ambiguous_nav_surfaces(self):
+        manifest_path = Path(__file__).resolve().parents[2] / 'content/follower-placements/halls-of-infusion.json'
+        records = {r['entry']: r for r in json.loads(manifest_path.read_text())['entries']}
+        for entry, observed, expected in [
+            (189722, [-190.51663351740984, -67.90195139447695, 25.439383706251334], -67.90195139447695),
+            (189727, [-190.64583, -100.40612940495758, 9.387790624059264], -100.40612940495758),
+        ]:
+            with self.subTest(entry=entry):
+                record = records[entry]
+                marker = read_cached_npc(self.cache, entry)['markers'][0]
+                assignments = select_assignment(self.tables, 2527, marker)
+                self.assertEqual(read_source_floor_support(record, marker, assignments, observed), [expected])
+                ambiguous = observed + [expected + 0.1]
+                with self.assertRaisesRegex(ValueError, 'one baked candidate'):
+                    read_source_floor_support(record, marker, assignments, ambiguous)
+                two_upwards = copy.deepcopy(record)
+                two_upwards['source_floor_evidence']['triangles'].append(copy.deepcopy(record['source_floor_evidence']['triangles'][1]))
+                with self.assertRaisesRegex(ValueError, 'one upward'):
+                    read_source_floor_support(two_upwards, marker, assignments, observed)
+                damaged = copy.deepcopy(record)
+                damaged['source_floor_evidence']['source_files'][0]['sha256'] = '0' * 64
+                with self.assertRaisesRegex(ValueError, 'evidence file changed'):
+                    read_source_floor_support(damaged, marker, assignments, observed)
+                with self.assertRaisesRegex(ValueError, 'marker floor'):
+                    read_source_floor_support(record, dict(marker, floor=0), assignments, observed)
+
     def test_teera_actual_empty_mapper_is_an_explicit_source_gap_not_a_crash(self):
         try:
             page = read_cached_npc(self.cache, 186339)
