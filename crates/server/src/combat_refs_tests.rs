@@ -148,7 +148,6 @@ fn controlled_pet(app: &mut App, owner: Entity) -> Entity {
 }
 
 #[test]
-#[ignore = "RED: NPC-pet PvE references incorrectly expire after five seconds"]
 fn pet_combat_refs_npc_pet_survives_quiet_pve_until_explicit_stop() {
     let mut app = app();
     let owner = player(&mut app, "Hunter");
