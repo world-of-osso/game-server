@@ -215,6 +215,30 @@ fn navigation_vexamus_partial_corridor_walks_and_repaths() {
     );
 }
 
+#[test]
+#[ignore = "requires canonical2516 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_nokhud_partial_corridors_walk_and_repath_three_bosses() {
+    let entrance = wow(-570.405, 2189.37, 431.296);
+    for (entry, target) in [
+        (186151, wow(-536.05316, 4163.211, 381.20233)),
+        (186338, wow(-2095.4968, 4335.8853, 536.04694)),
+        (186616, wow(-1167.5642, 1356.6361, 390.72348)),
+    ] {
+        eprintln!("Nokhud source placement entry={entry}");
+        assert_canonical_route_arrives(2516, entrance, target);
+    }
+}
+
+#[test]
+#[ignore = "requires canonical2521 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_ruby_partial_corridor_walks_and_repaths() {
+    assert_canonical_route_arrives(
+        2521,
+        wow(1386.2, -169.719, 131.0),
+        wow(1773.8756, 18.689396, 313.123),
+    );
+}
+
 fn assert_canonical_route_arrives(map_id: u32, mut from: Vec3, target: Vec3) {
     let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
     // Arrival is at the existing native projection, not an invented tighter XY bound.
