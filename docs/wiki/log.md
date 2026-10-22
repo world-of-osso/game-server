@@ -13,6 +13,9 @@
 ## 2026-10-22 — Native target57 raid-recipient correction
 
 [Toys](systems/toys.md#native-target57-raid-recipient-correction-2026-10-22): source57 raid relation was aliased to ordinary ally21; actual1022 on foreign ally returnsOk, while21/10060 control passes. Corrected6bdac3cf8 batch4RED/control4PASS102.82s, including separate Spotlight preflight REDs; compile-only0611502ac API errors excluded. Generic Raid relation now checks existing membership/assist and rejects explicit foreign targets without caster substitution; GREEN pending. No Spotlight entry yet, no mixed-mask/universal controlled-unit claim.
+## 2026-10-22 — Ki'katal source-clock partial
+
+[Ki'katal](investigations/follower-data.md#kikatal-source-clock-partial--2026-10-22): ignored native firstWebsRED→5b036e1ea3/3GREEN57.40s, eleven90s requests perNormal/Follower, nativeVolley/Singularity damage, evade/rearm, actualcopy-credit/corpse proof. Binding-only producer1/1GREEN preserves source/native/population; lower-bound alerts and absentcontrollers remain gaps. Canonical database untouched.
 ## 2026-10-22 — Active party combat references
 
 Updated [follower admission](investigations/follower-data.md#active-party-combat-reference-admission--2026-10-22) and its contract: actual31146 count RED and native missile-launch RED distinguish active references from target-side suppression. Membership-only Stockade regression isolated on identical authentic data; active-pair fix4405dca61 gives native2GREEN, Stockade3/3 with all5alive,685native controls plus Leymor1PASS. Full genuine Henry roster also clears3/3 at2384.60sim_s with all5alive on approved authentic6bf39eb8 input. Final master merge carries later schema/population-oracle updates; check/integration proof is recorded separately.
