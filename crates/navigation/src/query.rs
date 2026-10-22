@@ -452,6 +452,10 @@ fn validate_packet(bytes: &[u8]) -> Result<(), String> {
 mod seam_tests;
 
 #[cfg(all(test, feature = "bake"))]
+#[path = "gorek_diagnostic.rs"]
+mod gorek_diagnostic;
+
+#[cfg(all(test, feature = "bake"))]
 mod tests {
     use super::*;
     fn ground_dir() -> PathBuf {
