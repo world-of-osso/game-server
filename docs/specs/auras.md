@@ -7,11 +7,12 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on active
 TC a352b1fa `SpellAuraEffects.cpp:832–873` supplies the rolling-amount rule.
 This is shared aura execution, not an Echo/Ignite proc or learned-spell grant.
 
-- [ ] Native Attr10 `ROLLING_PERIODIC` selects one shared carry path for periodic damage/healing, including335467 leech.
-- [ ] Settle old due ticks once, then add the same caster/spell/effect's unpaid stored amount over the refreshed scheduled ticks; retain the existing native phase.
-- [ ] Preserve Barbed's authored five-amount normalization and seven-initial/six-refreshed clock; never apply its normalization to other spells or carry its old pool twice.
-- [ ] Unflagged periodic healing and foreign caster pools remain independent; preserve existing fractional snapshots and payment rounding rather than requantizing them during refresh.
-- [ ] Ordinary native child aura/cast execution gains this behavior automatically, including flagged12654; class producers still own their sourced incoming amount.
+- [x] Native Attr10 `ROLLING_PERIODIC` selects one shared carry path for periodic damage/healing, including335467 leech.
+- [x] Settle old due ticks once, then add the same caster/spell/effect's unpaid stored amount over the refreshed scheduled ticks; retain the existing native phase.
+- [x] Preserve Barbed's authored five-amount normalization and seven-initial/six-refreshed clock; never apply its normalization to other spells or carry its old pool twice.
+- [x] Unflagged periodic healing and foreign caster pools remain independent; preserve existing fractional snapshots and payment rounding rather than requantizing them during refresh.
+- [x] Ordinary native child aura/cast execution gains this behavior automatically; class producers still own their sourced incoming amount.
+- [ ] Qualify actual12654 producer integration separately; its flag uses the same shared path, but the Ignite producer belongs to another slice.
 
 Generic native boundary assertions:
 `crates/server/src/auras/rolling_periodic_tests.rs`; native Echo/ownership assertions:

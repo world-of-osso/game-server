@@ -1,5 +1,36 @@
 # Auras
 
+## Native rolling periodic refresh — 2026-10-22
+
+`refresh::prepare_application(world,target,new,spell)` reads native Attr10
+`ROLLING_PERIODIC` and owns the single shared carry pass. It settles already-due
+old ticks once, then matches same caster/spell/source/effect index/aura type and
+adds unpaid stored amount over the refreshed scheduled ticks. Native phase stays
+owned by `AuraInstance::refresh_from`; no new timer or partial-tick mechanism.
+TC a352b1fa `SpellAuraEffects.cpp:832–849` supplies the rule. Fractional snapshots
+remain intact; existing damage/heal payment rounding is unchanged.
+
+Barbed217200 normalizes only its fresh authored five-amount budget to the native
+schedule: seven initial ticks, six refreshed. Its old pool goes through the shared
+pass, never a second spell-local accumulator.335467 periodic leech also uses that
+flag path with no separate carry branch. This preserves its existing fractional
+amount contract. No spell-ID exception gates general carry.
+
+External interface is unchanged: ordinary native aura application, including
+`cast_triggered_with_effect0_amount` with a sourced **per-tick** incoming amount,
+gets carry automatically.12654 has the flag and uses this path; its actual Ignite
+producer qualification belongs to the other slice, not these tests.
+
+Native71023 Languish demonstrates5vs8 RED on refresh without amount overrides;
+real Henry77489 independently demonstrates a lost unpaid heal pool. Shared
+production5622db488 plus29e0d8a61 fraction fix, integratedaeeaa1b87, passes19cases
+77.83s including generic damage/unflagged Renew, Echo6, Barbed4,3354671, Binding5
+and PoH1. The first13-case run deliberately exposed the unnecessary new storage
+rounding; no test oracle was weakened to fix it.
+[Contract](../../specs/auras.md#native-rolling-periodic-refresh),
+[proof ledger](../../handoffs/healer-echo-of-light-proof-ledger.md),
+[Echo investigation](../investigations/holy-priest-follower-ai.md#echo-of-light-producer-and-shared-rolling-carry--2026-10-22).
+
 ## Pyroclasm Hot Streak policy — 2026-10-21
 
 `MAGE_PYROCLASM_SIMC_HOT_STREAK_TRIGGER` extends the existing Hot Streak cast-boundary hook, not generic proc masks. A true admitted48108 consumption rolls active269650 effect0 (native15%) and casts269651 with its native duration/two-stack cap. SimC76f8118 `sc_mage.cpp2326–2428,6444–6446` supplies the policy; pinned TC has no script and native269650 is DUMMY4 without proc options or a trigger. Native269651's230% value wins over reference numbers.

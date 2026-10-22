@@ -143,15 +143,17 @@ SimC76f8118 `sc_priest.hpp:1464–1476` and `residual_action.hpp:71–108`;
 local70448 amounts/clock win. TC a352b1fa `SpellAuraEffects.cpp:832–849` supplies
 the same-caster rolling rule. See the [mechanic investigation](../wiki/investigations/holy-priest-follower-ai.md).
 
-- [ ] Actual learned77485 supplies the live mastery percentage; never fabricate a follower amount.
-- [ ] Eligible direct healing, including self healing, produces native77489 on the actual healed patient from the pre-overheal amount.
-- [ ] Child duration/tick period come from native data, expire normally and do not recursively produce Echo.
-- [ ] Rehealing preserves the unpaid same-caster/patient pool and the existing tick phase.
-- [ ] Periodic healing and actors without learned mastery do not produce Echo.
+- [x] Actual learned77485 supplies the live mastery percentage; never fabricate a follower amount.
+- [x] Eligible direct healing, including self healing, produces native77489 on the actual healed patient from the pre-overheal amount.
+- [x] Child duration/tick period come from native data, expire normally and do not recursively produce Echo.
+- [x] Rehealing preserves the unpaid same-caster/patient pool and the existing tick phase.
+- [x] Periodic healing and actors without learned mastery do not produce Echo.
 
 Native assertions: `crates/server/src/followers/holy_policy_native_tests/echo_of_light.rs`.
-Prismatic Echoes390967's separate scripted mastery bonus, global rolling-flag
-coverage and simulator/live effectiveness are not implied by this producer contract.
+Prismatic Echoes390967's separate scripted mastery bonus and simulator/live
+effectiveness are not implied by this producer contract. Shared flag-driven
+carry is specified in [auras](auras.md#native-rolling-periodic-refresh); a passing
+boundary does not certify every flagged spell's producer.
 
 ### Serendipity (63733)
 
