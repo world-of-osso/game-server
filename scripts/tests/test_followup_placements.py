@@ -40,7 +40,11 @@ class FollowupPlacementAcceptance(unittest.TestCase):
                 self.assertEqual(runtime_display, native_display)
                 self.assertEqual(display, {189719: 106801, 189722: 103584, 189727: 107064,
                                            189729: 106934, 194181: 107525, 186151: 107680,
-                                           186338: 105722, 186615: 107145, 186616: 105823}[entry])
+                                           186338: 105722, 186615: 107145, 186616: 105823,
+                                           190485: 108318}[entry])
+
+    def test_ruby_erkhart_keeps_own_native_faction_model_and_budget(self):
+        self.assert_source_primaries(2521, (190485,))
 
     def test_nokhud_four_source_supported_primaries_keep_own_native_identity_and_budget(self):
         self.assert_source_primaries(2516, (186151, 186338, 186615, 186616))

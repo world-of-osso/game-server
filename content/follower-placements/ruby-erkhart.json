@@ -1,0 +1,27 @@
+{
+  "map_id": 2521,
+  "entrance_id": 100030,
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "entries": [
+    {
+      "entry": 190485,
+      "ordinal": 0,
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2503",
+      "journal_encounter_id": 2503,
+      "cache_sha256": "0d512e2356556cfafd27e757b49f385e2dfd090640bf33497231daa4b3b5ff9a",
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/Dragonflight/RubyLifePools/KyrakkaAndErkhartStormvein.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "3a8580ef5b9b7b64b8a6c545459150a751eade317640b68ce8d2df6ff55906a8",
+        "journal_actor_id": 5392
+      }
+    }
+  ],
+  "source_gaps": [
+    {"entry": 190484, "reserved_ordinal": 1, "name": "FOLLOWER_PLACEMENT_NO_INDIVIDUAL_SOURCE_190484", "reason": "Kyrakka's individual Wowhead mapper is empty; shared journal2503 cannot justify co-location. Never alias199790 or invent offsets. Require an individual TDB spawn, held-out-validated MDT point, or Wowhead marker."}
+  ],
+  "calibration_entries": [188252, 189232]
+}
