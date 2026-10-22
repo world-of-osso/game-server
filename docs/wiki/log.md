@@ -1,6 +1,6 @@
 ## 2026-10-22 — CT0 native map tuning and Gorren source floor
 
-[Native map tuning](investigations/follower-data.md#native-map-difficulty-tuning-for-ct0--2026-10-22): TC map-CT selection preserves native CT0/modifiers, records authenticated MapDifficulty ID/CT separately; seven-actor RED→source3GREEN0.081s. Gorren assigned-group upward consensus qualifies142.126492; actual missing-primary RED retained, private packet pending. Existing runtime regional scaling already implements this rule; no fresh runtime proof or dungeon completion claimed.
+[Native map tuning](investigations/follower-data.md#native-map-difficulty-tuning-for-ct0--2026-10-22): TC map-CT selection preserves native CT0/modifiers, records authenticated MapDifficulty ID/CT separately; seven-actor RED→source3GREEN0.081s. Gorren assigned-group upward consensus qualifies142.126492; actual missing-primary RED→fresh-copy2GREEN0.011s/replay3×. Lead confirmed packet4rows published/integrityOK; route gap relayed. Existing runtime regional scaling already implements this rule; no fresh runtime proof or dungeon completion claimed.
 
 ## 2026-10-22 — Initial respawn admission packet qualification
 
