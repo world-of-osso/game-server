@@ -2,6 +2,12 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Ancient Amani Mask source cancellation boundary (2026-10-22)
+
+[Contract](../../specs/toys.md#server-scope-visual-only-census-rule). Published279052/1303320 authors one zero-payload self aura4, source600000ms duration and900000ms inherited spell recovery. Attr0=-2147483648 is unsigned0x80000000, TC a352b1fa SharedDefines.h467 NO_AURA_CANCEL: players cannot voluntarily remove the aura. Existing native receive_cancel_aura already enforces that flag; do not invent a removal script or make this mask cancellable. Complete70448 visual closure72rows/28tables/four resident ordinary models4550068/6195676/6163854/6163853, zero missing references. Source artifacts visual-amani-mask-isolated-70448.json and visual-next-three-root-source.json.
+
+Test-first47322144f: actualUseToy and census RED2/control4PASS72.40s (two drift cases plus retained Orb three-affinity lifecycle, Cyrce and Gadgetzan controls). One exact1303320 registry entry now uses the unchanged strict predicate. GREEN pending: prove owner apply/replication, actual CancelAura refusal, natural10-minute expiry/15-minute recovery with real reuse, invariants and drift refusal. Harness uses its existing50ms ticks, no aura/cooldown state rewrite. Native mask pixels remain separate; census541 until qualified.
+
 ## Thaumaturgist's Orb specialization-affinity source boundary (2026-10-21)
 
 [Visual contract](../../specs/toys.md#server-scope-visual-only-census-rule). Source136928/127850 promises attention to the priest's light/shadow affinity. Isolated44 rows/26 tables/two resident ordinary models165840/948188/zero missing visual references. The root is instant self aura4/zero payload, duration300000ms, item recovery600000ms/category0/condition0, Priest-only AllowableClass16 and required level11.

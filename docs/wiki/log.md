@@ -1,3 +1,7 @@
+## 2026-10-22 — Amani mask source cancellation boundary
+
+[Toys](systems/toys.md#ancient-amani-mask-source-cancellation-boundary-2026-10-22): complete72row28table4model visual metadata, literal Attr0 NO_AURA_CANCEL and source10min aura/15min recovery. ActualUseToy/censusRED2/control4PASS72.40s at47322144f; exact1303320 registry entry only, native no-cancel/natural expiry/reuse GREEN pending. No canonical writes/native pixels claim; census541 retained until proof.
+
 ## 2026-10-22 — Orb source-affinity owner contract
 
 [Toys](systems/toys.md#thaumaturgists-orb-specialization-affinity-source-boundary-2026-10-21): corrected actualUseToy RED3/control3PASS49.69s → integrated5916e4f22/protocol2abc7fa focused9GREEN49.05s. All three genuine KnownSpell Priest affinity passives precede use and survive owner aura cancellation; exact source duration/recovery, replication/invariants/class/drift guards retained. Only127850 registry entry; no native color/full5-minute expiry/10-minute reuse/login claim. Census539→541 includes own136928 plus inherited131900 from master39e58b27a; no other row/reason changes. Final checkPASS88s/no warnings; fmtPASS. Readability changed-line audit found no violations.
