@@ -26,7 +26,7 @@ fn cast_native_child(h: &mut Harness) -> shared::protocol::CombatLogEvent {
 #[test]
 #[ignore = "native Overload effect1 effectiveness positive control pending GREEN"]
 fn native_lightning_overload_uses_mastery_effect1_and_removal_restores_child_base() {
-    let mut h = harness(vec![OVERLOAD], &[MASTERY, ECHO_CHAMBER], 7).unwrap();
+    let mut h = harness(Vec::new(), &[OVERLOAD, MASTERY, ECHO_CHAMBER], 7).unwrap();
     let store = h.app.world().resource::<crate::spell_info::SpellStore>();
     let effect = &store.get(OVERLOAD).unwrap().effects[0];
     let coefficient = effect.bonus_coefficient;
