@@ -160,7 +160,7 @@ Sources: local Mainline12.1.0.69933 DB2/read-only world.db; guardian_spells from
 - [x] Mangle33917 with231064 deals20% additional damage against an active bleed, without bonus if either requirement is absent.
 - [x] Renewing Mist115151 applies119611's base periodic healing aura to its friendly target, ticks at catalog timing and expires at its catalog duration.
 - [x] Vivify116670 with274586 heals allies bearing the caster's Renewing Mist119611 through425804, not other Monks' marks.
-- [x] Chain Lightning188443 with343725 generates the passive's two Maelstrom per successful target hit; no passive means no generation.
+- [x] Chain Lightning188443 and Overload45297 launch one native energize child (195897/218558) with active343725 effect4/5 × selected effect0 target count. No controller means no resource child; grants are not repeated at impact.
 - [x] Howling Blast49184 applies55095's base periodic disease to each enemy hit; allies/out-of-radius units are excluded.
 - [x] Prayer of Healing596 reduces Sanctify34861's running recharge by its authored six seconds and sends an owner update.
 - [x] Eruption395160 with395153 extends existing owned Ebon Might395152/395296 by the passive's1000ms once per cast, without restarting ticks or creating buffs.
@@ -275,7 +275,7 @@ These nine paths do not certify whole abilities. Rain tooltip total-healing expr
 - [x] Arcane Surge365350 applies named365362 damage/regeneration effects after cast. Mana-spent damage, soft-cap and Clearcasting remain open.
 - [x] Protection Judgment275779 with active315867 launches220637 Holy Power once on its damage hit; no rank means no resource award.
 - [x] Hand of Gul'dan105174 launches86040 at the target's native8yd area, multiplying damage by root s1=3 with the unchanged30-raw shard cost. Imps, Doom and variable-shard casting remain unsupported.
-- [x] Lightning Bolt188196 with active343725 awards its s1=6 Maelstrom once on a landed bolt. Maelstrom Weapon consumption/variants remain open.
+- [x] Lightning Bolt188196 and Overload45284 launch native energize children214815/214816 with active343725 effect0/1 amounts before missile impact. Children retain ordinary checks/procs except in-progress veto and leave modifier-charge spending to the triggering parent. Maelstrom Weapon consumption/variants remain open. Source: pinned TC a352b1fa spell_shaman.cpp459–522/1871–1921, Player.cpp22659–22661; native70448 amounts, not placeholder child BP0.
 
 Sources: local Mainline12.1.0.69933 DB2 only; no TrinityCore implementation bodies or invented child IDs. Divine Storm's reduced-damage formula and Glacial Advance's advancing geometry were not derivable from these sources and remain deferred.
 
