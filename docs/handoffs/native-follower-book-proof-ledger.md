@@ -44,3 +44,17 @@ Both used explicitly authorized `CAPACITY_ID=lead_ret_14752`, obeyed SHED and st
 At ea101bd41, unchanged native-book fixtures are3GREEN/0FAIL32.74s (dev profile/debug1; compile2m38s). `native-book-green-v1-dev.proof.json` seals source/command/profile/DB. Exporter PASS105.66s; all990 loadouts and native trees compare equal to frozen source, including known/passive flags, complete configs and unspent budgets. Only the compiled startup pathname differs. `native-source-after-ea101bd41.proof.json`, output SHA256 `8c730c5f13d88597c979bd4876c9679d56423ef3ab0677f63798ecd220475765`.
 
 Pre-fix dev executable is hardlinked under `target/ret-book-before-dev/game_server-ef331486f`, SHA256 `b84b3469218a028391b1492f0baea3123e94d8dfd6cb7152958c76bedb0091e3`, for paired observations without rebuilding an old tree. Targeted proof does not claim optimized/full-follower/Stockade integration, nor Ret rotation/DPS correctness.
+
+## nb997 source-correct oracle audit
+
+Merged current origin/master249358b3 before correction (merge4be7f9c8). The helper still equals the frozen990-loadout source; no runtime knowledge/stat change is required. `nb997-source-oracle-audit.json` retains raw70448 CSV rows/hashes, native config membership, native labels, local HP table and pinned base-stat source.
+
+| Failing test | Source and corrected boundary |
+|---|---|
+| Lantha Unending Resolve | Native230861/10 selects FelArmor386124, node71950/entry91461/rank1. Aura87 e1020181 is−1.5%;104773e114371 is−25%:100×.985×.75=73.875, rounded integer loss74. Oracle reads both raw sources and asserts both real auras. |
+| Garrick stamina/HP | Native209057/32 selects SanctifiedPlates402964, node93009/entry115034/rank1. Its+5% stamina label2602 gets137028e30 +50% Points0 →7.5%. Independent137 product1.30×1.05×1.075=1.467375; raw class2/32 stamina980 and local8HP/Sta →floor1438.0275×8=11504. |
+| Aegis removal/reapply | Settle initial Changed<KnownSpells> passive synchronization before expiring an aura. Assert Aegis stays absent afterward. Remaining Plate/Sanctified product1.12875 →12.875%, floor1106.175×8=8848; reapply restores11504. The initial resync had legitimately reapplied still-known Aegis. |
+| Owned evade | Preserve the complete native starter book, including Sanctified, across evade; expectedHP derives from raw sources, not old partial-book10696. Threat/passive/SP invariants remain. |
+| Partial/full controller provenance | Published versus absent controller rows must both retain the same native starter book and11504HP. Assert learned Sanctified and actual aura independently of catalog publication; preserve all solo/party checks. |
+
+TCa352b1fa: Unit.cpp5026–5050 (independent aura multipliers), SpellAuraEffects.cpp3893–3934 (total-stat mask), Unit.h784/UpdateFields.h456 (int32 exposed stat), StatSystem.cpp285–325 (stamina HP). Relevant five spell IDs have no direct TDB spell_group membership. Focused GREEN pending; leymor_fissure unchanged/out of scope.

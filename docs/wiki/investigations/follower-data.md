@@ -600,6 +600,8 @@ Sources: [native utility tests](../../../crates/server/src/followers/kit_utility
 
 ## NPC native starter knowledge — 2026-10-23
 
+The nb997 merged gate exposed old partial-book oracles: native starter SanctifiedPlates402964 and FelArmor386124 now apply even without controller rows. Source-backed corrections and the initial-passive-sync/removal ordering boundary are recorded in the [native-book audit](../../handoffs/native-follower-book-proof-ledger.md#nb997-source-correct-oracle-audit); no runtime helper change is required. Focused GREEN pending.
+
 Controller rows previously doubled as NPC spell grants: extending a Frenzy action alias learned both274837/1243807, no TraitLoadout was attached, and a Ret70 reinitialization without controller rows retained spec66. Three pushed native fixtures reproduce these boundaries (0PASS/3RED,25.40s; dev profile, frozen464fbb46 source). Prior opt2 SHED/compile interruptions were not RED.
 
 The runtime and exporter now share `evaluate_npc_starter`: requested NPC spec at every level1–90, race-neutral automatic class/default skills, level-qualified spec spells and validated starter talents, with native overridden bases removed. It preserves the exporter's literal computation, including no separate mastery addition. Initialization synchronizes only the resulting known passives and attaches KnownSpells/TraitLoadout/ActiveSpec without a Player or kit-row grant. Player progression retains its existing spec resolution and uses the shared trait-loadout constructor only. At ea101bd41 the unchanged three fixtures pass32.74s under the explicit dev profile; native source export passes105.66s and all990 loadouts/trees equal frozen464fbb46 data. Optimized/full follower and paired Stockade integration remain pending.
