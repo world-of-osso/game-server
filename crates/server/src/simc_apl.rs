@@ -8,11 +8,23 @@ pub trait Facts {
     fn value(&self, name: &str) -> Result<f64, String>;
 }
 
+/// Program operands such as plain gcd/combo_strike belong to the current action.
+/// Native adapters must supply this explicitly; no actor-wide fallback is assumed.
+pub trait ActionFacts: Facts {
+    fn value_for(&self, action: &Action, name: &str) -> Result<f64, String>;
+}
+
 impl Facts for BTreeMap<String, f64> {
     fn value(&self, name: &str) -> Result<f64, String> {
         self.get(name)
             .copied()
             .ok_or_else(|| format!("unknown APL operand {name}"))
+    }
+}
+
+impl ActionFacts for BTreeMap<String, f64> {
+    fn value_for(&self, _action: &Action, name: &str) -> Result<f64, String> {
+        Facts::value(self, name)
     }
 }
 
@@ -62,6 +74,8 @@ impl Variables {
     }
 }
 
+#[cfg(test)]
+mod context_tests;
 #[cfg(test)]
 mod program_tests;
 #[cfg(test)]

@@ -1923,6 +1923,8 @@ pub(crate) fn consume_absorbs(
 
 pub(crate) fn finish_absorbs(world: &mut World, unit: Entity, result: AbsorbResult) {
     for (caster, soaked) in result.contributions {
+        #[cfg(test)]
+        crate::dungeon_simulator::healer_intake::record_absorb(world, caster, unit, soaked);
         crate::damage_meter::record_absorb(world, caster, soaked);
     }
     if !result.depleted.is_empty() {

@@ -1,5 +1,5 @@
 //! Source-ordered variables/calls, SimC76f8118 variable.cpp and action.cpp4648–4689.
-use super::{Action, Expression, Facts, Variables};
+use super::{Action, ActionFacts, Expression, Facts, Variables};
 use std::collections::BTreeMap;
 
 #[derive(Debug)]
@@ -15,7 +15,7 @@ enum Assignment {
 
 #[derive(Debug)]
 enum Body {
-    Action(Action),
+    Action,
     Variable {
         name: String,
         assignment: Assignment,
@@ -25,6 +25,7 @@ enum Body {
 
 #[derive(Debug)]
 struct Rule {
+    action: Action,
     condition: Option<Expression>,
     body: Body,
 }
@@ -84,7 +85,7 @@ impl Program {
     pub fn select(
         &self,
         list: &str,
-        facts: &dyn Facts,
+        facts: &dyn ActionFacts,
         variables: &mut Variables,
         mut usable: impl FnMut(&Action) -> Result<bool, String>,
     ) -> Result<Option<Action>, String> {
@@ -127,6 +128,7 @@ impl Program {
             let bound = BoundFacts {
                 facts: selection.facts,
                 variables: selection.variables,
+                action: &rule.action,
             };
             if let Some(condition) = &rule.condition
                 && condition.evaluate(&bound)? == 0.0
@@ -135,17 +137,17 @@ impl Program {
             }
             match &rule.body {
                 Body::Variable { name, assignment } => {
-                    self.assign(name, assignment, selection.facts, selection.variables)?
+                    self.assign(name, assignment, &rule.action, selection)?
                 }
                 Body::Call(name) => {
                     if let Some(action) = self.select_list(name, selection)? {
                         return Ok(Some(action));
                     }
                 }
-                Body::Action(action) if (selection.usable)(action)? => {
-                    return Ok(Some(action.clone()));
+                Body::Action if (selection.usable)(&rule.action)? => {
+                    return Ok(Some(rule.action.clone()));
                 }
-                Body::Action(_) => {}
+                Body::Action => {}
             }
         }
         Ok(None)
@@ -155,10 +157,14 @@ impl Program {
         &self,
         name: &str,
         assignment: &Assignment,
-        facts: &dyn Facts,
-        variables: &mut Variables,
+        action: &Action,
+        selection: &mut Selection<'_>,
     ) -> Result<(), String> {
-        let bound = BoundFacts { facts, variables };
+        let bound = BoundFacts {
+            facts: selection.facts,
+            variables: selection.variables,
+            action,
+        };
         let value = match assignment {
             Assignment::Set(expression) => expression.evaluate(&bound)?,
             Assignment::SetIf {
@@ -175,7 +181,7 @@ impl Program {
             }
             Assignment::Reset => *self.defaults.get(name).expect("declared variable default"),
         };
-        let current = variables.values.get_mut(name).ok_or_else(|| {
+        let current = selection.variables.values.get_mut(name).ok_or_else(|| {
             format!("unknown APL operand variable.{name}; state must come from this program")
         })?;
         *current = value;
@@ -184,15 +190,16 @@ impl Program {
 }
 
 struct Selection<'a> {
-    facts: &'a dyn Facts,
+    facts: &'a dyn ActionFacts,
     variables: &'a mut Variables,
     usable: &'a mut dyn FnMut(&Action) -> Result<bool, String>,
     stack: Vec<String>,
 }
 
 struct BoundFacts<'a> {
-    facts: &'a dyn Facts,
+    facts: &'a dyn ActionFacts,
     variables: &'a Variables,
+    action: &'a Action,
 }
 
 impl Facts for BoundFacts<'_> {
@@ -203,7 +210,7 @@ impl Facts for BoundFacts<'_> {
                 .value(variable)
                 .ok_or_else(|| format!("unknown APL operand {name}"));
         }
-        self.facts.value(name)
+        self.facts.value_for(self.action, name)
     }
 }
 
@@ -245,20 +252,25 @@ fn parse_rule(literal: &str, defaults: &mut BTreeMap<String, f64>) -> Result<Rul
         .remove("if")
         .map(|source| Expression::parse(&source))
         .transpose()?;
+    let action = Action {
+        name: name.to_owned(),
+        options,
+    };
     let body = match name {
-        "variable" => parse_variable(&options, defaults)?,
+        "variable" => parse_variable(&action.options, defaults)?,
         "call_action_list" => {
-            if options.keys().any(|key| key != "name") {
+            if action.options.keys().any(|key| key != "name") {
                 return Err("unsupported call_action_list option".into());
             }
-            Body::Call(required_option(&options, "name")?)
+            Body::Call(required_option(&action.options, "name")?)
         }
-        _ => Body::Action(Action {
-            name: name.to_owned(),
-            options,
-        }),
+        _ => Body::Action,
     };
-    Ok(Rule { condition, body })
+    Ok(Rule {
+        action,
+        condition,
+        body,
+    })
 }
 
 fn parse_variable(

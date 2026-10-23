@@ -15,7 +15,6 @@ fn evaluate(source: &str, rows: &[(&str, f64)]) -> f64 {
 }
 
 #[test]
-#[ignore = "shared APL RED: source WW condition not interpreted yet"]
 fn simc_apl_ww_tiger_palm_literal_preserves_grouping_resources_and_stacks() {
     //76f8118 MID2_Monk_Windwalker.simc default_st Tiger Palm line69.
     let source = "combo_strike&!buff.zenith.up&chi<4+talent.ascension&energy.time_to_max<=gcd.max*3&(!buff.bloodlust.up|chi<1)&buff.combo_breaker.stack<2";
@@ -41,7 +40,6 @@ fn simc_apl_ww_tiger_palm_literal_preserves_grouping_resources_and_stacks() {
 }
 
 #[test]
-#[ignore = "shared APL RED: source Ret condition not interpreted yet"]
 fn simc_apl_ret_execution_sentence_literal_uses_native_fact_values() {
     //76f8118 apl_paladin.cpp43, ret-apl-condition-ledger-v1.json.
     let source = "(cooldown.avenging_wrath.remains>15|talent.radiant_glory)&(target.time_to_die>10)&(cooldown.wake_of_ashes.remains<gcd|variable.pre_es_wake=1)&(!talent.holy_flames|dot.expurgation.ticking)&(!talent.crusade|buff.avenging_wrath.stack>=7|variable.pre_es_wake=0)";
@@ -67,7 +65,6 @@ fn simc_apl_ret_execution_sentence_literal_uses_native_fact_values() {
 }
 
 #[test]
-#[ignore = "shared APL RED: source trinket division/modulo not interpreted yet"]
 fn simc_apl_ret_trinket_sync_keeps_percent_division_distinct_from_modulo() {
     //76f8118 apl_paladin.cpp23 and25.
     let modulo = "variable.trinket_1_buffs&(trinket.1.cooldown.duration%%cooldown.avenging_wrath.duration=0|cooldown.avenging_wrath.duration%%trinket.1.cooldown.duration=0)";
@@ -84,7 +81,6 @@ fn simc_apl_ret_trinket_sync_keeps_percent_division_distinct_from_modulo() {
 }
 
 #[test]
-#[ignore = "shared APL RED: boolean/numeric precedence not interpreted yet"]
 fn simc_apl_numeric_truth_and_precedence_follow_pinned_expression_engine() {
     //expressions.cpp1081–1130: unary > multiply > add > compare > AND > OR.
     for (source, expected) in [
@@ -103,7 +99,6 @@ fn simc_apl_numeric_truth_and_precedence_follow_pinned_expression_engine() {
 }
 
 #[test]
-#[ignore = "shared APL RED: unknown operands need explicit failure"]
 fn simc_apl_unknown_operand_never_becomes_false_even_in_an_inactive_branch() {
     let expression = Expression::parse("0&buff.not_a_bound_spell.up").unwrap();
     let error = expression.evaluate(&facts(&[])).unwrap_err();
@@ -114,7 +109,6 @@ fn simc_apl_unknown_operand_never_becomes_false_even_in_an_inactive_branch() {
 }
 
 #[test]
-#[ignore = "shared APL RED: malformed expressions need explicit rejection"]
 fn simc_apl_malformed_input_is_not_a_partial_or_empty_expression() {
     for source in [
         "",
