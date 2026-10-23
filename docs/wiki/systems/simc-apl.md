@@ -11,7 +11,7 @@
 | Variables | First declaration's numeric default (native default0); source `set`, `setif`, `value_else`, `reset`; per-actor `Program::state()` | Ret default/setif/reset decisions GREEN |
 | Conditional call lists | Literal row order, first native-usable action; exhausted/explicit empty child returns to caller; unknown call rejected and recursion errors explicit | WW ST/3T and Ret finisher unit decisions GREEN; recursion control added afterward |
 | Per-action facts | `ActionFacts::value_for(&Action, operand)` is mandatory for Program; no actor-wide fallback. SimC combo_strike and plain gcd are action-bound | Two genuine context REDs at2e6f242ce→13-case GREEN atcd3c7e427, including11 unchanged controls; both context cases enabled afterward |
-| Native follower execution | Caller-owned spellbook, target semantics and `creature_cast` integration | Literal WW/Ret adapters remain open. Lead approved only explicit parity Fixture drivers; Stockade retains its independent native kit and named DUNGEON_TTD_UNAVAILABLE gap |
+| Native follower execution | Caller-owned spellbook, target semantics and `creature_cast` integration | WW132literal rows/native adapter5GREEN35.19s at32e4610b7: action context, real ST/3T casts/recipients, dungeon rejection/non-Fixture kit. Damage/proc qualification and Ret integration remain open. Only explicit parity Fixture captures decisions; Stockade retains its independent native kit and named DUNGEON_TTD_UNAVAILABLE gap |
 
 `Facts` remains the standalone expression interface. `Program::select` requires `ActionFacts`; actor-only snapshots cannot represent proposed-action combo checks or call-control gcd0. `BTreeMap` explicitly models context-independent numeric fixtures.
 

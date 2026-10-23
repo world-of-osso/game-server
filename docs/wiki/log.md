@@ -1,3 +1,7 @@
+## 2026-10-23 — Literal Windwalker fixture boundary
+
+[Shared APL](systems/simc-apl.md): WW132literal source rows use native selected-spell readiness/actual casts without removing Follower identity; accepted4RED atb74411d5d→5GREEN35.19s at32e4610b7. ST FoF/RSK,3T SCK107270 recipients, action-context combo, exact placeholders/unknown rejection and dungeon/non-Fixture independence proved. Per-ability damage/procs and300s parity remain open; [census/receipt](../handoffs/ww-source-census.md#literal-fixture-implementation-unqualified).
+
 ## 2026-10-23 — Shared native APL fact boundary
 
 [Native facts](systems/simc-apl.md#native-binding-boundary): six actual native6RED at5924496f9→6GREEN17.40s atdc1ee9781,7m37compile/exit0/zero warnings. Earned TP/BOK buff+Chi, actual Charge200raw→20Rage, selected starter allocation distinct from learned utility, native Provoke/Roll timers, action/control GCD and300s fixture clock; no canonical DB edits. [Proof/capability limits](../handoffs/shared-native-apl-proof-ledger.md); only explicit parity Fixture driver approved, Stockade native kit/DUNGEON_TTD_UNAVAILABLE retained, no literal-rotation claim.
