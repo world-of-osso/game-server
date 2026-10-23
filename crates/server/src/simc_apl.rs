@@ -1,5 +1,8 @@
-//! Literal SimC76f8118 APL expressions and ordered lists; native facts are caller-owned.
-use std::collections::BTreeMap;
+//! Literal SimC76f8118 APL decisions; native numeric facts/castability stay caller-owned.
+mod expression;
+mod program;
+pub use program::Program;
+use std::collections::{BTreeMap, BTreeSet};
 
 pub trait Facts {
     fn value(&self, name: &str) -> Result<f64, String>;
@@ -13,25 +16,38 @@ impl Facts for BTreeMap<String, f64> {
     }
 }
 
+#[derive(Debug)]
 pub struct Expression {
-    source: String,
+    root: expression::Node,
+    operands: Vec<String>,
 }
 
 impl Expression {
     pub fn parse(source: &str) -> Result<Self, String> {
-        Ok(Self {
-            source: source.to_owned(),
-        })
+        let root = expression::parse(source)
+            .map_err(|error| format!("APL expression {source:?}: {error}"))?;
+        let mut operands = BTreeSet::new();
+        root.collect_operands(&mut operands);
+        let operands = operands.into_iter().map(str::to_owned).collect();
+        Ok(Self { root, operands })
     }
 
-    pub fn evaluate(&self, _facts: &dyn Facts) -> Result<f64, String> {
-        Err(format!("APL expression not implemented: {}", self.source))
+    /// Bind every operand before evaluation: unsupported facts cannot disappear
+    /// behind a false branch. Valid numeric operators retain native short-circuiting.
+    pub fn evaluate(&self, facts: &dyn Facts) -> Result<f64, String> {
+        let values = self
+            .operands
+            .iter()
+            .map(|name| facts.value(name).map(|value| (name.as_str(), value)))
+            .collect::<Result<BTreeMap<_, _>, _>>()?;
+        Ok(self.root.evaluate(&values))
     }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Action {
     pub name: String,
+    /// Non-if options are preserved for native action/target adapters, not discarded.
     pub options: BTreeMap<String, String>,
 }
 
@@ -42,29 +58,7 @@ pub struct Variables {
 
 impl Variables {
     pub fn value(&self, name: &str) -> Option<f64> {
-        self.values.get(name).copied()
-    }
-}
-
-pub struct Program;
-
-impl Program {
-    pub fn parse(_lines: &[(&str, &str)]) -> Result<Self, String> {
-        Err("APL program not implemented".into())
-    }
-
-    pub fn state(&self) -> Variables {
-        Variables::default()
-    }
-
-    pub fn select(
-        &self,
-        _list: &str,
-        _facts: &dyn Facts,
-        _variables: &mut Variables,
-        _usable: impl FnMut(&Action) -> Result<bool, String>,
-    ) -> Result<Option<Action>, String> {
-        Err("APL selection not implemented".into())
+        self.values.get(&name.to_ascii_lowercase()).copied()
     }
 }
 

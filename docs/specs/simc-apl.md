@@ -17,18 +17,20 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 
 ## Implementation inventory
 
-- `crates/server/src/simc_apl.rs` — shared interpreter entry point; currently RED scaffold only.
+- `crates/server/src/simc_apl.rs` — shared interpreter entry point and explicit fact binding.
+- `crates/server/src/simc_apl/expression.rs` — pinned lexical/operator semantics.
+- `crates/server/src/simc_apl/program.rs` — source-order variables and call lists.
 - `crates/server/src/simc_apl/tests.rs` — concrete WW/Ret behavioral expressions.
 - `crates/server/src/simc_apl/program_tests.rs` — variable lifetimes, source-order calls and native castability decisions.
 - `crates/server/src/lib.rs` — engine-free evaluator export.
 
 ## Tests asserting this spec
 
-`crates/server/src/simc_apl/tests.rs`; eleven ignored expression/program RED cases pushed before implementation. Runtime result pending.
+`crates/server/src/simc_apl/tests.rs`; eleven ignored expression/program RED cases pushed before implementation. Genuine11-case RED observed atc0cf6eed6 (exit101, no compiler warnings); implementation GREEN pending.
 
 ## Known gaps (current cycle)
 
-- [ ] Expression parser/evaluator, variable/list execution and native kit integration.
+- [ ] Qualify expression/parser and variable/list implementation GREEN, then wire native kit adapters.
 - [ ] Native WW and Ret fact adapters and literal per-spec action policies; Ret adapter belongs to14752.
 
 ## Out of scope
