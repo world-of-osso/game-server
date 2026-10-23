@@ -539,7 +539,6 @@ fn complete_recovered_native_cast(h: &mut Harness, caster: Entity, spell_id: u32
 }
 
 #[test]
-#[ignore = "native Lava Burst Overload mapping pending natural-chance RED/GREEN"]
 fn proc_fidelity_262_native_lava_burst_natural_overload_preserves_wrapper_flight() {
     const ACQUISITION_MISS_BUDGET: f64 = 1e-6;
     const TARGET_DISTANCE: f32 = 35.0;
@@ -620,7 +619,6 @@ fn proc_fidelity_262_native_lava_burst_natural_overload_preserves_wrapper_flight
 }
 
 #[test]
-#[ignore = "native Lava Burst removed-Mastery control pending qualification"]
 fn proc_fidelity_262_native_lava_burst_without_mastery_has_no_overload() {
     let (mut h, caster) = prepare(209053);
     crate::auras::remove_auras(
