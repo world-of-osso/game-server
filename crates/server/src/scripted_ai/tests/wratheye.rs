@@ -54,7 +54,6 @@ fn completed_strikes(h: &Harness, boss: Entity) -> usize {
 }
 
 #[test]
-#[ignore = "Wratheye native periodic child qualification before AI"]
 fn encounter_coverage_wratheye_projected_native_strike_damage_aura_and_isolation() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = projected_wratheye(difficulty);
@@ -89,7 +88,6 @@ fn encounter_coverage_wratheye_projected_native_strike_damage_aura_and_isolation
 }
 
 #[test]
-#[ignore = "RED before Wratheye native Decaystrike scripting"]
 fn encounter_coverage_wratheye_projected_first_and_alternating_strike_clocks() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = projected_wratheye(difficulty);
@@ -139,7 +137,6 @@ fn encounter_coverage_wratheye_projected_first_and_alternating_strike_clocks() {
 }
 
 #[test]
-#[ignore = "RED before Wratheye native Decaystrike scripting"]
 fn encounter_coverage_wratheye_projected_generic_lethal_credit_copy_and_corpse() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_wratheye(difficulty);
@@ -196,7 +193,6 @@ fn encounter_coverage_wratheye_projected_generic_lethal_credit_copy_and_corpse()
 }
 
 #[test]
-#[ignore = "RED before Wratheye native Decaystrike scripting"]
 fn encounter_coverage_wratheye_projected_native_home_reset_rearms_first_strike() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_wratheye(difficulty);

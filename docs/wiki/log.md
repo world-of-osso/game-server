@@ -1,3 +1,7 @@
+## 2026-10-22 — Wratheye Decaystrike-only partial
+
+[Wratheye](systems/boss-scripts.md#wratheye-decaystrike-only-partial-2026-10-22): ignorednativeRED precedes AI; integrated4GREEN25.54s actualperiodicdamage/aura/clock/reset/genericlethalcredit/copy/corpse. Source5%finish/energy/totem/cloud gaps explicit; stable-keySQLfreshcopyreceipt.
+
 ## 2026-10-22 — Gutshot success-owned partial
 
 [Gutshot](systems/boss-scripts.md#gutshot-success-owned-partial--2026-10-22): ignorednativeRED→sourceShot/Trap success-ownedlanes. Post-master802b22a0e native5GREEN28.63s Normal1/projected205:actualchilddamage/80s4Shot5Trap/cancelnorepeat/nativehome/reset/copycredit/corpse;stable-keySQLreceipt. Hyena100Energy/trap/controller/nonNormalMeatToss boundaries retained.
