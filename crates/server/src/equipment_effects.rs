@@ -261,6 +261,7 @@ mod tests {
                         .iter()
                         .map(|&(slot, _)| (slot, ItemInstanceModifiers::default()))
                         .collect(),
+                    ..Default::default()
                 },
             ));
             h.advance(3);
@@ -303,6 +304,7 @@ mod tests {
                     .iter()
                     .map(|&(slot, _)| (slot, ItemInstanceModifiers::default()))
                     .collect(),
+                ..Default::default()
             },
         ));
         h.advance(3);

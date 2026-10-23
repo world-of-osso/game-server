@@ -40,6 +40,7 @@ fn equip(world: &mut World, first: u32, second: u32) -> Entity {
                     .iter()
                     .map(|&(slot, _)| (slot, Default::default()))
                     .collect(),
+                ..Default::default()
             },
         ))
         .id()
@@ -104,6 +105,38 @@ fn literal_equipment_native_stat_and_cooldown_matrix() {
             expected.into_iter().map(Ok).collect::<Vec<_>>(),
             "native item{item}"
         );
+    }
+}
+
+#[test]
+#[ignore = "native primary-stat trinkets for shared caster/melee APL operands"]
+fn literal_equipment_native_primary_stat_names_match_the_real_trinket_aura() {
+    let mut world = load_world();
+    // Native effects10303/12409/12410 ->64712(Intellect)/84969(Agility)/84966(Strength).
+    for (item, expected) in [
+        (45148, [0.0, 0.0, 1.0]),
+        (61033, [0.0, 1.0, 0.0]),
+        (61034, [1.0, 0.0, 0.0]),
+    ] {
+        let actor = equip(&mut world, item, 270173);
+        assert_eq!(
+            read_facts(
+                &world,
+                actor,
+                &[
+                    "trinket.1.has_buff.strength",
+                    "trinket.1.has_buff.agility",
+                    "trinket.1.has_buff.intellect"
+                ]
+            ),
+            expected.map(Ok).to_vec(),
+            "native primary item{item}"
+        );
+        assert_eq!(
+            read_facts(&world, actor, &["trinket.1.has_use_buff"]),
+            vec![Ok(1.0)]
+        );
+        assert!(read_facts(&world, actor, &["trinket.1.has_buff.unknown_primary"])[0].is_err());
     }
 }
 

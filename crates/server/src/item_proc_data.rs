@@ -1,5 +1,7 @@
 //! Native equipped-set predicates and item-description role multipliers.
 //! Data only: this does not activate unrelated set bonuses or evaluate arbitrary tooltips.
+#[cfg(test)]
+mod tests;
 use bevy::prelude::*;
 use rusqlite::Connection;
 use shared::item_data::ItemDefinitionSource;
