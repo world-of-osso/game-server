@@ -1,3 +1,7 @@
+## 2026-10-22 — Target74 landed; Imaginary Gun capacity-only attempt
+
+Target74 tg967 landedec7b24f9f,2165PASS/0FAIL/8ignored2350.45s/check0-129s/fmt0;d23 independently ancestor of911d7be82,inactive local/remote branch cleaned. Imaginary Gun test/spec21a1 pushed/readback clean; first60 normal-capacity checks started no build, not RED. [Toy boundaries](systems/toys.md#imaginary-gun-companion-visual-boundary-2026-10-22).
+
 ## 2026-10-22 — Imaginary Gun companion visual source/fixture
 
 [Toys](systems/toys.md#imaginary-gun-companion-visual-boundary-2026-10-22):163705/279843 source150 companion aura10s/item recovery180s. Caster1074 and target1669/ANIM_DEATH1 are authored visual bindings,not invented gameplay death.61rows29tables complete animation/sound/fallback metadata plus8root/item/clock snapshots;actual-journal/physical-learning/UseToy tests added,RED pending. Lead accepts natural expiry;TC companion PetCancelAura refusal remains source-only/unqualified,no protocol edit. No implementation/admission/native playback claim. PriorCritterct944 landed452b49b78 independently ancestry-verified/branch cleaned;target74d23 queuedtg967 owns check/format and localcheck cancelled explicitly.
