@@ -1,5 +1,13 @@
 # Retail follower data and approved spec bridge
 
+## Devastation Giantkiller policy — 2026-10-22
+
+The legal1467 reference omits native-Augmentation-only98931/122279 from both inputs and SimC (`hero_talents=122279:0`); all other allocated/effective ranks match. Fresh1000-iteration references remain113727.53ST/182444.53three-target. Frozen1cf83f408 native300s measurements are15650.57/20146.43 (−86.24%/−88.96%), not parity acceptance. The obsolete pet-only constructor's duplicate-plugin crash was independently replaced on master by478afccc0.
+
+Native362980 has Aura4 and a1.5 mastery-point coefficient but no TC a352b1fa consequence script. Actual frozen4RED at0d07469b8 shows identical damage with/without the real mastery aura: Flame2995, Disintegrate2090 and Deep Breath DoT2598 at12% native mastery. `DEVASTATION_GIANTKILLER_SIMC_POLICY` wires that existing aura amount into ordinary direct/periodic Evoker-family224 damage, with pinned target-health30% floor and Tyranny exceptions; implementation awaits GREEN. Already-resolved copies, other spell families and healing do not enter this multiplier. See the [bounded contract and source policy](../../specs/devastation-parity.md).
+
+Sources: native70448 SpellEffect902053/SpellMisc362980; SimC76f8118 `sc_evoker.cpp4613–4629,5721,6165,7449`. Evidence: `game-engine/data/diagnostics/dev-evoker-parity-2026-10-22/`; no canonical data writes or coefficient tuning.
+
 ## Party-pet threat coverage — 2026-10-22
 
 Gatept976 exposed an older CombatRefs fixture's live-APL coupling, not a1-versus3 admitted-enemy regression: the three enemies already pass, then line163 expects Meteor's published `min_enemies=3` while the new Fire policy publishes1. Reproduced on unchanged3d16 native binary in5.45s. The fixture now clones native Meteor geometry and explicitly sets its own three-target threshold; its enemy-count/area/no-pull expectations remain unchanged, and no production Fire policy or canonical row is rewritten. Refreshed controls follow separately.

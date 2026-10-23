@@ -1,14 +1,15 @@
-//! Hunter-only source inheritance: TC Pet.cpp879/898–925 and StatSystem1187–1310.
+//! Hunter source inheritance: TC Pet.cpp879/898–925, StatSystem1187–1423.
 use bevy::prelude::*;
 use shared::components::Health;
 
 use crate::hunter_pet::HunterPet;
 use crate::level_scaling::CreatureArmor;
-use crate::stats::CharacterStats;
+use crate::stats::{CharacterStats, StatModifiers, WeaponAttackType};
 use crate::world_data::{CreatureTemplate, WorldData};
 
 const OWNER_STAMINA_FRACTION: f32 = 0.30;
 const OWNER_ARMOR_FRACTION: f32 = 0.70;
+const OWNER_RANGED_AP_FRACTION: f32 = 0.22;
 const HEALTH_PER_BONUS_STAMINA: f32 = 10.0;
 const BASE_ARMOR_PER_LEVEL: f32 = 50.0;
 
@@ -16,6 +17,16 @@ const BASE_ARMOR_PER_LEVEL: f32 = 50.0;
 pub(crate) struct HunterInheritedStats {
     level: u8,
     bonus_health: f32,
+}
+
+/// TC Guardian1344/1389: weapon-inclusive total RAP, then integer pet AP.
+/// Shared by actual melee and ability damage; intrinsic pet AP is unqualified.
+pub(crate) fn owner_bonus_attack_power(
+    owner: &CharacterStats,
+    modifiers: Option<&StatModifiers>,
+) -> f32 {
+    (owner.total_attack_power(WeaponAttackType::Ranged, modifiers) * OWNER_RANGED_AP_FRACTION)
+        .trunc()
 }
 
 fn owner_bonus_health(owner: &CharacterStats) -> f32 {
