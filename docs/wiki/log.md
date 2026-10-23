@@ -1,3 +1,7 @@
+## 2026-10-22 — Hunter pet melee owner-RAP RED
+
+[Owner melee contribution](systems/character-stats.md#hunter-pet-melee-owner-rap--2026-10-22): actual Duck90 native baseline14-damage swings16.06s; ignoreded2800 genuineRED14 versus TC owner-only contribution floor266, baselinepositivePASS15.13s combined. TC22% ownerRAP/3.5×2s additive path implemented with existing coefficient and no new state; GREEN/gear controls pending. Intrinsic AP/range and SimC60% divergence remain explicit, no totalpet-DPS claim.
+
 ## 2026-10-22 — Hunter pet integration fixture qualification
 
 [Hunter inheritance](systems/character-stats.md#hunter-pet-health-and-armor--2026-10-22): ps988 exposed missing ordinary stat-producer inputs in lightweight battleground Traveler and the old ceil378 tame oracle. Test-only01310e150 over master58ce397a supplies entry-equivalent default inputs; fresh tame asserts exact source377 current/max and entire stable. Native6PASS37.22s, all Hunter pet22PASS154.67s, BG pet-end5PASS16.76s; lockedalltargets checkPASS2m06s/fmtPASS. No runtime fallback or relaxed tolerance; independent landing remains parent-owned.

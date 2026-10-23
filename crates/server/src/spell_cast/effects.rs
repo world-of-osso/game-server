@@ -392,7 +392,7 @@ fn takes_healing_power(effect: &SpellEffect) -> bool {
 /// `Guardian::UpdateAttackPowerAndDamage` for a hunter pet (StatSystem.cpp:1336-1345): its
 /// owner's ranged attack power × 0.22. The pet's own `2 × Strength - 20` needs `pet_levelstats`,
 /// which is not imported.
-const HUNTER_PET_OWNER_AP: f32 = 0.22;
+pub(crate) const HUNTER_PET_OWNER_AP: f32 = 0.22;
 
 fn hunter_pet_attack_power(world: &World, owner: Entity) -> f32 {
     world

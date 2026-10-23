@@ -620,6 +620,12 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     units: ParamSet<'w, 's, (AutoAttackers<'w, 's>, AutoAttackTargets<'w, 's>)>,
     scaling: Query<'w, 's, ScalingItem<'static>>,
     spirit_wolves: Query<'w, 's, &'static crate::spell_cast::guardian::SpiritWolf>,
+    hunter_pets: Query<
+        'w,
+        's,
+        &'static crate::hunter_pet::HunterPet,
+        With<crate::hunter_pet_stats::HunterInheritedStats>,
+    >,
     owner_stats: Query<'w, 's, &'static CharacterStats>,
     summon_modifiers: crate::auras::summon_damage::SummonDamageModifiers<'w, 's>,
     sight: SwingSight<'w, 's>,
@@ -689,6 +695,14 @@ fn auto_attack_unit(
         authored_attack_time: snapshot.authored_attack_time,
         creature_flags: snapshot.creature_flags.as_ref(),
         temp_summoner: snapshot.temp_summoner,
+        hunter_owner_ap: params.hunter_pets.get(attacker_entity).ok().map(|pet| {
+            let owner = params
+                .owner_stats
+                .get(pet.owner)
+                .expect("native Hunter pet owner requires CharacterStats for melee power");
+            // Guardian stores total AP as int32 (StatSystem.cpp1389).
+            (owner.ranged_attack_power * crate::spell_cast::effects::HUNTER_PET_OWNER_AP).trunc()
+        }),
         spirit_wolf: params.spirit_wolves.get(attacker_entity).ok().map(|wolf| {
             let owner = params
                 .owner_stats
@@ -880,6 +894,7 @@ pub(crate) struct Attacker<'a> {
     /// Existing TempSummon direct summoner, not player owner or recursive ancestor.
     pub temp_summoner: Option<Entity>,
     pub spirit_wolf: Option<(&'a crate::spell_cast::guardian::SpiritWolf, f32)>,
+    pub hunter_owner_ap: Option<f32>,
 }
 
 impl Attacker<'_> {
@@ -953,7 +968,13 @@ fn swing_damage(
             None => creature_weapon_damage(scaling),
         }
     };
-    apply_swing_multipliers(base, attacker.mods, taken, additional_mult)
+    // TC Guardian::UpdateDamagePhysical1423: owner-derived AP is additive
+    // before the same damage/armor/outcome path. Intrinsic pet AP and weapon
+    // damage remain unqualified; do not import TC's fake primary-stat values.
+    let owner_bonus = attacker
+        .hunter_owner_ap
+        .map_or(0.0, |power| power / 3.5 * AUTO_ATTACK_INTERVAL);
+    apply_swing_multipliers(base + owner_bonus, attacker.mods, taken, additional_mult)
 }
 
 fn apply_swing_multipliers(
