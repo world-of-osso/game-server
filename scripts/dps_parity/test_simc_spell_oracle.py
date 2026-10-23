@@ -197,6 +197,16 @@ class OracleTests(unittest.TestCase):
             self.assertEqual(actual, [event])
             self.assertEqual(actual[0]["spell_id"], child_id)
 
+    def test_explicit_precombat_priming_replaces_original_setup_once(self):
+        source = 'shaman="Test"\nactions.precombat=old_setup\nactions=old_attack\n'
+        actual = oracle.build_profile(source, ["auto_attack", "windstrike"], ["windfury_weapon", "flametongue_weapon"])
+        self.assertNotIn("old_setup", actual)
+        self.assertIn("actions.precombat=windfury_weapon\nactions.precombat+=/flametongue_weapon\n", actual)
+        self.assertIn("actions=auto_attack\nactions+=/windstrike\n", actual)
+        self.assertEqual(actual.count("windfury_weapon"), 1)
+        with self.assertRaises(ValueError):
+            oracle.build_profile(source, ["auto_attack"], ["bad\nactions=other"])
+
     def test_invalid_action_is_rejected(self):
         with self.assertRaises(ValueError):
             oracle.build_profile('mage="Test"', ["bad\nactions=other"])

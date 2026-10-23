@@ -126,10 +126,14 @@ def parse_log(text):
     return {"schema_version": 1, "modifiers": modifiers, "events": events, "summary": summarize(events, modifiers), "unparsed_relevant_lines": unparsed, "limitations": ["All observed actors/children/procs retained; co-occurrence does not establish parent-child causality.", "Result logs contain multiple calculation stages, not independent casts. Use formula records for cast/tick counts; retain line ordering.", "Missing printed fields are null, never inferred; passive products exclude buff stacks and mastery-scaled effects.", "Spell IDs come from printed Action records; ambiguous result identities remain null with candidates."]}
 
 
-def build_profile(source, actions):
-    if not actions or any(not re.fullmatch(r"[a-zA-Z0-9_]+(?:,[^\r\n]*)?", action) for action in actions):
+def build_profile(source, actions, precombat_actions=None):
+    precombat_actions = precombat_actions or []
+    if not actions or any(not re.fullmatch(r"[a-zA-Z0-9_]+(?:,[^\r\n]*)?", action) for action in actions + precombat_actions):
         raise ValueError("at least one valid SimC action is required; no newlines")
     lines = [line for line in source.splitlines() if not re.match(r"\s*actions(?:[.+=\s]|$)", line)]
+    if precombat_actions:
+        lines += ["actions.precombat=" + precombat_actions[0]]
+        lines += ["actions.precombat+=/" + action for action in precombat_actions[1:]]
     return "\n".join(lines) + "\n\nactions=" + actions[0] + "\n" + "".join("actions+=/" + action + "\n" for action in actions[1:])
 
 
@@ -172,7 +176,7 @@ def resolve_reference_proof(profile, explicit=None):
     return matches[0][0]
 
 
-def run_oracle(profile, actions, output, targets=1, duration=30, reference_proof=None):
+def run_oracle(profile, actions, output, targets=1, duration=30, reference_proof=None, precombat_actions=None):
     if targets < 1 or not math.isfinite(duration) or duration <= 0:
         raise ValueError("targets and time must be positive")
     profile = resolve_profile(str(profile))
@@ -182,10 +186,10 @@ def run_oracle(profile, actions, output, targets=1, duration=30, reference_proof
     output = Path(output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     generated, log, proof_path = (output.with_suffix(s) for s in (".simc", ".txt", ".proof.json"))
-    generated.write_text(build_profile(profile.read_text(), actions))
+    generated.write_text(build_profile(profile.read_text(), actions, precombat_actions))
     overrides = [f"desired_targets={targets}", f"max_time={duration}", "iterations=1", "threads=1", "deterministic=1", "log=1", "debug=1", f"output={log}"]
     command = [str(RUNNER), "simc-oracle", str(BINARY), str(generated), *inherited, *overrides]
-    proof = {"reference_proof": str(reference_path), "reference_proof_sha256": sha256(reference_path), "reference_command": reference["command"], "inherited_options": inherited, "probe_overrides": overrides, "command": command, "binary_sha256": sha256(BINARY), "profile": str(profile), "profile_sha256": sha256(profile), "generated_profile_sha256": sha256(generated), "revision": REVISION, "actions": actions, "targets": targets, "time": duration, "started_unix": time.time(), "environment": {"TMPDIR": "/var/tmp/osso"}}
+    proof = {"precombat_actions": precombat_actions or [], "reference_proof": str(reference_path), "reference_proof_sha256": sha256(reference_path), "reference_command": reference["command"], "inherited_options": inherited, "probe_overrides": overrides, "command": command, "binary_sha256": sha256(BINARY), "profile": str(profile), "profile_sha256": sha256(profile), "generated_profile_sha256": sha256(generated), "revision": REVISION, "actions": actions, "targets": targets, "time": duration, "started_unix": time.time(), "environment": {"TMPDIR": "/var/tmp/osso"}}
     proof_path.write_text(json.dumps(proof, indent=2) + "\n")
     try:
         with output.with_suffix(".console.txt").open("w") as console:
@@ -212,6 +216,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile", required=True, help="path or MID2 profile/spec name, e.g. Warrior_Arms")
     parser.add_argument("--action", action="append", required=True, help="repeat for resource generators or proc drivers; order is APL priority")
+    parser.add_argument("--precombat-action", action="append", help="explicit sourced one-time setup action; repeat in precombat order")
     parser.add_argument("--reference-proof", type=Path, help="reference command proof; default discovers matching single-target profile proof")
     parser.add_argument("--targets", type=int, default=1)
     parser.add_argument("--time", type=float, default=30)
@@ -219,7 +224,7 @@ def main():
     args = parser.parse_args()
     output = args.output or DEFAULT_OUTPUT / f"{time.time_ns()}-{args.action[0].split(',')[0]}.json"
     try:
-        data = run_oracle(args.profile, args.action, output, args.targets, args.time, args.reference_proof)
+        data = run_oracle(args.profile, args.action, output, args.targets, args.time, args.reference_proof, args.precombat_action)
     except (ValueError, RuntimeError, OSError, subprocess.TimeoutExpired) as exc:
         parser.exit(1, f"oracle: {exc}\n")
     print(json.dumps({"output": str(output), "summary": data["summary"]}, indent=2))

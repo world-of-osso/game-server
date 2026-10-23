@@ -155,7 +155,7 @@ def generate_spec(spec, output=OUTPUT, references=REFERENCES, untriggered_only=F
                     shutil.copy2(artifact, archive / artifact.name)
         metadata = {'driver_plan': PROBE_PLANS.get(f"{spec}:{channel['name']}"), 'spec_id': spec, 'channel': channel, 'reference': str(raw), 'normalized_reference': str(reference), 'reference_sha256': sha256(raw), 'reference_proof': str(reference_proof), 'profile_policy': 'exact source profile from reference proof; MID1 where reference used MID1'}
         try:
-            data = run_oracle(profile, action_list(spec, channel), path, duration=probe_duration(spec, channel['name']), reference_proof=reference_proof)
+            data = run_oracle(profile, action_list(spec, channel), path, duration=probe_duration(spec, channel['name']), reference_proof=reference_proof, precombat_actions=(metadata['driver_plan'] or {}).get('precombat_actions'))
             observed = matching_formulas(spec, channel, data['events'])
             metadata['observed_formula_actions'] = sorted({(e['action'], e['spell_id']) for e in observed})
             metadata['status'] = 'observed' if observed else 'NOT_TRIGGERED_BY_MINIMAL_DRIVERS'
