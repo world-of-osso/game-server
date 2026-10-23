@@ -245,7 +245,8 @@ fn protection_producers_phalanx_clap_buff_is_consumed_by_shield_slam_for_real_da
         "consumption must emit damage, not only remove the buff"
     );
     h.inbox = Inbox::default();
-    h.advance(140);
+    // Native23922 RecoveryTime=9000ms; preserve the real cooldown.
+    h.advance(200);
     h.cast_and_deliver(SHIELD_SLAM, Some(h.npc));
     h.advance(5);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
