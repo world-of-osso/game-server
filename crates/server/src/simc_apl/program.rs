@@ -254,6 +254,7 @@ fn parse_rule(literal: &str, defaults: &mut BTreeMap<String, f64>) -> Result<Rul
         .transpose()?;
     let action = Action {
         name: name.to_owned(),
+        target: None,
         options,
     };
     let body = match name {
