@@ -76,7 +76,7 @@ pub(super) fn select_slot(
     check_destination_support(spell)?;
     let id = effect.implicit_targets[slot];
     if id == 73 {
-        return select_caster_radius(world, caster, spell, effect, slot).map(Some);
+        return sample_caster_radius_destination(world, caster, spell, effect, slot).map(Some);
     }
     let destination = effect_dest_slot(world, caster, explicit, effect, slot, id, previous);
     match id {
@@ -102,7 +102,7 @@ pub(super) fn select_slot(
 }
 
 /// Spell.cpp1611–1642:73 retains CalcRadius extent, then applies caster reach.
-fn select_caster_radius(
+fn sample_caster_radius_destination(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
@@ -113,7 +113,7 @@ fn select_caster_radius(
     let reach = crate::scripted_ai::model_reach::combat_reach(world, caster).ok_or_else(|| {
         super::super::CastFailure::Unsupported("target73 requires caster combat reach".into())
     })?;
-    let distance = caster_radius_extent(world, caster, spell, effect, slot).max(reach);
+    let distance = sample_caster_radius_extent(world, caster, spell, effect, slot).max(reach);
     let angle = rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..std::f32::consts::TAU);
     let destination = Dest {
         position: start + Vec3::new(distance * angle.cos(), 0.0, -distance * angle.sin()),
@@ -123,7 +123,7 @@ fn select_caster_radius(
 }
 
 /// CalcRadius(m_caster): absent B radius inherits A's entry; a missing entry is0.
-fn caster_radius_extent(
+fn sample_caster_radius_extent(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
@@ -134,17 +134,7 @@ fn caster_radius_extent(
     let Some(entry) = effect.radius[source_slot] else {
         return 0.0;
     };
-    let level = world
-        .get::<shared::components::Level>(caster)
-        .map(|level| level.0)
-        .or_else(|| {
-            world
-                .get::<shared::components::UnitLevel>(caster)
-                .map(|level| level.0)
-        });
-    let extent = level.map_or(entry.radius_max, |level| {
-        (entry.radius + entry.radius_per_level * f32::from(level)).min(entry.radius_max)
-    });
+    let extent = read_caster_radius_cap(world, caster, entry);
     let bonus = if super::super::attributes(spell, 9) & NO_MOVEMENT_RADIUS_BONUS == 0
         && has_running_range_bonus(world, caster)
     {
@@ -160,6 +150,24 @@ fn caster_radius_extent(
     } else {
         extent
     }
+}
+
+fn read_caster_radius_cap(
+    world: &World,
+    caster: Entity,
+    entry: crate::spell_info::SpellRadius,
+) -> f32 {
+    let level = world
+        .get::<shared::components::Level>(caster)
+        .map(|level| level.0)
+        .or_else(|| {
+            world
+                .get::<shared::components::UnitLevel>(caster)
+                .map(|level| level.0)
+        });
+    level.map_or(entry.radius_max, |level| {
+        (entry.radius + entry.radius_per_level * f32::from(level)).min(entry.radius_max)
+    })
 }
 
 /// CanIncreaseRangeByMovement: forward/strafe/falling, never walk mode.
