@@ -15,7 +15,13 @@ Exact argv, raw/normalized reports, profile and selected traits live under engin
 |Scenario|SimC DPS|Acceptable native DPS|Native status|
 |---|---:|---:|---|
 |ST / Patchwerk|188596.272|169736.645–207455.899|Not measured|
-|3T / main + two replacement adds every30s|328901.678|296011.511–361791.846|Not measured|
+|3T / main + two recurring adds (timing finding below)|328901.678|296011.511–361791.846|Not measured|
+
+## Shared v5 timing finding
+
+Arms/Ret70/WW269/Dev1467 receipts all use `desired_targets=1` with two adds, first0/cooldown30/duration30 and zero variance. Native fixtures atomically replace both adds every30.000s. However, pinned `raid_event.cpp:2700–2701` clamps cooldown≤duration to duration+0.01s. The retained one-iteration `71.three-uptime-audit.*` log proves starts0/30.010/60.020 through270.090; each add is active299.91/300s (99.97%). This is a quantified common timing mismatch, not an Arms-specific scenario difference; no reference has been silently replaced.
+
+Fixture boss classification must also match the reference: `sim.cpp:2783–2793` creates `desired_targets=3` as TANK_DUMMY plus ENEMY actors (all boss=true under `player.hpp:964`). This Arms reference instead uses ENEMY_ADD (`raid_event.cpp:77,269`), so only the main target is a boss. Identical native31146 templates cannot encode that distinction; explicit fixture metadata must not mutate their native creature rank.
 
 ## Coverage
 
