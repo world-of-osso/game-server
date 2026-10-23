@@ -55,6 +55,9 @@ mod natures_guardian;
 #[cfg(test)]
 pub(crate) mod observations;
 mod periodic;
+#[cfg(test)]
+mod point_mod_tests;
+mod point_mods;
 pub(crate) mod power_amount_trigger;
 #[cfg(test)]
 mod proc_mask_tests;
@@ -76,7 +79,7 @@ pub(crate) mod world_state;
 pub(crate) mod world_xp_tests;
 pub use invisibility::Invisibility;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
@@ -84,7 +87,7 @@ use shared::components::{AuraView, Npc, Player, UnitAuras, UnitStats};
 use shared::protocol::{CancelAura, CombatLogEvent, CombatLogKind};
 
 use crate::auth::{Authenticated, InWorld};
-use crate::class_progression::KnownSpells;
+use crate::class_progression::{KnownSpells, SpellTrait, TraitLoadout};
 use crate::grid_activity::GridDormant;
 use crate::networking::PlayerLink;
 use crate::spell_cast::{log_event, targets};
@@ -252,6 +255,8 @@ pub struct AuraInstance {
     pub source: AuraSource,
     /// Item-level snapshot of the applied aura effects.
     pub cast_item_level: Option<u16>,
+    /// Learned trait identity/rank at application, for passive relearning.
+    trait_info: Option<SpellTrait>,
     pub from_player: bool,
     pub effects: Vec<AuraEffectState>,
     /// Full duration in ms; 0 is permanent.
@@ -783,6 +788,9 @@ fn build_instance(
         caster,
         source: application.source,
         cast_item_level: spell.cast_item_level,
+        trait_info: world
+            .get::<TraitLoadout>(caster)
+            .and_then(|traits| traits.spell_trait(spell.id)),
         from_player: world.get::<Player>(caster).is_some(),
         effects,
         duration_ms,
@@ -1163,6 +1171,7 @@ pub(crate) fn apply_aura_with_spell(
             &aura,
         );
     }
+    point_mods::recalculate(world, target, &aura);
     log_event(world, aura_event(&aura, target, kind));
     auras_changed(world, target);
 }
@@ -1468,6 +1477,7 @@ fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason
     fixate::on_removed(world, aura);
     crate::spell_cast::recovery_rate::on_removed(world, unit, aura);
     mount::on_removed(world, unit, aura);
+    point_mods::recalculate(world, unit, aura);
     crate::vehicle::isle::on_removed(world, unit, aura);
     log_event(world, aura_event(aura, unit, CombatLogKind::AuraRemoved));
 }
@@ -1603,6 +1613,8 @@ pub(crate) fn spend_stack(world: &mut World, unit: Entity, instance_id: u32) {
         #[cfg(test)]
         let observed = (aura.caster, aura.spell_id);
         aura.stacks -= 1;
+        let source = aura.clone();
+        point_mods::recalculate(world, unit, &source);
         #[cfg(test)]
         observations::spent_stack(world, unit, observed.0, observed.1);
         auras_changed(world, unit);
@@ -2194,7 +2206,7 @@ fn init_unit_auras(world: &mut World, missing: &mut UnitsMissingAuras) {
     }
 }
 
-/// Owners whose knowledge, actual map or equipment changed since the last passive sync.
+/// Owners whose knowledge, trait ranks, map or equipment changed since passive sync.
 #[derive(Resource, Debug, Default)]
 struct PendingPassiveSync(Vec<Entity>);
 
@@ -2206,6 +2218,7 @@ type ChangedPassiveOwners<'w, 's> = Query<
         With<KnownSpells>,
         Or<(
             Changed<KnownSpells>,
+            Changed<TraitLoadout>,
             Changed<crate::maps::InMap>,
             Changed<crate::stats::EquippedItems>,
         )>,
@@ -2238,9 +2251,9 @@ pub fn sync_passives(world: &mut World, unit: Entity, source: AuraSource, spells
         .filter(|spell| passive_map_allowed(world, unit, spell))
         .filter(|spell| item_requirements::passive_items_fit(world, unit, spell))
         .collect();
-    let ids: Vec<u32> = passives.iter().map(|spell| spell.id).collect();
+    let expected = passive_trait_info(world, unit, &passives);
     remove_auras(world, unit, RemoveReason::Unlearned, |aura| {
-        aura.source == source && !ids.contains(&aura.spell_id)
+        passive_is_stale(aura, source, &expected)
     });
     for spell in passives {
         let applied = world.get::<ActiveAuras>(unit).is_some_and(|auras| {
@@ -2264,6 +2277,39 @@ pub fn sync_passives(world: &mut World, unit: Entity, source: AuraSource, spells
     if source == AuraSource::KnownSpell {
         crate::spell_cast::control_dream::sync_known_ready_credit(world, unit, spells);
     }
+}
+
+fn passive_trait_info(
+    world: &World,
+    unit: Entity,
+    passives: &[SpellInfo],
+) -> HashMap<u32, Option<SpellTrait>> {
+    let traits = world.get::<TraitLoadout>(unit);
+    passives
+        .iter()
+        .map(|spell| {
+            (
+                spell.id,
+                traits.and_then(|traits| traits.spell_trait(spell.id)),
+            )
+        })
+        .collect()
+}
+
+/// TC Player.cpp29283–29284 removes/relearns changed ranks. Preserve every
+/// unchanged passive, including its instance, stacks and periodic phase.
+fn passive_is_stale(
+    aura: &AuraInstance,
+    source: AuraSource,
+    expected: &HashMap<u32, Option<SpellTrait>>,
+) -> bool {
+    if aura.source != source {
+        return false;
+    }
+    let Some(trait_info) = expected.get(&aura.spell_id) else {
+        return true;
+    };
+    source == AuraSource::KnownSpell && aura.trait_info != *trait_info
 }
 
 type AuraUnit = (

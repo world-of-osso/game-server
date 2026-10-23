@@ -82,11 +82,33 @@ fn earn_finisher_power(h: &mut Harness, actor: Entity) {
         ) {
             Ok(()) => generators += 1,
             Err(crate::spell_cast::CastFailure::OnCooldown)
-            | Err(crate::spell_cast::CastFailure::OnGlobalCooldown) => {}
+            | Err(crate::spell_cast::CastFailure::OnGlobalCooldown)
+            | Err(crate::spell_cast::CastFailure::NoCharges) => {}
             Err(error) => panic!("native Ret Judgment generator failed: {error:?}"),
         }
         h.advance(1);
         if generators == 3 {
+            let power = crate::spell_cast::powers::power_value(
+                h.app.world(),
+                actor,
+                shared::components::PowerType::HolyPower,
+            );
+            assert!(
+                power.is_some_and(|(current, _)| current >= 3.0),
+                "fixture's three ordinary Judgments did not bank finisher power: power={power:?}, rank_known={}, rank_aura={}, combat={:?}, events={:?}",
+                h.app
+                    .world()
+                    .get::<KnownSpells>(actor)
+                    .unwrap()
+                    .contains(315867),
+                crate::auras::has_aura(h.app.world(), actor, 315867),
+                h.app.world().get::<shared::components::CombatStatus>(actor),
+                h.inbox
+                    .log
+                    .iter()
+                    .filter(|event| event.source == Some(actor.to_bits()))
+                    .collect::<Vec<_>>()
+            );
             return;
         }
     }
