@@ -1,6 +1,6 @@
 ## 2026-10-23 — Explicit APL runs and target identities
 
-[Shared interpreter](systems/simc-apl.md):14PASS/4genuineRED, then explicit `Action.target`/candidate API and16PASS/8genuineRED at2088713a6. Source-grounded run switches, min/max target-before-if, strict tie order and nested call-context restoration implemented; focused GREEN pending. No native rotation or DPS parity claim; native target-aware dispatch remains adapter-owned.
+[Shared interpreter](systems/simc-apl.md):14PASS/4genuineRED, then explicit `Action.target`/candidate API and16PASS/8genuineRED at2088713a6. Source-grounded run switches, min/max target-before-if, strict tie order and nested call-context restoration:24/24GREEN ate7fdc4dd1,30.51s compile/0warnings/0ignored ([proof](../handoffs/shared-run-target-proof-ledger.md)). No native rotation or DPS parity claim; native target-aware dispatch remains adapter-owned.
 
 ## 2026-10-23 — Shared native APL fact boundary
 
