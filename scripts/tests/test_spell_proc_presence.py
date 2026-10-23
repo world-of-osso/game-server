@@ -66,6 +66,18 @@ class SpellProcPresenceTests(unittest.TestCase):
                 "SELECT SpellId, Chance FROM tdb_spell_proc ORDER BY SpellId").fetchall(),
                 [(4341, 0), (48484, 0), (1259886, 0)])
 
+    def test_value_column_constraint_failure_rolls_back_removed_rows(self):
+        with sqlite3.connect(self.db) as conn:
+            conn.execute("CREATE TABLE tdb_spell_proc (SpellId INTEGER PRIMARY KEY, "
+                         "Chance REAL NOT NULL)")
+            conn.executemany("INSERT INTO tdb_spell_proc VALUES (?, 0)", [(4341,), (14190,)])
+        result = self.import_presence()
+        self.assertNotEqual(result.returncode, 0)
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(conn.execute(
+                "SELECT SpellId, Chance FROM tdb_spell_proc ORDER BY SpellId").fetchall(),
+                [(4341, 0), (14190, 0)])
+
     def test_changed_pinned_source_rejects_before_database_mutation(self):
         Path(self.audit["patches"][0]["source"]).write_text("-- changed after audit\n")
         result = self.import_presence()

@@ -34,6 +34,12 @@ Native base ratings1076crit/738haste/959mastery/275vers plus7crit/7haste/32maste
 
 The historical native observation casts Incarnation102543 three times despite its absence from the exact selected Feral reference traits. Own a95c0df7a reproduces actual unselected Incarnation admission; own c3934c31d shared-helper GREEN rejects it while preserving selected visible/parent actions and all990starter books. [Generic action-knowledge census](action-knowledge-census.md) records15/15GREEN, the successful empower control and the separately owned Ret generator-fixture blocker. Current native ST/3T and literal Feral qualification remain pending.
 
+## Explicit TDB provenance boundary
+
+`scripts/import_spell_proc_presence.py --manifest <audit.json> --db <private-world.db>` verifies every pinned base/update SHA-256 before publishing audited `rows[].SpellId` to `tdb_spell_proc(SpellId PRIMARY KEY)`. The supplied `tdb-spell-proc-source-audit.json` has1291effective rows from1283base rows plus7ordered public TC updates. No numeric proc value is imported;14775 owns later value columns. Retained IDs preserve those columns; a value-column insertion constraint rolls the entire refresh back. Use a private DB for qualification; canonical data is not mutated by this task.
+
+The317candidate default-refusal census still splits268explicit/49missing against this effective manifest. WW MomentumBoost451294 is **not** a candidate: native Attributes3=0 lacks TC's required CAN_PROC_FROM_PROCS, despite its unrestricted aura42→451297/0x40010 mask. Do not broaden the guard to force a SimC match. Importer native qualification and generic refusal behavior are separate gates.
+
 ## Literal boundary
 
 The exact pinned profile requires target_if Boolean selectors and action-relative dot/snapshot facts, active_dot, hero_tree, previous-GCD facts, pool_resource/for_next, max_energy and use_items/off-GCD options. Shared owners receive these requests through the lead; Feral owns identity bindings, Berserk/Incarnation aliases and snapshot source attribution. Dungeon rotation is unchanged; only explicit parity Fixture encounters may capture native follower decisions.

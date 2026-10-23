@@ -67,6 +67,10 @@
 
 Pinned SimC76f8118 selects timed adds on a run row but its child Mortal Strike still waits for main health<80% (first60.056s on main, not6s on adds). `player.cpp2467–2476` only changes active lists. Earlier24/24GREEN included a wrong inherited-child oracle; packet withdrawn before landing per lead. Corrected23PASS/1 genuineRED at2d6a66259 →24/24GREEN atad720fc3c (28.61s compile/0compiler warnings/0ignored): shared target inheritance state deleted; ordinary target min/max and non-returning runs retained. [Proof ledger](../handoffs/shared-run-target-proof-ledger.md).
 
+## 2026-10-23 — Explicit proc provenance importer
+
+[Proc source presence](systems/auras.md#explicit-proc-source-presence--2026-10-23) consumes the audited1291effective TC IDs, verifies8pinned source files, and transactionally publishes presence only. Later numeric columns remain separately owned; no refusal guard or chance/mask overlay is included. Focused CLI RED recorded before implementation; qualification follows the committed producer.
+
 ## 2026-10-23 — Feral baseline and action-knowledge census
 
 [Feral census](../handoffs/feral-source-census.md): exact reproduced references, private-source-view historical native ST56378.65/3T62475.26 (supplied binary's9d13label withdrawn: UNKNOWN_PRE_9D13_MISLABELED), five ignored redirected-stat allocations and missing consumable residual separated from channel gaps. [Knowledge census](../handoffs/action-knowledge-census.md):990native starter books/1090kit rows; four sourced visible/parent actions, zero missing-book rejections after bridges. Own shared-helper a95c0df7a10FAIL/5PASS→c3934c31d15/15GREEN38.29s, four-stage empower PASS13.06s. Ret integration awaits its direct Judgment generator-fixture NoCharges correction; literal Feral/native current ST/3T remain pending.
