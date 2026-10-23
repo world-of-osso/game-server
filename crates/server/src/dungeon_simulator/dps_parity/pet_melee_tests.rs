@@ -80,6 +80,9 @@ fn dps_parity_pet_melee_baseline_records_actual_owner_and_swing_damage() {
         json!({
             "entry": entry, "level": world.get::<shared::components::UnitLevel>(pet).unwrap().0,
             "owner_melee_ap": owner.attack_power, "owner_ranged_ap": owner.ranged_attack_power,
+            "owner_total_ranged_ap": owner_total_ranged_ap(world, run.actor),
+            "owner_weapon_mainhand_ap": owner.weapon_attack_power.main_hand,
+            "owner_weapon_ranged_ap": owner.weapon_attack_power.ranged,
             "template_attack_time_ms": template.base_attack_time_ms,
             "pet_character_stats": world.get::<crate::stats::CharacterStats>(pet).is_some(),
             "hits": hits,
@@ -97,14 +100,29 @@ fn physical_damage_multiplier(world: &World, pet: Entity, target: Entity) -> f32
     let taken = world
         .get::<crate::auras::AuraStatMods>(target)
         .map_or(1.0, |mods| mods.damage_taken(1));
-    done * taken
+    done * taken * crate::auras::summon_damage::multiplier(world, pet)
+}
+
+fn owner_total_ranged_ap(world: &World, owner: Entity) -> f32 {
+    world
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap()
+        .total_attack_power(
+            crate::stats::WeaponAttackType::Ranged,
+            world.get::<crate::stats::StatModifiers>(owner),
+        )
 }
 
 fn owner_contribution_floor(world: &World, owner: Entity, pet: Entity, target: Entity) -> f32 {
     // TC StatSystem1344/1389/1423: integer .22 ownerRAP, /3.5 per
     // base attack second. Pet.cpp882 sets the source2000ms pet base clock.
-    let owner = world.get::<crate::stats::CharacterStats>(owner).unwrap();
-    let bonus = (owner.ranged_attack_power * 0.22).trunc() / 3.5 * 2.0;
+    let stats = world.get::<crate::stats::CharacterStats>(owner).unwrap();
+    let total = owner_total_ranged_ap(world, owner);
+    assert!(
+        total > stats.ranged_attack_power,
+        "actual native weapon must contribute owner total RAP"
+    );
+    let bonus = (total * 0.22).trunc() / 3.5 * 2.0;
     let damage = (bonus * physical_damage_multiplier(world, pet, target)).round();
     let pet_scaling = crate::level_scaling::UnitScaling::of(world, pet);
     let target_scaling = crate::level_scaling::UnitScaling::of(world, target);
@@ -130,7 +148,7 @@ fn owner_contribution_floor(world: &World, owner: Entity, pet: Entity, target: E
 #[ignore = "native pet owner-RAP melee RED; requires prepared parity inputs"]
 fn dps_parity_pet_melee_actual_swings_include_source_owner_ranged_ap_contribution() {
     let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
-    let hits = collect_native_pet_swings(&mut run, pet, 4);
+    let hits = normalized_pet_swings(&mut run, pet, 4);
     let world = run.app.world();
     let floor = owner_contribution_floor(world, run.actor, pet, run.targets[0]);
     println!(
@@ -146,7 +164,7 @@ fn dps_parity_pet_melee_actual_swings_include_source_owner_ranged_ap_contributio
     // Native misses/crit rolls remain; blocked/absorbed/glancing receipts are
     // excluded rather than changing RNG or loosening the contribution bound.
     assert!(
-        hits.iter().all(|damage| *damage as f32 >= floor),
+        hits.iter().all(|damage| *damage >= floor),
         "native pet swings{hits:?} omit source owner-RAP contribution floor{floor}"
     );
 }
@@ -251,6 +269,7 @@ fn dps_parity_pet_melee_owner_only_melee_ap_buff_does_not_change_swings() {
         .world()
         .get::<crate::stats::CharacterStats>(owner)
         .unwrap();
+    let initial_total_ranged = owner_total_ranged_ap(run.app.world(), owner);
     crate::spell_cast::cast_triggered(run.app.world_mut(), owner, MELEE_ONLY_AP, Some(owner), 1);
     for _ in 0..4 {
         run.app.update();
@@ -265,6 +284,10 @@ fn dps_parity_pet_melee_owner_only_melee_ap_buff_does_not_change_swings() {
         "native166 must change owner melee AP"
     );
     assert_eq!(stats.ranged_attack_power, initial.ranged_attack_power);
+    assert_eq!(
+        owner_total_ranged_ap(run.app.world(), owner),
+        initial_total_ranged
+    );
     assert!(
         !crate::auras::has_aura(run.app.world(), pet, MELEE_ONLY_AP),
         "native buff is owner-only, not a direct pet AP modifier"
