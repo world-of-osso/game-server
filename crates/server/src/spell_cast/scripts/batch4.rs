@@ -1,6 +1,6 @@
 //! Bounded paths derived from local Mainline 12.1.0.69933 rows.
 use bevy::prelude::*;
-use shared::components::{Health, PowerType};
+use shared::components::Health;
 
 use super::{reduce_cooldown, script_effect_value};
 use crate::spell_cast::{self, PlannedEffect, TargetPlan, targets};

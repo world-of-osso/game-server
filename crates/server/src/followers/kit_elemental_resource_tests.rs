@@ -249,6 +249,15 @@ fn assert_energize_preserves_parent_stormkeeper_uses(case: ResourceCase) {
                 .is_none(),
             "both actual native SK uses must still make their parent instant"
         );
+        let immediate = stormkeeper_charges(&h, caster);
+        println!(
+            "NATIVE_SK_LAUNCH spell={} remaining={immediate} expected={remaining}",
+            case.spell
+        );
+        assert_eq!(
+            immediate, remaining,
+            "the inline resource child retains parent charge ownership"
+        );
         h.advance(40);
         assert_eq!(
             stormkeeper_charges(&h, caster),
