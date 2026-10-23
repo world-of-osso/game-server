@@ -34,6 +34,13 @@ fn fixture(rend: bool) -> Harness {
     let mut h = harness(Vec::new(), &ids, 1).unwrap();
     h.app.insert_resource(world_db().unwrap().store.clone());
     h.app.insert_resource(load_native_creature_world(&[6]));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::item_proc_data::load(&conn).unwrap());
     let mut known = ids.to_vec();
     if rend {
         known.push(REND);

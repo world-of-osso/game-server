@@ -102,6 +102,69 @@ fn equip_tier(h: &mut Harness, pieces: usize) {
     h.advance(3);
 }
 
+#[test]
+fn protection_producers_item_native_inputs_resolve_equipped_counts_spec_and_roles() {
+    let mut h = item_fixture(true);
+    assert_eq!(
+        crate::item_proc_data::role_multiplier(h.app.world(), h.caster, GUILLOTINE_DRIVER).unwrap(),
+        0.66
+    );
+    assert!(!crate::item_proc_data::has_equipped_bonus(h.app.world(), h.caster, 1291726).unwrap());
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::EquippedItems>(h.caster)
+        .unwrap()
+        .items
+        .push((
+            EquipmentSlot::MainHand,
+            shared::item_data::ItemDefinitionSource::Retail,
+            268209,
+        ));
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::EquippedItemModifiers>(h.caster)
+        .unwrap()
+        .items
+        .push((EquipmentSlot::MainHand, Default::default()));
+    h.advance(3);
+    assert!(crate::item_proc_data::has_equipped_bonus(h.app.world(), h.caster, 1291726).unwrap());
+    equip_tier(&mut h, 4);
+    assert!(crate::item_proc_data::has_equipped_bonus(h.app.world(), h.caster, 1296648).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::ActiveSpec(71));
+    assert!(!crate::item_proc_data::has_equipped_bonus(h.app.world(), h.caster, 1296648).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::ActiveSpec(73));
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::EquippedItems>(h.caster)
+        .unwrap()
+        .items
+        .retain(|(slot, _, _)| *slot != EquipmentSlot::Legs);
+    assert!(!crate::item_proc_data::has_equipped_bonus(h.app.world(), h.caster, 1296648).unwrap());
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Unlearned,
+        |aura| aura.spell_id == PROTECTION_PASSIVE,
+    );
+    assert_eq!(
+        crate::item_proc_data::role_multiplier(h.app.world(), h.caster, GUILLOTINE_DRIVER).unwrap(),
+        1.0
+    );
+    h.app
+        .world_mut()
+        .remove_resource::<crate::item_proc_data::ItemProcInputs>();
+    assert!(
+        crate::item_proc_data::role_multiplier(h.app.world(), h.caster, GUILLOTINE_DRIVER).is_err()
+    );
+    assert!(crate::item_proc_data::has_equipped_bonus(h.app.world(), h.caster, 1296648).is_err());
+}
+
 fn landed_revenge(pieces: usize, free: bool) -> Harness {
     for _ in 0..8 {
         let mut h = item_fixture(false);
@@ -158,7 +221,6 @@ fn landed_revenge(pieces: usize, free: bool) -> Harness {
 }
 
 #[test]
-#[ignore = "RED: equipped four-piece free Revenge has no Bloody Rebuke producer"]
 fn protection_producers_item_four_piece_free_revenge_emits_owned_periodic_bloody_rebuke() {
     let mut h = landed_revenge(4, true);
     let aura = h
@@ -181,7 +243,6 @@ fn protection_producers_item_four_piece_free_revenge_emits_owned_periodic_bloody
 }
 
 #[test]
-#[ignore = "RED control: Bloody Rebuke requires four pieces and a genuinely free Revenge"]
 fn protection_producers_item_three_piece_or_paid_revenge_cannot_grant_bloody_rebuke() {
     for (pieces, free) in [(3, true), (4, false)] {
         let h = landed_revenge(pieces, free);
@@ -196,7 +257,6 @@ fn protection_producers_item_three_piece_or_paid_revenge_cannot_grant_bloody_reb
 }
 
 #[test]
-#[ignore = "RED: equipped four-piece Ravager ticks have no Bloody Rebuke producer"]
 fn protection_producers_item_four_piece_ravager_tick_produces_bloody_rebuke() {
     let mut h = item_fixture(false);
     equip_tier(&mut h, 4);
@@ -241,7 +301,6 @@ fn devastate(h: &mut Harness) {
 }
 
 #[test]
-#[ignore = "RED: equipped native Guillotine has no damage producer"]
 fn protection_producers_item_equipped_guillotine_emits_base_not_catalog_perfected_variant() {
     let mut h = item_fixture(true);
     let aura = h
@@ -290,7 +349,6 @@ fn protection_producers_item_equipped_guillotine_emits_base_not_catalog_perfecte
 }
 
 #[test]
-#[ignore = "RED control: qualify catalog absence and native unequip lifecycle with Guillotine"]
 fn protection_producers_item_guillotine_catalog_and_unequipped_driver_do_not_proc() {
     for remove_equipped in [false, true] {
         let mut h = item_fixture(remove_equipped);

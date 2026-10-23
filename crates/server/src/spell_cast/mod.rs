@@ -3378,7 +3378,8 @@ fn launch_triggered_spell(
     depth: u8,
 ) -> bool {
     match plan_triggered_spell(world, caster, spell, explicit, depth) {
-        Ok(plan) => {
+        Ok(mut plan) => {
+            scripts::snapshot_guillotine_health(world, caster, spell, &mut plan);
             #[cfg(test)]
             if let Some(mut observed) =
                 world.get_resource_mut::<test_harness::ObservedTriggeredCasts>()

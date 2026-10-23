@@ -432,6 +432,14 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        crate::spell_cast::scripts::GUILLOTINE,
+        AuraScript {
+            check_proc: Some(crate::spell_cast::scripts::check_guillotine_proc),
+            on_damage_proc: Some(crate::spell_cast::scripts::cast_guillotine),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         crate::spell_cast::scripts::WHIRLING_BLADE,
         AuraScript {
             check_proc: Some(crate::spell_cast::scripts::check_whirling_blade_proc),

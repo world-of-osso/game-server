@@ -72,6 +72,7 @@ mod ignore_list;
 mod inspect;
 mod interest;
 mod inventory;
+mod item_proc_data;
 mod item_stats;
 mod item_templates;
 mod knockback;

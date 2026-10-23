@@ -1,3 +1,7 @@
+## 2026-10-22 — Source-backed equipped producer RED and implementation
+
+[Producer contract](../specs/protection-damage-producers.md): corrected complete-native1dbfec04b/mastera268ba2a6 cohort14PASS/3genuine missing-child FAIL46.08s/zero warnings, after actual item scaling, four-piece/free-cost and Ravager-hit prerequisites. Native set/role reader plus Guillotine per-recipient launch snapshot and Bloody Rebuke hit hooks implemented; GREEN pending. Native thresholds/role expressions/amounts/RPPM/flight/DoT metadata are not fabricated. Venomfang and perfected poison remain open; no full DPS/legal-loadout claim.
+
 ## 2026-10-22 — Whirling eligibility controls and equipped fixture correction
 
 [Producer coverage](../specs/protection-damage-producers.md): bfc6fc286 Whirling4PASS40.75s/no warnings adds actual white/secondary/absent-passive/removal proof. Item/tier5-case attempt is INVALID RED: partial temporary catalog omitted CurvePoint before gameplay; replaced by read-only installed native inputs, not fabricated scaling. Lead published native equipped catalogs using additive76cf8b7c5 with unchanged repeat mtime/quick_check ok; Rust consumers and meaningful item/tier RED remain open.

@@ -6,6 +6,8 @@
 
 Whirling Blade uses the existing aura proc/RPPM machinery. Its named foreground/primary-target policy supplies native228920 and the talent's4000ms lifetime through a private triggered-cast snapshot, without changing the catalog. `batch9::GroundPulses` supplies the missing156287 timer using native2000ms and targetB radius14=8yd. Ordinary Ravager retains12000ms. The ground anchor is captured before direct impact; no new child rotation action or independent timer system. These two producer paths have native timing/damage/expiry GREEN; Whirling's actual auto/secondary/absence/removal boundaries are also qualified. Weapon chasing and reduced damage beyond eight targets are not certified.
 
+Equipped producers read four native tables through `item_proc_data`; actual item identities/counts/spec and aura-conditional description values drive eligibility/scaling. Guillotine snapshots target-specific health multipliers before its native one-second flight using the existing target-plan scalar; source role and native item amount stay on the private cast. Bloody Rebuke observes real free-Revenge/Ravager hit inputs with a source-backed four-piece predicate, not a granted catalog aura. These hooks await GREEN; Venomfang/perfected poison and broader set activation remain open. See the contract for exact post-master RED receipts and publication prerequisites.
+
 Sources: TC a352b1fa `spell_warrior.cpp1773–1789/2097–2144`; SimC76f8118 `sc_warrior.cpp1684–1690/4173–4174/5820–5977/6300–6303`; native70448 SpellEffect/SpellDuration/SpellProcsPerMinute; [spec/source graph](../../specs/protection-damage-producers.md).
 
 ## Cast while casting — 2026-10-21
