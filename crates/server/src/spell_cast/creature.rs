@@ -118,6 +118,8 @@ fn load_creature_cast(
     spell_id: u32,
     target: Option<Entity>,
 ) -> Result<(SpellInfo, Option<Entity>), CastFailure> {
+    #[cfg(test)]
+    trace_follower_cast(world, caster, spell_id, target);
     let spell = world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(spell_id))
@@ -130,6 +132,39 @@ fn load_creature_cast(
 
 /// TC Spell.cpp621–664 InitExplicitTargets: player selection / creature victim,
 /// then caster for a non-enemy unit requirement. Explicit requests are unchanged.
+#[cfg(test)]
+fn trace_follower_cast(world: &World, caster: Entity, spell: u32, target: Option<Entity>) {
+    use shared::components::{Health, Mana};
+    let Some(follower) = world.get::<crate::followers::Follower>(caster) else {
+        return;
+    };
+    let health = |unit| {
+        world
+            .get::<Health>(unit)
+            .map(|health| (health.current.to_bits(), health.max.to_bits()))
+    };
+    let auras = |unit| {
+        world.get::<crate::auras::ActiveAuras>(unit).map(|auras| {
+            auras
+                .iter()
+                .map(|aura| (aura.spell_id, aura.caster.to_bits(), aura.stacks))
+                .collect::<Vec<_>>()
+        })
+    };
+    eprintln!(
+        "FOLLOWER_CAST_TRACE {}",
+        serde_json::json!({
+            "at":crate::auras::aura_now(world),"rng":crate::random::seeded_fingerprint(),
+            "caster":caster.to_bits(),"spec":follower.profile.spec_id,"spell":spell,
+            "target":target.map(Entity::to_bits),"caster_health":health(caster),
+            "target_health":target.and_then(health),
+            "mana":world.get::<Mana>(caster).map(|mana| (mana.current.to_bits(), mana.max.to_bits())),
+            "cast":world.get::<shared::casting::CastState>(caster).map(|cast| (cast.spell_id, cast.target)),
+            "caster_auras":auras(caster),"target_auras":target.and_then(auras),
+        })
+    );
+}
+
 fn default_scripted_target(
     world: &World,
     caster: Entity,
