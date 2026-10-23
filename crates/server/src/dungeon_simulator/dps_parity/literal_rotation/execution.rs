@@ -162,6 +162,14 @@ pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Re
                 .entity_mut(actor)
                 .remove::<crate::creature_ai::FollowOwner>()
                 .insert(crate::networking::CombatTarget(Some(target)));
+            // Preserve native chase/facing when the literal fixture replaces the
+            // kit controller. TC ChaseMovementGenerator::Update SetInFront;
+            // without Pursuing, caster-facing cones miss the selected victim.
+            if let Some(mut state) = world.get_mut::<crate::creature_ai::CreatureState>(actor) {
+                *state = crate::creature_ai::CreatureState::Pursuing {
+                    target: target.to_bits(),
+                };
+            }
             Ok(())
         }
         Execution::Spell(id, target) => {
