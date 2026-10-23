@@ -1,3 +1,7 @@
+## 2026-10-23 — Windwalker baseline and Combo Strikes boundary
+
+[Combo Strikes](systems/auras.md#windwalker-combo-strikes-policy--2026-10-23): actual native TP→Provoke→TP without Hit Combo,83.754=83.754 RED versus99.35737 expected, then native coefficient/state1GREEN10.04s at3286b0463. Frozen300s31146 baseline ST23785.66/3T23260.47,−88.48%/−93.82%; missing FoF/RSK/SCK casts, literal adapter and per-ability/channel qualification remain open ([census](../handoffs/ww-source-census.md)). No tuning/canonical DB changes.
+
 ## 2026-10-22 — Light of the Titans and native hit masks
 
 [Native Titans](systems/auras.md#light-of-the-titans-and-hit-proc-masks--2026-10-22): ordinary Judgment-earned Word actualmissing378412 RED→native40% HoT; shared Defense0 mask root fixed per TC attrs, then actualhostileDoT110vs329 RED→native200%selfbonus. Merged891b9ab1d19GREEN38.11s/check0/2m08s/zero warnings/fmtPASS. Existing test expectations unchanged; [census](../../docs/handoffs/native-hit-proc-mask-census.md)334969spell/5670staticcandidateaura changes; fullworkspaceleadgate required, no efficacy/completeproducer claim.
