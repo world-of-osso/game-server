@@ -43,12 +43,20 @@ pub(super) fn cached_inputs(
     key: InputKey,
     load: impl FnOnce() -> PreparedInputs,
 ) -> Arc<PreparedInputs> {
-    static INPUTS: OnceLock<Mutex<HashMap<InputKey, Arc<PreparedInputs>>>> = OnceLock::new();
-    let mut inputs = INPUTS.get_or_init(Default::default).lock().unwrap();
-    inputs
-        .entry(key)
-        .or_insert_with(|| Arc::new(load()))
-        .clone()
+    type InputSlot = Arc<Mutex<Option<Arc<PreparedInputs>>>>;
+    static INPUTS: OnceLock<Mutex<HashMap<InputKey, InputSlot>>> = OnceLock::new();
+    let slot = {
+        let mut inputs = INPUTS
+            .get_or_init(Default::default)
+            .lock()
+            .expect("prepared-input registry poisoned");
+        inputs
+            .entry(key)
+            .or_insert_with(|| Arc::new(Mutex::new(None)))
+            .clone()
+    };
+    let mut initialized = slot.lock().expect("prepared-input initializer poisoned");
+    initialized.get_or_insert_with(|| Arc::new(load())).clone()
 }
 
 pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<PreparedInputs> {
@@ -66,11 +74,14 @@ pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<P
         16808 => Some("kargath"),
         20923 => Some("porung"),
         209230 => Some("kyrioss"),
+        208745 => Some("candle-king"),
         186737 => Some("telash"),
         186739 => Some("azureblade"),
         186738 => Some("umbrelskul"),
         196482 => Some("ancient"),
         190609 => Some("doragosa"),
+        186116 => Some("gutshot"),
+        186121 => Some("wratheye"),
         189478 => Some("gorek"),
         189727 => Some("khajin"),
         189722 => Some("gulping-goliath"),
@@ -125,8 +136,9 @@ fn decode_encounter_inputs(
     let mut inputs = PreparedInputs::default();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     if [
-        20923, 196482, 190609, 194181, 188252, 189232, 184580, 184581, 184582, 184018, 184124,
-        184422, 215405, 215407, 207946, 216619, 186616, 186120, 210156, 189722, 189727, 189478,
+        208745, 20923, 196482, 190609, 194181, 188252, 189232, 184580, 184581, 184582, 184018,
+        184124, 184422, 215405, 215407, 207946, 216619, 186616, 186120, 210156, 189722, 189727,
+        189478, 186116,
     ]
     .contains(&entry)
     {

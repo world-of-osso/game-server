@@ -298,21 +298,21 @@ fn navigation_ruby_repeated_partial_endpoint_stops_bounded_continuation() {
 
 #[test]
 #[ignore = "requires canonical2651 assets and FOLLOWER_NAV_CANONICAL"]
-fn navigation_darkflame_208743_completed_search_disconnection_remains_blocked() {
+fn navigation_darkflame_208743_upward_route_remains_blocked() {
     assert_canonical_route_blocked(
         2651,
-        wow(239.839, 75.8715, 94.7386),
         wow(406.7775, -155.27142, 56.68355),
+        wow(239.839, 75.8715, 94.7386),
     );
 }
 
 #[test]
 #[ignore = "requires canonical2651 assets and FOLLOWER_NAV_CANONICAL"]
-fn navigation_darkflame_208747_completed_search_disconnection_remains_blocked() {
+fn navigation_darkflame_208747_upward_route_remains_blocked() {
     assert_canonical_route_blocked(
         2651,
-        wow(239.839, 75.8715, 94.7386),
         wow(188.47888, -547.81714, 59.8),
+        wow(239.839, 75.8715, 94.7386),
     );
 }
 

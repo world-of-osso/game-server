@@ -97,6 +97,9 @@ fn hunter(db: &Path, entry: u32) -> Option<Harness> {
                 OpenFlags::SQLITE_OPEN_READ_ONLY,
             )
             .unwrap();
+            // Native hunter create-health now reads ExpectedStat directly;
+            // retain the source table, not only already-evaluated templates.
+            app.world_mut().resource_mut::<WorldData>().expected_stats = load_expected_stats(&conn);
             app.insert_resource(crate::npc_interaction::load_gossip_catalog(&conn).unwrap());
             app.init_resource::<StableInbox>()
                 .add_systems(First, collect_stable_inbox);
@@ -224,9 +227,18 @@ fn hunter_tames_a_diseased_young_wolf_after_the_channel() {
         world.get::<ModelDisplay>(pet).unwrap().display_id,
         WOLF_DISPLAY
     );
+    // Native ExpectedStat10/-2 CreatureHealth377.342255, template299
+    // HealthModifier1; Guardian::InitStatsForLevel truncates rather than ceils.
+    // This fixed-stat harness has zero owner Stamina, so no inherited HP.
+    let expected_health = 377.0;
+    let health = world.get::<Health>(pet).unwrap();
+    assert_eq!(health.max, expected_health);
+    assert_eq!(health.current, expected_health, "new tame must arrive full");
+    let mut expected_pet = stored_wolf();
+    expected_pet.health = Some(expected_health);
     let expected = StoredPetStable {
         current: Some(0),
-        active: [Some(stored_wolf()), None, None, None, None],
+        active: [Some(expected_pet), None, None, None, None],
         ..Default::default()
     };
     assert_eq!(stable(&h).unwrap().stored, expected);
@@ -283,15 +295,20 @@ fn dismissed_pet_stays_stored_and_call_pet_brings_it_back() {
         return;
     };
     let first = pet_out(&h);
+    // TC's ExpectedStat create-health truncates, unlike the old class-level
+    // ceil. Persist the actual hydrated/clamped pool, not the seed's old cap.
+    let hydrated_health = h.app.world().get::<Health>(first).unwrap().current;
 
     // Dismiss Pet: a 3 s cast.
     h.cast_and_deliver(DISMISS_PET, None);
     h.advance(3_000 / 50 + 2);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(h.app.world().get_entity(first).is_err(), "pet still out");
+    let mut expected_pet = stored_wolf();
+    expected_pet.health = Some(hydrated_health);
     let dismissed = StoredPetStable {
         current: None,
-        active: [Some(stored_wolf()), None, None, None, None],
+        active: [Some(expected_pet), None, None, None, None],
         ..Default::default()
     };
     assert_eq!(stable(&h).unwrap().stored, dismissed);

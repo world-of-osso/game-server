@@ -65,15 +65,11 @@ pub(super) fn build_app() -> App {
     build_cached_app(&mut None)
 }
 
-pub(super) fn build_pet_app() -> App {
-    build_runtime_app(&mut None, true)
-}
-
 pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
-    build_runtime_app(catalogs, false)
+    build_runtime_app(catalogs)
 }
 
-fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>, include_pets: bool) -> App {
+fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
     let mut app = App::new();
     app.insert_resource(super::Space(super::graph::read_graph().unwrap()));
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
@@ -91,9 +87,6 @@ fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>, include_p
         crate::pet_control::PetControlPlugin,
         crate::stats::StatsPlugin,
     ));
-    if include_pets {
-        app.add_plugins(crate::hunter_pet::HunterPetPlugin);
-    }
     app.init_resource::<crate::maps::InstanceManager>();
     app.init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
     app.init_resource::<crate::spell_cast::holy_metrics::HolyMetrics>();

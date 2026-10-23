@@ -2,12 +2,14 @@
 //! Percent and tick count are native; generic ROLLING_PERIODIC owns unpaid carry.
 use bevy::prelude::*;
 
-use super::AuraInstance;
 use super::procs::AuraEvent;
+use super::{ActiveAuras, AuraInstance};
 use crate::spell_info::SpellStore;
 
 pub(super) const MASTERY_IGNITE: u32 = 12846;
-const IGNITE: u32 = 12654;
+pub(super) const IGNITE: u32 = 12654;
+const INTENSIFYING_FLAME: u32 = 416714;
+const INTENSIFYING_FLAME_DAMAGE: u32 = 419800;
 const PYROBLAST: u32 = 11366;
 const FLAMESTRIKE: u32 = 2120;
 const NATIVE_FLAMESTRIKE: u32 = 1254851;
@@ -56,6 +58,71 @@ pub(super) fn apply_damage(
         1,
         amount,
     );
+}
+
+/// FIRE_INTENSIFYING_FLAME_SIMC_TICK_BRIDGE, SimC76f8118 sc_mage.cpp2502–2567.
+/// Run at the real tick boundary: deferred proc handling follows aura expiry,
+/// when the final tick's base amount and active-dot identity are already gone.
+/// Native416714 owns the cap, percentage, periodic mask and chance;419800 owns damage.
+pub(super) fn trigger_intensifying_flame(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    base_tick: f32,
+) {
+    let Some((max_targets, percent, chance)) = read_intensifying_flame_proc(world, caster) else {
+        return;
+    };
+    let active_dots = count_living_ignite_targets(world, caster);
+    if active_dots as f32 > max_targets {
+        return;
+    }
+    if chance < 100.0 && crate::random::random::<f32>() * 100.0 >= chance {
+        return;
+    }
+    crate::spell_cast::cast_triggered_with_effect0_amount(
+        world,
+        caster,
+        INTENSIFYING_FLAME_DAMAGE,
+        Some(target),
+        1,
+        base_tick * percent / 100.0,
+    );
+}
+
+fn count_living_ignite_targets(world: &mut World, caster: Entity) -> usize {
+    world
+        .query::<(&ActiveAuras, &shared::components::Health)>()
+        .iter(world)
+        .filter(|(auras, health)| {
+            health.current > 0.0
+                && auras
+                    .iter()
+                    .any(|aura| aura.spell_id == IGNITE && aura.caster == caster)
+        })
+        .count()
+}
+
+fn read_intensifying_flame_proc(world: &World, caster: Entity) -> Option<(f32, f32, f32)> {
+    let aura = world
+        .get::<ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.spell_id == INTENSIFYING_FLAME)?;
+    let max_targets = aura.effects.iter().find(|effect| effect.index == 0)?.amount;
+    let percent = aura.effects.iter().find(|effect| effect.index == 1)?.amount;
+    let spell = world.resource::<SpellStore>().get(INTENSIFYING_FLAME)?;
+    let options = spell.aura_options.as_ref()?;
+    if options.proc_type_mask[0] & super::procs::PROC_DEAL_HARMFUL_PERIODIC == 0 {
+        return None;
+    }
+    let chance = super::spell_mods::modify(
+        world,
+        caster,
+        spell,
+        super::SpellModOp::ProcChance,
+        options.proc_chance as f32,
+    );
+    Some((max_targets, percent, chance))
 }
 
 fn calculate_tick_amount(percent: f32, event: &AuraEvent, ticks: u32) -> f32 {

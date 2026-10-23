@@ -55,6 +55,9 @@ mod natures_guardian;
 #[cfg(test)]
 pub(crate) mod observations;
 mod periodic;
+#[cfg(test)]
+mod point_mod_tests;
+mod point_mods;
 pub(crate) mod power_amount_trigger;
 #[cfg(test)]
 mod proc_mask_tests;
@@ -1169,6 +1172,7 @@ pub(crate) fn apply_aura_with_spell(
             &aura,
         );
     }
+    point_mods::recalculate(world, target, &aura);
     log_event(world, aura_event(&aura, target, kind));
     auras_changed(world, target);
 }
@@ -1474,6 +1478,7 @@ fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason
     fixate::on_removed(world, aura);
     crate::spell_cast::recovery_rate::on_removed(world, unit, aura);
     mount::on_removed(world, unit, aura);
+    point_mods::recalculate(world, unit, aura);
     crate::vehicle::isle::on_removed(world, unit, aura);
     log_event(world, aura_event(aura, unit, CombatLogKind::AuraRemoved));
 }
@@ -1609,6 +1614,8 @@ pub(crate) fn spend_stack(world: &mut World, unit: Entity, instance_id: u32) {
         #[cfg(test)]
         let observed = (aura.caster, aura.spell_id);
         aura.stacks -= 1;
+        let source = aura.clone();
+        point_mods::recalculate(world, unit, &source);
         #[cfg(test)]
         observations::spent_stack(world, unit, observed.0, observed.1);
         auras_changed(world, unit);
@@ -1929,6 +1936,8 @@ pub(crate) fn consume_absorbs(
 
 pub(crate) fn finish_absorbs(world: &mut World, unit: Entity, result: AbsorbResult) {
     for (caster, soaked) in result.contributions {
+        #[cfg(test)]
+        crate::dungeon_simulator::healer_intake::record_absorb(world, caster, unit, soaked);
         crate::damage_meter::record_absorb(world, caster, soaked);
     }
     if !result.depleted.is_empty() {
