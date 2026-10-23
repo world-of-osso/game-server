@@ -512,19 +512,19 @@ fn proc_fidelity_262_native_stormkeeper_chain_without_mastery_has_no_overload() 
     );
 }
 
-fn complete_recovered_lava_burst(h: &mut Harness, caster: Entity, target: Entity) {
+fn complete_recovered_native_cast(h: &mut Harness, caster: Entity, spell_id: u32, target: Entity) {
     for _ in 0..400 {
         let recovery = {
             let world = h.app.world();
             let spell = world
                 .resource::<crate::spell_info::SpellStore>()
-                .get(51505)
+                .get(spell_id)
                 .unwrap();
             crate::spell_cast::read_healer_recovery(world, caster, spell)
         };
         match recovery {
             Ok(()) => {
-                complete_cast(h, caster, 51505, target);
+                complete_cast(h, caster, spell_id, target);
                 return;
             }
             Err(
@@ -532,10 +532,10 @@ fn complete_recovered_lava_burst(h: &mut Harness, caster: Entity, target: Entity
                 | crate::spell_cast::CastFailure::OnCooldown
                 | crate::spell_cast::CastFailure::OnGlobalCooldown,
             ) => h.advance(1),
-            Err(failure) => panic!("native Lava Burst recovery failed: {failure:?}"),
+            Err(failure) => panic!("native{spell_id} recovery failed: {failure:?}"),
         }
     }
-    panic!("native Lava Burst did not naturally recover a charge within400 frames");
+    panic!("native{spell_id} did not naturally recover within400 frames");
 }
 
 #[test]
@@ -565,7 +565,7 @@ fn proc_fidelity_262_native_lava_burst_natural_overload_preserves_wrapper_flight
     for attempt in 1..=attempts {
         let cast_start = h.inbox.log.len();
         let go_start = h.inbox.go.len();
-        complete_recovered_lava_burst(&mut h, caster, target);
+        complete_recovered_native_cast(&mut h, caster, 51505, target);
         let mut wrapper_go_at = None;
         let mut overload_hit_at = None;
         for _ in 0..60 {
@@ -632,7 +632,7 @@ fn proc_fidelity_262_native_lava_burst_without_mastery_has_no_overload() {
     let target = h.npc;
     let first = h.inbox.log.len();
     let first_go = h.inbox.go.len();
-    complete_recovered_lava_burst(&mut h, caster, target);
+    complete_recovered_native_cast(&mut h, caster, 51505, target);
     h.advance(30);
     assert!(h.inbox.log[first..].iter().any(|event| {
         event.kind == CombatLogKind::Damage
@@ -650,6 +650,163 @@ fn proc_fidelity_262_native_lava_burst_without_mastery_has_no_overload() {
             .iter()
             .all(|event| { event.caster != caster.to_bits() || event.spell_id != 77451 })
     );
+}
+
+fn prepare_unselected_overload_root(root: u32) -> (Harness, Entity) {
+    let (mut h, caster) = at_level(209053, 70, |_| {});
+    let mut health = h.app.world_mut().get_mut::<Health>(h.npc).unwrap();
+    health.max = 1_000_000_000.0;
+    health.current = health.max;
+    assert!(
+        !h.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(caster)
+            .unwrap()
+            .contains(root),
+        "cast-mechanism-only qualification must not silently become a selected-kit certificate"
+    );
+    (h, caster)
+}
+
+fn fund_native_elemental_blast(h: &mut Harness, caster: Entity, target: Entity) {
+    let cost: f32 = {
+        let world = h.app.world();
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(117014)
+            .unwrap();
+        crate::spell_cast::spell_costs(world, caster, spell)
+            .unwrap()
+            .into_iter()
+            .filter_map(|(pool, amount)| {
+                matches!(
+                    pool,
+                    crate::spell_cast::CostPool::Power(PowerType::Maelstrom)
+                )
+                .then_some(amount)
+            })
+            .sum()
+    };
+    for _ in 0..32 {
+        let before = power_value(h.app.world(), caster, PowerType::Maelstrom)
+            .unwrap()
+            .0;
+        if before >= cost {
+            return;
+        }
+        assert!(has_aura(h.app.world(), caster, 343725));
+        complete_recovered_native_cast(h, caster, 188196, target);
+        h.advance(20);
+        let after = power_value(h.app.world(), caster, PowerType::Maelstrom)
+            .unwrap()
+            .0;
+        assert!(
+            after > before,
+            "actual native Lightning Bolt must earn the Maelstrom used by EB; no pool injection"
+        );
+    }
+    panic!("actual Lightning casts failed to fund native EB cost{cost}");
+}
+
+fn cast_unselected_native_root(h: &mut Harness, caster: Entity, root: u32, target: Entity) {
+    if root == 117014 {
+        fund_native_elemental_blast(h, caster, target);
+    }
+    complete_recovered_native_cast(h, caster, root, target);
+    h.advance(80);
+}
+
+fn assert_unselected_native_overload_acquisition(root: u32, child: u32) {
+    const ACQUISITION_MISS_BUDGET: f64 = 1e-6;
+    let (mut h, caster) = prepare_unselected_overload_root(root);
+    let chance = super::kit_clearcasting_tests::own_aura(&h, caster, 168534)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount as f64;
+    assert!(chance > 0.0 && chance < 100.0);
+    let attempts = (ACQUISITION_MISS_BUDGET.ln() / (1.0 - chance / 100.0).ln()).ceil() as usize;
+    let target = h.npc;
+    for attempt in 1..=attempts {
+        let first = h.inbox.log.len();
+        cast_unselected_native_root(&mut h, caster, root, target);
+        let events = &h.inbox.log[first..];
+        assert!(
+            events
+                .iter()
+                .any(|event| event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(root)
+                    && event.source == Some(caster.to_bits())
+                    && event.target == Some(target.to_bits())),
+            "actual native{root} must damage its target on every trial"
+        );
+        if events.iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(child)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+        }) {
+            println!(
+                "UNSELECTED_OVERLOAD cast-only root={root} child={child} chance={chance}% attempt={attempt}/{attempts}"
+            );
+            return;
+        }
+    }
+    panic!(
+        "cast-only native{root}: {attempts} actual root hits/chance{chance}% but no{child}; miss budget={ACQUISITION_MISS_BUDGET}"
+    );
+}
+
+fn assert_unselected_native_root_without_mastery(root: u32, child: u32) {
+    let (mut h, caster) = prepare_unselected_overload_root(root);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 168534,
+    );
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    cast_unselected_native_root(&mut h, caster, root, target);
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(root)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits()))
+    );
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .all(|event| event.spell_id != Some(child) || event.source != Some(caster.to_bits()))
+    );
+}
+
+#[test]
+#[ignore = "unselected native EB cast-mechanism RED/GREEN pending"]
+fn proc_fidelity_262_native_unselected_eb_overload_cast_mechanism() {
+    assert_unselected_native_overload_acquisition(117014, 120588);
+}
+
+#[test]
+#[ignore = "unselected native EB removed-Mastery control pending"]
+fn proc_fidelity_262_native_unselected_eb_without_mastery_has_no_overload() {
+    assert_unselected_native_root_without_mastery(117014, 120588);
+}
+
+#[test]
+#[ignore = "unselected native Icefury cast-mechanism RED/GREEN pending"]
+fn proc_fidelity_262_native_unselected_icefury_overload_cast_mechanism() {
+    assert_unselected_native_overload_acquisition(210714, 219271);
+}
+
+#[test]
+#[ignore = "unselected native Icefury removed-Mastery control pending"]
+fn proc_fidelity_262_native_unselected_icefury_without_mastery_has_no_overload() {
+    assert_unselected_native_root_without_mastery(210714, 219271);
 }
 
 #[test]
