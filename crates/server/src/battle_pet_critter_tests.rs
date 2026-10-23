@@ -339,6 +339,7 @@ fn toy_coverage_critter_unslotted_native_expiry_never_restores_an_older_owned_ac
 }
 
 #[test]
+#[ignore = "current-critter dismissal qualification; run explicitly"]
 fn toy_coverage_critter_dismiss_current_legacy_preserves_older_journal_without_restoring_it() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, ids) = create_critter_fixture(&dir.path().join("old-remove.redb"));

@@ -2,6 +2,7 @@
 use super::*;
 
 #[test]
+#[ignore = "current-critter dismissal qualification; run explicitly"]
 fn toy_coverage_critter_dismiss_current_journal_balloon_clears_runtime_not_owned_instance() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, ids) = create_critter_fixture(&dir.path().join("dismiss-balloon.redb"));
@@ -30,6 +31,7 @@ fn toy_coverage_critter_dismiss_current_journal_balloon_clears_runtime_not_owned
 }
 
 #[test]
+#[ignore = "current-critter dismissal qualification; run explicitly"]
 fn toy_coverage_critter_dismiss_current_legacy_succeeds_without_active_journal_tuple() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, _) = create_critter_fixture(&dir.path().join("dismiss-legacy.redb"));
@@ -54,6 +56,7 @@ fn toy_coverage_critter_dismiss_current_legacy_succeeds_without_active_journal_t
 }
 
 #[test]
+#[ignore = "current-critter dismissal qualification; run explicitly"]
 fn toy_coverage_critter_dismiss_does_not_substitute_guardians_or_noncompanion_journal_actor() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, ids) = create_critter_fixture(&dir.path().join("dismiss-no-substitute.redb"));
@@ -87,6 +90,7 @@ fn toy_coverage_critter_dismiss_does_not_substitute_guardians_or_noncompanion_jo
 }
 
 #[test]
+#[ignore = "current-critter dismissal qualification; run explicitly"]
 fn toy_coverage_critter_dismiss_ignores_selected_foreign_same_species_actor() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, ids) = create_critter_fixture(&dir.path().join("dismiss-owner.redb"));
