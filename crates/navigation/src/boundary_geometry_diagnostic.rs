@@ -1,5 +1,6 @@
 //! Existing collision-reader evidence around measured native component boundaries.
 use super::*;
+use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 
 fn overlaps(triangle: &[Vec3; 3], min: Vec3, max: Vec3) -> bool {
@@ -39,6 +40,57 @@ fn export_geometry(
     count
 }
 
+fn trace_boundary_wmo_sources(data: &Path, wdt: u32, min: Vec3, max: Vec3, trace: &mut impl Write) {
+    use los::bake::adt::{self, ModelRef};
+    let wdt_data = std::fs::read(data.join(format!("terrain/{wdt}.wdt"))).unwrap();
+    let mut placements = BTreeMap::new();
+    let tiles = adt::wdt_tiles(&wdt_data).unwrap();
+    let a = tile_of(min);
+    let b = tile_of(max);
+    for row in a.0.min(b.0).saturating_sub(1)..=(a.0.max(b.0) + 1).min(63) {
+        for col in a.1.min(b.1).saturating_sub(1)..=(a.1.max(b.1) + 1).min(63) {
+            let tile = tiles[(col * 64 + row) as usize];
+            if tile.obj0 == 0 {
+                continue;
+            }
+            let path = data.join(format!("terrain/{}.adt", tile.obj0));
+            let (_, wmos) = adt::placements(&std::fs::read(&path).unwrap()).unwrap();
+            for placement in wmos {
+                placements.insert(placement.unique_id, (path.clone(), placement));
+            }
+        }
+    }
+    for (_, (path, placement)) in placements {
+        let ModelRef::Fdid(fdid) = &placement.model else {
+            panic!("diagnostic requires sourced FDID WMO placement");
+        };
+        let root_path = data.join(format!("models/{fdid}.wmo"));
+        let root = los::bake::wmo::WmoRoot::parse(&std::fs::read(&root_path).unwrap()).unwrap();
+        let world = placement.world_from_local();
+        let mut hits = Vec::new();
+        for &group in &root.group_fdids {
+            let group_path = data.join(format!("models/{group}.wmo"));
+            let (triangles, _) = root
+                .group_triangles(&std::fs::read(group_path).unwrap())
+                .unwrap();
+            let count = triangles
+                .iter()
+                .filter(|triangle| {
+                    let transformed = triangle.map(|p| world.transform_point3(p));
+                    overlaps(&transformed, min, max)
+                })
+                .count();
+            if count > 0 {
+                hits.push((group, count));
+            }
+        }
+        if !hits.is_empty() {
+            let selected: Vec<_> = root.doodads(placement.doodad_set).map(|d| d.fdid).collect();
+            writeln!(trace, "wmo_source obj0={} placement={placement:?} root={} render_groups_overlapping_window={hits:?} selected_set={} selected_doodad_fdids={selected:?} qualification=render-group-overlap-not-collision-identity", path.display(), root_path.display(), placement.doodad_set).unwrap();
+        }
+    }
+}
+
 #[test]
 #[ignore = "requires FOLLOWER_BOUNDARY_WINDOWS CSV and local source geometry"]
 fn authored_collision_at_native_component_boundaries() {
@@ -67,6 +119,7 @@ fn authored_collision_at_native_component_boundaries() {
             std::fs::File::create(output.join(format!("{label}-collision.csv"))).unwrap(),
         );
         writeln!(csv, "slope_degrees,m2_obstacle,x0,y0,z0,x1,y1,z1,x2,y2,z2").unwrap();
+        trace_boundary_wmo_sources(&data, wdt, min, max, &mut trace);
         let mut count = 0;
         if let Some(global) = baker.collect_global(wdt).unwrap() {
             for (_, geometry) in global {
