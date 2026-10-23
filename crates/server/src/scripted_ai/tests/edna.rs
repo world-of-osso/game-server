@@ -285,6 +285,16 @@ fn encounter_coverage_edna_native_seismic_smash_damage_and_copy_isolation() {
 }
 
 #[test]
+#[ignore = "Temporary native Seismic damage diagnostic; remove after boundary is proved"]
+fn edna_seismic_native_diagnostic_seed_sweep() {
+    for seed in 0..8 {
+        eprintln!("EDNA native Seismic diagnostic seed{seed}");
+        let _rng = crate::random::seed_scope(seed);
+        encounter_coverage_edna_native_seismic_smash_damage_and_copy_isolation();
+    }
+}
+
+#[test]
 #[ignore = "EDNA combat RED follows authentic intro GREEN"]
 fn encounter_coverage_edna_first_spike_after_authentic_unlock_normal_projected205() {
     for difficulty in [1, 205] {
