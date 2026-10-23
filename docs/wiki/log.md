@@ -1,3 +1,29 @@
+## 2026-10-23 — Native Elemental launch resources qualified
+
+[Launch Maelstrom](investigations/follower-data.md#lightning-launch-maelstrom-children--2026-10-22): native10GREEN+nonzero Mage1GREEN, retained root/SK7GREEN. StatsPlugin70 ST/3T699.8/1026.733DPS; complete printed samples recovered after optional-directory export failure, not2PASS. No causal/parity or fullPoM proc ownership claim.
+
+## 2026-10-22 — Zero-valued native modifier charge RED
+
+[Resource qualification](investigations/follower-data.md#lightning-launch-maelstrom-children--2026-10-22):8 resource controls PASS,2 SK controls FAIL. Generic TC zero-valued-modifier charge rule approved and implemented; native nonzero Mage control added, postmerge11-case GREEN pending.
+
+## 2026-10-22 — Lightning native launch resource RED
+
+[Four paths](investigations/follower-data.md#lightning-launch-maelstrom-children--2026-10-22): actual pools/receipts 4FAIL/4controlsPASS. Controller BP0 and native energize children implemented at launch; bounded parent charge ownership, GREEN pending.
+## 2026-10-23 — Ground discovery I/O
+
+[Shared discovery helper](systems/ground-assets.md#discovery-only-payload-io--2026-10-23):51.848GB discarded reads avoided across normal/missing modes; byte-identical real outputs,275map selections and extraction missing order. Sparse48MiB fixture50,374,741-byteRED→fiveGREEN; unchanged native vehicle23.559sPASS. Shared suites10PASS/one existing opt-in skip; explicit91-case corpus/182CLIs preserves all observations, including28raw failures. Instrumented busy-host255.514→55.113s is not whole/quiet proof.
+
+## 2026-10-22 — Per-key prepared-input publication
+
+[Per-key init](investigations/server-test-performance.md#per-key-prepared-input-initialization-redgreen-and-native-qualification): explicit30sserializationRED→7951a2d33nativeGREEN0.003339s; eight same-key readers/other-keyprogress/counts1/1/Appisolation/warmreuse. Same514sourcefive-native169.415→73.051s; fullaffectedAI542PASS/17ignored, single-moduleRSS2.176GiB plus heavy reclaim/swap, notwholebudget proof. pk1027accepted/queued. Backup wall lever and small toy catalog slice declined; nextwhole-suite top-test attribution pending.
+
+## 2026-10-22 — Whole-suite overlap and fixture-cost bounds
+
+[Performance](investigations/server-test-performance.md#fixed-source-whole-suite-overlap-and-costs): fixed295e96b4c whole5880enabled/229ignored,1021.809s/6.72GiBRSS/1.065GiBswap; no missing/extra,900s/no-swap still open. Toys/followers start517s/237s earlier but total work binds;3slot splitting no win, conservative4slot+split model938s before new setup. Meteor isolated frozena2FAIL/canonicalPASS is kit publication drift. Concurrent source-specific drop probe128/128GREEN; target pin retained after pruning incident. No new optimization/quiet proof claimed.
+## 2026-10-23 — Hit positivity independent of factions
+
+[Hit classification](systems/auras.md#hit-positivity-independent-of-factions--2026-10-23): test-only6d5d7026a genuine1PASS/1FAIL10.43s, native16166 harmful proc absent against attackable neutral faction7 after actual damage; friendly2061→36483 control passes. Spell_cast now uses TC damage/heal/landed-effect positivity, not faction hostility; GREEN pending, no proc import or parity certification.
+
 ## 2026-10-23 — Binary probe withdraws inherited-run-target oracle
 
 Pinned SimC76f8118 selects timed adds on a run row but its child Mortal Strike still waits for main health<80% (first60.056s on main, not6s on adds). `player.cpp2467–2476` only changes active lists. Earlier24/24GREEN included a wrong inherited-child oracle; packet withdrawn before landing per lead. Corrected23PASS/1 genuineRED at2d6a66259 →24/24GREEN atad720fc3c (28.61s compile/0compiler warnings/0ignored): shared target inheritance state deleted; ordinary target min/max and non-returning runs retained. [Proof ledger](../handoffs/shared-run-target-proof-ledger.md).
@@ -4155,3 +4181,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 - [Lava crit ownership](investigations/follower-data.md#lava-caster-owned-flame-shock-crit-rule): approved own/foreign native285452/2854662PASS2RED9.13s. Shared predicate now requires actual aura caster and registers both payloads; no other crit/modifier/resource edits. GREEN pending on lv991-based branch.
 
 - [Lava crit ownership](investigations/follower-data.md#lava-caster-owned-flame-shock-crit-rule):4GREEN13.43s/zero warnings after2nativeRED; samebinary retained root2GREEN10.03s +actualStatsPlugin70samples2PASS12.42s. Observed285466crits5/5; cases enabled. No other crit edits or causal-DPS/parity claim.
+
+- 2026-10-23: Demonology266 reference reproduction and recursive owner/Felguard/summon census; private canonical-copy missing guardian publications recorded in [[demonology-dps-parity]]. Native baseline and parity remain open.

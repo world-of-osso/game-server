@@ -271,10 +271,12 @@ pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .filter(|aura| {
             aura.charges > 0
                 && !crate::spell_cast::scripts::preserve_unadmitted_proc(spell, aura)
-                && aura
-                    .effects
-                    .iter()
-                    .any(|effect| is_spell_mod(effect.aura_type) && affects(aura, effect, spell))
+                && aura.effects.iter().any(|effect| {
+                    // TC Player.cpp22820: zero-valued mods never enter m_appliedMods.
+                    effect.amount != 0.0
+                        && is_spell_mod(effect.aura_type)
+                        && affects(aura, effect, spell)
+                })
         })
         .map(|aura| aura.instance_id)
         .collect();
