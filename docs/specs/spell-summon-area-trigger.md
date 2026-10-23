@@ -10,6 +10,12 @@ Server effects 28 and 179 use authentic spell/world records. Source: `crates/ser
 - [ ] Missing creature and SummonProperties are reported rather than invented.
 - [x] Missing matrix trigger bindings do not acquire fictional actions; five available matrix area roots produce lifecycle-only entities.
 
+## Source target73 caster-radius destinations
+
+- [ ] Target73 uses the caster as destination reference, randomizes direction and retains authored CalcRadius Max rather than sampling target72's radial disk. TargetB selects its own radius; an absent B radius inherits A's entry and target identity. Clamp distance upward to the caster's sourced combat reach.
+- [ ] Destination-area recipients and emitted positions share one sample per processed effect group. Caster ground/orientation and direct collision authority apply; absent collision/ground refuses, and FORCE_DEST_LOCATION retains the named MAX_HEIGHT gap. No Detour parity claim.
+- [ ] Ruthers82467 requires actual learning/UseToy, source61667 model/owner/map/radius5, natural30s expiry and1800000ms recovery/reuse before new admission is qualified. Generic73 does not implement Wikky86594 forage/presents/Pandaria or Carp131814 kick interaction; preserve those named action gaps.
+
 ## Source target74 destinations
 
 - [x] Source target74 centers its destination on the explicit object, independently of caster/current-critter selection. A missing explicit object or one in another map does not create a substituted destination at the selector boundary.
