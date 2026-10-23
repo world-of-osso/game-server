@@ -1303,6 +1303,7 @@ fn damage_source_amount(
             * creature_type_damage_multiplier(world, bonus_caster, target, ctx.spell)
             * mechanic_damage_multiplier(world, bonus_caster, ctx.spell, effect)
             * super::scripts::combo_strikes_multiplier(world, bonus_caster, ctx.spell.id)
+            * super::scripts::giantkiller_multiplier(world, ctx.caster, target, ctx.spell)
     };
     let bonus_ctx = EffectCtx {
         caster: bonus_caster,
