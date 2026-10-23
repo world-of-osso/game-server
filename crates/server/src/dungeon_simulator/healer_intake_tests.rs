@@ -166,6 +166,8 @@ fn healer_benchmark_raw_spell_replay_applies_recipient_reduction_and_absorb_once
             raw: 200.0,
             kind: HitKind::Spell {
                 spell_id: 133,
+                depth: 0,
+                bonus_source_guid: None,
                 effect_index: None,
                 periodic: false,
                 crit: false,

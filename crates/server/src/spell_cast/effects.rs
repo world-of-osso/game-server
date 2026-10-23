@@ -1315,6 +1315,8 @@ pub(crate) fn replay_healer_hit(
     use crate::dungeon_simulator::healer_intake::HitKind;
     let HitKind::Spell {
         spell_id,
+        depth,
+        bonus_source_guid,
         effect_index,
         periodic,
         crit,
@@ -1344,10 +1346,23 @@ pub(crate) fn replay_healer_hit(
                 .ok_or_else(|| format!("NATIVE_SPELL_EFFECT_ABSENT:{spell_id}:{index}"))
         })
         .transpose()?;
+    let bonus_caster = if let Some(guid) = bonus_source_guid {
+        world
+            .get_resource::<crate::dungeon_simulator::healer_intake::Capture>()
+            .and_then(|capture| {
+                capture
+                    .sources
+                    .iter()
+                    .find_map(|(&unit, &(candidate, _))| (candidate == guid).then_some(unit))
+            })
+            .ok_or_else(|| format!("NATIVE_BONUS_CASTER_ABSENT:{guid}"))?
+    } else {
+        source
+    };
     let ctx = EffectCtx {
         caster: source,
         spell: &spell,
-        depth: 0,
+        depth,
         dest: None,
         chain_multiplier: 1.0,
     };
@@ -1357,7 +1372,7 @@ pub(crate) fn replay_healer_hit(
         periodic,
         resolved_source,
         effect,
-        bonus_caster: source,
+        bonus_caster,
     };
     deal_source_damage_and_report(world, &ctx, target, damage, Some(hit.raw));
     Ok(())
@@ -1393,6 +1408,13 @@ fn deal_source_damage_and_report(
     let source_amount =
         recorded_source.unwrap_or_else(|| damage_source_amount(world, ctx, target, &damage));
     #[cfg(test)]
+    let bonus_source_guid = crate::dungeon_simulator::healer_intake::spell_bonus_source(
+        world,
+        ctx.caster,
+        damage.bonus_caster,
+        target,
+    );
+    #[cfg(test)]
     crate::dungeon_simulator::healer_intake::record(
         world,
         ctx.caster,
@@ -1401,6 +1423,8 @@ fn deal_source_damage_and_report(
         source_amount,
         crate::dungeon_simulator::healer_intake::HitKind::Spell {
             spell_id: ctx.spell.id,
+            depth: ctx.depth,
+            bonus_source_guid,
             effect_index: effect.map(|effect| u32::from(effect.index)),
             periodic,
             crit,

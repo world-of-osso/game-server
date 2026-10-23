@@ -14,6 +14,8 @@ pub(crate) enum HitKind {
     },
     Spell {
         spell_id: u32,
+        depth: u8,
+        bonus_source_guid: Option<u32>,
         effect_index: Option<u32>,
         periodic: bool,
         crit: bool,
@@ -102,6 +104,29 @@ pub(crate) fn record(
         raw,
         kind,
     });
+}
+
+pub(crate) fn spell_bonus_source(
+    world: &mut World,
+    source: Entity,
+    bonus_caster: Entity,
+    target: Entity,
+) -> Option<u32> {
+    if source == bonus_caster {
+        return None;
+    }
+    let mut capture = world.get_resource_mut::<Capture>()?;
+    if !capture.members.contains(&target) || !capture.sources.contains_key(&source) {
+        return None;
+    }
+    if let Some(&(guid, _)) = capture.sources.get(&bonus_caster) {
+        return Some(guid);
+    }
+    let gap = "DAMAGE_SHIELD_BONUS_CASTER_IDENTITY_UNAVAILABLE".to_string();
+    if !capture.gaps.contains(&gap) {
+        capture.gaps.push(gap);
+    }
+    None
 }
 
 /// Called only for points the native absorb consumer actually removed.
