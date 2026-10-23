@@ -266,13 +266,20 @@ fn darkflame_drop_follower_sim_traverses_only_after_upper_route_stage() {
 fn darkflame_drop_idle_follower_descends_when_owner_is_directly_below() {
     let (mut h, follower) = create_native_follower_fixture();
     // Actual party-slot branch: slot2/4 places its settled follow point at UPPER.
-    let upper_owner = Vec3::new(536.1353, UPPER.y, 113.8637);
+    let upper_owner = Vec3::new(UPPER.x, UPPER.y, 114.0);
     let lower_owner = Vec3::new(upper_owner.x, LANDING.y, upper_owner.z);
     h.app
         .world_mut()
         .entity_mut(follower)
         .insert(crate::creature_ai::PartyFollowSlot::new(2, 4));
-    *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position(upper_owner);
+    h.app.world_mut().entity_mut(h.caster).insert((
+        position(upper_owner),
+        shared::components::Rotation {
+            x: 0.0,
+            y: -std::f32::consts::PI / 12.0,
+            z: 0.0,
+        },
+    ));
     for owner in [upper_owner, lower_owner] {
         let probe = h
             .app
@@ -290,6 +297,10 @@ fn darkflame_drop_idle_follower_descends_when_owner_is_directly_below() {
     let route = native
         .complete_path(UPPER, lower_follow_point)
         .expect("approved native route to the lower party follow point must exist");
+    let owner_upper_surface = native
+        .complete_path(upper_owner, upper_owner)
+        .expect("upper owner must fit the unchanged native body profile");
+    assert!(owner_upper_surface.last().unwrap().distance(upper_owner) < ::navigation::CELL_HEIGHT);
     h.advance(8);
     let upper = point(*h.app.world().get::<Position>(follower).unwrap());
     assert!(
