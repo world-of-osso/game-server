@@ -171,6 +171,19 @@ pub(super) fn report(intake: &Intake, bytes: &[u8], directory: &Path) -> Result<
     Ok(report)
 }
 
+fn assert_native_healers(report: &Value) {
+    for spec in [105, 257] {
+        assert!(
+            report["specs"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|row| row["spec"] == spec && row["status"] == "native"),
+            "native spec{spec} blocked: {report}"
+        );
+    }
+}
+
 #[test]
 #[ignore = "explicit native Stockade capture plus two native healer replays"]
 fn healer_benchmark_capture_stockade_and_report() {
@@ -196,16 +209,7 @@ fn healer_benchmark_capture_stockade_and_report() {
     std::fs::write(directory.join("stockade-seed1.intake.json"), &bytes).unwrap();
     let report = report(&intake, &bytes, &directory).unwrap();
     println!("HEALER_DUNGEON_REPORT {} {}", directory.display(), report);
-    for spec in [105, 257] {
-        assert!(
-            report["specs"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|row| row["spec"] == spec && row["status"] == "native"),
-            "native spec{spec} blocked: {report}"
-        );
-    }
+    assert_native_healers(&report);
 }
 
 #[test]
@@ -221,4 +225,5 @@ fn healer_benchmark_report_recorded_stockade() {
     let intake: Intake = serde_json::from_slice(&bytes).unwrap();
     let result = report(&intake, &bytes, &output_directory()).unwrap();
     println!("HEALER_DUNGEON_REPORT {result}");
+    assert_native_healers(&result);
 }
