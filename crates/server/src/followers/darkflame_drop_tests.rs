@@ -177,10 +177,26 @@ fn darkflame_drop_follower_sim_traverses_only_after_upper_route_stage() {
         &mut h.app,
         crate::navigation::Navigation::new(&navigation_root()),
     );
-    h.app
-        .world_mut()
-        .entity_mut(follower)
-        .insert((position(UPPER), InMap::continent(MAP)));
+    let (speed_walk, speed_run) = {
+        let template = &h
+            .app
+            .world()
+            .resource::<crate::world_data::WorldData>()
+            .templates[&209057];
+        (template.speed_walk, template.speed_run)
+    };
+    h.app.world_mut().entity_mut(follower).insert((
+        position(UPPER),
+        InMap::continent(MAP),
+        crate::creature_ai::SpawnPoint {
+            x: UPPER.x,
+            y: UPPER.y,
+            z: UPPER.z,
+            wander_distance: 0.0,
+            speed_walk,
+            speed_run,
+        },
+    ));
     h.app
         .world_mut()
         .entity_mut(h.caster)
