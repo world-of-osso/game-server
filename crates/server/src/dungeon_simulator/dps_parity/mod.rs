@@ -1,6 +1,7 @@
 //! Native 300s dummy qualification. This measures the existing kit, not a new rotation.
 mod engagement_tests;
 mod havoc_tests;
+mod hero_tree_tests;
 mod inputs;
 mod pet_child_tests;
 mod pet_stats_tests;
