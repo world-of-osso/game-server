@@ -11,6 +11,10 @@ const RECOVERY_MS: u32 = 1_800_000;
 fn fixture(path: &std::path::Path) -> (Harness, u64) {
     let (mut h, character) = setup(path);
     place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+    h.app.insert_resource(
+        crate::line_of_sight::LineOfSight::load(&crate::ground::ground_data_dir().join("los"))
+            .unwrap(),
+    );
     let conn = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -122,9 +126,11 @@ fn toy_coverage_target73_ruthers_real_use_actor_expiry_and_natural_recovery_reus
 fn toy_coverage_target73_ruthers_missing_collision_refuses_without_actor_or_recovery() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, _) = fixture(&dir.path().join("ruthers-collision.redb"));
-    h.app
+    let collision = h
+        .app
         .world_mut()
-        .remove_resource::<crate::line_of_sight::LineOfSight>();
+        .remove_resource::<crate::line_of_sight::LineOfSight>()
+        .expect("real collision fixture authority");
     let result = activate(&mut h, RUTHERS_TOY);
     assert!(
         result.iter().any(|result| result
@@ -135,10 +141,20 @@ fn toy_coverage_target73_ruthers_missing_collision_refuses_without_actor_or_reco
     );
     assert!(ruthers(&mut h).is_empty());
     assert!(!h.inbox.go.iter().any(|go| go.spell_id == RUTHERS_SPELL));
+    println!(
+        "Ruthers rejected cast cooldown receipts: {:?}",
+        h.inbox.cooldowns
+    );
     assert!(
         !h.inbox
             .cooldowns
             .iter()
-            .any(|cd| cd.spell_id == RUTHERS_SPELL)
+            .any(|cd| cd.spell_id == RUTHERS_SPELL && !cd.is_gcd && cd.duration_ms > 0)
     );
+    // A cast-start GCD is not the thirty-minute item recovery. Wait it out,
+    // restore actual collision authority and prove a real retry is not OnCooldown.
+    h.advance(40);
+    h.app.insert_resource(collision);
+    assert_eq!(activate(&mut h, RUTHERS_TOY)[0].error, None);
+    assert_eq!(ruthers(&mut h).len(), 1);
 }
