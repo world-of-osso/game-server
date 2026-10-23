@@ -282,6 +282,45 @@ fn dps_parity_single_spell_tiger_palm_records_real_factors() {
 }
 
 #[test]
+#[ignore = "actual Arms Player reference fixture; requires shared Player explicit-target dispatch"]
+fn dps_parity_player_single_spell_mortal_strike_records_real_factors() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare(71, 1).expect("actual Arms reference; use DPS_PARITY_ACTOR=player");
+    assert!(
+        run.app
+            .world()
+            .get::<shared::components::Player>(run.actor)
+            .is_some(),
+        "Arms uses a real Player, not an invented follower profile"
+    );
+    let receipt = capture_cast(
+        &mut run,
+        &SpellProbe {
+            spec: 71,
+            spell: 12294,
+            damage_spell: 12294,
+            action: "mortal_strike",
+            ticks: 1,
+        },
+    )
+    .expect("actual shared-dispatch Mortal Strike");
+    let output =
+        std::path::PathBuf::from(std::env::var_os("DPS_SPELL_OUTPUT").expect("DPS_SPELL_OUTPUT"))
+            .with_file_name("71.mortal_strike.player.json");
+    std::fs::write(output, serde_json::to_vec_pretty(&receipt).unwrap()).unwrap();
+    assert_eq!(receipt["casts"], 1);
+    assert_eq!(receipt["captured_hits"], 1);
+    let formula = receipt["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 12294)
+        .expect("actual Mortal Strike formula");
+    assert!(formula["factors"]["a_power"].as_f64().unwrap() > 0.0);
+    assert!(formula["factors"]["a_mod"].as_f64().unwrap() > 0.0);
+}
+
+#[test]
 #[ignore = "real WW follower/reference280 policy; native armor-only receipt"]
 fn dps_parity_single_spell_follower_armor_penetration() {
     let _seed = crate::random::seed_scope(70_448);
