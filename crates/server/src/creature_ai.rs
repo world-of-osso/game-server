@@ -232,6 +232,23 @@ impl FollowOwner {
     }
 }
 
+/// FOLLOWER_PARTY_FOLLOW_SLOTS: project spacing policy, not Retail-authored angles.
+/// TC a352b1fa CreatureGroups.cpp:291–295 passes each member's angle/distance
+/// to MoveFormation. Keep that member identity through combat/regroup transitions.
+#[derive(Component, Clone, Copy)]
+pub(crate) struct PartyFollowSlot(f32);
+
+impl PartyFollowSlot {
+    pub(crate) fn new(slot: usize, member_count: usize) -> Self {
+        let fraction = if member_count > 1 {
+            slot as f32 / (member_count - 1) as f32
+        } else {
+            0.5
+        };
+        Self(PET_FOLLOW_ANGLE + (2.0 * fraction - 1.0) * PET_FOLLOW_ANGLE_TOLERANCE)
+    }
+}
+
 /// High-level creature behavior state. Overrides wander/waypoint when non-idle.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Default)]
 pub enum CreatureState {
@@ -1125,6 +1142,7 @@ type Follower = (
     Bearing,
     Option<&'static crate::followers::Follower>,
     Option<&'static crate::followers::FollowerReach>,
+    Option<&'static PartyFollowSlot>,
 );
 
 /// Where an owner stands and how fast it runs.
@@ -1192,8 +1210,19 @@ fn follow_owner_system(
             ))
         })
         .collect();
-    for (entity, mut pos, mut follow, health, cast, mods, map, bearing, companion, companion_pet) in
-        &mut units.p0()
+    for (
+        entity,
+        mut pos,
+        mut follow,
+        health,
+        cast,
+        mods,
+        map,
+        bearing,
+        companion,
+        companion_pet,
+        slot,
+    ) in &mut units.p0()
     {
         let Some(leader) = leaders.get(&follow.owner) else {
             continue;
@@ -1210,12 +1239,20 @@ fn follow_owner_system(
         }
         let reach = 2.0 * FOLLOW_COMBAT_REACH + PET_FOLLOW_DIST;
         let gap = (leader.position.x - pos.x).hypot(leader.position.z - pos.z);
-        if !follow.moving && gap <= reach + FOLLOW_RANGE_TOLERANCE {
+        let point = slot.map_or_else(
+            || follow_point(&leader, *pos, reach),
+            |slot| follow_point_at_angle(&leader, slot.0, reach),
+        );
+        let within_range = if slot.is_some() {
+            (point.0 - pos.x).hypot(point.1 - pos.z) <= FOLLOW_RANGE_TOLERANCE
+        } else {
+            gap <= reach + FOLLOW_RANGE_TOLERANCE
+        };
+        if !follow.moving && within_range {
             let here = *pos;
             queues.apply(entity, &mut pos, bearing, Stride::still(here));
             continue;
         }
-        let point = follow_point(&leader, *pos, reach);
         let run_speed = leader.speed * speed_mod * catch_up_factor(gap);
         let movement = if companion.is_some() || companion_pet.is_some() {
             let request = map.map(|map| MoveRequest {
@@ -1322,7 +1359,11 @@ fn follow_point(leader: &Leader, follower: Position, reach: f32) -> (f32, f32) {
     let off = (relative - PET_FOLLOW_ANGLE + PI).rem_euclid(TAU) - PI;
     let angle =
         PET_FOLLOW_ANGLE + off.clamp(-PET_FOLLOW_ANGLE_TOLERANCE, PET_FOLLOW_ANGLE_TOLERANCE);
-    let absolute = orientation + angle;
+    follow_point_at_angle(leader, angle, reach)
+}
+
+fn follow_point_at_angle(leader: &Leader, angle: f32, reach: f32) -> (f32, f32) {
+    let absolute = leader.rotation_y - std::f32::consts::FRAC_PI_2 + angle;
     (
         leader.position.x + reach * absolute.cos(),
         leader.position.z - reach * absolute.sin(),

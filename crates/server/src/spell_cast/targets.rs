@@ -21,7 +21,7 @@
 //! actual summoner), and 28 DEST_DYNOBJ_ENEMY (the units a persistent
 //! area aura affects, `spell_cast::area_aura`). Target56 selects the caster's group;
 //!118 UNIT_TARGET_ALLY_OR_RAID selects the group around a grouped explicit ally,
-//! otherwise just that ally. Target57 selects an explicit ally;120 selects the caster.
+//! otherwise just that ally. Target57 selects an explicit raid member;120 selects the caster.
 //! Every other ID is unsupported and fails the cast.
 
 mod ordered_destination;
@@ -69,6 +69,8 @@ fn implicit_target_allowed(world: &World, caster: Entity, spell: &SpellInfo, uni
 pub enum Relation {
     Enemy,
     Ally,
+    Raid,
+    Minipet,
     Any,
 }
 
@@ -97,6 +99,8 @@ enum Selector {
     CasterRandom,
     ///86/91: random direction;86 samples the radius span,91 keeps the radius.
     DestRandom,
+    ///74: explicit-object-centered CalcRadius(nullptr), not the current critter.
+    DestTargetRandom,
     /// Destination moved forward (78) or backward (79) by this slot's DB2 radius.
     DestOffset(f32),
     /// 55 DEST_CASTER_FRONT_LEAP: radius of this target slot, collision checked on execution.
@@ -121,6 +125,8 @@ enum Selector {
     Summoner,
     /// The caster's summoned pet.
     Pet,
+    ///150: current Companion-title minion, independent of explicit selection.
+    Critter,
     /// Area center = the caster's position moved `angle` (radians from its facing) by
     /// the effect radius, else `DEFAULT_TOTEM_DISTANCE`.
     CasterOffset(f32),
@@ -146,6 +152,8 @@ fn selector(id: u32) -> Option<Selector> {
         1 | 120 => Selector::Caster,
         56 => Selector::RaidArea,
         5 => Selector::Pet,
+        90 => Selector::Explicit(Minipet),
+        150 => Selector::Critter,
         119 => Selector::RaidCorpses,
         121 => Selector::ExplicitCorpseAlly,
         32 | 44 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
@@ -154,7 +162,8 @@ fn selector(id: u32) -> Option<Selector> {
         49 => Selector::CasterOffset(-std::f32::consts::FRAC_PI_2),
         50 => Selector::CasterOffset(std::f32::consts::FRAC_PI_2),
         6 => Selector::Explicit(Enemy),
-        21 | 57 => Selector::Explicit(Ally),
+        21 => Selector::Explicit(Ally),
+        57 => Selector::Explicit(Raid),
         118 => Selector::AllyOrRaid,
         25 => Selector::Explicit(Any),
         18 | 22 | 62 => Selector::CenterCaster,
@@ -163,6 +172,7 @@ fn selector(id: u32) -> Option<Selector> {
         78 => Selector::DestOffset(0.0),
         79 => Selector::DestOffset(std::f32::consts::PI),
         72 => Selector::CasterRandom,
+        74 => Selector::DestTargetRandom,
         86 | 91 => Selector::DestRandom,
         55 => Selector::ForwardLeap,
         53 => Selector::CenterExplicit(Enemy),
@@ -217,7 +227,7 @@ pub fn explicit_requirement<'a>(
         .find_map(|id| match selector(id)? {
             Selector::Explicit(relation) | Selector::CenterExplicit(relation) => Some(relation),
             Selector::AllyOrRaid | Selector::ExplicitCorpseAlly => Some(Relation::Ally),
-            Selector::DestTargetOffset(_) => Some(Relation::Any),
+            Selector::DestTargetOffset(_) | Selector::DestTargetRandom => Some(Relation::Any),
             _ => None,
         })
 }
@@ -235,6 +245,7 @@ pub(crate) fn provides_non_caster_unit_target(effect: &SpellEffect) -> bool {
                     | Selector::ChannelTarget
                     | Selector::Summoner
                     | Selector::Pet
+                    | Selector::Critter
                     | Selector::AreaAroundSrc(_)
                     | Selector::AreaAroundDest(_)
                     | Selector::DynObj(_)
@@ -308,9 +319,16 @@ pub fn is_friendly(world: &World, caster: Entity, target: Entity) -> bool {
 }
 
 pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation: Relation) -> bool {
+    if relation == Relation::Minipet {
+        return super::summon::current_critter(world, caster) == Some(target);
+    }
     let arena = crate::pvp::arena_combat::relation(world, caster, target);
     if caster == target {
         return relation != Relation::Enemy;
+    }
+    // TC CheckExplicitTarget: a raid unit must also be a valid assist target.
+    if relation == Relation::Raid && !shares_raid(world, caster, target) {
+        return false;
     }
     if !crate::auras::invisibility::can_detect(world, caster, target) {
         return false;
@@ -424,11 +442,37 @@ pub fn select_targets(
     max_targets: u32,
     ignore_relation: bool,
 ) -> Result<Vec<Entity>, u32> {
+    select_targets_and_destination(
+        world,
+        caster,
+        explicit,
+        spell,
+        effect,
+        max_targets,
+        ignore_relation,
+    )
+    .map(|(units, _)| units)
+}
+
+/// Return the sampled ordered destination with its recipients so a cast cannot
+/// re-roll74 after selecting an area. TC Spell.cpp741–800 shares effect groups.
+pub(super) fn select_targets_and_destination(
+    world: &mut World,
+    caster: Entity,
+    explicit: Option<Entity>,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    max_targets: u32,
+    ignore_relation: bool,
+) -> Result<(Vec<Entity>, Option<Dest>), u32> {
     let caster_pos = position(world, caster).unwrap_or_default();
     let mut center = None;
     let mut units = Vec::new();
     let mut selected_any = false;
-    let ordered = effect.implicit_targets.contains(&148);
+    let ordered = effect
+        .implicit_targets
+        .iter()
+        .any(|&id| matches!(id, 74 | 148));
     let mut destination = spell.cast_destination.map(|point| Dest {
         position: Vec3::from_array(point),
         orientation: orientation(world, caster),
@@ -453,7 +497,10 @@ pub fn select_targets(
             continue;
         }
         match selector {
-            Selector::None | Selector::ForwardLeap | Selector::DestTowardsCaster => {}
+            Selector::None
+            | Selector::ForwardLeap
+            | Selector::DestTowardsCaster
+            | Selector::DestTargetRandom => {}
             Selector::ExistingDest => {
                 // TC Spell::InitExplicitTargets:666–678 initializes an absent
                 // required destination from the supplied object target, else self.
@@ -468,7 +515,8 @@ pub fn select_targets(
             Selector::Explicit(relation) => {
                 selected_any = true;
                 if let Some(target) = explicit.filter(|&target| {
-                    ignore_relation || relation_matches(world, caster, target, relation)
+                    let bypass_relation = ignore_relation && relation != Relation::Minipet;
+                    bypass_relation || relation_matches(world, caster, target, relation)
                 }) {
                     units.push(target);
                     units.extend(chain_targets(
@@ -572,6 +620,10 @@ pub fn select_targets(
                 selected_any = true;
                 units.extend(crate::hunter_pet::summoned_pet(world, caster));
             }
+            Selector::Critter => {
+                selected_any = true;
+                units.extend(super::summon::current_critter(world, caster));
+            }
             Selector::CasterOffset(angle) => {
                 center = caster_offset(world, caster, angle, radius(effect, slot));
             }
@@ -668,7 +720,7 @@ pub fn select_targets(
     }
     units = limit_spell_targets(spell, caster, units, 0);
     units.dedup();
-    Ok(units)
+    Ok((units, destination))
 }
 
 /// TC a352b1fa SelectImplicitAreaTargets passes center to AddUnitTarget;
@@ -1200,14 +1252,20 @@ fn clamp_player_front_distance(world: &World, caster: Entity, target: u32, dista
     distance.max(reach)
 }
 
-/// TC a352b1fa SpellInfo.cpp CalcRadius:72/86 sample (Max-Min)*sqrt(rand_norm());
+/// TC a352b1fa SpellInfo.cpp CalcRadius:72/74/86 sample (Max-Min)*sqrt(rand_norm());
 ///91 only randomizes direction. Unlike GetRandomPoint, CalcRadius does not add Min.
 fn random_destination(point: Vec3, effect: &SpellEffect, slot: usize) -> Vec3 {
     let mut rng = rand::thread_rng();
     let angle = rand::Rng::gen_range(&mut rng, 0.0..std::f32::consts::TAU);
     let source_slot = radius_slot(effect, slot);
-    let maximum = radius(effect, source_slot);
-    let distance = if matches!(effect.implicit_targets[source_slot], 72 | 86) {
+    //74 calls CalcRadius(nullptr): use authored Max, without caster level/mods.
+    let maximum = if effect.implicit_targets[slot] == 74 {
+        effect.radius[source_slot].map_or(0.0, |entry| entry.radius_max)
+    } else {
+        radius(effect, source_slot)
+    };
+    // An absent B radius inherits A's target identity as well as its entry.
+    let distance = if matches!(effect.implicit_targets[source_slot], 72 | 74 | 86) {
         let minimum = effect.radius[source_slot].map_or(0.0, |entry| entry.radius_min);
         let area_fraction = rand::Rng::gen_range(&mut rng, 0.0_f32..1.0);
         (maximum - minimum) * area_fraction.sqrt()
@@ -1314,6 +1372,10 @@ fn effect_dest_slot(
             .or_else(|| position(world, explicit.unwrap_or(caster))),
         Selector::CasterRandom => {
             position(world, caster).map(|point| random_destination(point, effect, slot))
+        }
+        Selector::DestTargetRandom => {
+            let target = explicit.filter(|target| same_map(world, caster, *target))?;
+            position(world, target).map(|point| random_destination(point, effect, slot))
         }
         Selector::DestRandom => {
             let origin = dest

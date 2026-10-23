@@ -28,6 +28,10 @@ mod kit_interrupt;
 mod kit_overrides;
 
 #[cfg(test)]
+mod fire_efficiency_tests;
+#[cfg(test)]
+mod formation_tests;
+#[cfg(test)]
 mod kit_proc_fidelity_tests;
 #[cfg(test)]
 mod kit_rotation_fidelity_tests;
@@ -82,6 +86,12 @@ mod tank_frontal;
 mod tank_planner;
 #[cfg(test)]
 mod tank_planner_tests;
+mod utility;
+#[cfg(test)]
+mod utility_buff_tests;
+mod utility_interrupt;
+#[cfg(test)]
+mod utility_policy_tests;
 
 use bevy::prelude::*;
 use shared::group::GroupRole;
@@ -207,6 +217,8 @@ mod catalog_tests;
 #[cfg(test)]
 mod cc_tests;
 #[cfg(test)]
+mod combat_refs_tests;
+#[cfg(test)]
 mod control_cast_stop_tests;
 #[cfg(test)]
 mod defensive_tests;
@@ -239,7 +251,7 @@ mod kit_swiftmend_consumption_tests;
 #[cfg(test)]
 mod kit_swiftmend_tests;
 #[cfg(test)]
-mod kit_tests;
+pub(crate) mod kit_tests;
 #[cfg(test)]
 mod kit_tranquil_mind_tests;
 #[cfg(test)]
@@ -256,6 +268,8 @@ mod passive_stats_tests;
 mod pet_tests;
 #[cfg(test)]
 mod profile_behavior_tests;
+#[cfg(test)]
+mod pyroclasm_tests;
 #[cfg(test)]
 mod rotation_defense_tests;
 #[cfg(test)]

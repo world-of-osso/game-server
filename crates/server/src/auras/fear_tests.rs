@@ -412,7 +412,7 @@ fn kobold_data() -> WorldData {
     templates.retain(|entry, _| *entry == KOBOLD_VERMIN);
     crate::world_data::load_template_models(&conn, &mut templates);
     WorldData {
-        templates,
+        templates: templates.into(),
         ..Default::default()
     }
 }

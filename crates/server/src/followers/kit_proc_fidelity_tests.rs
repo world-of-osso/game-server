@@ -49,6 +49,34 @@ pub(super) fn complete_cast(h: &mut Harness, caster: Entity, spell: u32, target:
 }
 
 #[test]
+fn dps_parity_fists_of_fury_simc_tick_cadence_preserves_five_native_damage_hits() {
+    let (mut h, caster) = prepare(227734);
+    let target = h.npc;
+    // Earn actual native Chi using Tiger Palm; no pool/cooldown/clock overrides.
+    complete_cast(&mut h, caster, 100780, target);
+    complete_cast(&mut h, caster, 100780, target);
+    let first = h.inbox.log.len();
+    complete_cast(&mut h, caster, 113656, target);
+    h.advance(200);
+    // Native melee defenses can turn a child tick into a Miss/Dodge. Count
+    // every resolved117418 tick without changing those source defense rolls.
+    let tick_outcomes: Vec<_> = h.inbox.log[first..]
+        .iter()
+        .filter(|event| {
+            matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(117418)
+        })
+        .collect();
+    assert_eq!(
+        tick_outcomes.len(),
+        5,
+        "FISTS_OF_FURY_SIMC_TICK_CADENCE: one native4s channel, tick0 then1s ticks, including legal defenses; not one hit each166ms dummy heartbeat: {tick_outcomes:?}"
+    );
+}
+
+#[test]
 fn proc_fidelity_1467_native_dragonrage_azure_grants_and_spends_essence_burst() {
     let (mut h, caster) = prepare(215240);
     let target = h.npc;
@@ -165,6 +193,293 @@ fn proc_fidelity_63_native_fire_blast_crit_grants_heating_up_then_hot_streak() {
     assert!(
         !has_aura(h.app.world(), caster, 48108),
         "instant Pyroblast must spend Hot Streak at cast, not missile impact"
+    );
+}
+
+#[test]
+fn proc_fidelity_63_feel_the_burn_native_fire_blast_grants_mastery() {
+    let (mut h, caster) = prepare(209059);
+    assert!(has_aura(h.app.world(), caster, 383391));
+    assert!(!has_aura(h.app.world(), caster, 383395));
+    let target = h.npc;
+    complete_cast(&mut h, caster, 108853, target);
+    h.advance(3);
+    let buff = super::kit_clearcasting_tests::own_aura(&h, caster, 383395)
+        .expect("native383391 must grant real383395 from actual Fire Blast");
+    assert_eq!(buff.stacks, 1);
+    assert_eq!(buff.duration_ms, 4000);
+    assert!(
+        buff.effects
+            .iter()
+            .any(|effect| effect.aura_type == 318 && effect.amount == 2.0)
+    );
+}
+
+#[test]
+fn proc_fidelity_63_feel_the_burn_native_fireball_does_not_grant_mastery() {
+    let (mut h, caster) = prepare(209059);
+    assert!(has_aura(h.app.world(), caster, 383391));
+    let first = h.inbox.log.len();
+    let target = h.npc;
+    complete_cast(&mut h, caster, 133, target);
+    h.advance(20);
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(133)
+                && event.source == Some(caster.to_bits())
+                && event.amount > 0
+        }),
+        "control must land actual native Fireball damage"
+    );
+    assert!(
+        !has_aura(h.app.world(), caster, 383395),
+        "native383391 names Fire Blast, not every harmful spell"
+    );
+}
+
+#[test]
+fn proc_fidelity_63_feel_the_burn_native_applications_expire_independently() {
+    let (mut h, caster) = prepare(209059);
+    let target = h.npc;
+    complete_cast(&mut h, caster, 108853, target);
+    h.advance(3);
+    let first = super::kit_clearcasting_tests::own_aura(&h, caster, 383395)
+        .expect("first real Fire Blast must grant383395");
+    complete_cast(&mut h, caster, 108853, target);
+    h.advance(3);
+    let second = super::kit_clearcasting_tests::own_aura(&h, caster, 383395)
+        .expect("second real Fire Blast must retain383395");
+    assert_eq!(second.stacks, 2, "both actual native applications overlap");
+    let first_expiry = first
+        .expires_at
+        .expect("native first buff has finite4s duration");
+    let second_expiry = second
+        .expires_at
+        .expect("native second buff has finite4s duration");
+    assert!(second_expiry > first_expiry);
+    for _ in 0..200 {
+        if aura_now(h.app.world()) > first_expiry + frame_seconds(&h) {
+            break;
+        }
+        h.advance(1);
+    }
+    assert!(aura_now(h.app.world()) < second_expiry);
+    let remaining = super::kit_clearcasting_tests::own_aura(&h, caster, 383395)
+        .expect("second application remains after first naturally expires");
+    assert_eq!(
+        remaining.stacks, 1,
+        "multiple native applications overlap, not a single refreshed two-stack lifetime"
+    );
+    for _ in 0..200 {
+        if aura_now(h.app.world()) > second_expiry + frame_seconds(&h) {
+            break;
+        }
+        h.advance(1);
+    }
+    assert!(!has_aura(h.app.world(), caster, 383395));
+}
+
+#[test]
+fn proc_fidelity_63_feel_the_burn_native_cap_replaces_oldest_application() {
+    let (mut h, caster) = prepare(209059);
+    // Native child casts isolate the authored100-stack cap, not producer frequency.
+    for _ in 0..100 {
+        crate::spell_cast::cast_triggered(h.app.world_mut(), caster, 383395, Some(caster), 1);
+    }
+    let initial = super::kit_clearcasting_tests::own_aura(&h, caster, 383395).unwrap();
+    assert_eq!(initial.stacks, 100);
+    let first_expiry = initial.expires_at.unwrap();
+    h.advance(10);
+    let target = h.npc;
+    complete_cast(&mut h, caster, 108853, target);
+    h.advance(3);
+    let refreshed = super::kit_clearcasting_tests::own_aura(&h, caster, 383395).unwrap();
+    assert_eq!(refreshed.stacks, 100);
+    let latest_expiry = refreshed.expires_at.unwrap();
+    assert!(latest_expiry > first_expiry);
+    for _ in 0..200 {
+        if aura_now(h.app.world()) > first_expiry + frame_seconds(&h) {
+            break;
+        }
+        h.advance(1);
+    }
+    assert!(aura_now(h.app.world()) < latest_expiry);
+    let remaining = super::kit_clearcasting_tests::own_aura(&h, caster, 383395).unwrap();
+    assert_eq!(
+        remaining.stacks, 1,
+        "the later real Fire Blast replaces only the oldest expiry at the native cap"
+    );
+    for _ in 0..200 {
+        if aura_now(h.app.world()) > latest_expiry + frame_seconds(&h) {
+            break;
+        }
+        h.advance(1);
+    }
+    assert!(!has_aura(h.app.world(), caster, 383395));
+}
+
+#[test]
+fn proc_fidelity_262_inundate_native_lightning_does_not_generate_utility_resource() {
+    let (mut h, caster) = prepare(209053);
+    assert!(has_aura(h.app.world(), caster, 378776));
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    complete_cast(&mut h, caster, 188196, target);
+    h.advance(20);
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(188196)
+                && event.source == Some(caster.to_bits())
+                && event.amount > 0
+        }),
+        "actual native Lightning Bolt must land before its resource consequences are checked"
+    );
+    assert!(
+        h.inbox.log[first..].iter().all(|event| {
+            event.spell_id != Some(378777) || event.source != Some(caster.to_bits())
+        }),
+        "native378776 names utility casts, not Lightning Bolt or its damaging children"
+    );
+}
+
+#[test]
+fn proc_fidelity_262_inundate_native_wind_shear_interrupt_grants_once() {
+    let (mut h, caster) = prepare(209053);
+    assert!(has_aura(h.app.world(), caster, 378776));
+    let first = h.inbox.log.len();
+    super::utility_tests::start_enemy_fireball(&mut h, caster);
+    let enemy = h.npc;
+    complete_cast(&mut h, caster, 57994, enemy);
+    h.advance(3);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(enemy)
+            .is_none()
+    );
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Interrupt
+                && event.spell_id == Some(57994)
+                && event.extra_spell_id == Some(133)
+                && event.source == Some(caster.to_bits())
+        }),
+        "actual native Wind Shear must interrupt a real Fireball"
+    );
+    let gains: Vec<_> = h.inbox.log[first..]
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Energize
+                && event.spell_id == Some(378777)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(caster.to_bits())
+        })
+        .collect();
+    assert_eq!(
+        gains.len(),
+        1,
+        "one actual utility cast grants Inundate once"
+    );
+    assert_eq!(gains[0].amount, 8, "native378777s1 remains authoritative");
+}
+
+#[test]
+fn proc_fidelity_262_inundate_native_wind_shear_without_passive_does_not_grant_resource() {
+    let (mut h, caster) = prepare(209053);
+    assert!(has_aura(h.app.world(), caster, 378776));
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 378776,
+    );
+    assert!(!has_aura(h.app.world(), caster, 378776));
+    let first = h.inbox.log.len();
+    super::utility_tests::start_enemy_fireball(&mut h, caster);
+    let enemy = h.npc;
+    complete_cast(&mut h, caster, 57994, enemy);
+    h.advance(3);
+    assert!(h.inbox.log[first..].iter().any(|event| {
+        event.kind == CombatLogKind::Interrupt
+            && event.spell_id == Some(57994)
+            && event.extra_spell_id == Some(133)
+            && event.source == Some(caster.to_bits())
+    }));
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .all(|event| event.spell_id != Some(378777) || event.source != Some(caster.to_bits())),
+        "a successful native utility cast does not invent its removed Inundate driver"
+    );
+}
+
+#[test]
+fn proc_fidelity_262_native_stormkeeper_lightning_bolt_triggers_overload_damage() {
+    let (mut h, caster) = prepare(209053);
+    assert!(has_aura(h.app.world(), caster, 168534));
+    complete_cast(&mut h, caster, 191634, caster);
+    assert!(has_aura(h.app.world(), caster, 191634));
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    complete_cast(&mut h, caster, 188196, target);
+    h.advance(30);
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(188196)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.amount > 0
+        }),
+        "actual Stormkeeper-affected native Lightning Bolt must land"
+    );
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(45284)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.amount > 0
+        }),
+        "real native Stormkeeper-affected cast guarantees actual45284 Elemental Overload, not a synthetic scalar on Lightning Bolt"
+    );
+}
+
+#[test]
+fn proc_fidelity_262_native_stormkeeper_without_mastery_does_not_invent_overload() {
+    let (mut h, caster) = prepare(209053);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 168534,
+    );
+    assert!(!has_aura(h.app.world(), caster, 168534));
+    complete_cast(&mut h, caster, 191634, caster);
+    assert!(has_aura(h.app.world(), caster, 191634));
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    complete_cast(&mut h, caster, 188196, target);
+    h.advance(4);
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .all(|event| event.spell_id != Some(45284)),
+        "overload follows the sourced400ms callback, not immediate root impact"
+    );
+    h.advance(30);
+    assert!(h.inbox.log[first..].iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(188196)
+            && event.source == Some(caster.to_bits())
+    }));
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .all(|event| event.spell_id != Some(45284) || event.source != Some(caster.to_bits())),
+        "Stormkeeper cannot invent the removed Mastery passive"
     );
 }
 

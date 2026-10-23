@@ -59,7 +59,7 @@ def summarize(reports):
     return {
         "runs": len(reports), "seeds": [report["seed"] for report in reports],
         "cleared": count("cleared"), "wiped": count("wiped"),
-        "stalled": count("stalled"), "blocked": count("blocked"),
+        "stalled": count("stalled"), "blocked": count("blocked"), "aborted": count("aborted"),
         "timed_out": count("timeout"), "failed_runs": len(reports) - count("cleared"),
         "packs": dict(sorted(packs.items(), key=lambda item: int(item[0]))),
     }

@@ -479,19 +479,10 @@ fn choose_innervate(ctx: &TriageContext<'_>) -> Option<Decision> {
 }
 
 fn choose_natures_cure(ctx: &TriageContext<'_>) -> Option<Decision> {
-    let entry = ctx
-        .entries
-        .iter()
-        .find(|entry| entry.spell_id == NATURES_CURE)?;
-    if !ctx.ready(NATURES_CURE) {
-        return None;
-    }
-    let patient = ctx.patients.iter().find(|patient| {
-        super::kit_ai::patient_is_eligible(ctx.world, ctx.caster, patient.entity, entry)
-    })?;
-    Some(Decision {
-        spell_id: NATURES_CURE,
-        target: patient.entity,
-        urgent: false,
-    })
+    ctx.choose_dispel_target(NATURES_CURE)
+        .map(|target| Decision {
+            spell_id: NATURES_CURE,
+            target,
+            urgent: false,
+        })
 }

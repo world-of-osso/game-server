@@ -27,7 +27,7 @@ fn rotation_fidelity_feral_uses_native_cat_swipe_only_while_in_cat_form() {
         .find(|entry| entry.spec_id == 103 && entry.spell_id == 213764)
         .unwrap()
         .clone();
-    h.app.world_mut().resource_mut::<FollowerCatalog>().kits = vec![swipe];
+    h.app.world_mut().resource_mut::<FollowerCatalog>().kits = vec![swipe].into();
     for _ in 0..2 {
         let extra = spawn_npc(&mut h.app, 1.0);
         let mut threat = ThreatTable::default();

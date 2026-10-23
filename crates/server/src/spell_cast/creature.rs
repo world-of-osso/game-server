@@ -147,12 +147,19 @@ fn default_scripted_target(
                 world.get::<shared::components::Health>(target).is_some()
                     && targets::relation_matches(world, caster, target, relation)
             })
-    } else if relation == targets::Relation::Ally {
+    } else if matches!(
+        relation,
+        targets::Relation::Ally | targets::Relation::Raid | targets::Relation::Minipet
+    ) {
         None
     } else {
         victim(world, caster)
     };
-    selected.or_else(|| (relation != targets::Relation::Enemy).then_some(caster))
+    let defaults_to_self = !matches!(
+        relation,
+        targets::Relation::Enemy | targets::Relation::Minipet
+    );
+    selected.or_else(|| defaults_to_self.then_some(caster))
 }
 
 /// `AISpellInfoType::target` (`UnitAI::FillAISpellInfo`), which `DoCast(spellId)`

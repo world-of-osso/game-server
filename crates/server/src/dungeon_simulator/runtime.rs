@@ -20,6 +20,17 @@ pub(super) fn output_directory() -> std::path::PathBuf {
 pub(super) fn write_report(report: &super::campaign::Report) -> Result<(), String> {
     let directory = output_directory();
     std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
+    let events = report
+        .performance
+        .get("combat_events")
+        .ok_or("final simulator report lacks its native combat-event trace")?;
+    let export = serde_json::json!({"seed":report.seed,"status":report.status,
+        "reason":report.detail,"events":events});
+    std::fs::write(
+        directory.join(format!("combat-events-{}.json", report.seed)),
+        serde_json::to_vec_pretty(&export).map_err(|error| error.to_string())?,
+    )
+    .map_err(|error| format!("write native combat-event export: {error}"))?;
     std::fs::write(
         directory.join(format!("run-{}.json", report.seed)),
         serde_json::to_vec_pretty(&report).unwrap(),
@@ -54,7 +65,15 @@ pub(super) fn build_app() -> App {
     build_cached_app(&mut None)
 }
 
+pub(super) fn build_pet_app() -> App {
+    build_runtime_app(&mut None, true)
+}
+
 pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
+    build_runtime_app(catalogs, false)
+}
+
+fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>, include_pets: bool) -> App {
     let mut app = App::new();
     app.insert_resource(super::Space(super::graph::read_graph().unwrap()));
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
@@ -68,9 +87,13 @@ pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>)
         crate::creature_scripts::CreatureScriptsPlugin,
         crate::scripted_ai::ScriptedAiPlugin,
         crate::followers::FollowerPlugin,
+        crate::hunter_pet::HunterPetPlugin,
         crate::pet_control::PetControlPlugin,
         crate::stats::StatsPlugin,
     ));
+    if include_pets {
+        app.add_plugins(crate::hunter_pet::HunterPetPlugin);
+    }
     app.init_resource::<crate::maps::InstanceManager>();
     app.init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
     app.init_resource::<crate::spell_cast::holy_metrics::HolyMetrics>();

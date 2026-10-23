@@ -16,6 +16,8 @@ const RAIN_OF_FIRE_DAMAGE: u32 = 42223;
 pub(super) const CONSECRATION: u32 = 26573;
 const CONSECRATION_DAMAGE: u32 = 81297;
 pub(super) const EARTHQUAKE: u32 = 61882;
+// Native70448 target variant: same77478 field, authored destination-target53.
+const EARTHQUAKE_TARGET: u32 = 462620;
 pub(super) const EMERALD_BLOSSOM: u32 = 355913;
 pub(super) const WINTER_DAMAGE: u32 = 196771;
 pub(super) const SCOURGE_STRIKE: u32 = 55090;
@@ -32,7 +34,7 @@ const ATONEMENT: u32 = 194384;
 pub(in crate::spell_cast) fn cast_effect(spell_id: u32, index: u8) -> Option<CastEffectHandler> {
     match (spell_id, index) {
         (HEALING_RAIN, 0)
-        | (EARTHQUAKE, 2)
+        | (EARTHQUAKE | EARTHQUAKE_TARGET, 2)
         | (EMERALD_BLOSSOM, 0)
         | (RAIN_OF_FIRE, 1)
         | (SIGIL_OF_FLAME, 0) => Some(spawn_ground_pulses),
@@ -82,7 +84,7 @@ fn spawn_ground_pulses(
         },
         map,
     ));
-    if ctx.spell.id == EARTHQUAKE {
+    if matches!(ctx.spell.id, EARTHQUAKE | EARTHQUAKE_TARGET) {
         field.insert(EarthquakeStunnedTargets::default());
     }
 }
@@ -120,7 +122,7 @@ fn read_ground_pulses(world: &World, ctx: &EffectCtx) -> GroundPulses {
             targets::Relation::Ally,
             f64::from(ctx.spell.effects[2].aura_period_ms) / 1000.0,
         ),
-        EARTHQUAKE => (
+        EARTHQUAKE | EARTHQUAKE_TARGET => (
             QUAKE_DAMAGE,
             targets::effect_radius(&ctx.spell.effects[0]),
             0,
@@ -210,7 +212,13 @@ pub(super) fn inside_owned_consecration(world: &mut World, caster: Entity) -> bo
 pub(crate) fn ground_pulse_radius(world: &World, caster: Entity, spell_id: u32) -> Option<f32> {
     if !matches!(
         spell_id,
-        CONSECRATION | EARTHQUAKE | HEALING_RAIN | RAIN_OF_FIRE | SIGIL_OF_FLAME | EMERALD_BLOSSOM
+        CONSECRATION
+            | EARTHQUAKE
+            | EARTHQUAKE_TARGET
+            | HEALING_RAIN
+            | RAIN_OF_FIRE
+            | SIGIL_OF_FLAME
+            | EMERALD_BLOSSOM
     ) {
         return None;
     }
@@ -351,7 +359,7 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
         .expect("named ground spell child")
         .clone();
     // TC casts77478 with OriginalCaster=at->GetGUID(); preserve it through flight.
-    if pulses.root == EARTHQUAKE {
+    if matches!(pulses.root, EARTHQUAKE | EARTHQUAKE_TARGET) {
         child.cast_original_caster = Some(entity);
     }
     //26573's tooltip explicitly multiplies the81297 total by1.05.
@@ -425,9 +433,9 @@ fn mark_earthquake_stunned_target(
     field: Entity,
     target: Entity,
 ) -> bool {
-    let owned_earthquake = world
-        .get::<GroundPulses>(field)
-        .is_some_and(|pulses| pulses.root == EARTHQUAKE && pulses.caster == caster);
+    let owned_earthquake = world.get::<GroundPulses>(field).is_some_and(|pulses| {
+        matches!(pulses.root, EARTHQUAKE | EARTHQUAKE_TARGET) && pulses.caster == caster
+    });
     if !owned_earthquake {
         return false;
     }

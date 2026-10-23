@@ -63,6 +63,12 @@ name = "game-server-site-export"
 path = "src/bin/site_export.rs"
 
 [dev-dependencies]
+# Content-address frozen fixture inputs; already present in the workspace graph.
+blake3 = "1.8"
+# Exercise actual SQLite read authorization when proving cache I/O reuse.
+rusqlite = { version = "0.35", features = ["hooks"] }
+# Frozen engine-free AssistedCombat catalog/predicates; parity reuses authored decisions verbatim.
+game-engine-core = { git = "ssh://git@github.com/world-of-osso/game-engine.git", rev = "9ef2efe2d317b837d352fe8c5227086a4fdcd490" }
 # Measure publication bytes with the exact codec used by Lightyear messages.
 lightyear_serde = "0.28"
 # Bake concrete collision fixtures for fleeing's real Detour path boundary.
