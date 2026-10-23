@@ -110,7 +110,7 @@ fn hunter_logged_in(path: &Path) -> Option<PetHarness> {
     ];
     let mut h = harness_with_plugins(Vec::new(), &ids, CLASS_HUNTER, false, |app| {
         app.insert_resource(WorldData {
-            templates,
+            templates: templates.into(),
             ..Default::default()
         });
         app.insert_resource(db);

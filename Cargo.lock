@@ -6576,6 +6576,7 @@ dependencies = [
  "bevy",
  "bevy_replicon",
  "bitcode",
+ "blake3",
  "chrono",
  "csv",
  "game-engine-core",

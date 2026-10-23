@@ -64,7 +64,7 @@ fn spell_quest_app() -> Option<App> {
     templates.retain(|entry, _| *entry == VINEYARD_FIRE);
     crate::world_data::load_template_models(&conn, &mut templates);
     app.insert_resource(WorldData {
-        templates,
+        templates: templates.into(),
         ..Default::default()
     });
     Some(app)

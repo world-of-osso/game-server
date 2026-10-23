@@ -16,6 +16,7 @@ mod bank_test_harness;
 mod barber_shop;
 mod battle_pets;
 mod calendar;
+mod catalog_data;
 mod chair;
 mod character_stats_data;
 mod class_progression;
