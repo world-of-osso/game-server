@@ -2,7 +2,8 @@
 use super::equipment::{Equipment, ItemUse};
 use bevy::prelude::*;
 use server::simc_apl::Action;
-use std::collections::BTreeMap;
+use shared::components::PowerType;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone)]
 pub(crate) enum Execution {
@@ -21,10 +22,18 @@ pub(crate) struct NativeAction<'a> {
 }
 
 // None is the action's native default target, not an explicit-target substitute.
-type ReadyActions = BTreeMap<(String, Option<Entity>), Execution>;
+type ActionKey = (String, Option<Entity>);
+type ReadyActions = BTreeMap<ActionKey, Execution>;
+
+struct NativeReadiness {
+    ready: bool,
+    limited: Option<PowerType>,
+}
 
 pub(crate) struct Prepared {
     ready: ReadyActions,
+    limits: BTreeMap<ActionKey, PowerType>,
+    declared: BTreeSet<String>,
 }
 
 impl Prepared {
@@ -37,39 +46,48 @@ impl Prepared {
         needs_snapshot: bool,
     ) -> Result<Self, String> {
         let targets = native_targets(world, actor, targets);
-        let mut ready = BTreeMap::new();
+        let mut prepared = Self {
+            ready: BTreeMap::new(),
+            limits: BTreeMap::new(),
+            declared: ["snapshot_stats", "auto_attack", "retarget_auto_attack"]
+                .into_iter()
+                .map(str::to_owned)
+                .collect(),
+        };
         if needs_snapshot {
-            ready.insert(("snapshot_stats".into(), None), Execution::Snapshot);
+            prepared
+                .ready
+                .insert(("snapshot_stats".into(), None), Execution::Snapshot);
         }
-        read_attacks(world, actor, &targets, &mut ready);
-        read_spells(world, actor, &targets, actions, &mut ready)?;
-        for (slot, item) in equipment.uses() {
-            for target in std::iter::once(actor).chain(targets.iter().copied()) {
-                if native_ready(world, actor, item.on_use.spell_id, target, Some(item))? {
-                    record_ready(
-                        &mut ready,
-                        &format!("item:{slot}"),
-                        target,
-                        target == actor,
-                        Execution::Item(item, target),
-                    );
-                }
-            }
+        read_attacks(world, actor, &targets, &mut prepared.ready);
+        read_spells(world, actor, &targets, actions, &mut prepared)?;
+        for item in equipment.uses() {
+            read_item(world, actor, &targets, item, &mut prepared)?;
         }
-        Ok(Self { ready })
+        Ok(prepared)
     }
 
-    /// Readonly pool_resource hook. API scaffold: native classification is pending.
+    /// True only when this selected pool at its native maximum would admit the
+    /// action. Other pools/health and every other native check remain unchanged.
     pub fn resource_limited(
         &self,
         action: &Action,
-        _equipment: &Equipment,
-        _resource: shared::components::PowerType,
+        equipment: &Equipment,
+        resource: PowerType,
     ) -> Result<bool, String> {
-        Err(format!(
-            "NATIVE_LITERAL_RESOURCE_QUERY_UNAVAILABLE: {}",
-            action.name
-        ))
+        let Some(key) = action_key(action, equipment)? else {
+            return Ok(false);
+        };
+        if !self.declared.contains(&key.0) {
+            return Err(format!(
+                "unknown native resource-query action {}",
+                action.name
+            ));
+        }
+        Ok(self
+            .limits
+            .get(&key)
+            .is_some_and(|power| *power == resource))
     }
 
     pub fn execution(
@@ -77,23 +95,30 @@ impl Prepared {
         action: &Action,
         equipment: &Equipment,
     ) -> Result<Option<Execution>, String> {
-        let key = if action.name == "use_item" {
-            let Some(slot) = equipment.slot_for_action(action)? else {
-                return Ok(None);
-            };
-            format!("item:{slot}")
-        } else {
-            action.name.clone()
+        let Some(key) = action_key(action, equipment)? else {
+            return Ok(None);
         };
-        let target = action
-            .target
-            .map(|bits| {
-                Entity::try_from_bits(bits)
-                    .ok_or_else(|| format!("invalid explicit literal target {bits}"))
-            })
-            .transpose()?;
-        Ok(self.ready.get(&(key, target)).cloned())
+        Ok(self.ready.get(&key).cloned())
     }
+}
+
+fn action_key(action: &Action, equipment: &Equipment) -> Result<Option<ActionKey>, String> {
+    let name = if action.name == "use_item" {
+        let Some(slot) = equipment.slot_for_action(action)? else {
+            return Ok(None);
+        };
+        format!("item:{slot}")
+    } else {
+        action.name.clone()
+    };
+    let target = action
+        .target
+        .map(|bits| {
+            Entity::try_from_bits(bits)
+                .ok_or_else(|| format!("invalid explicit literal target {bits}"))
+        })
+        .transpose()?;
+    Ok(Some((name, target)))
 }
 
 fn native_targets(world: &World, actor: Entity, supplied: &[Entity]) -> Vec<Entity> {
@@ -148,39 +173,94 @@ fn read_attacks(world: &World, actor: Entity, targets: &[Entity], ready: &mut Re
     }
 }
 
+fn record_probe(
+    prepared: &mut Prepared,
+    key: ActionKey,
+    default: bool,
+    state: NativeReadiness,
+    execution: Execution,
+) {
+    if state.ready {
+        prepared.ready.insert(key.clone(), execution.clone());
+        if default {
+            prepared.ready.insert((key.0.clone(), None), execution);
+        }
+    }
+    if let Some(power) = state.limited {
+        prepared.limits.insert(key.clone(), power);
+        if default {
+            prepared.limits.insert((key.0, None), power);
+        }
+    }
+}
+
 fn read_spells<'a>(
     world: &mut World,
     actor: Entity,
     enemies: &[Entity],
     actions: impl IntoIterator<Item = NativeAction<'a>>,
-    ready: &mut ReadyActions,
+    prepared: &mut Prepared,
 ) -> Result<(), String> {
-    for NativeAction {
+    for action in actions {
+        read_spell(world, actor, enemies, action, prepared)?;
+    }
+    Ok(())
+}
+
+fn read_spell(
+    world: &mut World,
+    actor: Entity,
+    enemies: &[Entity],
+    action: NativeAction<'_>,
+    prepared: &mut Prepared,
+) -> Result<(), String> {
+    let NativeAction {
         name,
         spell: id,
         talent,
         self_target,
-    } in actions
-    {
-        if !talent_permits(world, actor, talent)? || !knows_action(world, actor, id)? {
-            continue;
-        }
-        let targets = if self_target {
-            std::slice::from_ref(&actor)
-        } else {
-            enemies
-        };
-        for (index, &target) in targets.iter().enumerate() {
-            if native_ready(world, actor, id, target, None)? {
-                record_ready(
-                    ready,
-                    name,
-                    target,
-                    index == 0,
-                    Execution::Spell(id, target),
-                );
-            }
-        }
+    } = action;
+    prepared.declared.insert(name.into());
+    if !talent_permits(world, actor, talent)? || !knows_action(world, actor, id)? {
+        return Ok(());
+    }
+    let targets = if self_target {
+        std::slice::from_ref(&actor)
+    } else {
+        enemies
+    };
+    for (index, &target) in targets.iter().enumerate() {
+        let state = native_readiness(world, actor, id, target, None)?;
+        record_probe(
+            prepared,
+            (name.into(), Some(target)),
+            index == 0,
+            state,
+            Execution::Spell(id, target),
+        );
+    }
+    Ok(())
+}
+
+fn read_item(
+    world: &mut World,
+    actor: Entity,
+    targets: &[Entity],
+    item: (&str, ItemUse),
+    prepared: &mut Prepared,
+) -> Result<(), String> {
+    let (slot, item) = item;
+    let name = format!("item:{slot}");
+    prepared.declared.insert(name.clone());
+    for target in std::iter::once(actor).chain(targets.iter().copied()) {
+        let state = native_readiness(world, actor, item.on_use.spell_id, target, Some(item))?;
+        record_probe(
+            prepared,
+            (name.clone(), Some(target)),
+            target == actor,
+            state,
+            Execution::Item(item, target),
+        );
     }
     Ok(())
 }
@@ -210,13 +290,13 @@ fn knows_action(world: &World, actor: Entity, id: u32) -> Result<bool, String> {
             .any(|base| crate::auras::overrides::resolve_spell(world, actor, base) == id))
 }
 
-fn native_ready(
+fn native_readiness(
     world: &mut World,
     actor: Entity,
     id: u32,
     target: Entity,
     item: Option<ItemUse>,
-) -> Result<bool, String> {
+) -> Result<NativeReadiness, String> {
     let mut spell = world
         .resource::<crate::spell_info::SpellStore>()
         .get(id)
@@ -227,14 +307,38 @@ fn native_ready(
         spell.cast_retail_item_id = Some(item.item_id);
     }
     match crate::spell_cast::read_native_cast_start(world, actor, &spell, target) {
-        Ok(_) => Ok(true),
-        Err(
-            reason @ (crate::spell_cast::CastFailure::UnknownSpell
-            | crate::spell_cast::CastFailure::Unsupported(_)),
-        ) => Err(format!(
+        Ok(_) => Ok(NativeReadiness {
+            ready: true,
+            limited: None,
+        }),
+        Err(crate::spell_cast::CastFailure::NotEnoughPower(power)) => {
+            match crate::spell_cast::read_native_cast_at_resource_max(
+                world, actor, &spell, target, power,
+            ) {
+                Ok(_) => Ok(NativeReadiness {
+                    ready: false,
+                    limited: Some(power),
+                }),
+                Err(reason) => refused_admission(id, reason),
+            }
+        }
+        Err(reason) => refused_admission(id, reason),
+    }
+}
+
+fn refused_admission(
+    id: u32,
+    reason: crate::spell_cast::CastFailure,
+) -> Result<NativeReadiness, String> {
+    match reason {
+        reason @ (crate::spell_cast::CastFailure::UnknownSpell
+        | crate::spell_cast::CastFailure::Unsupported(_)) => Err(format!(
             "NATIVE_LITERAL_ADMISSION_GAP: spell{id}: {reason:?}"
         )),
-        Err(_) => Ok(false), // Actual native refusal (power/GCD/range/aura/etc).
+        _ => Ok(NativeReadiness {
+            ready: false,
+            limited: None,
+        }),
     }
 }
 
