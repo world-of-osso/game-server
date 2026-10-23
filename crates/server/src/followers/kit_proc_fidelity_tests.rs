@@ -445,7 +445,6 @@ fn proc_fidelity_262_native_stormkeeper_lightning_bolt_triggers_overload_damage(
 }
 
 #[test]
-#[ignore = "native Chain Lightning Overload mapping pending RED/GREEN"]
 fn proc_fidelity_262_native_stormkeeper_chain_lightning_overloads_each_hit_target() {
     let (mut h, caster) = prepare(209053);
     let target = h.npc;
@@ -486,7 +485,6 @@ fn proc_fidelity_262_native_stormkeeper_chain_lightning_overloads_each_hit_targe
 }
 
 #[test]
-#[ignore = "native Chain Lightning removed-Mastery control pending qualification"]
 fn proc_fidelity_262_native_stormkeeper_chain_without_mastery_has_no_overload() {
     let (mut h, caster) = prepare(209053);
     crate::auras::remove_auras(
@@ -515,7 +513,6 @@ fn proc_fidelity_262_native_stormkeeper_chain_without_mastery_has_no_overload() 
 }
 
 #[test]
-#[ignore = "TC HIT-phase Overload400ms timing pending native RED/GREEN"]
 fn proc_fidelity_262_native_long_flight_overload_waits_400ms_after_root_hit() {
     let (mut h, caster) = prepare(209053);
     assert!(has_aura(h.app.world(), caster, 168534));
