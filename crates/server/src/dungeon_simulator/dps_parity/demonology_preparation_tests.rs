@@ -78,6 +78,60 @@ fn dps_parity_demo_native_guldan_imps_attack_the_selected_dummy() {
     );
 }
 
+#[test]
+#[ignore = "native first10s ST/3T engagement regression; private spec266 inputs required"]
+fn dps_parity_demo_native_first_pull_survives_inflight_precombat_cast() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut outcomes = Vec::new();
+    for count in [1, 3] {
+        let mut run = prepare(266, count).unwrap();
+        engage(&mut run);
+        let started = crate::spell_cast::now(run.app.world());
+        let mut events_seen = 0;
+        let mut casts = Vec::new();
+        let mut samples = Vec::new();
+        for tick in 1..=200 {
+            run.app.update();
+            let world = run.app.world();
+            let now = crate::spell_cast::now(world) - started;
+            let events = &world.resource::<ObservedCombatEvents>().0;
+            casts.extend(events[events_seen..].iter().filter_map(|event| {
+                matches!(
+                    event.kind,
+                    CombatLogKind::CastStart | CombatLogKind::CastSuccess
+                )
+                .then(|| json!({"at": now, "event": event}))
+            }));
+            events_seen = events.len();
+            if tick % 20 == 0 {
+                let owner = fixture_player(&run);
+                samples.push(json!({"at": now,
+                    "cast": format!("{:?}", world.get::<shared::casting::CastState>(run.actor)),
+                    "target": world.get::<crate::networking::CombatTarget>(run.actor).and_then(|target| target.0).map(Entity::to_bits),
+                    "owner_reference": crate::combat_refs::has_active_reference_to(world, owner, run.targets[0]),
+                    "actor_reference": crate::combat_refs::has_active_reference_to(world, run.actor, run.targets[0]),
+                    "pet": crate::hunter_pet::summoned_pet(world, run.actor).map(Entity::to_bits)}));
+            }
+        }
+        let damage = report::combat(run.app.world(), &run.damage_targets, 10.0)["total_damage"]
+            .as_u64()
+            .unwrap();
+        outcomes
+            .push(json!({"targets": count, "damage": damage, "casts": casts, "samples": samples}));
+    }
+    let path = inputs::directory()
+        .unwrap()
+        .join("266.first-engagement-10s.json");
+    std::fs::write(&path, serde_json::to_vec_pretty(&outcomes).unwrap()).unwrap();
+    assert!(
+        outcomes
+            .iter()
+            .all(|outcome| outcome["damage"].as_u64().unwrap() > 0),
+        "native first pull must reach actual damage in ST and3T; trace {}",
+        path.display()
+    );
+}
+
 fn advance_until_cast_finished(run: &mut Run, unit: Entity) {
     for _ in 0..400 {
         if run
