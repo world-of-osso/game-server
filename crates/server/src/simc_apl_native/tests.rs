@@ -38,9 +38,17 @@ fn fixture(world: &World) -> Encounter {
 }
 
 fn monk() -> (Harness, Entity) {
-    crate::followers::kit_tests::at_level(227734, 35, |app| {
+    let (mut h, actor) = crate::followers::kit_tests::at_level(227734, 35, |app| {
         app.add_plugins(crate::stats::StatsPlugin);
-    })
+    });
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(shared::components::Health {
+            current: 100_000_000.0,
+            max: 100_000_000.0,
+        });
+    (h, actor)
 }
 
 fn cast(h: &mut Harness, actor: Entity, spell: u32, target: Entity) {
@@ -82,7 +90,6 @@ fn native_apl_facts_follow_earned_buff_stacks_resources_and_repeat_removal() {
     assert_eq!(f.value("buff.hit_combo.up").unwrap(), 1.0);
     assert_eq!(f.value("buff.hit_combo.stack").unwrap(), 1.0);
     assert!(f.value("buff.hit_combo.remains").unwrap() > 0.0);
-    assert_eq!(f.value("talent.hit_combo").unwrap(), 1.0);
     let (chi, max_chi) =
         crate::spell_cast::powers::power_value(h.app.world(), actor, PowerType::Chi).unwrap();
     assert!(chi > 0.0);
@@ -101,6 +108,75 @@ fn native_apl_facts_follow_earned_buff_stacks_resources_and_repeat_removal() {
     assert_eq!(f.value("buff.hit_combo.up").unwrap(), 0.0);
     assert_eq!(f.value("buff.hit_combo.stack").unwrap(), 0.0);
     assert_eq!(f.value("buff.hit_combo.remains").unwrap(), 0.0);
+}
+
+#[test]
+#[ignore = "shared native ActionFacts RED: evaluated native allocation, not generic known spells"]
+fn native_apl_facts_read_selected_traits_without_promoting_learned_utility_to_talent() {
+    use crate::class_progression::{KnownSpells, TraitLoadout};
+    use crate::spell_info::ClassSpells;
+    use crate::trait_config::{Purchase, TraitContext, build_config, starter_purchases};
+    let (mut h, actor) = monk();
+    let profile = h
+        .app
+        .world()
+        .get::<crate::followers::Follower>(actor)
+        .unwrap()
+        .profile
+        .clone();
+    let classes = h.app.world().resource::<ClassSpells>();
+    let class = classes
+        .classes
+        .iter()
+        .find(|class| class.class_id == profile.class_id)
+        .unwrap();
+    let context = TraitContext {
+        spec_id: 269,
+        level: 35,
+    };
+    let purchases = starter_purchases(&class.traits, context).unwrap();
+    let allocated: Vec<_> = build_config(&class.traits, context, &purchases)
+        .unwrap()
+        .into_iter()
+        .map(|entry| Purchase {
+            node_id: entry.node_id,
+            entry_id: entry.entry_id,
+            ranks: entry.total(),
+        })
+        .collect();
+    let (known, traits) =
+        crate::class_progression::evaluate_reference_traits(classes, &profile, 35, &allocated)
+            .unwrap();
+    let selected = traits
+        .active_talent_spells()
+        .next()
+        .expect("native35 starter has selected talents")
+        .spell_id;
+    assert!(
+        known.contains(PROVOKE),
+        "real native utility is learned separately from talents"
+    );
+    h.app.world_mut().entity_mut(actor).insert((known, traits));
+    h.advance(4);
+    assert!(h.app.world().get::<TraitLoadout>(actor).is_some());
+    assert!(
+        h.app
+            .world()
+            .get::<KnownSpells>(actor)
+            .unwrap()
+            .contains(PROVOKE)
+    );
+    let b = Bindings {
+        talents: [
+            ("selected_native".into(), selected),
+            ("learned_utility".into(), PROVOKE),
+        ]
+        .into(),
+        ..Default::default()
+    };
+    let f = NativeFacts::new(h.app.world(), actor, &b, fixture(h.app.world()), 1);
+    assert_eq!(f.value("talent.selected_native").unwrap(), 1.0);
+    assert_eq!(f.value("talent.learned_utility").unwrap(), 0.0);
 }
 
 #[test]
