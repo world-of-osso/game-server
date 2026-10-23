@@ -23,12 +23,14 @@ Restore the missing spec73 producer channels identified by `game-engine/data/dia
 
 |Producer|Status|Proof|
 |---|---|---|
-|Thunder Clap Rend|TC hit hook implemented; GREEN pending|a0a9fca65 native landed hit lacks Rend; unknown-Rend control passes|
-|Shield Charge chain|TC Dummy→385953 implemented; existing effect96 owns385954|a0a9fca65 native cast succeeds but never moves/damages; GREEN pending|
-|Whirling Blade/Ravager|Missing named producer/ticks|Ignored native Ravager timing/damage/expiry and Whirling Blade actual-impact/RPPM cases committed; RED execution pending|
-|Phalanx/Bloody Rebuke|Missing named producer/consumer|Ignored native Phalanx Clap→buff→Slam damage/consumption, absence and foreign-buff controls committed; RED execution pending; Bloody Rebuke RED pending|
+|Thunder Clap Rend|TC hit hook implemented; native damage/ownership qualified|5e69c75db both Clap cases PASS; charge case remains separate|
+|Shield Charge chain|Corrected native-reach RED pending; initial hook removed until valid RED|Initial fixture omitted NPC display/catalog required by native charge; source33470fd67 still failed movement; corrected fixture supplies real reach|
+|Whirling Blade/Ravager|Missing named producer/ticks|5e69c75db native Ravager fails missing156287 tick; Whirling Blade fails missing228920 after40 real primary-target casts|
+|Phalanx/Bloody Rebuke|Native Phalanx proc producer already works; named Slam consumer missing|5e69c75db produces1278009 but fails consumption; absence and foreign-buff controls pass; Bloody Rebuke RED pending|
 |Guillotine/Venomfang|Equipped driver lifecycle exists; damage producers missing|RED pending|
 
 ### First TC producer receipts
 
-Ignored a0a9fca65 `protection_producers_tc_ --include-ignored`:1PASS/2FAIL16.79s, compile7m59s/no warnings. Shield Charge admits with actual2362 shield but remains at its initial position; landed Thunder Clap retains its slow but lacks388539. Native unknown-Rend control passes. `/home/osso/.worktrees/logs/census-tail/protection-tc-red.log`. Minimal TC hooks retain native charge flight/trigger child and qualify Rend by actual KnownSpells, not presence of384277 or a generic unconditional bleed. GREEN pending; remaining producer rows are still open.
+Ignored a0a9fca65 `protection_producers_tc_ --include-ignored`:1PASS/2FAIL16.79s, compile7m59s/no warnings. Shield Charge admits with actual2362 shield but remains at its initial position; landed Thunder Clap retains its slow but lacks388539. Native unknown-Rend control passes. `/home/osso/.worktrees/logs/census-tail/protection-tc-red.log`. Minimal TC hooks retain native charge flight/trigger child and qualify Rend by actual KnownSpells, not presence of384277 or a generic unconditional bleed. First GREEN attempt5e69c75db:2PASS/1FAIL12.22s, compile8m08/no warnings (`protection-tc-green.log`). Both Clap cases pass, including actual Rend tick damage; Charge still cannot move because its fixture NPC has no ModelDisplay/ModelReaches. Correct the fixture from actual template6/display10913 and catalog reach, remove the unqualified Charge hook, and obtain valid RED before restoring it. No runtime charge fallback or authored reach change.
+
+Compiled ignored policy cases5e69c75db:2PASS/3FAIL16.92s (`protection-policies-red.log`); Phalanx's native proc already produces1278009 but Slam does not consume it; absence/foreign-buff controls pass. Ravager lacks156287 periodic damage; Whirling Blade lacks228920 after40 real Devastate impacts with actual5RPPM/bad-luck timing. No flags/chances/RNG/proc timers modified. Remaining producer rows stay open.

@@ -68,12 +68,6 @@ pub(super) fn thunder_clap(world: &mut World, caster: Entity, target: Entity, de
     }
 }
 
-/// TC a352b1fa spell_warrior.cpp1773–1789: native effect96 owns movement and landing.
-pub(super) fn shield_charge(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    const SHIELD_CHARGE_EFFECT: u32 = 385953;
-    spell_cast::cast_triggered(world, caster, SHIELD_CHARGE_EFFECT, Some(target), depth + 1);
-}
-
 /// 2050s2 is the number of seconds removed when Flash Heal is cast.
 pub(super) fn flash_heal(world: &mut World, caster: Entity, _spell: &SpellInfo) {
     if world.resource::<SpellStore>().get(SERENITY).is_some() {

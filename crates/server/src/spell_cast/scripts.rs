@@ -360,7 +360,6 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch4::HOWLING_BLAST, 0) => Some(batch4::howling_blast),
         (batch3::MOONFIRE, 0) => Some(batch3::moonfire),
         (batch3::THUNDER_CLAP | 435222, 0) => Some(batch3::thunder_clap),
-        (385952, 0) => Some(batch3::shield_charge),
         (batch3::DEVASTATE, 0) => Some(batch3::devastate),
         (SKULL_BASH, 0) => Some(skull_bash),
         (FORTIFYING_BREW, 0) => Some(fortifying_brew),

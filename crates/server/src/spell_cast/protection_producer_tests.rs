@@ -359,6 +359,23 @@ fn protection_producers_tc_thunder_clap_without_known_rend_preserves_slow_only()
 fn protection_producers_tc_shield_charge_moves_then_native_landing_children_deal_damage() {
     let mut h = fixture(false);
     let target = h.npc;
+    // The ordinary spell fixture NPC omits display identity. Native charge
+    // requires real target reach before it can launch; load its actual catalog.
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap());
+    let model = &crate::test_data::world_data().templates[&6].models[0];
+    h.app
+        .world_mut()
+        .entity_mut(target)
+        .insert(shared::components::ModelDisplay {
+            display_id: model.display_id,
+        });
+    assert!(crate::scripted_ai::model_reach::combat_reach(h.app.world(), target).is_some());
     h.app.world_mut().entity_mut(target).insert(Position {
         x: 10.0,
         y: 0.0,
