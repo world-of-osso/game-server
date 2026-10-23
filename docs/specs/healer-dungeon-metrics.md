@@ -37,8 +37,15 @@ The standing healer benchmark replays recorded dungeon incoming hits in the head
 
 ## Known gaps (current cycle)
 
-- [ ] NATIVE_HEALER_PROFILE_ABSENT:65,256,264,270,1468. Only native105 Crenna209072 and257 Henry215011 run without new actor/policy work.
+- [ ] NATIVE_HEALER_POLICY_ABSENT:65,256,264,270,1468 until13191 publishes explicit available decision kits. The approved alternate-spec actor bridge is not an authored follower identity claim; production roster remains unchanged.
+- [ ] Alternate specs also require the policy-owned primary heal/GCD reference and qualified native book initialization (14752); no zero-reference idle metrics or duplicate book evaluator.
 - [x] RED fixtures committed and pushed before implementation; historical behavioral RED executed. Targeted14PASS/0FAIL after master rebase at dce76186c (209.11s), including persisted actual Stockade replay and15 sourced direct-heal probes. [Generated native results and proof scope](../reports/healer-stockade-seed1/README.md). Broader integration gates remain lead-owned.
+
+## Approved alternate-spec benchmark bridge
+
+`HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE` configures65 on source Garrick209057,256 on Henry215011,264 on Shuja209053,270 on Bo227734 and1468 on Kybel215240. Keep source entry/name/display and DB2 class, request the native healer specialization, and clear source DPS/tank actions rather than treating them as healer policy. Existing105/257 configurations remain unchanged. Private copies and benchmark only: no production roster or canonical DB mutation.
+
+JSON and Markdown label each alternate configuration with source entry/spec and requested spec, including blocked rows. Absent available decision rows report `NATIVE_HEALER_POLICY_ABSENT` before any party spawn; an unprovided primary heal reference reports `NATIVE_HEALER_PRIMARY_HEAL_ABSENT` rather than inventing idle normalization. Native class/spec mismatch blocks admission. [Exact source candidates and dependency boundaries](../reports/healer-alternate-spec-source-candidates.md) distinguish IDs from validated starter-book availability.
 
 ## Out of scope
 

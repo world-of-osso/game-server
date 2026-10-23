@@ -3,7 +3,7 @@ use super::{Follower, FollowerCatalog, kit_tests::level32, simulator::spawn_part
 use shared::components::Position;
 
 #[test]
-#[ignore = "RED: benchmark alternate specs have no explicit policy-admission boundary"]
+#[ignore = "explicit alternate benchmark actor/policy admission"]
 fn healer_benchmark_alternate_specs_require_explicit_native_policy() {
     let (mut h, _) = level32(209072);
     let missing = [65, 256, 264, 270, 1468];
@@ -69,4 +69,66 @@ fn healer_benchmark_alternate_specs_require_explicit_native_policy() {
         roster, after,
         "benchmark configuration must not rewrite the native roster"
     );
+}
+
+#[test]
+#[ignore = "explicit source actor identity and requested native class/spec configuration"]
+fn healer_benchmark_alternate_actor_configuration_preserves_source_identity() {
+    let (h, _) = level32(209072);
+    for (spec, entry, source_spec, class) in [
+        (65, 209057, 66, 2),
+        (256, 215011, 257, 5),
+        (264, 209053, 262, 7),
+        (270, 227734, 269, 10),
+        (1468, 215240, 1467, 13),
+    ] {
+        let configured = super::simulator::healer_profiles::configure(h.app.world(), spec).unwrap();
+        let source = h
+            .app
+            .world()
+            .resource::<FollowerCatalog>()
+            .profiles
+            .iter()
+            .find(|profile| profile.entry == entry)
+            .unwrap();
+        assert_eq!(
+            (configured.entry, configured.class_id, configured.spec_id),
+            (entry, class, spec)
+        );
+        assert_eq!(configured.name, source.name);
+        assert_eq!(
+            source.spec_id, source_spec,
+            "authored identity remains unchanged"
+        );
+        assert_eq!(configured.role, shared::group::GroupRole::Healer);
+        assert_eq!(
+            (
+                configured.attack_spell,
+                configured.cooldown_spell,
+                configured.taunt_spell,
+                configured.form_spell
+            ),
+            (0, 0, 0, 0),
+            "source DPS/tank actions are not healer policy"
+        );
+    }
+    for spec in [105, 257] {
+        let configured = super::simulator::healer_profiles::configure(h.app.world(), spec).unwrap();
+        let source = h
+            .app
+            .world()
+            .resource::<FollowerCatalog>()
+            .profiles
+            .iter()
+            .find(|profile| profile.spec_id == spec)
+            .unwrap();
+        assert_eq!(
+            (
+                configured.entry,
+                configured.heal_spell,
+                configured.attack_spell
+            ),
+            (source.entry, source.heal_spell, source.attack_spell)
+        );
+    }
 }
