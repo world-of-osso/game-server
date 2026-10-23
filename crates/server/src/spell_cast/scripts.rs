@@ -26,6 +26,7 @@ mod batch8;
 mod batch9;
 mod chrono_flame;
 mod clearcasting;
+mod elemental_ascendance;
 mod empower_evoker;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
@@ -34,7 +35,7 @@ pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
-pub(super) use hot_streak::record_fire_hit;
+pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 pub(crate) mod prayer_of_mending;
 mod scourge_strike;
@@ -72,6 +73,9 @@ pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::Ca
 }
 
 pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
+    if (spell, index) == (super::area_trigger::meteor::METEOR, 0) {
+        return Some(super::area_trigger::meteor::cast_meteor);
+    }
     if spell == super::mobile_banking::MOBILE_BANKING && index == 0 {
         return Some(super::mobile_banking::summon_chest);
     }
@@ -117,6 +121,7 @@ pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u
         && batch13::effect_enabled(spell, index)
         && batch15::effect_enabled(world, caster, spell, index)
         && batch23::effect_enabled(world, caster, spell, index)
+        && super::guardian::effect_enabled(world, caster, spell, index)
 }
 
 use bevy::prelude::*;
@@ -258,6 +263,9 @@ pub(super) fn consumes_effect_value(spell_id: u32, effect_index: u8) -> bool {
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (crate::scripted_ai::orator::TERRORIZE_SELECTOR, 0) => {
+            Some(crate::scripted_ai::orator::terrorize_hit)
+        }
         (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::cast_damage),
         (49_576, 0) => Some(death_grip),
         (108_199, 1) => Some(cast_subduing_grasp),
@@ -309,6 +317,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch14::BLIZZARD_DAMAGE, 0) => Some(batch14::slow_blizzard),
         (batch14::SURVIVAL_COMMAND, 0) => Some(batch14::command_pet),
         (KILL_COMMAND, 0) => Some(batch14::command_beast),
+        (batch14::WILD_THRASH, 0) => Some(batch14::wild_thrash),
         (batch14::WILDFIRE_BOMB, 2) => Some(batch14::bomb_primary),
         (batch14::CONSUME, 0) => Some(batch14::consume_fury),
         (batch13::REND, 0) => Some(batch13::apply_rend_bleed),
@@ -425,6 +434,11 @@ pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
         return Some(hook);
     }
     match spell_id {
+        super::elemental_overload::LIGHTNING_OVERLOAD
+        | super::elemental_overload::CHAIN_OVERLOAD
+        | super::elemental_overload::LAVA_OVERLOAD_DAMAGE => {
+            Some(super::elemental_overload::scale_damage)
+        }
         crate::auras::agony::AGONY => Some(crate::auras::agony::tick_damage),
         touch_of_death::TOUCH_OF_DEATH => Some(touch_of_death::damage),
         batch13::SHADOW_WORD_DEATH => Some(batch13::death_execute),
@@ -544,8 +558,8 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
             Some(essence_burst::roll_essence_burst)
         }
-        hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE => {
-            Some(hot_streak::consume_admitted_hot_streak)
+        hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE | hot_streak::NATIVE_FLAMESTRIKE => {
+            Some(hot_streak::consume_procs_and_roll_pyroclasm)
         }
         lava_surge::LAVA_BURST => Some(lava_surge::restore_deferred_charge),
         IMPENDING_VICTORY => Some(heal_and_consume_victorious),
@@ -1375,6 +1389,7 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
 
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
+        elemental_ascendance::ASCENDANCE => Some(elemental_ascendance::cast_entry),
         100780 => Some(windwalker::tiger_palm_hit),
 
         lava_surge::PROC => Some(lava_surge::restore_on_proc_hit),

@@ -1,6 +1,6 @@
 use crate::random as rand;
 use bevy::ecs::system::SystemParam;
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
@@ -43,7 +43,7 @@ const MOD_ENEMY_DODGE: u32 = 251;
 /// Non-player expertise (`Unit::GetUnitDodgeChance`/`GetUnitParryChance`).
 /// A swing of one hand pushes the other hand's timer to at least this
 /// (`ATTACK_DISPLAY_DELAY`, Unit.h:643; Unit::AttackerStateUpdate, Unit.cpp:2203-2230).
-const ATTACK_DISPLAY_DELAY: f32 = 0.2;
+const ATTACK_DISPLAY_DELAY: Duration = Duration::from_millis(200);
 /// Base melee damage per swing of units without ExpectedStat damage.
 const BASE_DAMAGE: f32 = 10.0;
 /// Retail rage per second of swing time for each auto-attack dealt (SimC
@@ -132,16 +132,16 @@ impl Plugin for CombatPlugin {
 /// its selection (`Player::SetTarget` is a no-op, Player.h:1920).
 #[derive(Component, Debug, Clone)]
 pub struct AutoAttack {
-    pub timer: f32,
-    pub off_hand_timer: f32,
+    pub timer: Duration,
+    pub off_hand_timer: Duration,
     pub victim: Entity,
 }
 
 impl AutoAttack {
     pub fn new(victim: Entity) -> Self {
         Self {
-            timer: 0.0,
-            off_hand_timer: 0.0,
+            timer: Duration::ZERO,
+            off_hand_timer: Duration::ZERO,
             victim,
         }
     }
@@ -498,8 +498,9 @@ pub(crate) fn rescale_creature_swing_timers(
     }
     if let Some(mut attack) = world.get_mut::<AutoAttack>(unit) {
         let multiplier = current / previous;
-        attack.timer *= multiplier;
-        attack.off_hand_timer *= multiplier;
+        attack.timer = melee::attack_timer_duration(attack.timer.as_secs_f32() * multiplier);
+        attack.off_hand_timer =
+            melee::attack_timer_duration(attack.off_hand_timer.as_secs_f32() * multiplier);
     }
 }
 
@@ -652,7 +653,7 @@ fn auto_attack_unit(
     time: Res<Time>,
     mut params: AutoAttackParams,
 ) {
-    let dt = time.delta_secs();
+    let dt = time.delta();
     let mut swings = Vec::new();
     let mut redirect_health = HashMap::new();
     // Release the attacker's read of ActiveAuras before mutating the victim's
@@ -752,7 +753,7 @@ struct SwingSnapshot {
 fn snapshot_attacker(
     attackers: &mut AutoAttackers,
     entity: Entity,
-    dt: f32,
+    dt: Duration,
 ) -> Option<SwingSnapshot> {
     let (
         _,
@@ -763,8 +764,8 @@ fn snapshot_attacker(
         (stat_mods, casting, auras),
         (creature, flags, summon, attack_time),
     ) = attackers.get_mut(entity).ok()?;
-    auto_attack.timer -= dt;
-    auto_attack.off_hand_timer -= dt;
+    auto_attack.timer = auto_attack.timer.saturating_sub(dt);
+    auto_attack.off_hand_timer = auto_attack.off_hand_timer.saturating_sub(dt);
     // Unit::DoMeleeAttackIfReady: timers run even while casting or controlled.
     if casting || auras.is_some_and(|auras| auras.cannot_auto_attack()) {
         return None;
@@ -797,7 +798,6 @@ fn record_swing(
     else {
         return;
     };
-    crate::combat_refs::set_in_combat_with(world, attacker_entity, target_entity);
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), target_entity);
     // Procs default to normal and critical hits (SpellMgr::LoadSpellProcs
     // HitMask 0); dodge- and parry-triggered procs are not modelled.
@@ -834,8 +834,10 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
         ],
         spell_id: None,
         can_proc: true,
+        cast_used_proc_modifier: false,
         periodic: false,
         damage: outcome.scaled_loss,
+        heal: None,
         reflected: false,
     }];
     if outcome.npc_died || outcome.player_died {
@@ -846,8 +848,10 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
             target_mask: [procs::PROC_DEATH, 0],
             spell_id: None,
             can_proc: true,
+            cast_used_proc_modifier: false,
             periodic: false,
             damage: 0.0,
+            heal: None,
             reflected: false,
         });
     }
@@ -1427,7 +1431,7 @@ fn try_swing(
         Hand::Main => auto_attack.timer,
         Hand::Off => auto_attack.off_hand_timer,
     };
-    if timer > 0.0 {
+    if !timer.is_zero() {
         return None;
     }
     let weapon = attacker.weapon(hand)?;
@@ -1486,6 +1490,12 @@ fn try_swing(
         * armor
             .1
             .map_or(1.0, CharacterStats::versatility_damage_taken_multiplier);
+    let raw_armor = target_armor(armor, &target, &attacker_scaling);
+    let bypassed_armor = crate::auras::combat_stats::armor_after_bypass(
+        avoidance.1.as_deref(),
+        attacker.entity,
+        raw_armor,
+    );
     let armored = armor_mitigated(
         swing_damage(
             attacker,
@@ -1499,7 +1509,7 @@ fn try_swing(
                     .taken_multiplier(attacker.entity, avoidance.1.as_deref())
                 * versus,
         ),
-        target_armor(armor, &target, &attacker_scaling),
+        bypassed_armor,
         &attacker_scaling,
         &target,
         context.armor_constants,
@@ -1640,8 +1650,8 @@ fn reset_swing_timers(auto_attack: &mut AutoAttack, hand: Hand, swing_time: f32)
         Hand::Main => (&mut auto_attack.timer, &mut auto_attack.off_hand_timer),
         Hand::Off => (&mut auto_attack.off_hand_timer, &mut auto_attack.timer),
     };
-    *swung = swing_time;
-    *other = other.max(ATTACK_DISPLAY_DELAY);
+    *swung = melee::attack_timer_duration(swing_time);
+    *other = (*other).max(ATTACK_DISPLAY_DELAY);
 }
 
 /// TC IsWithinMeleeRangeAt: nominal range plus attacker-owned aura153 yards.
@@ -1872,6 +1882,8 @@ fn commit_melee_loss(
         return false;
     }
     let before = health.current;
+    crate::combat_refs::engage_attacked_target(world, attacker, victim);
+    let health = world.get::<Health>(victim).expect("living melee victim");
     let scripted_loss = crate::scripted_ai::limit_scripted_loss(
         world.get::<crate::scripted_ai::CreatureScriptName>(victim),
         world
@@ -1929,6 +1941,7 @@ pub(crate) fn deal_health_damage(
     if !crate::spell_cast::targets::is_alive(world, victim) {
         return;
     }
+    crate::combat_refs::engage_attacked_target(world, attacker, victim);
     let (attacker_scaling, victim_scaling) = (
         UnitScaling::of(world, attacker),
         UnitScaling::of(world, victim),
@@ -1960,7 +1973,6 @@ pub(crate) fn deal_health_damage(
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
     world.entity_mut(victim).insert(LastDamager(attacker));
     crate::stand_state::stand_on_damage(world, victim);
-    crate::combat_refs::set_in_combat_with(world, attacker, victim);
     if loss > 0.0 {
         crate::creature_aggro::note_damage_taken(world, victim);
     }
@@ -2335,6 +2347,9 @@ mod npc_victim_parry_tests;
 #[cfg(test)]
 #[path = "combat_npc_weapon_crit_tests.rs"]
 mod npc_weapon_crit_tests;
+#[cfg(test)]
+#[path = "combat_pet_engagement_tests.rs"]
+mod pet_engagement_tests;
 #[cfg(test)]
 #[path = "combat_tests.rs"]
 mod tests;

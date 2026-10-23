@@ -73,6 +73,11 @@ impl Plugin for HunterPetPlugin {
             .add_systems(Update, load_pet_stables)
             .add_systems(
                 Update,
+                crate::hunter_pet_stats::refresh_owner_stats
+                    .after(crate::stats::update_character_stats),
+            )
+            .add_systems(
+                Update,
                 crate::pet_stable::process_pet_stable_requests
                     .after(crate::npc_interaction::NpcInteractionsProcessed)
                     .after(load_pet_stables),
@@ -795,13 +800,22 @@ fn spawn_pet(
         .active
         .get(usize::from(slot))?
         .clone()?;
+    let hunter = owner_class(world, owner) == Some(CLASS_HUNTER);
+    if hunter {
+        // A FixedUpdate Call Pet can precede Update's stat refresh after gear
+        // or passive initialization. Resolve through the SAME producer before
+        // snapshotting its owner, as Ebon Might does for cast-boundary stats.
+        world
+            .run_system_cached(crate::stats::update_character_stats)
+            .expect("resolve native owner stats before Hunter pet summon");
+    }
     let demon = owner_class(world, owner) == Some(CLASS_WARLOCK);
     let summoned = is_summoned_pet_owner(world, owner);
     if summoned {
         // Pet::LoadPetFromDB: SUMMON_PET always takes the owner's level.
         stored.level = world.get::<Level>(owner).expect("summoning player level").0;
     }
-    let (health, classification, mana, flags_extra) = {
+    let (base_health, classification, mana, flags_extra) = {
         let data = world.get_resource::<WorldData>()?;
         let Some(template) = data.template_for(stored.creature_entry, 0) else {
             error!(
@@ -811,7 +825,11 @@ fn spawn_pet(
             return None;
         };
         (
-            pet_max_health(data, template, stored.level),
+            if hunter {
+                crate::hunter_pet_stats::native_base_health(data, template, stored.level)
+            } else {
+                pet_max_health(data, template, stored.level)
+            },
             CreatureClassification::from_rank(template.rank)
                 .expect("creature_template.rank is validated when loaded"),
             (owner_class(world, owner) == Some(CLASS_MAGE))
@@ -819,6 +837,13 @@ fn spawn_pet(
             template.flags_extra,
         )
     };
+    let inherited = hunter.then(|| {
+        let owner_stats = world
+            .get::<crate::stats::CharacterStats>(owner)
+            .expect("native Hunter pet owner requires derived character stats");
+        crate::hunter_pet_stats::spawn_stats(stored.level, base_health, owner_stats)
+    });
+    let health = inherited.as_ref().map_or(base_health, |(max, _, _)| *max);
     let map = *world.get::<InMap>(owner)?;
     let zone = world.get::<Zone>(owner).copied().unwrap_or(Zone { id: 0 });
     let faction = *world.get::<UnitFactionTemplate>(owner)?;
@@ -833,7 +858,14 @@ fn spawn_pet(
             return None;
         }
     };
-    let pools = PowerPools::from_table(world.resource::<PowerTypeTable>(), vec![power]);
+    let Some(table) = world.get_resource::<PowerTypeTable>() else {
+        warn!(
+            "Pet{} powers unavailable: PowerTypeTable is not installed",
+            stored.creature_entry
+        );
+        return None;
+    };
+    let pools = PowerPools::from_table(table, vec![power]);
     let current_health = stored.health.unwrap_or(health).clamp(0.0, health);
     stored.health = Some(current_health);
     if !summoned && stored.specialization.is_none() {
@@ -879,6 +911,9 @@ fn spawn_pet(
             CombatTarget::default(),
         ),
     ));
+    if let Some((_, armor, inherited)) = inherited {
+        pet.insert((armor, inherited));
+    }
     if power == PowerType::Focus {
         pet.insert(PetFocusRegen::default());
     }

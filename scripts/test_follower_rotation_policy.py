@@ -7,6 +7,22 @@ import unittest
 from scripts.follower_spec_kits import combat_policy, kit_rows
 
 
+class AuthoredGroundAoePolicyTests(unittest.TestCase):
+    def test_ground_entries_keep_their_authored_target_thresholds(self):
+        cases = [
+            (63, 'Meteor', 153561, 1),
+            (63, 'Flamestrike', 1254851, 3),
+            (66, 'Consecration', 26573, 1),
+            (262, 'Earthquake', 61882, 3),
+        ]
+        for spec, name, spell, minimum in cases:
+            with self.subTest(spell=spell):
+                slot, _, conditions = combat_policy(spec, name, spell, [], [])
+                self.assertEqual(slot, 'aoe')
+                self.assertTrue(conditions['ground'])
+                self.assertEqual(conditions['min_enemies'], minimum)
+
+
 class HunterSecondaryTargetPolicyTests(unittest.TestCase):
     def test_native_barbed_rows_publish_own_aura_minimum_at_actual_learn_levels(self):
         root = Path(__file__).resolve().parents[1]
@@ -49,6 +65,25 @@ class WindwalkerRotationPolicyTests(unittest.TestCase):
     def test_other_specs_do_not_gain_combo_restrictions(self):
         _, _, conditions = combat_policy(66, 'Judgment', 275779, [], [])
         self.assertNotIn('no_repeat_group', conditions)
+
+
+class ElementalActionProjectionTests(unittest.TestCase):
+    def test_native_ascendance_action_appears_only_after_actual_talent_learn(self):
+        root = Path(__file__).resolve().parents[1]
+        export = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-kits-2026-10-18/native-source-v2.json')
+        source = json.loads(export.read_text())
+        selected = [row for row in source['loadouts'] if row['spec_id'] == 262 and row['level'] in (50, 51, 90)]
+        with closing(sqlite3.connect((root / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True)) as db:
+            rows, _, _ = kit_rows(db, dict(loadouts=selected))
+        ascendance = [row for row in rows if row[1] == 1219480]
+        self.assertFalse(any(row[2] <= 50 <= row[3] for row in ascendance))
+        for level in (51, 90):
+            with self.subTest(level=level):
+                action = next((row for row in ascendance if row[2] <= level <= row[3]), None)
+                self.assertIsNotNone(action, 'native114050 description and SimC11419 identify actual1219480')
+                self.assertEqual(action[4], 'buff')
+                self.assertEqual(json.loads(action[6]), dict(target='self', combat=True,
+                    missing_aura=1219480, cooldown_remaining_above=dict(spell_id=191634, seconds=15)))
 
 
 class DemonologyActionProjectionTests(unittest.TestCase):

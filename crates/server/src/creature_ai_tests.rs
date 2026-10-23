@@ -31,8 +31,8 @@ fn ai_test_app() -> App {
         std::time::Duration::from_millis(50),
     ));
     app.insert_resource(WorldData {
-        templates: HashMap::new(),
-        spawns: vec![],
+        templates: HashMap::new().into(),
+        spawns: vec![].into(),
         spawns_by_map: HashMap::new(),
         waypoints: HashMap::new(),
         ..Default::default()
