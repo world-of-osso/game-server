@@ -30,6 +30,14 @@ The damage-channel census records63 spell IDs/101 native DB2 effect rows. Includ
 
 `add_guardian_templates.py --spell104317 --spell193331 --spell193332` (each option and number separated by a space) selects native difficulty0 Effect28/56 creature IDs, deduplicates them and copies exact TDB templates/models through the existing retail-content importer. These roots resolve to55659 and98035. Explicit roots replace the default Darkglare/Wild Imp selection; they do not add fabricated spell lists, alter world spawns or broaden the default Wild Imp publication. Missing summon metadata fails before publication; reruns preserve the same model rows.
 
+## Neutral-target minion ownership boundary
+
+Exact master9d13 native ST produced0 DPS and3T11517.5333 DPS on the original private DB. Fire63 ST control produced24378.3867 DPS. The initial fixture pulls after200ms while native30146 takes6000ms; the dummy's five-second inactivity exit can remove the owner's attack before pet preparation finishes. Native follower code already prepares out of combat and skips preparation with an existing living pet; this is not evidence of a dungeon resummon loop.
+
+After the template-only delta,3T12715.8667 DPS still has no104318 casts. Live GDB on the exact9d13 binary, a detached source checkout over its baked path and the read-only prepared DB observed three actual104317 Imp actors alive and trying104318 on the correct31146. Each `targets::relation_matches` returned false; rejection occurred in `validate_target`, before power checks. A bounded native assertion exits1 (`imp-neutral-red.log`). Direct level32 Imp control succeeds because its target is hostile; the distinguishing condition is **neutral training dummy versus hostile harness target**, not demonstrated level scaling.
+
+`FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_MINION_FLAGS` is an explicitly approved project policy extending the class-follower spell-owner bridge: controlled minions/guardians inherit PLAYER_CONTROLLED8 from a player-affected owner through existing `faction::player_affected`. TC a352b1fa `Unit.cpp6286–6289` sets this flag only for actual Player owners; applying it to a class-stat follower is a project extension, not a TC claim. Ordinary NPC owners without8 remain unchanged; wild/non-minion summons retain their existing lifecycle, and companion immunities still OR with ownership. All owned guardian paths share `spawn_summon`; controlled Hunter pets/Felguard already unconditionally carry8 through `hunter_pet::spawn`, so that separate path needs no change.
+
 ## Evidence
 
 Artifacts under engine `data/diagnostics/demo-parity-2026-10-23/`: `266.reference.{single,three}.{json,txt,proof.json}`, `reference-channels.json`, `source-census.json`, private `world.db` and `world.sha256`. Prior source references are `dps-parity-2026-10-21/266.reference.single.*` and `266.reference-fixed.three.*`, not `all-spec-expanded-references/266.*`.

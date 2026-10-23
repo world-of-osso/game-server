@@ -775,10 +775,15 @@ fn roll_guardian_level(
     (level, scaling)
 }
 
-/// TC Unit::SetMinion sets PLAYER_CONTROLLED only for player owners.
+/// TC Unit.cpp6286–6289 sets PLAYER_CONTROLLED for Player-owned minions.
+/// FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_MINION_FLAGS extends that ownership
+/// to player-affected class followers; ordinary NPC owners stay unchanged.
 /// Companion immunity augments ownership flags instead of replacing them.
-fn calculate_summon_unit_flags(owner_is_player: bool, properties: SummonProperties) -> u32 {
-    let ownership = if owner_is_player && properties.is_minion() {
+fn calculate_summon_unit_flags(
+    owner_is_player_affected: bool,
+    properties: SummonProperties,
+) -> u32 {
+    let ownership = if owner_is_player_affected && properties.is_minion() {
         crate::faction::UNIT_FLAG_PLAYER_CONTROLLED
     } else {
         0
@@ -825,7 +830,11 @@ fn spawn_summon(
     let replicate = world.get::<Replicate>(owner).is_some();
     let display_id = template.display_id;
     let private_owner = private_summon_owner(world, owner, properties.flags);
-    let unit_flags = calculate_summon_unit_flags(world.get::<Player>(owner).is_some(), properties);
+    let owner_is_player_affected = crate::faction::player_affected(
+        world.get::<Player>(owner).is_some(),
+        world.get::<UnitFlags>(owner),
+    );
+    let unit_flags = calculate_summon_unit_flags(owner_is_player_affected, properties);
     let mut entity = world.spawn((
         (
             Position {
