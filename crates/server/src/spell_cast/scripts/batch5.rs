@@ -1,4 +1,5 @@
-//! Bounded scripts derived exclusively from local Mainline 12.1.0.69933 rows.
+//! Bounded scripts from local Mainline 12.1.0.69933 rows.
+//! Lava crit ownership: TC a352b1fa spell_shaman.cpp1735–1763.
 use crate::random as rand;
 use bevy::prelude::*;
 use shared::components::PowerType;
@@ -176,6 +177,11 @@ pub(super) fn epidemic_splash(
     units.retain(|&unit| Some(unit) != explicit);
 }
 
-pub(super) fn lava_burst_crit(world: &World, target: Entity) -> Option<f32> {
-    crate::auras::has_aura(world, target, FLAME_SHOCK).then_some(100.0)
+pub(super) fn lava_burst_crit(world: &World, caster: Entity, target: Entity) -> Option<f32> {
+    let owns_flame_shock = world.get::<ActiveAuras>(target).is_some_and(|auras| {
+        auras
+            .iter()
+            .any(|aura| aura.spell_id == FLAME_SHOCK && aura.caster == caster)
+    });
+    owns_flame_shock.then_some(100.0)
 }

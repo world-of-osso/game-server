@@ -1,3 +1,11 @@
+## 2026-10-23 — Shared native APL fact boundary
+
+[Native facts](systems/simc-apl.md#native-binding-boundary): six actual native6RED at5924496f9→6GREEN17.40s atdc1ee9781,7m37compile/exit0/zero warnings. Earned TP/BOK buff+Chi, actual Charge200raw→20Rage, selected starter allocation distinct from learned utility, native Provoke/Roll timers, action/control GCD and300s fixture clock; no canonical DB edits. [Proof/capability limits](../handoffs/shared-native-apl-proof-ledger.md); only explicit parity Fixture driver approved, Stockade native kit/DUNGEON_TTD_UNAVAILABLE retained, no literal-rotation claim.
+
+## 2026-10-23 — Windwalker baseline and Combo Strikes boundary
+
+[Combo Strikes](systems/auras.md#windwalker-combo-strikes-policy--2026-10-23): actual native TP→Provoke→TP without Hit Combo,83.754=83.754 RED versus99.35737 expected, then native coefficient/state1GREEN10.04s at3286b0463. Frozen300s31146 baseline ST23785.66/3T23260.47,−88.48%/−93.82%; missing FoF/RSK/SCK casts, literal adapter and per-ability/channel qualification remain open ([census](../handoffs/ww-source-census.md)). No tuning/canonical DB changes.
+
 ## 2026-10-22 — Current-critter DismissPet contract selected
 
 Lead chooses TC DismissCritter identity for existing DismissPet: authoritative current journal/legacy actor,never older journal tuple. Ignored spec/test-first actual balloon,legacy,older-preservation and isolation cases: genuine3RED/16controls→20GREEN29.14s at merged65ac11760; separate pipeline1GREEN8.72s/check0-103.15s/no warnings/fmt0. Verified2026-10-23:545/1173 unchanged; three inherited master title55 blocker-list removals retain existing party-viewer action gaps, no admissions. No protocol fields,UseToy toggle,ownership deletion or native parity claim. [Authority](systems/toys.md#current-critter-dismissal-authority-2026-10-22).
@@ -4092,3 +4100,7 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 - [EB cast mechanism](investigations/follower-data.md#unselected-elemental-blast-and-icefury-overload-mechanisms): after86 native-funded root hits/no120588 RED/controlPASS,117014→120588/effect1 scaling added on mergedlv991 base. Scoped postmerge GREEN pending; no selected-kit/cost/cast-time bypass.
 
 - [Overload cast-only tails](investigations/follower-data.md#unselected-elemental-blast-and-icefury-overload-mechanisms): postmerge11nativeGREEN23.93s +fivechild25%/removal/EchoGREEN10.25s; compile34m11/zero warnings. EB2 and four new child qualifiers enabled after proof; selected-kit/resource/APL limits retained.
+
+- [Lava crit ownership](investigations/follower-data.md#lava-caster-owned-flame-shock-crit-rule): approved own/foreign native285452/2854662PASS2RED9.13s. Shared predicate now requires actual aura caster and registers both payloads; no other crit/modifier/resource edits. GREEN pending on lv991-based branch.
+
+- [Lava crit ownership](investigations/follower-data.md#lava-caster-owned-flame-shock-crit-rule):4GREEN13.43s/zero warnings after2nativeRED; samebinary retained root2GREEN10.03s +actualStatsPlugin70samples2PASS12.42s. Observed285466crits5/5; cases enabled. No other crit edits or causal-DPS/parity claim.
