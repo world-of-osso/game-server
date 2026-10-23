@@ -1,8 +1,12 @@
 //! User-approved player-spec combat bridge for authenticated Retail followers.
 mod ai;
 mod catalog;
+#[cfg(test)]
+mod darkflame_drop_tests;
 mod empower_policy;
 mod hazards;
+#[cfg(test)]
+mod healer_benchmark_profile_tests;
 mod healer_context;
 #[cfg(test)]
 mod healer_group_cancel_tests;
@@ -35,6 +39,8 @@ mod fire_efficiency_tests;
 mod formation_tests;
 #[cfg(test)]
 mod kit_elemental_resource_tests;
+#[cfg(test)]
+mod intensifying_flame_tests;
 #[cfg(test)]
 mod kit_proc_fidelity_tests;
 #[cfg(test)]

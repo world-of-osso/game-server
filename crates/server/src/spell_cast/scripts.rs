@@ -49,7 +49,8 @@ mod windwalker;
 mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
 pub(crate) use windwalker::{
-    DANCE_OF_CHIJI, after_dance_cast_event, check_dance_proc, ordinary_combo_cast,
+    DANCE_OF_CHIJI, after_dance_cast_event, check_dance_proc, combo_strikes_multiplier,
+    ordinary_combo_cast,
 };
 
 pub(super) use batch9::update_ground_pulses;
@@ -430,9 +431,6 @@ pub(crate) fn rake_bleed_snapshot(world: &World, caster: Entity, amount: f32) ->
 pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
-    if let Some(hook) = batch19::damage_amount(spell_id) {
-        return Some(hook);
-    }
     match spell_id {
         super::elemental_overload::LIGHTNING_OVERLOAD
         | super::elemental_overload::CHAIN_OVERLOAD

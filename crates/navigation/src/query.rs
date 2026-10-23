@@ -8,6 +8,9 @@ use std::path::{Path, PathBuf};
 mod polygons;
 pub use polygons::read_walkable_polygons;
 
+#[path = "collision_drop.rs"]
+mod collision_drop;
+pub use collision_drop::CollisionDrop;
 #[path = "smooth.rs"]
 mod smooth;
 #[path = "visibility.rs"]
@@ -25,6 +28,7 @@ struct Corridor {
 pub struct NavigationPath {
     pub points: Vec<Vec3>,
     pub complete: bool,
+    pub collision_drop: Option<CollisionDrop>,
 }
 
 impl NavigationPath {
@@ -114,17 +118,37 @@ impl NavigationMap {
     }
 
     pub fn path(&mut self, start: Vec3, end: Vec3) -> Result<NavigationPath, String> {
+        let walking = self.walking_path(start, end);
+        let disconnected =
+            matches!(&walking, Err(error) if error == "unreachable target (incomplete corridor)");
+        if disconnected && self.has_collision_drop() {
+            return self.path_via_collision_drop(start, end);
+        }
+        walking
+    }
+
+    fn walking_path(&mut self, start: Vec3, end: Vec3) -> Result<NavigationPath, String> {
         let corridor = self.query_corridor(start, end)?;
         let points = self.pull_corners(&corridor.start, &corridor.end, &corridor.polygons)?;
         Ok(NavigationPath {
             points,
             complete: corridor.complete,
+            collision_drop: None,
         })
     }
 
     /// Inspection/admission requires the entire destination, not a walkable prefix.
     pub fn complete_path(&mut self, start: Vec3, end: Vec3) -> Result<Vec<Vec3>, String> {
         self.path(start, end)?.into_complete()
+    }
+
+    /// Escape candidates are walking-only; their callers do not own off-mesh motion.
+    pub(crate) fn complete_walk_path(
+        &mut self,
+        start: Vec3,
+        end: Vec3,
+    ) -> Result<Vec<Vec3>, String> {
+        self.walking_path(start, end)?.into_complete()
     }
 
     /// TC a352b1fa default PathGenerator surface stepping, only for C++ waypoints.

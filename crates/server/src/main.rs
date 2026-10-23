@@ -68,6 +68,7 @@ mod housing_catalog;
 mod housing_quest_tests;
 mod housing_quests;
 mod hunter_pet;
+mod hunter_pet_stats;
 mod ignore_list;
 mod inspect;
 mod interest;
@@ -124,6 +125,8 @@ mod rest;
 mod scripted_ai;
 mod seething_parachute;
 mod sheet_visibility;
+#[cfg(test)]
+mod simc_apl_native;
 mod skyriding;
 mod spawn_groups;
 mod spawn_pools;
