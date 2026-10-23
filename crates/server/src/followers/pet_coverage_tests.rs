@@ -97,7 +97,6 @@ fn assert_native_pickup(h: &mut Harness, tank: Entity, pet_owner: Entity, pet: E
 }
 
 #[test]
-#[ignore = "RED: follower tank omits native hunter-pet-only combat"]
 fn pet_coverage_native_duck_attacker_is_admitted_and_taunted() {
     let _seed = crate::random::seed_scope(1);
     let (mut h, owner, pet) = super::kit_hunter_policy_tests::prepare_native_duck(32);
@@ -106,7 +105,6 @@ fn pet_coverage_native_duck_attacker_is_admitted_and_taunted() {
 }
 
 #[test]
-#[ignore = "RED: follower tank omits native warlock-pet-only combat"]
 fn pet_coverage_native_felguard_attacker_is_admitted_and_taunted() {
     let _seed = crate::random::seed_scope(1);
     let (mut fixture, pet) = super::pet_tests::felguard_at_level(32);
