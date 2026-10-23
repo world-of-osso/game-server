@@ -74,6 +74,7 @@ type Roaming = (
     Without<crate::scripted_ai::waypoint_path::PathMovement>,
     Without<crate::scripted_ai::jump_movement::JumpMovement>,
     Without<crate::scripted_ai::fall_movement::FallMovement>,
+    Without<crate::navigation::collision_drop::CollisionDropMovement>,
     Without<crate::spell_cast::charge::ChargeMovement>,
 );
 /// Active creatures that are not confused, feared or in flight: chase and leash run.
@@ -84,6 +85,7 @@ pub(crate) type ActiveUncontrolled = (
     Without<crate::knockback::KnockbackFlight>,
     Without<crate::scripted_ai::jump_movement::JumpMovement>,
     Without<crate::scripted_ai::fall_movement::FallMovement>,
+    Without<crate::navigation::collision_drop::CollisionDropMovement>,
     Without<crate::spell_cast::charge::ChargeMovement>,
 );
 
@@ -1243,10 +1245,14 @@ fn follow_owner_system(
             || follow_point(&leader, *pos, reach),
             |slot| follow_point_at_angle(&leader, slot.0, reach),
         );
+        // TC a352b1fa FollowMovementGenerator.cpp:52 uses IsInDist;
+        // Position.h:121–124,157 includes vertical separation in squared distance.
+        let vertical_gap = leader.position.y - pos.y;
         let within_range = if slot.is_some() {
-            (point.0 - pos.x).hypot(point.1 - pos.z) <= FOLLOW_RANGE_TOLERANCE
+            let point_gap = (point.0 - pos.x).hypot(point.1 - pos.z);
+            point_gap.hypot(vertical_gap) <= FOLLOW_RANGE_TOLERANCE
         } else {
-            gap <= reach + FOLLOW_RANGE_TOLERANCE
+            gap.hypot(vertical_gap) <= reach + FOLLOW_RANGE_TOLERANCE
         };
         if !follow.moving && within_range {
             let here = *pos;

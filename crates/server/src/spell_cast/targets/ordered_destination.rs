@@ -16,7 +16,7 @@ pub(in crate::spell_cast) fn check_destination_support(
             effect
                 .implicit_targets
                 .iter()
-                .any(|&id| matches!(id, 73 | 74 | 148))
+                .any(|&id| matches!(id, 41 | 43 | 48 | 73 | 74 | 148))
         });
     if needs_force_height {
         // Spell.cpp9286–9292 selects Object.cpp2802–2826 MAX_HEIGHT/ten-step queries.
@@ -78,6 +78,11 @@ pub(super) fn select_slot(
     if id == 73 {
         return sample_caster_radius_destination(world, caster, spell, effect, slot).map(Some);
     }
+    if matches!(id, 41 | 43 | 48)
+        && let Some(Selector::CasterOffset(angle)) = selector(id)
+    {
+        return move_caster_offset_destination(world, caster, spell, effect, slot, angle).map(Some);
+    }
     let destination = effect_dest_slot(world, caster, explicit, effect, slot, id, previous);
     match id {
         74 => {
@@ -109,17 +114,50 @@ fn sample_caster_radius_destination(
     effect: &SpellEffect,
     slot: usize,
 ) -> Result<Dest, super::super::CastFailure> {
+    let distance = sample_caster_radius_extent(world, caster, spell, effect, slot);
+    let angle = rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..std::f32::consts::TAU);
+    move_caster_destination(world, caster, distance, angle, 73)
+}
+
+/// Spell.cpp1625–1636: only corners use3 when this slot has no radius entry.
+fn move_caster_offset_destination(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    slot: usize,
+    angle: f32,
+) -> Result<Dest, super::super::CastFailure> {
+    let id = effect.implicit_targets[slot];
+    let missing_corner_radius = matches!(id, 41 | 43) && effect.radius[slot].is_none();
+    let distance = if missing_corner_radius {
+        DEFAULT_TOTEM_DISTANCE
+    } else {
+        sample_caster_radius_extent(world, caster, spell, effect, slot)
+    };
+    let angle = orientation(world, caster) + angle;
+    move_caster_destination(world, caster, distance, angle, id)
+}
+
+fn move_caster_destination(
+    world: &mut World,
+    caster: Entity,
+    distance: f32,
+    angle: f32,
+    selector: u32,
+) -> Result<Dest, super::super::CastFailure> {
     let start = position(world, caster).ok_or(super::super::CastFailure::InvalidTarget)?;
     let reach = crate::scripted_ai::model_reach::combat_reach(world, caster).ok_or_else(|| {
-        super::super::CastFailure::Unsupported("target73 requires caster combat reach".into())
+        super::super::CastFailure::Unsupported(format!(
+            "target{selector} requires caster combat reach"
+        ))
     })?;
-    let distance = sample_caster_radius_extent(world, caster, spell, effect, slot).max(reach);
-    let angle = rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..std::f32::consts::TAU);
+    let distance = distance.max(reach);
     let destination = Dest {
         position: start + Vec3::new(distance * angle.cos(), 0.0, -distance * angle.sin()),
         orientation: orientation(world, caster),
     };
-    move_destination(world, caster, start, destination, 73)
+    move_destination(world, caster, start, destination, selector)
 }
 
 /// CalcRadius(m_caster): absent B radius inherits A's entry; a missing entry is0.
