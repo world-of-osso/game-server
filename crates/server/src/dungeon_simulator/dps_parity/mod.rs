@@ -415,6 +415,33 @@ fn dps_parity_native_bis_dummy_records_300s() {
 }
 
 #[test]
+#[ignore = "opt-in actual300s native add lifetimes; requires private parity inputs"]
+fn dps_parity_fixture_add_start_schedule_matches_simc_10ms_cooldown_clamp() {
+    let _seed_scope = crate::random::seed_scope(70_448);
+    let (profile, traits) = read_reference(66).unwrap();
+    let mut run = prepare_reference(
+        profile,
+        &traits,
+        3,
+        crate::followers::simulator::ParityActor::Follower,
+    )
+    .unwrap();
+    engage(&mut run);
+    let (seconds, _, _) = advance_combat(&mut run).unwrap();
+    assert!((seconds - 300.0).abs() < 0.001);
+    assert_eq!(run.target_waves.len(), 10);
+    // Pinned raid_event.cpp2700–2701: cooldown<=duration becomes duration+0.01s.
+    for (index, wave) in run.target_waves.iter().enumerate() {
+        let expected = index as f64 * 30.01;
+        let actual = wave["at"].as_f64().unwrap();
+        assert!(
+            (actual - expected).abs() < 0.0001,
+            "wave{index} started at{actual}s, source requires{expected}s"
+        );
+    }
+}
+
+#[test]
 #[ignore = "opt-in real300s dummy clock and add replacement; requires private parity inputs"]
 fn dps_parity_fixture_fixed_time_target_health_follows_global_clock() {
     let _seed_scope = crate::random::seed_scope(70_448);
