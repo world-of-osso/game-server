@@ -46,6 +46,10 @@ Failed or unavailable pet preparation must report the failure once per follower 
 
 ## What it must do
 
+### Player-equivalent class combat policy
+
+- [ ] `FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_ARMOR_PENETRATION`: player-affected class followers retain their actual native aura280 armor-penetration effects through stat recomputation. Ordinary NPCs, including player-controlled non-followers, remain excluded by the TC player-only boundary. No synthetic Player identity, penetration grant, armor/K override or coefficient tuning. Actual WW269 Tiger Palm on31146 must follow native450990's12% penetration; ordinary-NPC450990 control must remain unchanged. [Source and proof ledger](../wiki/investigations/follower-armor-penetration.md).
+
 ### Native source book
 - [x] Ordinary NPC followers retain their requested native specialization at levels1–90, without a Player identity or player-spec fallback. Known spells and passives come from the validated native starter build, independent of controller aliases or unpublished kit rows.
 - [x] Runtime initialization and the source exporter share one starter-book computation. All990 existing exported loadouts preserve known/passive flags, trait entries and unspent points; overriding a native spell removes its base knowledge. Controller family aliases must not grant both Frenzy variants.

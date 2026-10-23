@@ -30,7 +30,7 @@ Match actual **formula spell ID**, actor/pet, target count, direct/tick kind and
 | `armor_mitigation_fraction` | Explicit `reduced by X% from armor` divided by100. Compare native armor-only reduction, not total mitigation. Null means unprinted, not zero. |
 | Final `actual_amount` | Native `CombatLogEvent.amount` for one matched impact. `actions[].average_hit` mixes results/states and cannot identify formula factors. |
 
-No native instrumentation is added here. Existing field names come from `dps_parity/report.rs`; parity owners expose missing cast factors. Report the first differing factor, not a guessed channel-wide scaling correction. SimC70391/native70448 build differences remain separate evidence.
+The aggregate field mapping comes from `dps_parity/report.rs`; test-only `single_spell.rs`/`spell_cast/factor_capture.rs` now observe actual native formula operations without rerolling variance/crit or adding a second formula. Report the first differing factor, not a guessed channel-wide scaling correction. SimC70391/native70448 build differences remain separate evidence.
 
 ## Interpretation
 
@@ -48,7 +48,7 @@ Batch prerequisite plans record complete APLs, durations and pinned public-sourc
 python3 scripts/dps_parity/native_spell_diff.py --native native.json --oracle oracle.json --spell-id 100780 --output diff.json
 ```
 
-The stdlib consumer selects one ordinal impact per receipt, uses the final result stage, and compares each printed numeric formula/result/armor factor. It preserves native `unattributed product` labels, marks absent factors unavailable rather than zero, and records both input hashes. Exit0 means matching active coefficient/factor terms,1 means a difference/incomplete evidence,2 means invalid input. Raw SP observations remain visible when both SP coefficients are zero but do not become a coefficient-term mismatch. Native effective source/target products and AP/SP terms compare to explicitly labelled products of printed SimC components; differing factorization is not itself a mechanics correction. Ten recorded/counterfactual tests and a43-factor WW oracle self-control qualify this consumer; native per-hit producer acceptance remains pending.
+The stdlib consumer selects one ordinal impact per receipt, uses the final result stage, and compares each printed numeric formula/result/armor factor. It preserves native `unattributed product` labels, marks absent factors unavailable rather than zero, and records both input hashes. Exit0 means matching active coefficient/factor terms,1 means a difference/incomplete evidence,2 means invalid input. Raw SP observations remain visible when both SP coefficients are zero but do not become a coefficient-term mismatch. Native effective source/target products and AP/SP terms compare to explicitly labelled products of printed SimC components; differing factorization is not itself a mechanics correction. Ten recorded/counterfactual tests and a43-factor WW oracle self-control qualify this consumer. Actual WW269 Tiger Palm native per-hit capture passed1/1 at84d60394e, preserving baseline damage38050; its first real diff is not native parity certification. The helper uses shared `capture_fixture` and `Prepared`/`execution::execute`; Actual two-TP earned-Chi priming then one FoF113656 channel produced three child117418 impacts at distinct times,1/1 GREEN20.20s atbcd9d946d. Armor-policy recomputation and Arms Player dispatch remain pending. [Actor/armor source boundary](../investigations/follower-armor-penetration.md) explains why the follower receipt's0.30 cannot be tuned blindly to the SimC player's0.274.
 
 ## Sources
 
@@ -60,3 +60,4 @@ The stdlib consumer selects one ordinal impact per receipt, uses the final resul
 
 - [[simc-apl]] — native rotation binding is separate.
 - [[character-stats]] — native stat production.
+- [[follower-armor-penetration]] — actual actor-policy difference and ExpectedStat/TC provenance.

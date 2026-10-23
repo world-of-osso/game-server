@@ -1,3 +1,7 @@
+## 2026-10-23 — Follower armor penetration policy
+
+[Armor source ledger](investigations/follower-armor-penetration.md): installed ExpectedStat armor1470/K3430 and native450990/280=12 sourced against TC a352b1fa. Real WW follower receipt RED0.300011vs0.273859; explicit player-equivalent class-follower policy implemented, ordinary player-controlled NPC remains excluded. Native policy/control GREEN pending; max-level player item-level K curve remains a separate unqualified branch.
+
 ## 2026-10-22 — Devastation Giantkiller consequence boundary
 
 [Native Giantkiller](investigations/follower-data.md#devastation-giantkiller-policy--2026-10-22): legal-profile fixed300s baseline−86.24%ST/−88.96%three-target; actual4RED22.30s at0d07469b8 shows native12% mastery changes no damage. Native aura amount plus ledgered SimC health/Tyranny policy implemented; targeted GREEN and literal rotation remain open. No coefficient/stat tuning or canonical data edits.

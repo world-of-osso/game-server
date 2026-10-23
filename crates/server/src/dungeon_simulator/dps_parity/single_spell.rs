@@ -282,6 +282,50 @@ fn dps_parity_single_spell_tiger_palm_records_real_factors() {
 }
 
 #[test]
+#[ignore = "real WW follower/reference280 policy; native armor-only receipt"]
+fn dps_parity_single_spell_follower_armor_penetration() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare(269, 1).unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<crate::followers::Follower>(run.actor)
+            .is_some(),
+        "this policy test requires DPS_PARITY_ACTOR=follower"
+    );
+    let receipt = capture_cast(
+        &mut run,
+        &SpellProbe {
+            spec: 269,
+            spell: 100780,
+            damage_spell: 100780,
+            action: "tiger_palm",
+            ticks: 1,
+        },
+    )
+    .expect("actual native follower Tiger Palm");
+    let output =
+        std::path::PathBuf::from(std::env::var_os("DPS_SPELL_OUTPUT").expect("DPS_SPELL_OUTPUT"))
+            .with_file_name("269.tiger_palm.follower_armor.json");
+    std::fs::write(output, serde_json::to_vec_pretty(&receipt).unwrap()).unwrap();
+    let armor = receipt["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "armor" && event["spell_id"] == 100780)
+        .expect("actual armor stage")["factors"]["armor_fraction"]
+        .as_f64()
+        .unwrap();
+    // ExpectedStat475/478: armor1470/K3430; native450990/280:12%.
+    // The measured stage ratio includes native integer damage truncation.
+    let expected = (1470.0 * 0.88) / (1470.0 * 0.88 + 3430.0);
+    assert!(
+        (armor - expected).abs() < 0.0001,
+        "FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_ARMOR_PENETRATION: {armor} vs {expected}"
+    );
+}
+
+#[test]
 #[ignore = "real reference gear/traits; actual native TP priming and three FoF child ticks"]
 fn dps_parity_single_spell_fists_of_fury_three_ticks_keep_child_ids() {
     let _seed = crate::random::seed_scope(70_448);
