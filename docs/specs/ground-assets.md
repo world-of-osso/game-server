@@ -7,6 +7,7 @@ Provision local client-cache geometry for registered server maps, including maps
 - [x] Preserve default spawned-map selection; accept repeated explicit registered-map IDs and all registered maps; reject unknown explicit maps.
 - [x] Select the local CASC product from Map-row build provenance, including the pinned Forever overlay, without hardcoded map IDs.
 - [x] Discover WDT MAID root/obj0, MODF WMO roots and GFID primary groups recursively; place unlisted chunk files under server-readable cache names.
+- [x] Discovery registers and opens root ADTs, WMO groups and vehicle M2s without reading unused payload bytes. Preserve ordered present/missing paths, map selections, duplicate handling and open failures; parse WDT/obj0/WMO-root contents as before.
 - [x] Accept real Forever MVER-18 terrain and sample WMO primary groups; return finite supported terrain centers, minimum bounds and the authored liquid surface; preserve terrain holes.
 - [x] Export all 72 Zephras center records with explicit nulls for unavailable/unsupported terrain; do not invent a starting position.
 
@@ -24,7 +25,9 @@ Provision local client-cache geometry for registered server maps, including maps
 
 ## Tests asserting this spec
 
-- `scripts/tests/test_ground_selection.py` — four concrete SQLite/process fixtures, including full synthetic local extraction closure.
+- `scripts/tests/test_ground_selection.py` — concrete SQLite/process fixtures, including full synthetic local extraction closure.
+- `scripts/tests/test_vehicle_ground_files.py` — vehicle CLI closure and real process-I/O bound over48MiB of sparse root/group/model payloads, retaining parsed dependencies and missing-group identity.
+- `crates/server/src/vehicle_tests.rs` — unchanged real-world deploy-list and missing-model assertions.
 - `crates/server/src/zephras_ground_tests.rs` — three opt-in real Forever fixtures.
 - `crates/server/src/terrain_height_tests.rs` — existing terrain/interpolation/holes and real Northshire water regressions.
 

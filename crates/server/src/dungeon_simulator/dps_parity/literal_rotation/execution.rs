@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 pub(crate) enum Execution {
     Snapshot,
     AutoAttack(Entity),
+    RetargetAutoAttack(Entity),
     Spell(u32, Entity),
     Item(ItemUse, Entity),
 }
@@ -19,8 +20,11 @@ pub(crate) struct NativeAction<'a> {
     pub self_target: bool,
 }
 
+// None is the action's native default target, not an explicit-target substitute.
+type ReadyActions = BTreeMap<(String, Option<Entity>), Execution>;
+
 pub(crate) struct Prepared {
-    ready: BTreeMap<String, Execution>,
+    ready: ReadyActions,
 }
 
 impl Prepared {
@@ -32,22 +36,24 @@ impl Prepared {
         actions: impl IntoIterator<Item = NativeAction<'a>>,
         needs_snapshot: bool,
     ) -> Result<Self, String> {
+        let targets = native_targets(world, actor, targets);
         let mut ready = BTreeMap::new();
         if needs_snapshot {
-            ready.insert("snapshot_stats".into(), Execution::Snapshot);
+            ready.insert(("snapshot_stats".into(), None), Execution::Snapshot);
         }
-        if let Some(&target) = targets.first() {
-            if world
-                .get::<crate::combat::AutoAttack>(actor)
-                .is_none_or(|attack| attack.victim != target)
-            {
-                ready.insert("auto_attack".into(), Execution::AutoAttack(target));
-            }
-        }
-        read_spells(world, actor, targets.first().copied(), actions, &mut ready)?;
+        read_attacks(world, actor, &targets, &mut ready);
+        read_spells(world, actor, &targets, actions, &mut ready)?;
         for (slot, item) in equipment.uses() {
-            if native_ready(world, actor, item.on_use.spell_id, actor, Some(item))? {
-                ready.insert(format!("item:{slot}"), Execution::Item(item, actor));
+            for target in std::iter::once(actor).chain(targets.iter().copied()) {
+                if native_ready(world, actor, item.on_use.spell_id, target, Some(item))? {
+                    record_ready(
+                        &mut ready,
+                        &format!("item:{slot}"),
+                        target,
+                        target == actor,
+                        Execution::Item(item, target),
+                    );
+                }
             }
         }
         Ok(Self { ready })
@@ -66,16 +72,75 @@ impl Prepared {
         } else {
             action.name.clone()
         };
-        Ok(self.ready.get(&key).cloned())
+        let target = action
+            .target
+            .map(|bits| {
+                Entity::try_from_bits(bits)
+                    .ok_or_else(|| format!("invalid explicit literal target {bits}"))
+            })
+            .transpose()?;
+        Ok(self.ready.get(&(key, target)).cloned())
+    }
+}
+
+fn native_targets(world: &World, actor: Entity, supplied: &[Entity]) -> Vec<Entity> {
+    if !supplied.is_empty() {
+        return supplied.to_vec();
+    }
+    // A harmful precast still uses the actor's actual selected enemy, even
+    // before the adapter supplies its combat candidate order.
+    world
+        .get::<crate::networking::CombatTarget>(actor)
+        .and_then(|target| target.0)
+        .into_iter()
+        .collect()
+}
+
+fn record_ready(
+    ready: &mut ReadyActions,
+    name: &str,
+    target: Entity,
+    default: bool,
+    execution: Execution,
+) {
+    ready.insert((name.into(), Some(target)), execution.clone());
+    if default {
+        ready.insert((name.into(), None), execution);
+    }
+}
+
+fn read_attacks(world: &World, actor: Entity, targets: &[Entity], ready: &mut ReadyActions) {
+    let current = world.get::<crate::combat::AutoAttack>(actor);
+    for (index, &target) in targets.iter().enumerate() {
+        if current.is_none() {
+            record_ready(
+                ready,
+                "auto_attack",
+                target,
+                index == 0,
+                Execution::AutoAttack(target),
+            );
+        }
+        // SimC76f8118 player.cpp10824–10860: only a running, different
+        // weapon victim can be retargeted; the actor's selection stays intact.
+        if current.is_some_and(|attack| attack.victim != target) {
+            record_ready(
+                ready,
+                "retarget_auto_attack",
+                target,
+                index == 0,
+                Execution::RetargetAutoAttack(target),
+            );
+        }
     }
 }
 
 fn read_spells<'a>(
     world: &mut World,
     actor: Entity,
-    enemy: Option<Entity>,
+    enemies: &[Entity],
     actions: impl IntoIterator<Item = NativeAction<'a>>,
-    ready: &mut BTreeMap<String, Execution>,
+    ready: &mut ReadyActions,
 ) -> Result<(), String> {
     for NativeAction {
         name,
@@ -87,12 +152,21 @@ fn read_spells<'a>(
         if !talent_permits(world, actor, talent)? || !knows_action(world, actor, id)? {
             continue;
         }
-        let target = if self_target { Some(actor) } else { enemy };
-        let Some(target) = target else {
-            continue;
+        let targets = if self_target {
+            std::slice::from_ref(&actor)
+        } else {
+            enemies
         };
-        if native_ready(world, actor, id, target, None)? {
-            ready.insert(name.into(), Execution::Spell(id, target));
+        for (index, &target) in targets.iter().enumerate() {
+            if native_ready(world, actor, id, target, None)? {
+                record_ready(
+                    ready,
+                    name,
+                    target,
+                    index == 0,
+                    Execution::Spell(id, target),
+                );
+            }
         }
     }
     Ok(())
@@ -172,8 +246,23 @@ pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Re
             }
             Ok(())
         }
+        Execution::RetargetAutoAttack(target) => {
+            if world.get_entity(target).is_err() {
+                return Err("selected native AA target no longer exists".into());
+            }
+            let mut attack = world
+                .get_mut::<crate::combat::AutoAttack>(actor)
+                .ok_or("native AA stopped after retarget readiness")?;
+            attack.victim = target;
+            Ok(())
+        }
         Execution::Spell(id, target) => {
-            crate::spell_cast::creature_cast(world, actor, id, Some(target), false)
+            let result = if world.get::<shared::components::Player>(actor).is_some() {
+                crate::spell_cast::cast_for_player_with_target(world, actor, id, Some(target))
+            } else {
+                crate::spell_cast::creature_cast(world, actor, id, Some(target), false)
+            };
+            result
                 .map_err(|reason| format!("selected native literal spell{id} rejected: {reason:?}"))
         }
         Execution::Item(item, target) => crate::spell_cast::cast_item_spell(

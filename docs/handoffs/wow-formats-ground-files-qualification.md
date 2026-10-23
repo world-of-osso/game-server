@@ -48,4 +48,6 @@ Keep the script unchanged for now. A batched raw-record entry point in an existi
 
 ## Accepted decision
 
-Keep `ground_files.py` unchanged. Record `WOW_FORMATS_PYTHON_TOOL_READERS_NOT_CONSOLIDATED`: Python readers remain independent because there is no shared Rust boundary they can call without inventing a one-use bridge. The [format coverage matrix](../wiki/systems/wow-formats.md#coverage-and-named-python-tooling-gap) distinguishes completed Rust consolidation from this named gap. No raw-field API or transport implementation follows this qualification; CASC/WDC5 duplication remains separate future scope.
+The no-decoder-replacement decision below remains in force. A later separately authorized [discovery-only I/O change](../wiki/systems/ground-assets.md#discovery-only-payload-io--2026-10-23) preserves all91walk/182CLI observations without consolidating readers; the original before receipts remain untouched.
+
+Keep `ground_files.py` unchanged for parser consolidation. Record `WOW_FORMATS_PYTHON_TOOL_READERS_NOT_CONSOLIDATED`: Python readers remain independent because there is no shared Rust boundary they can call without inventing a one-use bridge. The [format coverage matrix](../wiki/systems/wow-formats.md#coverage-and-named-python-tooling-gap) distinguishes completed Rust consolidation from this named gap. No raw-field API or transport implementation follows this qualification; CASC/WDC5 duplication remains separate future scope.

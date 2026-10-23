@@ -269,7 +269,7 @@ fn dummy10_hand_of_guldan_uses_native_three_shard_meteor_and_target_area() {
 #[test]
 fn dummy10_lightning_bolt_grants_rank_maelstrom_once_per_successful_cast() {
     for rank in [false, true] {
-        let mut h = harness(Vec::new(), &[188196, 343725], 7).unwrap();
+        let mut h = harness(Vec::new(), &[188196, 343725, 214815], 7).unwrap();
         h.set_power(PowerType::Maelstrom, 0.0);
         if rank {
             apply(&mut h, 343725);
