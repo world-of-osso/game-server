@@ -103,7 +103,9 @@ fn direct_buffs(spell: &SpellInfo) -> Buffs {
         0.0
     } else {
         spell
-            .duration
+            .misc
+            .as_ref()
+            .and_then(|misc| misc.duration)
             .map_or(0.0, |row| f64::from(row.duration_ms.max(0)) / 1000.0)
     };
     Buffs { stats, duration }
