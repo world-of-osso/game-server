@@ -243,7 +243,15 @@ Actual module wall/CPU seconds:scriptedAI467.254/870.441, SpellCast420.372/1088.
 
 `--history PRIOR_SUMMARY` uses the measured wall/RSS rows for every selected binary/module. It starts longest-wall groups first when the sum of active measured peaks fits `--memory-budget-kib`; missing history or a group larger than the budget fails explicitly. `--processes`/`--threads` retain2×3 defaults and permit the approved3×2,4×2,3×3 calibrations. The process cap and measured-memory admission are independent; sampled actual aggregateRSS/swap remain the acceptance proof, not the historical estimates. A7.75GiB admission budget leaves256MiB for the caller/measurement overhead below8GiB. Source, ignore policy, assertions and known-failure handling remain unchanged.
 
-The real executable regression supplies concrete prior wall/RSS values and checks observed process intervals: the longest group starts first, no overlapping admitted weights exceed the budget, independent fitting groups overlap, and all selected enabled/ignored identities complete. RED reproduces absent scheduler switches (1FAIL/3PASS). Native calibration and final whole-suite900s proof remain open.
+The real executable regression supplies concrete prior wall/RSS values and checks observed process intervals: the longest group starts first, no overlapping admitted weights exceed the budget, independent fitting groups overlap, and all selected enabled/ignored identities complete. RED reproduces absent scheduler switches (1FAIL/3PASS); eeb361289 passes4/4 in2.523s. Normal-admission bounded native calibration uses the same9enabled/1ignored controls across five modules and the complete-suite historical weights. All three configurations preserve source hash/coverage and pass9/9 plus1ignored:
+
+| Processes×threads | Wall seconds | CPU seconds | Aggregate peakRSS KiB | Swap KiB |
+|---|---:|---:|---:|---:|
+|3×2|92.821|200.195|3019512|4472|
+|4×2|119.398|231.314|3060128|715352|
+|3×3|148.568|265.936|2786752|349188|
+
+These are bounded calibration results under different shared-host pressure, **not a controlled causal ranking or full-suite memory/time proof**.3×2 is the observed fastest/least-swap candidate and proceeds to requested quiet-window whole-suite measurement. No configuration has yet proved whole-suite900s/no-swap. Artifacts `weighted-calibration-{3x2,4x2,3x3}/{summary,groups,memory,plan}.json` and their source receipts preserve all measurements.
 
 ## Gate invocation
 
