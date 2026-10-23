@@ -2511,6 +2511,7 @@ pub(crate) fn execute_cast(
         },
     );
     let previous_efflo_summons = efflorescence::read_previous_summons(world, caster, spell.id);
+    scripts::spawn_ravager_field(world, caster, spell, explicit, 0);
     missiles::launch(world, caster, spell, plan, 0);
     efflorescence::initialize_new_summons(world, caster, previous_efflo_summons);
     scripts::refund_execute(world, caster, spell, explicit, &costs);
@@ -3241,12 +3242,14 @@ pub(super) fn cast_triggered_with_item_level(
     launch_triggered_spell(world, caster, &spell, explicit, depth)
 }
 
-/// The sourced CastSpellExtraArgs values carried by a real triggered cast.
+/// Sourced per-cast overrides retained in real triggered spell snapshots.
 #[derive(Default)]
 pub(crate) struct TriggeredSpellOverrides {
     pub effect0_amount: Option<f32>,
     pub aura_stacks: Option<u8>,
     pub original_caster: Option<Entity>,
+    /// Authored background-action lifetime, e.g. native Whirling Blade's amount.
+    pub duration_ms: Option<i32>,
 }
 
 pub(crate) fn cast_triggered_with_overrides(
@@ -3262,6 +3265,13 @@ pub(crate) fn cast_triggered_with_overrides(
     };
     spell.cast_aura_stacks = values.aura_stacks;
     spell.cast_original_caster = values.original_caster;
+    if let Some(milliseconds) = values.duration_ms {
+        let Some(duration) = spell.misc.as_mut().and_then(|misc| misc.duration.as_mut()) else {
+            warn!("Triggered spell {spell_id} skipped: duration override has no native duration");
+            return false;
+        };
+        duration.duration_ms = milliseconds;
+    }
     if let Some(amount) = values.effect0_amount {
         let Some(effect) = spell.effects.iter_mut().find(|effect| effect.index == 0) else {
             warn!("Triggered spell {spell_id} skipped: effect0 override has no effect0");
@@ -3365,6 +3375,7 @@ fn launch_triggered_spell(
                 observed.0.push((caster, spell.id, explicit));
             }
             crate::achievement::record_spell_cast(world, caster, spell.id);
+            scripts::spawn_ravager_field(world, caster, spell, explicit, depth);
             missiles::launch(world, caster, spell, plan, depth);
             druid_transform::after_cast(world, caster, spell);
             true

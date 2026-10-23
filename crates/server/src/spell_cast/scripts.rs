@@ -53,9 +53,12 @@ pub(crate) use windwalker::{
 };
 
 pub(super) use batch3::consume_phalanx;
-pub(crate) use batch3::{PHALANX_TALENT, check_phalanx_proc};
-pub(super) use batch9::update_ground_pulses;
+pub(crate) use batch3::{
+    PHALANX_TALENT, WHIRLING_BLADE, cast_whirling_ravager, check_phalanx_proc,
+    check_whirling_blade_proc,
+};
 pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
+pub(super) use batch9::{spawn_ravager_field, update_ground_pulses};
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(crate) use batch20::proc_charges;
 /// OnEffectHit runs once per effect without replacing generic or aura dispatch.

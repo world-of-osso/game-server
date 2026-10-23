@@ -115,7 +115,6 @@ fn clap(rend: bool) -> (Harness, Vec<Entity>) {
 /// SimC76f8118 sc_warrior.cpp1684–1690: foreground special impact on
 /// the primary target rolls native1235113 RPPM and emits228920.
 #[test]
-#[ignore = "RED: native Whirling Blade dummy has no Ravager producer"]
 fn protection_producers_whirling_blade_native_rppm_emits_ravager_from_real_impacts() {
     let mut h = fixture(false);
     h.app
@@ -197,7 +196,6 @@ fn protection_producers_whirling_blade_native_rppm_emits_ravager_from_real_impac
 /// Native228920 effect1 provides a2000ms PERIODIC_DUMMY and12s duration.
 /// SimC76f8118 sc_warrior.cpp5967–5977 supplies the missing156287 pulse.
 #[test]
-#[ignore = "RED: native Ravager periodic dummy has no damage producer"]
 fn protection_producers_ravager_native_periodic_damage_waits_for_tick_and_stops_at_expiry() {
     let mut h = fixture(false);
     h.app

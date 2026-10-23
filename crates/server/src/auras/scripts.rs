@@ -432,6 +432,14 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        crate::spell_cast::scripts::WHIRLING_BLADE,
+        AuraScript {
+            check_proc: Some(crate::spell_cast::scripts::check_whirling_blade_proc),
+            on_damage_proc: Some(crate::spell_cast::scripts::cast_whirling_ravager),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         crate::spell_cast::scripts::PHALANX_TALENT,
         AuraScript {
             check_proc: Some(crate::spell_cast::scripts::check_phalanx_proc),

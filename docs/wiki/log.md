@@ -1,3 +1,7 @@
+## 2026-10-22 — Protection producer dispatch
+
+[Dispatch](systems/spell-casting.md#protection-producer-dispatch--2026-10-22): TC known-Rend/Charge and named Phalanx paths have seven targeted native passes across recorded scopes; corrected fixtures preserve sourced reach/template and9s cooldown. Whirling foreground-primary/native5RPPM/4000ms snapshot and shared native Ravager2000ms/8yd ground pulses implemented after actual missing-producer RED; GREEN pending. No full ability/loadout/DPS parity or chasing/soft-cap claim. [Coverage and receipts](../specs/protection-damage-producers.md).
+
 ## 2026-10-22 — Partial corridor continuation
 
 [Navigation](systems/navigation.md#partial-corridor-continuation--2026-10-22): Gorek native graph26936polygons connected; unchanged8192pool reaches in296/263/84polygons over three queries. Production library+mover RED reproduce discarded partial corridor/immediate Blocked. Typed resource-limited partial paths and segment-end repath keep asset/pool/tolerance values; completed-search disconnects stay immediately Blocked. At884178a15 Gorek path/mover and three Brackenhide movers GREEN, genuine-disconnect/complete-leg controls GREEN; combined48controls40PASS/8existing ignored Stockade/current-victim FAIL. Baseline/follower/check gates pending, no overall acceptance.

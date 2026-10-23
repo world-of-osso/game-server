@@ -25,6 +25,8 @@ const SHIELD_SLAM_RANK: u32 = 231834;
 pub(crate) const PHALANX_TALENT: u32 = 1269311;
 const PHALANX_BUFF: u32 = 1278009;
 const PHALANX_DAMAGE: u32 = 1270116;
+pub(crate) const WHIRLING_BLADE: u32 = 1235113;
+const RAVAGER: u32 = 228920;
 const STEALTH: u32 = 1784;
 const GARROTE_RANK: u32 = 196861;
 const GARROTE_SILENCE: u32 = 1330;
@@ -75,6 +77,49 @@ pub(super) fn thunder_clap(world: &mut World, caster: Entity, target: Entity, de
 pub(super) fn shield_charge(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     const SHIELD_CHARGE_EFFECT: u32 = 385953;
     spell_cast::cast_triggered(world, caster, SHIELD_CHARGE_EFFECT, Some(target), depth + 1);
+}
+
+/// WHIRLING_BLADE_FOREGROUND_PRIMARY: SimC76f8118 sc_warrior.cpp1684–1690.
+/// Native1235113 retains its actual mask/RPPM; white/background/secondary hits do not roll.
+pub(crate) fn check_whirling_blade_proc(
+    world: &World,
+    aura: &crate::auras::AuraInstance,
+    event: &crate::auras::procs::AuraEvent,
+) -> bool {
+    let ordinary_special = event.can_proc && !event.periodic && event.spell_id.is_some();
+    let primary = event.target.is_some()
+        && world
+            .get::<crate::networking::CombatTarget>(aura.caster)
+            .is_some_and(|target| target.0 == event.target);
+    ordinary_special && primary && event.actor == aura.caster
+}
+
+/// WHIRLING_BLADE_BACKGROUND_DURATION: SimC76f8118 sc_warrior.cpp5898–5922.
+/// The native talent's effect0 amount supplies milliseconds, not Ravager's12s lifetime.
+pub(crate) fn cast_whirling_ravager(
+    world: &mut World,
+    unit: Entity,
+    aura: &crate::auras::AuraInstance,
+    event: &crate::auras::procs::AuraEvent,
+) {
+    let duration = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("Whirling Blade requires native effect0 duration")
+        .amount
+        .round() as i32;
+    spell_cast::cast_triggered_with_overrides(
+        world,
+        unit,
+        RAVAGER,
+        event.target,
+        1,
+        spell_cast::TriggeredSpellOverrides {
+            duration_ms: Some(duration),
+            ..Default::default()
+        },
+    );
 }
 
 /// PHALANX_CLAP_ONLY: SimC76f8118 sc_warrior.cpp4048–4049/4173–4174.
