@@ -278,7 +278,6 @@ fn assert_energize_preserves_parent_stormkeeper_uses(case: ResourceCase) {
 }
 
 #[test]
-#[ignore = "native nonzero charge-consumption control pending"]
 fn native_elemental_resource_nonzero_mage_modifier_still_spends_charge() {
     const PRESENCE_OF_MIND: u32 = 205025;
     const ARCANE_BLAST: u32 = 30451;
@@ -334,53 +333,43 @@ fn native_elemental_resource_nonzero_mage_modifier_still_spends_charge() {
 }
 
 #[test]
-#[ignore = "native resource helper parent-charge ownership qualification pending"]
 fn native_elemental_resource_lightning_energize_preserves_two_stormkeeper_uses() {
     assert_energize_preserves_parent_stormkeeper_uses(LIGHTNING);
 }
 #[test]
-#[ignore = "native resource helper parent-charge ownership qualification pending"]
 fn native_elemental_resource_chain_energize_preserves_two_stormkeeper_uses() {
     assert_energize_preserves_parent_stormkeeper_uses(CHAIN);
 }
 
 #[test]
-#[ignore = "native launch resource RED/GREEN pending"]
 fn native_elemental_resource_lightning_launch_pool_and_receipt() {
     assert_native_launch_energize(LIGHTNING);
 }
 #[test]
-#[ignore = "native launch resource removed-controller control pending"]
 fn native_elemental_resource_lightning_without_controller() {
     assert_removed_controller_blocks_energize(LIGHTNING);
 }
 #[test]
-#[ignore = "native launch resource RED/GREEN pending"]
 fn native_elemental_resource_lightning_overload_launch_pool_and_receipt() {
     assert_native_launch_energize(LIGHTNING_OVERLOAD);
 }
 #[test]
-#[ignore = "native launch resource removed-controller control pending"]
 fn native_elemental_resource_lightning_overload_without_controller() {
     assert_removed_controller_blocks_energize(LIGHTNING_OVERLOAD);
 }
 #[test]
-#[ignore = "native launch resource RED/GREEN pending"]
 fn native_elemental_resource_chain_launch_pool_and_receipt() {
     assert_native_launch_energize(CHAIN);
 }
 #[test]
-#[ignore = "native launch resource removed-controller control pending"]
 fn native_elemental_resource_chain_without_controller() {
     assert_removed_controller_blocks_energize(CHAIN);
 }
 #[test]
-#[ignore = "native launch resource RED/GREEN pending"]
 fn native_elemental_resource_chain_overload_launch_pool_and_receipt() {
     assert_native_launch_energize(CHAIN_OVERLOAD);
 }
 #[test]
-#[ignore = "native launch resource removed-controller control pending"]
 fn native_elemental_resource_chain_overload_without_controller() {
     assert_removed_controller_blocks_energize(CHAIN_OVERLOAD);
 }
