@@ -1,4 +1,4 @@
-//! Actual native Hunter pet swings before owner-RAP inheritance changes.
+//! Native Hunter pet owner-RAP melee receipts; no synthetic stats or intrinsic ranges.
 use super::*;
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 
@@ -28,8 +28,8 @@ fn pet_melee_hits(world: &World, pet: Entity, target: Entity) -> Vec<i32> {
         .collect()
 }
 
-fn normalized_pet_swings(run: &mut Run, pet: Entity) -> Vec<f32> {
-    collect_native_pet_swings(run, pet);
+fn normalized_pet_swings(run: &mut Run, pet: Entity, required_hits: usize) -> Vec<f32> {
+    collect_native_pet_swings(run, pet, required_hits);
     let world = run.app.world();
     let critical = 2.0
         * world
@@ -40,7 +40,7 @@ fn normalized_pet_swings(run: &mut Run, pet: Entity) -> Vec<f32> {
         .collect()
 }
 
-fn collect_native_pet_swings(run: &mut Run, pet: Entity) -> Vec<i32> {
+fn collect_native_pet_swings(run: &mut Run, pet: Entity, required_hits: usize) -> Vec<i32> {
     let target = run.targets[0];
     run.app
         .world_mut()
@@ -51,18 +51,18 @@ fn collect_native_pet_swings(run: &mut Run, pet: Entity) -> Vec<i32> {
     for _ in 0..600 {
         run.app.update();
         let hits = pet_melee_hits(run.app.world(), pet, target);
-        if hits.len() >= 4 {
+        if hits.len() >= required_hits {
             return hits;
         }
     }
-    panic!("native pet did not deliver four attributed melee swings");
+    panic!("native pet did not deliver {required_hits} attributed melee swings");
 }
 
 #[test]
 #[ignore = "native pet melee baseline; requires prepared parity inputs"]
 fn dps_parity_pet_melee_baseline_records_actual_owner_and_swing_damage() {
     let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
-    let hits = collect_native_pet_swings(&mut run, pet);
+    let hits = collect_native_pet_swings(&mut run, pet, 4);
     let world = run.app.world();
     let owner = world
         .get::<crate::stats::CharacterStats>(run.actor)
@@ -88,18 +88,24 @@ fn dps_parity_pet_melee_baseline_records_actual_owner_and_swing_damage() {
     assert!(hits.iter().all(|damage| *damage > 0));
 }
 
+fn physical_damage_multiplier(world: &World, pet: Entity, target: Entity) -> f32 {
+    let done = world
+        .get::<crate::auras::AuraStatMods>(pet)
+        .map_or(1.0, |mods| {
+            mods.damage_done(1) * mods.autoattack_damage_mult
+        });
+    let taken = world
+        .get::<crate::auras::AuraStatMods>(target)
+        .map_or(1.0, |mods| mods.damage_taken(1));
+    done * taken
+}
+
 fn owner_contribution_floor(world: &World, owner: Entity, pet: Entity, target: Entity) -> f32 {
     // TC StatSystem1344/1389/1423: integer .22 ownerRAP, /3.5 per
     // base attack second. Pet.cpp882 sets the source2000ms pet base clock.
     let owner = world.get::<crate::stats::CharacterStats>(owner).unwrap();
     let bonus = (owner.ranged_attack_power * 0.22).trunc() / 3.5 * 2.0;
-    let pet_mods = world.get::<crate::auras::AuraStatMods>(pet);
-    let done = pet_mods.map_or(1.0, |mods| {
-        mods.damage_done(1) * mods.autoattack_damage_mult
-    });
-    let taken = world
-        .get::<crate::auras::AuraStatMods>(target)
-        .map_or(1.0, |mods| mods.damage_taken(1));
+    let damage = (bonus * physical_damage_multiplier(world, pet, target)).round();
     let pet_scaling = crate::level_scaling::UnitScaling::of(world, pet);
     let target_scaling = crate::level_scaling::UnitScaling::of(world, target);
     let armor = target_scaling.armor_against(
@@ -110,12 +116,12 @@ fn owner_contribution_floor(world: &World, owner: Entity, pet: Entity, target: E
         &pet_scaling,
     );
     crate::combat::armor_mitigated(
-        (bonus * done * taken).round(),
+        damage,
         armor,
         &pet_scaling,
         &target_scaling,
         Some(world.resource::<crate::level_scaling::ArmorConstants>()),
-        pet_mods,
+        world.get::<crate::auras::AuraStatMods>(pet),
     )
     .floor()
 }
@@ -124,7 +130,7 @@ fn owner_contribution_floor(world: &World, owner: Entity, pet: Entity, target: E
 #[ignore = "native pet owner-RAP melee RED; requires prepared parity inputs"]
 fn dps_parity_pet_melee_actual_swings_include_source_owner_ranged_ap_contribution() {
     let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
-    let hits = collect_native_pet_swings(&mut run, pet);
+    let hits = collect_native_pet_swings(&mut run, pet, 4);
     let world = run.app.world();
     let floor = owner_contribution_floor(world, run.actor, pet, run.targets[0]);
     println!(
@@ -149,7 +155,7 @@ fn dps_parity_pet_melee_actual_swings_include_source_owner_ranged_ap_contributio
 #[ignore = "native pet live owner-RAP equipment control; requires prepared parity inputs"]
 fn dps_parity_pet_melee_live_owner_equipment_removal_and_restore_changes_swings() {
     let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
-    let before = normalized_pet_swings(&mut run, pet);
+    let before = normalized_pet_swings(&mut run, pet, 4);
     let owner = run.actor;
     let before_ap = run
         .app
@@ -194,7 +200,7 @@ fn dps_parity_pet_melee_live_owner_equipment_removal_and_restore_changes_swings(
         without_ap < before_ap,
         "actual reference gear must contribute RAP"
     );
-    let without = normalized_pet_swings(&mut run, pet);
+    let without = normalized_pet_swings(&mut run, pet, 4);
     run.app
         .world_mut()
         .entity_mut(owner)
@@ -210,7 +216,7 @@ fn dps_parity_pet_melee_live_owner_equipment_removal_and_restore_changes_swings(
             .ranged_attack_power,
         before_ap
     );
-    let restored = normalized_pet_swings(&mut run, pet);
+    let restored = normalized_pet_swings(&mut run, pet, 4);
     let lowest = |hits: &[f32]| hits.iter().copied().reduce(f32::min).unwrap();
     let highest = |hits: &[f32]| hits.iter().copied().reduce(f32::max).unwrap();
     println!(
@@ -228,5 +234,54 @@ fn dps_parity_pet_melee_live_owner_equipment_removal_and_restore_changes_swings(
     assert!(
         lowest(&restored) > highest(&without),
         "restoring real owner gear must raise pet swings"
+    );
+}
+
+#[test]
+#[ignore = "native pet ranged-versus-melee AP control; requires prepared parity inputs"]
+fn dps_parity_pet_melee_owner_only_melee_ap_buff_does_not_change_swings() {
+    // Native70831 Maelstrom Power: caster-only aura166 +20%, no aura167,
+    // party/pet recipient, extra attack, trigger or damage effect.
+    const MELEE_ONLY_AP: u32 = 70831;
+    let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
+    let before = normalized_pet_swings(&mut run, pet, 1);
+    let owner = run.actor;
+    let initial = *run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), owner, MELEE_ONLY_AP, Some(owner), 1);
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let stats = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap();
+    assert!(
+        stats.attack_power > initial.attack_power,
+        "native166 must change owner melee AP"
+    );
+    assert_eq!(stats.ranged_attack_power, initial.ranged_attack_power);
+    assert!(
+        !crate::auras::has_aura(run.app.world(), pet, MELEE_ONLY_AP),
+        "native buff is owner-only, not a direct pet AP modifier"
+    );
+    let after = normalized_pet_swings(&mut run, pet, 1);
+    assert!(
+        crate::auras::has_aura(run.app.world(), owner, MELEE_ONLY_AP),
+        "native buff must remain active during the measured swing"
+    );
+    println!(
+        "NATIVE_PET_MELEE_RANGED_ONLY {}",
+        json!({"before": before, "after_melee_only_buff": after})
+    );
+    // Each independent integer combat receipt can lose less than one damage
+    // unit before crit normalization. This bounds quantization, not AP variance.
+    assert!(
+        (after[0] - before[0]).abs() <= 1.0,
+        "pet must inherit RAP, not the independently increased melee AP"
     );
 }
