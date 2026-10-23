@@ -1,4 +1,6 @@
 //! Real journal RPC + authored legacy summons exercise the current-critter boundary.
+#[path = "battle_pet_dismiss_tests.rs"]
+mod dismiss;
 #[path = "toys_imaginary_gun_tests.rs"]
 mod imaginary_gun;
 use super::*;
@@ -8,6 +10,7 @@ use crate::spell_info::SpellStore;
 const MECHANICAL_SQUIRREL: u32 = 39;
 const SNOWY_OWL: u32 = 69;
 const HIDDEN_GREEN_BALLOON: u32 = 344;
+const YELLOW_BALLOON: u32 = 345;
 const COYOTE_SPELL: u32 = 51149;
 const COYOTE_ENTRY: u32 = 28267;
 const GOLDEN_HARE_SPELL: u32 = 26571;
@@ -56,6 +59,7 @@ struct OwnedPetIds {
     mechanical: u64,
     snowy: u64,
     ordinary_ally: u64,
+    yellow_balloon: u64,
     foreign: u64,
 }
 
@@ -74,6 +78,7 @@ fn seed_owned_journals(db: &Database) -> OwnedPetIds {
         mechanical: store_owned_pet(db, 1, MECHANICAL_SQUIRREL),
         snowy: store_owned_pet(db, 1, SNOWY_OWL),
         ordinary_ally: store_owned_pet(db, 1, HIDDEN_GREEN_BALLOON),
+        yellow_balloon: store_owned_pet(db, 1, YELLOW_BALLOON),
         foreign: store_owned_pet(db, 2, MECHANICAL_SQUIRREL),
     }
 }
@@ -334,17 +339,43 @@ fn toy_coverage_critter_unslotted_native_expiry_never_restores_an_older_owned_ac
 }
 
 #[test]
-fn toy_coverage_critter_older_journal_dismissal_does_not_clear_latest_legacy_critter() {
+#[ignore = "current-critter dismissal qualification; run explicitly"]
+fn toy_coverage_critter_dismiss_current_legacy_preserves_older_journal_without_restoring_it() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, ids) = create_critter_fixture(&dir.path().join("old-remove.redb"));
     let older = summon_journal_actor(&mut h, ids.mechanical, MECHANICAL_SQUIRREL);
     let hares = cast_source_summon(&mut h, GOLDEN_HARE_SPELL, GOLDEN_HARE_ENTRY);
-    request_dismiss(&mut h);
-    assert!(h.app.world().get_entity(older).is_err());
-    assert!(h.app.world().get_entity(hares[0]).is_ok());
+    let updates = request_dismiss(&mut h);
+    assert!(
+        h.app.world().get_entity(older).is_ok(),
+        "noncurrent journal actor must survive"
+    );
+    assert!(
+        h.app.world().get_entity(hares[0]).is_err(),
+        "dismiss resolves the current legacy critter"
+    );
+    assert!(
+        updates
+            .iter()
+            .any(|update| update.error.is_none() && update.summoned_pet_id == Some(ids.mechanical)),
+        "{updates:?}"
+    );
     assert_eq!(
         select_source_targets(&mut h, OWN_CRITTER_SPELL, None),
-        Ok(hares)
+        Ok(Vec::new())
+    );
+    assert_eq!(
+        select_source_targets(&mut h, EXPLICIT_MINIPET_SPELL, Some(older)),
+        Ok(Vec::new())
+    );
+    let again = request_dismiss(&mut h);
+    assert!(
+        again.iter().any(|update| update.error.is_some()),
+        "{again:?}"
+    );
+    assert!(
+        h.app.world().get_entity(older).is_ok(),
+        "no journal-tuple fallback when current critter is absent"
     );
 }
 
