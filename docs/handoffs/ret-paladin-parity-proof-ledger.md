@@ -236,3 +236,7 @@ All1267 native difficulty0 Aura4+Trigger roots are retained in `aura4-trigger-so
 ## Shared melee AP dependency
 
 All AP-coefficient rows in the raw114-spell matrix now name14754's shared weapon-derived-AP fix as a dependency. Lead reported genuine TigerPalm RED91 damage versus TC358–377; no Ret per-hit ratio exists yet and Ret does not modify the shared formula. Parent integrates that fix before final same-gear measurements.
+
+## Native permanent action override
+
+Parent approved exposing selected DB2 TraitDefinition OverridesSpellID to NPC action resolution, not zero-override variant guessing. New ignored native fixtures request APL base85256 through the existing follower controller: selected native383328 must cast and deal its own damage; granted-only Ret must retain85256→224266 damage with no FinalVerdict. Exact76f8118 selected-rank fixture is validated through ordinary native reference traits. Both cases earn Holy Power with three ordinary native Judgments; no power, damage coefficient or timer override. RED pending; production resolver unchanged.
