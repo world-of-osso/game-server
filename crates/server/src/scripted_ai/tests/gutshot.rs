@@ -55,7 +55,6 @@ fn completed_casts(h: &Harness, boss: Entity, spell: u32) -> usize {
 }
 
 #[test]
-#[ignore = "Gutshot native child damage qualification"]
 fn encounter_coverage_gutshot_projected_native_shot_damage_and_isolation() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = projected_gutshot(difficulty);
@@ -86,7 +85,6 @@ fn encounter_coverage_gutshot_projected_native_shot_damage_and_isolation() {
 }
 
 #[test]
-#[ignore = "RED before native Gutshot scripting"]
 fn encounter_coverage_gutshot_projected_first_shot_source_clock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = projected_gutshot(difficulty);
@@ -106,7 +104,6 @@ fn encounter_coverage_gutshot_projected_first_shot_source_clock() {
 }
 
 #[test]
-#[ignore = "RED before native Gutshot scripting"]
 fn encounter_coverage_gutshot_projected_lanes_credit_and_corpse() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_gutshot(difficulty);
@@ -177,7 +174,6 @@ fn encounter_coverage_gutshot_projected_lanes_credit_and_corpse() {
 }
 
 #[test]
-#[ignore = "RED before native Gutshot scripting"]
 fn encounter_coverage_gutshot_projected_evade_rearms_first_shot() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_gutshot(difficulty);
@@ -230,7 +226,6 @@ fn encounter_coverage_gutshot_projected_evade_rearms_first_shot() {
 }
 
 #[test]
-#[ignore = "RED before native Gutshot scripting"]
 fn encounter_coverage_gutshot_projected_interrupted_shot_has_no_success_repeat() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = projected_gutshot(difficulty);
