@@ -69,7 +69,6 @@ fn assert_casting(h: &Harness, boss: Entity, spell: u32) {
 }
 
 #[test]
-#[ignore = "Irideus native cone and periodic-child qualification before AI"]
 fn encounter_coverage_irideus_projected_native_fist_and_surge_damage() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = projected_irideus(difficulty);
@@ -110,7 +109,6 @@ fn encounter_coverage_irideus_projected_native_fist_and_surge_damage() {
 }
 
 #[test]
-#[ignore = "RED before Irideus stage1 native scripting"]
 fn encounter_coverage_irideus_projected_first_four_lane_clocks_and_overload_aura() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = projected_irideus(difficulty);
@@ -144,7 +142,8 @@ fn encounter_coverage_irideus_projected_first_four_lane_clocks_and_overload_aura
 
 #[test]
 #[ignore = "RED before Irideus stage1 native scripting"]
-fn encounter_coverage_irideus_projected_repeats_generic_credit_copy_and_corpse() {
+fn encounter_coverage_irideus_projected_native_cooldown_rejections_and_generic_credit_copy_and_corpse()
+ {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_irideus(difficulty);
         let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
@@ -157,20 +156,39 @@ fn encounter_coverage_irideus_projected_repeats_generic_credit_copy_and_corpse()
             });
         h.engage(boss);
         h.advance(90.0);
-        eprintln!(
-            "Irideus projected{difficulty} admissions={:?}; counts={:?}; player={:?}; boss={:?}",
-            h.app
-                .world()
-                .resource::<super::super::cast_admission::CastAdmissions>()
-                .entries,
-            [FIST, SURGE, OVERLOAD, VOLLEY].map(|spell| completed_casts(&h, boss, spell)),
-            h.health(h.player()),
-            h.health(boss)
+        assert!(
+            h.health(h.player()).current > 0.0,
+            "actual victim stays alive"
         );
-        for spell in [FIST, SURGE, OVERLOAD, VOLLEY] {
+        assert_eq!(
+            [FIST, SURGE, OVERLOAD, VOLLEY].map(|spell| completed_casts(&h, boss, spell)),
+            [5, 1, 3, 1],
+            "native category cooldowns reject Surge/Volley repeats, not Fist/Overload"
+        );
+        let admissions = &h
+            .app
+            .world()
+            .resource::<super::super::cast_admission::CastAdmissions>()
+            .entries;
+        for (spell, source_due) in [(SURGE, 38.5), (VOLLEY, 60.7)] {
+            let attempts: Vec<_> = admissions
+                .iter()
+                .filter(|entry| entry.spell == spell)
+                .collect();
+            assert_eq!(
+                attempts.len(),
+                2,
+                "one accepted start, one rejection, no fabricated retry"
+            );
+            assert!(attempts[0].result.is_ok());
+            assert!(matches!(
+                &attempts[1].result,
+                Err(crate::spell_cast::CastFailure::OnCooldown)
+            ));
+            assert!(attempts[1].on_cooldown);
             assert!(
-                completed_casts(&h, boss, spell) >= 2,
-                "native occupied stage1 repeats {spell} projected{difficulty}"
+                (attempts[1].time - source_due).abs() <= 0.1,
+                "source request deadline survives native rejection"
             );
         }
         assert!(
@@ -213,7 +231,6 @@ fn encounter_coverage_irideus_projected_repeats_generic_credit_copy_and_corpse()
 }
 
 #[test]
-#[ignore = "RED before Irideus stage1 native scripting"]
 fn encounter_coverage_irideus_projected_fifteen_percent_stops_without_fabricated_stage2() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_irideus(difficulty);
@@ -244,7 +261,6 @@ fn encounter_coverage_irideus_projected_fifteen_percent_stops_without_fabricated
 }
 
 #[test]
-#[ignore = "RED before Irideus stage1 native scripting"]
 fn encounter_coverage_irideus_projected_native_home_reset_rearms_first_fist() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_irideus(difficulty);
