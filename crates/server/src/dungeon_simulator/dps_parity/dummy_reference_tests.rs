@@ -1,30 +1,42 @@
 //! TC a352b1fa npc_training_dummy: timed combat exit is not an evade.
-use super::{Run, engage, prepare};
+use super::{Run, prepare};
 use crate::auras::{ActiveAuras, aura_now};
 use serde_json::{Value, json};
 use shared::components::CombatStatus;
 
-const HAVOC: u32 = 577;
-const BURNING_BLADES_DAMAGE: u32 = 453177;
+const FIRE: u32 = 63;
+const FIREBALL: u32 = 133;
+const IGNITE: u32 = 12654;
 const BERSERK: u32 = 26662;
 const CURSE_OF_WEAKNESS: u32 = 702;
 const AFTER_DUMMY_COMBAT_TIMEOUT: f64 = 5.25;
 
 fn prepare_live_dot() -> Run {
-    let mut run = prepare(HAVOC, 1).expect("native Havoc BiS and active traits must load");
-    engage(&mut run);
+    let mut run = prepare(FIRE, 1).expect("native Fire BiS and active traits must load");
+    // Isolate Ignite from Intensifying Flame's separate direct-hit bridge.
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 416714,
+    );
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    crate::spell_cast::cast_for_player(run.app.world_mut(), run.actor, FIREBALL)
+        .expect("ordinary native Fireball must start");
     for _ in 0..200 {
         run.app.update();
-        if crate::auras::has_aura(run.app.world(), run.targets[0], BURNING_BLADES_DAMAGE) {
+        if crate::auras::has_aura(run.app.world(), run.targets[0], IGNITE) {
             break;
         }
     }
     assert!(crate::auras::has_aura(
         run.app.world(),
         run.targets[0],
-        BURNING_BLADES_DAMAGE
+        IGNITE
     ));
-    crate::combat::attack_stop(run.app.world_mut(), run.actor);
     run
 }
 
@@ -35,7 +47,7 @@ fn read_dot_state(run: &Run) -> Value {
         .get::<ActiveAuras>(target)
         .unwrap()
         .iter()
-        .find(|aura| aura.spell_id == BURNING_BLADES_DAMAGE);
+        .find(|aura| aura.spell_id == IGNITE);
     json!({"time": aura_now(world), "actor": run.actor.to_bits(), "target": target.to_bits(),
         "target_in_combat": world.get::<CombatStatus>(target).map(|status| status.0),
         "dot": dot.map(|aura| json!({"caster": aura.caster.to_bits(),
@@ -53,7 +65,7 @@ fn advance_past_combat_timeout(run: &mut Run) {
 }
 
 #[test]
-#[ignore = "opt-in real31146 and native Havoc hit-to-DoT; requires private parity inputs"]
+#[ignore = "opt-in real31146 and native Fireball-to-Ignite; requires private parity inputs"]
 fn native_dummy_tc_combat_exit_retains_a_live_foreign_dot_past_five_seconds() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_live_dot();
@@ -91,7 +103,7 @@ fn native_dummy_tc_combat_exit_retains_a_live_foreign_dot_past_five_seconds() {
         .0;
     assert!(
         events[late_start..].iter().any(|event| {
-            event.spell_id == Some(BURNING_BLADES_DAMAGE)
+            event.spell_id == Some(IGNITE)
                 && event.kind == shared::protocol::CombatLogKind::Damage
                 && event.periodic
                 && event.amount > 0
@@ -120,7 +132,7 @@ fn native_dummy_tc_combat_exit_still_removes_leaving_combat_auras() {
 #[ignore = "opt-in ordinary native creature evade control; requires private parity inputs"]
 fn native_dummy_tc_fix_keeps_ordinary_creature_evade_aura_removal() {
     let _seed = crate::random::seed_scope(70_448);
-    let mut run = prepare(HAVOC, 1).expect("native Havoc BiS and active traits must load");
+    let mut run = prepare(FIRE, 1).expect("native Fire BiS and active traits must load");
     let creature = crate::zones::summon_creature(
         run.app.world_mut(),
         run.actor,
