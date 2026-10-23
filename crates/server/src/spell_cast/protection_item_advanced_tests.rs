@@ -1,5 +1,5 @@
 //! Source-qualified native item timing; no health writes, flags or seeded outcomes.
-use super::venomfang::equip_venomfang;
+use super::venomfang::{equip_venomfang, unequip_venomfang};
 use super::{
     DEVASTATE, GUILLOTINE_DAMAGE, GUILLOTINE_DRIVER, Harness, Inbox, PERFECTED_GUILLOTINE,
     item_fixture,
@@ -7,6 +7,7 @@ use super::{
 use shared::protocol::CombatLogKind;
 
 const VENOMFANG: u32 = 1306635;
+const VENOMFANG_BURST: u32 = 1306639;
 const DAMAGE_SELF_HALF: u32 = 136890;
 const FULL_HEAL_SELF: u32 = 17683;
 
@@ -107,6 +108,24 @@ fn protection_producers_item_advanced_guillotine_uses_launch_not_impact_health()
     );
 }
 
+fn assert_impact_poison_lifetime(h: &Harness, targets: &[bevy::prelude::Entity]) {
+    for &target in targets {
+        for (spell, periodic) in [(VENOMFANG, true), (VENOMFANG_BURST, false)] {
+            assert!(
+                h.inbox.log.iter().any(|event| event.spell_id == Some(spell)
+                    && event.source == Some(h.caster.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.kind == CombatLogKind::Damage
+                    && event.periodic == periodic
+                    && event.amount > 0),
+                "each retained native impact poison must tick and burst after weapon removal; spell{spell}, log={:?}",
+                h.inbox.log
+            );
+        }
+        assert!(!crate::auras::has_aura(h.app.world(), target, VENOMFANG));
+    }
+}
+
 #[test]
 #[ignore = "RED: perfected Guillotine lacks its guaranteed impact poison"]
 fn protection_producers_item_advanced_perfected_impact_applies_owned_poison_to_both_targets() {
@@ -123,12 +142,32 @@ fn protection_producers_item_advanced_perfected_impact_applies_owned_poison_to_b
         });
     // Native Attr4 BOUNCY_CHAIN_MISSILES delivers the two hits sequentially.
     let mut seen = Vec::new();
+    let mut unequipped_in_flight = false;
     for frame in 0..4000 {
-        if frame % 43 == 0 {
+        if !unequipped_in_flight && frame % 43 == 0 {
             h.cast(DEVASTATE, Some(h.npc));
         }
         let previous = h.inbox.log.len();
         h.advance(1);
+        let flying = h
+            .app
+            .world()
+            .get_resource::<crate::spell_cast::missiles::PendingSpellHits>()
+            .is_some_and(|pending| pending.has_caster(h.caster));
+        if !unequipped_in_flight && flying {
+            assert!(
+                !h.inbox
+                    .log
+                    .iter()
+                    .any(|event| event.spell_id == Some(PERFECTED_GUILLOTINE)
+                        && event.kind == CombatLogKind::Damage),
+                "unequip must precede the first native impact"
+            );
+            // Remove the real driver before impact: independent5RPPM cannot mask
+            // a missing guaranteed child. No proc chance, rows or RNG are edited.
+            unequip_venomfang(&mut h);
+            unequipped_in_flight = true;
+        }
         let receipts = &h.inbox.log[previous..];
         let hits: Vec<_> = receipts
             .iter()
@@ -162,6 +201,10 @@ fn protection_producers_item_advanced_perfected_impact_applies_owned_poison_to_b
             }
         }
         if seen.len() == 2 {
+            assert!(unequipped_in_flight);
+            h.inbox = Inbox::default();
+            h.advance(140);
+            assert_impact_poison_lifetime(&h, &[h.npc, near]);
             return;
         }
     }

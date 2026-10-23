@@ -54,7 +54,7 @@ fn poison_damage(h: &Harness, spell: u32) -> usize {
         .count()
 }
 
-fn unequip_venomfang(h: &mut Harness) {
+pub(super) fn unequip_venomfang(h: &mut Harness) {
     h.app
         .world_mut()
         .get_mut::<crate::stats::EquippedItems>(h.caster)
