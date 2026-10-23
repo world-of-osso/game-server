@@ -161,8 +161,8 @@ fn native_partial_resistance_periodic_flame_shock_uses_same_recipient_pipeline()
     let caster = h.caster;
     apply_native(&mut h, target, MAYPOLE, 22);
     apply_native(&mut h, caster, AUTO_ADVERTISER, 269);
-    apply_native(&mut h, target, FLAME_SHOCK, 3);
     let before = h.health(target);
+    apply_native(&mut h, target, FLAME_SHOCK, 3);
     h.advance(125); // Native2000ms ticks, not a fabricated periodic callback.
     let ticks = damage_events(&h, FLAME_SHOCK);
     assert!(
