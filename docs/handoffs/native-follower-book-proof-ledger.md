@@ -38,3 +38,9 @@ Artifacts live under engine `data/diagnostics/ret-parity-2026-10-23/`. Moved the
 | v6 priority | `native-book-red-v6.proof.json` | ADD22.1GiBfree, compile1032s through server/core; later SHED5.5GiBfree, disk425GiB; no tests, **not RED** |
 
 Both used explicitly authorized `CAPACITY_ID=lead_ret_14752`, obeyed SHED and stopped only the owned slice; verified inactive/empty ControlGroup. Dependencies are now warm. Further identical opt2 attempts paused pending a reserved compile window or a lower-resource targeted test profile; no production helper has been written.
+
+## Targeted native-book proof
+
+At ea101bd41, unchanged native-book fixtures are3GREEN/0FAIL32.74s (dev profile/debug1; compile2m38s). `native-book-green-v1-dev.proof.json` seals source/command/profile/DB. Exporter PASS105.66s; all990 loadouts and native trees compare equal to frozen source, including known/passive flags, complete configs and unspent budgets. Only the compiled startup pathname differs. `native-source-after-ea101bd41.proof.json`, output SHA256 `8c730c5f13d88597c979bd4876c9679d56423ef3ab0677f63798ecd220475765`.
+
+Pre-fix dev executable is hardlinked under `target/ret-book-before-dev/game_server-ef331486f`, SHA256 `b84b3469218a028391b1492f0baea3123e94d8dfd6cb7152958c76bedb0091e3`, for paired observations without rebuilding an old tree. Targeted proof does not claim optimized/full-follower/Stockade integration, nor Ret rotation/DPS correctness.

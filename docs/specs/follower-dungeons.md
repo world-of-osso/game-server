@@ -47,9 +47,9 @@ Failed or unavailable pet preparation must report the failure once per follower 
 ## What it must do
 
 ### Native source book
-- [ ] Ordinary NPC followers retain their requested native specialization at levels1–90, without a Player identity or player-spec fallback. Known spells and passives come from the validated native starter build, independent of controller aliases or unpublished kit rows.
-- [ ] Runtime initialization and the source exporter share one starter-book computation. All990 existing exported loadouts preserve known/passive flags, trait entries and unspent points; overriding a native spell removes its base knowledge. Controller family aliases must not grant both Frenzy variants.
-- [ ] A Ret70 NPC without published controller rows receives its selected native starter talents and TraitLoadout. This does not authorize reference-derived action grants or an invented Ret NPC template.
+- [x] Ordinary NPC followers retain their requested native specialization at levels1–90, without a Player identity or player-spec fallback. Known spells and passives come from the validated native starter build, independent of controller aliases or unpublished kit rows.
+- [x] Runtime initialization and the source exporter share one starter-book computation. All990 existing exported loadouts preserve known/passive flags, trait entries and unspent points; overriding a native spell removes its base knowledge. Controller family aliases must not grant both Frenzy variants.
+- [x] A Ret70 NPC without published controller rows receives its selected native starter talents and TraitLoadout. This does not authorize reference-derived action grants or an invented Ret NPC template.
 
 ### Reference preparation
 - [x] Decode the pinned Retail LFGDungeons layout; retain follower difficulty entries, authored role counts, map IDs, conditions, flags and content tuning. Ruby Life Pools2436 must resolve to map2521 and a1/1/3 composition.

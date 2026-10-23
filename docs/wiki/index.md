@@ -1079,4 +1079,4 @@ Debug logs and root cause analyses.
 
 - [Ruby entrance follow/formation](investigations/follower-data.md#ruby-entrance-follow-and-formation--2026-10-22) — absent runtime bake freezes admission; native23s RED proves identical pet follow points independently stack all4. Approved deterministic party slots; native23s GREEN,464controlsPASS, Stockade/Henry simulator clears and all-targets/fmtPASS.
 
-- [NPC native starter knowledge](investigations/follower-data.md#npc-native-starter-knowledge--2026-10-23) — shared runtime/exporter source-book boundary; three native REDs observed, GREEN pending.
+- [NPC native starter knowledge](investigations/follower-data.md#npc-native-starter-knowledge--2026-10-23) — shared runtime/exporter source-book boundary; three native RED→GREEN cases and990 exact exported loadouts; broader integration pending.
