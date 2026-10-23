@@ -242,6 +242,8 @@ fn encounter_coverage_skarmorak_source_shell_refill_channel_rearm_and_copy_credi
             423324
         );
         let player = h.player();
+        // Replay this native melee boundary, independent of setup/prephase draws.
+        let _rng = crate::random::seed_scope(u64::from(difficulty));
         let mut queue = bevy::ecs::world::CommandQueue::default();
         let mut commands = Commands::new(&mut queue, h.app.world());
         crate::combat::start_attack(&mut commands, player, boss, None);
@@ -284,7 +286,13 @@ fn encounter_coverage_skarmorak_source_shell_refill_channel_rearm_and_copy_credi
             .count();
         assert!(
             damage > 0,
-            "actual native autoattack damage, no fabricated hit amount"
+            "actual native autoattack damage, no fabricated hit amount; difficulty{difficulty}, receipts{:?}",
+            h.inbox(0)
+                .log
+                .iter()
+                .filter(|event| event.source == Some(player.to_bits())
+                    && event.target == Some(boss.to_bits()))
+                .collect::<Vec<_>>()
         );
         h.advance(19.3);
         let attempts = &h
