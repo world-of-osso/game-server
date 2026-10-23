@@ -26,7 +26,7 @@ Restore the missing spec73 producer channels identified by `game-engine/data/dia
 |Thunder Clap Rend|TC hit hook implemented; GREEN pending|a0a9fca65 native landed hit lacks Rend; unknown-Rend control passes|
 |Shield Charge chain|TC Dummy→385953 implemented; existing effect96 owns385954|a0a9fca65 native cast succeeds but never moves/damages; GREEN pending|
 |Whirling Blade/Ravager|Missing named producer/ticks|RED pending|
-|Phalanx/Bloody Rebuke|Missing named producer/consumer|RED pending|
+|Phalanx/Bloody Rebuke|Missing named producer/consumer|Ignored native Phalanx Clap→buff→Slam damage/consumption, absence and foreign-buff controls committed; RED execution pending; Bloody Rebuke RED pending|
 |Guillotine/Venomfang|Equipped driver lifecycle exists; damage producers missing|RED pending|
 
 ### First TC producer receipts

@@ -10,6 +10,10 @@ const THUNDER_CLAP: u32 = 6343;
 const SHIELD_CHARGE: u32 = 385_952;
 const SHIELD_CHARGE_MOVEMENT: u32 = 385_953;
 const SHIELD_CHARGE_DAMAGE: u32 = 385_954;
+const PHALANX_TALENT: u32 = 1_269_311;
+const PHALANX_BUFF: u32 = 1_278_009;
+const PHALANX_DAMAGE: u32 = 1_270_116;
+const SHIELD_SLAM: u32 = 23_922;
 
 fn fixture(rend: bool) -> Harness {
     let ids = [
@@ -48,6 +52,37 @@ fn fixture(rend: bool) -> Harness {
     h
 }
 
+fn apply_passive(h: &mut Harness, unit: Entity, spell_id: u32) {
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: unit,
+            target: unit,
+            spell_id,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert!(crate::auras::has_aura(h.app.world(), unit, spell_id));
+}
+
+fn phalanx_fixture(learned: bool) -> Harness {
+    let mut h = fixture(false);
+    let mut known = vec![THUNDER_CLAP, SHIELD_SLAM];
+    if learned {
+        known.push(PHALANX_TALENT);
+    }
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(known));
+    if learned {
+        let caster = h.caster;
+        apply_passive(&mut h, caster, PHALANX_TALENT);
+    }
+    h
+}
+
 fn clap(rend: bool) -> (Harness, Vec<Entity>) {
     // Whole native cast attempts retain actual avoidance. A hit is required before
     // inspecting its producer, never manufactured with hit flags or modified RNG.
@@ -70,6 +105,90 @@ fn clap(rend: bool) -> (Harness, Vec<Entity>) {
         }
     }
     panic!("eight native Thunder Clap casts produced no landed damage");
+}
+
+/// SimC76f8118 sc_warrior.cpp4173–4174/6300–6303. Native1269311
+/// supplies proc eligibility and1278009, but no native edge supplies1270116.
+#[test]
+#[ignore = "RED: native Phalanx producer and Shield Slam consumer not restored"]
+fn protection_producers_phalanx_clap_buff_is_consumed_by_shield_slam_for_real_damage() {
+    let mut h = phalanx_fixture(true);
+    h.cast_and_deliver(THUNDER_CLAP, None);
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(
+        crate::auras::has_aura(h.app.world(), h.caster, PHALANX_BUFF),
+        "learned native Phalanx must produce its actual1278009 buff on Clap"
+    );
+    h.advance(40);
+    h.cast_and_deliver(SHIELD_SLAM, Some(h.npc));
+    h.advance(5);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(
+        !crate::auras::has_aura(h.app.world(), h.caster, PHALANX_BUFF),
+        "Shield Slam consumes the owned Phalanx buff"
+    );
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(PHALANX_DAMAGE)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "consumption must emit damage, not only remove the buff"
+    );
+    h.inbox = Inbox::default();
+    h.advance(140);
+    h.cast_and_deliver(SHIELD_SLAM, Some(h.npc));
+    h.advance(5);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(PHALANX_DAMAGE)),
+        "an already-consumed buff cannot produce a second child"
+    );
+}
+
+#[test]
+#[ignore = "RED control: qualify absence alongside native Phalanx restoration"]
+fn protection_producers_phalanx_catalog_presence_does_not_grant_the_talent() {
+    let mut h = phalanx_fixture(false);
+    h.cast_and_deliver(THUNDER_CLAP, None);
+    h.advance(40);
+    h.cast_and_deliver(SHIELD_SLAM, Some(h.npc));
+    h.advance(5);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(!crate::auras::has_aura(
+        h.app.world(),
+        h.caster,
+        PHALANX_BUFF
+    ));
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(PHALANX_DAMAGE))
+    );
+}
+
+#[test]
+#[ignore = "RED control: qualify ownership alongside native Phalanx restoration"]
+fn protection_producers_phalanx_foreign_buff_does_not_empower_the_caster() {
+    let mut h = phalanx_fixture(true);
+    let other = spawn_player(&mut h.app, 1, 1.0);
+    apply_passive(&mut h, other, PHALANX_BUFF);
+    h.cast_and_deliver(SHIELD_SLAM, Some(h.npc));
+    h.advance(5);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(crate::auras::has_aura(h.app.world(), other, PHALANX_BUFF));
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(PHALANX_DAMAGE))
+    );
 }
 
 #[test]
