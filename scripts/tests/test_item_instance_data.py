@@ -4,6 +4,8 @@ import csv
 import importlib.util
 from pathlib import Path
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -11,6 +13,12 @@ SPEC = importlib.util.spec_from_file_location(
     "item_instance_data", Path(__file__).resolve().parents[1] / "item_instance_data.py")
 DATA = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(DATA)
+
+
+def publish_native_catalogs(path, source):
+    return subprocess.run(
+        [sys.executable, str(DATA.__file__), "--db2-dir", str(source), "--db", str(path),
+         "--publish-producer-catalogs"], capture_output=True, text=True, check=False)
 
 
 class ItemInstanceImportTests(unittest.TestCase):
@@ -59,6 +67,46 @@ class ItemInstanceImportTests(unittest.TestCase):
             self.assertEqual(conn.execute(
                 "SELECT build FROM item_instance_source WHERE table_name='item_set_spell'"
             ).fetchone(), ("12.1.5.70448",))
+
+    def test_producer_publication_adds_only_new_catalogs_and_refuses_existing_drift(self):
+        source = Path(__file__).resolve().parents[2] / "data/db2/12.1.5.70448"
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root) / "canonical-copy.db"
+            with closing(sqlite3.connect(path)) as conn:
+                conn.execute("CREATE TABLE item_bonus (ID INTEGER PRIMARY KEY, Value_0 INTEGER)")
+                conn.execute("INSERT INTO item_bonus VALUES (2,7)")
+                conn.execute("CREATE TABLE item_instance_source "
+                             "(table_name TEXT PRIMARY KEY, build TEXT NOT NULL, sha256 TEXT NOT NULL)")
+                conn.execute("INSERT INTO item_instance_source VALUES (?,?,?)",
+                             ("item_bonus", "prior-build", "preserve-this-source-stamp"))
+                conn.commit()
+                result = publish_native_catalogs(path, source)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(conn.execute("SELECT * FROM item_bonus").fetchall(), [(2, 7)])
+                self.assertEqual(conn.execute(
+                    "SELECT build,sha256 FROM item_instance_source WHERE table_name='item_bonus'"
+                ).fetchone(), ("prior-build", "preserve-this-source-stamp"))
+                self.assertEqual(conn.execute(
+                    "SELECT Threshold FROM item_set_spell WHERE SpellID=1296648"
+                ).fetchone(), (4,))
+                self.assertEqual(conn.execute(
+                    "SELECT COUNT(*) FROM item_instance_source"
+                ).fetchone()[0], 5)
+                version = conn.execute("PRAGMA data_version").fetchone()[0]
+                result = publish_native_catalogs(path, source)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(conn.execute("PRAGMA data_version").fetchone()[0], version,
+                                 "identical repeat publication must not write database pages")
+                conn.execute("UPDATE item_set_spell SET Threshold=3 WHERE SpellID=1296648")
+                conn.commit()
+                version = conn.execute("PRAGMA data_version").fetchone()[0]
+                result = publish_native_catalogs(path, source)
+                self.assertNotEqual(result.returncode, 0, "drift must refuse, not overwrite")
+                self.assertEqual(conn.execute("PRAGMA data_version").fetchone()[0], version)
+                self.assertEqual(conn.execute(
+                    "SELECT Threshold FROM item_set_spell WHERE SpellID=1296648"
+                ).fetchone(), (3,))
+                self.assertEqual(conn.execute("SELECT * FROM item_bonus").fetchall(), [(2, 7)])
 
     def test_bad_row_does_not_replace_existing_table(self):
         with tempfile.TemporaryDirectory() as root, closing(sqlite3.connect(":memory:")) as conn:
