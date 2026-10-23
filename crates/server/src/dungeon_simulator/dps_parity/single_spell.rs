@@ -356,10 +356,10 @@ fn dps_parity_single_spell_follower_armor_penetration() {
         .as_f64()
         .unwrap();
     // ExpectedStat475/478: armor1470/K3430; native450990/280:12%.
-    // The measured stage ratio includes native integer damage truncation.
+    // Capture the actual formula variable; rounded damage-stage ratios stay separate.
     let expected = (1470.0 * 0.88) / (1470.0 * 0.88 + 3430.0);
     assert!(
-        (armor - expected).abs() < 0.0001,
+        (armor - expected).abs() < 0.000001,
         "FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_ARMOR_PENETRATION: {armor} vs {expected}"
     );
     let result = receipt["events"]

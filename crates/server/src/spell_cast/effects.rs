@@ -827,7 +827,7 @@ fn armor_reduced(
         armor,
     );
     let armor = crate::auras::combat_stats::armor_after_ignore(world, caster, spell, armor);
-    let reduced = crate::combat::armor_mitigated(
+    let mitigation = crate::combat::armor_mitigated(
         amount,
         armor,
         &caster_scaling,
@@ -836,8 +836,8 @@ fn armor_reduced(
         world.get::<crate::auras::AuraStatMods>(caster),
     );
     #[cfg(test)]
-    factor_capture::record_armor(world, caster, target, spell, amount, armor, reduced);
-    reduced
+    factor_capture::record_armor(world, caster, target, spell, amount, &mitigation);
+    mitigation.damage
 }
 
 /// TC SpellInfo::IsRangedWeaponSpell; ItemTemplate.h weapon subclass mask.

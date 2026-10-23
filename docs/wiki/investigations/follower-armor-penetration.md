@@ -21,8 +21,9 @@ Artifacts: `game-engine/data/diagnostics/native-spell-diff-2026-10-23/armor-sour
 
 - `expected-stat.proof.json`: frozen database/CSV/source hashes, exact ExpectedStat/SpellEffect rows and actual target/aura snapshots. Fresh TC Unit.cpp matches the earlier pinned artifact byte-for-byte, SHA256 `5aee33e5fad0132bb1905ea6d1c330806374457b15f918d89e0ce5d60353f981`.
 - `follower-armor-policy.receipt-red.log`: real scope84d60394e Tiger Palm capture fails the independent policy expectation, exit1; no injected aura/resource values.
-- `dps_parity_single_spell_follower_armor_penetration`: actual reference-equipped WW follower cast regression; native GREEN pending.
-- `census_tail_280_native_npc_does_not_gain_player_armor_penetration`: existing ordinary, player-controlled NPC with actual450990 remains unaffected; post-policy control pending.
+- At a9a17aa4c the real policy cast passed the mitigation expectation: observed rounded-stage fraction0.2738695145 and damage39471. The test then correctly failed because the observer still printed pre280 armor1470; native policy damage was not the failure.
+- Three280 controls passed on that pinned binary: ordinary player-controlled NPC remains unaffected, Player Martial Precision removal restores damage, and100% penetration retains the TC cap. Runtime13.55s; `native-armor-policy-controls.proof.json` records the binary hash.
+- Observer correction returns actual post-penetration armor/K from `combat::armor_mitigated` and the actual mitigation scalar from `melee::armor_reduced_damage`. No formula is copied or recalculated. The old rounded stage ratio remains separately named `native_observed_armor_fraction`; `armor_fraction` is the actual formula variable. Current observer GREEN pending.
 
 The earlier per-hit capture schema itself passed1/1 and preserved damage38050 exactly from its RED baseline. That is not armor-policy GREEN or DPS parity. Arms MS, Assassination MH, Fury MH and BM melee oracle receipts all show1470/K3430/0.30; the WW0.274 observation must not be generalized to every physical spec.
 

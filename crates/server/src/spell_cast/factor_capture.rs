@@ -61,6 +61,9 @@ struct Armor {
     value: f32,
     before: f32,
     after: f32,
+    constant: Option<f32>,
+    penetration_pct: f32,
+    fraction: Option<f32>,
 }
 
 #[derive(Default)]
@@ -324,8 +327,7 @@ pub(crate) fn record_armor(
     target: Entity,
     spell: &SpellInfo,
     before: f32,
-    armor: f32,
-    after: f32,
+    mitigation: &crate::combat::ArmorMitigation,
 ) {
     observe(world, actor, |capture, state| {
         if target == capture.target {
@@ -334,9 +336,12 @@ pub(crate) fn record_armor(
                 .entry((spell.id, target.to_bits()))
                 .or_default()
                 .armor = Some(Armor {
-                value: armor,
+                value: mitigation.effective_armor,
                 before,
-                after,
+                after: mitigation.damage,
+                constant: mitigation.constant,
+                penetration_pct: mitigation.penetration_pct,
+                fraction: mitigation.fraction,
             });
         }
     });
@@ -497,7 +502,9 @@ fn event_row(
     json!({"event": kind, "time": time, "actor": ctx.caster.to_bits().to_string(),
         "target": capture.target.to_bits().to_string(), "action": action,
         "spell_id": ctx.spell.id, "native_spell_name": ctx.spell.name, "native_depth": ctx.depth,
-        "factors": factors, "factor_attribution": {"mult": "unattributed product",
+        "factors": factors, "factor_attribution": {"armor_fraction": "unattributed product",
+            "native_armor_penetration_pct": "unattributed product", "armor_coefficient": "selected native ExpectedStat input",
+            "mult": "unattributed product",
             "source_product": "unattributed product", "target_product": "unattributed product",
             "amount": "crit-normalized observed amount", "raw_amount": "crit-normalized observed amount"}})
 }
@@ -524,7 +531,10 @@ fn amount_event(
 
 fn armor_event(capture: &FactorCapture, ctx: &EffectCtx, hit: &Hit, time: f64) -> Option<Value> {
     hit.armor.map(|armor| {
-        let factors = json!({"armor_fraction": ratio(armor.after, armor.before).map(|value| 1.0 - value), "armor": armor.value});
+        let factors = json!({"armor_fraction": armor.fraction,
+            "native_observed_armor_fraction": ratio(armor.after, armor.before).map(|value| 1.0 - value),
+            "armor": armor.value, "armor_coefficient": armor.constant,
+            "native_armor_penetration_pct": armor.penetration_pct});
         event_row(capture, ctx, "armor", factors, time)
     })
 }
