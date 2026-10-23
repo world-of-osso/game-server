@@ -1,6 +1,10 @@
 ## 2026-10-23 — Caster offsets and source balloon qualification
 
 [Offsets](systems/toys.md#caster-offsets414348-source-boundary-2026-10-23): generic41/43/48 use source73 radius/reach/motion and direct geometry, preserving existing32. Genuine9RED plus correctedB43RED;37GREEN29.07s atc0b includes actual two balloons, native direction1GREEN at e71 and area1GREEN13.27s at909 complete39 covered cases without production changes. Native fixture fixes select279366 effect1 and source NPC6/display10913 rather than weakening LOS; legitimate native misses retain receipts. Check0/67.07s/no warnings/fmt0. Exact545→547 only75042/245946,17 blocker-list/15 unavailable strings; Arena battle/action gaps and native-facing/presentation/modifier/Detour boundaries retained. No canonical/protocol writes or invented UseToy toggle.
+## 2026-10-23 — Oracle reference simulation options
+
+[Oracle](reference/simc-spell-oracle.md): reference-proof discovery/explicit selection now inherits all non-probe options, including `optimal_raid=0`; missing/conflicting proof matches fail. Earlier raid-buffed diagnostics are invalid for native factor comparison and archived; the complete150-receipt corpus is regenerated with each source command's options. Native implementation remains unchanged.
+
 ## 2026-10-23 — SimC spell oracle
 
 [Oracle](reference/simc-spell-oracle.md): stdlib CLI retains pinned command/hash proof and parses printed direct/tick formulas, result stages, modifier sources and armor reductions. Top-five receipts for30 referenced specs live in game-engine diagnostics; untriggered prerequisites and native instrumentation gaps remain explicit. Recorded Arms/Blood fixtures cover conditional sources and apostrophe actor names. No native harness changes or parity certification.

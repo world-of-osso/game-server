@@ -131,7 +131,7 @@ def generate_spec(spec, output=OUTPUT, references=REFERENCES):
         path = output / str(spec) / filename
         metadata = {'spec_id': spec, 'channel': channel, 'reference': str(raw), 'normalized_reference': str(reference), 'reference_sha256': sha256(raw), 'reference_proof': str(reference_proof), 'profile_policy': 'exact source profile from reference proof; MID1 where reference used MID1'}
         try:
-            data = run_oracle(profile, action_list(spec, channel), path)
+            data = run_oracle(profile, action_list(spec, channel), path, reference_proof=reference_proof)
             observed = matching_formulas(spec, channel, data['events'])
             metadata['observed_formula_actions'] = sorted({(e['action'], e['spell_id']) for e in observed})
             metadata['status'] = 'observed' if observed else 'NOT_TRIGGERED_BY_MINIMAL_DRIVERS'
@@ -150,7 +150,7 @@ def generate_spec(spec, output=OUTPUT, references=REFERENCES):
 
 
 def write_index(output):
-    text = ['# SimC spell oracle — 2026-10-23', '', 'Pinned 76f8118cf3f7f41dad20708e8328e1f4ab2deebc. One deterministic 30 s probe per selected channel; not DPS parity certification. Pet contributions with the same name/ID are combined for top-five selection. Receipt v5 Frost251 native-legality exclusion remains in force.', '', 'Each JSON retains all observed children/procs and links adjacent `.simc`, `.txt`, `.proof.json`, and console output. `NOT_TRIGGERED` means no formula evidence for the requested channel, not zero damage or an inferred formula. Initialization failures retain actual SimC errors.', '', '| Spec | Channel | Reference share | Formula records | Status |', '|---|---|---:|---:|---|']
+    text = ['# SimC spell oracle — 2026-10-23', '', 'Pinned 76f8118cf3f7f41dad20708e8328e1f4ab2deebc. One deterministic 30 s probe per selected channel; reference simulation options inherited (optimal_raid=0), not DPS parity certification. Pet contributions with the same name/ID are combined for top-five selection. Receipt v5 Frost251 native-legality exclusion remains in force.', '', 'Each JSON retains all observed children/procs and links adjacent `.simc`, `.txt`, `.proof.json`, and console output. `NOT_TRIGGERED` means no formula evidence for the requested channel, not zero damage or an inferred formula. Initialization failures retain actual SimC errors.', '', '| Spec | Channel | Reference share | Formula records | Status |', '|---|---|---:|---:|---|']
     for manifest in sorted(output.glob('*/manifest.json'), key=lambda p: int(p.parent.name)):
         for row in json.loads(manifest.read_text()):
             channel = row['channel']
