@@ -1,6 +1,31 @@
 ## 2026-10-22 — Devastation Giantkiller consequence boundary
 
 [Native Giantkiller](investigations/follower-data.md#devastation-giantkiller-policy--2026-10-22): legal-profile fixed300s baseline−86.24%ST/−88.96%three-target; actual4RED22.30s at0d07469b8 shows native12% mastery changes no damage. Native aura amount plus ledgered SimC health/Tyranny policy implemented; targeted GREEN and literal rotation remain open. No coefficient/stat tuning or canonical data edits.
+## 2026-10-23 — Native Sunfire Spiral RSK boundary
+
+[Sunfire](systems/auras.md#sunfire-spiral-combo-rsk--2026-10-23): native learned40% conditional RSK multiplier, TC/TDB/mask absence checked. Actual TP-funded RSK/repeat1561.3763vs2185.9268 genuineRED→2GREEN39.92s atb6b3a93e6, original Combo control retained. Native coefficients unchanged.300s ST54887.59/3T87182.52 remain−73.41%/−76.85%; [remaining channels/proof](../handoffs/ww-source-census.md#rsktp-coefficient-and-sunfire-investigation).
+
+## 2026-10-23 — Literal controller native-facing boundary
+
+[Shared literal machinery](systems/simc-apl.md#shared-literal-fixture-machinery): original5GREEN retained after extraction; exact-order FoF117418 damage RED despite valid4s channel/226trigger. Literal AutoAttack left CreatureStateIdle; native Pursuing restores chase-facing without changing cone/coefficients/timing. At0e34d8666 native6GREEN39.89s;300s ST51416.15/3T84696.50,−75.09%/−77.51%,117418 now19045/35046DPS. [Receipts/remaining gaps](../handoffs/ww-source-census.md#fof-literal-controller-root-cause).
+
+## 2026-10-23 — Literal Windwalker fixture boundary
+
+[Shared APL](systems/simc-apl.md): WW132literal source rows use native selected-spell readiness/actual casts without removing Follower identity; accepted4RED atb74411d5d→5GREEN35.19s at32e4610b7. ST FoF/RSK,3T SCK107270 recipients, action-context combo, exact placeholders/unknown rejection and dungeon/non-Fixture independence proved. Per-ability damage/procs and300s parity remain open; [census/receipt](../handoffs/ww-source-census.md#literal-fixture-implementation-unqualified).
+## 2026-10-23 — Caster offsets and source balloon qualification
+
+[Offsets](systems/toys.md#caster-offsets414348-source-boundary-2026-10-23): generic41/43/48 use source73 radius/reach/motion and direct geometry, preserving existing32. Genuine9RED plus correctedB43RED;37GREEN29.07s atc0b includes actual two balloons, native direction1GREEN at e71 and area1GREEN13.27s at909 complete39 covered cases without production changes. Native fixture fixes select279366 effect1 and source NPC6/display10913 rather than weakening LOS; legitimate native misses retain receipts. Check0/67.07s/no warnings/fmt0. Exact545→547 only75042/245946,17 blocker-list/15 unavailable strings; Arena battle/action gaps and native-facing/presentation/modifier/Detour boundaries retained. No canonical/protocol writes or invented UseToy toggle.
+## 2026-10-23 — Oracle sourced prerequisite closure
+
+[Oracle](reference/simc-spell-oracle.md): all25 previously unobserved channels now have printed formula evidence,150/150 total. Pinned source-backed cast/ready-state plans use30–180s probes, earned resources/buffs and explicit precombat setup. Frost Strike/Obliterate/Arcane Missiles preserve actual child IDs instead of report-parent IDs. Actual Shaman trace reproduced98 repeated Flametongue casts starving combat; original precombat imbues restore TI without injected stacks or altered seed/reference flags.20 unittest GREEN; native parity remains unclaimed.
+
+## 2026-10-23 — Oracle reference simulation options
+
+[Oracle](reference/simc-spell-oracle.md): reference-proof discovery/explicit selection now inherits all non-probe options, including `optimal_raid=0`; missing/conflicting proof matches fail. Earlier raid-buffed diagnostics are invalid for native factor comparison and archived; the complete150-receipt corpus is regenerated with each source command's options. Native implementation remains unchanged.
+
+## 2026-10-23 — SimC spell oracle
+
+[Oracle](reference/simc-spell-oracle.md): stdlib CLI retains pinned command/hash proof and parses printed direct/tick formulas, result stages, modifier sources and armor reductions. Top-five receipts for30 referenced specs live in game-engine diagnostics; untriggered prerequisites and native instrumentation gaps remain explicit. Recorded Arms/Blood fixtures cover conditional sources and apostrophe actor names. No native harness changes or parity certification.
 
 - [Candle/Azure normalization correction](systems/boss-scripts.md#azure-integration-correction) — 2026-10-23: actual a112 Sprouts packet-target RED0/1;9f bounds generic source normalization to self-exclusion admission, preserving published cast/log recipients; Azure timing/assertions unchanged. Focused136PASS228.63s plus private-geometry prerequisite2PASS12.03s yields composite138GREEN;14pre-existing ignored, lead full integration gate pending.
 - [Candle King native target boundary](systems/boss-scripts.md#candle-king-native-explicit-unit-boundary--2026-10-22) — 2026-10-22: actual420659 self-target InvalidTarget RED→4GREEN70.52s, TC621–678 normalization/source masks;31 retained controls, native4336 landing pending.
@@ -4086,6 +4111,7 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 
 - 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22) HIT/Chain correction5GREEN10.43s; actual StatsPlugin70samples2PASS9.38s on same executable. Three qualified tests enabled; fullAPL/resource/other-root gaps retained.
 
+- 2026-10-23: Native NPC starter-book runtime/exporter helper; Frenzy alias, absent TraitLoadout and Ret requested-spec REDs reproduced. Shared helper implemented; GREEN/990-source equality pending. See [follower data](investigations/follower-data.md#npc-native-starter-knowledge--2026-10-23).
 - 2026-10-23: [Native weapon AP](systems/character-stats.md#native-weapon-attack-power--2026-10-23): actual Tiger Palm91vs358–377 RED precedes generic raw-table weapon AP/attack-type/aura366 implementation; targeted4GREEN13.89s at4b9d2be73, zero compiler warnings; cases enabled afterward. Parent integration gate pending. White-hit AP/6 versus TC3.5 remains deferred and unchanged.
 
 - 2026-10-23: [Shared SimC APL](systems/simc-apl.md): pushed eleven ignored WW/Ret expressions/variables/call-list REDs, observed11FAIL atc0cf6eed6; shared implementationaff61cbab passes11GREEN (zero compiler warnings), cases enabled afterward; native adapter integration remains pending.

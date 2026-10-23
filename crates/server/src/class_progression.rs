@@ -146,6 +146,11 @@ impl TraitLoadout {
         self.spells.iter().copied()
     }
 
+    #[cfg(test)]
+    pub(crate) fn source_config(&self) -> (&[ConfigEntry], &[(u32, i32)]) {
+        (&self.entries, &self.unspent)
+    }
+
     fn purchases(&self) -> Vec<Purchase> {
         self.entries
             .iter()
@@ -514,8 +519,24 @@ fn evaluate(
                 (granted_entries(&class.traits, ctx), true)
             }
         };
+    let traits = build_trait_loadout(class, spec, ctx, entries);
+    let known = compute_known_spells(class, player.race, level, spec, &traits);
+    Evaluated {
+        spec: ActiveSpec(ctx.spec_id),
+        known,
+        traits,
+        traits_reset,
+    }
+}
+
+fn build_trait_loadout(
+    class: &ClassInfo,
+    spec: Option<&SpecInfo>,
+    ctx: TraitContext,
+    entries: Vec<ConfigEntry>,
+) -> TraitLoadout {
     let talents: Vec<_> = talent_spell_entries(&class.traits, &entries).collect();
-    let traits = TraitLoadout {
+    TraitLoadout {
         tree_id: class.traits.tree_id,
         unspent: unspent(&class.traits, ctx, &entries),
         spells: talents
@@ -529,17 +550,77 @@ fn evaluate(
             .iter()
             .filter(|entry| entry.overrides_spell_id != 0)
             .map(|entry| (entry.overrides_spell_id, entry.spell_id))
-            .chain(spec_overrides(spec, level))
+            .chain(spec_overrides(spec, ctx.level))
             .collect(),
         entries,
-    };
-    let known = compute_known_spells(class, player.race, level, spec, &traits);
-    Evaluated {
-        spec: ActiveSpec(ctx.spec_id),
-        known,
-        traits,
-        traits_reset,
     }
+}
+
+/// Literal native kit-exporter starter book: requested NPC spec at every level,
+/// race-neutral class/default skills, spec spells and validated starter talents.
+/// No player-spec fallback, controller aliases or additional mastery grants.
+pub(crate) fn evaluate_npc_starter(
+    classes: &ClassSpells,
+    class_id: u8,
+    spec_id: u32,
+    level: u8,
+) -> Result<(Vec<KnownSpell>, TraitLoadout), String> {
+    let class = class_info(classes, class_id)
+        .ok_or_else(|| format!("NPC starter class{class_id} absent"))?;
+    let spec = class
+        .specs
+        .iter()
+        .find(|spec| spec.spec_id == spec_id)
+        .ok_or_else(|| format!("NPC starter spec{spec_id} absent from class{class_id}"))?;
+    let ctx = TraitContext { spec_id, level };
+    let purchases = starter_purchases(&class.traits, ctx)?;
+    let entries = build_config(&class.traits, ctx, &purchases)?;
+    let traits = build_trait_loadout(class, Some(spec), ctx, entries);
+    let known = collect_npc_starter_spells(class, spec, level, &traits);
+    Ok((known, traits))
+}
+
+fn collect_npc_starter_spells(
+    class: &ClassInfo,
+    spec: &SpecInfo,
+    level: u8,
+    traits: &TraitLoadout,
+) -> Vec<KnownSpell> {
+    let class_spells = class
+        .learnable
+        .iter()
+        .filter(|spell| {
+            AUTO_LEARN_METHODS.contains(&spell.acquire_method)
+                && spell.required_level <= u32::from(level)
+                && spell.race_masks == [0, 0]
+        })
+        .map(|spell| KnownSpell {
+            spell_id: spell.spell_id,
+            passive: spell.passive,
+        });
+    let spec_spells = spec
+        .spells
+        .iter()
+        .filter(|spell| spell.required_level <= u32::from(level))
+        .map(|spell| KnownSpell {
+            spell_id: spell.spell_id,
+            passive: spell.passive,
+        });
+    let mut known = BTreeMap::new();
+    for spell in class_spells
+        .chain(default_skill_spells(class, 0, level))
+        .chain(spec_spells)
+        .chain(traits.active_talent_spells())
+    {
+        known.insert(spell.spell_id, spell.passive);
+    }
+    for &(base, _) in &traits.overrides {
+        known.remove(&base);
+    }
+    known
+        .into_iter()
+        .map(|(spell_id, passive)| KnownSpell { spell_id, passive })
+        .collect()
 }
 
 /// Evaluate allocated reference ranks through native grants, budgets and overrides.

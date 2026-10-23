@@ -13,7 +13,7 @@ pub(crate) struct Party {
     pub members: Vec<Entity>,
 }
 
-/// NPC followers execute level-gated kit rows; they do not carry Player KnownSpells.
+/// Controller actions are level-gated kit rows, separate from the native NPC spellbook.
 pub(crate) fn available_kit_spells(world: &World, unit: Entity) -> Vec<u32> {
     let follower = world
         .get::<Follower>(unit)
