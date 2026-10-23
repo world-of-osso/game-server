@@ -34,6 +34,7 @@
 - [Spotlight source recipient boundary](systems/toys.md#spotlight-source-recipient-and-environmental-boundary-2026-10-22) —95rows27tables6resident models;8GREEN/check/fmt, actual grouped recipient/cancel/foreign refusal, exact542→543; named ONLY_OUTDOORS_UNENFORCED_NO_INDOOR_STATE gap retained.
 - [Native target57 raid-recipient correction](systems/toys.md#native-target57-raid-recipient-correction-2026-10-22) — actual1022 foreign-ally RED→rejection GREEN;21/10060 control remains accepted; separate source Raid correction plus Spotlight composite8GREEN/check/fmt.
 - [Ki'katal source-clock partial](investigations/follower-data.md#kikatal-source-clock-partial--2026-10-22) — native3/3 Normal/Follower request/effect/reset/copy-credit proof; controller gaps retained.
+- [Party-pet threat coverage](investigations/follower-data.md#party-pet-threat-coverage--2026-10-22) — nativeDuck/Felguard pet-only acquisition2RED→3GREEN actualtank62124pickup; foreignpet/unengaged exclusion and unchanged healer/stat policies; merged17native controls/check/fmtPASS.
 - [Controlled-unit owner engagement](systems/combat.md#attacked-controlled-unit-owners--2026-10-22) — native melee/direct/missile/lethal owner bridge and NPC↔pet PvE lifetime RED→6GREEN; no follower policy/stat changes; dungeon controls pending.
 - [Active party combat-reference admission](investigations/follower-data.md#active-party-combat-reference-admission--2026-10-22) — real31146 count1→3 and native launch RED→2GREEN; Stockade/Crenna and genuine Henry rosters clear3/3 with all5alive after excluding suppressed references; final integration lead-owned.
 - [Ascendance entry](investigations/follower-data.md#elemental-ascendance-entry--2026-10-22) — native2RED22.84s→2GREEN16.60s; six actual owned shocks/half-bursts, idle/range/full-damage controls; approved project policy, Ele3 samples/current integration gate distinct.
@@ -880,6 +881,10 @@ External resources, tooling, data sources, development workflow.
 | [[code-health]] | 4,838 symbols, 88 untested production candidates, dead-code situation, top hotspots |
 
 ## systems/
+
+- [Shared SimC APL](systems/simc-apl.md) — literal expressions, declared variables and conditional call order; eleven source WW/Ret REDs observed, implementation GREEN/native adapters pending.
+
+- [Native weapon AP](systems/character-stats.md#native-weapon-attack-power--2026-10-23) — actual Tiger Palm91vs358–377 RED→four native GREEN13.89s; raw item-table AP, attack-type selection and aura366/unequip; parent integration gate pending.
 
 - [Profession specializations](systems/profession-specializations.md) — source-earned knowledge, irreversible trait spending, atomic wallet/recipe persistence and owner snapshots; native/request acceptance remains open.
 

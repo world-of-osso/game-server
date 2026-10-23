@@ -150,6 +150,10 @@ Target74 tg967 landedec7b24f9f,2165PASS/0FAIL/8ignored2350.45s/check0-129s/fmt0;
 ## 2026-10-22 — Ki'katal source-clock partial
 
 [Ki'katal](investigations/follower-data.md#kikatal-source-clock-partial--2026-10-22): ignored native firstWebsRED→5b036e1ea3/3GREEN57.40s, eleven90s requests perNormal/Follower, nativeVolley/Singularity damage, evade/rearm, actualcopy-credit/corpse proof. Binding-only producer1/1GREEN preserves source/native/population; lower-bound alerts and absentcontrollers remain gaps. Canonical database untouched.
+## 2026-10-22 — Party-pet threat coverage
+
+[Coverage](investigations/follower-data.md#party-pet-threat-coverage--2026-10-22): corrected native2REDbe6f75d86→3GREEN971491e4c proves actualDuck/Felguard pet-onlyenemy admission and existingGarrick62124pickup. Localcombatmembership only; party/healer/stat/PetAIpolicyunchanged. Real4baAzureseed7 petdeath/reset is recorded separately from older0b ordering; no fullAzure proof. Merged470 controls17PASS14.65s/check3m22s/formatPASS, zero warnings; scope retains CC and launch suppression.
+
 ## 2026-10-22 — Attacked controlled-unit owners and pet PvE references
 
 [Combat](systems/combat.md#attacked-controlled-unit-owners--2026-10-22): separate TC-sourced owner-engagement and PvE-lifetime fixes follow pushed ignored REDs. Native melee/direct/133impact/lethal owner-zero-threat cases plus30squietPvE/bothcontrolledPvP give6GREEN31.60s at56e758740. No followercoverage/healerpolicy/stat changes; dungeon controls pending.
@@ -4018,3 +4022,6 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 - 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22) HIT/Chain correction5GREEN10.43s; actual StatsPlugin70samples2PASS9.38s on same executable. Three qualified tests enabled; fullAPL/resource/other-root gaps retained.
 
 - 2026-10-23: Native NPC starter-book runtime/exporter helper; Frenzy alias, absent TraitLoadout and Ret requested-spec REDs reproduced. Shared helper implemented; GREEN/990-source equality pending. See [follower data](investigations/follower-data.md#npc-native-starter-knowledge--2026-10-23).
+- 2026-10-23: [Native weapon AP](systems/character-stats.md#native-weapon-attack-power--2026-10-23): actual Tiger Palm91vs358–377 RED precedes generic raw-table weapon AP/attack-type/aura366 implementation; targeted4GREEN13.89s at4b9d2be73, zero compiler warnings; cases enabled afterward. Parent integration gate pending. White-hit AP/6 versus TC3.5 remains deferred and unchanged.
+
+- 2026-10-23: [Shared SimC APL](systems/simc-apl.md): pushed eleven ignored WW/Ret expressions/variables/call-list REDs, observed11FAIL atc0cf6eed6; shared implementation follows, GREEN/native adapter integration pending.

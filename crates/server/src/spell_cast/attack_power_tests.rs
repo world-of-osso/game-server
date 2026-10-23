@@ -6,6 +6,206 @@ use shared::components::Level;
 const BATTLE_SHOUT: u32 = 6673;
 const AIMED_SHOT: u32 = 19434;
 
+#[test]
+fn dps_parity_native_tiger_palm_includes_equipped_weapon_ap_before_battle_shout() {
+    use shared::item_data::ItemDefinitionSource::Retail;
+    use shared::protocol::{CombatLogKind, EquipmentSlot};
+
+    // Actual spec269 reference weapon, not a synthetic damage range/coefficient.
+    const WEAPON: u32 = 268215;
+    const TIGER_PALM: u32 = 100780;
+    let mut h = harness_with(
+        Vec::new(),
+        &[TIGER_PALM, BATTLE_SHOUT, SUNWELL_RADIANCE],
+        10,
+        true,
+    )
+    .unwrap();
+    let data = world_db().unwrap();
+    let templates = crate::item_templates::load_item_templates(&data.powers_db).unwrap();
+    let template = templates.get(Retail, WEAPON).unwrap();
+    let tables = h
+        .app
+        .world()
+        .resource::<crate::item_stats::ItemScalingTables>();
+    let item_level = tables.item_level(&template.scaling);
+    let dps = shared::item_scaling::weapon_dps(
+        tables,
+        &template.scaling,
+        template.inventory_type,
+        item_level,
+    )
+    .unwrap() as f32;
+    // TC Player.cpp8180 converts unrounded native table DPS to integer weapon AP.
+    let weapon_ap = (dps * 6.0).trunc();
+    assert!(weapon_ap > 0.0);
+    h.app.insert_resource(templates);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::stats::EquippedItems {
+            items: vec![(EquipmentSlot::MainHand, Retail, WEAPON)],
+        });
+    h.advance(5);
+    let base = stats(&h).attack_power;
+    let caster = h.caster;
+    apply_mask(&mut h, BATTLE_SHOUT, caster, 1);
+    let current = stats(&h);
+    assert_power(current.attack_power, base * 1.05);
+    let spell = data.store.get(TIGER_PALM).unwrap();
+    let coefficient = spell.effects[0].bonus_coefficient_from_ap;
+    // TC Unit.cpp9973–10000 includes weapon AP before its percentage;
+    // Unit.cpp6869–6891 supplies that total to the native AP coefficient.
+    let expected = varied((base + weapon_ap) * 1.05 * coefficient);
+    apply_native_enemy_dodge_reduction(&mut h);
+    h.advance(3);
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(caster)
+        .unwrap()
+        .crit_pct = 0.0;
+    h.cast_and_deliver(TIGER_PALM, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let hit = h
+        .inbox
+        .log
+        .iter()
+        .find(|event| {
+            event.source == Some(caster.to_bits())
+                && event.target == Some(h.npc.to_bits())
+                && event.spell_id == Some(TIGER_PALM)
+                && event.kind == CombatLogKind::Damage
+        })
+        .expect("native Tiger Palm damage");
+    assert!(
+        !hit.crit,
+        "coefficient control excludes critical amplification"
+    );
+    let before_block = (hit.amount + hit.blocked) as f32;
+    assert!(
+        expected.contains(&before_block),
+        "TC weapon AP: base={base}, weapon_ap={weapon_ap}, coefficient={coefficient}, expected={expected:?}, actual={hit:?}"
+    );
+}
+
+fn equip_native_ap_weapon(
+    h: &mut Harness,
+    items: &[(shared::protocol::EquipmentSlot, u32)],
+) -> Vec<f32> {
+    use shared::item_data::ItemDefinitionSource::Retail;
+    let templates =
+        crate::item_templates::load_item_templates(&world_db().unwrap().powers_db).unwrap();
+    let tables = h
+        .app
+        .world()
+        .resource::<crate::item_stats::ItemScalingTables>();
+    let powers = items
+        .iter()
+        .map(|&(_, id)| {
+            let template = templates.get(Retail, id).unwrap();
+            let dps = shared::item_scaling::weapon_dps(
+                tables,
+                &template.scaling,
+                template.inventory_type,
+                tables.item_level(&template.scaling),
+            )
+            .unwrap();
+            (dps as f32 * 6.0).trunc()
+        })
+        .collect();
+    h.app.insert_resource(templates);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::stats::EquippedItems {
+            items: items.iter().map(|&(slot, id)| (slot, Retail, id)).collect(),
+        });
+    h.advance(5);
+    powers
+}
+
+fn assert_native_effect_ap(h: &Harness, spell_id: u32, attack_power: f32) {
+    let world = h.app.world();
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+        .unwrap();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.bonus_coefficient_from_ap > 0.0)
+        .unwrap();
+    assert_eq!(effect.bonus_coefficient, 0.0);
+    let expected = attack_power * effect.bonus_coefficient_from_ap;
+    let actual = super::effects::effect_power_bonus(world, h.caster, spell, effect);
+    assert_power(actual, expected);
+}
+
+#[test]
+fn dps_parity_native_weapon_ap_ranged_uses_ranged_multiplier_and_native_bow() {
+    use shared::protocol::EquipmentSlot::MainHand;
+    // Native item2504: Worn Shortbow, rather than rounded swing-bound reconstruction.
+    let mut h = actor(3);
+    let weapon = equip_native_ap_weapon(&mut h, &[(MainHand, 2504)])[0];
+    let before = stats(&h);
+    assert_native_effect_ap(&h, AIMED_SHOT, before.ranged_attack_power + weapon);
+    let caster = h.caster;
+    // Native Battle Shout effect1 is independently RAP+5%, not melee-only effect0.
+    apply_mask(&mut h, BATTLE_SHOUT, caster, 1 << 1);
+    assert_native_effect_ap(&h, AIMED_SHOT, (before.ranged_attack_power + weapon) * 1.05);
+}
+
+#[test]
+fn dps_parity_native_weapon_ap_offhand_halves_base_and_own_weapon_not_main_hand() {
+    use shared::protocol::EquipmentSlot::{MainHand, OffHand};
+    const OFFHAND_WHIRLWIND: u32 = 44949;
+    let mut h = harness_with(Vec::new(), &[OFFHAND_WHIRLWIND, BATTLE_SHOUT], 1, true).unwrap();
+    let powers = equip_native_ap_weapon(&mut h, &[(MainHand, 25), (OffHand, 727)]);
+    assert_ne!(powers[0], powers[1]);
+    let before = stats(&h);
+    assert_native_effect_ap(
+        &h,
+        OFFHAND_WHIRLWIND,
+        (before.attack_power + powers[1]) * 0.5,
+    );
+    let caster = h.caster;
+    apply_mask(&mut h, BATTLE_SHOUT, caster, 1);
+    assert_native_effect_ap(
+        &h,
+        OFFHAND_WHIRLWIND,
+        (before.attack_power + powers[1]) * 0.5 * 1.05,
+    );
+}
+
+#[test]
+fn dps_parity_native_weapon_ap_spell_power_and_unequip_follow_native_total_ap() {
+    use shared::protocol::EquipmentSlot::MainHand;
+    let mut h = harness_with(Vec::new(), &[1258011, BATTLE_SHOUT], 2, true).unwrap();
+    h.advance(5);
+    let base = stats(&h);
+    let weapon = equip_native_ap_weapon(&mut h, &[(MainHand, 268215)])[0];
+    let equipped = stats(&h);
+    let native = world_db().unwrap().store.get(1258011).unwrap();
+    let percent = native
+        .effects
+        .iter()
+        .find(|effect| effect.aura == 366)
+        .unwrap()
+        .base_points;
+    assert_power(
+        equipped.spell_power,
+        ((equipped.attack_power + weapon) * percent / 100.0 + 0.5).floor(),
+    );
+    assert_power(equipped.healing_power, equipped.spell_power);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::stats::EquippedItems::default());
+    h.advance(5);
+    assert_power(stats(&h).attack_power, base.attack_power);
+    assert_power(stats(&h).spell_power, base.spell_power);
+}
+
 fn actor(class: u8) -> Harness {
     let mut h = harness_with(
         Vec::new(),
