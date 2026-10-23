@@ -111,8 +111,30 @@ fn encounter_coverage_gulping_goliath_projected_first_croak_source_clock() {
 fn encounter_coverage_gulping_goliath_projected_lanes_credit_and_corpse() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_goliath(difficulty);
+        let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
+        h.app
+            .insert_resource(super::cast_admission::CastAdmissions {
+                actor: boss,
+                origin,
+                entries: Vec::new(),
+            });
         h.engage(boss);
         h.advance(45.0);
+        eprintln!(
+            "GOLIATH {difficulty} admissions {:?}",
+            h.app
+                .world()
+                .resource::<super::cast_admission::CastAdmissions>()
+                .entries
+        );
+        eprintln!(
+            "GOLIATH completions {:?}",
+            h.inbox(0)
+                .spell_gos
+                .iter()
+                .map(|go| (go.spell_id, go.caster))
+                .collect::<Vec<_>>()
+        );
         for spell in [CROAK, TOXIC, 385551, 385531] {
             assert_eq!(
                 completed_casts(&h, boss, spell),
