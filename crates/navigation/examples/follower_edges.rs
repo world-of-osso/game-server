@@ -4,37 +4,42 @@ use navigation::NavigationMap;
 use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
 
-fn parse_points(text: &str) -> Result<Vec<(u32, Vec3)>, String> {
-    let mut points = Vec::new();
-    let mut identities = HashSet::new();
-    for (index, line) in text.lines().enumerate() {
-        let fields: Vec<_> = line.split(',').collect();
-        if fields.len() != 4 {
-            return Err(format!("point line{} requires guid,x,y,z", index + 1));
-        }
-        let guid: u32 = fields[0]
-            .parse()
-            .map_err(|error| format!("point line{} identity: {error}", index + 1))?;
-        if !identities.insert(guid) {
-            return Err(format!("duplicate source identity {guid}"));
-        }
-        let mut coordinates = [0.0_f32; 3];
-        for (axis, value) in coordinates.iter_mut().zip(&fields[1..]) {
-            *axis = value
-                .parse()
-                .map_err(|error| format!("point line{} coordinate: {error}", index + 1))?;
-        }
-        let point = Vec3::from_array(coordinates);
-        if !point.is_finite() {
-            return Err(format!(
-                "point line{} has non-finite coordinates",
-                index + 1
-            ));
-        }
-        points.push((guid, point));
+fn parse_point(line: &str) -> Result<(u32, Vec3), String> {
+    let fields: Vec<_> = line.split(',').collect();
+    if fields.len() != 4 {
+        return Err("expected guid,x,y,z".into());
     }
+    let guid = fields[0]
+        .parse()
+        .map_err(|error| format!("identity: {error}"))?;
+    let coordinates: Vec<f32> = fields[1..]
+        .iter()
+        .map(|value| value.parse())
+        .collect::<Result<_, _>>()
+        .map_err(|error| format!("coordinate: {error}"))?;
+    let point = Vec3::new(coordinates[0], coordinates[1], coordinates[2]);
+    if !point.is_finite() {
+        return Err("non-finite coordinates".into());
+    }
+    Ok((guid, point))
+}
+
+fn parse_points(text: &str) -> Result<Vec<(u32, Vec3)>, String> {
+    let points: Vec<_> = text
+        .lines()
+        .enumerate()
+        .map(|(index, line)| {
+            parse_point(line).map_err(|error| format!("point line{}: {error}", index + 1))
+        })
+        .collect::<Result<_, _>>()?;
     if points.is_empty() {
         return Err("source point file is empty".into());
+    }
+    let mut identities = HashSet::new();
+    for (guid, _) in &points {
+        if !identities.insert(*guid) {
+            return Err(format!("duplicate source identity {guid}"));
+        }
     }
     Ok(points)
 }
