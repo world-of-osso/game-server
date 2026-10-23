@@ -3,31 +3,31 @@ use super::test_harness::{Harness, harness};
 use bevy::prelude::*;
 use shared::protocol::CombatLogKind;
 
-const OVERLOAD: u32 = 45284;
 const MASTERY: u32 = 168534;
 const ECHO_CHAMBER: u32 = 382032;
 
-fn cast_native_child(h: &mut Harness) -> shared::protocol::CombatLogEvent {
+fn cast_native_child(h: &mut Harness, child: u32) -> shared::protocol::CombatLogEvent {
     let first = h.inbox.log.len();
-    super::creature_cast(h.app.world_mut(), h.caster, OVERLOAD, Some(h.npc), false).unwrap();
-    h.advance(20);
-    h.inbox.log[first..]
-        .iter()
-        .find(|event| {
+    super::creature_cast(h.app.world_mut(), h.caster, child, Some(h.npc), false).unwrap();
+    for _ in 0..200 {
+        h.advance(1);
+        if let Some(event) = h.inbox.log[first..].iter().find(|event| {
             event.kind == CombatLogKind::Damage
                 && event.source == Some(h.caster.to_bits())
                 && event.target == Some(h.npc.to_bits())
-                && event.spell_id == Some(OVERLOAD)
-        })
-        .expect("actual native45284 normal cast must damage its target")
-        .clone()
+                && event.spell_id == Some(child)
+        }) {
+            return event.clone();
+        }
+    }
+    panic!("actual native{child} normal cast must damage its target within200 frames");
 }
 
-#[test]
-fn native_lightning_overload_uses_mastery_effect1_and_removal_restores_child_base() {
-    let mut h = harness(Vec::new(), &[OVERLOAD, MASTERY, ECHO_CHAMBER], 7).unwrap();
+fn qualify_native_overload_effectiveness(overload: u32) {
+    let mut h = harness(Vec::new(), &[overload, MASTERY, ECHO_CHAMBER], 7).unwrap();
     let store = h.app.world().resource::<crate::spell_info::SpellStore>();
-    let effect = &store.get(OVERLOAD).unwrap().effects[0];
+    let effect = &store.get(overload).unwrap().effects[0];
+    assert_eq!(effect.base_points, 0.0);
     let coefficient = effect.bonus_coefficient;
     let variance = effect.variance / 2.0;
     let percent = store
@@ -60,7 +60,7 @@ fn native_lightning_overload_uses_mastery_effect1_and_removal_restores_child_bas
             source: crate::auras::AuraSource::Cast,
         },
     );
-    let hit = cast_native_child(&mut h);
+    let hit = cast_native_child(&mut h, overload);
     assert!(!hit.crit);
     let minimum = (base * (1.0 - variance) * percent / 100.0).round() as i32;
     let maximum = (base * (1.0 + variance) * percent / 100.0).round() as i32;
@@ -75,7 +75,7 @@ fn native_lightning_overload_uses_mastery_effect1_and_removal_restores_child_bas
         crate::auras::RemoveReason::Cancelled,
         |aura| aura.spell_id == MASTERY,
     );
-    let hit = cast_native_child(&mut h);
+    let hit = cast_native_child(&mut h, overload);
     let minimum = (base * (1.0 - variance)).round() as i32;
     let maximum = (base * (1.0 + variance)).round() as i32;
     assert!(
@@ -103,7 +103,7 @@ fn native_lightning_overload_uses_mastery_effect1_and_removal_restores_child_bas
             },
         );
     }
-    let hit = cast_native_child(&mut h);
+    let hit = cast_native_child(&mut h, overload);
     let modified_percent = percent * (1.0 + echo_percent / 100.0);
     let minimum = (base * (1.0 - variance) * modified_percent / 100.0).round() as i32;
     let maximum = (base * (1.0 + variance) * modified_percent / 100.0).round() as i32;
@@ -112,4 +112,33 @@ fn native_lightning_overload_uses_mastery_effect1_and_removal_restores_child_bas
         "actual native108/op12 scales effect1, not an invented flat25+25 multiplier: damage={}",
         hit.amount
     );
+}
+
+#[test]
+fn native_lightning_overload_uses_mastery_effect1_and_removal_restores_child_base() {
+    qualify_native_overload_effectiveness(45284);
+}
+
+#[test]
+#[ignore = "native Chain child effectiveness positive qualification pending"]
+fn native_chain_overload_uses_mastery_effect1_and_removal_restores_child_base() {
+    qualify_native_overload_effectiveness(45297);
+}
+
+#[test]
+#[ignore = "native Lava damage-child effectiveness positive qualification pending"]
+fn native_lava_overload_uses_mastery_effect1_and_removal_restores_child_base() {
+    qualify_native_overload_effectiveness(285466);
+}
+
+#[test]
+#[ignore = "native EB child effectiveness positive qualification pending"]
+fn native_eb_overload_uses_mastery_effect1_and_removal_restores_child_base() {
+    qualify_native_overload_effectiveness(120588);
+}
+
+#[test]
+#[ignore = "native Icefury child effectiveness positive qualification pending"]
+fn native_icefury_overload_uses_mastery_effect1_and_removal_restores_child_base() {
+    qualify_native_overload_effectiveness(219271);
 }
