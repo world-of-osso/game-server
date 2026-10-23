@@ -84,9 +84,12 @@ fn read_spells<'a>(
         self_target,
     } in actions
     {
-        if !talent_permits(world, actor, talent)? || !knows_action(world, actor, id)? {
+        if !talent_permits(world, actor, talent)? {
             continue;
         }
+        let Some(id) = resolve_action(world, actor, id)? else {
+            continue;
+        };
         let target = if self_target { Some(actor) } else { enemy };
         let Some(target) = target else {
             continue;
@@ -110,17 +113,18 @@ fn talent_permits(world: &World, actor: Entity, talent: Option<u32>) -> Result<b
         .any(|spell| spell.spell_id == talent))
 }
 
-pub(crate) fn knows_action(world: &World, actor: Entity, id: u32) -> Result<bool, String> {
+pub(crate) fn resolve_action(world: &World, actor: Entity, id: u32) -> Result<Option<u32>, String> {
     let known = world
         .get::<crate::class_progression::KnownSpells>(actor)
         .ok_or("native literal actor lacks KnownSpells")?;
     if crate::auras::overrides::resolve_spell(world, actor, id) != id {
-        return Ok(false);
+        return Ok(None);
     }
-    Ok(known.contains(id)
+    let permitted = known.contains(id)
         || known
             .iter()
-            .any(|base| crate::auras::overrides::resolve_spell(world, actor, base) == id))
+            .any(|base| crate::auras::overrides::resolve_spell(world, actor, base) == id);
+    Ok(permitted.then_some(id))
 }
 
 fn native_ready(
