@@ -1,3 +1,7 @@
+## 2026-10-23 — Explicit APL runs and target identities
+
+[Shared interpreter](systems/simc-apl.md):14PASS/4genuineRED, then explicit `Action.target`/candidate API and16PASS/8genuineRED at2088713a6. Source-grounded run switches, min/max target-before-if, strict tie order and nested call-context restoration implemented; focused GREEN pending. No native rotation or DPS parity claim; native target-aware dispatch remains adapter-owned.
+
 ## 2026-10-23 — Shared native APL fact boundary
 
 [Native facts](systems/simc-apl.md#native-binding-boundary): six actual native6RED at5924496f9→6GREEN17.40s atdc1ee9781,7m37compile/exit0/zero warnings. Earned TP/BOK buff+Chi, actual Charge200raw→20Rage, selected starter allocation distinct from learned utility, native Provoke/Roll timers, action/control GCD and300s fixture clock; no canonical DB edits. [Proof/capability limits](../handoffs/shared-native-apl-proof-ledger.md); only explicit parity Fixture driver approved, Stockade native kit/DUNGEON_TTD_UNAVAILABLE retained, no literal-rotation claim.

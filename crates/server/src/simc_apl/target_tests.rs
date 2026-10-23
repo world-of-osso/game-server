@@ -13,7 +13,7 @@ impl Facts for Targets {
 }
 
 impl ActionFacts for Targets {
-    fn target_ids(&self) -> Result<Vec<u64>, String> {
+    fn target_ids(&self, _action: &Action) -> Result<Vec<u64>, String> {
         Ok(self.units.iter().map(|unit| unit.0).collect())
     }
 
