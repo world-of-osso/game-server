@@ -41,6 +41,20 @@ fn dps_parity_pet_stats_baseline_records_actual_native_hunter_pet() {
     );
 }
 
+#[test]
+#[ignore = "native summon final-owner ordering RED; requires prepared parity inputs"]
+fn dps_parity_pet_stats_fresh_summon_arrives_full_under_final_owner_stats() {
+    let (run, pet) = super::power_tests::prepare_hunter_and_pet();
+    let world = run.app.world();
+    record_pet_stats(world, run.actor, pet, "fresh-summon-final-owner");
+    let health = world.get::<Health>(pet).unwrap();
+    assert_eq!(health.max, expected_hunter_max_hp(world, run.actor, pet));
+    assert_eq!(
+        health.current, health.max,
+        "fresh native Call Pet must not keep the pre-owner-stat maximum as current health"
+    );
+}
+
 fn expected_hunter_max_hp(world: &World, owner: Entity, pet: Entity) -> f32 {
     let data = world.resource::<crate::world_data::WorldData>();
     let entry = world
