@@ -33,7 +33,6 @@ impl ActionFacts for NativeActionFixture {
 }
 
 #[test]
-#[ignore = "APL context RED: combo_strike is incorrectly actor-scoped"]
 fn simc_apl_ww_combo_strike_compares_each_proposed_action_not_one_global_fact() {
     let program = Program::parse(&[
         ("default", "rising_sun_kick,if=combo_strike"),
@@ -65,7 +64,6 @@ fn simc_apl_ww_combo_strike_compares_each_proposed_action_not_one_global_fact() 
 }
 
 #[test]
-#[ignore = "APL context RED: Ret call gcd must not use a damage spell's GCD"]
 fn simc_apl_ret_call_list_uses_its_own_zero_gcd_before_choosing_a_finisher() {
     //Literal76f8118 apl_paladin.cpp51.
     let program = Program::parse(&[

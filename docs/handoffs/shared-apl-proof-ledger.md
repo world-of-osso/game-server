@@ -11,7 +11,7 @@ Engine `data/diagnostics/ww-parity-2026-10-23/shared-apl-{red,green}.proof.json`
 
 ## Action-context correction pending
 
-The first11 cases used action-invariant fixtures. Exact source discovery: `sc_monk.cpp208–211` binds combo_strike to the proposed action; `action.cpp3284–3285` binds plain gcd to that action, and call controls at4648+ have trigger_gcd0. An actor-wide Facts dictionary cannot represent these. New mandatory `ActionFacts::value_for(&Action, operand)` is declared without a fallback; two ignored WW/Ret context REDs precede evaluator wiring. Genuine2RED at2e6f242ce: context-required failures for proposed combo_strike and call gcd,20.58s compile,0.00s test,exit101,zero warnings. Per-row binding implementation follows; GREEN pending. No native literal-rotation claim follows from the earlier11-case library proof.
+The first11 cases used action-invariant fixtures. Exact source discovery: `sc_monk.cpp208–211` binds combo_strike to the proposed action; `action.cpp3284–3285` binds plain gcd to that action, and call controls at4648+ have trigger_gcd0. An actor-wide Facts dictionary cannot represent these. New mandatory `ActionFacts::value_for(&Action, operand)` is declared without a fallback; two ignored WW/Ret context REDs precede evaluator wiring. Genuine2RED at2e6f242ce: context-required failures for proposed combo_strike and call gcd,20.58s compile,0.00s test,exit101,zero warnings. Per-row bindingcd3c7e427 passes all13 targeted cases (`--include-ignored`),3m15 compile,0.00s tests,exit0,zero warnings. Both context cases enabled afterward; no native adapter proof follows. No native literal-rotation claim follows from the earlier11-case library proof.
 
 ## Coverage and open boundaries
 
