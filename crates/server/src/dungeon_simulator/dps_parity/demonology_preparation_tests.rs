@@ -160,6 +160,10 @@ fn dps_parity_demo_native_follower_and_felguard_keep_resource_regeneration() {
         after > before,
         "real class-follower mana must regenerate after native Shadow Bolt"
     );
+    // This control isolates regeneration, not movement: place the real pet at
+    // its real target before spending Energy through native Legion Strike.
+    let target_position = *run.app.world().get::<Position>(run.targets[0]).unwrap();
+    run.app.world_mut().entity_mut(pet).insert(target_position);
     cast_and_finish(&mut run, pet, 30213);
     let (before, maximum) =
         crate::spell_cast::powers::power_value(run.app.world(), pet, PowerType::Energy).unwrap();
