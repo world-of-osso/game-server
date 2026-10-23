@@ -17,7 +17,7 @@ BINARY = SIMC_ROOT / "engine/simc"
 RUNNER = Path("/home/osso/Projects/world-of-osso/game-engine/scripts/agent/agent-run")
 DEFAULT_OUTPUT = Path("/var/tmp/osso/simc-spell-oracle")
 ACTION = re.compile(r"Action '([^']+)' \((\d+)\)")
-AMOUNT = re.compile(r"([\d.]+) (?:Player|Pet) '([^']+)' (direct|tick) amount for Action '([^']+)' \((\d+)\)(.*)")
+AMOUNT = re.compile(r"([\d.]+) (?:Player|Pet|Enemy) '(.+?)' (direct|tick) amount for Action '([^']+)' \((\d+)\)(.*)")
 RESULT = re.compile(r"([\d.]+) (\S+) (\S+) ([^:]+): (.*\bresult=.*)")
 STARTUP = re.compile(r"^[\d.]+ (.+?) \((\d+)\) eff#(\d+) modifying (.+?) \((\d+)\) (\S+)(.*)")
 EFFECT = re.compile(r"action-effects: Action '([^']+)' \((\d+)\) (.+?) modified by (.+?) (per stack of buff|from) (.+?) \((\d+)#(\d+)\)")

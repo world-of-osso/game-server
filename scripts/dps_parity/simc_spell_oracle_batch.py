@@ -26,30 +26,31 @@ DRIVERS = {
     255: {'wildfire_bomb_damage': ['wildfire_bomb'], 'wildfire_bomb_bleed': ['wildfire_bomb'], 'raptor_swipe': ['raptor_strike'], 'strike_as_one': ['kill_command']},
     260: {'killing_spree_oh': ['killing_spree'], 'killing_spree_mh': ['killing_spree']},
     261: {'eviscerate_shadow_clone': ['shadow_dance', 'eviscerate'], 'eviscerate_bonus': ['eviscerate'], 'lingering_shadow': ['shadow_dance', 'eviscerate'], 'secret_technique_clones': ['secret_technique']},
-    258: {'void_volley_damage': ['void_eruption', 'void_volley'], 'void_blast': ['void_eruption', 'mind_blast']},
+    258: {'void_volley_damage': ['voidform', 'void_volley'], 'void_blast': ['voidform', 'void_blast']},
     250: {'perfected_guillotine': ['use_items'], 'vampiric_strike': ['heart_strike']},
     251: {'obliterate_frost': ['pillar_of_frost', 'obliterate']},
     252: {'necrotic_bolt': ['death_coil'], 'death_order': ['dark_transformation', 'scourge_strike'], 'putrefy_st': ['putrefy'], 'sweeping_claws': ['dark_transformation']},
     262: {'lightning_bolt_overload': ['lightning_bolt']},
-    263: {'crash_lightning_proc': ['crash_lightning', 'stormstrike'], 'fire_nova_explosion': ['flame_shock', 'fire_nova'], 'lightning_bolt_ti': ['lightning_bolt'], 'tempest': ['lightning_bolt']},
+    263: {'crash_lightning_proc': ['crash_lightning', 'stormstrike'], 'fire_nova_explosion': ['voltaic_blaze', 'flame_shock'], 'lightning_bolt_ti': ['lightning_bolt'], 'tempest': ['lightning_bolt']},
     62: {'prismatic_bolt': ['arcane_blast'], 'arcane_splinter': ['arcane_blast']},
     64: {'shatter_ice_lance': ['ice_lance'], 'frost_splinter': ['frostbolt']},
     265: {'blackened_soul': ['agony', 'unstable_affliction', 'shadow_bolt']},
-    266: {'fel_firebolt': ['hand_of_guldan'], 'burning_cleave': ['summon_demonic_tyrant', 'hand_of_guldan'], 'isolated_implosion_aoe': ['implosion', 'hand_of_guldan'], 'greater_felbolt': ['summon_demonic_tyrant']},
+    266: {'melee': ['hand_of_guldan'], 'fel_firebolt': ['hand_of_guldan'], 'burning_cleave': ['summon_demonic_tyrant', 'hand_of_guldan'], 'isolated_implosion_aoe': ['implosion', 'hand_of_guldan'], 'greater_felbolt': ['summon_demonic_tyrant']},
     267: {'blackened_soul': ['immolate', 'chaos_bolt']},
     268: {'purified_spirit': ['purifying_brew'], 'aspect_of_harmony_damage': ['celestial_brew', 'tiger_palm'], 'harmonic_surge_damage_st_tiger_palm': ['celestial_brew', 'tiger_palm']},
     103: {'unseen_slash': ['rake', 'rip']},
     581: {'voidfall_meteor_damage': ['soul_cleave'], 'soul_cleave_damage': ['soul_cleave'], 'catastrophe': ['metamorphosis', 'soul_cleave'], 'world_killer_damage': ['soul_cleave'], 'meteor_shower_damage': ['soul_cleave']},
-    1480: {'cull_damage': ['cull'], 'reap_damage': ['reap'], 'voidsurge': ['metamorphosis', 'void_ray'], 'reapers_toll_damage': ['reapers_toll']},
+    1480: {'cull_damage': ['cull'], 'reap_damage': ['reap'], 'voidsurge': ['metamorphosis', 'void_ray'], 'devour': ['metamorphosis', 'devour'], 'reapers_toll_damage': ['reapers_toll']},
 }
 GENERATORS = {
     70: ['blade_of_justice', 'judgment'], 269: ['tiger_palm'], 71: ['overpower'],
     577: ['felblade'], 259: ['mutilate'], 1467: ['living_flame'], 253: ['barbed_shot'],
     72: ['bloodthirst'], 73: ['shield_slam'], 66: ['judgment', 'blessed_hammer'],
     255: ['kill_command'], 260: ['sinister_strike'], 261: ['backstab'],
-    250: ['heart_strike'], 251: ['howling_blast'], 252: ['scourge_strike'],
+    250: ['heart_strike'], 251: ['howling_blast'], 252: ['festering_strike', 'scourge_strike'],
+    258: ['mind_blast', 'mind_flay'], 262: ['lightning_bolt'], 62: ['arcane_blast'],
     263: ['stormstrike'], 265: ['shadow_bolt'], 266: ['shadow_bolt'],
-    267: ['incinerate'], 268: ['keg_smash'], 103: ['shred'], 581: ['fracture'], 1480: ['devour'],
+    267: ['incinerate'], 268: ['keg_smash'], 103: ['shred'], 581: ['fracture'], 1480: ['consume'],
 }
 NO_AUTO = {62, 63, 64, 258, 262, 265, 266, 267, 1467}
 
@@ -75,8 +76,10 @@ def action_list(spec, channel):
     if name == 'font_of_venomous_rage':
         driver = ['use_items']
     startup = [] if spec in NO_AUTO else ['auto_attack']
-    if spec in {253, 266, 265, 267, 252}:
+    if spec in {253, 266, 265, 267}:
         startup.insert(0, 'summon_pet')
+    if spec == 252:
+        startup.insert(0, 'raise_dead')
     if spec == 103:
         startup.insert(0, 'cat_form')
     return list(dict.fromkeys(startup + driver + GENERATORS.get(spec, [])))
@@ -104,6 +107,8 @@ def reference_for(spec, references=REFERENCES):
 FORMULA_ALIASES = {
     (269, 'fists_of_fury'): {'fists_of_fury_damage', 'fists_of_fury_damage_mid2_2pc'},
     (1467, 'fire_breath'): {'fire_breath_damage'},
+    (254, 'rapid_fire'): {'rapid_fire_tick'},
+    (103, 'feral_frenzy'): {'feral_frenzy_tick'},
 }
 
 

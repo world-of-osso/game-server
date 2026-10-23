@@ -14,6 +14,12 @@ class OracleTests(unittest.TestCase):
     def parse(self):
         return oracle.parse_log((HERE / "fixtures/arms-recorded.txt").read_text())
 
+    def test_actor_name_apostrophe_preserves_blood_spell_formula(self):
+        data = oracle.parse_log((HERE / "fixtures/blood-recorded.txt").read_text())
+        self.assertEqual(len(data["events"]), 1)
+        self.assertEqual(data["events"][0]["actor"], "MID2_Death_Knight_Blood_San'layn")
+        self.assertEqual(data["events"][0]["spell_id"], 206930)
+
     def test_records_direct_and_child_periodic_factors(self):
         data = self.parse()
         direct = next(e for e in data["events"] if e["event"] == "direct_amount")
