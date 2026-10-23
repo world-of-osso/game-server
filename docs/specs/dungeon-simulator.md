@@ -33,15 +33,15 @@ A gameplay panic or initialization failure must return an explicit `aborted` res
 
 ## Data-driven map dispatch
 
-- [ ] Accept any selected map with exactly one valid `content/dungeons/*-<map_id>.json` graph and explicit source difficulty/boss order in `route-requirements.json`. Keep the existing map34 CLI default; invalid, missing, ambiguous or mismatched selections fail explicitly instead of selecting another map.
-- [ ] Preserve existing frozen graph bytes and route order. Difficulty and required bosses come from data, never map-specific Rust branches; all actors in shared encounters remain required. Native corridor capture uses this same dispatch without changing its eligibility/radius calculation.
+- [x] Accept any selected map with exactly one valid `content/dungeons/*-<map_id>.json` graph and explicit source difficulty/boss order in `route-requirements.json`. Keep the existing map34 CLI default; invalid, missing, ambiguous or mismatched selections fail explicitly instead of selecting another map.
+- [x] Preserve existing frozen graph bytes and route order. Difficulty and required bosses come from data, never map-specific Rust branches; all actors in shared encounters remain required. Native corridor capture uses this same dispatch without changing its eligibility/radius calculation.
 
 ## Uldaman frozen source-route packet
 
 - [x] Freeze map2451's same-map Normal population and native formation identities/heights in `content/dungeons/uldaman-2451.json`, using the existing Stockade/Azure graph and `FOLLOWER_ROUTE_BOSS_PATH_CORRIDOR` format. Native NPC patrols are not party progression routes.
 - [x] Preserve authenticated encounter order LostDwarves→Bromach→Talondras→Emberon→Deios. Within the shared first encounter, retain all three actors in authenticated journal order Baelog184581→Eric184582→Olaf184580; all must be cleared before Bromach184018, then184124/184422/184125. No representative or centroid substitutes for an actor.
-- [ ] Qualify pull selection with actual native eligibility/acquisition radii for the unchanged default party at sourced map ContentTuning2938 maximum level70; every Normal source GUID remains represented. Never infer radii from faction proxies or another dungeon. The [authored route](#authored-route) fixes order, permits only pace variation, always advances from cleared state and skips route packs already observed dead after accidental combat.
-- [ ] Deliver source/nav/output hashes and qualification receipt with the frozen data. Generic map2451 simulator dispatch/capture is agent14305-owned separate scope; retain its explicit gap until supported. A topology-only or empty-route capture input is not a qualified frozen pull profile.
+- [x] Qualify pull selection with actual native eligibility/acquisition radii for the unchanged default party at sourced map ContentTuning2938 maximum level70; every Normal source GUID remains represented. Never infer radii from faction proxies or another dungeon. The [authored route](#authored-route) fixes order, permits only pace variation, always advances from cleared state and skips route packs already observed dead after accidental combat.
+- [ ] Deliver source/nav/output hashes and qualification receipt with the frozen data. Generic dispatch/capture accepts source-data maps without map-specific Rust branches; preserve native eligibility/radius logic and default party. A topology-only or empty-route capture input is not a qualified frozen pull profile.
 
 ## Clearable opponents
 

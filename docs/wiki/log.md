@@ -1,3 +1,7 @@
+## 2026-10-23 — Uldaman native corridor inputs and frozen pulls
+
+[Native profile](investigations/follower-data.md#uldaman-frozen-input-assembly--2026-10-23):generic map-data dispatch99cf33f53 passes2tests; unchanged native capture1GREEN/13.67s retains227GUIDs/exact native f32XYZ, seed0/default five70party,140eligible/87ineligible. Native-sphere freezer emits112pulls/74boss-path nodes, preserving all7bosses and5unreachable source poses. Full pull-data acceptance/receipt pending; no healer/canonical edits or gameplay-clear claim.
+
 ## 2026-10-23 — Uldaman independent source-code gates
 
 [Staged input assembly](investigations/follower-data.md#uldaman-frozen-input-assembly--2026-10-23):e45b4ced3 parser2GREEN after readability split, scoped nav/examplescheck23.70s/zero warnings and formatGREEN, 74-node progression continuity/encounter-order acceptance1GREEN/0.005s. Existing227pose proof and immutable24,976pair extraction retained at original revisions; no unchanged matrix rerun. Real14305 native eligibility/radius capture still blocks pull selection; no runtime/canonical change.
