@@ -55,6 +55,87 @@ fn dps_parity_pet_stats_fresh_summon_arrives_full_under_final_owner_stats() {
     );
 }
 
+#[test]
+#[ignore = "native pet owner armor refresh; requires prepared parity inputs"]
+fn dps_parity_pet_stats_actual_equipment_removal_refreshes_owner_armor() {
+    let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
+    let owner_armor = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .armor;
+    let equipped = run
+        .app
+        .world()
+        .get::<crate::stats::EquippedItems>(run.actor)
+        .unwrap()
+        .clone();
+    let modifiers = run
+        .app
+        .world()
+        .get::<crate::stats::EquippedItemModifiers>(run.actor)
+        .unwrap()
+        .clone();
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::EquippedItems>(run.actor)
+        .unwrap()
+        .items
+        .clear();
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::EquippedItemModifiers>(run.actor)
+        .unwrap()
+        .items
+        .clear();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let unarmored = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .armor;
+    assert!(
+        unarmored < owner_armor,
+        "removing actual reference gear must lower owner armor"
+    );
+    let level = f32::from(run.app.world().get::<UnitLevel>(pet).unwrap().0);
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::level_scaling::CreatureArmor>(pet)
+            .unwrap()
+            .0,
+        (level * 50.0 + unarmored * 0.70).trunc()
+    );
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert((equipped, modifiers));
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .armor,
+        owner_armor
+    );
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::level_scaling::CreatureArmor>(pet)
+            .unwrap()
+            .0,
+        (level * 50.0 + owner_armor * 0.70).trunc()
+    );
+}
+
 fn expected_hunter_max_hp(world: &World, owner: Entity, pet: Entity) -> f32 {
     let data = world.resource::<crate::world_data::WorldData>();
     let entry = world
