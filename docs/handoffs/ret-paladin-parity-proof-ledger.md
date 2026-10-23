@@ -157,3 +157,74 @@ Every row remains runtime-unqualified. APL base replacements, background childre
 | ef331486f test-only | `follower_native_book_ --ignored --nocapture --test-threads=1` | queued; quiet window until02:28 |
 
 Completion remains open: native kit/effects, full APL decisions, both dummy measurements and Stockade observation are unproved.
+
+## Private Ret profile receipt
+
+`f285b1d4b`, `scripts/dps_parity_ret_profile.sql` changes one Captain Garrick209057 profile in `world.ret-native.db`: class2 remains; spec70/DPS, native Judgment20271 and AvengingWrath31884 legacy fields. Actual template/model/armor retained. `ret-profile-copy.receipt.json` records source/prepared rows and copy SHA256 `8e2228d2c2c656a3888425e8845684e73a17f8d9f123418e1768612cd01a7db7`; SQLite quick_check passed. No Ret kit rows yet; no canonical edit or DPS proof.
+
+## Next authorized generic mechanics
+
+Parent approved Aura361 native swing replacement (TC Unit.cpp2288–2349), TC CrusadingStrikes406833 stack2→406834, and Aura4/nonzeroTriggerSpell default proc dispatch (TC SpellAuraEffects.cpp1463–1492). Native-book slice first; each mechanism needs pushed ignored RED then observed failure before implementation. Weapon-derived AP is owned by14754; Ret does not duplicate that change.
+
+### Aura4 trigger census (potential source impact, not runtime qualification)
+
+All1267 native difficulty0 Aura4+Trigger roots are retained in `aura4-trigger-source-census.json`. The following56 have native trait, specialization, or class-mask skill evidence. Existing990 starter exports establish only six learned roots across the11 current follower specs; that smaller intersection is not an all-spec census. Generic proc eligibility and script-owned amount/target behavior must still be proven. In particular LightTitans378405 already dispatches an amount-overridden child: adding an unconditional default child would double fire.
+
+| Root | Native class family | Learned starter specs | Native children |
+|---|---|---|---|
+| 2823 Deadly Poison | Rogue | not in11 exports | 2818 |
+| 13877 Blade Flurry | Rogue | not in11 exports | 385835 |
+| 30884 Nature's Guardian | Shaman | 262 | 31616 |
+| 32388 Shadow Embrace | Warlock | not in11 exports | 32390 |
+| 49028 Dancing Rune Weapon | Death Knight | not in11 exports | 1206 |
+| 51128 Killing Machine | Death Knight | not in11 exports | 51124 |
+| 53563 Beacon of Light | Paladin | not in11 exports | 53651 |
+| 53576 Infusion of Light | Paladin | not in11 exports | 54149 |
+| 59057 Rime | Death Knight | not in11 exports | 59052 |
+| 76857 Mastery: Critical Block | Warrior | 73 | 12880 |
+| 102351 Cenarion Ward | Druid | not in11 exports | 102352 |
+| 135288 Tooth and Claw | Druid | not in11 exports | 135286 |
+| 156910 Beacon of Faith | Paladin | not in11 exports | 53651 |
+| 195300 Transfer the Power | Monk | not in11 exports | 195321 |
+| 201900 Hot Hand | Shaman | not in11 exports | 215785 |
+| 203415 Fury of the Eagle | Hunter | not in11 exports | 203413,203413,203413,203413 |
+| 205145 Demonic Calling | Warlock | not in11 exports | 205146,205146 |
+| 255652 Light's Reckoning | no class family; source row retained | not in11 exports | 256896 |
+| 315496 Slice and Dice | Rogue | not in11 exports | 426605 |
+| 315584 Instant Poison | Rogue | not in11 exports | 315585 |
+| 321291 Death and Madness | Priest | not in11 exports | 322098 |
+| 341273 Unfurling Darkness | Priest | not in11 exports | 341282 |
+| 371032 Terror of the Skies | Evoker | 1467 | 372245 |
+| 377073 Frigid Executioner | Death Knight | not in11 exports | 377074 |
+| 378405 Light of the Titans | Paladin | 66 | 378412 |
+| 378750 Cobra Sting | Hunter | not in11 exports | 336826 |
+| 379993 Flash Freeze | Mage | not in11 exports | 44544 |
+| 383344 Expurgation | Paladin | not in11 exports | 383346 |
+| 387153 Burn to Ashes | Warlock | not in11 exports | 387154 |
+| 387808 Divine Revelations | Paladin | not in11 exports | 387812 |
+| 388505 Quick Sip | Monk | not in11 exports | 383764 |
+| 390259 Commander of the Dead | Death Knight | not in11 exports | 390260 |
+| 406380 Mastery: Timewalker | Evoker | not in11 exports | 413984 |
+| 406646 Templar Strikes | Paladin | not in11 exports | 406648 |
+| 424044 Underhanded Upper Hand | Rogue | not in11 exports | 1784 |
+| 427445 Light's Guidance | Paladin | not in11 exports | 427441 |
+| 428344 Soul Strike | Warlock | not in11 exports | 267964 |
+| 434300 Bombardments | Evoker | not in11 exports | 434473 |
+| 440031 Bind in Darkness | Death Knight | not in11 exports | 443532 |
+| 441181 Menacing Presence | Evoker | not in11 exports | 441201 |
+| 443177 Lifespark | Evoker | not in11 exports | 394552 |
+| 445034 Lively Totems | Shaman | not in11 exports | 458101 |
+| 467749 Bleak Arrows | Hunter | not in11 exports | 467718 |
+| 471363 Headshot | Hunter | not in11 exports | 1277558 |
+| 1218047 Primordial Storm | Shaman | not in11 exports | 1218125 |
+| 1226140 Grove Guardians | Druid | 105 | 102693 |
+| 1230339 Mindbender | Priest | not in11 exports | 200174 |
+| 1233577 Call of the Forest | no class family; source row retained | not in11 exports | 1233578 |
+| 1233613 Xe'ra's Embrace | no class family; source row retained | not in11 exports | 1233616 |
+| 1234774 Volatile Magics | no class family; source row retained | not in11 exports | 1234775 |
+| 1235159 Souls of the Caw | no class family; source row retained | not in11 exports | 1242102 |
+| 1244788 Chaotic Inferno | Warlock | not in11 exports | 1244860 |
+| 1245979 Valiant Crusade | Paladin | not in11 exports | 1246042 |
+| 1247729 Thermal Void | Mage | not in11 exports | 1247730,1247730 |
+| 1260647 Overclock | Evoker | not in11 exports | 431442 |
+| 1262034 Gift of the Wild | Druid | 105,103 | 1126 |
