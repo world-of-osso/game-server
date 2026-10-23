@@ -54,6 +54,8 @@ mod offering_kit;
 mod oomgut;
 #[path = "toys_owner_flags_tests.rs"]
 mod owner_flags;
+#[path = "toys_player_target_tests.rs"]
+mod player_target;
 #[path = "toys_podium_tests.rs"]
 mod podium;
 #[path = "toys_scarab_tests.rs"]

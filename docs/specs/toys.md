@@ -13,6 +13,15 @@
 
 Do not add these three Toy rows until a real contract is established and approved through the source/RED/publication/GREEN flow. [Source/code/asset matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18). This source boundary does not certify native rendering, every historical toy's full lifecycle, uncovered natural30-minute/hour reuse or footstep/particle presentation; those remain separately scoped follow-ups.
 
+## Authored player-only unit targets
+
+- [ ] Native `SPELL_ATTR3_ONLY_ON_PLAYER` (`SpellMisc.Attributes_3 & 0x100`) excludes nonplayer unit recipients, even friendly or player-controlled NPCs. Player identity is not the PvP/player-affected reaction identity.
+- [ ] Explicit invalid unit use refuses before effects/recovery. Implicit area/chain eligibility filters before authored recipient caps; player positives remain eligible.
+- [ ] Real physical learning and owned UseToy for The Heartbreaker50471/71909 and B.B.F. Fist205045/408067 prove NPC refusal, retained ownership/state and immediate legitimate player use with native recovery60000/86400000ms.
+- [ ] Nonunit destinations/objects and unflagged source spells retain their own contracts. No extra toy admissions, freshness timers or target93 actions are inferred.
+
+Source: TC a352b1fa SharedDefines.h555/SpellInfo.cpp2443–2454 and locally extracted70448;29 direct toy roots/7 currently admitted. Native7645 supplies an authored one-target enemy-area control. Evidence:only-player-source-provenance.json.
+
 ## Authored item faction eligibility
 
 - [x] Existing ItemTemplate eligibility enforces ItemFlags2 Horde-only0x1 and Alliance-only0x2 together with source class/race masks. An all-races mask does not erase those faction flags; use the character's existing base faction, not arena/mercenary identity. Do not rewrite source masks or add protocol fields.
