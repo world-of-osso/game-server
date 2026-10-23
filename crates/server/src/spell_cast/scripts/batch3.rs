@@ -89,7 +89,7 @@ pub(crate) fn check_phalanx_proc(
 
 /// PHALANX_SHIELD_SLAM_CONSUMPTION: SimC76f8118 sc_warrior.cpp6300–6303.
 /// This execute-time policy is absent from pinned TC and native trigger rows.
-pub(super) fn consume_phalanx(
+pub(in crate::spell_cast) fn consume_phalanx(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
