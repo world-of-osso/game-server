@@ -85,6 +85,17 @@ fn complete_targeted_smite(h: &mut Harness, priest: Entity, target: Entity) {
 #[test]
 fn holy_priest_native_two_surge_uses_keep_half_cost_then_spend_one() {
     let (mut h, priest) = at_level(HENRY, 14, |_| {});
+    // Only Smite should damage this finite target during proc acquisition.
+    // An unrelated owner swing could otherwise kill it while Smite is casting.
+    h.stop_attack();
+    h.advance(5);
+    assert!(
+        h.inbox
+            .attack_stops
+            .iter()
+            .any(|stop| stop.attacker == h.caster.to_bits() && !stop.now_dead),
+        "the real owner AttackStop must arrive before natural Surge acquisition"
+    );
     let paid_cost = mana_cost(&h, priest, FLASH_HEAL);
     // Two adjacent native8% rolls provide a conservative finite acquisition
     // bound; no proc chance, timer, pool or stack is changed by this fixture.

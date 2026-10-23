@@ -43,6 +43,92 @@ fn decide(h: &mut Harness, healer: Entity, party: &[Entity]) {
 }
 
 #[test]
+fn resto_policy_emergency_direct_rescue_precedes_delayed_hot() {
+    let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(32);
+    let tank = party[2];
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 132158, Some(healer), false)
+        .unwrap();
+    super::super::kit_clearcasting_tests::complete_real_cast(&mut h, healer, 8936);
+    super::super::kit_clearcasting_tests::wait_for_gcd(&mut h, healer, 18562);
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 18562, Some(healer), false)
+        .unwrap();
+    super::super::kit_clearcasting_tests::wait_for_gcd(&mut h, healer, 8936);
+    for spell_id in [132158, 18562] {
+        let spell = h
+            .app
+            .world()
+            .resource::<SpellStore>()
+            .get(spell_id)
+            .unwrap();
+        assert!(
+            crate::spell_cast::read_healer_recovery(h.app.world(), healer, spell).is_err(),
+            "ordinary native cooldown must exclude instant rescue {spell_id}"
+        );
+    }
+    assert!(own_aura(&h, healer, tank, 774).is_none());
+    damage(&mut h, tank, 0.9);
+    let patient = super::super::healer_triage::read_patient(h.app.world(), tank).unwrap();
+    assert!(patient.emergency);
+    let before = h.health(tank);
+    let first = h.inbox.log.len();
+    decide(&mut h, healer, &[tank, healer]);
+    for _ in 0..80 {
+        h.advance(1);
+        if h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.source == Some(healer.to_bits())
+                && event.target == Some(tank.to_bits())
+                && !event.periodic
+        }) {
+            break;
+        }
+    }
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(8936)
+                && event.source == Some(healer.to_bits())
+                && event.target == Some(tank.to_bits())
+                && !event.periodic
+                && event.amount > event.overflow
+        }),
+        "critical patient needs native direct Regrowth, not an instant delayed HoT; health {before} -> {}",
+        h.health(tank)
+    );
+}
+
+#[test]
+fn resto_policy_emergency_keeps_ready_native_swiftmend_priority() {
+    let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(32);
+    let tank = party[2];
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 774, Some(tank), false).unwrap();
+    super::super::kit_clearcasting_tests::wait_for_gcd(&mut h, healer, 18562);
+    assert_eq!(
+        crate::auras::aura_state::read_computed_state(
+            h.app.world(),
+            tank,
+            crate::auras::aura_state::DRUID_PERIODIC_HEAL,
+        ),
+        Some(true),
+        "native Rejuvenation must qualify the actual Swiftmend prerequisite"
+    );
+    damage(&mut h, tank, 0.9);
+    let first = h.inbox.log.len();
+    decide(&mut h, healer, &[tank, healer]);
+    h.advance(1);
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(18562)
+                && event.source == Some(healer.to_bits())
+                && event.target == Some(tank.to_bits())
+                && event.amount > event.overflow
+        }),
+        "ready native instant Swiftmend must precede cast-time emergency Regrowth"
+    );
+}
+
+#[test]
 fn resto_policy_late_tank_lifebloom_refresh_uses_native_bloom() {
     let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(32);
     let tank = party[2];
@@ -452,6 +538,16 @@ fn resto_policy_learned_germination_adds_second_native_hot_to_pressured_tank() {
 #[test]
 fn resto_policy_marks_every_living_native_party_member_before_safe_filler() {
     let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(32);
+    // Raid-buff maintenance is OOC-only; end actual combat references/attacks.
+    for actor in party.into_iter().chain([h.npc]) {
+        crate::combat::combat_stop(h.app.world_mut(), actor);
+    }
+    assert!(party.iter().all(|member| {
+        h.app
+            .world()
+            .get::<shared::components::CombatStatus>(*member)
+            .is_none_or(|status| !status.0)
+    }));
     for _ in 0..200 {
         decide(&mut h, healer, &party);
         h.advance(1);

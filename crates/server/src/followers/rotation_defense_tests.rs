@@ -72,7 +72,8 @@ fn rotation_fidelity_tank_major_never_overlaps_another_native_major() {
 #[test]
 fn rotation_fidelity_tank_prefers_shorter_native_cooldown_not_catalog_order() {
     let (mut h, unit) = wounded_garrick();
-    h.app.world_mut().resource_mut::<FollowerCatalog>().kits = vec![major(86659), major(31850)];
+    h.app.world_mut().resource_mut::<FollowerCatalog>().kits =
+        vec![major(86659), major(31850)].into();
     update_ai(h.app.world_mut());
     h.advance(3);
     let first = h

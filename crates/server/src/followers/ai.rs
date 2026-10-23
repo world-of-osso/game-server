@@ -23,6 +23,10 @@ pub(super) fn update(world: &mut World) {
         .map(|(entity, follower)| (entity, follower.clone()))
         .collect();
     for (unit, follower) in &followers {
+        super::utility::sample_health(world, *unit);
+        super::utility::sample_health(world, follower.owner);
+    }
+    for (unit, follower) in &followers {
         if follower.profile.role == GroupRole::Tank
             && crate::spell_cast::targets::is_alive(world, *unit)
         {
@@ -299,6 +303,15 @@ pub(super) fn engaged_enemies(
     let Some(&map) = world.get::<InMap>(unit) else {
         return Vec::new();
     };
+    // Approved follower pickup policy: a native summoned pet's fight belongs to
+    // its party owner. Keep healer/party membership separate from combat coverage.
+    let mut combat_party = party.to_vec();
+    combat_party.extend(party.iter().filter_map(|&member| {
+        crate::hunter_pet::summoned_pet(world, member).filter(|&pet| {
+            world.get::<InMap>(pet) == Some(&map)
+                && crate::spell_cast::targets::is_alive(world, pet)
+        })
+    }));
     let selected = world
         .get::<CombatTarget>(follower.owner)
         .and_then(|target| target.0);
@@ -320,15 +333,17 @@ pub(super) fn engaged_enemies(
         })
         .filter(|&(enemy, victim)| {
             owner_victim == Some(enemy)
-                || party.iter().any(|&member| {
+                || combat_party.iter().any(|&member| {
                     crate::combat_refs::has_active_reference_to(world, enemy, member)
                 })
-                || victim.is_some_and(|victim| party.contains(&victim))
+                || victim.is_some_and(|victim| combat_party.contains(&victim))
                 || world
                     .get::<shared::components::ThreatTable>(enemy)
                     .is_some_and(|threat| {
                         threat.entries().iter().any(|entry| {
-                            party.iter().any(|member| member.to_bits() == entry.entity)
+                            combat_party
+                                .iter()
+                                .any(|member| member.to_bits() == entry.entity)
                         })
                     })
         })

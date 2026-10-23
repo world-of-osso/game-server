@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 const REPATH_DISTANCE: f32 = 1.0;
 const TELEPORT_DISTANCE: f32 = 2.0;
 
+pub(crate) mod collision_drop;
 mod deferred;
 #[cfg(test)]
 mod fixture_queries;
@@ -55,6 +56,10 @@ struct Route {
     last_target: Vec3,
     expected_from: Vec3,
     path: Result<Corners, String>,
+    collision_drop: Option<::navigation::CollisionDrop>,
+    complete: bool,
+    partial_endpoint_reached: bool,
+    partial_endpoints: HashSet<[u32; 3]>,
     reach: f32,
 }
 
@@ -80,6 +85,7 @@ impl Corners {
 pub struct Navigation {
     dir: PathBuf,
     routes: EntityHashMap<Route>,
+    drop_requests: EntityHashMap<(u32, ::navigation::CollisionDrop)>,
     worker: navigation::worker::Worker,
     pending: EntityHashMap<PendingRoute>,
     queries: EntityHashMap<PendingQuery>,
@@ -94,6 +100,7 @@ impl Navigation {
         Self {
             dir: dir.to_path_buf(),
             routes: EntityHashMap::default(),
+            drop_requests: EntityHashMap::default(),
             worker: navigation::worker::Worker::new(dir.to_path_buf()),
             pending: EntityHashMap::default(),
             queries: EntityHashMap::default(),
@@ -120,6 +127,7 @@ impl Navigation {
 
     /// Drop an interrupted chase corridor before it can resume from stale corners.
     pub(crate) fn cancel_route(&mut self, entity: Entity) {
+        self.drop_requests.remove(&entity);
         let had_route = self.routes.remove(&entity).is_some();
         let had_request = self.pending.remove(&entity).is_some();
         if (had_route || had_request) && !self.query_pending(entity) {
@@ -128,6 +136,9 @@ impl Navigation {
     }
 
     pub fn advance(&mut self, entity: Entity, request: MoveRequest) -> Step {
+        if self.drop_requests.contains_key(&entity) {
+            return Step::Pending;
+        }
         self.invalidate_moved_route(entity, &request);
         if self.unbaked.contains(&request.map_id) {
             self.cancel_route(entity);
@@ -154,7 +165,7 @@ impl Route {
         };
         let position_is_current =
             horizontal(self.expected_from - point(request.from)) <= TELEPORT_DISTANCE;
-        same_goal && target_is_current && position_is_current
+        same_goal && target_is_current && position_is_current && !self.partial_endpoint_reached
     }
 }
 
@@ -274,7 +285,12 @@ fn install_publication(app: &mut App) {
     app.insert_resource(NavigationPublicationInstalled);
     app.add_systems(
         FixedFirst,
-        (prune_routes, publish_navigation_results).chain(),
+        (
+            prune_routes,
+            publish_navigation_results,
+            collision_drop::advance_collision_drops,
+        )
+            .chain(),
     );
 }
 

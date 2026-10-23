@@ -48,6 +48,7 @@ pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
         .or_else(|| choose_tranquility(ctx))
         .or_else(|| choose_tree_of_life(ctx))
         .or_else(|| choose_natures_swiftness(ctx))
+        .or_else(|| choose_emergency_regrowth(ctx))
         .or_else(|| choose_natures_cure(ctx))
         .or_else(|| choose_innervate(ctx))
         .or_else(|| choose_efflorescence(ctx))
@@ -213,6 +214,13 @@ fn choose_swift_regrowth(ctx: &TriageContext<'_>) -> Option<Decision> {
         return None;
     }
     regrowth_target(ctx)
+}
+
+fn choose_emergency_regrowth(ctx: &TriageContext<'_>) -> Option<Decision> {
+    if !ctx.ready(REGROWTH) {
+        return None;
+    }
+    regrowth_target(ctx).filter(|decision| decision.urgent)
 }
 
 fn choose_natures_swiftness(ctx: &TriageContext<'_>) -> Option<Decision> {
@@ -479,19 +487,10 @@ fn choose_innervate(ctx: &TriageContext<'_>) -> Option<Decision> {
 }
 
 fn choose_natures_cure(ctx: &TriageContext<'_>) -> Option<Decision> {
-    let entry = ctx
-        .entries
-        .iter()
-        .find(|entry| entry.spell_id == NATURES_CURE)?;
-    if !ctx.ready(NATURES_CURE) {
-        return None;
-    }
-    let patient = ctx.patients.iter().find(|patient| {
-        super::kit_ai::patient_is_eligible(ctx.world, ctx.caster, patient.entity, entry)
-    })?;
-    Some(Decision {
-        spell_id: NATURES_CURE,
-        target: patient.entity,
-        urgent: false,
-    })
+    ctx.choose_dispel_target(NATURES_CURE)
+        .map(|target| Decision {
+            spell_id: NATURES_CURE,
+            target,
+            urgent: false,
+        })
 }
