@@ -7,6 +7,8 @@ use rusqlite::Connection;
 use std::collections::BTreeSet;
 
 const ACQUIRE_ITEM: u32 = 36;
+/// TC a352b1fa DBCEnums.h: quest-root annotation, not an eligibility restriction.
+const CRITERIA_TREE_IS_FOR_QUEST: u32 = 0x1000;
 
 pub(crate) fn load(source: &Connection, quests: &mut QuestDb) -> rusqlite::Result<()> {
     let installed: bool = source.query_row(
@@ -89,14 +91,16 @@ fn load_objectives(source: &Connection, quests: &mut QuestDb, id: u32) -> rusqli
 
 fn acquisition_asset(source: &Connection, root: u32) -> rusqlite::Result<Option<u32>> {
     let mut query=source.prepare("SELECT c.Asset FROM criteria_tree r JOIN criteria_tree t ON t.Parent=r.ID JOIN criteria c ON c.ID=t.CriteriaID
-        WHERE r.ID=? AND r.Parent=0 AND r.Operator=4 AND r.CriteriaID=0 AND r.Amount=0 AND r.Flags=0
+        WHERE r.ID=?1 AND r.Parent=0 AND r.Operator=4 AND r.CriteriaID=0 AND r.Amount=0 AND r.Flags IN (0,?2)
         AND t.Operator=0 AND t.Amount=0 AND t.Flags=0
         AND c.Type=36 AND c.ModifierTreeId=0 AND c.StartEvent=0 AND c.StartTimer=0 AND c.FailEvent=0
         AND c.Flags=32 AND c.EligibilityWorldStateID=0 AND c.EligibilityWorldStateValue=0
         AND (SELECT COUNT(*) FROM criteria_tree children WHERE children.Parent=r.ID)=1
         AND NOT EXISTS(SELECT 1 FROM criteria_tree children WHERE children.Parent=t.ID)")?;
     let items = query
-        .query_map([root], |row| row.get::<_, u32>(0))?
+        .query_map(rusqlite::params![root, CRITERIA_TREE_IS_FOR_QUEST], |row| {
+            row.get::<_, u32>(0)
+        })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(items.first().copied())
 }

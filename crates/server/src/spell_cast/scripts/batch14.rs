@@ -16,6 +16,8 @@ const CHILLED: u32 = 205708;
 const BLIZZARD_SLOW: u32 = 12486;
 pub(super) const SURVIVAL_COMMAND: u32 = 259489;
 const COMMAND_DAMAGE: u32 = 259277;
+pub(super) const WILD_THRASH: u32 = 1264359;
+const WILD_THRASH_PET: u32 = 1264355;
 pub(super) const WILDFIRE_BOMB: u32 = 259495;
 const BOMB_DAMAGE: u32 = 265157;
 const BOMB_BLEED: u32 = 269747;
@@ -80,12 +82,55 @@ pub(super) fn command_beast(world: &mut World, caster: Entity, target: Entity, d
     cast_pet_command(world, caster, target, BEAST_COMMAND_DAMAGE, depth);
 }
 
+/// HUNTER_WILD_THRASH_PET_CHILD_SIMC, hunter7562–7563/6796–6837.
+/// Native child target selection determines which real pets can reach the target.
+pub(super) fn wild_thrash(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    let child = world
+        .resource::<SpellStore>()
+        .get(WILD_THRASH_PET)
+        .expect("native Wild Thrash requires pet child1264355")
+        .clone();
+    let pets: Vec<_> = world
+        .query::<(Entity, &crate::hunter_pet::HunterPet)>()
+        .iter(world)
+        .filter(|(_, pet)| pet.owner == caster)
+        .map(|(unit, _)| unit)
+        .collect();
+    for pet in pets {
+        if !targets::is_alive(world, pet) {
+            continue;
+        }
+        let reachable = spell_cast::plan_targets(world, pet, &child, Some(target), false)
+            .is_ok_and(|plan| {
+                plan.iter().any(|effect| {
+                    child.effects[effect.index].effect == spell_cast::effects::EFFECT_SCHOOL_DAMAGE
+                        && effect.units.contains(&target)
+                })
+            });
+        if reachable {
+            cast_owned_pet_command(world, caster, pet, target, WILD_THRASH_PET, depth);
+        }
+    }
+}
+
 fn cast_pet_command(world: &mut World, caster: Entity, target: Entity, spell: u32, depth: u8) {
-    if let Some(pet) = crate::hunter_pet::summoned_pet(world, caster).filter(|&pet| {
-        world
-            .get::<crate::hunter_pet::HunterPet>(pet)
-            .is_some_and(|pet| pet.owner == caster)
-    }) {
+    if let Some(pet) = crate::hunter_pet::summoned_pet(world, caster) {
+        cast_owned_pet_command(world, caster, pet, target, spell, depth);
+    }
+}
+
+fn cast_owned_pet_command(
+    world: &mut World,
+    caster: Entity,
+    pet: Entity,
+    target: Entity,
+    spell: u32,
+    depth: u8,
+) {
+    if world
+        .get::<crate::hunter_pet::HunterPet>(pet)
+        .is_some_and(|pet| pet.owner == caster)
+    {
         spell_cast::cast_triggered(world, pet, spell, Some(target), depth + 1);
     }
 }

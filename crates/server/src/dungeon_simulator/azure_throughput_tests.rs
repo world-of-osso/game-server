@@ -273,3 +273,64 @@ fn native_pet_only_enemy_reset_does_not_strand_the_next_authored_pull() {
     );
     assert!(run.report.bosses_killed.is_empty());
 }
+
+#[test]
+#[ignore = "explicit native gameplay schedule-unwind and durable abort report/export boundary"]
+fn native_schedule_abort_preserves_report_and_ordered_combat_events() {
+    let _rng_scope = crate::random::seed_scope(7);
+    let started = std::time::Instant::now();
+    let mut run = spawn_run(7, &mut None).unwrap();
+    let tank = run.party.tank;
+    let enemy = run.actors[&29001799];
+    crate::combat::deal_direct_damage(run.app.world_mut(), tank, enemy, 1.0);
+    let before = serde_json::to_value(
+        &run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0,
+    )
+    .unwrap();
+    assert!(
+        before
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|event| event["kind"] == "Damage"
+                && event["source"] == tank.to_bits()
+                && event["target"] == enemy.to_bits()
+                && event["amount"] == 1)
+    );
+    run.app.add_systems(bevy::prelude::FixedUpdate, || {
+        panic!("explicit native FixedUpdate abort regression");
+    });
+    let report = super::run_prepared(run, &mut None, started, started.elapsed())
+        .expect("schedule unwind must become an explicit aborted report, not lose evidence");
+    assert_eq!(report.status, "aborted");
+    assert!(
+        report
+            .detail
+            .contains("explicit native FixedUpdate abort regression")
+    );
+    let trace = report.performance["combat_events"].as_array().unwrap();
+    assert!(
+        trace.starts_with(before.as_array().unwrap()),
+        "the ordered native combat trace before the abort must survive unchanged"
+    );
+    super::super::runtime::write_report(&report).unwrap();
+    let output = super::super::runtime::output_directory();
+    let saved: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(output.join("run-7.json")).unwrap()).unwrap();
+    let exported: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(output.join("combat-events-7.json")).unwrap())
+            .unwrap();
+    assert_eq!(saved["status"], "aborted");
+    assert!(
+        saved["detail"]
+            .as_str()
+            .unwrap()
+            .contains("explicit native FixedUpdate abort regression")
+    );
+    assert_eq!(exported["events"], report.performance["combat_events"]);
+    assert_eq!(exported["status"], "aborted");
+    assert_eq!(exported["reason"], saved["detail"]);
+}
