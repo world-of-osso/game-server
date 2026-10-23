@@ -1,0 +1,166 @@
+{
+  "difficulty_id": 1,
+  "intake_blake3": "541a4dedf0e1114307fd9972cd21642ac5ad62f6646b7a62f61c677839229eb8",
+  "intake_duration_ticks": 43797,
+  "intake_hits": 1132,
+  "level": 32,
+  "map_id": 34,
+  "recorded_combat_seconds": 1594.3000000000002,
+  "recorded_level_scaling": {
+    "hits": 1132,
+    "non_unit_hits": 0,
+    "unit_hits": 1132
+  },
+  "schema": 1,
+  "seed": 1,
+  "source_status": "cleared",
+  "specs": [
+    {
+      "gaps": [
+        "NATIVE_HEALER_PROFILE_ABSENT"
+      ],
+      "metrics": null,
+      "name": "Holy Paladin",
+      "spec": 65,
+      "status": "blocked"
+    },
+    {
+      "gaps": [
+        "NATIVE_HEALER_PROFILE_ABSENT"
+      ],
+      "metrics": null,
+      "name": "Discipline Priest",
+      "spec": 256,
+      "status": "blocked"
+    },
+    {
+      "duration_ticks": 43797,
+      "gaps": [
+        "RECORDED_FUTURE_DAMAGE_ALERTS_NOT_REPLAYED",
+        "RECORDED_SOURCE_GEOMETRY_NOT_REPLAYED",
+        "NATIVE_PARTIAL_SPELL_RESISTANCE_UNIMPLEMENTED"
+      ],
+      "intake_hits": 1132,
+      "level_scaling": {
+        "absorb_convention": "native consumed shield points, not normalized prevented HP",
+        "absorbed_points_non_unit_share": null,
+        "absorbed_points_on_non_unit_hits": 0.0,
+        "absorbed_points_unknown_scale": 0.0,
+        "factor_definition": "native damage multiplier / victim health multiplier, before integer rounding",
+        "gap_moot_for_intake": true,
+        "recorded_hits": 1132,
+        "recorded_non_unit_hits": 0,
+        "recorded_unit_hits": 1132,
+        "replayed_hits": 1132,
+        "replayed_non_unit_hits": 0
+      },
+      "metrics": {
+        "absorb_definition": "healer-cast native SCHOOL_ABSORB points consumed on party before level scaling; not normalized prevented HP; applied/unconsumed shield capacity excluded",
+        "absorbed_damage": 0.0,
+        "absorbed_points_on_non_unit_hits": 0.0,
+        "absorbed_points_unknown_scale": 0.0,
+        "combat_seconds": 2014.3999999999996,
+        "effective_healing": 169998,
+        "effective_healing_plus_absorbed_damage": 169998.0,
+        "effective_hps": 106.62861443893871,
+        "effective_throughput_hps": 106.62861443893871,
+        "idle_definition": "alive, in party combat, no active cast/channel or native GCD; equivalents use profile heal native hasted GCD",
+        "idle_gcd_seconds": 818.5999999999995,
+        "idle_gcds": 545.7333333333665,
+        "mana_at_end": 4296.8759765625,
+        "max_mana": 4430.0,
+        "native_combat_seconds": 2014.3999999999996,
+        "overheal_pct": 78.15244631221806,
+        "overhealing": 608112,
+        "party_deaths": 0,
+        "raw_healing": 778110,
+        "recorded_combat_seconds": 1594.3000000000002,
+        "throughput_denominator": "frozen intake recorded party-combat window; identical for all specs including early wipes"
+      },
+      "name": "Holy Priest",
+      "native_damage_receipts": 978,
+      "seed": 1,
+      "source_status": "cleared",
+      "spec": 257,
+      "status": "native"
+    },
+    {
+      "gaps": [
+        "NATIVE_HEALER_PROFILE_ABSENT"
+      ],
+      "metrics": null,
+      "name": "Restoration Shaman",
+      "spec": 264,
+      "status": "blocked"
+    },
+    {
+      "gaps": [
+        "NATIVE_HEALER_PROFILE_ABSENT"
+      ],
+      "metrics": null,
+      "name": "Mistweaver Monk",
+      "spec": 270,
+      "status": "blocked"
+    },
+    {
+      "duration_ticks": 43797,
+      "gaps": [
+        "RECORDED_FUTURE_DAMAGE_ALERTS_NOT_REPLAYED",
+        "RECORDED_SOURCE_GEOMETRY_NOT_REPLAYED",
+        "NATIVE_PARTIAL_SPELL_RESISTANCE_UNIMPLEMENTED"
+      ],
+      "intake_hits": 1132,
+      "level_scaling": {
+        "absorb_convention": "native consumed shield points, not normalized prevented HP",
+        "absorbed_points_non_unit_share": null,
+        "absorbed_points_on_non_unit_hits": 0.0,
+        "absorbed_points_unknown_scale": 0.0,
+        "factor_definition": "native damage multiplier / victim health multiplier, before integer rounding",
+        "gap_moot_for_intake": true,
+        "recorded_hits": 1132,
+        "recorded_non_unit_hits": 0,
+        "recorded_unit_hits": 1132,
+        "replayed_hits": 1132,
+        "replayed_non_unit_hits": 0
+      },
+      "metrics": {
+        "absorb_definition": "healer-cast native SCHOOL_ABSORB points consumed on party before level scaling; not normalized prevented HP; applied/unconsumed shield capacity excluded",
+        "absorbed_damage": 0.0,
+        "absorbed_points_on_non_unit_hits": 0.0,
+        "absorbed_points_unknown_scale": 0.0,
+        "combat_seconds": 2014.3999999999996,
+        "effective_healing": 152185,
+        "effective_healing_plus_absorbed_damage": 152185.0,
+        "effective_hps": 95.45568588095088,
+        "effective_throughput_hps": 95.45568588095088,
+        "idle_definition": "alive, in party combat, no active cast/channel or native GCD; equivalents use profile heal native hasted GCD",
+        "idle_gcd_seconds": 400.3999999999997,
+        "idle_gcds": 266.9333333333259,
+        "mana_at_end": 4355.130859375,
+        "max_mana": 4430.0,
+        "native_combat_seconds": 2014.3999999999996,
+        "overheal_pct": 63.17861342443613,
+        "overhealing": 261121,
+        "party_deaths": 0,
+        "raw_healing": 413306,
+        "recorded_combat_seconds": 1594.3000000000002,
+        "throughput_denominator": "frozen intake recorded party-combat window; identical for all specs including early wipes"
+      },
+      "name": "Restoration Druid",
+      "native_damage_receipts": 978,
+      "seed": 1,
+      "source_status": "cleared",
+      "spec": 105,
+      "status": "native"
+    },
+    {
+      "gaps": [
+        "NATIVE_HEALER_PROFILE_ABSENT"
+      ],
+      "metrics": null,
+      "name": "Preservation Evoker",
+      "spec": 1468,
+      "status": "blocked"
+    }
+  ]
+}

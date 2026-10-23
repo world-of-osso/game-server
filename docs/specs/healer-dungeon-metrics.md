@@ -38,7 +38,7 @@ The standing healer benchmark replays recorded dungeon incoming hits in the head
 ## Known gaps (current cycle)
 
 - [ ] NATIVE_HEALER_PROFILE_ABSENT:65,256,264,270,1468. Only native105 Crenna209072 and257 Henry215011 run without new actor/policy work.
-- [ ] Build/test proof pending capacity admission; RED fixtures committed and pushed before implementation.
+- [x] RED fixtures committed and pushed before implementation; historical behavioral RED executed. Targeted14PASS/0FAIL at e2ff0eccb (179.73s), including persisted actual Stockade replay and15 sourced direct-heal probes. [Generated native results and proof scope](../reports/healer-stockade-seed1/README.md). Broader integration gates remain lead-owned.
 
 ## Out of scope
 
