@@ -10,6 +10,13 @@ Server effects 28 and 179 use authentic spell/world records. Source: `crates/ser
 - [ ] Missing creature and SummonProperties are reported rather than invented.
 - [x] Missing matrix trigger bindings do not acquire fictional actions; five available matrix area roots produce lifecycle-only entities.
 
+## Source caster offsets41/43/48
+
+- [ ] Targets41/43/48 center on the caster, at source front-right/back-left/back angles. Use caster CalcRadius including source motion bonus and inherited B radius; only corner41/43 use source default3 when their own radius entry is absent. Back48 without radius uses zero before the combat-reach floor.
+- [ ] Preserve caster orientation and direct collision/ground authority. Area recipients share the final emitted destination; missing authority refuses, FORCE_DEST_LOCATION retains the named MAX_HEIGHT gap. Existing32 grounding-only behavior and generic spell-family modifiers remain separate.
+- [ ] Actual75042/105229 and245946/1240088 physical learning/UseToy prove source1s cast,60s actor expiry, model/owner/map/current-critter identity, source zero item recovery/reuse and existing DismissPet removal. Do not invent a UseToy toggle.
+- [ ] Arena108735/155042 remains unavailable without its source-described gladiator battle; two neutral actors alone are insufficient. Other affected script/action gaps remain independent of selector support.
+
 ## Source target73 caster-radius destinations
 
 - [x] Target73 uses the caster as destination reference, randomizes direction and retains authored CalcRadius Max rather than sampling target72's radial disk. TargetB selects its own radius; an absent B radius inherits A's entry and target identity. For unit casters, cap Radius+PerLevel×level at authoredMax. Preserve source forward/strafe/falling +2 range while not walking, unless NO_MOVEMENT_RADIUS_BONUS is authored. Clamp distance upward to the caster's sourced combat reach. Generic spell-family radius modifiers and native movement-ingress parity require separate qualification.
