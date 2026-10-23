@@ -52,14 +52,24 @@ fn plan(h: &mut Harness, id: u32) -> Result<Vec<PlannedEffect>, CastFailure> {
 
 fn destination(h: &mut Harness, id: u32) -> targets::Dest {
     let spell = world_db().unwrap().store.get(id).unwrap().clone();
-    //35972's effect43 action is unhandled; exercise native target selection without
-    //claiming that teleport action works or letting the action filter hide B43.
+    //Pick the authored offset effect:279366's is index1, not its index0 self aura.
+    //35972's effect43 action is unhandled; select targets without claiming that action.
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| {
+            effect
+                .implicit_targets
+                .iter()
+                .any(|id| matches!(id, 41 | 43 | 48))
+        })
+        .expect("native source offset effect");
     targets::select_targets_and_destination(
         h.app.world_mut(),
         h.caster,
         Some(h.npc),
         &spell,
-        &spell.effects[0],
+        effect,
         0,
         false,
     )
@@ -171,12 +181,38 @@ fn toy_coverage_caster_offset_native_area_uses_final_emitted_center() {
         z: origin.z - 6.0 * angle.sin(),
     };
     h.app.world_mut().entity_mut(h.npc).insert(center);
+    h.app
+        .init_resource::<super::test_harness::ObservedCombatEvents>();
+    let spell = world_db().unwrap().store.get(BACK_AREA).unwrap().clone();
+    let paired = targets::select_targets_and_destination(
+        h.app.world_mut(),
+        h.caster,
+        Some(h.npc),
+        &spell,
+        &spell.effects[0],
+        0,
+        false,
+    )
+    .unwrap();
+    println!("source126336 paired pre-defense recipients/destination: {paired:?}");
     let effects = plan(&mut h, BACK_AREA).unwrap();
+    println!(
+        "source126336 observed hit receipts: {:?}",
+        h.app
+            .world()
+            .resource::<super::test_harness::ObservedCombatEvents>()
+            .0
+    );
     for effect in effects {
         let dest = effect.dest.expect("native48/16 destination");
         assert!(
             effect.units.contains(&h.npc),
-            "native recipient at emitted center"
+            "native recipient at emitted center: index{} units{:?}, dest{dest:?}, input{center:?}, enemy{}, same_map{}, sight{}",
+            effect.index,
+            effect.units,
+            targets::relation_matches(h.app.world(), h.caster, h.npc, targets::Relation::Enemy),
+            targets::same_map(h.app.world(), h.caster, h.npc),
+            crate::line_of_sight::sees_area_center(h.app.world(), h.npc, dest.position),
         );
         assert!((dest.position.x - center.x).abs() < 0.001);
         assert!((dest.position.z - center.z).abs() < 0.001);
