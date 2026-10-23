@@ -9,8 +9,8 @@ Spec259 work targets the [ST/3T parity contract](../../specs/assassination-parit
 |Pinned SimC reference|ST186209.2049;3T265841.4526; exact binary/profile hashes, native target-level93 and no-raid flags|ST command exit unavailable after a post-run receipt-helper error; original complete raw report recovered without rerunning; explicitly null exit|
 |Source census|144 action/spell identities,77 trait allocations,49 literal APL rows; native effects/aura/ProcOptions/PPM, signed TDB links and actual TC definitions|Inventory is not runtime qualification|
 |Existing native Assisted player baseline|Both ST/3T stop at9.8s/197decisions on rule413/condition12 values[3,10,0]|No300s DPS or channel deltas; literal driver must replace the blocked controller, not bypass it|
-|Improved Garrote snapshot|2native controlsPASS/1RED:45.15 instead of67.725 for the native50% bonus|Correction GREEN pending|
-|Improved Garrote earned lifecycle|Native Stealth cast succeeds, missing392403RED; existing no-talent stealth controlPASS|Correction GREEN pending|
+|Improved Garrote snapshot|2native controlsPASS/1RED:45.15 instead of67.725; corrected source3d9b2e3f0 passes all4Garrote cases in the8-case native29.67s composite|No full BiS DPS effect attributed yet|
+|Improved Garrote earned lifecycle|Native Stealth succeeds/missing392403RED; corrected native lifecycle and no-talent controlsGREEN in the same8-case composite; Envenom/Rupture/Mutilate retainersPASS|Vanish/other stealth-like lifecycles not certified by this1784-specific slice|
 
 ## Root cause and implementation
 

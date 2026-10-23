@@ -1,6 +1,6 @@
 ## 2026-10-23 — Assassination native Garrote boundaries
 
-[Assassination parity](investigations/assassination-dps-parity.md): pinned ST186209.205/3T265841.453; existing native player controller stops at413/condition12. Native Garrote snapshot1RED/2controlsPASS, earned Stealth-bonus lifecycle1RED/no-talent controlPASS. TC-backed correction implemented; GREEN pending, no DPS-band claim.
+[Assassination parity](investigations/assassination-dps-parity.md): pinned ST186209.205/3T265841.453; existing native player controller stops at413/condition12. Native Garrote snapshot1RED/2controlsPASS, earned Stealth-bonus lifecycle1RED/no-talent controlPASS→corrected8-case native GREEN29.67s at3d9b2e3f0 (Envenom/Rupture/Mutilate retained). No DPS-band claim; literal300s baseline still open.
 
 ## 2026-10-23 — Hit positivity independent of factions
 

@@ -5,8 +5,8 @@ Qualify native spec259 against pinned SimC76f8118 BiS gear/talents:300s single-t
 ## What it must do
 
 - [ ] Consume the literal pinned APL through shared `simc_apl`, `simc_apl_native` and `dps_parity/literal_rotation`; do not substitute AssistedCombat or a local priority list.
-- [ ] Selected Improved Garrote makes actual Stealth1784 apply392403; leaving stealth replaces it with392401. No talent means no invented bonus.
-- [ ] Native Garrote703 snapshots one native effect1 bonus from392401/392403, preferring the former when both exist. Later removal does not change already-earned ticks; foreign-unit buffs do not contribute.
+- [x] Selected Improved Garrote makes actual Stealth1784 apply392403; leaving stealth replaces it with392401. No talent means no invented bonus.
+- [x] Native Garrote703 snapshots one native effect1 bonus from392401/392403, preferring the former when both exist. Later removal does not change already-earned ticks; foreign-unit buffs do not contribute.
 - [ ] `ROGUE_ENERGY_REGEN_COMBINED_SIMC_APL_ESTIMATE` is a decision-only SimC fact over native regen/owned poisoned bleed tick state. The sourced90% Dashing Scoundrel estimate never grants Energy or changes real regeneration.
 - [ ] ST and3T receipts expose gear/stat/action/channel differences and actual target damage before claiming the ±10% band.
 
@@ -28,7 +28,6 @@ Qualify native spec259 against pinned SimC76f8118 BiS gear/talents:300s single-t
 
 ## Known gaps (current cycle)
 
-- [ ] Garrote correction GREEN qualification pending; source-backed RED retained.
 - [ ] Assassination adapter, shared player/target/composite support, native ST/3T channel baseline and band qualification.
 - [ ] Poison/hero/talent/trinket channels not certified by source inventory alone.
 
