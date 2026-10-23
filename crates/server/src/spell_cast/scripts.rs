@@ -192,7 +192,9 @@ const BACKSTAB: u32 = 53;
 const PYRE_IMPACT: u32 = 393_568;
 const PYRE_DAMAGE: u32 = 357_212;
 const DRAIN_SOUL: u32 = 198_590;
+const FIREBALL: u32 = 133;
 const FIRE_BLAST: u32 = 108_853;
+const FIRESTARTER: u32 = 205_026;
 const DEATH_COIL: u32 = 47_541;
 const DEATH_COIL_DAMAGE: u32 = 47_632;
 const DEATH_COIL_HEAL: u32 = 47_633;
@@ -407,7 +409,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
 /// to 100%; Retail108853 tooltip explicitly renders `${$s1*2}`.
 pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32) -> Option<f32> {
     match spell_id {
-        133 | hot_streak::PYROBLAST => firestarter_crit(world, caster, target),
+        FIREBALL | hot_streak::PYROBLAST => firestarter_crit(world, caster, target),
         batch17::REGROWTH => batch17::regrowth_crit(world, caster, target),
         batch14::EYE_BEAM_DAMAGE => batch14::eye_beam_crit(world, caster),
         batch3::SHRED if batch11::shred_stealth_bonus(world, caster) => {
@@ -443,10 +445,11 @@ fn firestarter_crit(world: &World, caster: Entity, target: Entity) -> Option<f32
     let aura = world
         .get::<crate::auras::ActiveAuras>(caster)?
         .iter()
-        .find(|aura| aura.spell_id == 205026)?;
+        .find(|aura| aura.spell_id == FIRESTARTER)?;
     let threshold = aura.effects.iter().find(|effect| effect.index == 0)?.amount;
     let health = world.get::<shared::components::Health>(target)?;
-    (health.current / health.max * 100.0 >= threshold).then_some(100.0)
+    let health_percent = health.current / health.max * 100.0;
+    (health_percent >= threshold).then_some(100.0)
 }
 
 pub(crate) fn rake_bleed_snapshot(world: &World, caster: Entity, amount: f32) -> f32 {
