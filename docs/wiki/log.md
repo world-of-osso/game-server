@@ -3917,3 +3917,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0â
 - 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22): native child effectiveness/removal/Echo GREEN; real long-flight HIT-timing and three-target Chain RED. Per-hit correction and native45297 mapping committed; GREEN pending.
 
 - 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22) HIT/Chain correction5GREEN10.43s; actual StatsPlugin70samples2PASS9.38s on same executable. Three qualified tests enabled; fullAPL/resource/other-root gaps retained.
+
+- [Lava Burst Overload](investigations/follower-data.md#lava-burst-overload-qualification): fixtureNoCharges distinguished from genuine86-native-hit RED;51505â†’285466 added to existing HIT callback/effect1 scaling. GREEN pending; EB/Icefury cast-only scope clarified.

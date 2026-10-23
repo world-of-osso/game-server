@@ -431,9 +431,8 @@ pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
     }
     match spell_id {
         super::elemental_overload::LIGHTNING_OVERLOAD
-        | super::elemental_overload::CHAIN_OVERLOAD => {
-            Some(super::elemental_overload::scale_damage)
-        }
+        | super::elemental_overload::CHAIN_OVERLOAD
+        | super::elemental_overload::LAVA_OVERLOAD => Some(super::elemental_overload::scale_damage),
         crate::auras::agony::AGONY => Some(crate::auras::agony::tick_damage),
         touch_of_death::TOUCH_OF_DEATH => Some(touch_of_death::damage),
         batch13::SHADOW_WORD_DEATH => Some(batch13::death_execute),
