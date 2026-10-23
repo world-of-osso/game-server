@@ -53,6 +53,7 @@ pub(super) struct Intake {
     pub hits: Vec<Hit>,
     pub frames: Vec<Frame>,
     pub pulls: serde_json::Value,
+    pub source_deaths: Vec<(u32, u32)>,
     pub gaps: Vec<String>,
 }
 
@@ -63,6 +64,55 @@ pub(crate) struct Capture {
     pub start_tick: u32,
     pub hits: Vec<Hit>,
     pub gaps: Vec<String>,
+}
+
+pub(crate) fn record(
+    world: &mut World,
+    source: Entity,
+    target: Entity,
+    school: u32,
+    raw: f32,
+    kind: HitKind,
+) {
+    if !world.contains_resource::<Capture>() {
+        return;
+    }
+    let now = tick(world);
+    let mut capture = world.resource_mut::<Capture>();
+    let Some(target_slot) = capture.members.iter().position(|&unit| unit == target) else {
+        return;
+    };
+    let Some(&(source_guid, pack)) = capture.sources.get(&source) else {
+        if !capture.members.contains(&source) {
+            let gap = "RAW_SOURCE_IDENTITY_UNAVAILABLE".to_string();
+            if !capture.gaps.contains(&gap) {
+                capture.gaps.push(gap);
+            }
+        }
+        return;
+    };
+    let tick = now.saturating_sub(capture.start_tick);
+    capture.hits.push(Hit {
+        tick,
+        source_guid,
+        pack,
+        target_slot,
+        school,
+        raw,
+        kind,
+    });
+}
+
+pub(crate) fn note_unrecorded_direct(world: &mut World, source: Entity, target: Entity) {
+    let Some(mut capture) = world.get_resource_mut::<Capture>() else {
+        return;
+    };
+    if capture.members.contains(&target) && capture.sources.contains_key(&source) {
+        let gap = "DIRECT_DAMAGE_WITHOUT_RAW_MITIGATION_BOUNDARY".to_string();
+        if !capture.gaps.contains(&gap) {
+            capture.gaps.push(gap);
+        }
+    }
 }
 
 pub(super) fn tick(world: &World) -> u32 {

@@ -97,6 +97,7 @@ pub(super) fn small_intake() -> Intake {
             in_combat: true,
         }],
         pulls: serde_json::json!([{ "pack":pack.id,"start_tick":1,"end_tick":40 }]),
+        source_deaths: vec![],
         gaps: vec![],
     }
 }
@@ -108,4 +109,101 @@ fn healer_benchmark_same_intake_replays_identical_native_numbers() {
     let first = super::healer_replay::replay(&intake, 105).unwrap();
     assert!(first["metrics"]["effective_hps"].is_number());
     assert_eq!(first, super::healer_replay::replay(&intake, 105).unwrap());
+}
+
+#[test]
+#[ignore = "explicit native recipient mitigation replay control"]
+fn healer_benchmark_raw_spell_replay_applies_recipient_reduction_and_absorb_once() {
+    for (aura, expected_loss) in [(None, 200.0), (Some(102342), 160.0), (Some(17), 0.0)] {
+        let mut h =
+            crate::spell_cast::test_harness::harness(Vec::new(), &[133, 17, 102342], 5).unwrap();
+        if let Some(spell_id) = aura {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: h.caster,
+                    target: h.caster,
+                    spell_id,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        let hit = Hit {
+            tick: 1,
+            source_guid: 6,
+            pack: 6,
+            target_slot: 0,
+            school: 4,
+            raw: 200.0,
+            kind: HitKind::Spell {
+                spell_id: 133,
+                effect_index: None,
+                periodic: false,
+                crit: false,
+                resolved_source: false,
+                blocked: false,
+            },
+        };
+        let before = h.health(h.caster);
+        crate::spell_cast::effects::replay_healer_hit(h.app.world_mut(), h.npc, h.caster, &hit)
+            .unwrap();
+        assert_eq!(
+            before - h.health(h.caster),
+            expected_loss,
+            "aura{aura:?}: fixed raw200 must use replay recipient mitigation"
+        );
+    }
+}
+
+#[test]
+#[ignore = "explicit native melee armor and shield replay control"]
+fn healer_benchmark_raw_melee_replay_applies_native_armor_and_shield() {
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[17], 5).unwrap();
+    h.app
+        .insert_resource(crate::test_data::world_data().armor_constants.clone());
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .armor = 5000.0;
+    let hit = Hit {
+        tick: 1,
+        source_guid: 6,
+        pack: 6,
+        target_slot: 0,
+        school: 1,
+        raw: 200.0,
+        kind: HitKind::Melee {
+            hand: 0,
+            outcome: "Hit".into(),
+            level_difference: 0,
+            critical_multiplier: 1.0,
+            weapon_speed: 2.0,
+        },
+    };
+    let before = h.health(h.caster);
+    crate::combat::replay_healer_hit(h.app.world_mut(), h.npc, h.caster, &hit).unwrap();
+    let loss = before - h.health(h.caster);
+    assert!(
+        loss > 0.0 && loss < 200.0,
+        "native armor must reduce raw200, observed{loss}"
+    );
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 17,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let shielded = h.health(h.caster);
+    crate::combat::replay_healer_hit(h.app.world_mut(), h.npc, h.caster, &hit).unwrap();
+    assert_eq!(
+        h.health(h.caster),
+        shielded,
+        "same raw200 must reach native shield after armor"
+    );
 }

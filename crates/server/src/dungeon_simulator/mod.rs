@@ -12,6 +12,7 @@ mod healer_intake_tests;
 mod healer_metrics;
 mod healer_metrics_tests;
 mod healer_replay;
+mod healer_report;
 mod movement;
 mod runtime;
 pub(crate) use graph::Space;

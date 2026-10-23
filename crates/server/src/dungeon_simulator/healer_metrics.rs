@@ -42,6 +42,11 @@ pub(super) struct Recorder {
     idle_gcd_seconds: f64,
     idle_gcds: f64,
     pull_ends: Vec<PullEnd>,
+    frames: Vec<super::healer_intake::Frame>,
+    source_deaths: Vec<(u32, u32)>,
+    map_id: u32,
+    difficulty_id: u32,
+    level: u8,
 }
 
 pub(super) fn start(
@@ -59,6 +64,23 @@ pub(super) fn start(
                 .is_some_and(|follower| follower.profile.role == shared::group::GroupRole::Healer)
         })
         .expect("native simulator party includes a healer");
+    let members: Vec<_> = party.members.iter().copied().chain([party.owner]).collect();
+    let sources = graph
+        .packs
+        .iter()
+        .flat_map(|pack| {
+            pack.spawns
+                .iter()
+                .map(|spawn| (actors[&spawn.guid], (spawn.guid, pack.id)))
+        })
+        .collect();
+    let start_tick = super::healer_intake::tick(world);
+    world.insert_resource(super::healer_intake::Capture {
+        members: members.clone(),
+        sources,
+        start_tick,
+        ..Default::default()
+    });
     let actor_packs = graph
         .packs
         .iter()
@@ -87,10 +109,27 @@ pub(super) fn start(
         })
         .collect();
     crate::auras::observations::start(world, healer);
+    let level = world.get::<shared::components::Level>(healer).unwrap().0;
+    let initial_frame = super::healer_intake::Frame {
+        tick: 0,
+        positions: members
+            .iter()
+            .map(|&unit| {
+                world
+                    .get::<shared::components::Position>(unit)
+                    .map(|at| [at.x, at.y, at.z])
+            })
+            .collect(),
+        in_combat: members.iter().any(|&unit| {
+            world
+                .get::<CombatStatus>(unit)
+                .is_some_and(|status| status.0)
+        }),
+    };
     Recorder {
         healer,
         tank: party.tank,
-        members: party.members.iter().copied().chain([party.owner]).collect(),
+        members,
         actor_packs,
         packs,
         event_cursor: world.resource::<ObservedCombatEvents>().0.len(),
@@ -105,6 +144,11 @@ pub(super) fn start(
         idle_gcd_seconds: 0.0,
         idle_gcds: 0.0,
         pull_ends: Vec::new(),
+        frames: vec![initial_frame],
+        source_deaths: Vec::new(),
+        map_id: graph.map_id,
+        difficulty_id: graph.difficulty_id(),
+        level,
     }
 }
 
@@ -131,6 +175,24 @@ impl Recorder {
         let now = world.resource::<Time<Virtual>>().elapsed_secs_f64();
         let dt = now - self.last_frame;
         self.last_frame = now;
+        let capture = world.resource::<super::healer_intake::Capture>();
+        self.frames.push(super::healer_intake::Frame {
+            tick: super::healer_intake::tick(world).saturating_sub(capture.start_tick),
+            positions: self
+                .members
+                .iter()
+                .map(|&unit| {
+                    world
+                        .get::<shared::components::Position>(unit)
+                        .map(|at| [at.x, at.y, at.z])
+                })
+                .collect(),
+            in_combat: self.members.iter().any(|&unit| {
+                world
+                    .get::<CombatStatus>(unit)
+                    .is_some_and(|status| status.0)
+            }),
+        });
         self.observe_combat_coverage(world, dt);
         let events = &world.resource::<ObservedCombatEvents>().0;
         for event in &events[self.event_cursor..] {
@@ -236,6 +298,13 @@ impl Recorder {
     }
 
     fn observe_pack_death(&mut self, world: &World, target: Entity, now: f64) {
+        let capture = world.resource::<super::healer_intake::Capture>();
+        if let Some(&(guid, _)) = capture.sources.get(&target) {
+            self.source_deaths.push((
+                super::healer_intake::tick(world).saturating_sub(capture.start_tick),
+                guid,
+            ));
+        }
         let Some(&pack_id) = self.actor_packs.get(&target) else {
             return;
         };
@@ -270,6 +339,18 @@ impl Recorder {
             })
             .collect();
         serde_json::json!({
+            "recorded_intake": {
+                "schema": 1,
+                "map_id": self.map_id,
+                "difficulty_id": self.difficulty_id,
+                "level": self.level,
+                "source_deaths": self.source_deaths,
+                "end_tick": self.frames.last().map_or(0, |frame| frame.tick),
+                "hits": world.resource::<super::healer_intake::Capture>().hits,
+                "frames": self.frames,
+                "pulls": self.pull_ends,
+                "gaps": world.resource::<super::healer_intake::Capture>().gaps,
+            },
             "dungeon_healing": {
                 "party_deaths": self.party_deaths,
                 "raw_healing": self.raw_healing,

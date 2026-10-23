@@ -12,18 +12,22 @@ The standing healer benchmark replays recorded dungeon incoming hits in the head
 
 ## How it works
 
-- [Dungeon simulator](../wiki/systems/dungeon-simulator.md)
+- [Dungeon healing metrics](../wiki/systems/healer-dungeon-metrics.md)
 - [Coefficient ledger](../reports/healer-coefficient-ledger.md)
 
 ## Implementation inventory
 
-- `crates/server/src/dungeon_simulator/healer_metrics.rs`: frame/event observations and metrics.
+- `crates/server/src/dungeon_simulator/{healer_intake,healer_metrics,healer_replay,healer_report}.rs`: stable raw receipts, frame/event metrics, native replay and JSON/MD artifacts.
+- `crates/server/src/{combat.rs,spell_cast/effects.rs}`: narrow native source-amount capture and recipient mitigation replay seams.
+- `crates/server/src/followers/simulator.rs`: explicit native healer-profile selection; no policy changes.
 - `crates/server/src/spell_cast/mod.rs`: observation-only native cast/GCD readiness seam.
 - `docs/reports/healer-coefficient-ledger.json`: exact DB2 rows and source evidence.
 
 ## Tests asserting this spec
 
 - `crates/server/src/dungeon_simulator/healer_benchmark_tests.rs`: concrete fight extraction and repeatability.
+- `crates/server/src/dungeon_simulator/healer_intake_tests.rs`: raw-before-absorb capture, same-input native determinism and recipient reduction/armor/shield controls.
+- `crates/server/src/dungeon_simulator/healer_report.rs`: explicit ignored actual Stockade capture and recorded-input report drivers.
 - `crates/server/src/dungeon_simulator/healer_coefficient_tests.rs`: isolated native direct-heal probes for all seven specs.
 
 ## Known gaps (current cycle)

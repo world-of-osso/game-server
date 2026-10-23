@@ -1237,7 +1237,7 @@ fn ignores_caster_damage_modifiers(spell: &SpellInfo) -> bool {
 
 /// Numeric source amount before rounding, armor, absorbs, transfer or health scaling.
 /// Callers retain their own spell's downstream resolution and native attributes.
-pub(super) fn damage_before_mitigation(
+fn damage_source_amount(
     world: &World,
     ctx: &EffectCtx,
     target: Entity,
@@ -1267,16 +1267,6 @@ pub(super) fn damage_before_mitigation(
             * creature_type_damage_multiplier(world, bonus_caster, target, ctx.spell)
             * mechanic_damage_multiplier(world, bonus_caster, ctx.spell, effect)
     };
-    let taken = if effect.is_some_and(|effect| {
-        matches!(
-            effect.effect,
-            EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT | EFFECT_POWER_BURN
-        )
-    }) {
-        crate::auras::damage_resilience_multiplier(world, target, ctx.spell)
-    } else {
-        crate::auras::damage_taken_multiplier(world, target, bonus_caster, ctx.spell)
-    };
     let bonus_ctx = EffectCtx {
         caster: bonus_caster,
         ..*ctx
@@ -1285,10 +1275,92 @@ pub(super) fn damage_before_mitigation(
         amount
     } else {
         modded_amount(world, &bonus_ctx, amount, periodic)
-    } * done
-        * taken
+    } * done)
+        .max(0.0)
+}
+
+fn damage_taken(world: &World, ctx: &EffectCtx, target: Entity, damage: &DamageInput) -> f32 {
+    if damage.effect.is_some_and(|effect| {
+        matches!(
+            effect.effect,
+            EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT | EFFECT_POWER_BURN
+        )
+    }) {
+        crate::auras::damage_resilience_multiplier(world, target, ctx.spell)
+    } else {
+        crate::auras::damage_taken_multiplier(world, target, damage.bonus_caster, ctx.spell)
+    }
+}
+
+/// Source amount followed by the native recipient reduction and authored cast multiplier.
+pub(super) fn damage_before_mitigation(
+    world: &World,
+    ctx: &EffectCtx,
+    target: Entity,
+    damage: &DamageInput,
+) -> f32 {
+    (damage_source_amount(world, ctx, target, damage)
+        * damage_taken(world, ctx, target, damage)
         * ctx.spell.cast_damage_multiplier.unwrap_or(1.0))
     .max(0.0)
+}
+
+#[cfg(test)]
+pub(crate) fn replay_healer_hit(
+    world: &mut World,
+    source: Entity,
+    target: Entity,
+    hit: &crate::dungeon_simulator::healer_intake::Hit,
+) -> Result<(), String> {
+    use crate::dungeon_simulator::healer_intake::HitKind;
+    let HitKind::Spell {
+        spell_id,
+        effect_index,
+        periodic,
+        crit,
+        resolved_source,
+        blocked,
+    } = hit.kind
+    else {
+        return Err("SPELL_REPLAY_REQUIRES_SPELL_RECEIPT".into());
+    };
+    if blocked {
+        return Err("SPELL_BLOCK_OUTCOME_REPLAY_UNAVAILABLE".into());
+    }
+    let spell = world
+        .resource::<super::SpellStore>()
+        .get(spell_id)
+        .cloned()
+        .ok_or_else(|| format!("NATIVE_SPELL_ABSENT:{spell_id}"))?;
+    if spell.school_mask() != hit.school {
+        return Err("RECORDED_SPELL_SCHOOL_CHANGED".into());
+    }
+    let effect = effect_index
+        .map(|index| {
+            spell
+                .effects
+                .iter()
+                .find(|effect| u32::from(effect.index) == index)
+                .ok_or_else(|| format!("NATIVE_SPELL_EFFECT_ABSENT:{spell_id}:{index}"))
+        })
+        .transpose()?;
+    let ctx = EffectCtx {
+        caster: source,
+        spell: &spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    let damage = DamageInput {
+        amount: hit.raw,
+        crit,
+        periodic,
+        resolved_source,
+        effect,
+        bonus_caster: source,
+    };
+    deal_source_damage_and_report(world, &ctx, target, damage, Some(hit.raw));
+    Ok(())
 }
 
 fn deal_damage_and_report(
@@ -1296,6 +1368,16 @@ fn deal_damage_and_report(
     ctx: &EffectCtx,
     target: Entity,
     damage: DamageInput,
+) -> f32 {
+    deal_source_damage_and_report(world, ctx, target, damage, None)
+}
+
+fn deal_source_damage_and_report(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    damage: DamageInput,
+    recorded_source: Option<f32>,
 ) -> f32 {
     let DamageInput {
         crit,
@@ -1308,13 +1390,35 @@ fn deal_damage_and_report(
         return 0.0;
     }
     let school = ctx.spell.school_mask();
+    let source_amount =
+        recorded_source.unwrap_or_else(|| damage_source_amount(world, ctx, target, &damage));
+    #[cfg(test)]
+    crate::dungeon_simulator::healer_intake::record(
+        world,
+        ctx.caster,
+        target,
+        school,
+        source_amount,
+        crate::dungeon_simulator::healer_intake::HitKind::Spell {
+            spell_id: ctx.spell.id,
+            effect_index: effect.map(|effect| u32::from(effect.index)),
+            periodic,
+            crit,
+            resolved_source,
+            blocked: super::hit_was_blocked(world, ctx.caster, ctx.spell.id, target),
+        },
+    );
     if crate::auras::is_immune(world, target, school) {
         let mut event = log_amount(ctx, target, CombatLogKind::Miss(MissKind::Immune));
         event.periodic = periodic;
         log_event(world, event);
         return 0.0;
     }
-    let amount = damage_before_mitigation(world, ctx, target, &damage).round();
+    let amount = (source_amount
+        * damage_taken(world, ctx, target, &damage)
+        * ctx.spell.cast_damage_multiplier.unwrap_or(1.0))
+    .max(0.0)
+    .round();
     let amount = if periodic {
         amount
     } else {

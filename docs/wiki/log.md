@@ -32,6 +32,9 @@ Target74 tg967 landedec7b24f9f,2165PASS/0FAIL/8ignored2350.45s/check0-129s/fmt0;
 ## 2026-10-22 — Native pet diagnostic history
 
 [Pet samples](systems/dungeon-simulator.md#pet-diagnostic-history-2026-10-22): realpet/Death/evade/despawn RED12.76s→4baGREEN11.66s.0.5s samples/terminal nowretainnativepetidentity,HP/position/refs/threatandrelatedopponentresetstates,includingzero-threatacquisitionandexplicitunavailablevaluesafterdespawn. Diagnostic-only, noAI/heal/threatmutation. Retainedabort/export+summary2PASS; single seed7capturequeued, notReliability.
+## 2026-10-22 — Recorded dungeon healer benchmark
+
+[Dungeon healing metrics](systems/healer-dungeon-metrics.md): observation-only raw pre-mitigation capture, stable50ms source/party-slot intake, native target mitigation replay and JSON/MD coverage report adapter. Native105/257 profiles only; five explicit missing-profile gaps, no policy changes.32spell/59DB2-effect coefficient ledger and15direct amount probes. Ignored RED checkpoints pushed first; execution proof pending quiet-window/capacity admission.
 
 ## 2026-10-22 — Abort-safe native simulator evidence
 
