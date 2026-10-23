@@ -30,6 +30,7 @@ fn fixture(rend: bool) -> Harness {
     ];
     let mut h = harness(Vec::new(), &ids, 1).unwrap();
     h.app.insert_resource(world_db().unwrap().store.clone());
+    h.app.insert_resource(load_native_creature_world(&[6]));
     let mut known = ids.to_vec();
     if rend {
         known.push(REND);
