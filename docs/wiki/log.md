@@ -5,6 +5,10 @@
 ## 2026-10-23 — Intensifying Flame tick bridge
 
 [Native-value bridge](systems/auras.md#intensifying-flame-tick-bridge--2026-10-23): approved `FIRE_INTENSIFYING_FLAME_SIMC_TICK_BRIDGE` passes actual base amounts at the tick boundary before expiry, preserving native416714 cap/percentage/chance/mask and419800 damage data. Natural one/three-target and final-tick3RED; four-target fixture prerequisite and GREEN remain pending. Both-ID Flamestrike consumers landed separately through lead fs982.
+## 2026-10-22 — Gutshot success-owned partial
+
+[Gutshot](systems/boss-scripts.md#gutshot-success-owned-partial--2026-10-22): ignorednativeRED→sourceShot/Trap success-ownedlanes. Post-master802b22a0e native5GREEN28.63s Normal1/projected205:actualchilddamage/80s4Shot5Trap/cancelnorepeat/nativehome/reset/copycredit/corpse;stable-keySQLreceipt. Hyena100Energy/trap/controller/nonNormalMeatToss boundaries retained.
+
 ## 2026-10-22 — Hunter pet sourced HP/armor and summon ordering
 
 [Hunter inheritance](systems/character-stats.md#hunter-pet-health-and-armor--2026-10-22): native ExpectedStat/template createHP, TC30% ownerStamina×10HP and level×50+70% ownerarmor. Separate fresh56244/max178094 RED fixed through the existing cached Stats producer before summon, without initialization/top-up state. Six native controls pass; lifecycle composite5+1 passes after authentic ExpectedStats fixture hydration and exact native377HP dismissal persistence. Check/fmt pass at01d22; parent integration gate remains separate. SimC divergence explicit; no whole DPS/Azure survival/petAP claim.
@@ -45,6 +49,9 @@ Target74 tg967 landedec7b24f9f,2165PASS/0FAIL/8ignored2350.45s/check0-129s/fmt0;
 ## 2026-10-22 — Native pet diagnostic history
 
 [Pet samples](systems/dungeon-simulator.md#pet-diagnostic-history-2026-10-22): realpet/Death/evade/despawn RED12.76s→4baGREEN11.66s.0.5s samples/terminal nowretainnativepetidentity,HP/position/refs/threatandrelatedopponentresetstates,includingzero-threatacquisitionandexplicitunavailablevaluesafterdespawn. Diagnostic-only, noAI/heal/threatmutation. Retainedabort/export+summary2PASS; single seed7capturequeued, notReliability.
+## 2026-10-22 — Recorded dungeon healer benchmark
+
+[Dungeon healing metrics](systems/healer-dungeon-metrics.md): observation-only raw pre-mitigation capture, stable50ms source/party-slot intake, native target mitigation replay and JSON/MD coverage report adapter. Native105/257 profiles only; five explicit missing-profile gaps, no policy changes.32spell/59DB2-effect coefficient ledger and15direct amount probes. Ignored RED checkpoints pushed first; behavioral RED executed. [Native results](../reports/healer-stockade-seed1/README.md) at rebased dce76186c:14GREEN209.11s, unchanged1132-hit Stockade input, native105/257 zero deaths,15direct probes across seven specs. Recorded block/native second-swing-clock failures fixed; five missing-profile and alert/geometry/partial-resistance gaps retained. Full integration lead-owned.
 
 ## 2026-10-22 — Abort-safe native simulator evidence
 
