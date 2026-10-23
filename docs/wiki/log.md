@@ -1,3 +1,7 @@
+## 2026-10-22 — Hunter pet integration fixture qualification
+
+[Hunter inheritance](systems/character-stats.md#hunter-pet-health-and-armor--2026-10-22): ps988 exposed missing ordinary stat-producer inputs in lightweight battleground Traveler and the old ceil378 tame oracle. Test-only01310e150 over master58ce397a supplies entry-equivalent default inputs; fresh tame asserts exact source377 current/max and entire stable. Native6PASS37.22s, all Hunter pet22PASS154.67s, BG pet-end5PASS16.76s; lockedalltargets checkPASS2m06s/fmtPASS. No runtime fallback or relaxed tolerance; independent landing remains parent-owned.
+
 ## 2026-10-22 — Hunter pet sourced HP/armor and summon ordering
 
 [Hunter inheritance](systems/character-stats.md#hunter-pet-health-and-armor--2026-10-22): native ExpectedStat/template createHP, TC30% ownerStamina×10HP and level×50+70% ownerarmor. Separate fresh56244/max178094 RED fixed through the existing cached Stats producer before summon, without initialization/top-up state. Six native controls pass; lifecycle composite5+1 passes after authentic ExpectedStats fixture hydration and exact native377HP dismissal persistence. Check/fmt pass at01d22; parent integration gate remains separate. SimC divergence explicit; no whole DPS/Azure survival/petAP claim.
