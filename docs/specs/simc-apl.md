@@ -1,6 +1,6 @@
 # Literal SimC APL decisions
 
-Shared native follower decision evaluation interprets pinned SimC76f8118 conditions and source-ordered action lists. Native spellbook, castability and numeric combat data remain authoritative and caller-owned. [Implementation details](../wiki/systems/simc-apl.md).
+Shared native decision evaluation interprets pinned SimC76f8118 conditions and source-ordered action lists. Native spellbook, castability and numeric combat data remain authoritative and caller-owned. [Implementation details](../wiki/systems/simc-apl.md).
 
 ## What it must do
 
@@ -12,6 +12,10 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 - [x] Implement conditional `run_action_list` switches that never resume the caller after child exhaustion; reject unknown lists.
 - [x] Select explicit native targets with `target_if=min/max:<expr>` before the row's `if`; preserve native tie order. Unknown target operands/adapters fail explicitly.
 - [x] Scope a run row's selector to that control action. Child actions retain their own targets; run selection must not retarget them.
+- [x] Sample native cast readiness independently for each action/target pair. Harmful precasts use the actor's actual selected enemy when combat candidates have not yet been supplied.
+- [x] Deliver Player literal spells through ordinary Player requests with the selected explicit target, rechecking knowledge and rejecting expired identities rather than redirecting. Preserve selected and AA targets; retain native creature dispatch for WW followers.
+- [x] `retarget_auto_attack` changes only the running AA victim, preserving both swing timers and the actor's selection. An already-running AA must not restart onto the primary target.
+- [ ] Expose target-specific readonly resource-limited admission for a chosen power pool. Compare that pool's native maximum locally; never grant or temporarily replace resources. Preserve other pools, health and every other native cast constraint; an unaffordable maximum cannot qualify.
 - [x] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.
 
 ## Native action permission
@@ -41,6 +45,8 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 `crates/server/src/simc_apl/tests.rs`; eleven expression/program cases pushed ignored before implementation: genuine11RED atc0cf6eed6→11GREEN ataff61cbab (exit0, zero compiler warnings,1m03 compile). Cases enabled afterward; invalid-control case additionally checks sourced call recursion. Two action-context REDs at2e6f242ce→all13GREEN atcd3c7e427, zero compiler warnings; context cases enabled afterward.
 
 Run/target source extension: genuine14PASS/4RED at a446f0634; explicit `Action.target` and candidate-ID API scaffold then genuine16PASS/8RED at2088713a6 (no compiler errors). Ate7fdc4dd1 all24 shared interpreter tests passed, but the real pinned SimC run-selector probe invalidated the inherited-child oracle; that packet is withdrawn. Corrected binary-backed oracle:23PASS/1 genuine assertion RED at2d6a66259 →24/24GREEN atad720fc3c (28.61s compile,0compiler warnings/0ignored). Native per-target dispatch remains caller-owned; [isolated proof packet](../handoffs/shared-run-target-proof-ledger.md).
+
+Player execution boundary: seven actual native cases at4f91688e8 give1WW controlPASS/6genuine assertionRED (34.94s runtime). At e99b879e8 after hp1026, all7 pass (27.17s runtime,18m08 compile,0compiler warnings). [Scoped proof](../handoffs/literal-player-dispatch-proof-ledger.md); broader integration remains lead-owned. [Shared machinery](../wiki/systems/simc-apl.md#shared-literal-fixture-machinery).
 
 ## Shared native facts
 

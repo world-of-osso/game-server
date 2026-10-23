@@ -193,6 +193,9 @@ fn startup_load_item_scaling_tables(mut commands: Commands) {
     commands.insert_resource(tables);
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("open native item-instance tables");
+    commands.insert_resource(crate::item_proc_data::load(&conn).expect(
+        "load native equipped-producer catalogs; run item_instance_data.py --publish-producer-catalogs",
+    ));
     commands.insert_resource(crate::stats::NativeItemInstances {
         effects: server::item_instance::load::load_item_effect_tables(&conn)
             .expect("load native ItemEffect and ItemXItemEffect tables"),

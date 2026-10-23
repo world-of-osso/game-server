@@ -166,6 +166,7 @@ mod dummy9_tests;
 mod dummy_tests;
 pub mod effects;
 pub(crate) mod efflorescence;
+mod elemental_resource;
 mod empower;
 #[cfg(test)]
 mod empower_input_tests;
@@ -181,6 +182,8 @@ mod fel_devastation_tests;
 mod fount_strength_tests;
 #[cfg(test)]
 mod full_trigger_dead_target_tests;
+#[cfg(test)]
+mod generic_empower_tests;
 pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
@@ -195,6 +198,8 @@ mod invigorating_fury_tests;
 pub(crate) mod native_apl;
 #[cfg(test)]
 mod periodic_healing_taken_tests;
+#[cfg(test)]
+mod protection_producer_tests;
 mod sanctuary;
 pub(crate) use interruptibility::can_interrupt_cast;
 #[cfg(test)]
@@ -1345,12 +1350,23 @@ pub(crate) fn cast_for_player(
     player: Entity,
     spell_id: u32,
 ) -> Result<(), CastFailure> {
+    cast_for_player_with_target(world, player, spell_id, None)
+}
+
+/// Use the normal Player request path without changing its selected/AA victim.
+/// None means the request uses the Player's native selected target.
+pub(crate) fn cast_for_player_with_target(
+    world: &mut World,
+    player: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
+) -> Result<(), CastFailure> {
     let request = SpellCastIntent {
         target_item_guid: None,
         destination: None,
         spell_id: Some(spell_id),
         spell: String::new(),
-        target_entity: None,
+        target_entity: target.map(Entity::to_bits),
         witness: None,
     };
     request_cast(world, player, &request).map_err(|(spell_id, failure)| {
@@ -1571,15 +1587,16 @@ fn request_cast(
         };
         return Err((spell.id, failure));
     }
-    let explicit = request
-        .target_entity
-        .and_then(Entity::try_from_bits)
-        .filter(|&target| world.get_entity(target).is_ok())
-        .or_else(|| {
-            world
-                .get::<CombatTarget>(caster)
-                .and_then(|target| target.0)
-        });
+    let explicit = match request.target_entity {
+        Some(bits) => Some(
+            Entity::try_from_bits(bits)
+                .filter(|&target| world.get_entity(target).is_ok())
+                .ok_or((spell.id, CastFailure::NoTarget))?,
+        ),
+        None => world
+            .get::<CombatTarget>(caster)
+            .and_then(|target| target.0),
+    };
     let explicit = if disenchant::is_disenchant(&spell)
         || (request.target_item_guid.is_some()
             && spell.effects.iter().any(open_lock::is_item_effect))
@@ -1740,6 +1757,7 @@ fn check_ordinary_caster_life(
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum StartCheck {
     Native,
+    ResourceMax(PowerType),
     IgnoreCastInProgress,
     TankHealCapability,
     HealerDecision,
@@ -1768,6 +1786,24 @@ pub(crate) fn read_native_cast_start(
     target: Entity,
 ) -> Result<Option<Entity>, CastFailure> {
     validate_start(world, caster, spell, Some(target), false)
+}
+
+/// Read ordinary native admission using only the chosen pool's maximum in the
+/// affordability calculation. No pool is written, granted or spent.
+pub(crate) fn read_native_cast_at_resource_max(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+    resource: PowerType,
+) -> Result<Option<Entity>, CastFailure> {
+    validate_start_with_policy(
+        world,
+        caster,
+        spell,
+        Some(target),
+        StartCheck::ResourceMax(resource),
+    )
 }
 
 /// Planner capability only: no cast, no spend, and no mutation of native GCD clocks.
@@ -1886,7 +1922,7 @@ fn validate_start_with_policy(
     teleport::check_destination(world, caster, spell)?;
     let casting_blocks_start =
         world.get::<CastState>(caster).is_some() && !allows_cast_while_casting(spell);
-    if check == StartCheck::Native && casting_blocks_start {
+    if matches!(check, StartCheck::Native | StartCheck::ResourceMax(_)) && casting_blocks_start {
         return Err(CastFailure::InProgress);
     }
     validate_history(world, caster, spell, check)?;
@@ -1909,7 +1945,11 @@ fn validate_start_with_policy(
     aura_spell_restrictions::check_target(world, caster, target, spell)?;
     toy_facing::check_cast(world, caster, spell.id, target)?;
     crate::hunter_pet::check_cast(world, caster, spell, target)?;
-    spell_costs(world, caster, spell)?;
+    let at_max = match check {
+        StartCheck::ResourceMax(power) => Some(power),
+        _ => None,
+    };
+    checked_costs(world, caster, spell, at_max)?;
     crate::profession::check_cast_items(world, caster, spell)?;
     disenchant::check_cast(world, caster, spell)?;
     Ok(target)
@@ -2171,10 +2211,37 @@ pub(crate) fn spell_costs(
     caster: Entity,
     spell: &SpellInfo,
 ) -> Result<Vec<(CostPool, f32)>, CastFailure> {
+    checked_costs(world, caster, spell, None)
+}
+
+fn cost_available(
+    world: &World,
+    caster: Entity,
+    pool: CostPool,
+    current: f32,
+    at_max: Option<PowerType>,
+) -> Result<f32, CastFailure> {
+    match pool {
+        CostPool::Power(power) if at_max == Some(power) => {
+            powers::power_value(world, caster, power)
+                .map(|(_, max)| max)
+                .ok_or(CastFailure::NotEnoughPower(power))
+        }
+        _ => Ok(current),
+    }
+}
+
+fn checked_costs(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    at_max: Option<PowerType>,
+) -> Result<Vec<(CostPool, f32)>, CastFailure> {
     applicable_costs(world, caster, spell)?
         .into_iter()
         .map(|(pool, amount, current)| {
-            if current < amount {
+            let available = cost_available(world, caster, pool, current, at_max)?;
+            if available < amount {
                 Err(match pool {
                     CostPool::Power(power) => CastFailure::NotEnoughPower(power),
                     CostPool::Health => CastFailure::NotEnoughHealth,
@@ -2553,13 +2620,17 @@ pub(crate) fn execute_cast(
         },
     );
     let previous_efflo_summons = efflorescence::read_previous_summons(world, caster, spell.id);
+    scripts::spawn_ravager_field(world, caster, spell, explicit, 0);
     missiles::launch(world, caster, spell, plan, 0);
     efflorescence::initialize_new_summons(world, caster, previous_efflo_summons);
     scripts::refund_execute(world, caster, spell, explicit, &costs);
+    scripts::consume_phalanx(world, caster, spell, explicit);
     if let Some(hook) = scripts::after_cast(spell.id) {
         hook(world, caster, spell);
     }
-    spell_mods::consume_charges(world, caster, spell);
+    if !spell.cast_parent_owns_modifier_charges {
+        spell_mods::consume_charges(world, caster, spell);
+    }
     blooming_infusion::after_cast(world, caster, spell);
     druid_transform::after_cast(world, caster, spell);
     // Spell::finish (Spell.cpp:4448-4450): some spells stop the caster's auto-attack.
@@ -3312,12 +3383,14 @@ pub(super) fn cast_triggered_with_item_level(
     launch_triggered_spell(world, caster, &spell, explicit, depth)
 }
 
-/// The sourced CastSpellExtraArgs values carried by a real triggered cast.
+/// Sourced per-cast overrides retained in real triggered spell snapshots.
 #[derive(Default)]
 pub(crate) struct TriggeredSpellOverrides {
     pub effect0_amount: Option<f32>,
     pub aura_stacks: Option<u8>,
     pub original_caster: Option<Entity>,
+    /// Authored background-action lifetime, e.g. native Whirling Blade's amount.
+    pub duration_ms: Option<i32>,
 }
 
 pub(crate) fn cast_triggered_with_overrides(
@@ -3333,6 +3406,13 @@ pub(crate) fn cast_triggered_with_overrides(
     };
     spell.cast_aura_stacks = values.aura_stacks;
     spell.cast_original_caster = values.original_caster;
+    if let Some(milliseconds) = values.duration_ms {
+        let Some(duration) = spell.misc.as_mut().and_then(|misc| misc.duration.as_mut()) else {
+            warn!("Triggered spell {spell_id} skipped: duration override has no native duration");
+            return false;
+        };
+        duration.duration_ms = milliseconds;
+    }
     if let Some(amount) = values.effect0_amount {
         let Some(effect) = spell.effects.iter_mut().find(|effect| effect.index == 0) else {
             warn!("Triggered spell {spell_id} skipped: effect0 override has no effect0");
@@ -3428,7 +3508,8 @@ fn launch_triggered_spell(
     depth: u8,
 ) -> bool {
     match plan_triggered_spell(world, caster, spell, explicit, depth) {
-        Ok(plan) => {
+        Ok(mut plan) => {
+            scripts::snapshot_guillotine_health(world, caster, spell, &mut plan);
             #[cfg(test)]
             if let Some(mut observed) =
                 world.get_resource_mut::<test_harness::ObservedTriggeredCasts>()
@@ -3436,6 +3517,7 @@ fn launch_triggered_spell(
                 observed.0.push((caster, spell.id, explicit));
             }
             crate::achievement::record_spell_cast(world, caster, spell.id);
+            scripts::spawn_ravager_field(world, caster, spell, explicit, depth);
             missiles::launch(world, caster, spell, plan, depth);
             druid_transform::after_cast(world, caster, spell);
             true
