@@ -71,6 +71,16 @@ A config is the purchased `(node, entry, ranks)` list merged with the granted en
 
 The config does not need to spend all its points.
 
+## Trait Effect Points
+
+Contract: [Trait Effect Points](../../specs/trait-effect-points.md). Native70448 has1408 `TraitDefinitionEffectPoints` rows referencing1358 curves/4340 points; Curve/CurvePoint already belong to the normal importer. `SpellStore` now loads the point rows and referenced curves, retaining them when a native harness scopes spell records. The current referenced corpus uses Type0 linear and Type2 (point-count-dependent cosine/Bezier); unsupported referenced types fail loading rather than substituting a curve.
+
+Applied trait spell entries in `TraitLoadout.spells` retain `SpellTrait { definition_id, rank }`, with rank equal to purchased plus granted ranks. Public talent-spell iteration still returns the existing spell ID/passive records. Exact learned definition spell IDs own this metadata; triggered children do not inherit it. This shares the existing NPC/player trait allocation boundary without a player-only cast check.
+
+`modded_base_points`, rolled values and power-drain values apply the matching definition/effect-index operation after raw CalcBaseValue, before variance/level/point modifiers. Set replaces the value; Multiply multiplies it; None preserves it. As in TC SpellInfo.cpp532–553, variance adds the **original** base contribution, not a second trait-scaled contribution. TC DB2Stores.cpp2296–2458 grounds interpolation, including repeated-X Bezier control points.
+
+Current proof: [source/native ledger](../../handoffs/trait-effect-points-proof-ledger.md). Two fresh rank2 native amount REDs observed; implementation GREEN/control proof pending. Existing-passive rank relearning is not yet implemented; TC Player.cpp29283–29284 explicitly unlearns/relearns changed ranks.
+
 ## Starter Build
 
 Contract: [Starter Build](../../specs/talent-starter-build.md). `trait_data` loads populated `trait_tree_loadout` rows per tree/spec, with entries in `OrderIndex` order. Pinned TrinityCore a352b1fa `TraitMgr.cpp:1038–1096` supplies grant initialization, entry-zero resolution, cumulative `NumPoints`, and ordered affordable rows without blocking the other currency. Each candidate also passes normal trait-purchase eligibility before being adopted: installed Arms loadout rows reach apex110407 at OrderIndex56 while spec currency is still affordable, before its level81 availability condition49327. Its group9029 costs one spec point per rank. Currency-only construction therefore failed at level70; eligibility defers this row until its authored level instead of invalidating the whole Starter build. Ordinary level/rank/gate/parent/budget rules remain authoritative. No hero choices are invented when authored rows omit them.

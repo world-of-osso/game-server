@@ -21,6 +21,7 @@ pub mod positivity;
 #[cfg(test)]
 pub(crate) mod serverside_tests;
 mod trait_data;
+mod trait_effect_points;
 
 use std::path::Path;
 use std::time::Instant;
@@ -382,6 +383,7 @@ pub struct EmpowerStage {
 #[cfg_attr(test, derive(Clone))]
 pub struct SpellStore {
     spells: crate::catalog_data::CatalogData<Vec<crate::catalog_data::CatalogData<SpellInfo>>>,
+    trait_effect_points: crate::catalog_data::CatalogData<trait_effect_points::TraitEffectPoints>,
 }
 
 impl SpellInfo {
@@ -424,15 +426,38 @@ impl SpellStore {
         #[cfg(test)]
         return Self {
             spells: spells.into_iter().map(Into::into).collect(),
+            trait_effect_points: Default::default(),
         };
         #[cfg(not(test))]
-        Self { spells }
+        Self {
+            spells,
+            trait_effect_points: Default::default(),
+        }
     }
 
     #[cfg(test)]
     pub(crate) fn fixture(mut spells: Vec<SpellInfo>) -> Self {
         spells.sort_by_key(|spell| spell.id);
         Self::from_spells(spells)
+    }
+
+    /// Keep native trait curves when a harness scopes the spell records.
+    #[cfg(test)]
+    pub(crate) fn fixture_from_catalog(spells: Vec<SpellInfo>, catalog: &Self) -> Self {
+        let mut store = Self::fixture(spells);
+        store.trait_effect_points = catalog.trait_effect_points.clone();
+        store
+    }
+
+    pub(crate) fn trait_base_points(
+        &self,
+        definition_id: u32,
+        rank: u32,
+        effect_index: u8,
+        value: f32,
+    ) -> f32 {
+        self.trait_effect_points
+            .apply(definition_id, rank, effect_index, value)
     }
 
     /// Production's server-side loader against an independent prepared copy.

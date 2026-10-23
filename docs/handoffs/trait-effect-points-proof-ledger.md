@@ -11,6 +11,13 @@ Import native TraitDefinitionEffectPoints through the normal DB2 importer; retai
 - Normal `scripts/db2.py` already imports all Curve/CurvePoint rows. All1358/4340 referenced frozen DB rows were compared against exact native CSV bytes/numeric fields; no missing curves. New registry/schema entry still pending.
 - Private DB `game-engine/data/diagnostics/trait-points-2026-10-23/world.trait-points.db` adds all1408 point rows to the frozen552458c2 source, canonical untouched. `private-source.proof.json` records database/CSV hashes and equality.
 
+## Implementation slices
+
+1. Normal importer/schema, richer applied trait spell entries and shared CalcValue integration implement the two source-proven fresh amount gaps. Scoped spell fixtures retain the catalog's native point/curve data. Preserve original-base variance semantics. Fresh GREEN/control proof pending.
+2. Existing-aura rank replacement remains separate until its genuine behavioral RED is observed. No aura lifecycle production change yet.
+
+`trait-points-red-v3` at8da8a9c17 was SHED-stopped during compilation (RAM5.7GiB), exit-15; not behavior evidence. No tests were changed to bypass native eligibility.
+
 ## Native behavioral tests
 
 Ignored tests were pushed before production changes. Atbc5ce36ca, `trait-points-red-v2` observed both genuine rank2 amount failures below. Rank1/lifecycle instead hit native condition20153: lowering both ranks leaves21 earlier class points, below23. Corrected controls omit native final class-group8482; the lifecycle keeps that same early-class spell book at both ranks. Runtime remains unchanged; control/lifecycle rerun pending.

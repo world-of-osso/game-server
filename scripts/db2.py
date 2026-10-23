@@ -79,6 +79,7 @@ TABLES = [
     "TraitNode",
     "TraitNodeEntry",
     "TraitDefinition",
+    "TraitDefinitionEffectPoints",
     "TraitEdge",
     "TraitCond",
     "TraitCost",
