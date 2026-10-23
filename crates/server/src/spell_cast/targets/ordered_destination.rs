@@ -10,10 +10,12 @@ pub(in crate::spell_cast) fn check_destination_support(
     spell: &SpellInfo,
 ) -> Result<(), super::super::CastFailure> {
     let needs_force_height = super::super::attributes(spell, 9) & FORCE_DEST_LOCATION != 0
-        && spell
-            .effects
-            .iter()
-            .any(|effect| effect.implicit_targets.contains(&148));
+        && spell.effects.iter().any(|effect| {
+            effect
+                .implicit_targets
+                .iter()
+                .any(|&id| matches!(id, 74 | 148))
+        });
     if needs_force_height {
         // Spell.cpp9286–9292 selects Object.cpp2802–2826 MAX_HEIGHT/ten-step queries.
         return Err(super::super::CastFailure::Unsupported(
@@ -30,6 +32,7 @@ pub(super) fn sets_destination(selector: Selector) -> bool {
             | Selector::ExistingDest
             | Selector::DestTowardsCaster
             | Selector::CasterRandom
+            | Selector::DestTargetRandom
             | Selector::DestRandom
             | Selector::DestOffset(_)
             | Selector::ForwardLeap
@@ -71,13 +74,21 @@ pub(super) fn select_slot(
     let id = effect.implicit_targets[slot];
     let destination = effect_dest_slot(world, caster, explicit, effect, slot, id, previous);
     match id {
+        74 => {
+            let target = explicit
+                .filter(|target| same_map(world, caster, *target))
+                .ok_or(super::super::CastFailure::InvalidTarget)?;
+            let start = position(world, target).ok_or(super::super::CastFailure::InvalidTarget)?;
+            let destination = destination.ok_or(super::super::CastFailure::InvalidTarget)?;
+            move_destination(world, target, start, destination, 74).map(Some)
+        }
         148 | 78 | 79 => {
             let start = previous
                 .map(|dest| dest.position)
                 .or_else(|| position(world, explicit.unwrap_or(caster)))
                 .ok_or(super::super::CastFailure::InvalidTarget)?;
             let destination = destination.ok_or(super::super::CastFailure::InvalidTarget)?;
-            move_destination(world, caster, start, destination).map(Some)
+            move_destination(world, caster, start, destination, 148).map(Some)
         }
         62 | 138 => ground_destination(world, caster, effect, destination),
         _ => Ok(destination),
@@ -88,26 +99,29 @@ pub(super) fn select_slot(
 /// and dry/non-hover allowed-Z services as native pull destinations.
 fn move_destination(
     world: &mut World,
-    caster: Entity,
+    reference: Entity,
     start: Vec3,
     mut destination: Dest,
+    selector: u32,
 ) -> Result<Dest, super::super::CastFailure> {
     let map = world
-        .get::<crate::maps::InMap>(caster)
+        .get::<crate::maps::InMap>(reference)
         .copied()
         .ok_or(super::super::CastFailure::InvalidTarget)?;
     let los = world
         .get_resource::<crate::line_of_sight::LineOfSight>()
         .ok_or_else(|| {
-            super::super::CastFailure::Unsupported("target148 requires collision data".into())
+            super::super::CastFailure::Unsupported(format!(
+                "target{selector} requires collision data"
+            ))
         })?;
     destination.position =
         super::super::teleport::clamp_to_wall(los, map, start, destination.position);
-    let can_fly = caster_can_fly(world, caster);
+    let can_fly = caster_can_fly(world, reference);
     let mut ground = world
         .get_resource_mut::<crate::ground::GroundMap>()
         .ok_or_else(|| {
-            super::super::CastFailure::Unsupported("target148 requires ground data".into())
+            super::super::CastFailure::Unsupported(format!("target{selector} requires ground data"))
         })?;
     let crate::ground::GroundProbe::Supported(height) =
         ground.creature_ground_in(map, destination.position)

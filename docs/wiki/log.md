@@ -1,3 +1,14 @@
+## 2026-10-22 — Elemental Overload actual-cast RED
+
+[Cast boundary](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22): actualownMastery/SK/Lightning damage passes,45284absent; genuine1RED/removedMastery1positive8.51s/zero warnings. TC400ms/defaultNONE callback and native effect amounts qualified; first188196→45284 consequence445c3ccc6 uses actual charged-modifier provenance, no livebuff guess. Timingcontrolbf4098b52 and targetedGREEN pending; other roots/additionaloverloads/fullAPL remain open. Inundate prior packet landed through leadin962.
+
+## 2026-10-22 — Target74 paired destination/recipient proof
+
+[Toys](systems/toys.md#target74-and-cranky-crab-source-action-boundary-2026-10-22): sourceMax/inheritedA identity, explicit-target reference/direct geometry and one sampled center cached with recipients per processed group. Generic49f4476e8 follows9RED/control8PASS44.14s plus native86088 ordering1RED/control1PASS26.25s; exact166662 ride-gap ca56cd3f4 is separate. Composite34GREEN111.78s retains148 physical/selector, critter, Coyote,99104slot6,21,dummy and census controls. Pipeline543 unchanged;onlyCrab target74 becomes source battle-pet ride interaction gap. Fmt0/manual readability;check pending. No live player-cast default/native playback/Crab ride certificate. Initial compile-only fixture failure and no-admission capacity attempt are excluded and retained separately.
+
+## 2026-10-22 — Target74 and Cranky Crab source action audit
+
+[Toys](systems/toys.md#target74-and-cranky-crab-source-action-boundary-2026-10-22):74 centers explicit object, not the independently selected150 critter; source B421 Radius3/Min3/Max6 must use Max6 before Max-Min sampling. SourceCrab289330 promises a battle-pet ride but149189 lacks a sourced vehicle/AI/script binding. Generic destination support must retain that named action gap, not false-admit scenery. Native70448 geometry/authority and ride-marker tests added; RED pending.
 ## 2026-10-22 — Partial corridor continuation
 
 [Navigation](systems/navigation.md#partial-corridor-continuation--2026-10-22): Gorek native graph26936polygons connected; unchanged8192pool reaches in296/263/84polygons over three queries. Production library+mover RED reproduce discarded partial corridor/immediate Blocked. Typed resource-limited partial paths and segment-end repath keep asset/pool/tolerance values; completed-search disconnects stay immediately Blocked. At884178a15 Gorek path/mover and three Brackenhide movers GREEN, genuine-disconnect/complete-leg controls GREEN; combined48controls40PASS/8existing ignored Stockade/current-victim FAIL. Baseline/follower/check gates pending, no overall acceptance.
@@ -71,6 +82,10 @@
 ## 2026-10-22 — Feel the Burn native eligibility and async stack RED
 
 [Native boundaries](investigations/follower-data.md#feel-the-burn-native-eligibility-and-overlap--2026-10-22): actualFireBlast2mastery4s positive; actualFireballwrongproc and independent4s application2vs1 are genuine2RED/21.74s. [Generic native490](systems/auras.md#native-asynchronous-stack-expirations--2026-10-22) has pinned SimC authority plus exact70448 flag, no guessed per-spell timer. Runtimeac5eb241d/source/spec committed; GREEN pending, cases remain ignored. Frozen Ascendance entry packetb11 unchanged.
+## 2026-10-22 — Vexamus projected native partial
+
+[Vexamus](systems/boss-scripts.md#vexamus-projected-native-partial--2026-10-22): ignored firstExpulsion/Bomb RED before source5→18/15→18 lanes. Post-master d1336fa13 native4GREEN49.02s Normal1/projectedFollower205, real cone damage,82s ongoing completions, actual second copy, credit/corpse/native-home-reset; producer1GREEN and stable-key SQL receipt. Energy/MaxdormuOrbs/Bombdummy/timeline context remain gaps, no whole-fight/publication claim.
+
 ## 2026-10-22 — Native power receipt observability
 ## 2026-10-22 — Utility Attr4 master refresh
 
@@ -151,6 +166,13 @@ Native BM10 passes at4f88 (16.25s): initial75, exact2s cadence, ordinary retarge
 ## 2026-10-21 — Native DPS parity adapter
 
 [Adapter](systems/dungeon-simulator.md#native-dps-parity-adapter--2026-10-21): source-qualified instance/linked effects and physical armor enchants; separate allocated/effective SimC traits. Real NPC follower and native living out-of-range controller avoid first-tick-only false acceptance. Merged24controls GREEN; actual pet absence/no learned casts and missing30s add replacement give three explicit ignored REDs. Existing pet systems/native metadata and timed native summon retirement now pass all3 opt-in300s qualifications atd698d1d3b (Hunter76petcasts, Demo50petcasts,10waves/20distinctadds); source/stat/rotation parity remains unproved. Stable-key Duck174884 SQL/receipt only, no canonical mutation or fabricated stats. Original18 SimC runs retained; expanded reference coverage now60 benchmarks across30 selected profiles, with actual three-target recipient evidence. Eight actor-aware factor ledgers expose missing output/per-hit/count differences and excess FoF pulses; conditional guardian means need whole-player sample weighting. Current16/16 native execution cases pass, but timed-three reveals a real passive-dummy multi-enemy admission gap: follower AI does not count CombatRefs-only targets, and only the main dummy is the owner's victim. No fake threat/flags or AI edits. Bounded113-spell/206-base-effect comparison agrees70391/70448 in16 fields; effective multipliers remain unisolated. Health-phase/consumable/item-option differences and whole40-spec acceptance remain open.
+## 2026-10-22 — Granyth finite pre-Lance partial
+
+[Granyth](systems/boss-scripts.md#granyth-finite-pre-lance-partial--2026-10-22): ignoredRED firstShards/finite/reset before10.6/23.9Shards+15.5Stomp. Post-master25f9ffe17 native4GREEN62.73s Normal1/projectedFollower205, real area damage/copy-credit/corpse/native-home reset; producer1GREEN and stable-key SQL receipt. EruptionEnergy/Lance/reload/Mythicadds remain named gaps, no whole-fight/publication claim.
+## 2026-10-22 — Treemouth non-Mythic partial
+
+[Treemouth](systems/boss-scripts.md#treemouth-non-mythic-partial--2026-10-22): ignored firstWhip/Spit/reset RED before source3lanes/namedlowerhold policy. Post-master5c2efe459 native4GREEN48.84s Normal1/projectedFollower205, real cone damage/native-home/reset/copy-credit/corpse; stable-key SQL fresh-copy receipt. Energy/Consume/slime/selector context remains gaps, no whole-fight/publication claim.
+
 ## 2026-10-22 — Class4 zone-only ingress
 
 [Optional power metadata](investigations/follower-data.md#class4-zone-only-ingress--2026-10-22): az914b real205 VaultRune summon exposed a shared zone-entry resource panic. Production now preserves source stats/identity and explicitly warns/leaves power absent when SpellCastPlugin is not installed; no fake pools or fixture-only patch. Present-table native initialization is unchanged. Native832762da4 reproof: real failingRune1/1 (17.91s), present-table class4Energy+Anub4 controls5/5 (70.99s); no duplicate broad gate.
