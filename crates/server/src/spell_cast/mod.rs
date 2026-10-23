@@ -32,6 +32,8 @@ pub(crate) mod auto_repeat;
 #[cfg(test)]
 mod auto_shot_repeat_tests;
 #[cfg(test)]
+mod hit_positivity_tests;
+#[cfg(test)]
 pub(crate) mod holy_metrics;
 #[cfg(test)]
 mod holy_words_tests;
