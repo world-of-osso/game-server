@@ -25,7 +25,10 @@ const MAGIC_DISPEL_TYPE: u32 = 1;
 const MASS_DISPEL_PATIENTS: usize = 3;
 const SURGE: u32 = 114255;
 const MENDING_WARD: u32 = 41635;
+const DIRECT_HEALS: SpellSet = &[SERENITY, FLASH_HEAL];
 const OWNED: SpellSet = &[
+    SERENITY,
+    FLASH_HEAL,
     PRAYER_OF_MENDING,
     SANCTIFY,
     DIVINE_HYMN,
@@ -94,6 +97,7 @@ pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
                 urgent: false,
             })
         })
+        .or_else(|| choose_direct_heal(ctx))
         .or_else(|| choose_fortitude(ctx))
         .or_else(|| choose_holy_nova(ctx));
     match decision {
@@ -154,9 +158,27 @@ fn choose_emergency(ctx: &TriageContext<'_>) -> Option<Decision> {
     ctx.candidates
         .iter()
         .find(|candidate| {
-            candidate.decision.urgent && !OWNED.contains(&candidate.decision.spell_id)
+            let spell = candidate.decision.spell_id;
+            candidate.decision.urgent && (DIRECT_HEALS.contains(&spell) || !OWNED.contains(&spell))
         })
         .map(|candidate| candidate.decision)
+}
+
+fn choose_direct_heal(ctx: &TriageContext<'_>) -> Option<Decision> {
+    ctx.candidates.iter().find_map(|candidate| {
+        let decision = candidate.decision;
+        if !DIRECT_HEALS.contains(&decision.spell_id) {
+            return None;
+        }
+        let threshold = ctx
+            .entries
+            .iter()
+            .find(|entry| entry.spell_id == decision.spell_id)?
+            .conditions
+            .health_below?;
+        let injured = health_fraction(ctx, decision.target)? < threshold;
+        injured.then_some(decision)
+    })
 }
 
 fn choose_fade(ctx: &TriageContext<'_>) -> Option<Decision> {
@@ -347,7 +369,7 @@ fn choose_prayer_of_healing(ctx: &TriageContext<'_>) -> Option<HolyDecision> {
     let direct_efficiency = ctx
         .candidates
         .iter()
-        .filter(|candidate| !OWNED.contains(&candidate.decision.spell_id))
+        .filter(|candidate| DIRECT_HEALS.contains(&candidate.decision.spell_id))
         .map(|candidate| candidate.effective_healing / candidate.mana_cost.max(f32::MIN_POSITIVE))
         .max_by(f32::total_cmp)
         .unwrap_or(0.0);

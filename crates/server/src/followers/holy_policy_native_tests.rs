@@ -170,10 +170,7 @@ fn cast_binding_source(group: &mut GroupFixture, spell: u32, target: Entity) {
     group.h.advance(200);
 }
 
-#[test]
-fn holy_policy_native32_defers_direct_heals_for_chip_damage() {
-    let mut group = native_group_at(32);
-    let target = group.h.caster;
+fn damage_native_member(group: &mut GroupFixture, target: Entity, fraction: f32) {
     let enemy = group.h.npc;
     let maximum = group.h.app.world().get::<Health>(target).unwrap().max;
     let source_scale = crate::level_scaling::UnitScaling::of(group.h.app.world(), enemy);
@@ -184,8 +181,15 @@ fn holy_policy_native32_defers_direct_heals_for_chip_damage() {
         group.h.app.world_mut(),
         enemy,
         target,
-        maximum * 0.01 / health_per_damage,
+        maximum * fraction / health_per_damage,
     );
+}
+
+#[test]
+fn holy_policy_native32_defers_direct_heals_for_chip_damage() {
+    let mut group = native_group_at(32);
+    let target = group.h.caster;
+    damage_native_member(&mut group, target, 0.01);
     assert!(fraction(&group, target) > 0.98 && fraction(&group, target) < 1.0);
     assert!(own_aura(&group.h, group.priest, 114255).is_none());
     let first = group.h.inbox.log.len();
@@ -204,6 +208,55 @@ fn holy_policy_native32_defers_direct_heals_for_chip_damage() {
         oversized.is_empty(),
         "non-emergency chip damage must not bypass authored direct-heal thresholds: {oversized:?}"
     );
+}
+
+#[test]
+fn holy_policy_native32_moderate_injury_uses_flash_not_serenity() {
+    let mut group = native_group_at(32);
+    let target = group.h.caster;
+    damage_native_member(&mut group, target, 0.3);
+    creature_cast(
+        group.h.app.world_mut(),
+        group.priest,
+        33076,
+        Some(target),
+        false,
+    )
+    .unwrap();
+    super::kit_clearcasting_tests::wait_for_gcd(&mut group.h, group.priest, 2061);
+    assert!(owned_ward(&group));
+    assert!(fraction(&group, target) > 0.4 && fraction(&group, target) < 0.8);
+    assert!(
+        !super::healer_triage::read_patient(group.h.app.world(), target)
+            .unwrap()
+            .emergency,
+        "moderate control must be outside the shared emergency deadline"
+    );
+    let first = group.h.inbox.log.len();
+    for _ in 0..100 {
+        step_henry(&mut group);
+        if group.h.inbox.log[first..].iter().any(|event| {
+            event.source == Some(group.priest.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(2061)
+        }) {
+            break;
+        }
+    }
+    let events = &group.h.inbox.log[first..];
+    assert!(events.iter().any(|event| {
+        event.source == Some(group.priest.to_bits())
+            && event.target == Some(target.to_bits())
+            && event.kind == CombatLogKind::Heal
+            && event.spell_id == Some(2061)
+            && event.amount > event.overflow
+    }));
+    assert!(events.iter().all(|event| {
+        event.source != Some(group.priest.to_bits())
+            || event.kind != CombatLogKind::Heal
+            || event.spell_id != Some(2050)
+    }));
 }
 
 #[test]

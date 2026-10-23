@@ -88,9 +88,14 @@ Holy Nova uses its native self target (RangeIndex1), never an enemy pursuit for
 this zero-range spell. Require shared healing-safe inputs, the selected kit's
 engaged-enemy count in its native radius, and no living fresh enemy or protected
 breakable CC in that footprint. Holy owns the decision; no generic movement change.
-These are project decisions, not DB2 magnitudes. Owned cooldown/upkeep rows stay
-owned even when no native admission is available; ordinary direct healing remains
-available through the shared generic candidate ranking.
+These are project decisions, not DB2 magnitudes. Holy owns ordinary Serenity and
+Flash Heal as well as cooldown/upkeep decisions. Outside shared emergencies,
+ordinary direct heals honor their authored kit `health_below` thresholds (current
+Serenity40%, Flash Heal80%); minor injury must not bypass them through generic
+candidate execution. Native Surge retains its separate below90% choice, and
+emergency direct rescue retains shared candidate ranking regardless of routine
+thresholds. Prayer of Healing efficiency still compares against the same ordinary
+direct-heal candidates. Owned rows stay owned when no native admission exists.
 
 ## Consequence coverage required
 
