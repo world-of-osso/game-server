@@ -5,6 +5,7 @@ The standing healer benchmark replays recorded dungeon incoming hits in the head
 ## What it must do
 
 - [ ] Record one actual Stockade pull sequence, seed, tick and incoming raw damage, with stable source/party-slot identity and hit/crit flags; replay the same intake for every supported healer.
+- [ ] Preserve recorded source native levels and per-spawn tuning deltas across healer-dependent initialization RNG; native tuning/identity drift is a named gap rather than an invented stat sheet.
 - [ ] Capture before target mitigation, then replay through native target armor, resistance, absorbs and damage reductions. Preserve trigger-depth proc eligibility and separate damage-shield owner/bonus-caster identity. Missing native mitigation or caster identity remains a named gap, never a post-mitigation fallback.
 - [ ] Report JSON and Markdown party deaths, overheal percentage, ending mana, idle GCD equivalents and effective healing per combat second for specs65,256,257,264,270,105,1468; blocked specs retain null metrics and named gaps.
 - [ ] Use the frozen intake's recorded combat window for eHPS and combined effective healing-plus-absorb throughput, even after early wipes; retain native observed combat seconds separately.

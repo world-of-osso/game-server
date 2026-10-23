@@ -135,6 +135,11 @@ pub(super) fn replay(intake: &Intake, spec: u32) -> Result<Value, String> {
     {
         return Err("RECORDED_PARTY_SLOT_OR_NATIVE_SOURCE_ABSENT".into());
     }
+    if intake.hits.iter().any(|hit| !intake.sources.contains_key(&hit.source_guid)
+        || matches!(hit.kind, HitKind::Spell { bonus_source_guid: Some(guid), .. } if !intake.sources.contains_key(&guid))) {
+        return Err("RECORDED_SOURCE_SCALING_METADATA_ABSENT".into());
+    }
+    super::healer_intake::apply_source_snapshots(app.world_mut(), &intake.sources, &actors)?;
     freeze_sources(app.world_mut(), &actors);
     let mut recorder = super::healer_metrics::start(app.world_mut(), &graph, &party, &actors);
     app.init_resource::<PendingHits>();
@@ -220,7 +225,10 @@ pub(super) fn replay(intake: &Intake, spec: u32) -> Result<Value, String> {
     metrics["throughput_denominator"] = json!(
         "frozen intake recorded party-combat window; identical for all specs including early wipes"
     );
-    let mut gaps = vec!["RECORDED_FUTURE_DAMAGE_ALERTS_NOT_REPLAYED"];
+    let mut gaps = vec![
+        "RECORDED_FUTURE_DAMAGE_ALERTS_NOT_REPLAYED",
+        "RECORDED_SOURCE_GEOMETRY_NOT_REPLAYED",
+    ];
     if intake.hits.iter().any(|hit| hit.school & !1 != 0) {
         gaps.push("NATIVE_PARTIAL_SPELL_RESISTANCE_UNIMPLEMENTED");
     }

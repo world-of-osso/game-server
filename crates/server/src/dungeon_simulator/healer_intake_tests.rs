@@ -70,7 +70,12 @@ fn healer_benchmark_raw_spell_receipt_precedes_native_absorb() {
 }
 
 pub(super) fn small_intake() -> Intake {
+    let _rng = crate::random::seed_scope(1);
     let graph = super::graph::read_graph().unwrap();
+    let mut app = super::runtime::build_app();
+    let copy = super::runtime::create_copy(&mut app);
+    let actors = super::runtime::spawn_population(&mut app, copy);
+    let sources = super::healer_intake::snapshot_sources(app.world(), &actors).unwrap();
     let pack = graph
         .packs
         .iter()
@@ -100,6 +105,7 @@ pub(super) fn small_intake() -> Intake {
         end_tick: 40,
         source_status: "concrete_fixture".into(),
         hits: vec![hit.clone(), Hit { tick: 5, ..hit }],
+        sources,
         frames: vec![Frame {
             tick: 0,
             positions: vec![Some([graph.entrance[0], graph.entrance_height, graph.entrance[1]]); 5],

@@ -73,10 +73,36 @@ pub(super) fn snapshot_sources(
 }
 
 pub(super) fn apply_source_snapshots(
-    _world: &mut World,
-    _sources: &BTreeMap<u32, SourceSnapshot>,
-    _actors: &BTreeMap<u32, Entity>,
+    world: &mut World,
+    sources: &BTreeMap<u32, SourceSnapshot>,
+    actors: &BTreeMap<u32, Entity>,
 ) -> Result<(), String> {
+    let current = snapshot_sources(world, actors)?;
+    for (&guid, saved) in sources {
+        let live = current
+            .get(&guid)
+            .ok_or_else(|| format!("RECORDED_SOURCE_ABSENT:{guid}"))?;
+        if (live.entry, live.native_level) != (saved.entry, saved.native_level) {
+            return Err(format!("NATIVE_SOURCE_IDENTITY_OR_LEVEL_CHANGED:{guid}"));
+        }
+        match (saved.scaling, live.scaling) {
+            (Some(recorded), Some(current))
+                if (
+                    recorded.content_tuning_id,
+                    recorded.min_level,
+                    recorded.max_level,
+                ) == (
+                    current.content_tuning_id,
+                    current.min_level,
+                    current.max_level,
+                ) =>
+            {
+                world.entity_mut(actors[&guid]).insert(recorded);
+            }
+            (None, None) => {}
+            _ => return Err(format!("NATIVE_SOURCE_SCALING_CATALOG_CHANGED:{guid}")),
+        }
+    }
     Ok(())
 }
 
@@ -97,6 +123,7 @@ pub(super) struct Intake {
     pub end_tick: u32,
     pub source_status: String,
     pub hits: Vec<Hit>,
+    pub sources: BTreeMap<u32, SourceSnapshot>,
     pub frames: Vec<Frame>,
     pub pulls: serde_json::Value,
     pub source_deaths: Vec<(u32, u32)>,
@@ -110,6 +137,7 @@ pub(crate) struct Capture {
     pub start_tick: u32,
     pub hits: Vec<Hit>,
     pub consumed_absorbs: BTreeMap<Entity, f64>,
+    pub(super) source_snapshots: BTreeMap<u32, SourceSnapshot>,
     pub gaps: Vec<String>,
 }
 

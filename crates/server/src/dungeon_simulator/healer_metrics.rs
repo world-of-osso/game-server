@@ -75,10 +75,16 @@ pub(super) fn start(
         })
         .collect();
     let start_tick = super::healer_intake::tick(world);
+    let (source_snapshots, gaps) = match super::healer_intake::snapshot_sources(world, actors) {
+        Ok(sources) => (sources, Vec::new()),
+        Err(gap) => (BTreeMap::new(), vec![gap]),
+    };
     world.insert_resource(super::healer_intake::Capture {
         members: members.clone(),
         sources,
         start_tick,
+        source_snapshots,
+        gaps,
         ..Default::default()
     });
     let actor_packs = graph
@@ -353,6 +359,7 @@ impl Recorder {
                 "source_deaths": self.source_deaths,
                 "end_tick": self.frames.last().map_or(0, |frame| frame.tick),
                 "hits": world.resource::<super::healer_intake::Capture>().hits,
+                "sources": world.resource::<super::healer_intake::Capture>().source_snapshots,
                 "frames": self.frames,
                 "pulls": self.pull_ends,
                 "gaps": world.resource::<super::healer_intake::Capture>().gaps,
