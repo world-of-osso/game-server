@@ -57,6 +57,39 @@ class NativeDiffTests(unittest.TestCase):
         row = next(r for r in result["factors"] if r["factor"] == "a_mod")
         self.assertEqual(row["native_attribution"], "unattributed product")
 
+    def test_observed_native_products_compare_to_printed_simc_components(self):
+        native = deepcopy(self.recorded())
+        amount = next(e for e in native["events"] if e["event"] == "direct_amount")["factors"]
+        result = [e for e in native["events"] if e["event"] == "result"][-1]["factors"]
+        amount["ap_term"] = amount["a_power"] * amount["a_mod"]
+        amount["sp_term"] = amount["s_power"] * amount["s_mod"]
+        amount["native_scaled_amount"] = amount["base"] + amount["ap_term"] + amount["sp_term"]
+        result["source_product"] = result["da_mul"] * result["ply_mul"] * result["vs_mul"] * result["per_mul"]
+        result["target_product"] = result["tgt_da_mul"] * result["tgt_mitg_da_mul"]
+        output = diff.diff_receipts(native, self.recorded(), 12294)
+        self.assertEqual(output["status"], "match")
+        product = next(row for row in output["factors"] if row["factor"] == "source_product")
+        self.assertIn("da_mul", product["simc_derivation"])
+
+    def test_zero_sp_coefficients_do_not_make_unused_power_a_formula_mismatch(self):
+        native = deepcopy(self.recorded())
+        next(e for e in native["events"] if e["event"] == "direct_amount")["factors"]["s_power"] = 3554
+        output = diff.diff_receipts(native, self.recorded(), 12294)
+        power = next(row for row in output["factors"] if row["factor"] == "s_power")
+        self.assertEqual(power["status"], "different")
+        self.assertFalse(power["coefficient_term_active"])
+        self.assertEqual(output["status"], "match")
+
+    def test_empty_factor_records_are_incomplete_not_matching(self):
+        empty = {"events": [{"event": "direct_amount", "spell_id": 12294, "factors": {}}]}
+        self.assertEqual(diff.diff_receipts(empty, empty, 12294)["status"], "incomplete")
+
+    def test_nonfinite_native_only_factor_fails_explicitly(self):
+        native = deepcopy(self.recorded())
+        next(e for e in native["events"] if e["event"] == "direct_amount")["factors"]["native_only"] = float("nan")
+        with self.assertRaises(ValueError):
+            diff.diff_receipts(native, self.recorded(), 12294)
+
     def test_missing_spell_and_nonfinite_factor_fail_explicitly(self):
         with self.assertRaises(ValueError):
             diff.select_impact(self.recorded(), 999999)
