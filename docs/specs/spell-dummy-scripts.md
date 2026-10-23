@@ -48,7 +48,7 @@ Tests: `spell_cast/dummy20_tests.rs`. Local Mainline12.1.0.69933 and TDB1210 onl
 ### Nineteenth-batch counts, healing totals and owned damage
 
 - [x] Flurry44614 casts its native s1 count of228596/228354 bolts, not all four stored trigger slots. Optional Freezing/talent bridges remain uncertified.
-- [x] Mutilate1329 variable394 halves27576's damage and leaves5374 unchanged; no universal offhand multiplier is inferred.
+- [x] Mutilate1329 leaves5374 unchanged and applies27576's native exclusive-offhand AP selection once. Variable394 describes that half-offhand result, not a second damage multiplier (TC Unit.cpp6880–6891/9991–9995).
 - [x] Dispersion47585 variable872 heals its native total over its native initial/regular ticks. Intangibility288733 adds s2 to that total; Altered Form453729's existing native duration modifier extends the healing clock. Equal tick distribution is derived from the total and unchanged native clock, not a new timer. Per-tick rounding remains normal engine rounding.
 - [x] Successful34914 dispel applies native87204 Horror to the dispeller, from the original aura owner. Expiry/cancellation never retaliate. Root aura4 Base2 remains unidentified.
 - [x] Havoc80240 copies s1 percent of effective direct single-target Warlock spell damage to the owned marked victim, without recursive copies or a second source modifier/critical roll. Destination immunity/absorption/mitigation still apply. Native single-target ownership excludes replaced marks but preserves foreign owners. Periodic/area/foreign-owner/expired marks do not copy. Range, specialized child selectors, destination mitigation parity and talent variants remain uncertified.

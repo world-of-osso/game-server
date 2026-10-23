@@ -9,7 +9,7 @@ const MAP: InMap = InMap {
     map_id: 2669,
     instance_id: 1,
 };
-const IDS: &[u32] = &[330398, 196884, 1243638, 1281788, 1242814, 448480];
+const IDS: &[u32] = &[330398, 196884, 1243638, 1281788, 1242814, 448480, 4336];
 
 fn scene() -> (Harness, Position) {
     let mut h = harness(Vec::new(), IDS, 1).expect("native spell fixture");
@@ -148,6 +148,29 @@ fn native_target148_area_enemy_selection_uses_modified_center() {
         units,
         vec![near],
         "center must shift20 toward the caster; original target is outside10"
+    );
+}
+
+#[test]
+fn native_creature_original_destination_survives_normalization_and_landing() {
+    let (mut h, origin) = scene();
+    h.app.add_systems(
+        FixedUpdate,
+        crate::scripted_ai::jump_movement::advance_jumps,
+    );
+    let caster = h.caster;
+    let target = h.npc;
+    // Actual4336 is42/87 without unsupported face-unit/arrival-script options.
+    // 1281788 remains a target148 planning control, not a certified arrival script.
+    super::creature_cast(h.app.world_mut(), caster, 4336, Some(target), false)
+        .expect("native destination Jump removes redundant unit but keeps its destination");
+    h.advance(100);
+    let position = *h.app.world().get::<Position>(caster).unwrap();
+    // Target87 retains the supplied object's exact pose; unlike138 it does not
+    // re-sample terrain (the authored spawn is0.088yd above this baked floor).
+    assert_eq!(
+        position, origin,
+        "native target87 retains the original object destination"
     );
 }
 
