@@ -28,6 +28,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [ ] `HAVOC_BURNING_BLADES_SIMC_POLICY` supplies only the missing452408→453177 child dispatch for positive native Havoc auto-attacks, Chaos Strike/Annihilation hits, First Blood hits and Throw Glaive/Furious Throws. Native DB2 proc admission/chance, effect0 percentage and child duration/period/rolling carry remain authoritative. Periodic damage, ordinary area Blade Dance strikes and unrelated hits cannot feed it. TC a352b1fa has no Burning Blades script; DB2 Dummy effects have zero triggers and neither signed TDB proc nor script registrations name the parent/child link. SimC76f8118 sc_demon_hunter.cpp3088–3112 supplies the residual producer;6878/7040/7455/8258 supply eligibility. No Devourer cosmic policy or fabricated proc row.
 
+### Training dummy combat exit
+
+- [ ] Native31146 uses TC a352b1fa `npc_training_dummy`/`NullCreatureAI`: each attacker leaves combat5s after its last non-DoT hit; DoT damage does not refresh that timer. Combat exit removes only LeavingCombat-interrupt auras, not every foreign aura, and does not enter evade. A still-live native DoT must tick beyond5s. Genuine ordinary-creature EnterEvadeMode continues removing evade-eligible auras. Source: `npcs_special.cpp1382–1421`, `PassiveAI.h55–67`, `Unit.cpp9257`; no harness timer/evade exemption.
+
 ### Measurement
 
 Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` clears explicit raid events for Patchwerk after parsing. The opt-in CLI integration test must observe three actual targets and an adds event; argument-string checks alone did not detect this failure.
