@@ -10,6 +10,12 @@ TC a352b1fa `SpellAuras.cpp524–532` rejects Attr2 `CANT_CRIT` before accepting
 
 Pushed native RED7b92423a7: seven cases, two controls PASS/five feature failures35.83s. Player and class-follower Barbed217200 each record zero crits over32 seeded positive ticks at22.739% native crit. Same-instance Barbed/Renew139 ignore real post-application crit changes; native pet Burning Blood98957 records zero/four with owner crit≥100. CANT+unflagged controls (341408/71023) and an ordinary creature with native +100 spell crit154611 pass. Real Denounce171884, Critical Focus75060 and Luckydo130165 isolate current chance and native bonuses without invented rows/stats/flags/amounts. GREEN/integration proof pending; controlled aura applications do not qualify root cast admission, APL or DPS parity. Evidence: engine `data/diagnostics/dps-parity-fix-2026-10-21/periodic-crit-{native-source.json,red-7b92423a7-native.log}`.
 
+## Sunfire Spiral combo RSK — 2026-10-23
+
+`WW_SUNFIRE_SPIRAL_SIMC_POLICY` applies earned1272415 effect0's native40% to RSK damage185099 only after ordinary Combo Strikes is active. Native aura4 has no class-mask words; pinnedTCsrc, TDB4066script bindings and TC SQL updates have no1272415/Sunfire binding. SimC76f8118 `sc_monk.cpp945–953` supplies the condition, not a coefficient. Repeating RSK clears the ordinary combo/Hit Combo state and receives neither mastery nor Sunfire.
+
+Actual native level69 TP-funded RSK→repeat-RSK: fba821595 genuineRED1561.3763 versus2185.9268 expected; b6b3a93e6 native2GREEN39.92s including original TP/Provoke mastery control. Repeated1303.1418, mastery18.63%, HitCombo1% and Sunfire40% all come from native state; no buff/resource grants. Test enabled afterward without body change. Post-fix300s ST54887.59/3T87182.52 remain−73.41%/−76.85%; [census/source/receipts](../../handoffs/ww-source-census.md#rsktp-coefficient-and-sunfire-investigation), [contract](../../specs/windwalker-parity.md).
+
 ## Intensifying Flame tick bridge — 2026-10-23
 
 `FIRE_INTENSIFYING_FLAME_SIMC_TICK_BRIDGE` connects actual Ignite12654 effect0 ticks to native419800. SimC76f8118 `sc_mage.cpp2502–2567` supplies this missing bridge; TC a352b1fa has no named script and DB2 has no child trigger. Active416714 supplies the native owner-local target cap, percentage, chance and periodic mask. Its current70448 row has cap3, percentage30, chance101 and no ICD, charges or RPPM. The leaf's coefficient and flags remain native; SimC damage-flag overrides are not imported. [Contract](../../specs/auras.md#intensifying-flame).

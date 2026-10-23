@@ -49,10 +49,41 @@ fn literal_ww_native_combo_facts_follow_the_proposed_action_and_ignore_utility()
     let mut run = super::super::prepare(269, 1).unwrap();
     let clock = fixture(run.app.world());
     let rotation = Rotation::load(run.app.world_mut(), run.actor, clock).unwrap();
+    for (name, expected) in [
+        ("cooldown.whirling_dragon.remains", 0.0),
+        (
+            "cooldown.invoke_power_infusion_0.duration",
+            i64::MIN as f64 / 1000.0,
+        ),
+    ] {
+        assert_eq!(
+            rotation
+                .value_for(
+                    run.app.world_mut(),
+                    run.actor,
+                    &run.targets,
+                    &action("tiger_palm"),
+                    name
+                )
+                .unwrap(),
+            expected
+        );
+    }
+    assert!(
+        rotation
+            .value_for(
+                run.app.world_mut(),
+                run.actor,
+                &run.targets,
+                &action("tiger_palm"),
+                "cooldown.unknown_whirling_dragon.remains"
+            )
+            .is_err()
+    );
     assert_eq!(
         rotation
             .value_for(
-                run.app.world(),
+                run.app.world_mut(),
                 run.actor,
                 &run.targets,
                 &action("tiger_palm"),
@@ -65,7 +96,7 @@ fn literal_ww_native_combo_facts_follow_the_proposed_action_and_ignore_utility()
     assert_eq!(
         rotation
             .value_for(
-                run.app.world(),
+                run.app.world_mut(),
                 run.actor,
                 &run.targets,
                 &action("tiger_palm"),
@@ -77,7 +108,7 @@ fn literal_ww_native_combo_facts_follow_the_proposed_action_and_ignore_utility()
     assert_eq!(
         rotation
             .value_for(
-                run.app.world(),
+                run.app.world_mut(),
                 run.actor,
                 &run.targets,
                 &action("blackout_kick"),
@@ -90,7 +121,7 @@ fn literal_ww_native_combo_facts_follow_the_proposed_action_and_ignore_utility()
     assert_eq!(
         rotation
             .value_for(
-                run.app.world(),
+                run.app.world_mut(),
                 run.actor,
                 &run.targets,
                 &action("tiger_palm"),
@@ -148,10 +179,11 @@ fn run_literal(count: usize) {
                 events.iter().any(|event| {
                     event.source == Some(run.actor.to_bits())
                         && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(107270)
                         && event.kind == CombatLogKind::Damage
                         && event.amount > 0
                 }),
-                "each real target must receive native damage"
+                "each real target must receive actual native SCK107270 damage"
             );
         }
     }
@@ -181,6 +213,101 @@ fn literal_ww_native_st_executes_its_real_selected_kit_without_generic_starvatio
 #[ignore = "literal WW native RED: 30s real three-target casts and recipients"]
 fn literal_ww_native_three_target_executes_sck_and_damages_all_native_targets() {
     run_literal(3);
+}
+
+#[test]
+#[ignore = "native FoF damage RED; exact literal fixture ordering and frozen inputs"]
+fn literal_ww_native_fof_channel_releases_damage_on_the_measured_target() {
+    let _scope = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare(269, 1).unwrap();
+    super::super::engage(&mut run);
+    let clock = fixture(run.app.world());
+    let mut rotation = Rotation::load(run.app.world_mut(), run.actor, clock).unwrap();
+    let mut observed_channel = false;
+    for _ in 0..600 {
+        rotation
+            .drive(run.app.world_mut(), run.actor, &run.targets)
+            .unwrap();
+        let world = run.app.world();
+        if !observed_channel
+            && world
+                .get::<shared::casting::CastState>(run.actor)
+                .is_some_and(|cast| cast.spell_id == 113656)
+        {
+            observed_channel = true;
+            let aura = world
+                .get::<crate::auras::ActiveAuras>(run.actor)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 113656);
+            eprintln!(
+                "FOF_NATIVE_PROBE {}",
+                json!({
+                    "cast": format!("{:?}", world.get::<shared::casting::CastState>(run.actor)),
+                    "position": format!("{:?}", world.get::<shared::components::Position>(run.actor)),
+                    "rotation": format!("{:?}", world.get::<shared::components::Rotation>(run.actor)),
+                    "target_position": format!("{:?}", world.get::<shared::components::Position>(run.targets[0])),
+                    "aura_effects": aura.map(|aura| aura.effects.iter().map(|effect| json!({"index": effect.index,"aura": effect.aura_type,"period_ms": effect.period_ms,"trigger": effect.trigger_spell})).collect::<Vec<_>>())
+                })
+            );
+        }
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(113656)
+                && event.kind == CombatLogKind::CastSuccess),
+        "literal fixture must actually cast FoF"
+    );
+    assert!(observed_channel, "native FoF must enter its actual channel");
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(117418)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "actual FoF113656 must deliver its native117418 periodic damage, not merely log a root cast"
+    );
+}
+
+#[test]
+#[ignore = "explicit native non-Fixture control; requires the prepared parity inputs"]
+fn literal_ww_native_non_fixture_follower_keeps_its_native_kit() {
+    let mut run = super::super::prepare(269, 1).unwrap();
+    super::super::engage(&mut run);
+    for _ in 0..80 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<super::super::literal_rotation::LiteralParityFixture>(run.actor)
+            .is_none()
+    );
+    assert!(
+        run.app
+            .world()
+            .get::<crate::followers::Follower>(run.actor)
+            .is_some()
+    );
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+        "non-Fixture follower still runs its independent native kit"
+    );
 }
 
 #[test]
