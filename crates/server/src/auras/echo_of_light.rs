@@ -2,11 +2,26 @@
 //! supplies the producer shape; local77485 amount and77489 clock win.
 use bevy::prelude::*;
 
-use super::AuraInstance;
 use super::procs::AuraEvent;
+use super::{ActiveAuras, AuraInstance};
 
 pub(super) const ECHO_MASTERY: u32 = 77_485;
 pub(super) const ECHO_HEAL: u32 = 77_489;
+const PRISMATIC_ECHOES: u32 = 390_967;
+
+/// SimC76f8118 sc_priest.cpp3704–3711: multiply Echo, not raw mastery/Renew.
+fn prismatic_multiplier(world: &World, caster: Entity) -> f32 {
+    let percent = world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == PRISMATIC_ECHOES && aura.caster == caster)
+        })
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+        .map_or(0.0, |effect| effect.amount);
+    1.0 + percent / 100.0
+}
 
 pub(super) fn check_heal(_world: &World, _aura: &AuraInstance, event: &AuraEvent) -> bool {
     event.heal.is_some_and(|heal| heal > 0.0)
@@ -19,7 +34,7 @@ pub(super) fn apply_echo(world: &mut World, _unit: Entity, aura: &AuraInstance, 
     let Some(effect) = aura.effects.iter().find(|effect| effect.index == 0) else {
         return;
     };
-    let total = heal * effect.amount / 100.0;
+    let total = heal * effect.amount / 100.0 * prismatic_multiplier(world, event.actor);
     if total <= 0.0 {
         return;
     }

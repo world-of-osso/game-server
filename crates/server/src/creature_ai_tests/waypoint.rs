@@ -180,8 +180,8 @@ fn waypoint_at_current_position_does_not_dirty_position() {
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins);
     app.insert_resource(WorldData {
-        templates: HashMap::new(),
-        spawns: vec![],
+        templates: HashMap::new().into(),
+        spawns: vec![].into(),
         spawns_by_map: HashMap::new(),
         waypoints: HashMap::from([(7, path)]),
         ..Default::default()

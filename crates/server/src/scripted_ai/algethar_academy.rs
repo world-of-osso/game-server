@@ -12,7 +12,10 @@ const BRANCH_OUT: u32 = 388623;
 const BURST_FORTH: u32 = 388923;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
-    matches!(name, ANCIENT_SCRIPT | super::doragosa::SCRIPT)
+    matches!(
+        name,
+        ANCIENT_SCRIPT | super::doragosa::SCRIPT | super::vexamus::SCRIPT
+    )
 }
 
 pub(super) fn creature_ai(world: &World, actor: Entity, name: &str) -> Option<Box<dyn CreatureAi>> {
@@ -20,6 +23,9 @@ pub(super) fn creature_ai(world: &World, actor: Entity, name: &str) -> Option<Bo
         return None;
     }
     let boss = super::instance_script::bound_boss(world, actor)?;
+    if name == super::vexamus::SCRIPT {
+        return Some(super::vexamus::creature_ai(boss));
+    }
     if name == super::doragosa::SCRIPT {
         return Some(super::doragosa::creature_ai(boss));
     }

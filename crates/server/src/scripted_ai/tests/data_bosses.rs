@@ -67,6 +67,8 @@ mod gargolmar_speech;
 mod gizlock;
 #[path = "gnomeregan.rs"]
 mod gnomeregan;
+#[path = "granyth.rs"]
+mod granyth;
 #[path = "data_bosses_group_criteria.rs"]
 mod group_criteria;
 #[path = "herald_call.rs"]
@@ -121,20 +123,28 @@ mod omor_pushback;
 mod omor_slay;
 #[path = "omrogg.rs"]
 mod omrogg;
+#[path = "orator.rs"]
+mod orator;
 #[path = "porung.rs"]
 mod porung;
+#[path = "skarmorak.rs"]
+mod skarmorak;
 #[path = "talondras.rs"]
 mod talondras;
 #[path = "the_maker.rs"]
 mod the_maker;
 #[path = "theradras.rs"]
 mod theradras;
+#[path = "treemouth.rs"]
+mod treemouth;
 #[path = "tww_kyrioss.rs"]
 mod tww_kyrioss;
 #[path = "umbrelskul.rs"]
 mod umbrelskul;
 #[path = "vazruden_slay.rs"]
 mod vazruden_slay;
+#[path = "vexamus.rs"]
+mod vexamus;
 #[path = "vyletongue.rs"]
 mod vyletongue;
 
@@ -374,9 +384,9 @@ fn encounter_fixture(
     inputs.install(&mut app);
     // Keep producer-authenticated map/binding inputs already installed in this app.
     let mut maps = app.world().resource::<MapStore>().clone();
-    if matches!(entry, 234648 | 215405 | 215407 | 207946) {
+    if matches!(entry, 234648 | 215405 | 215407 | 207946 | 216619 | 210156) {
         // Install production ground before source addon application or combat.
-        // Mirror Image, Blink and Eye use native grounded destinations.
+        // Mirror Image, Blink, Eye and the Orator source arena use real ground.
         let wdt = maps.maps.get(&map_id).unwrap().wdt_file_data_id;
         app.insert_resource(crate::ground::GroundMap::new(
             &crate::ground::ground_data_dir(),
@@ -465,7 +475,7 @@ fn encounter_fixture(
             spawn_prepared_actor(&mut app, inputs.authored_spawn(difficulty), map, difficulty);
         let near = if [
             ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 16807, 17306, 17308,
-            209230, 215405, 215407, 216619, 207946,
+            209230, 215405, 215407, 216619, 207946, 194181, 186616, 186120, 210156,
         ]
         .contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)
@@ -497,6 +507,15 @@ fn encounter_fixture(
         ..map
     };
     let (other, other_connection) = spawn_player(&mut app, other_map, near, 2);
+    if entry == 216619 {
+        // This headless app omits InterestPlugin. TC Oration fires JustAppeared
+        // on the first update: establish its real observer before that boundary.
+        let mut visibility = crate::interest::NetworkVisibility::default();
+        visibility.gain_visibility(connection);
+        app.world_mut()
+            .entity_mut(boss.expect("authored Orator"))
+            .insert(visibility);
+    }
     let mut h = Harness {
         app,
         players: vec![

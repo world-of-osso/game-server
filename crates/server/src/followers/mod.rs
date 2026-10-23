@@ -30,6 +30,8 @@ mod kit_light_of_titans_tests;
 mod kit_overrides;
 
 #[cfg(test)]
+mod fire_efficiency_tests;
+#[cfg(test)]
 mod formation_tests;
 #[cfg(test)]
 mod kit_proc_fidelity_tests;
