@@ -5,46 +5,46 @@ const GEOMANCER: u32 = 476;
 const FIREBALL: u32 = 20793;
 
 fn geomancer() -> (Harness, Entity) {
+    source_smart_actor(GEOMANCER, 0, &[FIREBALL, 12544])
+}
+
+fn source_smart_actor(entry: u32, map_id: u32, spells: &[u32]) -> (Harness, Entity) {
     let data = data().expect("world.db fixture");
     let mut app = stockade_app(data);
     let path = world_db_path();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let expected = crate::world_data::load_expected_stats(&conn);
     let mut templates = crate::world_data::load_templates(&conn, &expected);
-    templates.retain(|entry, _| *entry == GEOMANCER);
+    templates.retain(|id, _| *id == entry);
     crate::world_data::load_template_models(&conn, &mut templates);
     app.insert_resource(WorldData {
         templates: templates.into(),
         class_level_base_mana: data.base_mana.clone(),
+        template_addons: crate::world_data::load_template_addons(&conn),
+        addons: crate::world_data::load_spawn_addons(&conn),
         ..Default::default()
     });
     let all = crate::spell_cast::test_harness::world_db().unwrap();
     app.insert_resource(SpellStore::fixture(
-        [FIREBALL, 12544]
+        spells
             .iter()
             .map(|id| all.store.get(*id).unwrap().clone())
             .collect(),
     ));
     app.insert_resource(smart_ai::load_smart_scripts(&path).unwrap());
-    let spawn = conn.query_row(
-        "SELECT guid, position_x, position_y, position_z, orientation, spawntimesecs FROM content_creature WHERE id1 = 476 AND map = 0 ORDER BY guid LIMIT 1",
-        [],
-        |row| Ok(CreatureSpawn {
-            guid: row.get(0)?, template_entry: GEOMANCER, map: 0, zone_id: 12,
-            position_x: row.get(1)?, position_y: row.get(2)?, position_z: row.get(3)?,
-            orientation: row.get(4)?, wander_distance: 0.0, movement_type: 0,
-            spawntimesecs: row.get(5)?, display_id: None, unit_flags: None,
-            spawn_difficulties: vec![0], equipment_id: 0,
-        }),
-    ).unwrap();
-    let map = InMap::continent(0);
+    let spawn = crate::world_data::load_spawns(&conn)
+        .into_iter()
+        .filter(|spawn| spawn.template_entry == entry && u32::from(spawn.map) == map_id)
+        .min_by_key(|spawn| spawn.guid)
+        .expect("actual source SmartAI placement");
+    let map = InMap::continent(map_id);
     let wd = app.world().resource::<WorldData>();
     let mut queue = bevy::ecs::world::CommandQueue::default();
     let mut commands = Commands::new(&mut queue, app.world());
     let creature = crate::zones::spawn_creature(
         &mut commands,
         wd,
-        &wd.templates[&GEOMANCER],
+        &wd.templates[&entry],
         &mut crate::zones::CreatureSpawnContext {
             map: map,
             difficulty_id: 0,
@@ -55,7 +55,7 @@ fn geomancer() -> (Harness, Entity) {
         &spawn,
         &mut rand::thread_rng(),
     )
-    .expect("source geomancer level context");
+    .expect("source SmartAI actor level context");
     queue.apply(app.world_mut());
     // Outside proximity aggro until explicitly engaged; inside Fireball's range.
     let (player, connection) = spawn_player(
@@ -75,6 +75,54 @@ fn geomancer() -> (Harness, Entity) {
     };
     h.advance(0.05);
     (h, creature)
+}
+
+#[test]
+#[ignore = "SmartAI immunity-clear RED must execute before shared projection fix"]
+fn smartai_source_leviroth_spellhit_clear_enables_real_linked_attack() {
+    // Actual26452/spawn20203126 on571, source47170→144(0)→145(0)→46767→49.
+    // This qualifies the SpellHit/action boundary, not the quest-item admission.
+    let (mut h, creature) = source_smart_actor(26452, 571, &[46767, 19643]);
+    let immunity = UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC;
+    assert_eq!(
+        h.app.world().get::<UnitFlags>(creature).unwrap().0 & immunity,
+        immunity
+    );
+    h.engage(creature);
+    assert!(
+        h.app
+            .world()
+            .get::<CombatStatus>(creature)
+            .is_none_or(|status| !status.0)
+    );
+    let player = h.player();
+    dispatch(
+        h.app.world_mut(),
+        creature,
+        Hook::SpellHit {
+            caster: player,
+            spell_id: 47170,
+        },
+    );
+    assert_eq!(
+        h.app.world().get::<UnitFlags>(creature).unwrap().0 & immunity,
+        0
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<CombatStatus>(creature)
+            .is_some_and(|status| status.0)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(creature)
+            .unwrap()
+            .0,
+        Some(player),
+        "real source-linked AttackStart must acquire the invoker after flag clear"
+    );
 }
 
 fn wait_for_fireball(h: &mut Harness, creature: Entity) -> CastState {
