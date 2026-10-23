@@ -326,6 +326,15 @@ pub(super) fn replay(intake: &Intake, spec: u32) -> Result<Value, String> {
         if !app.world().resource::<PendingHits>().hits.is_empty() {
             return Err("REPLAY_FIXED_TICK_NOT_EXECUTED".into());
         }
+        let capture = app.world().resource::<super::healer_intake::Capture>();
+        let expected = app.world().resource::<PendingHits>().manual_raw_receipts;
+        if capture.hits.len() != expected {
+            return Err(format!(
+                "UNRECORDED_NATIVE_INCOMING_DAMAGE:tick={tick}:observed={}:manual={expected}:recent={:?}",
+                capture.hits.len(),
+                capture.hits.iter().rev().take(8).collect::<Vec<_>>()
+            ));
+        }
         recorder.observe_frame(app.world());
         for &(_, guid) in intake.source_deaths.iter().filter(|(at, _)| *at == tick) {
             if let Some(&source) = actors.get(&guid) {
