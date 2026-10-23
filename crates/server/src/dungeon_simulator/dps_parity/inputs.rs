@@ -74,7 +74,7 @@ pub(super) fn read_actor(
     }
 }
 
-fn read_reference_race(name: &str) -> Result<u8, String> {
+pub(super) fn read_reference_race(name: &str) -> Result<u8, String> {
     let path = std::env::var_os("DPS_PARITY_WORLD_DB").ok_or("DPS_PARITY_WORLD_DB absent")?;
     let db =
         rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
