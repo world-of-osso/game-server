@@ -6,6 +6,83 @@ use shared::components::Level;
 const BATTLE_SHOUT: u32 = 6673;
 const AIMED_SHOT: u32 = 19434;
 
+#[test]
+#[ignore = "weapon AP regression: observe native RED before implementation"]
+fn dps_parity_native_tiger_palm_includes_equipped_weapon_ap_before_battle_shout() {
+    use shared::item_data::ItemDefinitionSource::Retail;
+    use shared::protocol::{CombatLogKind, EquipmentSlot};
+
+    // Actual spec269 reference weapon, not a synthetic damage range/coefficient.
+    const WEAPON: u32 = 268215;
+    const TIGER_PALM: u32 = 100780;
+    let mut h = harness_with(
+        Vec::new(),
+        &[TIGER_PALM, BATTLE_SHOUT, SUNWELL_RADIANCE],
+        10,
+        true,
+    )
+    .unwrap();
+    let data = world_db().unwrap();
+    let templates = crate::item_templates::load_item_templates(&data.powers_db).unwrap();
+    let template = templates.get(Retail, WEAPON).unwrap();
+    let tables = h
+        .app
+        .world()
+        .resource::<crate::item_stats::ItemScalingTables>();
+    let item_level = tables.item_level(&template.scaling);
+    let dps = shared::item_scaling::weapon_dps(
+        tables,
+        &template.scaling,
+        template.inventory_type,
+        item_level,
+    )
+    .unwrap() as f32;
+    // TC Player.cpp8180 converts unrounded native table DPS to integer weapon AP.
+    let weapon_ap = (dps * 6.0).trunc();
+    assert!(weapon_ap > 0.0);
+    h.app.insert_resource(templates);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::stats::EquippedItems {
+            items: vec![(EquipmentSlot::MainHand, Retail, WEAPON)],
+        });
+    h.advance(5);
+    let base = stats(&h).attack_power;
+    let caster = h.caster;
+    apply_mask(&mut h, BATTLE_SHOUT, caster, 1);
+    let current = stats(&h);
+    assert_power(current.attack_power, base * 1.05);
+    let spell = data.store.get(TIGER_PALM).unwrap();
+    let coefficient = spell.effects[0].bonus_coefficient_from_ap;
+    // TC Unit.cpp9973–10000 includes weapon AP before its percentage;
+    // Unit.cpp6869–6891 supplies that total to the native AP coefficient.
+    let expected = varied((base + weapon_ap) * 1.05 * coefficient);
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(caster)
+        .unwrap()
+        .crit_pct = 0.0;
+    apply_native_enemy_dodge_reduction(&mut h);
+    h.cast_and_deliver(TIGER_PALM, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let hit = h
+        .inbox
+        .log
+        .iter()
+        .find(|event| {
+            event.source == Some(caster.to_bits())
+                && event.target == Some(h.npc.to_bits())
+                && event.spell_id == Some(TIGER_PALM)
+                && event.kind == CombatLogKind::Damage
+        })
+        .expect("native Tiger Palm damage");
+    assert!(
+        expected.contains(&(hit.amount as f32)),
+        "TC weapon AP: base={base}, weapon_ap={weapon_ap}, coefficient={coefficient}, expected={expected:?}, actual={hit:?}"
+    );
+}
+
 fn actor(class: u8) -> Harness {
     let mut h = harness_with(
         Vec::new(),
