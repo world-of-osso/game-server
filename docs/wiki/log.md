@@ -1,3 +1,7 @@
+## 2026-10-22 — Imaginary Gun companion server contract qualified
+
+Exact279843 shape admissionbec533e21 follows four genuineUseToyREDs;26GREEN191.47s plus corrected-filter Coyote4GREEN38.62s/check0-53.68s/no warnings/fmt0. Full1173 census543→544 only163705,no other row/reason delta. Real owned-journal/legacy current critter,10s recipient aura/natural expiry,180s natural recovery/reuse,foreign/guardian/ordinary-Ally isolation,invariants,four drifts. Compile/import and missile-sibling fixture failures excluded; three capacity-only attempts separately retained. Native animation/audio/PetCancelAura rejection unqualified. [Toy source boundary](systems/toys.md#imaginary-gun-companion-visual-boundary-2026-10-22).
+
 ## 2026-10-22 — Target74 landed; Imaginary Gun capacity-only attempt
 
 Target74 tg967 landedec7b24f9f,2165PASS/0FAIL/8ignored2350.45s/check0-129s/fmt0;d23 independently ancestor of911d7be82,inactive local/remote branch cleaned. Imaginary Gun test/spec21a1 pushed/readback clean; first60 normal-capacity checks started no build, not RED. [Toy boundaries](systems/toys.md#imaginary-gun-companion-visual-boundary-2026-10-22).
