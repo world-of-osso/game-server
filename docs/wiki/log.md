@@ -1,3 +1,7 @@
+## 2026-10-23 — Label point modifier lifecycle
+
+[Generic label-point boundary](systems/auras.md#label-point-modifier-recalculation--2026-10-23): four actual native late/remove passive cases confirm stale snapshots atcf496f61b10.52s. Reuse native CalcValue for amount-only updates; guarded owned passive/permanent effects and changed-modifier propagation. GREEN/lead gate pending; no data, rank, coefficient or hotfix changes. [Proof ledger](../handoffs/aura-label-points-proof-ledger.md).
+
 ## 2026-10-23 — Native Sunfire Spiral RSK boundary
 
 [Sunfire](systems/auras.md#sunfire-spiral-combo-rsk--2026-10-23): native learned40% conditional RSK multiplier, TC/TDB/mask absence checked. Actual TP-funded RSK/repeat1561.3763vs2185.9268 genuineRED→2GREEN39.92s atb6b3a93e6, original Combo control retained. Native coefficients unchanged.300s ST54887.59/3T87182.52 remain−73.41%/−76.85%; [remaining channels/proof](../handoffs/ww-source-census.md#rsktp-coefficient-and-sunfire-investigation).

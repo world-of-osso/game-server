@@ -87,7 +87,7 @@ fn is_pct(aura_type: u32) -> bool {
 }
 
 /// Whether a spell-mod effect of `aura` applies to `spell`.
-fn affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> bool {
+pub(super) fn affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> bool {
     match effect.aura_type {
         ADD_FLAT_MODIFIER | ADD_PCT_MODIFIER => class_mask_affects(aura, effect, spell),
         _ => u32::try_from(effect.misc_values[1])
