@@ -90,7 +90,7 @@ fn bank_power(h: &mut Harness, unit: Entity, power: PowerType, generators: &[(u3
     generate_power(h, unit, (power, maximum), generators);
 }
 
-fn generate_power(
+pub(super) fn generate_power(
     h: &mut Harness,
     unit: Entity,
     goal: (PowerType, f32),

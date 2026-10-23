@@ -245,4 +245,6 @@ Native resolver first execution at77c0f56ed reached two fixture setup failures, 
 
 `native-action-red-v4-dev.{log,proof.json}` at1e38873a7 compiled successfully; both cases recorded three Judgments but neither spender. Not a qualified resolver RED: the unselected control also failed. Added an actual earned-power assertion with native rank aura/combat/event diagnostics before controller execution; no resource grants or production changes. Next run must identify the setup boundary before implementing the resolver.
 
+After trait-point tip50eb68971 was queued as parent gatetp1034, merged shared literal driver9912a2917 as51a79c22b. Resolver fixture funding now uses the existing native resource-generation helper until actual earned Holy Power meets the finisher's catalog cost, not an admitted-cast count. Native StatsPlugin supplies ordinary derived-stat refresh; no power/SP/AP override. Production resolver still unchanged. Next RED uses the private point-enabled DB because the new spell loader requires TraitDefinitionEffectPoints.
+
 Shared spell-oracle receipts are available under engine `data/diagnostics/simc-spell-oracle-2026-10-23/70/manifest.json`: Final Verdict19, Dawnlight28, Crusading Strike30 and Perfected Guillotine2 matching formula records; Divine Arbiter did not trigger. Reuse these receipts; no separate SimC hand-run.

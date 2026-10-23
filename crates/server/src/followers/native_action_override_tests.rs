@@ -7,7 +7,7 @@ use crate::class_progression::KnownSpells;
 use crate::spell_cast::test_harness::Harness;
 use crate::trait_config::Purchase;
 use bevy::prelude::*;
-use shared::components::{Health, Player, Position};
+use shared::components::{Health, Player, Position, PowerType};
 use shared::protocol::CombatLogKind;
 
 const TEMPLARS_VERDICT: u32 = 85256;
@@ -40,7 +40,9 @@ fn selected_ret_purchases() -> Vec<Purchase> {
 }
 
 fn ret_fixture(purchases: &[Purchase]) -> (Harness, Entity) {
-    let (mut h, actor) = at_level(209057, RET_LEVEL, |_| {});
+    let (mut h, actor) = at_level(209057, RET_LEVEL, |app| {
+        app.add_plugins(crate::stats::StatsPlugin);
+    });
     let mut profile = h
         .app
         .world()
@@ -70,49 +72,26 @@ fn ret_fixture(purchases: &[Purchase]) -> (Harness, Entity) {
     (h, actor)
 }
 
-fn earn_finisher_power(h: &mut Harness, actor: Entity) {
-    let mut generators = 0;
-    for _ in 0..600 {
-        match crate::spell_cast::creature_cast(
-            h.app.world_mut(),
-            actor,
-            JUDGMENT,
-            Some(h.npc),
-            false,
-        ) {
-            Ok(()) => generators += 1,
-            Err(crate::spell_cast::CastFailure::OnCooldown)
-            | Err(crate::spell_cast::CastFailure::OnGlobalCooldown)
-            | Err(crate::spell_cast::CastFailure::NoCharges) => {}
-            Err(error) => panic!("native Ret Judgment generator failed: {error:?}"),
-        }
-        h.advance(1);
-        if generators == 3 {
-            let power = crate::spell_cast::powers::power_value(
-                h.app.world(),
-                actor,
-                shared::components::PowerType::HolyPower,
-            );
-            assert!(
-                power.is_some_and(|(current, _)| current >= 3.0),
-                "fixture's three ordinary Judgments did not bank finisher power: power={power:?}, rank_known={}, rank_aura={}, combat={:?}, events={:?}",
-                h.app
-                    .world()
-                    .get::<KnownSpells>(actor)
-                    .unwrap()
-                    .contains(315867),
-                crate::auras::has_aura(h.app.world(), actor, 315867),
-                h.app.world().get::<shared::components::CombatStatus>(actor),
-                h.inbox
-                    .log
-                    .iter()
-                    .filter(|event| event.source == Some(actor.to_bits()))
-                    .collect::<Vec<_>>()
-            );
-            return;
-        }
-    }
-    panic!("three native Judgment generators did not finish: {generators}");
+fn earn_finisher_power(h: &mut Harness, actor: Entity, finisher: u32) {
+    let world = h.app.world();
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(finisher)
+        .unwrap();
+    let required = crate::spell_cast::applicable_costs(world, actor, spell)
+        .unwrap()
+        .into_iter()
+        .filter(|(pool, _, _)| *pool == crate::spell_cast::CostPool::Power(PowerType::HolyPower))
+        .map(|(_, amount, _)| amount)
+        .sum();
+    let target = h.npc;
+    // An admitted Judgment may miss: use earned native power, not cast count.
+    super::rotation_refresh_tests::generate_power(
+        h,
+        actor,
+        (PowerType::HolyPower, required),
+        &[(JUDGMENT, target)],
+    );
 }
 
 fn cast_controller_verdict(h: &mut Harness, actor: Entity, expected: u32) {
@@ -125,7 +104,7 @@ fn cast_controller_verdict(h: &mut Harness, actor: Entity, expected: u32) {
         conditions: Conditions::default(),
     }]
     .into();
-    earn_finisher_power(h, actor);
+    earn_finisher_power(h, actor, expected);
     uses_spell(h, actor, expected);
     h.advance(10);
 }
