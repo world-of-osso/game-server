@@ -310,13 +310,23 @@ Meteor is accepted input drift, not an observed code failure: same frozen binary
 
 Evidence under the usual diagnostics root: `current-master-fixed-3x3/{summary,context,module-timeline,test-costs,schedule-models}.json`, `performance-analysis.md`, raw host/module timelines, `meteor-classification/results.json`, and `current-master-fixed-preflight-summary.json`. No performance implementation follows this analysis without the next bounded evidence/approval.
 
-## Per-key prepared-input initialization (qualification pending)
+## Per-key prepared-input initialization (RED/GREEN and native qualification)
 
 Normal-admission phase attribution at51f2b629d preserves all eight selected native outcomes on fresh qualified source51455391…98d9b. The five prepared cases take169.415s:19cachelookups,12misses/7hits,291.579summed thread-seconds cross-key wait and158.479s global-mutex hold. Snapshot/import/decode account for100.829/18.453/35.872s. A fixed-work three-worker replay removing only cross-key waiting models75.430s, not a measured whole-suite saving. The normal run also observes ancestor memory.high reclaim, so parallel IO and RSS require actual qualification.
 
 New regression03cb7fd24 gates an initializer while eight readers request its key, then requires a different key to finish before releasing the gate. The original global mutex reproduces the intended30.012s/exit101 RED; constructor counts1/1, installed independent resources and warm reuse pass before the unrelated-key progress assertion fails. Gate cleanup occurs before asserting, avoiding poisoned-cache collateral failure.
 
-The registry now stores `Arc<Mutex<Option<Arc<PreparedInputs>>>>` per InputKey. Its global guard covers only lookup/insertion; the per-key mutex covers the existing complete initializer and publication. Identical keys still initialize once, different keys may prepare concurrently, and a failed initializer remains poisoned for that key. No snapshots, importers, decoding, native assertions or gameplay steps change. GREEN and native concurrency/RSS qualification are pending; whole900s/no-swap remains open.
+The registry now stores `Arc<Mutex<Option<Arc<PreparedInputs>>>>` per InputKey. Its global guard covers only lookup/insertion; the per-key mutex covers the existing complete initializer and publication. Identical keys still initialize once, different keys may prepare concurrently, and a failed initializer remains poisoned for that key. No snapshots, importers, decoding, native assertions or gameplay steps change.
+
+Feature7951a2d33 passes the exact regression in0.003339s (timer0.131s), versus intended30.012sRED; build0/817.555s/zero warnings. The matched five native cases all pass on the same514source:169.415→73.051s wall,84.897→96.398CPU (+13.5%). This normal-host observation is not an isolated quiet CPU/wall attribution. Complete affectedAI qualification uses Cargo package cwd/three threads:559selected,542PASS/17existingignored/zero failures, including the new regression. Wall1337.482s/1972.166CPU under317682ancestor memory.high events,73156major faults and minimum6.514GiBhost available. AggregateRSS2281712KiB (2.176GiB), sampled swap3267216KiB (3.116GiB), simultaneousRSS+swap4557060KiB (4.346GiB). This qualifies functional/concurrent/single-module memory behavior, not zero swap or whole-suite composition.
+
+Source51455391…98d9b and sibling lock receipts stay unchanged; a same-library VACUUM control reproduces exact prior snapshot SHAe75c96ee…fb573. Own source link is restored afterward. Evidence `per-key-init/{red,green}/summary.json` and `per-key-init/qualification/{summary,comparison}.json`, all native/timeline receipts. The lead accepts7951a2d33 as pk1027; whole900s/no-swap remains open.
+
+### Attribution conclusions and declined toy slice
+
+Exact-native-SQLite3.49.1 copy control preserves400tables/11961605visible rows/schema forVACUUM/backup/backup/VACUUM. VACUUM wall5.451/3.266s,CPU2.917/1.556s; backup wall4.311/5.383s,CPU1.046/1.008s. Backup saves1.210meanCPU-s/copy (~54%;14.519CPU-s/12copies), but wall order reverses and mean backup is0.489s slower. The lead drops backup as a wall lever; no copy primitive changes.
+
+Measured42toysetups spend103.383summed seconds:47.789harness,35.993redb,10.473toy catalog,3.580summon catalog,0.0096texts. Pennant's18setups take55.420s of58.195s. A conservative immutable-catalog-only proposal retains first parse0.261s/removes123repeated reads, models13.802test-seconds and6.303s three-toy cohort saving (87.872→81.568),5.781spennant saving before clone costs. It preserves18freshApps/DBs and every native action; mutable Harness/DB sharing and counting all55.420s removable are excluded. The lead declines this slice as too small; no toy caching is implemented. `fixture-cost-attribution/{optimization-proposals.md,phase-analysis.json,toy-immutable-proposal-model.json,snapshot-control/comparison.json}` preserve the measured limits.
 
 ## Gate invocation
 

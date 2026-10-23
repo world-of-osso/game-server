@@ -1,3 +1,7 @@
+## 2026-10-22 — Per-key prepared-input publication
+
+[Per-key init](investigations/server-test-performance.md#per-key-prepared-input-initialization-redgreen-and-native-qualification): explicit30sserializationRED→7951a2d33nativeGREEN0.003339s; eight same-key readers/other-keyprogress/counts1/1/Appisolation/warmreuse. Same514sourcefive-native169.415→73.051s; fullaffectedAI542PASS/17ignored, single-moduleRSS2.176GiB plus heavy reclaim/swap, notwholebudget proof. pk1027accepted/queued. Backup wall lever and small toy catalog slice declined; nextwhole-suite top-test attribution pending.
+
 ## 2026-10-22 — Whole-suite overlap and fixture-cost bounds
 
 [Performance](investigations/server-test-performance.md#fixed-source-whole-suite-overlap-and-costs): fixed295e96b4c whole5880enabled/229ignored,1021.809s/6.72GiBRSS/1.065GiBswap; no missing/extra,900s/no-swap still open. Toys/followers start517s/237s earlier but total work binds;3slot splitting no win, conservative4slot+split model938s before new setup. Meteor isolated frozena2FAIL/canonicalPASS is kit publication drift. Concurrent source-specific drop probe128/128GREEN; target pin retained after pruning incident. No new optimization/quiet proof claimed.
