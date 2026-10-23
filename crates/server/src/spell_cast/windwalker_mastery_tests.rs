@@ -116,7 +116,6 @@ fn dps_parity_windwalker_combo_strikes_first_cast_and_repeat_without_hit_combo()
 }
 
 #[test]
-#[ignore = "Sunfire Spiral native conditional damage RED before implementation"]
 fn dps_parity_windwalker_sunfire_spiral_empowers_actual_combo_rsk_only() {
     const SUNFIRE: u32 = 1272415;
     const RSK: u32 = 107428;

@@ -1,3 +1,7 @@
+## 2026-10-23 — Native Sunfire Spiral RSK boundary
+
+[Sunfire](systems/auras.md#sunfire-spiral-combo-rsk--2026-10-23): native learned40% conditional RSK multiplier, TC/TDB/mask absence checked. Actual TP-funded RSK/repeat1561.3763vs2185.9268 genuineRED→2GREEN39.92s atb6b3a93e6, original Combo control retained. Native coefficients unchanged.300s ST54887.59/3T87182.52 remain−73.41%/−76.85%; [remaining channels/proof](../handoffs/ww-source-census.md#rsktp-coefficient-and-sunfire-investigation).
+
 ## 2026-10-23 — Literal controller native-facing boundary
 
 [Shared literal machinery](systems/simc-apl.md#shared-literal-fixture-machinery): original5GREEN retained after extraction; exact-order FoF117418 damage RED despite valid4s channel/226trigger. Literal AutoAttack left CreatureStateIdle; native Pursuing restores chase-facing without changing cone/coefficients/timing. At0e34d8666 native6GREEN39.89s;300s ST51416.15/3T84696.50,−75.09%/−77.51%,117418 now19045/35046DPS. [Receipts/remaining gaps](../handoffs/ww-source-census.md#fof-literal-controller-root-cause).
