@@ -226,7 +226,7 @@ fn literal_ww_native_non_fixture_follower_keeps_its_native_kit() {
     assert!(
         run.app
             .world()
-            .get::<crate::followers::simulator::LiteralParityFixture>(run.actor)
+            .get::<super::super::literal_rotation::LiteralParityFixture>(run.actor)
             .is_none()
     );
     assert!(

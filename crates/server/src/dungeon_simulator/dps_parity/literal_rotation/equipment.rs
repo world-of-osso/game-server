@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 const ALGETHAR_PUZZLE_BOX: u32 = 193701;
 
 #[derive(Clone, Copy)]
-pub(super) struct ItemUse {
+pub(crate) struct ItemUse {
     pub item_id: u32,
     pub on_use: OnUseSpell,
     pub item_level: u16,
@@ -22,7 +22,7 @@ struct Slot {
     on_use: Option<ItemUse>,
 }
 
-pub(super) struct Equipment {
+pub(crate) struct Equipment {
     slots: BTreeMap<String, Slot>,
 }
 
@@ -55,7 +55,7 @@ impl Equipment {
                 .slots
                 .get_key_value(slot)
                 .map(|(key, _)| Some(key.as_str()))
-                .ok_or_else(|| format!("unknown WW item slot {slot}"));
+                .ok_or_else(|| format!("unknown literal item slot {slot}"));
         }
         match action.options.get("name").map(String::as_str) {
             Some("algethar_puzzle_box") => Ok(self
@@ -63,19 +63,21 @@ impl Equipment {
                 .iter()
                 .find(|(_, slot)| slot.item_id == ALGETHAR_PUZZLE_BOX)
                 .map(|(name, _)| name.as_str())),
-            name => Err(format!("unknown WW named item {name:?}")),
+            name => Err(format!("unknown literal named item {name:?}")),
         }
     }
 
     pub fn fact(&self, name: &str, native: &NativeFacts<'_>) -> Result<f64, String> {
         let tail = name
             .strip_prefix("trinket.")
-            .ok_or("WW trinket prefix absent")?;
-        let (index, field) = tail.split_once('.').ok_or("WW trinket requires a field")?;
+            .ok_or("literal trinket prefix absent")?;
+        let (index, field) = tail
+            .split_once('.')
+            .ok_or("literal trinket requires a field")?;
         let slot = match index {
             "1" => "trinket1",
             "2" => "trinket2",
-            _ => return Err(format!("unknown WW trinket {index}")),
+            _ => return Err(format!("unknown literal trinket {index}")),
         };
         let item = self
             .slots
@@ -93,7 +95,7 @@ impl Equipment {
                 0.0
             }),
             "cooldown.remains" | "cooldown.ready" => self.cooldown(slot, item, field, native),
-            _ => Err(format!("unknown WW trinket fact {name}")),
+            _ => Err(format!("unknown literal trinket fact {name}")),
         }
     }
 
@@ -111,7 +113,7 @@ impl Equipment {
                 return Ok(0.0);
             }
             return Err(format!(
-                "WW passive item{} proc cooldown unqualified",
+                "literal passive item{} proc cooldown unqualified",
                 item.item_id
             ));
         };

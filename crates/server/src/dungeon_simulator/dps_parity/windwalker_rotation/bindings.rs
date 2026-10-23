@@ -112,7 +112,26 @@ pub(super) fn build() -> Bindings {
     }
 }
 
-pub(super) fn self_target(name: &str) -> bool {
+pub(super) fn execution_actions()
+-> impl Iterator<Item = super::super::literal_rotation::execution::NativeAction<'static>> {
+    // No native potion inventory is provisioned; the WW report owns that gap.
+    ACTIONS
+        .iter()
+        .filter(|(name, _)| *name != "potion")
+        .map(
+            |&(name, spell)| super::super::literal_rotation::execution::NativeAction {
+                name,
+                spell,
+                self_target: self_target(name),
+                talent: TALENT_ACTIONS
+                    .iter()
+                    .find(|(action, _)| *action == name)
+                    .map(|(_, id)| *id),
+            },
+        )
+}
+
+fn self_target(name: &str) -> bool {
     matches!(
         name,
         "zenith"

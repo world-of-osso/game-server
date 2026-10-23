@@ -1,31 +1,35 @@
 //! Native eligibility is sampled before immutable expression evaluation.
-use super::{
-    bindings,
-    equipment::{Equipment, ItemUse},
-};
+use super::equipment::{Equipment, ItemUse};
 use bevy::prelude::*;
 use server::simc_apl::Action;
 use std::collections::BTreeMap;
 
 #[derive(Clone)]
-pub(super) enum Execution {
+pub(crate) enum Execution {
     Snapshot,
     AutoAttack(Entity),
     Spell(u32, Entity),
     Item(ItemUse, Entity),
 }
 
-pub(super) struct Prepared {
+pub(crate) struct NativeAction<'a> {
+    pub name: &'a str,
+    pub spell: u32,
+    pub talent: Option<u32>,
+    pub self_target: bool,
+}
+
+pub(crate) struct Prepared {
     ready: BTreeMap<String, Execution>,
-    pub xuen_active: bool,
 }
 
 impl Prepared {
-    pub fn read(
+    pub fn read<'a>(
         world: &mut World,
         actor: Entity,
         targets: &[Entity],
         equipment: &Equipment,
+        actions: impl IntoIterator<Item = NativeAction<'a>>,
         needs_snapshot: bool,
     ) -> Result<Self, String> {
         let mut ready = BTreeMap::new();
@@ -40,16 +44,13 @@ impl Prepared {
                 ready.insert("auto_attack".into(), Execution::AutoAttack(target));
             }
         }
-        read_spells(world, actor, targets.first().copied(), &mut ready)?;
+        read_spells(world, actor, targets.first().copied(), actions, &mut ready)?;
         for (slot, item) in equipment.uses() {
             if native_ready(world, actor, item.on_use.spell_id, actor, Some(item))? {
                 ready.insert(format!("item:{slot}"), Execution::Item(item, actor));
             }
         }
-        Ok(Self {
-            ready,
-            xuen_active: read_xuen(world, actor),
-        })
+        Ok(Self { ready })
     }
 
     pub fn execution(
@@ -69,26 +70,24 @@ impl Prepared {
     }
 }
 
-fn read_spells(
+fn read_spells<'a>(
     world: &mut World,
     actor: Entity,
     enemy: Option<Entity>,
+    actions: impl IntoIterator<Item = NativeAction<'a>>,
     ready: &mut BTreeMap<String, Execution>,
 ) -> Result<(), String> {
-    for &(name, id) in bindings::ACTIONS {
-        // Potions require a provisioned native inventory, absent in this follower
-        // fixture. The named gap is retained, not a fabricated consumable cast.
-        if name == "potion"
-            || !talent_permits(world, actor, name)?
-            || !knows_action(world, actor, id)?
-        {
+    for NativeAction {
+        name,
+        spell: id,
+        talent,
+        self_target,
+    } in actions
+    {
+        if !talent_permits(world, actor, talent)? || !knows_action(world, actor, id)? {
             continue;
         }
-        let target = if bindings::self_target(name) {
-            Some(actor)
-        } else {
-            enemy
-        };
+        let target = if self_target { Some(actor) } else { enemy };
         let Some(target) = target else {
             continue;
         };
@@ -99,16 +98,13 @@ fn read_spells(
     Ok(())
 }
 
-fn talent_permits(world: &World, actor: Entity, action: &str) -> Result<bool, String> {
-    let Some(&(_, talent)) = bindings::TALENT_ACTIONS
-        .iter()
-        .find(|(name, _)| *name == action)
-    else {
+fn talent_permits(world: &World, actor: Entity, talent: Option<u32>) -> Result<bool, String> {
+    let Some(talent) = talent else {
         return Ok(true);
     };
     let traits = world
         .get::<crate::class_progression::TraitLoadout>(actor)
-        .ok_or("native selected WW TraitLoadout absent")?;
+        .ok_or("native selected TraitLoadout absent")?;
     Ok(traits
         .active_talent_spells()
         .any(|spell| spell.spell_id == talent))
@@ -117,7 +113,7 @@ fn talent_permits(world: &World, actor: Entity, action: &str) -> Result<bool, St
 fn knows_action(world: &World, actor: Entity, id: u32) -> Result<bool, String> {
     let known = world
         .get::<crate::class_progression::KnownSpells>(actor)
-        .ok_or("native WW actor lacks KnownSpells")?;
+        .ok_or("native literal actor lacks KnownSpells")?;
     if crate::auras::overrides::resolve_spell(world, actor, id) != id {
         return Ok(false);
     }
@@ -138,7 +134,7 @@ fn native_ready(
         .resource::<crate::spell_info::SpellStore>()
         .get(id)
         .cloned()
-        .ok_or_else(|| format!("native WW spell{id} absent"))?;
+        .ok_or_else(|| format!("native literal spell{id} absent"))?;
     if let Some(item) = item {
         spell.cast_item_level = Some(item.item_level);
         spell.cast_retail_item_id = Some(item.item_id);
@@ -148,25 +144,14 @@ fn native_ready(
         Err(
             reason @ (crate::spell_cast::CastFailure::UnknownSpell
             | crate::spell_cast::CastFailure::Unsupported(_)),
-        ) => Err(format!("NATIVE_WW_ADMISSION_GAP: spell{id}: {reason:?}")),
+        ) => Err(format!(
+            "NATIVE_LITERAL_ADMISSION_GAP: spell{id}: {reason:?}"
+        )),
         Err(_) => Ok(false), // Actual native refusal (power/GCD/range/aura/etc).
     }
 }
 
-pub(super) fn read_xuen(world: &mut World, actor: Entity) -> bool {
-    let summons: Vec<_> = world
-        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
-        .iter(world)
-        .filter(|(_, summon)| summon.owner == actor && summon.spell_id == 123904)
-        .map(|(entity, _)| entity)
-        .collect();
-    summons.into_iter().any(|entity| {
-        crate::spell_cast::targets::is_alive(world, entity)
-            && crate::spell_cast::targets::same_map(world, actor, entity)
-    })
-}
-
-pub(super) fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<(), String> {
+pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<(), String> {
     match action {
         Execution::Snapshot => Err("snapshot execution belongs to the native stat recorder".into()),
         Execution::AutoAttack(target) => {
@@ -181,7 +166,7 @@ pub(super) fn execute(world: &mut World, actor: Entity, action: Execution) -> Re
         }
         Execution::Spell(id, target) => {
             crate::spell_cast::creature_cast(world, actor, id, Some(target), false)
-                .map_err(|reason| format!("selected native WW spell{id} rejected: {reason:?}"))
+                .map_err(|reason| format!("selected native literal spell{id} rejected: {reason:?}"))
         }
         Execution::Item(item, target) => crate::spell_cast::cast_item_spell(
             world,
@@ -194,7 +179,7 @@ pub(super) fn execute(world: &mut World, actor: Entity, action: Execution) -> Re
         )
         .map_err(|reason| {
             format!(
-                "selected native WW item{} rejected: {reason:?}",
+                "selected native literal item{} rejected: {reason:?}",
                 item.item_id
             )
         }),

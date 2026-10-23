@@ -1,5 +1,6 @@
 //! WW-only predicates; shared native facts remain authoritative and unchanged.
-use super::{bindings::COMBO_HISTORY, equipment::Equipment};
+use super::super::literal_rotation::equipment::Equipment;
+use super::bindings::COMBO_HISTORY;
 use crate::simc_apl_native::{Bindings, NativeFacts};
 use bevy::prelude::*;
 use server::simc_apl::{Action, ActionFacts, Facts};
@@ -87,6 +88,19 @@ impl WwFacts<'_> {
             .and_then(|history| history.last_cast_in(COMBO_HISTORY));
         Ok(boolean(previous != Some(id)))
     }
+}
+
+pub(super) fn read_xuen(world: &mut World, actor: Entity) -> bool {
+    let summons: Vec<_> = world
+        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(world)
+        .filter(|(_, summon)| summon.owner == actor && summon.spell_id == 123904)
+        .map(|(entity, _)| entity)
+        .collect();
+    summons.into_iter().any(|entity| {
+        crate::spell_cast::targets::is_alive(world, entity)
+            && crate::spell_cast::targets::same_map(world, actor, entity)
+    })
 }
 
 fn boolean(value: bool) -> f64 {

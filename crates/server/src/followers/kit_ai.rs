@@ -30,7 +30,7 @@ pub(super) fn update(
 ) -> bool {
     #[cfg(test)]
     if world
-        .get::<super::simulator::LiteralParityFixture>(unit)
+        .get::<crate::dungeon_simulator::dps_parity::literal_rotation::LiteralParityFixture>(unit)
         .is_some()
     {
         return true;

@@ -1,6 +1,7 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
 mod engagement_tests;
 mod inputs;
+pub(crate) mod literal_rotation;
 mod pet_child_tests;
 mod pet_stats_tests;
 mod player_rotation;
