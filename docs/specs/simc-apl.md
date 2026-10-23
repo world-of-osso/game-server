@@ -44,7 +44,13 @@ Native behavioral tests: `simc_apl_native/tests.rs` (earned Hit Combo and Chi, r
 - [ ] Contextual `charges`, `charges_fractional` and `full_recharge_time` follow the proposed action's actual native category.
 - [ ] Contextual `ticks_remain` counts future scheduled native ticks; `action.<name>.ready` includes native admission, while `usable_in` is remaining cooldown time.
 
-Ignored native regressions in `simc_apl_native/{extension_tests,action_extension_tests}.rs` precede implementation. Source: pinned SimC76f8118 `player.cpp11822,12369`, `buff.cpp457–462`, `action.cpp3266–3333` and `dot.cpp526–532`. These shared predicates remain fixture-only; no Dev-local duplicate resolver.
+Ignored native regressions in `simc_apl_native/{extension_tests,action_extension_tests}.rs` precede implementation. At89f985420 all seven reach genuine unknown-operand/property RED in18.52s with native prerequisite state intact; GREEN remains pending. Source: pinned SimC76f8118 `player.cpp11822,12369`, `buff.cpp457–462`, `action.cpp3266–3333` and `dot.cpp526–532`. These shared predicates remain fixture-only; no Dev-local duplicate resolver.
+
+## Native haste composition boundary
+
+- [ ] Native haste rating and independent combat-speed aura193 effects compose multiplicatively, including ordinary cast time and GCD consumers. Removing actual buffs restores the original rating-derived speed. Keep existing native rating diminishing returns and data amounts.
+
+TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyCastTimePercentMod`; `SpellAuraEffects.cpp4531–4551` applies aura193 through the same multiplicative cast/attack speed paths. Regression `dps_parity/haste_tests.rs` uses actual1467 BiS gear plus native Power Infusion10060 and Heroism32182 aura amounts; no injected ratings, stats or coefficients. Feral's separate100%-uptime Frantic Momentum/Savage Fury proc eligibility belongs to its spec owner, not to rating conversion.
 
 ## Known gaps (current cycle)
 
