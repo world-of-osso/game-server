@@ -8,6 +8,14 @@ use server::simc_apl::Action;
 use shared::protocol::CombatLogKind;
 
 const MAX_FRAMES: usize = 2_400;
+const FRAME_SECONDS: f64 = 0.05;
+
+struct ProbeSnapshot {
+    stats: Value,
+    targets: Value,
+    auras: Value,
+    started_at: f64,
+}
 
 pub(crate) struct SpellProbe<'a> {
     pub spec: u32,
@@ -17,35 +25,63 @@ pub(crate) struct SpellProbe<'a> {
     pub ticks: usize,
 }
 
-fn dispatch_once(run: &mut Run, probe: &SpellProbe) -> Result<(), String> {
+fn capture_controller(run: &mut Run) -> Result<Equipment, String> {
     let encounter = Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
-        duration: MAX_FRAMES as f64 / 20.0,
+        duration: MAX_FRAMES as f64 * FRAME_SECONDS,
         style: FightStyle::Patchwerk,
     };
     capture_fixture(run.app.world_mut(), run.actor, encounter)?;
     engage_fixture_opponents(run);
-    let equipment = Equipment::load(run.app.world(), run.actor, &mut Default::default())?;
+    Equipment::load(run.app.world(), run.actor, &mut Default::default())
+}
+
+fn read_probe_execution(
+    run: &mut Run,
+    probe: &SpellProbe,
+    equipment: &Equipment,
+) -> Result<Option<literal_rotation::execution::Execution>, String> {
+    let actions = [NativeAction {
+        name: probe.action,
+        spell: probe.spell,
+        talent: None,
+        self_target: false,
+    }];
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        run.actor,
+        &run.targets,
+        equipment,
+        actions,
+        false,
+    )?;
     let action = Action {
         name: probe.action.into(),
         options: Default::default(),
     };
-    for _ in 0..MAX_FRAMES {
-        let actions = [NativeAction {
-            name: probe.action,
-            spell: probe.spell,
-            talent: None,
-            self_target: false,
-        }];
-        let prepared = Prepared::read(
+    prepared.execution(&action, equipment)
+}
+
+fn prime_auto_attack(run: &mut Run) -> Result<(), String> {
+    if run
+        .app
+        .world()
+        .get::<crate::combat::AutoAttack>(run.actor)
+        .is_none()
+    {
+        literal_rotation::execution::execute(
             run.app.world_mut(),
             run.actor,
-            &run.targets,
-            &equipment,
-            actions,
-            false,
+            literal_rotation::execution::Execution::AutoAttack(run.targets[0]),
         )?;
-        if let Some(execution) = prepared.execution(&action, &equipment)? {
+    }
+    Ok(())
+}
+
+fn dispatch_once(run: &mut Run, probe: &SpellProbe) -> Result<(), String> {
+    let equipment = capture_controller(run)?;
+    for _ in 0..MAX_FRAMES {
+        if let Some(execution) = read_probe_execution(run, probe, &equipment)? {
             literal_rotation::execution::execute(run.app.world_mut(), run.actor, execution)?;
             run.app
                 .world_mut()
@@ -53,18 +89,7 @@ fn dispatch_once(run: &mut Run, probe: &SpellProbe) -> Result<(), String> {
                 .remove::<crate::combat::AutoAttack>();
             return Ok(());
         }
-        if run
-            .app
-            .world()
-            .get::<crate::combat::AutoAttack>(run.actor)
-            .is_none()
-        {
-            literal_rotation::execution::execute(
-                run.app.world_mut(),
-                run.actor,
-                literal_rotation::execution::Execution::AutoAttack(run.targets[0]),
-            )?;
-        }
+        prime_auto_attack(run)?;
         run.app.update();
     }
     Err(format!(
@@ -94,10 +119,28 @@ pub(crate) fn run_spell_probe(probe: SpellProbe) -> Result<Value, String> {
     }
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare(probe.spec, 1)?;
-    let stats = report::stats(run.app.world(), run.actor);
-    let targets = json!(target_snapshot(&run));
+    let snapshot = begin_capture(&mut run, &probe)?;
+    dispatch_once(&mut run, &probe)?;
+    for _ in 0..MAX_FRAMES {
+        run.app.update();
+        if observed_hits(&run, probe.damage_spell) >= probe.ticks {
+            return export_receipt(&run, &probe, snapshot);
+        }
+    }
+    Err(format!(
+        "native spell{} did not produce {} hits/ticks",
+        probe.spell, probe.ticks
+    ))
+}
+
+fn begin_capture(run: &mut Run, probe: &SpellProbe) -> Result<ProbeSnapshot, String> {
     verify_raid_free(run.app.world(), run.actor)?;
-    let auras = aura_snapshot(run.app.world(), run.actor);
+    let snapshot = ProbeSnapshot {
+        stats: report::stats(run.app.world(), run.actor),
+        targets: json!(target_snapshot(run)),
+        auras: aura_snapshot(run.app.world(), run.actor),
+        started_at: crate::spell_cast::now(run.app.world()),
+    };
     run.app.world_mut().insert_resource(
         crate::spell_cast::effects::factor_capture::FactorCapture::new(
             run.actor,
@@ -107,18 +150,7 @@ pub(crate) fn run_spell_probe(probe: SpellProbe) -> Result<Value, String> {
             probe.ticks,
         ),
     );
-    let started_at = crate::spell_cast::now(run.app.world());
-    dispatch_once(&mut run, &probe)?;
-    for _ in 0..MAX_FRAMES {
-        run.app.update();
-        if observed_hits(&run, probe.damage_spell) >= probe.ticks {
-            return export_receipt(&run, &probe, stats, targets, auras, started_at);
-        }
-    }
-    Err(format!(
-        "native spell{} did not produce {} hits/ticks",
-        probe.spell, probe.ticks
-    ))
+    Ok(snapshot)
 }
 
 fn verify_raid_free(world: &World, actor: Entity) -> Result<(), String> {
@@ -150,50 +182,52 @@ fn aura_snapshot(world: &World, actor: Entity) -> Value {
     json!(auras)
 }
 
-fn export_receipt(
-    run: &Run,
-    probe: &SpellProbe,
-    stats: Value,
-    targets: Value,
-    auras: Value,
-    started_at: f64,
-) -> Result<Value, String> {
-    let world = run.app.world();
-    verify_raid_free(world, run.actor)?;
-    let mut receipt = world
-        .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
-        .export();
-    let casts = world
+fn observed_casts(run: &Run, spell: u32) -> usize {
+    run.app
+        .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0
         .iter()
         .filter(|event| {
             event.source == Some(run.actor.to_bits())
-                && event.spell_id == Some(probe.spell)
+                && event.spell_id == Some(spell)
                 && event.kind == CombatLogKind::CastSuccess
         })
-        .count();
-    receipt["spec_id"] = json!(probe.spec);
-    receipt["cast_spell_id"] = json!(probe.spell);
-    receipt["damage_spell_id"] = json!(probe.damage_spell);
-    receipt["casts"] = json!(casts);
-    receipt["stats_before"] = stats;
-    receipt["stats_after"] = report::stats(world, run.actor);
-    receipt["targets_before"] = targets;
-    receipt["targets_after"] = json!(target_snapshot(run));
+        .count()
+}
+
+fn append_reference_context(run: &Run, receipt: &mut Value) -> Result<(), String> {
     receipt["gaps"] = json!(run.gaps);
     receipt["reference_directory"] = json!(inputs::directory()?);
     receipt["native_database"] =
         json!(std::env::var_os("DPS_PARITY_WORLD_DB").map(std::path::PathBuf::from));
-    receipt["aura_state_before"] = auras;
-    receipt["aura_state_after"] = aura_snapshot(world, run.actor);
-    receipt["raid_buff_check"] = json!({"absent": [6673, 1459, 1126, 21562], "fixture": "standalone actor; no external raid buffers"});
     receipt["reference_seed"] = json!(70448);
+    receipt["raid_buff_check"] = json!({"absent": [6673, 1459, 1126, 21562], "fixture": "standalone actor; no external raid buffers"});
+    Ok(())
+}
+
+fn export_receipt(run: &Run, probe: &SpellProbe, snapshot: ProbeSnapshot) -> Result<Value, String> {
+    let world = run.app.world();
+    verify_raid_free(world, run.actor)?;
+    let mut receipt = world
+        .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+        .export();
+    receipt["spec_id"] = json!(probe.spec);
+    receipt["cast_spell_id"] = json!(probe.spell);
+    receipt["damage_spell_id"] = json!(probe.damage_spell);
+    receipt["casts"] = json!(observed_casts(run, probe.spell));
+    receipt["stats_before"] = snapshot.stats;
+    receipt["stats_after"] = report::stats(world, run.actor);
+    receipt["targets_before"] = snapshot.targets;
+    receipt["targets_after"] = json!(target_snapshot(run));
+    receipt["aura_state_before"] = snapshot.auras;
+    receipt["aura_state_after"] = aura_snapshot(world, run.actor);
     receipt["combat"] = report::combat(
         world,
         &run.targets,
-        crate::spell_cast::now(world) - started_at,
+        crate::spell_cast::now(world) - snapshot.started_at,
     );
+    append_reference_context(run, &mut receipt)?;
     Ok(receipt)
 }
 

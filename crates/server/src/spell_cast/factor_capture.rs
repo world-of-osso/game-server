@@ -65,6 +65,8 @@ struct Armor {
 
 #[derive(Default)]
 struct Hit {
+    formula: Formula,
+    sources: Vec<Value>,
     chance: Option<(f32, f32)>,
     critical: Option<Critical>,
     source: Option<Source>,
@@ -442,6 +444,8 @@ fn result_factors(hit: &Hit, event: &shared::protocol::CombatLogEvent) -> Value 
         "absorbed_amount": event.absorbed, "blocked_amount": event.blocked,
         "source_product": source_product, "target_product": target.multiplier,
         "target_armor": hit.armor.map(|armor| armor.value),
+        "native_input_amount": source.input, "native_scripted_amount": source.scripted,
+        "native_modded_amount": source.modded, "native_source_amount": source.after,
         "native_script_product": ratio(source.scripted, source.input),
         "native_spell_mod_product": ratio(source.modded, source.scripted),
         "native_done_product": source.done})
@@ -498,6 +502,45 @@ fn event_row(
             "amount": "crit-normalized observed amount", "raw_amount": "crit-normalized observed amount"}})
 }
 
+fn amount_event(
+    capture: &FactorCapture,
+    ctx: &EffectCtx,
+    hit: &Hit,
+    event: &shared::protocol::CombatLogEvent,
+    time: f64,
+) -> Value {
+    let kind = if event.periodic {
+        "periodic_amount"
+    } else {
+        "direct_amount"
+    };
+    let factors = formula_factors(&hit.formula, hit, crit_multiplier(hit, event.crit));
+    let mut amount = event_row(capture, ctx, kind, factors, time);
+    amount["factor_sources"] = factor_sources(&hit.sources);
+    amount["applied_modifiers"] = json!(&hit.sources);
+    amount["applied_multipliers"] = json!(applied_multipliers(hit, event.crit));
+    amount
+}
+
+fn armor_event(capture: &FactorCapture, ctx: &EffectCtx, hit: &Hit, time: f64) -> Option<Value> {
+    hit.armor.map(|armor| {
+        let factors = json!({"armor_fraction": ratio(armor.after, armor.before).map(|value| 1.0 - value), "armor": armor.value});
+        event_row(capture, ctx, "armor", factors, time)
+    })
+}
+
+fn result_event(
+    capture: &FactorCapture,
+    ctx: &EffectCtx,
+    hit: &Hit,
+    event: &shared::protocol::CombatLogEvent,
+    time: f64,
+) -> Value {
+    let mut result = event_row(capture, ctx, "result", result_factors(hit, event), time);
+    result["factor_sources"] = factor_sources(&hit.sources);
+    result
+}
+
 pub(super) fn finish(
     world: &World,
     ctx: &EffectCtx,
@@ -510,44 +553,26 @@ pub(super) fn finish(
             return;
         }
         let time = crate::spell_cast::now(world);
-        let hit = state
+        let mut hit = state
             .hits
             .remove(&(ctx.spell.id, target.to_bits()))
             .expect("native factor impact stages absent");
-        let formula = damage
+        hit.formula = damage
             .effect
             .and_then(|effect| state.formulas.get(&(ctx.spell.id, effect.index)))
             .cloned()
             .unwrap_or_default();
-        let sources = unique_sources(
-            &formula,
+        hit.sources = unique_sources(
+            &hit.formula,
             &state.modifiers.remove(&ctx.spell.id).unwrap_or_default(),
         );
-        let kind = if event.periodic {
-            "periodic_amount"
-        } else {
-            "direct_amount"
-        };
-        let mut amount = event_row(
-            capture,
-            ctx,
-            kind,
-            formula_factors(&formula, &hit, crit_multiplier(&hit, event.crit)),
-            time,
-        );
-        amount["factor_sources"] = factor_sources(&sources);
-        amount["applied_modifiers"] = json!(&sources);
-        amount["applied_multipliers"] = json!(applied_multipliers(&hit, event.crit));
-        state.events.push(amount);
-        if let Some(armor) = hit.armor {
-            let factors = json!({"armor_fraction": ratio(armor.after, armor.before).map(|value| 1.0 - value), "armor": armor.value});
-            state
-                .events
-                .push(event_row(capture, ctx, "armor", factors, time));
-        }
-        let mut result = event_row(capture, ctx, "result", result_factors(&hit, event), time);
-        result["factor_sources"] = factor_sources(&sources);
-        state.events.push(result);
+        state
+            .events
+            .push(amount_event(capture, ctx, &hit, event, time));
+        state.events.extend(armor_event(capture, ctx, &hit, time));
+        state
+            .events
+            .push(result_event(capture, ctx, &hit, event, time));
         if ctx.spell.id == capture.focus_spell {
             state.completed += 1;
         }
