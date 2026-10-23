@@ -297,6 +297,32 @@ fn fire_efficiency_native70_consumed_hot_streak_doubles_ignite_on_impact() {
     );
 }
 
+#[test]
+fn fire_flamestrike_2120_spends_actual_earned_hot_streak_at_instant_admission() {
+    let _seed = crate::random::seed_scope(1);
+    let (mut h, caster) = prepare_follower(209059, 63, 70);
+    let target = prepare_dummies(&mut h, 1)[0];
+    for _ in 0..2 {
+        crate::spell_cast::creature_cast(h.app.world_mut(), caster, 108853, Some(target), false)
+            .unwrap();
+        h.advance(10);
+    }
+    h.advance(3);
+    assert!(
+        crate::auras::has_aura(h.app.world(), caster, 48108),
+        "two nativeFireBlast crits earn the real proc"
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, 2120, Some(target), false).unwrap();
+    assert!(
+        h.app.world().get::<CastState>(caster).is_none(),
+        "native2120 admitted instant with earnedHotStreak"
+    );
+    assert!(
+        !crate::auras::has_aura(h.app.world(), caster, 48108),
+        "ordinary2120 spends its admittedHotStreak at launch"
+    );
+}
+
 fn land_fireball(
     h: &mut crate::spell_cast::test_harness::Harness,
     caster: Entity,
