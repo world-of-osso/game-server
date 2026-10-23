@@ -21,9 +21,9 @@ TC `StatSystem.cpp:455` computes player weapon damage with `GetTotalAttackPowerV
 
 | Revision / scope | Command | Result | Validity |
 |---|---|---|---|
-| `0cef21dfc`, ignored RED only | native `dps_parity_native_tiger_palm_includes_equipped_weapon_ap_before_battle_shout` | Not run: formal capacity HOLD/FIFO | No behavioral RED claim |
+| `0cef21dfc` Rust / `1389c188a` invocation, docs-only tip `d9296e161` | `agent-run ww-monk-parity python3 scripts/build-host.py --build-host native --test -p server dps_parity_native_tiger_palm_includes_equipped_weapon_ap_before_battle_shout -- --ignored --nocapture --test-threads=1` | Genuine RED:91 vs358–377, base98/weapon291/coefficient0.9/Battle Shout1.05; no crit/block/absorb. Exit101; cold compile12m18s | Exact binary49562a93a94e52d1 SHA256be4fa36ac4d71bce80027ee78c414182fb40e5ea70b7c735cdb9d5e69893f670. Production subsequently changed; RED remains baseline proof |
 
-RED uses actual native weapon268215, table DPS at its authored level, real Tiger Palm100780 coefficient, native Battle Shout6673 and actual cast/damage log. No synthetic coefficient, weapon range, damage override or database edit. RED committed and pushed before production implementation.
+RED uses actual native weapon268215, table DPS at its authored level, real Tiger Palm100780 coefficient, native Battle Shout6673 and actual cast/damage log. No synthetic coefficient, weapon range, damage override or database edit. RED committed and pushed before production implementation. Engine evidence directory `data/diagnostics/ww-parity-2026-10-23/weapon-ap-red.proof.json` preserves exact values/binary identity; detached job01a167cc-dfa9-7426-8e13-b27efad1256f retains full helper output. No GREEN claimed yet.
 
 ## Historical receipt caveat
 
