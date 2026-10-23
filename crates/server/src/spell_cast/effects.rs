@@ -31,6 +31,9 @@ mod bypass_armor_tests;
 #[cfg(test)]
 #[path = "caster_ability_crit_tests.rs"]
 mod caster_ability_crit_tests;
+#[cfg(test)]
+#[path = "windwalker_mastery_tests.rs"]
+mod windwalker_mastery_tests;
 
 use crate::random as rand;
 use std::collections::HashSet;
@@ -49,7 +52,7 @@ use crate::creature_scripts::{TrainingDummy, health_loss};
 use crate::item_stats::WeaponDamage;
 use crate::level_scaling::{ArmorConstants, CreatureArmor, UnitScaling};
 use crate::spell_info::{SpellEffect, SpellInfo};
-use crate::stats::CharacterStats;
+use crate::stats::{CharacterStats, WeaponAttackType};
 
 /// TC SharedDefines.h592: ignore armor/crit/block damage-taken adjustments.
 const ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS: u32 = 0x100;
@@ -655,19 +658,7 @@ pub(crate) fn effect_power_bonus(
     effect: &SpellEffect,
 ) -> f32 {
     let (spell_power, melee_attack_power) = power_stats(world, caster, takes_healing_power(effect));
-    // Unit.cpp6880–6890 chooses RAP for non-melee ranged weapon spells only.
-    let attack_power = if is_ranged_weapon_spell(spell)
-        && spell
-            .categories
-            .as_ref()
-            .is_none_or(|categories| categories.defense_type != DEFENSE_MELEE)
-    {
-        world
-            .get::<CharacterStats>(caster)
-            .map_or(0.0, |stats| stats.ranged_attack_power)
-    } else {
-        melee_attack_power
-    };
+    let attack_power = effect_attack_power(world, caster, spell, melee_attack_power);
     let modify = |op, value| spell_mods::modify(world, caster, spell, op, value);
     let coefficient = modify(SpellModOp::BonusCoefficient, effect.bonus_coefficient);
     let ap_coefficient = modify(
@@ -675,6 +666,51 @@ pub(crate) fn effect_power_bonus(
         effect.bonus_coefficient_from_ap,
     );
     coefficient * spell_power + ap_coefficient * attack_power
+}
+
+/// TC Unit.cpp6880–6890/7400–7409/7674–7683 shares damage/heal/absorb selection.
+fn effect_attack_power(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    inherited_melee_power: f32,
+) -> f32 {
+    let attack_type = spell_attack_type(spell);
+    // Equipped player/follower class stats are distinct from guardian inherited AP.
+    let equipped_class = world.get::<Player>(caster).is_some()
+        || world.get::<crate::followers::Follower>(caster).is_some();
+    if equipped_class && let Some(stats) = world.get::<CharacterStats>(caster) {
+        return stats.total_attack_power(
+            attack_type,
+            world.get::<crate::stats::StatModifiers>(caster),
+        );
+    }
+    if matches!(attack_type, WeaponAttackType::Ranged) {
+        world
+            .get::<CharacterStats>(caster)
+            .map_or(0.0, |stats| stats.ranged_attack_power)
+    } else {
+        inherited_melee_power
+    }
+}
+
+fn spell_attack_type(spell: &SpellInfo) -> WeaponAttackType {
+    let ranged = is_ranged_weapon_spell(spell)
+        && spell
+            .categories
+            .as_ref()
+            .is_none_or(|categories| categories.defense_type != DEFENSE_MELEE);
+    if ranged {
+        return WeaponAttackType::Ranged;
+    }
+    let attributes = super::attributes(spell, 3);
+    const REQUIRES_MAIN_HAND: u32 = 0x0000_0400;
+    const REQUIRES_OFF_HAND: u32 = 0x0100_0000;
+    if attributes & REQUIRES_OFF_HAND != 0 && attributes & REQUIRES_MAIN_HAND == 0 {
+        WeaponAttackType::OffHand
+    } else {
+        WeaponAttackType::MainHand
+    }
 }
 
 /// One main-hand weapon hit. A creature (no `CharacterStats`) rolls its own weapon
@@ -1237,7 +1273,7 @@ fn ignores_caster_damage_modifiers(spell: &SpellInfo) -> bool {
 
 /// Numeric source amount before rounding, armor, absorbs, transfer or health scaling.
 /// Callers retain their own spell's downstream resolution and native attributes.
-pub(super) fn damage_before_mitigation(
+fn damage_source_amount(
     world: &World,
     ctx: &EffectCtx,
     target: Entity,
@@ -1267,7 +1303,20 @@ pub(super) fn damage_before_mitigation(
             * creature_type_damage_multiplier(world, bonus_caster, target, ctx.spell)
             * mechanic_damage_multiplier(world, bonus_caster, ctx.spell, effect)
     };
-    let taken = if effect.is_some_and(|effect| {
+    let bonus_ctx = EffectCtx {
+        caster: bonus_caster,
+        ..*ctx
+    };
+    let source = if resolved_source {
+        amount
+    } else {
+        modded_amount(world, &bonus_ctx, amount, periodic)
+    };
+    source * done
+}
+
+fn damage_taken(world: &World, ctx: &EffectCtx, target: Entity, damage: &DamageInput) -> f32 {
+    if damage.effect.is_some_and(|effect| {
         matches!(
             effect.effect,
             EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT | EFFECT_POWER_BURN
@@ -1275,20 +1324,91 @@ pub(super) fn damage_before_mitigation(
     }) {
         crate::auras::damage_resilience_multiplier(world, target, ctx.spell)
     } else {
-        crate::auras::damage_taken_multiplier(world, target, bonus_caster, ctx.spell)
-    };
-    let bonus_ctx = EffectCtx {
-        caster: bonus_caster,
-        ..*ctx
-    };
-    (if resolved_source {
-        amount
-    } else {
-        modded_amount(world, &bonus_ctx, amount, periodic)
-    } * done
-        * taken
+        crate::auras::damage_taken_multiplier(world, target, damage.bonus_caster, ctx.spell)
+    }
+}
+
+/// Source amount followed by the native recipient reduction and authored cast multiplier.
+pub(super) fn damage_before_mitigation(
+    world: &World,
+    ctx: &EffectCtx,
+    target: Entity,
+    damage: &DamageInput,
+) -> f32 {
+    (damage_source_amount(world, ctx, target, damage)
+        * damage_taken(world, ctx, target, damage)
         * ctx.spell.cast_damage_multiplier.unwrap_or(1.0))
     .max(0.0)
+}
+
+#[cfg(test)]
+pub(crate) fn replay_healer_hit(
+    world: &mut World,
+    source: Entity,
+    target: Entity,
+    hit: &crate::dungeon_simulator::healer_intake::Hit,
+) -> Result<(), String> {
+    use crate::dungeon_simulator::healer_intake::HitKind;
+    let HitKind::Spell {
+        spell_id,
+        depth,
+        bonus_source_guid,
+        effect_index,
+        periodic,
+        crit,
+        resolved_source,
+        blocked,
+    } = hit.kind
+    else {
+        return Err("SPELL_REPLAY_REQUIRES_SPELL_RECEIPT".into());
+    };
+    let spell = world
+        .resource::<super::SpellStore>()
+        .get(spell_id)
+        .cloned()
+        .ok_or_else(|| format!("NATIVE_SPELL_ABSENT:{spell_id}"))?;
+    if spell.school_mask() != hit.school {
+        return Err("RECORDED_SPELL_SCHOOL_CHANGED".into());
+    }
+    let effect = effect_index
+        .map(|index| {
+            spell
+                .effects
+                .iter()
+                .find(|effect| u32::from(effect.index) == index)
+                .ok_or_else(|| format!("NATIVE_SPELL_EFFECT_ABSENT:{spell_id}:{index}"))
+        })
+        .transpose()?;
+    let bonus_caster = if let Some(guid) = bonus_source_guid {
+        world
+            .get_resource::<crate::dungeon_simulator::healer_intake::Capture>()
+            .and_then(|capture| {
+                capture
+                    .sources
+                    .iter()
+                    .find_map(|(&unit, &(candidate, _))| (candidate == guid).then_some(unit))
+            })
+            .ok_or_else(|| format!("NATIVE_BONUS_CASTER_ABSENT:{guid}"))?
+    } else {
+        source
+    };
+    let ctx = EffectCtx {
+        caster: source,
+        spell: &spell,
+        depth,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    let damage = DamageInput {
+        amount: hit.raw,
+        crit,
+        periodic,
+        resolved_source,
+        effect,
+        bonus_caster,
+    };
+    deal_source_damage_and_report(world, &ctx, target, damage, Some((hit.raw, blocked)));
+    Ok(())
 }
 
 fn deal_damage_and_report(
@@ -1296,6 +1416,16 @@ fn deal_damage_and_report(
     ctx: &EffectCtx,
     target: Entity,
     damage: DamageInput,
+) -> f32 {
+    deal_source_damage_and_report(world, ctx, target, damage, None)
+}
+
+fn deal_source_damage_and_report(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    damage: DamageInput,
+    recorded_hit: Option<(f32, bool)>,
 ) -> f32 {
     let DamageInput {
         crit,
@@ -1308,13 +1438,50 @@ fn deal_damage_and_report(
         return 0.0;
     }
     let school = ctx.spell.school_mask();
+    let source_amount = recorded_hit.map_or_else(
+        || damage_source_amount(world, ctx, target, &damage),
+        |(amount, _)| amount,
+    );
+    let was_blocked = recorded_hit.map_or_else(
+        || super::hit_was_blocked(world, ctx.caster, ctx.spell.id, target),
+        |(_, blocked)| blocked,
+    );
+    #[cfg(test)]
+    let bonus_source_guid = crate::dungeon_simulator::healer_intake::spell_bonus_source(
+        world,
+        ctx.caster,
+        damage.bonus_caster,
+        target,
+    );
+    #[cfg(test)]
+    crate::dungeon_simulator::healer_intake::record(
+        world,
+        ctx.caster,
+        target,
+        school,
+        source_amount,
+        crate::dungeon_simulator::healer_intake::HitKind::Spell {
+            spell_id: ctx.spell.id,
+            depth: ctx.depth,
+            bonus_source_guid,
+            effect_index: effect.map(|effect| u32::from(effect.index)),
+            periodic,
+            crit,
+            resolved_source,
+            blocked: was_blocked,
+        },
+    );
     if crate::auras::is_immune(world, target, school) {
         let mut event = log_amount(ctx, target, CombatLogKind::Miss(MissKind::Immune));
         event.periodic = periodic;
         log_event(world, event);
         return 0.0;
     }
-    let amount = damage_before_mitigation(world, ctx, target, &damage).round();
+    let amount = (source_amount
+        * damage_taken(world, ctx, target, &damage)
+        * ctx.spell.cast_damage_multiplier.unwrap_or(1.0))
+    .max(0.0)
+    .round();
     let amount = if periodic {
         amount
     } else {
@@ -1330,12 +1497,11 @@ fn deal_damage_and_report(
     let blockable = !periodic
         && !resolved_source
         && super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0;
-    let (amount, blocked) =
-        if blockable && super::hit_was_blocked(world, ctx.caster, ctx.spell.id, target) {
-            spell_block_damage(world, ctx, target, amount)
-        } else {
-            (amount, 0.0)
-        };
+    let (amount, blocked) = if blockable && was_blocked {
+        spell_block_damage(world, ctx, target, amount)
+    } else {
+        (amount, 0.0)
+    };
     let amount = if periodic {
         crate::auras::area_avoidance::reduce_damage(world, target, ctx.spell, effect, true, amount)
     } else {
