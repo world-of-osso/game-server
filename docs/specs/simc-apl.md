@@ -47,6 +47,14 @@ Player execution boundary: seven actual native cases at4f91688e8 give1WW control
 
 Native behavioral tests: `simc_apl_native/tests.rs` (earned Hit Combo and Chi, real Provoke cooldown, real Roll charges, actual Charge Rage display conversion, fixture clock and unavailable dungeon predicates). Six pushed ignored native cases produce genuine6RED at5924496f9 (13.24s test/8m18compile/exit101; three scaffold dead-field warnings). Atdc1ee9781 the same six native cases pass6/6 in17.40s (7m37compile),exit0,zero compiler warnings; tests enabled afterward without body changes ([native proof ledger](../handoffs/shared-native-apl-proof-ledger.md)). Current native fact seam is fixture-only (`cfg(test)`), matching the approved explicit parity Fixture driver boundary; live dungeon APL/TTD is not enabled.
 
+### Native flight observations (pending)
+
+- [ ] `action.<name>.in_flight` observes that actor's genuinely pending native travel/delay state; a hardcast before launch and an ongoing ground burn are not flight.
+- [ ] `in_flight_remains` reports seconds to the nearest pending impact, or zero with no flight. Follow the actual Meteor delay-field→missile lifecycle and native metadata, not SimC's different modeled travel clock or a new timer.
+- [ ] Failed native expiry admission ends Meteor flight immediately; another actor's projectiles cannot affect either fact.
+
+Behavioral source: `followers/native_flight_tests.rs` covers Pyroblast launch/countdown/impact, hardcast exclusion, actor isolation and Meteor handoff/refusal. No executed flight RED/GREEN yet.
+
 ## Known gaps (current cycle)
 
 - [ ] Wire native kit adapters; library expression/variable/list decisions have11-case GREEN, not full native rotation proof.
