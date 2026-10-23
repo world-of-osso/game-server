@@ -2,6 +2,8 @@
 use super::{DEVASTATE, Harness, Inbox, apply_passive, fixture};
 use shared::protocol::{CombatLogKind, EquipmentSlot};
 
+#[path = "protection_item_advanced_tests.rs"]
+mod advanced;
 #[path = "venomfang_tests.rs"]
 mod venomfang;
 

@@ -7,7 +7,7 @@ const VENOMFANG_DRIVER: u32 = 1291718;
 const VENOMFANG: u32 = 1306635;
 const VENOMFANG_BURST: u32 = 1306639;
 
-fn equip_venomfang(h: &mut Harness) {
+pub(super) fn equip_venomfang(h: &mut Harness) {
     h.app
         .world_mut()
         .get_mut::<crate::stats::EquippedItems>(h.caster)
