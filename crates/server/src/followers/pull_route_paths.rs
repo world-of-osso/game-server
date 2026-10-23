@@ -51,7 +51,7 @@ impl AdmissionPaths {
             return false;
         };
         let result = result.and_then(|output| match output {
-            Some(Output::Path(points)) => Ok(points),
+            Some(Output::Path(path)) => path.into_complete(),
             None => Err("Pull route has no authored navigation bake".into()),
             Some(_) => Err("Pull route worker returned a non-path result".into()),
         });

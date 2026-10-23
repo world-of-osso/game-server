@@ -1068,8 +1068,8 @@ mod tests {
             spawns_by_map.entry(s.map).or_default().push(i);
         }
         WorldData {
-            templates: template_map,
-            spawns,
+            templates: template_map.into(),
+            spawns: spawns.into(),
             spawns_by_map,
             waypoints: HashMap::new(),
             class_level_base_hp: HashMap::from([((1, 1), [100; 3]), ((7, 1), [100; 3])]),

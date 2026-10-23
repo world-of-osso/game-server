@@ -4,6 +4,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
+pub(crate) mod catalog_cache;
+
 /// Advance the real selection/admission path until its player is published.
 pub(crate) fn wait_for_selected_player(
     app: &mut bevy::prelude::App,

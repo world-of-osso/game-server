@@ -20,6 +20,17 @@ pub(super) fn output_directory() -> std::path::PathBuf {
 pub(super) fn write_report(report: &super::campaign::Report) -> Result<(), String> {
     let directory = output_directory();
     std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
+    let events = report
+        .performance
+        .get("combat_events")
+        .ok_or("final simulator report lacks its native combat-event trace")?;
+    let export = serde_json::json!({"seed":report.seed,"status":report.status,
+        "reason":report.detail,"events":events});
+    std::fs::write(
+        directory.join(format!("combat-events-{}.json", report.seed)),
+        serde_json::to_vec_pretty(&export).map_err(|error| error.to_string())?,
+    )
+    .map_err(|error| format!("write native combat-event export: {error}"))?;
     std::fs::write(
         directory.join(format!("run-{}.json", report.seed)),
         serde_json::to_vec_pretty(&report).unwrap(),
@@ -76,6 +87,7 @@ fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>, include_p
         crate::creature_scripts::CreatureScriptsPlugin,
         crate::scripted_ai::ScriptedAiPlugin,
         crate::followers::FollowerPlugin,
+        crate::hunter_pet::HunterPetPlugin,
         crate::pet_control::PetControlPlugin,
         crate::stats::StatsPlugin,
     ));
