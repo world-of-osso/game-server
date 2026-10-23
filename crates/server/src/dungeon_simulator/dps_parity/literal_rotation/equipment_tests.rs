@@ -225,6 +225,63 @@ fn literal_equipment_native_set_facts_follow_original_piece_counts_and_spec() {
     assert!(read_facts(&world, actor, &["set_bonus.unknown_tier_4pc"])[0].is_err());
 }
 
+fn scope_trigger_catalog(world: &mut World, remove_child: bool, cycle: bool) {
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let mut spells: Vec<_> = [21992, 27648, 221786, 221796, 1291728]
+        .into_iter()
+        .filter(|&id| !remove_child || id != 221796)
+        .map(|id| store.get(id).unwrap().clone())
+        .collect();
+    let root = spells.iter_mut().find(|spell| spell.id == 221786).unwrap();
+    if cycle {
+        // Malformed test-owned source: a real proc root points to itself.
+        root.effects[0].trigger_spell = root.id;
+    } else {
+        // Shared child DAG: two real proc effects reference the same stat spell.
+        let mut second = root.effects[0].clone();
+        second.index = 1;
+        root.effects.push(second);
+    }
+    world.insert_resource(crate::spell_info::SpellStore::fixture(spells));
+}
+
+#[test]
+#[ignore = "requires native item roots; malformed test-owned metadata must fail explicitly"]
+fn literal_equipment_native_trigger_missing_child_and_cycle_are_errors() {
+    let mut world = load_world();
+    let actor = equip(&mut world, 139329, 270173);
+    for (missing, cycle) in [(true, false), (false, true)] {
+        // Restore unmodified native input before each independently malformed graph.
+        let source = load_world();
+        world.insert_resource(source.resource::<crate::spell_info::SpellStore>().clone());
+        scope_trigger_catalog(&mut world, missing, cycle);
+        let result = Equipment::load(&world, actor, &mut Bindings::default());
+        assert!(
+            result.is_err(),
+            "missing={missing} cycle={cycle} must not bind silent metadata"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires native item roots; shared child is not an active recursion cycle"]
+fn literal_equipment_native_trigger_shared_child_dag_keeps_stat_and_duration() {
+    let mut world = load_world();
+    let actor = equip(&mut world, 139329, 270173);
+    scope_trigger_catalog(&mut world, false, false);
+    assert_eq!(
+        read_facts(
+            &world,
+            actor,
+            &[
+                "trinket.1.has_buff.haste",
+                "trinket.1.proc.any_dps.duration"
+            ]
+        ),
+        vec![Ok(1.0), Ok(10.0)]
+    );
+}
+
 #[test]
 #[ignore = "requires private native item spells; zero cooldown without item-specific exception"]
 fn literal_equipment_native_passive_zero_cooldown_and_unknown_operand_boundary() {
