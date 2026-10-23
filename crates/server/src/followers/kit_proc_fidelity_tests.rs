@@ -513,6 +513,77 @@ fn proc_fidelity_262_native_stormkeeper_chain_without_mastery_has_no_overload() 
 }
 
 #[test]
+#[ignore = "native Lava Burst Overload mapping pending natural-chance RED/GREEN"]
+fn proc_fidelity_262_native_lava_burst_natural_mastery_produces_overload() {
+    const ACQUISITION_MISS_BUDGET: f64 = 1e-6;
+    let (mut h, caster) = prepare(209053);
+    let chance = super::kit_clearcasting_tests::own_aura(&h, caster, 168534)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount as f64;
+    assert!((0.0..100.0).contains(&chance) && chance > 0.0);
+    let attempts = (ACQUISITION_MISS_BUDGET.ln() / (1.0 - chance / 100.0).ln()).ceil() as usize;
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    for attempt in 1..=attempts {
+        let cast_start = h.inbox.log.len();
+        complete_cast(&mut h, caster, 51505, target);
+        h.advance(30);
+        assert!(
+            h.inbox.log[cast_start..].iter().any(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(285452)
+                    && event.source == Some(caster.to_bits())
+                    && event.target == Some(target.to_bits())
+            }),
+            "each actual native51505 must land its authored285452 damage payload"
+        );
+        if h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(285466)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+        }) {
+            println!("LAVA_OVERLOAD native_chance={chance}% attempts={attempt}/{attempts}");
+            return;
+        }
+    }
+    panic!(
+        "actual51505 casts/{attempts} authored285452 hits with native chance={chance}% produced no285466; miss budget={ACQUISITION_MISS_BUDGET}"
+    );
+}
+
+#[test]
+#[ignore = "native Lava Burst removed-Mastery control pending qualification"]
+fn proc_fidelity_262_native_lava_burst_without_mastery_has_no_overload() {
+    let (mut h, caster) = prepare(209053);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 168534,
+    );
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    complete_cast(&mut h, caster, 51505, target);
+    h.advance(30);
+    assert!(h.inbox.log[first..].iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(285452)
+            && event.source == Some(caster.to_bits())
+            && event.target == Some(target.to_bits())
+    }));
+    assert!(
+        h.inbox.log[first..].iter().all(|event| {
+            event.spell_id != Some(285466) || event.source != Some(caster.to_bits())
+        })
+    );
+}
+
+#[test]
 fn proc_fidelity_262_native_long_flight_overload_waits_400ms_after_root_hit() {
     let (mut h, caster) = prepare(209053);
     assert!(has_aura(h.app.world(), caster, 168534));
