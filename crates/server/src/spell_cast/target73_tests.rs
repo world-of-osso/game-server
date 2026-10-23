@@ -1,7 +1,7 @@
 //! Source73 destination planning, not the scripted actions of sampled native spells.
 use super::test_harness::{Harness, harness, spawn_npc, world_db};
 use super::*;
-use shared::components::{Position, Rotation};
+use shared::components::{PlayerMotion, Position, Rotation};
 
 const RUTHERS: u32 = 120108;
 const POISON: u32 = 65440;
@@ -10,13 +10,23 @@ const BOON: u32 = 75080;
 const SHACKLES: u32 = 346444;
 const PULL: u32 = 260080;
 const FORCE_SHATTER: u32 = 81037;
+const SPLIT_SOUL: u32 = 224373;
 const SAMPLES: usize = 24;
 const YAW: f32 = 0.37;
 
 fn scene() -> (Harness, Position) {
     let mut h = harness(
         Vec::new(),
-        &[RUTHERS, POISON, BLINK, BOON, SHACKLES, PULL, FORCE_SHATTER],
+        &[
+            RUTHERS,
+            POISON,
+            BLINK,
+            BOON,
+            SHACKLES,
+            PULL,
+            FORCE_SHATTER,
+            SPLIT_SOUL,
+        ],
         1,
     )
     .expect("native target73 fixture");
@@ -176,6 +186,49 @@ fn toy_coverage_target73_area_recipients_share_the_emitted_circle_sample() {
         assert_eq!(
             actual, expected,
             "destination and recipients must share one sample"
+        );
+    }
+}
+
+#[test]
+fn toy_coverage_target73_running_strafing_falling_bonus_excludes_walking_and_backward() {
+    let (mut h, origin) = scene();
+    let cases = [
+        (PlayerMotion::FORWARD, 7.0),
+        (PlayerMotion::STRAFE_LEFT, 7.0),
+        (PlayerMotion::STRAFE_RIGHT, 7.0),
+        (PlayerMotion::FALLING, 7.0),
+        (PlayerMotion::FORWARD | PlayerMotion::WALKING, 5.0),
+        (PlayerMotion::BACKWARD, 5.0),
+        (0, 5.0),
+    ];
+    for (flags, expected) in cases {
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(PlayerMotion(flags));
+        for _ in 0..SAMPLES {
+            let actual = destination(&mut h, RUTHERS);
+            assert!(
+                (horizontal_distance(actual, origin) - expected).abs() < 0.001,
+                "source motion{flags:x}: {actual:?} expected radius{expected}"
+            );
+        }
+    }
+}
+
+#[test]
+fn toy_coverage_target73_native_no_movement_radius_bonus_keeps_authored_extent() {
+    let (mut h, origin) = scene();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(PlayerMotion(PlayerMotion::FORWARD));
+    for _ in 0..SAMPLES {
+        let actual = destination(&mut h, SPLIT_SOUL);
+        assert!(
+            (horizontal_distance(actual, origin) - 15.0).abs() < 0.001,
+            "native224373 source NO_MOVEMENT_RADIUS_BONUS: {actual:?}"
         );
     }
 }
