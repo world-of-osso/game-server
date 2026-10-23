@@ -271,13 +271,7 @@ fn assert_profile_combat(entry: u32) {
             .current = 100.0;
     }
     if profile.role == GroupRole::Tank {
-        // Taunts retain native creature-melee miss rolls. This success fixture
-        // fixes only the hit modifier; the real miss boundary is tested below.
-        h.app
-            .world_mut()
-            .get_mut::<crate::auras::AuraStatMods>(unit)
-            .unwrap()
-            .melee_hit_chance_pct = 100.0;
+        // Native62124/355 are ALWAYS_HIT; no invented hit statistic is needed.
         h.app.world_mut().entity_mut(enemy).insert((
             shared::components::ThreatTable::default(),
             crate::creature_ai::CreatureState::Pursuing {
@@ -357,11 +351,31 @@ fn assert_profile_combat(entry: u32) {
 fn follower_real_taunt_miss_keeps_the_attacked_ally_as_victim() {
     let (mut h, unit, _) = spawn_profile_fixture(209057);
     let enemy = h.npc;
+    // 70448 SpellMisc62124 Attr3=0x50000 includes ALWAYS_HIT, so it cannot
+    // qualify avoidance. Select native43263 Ghoul Taunt only for this AI control:
+    // Attr3=0, DefenseType2, effects114/63. This is not a Garrick-kit assertion.
+    const AVOIDABLE_TAUNT: u32 = 43263;
     h.app
         .world_mut()
-        .get_mut::<crate::auras::AuraStatMods>(unit)
+        .get_mut::<Follower>(unit)
         .unwrap()
-        .melee_hit_chance_pct = -100.0;
+        .profile
+        .taunt_spell = AVOIDABLE_TAUNT;
+    let native = crate::spell_cast::test_harness::load_native_creature_world(&[6]);
+    h.app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>()
+        .templates
+        .extend(native.templates);
+    crate::spell_cast::creature_cast(h.app.world_mut(), enemy, 5277, Some(enemy), false).unwrap();
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(enemy)
+            .unwrap()
+            .modifier(49),
+        200.0
+    );
     h.app.world_mut().entity_mut(enemy).insert((
         shared::components::ThreatTable::default(),
         crate::creature_ai::CreatureState::Pursuing {
@@ -381,10 +395,76 @@ fn follower_real_taunt_miss_keeps_the_attacked_ally_as_victim() {
         Some(h.caster)
     );
     assert!(
-        h.inbox.log.iter().any(|event| event.spell_id == Some(62124)
-            && event.kind
-                == shared::protocol::CombatLogKind::Miss(shared::protocol::MissKind::Miss)),
-        "actual taunt miss log missing: {:?}",
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(AVOIDABLE_TAUNT)
+                && matches!(
+                    event.kind,
+                    shared::protocol::CombatLogKind::Miss(
+                        shared::protocol::MissKind::Miss | shared::protocol::MissKind::Dodge
+                    )
+                )),
+        "actual avoidable taunt miss log missing: {:?}",
+        h.inbox.log
+    );
+}
+
+#[test]
+fn follower_native_always_hit_taunt_ignores_real_evasion() {
+    let (mut h, unit, profile) = spawn_profile_fixture(209057);
+    assert_eq!(profile.taunt_spell, 62124);
+    let enemy = h.npc;
+    let native = crate::spell_cast::test_harness::load_native_creature_world(&[6]);
+    h.app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>()
+        .templates
+        .extend(native.templates);
+    crate::spell_cast::creature_cast(h.app.world_mut(), enemy, 5277, Some(enemy), false).unwrap();
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(enemy)
+            .unwrap()
+            .modifier(49),
+        200.0
+    );
+    h.app.world_mut().entity_mut(enemy).insert((
+        shared::components::ThreatTable::default(),
+        crate::creature_ai::CreatureState::Pursuing {
+            target: h.caster.to_bits(),
+        },
+        crate::networking::CombatTarget(Some(h.caster)),
+    ));
+    crate::creature_aggro::add_threat(h.app.world_mut(), enemy, h.caster, 100.0);
+    update_ai(h.app.world_mut());
+    h.advance(4);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(enemy)
+            .unwrap()
+            .0,
+        Some(unit)
+    );
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        enemy,
+        profile.taunt_spell
+    ));
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(profile.taunt_spell)
+                && matches!(
+                    event.kind,
+                    shared::protocol::CombatLogKind::Miss(
+                        shared::protocol::MissKind::Miss | shared::protocol::MissKind::Dodge
+                    )
+                )),
+        "native62124 remains unavoidable under actual5277 Evasion; log={:?}",
         h.inbox.log
     );
 }

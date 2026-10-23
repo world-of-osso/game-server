@@ -182,6 +182,8 @@ mod fel_devastation_tests;
 mod fount_strength_tests;
 #[cfg(test)]
 mod full_trigger_dead_target_tests;
+#[cfg(test)]
+mod generic_empower_tests;
 pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
@@ -196,6 +198,8 @@ mod invigorating_fury_tests;
 pub(crate) mod native_apl;
 #[cfg(test)]
 mod periodic_healing_taken_tests;
+#[cfg(test)]
+mod protection_producer_tests;
 mod sanctuary;
 pub(crate) use interruptibility::can_interrupt_cast;
 #[cfg(test)]
@@ -2565,9 +2569,11 @@ pub(crate) fn execute_cast(
         },
     );
     let previous_efflo_summons = efflorescence::read_previous_summons(world, caster, spell.id);
+    scripts::spawn_ravager_field(world, caster, spell, explicit, 0);
     missiles::launch(world, caster, spell, plan, 0);
     efflorescence::initialize_new_summons(world, caster, previous_efflo_summons);
     scripts::refund_execute(world, caster, spell, explicit, &costs);
+    scripts::consume_phalanx(world, caster, spell, explicit);
     if let Some(hook) = scripts::after_cast(spell.id) {
         hook(world, caster, spell);
     }
@@ -3326,12 +3332,14 @@ pub(super) fn cast_triggered_with_item_level(
     launch_triggered_spell(world, caster, &spell, explicit, depth)
 }
 
-/// The sourced CastSpellExtraArgs values carried by a real triggered cast.
+/// Sourced per-cast overrides retained in real triggered spell snapshots.
 #[derive(Default)]
 pub(crate) struct TriggeredSpellOverrides {
     pub effect0_amount: Option<f32>,
     pub aura_stacks: Option<u8>,
     pub original_caster: Option<Entity>,
+    /// Authored background-action lifetime, e.g. native Whirling Blade's amount.
+    pub duration_ms: Option<i32>,
 }
 
 pub(crate) fn cast_triggered_with_overrides(
@@ -3347,6 +3355,13 @@ pub(crate) fn cast_triggered_with_overrides(
     };
     spell.cast_aura_stacks = values.aura_stacks;
     spell.cast_original_caster = values.original_caster;
+    if let Some(milliseconds) = values.duration_ms {
+        let Some(duration) = spell.misc.as_mut().and_then(|misc| misc.duration.as_mut()) else {
+            warn!("Triggered spell {spell_id} skipped: duration override has no native duration");
+            return false;
+        };
+        duration.duration_ms = milliseconds;
+    }
     if let Some(amount) = values.effect0_amount {
         let Some(effect) = spell.effects.iter_mut().find(|effect| effect.index == 0) else {
             warn!("Triggered spell {spell_id} skipped: effect0 override has no effect0");
@@ -3442,7 +3457,8 @@ fn launch_triggered_spell(
     depth: u8,
 ) -> bool {
     match plan_triggered_spell(world, caster, spell, explicit, depth) {
-        Ok(plan) => {
+        Ok(mut plan) => {
+            scripts::snapshot_guillotine_health(world, caster, spell, &mut plan);
             #[cfg(test)]
             if let Some(mut observed) =
                 world.get_resource_mut::<test_harness::ObservedTriggeredCasts>()
@@ -3450,6 +3466,7 @@ fn launch_triggered_spell(
                 observed.0.push((caster, spell.id, explicit));
             }
             crate::achievement::record_spell_cast(world, caster, spell.id);
+            scripts::spawn_ravager_field(world, caster, spell, explicit, depth);
             missiles::launch(world, caster, spell, plan, depth);
             druid_transform::after_cast(world, caster, spell);
             true

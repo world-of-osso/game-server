@@ -1,6 +1,34 @@
 ## 2026-10-23 — Native Player literal target/request boundary
 
 [Shared execution](systems/simc-apl.md#shared-literal-fixture-machinery): actual Human casts with pinned269 gear/traits reproduce1WW controlPASS/6assertionRED at4f91688e8 (34.94s runtime). Readiness now keyed by action/target; harmful precasts read native selection; Player delivery uses normal explicit-target requests and refuses expired targets. Retarget changes only the running AA victim, not selection/timers. Creature delivery retained. After hp1026 merge e99b879e8:7GREEN27.17s (18m08 compile/0compiler warnings); [proof](../handoffs/literal-player-dispatch-proof-ledger.md). Setup-only Position field compile error is not RED evidence. No numeric or DPS qualification claim.
+## 2026-10-22 — Native ALWAYS_HIT defense GREEN
+
+[Producer contract](../specs/protection-damage-producers.md#native-always_hit-defense-reader): d1335d8074PASS17.98s/compile3m16/no warnings. Actual Evasion cannot stop native Charge movement/landing; ordinary Slam still avoids. Both native immune recipients and native magic reflection retain their receipts; original ordinary Charge primary/splash/stun assertions pass. Prior seventeen disjoint producer passes retained; poison and numerical timing remain open.
+
+## 2026-10-22 — Native ALWAYS_HIT avoidance RED
+
+[Producer contract](../specs/protection-damage-producers.md#native-always_hit-defense-reader): d3de60bba native5277 Evasion deterministically makes385953 dodge, preventing movement; ordinary23922 avoidance and23920→20006 reflection qualify their inputs. Separate immunity-area assertion had an out-of-range fixture recipient, corrected without changing native data. Generic Attr3 reader implemented after immunity; GREEN pending.
+
+## 2026-10-22 — Equipped producer GREEN; Shield Charge receipt diagnosis
+
+[Coverage](../specs/protection-damage-producers.md):93ca4b7d1 cohort17PASS/1FAIL51.93s/no warnings; all six equipped/metadata cases now pass, including both actual Bloody Rebuke tick inputs and parsed role/set predicates. Previously-green Shield Charge lacked a positive splash receipt in this draw; added native-outcome diagnostics, no production-cause assumption or RNG/flag changes. Retain seventeen disjoint passes; remaining poison/numerical timing and whole-batch acceptance stay open.
+
+## 2026-10-22 — Source-backed equipped producer RED and implementation
+
+[Producer contract](../specs/protection-damage-producers.md): corrected complete-native1dbfec04b/mastera268ba2a6 cohort14PASS/3genuine missing-child FAIL46.08s/zero warnings, after actual item scaling, four-piece/free-cost and Ravager-hit prerequisites. Native set/role reader plus Guillotine per-recipient launch snapshot and Bloody Rebuke hit hooks implemented; GREEN pending. Native thresholds/role expressions/amounts/RPPM/flight/DoT metadata are not fabricated. Venomfang and perfected poison remain open; no full DPS/legal-loadout claim.
+
+## 2026-10-22 — Whirling eligibility controls and equipped fixture correction
+
+[Producer coverage](../specs/protection-damage-producers.md): bfc6fc286 Whirling4PASS40.75s/no warnings adds actual white/secondary/absent-passive/removal proof. Item/tier5-case attempt is INVALID RED: partial temporary catalog omitted CurvePoint before gameplay; replaced by read-only installed native inputs, not fabricated scaling. Lead published native equipped catalogs using additive76cf8b7c5 with unchanged repeat mtime/quick_check ok; Rust consumers and meaningful item/tier RED remain open.
+
+## 2026-10-22 — Whirling/Ravager native timing GREEN and equipped-source ingress
+
+[Dispatch](systems/spell-casting.md#protection-producer-dispatch--2026-10-22):1ba8cc854 two native cases PASS13.14s/zero warnings, real156287 ticks and ordinary12s/background4s expiry; retain seven disjoint prior TC/Phalanx passes. Auto/secondary/absence and remaining item channels are open. Native set/description-variable catalogs are absent from world.db/runtime; authenticated70448 inputs now have an importer RED fixture, execution pending. Canonical import remains lead-only; no fabricated equipped bonuses or role coefficients.
+
+## 2026-10-22 — Protection producer dispatch
+
+[Dispatch](systems/spell-casting.md#protection-producer-dispatch--2026-10-22): TC known-Rend/Charge and named Phalanx paths have seven targeted native passes across recorded scopes; corrected fixtures preserve sourced reach/template and9s cooldown. Whirling foreground-primary/native5RPPM/4000ms snapshot and shared native Ravager2000ms/8yd ground pulses implemented after actual missing-producer RED; GREEN pending. No full ability/loadout/DPS parity or chasing/soft-cap claim. [Coverage and receipts](../specs/protection-damage-producers.md).
+
 ## 2026-10-23 — Label point modifier lifecycle
 
 [Generic label-point boundary](systems/auras.md#label-point-modifier-recalculation--2026-10-23): four actual native late/remove passive cases confirm stale snapshots atcf496f61b10.52s. Reuse native CalcValue for amount-only updates; guarded owned passive/permanent effects and changed-modifier propagation. At52cb15634 four GREEN14.07s, compileexit0/zero warnings18m37; activation changes only ignore annotations. Lead gate/300s parity remain open; no data, rank, coefficient or hotfix changes. [Proof ledger](../handoffs/aura-label-points-proof-ledger.md).
