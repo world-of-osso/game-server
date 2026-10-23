@@ -74,7 +74,9 @@ struct Data {
 }
 
 /// The five Stockade script creatures' templates.
-fn stockade_templates() -> std::collections::HashMap<u32, crate::world_data::CreatureTemplate> {
+fn stockade_templates() -> crate::catalog_data::CatalogData<
+    std::collections::HashMap<u32, crate::world_data::CreatureTemplate>,
+> {
     let mut templates = crate::test_data::world_data().templates.clone();
     templates.retain(|entry, _| {
         [

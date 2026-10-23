@@ -40,7 +40,7 @@ fn harness() -> Option<Harness> {
     app.add_plugins(shared::protocol::ProtocolPlugin);
     app.init_resource::<Inbox>().add_systems(First, collect);
     app.insert_resource(WorldData {
-        templates: load_templates(&conn, &load_expected_stats(&conn)),
+        templates: load_templates(&conn, &load_expected_stats(&conn)).into(),
         ..Default::default()
     });
     app.insert_resource(load_loot_tables(&conn).unwrap());

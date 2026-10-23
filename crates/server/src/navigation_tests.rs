@@ -30,7 +30,7 @@ fn clear_path(path: &[Vec3]) {
 fn navigation_stormwind_auction_house_uses_wmo_floor() {
     let mut map = navigation::NavigationMap::open(&ground_dir().join("navmesh/0")).unwrap();
     let path = map
-        .path(wow(-8820.0, 660.0, 98.1), wow(-8816.0, 661.0, 98.1))
+        .complete_path(wow(-8820.0, 660.0, 98.1), wow(-8816.0, 661.0, 98.1))
         .unwrap();
     clear_path(&path);
     let mut ground = ground();
@@ -54,7 +54,7 @@ fn navigation_stormwind_auction_house_uses_wmo_floor() {
 fn navigation_stormwind_stairs_reach_upper_landing() {
     let mut map = navigation::NavigationMap::open(&ground_dir().join("navmesh/0")).unwrap();
     let path = map
-        .path(wow(-8737.0, 993.0, 79.5), wow(-8737.0, 971.0, 85.3))
+        .complete_path(wow(-8737.0, 993.0, 79.5), wow(-8737.0, 971.0, 85.3))
         .unwrap();
     clear_path(&path);
     assert!(
@@ -141,7 +141,7 @@ fn navigation_real_terrain_connects_across_wow_tile_seam() {
     assert_ne!(navigation::tile_of(a), navigation::tile_of(b));
     let mut map = navigation::NavigationMap::open(&ground_dir().join("navmesh/0")).unwrap();
     let path = map
-        .path(a, b)
+        .complete_path(a, b)
         .expect("connected portals across real WoW tile seam");
     clear_path(&path);
     assert!(path[0].distance(a) < 0.5);
@@ -163,6 +163,291 @@ fn ready_step(nav: &mut Navigation, entity: Entity, request: MoveRequest) -> Ste
     let _ = nav.advance(entity, request);
     nav.drain_until_idle();
     nav.advance(entity, request)
+}
+
+#[test]
+#[ignore = "requires canonical2519 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_gorek_partial_corridors_walk_and_repath_to_target() {
+    assert_canonical_route_arrives(
+        2519,
+        Vec3::new(70.6448, 72.6027, 779.064),
+        Vec3::new(-264.45807, 125.19722, 503.5),
+    );
+}
+
+#[test]
+#[ignore = "requires canonical2520 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_brackenhide_partial_corridors_walk_and_repath_three_bosses() {
+    // Exact authored XY/source-floor Z from brackenhide-packet-2/receipt.json.
+    let entrance = Vec3::new(-3300.65, 0.129981, -4681.51);
+    for (entry, target) in [
+        (186116, Vec3::new(-3168.1669, 100.49736, -3960.1665)),
+        (186120, Vec3::new(-3650.2505, 99.49241, -3961.558)),
+        (186121, Vec3::new(-3344.54, 111.17662, -3663.96)),
+    ] {
+        eprintln!("Brackenhide source placement entry={entry}");
+        assert_canonical_route_arrives(2520, entrance, target);
+    }
+}
+
+#[test]
+#[ignore = "requires canonical2527 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_halls_completed_search_disconnections_remain_blocked() {
+    // Exact halls-packet-3 WoW coordinates, converted with the existing axis adapter.
+    let entrance = wow(-0.370431, 228.269, 20.8162);
+    for (entry, target) in [
+        (189722, wow(-353.12274, -155.7234, -67.9066)),
+        (189727, wow(-315.97385, 161.89757, -100.404625)),
+    ] {
+        eprintln!("Halls source placement entry={entry}");
+        assert_canonical_route_blocked(2527, entrance, target);
+    }
+}
+
+#[test]
+#[ignore = "requires canonical2526 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_vexamus_completed_search_disconnection_remains_blocked() {
+    // Exact vexamus-packet-3 inputs; native PARTIAL without OUT_OF_NODES.
+    assert_canonical_route_blocked(
+        2526,
+        wow(1410.22, -2771.71, 955.637),
+        wow(1815.2512, -2783.9756, 904.01917),
+    );
+}
+
+#[test]
+#[ignore = "requires canonical2516 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_nokhud_186151_partial_corridor_walks_and_repaths() {
+    assert_canonical_route_arrives(
+        2516,
+        wow(-570.405, 2189.37, 431.296),
+        wow(-536.05316, 4163.211, 381.20233),
+    );
+}
+
+#[test]
+#[ignore = "requires canonical2516 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_nokhud_186338_partial_corridor_walks_and_repaths() {
+    assert_canonical_route_arrives(
+        2516,
+        wow(-570.405, 2189.37, 431.296),
+        wow(-2095.4968, 4335.8853, 536.04694),
+    );
+}
+
+#[test]
+#[ignore = "requires canonical2516 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_nokhud_186616_partial_corridor_walks_and_repaths() {
+    assert_canonical_route_arrives(
+        2516,
+        wow(-570.405, 2189.37, 431.296),
+        wow(-1167.5642, 1356.6361, 390.72348),
+    );
+}
+
+#[test]
+#[ignore = "requires canonical2521 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_ruby_repeated_partial_endpoint_stops_bounded_continuation() {
+    let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
+    let mut nav = Navigation::new(&root);
+    let actor = Entity::from_bits(99);
+    let start = wow(1386.2, -169.719, 131.0);
+    let mut from = start;
+    let target = wow(1773.8756, 18.689396, 313.123);
+    let mut blocked = false;
+    for _ in 0..2000 {
+        let mut movement = request(2521, from, target);
+        movement.distance = 1.0;
+        movement.reach = 0.0;
+        let step = nav.advance(actor, movement);
+        nav.drain_until_idle();
+        match step {
+            Step::Moved { position, reached } => {
+                assert!(!reached, "repeated partial endpoint is not the boss");
+                let next = point(position);
+                assert!(next.distance(from) < 3.0);
+                from = next;
+            }
+            Step::Blocked => {
+                blocked = true;
+                break;
+            }
+            Step::Pending => {}
+            Step::Unbaked => panic!("canonical Ruby bake missing"),
+        }
+    }
+    assert!(
+        blocked,
+        "must not loop indefinitely on the same partial end"
+    );
+    assert!(
+        from.distance(start) > 100.0,
+        "resource-limited prefix must still move"
+    );
+    assert!(
+        from.distance(target) > 100.0,
+        "Ruby remains a named route gap"
+    );
+    for _ in 0..5 {
+        assert!(matches!(
+            nav.advance(actor, request(2521, from, target)),
+            Step::Blocked
+        ));
+    }
+}
+
+#[test]
+#[ignore = "requires canonical2651 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_darkflame_208743_completed_search_disconnection_remains_blocked() {
+    assert_canonical_route_blocked(
+        2651,
+        wow(239.839, 75.8715, 94.7386),
+        wow(406.7775, -155.27142, 56.68355),
+    );
+}
+
+#[test]
+#[ignore = "requires canonical2651 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_darkflame_208747_completed_search_disconnection_remains_blocked() {
+    assert_canonical_route_blocked(
+        2651,
+        wow(239.839, 75.8715, 94.7386),
+        wow(188.47888, -547.81714, 59.8),
+    );
+}
+
+#[test]
+#[ignore = "requires canonical2661 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_cinderbrew_goldie_completed_search_disconnection_remains_blocked() {
+    assert_canonical_route_blocked(
+        2661,
+        wow(2650.88, -4835.88, 101.042),
+        wow(2649.0535, -5013.1484, 110.600006),
+    );
+}
+
+fn assert_canonical_route_blocked(map_id: u32, from: Vec3, target: Vec3) {
+    let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
+    let mut nav = Navigation::new(&root);
+    let actor = Entity::from_bits(99);
+    let movement = request(map_id, from, target);
+    assert!(matches!(nav.advance(actor, movement), Step::Pending));
+    nav.drain_until_idle();
+    for _ in 0..5 {
+        assert!(
+            matches!(nav.advance(actor, movement), Step::Blocked),
+            "map{map_id} completed-search disconnect must stay stationary/Blocked: {from:?} -> {target:?}"
+        );
+    }
+    eprintln!(
+        "map{map_id} retained named route gap at unchanged entrance={from:?}, target={target:?}"
+    );
+}
+
+fn assert_canonical_route_arrives(map_id: u32, mut from: Vec3, target: Vec3) {
+    let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
+    // Arrival is at the existing native projection, not an invented tighter XY bound.
+    let mut map = navigation::NavigationMap::open(&root.join(map_id.to_string())).unwrap();
+    let target_floor = map.complete_path(target, target).unwrap();
+    let projected_target = *target_floor.last().unwrap();
+    eprintln!("map{map_id} authored_target={target:?} native_projection={projected_target:?}");
+    let mut nav = Navigation::new(&root);
+    let actor = Entity::from_bits(99);
+    let mut arrived = false;
+    for _ in 0..10_000 {
+        let mut movement = request(map_id, from, target);
+        movement.distance = 1.0;
+        movement.reach = 0.0;
+        let step = nav.advance(actor, movement);
+        nav.drain_until_idle();
+        match step {
+            Step::Moved { position, reached } => {
+                let next = point(position);
+                assert!(next.distance(from) < 3.0, "no segment-end teleport");
+                from = next;
+                if reached {
+                    assert!(
+                        from.distance(projected_target) < 0.001,
+                        "partial end is not arrival: feet={from:?} projected_target={projected_target:?} authored_target={target:?}"
+                    );
+                    arrived = true;
+                    break;
+                }
+            }
+            Step::Pending => {}
+            Step::Blocked => {
+                panic!("map{map_id} mover blocked before reaching {target:?} at {from:?}")
+            }
+            Step::Unbaked => panic!("canonical map{map_id} bake missing"),
+        }
+    }
+    assert!(
+        arrived,
+        "map{map_id} mover failed to arrive in bounded walk: {from:?}"
+    );
+}
+
+#[test]
+fn navigation_completed_disconnected_search_stays_blocked_without_moving() {
+    let dir = tempfile::tempdir().unwrap();
+    let map_dir = dir.path().join("12");
+    std::fs::create_dir(&map_dir).unwrap();
+    let mut triangles = Vec::new();
+    for x in [10.0, 70.0] {
+        let a = Vec3::new(x, 0.0, 10.0);
+        let b = Vec3::new(x, 0.0, 30.0);
+        let c = Vec3::new(x + 30.0, 0.0, 30.0);
+        let d = Vec3::new(x + 30.0, 0.0, 10.0);
+        triangles.extend([[a, b, c], [a, c, d]]);
+    }
+    let tile = navigation::bake::bake_tile(&triangles, (32, 31)).unwrap();
+    std::fs::write(map_dir.join("32_31.nav"), tile).unwrap();
+    let mut nav = Navigation::new(dir.path());
+    let actor = Entity::from_bits(99);
+    let from = Vec3::new(20.0, 0.2, 20.0);
+    let target = Vec3::new(80.0, 0.2, 20.0);
+    // Previous partial-walking implementation demonstrably moved on these islands.
+    // A completed search now proves the disconnect and must never return Moved.
+    assert!(matches!(
+        ready_step(&mut nav, actor, request(12, from, target)),
+        Step::Blocked
+    ));
+    for _ in 0..5 {
+        assert!(matches!(
+            ready_step(&mut nav, actor, request(12, from, target)),
+            Step::Blocked
+        ));
+    }
+}
+
+#[test]
+fn navigation_complete_terminal_leg_tracks_a_nearby_moving_victim() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut nav = Navigation::new(dir.path());
+    let actor = Entity::from_bits(99);
+    let from = Vec3::ZERO;
+    let target = Vec3::new(10.0, 0.0, 0.0);
+    let mut movement = request(12, from, target);
+    movement.distance = 8.0;
+    nav.adopt_candidate_route(actor, movement, vec![from, target]);
+    let Step::Moved {
+        position: at,
+        reached: true,
+    } = nav.advance(actor, movement)
+    else {
+        panic!("complete route must reach the ordinary two-yard sphere");
+    };
+    movement.from = at;
+    movement.to = position(Vec3::new(10.5, 0.0, 0.0));
+    movement.distance = 1.0;
+    let Step::Moved {
+        position: next,
+        reached: true,
+    } = nav.advance(actor, movement)
+    else {
+        panic!("sub-yard target motion must reuse the complete terminal leg");
+    };
+    assert!((next.x - 8.5).abs() < 0.001);
 }
 
 #[test]
