@@ -171,6 +171,42 @@ fn cast_binding_source(group: &mut GroupFixture, spell: u32, target: Entity) {
 }
 
 #[test]
+fn holy_policy_native32_defers_direct_heals_for_chip_damage() {
+    let mut group = native_group_at(32);
+    let target = group.h.caster;
+    let enemy = group.h.npc;
+    let maximum = group.h.app.world().get::<Health>(target).unwrap().max;
+    let source_scale = crate::level_scaling::UnitScaling::of(group.h.app.world(), enemy);
+    let target_scale = crate::level_scaling::UnitScaling::of(group.h.app.world(), target);
+    let health_per_damage = crate::level_scaling::health_loss(&source_scale, &target_scale, 1.0);
+    assert!(health_per_damage > 0.0);
+    crate::combat::deal_direct_damage(
+        group.h.app.world_mut(),
+        enemy,
+        target,
+        maximum * 0.01 / health_per_damage,
+    );
+    assert!(fraction(&group, target) > 0.98 && fraction(&group, target) < 1.0);
+    assert!(own_aura(&group.h, group.priest, 114255).is_none());
+    let first = group.h.inbox.log.len();
+    step_henry(&mut group);
+    group.h.advance(80);
+    let oversized: Vec<_> = group.h.inbox.log[first..]
+        .iter()
+        .filter(|event| {
+            event.source == Some(group.priest.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Heal
+                && matches!(event.spell_id, Some(2050 | 2061))
+        })
+        .collect();
+    assert!(
+        oversized.is_empty(),
+        "non-emergency chip damage must not bypass authored direct-heal thresholds: {oversized:?}"
+    );
+}
+
+#[test]
 fn holy_binding_heals_native90_other_heal_copies_pre_overheal_amount_once() {
     let mut group = native_group();
     assert!(own_aura(&group.h, group.priest, 368275).is_some());
