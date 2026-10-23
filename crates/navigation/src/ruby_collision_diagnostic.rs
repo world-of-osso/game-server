@@ -61,7 +61,7 @@ fn ruby_raw_collision_at_component_gap_and_target() {
         writeln!(csv, "x0,y0,z0,x1,y1,z1,x2,y2,z2").unwrap();
         let mut count = 0;
         if let Some(global) = &global {
-            for geometry in global.values() {
+            for (_, geometry) in global {
                 count += write_collision_window(geometry, min, max, &mut csv);
             }
         } else {
