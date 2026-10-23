@@ -13,7 +13,8 @@ const PYROCLASM_TALENT: u32 = 269650;
 const PYROCLASM: u32 = 269651;
 pub(crate) const HOT_STREAK: u32 = 48108;
 pub(super) const PYROBLAST: u32 = 11366;
-pub(super) const FLAMESTRIKE: u32 = 1254851;
+pub(super) const FLAMESTRIKE: u32 = 2120;
+pub(super) const NATIVE_FLAMESTRIKE: u32 = 1254851;
 
 pub(crate) fn record_fire_hit(world: &mut World, caster: Entity, spell: &SpellInfo, crit: bool) {
     // SimC marks only Fireball, Fire Blast, Pyroblast and Scorch as HS triggers.
@@ -69,7 +70,8 @@ pub(crate) fn pyroclasm_damage_modifier(
     caster: Entity,
     spell: &SpellInfo,
 ) -> Option<ChargedSpellModifier> {
-    if !spell.cast_was_hardcast || !matches!(spell.id, PYROBLAST | FLAMESTRIKE) {
+    if !spell.cast_was_hardcast || !matches!(spell.id, PYROBLAST | FLAMESTRIKE | NATIVE_FLAMESTRIKE)
+    {
         return None;
     }
     let aura = world

@@ -2,6 +2,17 @@
 
 Server-side aura runtime in `crates/server/src/auras/`: aura instances on active units, periodic effects, procs, spell and stat modifiers, removal and `UnitAuras` replication. See [auras](../wiki/systems/auras.md).
 
+## Native hit proc masks
+
+TC a352b1fa `Spell.cpp:2343–2400`: melee/ranged defense classes keep their
+weapon ability masks. Other spells select helpful/harmful periodic masks for
+native Attr3 TreatAsPeriodic, else ability masks for Attr0 IsAbility, else spell
+masks. DefenseType0 alone must not force an ability mask. Native Word of Glory's
+real helpful hit must therefore reach Light of the Titans' native proc mask.
+Preserve family masks, proc chance, triggered eligibility and charges. Record the
+native catalog eligibility diff and a changed non-Paladin source control; no
+spell-ID exception or blanket proc certification.
+
 ## Native rolling periodic refresh
 
 TC a352b1fa `SpellAuraEffects.cpp:832–873` supplies the rolling-amount rule.
@@ -85,13 +96,13 @@ Native12846 positive eligible damage procs ordinary12654 on the damaged target. 
 
 ## Fire Hot Streak
 
-Native-kit followers retain their actual level-gated selected spell IDs in KnownSpells, including non-aura passives, without a Player or player-only grants. Actual known native195283 (Effect3, not an aura) enables ordinary landed direct Fireball133, Fire Blast108853/319836, Pyroblast11366 and Scorch2948 hits to produce Heating Up48107 on a crit, convert existing Heating Up to Hot Streak48108 on the next crit, or clear Heating Up on a noncrit (TC a352b1fa `spell_mage.cpp:1037–1100`; current eligible actions: SimC76f8118). Periodic/copy/triggered damage must not enter this ordinary-hit bridge. Snapshot actual native cast-time-modifier instances at cast admission; only Pyroblast/Flamestrike1254851 admitted with48108 consume that instance after successful cast, before missile impact. Hot Streak earned during a hardcast belongs to the next cast (TC marker `m_appliedMods`; SimC `sc_mage.cpp:2427`). Additional Ignite/Pyroclasm/scorch-finish/talent and other-trigger consequences remain separate gaps.
+Native-kit followers retain their actual level-gated selected spell IDs in KnownSpells, including non-aura passives, without a Player or player-only grants. Actual known native195283 (Effect3, not an aura) enables ordinary landed direct Fireball133, Fire Blast108853/319836, Pyroblast11366 and Scorch2948 hits to produce Heating Up48107 on a crit, convert existing Heating Up to Hot Streak48108 on the next crit, or clear Heating Up on a noncrit (TC a352b1fa `spell_mage.cpp:1037–1100`; current eligible actions: SimC76f8118). Periodic/copy/triggered damage must not enter this ordinary-hit bridge. Snapshot actual native cast-time-modifier instances at cast admission; only Pyroblast11366/Flamestrike2120 or1254851 admitted with48108 consume that instance after successful cast, before missile impact. Hot Streak earned during a hardcast belongs to the next cast (TC marker `m_appliedMods`; SimC `sc_mage.cpp:2427`). Additional Ignite/Pyroclasm/scorch-finish/talent and other-trigger consequences remain separate gaps.
 
 ## Elemental Overload cast consequences
 
-Actual168534 effect0 supplies the Lightning Bolt188196→45284 proc chance. A source191634 charged modifier matched into that successful cast's launch snapshot guarantees the overload; merely observing a live buff is insufficient. Queue the native child400ms after successful cast, using normal `TRIGGERED_NONE` cast semantics, its actual target and native missile data. TC a352 `spell_shaman.cpp:2124–2230`, `SpellDefines.h:493` and SimC76f8118 `sc_shaman.cpp:3175–3197` qualify the mechanism.
+Actual168534 effect0 supplies the Lightning Bolt188196→45284 and Lava Burst51505→77451→285466 chance, and one-third that chance for each Chain Lightning188443→45297 hit. Native51505 retains its authored285452 root-damage payload. TC's queued Lava Overload ID is77451 (`spell_shaman.cpp:110`), whose native effect32 launches285466 damage at50yd/s; never bypass that wrapper by directly casting285466. A source191634 charged modifier matched into the triggering cast guarantees its overloads; merely observing a live buff is insufficient. Each landed hostile root target receives a normal `TRIGGERED_NONE` child cast400ms after that hit, retaining the actual target and native missile data. Root flight time precedes the400ms wait. TC a352 `spell_shaman.cpp:2124–2230`, `SpellDefines.h:493` and TDB168534 `SpellPhaseMask=2` (HIT, `SpellMgr.h:225`) qualify this boundary; SimC76f8118 schedules during travel instead and does not override the pinned TC timing.
 
-The actual168534 effect1 amount scales45284's damage at impact, retaining native modifiers and normal crit/mitigation/rounding. Native382032 Echo Chamber is already108/PointsIndex1 in the aura calculation; do not substitute an invented flat coefficient from historical tooltip wording. This first bounded Lightning Bolt consequence does not certify Chain/Lava/Elemental Blast/Icefury, Ascendance extra overloads, full proc-table import or their resource scripts. Mastery-point coefficient production remains the existing separate stat consumer.
+The actual168534 effect1 amount scales45284/45297/285466 damage at impact, retaining native modifiers and normal crit/mitigation/rounding. Native382032 Echo Chamber is already108/PointsIndex1 in the aura calculation; do not substitute an invented flat coefficient from historical tooltip wording. Elemental Blast/Icefury mappings, Lava-specific Flame Shock crit behavior, Ascendance extra overloads, full proc-table import and resource scripts remain uncertified. Mastery-point coefficient production remains the existing separate stat consumer.
 
 ## Inundate utility-cast resource policy
 
@@ -105,7 +116,7 @@ For finite stacking auras with native attribute490 (`Attributes_15 & 0x400`, Sim
 
 ## Pyroclasm Hot Streak policy
 
-`MAGE_PYROCLASM_SIMC_HOT_STREAK_TRIGGER` rolls the actual active269650 effect0 chance when a cast truly spends its admitted Hot Streak. Trigger native269651, retaining its native duration and two-stack cap. Ordinary Pyroblast11366/Flamestrike1254851 admitted with positive cast time use269651 effect0 damage percentage and consume one live stack at completion; instant casts neither spend nor receive that hardcast-only bonus. Retain the numeric bonus through missile impact after consumption.70448 supplies chance15 and bonus230%; SimC76f8118 `sc_mage.cpp2326–2428,6444–6446` supplies trigger/consumer semantics. TC has no Pyroclasm script and DB2 has no269650 proc row, so this is an explicit project policy. Other set/talent consequences remain outside this slice. [Implementation and proof](../wiki/systems/auras.md#pyroclasm-hot-streak-policy--2026-10-21).
+`MAGE_PYROCLASM_SIMC_HOT_STREAK_TRIGGER` rolls the actual active269650 effect0 chance when a cast truly spends its admitted Hot Streak. Trigger native269651, retaining its native duration and two-stack cap. Ordinary Pyroblast11366/Flamestrike2120 or1254851 admitted with positive cast time use269651 effect0 damage percentage and consume one live stack at completion; instant casts neither spend nor receive that hardcast-only bonus. Retain the numeric bonus through missile impact after consumption.70448 supplies chance15 and bonus230%; SimC76f8118 `sc_mage.cpp2326–2428,6444–6446` supplies trigger/consumer semantics. TC has no Pyroclasm script and DB2 has no269650 proc row, so this is an explicit project policy. Other set/talent consequences remain outside this slice. [Implementation and proof](../wiki/systems/auras.md#pyroclasm-hot-streak-policy--2026-10-21).
 
 ## Devastation Essence Burst
 

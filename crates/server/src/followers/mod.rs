@@ -1,6 +1,8 @@
 //! User-approved player-spec combat bridge for authenticated Retail followers.
 mod ai;
 mod catalog;
+#[cfg(test)]
+mod darkflame_drop_tests;
 mod empower_policy;
 mod hazards;
 mod healer_context;
@@ -25,6 +27,8 @@ mod kit_empower_tests;
 #[cfg(test)]
 mod kit_hunter_policy_tests;
 mod kit_interrupt;
+#[cfg(test)]
+mod kit_light_of_titans_tests;
 mod kit_overrides;
 
 #[cfg(test)]
@@ -266,6 +270,8 @@ pub(crate) mod native_fixture;
 mod navigation_tests;
 #[cfg(test)]
 mod passive_stats_tests;
+#[cfg(test)]
+mod pet_coverage_tests;
 #[cfg(test)]
 mod pet_tests;
 #[cfg(test)]

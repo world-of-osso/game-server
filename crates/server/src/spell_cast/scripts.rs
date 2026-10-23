@@ -434,7 +434,9 @@ pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
         return Some(hook);
     }
     match spell_id {
-        super::elemental_overload::LIGHTNING_OVERLOAD => {
+        super::elemental_overload::LIGHTNING_OVERLOAD
+        | super::elemental_overload::CHAIN_OVERLOAD
+        | super::elemental_overload::LAVA_OVERLOAD_DAMAGE => {
             Some(super::elemental_overload::scale_damage)
         }
         crate::auras::agony::AGONY => Some(crate::auras::agony::tick_damage),
@@ -556,7 +558,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
             Some(essence_burst::roll_essence_burst)
         }
-        hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE => {
+        hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE | hot_streak::NATIVE_FLAMESTRIKE => {
             Some(hot_streak::consume_procs_and_roll_pyroclasm)
         }
         lava_surge::LAVA_BURST => Some(lava_surge::restore_deferred_charge),
