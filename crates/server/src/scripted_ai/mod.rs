@@ -53,6 +53,7 @@ pub(crate) mod ragefire_chasm;
 pub(crate) mod ruby_life_pools;
 mod scripted_alerts;
 pub(crate) mod shattered_halls;
+mod skarmorak;
 pub mod smart_ai;
 mod talondras;
 pub mod the_stockade;
@@ -127,6 +128,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, blood_furnace::register_aura_scripts)
             .add_systems(Startup, shattered_halls::register_aura_scripts)
             .add_systems(Startup, orator::register_aura_scripts)
+            .add_systems(Startup, skarmorak::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
@@ -397,6 +399,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == orator::SCRIPT {
         return orator::creature_ai(world, creature);
     }
+    if script_name == skarmorak::SCRIPT {
+        return skarmorak::creature_ai(world, creature);
+    }
     if script_name == kikatal::SCRIPT {
         return kikatal::creature_ai(world, creature);
     }
@@ -475,6 +480,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || script_name == anubzekt::SCRIPT
         || script_name == gulping_goliath::SCRIPT
         || script_name == orator::SCRIPT
+        || script_name == skarmorak::SCRIPT
         || script_name == granyth::SCRIPT
         || script_name == treemouth::SCRIPT
         || script_name == kikatal::SCRIPT

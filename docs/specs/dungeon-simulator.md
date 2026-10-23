@@ -16,6 +16,10 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - [ ] Enforce `SCRIPTED_BOSS_PULL_WHEN_READY` and `CLEARED_STATE_ALWAYS_PULLS_NEXT_PACK` from the [follower policy](follower-dungeons.md): no numeric forecast may strand a cleared, full-ready party before its next single pack. No overlap or chained adds on that admission.
 - [ ] Preserve approved tank policy: ten active-combat seconds of current-run DPS/healing measurements, retained through OOC travel/recovery/holds and reset at dungeon start or full wipe; separate five-second health stability remains wall-clock. Preserve 30% HP reserve, first single pack, affordable sourced heal, every member above 80% across five seconds before overlap, static spawns until observed dead, caster collection and hazard reaction.
 
+## Pet diagnostic evidence
+
+Each regular party sample also records actual controlled pets, their owner/entity/template/level provenance, HP, position, CombatRefs, threat and cast/motion state. Record related opponents even when initial acquisition has zero threat. Retain those diagnostic identities after pet Death, enemy evade/home and despawn so reset transitions and unavailable state remain observable; never fabricate missing HP/position. Terminal unit snapshots include those pets. These observations do not change party admission, threat, AI or healer policy.
+
 ## Abort evidence
 
 A gameplay panic or initialization failure must return an explicit `aborted` result with its original reason instead of losing the run's evidence. Final output always includes `run-SEED.json` and `combat-events-SEED.json` with status/reason and the ordered native events captured before termination. Horizon completion keeps its `timeout` reason and exports the same trace. Initialization failure before a retained gameplay world is identified explicitly; never invent combat events, unit state or boss credit. Filesystem write errors remain explicit failures. This covers recoverable Rust unwind/error boundaries, not process kill, hardware failure or abort-on-panic builds.
