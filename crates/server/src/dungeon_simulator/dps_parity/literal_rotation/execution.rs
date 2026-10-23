@@ -59,6 +59,18 @@ impl Prepared {
         Ok(Self { ready })
     }
 
+    /// Readonly pool_resource hook. API scaffold: native classification is pending.
+    pub fn resource_limited(
+        &self,
+        action: &Action,
+        _equipment: &Equipment,
+    ) -> Result<bool, String> {
+        Err(format!(
+            "NATIVE_LITERAL_RESOURCE_QUERY_UNAVAILABLE: {}",
+            action.name
+        ))
+    }
+
     pub fn execution(
         &self,
         action: &Action,
