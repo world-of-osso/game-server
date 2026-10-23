@@ -30,7 +30,7 @@ Match actual **formula spell ID**, actor/pet, target count, direct/tick kind and
 | `armor_mitigation_fraction` | Explicit `reduced by X% from armor` divided by100. Compare native armor-only reduction, not total mitigation. Null means unprinted, not zero. |
 | Final `actual_amount` | Native `CombatLogEvent.amount` for one matched impact. `actions[].average_hit` mixes results/states and cannot identify formula factors. |
 
-No native instrumentation is added here. Existing field names come from `dps_parity/report.rs`; parity owners expose missing cast factors. Report the first differing factor, not a guessed channel-wide scaling correction. SimC70391/native70448 build differences remain separate evidence.
+The aggregate field mapping comes from `dps_parity/report.rs`; test-only `single_spell.rs`/`spell_cast/factor_capture.rs` now observe actual native formula operations without rerolling variance/crit or adding a second formula. Report the first differing factor, not a guessed channel-wide scaling correction. SimC70391/native70448 build differences remain separate evidence.
 
 ## Interpretation
 
@@ -42,13 +42,22 @@ Batch prerequisite plans record complete APLs, durations and pinned public-sourc
 
 `NOT_TRIGGERED_BY_MINIMAL_DRIVERS` means no matching formula observed during the recorded probe duration, not zero damage. Startup modifiers may still print. Failures retain actual errors/proof; no values are fabricated.
 
+## Native factor comparison consumer
+
+```text
+python3 scripts/dps_parity/native_spell_diff.py --native native.json --oracle oracle.json --spell-id 100780 --output diff.json
+```
+
+The stdlib consumer selects one ordinal impact per receipt, uses the final result stage, and compares each printed numeric formula/result/armor factor. It preserves native `unattributed product` labels, marks absent factors unavailable rather than zero, and records both input hashes. Exit0 means matching active coefficient/factor terms,1 means a difference/incomplete evidence,2 means invalid input. Raw SP observations remain visible when both SP coefficients are zero but do not become a coefficient-term mismatch. Native effective source/target products and AP/SP terms compare to explicitly labelled products of printed SimC components; differing factorization is not itself a mechanics correction. Ten recorded/counterfactual tests and a43-factor WW oracle self-control qualify this consumer. Actual WW269 Tiger Palm native per-hit capture passed1/1 at84d60394e, preserving baseline damage38050; its first real diff is not native parity certification. The helper uses shared `capture_fixture` and `Prepared`/`execution::execute`; Actual two-TP earned-Chi priming then one FoF113656 channel produced three child117418 impacts at distinct times,1/1 GREEN20.20s atbcd9d946d. At a9a17aa4c the new280 policy changed the real TP hit38050→39471 and its armor stage to0.2738695 including truncation; three ordinary-NPC/Player/cap controls passed. At998083262 native cases3/controls3/math1/forecast8 are GREEN. Actual post280 armor1293.599976, K3430 and mitigation scalar0.273858905 match the oracle; rounded stage ratios stay separately named and damage remains39471. The first three FoF coefficient/armor factors also match, but outgoing source products differ; recorded states/priming are not assumed equivalent. Arms still awaits shared Player dispatch. [Actor/armor source boundary](../investigations/follower-armor-penetration.md) explains why the follower receipt's0.30 cannot be tuned blindly to the SimC player's0.274.
+
 ## Sources
 
 - [CLI](../../../scripts/dps_parity/simc_spell_oracle.py), [batch driver map](../../../scripts/dps_parity/simc_spell_oracle_batch.py), [sourced prerequisite plans](../../../scripts/dps_parity/simc_spell_oracle_plans.json), [recorded tests](../../../scripts/dps_parity/test_simc_spell_oracle.py).
-- [Native receipt fields](../../../crates/server/src/dungeon_simulator/dps_parity/report.rs).
+- [Native receipt fields](../../../crates/server/src/dungeon_simulator/dps_parity/report.rs); [factor comparison consumer](../../../scripts/dps_parity/native_spell_diff.py).
 - [Parity specification](../../specs/dps-parity.md).
 
 ## See Also
 
 - [[simc-apl]] — native rotation binding is separate.
 - [[character-stats]] — native stat production.
+- [[follower-armor-penetration]] — actual actor-policy difference and ExpectedStat/TC provenance.

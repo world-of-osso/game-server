@@ -148,6 +148,7 @@ fn mitigated_physical_floor(world: &World, pet: Entity, target: Entity, base: f3
         Some(world.resource::<crate::level_scaling::ArmorConstants>()),
         world.get::<crate::auras::AuraStatMods>(pet),
     )
+    .damage
     .floor()
 }
 
