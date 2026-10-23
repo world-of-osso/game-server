@@ -1,3 +1,7 @@
+## 2026-10-22 — Wratheye Decaystrike-only partial
+
+[Wratheye](systems/boss-scripts.md#wratheye-decaystrike-only-partial-2026-10-22): ignorednativeRED precedes AI; integrated4GREEN25.54s actualperiodicdamage/aura/clock/reset/genericlethalcredit/copy/corpse. Source5%finish/energy/totem/cloud gaps explicit; stable-keySQLfreshcopyreceipt.
+
 ## 2026-10-23 — TC-native Intensifying Flame feedback
 
 [Bridge](systems/auras.md#intensifying-flame-tick-bridge--2026-10-23):68f5 gives native amount/cap/feedback4PASS and an obsolete natural-expiry oracle failure, plus retained core-Ignite4PASS with approved script isolation. Exact trace proves nine419800→Ignite refreshes and original11.1s→20.1s deadline extension. Pinned TC/TDB defaults win over SimC; no production exclusion added. Finalf6b53c0d3 gives native5PASS9.19s (compile5m17, zero warnings), isolating12846 only after earning the real bank for the expiry-frame control. Retained4PASS16.66s source scope is unchanged. Lead independent integration/check remains pending.
@@ -4041,7 +4045,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 ## 2026-10-22 — Native immutable fixture sharing
 
-[Server performance](investigations/server-test-performance.md#cache-implementation-boundary-in-progress):8b61e8bc0 shares test-only catalog/spell payloads while production aliases retain owned types. Native App isolation3/3, real SQLite cache controls6/6, spell isolation/server-side append controls4/4 pass. Exact old/current binary census5542→5543 adds only the new isolation test, with no removals/ignore drift. Qualified matching workspace-graph cohort19/19PASS: summed isolated CPU787.220→554.693s; prepared3-App RSS3161604→1283496KiB, with explicitly higher cold-case RSS. Completed quiet six-thread union2856PASS/87ignored/zero coverage drift:1348.305s,4757.822CPU,6.15GiBRSS/7.08GiBswap;900s remains unmet. Module-process batching acb1539e0 qualifies the same native union706.402s/6.77GiBRSS/zero swap, exact2856enabled/87ignored coverage,2855PASS/1lead-accepted known Talondras master environment failure. Full workspace batching remains unmeasured. Package-only exploratory measurements are excluded.
+[Server performance](investigations/server-test-performance.md#cache-implementation-boundary-in-progress):8b61e8bc0 shares test-only catalog/spell payloads while production aliases retain owned types. Native App isolation3/3, real SQLite cache controls6/6, spell isolation/server-side append controls4/4 pass. Exact old/current binary census5542→5543 adds only the new isolation test, with no removals/ignore drift. Qualified matching workspace-graph cohort19/19PASS: summed isolated CPU787.220→554.693s; prepared3-App RSS3161604→1283496KiB, with explicitly higher cold-case RSS. Completed quiet six-thread union2856PASS/87ignored/zero coverage drift:1348.305s,4757.822CPU,6.15GiBRSS/7.08GiBswap;900s remains unmet. Module-process batching acb1539e0 qualifies the same native union706.402s/6.77GiBRSS/zero swap, exact2856enabled/87ignored coverage,2855PASS/1lead-accepted known Talondras master environment failure. Full workspace batching remains unmeasured. Package-only exploratory measurements are excluded. Whole suite2×3 takes1254s; weighted3×3 is5745PASS/191ignored at1010s/7.07GiB, still above900s. Deleted prepared-input cache release2RED→8GREEN and test-local per-difficulty Crawth seed are qualified at20cf2611b/dce79defc; normalAI/Herald RSS decreases33.4%/15.6% while CPU increases21.7%/20.5%, reported without claiming a timing win. Seeded3isolated+exact526-case/2thread Crawth proof pass; unchanged Talondras remains known.
 
 ## 2026-10-22 — Server test performance profile
 
@@ -4061,6 +4065,11 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 
 - 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22) HIT/Chain correction5GREEN10.43s; actual StatsPlugin70samples2PASS9.38s on same executable. Three qualified tests enabled; fullAPL/resource/other-root gaps retained.
 
+- 2026-10-23: [Native weapon AP](systems/character-stats.md#native-weapon-attack-power--2026-10-23): actual Tiger Palm91vs358–377 RED precedes generic raw-table weapon AP/attack-type/aura366 implementation; targeted4GREEN13.89s at4b9d2be73, zero compiler warnings; cases enabled afterward. Parent integration gate pending. White-hit AP/6 versus TC3.5 remains deferred and unchanged.
+
+- 2026-10-23: [Shared SimC APL](systems/simc-apl.md): pushed eleven ignored WW/Ret expressions/variables/call-list REDs, observed11FAIL atc0cf6eed6; shared implementationaff61cbab passes11GREEN (zero compiler warnings), cases enabled afterward; native adapter integration remains pending.
+
+- 2026-10-23: [Action-bound APL facts](systems/simc-apl.md): genuine WW combo/Ret call-gcd2RED→13GREEN atcd3c7e427, zero warnings; mandatory ActionFacts receives each native/control row. Native adapters/DPS proof remain open.
 - [Lava Burst Overload](investigations/follower-data.md#lava-burst-overload-qualification): fixtureNoCharges distinguished from genuine86-native-hit RED;51505→285466 added to existing HIT callback/effect1 scaling. GREEN pending; EB/Icefury cast-only scope clarified.
 
 - [Lava Overload identity](investigations/follower-data.md#lava-burst-overload-qualification): TC enum77451 is queued cast; native effect32→285466 damage at50yd/s. Direct-payload mapping is not gate-ready; ignored native wrapper/flight oracle added before correction.

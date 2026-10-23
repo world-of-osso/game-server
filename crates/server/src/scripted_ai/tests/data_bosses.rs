@@ -155,6 +155,8 @@ mod vazruden_slay;
 mod vexamus;
 #[path = "vyletongue.rs"]
 mod vyletongue;
+#[path = "wratheye.rs"]
+mod wratheye;
 
 #[path = "prepared_input_tests.rs"]
 mod prepared_input_tests;

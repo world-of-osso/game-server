@@ -1,5 +1,12 @@
 # Boss scripts
 
+## Wratheye Decaystrike-only partial —2026-10-22
+
+[Contract](../../specs/boss-scripts.md#wratheye-decaystrike-only-partial). LittleWigs2777a9d actual373912 first10.6s/accepted-start alternating19.4,25.5s, not373917 warning. Native2s cast/800ms periodic373915damage+373917aura unchanged. Ignored426358f2a tests pushed before AI: ac46f5a9f native1qualificationPASS/3genuineclock/reset/lifecycleFAIL30.34s; source partiald12f39c3f with native EventMap-width correction28d822ceb then4GREEN25.54s after master merge. Explicit Normal1/projected205: first/second/third/fourth starts, actual damage/aura, separate coincident copy, native-home reset, generic lethal-credit and corpse silence. Four ignores removed only after proof; no assertion/production change.
+
+`WRATHEYE_FIVE_PERCENT_FINISH_GAP` retains the source5% encounter end: lethal-credit fixture is NOT source-completion proof. `WRATHEYE_TOTEM_CLOUD_CONTROLLER_GAP` retains missing190381/191574 native templates/destinations87/47/child actions. `WRATHEYE_DECAYING_STRENGTH_ENERGY_GAP` retains energy/dummy controller; no invented phase clocks/targets/population/stat modifications. Producer/SQL only binds2474/5417/106069 and ScriptName; derivedWowheadNormal63520002/source class4/flags0/faction16/models/difficulties/native rows preserved. Fresh-copy twice-replay receipt and producer preservation/idempotence/conflict pass. Evidence `game-engine/data/diagnostics/follower-bosses-df-2026-10-22/wratheye-*`; lead owns final check/integration/publication. No wholefight/nav/loot/authored205population claim.
+
+
 ## Skarmorak TC Shell-controller partial — 2026-10-22
 
 Actual210156/map2652/2880bit1 is authenticated by TC a352b1fa `TheStoneVault/boss_skarmorak.cpp`, source spawn10002291 and native70448 Journal2579/5608/display118714. Sourceclass4/flags64/flags2=0/addons429974/422359 and all actor/native/population data remain intact. Independent producer `--encounter skarmorak` RED→1GREEN7.658s proves binding-only preservation/idempotence/conflict; stable-key delta receipt verifies twice-replayed fresh copy. Follower205 fixtures explicitly project the authored Normal placement, not205 stat/spawn rows. Receipts: `game-engine/data/diagnostics/follower-bosses-tww-2026-10-22/skarmorak-*`.
