@@ -55,6 +55,29 @@ class OracleTests(unittest.TestCase):
         self.assertIn("head=hat,id=1", actual)
         self.assertIn("actions=fire_blast\nactions+=/scorch", actual)
 
+    def test_report_parent_uses_explicit_child_alias_without_changing_ids(self):
+        import simc_spell_oracle_batch as batch
+        channel = {"name": "fists_of_fury", "spell_id": 113656}
+        events = [{"event": "direct_amount", "action": "fists_of_fury_damage", "spell_id": 117418}]
+        actual = batch.matching_formulas(269, channel, events)
+        self.assertEqual(actual, events)
+        self.assertEqual(actual[0]["spell_id"], 117418)
+        self.assertEqual(batch.matching_formulas(71, channel, events), [])
+
+    def test_child_drivers_include_required_trigger_actions(self):
+        import simc_spell_oracle_batch as batch
+        self.assertIn("bestial_wrath", batch.action_list(253, {"name": "bloodshed"}))
+        self.assertIn("eternity_surge", batch.action_list(1467, {"name": "azure_sweep"}))
+        self.assertNotIn("melee", batch.action_list(253, {"name": "melee"}))
+
+    def test_top_channels_combine_equal_spell_pet_contributions(self):
+        import simc_spell_oracle_batch as batch
+        rows = [{"name": "kill_command", "spell_id": 83381, "actor": "duck", "damage": 10, "share_pct": 10}, {"name": "kill_command", "spell_id": 83381, "actor": "animal_companion", "damage": 20, "share_pct": 20}]
+        actual = batch.top_channels({"actions": rows})
+        self.assertEqual(len(actual), 1)
+        self.assertEqual(actual[0]["share_pct"], 30)
+        self.assertEqual(actual[0]["actors"], ["duck", "animal_companion"])
+
     def test_invalid_action_is_rejected(self):
         with self.assertRaises(ValueError):
             oracle.build_profile('mage="Test"', ["bad\nactions=other"])

@@ -12,11 +12,12 @@ OUTPUT = ENGINE / 'data/diagnostics/simc-spell-oracle-2026-10-23'
 PRIORITY = [70, 269, 71, 577, 259, 1467, 63, 253]
 # Explicit minimal public SimC cast drivers for reported child/proc channels.
 DRIVERS = {
-    70: {'final_verdict': ['templars_verdict'], 'dawnlight': ['avenging_wrath', 'wake_of_ashes', 'templars_verdict'], 'divine_arbiter': ['templars_verdict'], 'crusading_strike': [], 'perfected_guillotine': ['use_items']},
-    269: {'rising_sun_kick_damage': ['rising_sun_kick'], 'rushing_wind_kick_damage': ['rushing_wind_kick'], 'dual_threat': []},
+    70: {'final_verdict': ['templars_verdict'], 'dawnlight': ['avenging_wrath', 'wake_of_ashes', 'templars_verdict'], 'divine_arbiter': ['divine_storm,if=buff.divine_arbiter_verdict.up', 'templars_verdict'], 'crusading_strike': [], 'perfected_guillotine': ['use_items']},
+    269: {'rising_sun_kick_damage': ['rising_sun_kick'], 'rushing_wind_kick_damage': ['rushing_wind_kick', 'blackout_kick'], 'dual_threat': []},
     71: {'execute_damage': ['execute'], 'slayers_strike': ['mortal_strike'], 'mortal_strike_bladestorm_unhinged': ['bladestorm'], 'bladestorm_mh': ['bladestorm']},
     577: {'burning_blades': ['immolation_aura', 'blade_dance', 'chaos_strike'], 'demonsurge': ['metamorphosis', 'eye_beam', 'blade_dance', 'chaos_strike'], 'death_sweep_first_blood_4': ['metamorphosis', 'death_sweep'], 'annihilation_damage_1': ['metamorphosis', 'annihilation']},
-    1467: {'bombardments': ['deep_breath', 'disintegrate'], 'scintillation': ['disintegrate']},
+    1467: {'azure_sweep': ['azure_sweep', 'eternity_surge'], 'bombardments': ['deep_breath', 'disintegrate'], 'scintillation': ['disintegrate']},
+    253: {'bloodshed': ['bestial_wrath'], 'melee': ['kill_command']},
     63: {'ignite': ['pyroblast'], 'intensifying_flame': ['fire_blast', 'pyroblast']},
     72: {'crushing_blow_mh': ['recklessness', 'raging_blow'], 'crushing_blow_oh': ['recklessness', 'raging_blow'], 'slayers_strike': ['rampage'], 'bladestorm_mh': ['bladestorm']},
     73: {'execute_damage': ['execute'], 'devastator': []},
@@ -98,6 +99,21 @@ def reference_for(spec, references=REFERENCES):
     return reference, raw, proof_path, profile
 
 
+# The pinned report aggregates these child formula actions under parent channels.
+# Keep printed IDs unchanged and expose this relation in selection metadata.
+FORMULA_ALIASES = {
+    (269, 'fists_of_fury'): {'fists_of_fury_damage', 'fists_of_fury_damage_mid2_2pc'},
+    (1467, 'fire_breath'): {'fire_breath_damage'},
+}
+
+
+def matching_formulas(spec, channel, events):
+    aliases = FORMULA_ALIASES.get((spec, channel['name']), set())
+    return [e for e in events if e['event'].endswith('_amount') and (
+        (e['spell_id'] == channel['spell_id'] and e['action'] == channel['name'])
+        or e['action'] in aliases)]
+
+
 def generate_spec(spec, output=OUTPUT, references=REFERENCES):
     reference, raw, reference_proof, profile = reference_for(spec, references)
     channels = top_channels(json.loads(reference.read_text()))
@@ -111,7 +127,8 @@ def generate_spec(spec, output=OUTPUT, references=REFERENCES):
         metadata = {'spec_id': spec, 'channel': channel, 'reference': str(raw), 'normalized_reference': str(reference), 'reference_sha256': sha256(raw), 'reference_proof': str(reference_proof), 'profile_policy': 'exact source profile from reference proof; MID1 where reference used MID1'}
         try:
             data = run_oracle(profile, action_list(spec, channel), path)
-            observed = [e for e in data['events'] if e['event'].endswith('_amount') and e['spell_id'] == channel['spell_id'] and e['action'] == channel['name']]
+            observed = matching_formulas(spec, channel, data['events'])
+            metadata['observed_formula_actions'] = sorted({(e['action'], e['spell_id']) for e in observed})
             metadata['status'] = 'observed' if observed else 'NOT_TRIGGERED_BY_MINIMAL_DRIVERS'
             metadata['matching_formula_records'] = len(observed)
             data['selection'] = metadata
