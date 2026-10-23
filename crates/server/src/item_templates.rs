@@ -150,6 +150,7 @@ pub struct ItemTemplates {
     pub loot_need: LootNeedMetadata,
     /// Retail ItemEffect TriggerType6 (ON_LEARN), keyed by the owning item.
     pub(crate) retail_learning_spells: HashMap<u32, Vec<u32>>,
+    pub(crate) item_sets: crate::equipment_effects::item_sets::ItemSets,
 }
 
 impl ItemTemplates {
@@ -271,6 +272,7 @@ pub fn load_item_templates(path: &Path) -> rusqlite::Result<ItemTemplates> {
         forever: HashMap::new(),
         loot_need: loot_need::load(&conn)?,
         retail_learning_spells: load_item_learning_spells(&conn)?,
+        item_sets: crate::equipment_effects::item_sets::ItemSets::load(&conn)?,
     })
 }
 

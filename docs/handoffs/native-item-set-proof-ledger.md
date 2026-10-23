@@ -14,7 +14,11 @@ Native70448 ItemSet2062 Radiance of the Consecrated Flame has items271468/271466
 
 - c893c7499 introduced two ignored native Ret tests: counts1→2→5→3→1→4→0 and same actor70→66→70. Initial compile failed on fixture-only `Shoulders` spelling; corrected to existing `Shoulder` atc19c14e80. No behavioral RED yet.
 - 2d411a47a normal importer RED: `python3 -m unittest scripts/tests/test_db2_item_sets.py -v`, assertion failed because ItemSet/ItemSetSpell output catalogs were absent;4.924s. `item-set-import-red-v2.log` under engine diagnostics `ret-parity-2026-10-23/`. Prior v1 SQL missing-table error is setup evidence, not behavioral RED.
-- Native set application implementation remains pending genuine native RED. Normal importer registry/schema implementation follows the importer RED separately.
+- At80c23d207, normal importer1GREEN0.050s:1008 ItemSet/2971 ItemSetSpell; exact Ret/Elemental membership+threshold+spec+build receipts retained, unrelated table preserved.
+- At80c23d207 Rust scope/c19c14e80 fixtures, native set2RED and generic Equipment3RED39.20s; Ret2062 count2 observed(false,false), expected(true,false); no tier aura in spec fixture. `equipment-set-red-v2-full.log` retains complete proof, private source SHA cb201a5e860f31fd6a1d31d3a0ef1b925e560130fdadd5fcd65ecbd443a39f15.
+- Native set lifecycle implemented after genuine RED: original Retail ItemSparse.ItemSet counts, native thresholds/legacy flag/skill/spec/subtree gates, separate ItemSet aura ownership and ordinary aura application/removal. Equipment, ActiveSpec, TraitLoadout and skill changes trigger reconciliation. Targeted GREEN pending; Equipment facts remain unimplemented.
+- Private `item-sets.delta.sql` SHA3032b1eb6d352e6a32d042e072575292772f7fa809b4570e7d130922b347b4ed adds only the two tables and build receipts to unchanged trait-enabled private source. Canonical publication remains parent-owned.
+- Source census: active native sets have no nonzero shapeshift mask/exclude fields (one zero-mask StanceBarOrder-only row27733). Heirloom level/bonus-curve retirement and non-Retail set namespaces are not qualified by this slice.
 
 ## Tier alias policy
 

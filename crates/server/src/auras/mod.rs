@@ -161,6 +161,7 @@ impl Plugin for AuraPlugin {
                     mount::apply_flight_style,
                     sync_passive_auras,
                     crate::equipment_effects::sync_equipment_effects,
+                    crate::equipment_effects::item_sets::sync_item_sets,
                     update_auras,
                     procs::process_aura_events,
                     health_pct_trigger::trigger_on_health_pct,
@@ -190,6 +191,8 @@ pub enum AuraSource {
     KnownSpell,
     /// Native on-equip/enchant spell owned by this physical equipment slot.
     Equipment(shared::protocol::EquipmentSlot),
+    /// Native ItemSetSpell owned by the threshold count of this item set.
+    ItemSet(u32),
     /// Authored spell_area autocast; cannot be canceled by the player.
     SpellArea,
 }

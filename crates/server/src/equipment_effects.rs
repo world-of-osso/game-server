@@ -1,4 +1,5 @@
 //! Equipped native item/enchant spells follow the ordinary aura lifecycle.
+pub(crate) mod item_sets;
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::{EquippedItemModifiers, EquippedItems, NativeItemInstances};
@@ -38,7 +39,7 @@ pub(crate) fn sync_equipment_effects(world: &mut World, changed: &mut ChangedEqu
             })
         });
         for (slot, spell) in desired {
-            apply_missing_equipment_aura(world, unit, slot, &spell);
+            apply_missing_equipment_aura(world, unit, AuraSource::Equipment(slot), &spell);
         }
     }
 }
@@ -140,10 +141,9 @@ fn equipped_spell_ids(
 fn apply_missing_equipment_aura(
     world: &mut World,
     unit: Entity,
-    slot: EquipmentSlot,
+    source: AuraSource,
     spell: &SpellInfo,
 ) {
-    let source = AuraSource::Equipment(slot);
     let applied = world.get::<ActiveAuras>(unit).is_some_and(|auras| {
         auras.iter().any(|aura| {
             aura.spell_id == spell.id
