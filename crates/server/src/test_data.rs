@@ -52,7 +52,7 @@ pub(crate) fn advance_and_drain_persistence(app: &mut bevy::prelude::App) {
 
 /// Immutable canonical input, parsed once per test process. Apps clone before editing.
 /// Prepared/mutable database copies must use their own loaders, never this cache.
-pub(crate) fn world_data() -> &'static crate::world_data::WorldData {
+pub fn world_data() -> &'static crate::world_data::WorldData {
     static DATA: OnceLock<crate::world_data::WorldData> = OnceLock::new();
     DATA.get_or_init(|| crate::world_data::load_world_data(&world_db_path()))
 }
@@ -155,7 +155,7 @@ fn prepared_class_fixture_remains_read_only_and_app_mutations_are_isolated() {
 }
 
 /// `data/world.db` of this checkout.
-pub(crate) fn world_db_path() -> PathBuf {
+pub fn world_db_path() -> PathBuf {
     require(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"))
 }
 

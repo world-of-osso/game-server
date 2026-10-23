@@ -1,7 +1,7 @@
 //! Test-only authentic profile/template loading through production follower spawning.
 use bevy::prelude::*;
 
-pub(crate) fn spawn(world: &mut World, owner: Entity, entry: u32) -> Result<Entity, String> {
+pub fn spawn(world: &mut World, owner: Entity, entry: u32) -> Result<Entity, String> {
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,

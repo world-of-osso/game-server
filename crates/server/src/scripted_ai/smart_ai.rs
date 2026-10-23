@@ -151,8 +151,8 @@ pub(crate) struct SmartEvent {
 
 /// Creature entry -> its SmartAI rows, by id.
 #[derive(Resource, Debug, Default)]
-#[cfg_attr(test, derive(Clone))]
-pub(crate) struct SmartScripts(
+#[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
+pub struct SmartScripts(
     pub HashMap<u32, Arc<Vec<SmartEvent>>>,
     HashMap<u32, Arc<Vec<SmartEvent>>>,
     HashMap<u32, Arc<paths::WaypointPath>>,

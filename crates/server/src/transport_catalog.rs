@@ -102,7 +102,7 @@ fn load_route_knots(conn: &Connection, path_id: u32) -> Result<(u32, Vec<[f32; 3
     Ok((map, knots))
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn fixture_catalog() -> TransportCatalog {
     TransportCatalog::load(&tests::source_fixture()).unwrap()
 }

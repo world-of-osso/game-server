@@ -561,7 +561,7 @@ struct ContentNames {
     items: HashMap<u32, QuestItemInfo>,
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[test]
 #[ignore = "requires WORLD_POPULATION_DB pointing to a promoted private copy"]
 fn zone_population_real_copy_loads_quests_givers_and_objectives() {
@@ -770,7 +770,7 @@ fn startup_load_quest_db(mut commands: Commands) {
 }
 
 /// Quest content from the real `data/world.db`, loaded once; `None` when absent.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn test_quest_db() -> Option<&'static QuestDb> {
     static DB: std::sync::OnceLock<Option<QuestDb>> = std::sync::OnceLock::new();
     DB.get_or_init(|| {

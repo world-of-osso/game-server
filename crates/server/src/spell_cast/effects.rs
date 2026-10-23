@@ -1249,7 +1249,7 @@ pub(super) struct DamageInput<'a> {
 
 /// TC Unit::DealMeleeDamage: shield owner damages the attacker; the original
 /// aura caster supplies SpellDamageBonusDone/Taken. Shield damage cannot crit.
-pub(crate) fn deal_damage_shield(
+pub fn deal_damage_shield(
     world: &mut World,
     ctx: &EffectCtx,
     aura_caster: Entity,
@@ -1480,14 +1480,14 @@ pub(super) fn damage_before_mitigation(
     .max(0.0)
 }
 
-#[cfg(test)]
-pub(crate) fn replay_healer_hit(
+#[cfg(any(test, feature = "test-support"))]
+pub fn replay_healer_hit(
     world: &mut World,
     source: Entity,
     target: Entity,
-    hit: &crate::dungeon_simulator::healer_intake::Hit,
+    hit: &crate::test_support::healer_intake::Hit,
 ) -> Result<(), String> {
-    use crate::dungeon_simulator::healer_intake::HitKind;
+    use crate::test_support::healer_intake::HitKind;
     let HitKind::Spell {
         spell_id,
         depth,
@@ -1520,7 +1520,7 @@ pub(crate) fn replay_healer_hit(
         .transpose()?;
     let bonus_caster = if let Some(guid) = bonus_source_guid {
         world
-            .get_resource::<crate::dungeon_simulator::healer_intake::Capture>()
+            .get_resource::<crate::test_support::healer_intake::Capture>()
             .and_then(|capture| {
                 capture
                     .sources
@@ -1592,21 +1592,21 @@ fn deal_source_damage_and_report(
         || super::hit_was_blocked(world, ctx.caster, ctx.spell.id, target),
         |(_, blocked)| blocked,
     );
-    #[cfg(test)]
-    let bonus_source_guid = crate::dungeon_simulator::healer_intake::spell_bonus_source(
+    #[cfg(any(test, feature = "test-support"))]
+    let bonus_source_guid = crate::test_support::healer_intake::spell_bonus_source(
         world,
         ctx.caster,
         damage.bonus_caster,
         target,
     );
-    #[cfg(test)]
-    crate::dungeon_simulator::healer_intake::record(
+    #[cfg(any(test, feature = "test-support"))]
+    crate::test_support::healer_intake::record(
         world,
         ctx.caster,
         target,
         school,
         source_amount,
-        crate::dungeon_simulator::healer_intake::HitKind::Spell {
+        crate::test_support::healer_intake::HitKind::Spell {
             spell_id: ctx.spell.id,
             depth: ctx.depth,
             bonus_source_guid,

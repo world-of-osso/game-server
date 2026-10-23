@@ -319,7 +319,7 @@ pub(crate) type ScalingItem<'a> = (
 
 /// A unit's level and, when it is a tuned creature, its scaling.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct UnitScaling<'a> {
+pub struct UnitScaling<'a> {
     /// `UnitLevel` (GetEffectiveLevel); a tuned creature's native level.
     level: u8,
     tuned: Option<(&'a LevelScaling, &'a LevelStats)>,
@@ -370,7 +370,7 @@ impl<'a> UnitScaling<'a> {
 
     /// Creature::GetHealthMultiplierForTarget: max health at the attacker's
     /// level over the creature's own (CreateHealth, the native-level max).
-    pub(crate) fn health_multiplier(&self, attacker: &UnitScaling) -> f32 {
+    pub fn health_multiplier(&self, attacker: &UnitScaling) -> f32 {
         self.tuned.map_or(1.0, |(scaling, stats)| {
             stats.max_health(self.level_against(attacker))
                 / stats.max_health(scaling.native_level())
@@ -381,7 +381,7 @@ impl<'a> UnitScaling<'a> {
 /// Unit::DealDamageMods (Unit.cpp:814-815): damage `attacker` deals to
 /// `victim`, times the attacker's damage multiplier for the victim; what the
 /// combat log, threat and rage see.
-pub(crate) fn damage_dealt(attacker: &UnitScaling, victim: &UnitScaling, damage: f32) -> f32 {
+pub fn damage_dealt(attacker: &UnitScaling, victim: &UnitScaling, damage: f32) -> f32 {
     (damage * attacker.damage_multiplier(victim)).trunc()
 }
 
@@ -392,8 +392,8 @@ pub(crate) fn health_loss(attacker: &UnitScaling, victim: &UnitScaling, damage: 
 }
 
 /// Observation-only mapping of one pre-scaling damage/shield point into victim HP.
-#[cfg(test)]
-pub(crate) fn damage_to_hp_scale(world: &World, attacker: Entity, victim: Entity) -> f32 {
+#[cfg(any(test, feature = "test-support"))]
+pub fn damage_to_hp_scale(world: &World, attacker: Entity, victim: Entity) -> f32 {
     let (attacker, victim) = (
         UnitScaling::of(world, attacker),
         UnitScaling::of(world, victim),

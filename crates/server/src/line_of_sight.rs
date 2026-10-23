@@ -127,7 +127,7 @@ impl LineOfSight {
     }
 
     /// Segments tested against the bake so far (read by the tick-cost probe).
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn rays(&self) -> u64 {
         self.rays.load(Ordering::Relaxed)
     }

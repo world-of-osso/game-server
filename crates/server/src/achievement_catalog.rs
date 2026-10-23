@@ -810,13 +810,13 @@ struct AchievementDef {
 mod evaluation;
 pub(crate) use evaluation::EvaluationCache;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 thread_local! {
     static EVALUATION_WORK: std::cell::Cell<(usize, usize)> = const { std::cell::Cell::new((0, 0)) };
 }
 
 #[derive(Resource, Debug, Default)]
-#[cfg_attr(test, derive(Clone))]
+#[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
 pub(crate) struct AchievementCatalog {
     window: window::WindowData,
     definitions: BTreeMap<u32, AchievementDef>,
@@ -883,7 +883,7 @@ impl AchievementCatalog {
     }
 
     /// An event outside any instance copy (Difficulty 0).
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn update(
         &self,
         state: &mut PlayerAchievementState,
@@ -1223,7 +1223,7 @@ impl AchievementCatalog {
     }
 
     pub fn tree_progress(&self, id: u32, state: &PlayerAchievementState) -> TreeProgress {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         EVALUATION_WORK.with(|work| {
             let (definitions, trees) = work.get();
             work.set((definitions, trees + 1));

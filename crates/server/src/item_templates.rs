@@ -149,7 +149,7 @@ pub struct ItemTemplates {
     pub forever: HashMap<u32, ItemTemplate>,
     pub loot_need: LootNeedMetadata,
     /// Retail ItemEffect TriggerType6 (ON_LEARN), keyed by the owning item.
-    pub(crate) retail_learning_spells: HashMap<u32, Vec<u32>>,
+    pub retail_learning_spells: HashMap<u32, Vec<u32>>,
 }
 
 impl ItemTemplates {

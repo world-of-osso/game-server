@@ -160,13 +160,13 @@ fn read_complete_route(
     paths::read(world, tank, map, key, from, to)
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(super) fn inspect_route(world: &mut World, request: &Request<'_>) -> Result<PullRoute, String> {
     read_route_with_destination(world, request, None, inspect_complete_route)?
         .ok_or_else(|| "Fixture route inspection unexpectedly pending".into())
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(super) fn inspect_point_route(
     world: &mut World,
     request: &Request<'_>,
@@ -176,7 +176,7 @@ pub(super) fn inspect_point_route(
         .ok_or_else(|| "Fixture point inspection unexpectedly pending".into())
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 fn inspect_complete_route(
     world: &mut World,
     tank: Entity,

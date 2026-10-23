@@ -19,7 +19,7 @@ pub(crate) fn save_bind_in(txn: &redb::WriteTransaction, character: u64, bind: W
         .expect("Save homebind");
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn save_bind(db: &Database, character: u64, bind: WorldLocation) {
     let txn = db.begin_write().expect("Begin homebind write");
     save_bind_in(&txn, character, bind);

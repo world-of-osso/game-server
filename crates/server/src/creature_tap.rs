@@ -34,7 +34,7 @@ pub(crate) struct CreatureTap {
 
 impl CreatureTap {
     /// A creature players alone damaged, tapped by `character` (test fixtures).
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn tapped_by(character: u64) -> Self {
         Self {
             tappers: vec![character],

@@ -15,7 +15,7 @@ pub struct EventMap {
     /// `_lastEvent`: what `repeat` schedules again.
     last_event: u32,
     last_due: u64,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     rng: Option<rand::rngs::StdRng>,
 }
 
@@ -28,7 +28,7 @@ pub fn rand_ms(min_ms: u64, max_ms: u64) -> u64 {
 }
 
 impl EventMap {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn seeded(seed: u64) -> Self {
         use rand::SeedableRng;
         Self {
@@ -38,7 +38,7 @@ impl EventMap {
     }
 
     fn roll_delay(&mut self, min_ms: u64, max_ms: u64) -> u64 {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         if let Some(rng) = &mut self.rng {
             return if max_ms <= min_ms {
                 min_ms
@@ -134,14 +134,14 @@ impl EventMap {
     }
 
     /// Seed only fixture randomness, preserving the clock and pending source events.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn seed_rng(&mut self, seed: u64) {
         use rand::SeedableRng;
         self.rng = Some(rand::rngs::StdRng::seed_from_u64(seed));
     }
 
     /// Apply the shared fixture default without replacing an explicit scenario seed.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn seed_rng_if_unseeded(&mut self, seed: u64) {
         if self.rng.is_none() {
             self.seed_rng(seed);
@@ -149,13 +149,13 @@ impl EventMap {
     }
 
     /// Exact EventMap clock for opt-in fixture evidence; never advances it.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn elapsed_ms(&self) -> u64 {
         self.time
     }
 
     /// Scheduled event ids in due order (tests).
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn pending(&self) -> Vec<u32> {
         self.events.iter().map(|&(_, id, _)| id).collect()
     }

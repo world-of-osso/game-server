@@ -91,7 +91,7 @@ pub struct Navigation {
     queries: EntityHashMap<PendingQuery>,
     unbaked: HashSet<u32>,
     next_id: u64,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     applied: Vec<(Entity, u64)>,
 }
 
@@ -106,7 +106,7 @@ impl Navigation {
             queries: EntityHashMap::default(),
             unbaked: HashSet::new(),
             next_id: 0,
-            #[cfg(test)]
+            #[cfg(any(test, feature = "test-support"))]
             applied: Vec::new(),
         }
     }
@@ -294,16 +294,16 @@ fn install_publication(app: &mut App) {
     );
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[derive(Resource)]
 struct NavigationFixtureDrainInstalled;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 fn drain_fixture_navigation(mut navigation: ResMut<Navigation>) {
     navigation.drain_until_idle();
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn install_fixture(app: &mut App, navigation: Navigation) {
     install_publication(app);
     app.insert_resource(navigation);
@@ -316,7 +316,7 @@ pub(crate) fn install_fixture(app: &mut App, navigation: Navigation) {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn drain_fixture(app: &mut App) {
     if app.world().contains_resource::<Navigation>() {
         install_publication(app);

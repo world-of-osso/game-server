@@ -406,7 +406,7 @@ fn update_grants(
         sender.send::<TalentChannel>(bar);
     }
 }
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 impl Catalog {
     fn fixture() -> Self {
         let conn = Connection::open_in_memory().unwrap();

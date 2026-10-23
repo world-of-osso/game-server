@@ -124,7 +124,7 @@ pub(crate) fn push_mail(txn: &WriteTransaction, character_id: u64, mail: MailDat
 }
 
 /// Fixture delivery uses the runtime market transaction path.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub fn deliver_mail(db: &Database, character_id: u64, mail: MailData) {
     let changes = crate::economy::store::MarketChanges {
         mails: vec![(character_id, mail)],

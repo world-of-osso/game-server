@@ -49,12 +49,12 @@ impl Navigation {
     }
 
     pub(super) fn publish_ready_routes(&mut self, simulation_s: Option<f64>) {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         self.applied.clear();
         for response in self.worker.poll() {
             let entity = Entity::from_bits(response.entity);
             if self.publish_query(&response, simulation_s) {
-                #[cfg(test)]
+                #[cfg(any(test, feature = "test-support"))]
                 self.applied.push((entity, response.id));
                 continue;
             }
@@ -66,7 +66,7 @@ impl Navigation {
             }
             pending.done = true;
             let request = pending.request;
-            #[cfg(test)]
+            #[cfg(any(test, feature = "test-support"))]
             self.applied.push((entity, response.id));
             self.publish_route(entity, request, response.result);
         }
@@ -180,7 +180,7 @@ impl Navigation {
         );
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn continue_route(
         &mut self,
         entity: Entity,
@@ -260,7 +260,7 @@ impl Navigation {
         }
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn drain_until_idle(&mut self) {
         while !self.worker.is_idle() {
             self.publish_ready_routes(None);

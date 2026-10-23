@@ -450,7 +450,7 @@ pub(crate) fn queue_player_despawn(commands: &mut Commands, entity: Entity) {
     );
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn install_disconnect_fixture(app: &mut App) {
     app.init_resource::<ConnectedAccounts>();
     app.add_observer(on_client_disconnected);
@@ -1046,7 +1046,7 @@ pub(crate) struct FallAuras {
 }
 
 impl FallAuras {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub(crate) const NONE: Self = Self {
         feather_fall: false,
         damage_multiplier: 1.0,

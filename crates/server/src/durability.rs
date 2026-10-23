@@ -122,9 +122,9 @@ pub fn load_item_durability(conn: &Connection) -> rusqlite::Result<ItemDurabilit
 
 pub struct DurabilityPlugin;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 static CHANGED_DURABILITY_PLAYERS_VISITED: AtomicUsize = AtomicUsize::new(0);
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 static CHANGED_DURABILITY_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 impl Plugin for DurabilityPlugin {
@@ -413,7 +413,7 @@ fn send_changed_durability_snapshot(
     rules: Res<ItemDurability>,
 ) {
     for (player_entity, durability) in &players {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         CHANGED_DURABILITY_PLAYERS_VISITED.fetch_add(1, Ordering::SeqCst);
 
         if durability.is_added() {

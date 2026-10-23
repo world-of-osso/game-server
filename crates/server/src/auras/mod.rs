@@ -39,7 +39,7 @@ mod fel_devastation;
 mod fixate;
 mod fleeing;
 pub(crate) mod forecast;
-pub(crate) mod handlers;
+pub mod handlers;
 pub(crate) mod health_pct_trigger;
 mod ignite;
 pub mod invisibility;
@@ -52,8 +52,8 @@ mod mechanic_duration;
 pub(crate) mod mechanic_immunity;
 pub mod mount;
 mod natures_guardian;
-#[cfg(test)]
-pub(crate) mod observations;
+#[cfg(any(test, feature = "test-support"))]
+pub mod observations;
 mod periodic;
 #[cfg(test)]
 mod point_mod_tests;
@@ -72,7 +72,7 @@ pub mod spell_mods;
 mod spirit_wolf;
 pub mod stat_mods;
 pub(crate) mod stealth;
-pub(crate) mod summon_damage;
+pub mod summon_damage;
 mod unit_state;
 pub(crate) mod world_state;
 #[cfg(test)]
@@ -121,8 +121,8 @@ const ATTR5_EXTRA_INITIAL_PERIOD: u32 = 0x200;
 /// `DispelType` 7 matches every dispel type.
 const DISPEL_ALL: u32 = 7;
 
-pub(crate) mod override_spell_data;
-pub(crate) mod overrides;
+pub mod override_spell_data;
+pub mod overrides;
 
 pub struct AuraPlugin;
 
@@ -464,7 +464,7 @@ impl ActiveAuras {
     }
 
     /// Additive aura points, outside rating diminishing returns.
-    pub(crate) fn modifier(&self, aura_type: u32) -> f32 {
+    pub fn modifier(&self, aura_type: u32) -> f32 {
         self.iter()
             .map(|aura| {
                 aura.effects
@@ -476,7 +476,7 @@ impl ActiveAuras {
             .sum()
     }
 
-    pub(crate) fn has_type(&self, aura_type: u32) -> bool {
+    pub fn has_type(&self, aura_type: u32) -> bool {
         self.auras
             .iter()
             .flat_map(|aura| &aura.effects)
@@ -553,7 +553,7 @@ impl ActiveAuras {
 #[derive(Resource, Debug, Default)]
 pub struct UnhandledAuras(HashSet<(u32, u32)>);
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn take_unhandled_auras(world: &mut World) -> Vec<(u32, u32)> {
     let mut types: Vec<_> = world.resource_mut::<UnhandledAuras>().0.drain().collect();
     types.sort_unstable();
@@ -1161,7 +1161,7 @@ pub(crate) fn apply_aura_with_spell(
     let shared_slot = shares_stack_slot_between_casters(spell);
     let previous_rate =
         crate::spell_cast::recovery_rate::capture_previous_rate_aura(world, target, &instance);
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     let observed_previous = observations::previous_stacks(world, target, &instance);
     let stacking = world
         .get_mut::<ActiveAuras>(target)
@@ -1181,7 +1181,7 @@ pub(crate) fn apply_aura_with_spell(
         .and_then(|auras| auras.get(id))
         .cloned()
         .expect("aura just stored");
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     observations::applied(world, &aura, observed_previous);
     if kind == CombatLogKind::AuraApplied {
         crate::achievement::record_gain_aura(world, target, aura.spell_id);
@@ -1509,7 +1509,7 @@ fn overkill_absorb_amount(world: &World, unit: Entity, loss: f32, school: u32) -
 
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
     shapeshift::remove_form_boosts(world, unit, aura);
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     observations::removed(world, unit, aura, reason);
     world_state::on_removed(world, unit, aura);
     scripts::run_remove(world, unit, aura, reason);
@@ -1652,12 +1652,12 @@ pub(crate) fn spend_stack(world: &mut World, unit: Entity, instance_id: u32) {
     if aura.stacks <= 1 {
         remove_instance(world, unit, instance_id, RemoveReason::Consumed);
     } else {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         let observed = (aura.caster, aura.spell_id);
         aura.stacks -= 1;
         let source = aura.clone();
         point_mods::recalculate(world, unit, &source);
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         observations::spent_stack(world, unit, observed.0, observed.1);
         auras_changed(world, unit);
     }
@@ -1977,8 +1977,8 @@ pub(crate) fn consume_absorbs(
 
 pub(crate) fn finish_absorbs(world: &mut World, unit: Entity, result: AbsorbResult) {
     for (caster, soaked) in result.contributions {
-        #[cfg(test)]
-        crate::dungeon_simulator::healer_intake::record_absorb(world, caster, unit, soaked);
+        #[cfg(any(test, feature = "test-support"))]
+        crate::test_support::healer_intake::record_absorb(world, caster, unit, soaked);
         crate::damage_meter::record_absorb(world, caster, soaked);
     }
     if !result.depleted.is_empty() {
@@ -2656,7 +2656,7 @@ mod mage_tests;
 #[cfg(test)]
 pub(crate) mod mount_tests;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[test]
 fn idle_aura_init_full_population_is_bounded() {
     let mut app = App::new();

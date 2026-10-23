@@ -19,7 +19,7 @@ pub(crate) struct ActorMetrics {
 }
 
 #[derive(Resource, Debug, Default, Serialize)]
-pub(crate) struct HolyMetrics {
+pub struct HolyMetrics {
     pub actors: BTreeMap<u64, ActorMetrics>,
 }
 

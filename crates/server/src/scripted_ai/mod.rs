@@ -47,7 +47,7 @@ mod kokia;
 mod lost_dwarves;
 pub(crate) mod maraudon;
 mod melidrussa;
-pub(crate) mod model_reach;
+pub mod model_reach;
 pub mod movement;
 pub mod murder_row;
 pub(crate) mod nethekurse;
@@ -891,7 +891,7 @@ impl Ctx<'_> {
             .map_or_else(String::new, |npc| npc.name.clone());
         let result =
             crate::spell_cast::creature_cast(self.world, self.me, spell_id, target, triggered);
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         tests::cast_admission::record(self.world, self.me, spell_id, &result);
         match result {
             Ok(()) => {
@@ -1122,7 +1122,7 @@ pub(crate) fn attack_stop(world: &mut World, unit: Entity) {
 #[cfg(test)]
 pub(crate) mod tests;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[test]
 fn idle_just_appeared_full_population_is_bounded() {
     let mut app = App::new();

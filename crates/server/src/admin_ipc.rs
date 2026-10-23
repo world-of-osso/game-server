@@ -37,7 +37,7 @@ impl Plugin for AdminIpcPlugin {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn dispatch_staging_fixture(
     world: &mut World,
     request: serde_json::Value,

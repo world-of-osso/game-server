@@ -209,7 +209,7 @@ fn active_updates(history: &SpellHistory, now: f64) -> Vec<SpellCooldownUpdate> 
 }
 
 /// Unexpired (spell, ready unix ms) and (category, spell, ready unix ms) for fixtures.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn stored_deadlines(
     db: &Database,
     character_id: u64,

@@ -594,7 +594,7 @@ pub(crate) fn load_account_char_ids(db: &Database, account_id: u64) -> Vec<u64> 
 }
 
 /// Test fixture: a new character with an empty kit (no items, no action buttons).
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub fn create_character(
     db: &Database,
     account_id: u64,
@@ -740,7 +740,7 @@ pub(crate) fn save_new_character(
 
 /// Test fixture: a new character whose bags are granted 20 Linen Cloth, 10
 /// Peacebloom and 10 Copper Ore, with 10 gold (new characters start empty).
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn create_character_with_test_bags(
     db: &Database,
     account_id: u64,

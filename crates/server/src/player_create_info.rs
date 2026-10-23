@@ -58,7 +58,7 @@ struct SkyborneKitItems {
 
 impl PlayerCreateInfos {
     /// Test fixture: every playable pair with an empty kit.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn bare() -> Self {
         Self(
             playable_pairs()
@@ -317,7 +317,7 @@ pub fn load_player_create_infos(conn: &Connection) -> rusqlite::Result<PlayerCre
 }
 
 /// Test fixture owning a kit: empty (`bare`) or the real data/world.db one.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[derive(Default)]
 pub(crate) struct OwnedKit {
     pub(crate) templates: ItemTemplates,
@@ -325,7 +325,7 @@ pub(crate) struct OwnedKit {
     pub(crate) create_info: PlayerCreateInfos,
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 impl OwnedKit {
     pub(crate) fn bare() -> Self {
         Self {

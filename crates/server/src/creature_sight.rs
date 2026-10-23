@@ -408,7 +408,7 @@ impl SightParams<'_, '_> {
 }
 
 /// Read the production NPC-to-NPC acquisition predicate without adding threat.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn read_npc_proximity_acquisition(
     world: &mut World,
     watcher: Entity,

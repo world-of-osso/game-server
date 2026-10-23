@@ -28,7 +28,7 @@ pub struct AccountInspection {
 }
 
 /// Synchronous fixture API; runtime password tokens use the FIFO receipt.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub fn login_with_credentials(
     db: &Database,
     token: Option<&str>,

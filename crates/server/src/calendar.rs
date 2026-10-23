@@ -37,9 +37,9 @@ struct CalendarEventState {
 
 pub struct CalendarPlugin;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 static CALENDAR_SNAPSHOT_MATERIALIZATIONS: AtomicUsize = AtomicUsize::new(0);
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 static CALENDAR_SNAPSHOT_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 impl Plugin for CalendarPlugin {
@@ -304,7 +304,7 @@ fn confirmed_signup_count(event: &CalendarEventState) -> usize {
 }
 
 fn build_calendar_snapshot(state: &CalendarState) -> CalendarSnapshot {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     CALENDAR_SNAPSHOT_MATERIALIZATIONS.fetch_add(1, Ordering::SeqCst);
 
     let mut events: Vec<_> = state

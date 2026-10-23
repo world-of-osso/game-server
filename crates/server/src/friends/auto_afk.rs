@@ -14,11 +14,11 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(super) static AUTO_AFK_PLAYERS_VISITED: AtomicUsize = AtomicUsize::new(0);
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(super) static AUTO_AFK_TRANSITIONS: AtomicUsize = AtomicUsize::new(0);
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(super) static AUTO_AFK_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -81,7 +81,7 @@ pub(super) fn process_due_auto_afk(
     mut players: Query<(&mut PresenceStatus, &PresenceTracker), With<Player>>,
 ) {
     while let Some(deadline) = scheduler.pop_due(time.elapsed()) {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         AUTO_AFK_PLAYERS_VISITED.fetch_add(1, Ordering::SeqCst);
 
         let Ok((mut status, tracker)) = players.get_mut(deadline.player) else {
@@ -94,7 +94,7 @@ pub(super) fn process_due_auto_afk(
             continue;
         }
         *status = PresenceStatus::Afk;
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         AUTO_AFK_TRANSITIONS.fetch_add(1, Ordering::SeqCst);
         mark_presence_changed(dirty_queue.as_deref(), deadline.player);
     }

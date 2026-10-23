@@ -286,13 +286,13 @@ pub(crate) fn sync_progress_currencies_from_wallet(
     changed
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn forget_matches_for_reconnect_fixture(world: &mut World) {
     world.insert_resource(PvpServerState::default());
 }
 
 /// Controlled pre-terminal baseline; subsequent channel fixtures must produce the actual end.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn seed_terminal_reinforcements(
     world: &mut World,
     match_id: u64,

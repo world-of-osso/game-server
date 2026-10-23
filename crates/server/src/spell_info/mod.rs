@@ -41,9 +41,9 @@ pub use trait_data::{
     TraitNode, TraitNodeEntry, TraitNodeType, TraitTree,
 };
 
-#[cfg(not(test))]
-pub(crate) const WORLD_DB_PATH: &str = "data/world.db";
-#[cfg(test)]
+#[cfg(not(any(test, feature = "test-support")))]
+pub const WORLD_DB_PATH: &str = "data/world.db";
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) const WORLD_DB_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/world.db");
 
 /// One already matched charged spell modifier, retained by its launched cast.
@@ -383,7 +383,7 @@ pub struct EmpowerStage {
 /// Every spell in world.db, sorted by spell ID (binary-searched; a `HashMap`
 /// of 360-byte values costs ~40% more memory at this load factor).
 #[derive(Resource, Debug, Default)]
-#[cfg_attr(test, derive(Clone))]
+#[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
 pub struct SpellStore {
     spells: crate::catalog_data::CatalogData<Vec<crate::catalog_data::CatalogData<SpellInfo>>>,
     trait_effect_points: crate::catalog_data::CatalogData<trait_effect_points::TraitEffectPoints>,
@@ -426,20 +426,20 @@ impl SpellInfo {
 
 impl SpellStore {
     fn from_spells(spells: Vec<SpellInfo>) -> Self {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         return Self {
             spells: spells.into_iter().map(Into::into).collect(),
             trait_effect_points: Default::default(),
         };
-        #[cfg(not(test))]
+        #[cfg(not(any(test, feature = "test-support")))]
         Self {
             spells,
             trait_effect_points: Default::default(),
         }
     }
 
-    #[cfg(test)]
-    pub(crate) fn fixture(mut spells: Vec<SpellInfo>) -> Self {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn fixture(mut spells: Vec<SpellInfo>) -> Self {
         spells.sort_by_key(|spell| spell.id);
         Self::from_spells(spells)
     }
@@ -464,13 +464,13 @@ impl SpellStore {
     }
 
     /// Production's server-side loader against an independent prepared copy.
-    #[cfg(test)]
-    pub(crate) fn append_serverside(&mut self, conn: &Connection) -> rusqlite::Result<usize> {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn append_serverside(&mut self, conn: &Connection) -> rusqlite::Result<usize> {
         load::append_serverside_spells(conn, self)
     }
 
     /// Resolve an explicit ID or a unique exact name; ambiguous ranks require an ID.
-    pub(crate) fn resolve(&self, id: Option<u32>, name: &str) -> Option<&SpellInfo> {
+    pub fn resolve(&self, id: Option<u32>, name: &str) -> Option<&SpellInfo> {
         if let Some(id) = id {
             return self.get(id);
         }
@@ -534,9 +534,9 @@ fn fixture_spell_edits_and_insertions_leave_retained_and_sibling_stores_unchange
 
 /// Load every spell and the class spell lists from world.db.
 pub fn load_spell_data(conn: &Connection) -> rusqlite::Result<(SpellStore, ClassSpells)> {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     return crate::test_data::catalog_cache::load_connection(conn, || read_spell_data(conn));
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "test-support")))]
     read_spell_data(conn)
 }
 

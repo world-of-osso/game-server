@@ -324,7 +324,7 @@ pub struct MapStore {
     /// Unambiguous CASC journal → TDB map/display joins: (map, creature) → encounter bit.
     pub raid_creature_encounters: HashMap<(u32, u32), u32>,
     pub area_triggers: HashMap<u32, Vec<AreaTriggerTeleport>>,
-    pub(crate) world_area_triggers: crate::world_area_triggers::Catalog,
+    pub world_area_triggers: crate::world_area_triggers::Catalog,
     pub safe_locs: HashMap<u32, WorldLocation>,
     /// Nonzero WorldSafeLocs.TransportSpawnId: location coordinates are ship-relative.
     pub safe_loc_transports: HashMap<u32, u32>,
@@ -387,7 +387,7 @@ impl MapStore {
     }
 
     /// `DB2Manager::GetDefaultMapDifficulty` (DB2Stores.cpp:2734-2765).
-    pub(crate) fn default_map_difficulty(&self, map_id: u32) -> Option<&MapDifficulty> {
+    pub fn default_map_difficulty(&self, map_id: u32) -> Option<&MapDifficulty> {
         let rows = self.difficulties.get(&map_id)?;
         let known = || {
             rows.iter()
@@ -467,7 +467,7 @@ impl MapStore {
 
 impl MapStore {
     /// Maps 0 and 1 as `Map.db2` lists them, for tests without world.db.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn continents() -> Self {
         let continent = |id: u32, directory: &str, name: &str, wdt_file_data_id: u32| MapEntry {
             id,
@@ -493,9 +493,9 @@ impl MapStore {
 }
 
 pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     return crate::test_data::catalog_cache::load_connection(conn, || read_map_store(conn));
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "test-support")))]
     read_map_store(conn)
 }
 

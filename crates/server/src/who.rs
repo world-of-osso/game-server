@@ -13,9 +13,9 @@ use std::sync::{
 
 pub struct WhoPlugin;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 static ONLINE_ROSTER_MATERIALIZATIONS: AtomicUsize = AtomicUsize::new(0);
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 static ONLINE_ROSTER_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 impl Plugin for WhoPlugin {
@@ -74,7 +74,7 @@ fn drain_latest_queries(receivers: &mut WhoQueryReceivers) -> Vec<(Entity, Query
 fn collect_online_entries(
     players: &Query<(&Player, &Level, Option<&Zone>)>,
 ) -> Vec<WhoCharacterSnapshot> {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     ONLINE_ROSTER_MATERIALIZATIONS.fetch_add(1, Ordering::SeqCst);
 
     players
