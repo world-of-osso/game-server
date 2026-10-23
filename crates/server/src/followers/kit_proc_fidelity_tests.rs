@@ -676,10 +676,10 @@ fn fund_native_elemental_blast(h: &mut Harness, caster: Entity, target: Entity) 
             .resource::<crate::spell_info::SpellStore>()
             .get(117014)
             .unwrap();
-        crate::spell_cast::spell_costs(world, caster, spell)
+        crate::spell_cast::applicable_costs(world, caster, spell)
             .unwrap()
             .into_iter()
-            .filter_map(|(pool, amount)| {
+            .filter_map(|(pool, amount, _current)| {
                 matches!(
                     pool,
                     crate::spell_cast::CostPool::Power(PowerType::Maelstrom)
@@ -787,25 +787,21 @@ fn assert_unselected_native_root_without_mastery(root: u32, child: u32) {
 }
 
 #[test]
-#[ignore = "unselected native EB cast-mechanism RED/GREEN pending"]
 fn proc_fidelity_262_native_unselected_eb_overload_cast_mechanism() {
     assert_unselected_native_overload_acquisition(117014, 120588);
 }
 
 #[test]
-#[ignore = "unselected native EB removed-Mastery control pending"]
 fn proc_fidelity_262_native_unselected_eb_without_mastery_has_no_overload() {
     assert_unselected_native_root_without_mastery(117014, 120588);
 }
 
 #[test]
-#[ignore = "unselected native Icefury cast-mechanism RED/GREEN pending"]
 fn proc_fidelity_262_native_unselected_icefury_overload_cast_mechanism() {
     assert_unselected_native_overload_acquisition(210714, 219271);
 }
 
 #[test]
-#[ignore = "unselected native Icefury removed-Mastery control pending"]
 fn proc_fidelity_262_native_unselected_icefury_without_mastery_has_no_overload() {
     assert_unselected_native_root_without_mastery(210714, 219271);
 }
