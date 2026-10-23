@@ -951,6 +951,27 @@ struct SwingDamage {
     raw: f32,
 }
 
+fn roll_swing_base(
+    attacker: &Attacker,
+    weapon: &WeaponDamage,
+    hand: Hand,
+    scaling: &UnitScaling,
+) -> f32 {
+    let mut rng = rand::thread_rng();
+    if let Some((_, attack_power)) = attacker.spirit_wolf {
+        // Guardian::UpdateDamagePhysical1423; intrinsic AP is unqualified.
+        let bonus = attack_power / 3.5 * weapon.speed;
+        return rand::Rng::gen_range(&mut rng, weapon.min + bonus..=weapon.max + bonus);
+    }
+    match attacker.stats {
+        Some(stats) => melee::roll_weapon_damage(
+            melee::weapon_damage_range(weapon, stats.attack_power, stats.versatility_pct, hand),
+            rand::Rng::r#gen(&mut rng),
+        ),
+        None => creature_weapon_damage(scaling),
+    }
+}
+
 fn swing_damage(
     attacker: &Attacker,
     weapon: &WeaponDamage,
@@ -960,21 +981,7 @@ fn swing_damage(
     additional_mult: f32,
     #[cfg(test)] source_mult: f32,
 ) -> SwingDamage {
-    let mut rng = rand::thread_rng();
-    let base = if let Some((_, attack_power)) = attacker.spirit_wolf {
-        // Guardian::UpdateDamagePhysical, StatSystem.cpp:1423. Only owner AP
-        // is sourced; intrinsic AP remains the named pet_levelstats gap.
-        let bonus = attack_power / 3.5 * weapon.speed;
-        rand::Rng::gen_range(&mut rng, weapon.min + bonus..=weapon.max + bonus)
-    } else {
-        match attacker.stats {
-            Some(stats) => melee::roll_weapon_damage(
-                melee::weapon_damage_range(weapon, stats.attack_power, stats.versatility_pct, hand),
-                rand::Rng::r#gen(&mut rng),
-            ),
-            None => creature_weapon_damage(scaling),
-        }
-    };
+    let base = roll_swing_base(attacker, weapon, hand, scaling);
     // TC Guardian::UpdateDamagePhysical1423: owner-derived AP is additive
     // before the same damage/armor/outcome path. Intrinsic pet AP and weapon
     // damage remain unqualified; do not import TC's fake primary-stat values.
