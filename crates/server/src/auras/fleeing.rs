@@ -250,7 +250,10 @@ fn choose_path(world: &mut World, unit: Entity, state: &mut Fleeing) {
         }
         (FleeQuery::Path { destination, .. }, Ok(Some(Output::Path(points)))) => {
             retry_path(world, unit, state, PATH_RETRY);
-            start_path(destination, points, state);
+            match points.into_complete() {
+                Ok(points) => start_path(destination, points, state),
+                Err(error) => debug!("Fear {unit} {goal:?}: {error}"),
+            }
         }
         (_, result) => {
             if let Err(error) = result {

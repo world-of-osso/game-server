@@ -31,6 +31,7 @@ mod dailcry;
 mod doragosa;
 mod emberon;
 pub mod event_map;
+mod granyth;
 pub(crate) mod hellfire_ramparts;
 pub mod instance_script;
 pub(crate) mod jump_movement;
@@ -51,11 +52,14 @@ pub(crate) mod ragefire_chasm;
 pub(crate) mod ruby_life_pools;
 mod scripted_alerts;
 pub(crate) mod shattered_halls;
+mod skarmorak;
 pub mod smart_ai;
 mod talondras;
 pub mod the_stockade;
+mod treemouth;
 pub(crate) mod tww_rookery;
 mod umbrelskul;
+mod vexamus;
 pub(crate) mod wailing_caverns;
 pub mod waypoint_path;
 
@@ -123,6 +127,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, blood_furnace::register_aura_scripts)
             .add_systems(Startup, shattered_halls::register_aura_scripts)
             .add_systems(Startup, orator::register_aura_scripts)
+            .add_systems(Startup, skarmorak::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
@@ -378,11 +383,20 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == emberon::SCRIPT {
         return emberon::creature_ai(world, creature);
     }
+    if script_name == granyth::SCRIPT {
+        return granyth::creature_ai(world, creature);
+    }
+    if script_name == treemouth::SCRIPT {
+        return treemouth::creature_ai(world, creature);
+    }
     if script_name == anubzekt::SCRIPT {
         return anubzekt::creature_ai(world, creature);
     }
     if script_name == orator::SCRIPT {
         return orator::creature_ai(world, creature);
+    }
+    if script_name == skarmorak::SCRIPT {
+        return skarmorak::creature_ai(world, creature);
     }
     if script_name == kikatal::SCRIPT {
         return kikatal::creature_ai(world, creature);
@@ -461,6 +475,9 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || script_name == emberon::SCRIPT
         || script_name == anubzekt::SCRIPT
         || script_name == orator::SCRIPT
+        || script_name == skarmorak::SCRIPT
+        || script_name == granyth::SCRIPT
+        || script_name == treemouth::SCRIPT
         || script_name == kikatal::SCRIPT
         || script_name == dailcry::SCRIPT
         || hellfire_ramparts::is_creature_script(script_name)

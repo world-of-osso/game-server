@@ -35,7 +35,7 @@ fn feero() -> (tempfile::TempDir, World, Entity, Entity) {
         .map(Result::unwrap)
         .collect();
     world.insert_resource(crate::world_data::WorldData {
-        templates,
+        templates: templates.into(),
         class_level_base_hp,
         ..Default::default()
     });

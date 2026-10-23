@@ -16,6 +16,14 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - [ ] Enforce `SCRIPTED_BOSS_PULL_WHEN_READY` and `CLEARED_STATE_ALWAYS_PULLS_NEXT_PACK` from the [follower policy](follower-dungeons.md): no numeric forecast may strand a cleared, full-ready party before its next single pack. No overlap or chained adds on that admission.
 - [ ] Preserve approved tank policy: ten active-combat seconds of current-run DPS/healing measurements, retained through OOC travel/recovery/holds and reset at dungeon start or full wipe; separate five-second health stability remains wall-clock. Preserve 30% HP reserve, first single pack, affordable sourced heal, every member above 80% across five seconds before overlap, static spawns until observed dead, caster collection and hazard reaction.
 
+## Pet diagnostic evidence
+
+Each regular party sample also records actual controlled pets, their owner/entity/template/level provenance, HP, position, CombatRefs, threat and cast/motion state. Record related opponents even when initial acquisition has zero threat. Retain those diagnostic identities after pet Death, enemy evade/home and despawn so reset transitions and unavailable state remain observable; never fabricate missing HP/position. Terminal unit snapshots include those pets. These observations do not change party admission, threat, AI or healer policy.
+
+## Abort evidence
+
+A gameplay panic or initialization failure must return an explicit `aborted` result with its original reason instead of losing the run's evidence. Final output always includes `run-SEED.json` and `combat-events-SEED.json` with status/reason and the ordered native events captured before termination. Horizon completion keeps its `timeout` reason and exports the same trace. Initialization failure before a retained gameplay world is identified explicitly; never invent combat events, unit state or boss credit. Filesystem write errors remain explicit failures. This covers recoverable Rust unwind/error boundaries, not process kill, hardware failure or abort-on-panic builds.
+
 ## Azure qualification
 
 - [x] Freeze the staged2515 native graph, complete Normal source population and an authored Leymor→Azureblade→Telash→Umbrelskul route. Difficulty205 retains its native Normal-population alias.
@@ -54,7 +62,7 @@ Evading actors must travel frozen edges at their native speed to the native home
 
 ## Native pet utility
 
-Production `PetControlPlugin` initializes real `PetLevelupSpells` and runs normal pet actions/AI. The immutable catalog moves between cached seeded worlds; pet commands, owners and cast state never do. Native Felguard30146 must expose learned Axe Toss89766 at the selected level in both first and cached worlds. No player spell grant or invented Hunter pet is permitted. Harness initialization omissions cannot qualify production utility coverage.
+Production `HunterPetPlugin` and `PetControlPlugin` load native pet family/specialization/learned-spell definitions and run normal pet lifecycle/actions/AI. Immutable catalogs move between cached seeded worlds; stables, summoned pets, commands, owners and cast state never do. A transport-free leader retains the ordinary runtime-only stable initialized while it has follower identity; never invent a persistent character or transport connection to summon its pet. Native source templates remain required. Native Felguard30146 must expose learned Axe Toss89766 at the selected level in both first and cached worlds. No player spell grant or invented Hunter pet is permitted. Harness initialization omissions cannot qualify production utility coverage.
 
 ## How it works
 
