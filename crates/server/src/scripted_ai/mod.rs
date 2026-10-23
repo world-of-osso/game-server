@@ -50,6 +50,7 @@ mod melidrussa;
 pub(crate) mod model_reach;
 pub mod movement;
 pub mod murder_row;
+mod neltharus_initial;
 pub(crate) mod nethekurse;
 pub(crate) mod nethekurse_intro;
 pub(crate) mod orator;
@@ -413,6 +414,12 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == irideus::SCRIPT {
         return irideus::creature_ai(world, creature);
     }
+    if matches!(
+        script_name,
+        neltharus_initial::CHARGATH_SCRIPT | neltharus_initial::SARGHA_SCRIPT
+    ) {
+        return neltharus_initial::creature_ai(world, creature, script_name);
+    }
     if script_name == anubzekt::SCRIPT {
         return anubzekt::creature_ai(world, creature);
     }
@@ -501,6 +508,10 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || script_name == gutshot::SCRIPT
         || script_name == wratheye::SCRIPT
         || script_name == irideus::SCRIPT
+        || matches!(
+            script_name,
+            neltharus_initial::CHARGATH_SCRIPT | neltharus_initial::SARGHA_SCRIPT
+        )
         || script_name == gorek::SCRIPT
         || script_name == khajin::SCRIPT
         || script_name == gulping_goliath::SCRIPT
