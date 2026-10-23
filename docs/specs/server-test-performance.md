@@ -1,10 +1,14 @@
 # Server test performance
 
-The server's standard lead gate must retain its native coverage while completing within15minutes and approximately8GiB RSS without swap. Shared fixture code lives in `crates/server/src/test_data/`; [measurement and implementation notes](../wiki/investigations/server-test-performance.md).
+The whole server test suite must retain every discovered case and existing ignore while completing within15minutes and approximately8GiB RSS without swap. The three-gate union is an intermediate measurement, not full-suite completion. Shared fixture code lives in `crates/server/src/test_data/`; [measurement and implementation notes](../wiki/investigations/server-test-performance.md).
 
 ## What it must do
 
 ### Execution and coverage
+
+- [ ] `--full-suite` executes all discovered tests from the supplied complete Cargo artifact inventory, with no union-only filter or implicit skip.
+- [ ] Report exact known and unexpected failing identities without converting failures to ignores, dropping assertions, or rewriting raw failure status.
+- [ ] Qualify the whole-suite command against900s/~8GiB with a complete all-case/ignore inventory and separate compile timing.
 
 - [x] Execute the union of the `fu913`, `sm894` and `rd912` gate filters within900s wall at approximately8GiB peak RSS with no swap;706.402s/6.77GiB/zero swap qualifies performance, with one lead-accepted known master environment/data failure reported explicitly.
 - [x] Preserve test cases, existing ignore status, assertions and native simulation steps; the complete native union accounts for2856 enabled/87 ignored without missing/extra identities.

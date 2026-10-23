@@ -191,19 +191,30 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--artifacts", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--skip", action="append", default=[SKIP])
-    parser.add_argument("filters", nargs="*", default=FILTERS)
+    parser.add_argument("--skip", action="append", default=[])
+    parser.add_argument("--full-suite", action="store_true", help="all discovered tests; no implicit union filters or skip")
+    parser.add_argument("--known-failure", action="append", default=[], metavar="EXACT_NAME", help="label, never suppress, an expected failing identity")
+    parser.add_argument("filters", nargs="*")
     args = parser.parse_args()
+    if args.full_suite and args.filters:
+        parser.error("--full-suite cannot be combined with test filters")
+    filters = args.filters or (() if args.full_suite else FILTERS)
+    skips = args.skip if args.full_suite else [SKIP, *args.skip]
     args.output.mkdir(parents=True)
     env = dict(os.environ, RUSTC_BOOTSTRAP="1")
     binaries = read_binaries(args.artifacts)
-    plan, expected = discover_groups(binaries, args.filters, args.skip, args.output, env)
+    plan, expected = discover_groups(binaries, filters, skips, args.output, env)
     rows, events, peaks, execution_wall = execute_groups(plan, args.output, env)
     observed = Counter((binary, event["name"], event["event"] == "ignored") for binary, event in events)
     usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+    failures = {event["name"] for _, event in events if event["event"] == "failed"}
+    known = set(args.known_failure)
     summary = {"passed": sum(event["event"] == "ok" for _, event in events),
                "failed": sum(event["event"] == "failed" for _, event in events),
                "ignored": sum(event["event"] == "ignored" for _, event in events),
+               "known_failures": sorted(failures & known),
+               "unexpected_failures": sorted(failures - known),
+               "full_suite": args.full_suite, "filters": list(filters), "skips": skips,
                "missing": serialize_missing(expected - observed),
                "extra": serialize_missing(observed - expected), "groups": rows,
                "wall_seconds": time.monotonic() - started, "execution_wall_seconds": execution_wall,

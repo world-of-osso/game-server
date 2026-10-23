@@ -225,6 +225,18 @@ Two process slots each run three libtest threads. Fresh process boundaries relea
 
 The same-source shared-process run was1348.305s; batching reduces actual wall47.6% and CPU34.8%. Both use the same frozen binary hash, feature graph and world image. This is **the three-gate union, not the entire workspace test suite**. Full-suite default adoption must explicitly select all tests and preserve full-suite ignore/exclusion policy; the current runner defaults to the named union and its existing single skip. Evidence: `module-batches-final/{summary.json,context.json,batches/groups.json,batch-host-memory.jsonl,frontal-host-memory.jsonl}`, `module-batches-final-drain.json`.
 
+## Whole-suite mode (qualification pending)
+
+`--full-suite` selects every discovered test in every supplied Cargo test artifact. It adds neither the union filters nor the union-only skip; explicit caller `--skip` remains visible in `summary.json` for a separately qualified special case. `--known-failure EXACT_NAME` labels matching failures in `known_failures` and all others in `unexpected_failures`; it never changes execution, assertion outcomes, ignore status, or the runner's nonzero failure exit. Package directories come from the Cargo manifest receipt, and grouping remains separate per binary/module with two processes×three threads.
+
+Gate/agent command after a complete workspace build's Cargo JSON receipt:
+
+```text
+python3 scripts/native_test_batches.py --artifacts BUILD_ARTIFACT_JSONL --output NEW_RESULT_DIR --full-suite
+```
+
+Pass known identities via repeatable `--known-failure`; the lead owns classification. Agents require their normal capacity admission and `agent-run OWNER`; the caller retains immutable-input/floor monitoring and includes any separately qualified serial case exactly once in full coverage/time. The executable regression proves full-suite mode includes an otherwise excluded union case and a module outside union filters, keeps the existing ignore, and reports a known failed case as failed. Initial RED is1FAIL/2PASS because full-suite/known-failure switches are absent. Native whole-suite timing remains pending;706s for2856 enabled cases does not establish the whole-suite target.
+
 ## Gate invocation
 
 Use the committed default `test` profile through ordinary `cargo test --locked --workspace --no-fail-fast -- <union filters> --skip opening_admission_does_not_recruit_unprojected_source_packs --test-threads 4`, with no kit override and a hash-frozen, writable-copy-compatible private source layout. The qualified frontal case must run separately/serially with its actual bake receipt; include its execution receipt in total coverage/time. Four threads are the **measured baseline, not an accepted final recommendation**: memory-bounded heavy-test scheduling still needs proof. Nextest supplies isolated timing/RSS here; cold per-test process isolation is not assumed faster for thousands of native fixtures. Exact full argv is preserved in `union.log`/`union-provenance.json`; filters remain the literal three-gate union. No timeout, retry, ignore or assertion policy changes to manufacture acceptance.
