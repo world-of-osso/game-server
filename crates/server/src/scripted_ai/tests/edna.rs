@@ -45,6 +45,9 @@ fn source_copy(difficulty: u32) -> (Harness, Entity, InMap, Vec<Entity>) {
         assert!(ids.spawn.is_none());
         assert!(ids.has("edna_intro_trash"));
     }
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(boss).insert(visibility);
     h.advance(0.05);
     assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 320);
     (h, boss, map, golems)
@@ -110,8 +113,11 @@ fn encounter_coverage_edna_five_inherited_stringid_deaths_force_walk_arrival_unl
         );
         assert!(!immune(&h, boss));
         assert!(
-            h.has_aura(boss, ANCHOR),
-            "native45313 anchor cast after arrival+1s"
+            h.inbox(0)
+                .spell_gos
+                .iter()
+                .any(|go| go.caster == boss.to_bits() && go.spell_id == ANCHOR),
+            "native45313 script-effect cast after arrival+1s, not an aura"
         );
         assert_eq!(
             get_boss_state(h.app.world_mut(), map, 0),
@@ -139,6 +145,11 @@ fn encounter_coverage_edna_death_counter_is_copy_owned_and_idle_time_does_not_un
     assert_eq!(intro_state(&mut h, map), 0);
     assert_eq!(intro_state(&mut h, other), 0);
     assert!(immune(&h, boss));
-    assert!(!h.has_aura(boss, ANCHOR));
+    assert!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .all(|go| go.caster != boss.to_bits() || go.spell_id != ANCHOR)
+    );
     assert!(h.app.world().get::<movement::PointMovement>(boss).is_none());
 }
