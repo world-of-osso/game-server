@@ -6,8 +6,9 @@ The server's standard lead gate must retain its native coverage while completing
 
 ### Execution and coverage
 
-- [ ] Execute the union of the `fu913`, `sm894` and `rd912` gate filters within900s wall at approximately8GiB peak RSS with no swap; report compilation separately.
-- [ ] Preserve test cases, existing ignore status, assertions and native simulation steps; scheduling may separate heavy tests without dropping coverage.
+- [x] Execute the union of the `fu913`, `sm894` and `rd912` gate filters within900s wall at approximately8GiB peak RSS with no swap;706.402s/6.77GiB/zero swap qualifies performance, with one lead-accepted known master environment/data failure reported explicitly.
+- [x] Preserve test cases, existing ignore status, assertions and native simulation steps; the complete native union accounts for2856 enabled/87 ignored without missing/extra identities.
+- [x] Module-process batching preserves the exact2856enabled/87ignored inventory and reports per-module CPU/wall plus aggregate peak RSS, using at most six concurrent test threads.
 - [x] Retain debug assertions and overflow checks in optimized server tests; the compiler artifact and same-source controlled route receipt assert these settings.
 
 ### Immutable fixture inputs
@@ -36,13 +37,15 @@ The server's standard lead gate must retain its native coverage while completing
 - `crates/server/src/test_data/catalog_cache_tests.rs` — immutable input reuse, concurrent read capability and path/content isolation.
 - `crates/server/src/test_data.rs` — existing live-App catalog/creature/prepared-source isolation.
 - `crates/server/src/test_data/catalog_data_tests.rs` — local edits/iteration and serialized collection values.
+- `scripts/tests/test_native_test_batches.py` — real process-cache lifetime, bounded parallelism, ignored-case accounting and failure propagation contracts.
 - Native gate discovery/execution inventories and compiler artifact receipts linked from the investigation.
 
 ## Known gaps (current cycle)
 
-- [ ] Historical profile-only union takes37m58s and swaps; the current after-cache union has not completed qualification, so the performance goal remains open.
+- [x] Module-process execution meets900s/no-swap performance; raw functional status remains2855PASS/1known master environment/data FAIL, not all green.
 - [x] Native loader/storage integration, targeted live-App isolation and compilation pass; the matching19-case workspace-graph before/after measurements are recorded.
-- [ ] Memory-weighted heavy-test scheduling and final complete gate proof remain open.
+- [x] Two process slots×three threads qualify the standard union below8GiB with no swap.
+- [ ] Whole-workspace full-suite batching/default adoption is not measured by the standard gate union.
 
 ## Out of scope
 
