@@ -67,6 +67,27 @@ fn equip_base_slot(
 }
 
 #[test]
+fn dps_parity_equipment_redirected_base_stats_are_modeled_without_hiding_other_options() {
+    let profile: inputs::Profile = serde_json::from_value(serde_json::json!({
+        "spec_id": 103, "level": "90", "race": "night_elf", "consumables": {},
+        "equipment": [{"slot": "head", "item_id": 271528,
+            "bonus_list": [4786,4800,13692,13698,13847,13848], "item_level_override": 344,
+            "enchant": 8017, "gems": [], "crafted_stats": [],
+            "options": {"redirected_base_stats": "271875", "future_item_option": "1"}}]
+    }))
+    .unwrap();
+    let gaps = super::report::gaps(&profile, true);
+    assert!(
+        !gaps.iter().any(|gap| gap.contains("redirected_base_stats")),
+        "implemented option is not an unsupported gear gap: {gaps:?}"
+    );
+    assert!(
+        gaps.contains(&"ITEM_OPTION_UNMODELED:271528:future_item_option=1".into()),
+        "other unsupported options remain explicit: {gaps:?}"
+    );
+}
+
+#[test]
 #[ignore = "native per-slot redirected-base-stats RED; frozen103 profile/database required"]
 fn dps_parity_equipment_redirected_native_base_stats_match_all_fifteen_slots() {
     // Exact per-slot base ratings from pinned76f8118's103 profile. All ten
