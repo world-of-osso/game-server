@@ -115,18 +115,16 @@ fn clap(rend: bool) -> (Harness, Vec<Entity>) {
     panic!("eight native Thunder Clap casts produced no landed damage");
 }
 
-/// SimC76f8118 sc_warrior.cpp1684–1690: foreground special impact on
-/// the primary target rolls native1235113 RPPM and emits228920.
-#[test]
-fn protection_producers_whirling_blade_native_rppm_emits_ravager_from_real_impacts() {
+fn whirling_fixture(learned: bool) -> Harness {
     let mut h = fixture(false);
+    let mut known = vec![DEVASTATE, THUNDER_CLAP];
+    if learned {
+        known.push(WHIRLING_BLADE);
+    }
     h.app
         .world_mut()
         .entity_mut(h.caster)
-        .insert(crate::class_progression::KnownSpells::fixture(vec![
-            DEVASTATE,
-            WHIRLING_BLADE,
-        ]));
+        .insert(crate::class_progression::KnownSpells::fixture(known));
     h.app
         .world_mut()
         .entity_mut(h.npc)
@@ -134,10 +132,90 @@ fn protection_producers_whirling_blade_native_rppm_emits_ravager_from_real_impac
             current: 1_000_000.0,
             max: 1_000_000.0,
         });
-    let caster = h.caster;
-    apply_passive(&mut h, caster, WHIRLING_BLADE);
+    if learned {
+        let caster = h.caster;
+        apply_passive(&mut h, caster, WHIRLING_BLADE);
+    }
     h.select(Some(h.npc));
     h.advance(3);
+    h
+}
+
+fn assert_no_ravager(h: &Harness) {
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| matches!(event.spell_id, Some(RAVAGER | RAVAGER_TICK))),
+        "ineligible events cannot grant Ravager"
+    );
+}
+
+#[test]
+fn protection_producers_whirling_control_catalog_presence_does_not_grant_the_passive() {
+    let mut h = whirling_fixture(false);
+    for _ in 0..40 {
+        h.cast_and_deliver(DEVASTATE, Some(h.npc));
+        h.advance(40);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    }
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(DEVASTATE)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0)
+    );
+    assert_no_ravager(&h);
+}
+
+#[test]
+fn protection_producers_whirling_control_white_attacks_do_not_roll_the_special_policy() {
+    let mut h = whirling_fixture(true);
+    h.attack(h.npc);
+    h.advance(1700);
+    assert!(h.inbox.log.iter().any(|event| event.spell_id.is_none()
+        && event.kind == CombatLogKind::Damage
+        && event.amount > 0));
+    assert_no_ravager(&h);
+}
+
+#[test]
+fn protection_producers_whirling_control_area_hits_without_the_selected_primary_do_not_proc() {
+    let mut h = whirling_fixture(true);
+    let selected = spawn_npc(&mut h.app, 25.0);
+    h.select(Some(selected));
+    h.advance(3);
+    for _ in 0..20 {
+        h.cast_and_deliver(THUNDER_CLAP, None);
+        h.advance(140);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    }
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(h.caster)
+            .unwrap()
+            .0,
+        Some(selected)
+    );
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(THUNDER_CLAP)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0)
+    );
+    assert_no_ravager(&h);
+}
+
+/// SimC76f8118 sc_warrior.cpp1684–1690: foreground special impact on
+/// the primary target rolls native1235113 RPPM and emits228920.
+#[test]
+fn protection_producers_whirling_blade_native_rppm_emits_ravager_from_real_impacts() {
+    let mut h = whirling_fixture(true);
     // Real casts, native5 RPPM and real simulation time. No edited flags,
     // chances, proc timers or seeded RNG; the bounded sequence includes bad luck protection.
     for _ in 0..40 {
@@ -180,6 +258,24 @@ fn protection_producers_whirling_blade_native_rppm_emits_ravager_from_real_impac
                     .any(|event| event.spell_id == Some(RAVAGER_TICK)),
                 "Whirling Blade cannot leave the ordinary12s Ravager field running"
             );
+            crate::auras::remove_auras(
+                h.app.world_mut(),
+                h.caster,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == WHIRLING_BLADE,
+            );
+            assert!(!crate::auras::has_aura(
+                h.app.world(),
+                h.caster,
+                WHIRLING_BLADE
+            ));
+            h.inbox = Inbox::default();
+            for _ in 0..40 {
+                h.cast_and_deliver(DEVASTATE, Some(h.npc));
+                h.advance(40);
+                assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+            }
+            assert_no_ravager(&h);
             return;
         }
     }
