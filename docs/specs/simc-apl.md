@@ -6,6 +6,7 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 
 - [x] Interpret numeric truth, OR/AND/NOT, arithmetic and comparisons with pinned SimC precedence. Single `%` divides; `%%` is modulo.
 - [ ] Read explicit native facts for buff stacks/remains/up, cooldown remains/charges/duration, resources, talents, equipment/trinkets, target count/TTD, fight remains, raid-event adds, dots/debuffs and gcd. Unknown operands fail explicitly, including in otherwise inactive condition branches; never silently become false.
+- [ ] Share native equipment identities/stat-buff metadata, on-use vs proc cooldown sources and native tier facts across spec adapters. Reject unknown item/tier operands; preserve original IDs and trinket1→trinket2→other use order.
 - [x] Bind action-dependent facts (`combo_strike`, plain `gcd`, action minimum GCD) to each source row, including variable/call control actions. An actor-wide value is not equivalent.
 - [x] Execute declared variables using source `value`, `setif`, `value_else`, `reset` and numeric `default` semantics.
 - [x] Preserve literal action order and conditional `call_action_list` decisions; native castability selects the first usable action. An exhausted child list returns control to its caller.
@@ -18,6 +19,7 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 
 - [Shared APL evaluator](../wiki/systems/simc-apl.md).
 - [WW source census](../handoffs/ww-source-census.md).
+- [Shared equipment source and proof](../handoffs/equipment-facts-proof-ledger.md).
 
 ## Implementation inventory
 
@@ -29,6 +31,7 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 - `crates/server/src/simc_apl/context_tests.rs` — proposed-action combo decisions and Ret call-control GCD.
 - `crates/server/src/simc_apl/run_tests.rs`, `target_tests.rs` — non-returning runs and explicit min/max target decisions.
 - `crates/server/src/lib.rs` — engine-free evaluator export.
+- `crates/server/src/dungeon_simulator/dps_parity/literal_rotation/equipment*.rs`, `set_aliases_76f8118.csv` — shared native item metadata, eligibility and named tier aliases.
 
 ## Tests asserting this spec
 

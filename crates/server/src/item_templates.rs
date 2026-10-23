@@ -1,6 +1,7 @@
 //! Retail item attributes from world.db `content_item` (item + item_sparse).
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::Path;
+use std::sync::Arc;
 
 use bevy::prelude::*;
 use rusqlite::{Connection, OpenFlags, Row};
@@ -151,6 +152,7 @@ pub struct ItemTemplates {
     /// Retail ItemEffect TriggerType6 (ON_LEARN), keyed by the owning item.
     pub(crate) retail_learning_spells: HashMap<u32, Vec<u32>>,
     pub(crate) item_sets: crate::equipment_effects::item_sets::ItemSets,
+    pub(crate) item_names: Arc<BTreeMap<String, BTreeSet<u32>>>,
 }
 
 impl ItemTemplates {
@@ -273,7 +275,37 @@ pub fn load_item_templates(path: &Path) -> rusqlite::Result<ItemTemplates> {
         loot_need: loot_need::load(&conn)?,
         retail_learning_spells: load_item_learning_spells(&conn)?,
         item_sets: crate::equipment_effects::item_sets::ItemSets::load(&conn)?,
+        item_names: Arc::new(load_item_names(&conn)?),
     })
+}
+
+/// Pinned SimC util.cpp3234 tokenization; only the operand name, never mechanics.
+fn normalized_item_name(name: &str) -> String {
+    name.trim_start_matches(['_', '+'])
+        .chars()
+        .filter_map(|character| match character {
+            ' ' => Some('_'),
+            '_' | '+' | '.' | '%' | '0'..='9' => Some(character),
+            'a'..='z' | 'A'..='Z' => Some(character.to_ascii_lowercase()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn load_item_names(conn: &Connection) -> rusqlite::Result<BTreeMap<String, BTreeSet<u32>>> {
+    let mut query = conn.prepare("SELECT ID,Name FROM content_item ORDER BY ID")?;
+    let rows = query.query_map([], |row| {
+        Ok((row.get::<_, u32>(0)?, row.get::<_, String>(1)?))
+    })?;
+    let mut names: BTreeMap<String, BTreeSet<u32>> = BTreeMap::new();
+    for row in rows {
+        let (id, name) = row?;
+        names
+            .entry(normalized_item_name(&name))
+            .or_default()
+            .insert(id);
+    }
+    Ok(names)
 }
 
 fn load_item_learning_spells(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<u32>>> {

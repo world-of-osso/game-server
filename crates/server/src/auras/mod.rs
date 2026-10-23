@@ -184,6 +184,24 @@ pub fn aura_now(world: &World) -> f64 {
     world.resource::<Time<Virtual>>().elapsed_secs_f64()
 }
 
+/// Actual native equipment proc timer; reading never starts or retimes a proc.
+pub(crate) fn equipment_proc_cooldown_remaining(
+    world: &World,
+    unit: Entity,
+    slot: shared::protocol::EquipmentSlot,
+    spell: u32,
+) -> f64 {
+    let Some(auras) = world.get::<ActiveAuras>(unit) else {
+        return 0.0;
+    };
+    let ready = auras
+        .iter()
+        .filter(|aura| aura.spell_id == spell && aura.source == AuraSource::Equipment(slot))
+        .map(|aura| aura.proc.next_ready_at)
+        .fold(0.0, f64::max);
+    (ready - aura_now(world)).max(0.0)
+}
+
 /// Who put an aura on the unit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AuraSource {

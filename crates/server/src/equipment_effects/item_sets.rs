@@ -131,7 +131,7 @@ pub(crate) fn sync_item_sets(world: &mut World, changed: &mut ChangedSetOwners) 
     }
 }
 
-fn read_set_spells(world: &World, unit: Entity) -> Vec<(u32, SpellInfo)> {
+pub(crate) fn read_set_spells(world: &World, unit: Entity) -> Vec<(u32, SpellInfo)> {
     let equipped = world
         .get::<EquippedItems>(unit)
         .expect("set owner equipment");
