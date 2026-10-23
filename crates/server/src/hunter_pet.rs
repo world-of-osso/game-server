@@ -801,6 +801,14 @@ fn spawn_pet(
         .get(usize::from(slot))?
         .clone()?;
     let hunter = owner_class(world, owner) == Some(CLASS_HUNTER);
+    if hunter {
+        // A FixedUpdate Call Pet can precede Update's stat refresh after gear
+        // or passive initialization. Resolve through the SAME producer before
+        // snapshotting its owner, as Ebon Might does for cast-boundary stats.
+        world
+            .run_system_cached(crate::stats::update_character_stats)
+            .expect("resolve native owner stats before Hunter pet summon");
+    }
     let demon = owner_class(world, owner) == Some(CLASS_WARLOCK);
     let summoned = is_summoned_pet_owner(world, owner);
     if summoned {
