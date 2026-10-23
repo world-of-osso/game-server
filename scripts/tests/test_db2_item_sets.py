@@ -25,6 +25,11 @@ class ItemSetImportTests(unittest.TestCase):
                     patch.object(db2.skyborne_data, 'import_rows'):
                 db2.import_tables('12.1.5.70448', db2.DEFAULT_CSV_ROOT, database, Path(directory))
             with closing(sqlite3.connect(database)) as conn:
+                imported = {row[0] for row in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )}
+                self.assertTrue({'item_set', 'item_set_spell'}.issubset(imported),
+                                'normal importer must publish native set catalogs')
                 self.assertEqual(conn.execute(
                     'SELECT ID,SetFlags,RequiredSkill,ItemID_0,ItemID_1,ItemID_2,ItemID_3,ItemID_4 '
                     'FROM item_set WHERE ID=2062'
