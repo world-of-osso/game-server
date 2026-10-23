@@ -187,6 +187,75 @@ fn dummy16_arcane_power_discount_ends_at_native_expiry() {
     );
 }
 
+// TC a352b1fa spell_paladin.cpp1062–1091: OnCast, gated on HasSpell315867.
+#[test]
+fn dummy16_judgment_known_rank_generates_power_before_impact() {
+    for root in [20271, 275779, 275773] {
+        for ranked in [false, true] {
+            let known = if ranked {
+                vec![root, 315867]
+            } else {
+                vec![root]
+            };
+            let mut h = fixture(&[root, 315867, 220637], &known, 2);
+            h.set_power(PowerType::HolyPower, 0.0);
+            let target = h.npc;
+            let health = h.health(target);
+            execute(&mut h, root, Some(target));
+            assert_eq!(
+                h.power(PowerType::HolyPower),
+                if ranked { 1.0 } else { 0.0 },
+                "Judgment{root}, known rank={ranked}: power belongs to cast, not impact"
+            );
+            assert_eq!(h.health(target), health, "projectile has not impacted");
+        }
+    }
+}
+
+#[test]
+fn dummy16_judgment_aura_without_known_rank_does_not_grant_power() {
+    for root in [20271, 275779, 275773] {
+        let mut h = fixture(&[root, 315867, 220637], &[root], 2);
+        apply(&mut h, 315867);
+        h.set_power(PowerType::HolyPower, 0.0);
+        let target = h.npc;
+        execute(&mut h, root, Some(target));
+        h.advance(10);
+        assert_eq!(
+            h.power(PowerType::HolyPower),
+            0.0,
+            "Judgment{root}: aura is not learned-rank authority"
+        );
+    }
+}
+
+#[test]
+fn dummy16_judgment_known_rank_generates_power_against_immune_primary() {
+    for root in [20271, 275779, 275773] {
+        let mut h = fixture(&[root, 315867, 220637, 642], &[root, 315867], 2);
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: h.npc,
+                target: h.npc,
+                spell_id: 642,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        h.set_power(PowerType::HolyPower, 0.0);
+        let target = h.npc;
+        execute(&mut h, root, Some(target));
+        h.advance(10);
+        assert_eq!(
+            h.power(PowerType::HolyPower),
+            1.0,
+            "Judgment{root}: immune target cannot cancel cast-time power"
+        );
+        assert_eq!(h.health(target), 5000.0);
+    }
+}
+
 #[test]
 fn dummy16_judgment_immune_primary_never_generates_rank_power() {
     for root in [20271, 275773] {

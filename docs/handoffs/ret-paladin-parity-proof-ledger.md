@@ -248,3 +248,9 @@ Native resolver first execution at77c0f56ed reached two fixture setup failures, 
 After trait-point tip50eb68971 was queued as parent gatetp1034, merged shared literal driver9912a2917 as51a79c22b. Resolver fixture funding now uses the existing native resource-generation helper until actual earned Holy Power meets the finisher's catalog cost, not an admitted-cast count. Native StatsPlugin supplies ordinary derived-stat refresh; no power/SP/AP override. Production resolver still unchanged. Next RED uses the private point-enabled DB because the new spell loader requires TraitDefinitionEffectPoints.
 
 Shared spell-oracle receipts are available under engine `data/diagnostics/simc-spell-oracle-2026-10-23/70/manifest.json`: Final Verdict19, Dawnlight28, Crusading Strike30 and Perfected Guillotine2 matching formula records; Divine Arbiter did not trigger. Reuse these receipts; no separate SimC hand-run.
+
+## Judgment cast-time resource correction
+
+Pinned TC a352b1fa `spell_paladin.cpp1062–1091` registers20271/275779/275773 resource child220637 on **OnCast**, gated by **HasSpell315867**. Native `scripts/batch10.rs94–102` and `batch16.rs32–45` instead require rank aura plus actual primary damage. Thus an impact miss is not a valid native explanation for losing Judgment Holy Power. Parent approved generic correction2026-10-23; no Ret-local exception or fixture power grant.
+
+Three new source-backed controls cover all three native Judgment variants: learned-rank power before projectile impact, aura-only rank not authorizing power, and learned-rank power despite immune primary. Tests committed before runtime changes; execution RED pending the single capacity-admitted `lead_ret_14752` compile. Existing on-hit oracles must be reconciled to TC after genuine RED. Ret controller damage remains unqualified.
