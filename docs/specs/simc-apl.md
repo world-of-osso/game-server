@@ -19,11 +19,12 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 
 - `crates/server/src/simc_apl.rs` — shared interpreter entry point; currently RED scaffold only.
 - `crates/server/src/simc_apl/tests.rs` — concrete WW/Ret behavioral expressions.
+- `crates/server/src/simc_apl/program_tests.rs` — variable lifetimes, source-order calls and native castability decisions.
 - `crates/server/src/lib.rs` — engine-free evaluator export.
 
 ## Tests asserting this spec
 
-`crates/server/src/simc_apl/tests.rs`; six ignored RED cases pushed before implementation. Runtime result pending.
+`crates/server/src/simc_apl/tests.rs`; ten ignored expression/program RED cases pushed before implementation. Runtime result pending.
 
 ## Known gaps (current cycle)
 

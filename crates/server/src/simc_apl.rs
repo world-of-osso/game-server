@@ -29,5 +29,46 @@ impl Expression {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct Action {
+    pub name: String,
+    pub options: BTreeMap<String, String>,
+}
+
+#[derive(Default)]
+pub struct Variables {
+    values: BTreeMap<String, f64>,
+}
+
+impl Variables {
+    pub fn value(&self, name: &str) -> Option<f64> {
+        self.values.get(name).copied()
+    }
+}
+
+pub struct Program;
+
+impl Program {
+    pub fn parse(_lines: &[(&str, &str)]) -> Result<Self, String> {
+        Err("APL program not implemented".into())
+    }
+
+    pub fn state(&self) -> Variables {
+        Variables::default()
+    }
+
+    pub fn select(
+        &self,
+        _list: &str,
+        _facts: &dyn Facts,
+        _variables: &mut Variables,
+        _usable: impl FnMut(&Action) -> Result<bool, String>,
+    ) -> Result<Option<Action>, String> {
+        Err("APL selection not implemented".into())
+    }
+}
+
+#[cfg(test)]
+mod program_tests;
 #[cfg(test)]
 mod tests;
