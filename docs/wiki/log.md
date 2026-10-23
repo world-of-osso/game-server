@@ -1,3 +1,7 @@
+## 2026-10-23 — Oracle reference simulation options
+
+[Oracle](reference/simc-spell-oracle.md): reference-proof discovery/explicit selection now inherits all non-probe options, including `optimal_raid=0`; missing/conflicting proof matches fail. Earlier raid-buffed diagnostics are invalid for native factor comparison and archived; the complete150-receipt corpus is regenerated with each source command's options. Native implementation remains unchanged.
+
 ## 2026-10-23 — SimC spell oracle
 
 [Oracle](reference/simc-spell-oracle.md): stdlib CLI retains pinned command/hash proof and parses printed direct/tick formulas, result stages, modifier sources and armor reductions. Top-five receipts for30 referenced specs live in game-engine diagnostics; untriggered prerequisites and native instrumentation gaps remain explicit. Recorded Arms/Blood fixtures cover conditional sources and apostrophe actor names. No native harness changes or parity certification.

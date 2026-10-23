@@ -105,6 +105,33 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(actual[0]["share_pct"], 30)
         self.assertEqual(actual[0]["actors"], ["duck", "animal_companion"])
 
+    def test_reference_options_preserve_raid_state_and_nondefault_flags(self):
+        import json
+        proof = json.loads((HERE / "fixtures/arms-reference.proof.json").read_text())
+        options = oracle.reference_options(proof)
+        self.assertIn("optimal_raid=0", options)
+        self.assertIn("report_details=1", options)
+        self.assertIn("target_level=93", options)
+        self.assertNotIn("max_time=300", options)
+        self.assertFalse(any(option.startswith(("output=", "json=")) for option in options))
+        proof["command"].append("override.target_armor=0")
+        self.assertIn("override.target_armor=0", oracle.reference_options(proof))
+
+    def test_default_reference_discovery_matches_profile_and_rejects_missing(self):
+        import json
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            profile = root / "arms.simc"
+            profile.touch()
+            reference = root / "71.single.proof.json"
+            reference.write_text(json.dumps({"command": ["simc", str(profile), "optimal_raid=0"]}))
+            with patch.object(oracle, "REFERENCE_ROOT", root):
+                self.assertEqual(oracle.resolve_reference_proof(profile), reference)
+                with self.assertRaises(ValueError):
+                    oracle.resolve_reference_proof(root / "missing.simc")
+
     def test_timeout_keeps_command_hashes_and_failure_proof(self):
         import json
         import subprocess
@@ -117,9 +144,11 @@ class OracleTests(unittest.TestCase):
             binary = root / "simc"
             binary.write_bytes(b"test binary")
             output = root / "probe.json"
+            reference = root / "reference.proof.json"
+            reference.write_text(json.dumps({"command": ["simc", str(profile), "optimal_raid=0"]}))
             with patch.object(oracle, "BINARY", binary), patch.object(oracle.subprocess, "run", side_effect=subprocess.TimeoutExpired(["simc"], 180)):
                 with self.assertRaises(subprocess.TimeoutExpired):
-                    oracle.run_oracle(profile, ["scorch"], output)
+                    oracle.run_oracle(profile, ["scorch"], output, reference_proof=reference)
             proof = json.loads(output.with_suffix(".proof.json").read_text())
             self.assertEqual(proof["binary_sha256"], oracle.sha256(binary))
             self.assertEqual(proof["profile_sha256"], oracle.sha256(profile))
