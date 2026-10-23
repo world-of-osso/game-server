@@ -464,7 +464,7 @@ fn dps_parity_fixture_add_health_and_ttd_follow_each_summon_lifetime() {
         style: FightStyle::Patchwerk,
     };
     let bindings = Bindings::default();
-    let mut seen = [false; 10];
+    let mut seen = [[false; 2]; 10];
     let mut gaps = [false; 9];
     let mut errors = Vec::new();
     let (seconds, _, _) = advance_combat_observed(&mut run, |run| {
@@ -485,10 +485,17 @@ fn dps_parity_fixture_add_health_and_ttd_follow_each_summon_lifetime() {
             }
             return;
         }
-        if age < 15_000 || seen[wave] {
+        let sample_index = if age >= 27_000 {
+            1 //10% health: both Execute thresholds have been crossed in this wave.
+        } else if age >= 15_000 {
+            0 //50% health: same wave before Execute eligibility.
+        } else {
+            return;
+        };
+        if seen[wave][sample_index] {
             return;
         }
-        seen[wave] = true;
+        seen[wave][sample_index] = true;
         if run.targets.len() != 3 {
             errors.push(format!(
                 "wave{wave}: expected3 targets, got{}",
@@ -545,7 +552,7 @@ fn dps_parity_fixture_add_health_and_ttd_follow_each_summon_lifetime() {
                 match actual {
                     Ok(value) if (value - expected).abs() < 0.001 => {}
                     other => errors.push(format!(
-                        "wave{wave}/target{index} {label}: {other:?}, expected{expected}"
+                        "wave{wave}/sample{sample_index}/target{index} {label}: {other:?}, expected{expected}"
                     )),
                 }
             }
@@ -554,8 +561,8 @@ fn dps_parity_fixture_add_health_and_ttd_follow_each_summon_lifetime() {
     .unwrap();
     assert!((seconds - 300.0).abs() < 0.001);
     assert!(
-        seen.into_iter().all(|seen| seen),
-        "all10 waves must actually be observed"
+        seen.into_iter().flatten().all(|seen| seen),
+        "all10 waves must be observed before and during their Execute phase"
     );
     assert!(errors.is_empty(), "{}", errors.join("\n"));
     assert!(
