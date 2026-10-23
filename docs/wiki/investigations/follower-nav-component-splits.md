@@ -1,0 +1,53 @@
+# Follower navigation component splits
+
+Read-only canonical full-map native-link investigation for six boss endpoints and Azure's qualified book boundary. No connector or profile change is justified merely by disconnected components, nearby doors, vehicle flags or a missing source row. [Continuation contract](../../specs/navigation.md); [navigation implementation](../systems/navigation.md).
+
+## Native coverage
+
+Both-direction native-link searches over every canonical tile find zero intersection between each endpoint component. Exact refs/vertices, closest coarse-polygon points and unchanged input hashes are recorded in game-engine `data/diagnostics/follower-nav-gorek-2026-10-22/component-investigation/`.
+
+| Map / endpoints | Tiles / component polygon counts | Closest coarse gap | Physical-source verdict |
+|---|---|---|---|
+|2527/Halls189722,189727|40;5990→9968, same pair|5.422yd, mostly vertical|No sourced internal traversal object; custom exitAT10 touches entrance side only.|
+|2526/Vexamus194181|12;1272→16949|94.804yd|Four doors are on boss side; exitAT8 touches entrance side. Recruiter SmartAI casts pledge auras, not movement.|
+|2651/Darkflame208743,208747|100;4857→8159, same pair|24.000yd vertical|Doors touch one side each; CandlelightAT285 is encounter geometry. Vehicle flags/boarding spells do not provide a route/destination.|
+|2661/Goldie214661|4;3203→872|9.845yd, mostly vertical|Brewery doors444272/444271 are14.130/15.111yd from entrance component but0.007/0.087yd from boss component. No crossing action.|
+|2515/AzureRune29001884 or book29002007→receiver29001886/pack29001895|4;1520→1638|80.357yd, mostly vertical|Qualified native gossip-backed [directed book policy](../systems/azure-translocation.md) supplies the middle-ring crossing; do not fabricate an ordinary walk edge.|
+
+Distances above are minimum polygon-to-polygon coarse-surface distances, not necessarily the authored route location. The source-object report separately measures every candidate position to **each complete component**, with native polygon refs. Raw collision windows contain real shallow/flat endpoint support faces and zero missing assets; local exact-vertex topology does not join those support faces even at55°or90°. This does not prove a full-map raw-geometry topology or authorize a slope change.
+
+## Traversal-source pass
+
+Build70448 AreaTrigger CSV and SQLite projection have zero map rows for the four boss maps; no `areatrigger_teleport` originates in or lands at their safe locations. The placed TDB GO inventory has no TYPE_TRANSPORT11/MO_TRANSPORT15 candidate. Dynamic/custom AT rows are the two dungeon exits and Darkflame Candlelight. Source absence remains a coverage limitation, not proof that no client-authored transport exists.
+
+Door, vehicle and SmartAI rows were checked with literal source typing. Timed source_type9 action-list IDs are followed only through explicit action references, not numeric collisions with creature IDs. Academy's15SmartAI rows provide conversations/pledge buffs/close-gossip; Goldie's matched spawn reset casts454194(effect6/aura4). Boarding spell46598 has aura236 but no sourced cross-component destination. Pinned TC Darkflame scripts bind the Candle King encounter gate, with no traversal jump/teleport handler found. Ordinary GO door state is not an offline static bake input, so “door closed in bake” is not established by a GO state field alone.
+
+## Authored WMO placements
+
+Existing ADT/WMO readers resolve these measured boundary windows:
+
+| Map | MODF placement / root FDID | Overlapping render-group FDIDs | Authored selected set |
+|---|---|---|---|
+|2527|33746373 /4325339|4532807|0|
+|2526|36445174 /3947017;36447207 /4335681|3947700;4352531|0;1|
+|2651|44107304 /5162358|5466061|0|
+|2661|44593122 /5244088|5245896/5279094/5422559|0|
+
+Render overlap is provenance, not collision classification. Current collision collection loads root groups through the existing ground-face reader and selects rootset0 plus the authored MODF set. No source establishes that enabling a different doodad set is the correct world state. No sourced destructible/trapdoor/phaseable GO crossing was identified. Detailed selected doodad IDs and object-anchor/component distances are retained in the evidence report.
+
+## Candidate experiment
+
+The pinned TC low-hanging filter omission received a separate one-map private experiment; its [recorded negative Goldie outcome](../systems/navigation.md#low-hanging-filter-candidate--2026-10-22) does not establish these physical causes. No other-map bake, canonical publication or synthesized connector follows from this investigation.
+
+## Sources
+
+- Read-only `world.db`: `tdb_gameobject`, templates, transports, `tdb_areatrigger`, `tdb_areatrigger_teleport`, safe locations, creatures, SmartAI, spellclick and native spell effects.
+- Authenticated local build70448 `AreaTrigger.csv`; hash in `sourced-traversal-objects.json`.
+- Native query/codec: `crates/navigation/src/component_diagnostic.rs`; existing collision readers: `crates/los/src/bake` through `boundary_geometry_diagnostic.rs`.
+- Pinned TrinityCore a352b1fa generator, dynamic GO, transport and Darkflame scripts, saved verbatim under the parent evidence directory's `tc-a352b1fa-mmaps/`.
+- Qualified Azure packet: `sim-azure-evade-2026-10-22/azure-walk-components-for-navigation.json`, graphSHA c9172a1299322569fa674652e37f719926f01191cf1c1fa489158308d42a68c8. It does not qualify the unrelated14305AFTER report.
+
+## See Also
+
+- [[azure-translocation]] — explicit book endpoint policy and remaining ActionSet gap.
+- [[navigation]] — resource-limited partial continuation versus completed disconnection.

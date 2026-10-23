@@ -1,3 +1,7 @@
+## 2026-10-22 — Follower component traversal-source pass
+
+[Source investigation](investigations/follower-nav-component-splits.md): canonical five-map/eight-pair native components exported with unchanged input hashes; measured nearest polygons and existing-reader collision/WMO provenance. Sixboss four-map source rows checked for triggers, transports, doors, vehicles, SmartAI and authored sets, with candidate distances to both entire native components. None supplies an established crossing; no new connector policy. Azure exact Rune/book→receiver/pack native split matches existing directed book policy. Private Goldie filter experiment remains negative.
+
 ## 2026-10-22 — Low-hanging filter candidate
 
 [Navigation candidate](systems/navigation.md#low-hanging-filter-candidate--2026-10-22): pinned TC filter stage precedes ledge/headroom. Concrete supported-floor/0.8yd obstruction route REDc84→GREENb4261PASS0.25s with unchanged-climb filter;2yd/steep negativesPASS. One private2661four-tile bake8.53s/exit0 changes no canonical/input hashes but Goldie remains disconnected:3203canonical vs3032private entrance polygons, both Blocked. Negative map experiment; no full rebake/publication or physical cause claim.
