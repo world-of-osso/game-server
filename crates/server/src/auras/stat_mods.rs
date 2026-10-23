@@ -386,12 +386,8 @@ pub fn compute(auras: &ActiveAuras, player_controlled_npc: bool) -> (StatModifie
 /// TC Unit.cpp11032–11071 multiplies independent attack/cast speed modifiers.
 /// A negative native amount increases duration by its absolute percent.
 fn compose_haste(current: f32, amount: f32) -> f32 {
-    let factor = if amount >= 0.0 {
-        pct(amount)
-    } else {
-        1.0 / pct(-amount)
-    };
-    (pct(current) * factor - 1.0) * 100.0
+    let speed_factor = 1.0 / time_percent_mod(amount);
+    (pct(current) * speed_factor - 1.0) * 100.0
 }
 
 /// TC Unit.cpp8833–8854 selects the unit's flight branch before applying211.
