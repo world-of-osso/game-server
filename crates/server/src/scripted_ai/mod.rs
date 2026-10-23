@@ -31,6 +31,7 @@ mod dailcry;
 mod doragosa;
 mod emberon;
 pub mod event_map;
+mod gorek;
 mod granyth;
 mod gulping_goliath;
 pub(crate) mod hellfire_ramparts;
@@ -394,6 +395,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == treemouth::SCRIPT {
         return treemouth::creature_ai(world, creature);
     }
+    if script_name == gorek::SCRIPT {
+        return gorek::creature_ai(world, creature);
+    }
     if script_name == khajin::SCRIPT {
         return khajin::creature_ai(world, creature);
     }
@@ -482,6 +486,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || script_name == talondras::SCRIPT
         || script_name == emberon::SCRIPT
         || script_name == anubzekt::SCRIPT
+        || script_name == gorek::SCRIPT
         || script_name == khajin::SCRIPT
         || script_name == gulping_goliath::SCRIPT
         || script_name == orator::SCRIPT
