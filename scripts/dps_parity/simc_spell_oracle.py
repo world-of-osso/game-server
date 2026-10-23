@@ -55,8 +55,11 @@ def parse_modifier(line, number):
     if match:
         name, spell, kind, value, mode, source, source_id, effect = match.groups()
         override = "(value override)" in value
+        dynamic = "value function" in value or "with condition" in value
         value, unit = modifier_value(value)
         application = {"per stack of buff": "per_buff_stack", "per consumed stack of buff": "per_consumed_buff_stack", "with buff": "buff_present"}.get(mode, "mastery_scaled" if unit == "mastery_coefficient" else "passive")
+        if dynamic:
+            application = "conditional_or_dynamic"
     else:
         match = STARTUP.search(line)
         if not match:

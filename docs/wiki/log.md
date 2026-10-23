@@ -15,6 +15,10 @@
 ## 2026-10-23 — Caster offsets and source balloon qualification
 
 [Offsets](systems/toys.md#caster-offsets414348-source-boundary-2026-10-23): generic41/43/48 use source73 radius/reach/motion and direct geometry, preserving existing32. Genuine9RED plus correctedB43RED;37GREEN29.07s atc0b includes actual two balloons, native direction1GREEN at e71 and area1GREEN13.27s at909 complete39 covered cases without production changes. Native fixture fixes select279366 effect1 and source NPC6/display10913 rather than weakening LOS; legitimate native misses retain receipts. Check0/67.07s/no warnings/fmt0. Exact545→547 only75042/245946,17 blocker-list/15 unavailable strings; Arena battle/action gaps and native-facing/presentation/modifier/Detour boundaries retained. No canonical/protocol writes or invented UseToy toggle.
+## 2026-10-23 — Oracle conditional multiplier classification
+
+[Oracle](reference/simc-spell-oracle.md): recorded Elemental Weapons408390 value-function/condition row reproduced passive misclassification. Such action-effects now retain printed values/raw text as `conditional_or_dynamic` and are excluded from passive products; no runtime multiplier is inferred from startup placeholders. Existing raw logs are reparsed without new simulations.
+
 ## 2026-10-23 — Oracle sourced prerequisite closure
 
 [Oracle](reference/simc-spell-oracle.md): all25 previously unobserved channels now have printed formula evidence,150/150 total. Pinned source-backed cast/ready-state plans use30–180s probes, earned resources/buffs and explicit precombat setup. Frost Strike/Obliterate/Arcane Missiles preserve actual child IDs instead of report-parent IDs. Actual Shaman trace reproduced98 repeated Flametongue casts starving combat; original precombat imbues restore TI without injected stacks or altered seed/reference flags.20 unittest GREEN; native parity remains unclaimed.
