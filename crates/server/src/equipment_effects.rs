@@ -226,6 +226,109 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "native Ret ItemSet2062 threshold lifecycle RED; private source DB only"]
+    fn item_set_native_ret_thresholds_remove_and_reapply_without_duplicate_auras() {
+        let mut h = native_harness();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(crate::class_progression::ActiveSpec(70));
+        let pieces = [
+            (EquipmentSlot::Head, 271465),
+            (EquipmentSlot::Shoulders, 271463),
+            (EquipmentSlot::Chest, 271468),
+            (EquipmentSlot::Legs, 271464),
+            (EquipmentSlot::Hands, 271466),
+        ];
+        for (count, expected) in [
+            (1, (false, false)),
+            (2, (true, false)),
+            (5, (true, true)),
+            (3, (true, false)),
+            (1, (false, false)),
+            (4, (true, true)),
+            (0, (false, false)),
+        ] {
+            h.app.world_mut().entity_mut(h.caster).insert((
+                EquippedItems {
+                    items: pieces[..count]
+                        .iter()
+                        .map(|&(slot, id)| (slot, Retail, id))
+                        .collect(),
+                },
+                EquippedItemModifiers {
+                    items: pieces[..count]
+                        .iter()
+                        .map(|&(slot, _)| (slot, ItemInstanceModifiers::default()))
+                        .collect(),
+                },
+            ));
+            h.advance(3);
+            let observed = (
+                crate::auras::has_aura(h.app.world(), h.caster, 1296660),
+                crate::auras::has_aura(h.app.world(), h.caster, 1296661),
+            );
+            assert_eq!(observed, expected, "native Ret2062 count{count}");
+            let auras = h.app.world().get::<ActiveAuras>(h.caster).unwrap();
+            for id in [1296660, 1296661] {
+                assert!(auras.iter().filter(|aura| aura.spell_id == id).count() <= 1);
+            }
+        }
+    }
+
+    #[test]
+    #[ignore = "native Ret ItemSet2062 spec change RED; private source DB only"]
+    fn item_set_native_ret_specialization_change_replaces_only_set_owned_auras() {
+        let mut h = native_harness();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(crate::class_progression::ActiveSpec(70));
+        let pieces = [
+            (EquipmentSlot::Head, 271465),
+            (EquipmentSlot::Shoulders, 271463),
+            (EquipmentSlot::Chest, 271468),
+            (EquipmentSlot::Legs, 271464),
+        ];
+        h.app.world_mut().entity_mut(h.caster).insert((
+            EquippedItems {
+                items: pieces
+                    .iter()
+                    .map(|&(slot, id)| (slot, Retail, id))
+                    .collect(),
+            },
+            EquippedItemModifiers {
+                items: pieces
+                    .iter()
+                    .map(|&(slot, _)| (slot, ItemInstanceModifiers::default()))
+                    .collect(),
+            },
+        ));
+        h.advance(3);
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296660));
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296661));
+        // Native ItemSetSpell7715–7720 choose different Ret/Prot/Holy roots.
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(crate::class_progression::ActiveSpec(66));
+        h.advance(3);
+        assert!(!crate::auras::has_aura(h.app.world(), h.caster, 1296660));
+        assert!(!crate::auras::has_aura(h.app.world(), h.caster, 1296661));
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296658));
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296659));
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(crate::class_progression::ActiveSpec(70));
+        h.advance(3);
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296660));
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296661));
+        assert!(!crate::auras::has_aura(h.app.world(), h.caster, 1296658));
+        assert!(!crate::auras::has_aura(h.app.world(), h.caster, 1296659));
+    }
+
+    #[test]
     fn item_instance_equipment_base_spell_is_removed_on_unequip() {
         let mut h = native_harness();
         // Native268209 -> ItemEffect232799 -> equip spell1291718.
