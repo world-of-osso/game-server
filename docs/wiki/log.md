@@ -121,6 +121,9 @@
 ## 2026-10-22 — Halls and Vexamus source-floor policies
 
 [Source-floor selection](investigations/follower-data.md#halls-and-vexamus-source-floor-selection--2026-10-22): approved unique DB2 floor-group upward triangle matching and Vexamus-only two-native-anchor selection; original ambiguous packet attempts refused SQL, Primal remains unresolved. Source/packet GREEN pending.
+## 2026-10-22 — Khajin non-Mythic partial
+
+[Khajin](systems/boss-scripts.md#khajin-non-mythic-partial--2026-10-22): ignorednativeRED→sourceShock/Hail/Surge lanes; post-master930e63f96 native4GREEN20.76s Normal1/projected205, real7sHail,90s5/3/3completions/reset/actualsecondcopycredit/corpse. ManualinstantShock fixture observes0.1s beforeautomatic6s request, noAI/timer bypass. Surge/Boulder/controller gaps and stable-key SQLreceipt retained.
 ## 2026-10-22 — Light of the Titans and native hit masks
 
 [Native Titans](systems/auras.md#light-of-the-titans-and-hit-proc-masks--2026-10-22): ordinary Judgment-earned Word actualmissing378412 RED→native40% HoT; shared Defense0 mask root fixed per TC attrs, then actualhostileDoT110vs329 RED→native200%selfbonus. Merged891b9ab1d19GREEN38.11s/check0/2m08s/zero warnings/fmtPASS. Existing test expectations unchanged; [census](../../docs/handoffs/native-hit-proc-mask-census.md)334969spell/5670staticcandidateaura changes; fullworkspaceleadgate required, no efficacy/completeproducer claim.

@@ -508,6 +508,28 @@ def import_treemouth(connection):
     connection.execute("UPDATE content_creature_template SET ScriptName='boss_treemouth' WHERE entry=186120")
     return [186120]
 
+def import_khajin(connection):
+    """Bind Lua-authenticated Khajin; preserve native actor, placement and spells."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2527, entry=189727, encounter_id=2617, bit=2,
+                   script='', ai='', journal_id=2510, actor_id=5405, display_id=107064)
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=189727').fetchone()
+    if runtime not in [('Khajin the Unyielding','','',0), ('Khajin the Unyielding','','boss_khajin',0)]:
+        raise ValueError('Khajin runtime binding or source flags changed')
+    for spell, target in [(385963,25),(386757,18)]:
+        effect = connection.execute('''SELECT Effect,ImplicitTarget_0 FROM spell_effect
+            WHERE SpellID=? AND DifficultyID=0 AND EffectIndex=0''', (spell,)).fetchone()
+        if effect != (2,target):
+            raise ValueError(f'Khajin native damage identity changed: {spell}')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_khajin' WHERE entry=189727")
+    return [189727]
+
 
 def import_doragosa(connection):
     """Current Retail local Lua binding, no source actor or difficulty mutation."""
@@ -837,7 +859,7 @@ def import_skarmorak(connection):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','vexamus','granyth','treemouth','gulping-goliath','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry','orator','skarmorak'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','khajin','vexamus','granyth','treemouth','gulping-goliath','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry','orator','skarmorak'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -885,6 +907,8 @@ def main():
                 entries = import_granyth(conn)
             elif args.encounter == 'treemouth':
                 entries = import_treemouth(conn)
+            elif args.encounter == 'khajin':
+                entries = import_khajin(conn)
             elif args.encounter == 'doragosa':
                 entries = import_doragosa(conn)
             elif args.encounter == 'melidrussa':
