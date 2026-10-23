@@ -28,6 +28,16 @@ impl Drop for SeedScope {
 }
 
 #[cfg(test)]
+pub(crate) fn seeded_fingerprint() -> Option<u64> {
+    SEEDED.with(|state| {
+        state.borrow().as_ref().map(|rng| {
+            let mut copy = rng.clone();
+            ::rand::RngCore::next_u64(&mut copy)
+        })
+    })
+}
+
+#[cfg(test)]
 pub(crate) struct ThreadRng;
 
 #[cfg(test)]

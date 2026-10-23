@@ -122,6 +122,25 @@ fn select_random_jump_target(
     _explicit: Option<Entity>,
     units: &mut Vec<Entity>,
 ) {
+    #[cfg(test)]
+    {
+        let pool: Vec<_> = units
+            .iter()
+            .map(|unit| {
+                serde_json::json!({
+                    "entity":unit.to_bits(),"priority":read_target_priority(world, *unit),
+                    "health":world.get::<Health>(*unit).map(|health| (health.current.to_bits(), health.max.to_bits())),
+                })
+            })
+            .collect();
+        eprintln!(
+            "POM_TRACE_INPUT {}",
+            serde_json::json!({
+                "at":crate::auras::aura_now(world),"rng":crate::random::seeded_fingerprint(),
+                "pool":pool,"thread":format!("{:?}", std::thread::current().id()),
+            })
+        );
+    }
     if units.len() <= 1 {
         return;
     }
@@ -133,6 +152,14 @@ fn select_random_jump_target(
     units.retain(|unit| read_target_priority(world, *unit) == best);
     units.shuffle(&mut rand::thread_rng());
     units.truncate(1);
+    #[cfg(test)]
+    eprintln!(
+        "POM_TRACE_OUTPUT {}",
+        serde_json::json!({
+            "at":crate::auras::aura_now(world),
+            "chosen":units.iter().map(|unit| unit.to_bits()).collect::<Vec<_>>(),
+        })
+    );
 }
 
 fn read_target_priority(world: &World, unit: Entity) -> (bool, bool) {
