@@ -212,6 +212,30 @@ fn dps_parity_periodic_crit_native_plain_creature_has_no_class_spell_owner() {
     );
 }
 
+#[test]
+#[ignore = "native pet spell-owner RED/GREEN; requires prepared parity inputs"]
+fn dps_parity_periodic_crit_native_pet_uses_class_owners_current_chance() {
+    let _seed = crate::random::seed_scope(70448);
+    let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
+    let (owner, target) = (run.actor, run.targets[0]);
+    assert!(run.app.world().get::<CharacterStats>(pet).is_none());
+    assert_native_flags(&run, BURNING_BLOOD, true, false);
+    apply_native_aura(&mut run, owner, owner, CRITICAL_FOCUS);
+    assert!(
+        run.app
+            .world()
+            .get::<CharacterStats>(owner)
+            .unwrap()
+            .crit_pct
+            >= 100.0
+    );
+    let events = collect_native_ticks(&mut run, pet, target, BURNING_BLOOD, 4);
+    assert!(
+        events.iter().all(|event| event.crit),
+        "native pet must use its class spell owner's current chance: {events:?}"
+    );
+}
+
 fn first_new_tick(run: &mut Run, caster: Entity, target: Entity, spell: u32) -> CombatLogEvent {
     run.app
         .world_mut()
