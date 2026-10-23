@@ -432,6 +432,13 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        crate::spell_cast::scripts::PHALANX_TALENT,
+        AuraScript {
+            check_proc: Some(crate::spell_cast::scripts::check_phalanx_proc),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         crate::spell_cast::scripts::DANCE_OF_CHIJI,
         AuraScript {
             check_proc: Some(crate::spell_cast::scripts::check_dance_proc),

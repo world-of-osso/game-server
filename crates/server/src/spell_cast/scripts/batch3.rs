@@ -22,6 +22,9 @@ const THUNDER_CLAP_REND: u32 = 388539;
 const SHRED_RANK: u32 = 231063;
 const SHIELD_SLAM: u32 = 23922;
 const SHIELD_SLAM_RANK: u32 = 231834;
+pub(crate) const PHALANX_TALENT: u32 = 1269311;
+const PHALANX_BUFF: u32 = 1278009;
+const PHALANX_DAMAGE: u32 = 1270116;
 const STEALTH: u32 = 1784;
 const GARROTE_RANK: u32 = 196861;
 const GARROTE_SILENCE: u32 = 1330;
@@ -72,6 +75,41 @@ pub(super) fn thunder_clap(world: &mut World, caster: Entity, target: Entity, de
 pub(super) fn shield_charge(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     const SHIELD_CHARGE_EFFECT: u32 = 385953;
     spell_cast::cast_triggered(world, caster, SHIELD_CHARGE_EFFECT, Some(target), depth + 1);
+}
+
+/// PHALANX_CLAP_ONLY: SimC76f8118 sc_warrior.cpp4048–4049/4173–4174.
+/// Native1269311 supplies the proc mask/chance/child but no source-spell filter.
+pub(crate) fn check_phalanx_proc(
+    _world: &World,
+    _aura: &crate::auras::AuraInstance,
+    event: &crate::auras::procs::AuraEvent,
+) -> bool {
+    event.can_proc && matches!(event.spell_id, Some(THUNDER_CLAP | 435222))
+}
+
+/// PHALANX_SHIELD_SLAM_CONSUMPTION: SimC76f8118 sc_warrior.cpp6300–6303.
+/// This execute-time policy is absent from pinned TC and native trigger rows.
+pub(super) fn consume_phalanx(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+) {
+    let learned = world
+        .get::<crate::class_progression::KnownSpells>(caster)
+        .is_some_and(|known| known.contains(PHALANX_TALENT));
+    if spell.id != SHIELD_SLAM || !learned || !crate::auras::has_aura(world, caster, PHALANX_BUFF) {
+        return;
+    }
+    if let Some(target) = explicit {
+        spell_cast::cast_triggered(world, caster, PHALANX_DAMAGE, Some(target), 1);
+    }
+    crate::auras::remove_auras(
+        world,
+        caster,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == PHALANX_BUFF,
+    );
 }
 
 /// 2050s2 is the number of seconds removed when Flash Heal is cast.

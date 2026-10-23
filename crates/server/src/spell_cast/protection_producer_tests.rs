@@ -218,7 +218,6 @@ fn protection_producers_ravager_native_periodic_damage_waits_for_tick_and_stops_
 /// SimC76f8118 sc_warrior.cpp4173–4174/6300–6303. Native1269311
 /// supplies proc eligibility and1278009, but no native edge supplies1270116.
 #[test]
-#[ignore = "RED: native Phalanx producer and Shield Slam consumer not restored"]
 fn protection_producers_phalanx_clap_buff_is_consumed_by_shield_slam_for_real_damage() {
     let mut h = phalanx_fixture(true);
     h.cast_and_deliver(THUNDER_CLAP, None);
@@ -260,7 +259,6 @@ fn protection_producers_phalanx_clap_buff_is_consumed_by_shield_slam_for_real_da
 }
 
 #[test]
-#[ignore = "RED: native broad proc mask needs the named Clap-only Phalanx policy"]
 fn protection_producers_phalanx_other_melee_abilities_do_not_produce_the_clap_buff() {
     for _ in 0..8 {
         let mut h = phalanx_fixture(true);
@@ -283,7 +281,6 @@ fn protection_producers_phalanx_other_melee_abilities_do_not_produce_the_clap_bu
 }
 
 #[test]
-#[ignore = "RED control: qualify absence alongside native Phalanx restoration"]
 fn protection_producers_phalanx_catalog_presence_does_not_grant_the_talent() {
     let mut h = phalanx_fixture(false);
     h.cast_and_deliver(THUNDER_CLAP, None);
@@ -305,7 +302,6 @@ fn protection_producers_phalanx_catalog_presence_does_not_grant_the_talent() {
 }
 
 #[test]
-#[ignore = "RED control: qualify ownership alongside native Phalanx restoration"]
 fn protection_producers_phalanx_foreign_buff_does_not_empower_the_caster() {
     let mut h = phalanx_fixture(true);
     let other = spawn_player(&mut h.app, 1, 1.0);

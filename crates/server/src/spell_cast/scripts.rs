@@ -52,6 +52,8 @@ pub(crate) use windwalker::{
     DANCE_OF_CHIJI, after_dance_cast_event, check_dance_proc, ordinary_combo_cast,
 };
 
+pub(super) use batch3::consume_phalanx;
+pub(crate) use batch3::{PHALANX_TALENT, check_phalanx_proc};
 pub(super) use batch9::update_ground_pulses;
 pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
