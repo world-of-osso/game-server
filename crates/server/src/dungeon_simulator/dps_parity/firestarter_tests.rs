@@ -14,6 +14,8 @@ const FIRESTARTER: u32 = 205026;
 const FIREBALL: u32 = 133;
 const PYROBLAST: u32 = 11366;
 const OBSERVATION_FRAMES: usize = 400;
+const MAX_MISS_ATTEMPTS: usize = 16;
+const MAX_OUTCOME_CASTS: usize = 64;
 
 fn load_native90_player() -> Run {
     let (profile, traits) = read_reference(63).expect("prepared native Fire reference");
@@ -43,8 +45,8 @@ fn load_native90_player() -> Run {
         .unwrap()
         .crit_pct;
     assert!(
-        crit < 100.0,
-        "ordinary native crit must not already guarantee the result"
+        crit > 0.0 && crit < 100.0,
+        "ordinary native crit must permit both outcomes"
     );
     run
 }
@@ -128,7 +130,7 @@ fn observe_cast_crit(run: &mut Run, spell_id: u32, health_pct: f32, start: usize
 }
 
 fn landed_critical_result(run: &mut Run, spell_id: u32, health_pct: f32) -> bool {
-    for _ in 0..16 {
+    for _ in 0..MAX_MISS_ATTEMPTS {
         if let Some(crit) = cast_at_health(run, spell_id, health_pct) {
             return crit;
         }
@@ -161,6 +163,20 @@ fn firestarter_native90_pyroblast_crits_above_and_at_native_threshold() {
     assert_above_and_at_native_threshold(PYROBLAST);
 }
 
+fn observe_both_crit_outcomes(run: &mut Run, spell_id: u32, health_pct: f32) -> bool {
+    let mut saw_crit = false;
+    let mut saw_noncrit = false;
+    for _ in 0..MAX_OUTCOME_CASTS {
+        let crit = landed_critical_result(run, spell_id, health_pct);
+        saw_crit |= crit;
+        saw_noncrit |= !crit;
+        if saw_crit && saw_noncrit {
+            return true;
+        }
+    }
+    false
+}
+
 #[test]
 #[ignore = "native below-threshold control; ordinary chance retained, not forced noncritical"]
 fn firestarter_native90_below_threshold_retains_ordinary_direct_crit() {
@@ -169,8 +185,8 @@ fn firestarter_native90_below_threshold_retains_ordinary_direct_crit() {
         let mut run = load_native90_player();
         let below = native_threshold(&run) - 1.0;
         assert!(
-            (0..8).any(|_| !landed_critical_result(&mut run, spell_id, below)),
-            "native{spell_id} below Firestarter must not be forced to100% crit"
+            observe_both_crit_outcomes(&mut run, spell_id, below),
+            "native{spell_id} below Firestarter must preserve both ordinary crit outcomes"
         );
     }
 }
