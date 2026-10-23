@@ -41,7 +41,7 @@ Source: local Mainline12.1.0.69933 description “Combo point generating abiliti
 ### Twentieth-batch authored totals and next-spell uses
 
 - [x] Barbed Shot217200 distributes its authored s2-tick damage total over its unchanged native initial/regular schedule. Local s2=5 versus native seven ticks is reconciled by equal distribution, an inference from total and clock, not independently observed Retail tick amounts. Same-owner reapplication adds unpaid damage to the new total, pays due ticks before snapshot and preserves foreign owners. Completed casts start named246152 periodic Focus once; rejected casts do not grant it.
-- [x] Stormkeeper191634 grants its s5 empowered-spell uses instead of the single options-row charge. Each matching completed Lightning Bolt/Chain Lightning consumes one use; unrelated spells do not. Native modifiers remain authoritative. Elemental Overload targeting/variants remain uncertified.
+- [x] Stormkeeper191634 grants its s5 empowered-spell uses instead of the single options-row charge. Each matching completed Lightning Bolt/Chain Lightning consumes one use; unrelated spells do not. Zero-valued modifier effects never count as used for charge consumption, for any aura/spell; nonzero matched effects still spend normally (TC Player.cpp22820–22823). Native modifiers remain authoritative. Elemental Overload targeting/variants remain uncertified.
 
 Tests: `spell_cast/dummy20_tests.rs`. Local Mainline12.1.0.69933 and TDB1210 only; [coverage](../spell-dummy20-coverage.md), [runtime](../wiki/systems/spell-casting.md#twentieth-batch-authored-totals-and-next-spell-uses). Audited but unidentified Dummy fields are retained, not no-op closures.
 

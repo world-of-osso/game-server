@@ -1,3 +1,7 @@
+## 2026-10-22 — Zero-valued native modifier charge RED
+
+[Resource qualification](investigations/follower-data.md#lightning-launch-maelstrom-children--2026-10-22):8 resource controls PASS,2 SK controls FAIL. Generic TC zero-valued-modifier charge rule approved and implemented; native nonzero Mage control added, postmerge11-case GREEN pending.
+
 ## 2026-10-22 — Lightning native launch resource RED
 
 [Four paths](investigations/follower-data.md#lightning-launch-maelstrom-children--2026-10-22): actual pools/receipts 4FAIL/4controlsPASS. Controller BP0 and native energize children implemented at launch; bounded parent charge ownership, GREEN pending.
