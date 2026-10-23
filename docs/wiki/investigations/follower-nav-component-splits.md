@@ -35,6 +35,21 @@ Existing ADT/WMO readers resolve these measured boundary windows:
 
 Render overlap is provenance, not collision classification. Current collision collection loads root groups through the existing ground-face reader and selects rootset0 plus the authored MODF set. No source establishes that enabling a different doodad set is the correct world state. No sourced destructible/trapdoor/phaseable GO crossing was identified. Detailed selected doodad IDs and object-anchor/component distances are retained in the evidence report.
 
+## Final raw-support boundary classification
+
+The final diagnostic measures raw collision support patches seeded at the corresponding native boundary, then expanded through exact shared raw edges with the existing slope50°/support-face selection. It does not substitute generated nav vertices or assign remote roof faces to a component by arbitrary proximity. Exact pairwise triangle distances and source vertices are retained in `raw-seeded-support-gap-results.json`.
+
+| Named gap | Raw horizontal gap | Raw vertical step | Verdict |
+|---|---:|---:|---|
+|`FOLLOWER_NAV_COMPONENT_SPLIT_2527` (both bosses)|0.000843yd|4.954492yd|Exceeds1.6yd climb.|
+|`FOLLOWER_NAV_COMPONENT_SPLIT_2526`|78.499696yd|51.230000yd|Exceeds clearance/step limits.|
+|`FOLLOWER_NAV_COMPONENT_SPLIT_2651` (both bosses)|0.640860yd|23.956675yd|Exceeds1.6yd climb.|
+|`FOLLOWER_NAV_COMPONENT_SPLIT_2661`|0.209433yd|9.942910yd|Exceeds1.6yd climb.|
+
+No corresponding measured support pair is under climb; none proves a rasterization/missing-span/erosion defect. Radius0.388yd (two-cell erosion≈0.520833yd) is clearance, not permission to bridge a horizontal void. Height2.03128yd (eleven0.2yd cells) is headroom, not an allowed step. Small XZ separation between stacked levels does not imply walking connectivity.
+
+An initial all-nearby-triangles/nearest-native-component assignment produced a false Darkflame zero gap on roof faces29–37yd from either actual component. It was rejected, not used to justify a bake change; final seeded support patches avoid that attribution mistake. This is a measured-boundary classification, not enumeration of every remote raw surface or proof of authored Retail travel intent. Full-map native disconnection and absence of a qualified source crossing remain established. Per lead decision, retain the four named gaps and stop corrective changes: no connector, slope/profile relaxation or further bake.
+
 ## Candidate experiment
 
 The pinned TC low-hanging filter omission received a separate one-map private experiment; its [recorded negative Goldie outcome](../systems/navigation.md#low-hanging-filter-candidate--2026-10-22) does not establish these physical causes. No other-map bake, canonical publication or synthesized connector follows from this investigation.
