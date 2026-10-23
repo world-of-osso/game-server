@@ -418,7 +418,9 @@ pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32)
         batch3::SCORCH => batch3::scorch_crit(world, caster, target),
         batch12::GARGOYLE_STRIKE => batch12::gargoyle_crit(world, caster),
         FIRE_BLAST | batch5::CHAOS_BOLT | voltaic_blaze::DAMAGE => Some(100.0),
-        batch5::LAVA_BURST_DAMAGE => batch5::lava_burst_crit(world, target),
+        batch5::LAVA_BURST_DAMAGE | super::elemental_overload::LAVA_OVERLOAD_DAMAGE => {
+            batch5::lava_burst_crit(world, caster, target)
+        }
         _ => None,
     }
 }

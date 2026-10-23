@@ -104,7 +104,9 @@ Actual168534 effect0 supplies the Lightning Bolt188196→45284 and Lava Burst515
 
 Elemental Blast117014→120588 and Icefury210714→219271 use the same native Mastery chance and post-hit400ms normal cast, retaining native child cast time, flight and costs. These are cast-mechanism-only: the selected level70 kit does not know117014/210714, and this contract does not grant either or change that kit's action policy.
 
-The actual168534 effect1 amount scales45284/45297/285466/120588/219271 damage at impact, retaining native modifiers and normal crit/mitigation/rounding. Native382032 Echo Chamber is already108/PointsIndex1 in the aura calculation; do not substitute an invented flat coefficient from historical tooltip wording. Elemental Blast/Icefury selected-kit policy, Lava-specific Flame Shock crit behavior, Ascendance extra overloads, full proc-table import and resource scripts remain uncertified. Mastery-point coefficient production remains the existing separate stat consumer.
+The actual168534 effect1 amount scales45284/45297/285466/120588/219271 damage at impact, retaining native modifiers and normal crit/mitigation/rounding. Native382032 Echo Chamber is already108/PointsIndex1 in the aura calculation; do not substitute an invented flat coefficient from historical tooltip wording. Elemental Blast/Icefury selected-kit policy, Ascendance extra overloads, full proc-table import and resource scripts remain uncertified. Mastery-point coefficient production remains the existing separate stat consumer.
+
+Lava damage285452 and Overload damage285466 share one caster-owned188389 Flame Shock crit rule (TC a352b1fa `spell_shaman.cpp:1735–1763`). Own Flame Shock supplies100% before existing crit modifiers; a foreign caster's Flame Shock does not override ordinary crit chance. Existing crit modifiers, damage scaling and resources remain unchanged.
 
 ## Inundate utility-cast resource policy
 
