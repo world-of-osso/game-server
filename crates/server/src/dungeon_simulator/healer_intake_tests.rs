@@ -244,6 +244,60 @@ fn healer_benchmark_reports_frozen_combat_denominator() {
 }
 
 #[test]
+#[ignore = "RED: actual recorded Stockade physical spell block unsupported"]
+fn healer_benchmark_replays_recorded_stockade_spell_block() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../content/dungeons/healer-benchmark/stockade-seed1.intake.json");
+    let intake: Intake = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    let blocked = intake
+        .hits
+        .iter()
+        .find(|hit| {
+            matches!(
+                hit.kind,
+                HitKind::Spell {
+                    spell_id: 86727,
+                    blocked: true,
+                    ..
+                }
+            )
+        })
+        .expect("actual captured Strike block")
+        .clone();
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[86727], 1).unwrap();
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    let mut unblocked = blocked.clone();
+    if let HitKind::Spell { blocked, .. } = &mut unblocked.kind {
+        *blocked = false;
+    }
+    let before = h.health(h.npc);
+    crate::spell_cast::effects::replay_healer_hit(h.app.world_mut(), h.caster, h.npc, &unblocked)
+        .unwrap();
+    let full = before - h.health(h.npc);
+    h.app.world_mut().get_mut::<Health>(h.npc).unwrap().current = before;
+    crate::spell_cast::effects::replay_healer_hit(h.app.world_mut(), h.caster, h.npc, &blocked)
+        .unwrap();
+    let loss = before - h.health(h.npc);
+    let native_block = (full * crate::melee::CREATURE_BLOCKED_PCT / 100.0).trunc();
+    assert!(native_block > 0.0);
+    assert_eq!(
+        loss,
+        full - native_block,
+        "recorded block uses native creature block amount exactly once"
+    );
+    let events = &h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(events.iter().any(
+        |event| event.kind == shared::protocol::CombatLogKind::Damage
+            && event.blocked == native_block as i32
+    ));
+}
+
+#[test]
 #[ignore = "explicit native recipient mitigation replay control"]
 fn healer_benchmark_raw_spell_replay_applies_recipient_reduction_and_absorb_once() {
     for (aura, expected_loss) in [(None, 200.0), (Some(102342), 160.0), (Some(17), 0.0)] {
