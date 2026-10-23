@@ -58,12 +58,13 @@ fn dps_parity_native_tiger_palm_includes_equipped_weapon_ap_before_battle_shout(
     // TC Unit.cpp9973–10000 includes weapon AP before its percentage;
     // Unit.cpp6869–6891 supplies that total to the native AP coefficient.
     let expected = varied((base + weapon_ap) * 1.05 * coefficient);
+    apply_native_enemy_dodge_reduction(&mut h);
+    h.advance(3);
     h.app
         .world_mut()
         .get_mut::<CharacterStats>(caster)
         .unwrap()
         .crit_pct = 0.0;
-    apply_native_enemy_dodge_reduction(&mut h);
     h.cast_and_deliver(TIGER_PALM, Some(h.npc));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     let hit = h
@@ -78,7 +79,12 @@ fn dps_parity_native_tiger_palm_includes_equipped_weapon_ap_before_battle_shout(
         })
         .expect("native Tiger Palm damage");
     assert!(
-        expected.contains(&(hit.amount as f32)),
+        !hit.crit,
+        "coefficient control excludes critical amplification"
+    );
+    let before_block = (hit.amount + hit.blocked) as f32;
+    assert!(
+        expected.contains(&before_block),
         "TC weapon AP: base={base}, weapon_ap={weapon_ap}, coefficient={coefficient}, expected={expected:?}, actual={hit:?}"
     );
 }

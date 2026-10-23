@@ -49,7 +49,7 @@ use crate::creature_scripts::{TrainingDummy, health_loss};
 use crate::item_stats::WeaponDamage;
 use crate::level_scaling::{ArmorConstants, CreatureArmor, UnitScaling};
 use crate::spell_info::{SpellEffect, SpellInfo};
-use crate::stats::CharacterStats;
+use crate::stats::{CharacterStats, WeaponAttackType};
 
 /// TC SharedDefines.h592: ignore armor/crit/block damage-taken adjustments.
 const ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS: u32 = 0x100;
@@ -672,22 +672,7 @@ fn effect_attack_power(
     spell: &SpellInfo,
     inherited_melee_power: f32,
 ) -> f32 {
-    use crate::stats::WeaponAttackType;
-    let ranged = is_ranged_weapon_spell(spell)
-        && spell
-            .categories
-            .as_ref()
-            .is_none_or(|categories| categories.defense_type != DEFENSE_MELEE);
-    let attributes = super::attributes(spell, 3);
-    const REQUIRES_MAIN_HAND: u32 = 0x0000_0400;
-    const REQUIRES_OFF_HAND: u32 = 0x0100_0000;
-    let attack_type = if ranged {
-        WeaponAttackType::Ranged
-    } else if attributes & REQUIRES_OFF_HAND != 0 && attributes & REQUIRES_MAIN_HAND == 0 {
-        WeaponAttackType::OffHand
-    } else {
-        WeaponAttackType::MainHand
-    };
+    let attack_type = spell_attack_type(spell);
     // Equipped player/follower class stats are distinct from guardian inherited AP.
     let equipped_class = world.get::<Player>(caster).is_some()
         || world.get::<crate::followers::Follower>(caster).is_some();
@@ -697,12 +682,31 @@ fn effect_attack_power(
             world.get::<crate::stats::StatModifiers>(caster),
         );
     }
-    if ranged {
+    if matches!(attack_type, WeaponAttackType::Ranged) {
         world
             .get::<CharacterStats>(caster)
             .map_or(0.0, |stats| stats.ranged_attack_power)
     } else {
         inherited_melee_power
+    }
+}
+
+fn spell_attack_type(spell: &SpellInfo) -> WeaponAttackType {
+    let ranged = is_ranged_weapon_spell(spell)
+        && spell
+            .categories
+            .as_ref()
+            .is_none_or(|categories| categories.defense_type != DEFENSE_MELEE);
+    if ranged {
+        return WeaponAttackType::Ranged;
+    }
+    let attributes = super::attributes(spell, 3);
+    const REQUIRES_MAIN_HAND: u32 = 0x0000_0400;
+    const REQUIRES_OFF_HAND: u32 = 0x0100_0000;
+    if attributes & REQUIRES_OFF_HAND != 0 && attributes & REQUIRES_MAIN_HAND == 0 {
+        WeaponAttackType::OffHand
+    } else {
+        WeaponAttackType::MainHand
     }
 }
 

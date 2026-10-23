@@ -217,31 +217,29 @@ impl CharacterStats {
         attack_type: WeaponAttackType,
         modifiers: Option<&StatModifiers>,
     ) -> f32 {
-        let main_or_ranged = self
-            .weapon_attack_power
-            .main_hand
-            .max(self.weapon_attack_power.ranged);
-        let (base, weapon, percentage, share) = match attack_type {
-            WeaponAttackType::MainHand => (
-                self.attack_power,
-                main_or_ranged,
-                modifiers.map_or(0.0, |mods| mods.attack_power_pct),
-                1.0,
-            ),
-            WeaponAttackType::OffHand => (
-                self.attack_power,
-                self.weapon_attack_power.off_hand,
-                modifiers.map_or(0.0, |mods| mods.attack_power_pct),
-                0.5,
-            ),
-            WeaponAttackType::Ranged => (
-                self.ranged_attack_power,
-                main_or_ranged,
-                modifiers.map_or(0.0, |mods| mods.ranged_attack_power_pct),
-                1.0,
-            ),
+        let ranged = matches!(attack_type, WeaponAttackType::Ranged);
+        let off_hand = matches!(attack_type, WeaponAttackType::OffHand);
+        let base = if ranged {
+            self.ranged_attack_power
+        } else {
+            self.attack_power
         };
-        ((base + weapon * (1.0 + percentage / 100.0)) * share).max(0.0)
+        let percentage = modifiers.map_or(0.0, |mods| {
+            if ranged {
+                mods.ranged_attack_power_pct
+            } else {
+                mods.attack_power_pct
+            }
+        });
+        let weapon = if off_hand {
+            self.weapon_attack_power.off_hand
+        } else {
+            self.weapon_attack_power
+                .main_hand
+                .max(self.weapon_attack_power.ranged)
+        };
+        let total = (base + weapon * (1.0 + percentage / 100.0)).max(0.0);
+        if off_hand { total * 0.5 } else { total }
     }
 
     /// Unit.cpp7036/8229: incoming damage uses half the combined rating and
