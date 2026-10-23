@@ -89,28 +89,34 @@ fn simc_apl_target_condition_failure_does_not_choose_second_best() {
 }
 
 #[test]
-fn simc_apl_target_run_inherits_selected_target_into_child_conditions() {
+fn simc_apl_target_run_selector_does_not_retarget_child_actions() {
+    // Real pinned SimC probe: at15s main95%/add50%, the run selects an add,
+    // but its child if<80 still sees the main; first MS is60.056s on main.
+    // player.cpp2467 only changes list pointers, never child action targets.
+    let facts = Targets {
+        units: vec![(41, 95.0, 0.0), (42, 50.0, 0.0)],
+    };
     let program = Program::parse(&[
         (
             "default",
             "run_action_list,name=execute,target_if=min:target.health.pct",
         ),
-        ("execute", "mortal_strike,if=target.health.pct>50"),
-        ("execute", "execute"),
+        ("execute", "mortal_strike,if=target.health.pct<80"),
     ])
     .unwrap();
     let selected = program
-        .select("default", &targets(), &mut program.state(), |action| {
-            Ok(matches!(action.name.as_str(), "mortal_strike" | "execute"))
+        .select("default", &facts, &mut program.state(), |action| {
+            Ok(action.name == "mortal_strike")
         })
-        .unwrap()
         .unwrap();
-    assert_eq!(selected.name, "execute");
-    assert_eq!(selected.target, Some(42));
+    assert_eq!(
+        selected, None,
+        "run's selected add must not become the child's target"
+    );
 }
 
 #[test]
-fn simc_apl_target_exhausted_nested_run_restores_callers_target_context() {
+fn simc_apl_target_exhausted_nested_run_never_changes_callers_target() {
     let program = Program::parse(&[
         ("default", "call_action_list,name=aux"),
         ("default", "execute,if=target.health.pct>50"),
