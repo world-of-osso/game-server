@@ -1,4 +1,5 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
+mod demonology_preparation_tests;
 mod demonology_tests;
 mod engagement_tests;
 mod inputs;
