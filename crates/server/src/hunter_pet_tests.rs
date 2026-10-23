@@ -286,15 +286,20 @@ fn dismissed_pet_stays_stored_and_call_pet_brings_it_back() {
         return;
     };
     let first = pet_out(&h);
+    // TC's ExpectedStat create-health truncates, unlike the old class-level
+    // ceil. Persist the actual hydrated/clamped pool, not the seed's old cap.
+    let hydrated_health = h.app.world().get::<Health>(first).unwrap().current;
 
     // Dismiss Pet: a 3 s cast.
     h.cast_and_deliver(DISMISS_PET, None);
     h.advance(3_000 / 50 + 2);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(h.app.world().get_entity(first).is_err(), "pet still out");
+    let mut expected_pet = stored_wolf();
+    expected_pet.health = Some(hydrated_health);
     let dismissed = StoredPetStable {
         current: None,
-        active: [Some(stored_wolf()), None, None, None, None],
+        active: [Some(expected_pet), None, None, None, None],
         ..Default::default()
     };
     assert_eq!(stable(&h).unwrap().stored, dismissed);
