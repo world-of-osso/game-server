@@ -1,3 +1,7 @@
+## 2026-10-22 — Equipped producer GREEN; Shield Charge receipt diagnosis
+
+[Coverage](../specs/protection-damage-producers.md):93ca4b7d1 cohort17PASS/1FAIL51.93s/no warnings; all six equipped/metadata cases now pass, including both actual Bloody Rebuke tick inputs and parsed role/set predicates. Previously-green Shield Charge lacked a positive splash receipt in this draw; added native-outcome diagnostics, no production-cause assumption or RNG/flag changes. Retain seventeen disjoint passes; remaining poison/numerical timing and whole-batch acceptance stay open.
+
 ## 2026-10-22 — Source-backed equipped producer RED and implementation
 
 [Producer contract](../specs/protection-damage-producers.md): corrected complete-native1dbfec04b/mastera268ba2a6 cohort14PASS/3genuine missing-child FAIL46.08s/zero warnings, after actual item scaling, four-piece/free-cost and Ravager-hit prerequisites. Native set/role reader plus Guillotine per-recipient launch snapshot and Bloody Rebuke hit hooks implemented; GREEN pending. Native thresholds/role expressions/amounts/RPPM/flight/DoT metadata are not fabricated. Venomfang and perfected poison remain open; no full DPS/legal-loadout claim.

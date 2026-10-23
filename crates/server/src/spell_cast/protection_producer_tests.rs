@@ -568,13 +568,23 @@ fn protection_producers_tc_shield_charge_moves_then_native_landing_children_deal
         damage
             .iter()
             .any(|event| event.target == Some(target.to_bits())),
-        "landing must cast native385954 primary damage"
+        "landing must cast native385954 primary damage; native receipts={:?}",
+        h.inbox
+            .log
+            .iter()
+            .filter(|event| event.spell_id == Some(SHIELD_CHARGE_DAMAGE))
+            .collect::<Vec<_>>()
     );
     assert!(
         damage
             .iter()
             .any(|event| event.target == Some(near.to_bits())),
-        "native landing child preserves its area damage"
+        "native landing child preserves its area damage; native receipts={:?}",
+        h.inbox
+            .log
+            .iter()
+            .filter(|event| event.spell_id == Some(SHIELD_CHARGE_DAMAGE))
+            .collect::<Vec<_>>()
     );
     assert!(
         !damage
