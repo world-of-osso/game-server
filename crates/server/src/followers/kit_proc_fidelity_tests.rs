@@ -448,6 +448,133 @@ fn proc_fidelity_262_native_stormkeeper_lightning_bolt_triggers_overload_damage(
 }
 
 #[test]
+fn proc_fidelity_262_native_stormkeeper_chain_lightning_overloads_each_hit_target() {
+    let (mut h, caster) = prepare(209053);
+    let target = h.npc;
+    let second = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 10.0);
+    let third = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 12.0);
+    complete_cast(&mut h, caster, 191634, caster);
+    assert!(has_aura(h.app.world(), caster, 168534));
+    assert!(has_aura(h.app.world(), caster, 191634));
+    let first_log = h.inbox.log.len();
+    let first_go = h.inbox.go.len();
+    complete_cast(&mut h, caster, 188443, target);
+    h.advance(60);
+    for target in [target, second, third] {
+        assert!(
+            h.inbox.log[first_log..].iter().any(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(188443)
+                    && event.source == Some(caster.to_bits())
+                    && event.target == Some(target.to_bits())
+            }),
+            "actual native Chain Lightning must hit each of three hostile targets"
+        );
+    }
+    let child_casts = h.inbox.go[first_go..]
+        .iter()
+        .filter(|event| event.caster == caster.to_bits() && event.spell_id == 45297)
+        .count();
+    assert_eq!(
+        child_casts, 3,
+        "TC HIT-phase native SK modifier guarantees one normal45297 cast per root hit, not one per parent cast"
+    );
+    assert!(h.inbox.log[first_log..].iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(45297)
+            && event.source == Some(caster.to_bits())
+            && event.amount > 0
+    }));
+}
+
+#[test]
+fn proc_fidelity_262_native_stormkeeper_chain_without_mastery_has_no_overload() {
+    let (mut h, caster) = prepare(209053);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 168534,
+    );
+    complete_cast(&mut h, caster, 191634, caster);
+    assert!(has_aura(h.app.world(), caster, 191634));
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    complete_cast(&mut h, caster, 188443, target);
+    h.advance(60);
+    assert!(h.inbox.log[first..].iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(188443)
+            && event.source == Some(caster.to_bits())
+            && event.target == Some(target.to_bits())
+    }));
+    assert!(
+        h.inbox.log[first..].iter().all(|event| {
+            event.spell_id != Some(45297) || event.source != Some(caster.to_bits())
+        })
+    );
+}
+
+#[test]
+fn proc_fidelity_262_native_long_flight_overload_waits_400ms_after_root_hit() {
+    let (mut h, caster) = prepare(209053);
+    assert!(has_aura(h.app.world(), caster, 168534));
+    let mut target_position = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(caster)
+        .unwrap();
+    target_position.x += 35.0;
+    let target = h.npc;
+    h.app.world_mut().entity_mut(target).insert(target_position);
+    complete_cast(&mut h, caster, 191634, caster);
+    assert!(has_aura(h.app.world(), caster, 191634));
+    wait_for_gcd(&mut h, caster, 188196);
+    let first_log = h.inbox.log.len();
+    let first_go = h.inbox.go.len();
+    let launched_at = crate::spell_cast::now(h.app.world());
+    creature_cast(h.app.world_mut(), caster, 188196, Some(target), false).unwrap();
+    let mut root_hit_at = None;
+    let mut child_go_at = None;
+    for _ in 0..120 {
+        h.advance(1);
+        let now = crate::spell_cast::now(h.app.world());
+        if root_hit_at.is_none()
+            && h.inbox.log[first_log..].iter().any(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(188196)
+                    && event.source == Some(caster.to_bits())
+                    && event.target == Some(target.to_bits())
+            })
+        {
+            root_hit_at = Some(now);
+        }
+        if child_go_at.is_none()
+            && h.inbox.go[first_go..]
+                .iter()
+                .any(|event| event.caster == caster.to_bits() && event.spell_id == 45284)
+        {
+            child_go_at = Some(now);
+        }
+        if root_hit_at.is_some() && child_go_at.is_some() {
+            break;
+        }
+    }
+    let root_hit_at = root_hit_at.expect("actual long-flight188196 must damage target");
+    let child_go_at = child_go_at.expect("actual SK modifier must guarantee normal45284 cast");
+    let frame = frame_seconds(&h);
+    assert!(
+        root_hit_at - launched_at > 0.4 + frame,
+        "native root flight must distinguish HIT scheduling from launch scheduling"
+    );
+    let delay = child_go_at - root_hit_at;
+    assert!(
+        (0.4 - frame..=0.4 + 2.0 * frame).contains(&delay),
+        "TC168534 SpellPhaseMask2=HIT: normal child must launch400ms after actual root hit; root={root_hit_at}, child={child_go_at}, delay={delay}"
+    );
+}
+
+#[test]
 fn proc_fidelity_262_native_stormkeeper_without_mastery_does_not_invent_overload() {
     let (mut h, caster) = prepare(209053);
     crate::auras::remove_auras(

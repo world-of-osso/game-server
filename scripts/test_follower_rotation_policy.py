@@ -7,6 +7,22 @@ import unittest
 from scripts.follower_spec_kits import combat_policy, kit_rows
 
 
+class AuthoredGroundAoePolicyTests(unittest.TestCase):
+    def test_ground_entries_keep_their_authored_target_thresholds(self):
+        cases = [
+            (63, 'Meteor', 153561, 1),
+            (63, 'Flamestrike', 1254851, 3),
+            (66, 'Consecration', 26573, 1),
+            (262, 'Earthquake', 61882, 3),
+        ]
+        for spec, name, spell, minimum in cases:
+            with self.subTest(spell=spell):
+                slot, _, conditions = combat_policy(spec, name, spell, [], [])
+                self.assertEqual(slot, 'aoe')
+                self.assertTrue(conditions['ground'])
+                self.assertEqual(conditions['min_enemies'], minimum)
+
+
 class HunterSecondaryTargetPolicyTests(unittest.TestCase):
     def test_native_barbed_rows_publish_own_aura_minimum_at_actual_learn_levels(self):
         root = Path(__file__).resolve().parents[1]
