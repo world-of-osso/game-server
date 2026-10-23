@@ -77,6 +77,46 @@ fn dummy13_rend_applies_owned_native_bleed_and_ticks() {
 }
 
 #[test]
+fn arms_execute_native_optional_rage_scales_child_damage_from_launch_spend() {
+    // TC a352b1fa spell_warr_execute_damage: 1 + (spent - base) / optional.
+    // Actual SpellPower9491 supplies Arms' base200 and optional200 raw Rage.
+    let execute = world_db().unwrap().store.get(163201).unwrap();
+    let cost = execute
+        .power_costs
+        .iter()
+        .find(|cost| cost.required_aura_spell_id == 137049)
+        .unwrap();
+    let base = cost.mana_cost as f32;
+    let optional = cost.optional_cost as f32;
+    assert!(base > 0.0 && optional > 0.0);
+    let mut base_damage = None;
+    for fraction in [0.0, 0.5, 1.0] {
+        let _seed = crate::random::seed_scope(71_260_798);
+        let mut h =
+            harness_with_native_enemy_dodge_reduction(Vec::new(), &[163201, 260798, 137049], 1)
+                .unwrap();
+        let caster = h.caster;
+        let target = h.npc;
+        apply(&mut h, caster, caster, 137049, u32::MAX);
+        h.app.world_mut().get_mut::<Health>(target).unwrap().current = 900.0;
+        let spent = base + optional * fraction;
+        h.set_power(PowerType::Rage, spent);
+        h.cast_and_deliver(163201, Some(target));
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert_eq!(h.power(PowerType::Rage), 0.0);
+        let hits = damage(&h, 260798, target);
+        assert_eq!(hits.len(), 1, "native damage child must land once");
+        let damage = hits[0] as f32;
+        let ordinary = *base_damage.get_or_insert(damage);
+        let expected = ordinary * (1.0 + fraction);
+        assert!(
+            (damage - expected).abs() <= 2.0,
+            "spent={spent}, damage={damage}, base={ordinary}, expected={expected}"
+        );
+    }
+}
+
+#[test]
 fn dummy13_execute_refunds_actual_optional_rage_only_with_rank_and_survivor() {
     for (rank, health, expected) in [
         (false, 900.0, 200.0),
