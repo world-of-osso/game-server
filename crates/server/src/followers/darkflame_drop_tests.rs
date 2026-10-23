@@ -265,31 +265,59 @@ fn darkflame_drop_follower_sim_traverses_only_after_upper_route_stage() {
 #[ignore = "unresolved stacked-floor follow admission; requires actual2651 assets/profile"]
 fn darkflame_drop_idle_follower_descends_when_owner_is_directly_below() {
     let (mut h, follower) = create_native_follower_fixture();
+    // Actual party-slot branch: slot2/4 places its settled follow point at UPPER.
+    let upper_owner = Vec3::new(536.1353, UPPER.y, 113.8637);
+    let lower_owner = Vec3::new(upper_owner.x, LANDING.y, upper_owner.z);
+    h.app
+        .world_mut()
+        .entity_mut(follower)
+        .insert(crate::creature_ai::PartyFollowSlot::new(2, 4));
+    *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position(upper_owner);
+    for owner in [upper_owner, lower_owner] {
+        let probe = h
+            .app
+            .world_mut()
+            .resource_mut::<GroundMap>()
+            .ground_in(InMap::continent(MAP), owner);
+        assert!(
+            matches!(probe, GroundProbe::Supported(y) if (y-owner.y).abs()<0.05),
+            "physical owner support required at {owner:?}: {probe:?}"
+        );
+    }
+    let lower_follow_point = Vec3::new(UPPER.x, LANDING.y, UPPER.z);
     let mut native =
         ::navigation::NavigationMap::open(&navigation_root().join(MAP.to_string())).unwrap();
     let route = native
-        .complete_path(UPPER, LANDING)
-        .expect("approved native down route must exist before testing follow admission");
+        .complete_path(UPPER, lower_follow_point)
+        .expect("approved native route to the lower party follow point must exist");
     h.advance(8);
     let upper = point(*h.app.world().get::<Position>(follower).unwrap());
     assert!(
         upper.distance(UPPER) < 0.1,
         "same-floor nearby owner correctly holds still"
     );
-    *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position(LANDING);
+    *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position(lower_owner);
     h.advance(80);
     let feet = point(*h.app.world().get::<Position>(follower).unwrap());
     eprintln!(
-        "STACKED_FLOOR_FOLLOW_ADMISSION route_corners={} owner={LANDING:?} initial={upper:?} final={feet:?} horizontal={} vertical={} follow={:?}",
+        "STACKED_FLOOR_FOLLOW_ADMISSION party_slot=2/4 route_corners={} owner={lower_owner:?} lower_follow_point={lower_follow_point:?} initial={upper:?} final={feet:?} goal_horizontal={} goal_vertical={} follow={:?}",
         route.len(),
-        (feet.x - LANDING.x).hypot(feet.z - LANDING.z),
-        feet.y - LANDING.y,
+        (feet.x - lower_follow_point.x).hypot(feet.z - lower_follow_point.z),
+        feet.y - lower_follow_point.y,
         h.app
             .world()
             .get::<crate::creature_ai::FollowOwner>(follower)
     );
     // Change horizontal separation only; the same actor must then use the route.
-    let far_owner = Vec3::new(406.7775, LANDING.y, 155.27142);
+    let far_follow_point = Vec3::new(406.7775, LANDING.y, 155.27142);
+    native
+        .complete_path(UPPER, far_follow_point)
+        .expect("horizontal control party point is reachable");
+    let far_owner = Vec3::new(
+        far_follow_point.x + upper_owner.x - UPPER.x,
+        lower_owner.y,
+        far_follow_point.z + upper_owner.z - UPPER.z,
+    );
     *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position(far_owner);
     h.advance(80);
     let control = point(*h.app.world().get::<Position>(follower).unwrap());
