@@ -171,6 +171,42 @@ class OracleTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     oracle.resolve_profile("missing")
 
+    def test_primed_plans_supply_ready_actions_and_bounded_duration(self):
+        import simc_spell_oracle_batch as batch
+        self.assertIn("crushing_blow", batch.action_list(72, {"name": "crushing_blow_mh"}))
+        self.assertNotIn("raging_blow", batch.action_list(72, {"name": "crushing_blow_mh"}))
+        self.assertIn("void_torrent", batch.action_list(258, {"name": "void_blast"}))
+        self.assertGreater(batch.probe_duration(269, "rushing_wind_kick_damage"), 30)
+        self.assertEqual(batch.probe_duration(71, "mortal_strike"), 30)
+
+    def test_replacement_abilities_prime_selected_hero_states(self):
+        import simc_spell_oracle_batch as batch
+        self.assertIn("pierce_the_veil", batch.action_list(1480, {"name": "reapers_toll_damage"}))
+        self.assertIn("ascendance", batch.action_list(263, {"name": "lightning_bolt_ti"}))
+        self.assertIn("windstrike", batch.action_list(263, {"name": "lightning_bolt_ti"}))
+
+    def test_report_parent_aliases_retain_emitted_child_ids(self):
+        import simc_spell_oracle_batch as batch
+        for specialization, parent, parent_id, child, child_id in [
+            (62, "arcane_missiles", 5143, "arcane_missiles_tick", 7268),
+            (251, "frost_strike", 49143, "frost_strike_damage", 222026),
+            (251, "obliterate", 49020, "obliterate_damage", 222024),
+        ]:
+            event = {"event": "direct_amount", "action": child, "spell_id": child_id}
+            actual = batch.matching_formulas(specialization, {"name": parent, "spell_id": parent_id}, [event])
+            self.assertEqual(actual, [event])
+            self.assertEqual(actual[0]["spell_id"], child_id)
+
+    def test_explicit_precombat_priming_replaces_original_setup_once(self):
+        source = 'shaman="Test"\nactions.precombat=old_setup\nactions=old_attack\n'
+        actual = oracle.build_profile(source, ["auto_attack", "windstrike"], ["windfury_weapon", "flametongue_weapon"])
+        self.assertNotIn("old_setup", actual)
+        self.assertIn("actions.precombat=windfury_weapon\nactions.precombat+=/flametongue_weapon\n", actual)
+        self.assertIn("actions=auto_attack\nactions+=/windstrike\n", actual)
+        self.assertEqual(actual.count("windfury_weapon"), 1)
+        with self.assertRaises(ValueError):
+            oracle.build_profile(source, ["auto_attack"], ["bad\nactions=other"])
+
     def test_invalid_action_is_rejected(self):
         with self.assertRaises(ValueError):
             oracle.build_profile('mage="Test"', ["bad\nactions=other"])

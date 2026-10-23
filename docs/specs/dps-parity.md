@@ -46,6 +46,7 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 - [x] Inherit each source reference proof's simulation options, including `optimal_raid=0` and all other non-default flags. Only explicit short-probe controls/report destinations differ; missing or conflicting profile-proof matches fail, never silently enable default raid buffs.
 - [x] Retain generated profile, debug log and proof containing exact command, binary/profile/source-proof hashes, inherited options, explicit probe overrides and revision. Parse printed direct/tick formula factors, result stages, child/proc spell IDs and source/effect-attributed passive versus buff-stack modifiers; preserve unsupported lines and mark unprinted factors null.
 - [x] Emit per-spell coefficients, base/weapon terms, itemised passive products, crit/versatility/target factors and explicitly printed armor reduction. Never invent parent-child causality or count duplicate result stages as casts.
+- [x] Source-backed prerequisite plans may use bounded longer durations and actual enabling casts/earned stacks. Explicit repeated precombat actions replace the stripped setup and are recorded separately in proof; no invented buff values or silent reference-option changes.
 - [x] Select top-five reference damage channels per spec, retain channel shares/provenance and explicit untriggered-channel gaps; diagnostic probes do not certify native±10% parity. Native cast instrumentation remains owned by spec parity harnesses.
 
 ## How it works
