@@ -78,6 +78,7 @@ pub struct StatModifiers {
     /// Aura404: presence replaces both AP bases, including an authored zero.
     pub attack_power_from_sp_pct: Option<f32>,
     pub crit_pct: f32,
+    /// Composed aura speed increase; combines multiplicatively with haste rating.
     pub haste_pct: f32,
     pub mastery_points: f32,
     pub versatility_pct: f32,
@@ -399,6 +400,13 @@ fn tertiary_rating_value(rating: f32, per_point: f32) -> f32 {
     curve_value(&TERTIARY_DR_CURVE, rating / per_point)
 }
 
+/// TC Player.cpp5334–5361: rating and aura speed factors share the same product.
+fn effective_haste_pct(rating: f32, per_point: f32, aura_haste: f32) -> f32 {
+    let rating_factor = 1.0 + rating_value(rating, per_point) / 100.0;
+    let aura_factor = 1.0 + aura_haste / 100.0;
+    (rating_factor * aura_factor - 1.0) * 100.0
+}
+
 /// TC a352b1fa StatSystem.cpp:255-276, Player::UpdateArmor: live stat
 /// percentages add to armor, rather than snapshotting agility at aura apply.
 fn armor_from_stats(primary: &UnitStats, main: Option<PrimaryStat>, mods: &StatModifiers) -> f32 {
@@ -571,7 +579,7 @@ pub fn compute_character_stats(
         ranged_attack_power,
         weapon_attack_power: WeaponAttackPower::default(),
         crit_pct: BASE_CRIT_PCT + rating_value(ratings.crit, CRIT_RATING[level]) + mods.crit_pct,
-        haste_pct: rating_value(ratings.haste, HASTE_RATING[level]) + mods.haste_pct,
+        haste_pct: effective_haste_pct(ratings.haste, HASTE_RATING[level], mods.haste_pct),
         mastery_pct: mastery_points * input.mastery_coefficient,
         mastery_points,
         versatility_pct: rating_value(ratings.versatility, VERSATILITY_RATING[level])

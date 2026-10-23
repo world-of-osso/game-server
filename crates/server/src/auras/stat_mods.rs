@@ -338,7 +338,7 @@ struct Accumulator {
     haste_not_stack: f32,
 }
 
-/// Aura stat changes (additive percentages, as `StatModifiers` defines them)
+/// Aura stat changes (per-field additive or composed percentages in `StatModifiers`)
 /// and combat multipliers of `auras`.
 pub fn compute(auras: &ActiveAuras, player_controlled_npc: bool) -> (StatModifiers, AuraStatMods) {
     let mut acc = Accumulator {
@@ -379,8 +379,19 @@ pub fn compute(auras: &ActiveAuras, player_controlled_npc: bool) -> (StatModifie
     acc.combat.movement_speed = slowed(capped(run, BASE_SPEED));
     acc.combat.flight_speed = slowed(capped(flight, BASE_SPEED));
     acc.combat.swim_speed = slowed(capped(swim, BASE_SWIM_SPEED));
-    acc.stats.haste_pct += acc.haste_not_stack;
+    acc.stats.haste_pct = compose_haste(acc.stats.haste_pct, acc.haste_not_stack);
     (acc.stats, acc.combat)
+}
+
+/// TC Unit.cpp11032–11071 multiplies independent attack/cast speed modifiers.
+/// A negative native amount increases duration by its absolute percent.
+fn compose_haste(current: f32, amount: f32) -> f32 {
+    let factor = if amount >= 0.0 {
+        pct(amount)
+    } else {
+        1.0 / pct(-amount)
+    };
+    (pct(current) * factor - 1.0) * 100.0
 }
 
 /// TC Unit.cpp8833–8854 selects the unit's flight branch before applying211.
@@ -565,7 +576,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             | MOD_MELEE_RANGED_HASTE
             | MOD_MELEE_RANGED_HASTE_2
             | MELEE_SLOW
-            | HASTE_SPELLS => stats.haste_pct += amount,
+            | HASTE_SPELLS => stats.haste_pct = compose_haste(stats.haste_pct, amount),
             MOD_CASTING_SPEED_NOT_STACK => acc.haste_not_stack = acc.haste_not_stack.max(amount),
             MASTERY => stats.mastery_points += amount,
             // Player::ApplyModOverrideSpellPowerByAPPercent adds each aura's amount

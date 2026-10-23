@@ -26,6 +26,12 @@ FixedUpdate Call Pet can precede Update's equipment/passive calculation. Summon 
 
 Native exact253/level90 Duck174884 reproduced HP1/no armor versus178094HP/5718armor. Separate ordering RED reproduced current56244/max178094; shared-producer fix and six native controls pass, including full fresh summon, real Fortitude growth/removal without healing, reference gear removal/restoration and foreign-controller exclusion. Lifecycle proofs retain real23HP reopened wounds,17HP logout fence, three revive controls and exact hydrated-health dismissal/recall. Fixtures load actual ExpectedStats; the legacy378HP seed clamps to native377, so dismissal asserts persistence of actual hydrated currentHP, not the stale pre-hydration seed. Receipts: game-engine `data/diagnostics/dps-parity-fix-2026-10-21/pet-stats-gate-packet.md`. This is not pet melee AP, whole pet aura/stat parity, new mob-hit mitigation proof or Azure survival acceptance.
 
+## Native haste composition qualification — 2026-10-23
+
+Actual1467 BiS gear gives17.363636% haste. Native Power Infusion10060 supplies20%; additive code produced37.363636% versus TC40.836363% (genuine17.43s RED atbb504b366). Native rating/aura composition now follows the TC product; targeted GREEN remains pending. The ignored regression also checks a second real Heroism32182 aura, actual Living Flame cast/GCD timing and removal. Inputs use a fresh read-only canonical SQLite backup (source56820001, backupdd1de231; game-engine evidence`dev-evoker-parity-2026-10-22/current-canonical-inputs/20261023T230942Z/receipt.json`).
+
+Feral's reported36.931816% is independently explained by745/44 plus two live10% buffs (Frantic Momentum391876 and Savage Fury449646), both100% native uptime versus42.83%/26.67% reference. Those proc eligibility/refresh gaps belong to Feral; changing rating conversion would hide them. Receipt:`dev-evoker-parity-2026-10-22/feral-haste-attribution-9d13ac19c.json`.
+
 ## Sources
 
 | Data | Source | Status |
@@ -55,7 +61,7 @@ Native exact253/level90 Duck174884 reproduced HP1/no armor versus178094HP/5718ar
    - Only classes with a non-zero basemp column get a `Mana` component: Paladin, Priest, Shaman, Mage, Warlock, Monk, Druid and Evoker.
 4. **Spell power** = Int when the main stat is Intellect, else 0 (TrinityCore Unit::SpellBaseDamageBonusDone). **Healing power** (`CharacterStats.healing_power`, used by heals, periodic heals and absorbs) = Int for every mana class (Unit::SpellBaseHealingBonusDone). Aura 366 OVERRIDE_SPELL_POWER_BY_AP_PCT sets both to AP × pct (Retribution, Protection, Feral/Guardian, Enhancement, Windwalker/Brewmaster passives). The main stat is the active spec's, else `chr_classes.PrimaryStatPriority`. **Melee AP** = (Str × AttackPowerPerStrength + Agi × AttackPowerPerAgility) × composed aura166 multiplier. **Ranged AP** = (level + max(Agi, 0)) × RangedAttackPowerPerAgility × composed aura167 multiplier (TC a352b1fa StatSystem.cpp354–414). Aura366 reads melee AP; native ranged-defense spell AP coefficients and hunter pet inheritance read RAP.
 5. **Crit %** = 5 + DR(crit rating / rating-per-1%) + `crit_pct`.
-6. **Haste %** = DR(haste rating / rating-per-1%) + `haste_pct`.
+6. **Haste %** = `100 × ((1 + DR(haste rating / rating-per-1%) / 100) × (1 + haste_pct / 100) − 1)`. Aura combat/cast-speed amounts compose multiplicatively; aura65 retains its existing strongest-only selection. TC `Player.cpp5334–5361`, `SpellAuraEffects.cpp4472–4551`, `Unit.cpp11032–11071`. Negative native amounts increase duration by their absolute percent. Existing unified haste-channel representation and instant-cast sentinel handling are not redesigned here.
 7. **Versatility %** = DR(versatility rating / rating-per-1%) + `versatility_pct`.
 8. **Mastery %** = (8 + DR(mastery rating / rating-per-point) + `mastery_points`) × mastery coefficient.
 9. **Armor** = gear armor rating.
