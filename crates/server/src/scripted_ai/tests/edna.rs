@@ -254,6 +254,9 @@ fn encounter_coverage_edna_native_seismic_smash_damage_and_copy_isolation() {
         let peer = h.players[1].0;
         h.app.world_mut().entity_mut(player).insert(near);
         h.app.world_mut().entity_mut(peer).insert(near);
+        // Native melee spells may miss. Scope only the real cast boundary so
+        // this positive damage qualification is independent of setup RNG.
+        let _rng = crate::random::seed_scope(0);
         crate::spell_cast::creature_cast(h.app.world_mut(), boss, 424888, Some(player), false)
             .expect("ordinary sourced victim cast, no immunity edits or bypass flags");
         assert_eq!(h.app.world().get::<CastState>(boss).unwrap().duration, 4.0);
@@ -281,16 +284,6 @@ fn encounter_coverage_edna_native_seismic_smash_damage_and_copy_isolation() {
             immune(&h, boss),
             "outgoing qualification never strips source PC immunity"
         );
-    }
-}
-
-#[test]
-#[ignore = "Temporary native Seismic damage diagnostic; remove after boundary is proved"]
-fn edna_seismic_native_diagnostic_seed_sweep() {
-    for seed in 0..8 {
-        eprintln!("EDNA native Seismic diagnostic seed{seed}");
-        let _rng = crate::random::seed_scope(seed);
-        encounter_coverage_edna_native_seismic_smash_damage_and_copy_isolation();
     }
 }
 
