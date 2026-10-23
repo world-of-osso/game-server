@@ -1,3 +1,7 @@
+## 2026-10-23 — Native taunt adjudication and equipped Venomfang RED
+
+[Producer contract](../specs/protection-damage-producers.md#venomfang-poison-lifecycle): c88451c055PASS/1FAIL11.41s/compile13m34/no warnings. Real follower-AI avoidable43263/Evasion and unmodified ALWAYS_HIT62124 controls pass, as do both native tank-success profiles without fabricated hit stats. Actual equipped219-level Venomfang inputs pass but poison damage is missing. Sourced poison/retained burst and per-native-stack expiry hook implemented; GREEN pending. Perfected poison/numerical timing remain open.
+
 ## 2026-10-22 — Native ALWAYS_HIT defense GREEN
 
 [Producer contract](../specs/protection-damage-producers.md#native-always_hit-defense-reader): d1335d8074PASS17.98s/compile3m16/no warnings. Actual Evasion cannot stop native Charge movement/landing; ordinary Slam still avoids. Both native immune recipients and native magic reflection retain their receipts; original ordinary Charge primary/splash/stun assertions pass. Prior seventeen disjoint producer passes retained; poison and numerical timing remain open.

@@ -12,6 +12,97 @@ const PERFECTED_SET: u32 = 1291726;
 const PROTECTION_FOUR_PIECE: u32 = 1296648;
 const BLOODY_REBUKE: u32 = 1300690;
 const FREE_REVENGE: u32 = 5302;
+pub(crate) const VENOMFANG_DRIVER: u32 = 1291718;
+pub(crate) const VENOMFANG: u32 = 1306635;
+const VENOMFANG_BURST: u32 = 1306639;
+
+/// SimC dbc_proc_callback.cpp186–190: the callback cannot trigger itself.
+pub(crate) fn check_venomfang_proc(_world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
+    event.actor == aura.caster && !matches!(event.spell_id, Some(VENOMFANG | VENOMFANG_BURST))
+}
+
+fn venomfang_amount(world: &World, driver: &AuraInstance, index: u8) -> Result<f32, String> {
+    let role = crate::item_proc_data::role_multiplier(world, driver.caster, VENOMFANG_DRIVER)?;
+    let effect = driver
+        .effects
+        .iter()
+        .find(|effect| effect.index == index)
+        .ok_or_else(|| format!("native Venomfang driver lacks scaled effect{index}"))?;
+    Ok(effect.amount * role)
+}
+
+/// VENOMFANG_EQUIPPED_DRIVER: unique_gear_midnight.cpp6283–6292,6379–6383.
+pub(crate) fn cast_venomfang(
+    world: &mut World,
+    unit: Entity,
+    aura: &AuraInstance,
+    event: &AuraEvent,
+) {
+    let amount = match venomfang_amount(world, aura, 0) {
+        Ok(amount) => amount,
+        Err(error) => {
+            warn!("Venomfang refused: {error}");
+            return;
+        }
+    };
+    spell_cast::cast_triggered_with_effect0_amount(world, unit, VENOMFANG, event.target, 1, amount);
+}
+
+/// Preserve the independently scaled native burst, not a rounded coefficient ratio
+/// or a live weapon lookup at expiry. Aura refresh retains the new source snapshot.
+pub(crate) fn snapshot_venomfang_burst(world: &World, caster: Entity, spell: u32) -> Option<f32> {
+    if spell != VENOMFANG {
+        return None;
+    }
+    let driver = world
+        .get::<crate::auras::ActiveAuras>(caster)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == VENOMFANG_DRIVER));
+    let amount = driver
+        .ok_or_else(|| "Venomfang has no equipped driver at application".to_owned())
+        .and_then(|driver| venomfang_amount(world, driver, 1));
+    match amount {
+        Ok(amount) => Some(amount),
+        Err(error) => {
+            warn!("Venomfang burst snapshot refused: {error}");
+            None
+        }
+    }
+}
+
+/// VENOMFANG_STACK_EXPIRY: unique_gear_midnight.cpp6307–6315. Native effect64
+/// supplies the child edge; each asynchronous expiry, not launch, dispatches it.
+pub(super) fn defer_venomfang_burst(
+    _world: &mut World,
+    _ctx: &spell_cast::effects::EffectCtx,
+    effect: &crate::spell_info::SpellEffect,
+    _target: Entity,
+) {
+    assert_eq!(
+        effect.trigger_spell, VENOMFANG_BURST,
+        "native Venomfang expiry child changed"
+    );
+}
+
+pub(crate) fn burst_venomfang(world: &mut World, target: Entity, aura: &AuraInstance) {
+    let Some(amount) = aura.venomfang_burst_amount else {
+        warn!("Venomfang burst refused: missing native item snapshot");
+        return;
+    };
+    let child = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(VENOMFANG)
+        .and_then(|spell| spell.effects.iter().find(|effect| effect.index == 1))
+        .expect("native Venomfang requires expiry effect1")
+        .trigger_spell;
+    spell_cast::cast_triggered_with_effect0_amount(
+        world,
+        aura.caster,
+        child,
+        Some(target),
+        1,
+        amount,
+    );
+}
 
 /// SimC dbc_proc_callback.cpp186–190: exclude the callback's own action, not unrelated procs.
 pub(crate) fn check_guillotine_proc(

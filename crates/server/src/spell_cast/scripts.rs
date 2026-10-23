@@ -63,7 +63,10 @@ pub(super) use batch9::{spawn_ravager_field, update_ground_pulses};
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(crate) use batch20::proc_charges;
 pub(super) use protection_items::snapshot_guillotine_health;
-pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
+pub(crate) use protection_items::{
+    GUILLOTINE, VENOMFANG, VENOMFANG_DRIVER, burst_venomfang, cast_guillotine, cast_venomfang,
+    check_guillotine_proc, check_venomfang_proc, snapshot_venomfang_burst,
+};
 /// OnEffectHit runs once per effect without replacing generic or aura dispatch.
 pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
     match (spell, index) {
@@ -99,6 +102,9 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
 }
 /// Native per-unit scripts replace the default effect handler before dispatch.
 pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+    if (spell, index) == (VENOMFANG, 1) {
+        return Some(protection_items::defer_venomfang_burst);
+    }
     if (spell, index) == (super::toy_coyote::DESPAWN, 0) {
         return Some(super::toy_coyote::despawn);
     }

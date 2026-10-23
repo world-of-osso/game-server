@@ -275,6 +275,8 @@ pub struct AuraInstance {
     proc: ProcTimers,
     /// Guardian Spirit's non-aura effect1, snapshotted at application/refresh.
     guardian_heal_pct: Option<f32>,
+    /// Source item-scaled expiry damage, retained after the weapon is unequipped.
+    pub(crate) venomfang_burst_amount: Option<f32>,
 }
 
 impl AuraInstance {
@@ -344,6 +346,7 @@ impl AuraInstance {
         self.refresh_stacks(&new);
         self.charges = new.charges;
         self.guardian_heal_pct = new.guardian_heal_pct;
+        self.venomfang_burst_amount = new.venomfang_burst_amount;
         for fresh in new.effects {
             match self
                 .effects
@@ -812,6 +815,9 @@ fn build_instance(
             .class_options
             .as_ref()
             .map_or(0, |options| options.spell_class_set),
+        venomfang_burst_amount: crate::spell_cast::scripts::snapshot_venomfang_burst(
+            world, caster, spell.id,
+        ),
         guardian_heal_pct: (spell.id == 47_788)
             .then(|| spell.effects.iter().find(|effect| effect.index == 1))
             .flatten()

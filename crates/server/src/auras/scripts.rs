@@ -27,6 +27,8 @@ pub struct AuraScript {
     pub on_proc: Option<ProcHook>,
     pub check_proc: Option<ProcCheckHook>,
     pub on_damage_proc: Option<DamageProcHook>,
+    /// Once per independently expired native asynchronous stack, including the last.
+    pub on_stack_expire: Option<AuraHook>,
 }
 
 #[derive(Resource, Debug, Default)]
@@ -52,6 +54,12 @@ pub(super) fn run_remove(
 ) {
     if let Some(run) = script(world, aura.spell_id).and_then(|script| script.on_remove) {
         run(world, unit, aura, reason);
+    }
+}
+
+pub(super) fn run_stack_expire(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if let Some(run) = script(world, aura.spell_id).and_then(|script| script.on_stack_expire) {
+        run(world, unit, aura);
     }
 }
 
@@ -428,6 +436,21 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         AuraScript {
             on_apply: Some(crate::spell_cast::scripts::replace_lifebloom),
             on_remove: Some(crate::spell_cast::scripts::bloom_lifebloom),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        crate::spell_cast::scripts::VENOMFANG_DRIVER,
+        AuraScript {
+            check_proc: Some(crate::spell_cast::scripts::check_venomfang_proc),
+            on_damage_proc: Some(crate::spell_cast::scripts::cast_venomfang),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        crate::spell_cast::scripts::VENOMFANG,
+        AuraScript {
+            on_stack_expire: Some(crate::spell_cast::scripts::burst_venomfang),
             ..Default::default()
         },
     );
