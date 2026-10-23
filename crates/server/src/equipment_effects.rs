@@ -289,6 +289,7 @@ mod tests {
             (EquipmentSlot::Shoulder, 271463),
             (EquipmentSlot::Chest, 271468),
             (EquipmentSlot::Legs, 271464),
+            (EquipmentSlot::MainHand, 268209),
         ];
         h.app.world_mut().entity_mut(h.caster).insert((
             EquippedItems {
@@ -307,6 +308,17 @@ mod tests {
         h.advance(3);
         assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296660));
         assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296661));
+        let ordinary_instance = |h: &Harness| {
+            h.app
+                .world()
+                .get::<ActiveAuras>(h.caster)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 1291718)
+                .expect("unchanged native weapon aura")
+                .instance_id
+        };
+        let weapon_aura = ordinary_instance(&h);
         // Native ItemSetSpell7715–7720 choose different Ret/Prot/Holy roots.
         h.app
             .world_mut()
@@ -317,6 +329,7 @@ mod tests {
         assert!(!crate::auras::has_aura(h.app.world(), h.caster, 1296661));
         assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296658));
         assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296659));
+        assert_eq!(ordinary_instance(&h), weapon_aura);
         h.app
             .world_mut()
             .entity_mut(h.caster)
@@ -326,6 +339,7 @@ mod tests {
         assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296661));
         assert!(!crate::auras::has_aura(h.app.world(), h.caster, 1296658));
         assert!(!crate::auras::has_aura(h.app.world(), h.caster, 1296659));
+        assert_eq!(ordinary_instance(&h), weapon_aura);
     }
 
     #[test]
