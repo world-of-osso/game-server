@@ -331,7 +331,7 @@ fn dps_parity_periodic_crit_native_renew_reads_current_crit_after_application() 
 #[ignore = "native flat periodic bonus ordering RED/GREEN; requires prepared parity inputs"]
 fn dps_parity_periodic_crit_native_rupture_flat_bonus_precedes_critical_multiplier() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = native_actor(259, ParityActor::Follower);
+    let mut run = native_actor(259, ParityActor::Player { race: 3 });
     let (caster, target) = (run.actor, run.targets[0]);
     assert_native_flags(&run, RUPTURE, true, false);
     apply_native_aura(&mut run, caster, caster, DENOUNCE);
