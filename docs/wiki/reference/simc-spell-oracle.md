@@ -48,7 +48,7 @@ Batch prerequisite plans record complete APLs, durations and pinned public-sourc
 python3 scripts/dps_parity/native_spell_diff.py --native native.json --oracle oracle.json --spell-id 100780 --output diff.json
 ```
 
-The stdlib consumer selects one ordinal impact per receipt, uses the final result stage, and compares each printed numeric formula/result/armor factor. It preserves native `unattributed product` labels, marks absent factors unavailable rather than zero, and records both input hashes. Exit0 means matching printed factors,1 means a difference/incomplete evidence,2 means invalid input. Recorded/counterfactual tests and a43-factor WW oracle self-control qualify this consumer; native per-hit producer acceptance remains pending.
+The stdlib consumer selects one ordinal impact per receipt, uses the final result stage, and compares each printed numeric formula/result/armor factor. It preserves native `unattributed product` labels, marks absent factors unavailable rather than zero, and records both input hashes. Exit0 means matching active coefficient/factor terms,1 means a difference/incomplete evidence,2 means invalid input. Raw SP observations remain visible when both SP coefficients are zero but do not become a coefficient-term mismatch. Native effective source/target products and AP/SP terms compare to explicitly labelled products of printed SimC components; differing factorization is not itself a mechanics correction. Ten recorded/counterfactual tests and a43-factor WW oracle self-control qualify this consumer; native per-hit producer acceptance remains pending.
 
 ## Sources
 

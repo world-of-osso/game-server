@@ -52,6 +52,7 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 ### Native per-spell differential harness
 
 - [ ] A shared test-side helper reuses reference-profile preparation, native31146 and literal fixture readiness/dispatch for exactly one requested cast or N observed damage ticks; no forked rotation or synthetic follower profile. First native fixture is follower269 Tiger Palm, then Arms12294 after shared Player dispatch supports its real actor.
+- [ ] The shared helper accepts distinct cast and observed damage spell IDs. An existing real fixture may be primed through shared native execution before capture; requested hit/tick counts exclude earlier priming events, without granting resources or inventing actor profiles.
 - [ ] Capture actual calculation-stage inputs/outputs without rerolling variance/crit or recomputing a second formula. JSON retains base, AP/SP terms, applied multipliers, crit, versatility and armor reduction in oracle-compatible per-hit events. Missing attribution is explicitly `unattributed product`, not a guessed aura source.
 - [ ] Native fixtures preserve reference gear/talents and exclude raid buffs. Explicit priming casts may earn required resources/state; no production damage tuning belongs to this diagnostic.
 - [ ] A stdlib Python CLI diffs matched formula/result/armor factors, retains both result states and provenance, and distinguishes actual differences from unprinted factors. Identical recorded factors and concrete counterfactual deltas have unittest coverage.

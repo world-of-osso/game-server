@@ -9,6 +9,7 @@ use shared::protocol::CombatLogKind;
 
 const MAX_FRAMES: usize = 2_400;
 const FRAME_SECONDS: f64 = 0.05;
+const PRIMER_SETTLE_FRAMES: usize = 10;
 
 struct ProbeSnapshot {
     stats: Value,
@@ -114,22 +115,34 @@ fn observed_hits(run: &Run, spell: u32) -> usize {
 }
 
 pub(crate) fn run_spell_probe(probe: SpellProbe) -> Result<Value, String> {
-    if probe.ticks == 0 {
-        return Err("a spell probe requires at least one hit/tick".into());
-    }
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare(probe.spec, 1)?;
-    let snapshot = begin_capture(&mut run, &probe)?;
-    dispatch_once(&mut run, &probe)?;
+    capture_cast(&mut run, &probe)
+}
+
+/// Callers may prime their existing real fixture with shared native execution first.
+pub(super) fn capture_cast(run: &mut Run, probe: &SpellProbe) -> Result<Value, String> {
+    if probe.ticks == 0 || run.profile.spec_id != probe.spec {
+        return Err(
+            "native probe requires positive hit count and matching fixture specialization".into(),
+        );
+    }
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    let snapshot = begin_capture(run, probe)?;
+    dispatch_once(run, probe)?;
     for _ in 0..MAX_FRAMES {
         run.app.update();
-        if observed_hits(&run, probe.damage_spell) >= probe.ticks {
-            return export_receipt(&run, &probe, snapshot);
+        if observed_hits(run, probe.damage_spell) >= probe.ticks {
+            return export_receipt(run, probe, snapshot);
         }
     }
     Err(format!(
-        "native spell{} did not produce {} hits/ticks",
-        probe.spell, probe.ticks
+        "native cast{} did not produce {} hits for spell{}",
+        probe.spell, probe.ticks, probe.damage_spell
     ))
 }
 
@@ -141,12 +154,17 @@ fn begin_capture(run: &mut Run, probe: &SpellProbe) -> Result<ProbeSnapshot, Str
         auras: aura_snapshot(run.app.world(), run.actor),
         started_at: crate::spell_cast::now(run.app.world()),
     };
+    let damage_action = if probe.spell == probe.damage_spell {
+        probe.action.to_string()
+    } else {
+        format!("spell_{}", probe.damage_spell)
+    };
     run.app.world_mut().insert_resource(
         crate::spell_cast::effects::factor_capture::FactorCapture::new(
             run.actor,
             run.targets[0],
             probe.damage_spell,
-            probe.action,
+            &damage_action,
             probe.ticks,
         ),
     );
@@ -261,4 +279,60 @@ fn dps_parity_single_spell_tiger_palm_records_real_factors() {
                 .is_some_and(|damage| damage > 0.0)
     }));
     assert_eq!(receipt["casts"], 1);
+}
+
+#[test]
+#[ignore = "real reference gear/traits; actual native TP priming and three FoF child ticks"]
+fn dps_parity_single_spell_fists_of_fury_three_ticks_keep_child_ids() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare(269, 1).unwrap();
+    let palm = SpellProbe {
+        spec: 269,
+        spell: 100780,
+        damage_spell: 100780,
+        action: "tiger_palm",
+        ticks: 1,
+    };
+    for _ in 0..2 {
+        dispatch_once(&mut run, &palm).expect("actual native TP earns Chi");
+        for _ in 0..PRIMER_SETTLE_FRAMES {
+            run.app.update();
+        }
+    }
+    let probe = SpellProbe {
+        spec: 269,
+        spell: 113656,
+        damage_spell: 117418,
+        action: "fists_of_fury",
+        ticks: 3,
+    };
+    let mut receipt =
+        capture_cast(&mut run, &probe).expect("one FoF channel produces three real child hits");
+    receipt["priming"] = json!({"spells": [100780, 100780], "policy": "actual shared native execution; no granted Chi or buff stacks"});
+    let output =
+        std::path::PathBuf::from(std::env::var_os("DPS_SPELL_OUTPUT").expect("DPS_SPELL_OUTPUT"))
+            .with_file_name("269.fists_of_fury.three_ticks.json");
+    std::fs::write(output, serde_json::to_vec_pretty(&receipt).unwrap()).unwrap();
+    assert_eq!(receipt["casts"], 1);
+    assert_eq!(receipt["captured_hits"], 3);
+    let amounts = receipt["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|event| event["event"] == "direct_amount" && event["spell_id"] == 117418)
+        .collect::<Vec<_>>();
+    assert_eq!(amounts.len(), 3);
+    let times = amounts
+        .iter()
+        .map(|event| event["time"].as_f64().unwrap())
+        .collect::<Vec<_>>();
+    assert!(
+        times.windows(2).all(|pair| pair[0] < pair[1]),
+        "three actual tick times, not duplicate result stages"
+    );
+    assert!(amounts.iter().all(|event| {
+        event["factors"]["a_power"]
+            .as_f64()
+            .is_some_and(|power| power > 0.0)
+    }));
 }
