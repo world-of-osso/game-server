@@ -147,6 +147,37 @@ fn protection_producers_whirling_blade_native_rppm_emits_ravager_from_real_impac
                 && event.kind == CombatLogKind::Damage
                 && event.amount > 0
         }) {
+            let aura = h
+                .app
+                .world()
+                .get::<crate::auras::ActiveAuras>(h.caster)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == RAVAGER)
+                .expect("the native Ravager cast retains its indicator aura");
+            assert_eq!(
+                aura.duration_ms, 4000,
+                "Whirling Blade's native4000ms amount supplies the background lifetime"
+            );
+            h.advance(45);
+            assert!(
+                h.inbox
+                    .log
+                    .iter()
+                    .any(|event| event.spell_id == Some(RAVAGER_TICK)
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0),
+                "the proc must produce Ravager's real periodic child"
+            );
+            h.inbox = Inbox::default();
+            h.advance(70);
+            assert!(
+                !h.inbox
+                    .log
+                    .iter()
+                    .any(|event| event.spell_id == Some(RAVAGER_TICK)),
+                "Whirling Blade cannot leave the ordinary12s Ravager field running"
+            );
             return;
         }
     }
