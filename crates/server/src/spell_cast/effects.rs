@@ -31,6 +31,9 @@ mod bypass_armor_tests;
 #[cfg(test)]
 #[path = "caster_ability_crit_tests.rs"]
 mod caster_ability_crit_tests;
+#[cfg(test)]
+#[path = "windwalker_mastery_tests.rs"]
+mod windwalker_mastery_tests;
 
 use crate::random as rand;
 use std::collections::HashSet;
