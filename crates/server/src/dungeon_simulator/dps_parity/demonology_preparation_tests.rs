@@ -34,8 +34,23 @@ fn dps_parity_demo_native_guldan_imps_attack_the_selected_dummy() {
                     .and_then(|target| target.0);
                 let admission =
                     crate::spell_cast::read_native_cast_start(world, imp, &spell, run.targets[0]);
+                let costs = crate::spell_cast::applicable_costs(world, imp, &spell);
                 println!(
-                    "DEMO_IMP tick={tick} entity={imp:?} owner_target={owner_target:?} admission={admission:?}"
+                    "DEMO_IMP tick={tick} entity={imp:?} owner_target={owner_target:?} admission={admission:?} costs={costs:?}"
+                );
+                println!(
+                    "DEMO_IMP_STATE level={:?} owner_level={:?} faction={:?} map={:?} target_map={:?} enemy={}",
+                    world.get::<shared::components::UnitLevel>(imp),
+                    world.get::<shared::components::Level>(run.actor),
+                    world.get::<shared::components::UnitFactionTemplate>(imp),
+                    world.get::<crate::maps::InMap>(imp),
+                    world.get::<crate::maps::InMap>(run.targets[0]),
+                    crate::spell_cast::targets::relation_matches(
+                        world,
+                        imp,
+                        run.targets[0],
+                        crate::spell_cast::targets::Relation::Enemy
+                    )
                 );
             }
         }
