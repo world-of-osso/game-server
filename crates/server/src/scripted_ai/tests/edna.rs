@@ -144,6 +144,17 @@ fn encounter_coverage_edna_five_inherited_stringid_deaths_force_walk_arrival_unl
         );
         assert!(!immune(&h, boss));
         assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 64);
+        assert_eq!(
+            crate::spell_cast::powers::power_value(
+                h.app.world(),
+                boss,
+                shared::components::PowerType::Energy,
+            )
+            .unwrap()
+            .0,
+            4.0,
+            "combat ingress refresh must not replay class-power initialization"
+        );
         let home = h
             .app
             .world()
