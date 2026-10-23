@@ -308,6 +308,14 @@ fn spell_teleport_harpoon_moves_but_feral_lunge_refuses_jump254_curve_trigger() 
         let mut h = harness(Vec::new(), &[id], 7).unwrap();
         h.app
             .insert_resource(crate::test_data::world_data().clone());
+        h.app.add_systems(
+            FixedUpdate,
+            (
+                crate::scripted_ai::jump_movement::release_finished_jumps,
+                crate::scripted_ai::jump_movement::advance_jumps,
+            )
+                .chain(),
+        );
         h.app
             .insert_resource(crate::terrain_height::test_helpers::flat_ground(
                 33.0, 33.0, 2.0,
@@ -344,11 +352,25 @@ fn spell_teleport_harpoon_moves_but_feral_lunge_refuses_jump254_curve_trigger() 
         let plan =
             super::plan_targets(h.app.world_mut(), h.caster, &spell, Some(h.npc), true).unwrap();
         super::resolve_effects(h.app.world_mut(), h.caster, &spell, &plan, 0);
+        assert_eq!(
+            *h.app.world().get::<Position>(h.caster).unwrap(),
+            start,
+            "no launch teleport"
+        );
+        h.advance(1);
+        if id == 186260 {
+            let during = *h.app.world().get::<Position>(h.caster).unwrap();
+            assert!(
+                during.x > start.x && during.x < destination.x && during.y > start.y,
+                "native Harpoon41 uses a real arc"
+            );
+        }
+        h.advance(60);
         let expected = if id == 196884 { start } else { destination };
         assert_eq!(
             *h.app.world().get::<Position>(h.caster).unwrap(),
             expected,
-            "Harpoon41 moves; JUMP254_PARABOLIC_CURVE_TRIGGER refuses196884 displacement"
+            "Harpoon41 lands; JUMP254_PARABOLIC_CURVE_TRIGGER still refuses196884 displacement"
         );
         assert_eq!(*h.app.world().get::<Position>(h.npc).unwrap(), destination);
     }

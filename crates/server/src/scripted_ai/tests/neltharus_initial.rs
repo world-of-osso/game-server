@@ -87,6 +87,186 @@ fn completed_casts(h: &Harness, boss: Entity, spell: u32) -> usize {
         .count()
 }
 
+fn arrival_cast_count(world: &World, caster: Entity, spell: u32) -> usize {
+    world
+        .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+        .0
+        .iter()
+        .filter(|(actor, id, _)| *actor == caster && *id == spell)
+        .count()
+}
+
+#[test]
+#[ignore = "RED before generic effect41 arrival spell port"]
+fn encounter_coverage_neltharus_initial_jump_arrival_chargath_midair_then_child() {
+    for difficulty in [1, 205] {
+        let (mut h, boss, _) = projected_initial_boss(&INITIAL_PHASES[0], difficulty);
+        h.app
+            .insert_resource(crate::spell_cast::test_harness::ObservedTriggeredCasts::default());
+        let player = h.player();
+        let origin = *h.app.world().get::<Position>(boss).unwrap();
+        let destination = Position {
+            x: origin.x + 20.0,
+            ..origin
+        };
+        *h.app.world_mut().get_mut::<Position>(player).unwrap() = destination;
+        h.engage(boss);
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, STRIKE, Some(player), false)
+            .expect("actual native Chargath jump parent");
+        h.advance(2.1);
+        let during = *h.app.world().get::<Position>(boss).unwrap();
+        assert!(
+            during.x > origin.x && during.x < destination.x && during.y > origin.y,
+            "native41 moves through a real arc, not a launch teleport: {during:?}"
+        );
+        assert_eq!(
+            arrival_cast_count(h.app.world(), boss, 373735),
+            0,
+            "no child before physical arrival"
+        );
+        for _ in 0..40 {
+            if arrival_cast_count(h.app.world(), boss, 373735) > 0 {
+                break;
+            }
+            h.advance(0.05);
+        }
+        assert_eq!(arrival_cast_count(h.app.world(), boss, 373735), 1);
+        assert_eq!(
+            *h.app.world().get::<Position>(boss).unwrap(),
+            destination,
+            "child launches at the real landing endpoint"
+        );
+        assert!(
+            h.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+                .0
+                .contains(&(boss, 373735, Some(player))),
+            "TC effect41 retains the arrival unit GUID"
+        );
+        assert!(
+            h.inbox(0)
+                .log
+                .iter()
+                .any(|event| event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(373735)
+                    && event.amount > 0
+                    && event.source == Some(boss.to_bits())
+                    && event.target == Some(player.to_bits())),
+            "real native arrival damage"
+        );
+        h.advance(0.1);
+        assert_eq!(
+            arrival_cast_count(h.app.world(), boss, 373735),
+            1,
+            "one arrival cast, not every finished frame"
+        );
+    }
+}
+
+fn destination_jump_fixture() -> crate::spell_cast::test_harness::Harness {
+    let mut h =
+        crate::spell_cast::test_harness::harness(Vec::new(), &[92832, 440206, 4336], 6).unwrap();
+    h.app.insert_resource(
+        crate::spell_cast::test_harness::world_db()
+            .unwrap()
+            .store
+            .clone(),
+    );
+    h.app
+        .insert_resource(crate::test_data::world_data().clone());
+    h.app
+        .insert_resource(crate::spell_cast::test_harness::ObservedTriggeredCasts::default());
+    h.app.add_systems(
+        FixedUpdate,
+        (
+            crate::scripted_ai::jump_movement::release_finished_jumps,
+            crate::scripted_ai::jump_movement::advance_jumps,
+        )
+            .chain(),
+    );
+    h.advance(3);
+    h
+}
+
+#[test]
+#[ignore = "RED before generic effect42 arrival spell port"]
+fn encounter_coverage_neltharus_initial_jump_arrival_native_destination_trigger() {
+    let mut h = destination_jump_fixture();
+    let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+    let destination = Vec3::new(origin.x + 21.0, origin.y, origin.z);
+    crate::spell_cast::cast_triggered_at_destination(
+        h.app.world_mut(),
+        h.caster,
+        92832,
+        destination,
+        0,
+    );
+    h.advance(1);
+    let during = *h.app.world().get::<Position>(h.caster).unwrap();
+    assert!(
+        during.x > origin.x && during.x < destination.x && during.y > origin.y,
+        "native42 trigger option retains real jump movement"
+    );
+    assert_eq!(arrival_cast_count(h.app.world(), h.caster, 440206), 0);
+    h.advance(40);
+    assert_eq!(
+        *h.app.world().get::<Position>(h.caster).unwrap(),
+        Position {
+            x: destination.x,
+            y: destination.y,
+            z: destination.z
+        }
+    );
+    assert_eq!(arrival_cast_count(h.app.world(), h.caster, 440206), 1);
+    assert!(
+        h.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+            .0
+            .contains(&(h.caster, 440206, None)),
+        "TC effect42 has no arrival unit GUID"
+    );
+    h.advance(10);
+    assert_eq!(arrival_cast_count(h.app.world(), h.caster, 440206), 1);
+}
+
+#[test]
+#[ignore = "Native no-trigger jump control for generic arrival port"]
+fn encounter_coverage_neltharus_initial_jump_arrival_native_no_trigger_control() {
+    let mut h = destination_jump_fixture();
+    let origin = *h.app.world().get::<Position>(h.caster).unwrap();
+    let destination = Vec3::new(origin.x + 21.0, origin.y, origin.z);
+    crate::spell_cast::cast_triggered_at_destination(
+        h.app.world_mut(),
+        h.caster,
+        4336,
+        destination,
+        0,
+    );
+    h.advance(1);
+    let during = *h.app.world().get::<Position>(h.caster).unwrap();
+    assert!(during.x > origin.x && during.x < destination.x && during.y > origin.y);
+    h.advance(40);
+    assert_eq!(
+        *h.app.world().get::<Position>(h.caster).unwrap(),
+        Position {
+            x: destination.x,
+            y: destination.y,
+            z: destination.z
+        }
+    );
+    assert!(
+        h.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+            .0
+            .iter()
+            .all(|(_, spell, _)| *spell == 4336),
+        "native zero TriggerSpell invents no arrival cast"
+    );
+}
+
 fn assert_native_primary_admission(profile: &InitialPhase) {
     for difficulty in [1, 205] {
         for &(spell, _) in profile.counts {
