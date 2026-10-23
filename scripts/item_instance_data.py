@@ -7,6 +7,7 @@ ScalingStatDistribution was removed from this build; ItemScalingConfig and
 ItemOffsetCurve supply Midnight's native scaling instead.
 """
 import argparse
+from contextlib import closing
 import csv
 import hashlib
 from pathlib import Path
@@ -87,7 +88,7 @@ def main():
     args = parser.parse_args()
     if not args.db.is_file():
         parser.error(f"Database does not exist: {args.db}")
-    with sqlite3.connect(args.db) as conn:
+    with closing(sqlite3.connect(args.db)) as conn, conn:
         counts = import_catalog(conn, args.db2_dir)
     for table, count in counts.items():
         print(f"{table}: {count}")

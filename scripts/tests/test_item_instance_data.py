@@ -1,4 +1,5 @@
 """Concrete native item-bonus rows and transactional failure boundaries."""
+from contextlib import closing
 import csv
 import importlib.util
 from pathlib import Path
@@ -14,7 +15,7 @@ SPEC.loader.exec_module(DATA)
 
 class ItemInstanceImportTests(unittest.TestCase):
     def test_import_preserves_signed_values_and_replaces_only_named_table(self):
-        with tempfile.TemporaryDirectory() as root, sqlite3.connect(":memory:") as conn:
+        with tempfile.TemporaryDirectory() as root, closing(sqlite3.connect(":memory:")) as conn:
             path = Path(root) / "ItemBonus.csv"
             path.write_text("ID,Value_0,Value_1,Value_2,Value_3,ParentItemBonusListID,Type,OrderIndex\n"
                             "2,7,15789,0,0,1,2,0\n3,-10,0,0,0,2,1,0\n")
@@ -29,7 +30,7 @@ class ItemInstanceImportTests(unittest.TestCase):
 
     def test_native_equipped_producer_set_and_role_sources_are_imported(self):
         source = Path(__file__).resolve().parents[2] / "data/db2/12.1.5.70448"
-        with sqlite3.connect(":memory:") as conn:
+        with closing(sqlite3.connect(":memory:")) as conn:
             counts = DATA.import_catalog(conn, source)
             for table in ("item_set", "item_set_spell", "spell_description_variables",
                           "spell_x_description_variables"):
@@ -60,7 +61,7 @@ class ItemInstanceImportTests(unittest.TestCase):
             ).fetchone(), ("12.1.5.70448",))
 
     def test_bad_row_does_not_replace_existing_table(self):
-        with tempfile.TemporaryDirectory() as root, sqlite3.connect(":memory:") as conn:
+        with tempfile.TemporaryDirectory() as root, closing(sqlite3.connect(":memory:")) as conn:
             conn.execute("CREATE TABLE item_bonus (ID INTEGER PRIMARY KEY, Value_0 INTEGER)")
             conn.execute("INSERT INTO item_bonus VALUES (2,7)")
             path = Path(root) / "ItemBonus.csv"
