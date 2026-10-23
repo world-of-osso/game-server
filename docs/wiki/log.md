@@ -1,3 +1,7 @@
+## Player Meteorite native bridges — RED and implementation
+
+[Native bridges](systems/auras.md#player-meteorite-native-bridges):81d8 actual7 cases2PASS/5FAIL75.79s, including four genuine mechanic REDs and one follower OutOfRange fixture failure.39a38 bounds destination-only non-channeled effect32 to one child dispatch;99c703 adds approved native Fireball and OOC Sphere/Glorious bridges. No GREEN or500ms recovery claim; readiness RED and follower position/Travel diagnosis precede remaining changes.
+
 ## 2026-10-23 — TC-native Intensifying Flame feedback
 
 [Bridge](systems/auras.md#intensifying-flame-tick-bridge--2026-10-23):68f5 gives native amount/cap/feedback4PASS and an obsolete natural-expiry oracle failure, plus retained core-Ignite4PASS with approved script isolation. Exact trace proves nine419800→Ignite refreshes and original11.1s→20.1s deadline extension. Pinned TC/TDB defaults win over SimC; no production exclusion added. Finalf6b53c0d3 gives native5PASS9.19s (compile5m17, zero warnings), isolating12846 only after earning the real bank for the expiry-frame control. Retained4PASS16.66s source scope is unchanged. Lead independent integration/check remains pending.

@@ -1,3 +1,4 @@
+- [Player Meteorite native bridges](systems/auras.md#player-meteorite-native-bridges) — genuine Fireball/OOC/3T fan-out RED; native data bridges committed, GREEN/charge recovery/follower placement pending.
 - [Intensifying Flame tick bridge](systems/auras.md#intensifying-flame-tick-bridge--2026-10-23) — native5GREEN including final-tick script isolation; retained core4GREEN, TC-vs-SimC native refresh finding.
 - [Meteor authored minimum and TC chain](investigations/follower-data.md#meteor-authored-admission-and-tc-delayed-impact--2026-10-22) — ST/3T genuineRED, exact native AT/missile/burn, concurrent-hardcast TC-vs-SimC divergence; four nativeGREEN, copy-only kit delta.
 - [Fire70 Ignite and controlled baseline](investigations/follower-data.md#fire70-ignite-producer-and-controlled-baseline--2026-10-22) — ordinary-hit RED→four native GREEN, shared rolling carry, exact HS missile provenance; matched-profile action/stat/idle decomposition, no full parity claim.
