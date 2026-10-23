@@ -39,7 +39,13 @@ Production3286b0463, same immutable frozen DB/gear/traits/source view: ST30118.0
 
 ## Literal missing-cooldown policy
 
-Lead approved `SIMC_MISSING_COOLDOWN_PLACEHOLDER` for exact WW tokens only: `cooldown.whirling_dragon.remains`=0 (never started) and `cooldown.invoke_power_infusion_0.duration`=`timespan::min` in seconds when no external PI cooldown exists. Pinned`player/player.cpp12257–12269` creates those placeholder objects with duration/base_duration=`timespan::min`; `sim/cooldown.hpp113–114` starts readiness at−3600s. Do not correct the typo to`whirling_dragon_punch`, and never turn arbitrary unknown operands into zero. Generic native bindings remain strict. Wrapper implementation/behavior proof pending literal-driver RED admission.
+Lead approved `SIMC_MISSING_COOLDOWN_PLACEHOLDER` for exact WW tokens only: `cooldown.whirling_dragon.remains`=0 (never started) and `cooldown.invoke_power_infusion_0.duration`=`timespan::min` in seconds when no external PI cooldown exists. Pinned`player/player.cpp12257–12269` creates those placeholder objects with duration/base_duration=`timespan::min`; `sim/cooldown.hpp113–114` starts readiness at−3600s. Do not correct the typo to`whirling_dragon_punch`, and never turn arbitrary unknown operands into zero. Generic native bindings remain strict. WW wrapper now binds only those exact tokens; its actual-action fixture asserts both values plus rejection of an unrelated cooldown alias. Runtime GREEN remains pending.
+
+## Literal fixture implementation (unqualified)
+
+Four original real-native REDs were accepted atb74411d5d:62.37s execution,9m05s compile,zero warnings. The implementation embeds all132source action rows unchanged and uses the shared evaluator with native selected-trait/known-spell admission, precomputed native cast readiness, actual creature/item casts, equipment identities and WW action-bound combo/history predicates. `target_if=min/max:target.time_to_die` ties all fixture targets under the shared fixed-time health policy; selection keeps the first native target. Other target selectors/options reject explicitly. Celestial Conduit `cancel_if` remains a parsed expression evaluated during its actual native channel.
+
+Only successfully loading an explicit spec269 `Encounter::Fixture` attaches `LiteralParityFixture`; native Follower/NPC identity remains intact and the generic kit yields decisions. The300s parity loop selects this controller only for the spec269 follower. Dungeon loading rejects before capture; a separate non-Fixture fixture asserts native-kit damage without controller capture. Potions without provisioned inventory and external PI without a provider remain named execution gaps, not fabricated casts. WW spell and item behavior remain unqualified; literal integration is not parity completion. Targeted5test GREEN and later300s receipts pending.
 
 ## Source inventory artifact
 

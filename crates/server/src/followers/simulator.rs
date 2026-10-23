@@ -4,6 +4,11 @@ use super::*;
 use bevy::ecs::system::RunSystemOnce;
 use shared::components::{Level, Player, Position, UnitFactionTemplate};
 
+/// Installed only by explicit dps_parity Fixture encounter setup. The measured
+/// NPC/follower keeps its native components; only its generic kit decisions yield.
+#[derive(Component)]
+pub(crate) struct LiteralParityFixture;
+
 #[derive(Component)]
 struct LeaderProfile(Profile);
 

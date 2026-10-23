@@ -706,6 +706,14 @@ impl SpellHistory {
             .map(|(spell, _)| spell)
     }
 
+    #[cfg(test)]
+    pub(crate) fn last_successful_cast(&self) -> Option<u32> {
+        self.successful_casts
+            .iter()
+            .max_by_key(|(_, order)| *order)
+            .map(|(&spell, _)| spell)
+    }
+
     fn record_successful_cast(&mut self, spell: u32) {
         self.cast_sequence += 1;
         self.successful_casts.insert(spell, self.cast_sequence);
