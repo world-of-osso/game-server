@@ -154,6 +154,8 @@ mod vexamus;
 #[path = "vyletongue.rs"]
 mod vyletongue;
 
+#[path = "prepared_input_concurrency_tests.rs"]
+mod prepared_input_concurrency_tests;
 #[path = "prepared_input_tests.rs"]
 mod prepared_input_tests;
 #[path = "prepared_inputs.rs"]

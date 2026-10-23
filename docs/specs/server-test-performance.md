@@ -20,6 +20,7 @@ The whole server test suite must retain every discovered case and existing ignor
 
 - [x] Reuse decoded immutable definitions without querying SQLite again for the same database path and content.
 - [x] Permit one source reader to supply concurrent Apps; do not serialize repeated database decoding behind a shared global lock.
+- [ ] Prepared-input keys initialize independently: a gated initializer must not block another key, while concurrent readers of one key publish exactly one completed value and install independent App resources. Snapshot bytes and native fixture steps remain unchanged.
 - [x] Keep prepared paths distinct from canonical authority, even when initial bytes match; changed content at the same path must load the changed definitions.
 - [x] App-local catalog mutations must leave sibling Apps and retained input definitions unchanged.
 - [x] Deleted prepared source files must not keep otherwise unused decoded catalogs alive after the next catalog load; existing App copies remain valid and independent, while existing canonical input stays reusable.
@@ -42,6 +43,7 @@ The whole server test suite must retain every discovered case and existing ignor
 
 - `crates/server/src/test_data/catalog_cache_tests.rs` — immutable input reuse, concurrent read capability and path/content isolation.
 - `crates/server/src/test_data.rs` — existing live-App catalog/creature/prepared-source isolation.
+- `crates/server/src/scripted_ai/tests/prepared_input_concurrency_tests.rs` — distinct-key progress, same-key once initialization, warm reuse and independent installed resources.
 - `crates/server/src/test_data/catalog_data_tests.rs` — local edits/iteration and serialized collection values.
 - `scripts/tests/test_native_test_batches.py` — real process-cache lifetime, bounded parallelism, ignored-case accounting and failure propagation contracts.
 - Native gate discovery/execution inventories and compiler artifact receipts linked from the investigation.
