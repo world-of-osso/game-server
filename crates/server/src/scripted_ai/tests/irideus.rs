@@ -141,7 +141,6 @@ fn encounter_coverage_irideus_projected_first_four_lane_clocks_and_overload_aura
 }
 
 #[test]
-#[ignore = "RED before Irideus stage1 native scripting"]
 fn encounter_coverage_irideus_projected_native_cooldown_rejections_and_generic_credit_copy_and_corpse()
  {
     for difficulty in [1, 205] {

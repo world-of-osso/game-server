@@ -1,5 +1,14 @@
 # Boss scripts
 
+## Watcher Irideus stage-one partial —2026-10-22
+
+[Contract](../../specs/boss-scripts.md#watcher-irideus-stage-one-partial). LittleWigs2777a9d stage-one Fist384524/Surge384014/Overload389179/Volley384351 retain native targets, casts and channels. Future events stop at<=15% health; no invented transition position, Barrier, Pulse, removal/resume or scripted dummy children. Generic lethal credit is not full-fight proof.
+
+Ignored693bfe1e5 contracts preceded AI:9d23d7af0 native cone/periodic damage qualification PASS with four genuine missing-clock failures27.50s. Post-master88bc9b8ff passes native Fist/Surge damage, all four initial clocks/actual Overload aura,15% stop and native-home reset; the repeat oracle fails. Diagnostic887aa9114 proves source requests are correct but native category1152/12s rejects Surge38.45s after Overload, and category133/2s rejects Volley60.65s after Fist. Victim stays alive;90s completions are[5,1,3,1]. `IRIDEUS_SOURCE_CLOCK_CATEGORY_COOLDOWN_GAP` preserves this incompatibility without cooldown bypass, retry or manufactured rearm. The unsupported all-lanes-repeat assertion was replaced with actual rejection/deadline/no-retry assertions, retaining credit/copy/corpse checks. Exact corrected case1f12f317e passes22.01s in Normal1/projected205. Coverage is COMPOSITE5GREEN (retained four plus this one), not a fresh five-case run; production unchanged since88bc9b8ff.
+
+Producer/SQL only bind2504/5395/106801 and ScriptName. DerivedNormal63527000/class4/flags0/faction16/models/difficulties/native data remain unchanged; fresh-copy twice-replay receipt and conflict/idempotence producer proof accompany the packet. Evidence `game-engine/data/diagnostics/follower-bosses-df-2026-10-22/irideus-*`, including native category rows and admission log. Lead owns final check, landing and canonical publication. No Stage2, indefinitely repeating four-lane combat, authored205population, navigation or loot claim.
+
+
 ## Wratheye Decaystrike-only partial —2026-10-22
 
 [Contract](../../specs/boss-scripts.md#wratheye-decaystrike-only-partial). LittleWigs2777a9d actual373912 first10.6s/accepted-start alternating19.4,25.5s, not373917 warning. Native2s cast/800ms periodic373915damage+373917aura unchanged. Ignored426358f2a tests pushed before AI: ac46f5a9f native1qualificationPASS/3genuineclock/reset/lifecycleFAIL30.34s; source partiald12f39c3f with native EventMap-width correction28d822ceb then4GREEN25.54s after master merge. Explicit Normal1/projected205: first/second/third/fourth starts, actual damage/aura, separate coincident copy, native-home reset, generic lethal-credit and corpse silence. Four ignores removed only after proof; no assertion/production change.
