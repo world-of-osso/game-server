@@ -1,5 +1,13 @@
 # Auras
 
+## Hit positivity independent of factions — 2026-10-23
+
+`spell_cast::push_hit_events` previously used `targets::is_hostile` to classify hit proc masks. Native dummy31146 has faction7, which is attackable but not hostile to the parity player. Native16166 chance101/mask0x10000 therefore never produced260734 from an ordinary Lava Burst51505 and its actual285452 damage child on that faction. Genuine test-only6d5d7026a gives1PASS/1FAIL10.43s: friendly2061 healing still procs native36488→36483, while the neutral harmful case fails only after positive damage. Cold compile41m05, zero warnings. GREEN pending.
+
+Classification now follows pinned TC a352b1fa `Spell.cpp:2849–2871`: actual positive damage is harmful, otherwise positive healing is helpful, otherwise intersect `spell_info::positivity::negative_effects` with effects that landed on this recipient. `SpellInfo.cpp:1883–1891` supplies the native positivity contract; `Unit.cpp:5587–5620` forwards the supplied actor/recipient masks without faction reclassification. Threat/attack admission remains separate. No proc masks/chances, faction rows, coefficients, charges or wire fields change.
+
+The existing `auras/procs.rs` non-weapon attribute mapping remains unchanged: this base already reads TreatAsPeriodic/IsAbility (the historical Intensifying note below describes its older revision). TDB proc import and full periodic eligibility are separate ownership. Tests: `spell_cast/hit_positivity_tests.rs`; [contract](../../specs/auras.md#native-hit-proc-masks). Exact native source receipt and RED log: engine `data/diagnostics/rotation-fidelity-2026-10-21/{generic-hit-positivity-source-qualification.json,hit-positivity-6d5d-native-red.log}`. No DPS parity claim follows from these two fixtures.
+
 ## Intensifying Flame tick bridge — 2026-10-23
 
 `FIRE_INTENSIFYING_FLAME_SIMC_TICK_BRIDGE` connects actual Ignite12654 effect0 ticks to native419800. SimC76f8118 `sc_mage.cpp2502–2567` supplies this missing bridge; TC a352b1fa has no named script and DB2 has no child trigger. Active416714 supplies the native owner-local target cap, percentage, chance and periodic mask. Its current70448 row has cap3, percentage30, chance101 and no ICD, charges or RPPM. The leaf's coefficient and flags remain native; SimC damage-flag overrides are not imported. [Contract](../../specs/auras.md#intensifying-flame).

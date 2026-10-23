@@ -19,7 +19,7 @@ fn assert_native_proc(h: &Harness, passive: u32, chance: u32, mask: u32) {
 
 #[test]
 fn hit_positivity_native_harmful_proc_on_neutral_attackable_target() {
-    // Native Elemental Focus16166: guaranteed harmful-spell proc260734.
+    // Native Master of the Elements16166: guaranteed harmful-spell proc260734.
     // Native Lava Burst51505 launches its actual damage child285452.
     let mut h = harness(Vec::new(), &[16166, 260734, 51505, 285452], 7).unwrap();
     h.advance(3);
