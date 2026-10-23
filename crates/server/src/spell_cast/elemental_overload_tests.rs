@@ -114,6 +114,73 @@ fn qualify_native_overload_effectiveness(overload: u32) {
     );
 }
 
+fn cast_lava_damage_with_flame_shock(
+    damage: u32,
+    owns_flame_shock: bool,
+) -> shared::protocol::CombatLogEvent {
+    const FLAME_SHOCK: u32 = 188389;
+    let mut h = harness(Vec::new(), &[damage, FLAME_SHOCK], 7).unwrap();
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::stats::CharacterStats>(h.caster)
+            .unwrap()
+            .crit_pct,
+        0.0,
+        "existing fixed-crit fixture makes owned/foreign crit flags deterministic without RNG overrides"
+    );
+    let flame_shock_caster = if owns_flame_shock {
+        h.caster
+    } else {
+        super::test_harness::spawn_player(&mut h.app, 7, 0.0)
+    };
+    // Controlled actual native AuraApplication isolates ownership, not acquisition.
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: flame_shock_caster,
+            target: h.npc,
+            spell_id: FLAME_SHOCK,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.npc)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == FLAME_SHOCK)
+        .unwrap();
+    assert_eq!(aura.caster, flame_shock_caster);
+    cast_native_child(&mut h, damage)
+}
+
+#[test]
+#[ignore = "TC caster-owned Flame Shock root crit RED/GREEN pending"]
+fn native_lava_crit_root_own_flame_shock_guarantees_crit() {
+    assert!(cast_lava_damage_with_flame_shock(285452, true).crit);
+}
+
+#[test]
+#[ignore = "TC foreign Flame Shock root crit RED/GREEN pending"]
+fn native_lava_crit_root_foreign_flame_shock_does_not_guarantee_crit() {
+    assert!(!cast_lava_damage_with_flame_shock(285452, false).crit);
+}
+
+#[test]
+#[ignore = "TC caster-owned Flame Shock Overload crit RED/GREEN pending"]
+fn native_lava_crit_overload_own_flame_shock_guarantees_crit() {
+    assert!(cast_lava_damage_with_flame_shock(285466, true).crit);
+}
+
+#[test]
+#[ignore = "TC foreign Flame Shock Overload crit RED/GREEN pending"]
+fn native_lava_crit_overload_foreign_flame_shock_does_not_guarantee_crit() {
+    assert!(!cast_lava_damage_with_flame_shock(285466, false).crit);
+}
+
 #[test]
 fn native_lightning_overload_uses_mastery_effect1_and_removal_restores_child_base() {
     qualify_native_overload_effectiveness(45284);
