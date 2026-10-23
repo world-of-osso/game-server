@@ -417,6 +417,29 @@ def import_ancient(connection):
     return [196482]
 
 
+def import_gulping_goliath(connection):
+    """Bind Lua-authenticated Goliath; no native actor, spell or placement edits."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2527, entry=189722, encounter_id=2616, bit=1,
+                   script='', ai='', journal_id=2507, actor_id=5448, display_id=103584)
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=189722').fetchone()
+    if runtime not in [('Gulping Goliath','','',0), ('Gulping Goliath','','boss_gulping_goliath',0)]:
+        raise ValueError('Gulping Goliath runtime binding or source flags changed')
+    for spell, child in [(385181,385187),(385442,385451)]:
+        effect = connection.execute('''SELECT Effect,EffectAura,EffectTriggerSpell FROM spell_effect
+            WHERE SpellID=? AND DifficultyID=0 AND EffectIndex=0''', (spell,)).fetchone()
+        if effect != (6,23,child):
+            raise ValueError(f'Gulping Goliath native periodic identity changed: {spell}')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_gulping_goliath' WHERE entry=189722")
+    return [189722]
+
+
 def import_vexamus(connection):
     """Lua-authenticated primary; derived placement and native actor stay unchanged."""
     import encounter_cpp_bindings
@@ -836,7 +859,7 @@ def import_skarmorak(connection):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','khajin','vexamus','granyth','treemouth','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry','orator','skarmorak'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','khajin','vexamus','granyth','treemouth','gulping-goliath','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry','orator','skarmorak'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -876,6 +899,8 @@ def main():
                 entries = import_umbrelskul(conn)
             elif args.encounter == 'ancient':
                 entries = import_ancient(conn)
+            elif args.encounter == 'gulping-goliath':
+                entries = import_gulping_goliath(conn)
             elif args.encounter == 'vexamus':
                 entries = import_vexamus(conn)
             elif args.encounter == 'granyth':

@@ -1,3 +1,14 @@
+## 2026-10-22 — Imaginary Gun companion server contract qualified
+
+Exact279843 shape admissionbec533e21 follows four genuineUseToyREDs;26GREEN191.47s plus corrected-filter Coyote4GREEN38.62s/check0-53.68s/no warnings/fmt0. Full1173 census543→544 only163705,no other row/reason delta. Real owned-journal/legacy current critter,10s recipient aura/natural expiry,180s natural recovery/reuse,foreign/guardian/ordinary-Ally isolation,invariants,four drifts. Compile/import and missile-sibling fixture failures excluded; three capacity-only attempts separately retained. Native animation/audio/PetCancelAura rejection unqualified. [Toy source boundary](systems/toys.md#imaginary-gun-companion-visual-boundary-2026-10-22).
+
+## 2026-10-22 — Target74 landed; Imaginary Gun capacity-only attempt
+
+Target74 tg967 landedec7b24f9f,2165PASS/0FAIL/8ignored2350.45s/check0-129s/fmt0;d23 independently ancestor of911d7be82,inactive local/remote branch cleaned. Imaginary Gun test/spec21a1 pushed/readback clean; first60 normal-capacity checks started no build, not RED. [Toy boundaries](systems/toys.md#imaginary-gun-companion-visual-boundary-2026-10-22).
+
+## 2026-10-22 — Imaginary Gun companion visual source/fixture
+
+[Toys](systems/toys.md#imaginary-gun-companion-visual-boundary-2026-10-22):163705/279843 source150 companion aura10s/item recovery180s. Caster1074 and target1669/ANIM_DEATH1 are authored visual bindings,not invented gameplay death.61rows29tables complete animation/sound/fallback metadata plus8root/item/clock snapshots;actual-journal/physical-learning/UseToy tests added,RED pending. Lead accepts natural expiry;TC companion PetCancelAura refusal remains source-only/unqualified,no protocol edit. No implementation/admission/native playback claim. PriorCritterct944 landed452b49b78 independently ancestry-verified/branch cleaned;target74d23 queuedtg967 owns check/format and localcheck cancelled explicitly.
 ## 2026-10-22 — Native pet diagnostic history
 
 [Pet samples](systems/dungeon-simulator.md#pet-diagnostic-history-2026-10-22): realpet/Death/evade/despawn RED12.76s→4baGREEN11.66s.0.5s samples/terminal nowretainnativepetidentity,HP/position/refs/threatandrelatedopponentresetstates,includingzero-threatacquisitionandexplicitunavailablevaluesafterdespawn. Diagnostic-only, noAI/heal/threatmutation. Retainedabort/export+summary2PASS; single seed7capturequeued, notReliability.
@@ -183,6 +194,10 @@ Native BM10 passes at4f88 (16.25s): initial75, exact2s cadence, ordinary retarge
 ## 2026-10-22 — Treemouth non-Mythic partial
 
 [Treemouth](systems/boss-scripts.md#treemouth-non-mythic-partial--2026-10-22): ignored firstWhip/Spit/reset RED before source3lanes/namedlowerhold policy. Post-master5c2efe459 native4GREEN48.84s Normal1/projectedFollower205, real cone damage/native-home/reset/copy-credit/corpse; stable-key SQL fresh-copy receipt. Energy/Consume/slime/selector context remains gaps, no whole-fight/publication claim.
+
+## 2026-10-22 — Gulping Goliath native partial
+
+[Goliath](systems/boss-scripts.md#gulping-goliath-native-partial--2026-10-22): ignorednativeRED→3GREEN/1GulpRED; actual18.1InvalidTarget from EXCLUDE_CASTER selftarget, ordinaryno-explicitAOE fixes exactlane1GREEN25.90s. Composite4scopes Normal1/projected205: actualCroak/Toxicchilddamage,82s twofourlanecompletions/reset/realcopycredit/corpse. SourceSwog/Hangry/selector gaps and stable-key SQLreceipt retained; publicationlead-owned.
 
 ## 2026-10-22 — Class4 zone-only ingress
 
@@ -3993,3 +4008,7 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 ## 2026-10-22 — Brackenhide source-floor packet
 
 [Six boss placements](investigations/follower-data.md#brackenhide-source-floors-and-route-gaps--2026-10-22): exact source marker/floor transforms and own TDB stats; authored WMO group bounds disambiguate Wratheye from outdoor roofs without supplying Z. Actual missing-six RED→six-primary GREEN, replay3×; three route gaps remain separate. No unsupported War-band offsets, canonical writes or dungeon-clear claim.
+
+- 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22): native child effectiveness/removal/Echo GREEN; real long-flight HIT-timing and three-target Chain RED. Per-hit correction and native45297 mapping committed; GREEN pending.
+
+- 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22) HIT/Chain correction5GREEN10.43s; actual StatsPlugin70samples2PASS9.38s on same executable. Three qualified tests enabled; fullAPL/resource/other-root gaps retained.

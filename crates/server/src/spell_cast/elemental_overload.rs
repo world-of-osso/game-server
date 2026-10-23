@@ -8,7 +8,9 @@ use crate::spell_info::SpellInfo;
 const MASTERY: u32 = 168534;
 const STORMKEEPER: u32 = 191634;
 const LIGHTNING_BOLT: u32 = 188196;
+const CHAIN_LIGHTNING: u32 = 188443;
 pub(super) const LIGHTNING_OVERLOAD: u32 = 45284;
+pub(super) const CHAIN_OVERLOAD: u32 = 45297;
 const OVERLOAD_DELAY_MS: u32 = 400;
 
 fn mastery_amount(world: &World, caster: Entity, index: u8) -> Option<f32> {
@@ -30,22 +32,21 @@ fn stormkeeper_modified_cast(spell: &SpellInfo) -> bool {
         .any(|modifier| modifier.aura_spell_id == STORMKEEPER)
 }
 
-/// The already matched launch snapshot proves SK actually modified this cast.
-/// The live aura can disappear when its charge is consumed after this boundary.
-pub(super) fn after_cast(
-    world: &mut World,
-    caster: Entity,
-    spell: &SpellInfo,
-    target: Option<Entity>,
-) {
-    if spell.id != LIGHTNING_BOLT {
-        return;
-    }
+/// TDB168534 phase2 is HIT: roll once per landed target, then wait400ms.
+/// The retained launch snapshot proves SK matched even after charge consumption.
+pub(super) fn after_hit(world: &mut World, caster: Entity, spell: &SpellInfo, target: Entity) {
+    let overload = match spell.id {
+        LIGHTNING_BOLT => LIGHTNING_OVERLOAD,
+        CHAIN_LIGHTNING => CHAIN_OVERLOAD,
+        _ => return,
+    };
     let Some(chance) = mastery_amount(world, caster, 0) else {
         return;
     };
-    let Some(target) = target else {
-        return;
+    let chance = if spell.id == CHAIN_LIGHTNING {
+        chance / 3.0
+    } else {
+        chance
     };
     let guaranteed = stormkeeper_modified_cast(spell);
     if !guaranteed && crate::random::random::<f32>() * 100.0 >= chance {
@@ -58,13 +59,7 @@ pub(super) fn after_cast(
         dest: None,
         chain_multiplier: 1.0,
     };
-    super::queued_triggers::schedule_normal_cast(
-        world,
-        &ctx,
-        target,
-        LIGHTNING_OVERLOAD,
-        OVERLOAD_DELAY_MS,
-    );
+    super::queued_triggers::schedule_normal_cast(world, &ctx, target, overload, OVERLOAD_DELAY_MS);
 }
 
 /// TC reads the current native effect1 amount, including its authored modifiers.
