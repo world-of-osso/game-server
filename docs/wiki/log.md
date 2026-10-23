@@ -1,3 +1,7 @@
+## 2026-10-23 — Intensifying Flame tick bridge
+
+[Native-value bridge](systems/auras.md#intensifying-flame-tick-bridge--2026-10-23): approved `FIRE_INTENSIFYING_FLAME_SIMC_TICK_BRIDGE` passes actual base amounts at the tick boundary before expiry, preserving native416714 cap/percentage/chance/mask and419800 damage data. Natural one/three-target and final-tick3RED; four-target fixture prerequisite and GREEN remain pending. Both-ID Flamestrike consumers landed separately through lead fs982.
+
 ## 2026-10-22 — Active party combat references
 
 ## 2026-10-22 — Meteor admission, impact and TC cast boundary

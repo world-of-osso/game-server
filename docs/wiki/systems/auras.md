@@ -1,10 +1,18 @@
 # Auras
 
+## Intensifying Flame tick bridge — 2026-10-23
+
+`FIRE_INTENSIFYING_FLAME_SIMC_TICK_BRIDGE` connects actual Ignite12654 effect0 ticks to native419800. SimC76f8118 `sc_mage.cpp2502–2567` supplies this missing bridge; TC a352b1fa has no named script and DB2 has no child trigger. Active416714 supplies the native owner-local target cap, percentage, chance and periodic mask. Its current70448 row has cap3, percentage30, chance101 and no ICD, charges or RPPM. The leaf's coefficient and flags remain native; SimC damage-flag overrides are not imported. [Contract](../../specs/auras.md#intensifying-flame).
+
+The periodic-damage boundary passes the actual base tick amount directly to the bridge, before `update_auras` removes expired auras. Deferred `process_aura_events` runs after expiry and cannot recover the final tick's base amount from live aura state. Counting living targets with this caster's actual Ignite also excludes other owners. No new `AuraEvent` fields, kit changes or talent grants.
+
+Ignored native a996 tests produce three genuine REDs: ordinary one/three-target ticks emit no419800, and natural expiry records all nine Ignite ticks but zero children. The four-target cap control currently has a separate native fixture prerequisite failure; GREEN is pending. Sources: `auras/ignite.rs`, `auras/periodic.rs`, `followers/intensifying_flame_tests.rs`; receipts under engine `data/diagnostics/rotation-fidelity-2026-10-21/`.
+
 ## Pyroclasm Hot Streak policy — 2026-10-21
 
 `MAGE_PYROCLASM_SIMC_HOT_STREAK_TRIGGER` extends the existing Hot Streak cast-boundary hook, not generic proc masks. A true admitted48108 consumption rolls active269650 effect0 (native15%) and casts269651 with its native duration/two-stack cap. SimC76f8118 `sc_mage.cpp2326–2428,6444–6446` supplies the policy; pinned TC has no script and native269650 is DUMMY4 without proc options or a trigger. Native269651's230% value wins over reference numbers.
 
-The ordinary per-cast clone records whether admission had positive cast time. At launch, eligible11366/1254851 hardcasts retain one269651 effect0 percentage in the existing numeric modifier snapshot; after launch they spend one stack through the native stack-loss path without refreshing its timer. This preserves damage after consumption and through missiles, and excludes instant casts even if buff state changes during an in-flight hardcast. Hot Streak consumption remains tied to the exact admitted instance. Native RED reproduced64 HS spends without a proc and two retained stacks after a hardcast; corrected instant-control oracle accounts for real crit outcomes/authored variance rather than assuming identical RNG. Four enabled native cases pass within the13-case first-batch GREEN at2ba4ec43a (22.04s); final integration checks pass at5368e1070. [Contract](../../specs/auras.md#pyroclasm-hot-streak-policy); tests `followers/pyroclasm_tests.rs`.
+The ordinary per-cast clone records whether admission had positive cast time. At launch, eligible11366/2120/1254851 hardcasts retain one269651 effect0 percentage in the existing numeric modifier snapshot; after launch they spend one stack through the native stack-loss path without refreshing its timer. This preserves damage after consumption and through missiles, and excludes instant casts even if buff state changes during an in-flight hardcast. Hot Streak consumption remains tied to the exact admitted instance. Native RED reproduced64 HS spends without a proc and two retained stacks after a hardcast; corrected instant-control oracle accounts for real crit outcomes/authored variance rather than assuming identical RNG. Four enabled native cases pass within the13-case first-batch GREEN at2ba4ec43a (22.04s); final integration checks pass at5368e1070. [Contract](../../specs/auras.md#pyroclasm-hot-streak-policy); tests `followers/pyroclasm_tests.rs`.
 
 ## RPPM haste modifiers — 2026-10-21
 
