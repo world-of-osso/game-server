@@ -32,6 +32,8 @@ pub(crate) mod auto_repeat;
 #[cfg(test)]
 mod auto_shot_repeat_tests;
 #[cfg(test)]
+mod hit_positivity_tests;
+#[cfg(test)]
 pub(crate) mod holy_metrics;
 #[cfg(test)]
 mod holy_words_tests;
@@ -3184,6 +3186,19 @@ pub(crate) fn record_hit_heal(
     true
 }
 
+/// TC a352b1fa Spell.cpp:2854–2867 checks only effects that landed on this unit.
+fn has_negative_hit_effects(
+    store: &SpellStore,
+    spell: &SpellInfo,
+    plan: &TargetPlan,
+    target: Entity,
+) -> bool {
+    let negative = crate::spell_info::positivity::negative_effects(store, spell);
+    plan.iter()
+        .filter(|planned| planned.units.contains(&target))
+        .any(|planned| negative & (1 << spell.effects[planned.index].index) != 0)
+}
+
 /// One proc event per distinct unit the spell landed on, with the direct damage it
 /// took (TAKE_ANY_DAMAGE when above 0); damage to a unit outside the plan gets a
 /// damage-only event.
@@ -3230,9 +3245,21 @@ fn push_hit_events(
                 crate::stand_state::stand_on_hostile_spell(world, target, attributes(spell, 3));
             }
         }
-        let harmful = targets::is_hostile(world, caster, target);
-        let (actor_mask, mut target_mask) = procs::spell_hit_masks(spell, harmful);
         let damage = damage_to(target);
+        let heal = healing
+            .iter()
+            .find(|(unit, _)| *unit == target)
+            .map(|(_, amount)| *amount);
+        // TC a352b1fa Spell.cpp:2849–2871: damage wins, then healing,
+        // otherwise landed effect positivity. Neutral attackable units are not friendly hits.
+        let harmful = if damage > 0.0 {
+            true
+        } else if heal.is_some_and(|amount| amount > 0.0) {
+            false
+        } else {
+            has_negative_hit_effects(world.resource::<SpellStore>(), spell, plan, target)
+        };
+        let (actor_mask, mut target_mask) = procs::spell_hit_masks(spell, harmful);
         if damage > 0.0 {
             target_mask |= procs::PROC_TAKE_ANY_DAMAGE;
         }
@@ -3248,10 +3275,7 @@ fn push_hit_events(
                 cast_used_proc_modifier: !spell.cast_proc_mods.is_empty(),
                 periodic: false,
                 damage,
-                heal: healing
-                    .iter()
-                    .find(|(unit, _)| *unit == target)
-                    .map(|(_, amount)| *amount),
+                heal,
                 reflected: false,
             },
         );

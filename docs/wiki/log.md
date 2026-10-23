@@ -1,6 +1,9 @@
 ## 2026-10-23 — Native Player literal target/request boundary
 
 [Shared execution](systems/simc-apl.md#shared-literal-fixture-machinery): actual Human casts with pinned269 gear/traits reproduce1WW controlPASS/6assertionRED at4f91688e8 (34.94s runtime). Readiness now keyed by action/target; harmful precasts read native selection; Player delivery uses normal explicit-target requests and refuses expired targets. Retarget changes only the running AA victim, not selection/timers. Creature delivery retained. GREEN pending; setup-only Position field compile error is not RED evidence. No numeric or DPS qualification claim.
+## 2026-10-23 — Hit positivity independent of factions
+
+[Hit classification](systems/auras.md#hit-positivity-independent-of-factions--2026-10-23): test-only6d5d7026a genuine1PASS/1FAIL10.43s, native16166 harmful proc absent against attackable neutral faction7 after actual damage; friendly2061→36483 control passes. Spell_cast now uses TC damage/heal/landed-effect positivity, not faction hostility; GREEN pending, no proc import or parity certification.
 
 ## 2026-10-23 — Binary probe withdraws inherited-run-target oracle
 
@@ -4159,3 +4162,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 - [Lava crit ownership](investigations/follower-data.md#lava-caster-owned-flame-shock-crit-rule): approved own/foreign native285452/2854662PASS2RED9.13s. Shared predicate now requires actual aura caster and registers both payloads; no other crit/modifier/resource edits. GREEN pending on lv991-based branch.
 
 - [Lava crit ownership](investigations/follower-data.md#lava-caster-owned-flame-shock-crit-rule):4GREEN13.43s/zero warnings after2nativeRED; samebinary retained root2GREEN10.03s +actualStatsPlugin70samples2PASS12.42s. Observed285466crits5/5; cases enabled. No other crit edits or causal-DPS/parity claim.
+
+- 2026-10-23: Demonology266 reference reproduction and recursive owner/Felguard/summon census; private canonical-copy missing guardian publications recorded in [[demonology-dps-parity]]. Native baseline and parity remain open.
