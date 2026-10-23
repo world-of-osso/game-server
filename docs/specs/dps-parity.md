@@ -31,6 +31,14 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [ ] Hunter pet ability damage inherits the same integer22% owner total RAP source as melee, including equipped weapon AP; native1264355 damage qualifies the actual effect boundary before the shared input changes. Ability coefficients/variance and native target geometry stay unchanged.
 - [ ] Intrinsic pet AP/weapon damage remains an explicit unqualified gap; do not invent pet_levelstats or import TC's fake primary stats/approximate weapon range. SimC stable_pet60% ownerAP is named divergence `HUNTER_PET_SIMC_OWNER_AP_DIFF`, not mixed with TC22% RAP. Contribution proofs do not certify total pet DPS or Azure survival.
 
+### Literal precombat execution
+
+- [ ] Explicit literal controller handoff occurs before any native setup/warmup frames. Nonliteral fixtures retain native kit behavior; literal fixtures cannot acquire kit-cast precombat auras absent from their APL. Never delete those auras afterward to conceal a late handoff.
+- [ ] Execute precombat once in source order: eligible nonharmful actions and at most the first ready harmful action, following pinned player.cpp6138–6183. It is not a repeating priority scan. Preserve WW snapshot/item behavior.
+- [ ] Run native cast completion and GCD progression out of combat before explicit fixture CombatRefs engagement and the measured300s clock; Prowl5215 must meet native OOC readiness. No FULL_MASK, cast-time skips, resource resets or grants.
+- [ ] Initialize profile-declared class start pools/default pet before precombat, using native pool units and configured profile values. Current pinned Warlock profiles declare soul_shards0 and sayaad/felguard/imp. Precasts build resources naturally; summon_pet runs once and no-ops when the requested native pet already exists. Demo's Felguard must exist at pull.
+- [ ] Harmful precasts use the shared target-aware Prepared enemy seam, preserving exact selected identities and normal cast permission. Pool_resource uses the GREEN readiness-only requested-pool query, never live resource mutation.
+
 ### Measurement
 
 Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` clears explicit raid events for Patchwerk after parsing. The opt-in CLI integration test must observe three actual targets and an adds event; argument-string checks alone did not detect this failure.

@@ -8,6 +8,7 @@ mod pet_melee_tests;
 mod pet_stats_tests;
 mod player_rotation;
 mod power_tests;
+mod precombat_tests;
 mod report;
 mod windwalker_rotation;
 use bevy::prelude::*;
@@ -99,6 +100,19 @@ fn prepare(spec_id: u32, count: usize) -> Result<Run, String> {
     let (profile, traits) = read_reference(spec_id)?;
     let identity = inputs::read_actor(&profile)?;
     prepare_reference(profile, &traits, count, identity)
+}
+
+/// Explicit literal fixture entry. RED scaffold retains the existing late handoff;
+/// the precombat implementation must capture before prepare_reference's warmup.
+fn prepare_literal(spec_id: u32, count: usize) -> Result<Run, String> {
+    let mut run = prepare(spec_id, count)?;
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: f64::from(TICKS) / 20.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter)?;
+    Ok(run)
 }
 
 fn prepare_reference(
