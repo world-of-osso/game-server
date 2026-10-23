@@ -446,6 +446,7 @@ fn dps_parity_fixture_add_health_and_ttd_follow_each_summon_lifetime() {
     };
     let bindings = Bindings::default();
     let mut seen = [false; 10];
+    let mut gaps = [false; 9];
     let mut errors = Vec::new();
     let (seconds, _, _) = advance_combat_observed(&mut run, |run| {
         let elapsed = crate::spell_cast::now(run.app.world()) - started_at;
@@ -456,6 +457,7 @@ fn dps_parity_fixture_add_health_and_ttd_follow_each_summon_lifetime() {
         }
         let age = millis % 30_010;
         if age >= 30_000 {
+            gaps[wave] = true;
             if run.targets.len() != 1 {
                 errors.push(format!(
                     "{elapsed}s: expected absent adds, got{} targets",
@@ -537,6 +539,10 @@ fn dps_parity_fixture_add_health_and_ttd_follow_each_summon_lifetime() {
         "all10 waves must actually be observed"
     );
     assert!(errors.is_empty(), "{}", errors.join("\n"));
+    assert!(
+        gaps.into_iter().all(|seen| seen),
+        "all9 actual10ms absent windows must be observed"
+    );
 }
 
 #[test]
