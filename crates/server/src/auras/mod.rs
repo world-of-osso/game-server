@@ -55,6 +55,8 @@ mod natures_guardian;
 #[cfg(test)]
 pub(crate) mod observations;
 mod periodic;
+#[cfg(test)]
+mod point_mod_tests;
 pub(crate) mod power_amount_trigger;
 #[cfg(test)]
 mod proc_mask_tests;

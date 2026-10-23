@@ -2,6 +2,10 @@
 
 Server-side aura runtime in `crates/server/src/auras/`: aura instances on active units, periodic effects, procs, spell and stat modifiers, removal and `UnitAuras` replication. See [auras](../wiki/systems/auras.md).
 
+## Label point modifiers on existing auras
+
+Native aura218/219 point modifiers must update affected self-owned passive/permanent aura effect amounts on add, change and removal, independent of application order. Use native labels and Points/PointsIndex0–4; charged modifiers must not recalculate passive amounts, and the triggering effect cannot modify itself. Preserve the target aura instance, duration, stacks and periodic phase. Native WW1258122 makes Efficient Training450989 effects0/1 equal40 instead of20; native Ret1258011 makes Second Sunrise431474 equal20/50 instead of15/30. Unlearning restores unmodified amounts without reapplying the target. TC a352b1fa `SpellAuraEffects.cpp1194–1249`; [source census/proof](../handoffs/aura-label-points-proof-ledger.md).
+
 ## Native hit proc masks
 
 TC a352b1fa `Spell.cpp:2343–2400`: melee/ranged defense classes keep their
