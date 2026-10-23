@@ -66,10 +66,10 @@
     "sources": ["engine/class_modules/priest/sc_priest.cpp#L370-L411", "engine/class_modules/priest/sc_priest_shadow.cpp#L1507-L1512"]
   },
   "263:lightning_bolt_ti": {
-    "actions": ["windfury_weapon", "flametongue_weapon", "auto_attack", "ascendance", "windstrike", "stormstrike", "voltaic_blaze", "lightning_bolt,if=buff.maelstrom_weapon.stack>=10"],
+    "actions": ["windfury_weapon,if=!buff.windfury_weapon.up", "flametongue_weapon,if=!buff.flametongue_weapon.up", "auto_attack", "ascendance", "windstrike", "stormstrike", "voltaic_blaze", "lightning_bolt,if=buff.maelstrom_weapon.stack>=10"],
     "time": 120,
-    "prerequisite": "Prime the profile's weapon imbues and use Ascendance/Windstrike: selected Ascendance disables the ordinary Doom Winds button, while Windstrike invokes Thorim with available Maelstrom Weapon stacks.",
-    "sources": ["profiles/MID2/MID2_Shaman_Enhancement.simc#L25-L26", "engine/class_modules/sc_shaman.cpp#L5683-L5688", "engine/class_modules/sc_shaman.cpp#L8823-L8868", "engine/class_modules/sc_shaman.cpp#L12554-L12579"]
+    "prerequisite": "Prime the profile's weapon imbues once while their actual buffs are absent (unguarded imbues remain ready and starve the APL), then use Ascendance/Windstrike: selected Ascendance disables the ordinary Doom Winds button; Windstrike invokes Thorim with available Maelstrom Weapon stacks.",
+    "sources": ["profiles/MID2/MID2_Shaman_Enhancement.simc#L25-L26", "engine/class_modules/sc_shaman.cpp#L5683-L5688", "engine/class_modules/sc_shaman.cpp#L5809-L5843", "engine/class_modules/sc_shaman.cpp#L8823-L8868", "engine/class_modules/sc_shaman.cpp#L12554-L12579"]
   },
   "263:tempest": {
     "actions": ["auto_attack", "tempest", "doom_winds", "stormstrike", "voltaic_blaze", "lightning_bolt,if=buff.maelstrom_weapon.stack>=10"],
