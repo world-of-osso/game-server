@@ -13,6 +13,7 @@ The standing healer benchmark replays recorded dungeon incoming hits in the head
 - [ ] Retain the native damage-meter consumed-point convention, not normalized prevented HP. Record each hit's native level-scaling factor and unit/non-unit counts; retain ABSORB_POINTS_VS_PREVENTED_HP_LEVEL_SCALING for non-unit cases and report their share of consumed points. If all captured hits are unit scale, explicitly mark the gap moot with the count. Do not add a wider prevented-HP observer.
 - [ ] Prove extraction with a concrete200-raw/150-effective/50-overheal3s fight and repeatability with identical intake.
 - [ ] Keep core-heal coefficient and native per-cast amount checks against DB2 and TrinityCore, separately from dungeon-policy performance.
+- [x] Preserve authenticated same-class source identities and native class/spec pairing in approved benchmark-only alternate configurations; absent available policy refuses before party spawn without modifying the source roster.16 targeted controls pass at5ed84c223,195.63s; this is configuration/blocked-policy proof, not five new executed healer actors.
 
 ## How it works
 
