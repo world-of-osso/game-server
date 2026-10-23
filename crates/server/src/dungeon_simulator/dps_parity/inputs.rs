@@ -165,6 +165,10 @@ pub(super) fn install_reference_catalogs(app: &mut App) -> Result<(), String> {
     let native = load_native_catalogs(&db)?;
     app.insert_resource(native);
     app.insert_resource(
+        crate::item_proc_data::load(&db)
+            .map_err(|error| format!("load private native equipped-producer inputs: {error}"))?,
+    );
+    app.insert_resource(
         crate::item_templates::load_item_templates(&path).map_err(|error| error.to_string())?,
     );
     app.insert_resource(
