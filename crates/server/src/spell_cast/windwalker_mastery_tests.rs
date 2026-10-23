@@ -49,6 +49,7 @@ fn cast_native(h: &mut Harness, caster: Entity, spell: u32, target: Entity) {
             Err(
                 CastFailure::OnGlobalCooldown
                 | CastFailure::OnCooldown
+                | CastFailure::NoCharges
                 | CastFailure::InProgress
                 | CastFailure::NotEnoughPower(_),
             ) => h.advance(1),
@@ -137,6 +138,11 @@ fn dps_parity_windwalker_sunfire_spiral_empowers_actual_combo_rsk_only() {
         "native learned Sunfire Spiral"
     );
     let target = h.npc;
+    // Ordinary melee keeps native combat/Chi alive while RSK's charge recharges.
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(crate::combat::AutoAttack::new(target));
     for _ in 0..12 {
         let chi = crate::spell_cast::powers::power_value(
             h.app.world(),
