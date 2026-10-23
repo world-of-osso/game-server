@@ -19,6 +19,7 @@ The whole server test suite must retain every discovered case and existing ignor
 ### Immutable fixture inputs
 
 - [x] Reuse decoded immutable definitions without querying SQLite again for the same database path and content.
+- [x] Reuse complete read-only Disenchant eligibility and loot/reference definitions through the existing test-only catalog cache; fresh App resources remain independently mutable. Writable readers observe uncommitted changes, changed source content loads new values, and production loading remains uncached.
 - [x] Permit one source reader to supply concurrent Apps; do not serialize repeated database decoding behind a shared global lock.
 - [x] Prepared-input keys initialize independently: a gated initializer must not block another key, while concurrent readers of one key publish exactly one completed value and install independent App resources. Snapshot bytes and native fixture steps remain unchanged.
 - [x] Keep prepared paths distinct from canonical authority, even when initial bytes match; changed content at the same path must load the changed definitions.
@@ -43,6 +44,7 @@ The whole server test suite must retain every discovered case and existing ignor
 ## Tests asserting this spec
 
 - `crates/server/src/test_data/catalog_cache_tests.rs` — immutable input reuse, concurrent read capability and path/content isolation.
+- `crates/server/src/spell_cast/disenchant_cache_tests.rs` — revoked read capability across connections, complete App-local resource edits, writable uncommitted state and changed readonly source values.
 - `crates/server/src/test_data.rs` — existing live-App catalog/creature/prepared-source isolation.
 - `crates/server/src/scripted_ai/tests/prepared_input_concurrency_tests.rs` — distinct-key progress, same-key once initialization, warm reuse and independent installed resources.
 - `crates/server/src/test_data/catalog_data_tests.rs` — local edits/iteration and serialized collection values.

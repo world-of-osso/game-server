@@ -26,6 +26,7 @@ struct Eligibility {
     skill: u16,
 }
 
+#[cfg_attr(test, derive(Clone))]
 #[derive(Resource, Default)]
 pub(crate) struct DisenchantData {
     items: HashMap<u32, Eligibility>,
@@ -33,6 +34,17 @@ pub(crate) struct DisenchantData {
 }
 
 pub(crate) fn load_data(conn: &rusqlite::Connection) -> rusqlite::Result<DisenchantData> {
+    #[cfg(test)]
+    {
+        crate::test_data::catalog_cache::load_connection(conn, || read_data(conn))
+    }
+    #[cfg(not(test))]
+    {
+        read_data(conn)
+    }
+}
+
+fn read_data(conn: &rusqlite::Connection) -> rusqlite::Result<DisenchantData> {
     // Flags0: CONJURED=2, NO_DISENCHANT=0x8000. Never use legacy DisenchantID.
     let mut stmt = conn.prepare(
         "SELECT c.ID, d.ID, d.SkillRequired
