@@ -186,9 +186,28 @@ fn encounter_coverage_kargath_native_blade_dance_damage_qualifies() {
     let (mut h, boss, _) = kargath_copy(1);
     stand_near_kargath(&mut h, boss);
     let player = h.player();
+    h.app
+        .insert_resource(crate::spell_cast::test_harness::ObservedCombatEvents::default());
+    let health_before = h.health(player);
     crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30739, Some(boss), false)
         .expect("ordinary native Blade Dance");
     h.advance(0.2);
+    let actual_events: Vec<_> = h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| event.spell_id == Some(30739))
+        .collect();
+    eprintln!(
+        "Kargath30739 actual={actual_events:?}; gos={:?}; cast={:?}; boss_pos={:?}; player_pos={:?}; player_health={health_before:?}->{:?}",
+        spell_gos(&h, boss, 30739),
+        h.app.world().get::<shared::casting::CastState>(boss),
+        h.app.world().get::<Position>(boss),
+        h.app.world().get::<Position>(player),
+        h.health(player)
+    );
     assert!(
         h.inbox(0)
             .log
