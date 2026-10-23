@@ -89,6 +89,7 @@ impl Navigation {
             .map(|route| route.partial_endpoints.clone())
             .unwrap_or_default();
         let mut complete = false;
+        let mut collision_drop = None;
         let points = match result {
             Ok(None) => {
                 if self.unbaked.insert(request.map_id) {
@@ -102,10 +103,14 @@ impl Navigation {
                 self.routes.remove(&entity);
                 return;
             }
-            Ok(Some(Output::Path(path))) => {
+            Ok(Some(Output::Path(mut path))) => {
                 complete = path.complete;
-                remember_partial_endpoint(&path, &mut partial_endpoints)
-                    .map(|()| Corners::new(path.points))
+                let progress = remember_partial_endpoint(&path, &mut partial_endpoints);
+                collision_drop = path.collision_drop.take();
+                if let Some(drop) = &collision_drop {
+                    path.points.truncate(drop.after_corner + 1);
+                }
+                progress.map(|()| Corners::new(path.points))
             }
             Ok(Some(_)) => Err("navigation route returned a non-path result".into()),
             Err(error) => Err(error),
@@ -126,6 +131,7 @@ impl Navigation {
                 expected_from: point(request.from),
                 reach: request.reach,
                 path: points,
+                collision_drop,
                 complete,
                 partial_endpoint_reached: false,
                 partial_endpoints,
@@ -169,6 +175,7 @@ impl Navigation {
             Ok(Some(Output::Path(::navigation::NavigationPath {
                 points,
                 complete: true,
+                collision_drop: None,
             }))),
         );
     }
@@ -218,9 +225,20 @@ impl Navigation {
             route.reach = request.reach;
         }
         let complete = route.complete;
-        let reach = if complete { route.reach } else { 0.0 };
+        let reach = if complete && route.collision_drop.is_none() {
+            route.reach
+        } else {
+            0.0
+        };
         let (next, reached) = corners.advance(from, request.distance, reach, route.last_target);
         route.expected_from = next;
+        if reached && let Some(drop) = route.collision_drop.take() {
+            self.drop_requests.insert(entity, (request.map_id, drop));
+            return Step::Moved {
+                position: position(next),
+                reached: false,
+            };
+        }
         route.partial_endpoint_reached = reached && !complete;
         if pending || route.partial_endpoint_reached {
             if pending && next == from {
