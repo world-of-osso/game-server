@@ -4,6 +4,9 @@ use bevy::prelude::*;
 use shared::components::Position;
 use shared::protocol::{CombatLogKind, EquipmentSlot};
 
+#[path = "protection_item_tests.rs"]
+mod items;
+
 const REND: u32 = 772;
 const REND_BLEED: u32 = 388_539;
 const THUNDER_CLAP: u32 = 6343;

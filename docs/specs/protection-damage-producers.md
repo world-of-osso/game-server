@@ -27,7 +27,7 @@ Restore the missing spec73 producer channels identified by `game-engine/data/dia
 |Shield Charge chain|Native movement/landing/area/stun qualified|13906f459 PASS with sourced display/reach/template metadata; valid RED59677be35 retained|
 |Whirling Blade/Ravager|Native-RPPM producer, sourced4s lifetime and timed damage/expiry qualified|1ba8cc854:2PASS13.14s; native Ravager RED5e69c75db and updated Whirling RED542fec1aa retained|
 |Phalanx/Bloody Rebuke|Phalanx four native cases qualified; Bloody Rebuke missing|5e69c75db produces1278009 but fails consumption; absence and foreign-buff controls pass; 7327a4c03 non-Clap actual-hit RED0PASS/1FAIL47.10s: Shield Slam wrongly produces the buff; Bloody Rebuke RED pending|
-|Guillotine/Venomfang|Equipped driver lifecycle exists; damage producers missing|RED pending|
+|Guillotine/Venomfang|Equipped driver lifecycle exists; damage producers missing|Ignored actual219-level270173 equip/base-child and catalog/unequip controls committed; RED execution pending; Venomfang pending|
 
 ### First TC producer receipts
 
