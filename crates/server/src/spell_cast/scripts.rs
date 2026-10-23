@@ -31,6 +31,8 @@ mod empower_evoker;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
+mod giantkiller;
+pub(super) use giantkiller::multiplier as giantkiller_multiplier;
 pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
@@ -49,7 +51,8 @@ mod windwalker;
 mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
 pub(crate) use windwalker::{
-    DANCE_OF_CHIJI, after_dance_cast_event, check_dance_proc, ordinary_combo_cast,
+    DANCE_OF_CHIJI, after_dance_cast_event, check_dance_proc, combo_strikes_multiplier,
+    ordinary_combo_cast,
 };
 
 pub(super) use batch9::update_ground_pulses;
@@ -333,7 +336,6 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch10::FERAL_LUNGE, 0) => Some(batch10::bite_lunge),
         (batch10::PROTECTION_JUDGMENT, 0) => Some(batch10::energize_judgment),
         (batch10::HAND_OF_GULDAN, 0) => Some(batch10::launch_guldan_meteor),
-        (batch10::LIGHTNING_BOLT, 0) => Some(batch10::energize_lightning_bolt),
         (batch9::WINTER_DAMAGE, 0) => Some(batch9::slow_winter_hit),
         (batch9::SCOURGE_STRIKE, 0) => Some(scourge_strike::erupt_and_apply_missing),
         (batch9::RADIANCE, 1) => Some(batch9::apply_radiance_atonement),
@@ -360,7 +362,6 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch5::EPIDEMIC, 0) => Some(batch5::epidemic),
         (batch4::RENEWING_MIST_CAST, 0) => Some(batch4::renewing_mist),
         (batch4::STEADY_SHOT, 0) => Some(batch4::steady_shot),
-        (batch4::CHAIN_LIGHTNING, 0) => Some(batch4::chain_lightning),
         (batch4::HOWLING_BLAST, 0) => Some(batch4::howling_blast),
         (batch3::MOONFIRE, 0) => Some(batch3::moonfire),
         (batch3::THUNDER_CLAP, 0) => Some(batch3::thunder_clap),
@@ -418,7 +419,9 @@ pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32)
         batch3::SCORCH => batch3::scorch_crit(world, caster, target),
         batch12::GARGOYLE_STRIKE => batch12::gargoyle_crit(world, caster),
         FIRE_BLAST | batch5::CHAOS_BOLT | voltaic_blaze::DAMAGE => Some(100.0),
-        batch5::LAVA_BURST_DAMAGE => batch5::lava_burst_crit(world, target),
+        batch5::LAVA_BURST_DAMAGE | super::elemental_overload::LAVA_OVERLOAD_DAMAGE => {
+            batch5::lava_burst_crit(world, caster, target)
+        }
         _ => None,
     }
 }

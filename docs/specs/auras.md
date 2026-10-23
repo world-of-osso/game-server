@@ -4,6 +4,11 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on active
 
 ## Native hit proc masks
 
+- [ ] Classify each landed hit by TC damage/healing/effect positivity, not faction relation: positive damage is harmful; otherwise positive healing is helpful; otherwise inspect only effects landing on that recipient.
+- [ ] Native harmful-hit procs must work against neutral attackable faction7 (training dummy31146); friendly2061 healing must preserve native36488→36483 helpful eligibility.
+
+Behavioral fixtures: `crates/server/src/spell_cast/hit_positivity_tests.rs`.
+
 TC a352b1fa `Spell.cpp:2343–2400`: melee/ranged defense classes keep their
 weapon ability masks. Other spells select helpful/harmful periodic masks for
 native Attr3 TreatAsPeriodic, else ability masks for Attr0 IsAbility, else spell
@@ -108,7 +113,9 @@ Actual168534 effect0 supplies the Lightning Bolt188196→45284 and Lava Burst515
 
 Elemental Blast117014→120588 and Icefury210714→219271 use the same native Mastery chance and post-hit400ms normal cast, retaining native child cast time, flight and costs. These are cast-mechanism-only: the selected level70 kit does not know117014/210714, and this contract does not grant either or change that kit's action policy.
 
-The actual168534 effect1 amount scales45284/45297/285466/120588/219271 damage at impact, retaining native modifiers and normal crit/mitigation/rounding. Native382032 Echo Chamber is already108/PointsIndex1 in the aura calculation; do not substitute an invented flat coefficient from historical tooltip wording. Elemental Blast/Icefury selected-kit policy, Lava-specific Flame Shock crit behavior, Ascendance extra overloads, full proc-table import and resource scripts remain uncertified. Mastery-point coefficient production remains the existing separate stat consumer.
+The actual168534 effect1 amount scales45284/45297/285466/120588/219271 damage at impact, retaining native modifiers and normal crit/mitigation/rounding. Native382032 Echo Chamber is already108/PointsIndex1 in the aura calculation; do not substitute an invented flat coefficient from historical tooltip wording. Elemental Blast/Icefury selected-kit policy, Ascendance extra overloads, full proc-table import and resource scripts remain uncertified. Mastery-point coefficient production remains the existing separate stat consumer.
+
+Lava damage285452 and Overload damage285466 share one caster-owned188389 Flame Shock crit rule (TC a352b1fa `spell_shaman.cpp:1735–1763`). Own Flame Shock supplies100% before existing crit modifiers; a foreign caster's Flame Shock does not override ordinary crit chance. Existing crit modifiers, damage scaling and resources remain unchanged.
 
 ## Inundate utility-cast resource policy
 

@@ -32,6 +32,8 @@ pub(crate) mod auto_repeat;
 #[cfg(test)]
 mod auto_shot_repeat_tests;
 #[cfg(test)]
+mod hit_positivity_tests;
+#[cfg(test)]
 pub(crate) mod holy_metrics;
 #[cfg(test)]
 mod holy_words_tests;
@@ -164,6 +166,7 @@ mod dummy9_tests;
 mod dummy_tests;
 pub mod effects;
 pub(crate) mod efflorescence;
+mod elemental_resource;
 mod empower;
 #[cfg(test)]
 mod empower_input_tests;
@@ -189,6 +192,8 @@ mod impending_victory_tests;
 mod interruptibility;
 #[cfg(test)]
 mod invigorating_fury_tests;
+#[cfg(test)]
+pub(crate) mod native_apl;
 #[cfg(test)]
 mod periodic_healing_taken_tests;
 mod sanctuary;
@@ -704,6 +709,14 @@ impl SpellHistory {
             .map(|(spell, _)| spell)
     }
 
+    #[cfg(test)]
+    pub(crate) fn last_successful_cast(&self) -> Option<u32> {
+        self.successful_casts
+            .iter()
+            .max_by_key(|(_, order)| *order)
+            .map(|(&spell, _)| spell)
+    }
+
     fn record_successful_cast(&mut self, spell: u32) {
         self.cast_sequence += 1;
         self.successful_casts.insert(spell, self.cast_sequence);
@@ -732,6 +745,16 @@ impl SpellHistory {
                     .category_ready_at
                     .get(&category)
                     .is_some_and(|&at| at > now))
+    }
+
+    /// TC a352b1fa SpellHistory.cpp:709–736 GetRemainingCooldown: a live own
+    /// entry wins; otherwise consult its category. Expired entries are not live.
+    pub(crate) fn remaining_cooldown_ms(&self, spell: &SpellInfo, now: f64) -> u64 {
+        let category = spell.categories.as_ref().map_or(0, |c| c.category);
+        let own_deadline = self.spell_ready_at.get(&spell.id).filter(|&&at| at > now);
+        let deadline = own_deadline.or_else(|| self.category_ready_at.get(&category));
+        let remaining = deadline.copied().unwrap_or(now) - now;
+        (remaining.max(0.0) * 1000.0) as u64
     }
 
     pub(crate) fn on_gcd(&self, spell: &SpellInfo, now: f64) -> bool {
@@ -2536,7 +2559,9 @@ pub(crate) fn execute_cast(
     if let Some(hook) = scripts::after_cast(spell.id) {
         hook(world, caster, spell);
     }
-    spell_mods::consume_charges(world, caster, spell);
+    if !spell.cast_parent_owns_modifier_charges {
+        spell_mods::consume_charges(world, caster, spell);
+    }
     blooming_infusion::after_cast(world, caster, spell);
     druid_transform::after_cast(world, caster, spell);
     // Spell::finish (Spell.cpp:4448-4450): some spells stop the caster's auto-attack.
@@ -2747,12 +2772,12 @@ fn plan_targets(
         } else {
             Vec::new()
         };
-        let sampled_destination = effect
+        let paired_destination = effect
             .implicit_targets
             .iter()
-            .any(|id| matches!(id, 73 | 74));
-        let ordered_destination = sampled_destination || effect.implicit_targets.contains(&148);
-        let dest = if sampled_destination {
+            .any(|id| matches!(id, 41 | 43 | 48 | 73 | 74));
+        let ordered_destination = paired_destination || effect.implicit_targets.contains(&148);
+        let dest = if paired_destination {
             selected_destination
         } else if ordered_destination {
             targets::effect_destination(world, caster, explicit, spell, effect)?
@@ -3152,6 +3177,19 @@ pub(crate) fn record_hit_heal(
     true
 }
 
+/// TC a352b1fa Spell.cpp:2854–2867 checks only effects that landed on this unit.
+fn has_negative_hit_effects(
+    store: &SpellStore,
+    spell: &SpellInfo,
+    plan: &TargetPlan,
+    target: Entity,
+) -> bool {
+    let negative = crate::spell_info::positivity::negative_effects(store, spell);
+    plan.iter()
+        .filter(|planned| planned.units.contains(&target))
+        .any(|planned| negative & (1 << spell.effects[planned.index].index) != 0)
+}
+
 /// One proc event per distinct unit the spell landed on, with the direct damage it
 /// took (TAKE_ANY_DAMAGE when above 0); damage to a unit outside the plan gets a
 /// damage-only event.
@@ -3198,9 +3236,21 @@ fn push_hit_events(
                 crate::stand_state::stand_on_hostile_spell(world, target, attributes(spell, 3));
             }
         }
-        let harmful = targets::is_hostile(world, caster, target);
-        let (actor_mask, mut target_mask) = procs::spell_hit_masks(spell, harmful);
         let damage = damage_to(target);
+        let heal = healing
+            .iter()
+            .find(|(unit, _)| *unit == target)
+            .map(|(_, amount)| *amount);
+        // TC a352b1fa Spell.cpp:2849–2871: damage wins, then healing,
+        // otherwise landed effect positivity. Neutral attackable units are not friendly hits.
+        let harmful = if damage > 0.0 {
+            true
+        } else if heal.is_some_and(|amount| amount > 0.0) {
+            false
+        } else {
+            has_negative_hit_effects(world.resource::<SpellStore>(), spell, plan, target)
+        };
+        let (actor_mask, mut target_mask) = procs::spell_hit_masks(spell, harmful);
         if damage > 0.0 {
             target_mask |= procs::PROC_TAKE_ANY_DAMAGE;
         }
@@ -3216,10 +3266,7 @@ fn push_hit_events(
                 cast_used_proc_modifier: !spell.cast_proc_mods.is_empty(),
                 periodic: false,
                 damage,
-                heal: healing
-                    .iter()
-                    .find(|(unit, _)| *unit == target)
-                    .map(|(_, amount)| *amount),
+                heal,
                 reflected: false,
             },
         );
@@ -3519,6 +3566,40 @@ fn category_cooldown_modifier_ms(world: &World, caster: Entity, category: u32) -
     total
 }
 
+fn base_cooldowns(spell: &SpellInfo) -> (u32, u32) {
+    let (spell_ms, category_ms) = spell
+        .cooldowns
+        .as_ref()
+        .map_or((0, 0), |cd| (cd.recovery_ms, cd.category_recovery_ms));
+    let spell_ms = if spell.id == mobile_banking::MOBILE_BANKING {
+        shared::guild_perks::MOBILE_BANKING_COOLDOWN_2H
+    } else {
+        spell_ms
+    };
+    (spell_ms, category_ms)
+}
+
+fn cooldown_recovery_ms(world: &World, caster: Entity, spell: &SpellInfo, base: u32) -> u32 {
+    if base == 0 {
+        return 0;
+    }
+    let modified = modify(world, caster, spell, SpellModOp::Cooldown, base as f32);
+    let hasted = haste_regen_cooldown_ms(world, caster, spell, modified);
+    let rate = recovery_rate::multiplier(world, caster, spell);
+    let recovered = if rate == 1.0 {
+        hasted
+    } else {
+        (f64::from(hasted) * rate).trunc() as f32
+    };
+    let category = spell.categories.as_ref().map_or(0, |c| c.category);
+    let adjusted = if recovered > 0.0 {
+        recovered + category_cooldown_modifier_ms(world, caster, category)
+    } else {
+        recovered
+    };
+    adjusted.max(0.0).round() as u32
+}
+
 fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // SpellHistory::HandleCooldowns returns before consuming a charge or starting
     // a clock when source flag 0x2 is set. The cast's GCD remains independent.
@@ -3527,38 +3608,12 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
     let now = history_now(world);
     let ready_credit = control_dream::ready_credit_ms(world, caster, spell, now);
-    let (base_recovery_ms, base_category_ms) = spell
-        .cooldowns
-        .as_ref()
-        .map_or((0, 0), |cd| (cd.recovery_ms, cd.category_recovery_ms));
-    let base_recovery_ms = if spell.id == mobile_banking::MOBILE_BANKING {
-        shared::guild_perks::MOBILE_BANKING_COOLDOWN_2H
-    } else {
-        base_recovery_ms
-    };
+    let (base_recovery_ms, base_category_ms) = base_cooldowns(spell);
     let category = spell.categories.as_ref().map_or(0, |c| c.category);
-    let category_modifier_ms = category_cooldown_modifier_ms(world, caster, category);
-    let cooldown = |base: u32| {
-        if base == 0 {
-            return 0;
-        }
-        let modified = modify(world, caster, spell, SpellModOp::Cooldown, base as f32);
-        let hasted = haste_regen_cooldown_ms(world, caster, spell, modified);
-        let rate = recovery_rate::multiplier(world, caster, spell);
-        let recovered = if rate == 1.0 {
-            hasted
-        } else {
-            (f64::from(hasted) * rate).trunc() as f32
-        };
-        let adjusted = if recovered > 0.0 {
-            recovered + category_modifier_ms
-        } else {
-            recovered
-        };
-        adjusted.max(0.0).round() as u32
-    };
-    let recovery_ms = cooldown(base_recovery_ms).saturating_sub(ready_credit);
-    let category_ms = cooldown(base_category_ms).saturating_sub(ready_credit);
+    let recovery_ms =
+        cooldown_recovery_ms(world, caster, spell, base_recovery_ms).saturating_sub(ready_credit);
+    let category_ms =
+        cooldown_recovery_ms(world, caster, spell, base_category_ms).saturating_sub(ready_credit);
     let mods = charge_mods(world, caster, spell);
     let mut entity = world.entity_mut(caster);
     let mut history = entity.entry::<SpellHistory>().or_default();
@@ -3849,6 +3904,8 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
 
 #[cfg(test)]
 mod additional_optional_power_tests;
+#[cfg(test)]
+mod caster_offset_tests;
 #[cfg(test)]
 mod class_resource_tests;
 #[cfg(test)]
