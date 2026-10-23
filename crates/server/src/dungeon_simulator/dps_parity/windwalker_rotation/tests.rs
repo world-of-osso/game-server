@@ -276,6 +276,40 @@ fn literal_ww_native_fof_channel_releases_damage_on_the_measured_target() {
 }
 
 #[test]
+#[ignore = "native RWK producer RED; real300s literal fixture with selected traits"]
+fn literal_ww_native_combo_breaker_blackout_earns_rwk_and_delivers_its_child() {
+    let report = super::super::measure(269, 1).unwrap();
+    let actions = report["combat"]["actions"].as_array().unwrap();
+    assert!(
+        actions.iter().any(|action| action["spell_id"] == 100784
+            && action["hits"].as_u64().is_some_and(|hits| hits > 0)),
+        "actual Blackout Kick damage is required before testing its producer"
+    );
+    assert!(
+        report["buff_uptime_pct"]["116768"]
+            .as_f64()
+            .is_some_and(|uptime| uptime > 0.0),
+        "actual Tiger Palm must naturally earn Combo Breaker"
+    );
+    assert!(
+        report["buff_uptime_pct"]["1250554"]
+            .as_f64()
+            .is_some_and(|uptime| uptime > 0.0),
+        "native selected RWK must naturally earn its1250554 override from landed Combo-Breaker Blackout Kicks"
+    );
+    assert!(
+        actions.iter().any(|action| action["spell_id"] == 467307
+            && action["count"].as_u64().is_some_and(|count| count > 0)),
+        "literal APL must admit the actual earned RWK override"
+    );
+    assert!(
+        actions.iter().any(|action| action["spell_id"] == 468179
+            && action["damage"].as_u64().is_some_and(|damage| damage > 0)),
+        "actual RWK must deliver native468179 damage, not just a root cast"
+    );
+}
+
+#[test]
 #[ignore = "explicit native non-Fixture control; requires the prepared parity inputs"]
 fn literal_ww_native_non_fixture_follower_keeps_its_native_kit() {
     let mut run = super::super::prepare(269, 1).unwrap();
