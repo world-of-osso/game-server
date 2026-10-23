@@ -13,6 +13,7 @@ const TALENT: u32 = 416714;
 const IGNITE: u32 = 12654;
 const DAMAGE: u32 = 419800;
 const FIREBALL: u32 = 133;
+const FIRE_BLAST: u32 = 108853;
 
 fn prepare_ignites(target_count: usize) -> (Harness, Entity, Vec<Entity>) {
     let (mut h, caster) = prepare_follower(209059, 63, 70);
@@ -25,8 +26,11 @@ fn prepare_ignites(target_count: usize) -> (Harness, Entity, Vec<Entity>) {
     );
     assert!(has_aura(h.app.world(), caster, TALENT));
     let targets = prepare_dummies(&mut h, target_count);
-    for &target in &targets {
-        complete_cast(&mut h, caster, FIREBALL, target);
+    // Native Ignite lasts only9s. Use the actual two starting Fire Blast charges
+    // after two Fireballs so all four banks coexist without refreshing their clocks.
+    for (index, &target) in targets.iter().enumerate() {
+        let spell = if index < 2 { FIREBALL } else { FIRE_BLAST };
+        complete_cast(&mut h, caster, spell, target);
         h.advance(20);
     }
     for &target in &targets {
@@ -37,7 +41,7 @@ fn prepare_ignites(target_count: usize) -> (Harness, Entity, Vec<Entity>) {
                 .unwrap()
                 .iter()
                 .any(|aura| { aura.spell_id == IGNITE && aura.caster == caster }),
-            "ordinary Fireball must produce this caster's actual Ignite on every target: target={}, now={}, own events={:?}",
+            "ordinary native hits must produce this caster's actual Ignite on every target: target={}, now={}, own events={:?}",
             target.to_bits(),
             aura_now(h.app.world()),
             h.inbox
@@ -204,9 +208,20 @@ fn fire_intensifying_flame_native70_final_tick_is_credited_before_natural_expiry
 #[ignore = "native Intensifying Flame source gate"]
 fn fire_intensifying_flame_native70_four_actual_ignites_block_child_damage() {
     let _seed = crate::random::seed_scope(1);
-    let (mut h, caster, _) = prepare_ignites(4);
+    let (mut h, caster, targets) = prepare_ignites(4);
     let first = h.inbox.log.len();
     h.advance(45);
+    assert!(
+        targets.iter().all(|target| {
+            h.app
+                .world()
+                .get::<ActiveAuras>(*target)
+                .unwrap()
+                .iter()
+                .any(|aura| aura.spell_id == IGNITE && aura.caster == caster)
+        }),
+        "four actual own Ignite banks must remain live throughout the cap control"
+    );
     let own_damage: Vec<_> = h.inbox.log[first..]
         .iter()
         .filter(|event| {
