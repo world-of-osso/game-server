@@ -1,3 +1,7 @@
+## 2026-10-23 — Pinned Legacy history / 27-map coverage
+
+[History and coverage](investigations/follower-data.md#pinned-legacy-history-and-27-map-coverage--2026-10-23):27difficulty205 maps/878qualified trash poses independently match publication; per-map runnable gate separates missing components from unproved ones. Official Legacyc6 ancestry14file revisions has byte-identical zone/frame/clone data; prior3map rejection proofs retained, Dawn2anchors1140.671/473.526yd also reject. Four named chain gaps/noSQL; no aliases/tolerance changes/canonical writes. Script baseline6c00e0df1; four owner13106 component gaps and unapproved drops explicit.
+
 ## 2026-10-22 — Emberdawn source-selected single Z / no admission
 
 [Emberdawn source-floor](investigations/follower-data.md#windrunner-emberdawn-source-floor-placement--2026-10-22):unique231606/JEC5764/Journal2655, all4assigned groups checked, group74248up90.026/90.229 selects90.35608/rejects87.95608. Lead allows hashed consensus-qualified single candidate without entrance; actual old gateRED→source/raw-single2GREEN0.533s and missingbossRED→actual-copy+SQL2GREEN0.014s at7ce001c68. Fresh-copy fourINSERTs/replay3×, native0CT0/ownmods/model, factiononly; no entrance/route claim, other identities unresolved.
