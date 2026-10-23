@@ -18,3 +18,16 @@ Required proof: RED for274837/1243807 overlap across the source window; unchange
 - Native runtime RED not yet observed. No production book implementation before RED.
 - Master baseline:7639103489fb8b822864e164c25211cfb18a9e88; output directory and immutable binary receipt will be sealed after the first build.
 - Final followers/Stockade proof and per-follower behavior delta: pending implementation.
+
+## Ret takeover2026-10-23
+
+Lead assigned native-book helper to Ret14752. Ported ignored REDs1131e1685, Stockade observation03699ef4a; Ret requested-spec/no-kit/selected-talent/no-Player case pushed ef331486f. No production helper yet.
+
+| Attempt | Source/proof | Result |
+|---|---|---|
+| v1 | Ret engine diagnostics `native-book-red-status.json` |35 capacity HOLD checks exhausted; no build |
+| v2 | `native-book-red-v2.proof.json` | FormalADD, helper compile425s, SHED RAM<6GiB; own slice stopped/verified inactive; no tests, **not RED** |
+| v3 | `native-book-red-v3-status.json` |35 capacity HOLD checks exhausted, -j1; no build |
+| v4 | `native-book-red-v4-status.json` | Bounded -j1 admission worker pending; production Rust scope remains ef331486f |
+
+Artifacts live under engine `data/diagnostics/ret-parity-2026-10-23/`. Moved the allocated ended-owner target into game-server-ret-parity/target, without copying it. It contains only a3.4GiB partial dependency build and no game_server executable; native compiler is Arch1.99.0, unlike the older1.98.1 docs. Parent confirmed no genuinely warm1.99 ended-owner cache is available.
