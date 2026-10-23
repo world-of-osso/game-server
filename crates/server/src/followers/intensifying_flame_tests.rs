@@ -2,9 +2,10 @@
 use bevy::prelude::*;
 use shared::protocol::CombatLogKind;
 
+use super::kit_clearcasting_tests::frame_seconds;
 use super::kit_proc_fidelity_tests::complete_cast;
 use super::rotation_dummy_tests::{prepare_dummies, prepare_follower};
-use crate::auras::{ActiveAuras, has_aura};
+use crate::auras::{ActiveAuras, aura_now, has_aura};
 use crate::class_progression::KnownSpells;
 use crate::spell_cast::test_harness::Harness;
 
@@ -45,9 +46,41 @@ fn prepare_ignites(target_count: usize) -> (Harness, Entity, Vec<Entity>) {
 fn assert_native_tick_produces_intensifying_flame(target_count: usize) {
     let _seed = crate::random::seed_scope(1);
     let (mut h, caster, targets) = prepare_ignites(target_count);
+    let percent = h
+        .app
+        .world()
+        .get::<ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == TALENT)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .amount;
+    let expected: Vec<_> = targets
+        .iter()
+        .map(|&target| {
+            let tick_amount = h
+                .app
+                .world()
+                .get::<ActiveAuras>(target)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == IGNITE && aura.caster == caster)
+                .unwrap()
+                .effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .unwrap()
+                .amount;
+            (target, tick_amount * percent / 100.0)
+        })
+        .collect();
     let first = h.inbox.log.len();
     h.advance(45);
-    for target in targets {
+    for (target, expected_damage) in expected {
         let events = &h.inbox.log[first..];
         assert!(events.iter().any(|event| {
             event.source == Some(caster.to_bits())
@@ -56,15 +89,25 @@ fn assert_native_tick_produces_intensifying_flame(target_count: usize) {
                 && event.kind == CombatLogKind::Damage
                 && event.amount > 0
         }));
-        assert!(
-            events.iter().any(|event| {
+        let child = events
+            .iter()
+            .find(|event| {
                 event.source == Some(caster.to_bits())
                     && event.target == Some(target.to_bits())
                     && event.spell_id == Some(DAMAGE)
                     && event.kind == CombatLogKind::Damage
                     && event.amount > 0
-            }),
-            "actual Ignite tick must produce native419800 at {target_count} active own dots"
+            })
+            .unwrap_or_else(|| {
+                panic!(
+                    "actual Ignite tick must produce native419800 at {target_count} active own dots"
+                )
+            });
+        assert!(!child.crit, "native419800 has CANT_CRIT");
+        assert!(
+            (child.amount as f32 - expected_damage).abs() <= 1.0,
+            "native419800 must use actual416714 effect1 percentage of the base tick: actual{}, expected{expected_damage}",
+            child.amount
         );
     }
 }
@@ -79,6 +122,51 @@ fn fire_intensifying_flame_native70_one_actual_ignite_produces_child_damage() {
 #[ignore = "native Intensifying Flame source gate"]
 fn fire_intensifying_flame_native70_three_actual_ignites_allow_child_damage() {
     assert_native_tick_produces_intensifying_flame(3);
+}
+
+#[test]
+#[ignore = "native Intensifying Flame source gate"]
+fn fire_intensifying_flame_native70_final_tick_is_credited_before_natural_expiry() {
+    let _seed = crate::random::seed_scope(1);
+    let (mut h, caster, targets) = prepare_ignites(1);
+    let target = targets[0];
+    let ignite = h
+        .app
+        .world()
+        .get::<ActiveAuras>(target)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == IGNITE && aura.caster == caster)
+        .unwrap();
+    let period_ms = ignite
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .period_ms;
+    let native_ticks = ignite.duration_ms / period_ms;
+    let remaining = ignite.expires_at.unwrap() - aura_now(h.app.world());
+    let frames = (remaining / frame_seconds(&h)).ceil() as usize + 2;
+    let first = h.inbox.log.len();
+    h.advance(frames);
+    assert!(!has_aura(h.app.world(), target, IGNITE));
+    let count = |spell_id| {
+        h.inbox.log[first..]
+            .iter()
+            .filter(|event| {
+                event.source == Some(caster.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(spell_id)
+            })
+            .count()
+    };
+    assert_eq!(count(IGNITE), native_ticks as usize);
+    assert_eq!(
+        count(DAMAGE),
+        native_ticks as usize,
+        "every actual Ignite tick, including its expiry-frame tick, must credit its child"
+    );
 }
 
 #[test]
