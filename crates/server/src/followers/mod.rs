@@ -5,6 +5,8 @@ mod catalog;
 mod darkflame_drop_tests;
 mod empower_policy;
 mod hazards;
+#[cfg(test)]
+mod healer_benchmark_profile_tests;
 mod healer_context;
 #[cfg(test)]
 mod healer_group_cancel_tests;

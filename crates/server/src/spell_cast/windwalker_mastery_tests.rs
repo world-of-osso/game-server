@@ -58,7 +58,6 @@ fn cast_native(h: &mut Harness, caster: Entity, spell: u32, target: Entity) {
 }
 
 #[test]
-#[ignore = "WW Combo Strikes policy RED: native coefficient has no damage consumer"]
 fn dps_parity_windwalker_combo_strikes_first_cast_and_repeat_without_hit_combo() {
     let (mut h, caster) = crate::followers::kit_tests::at_level(227734, 10, |app| {
         app.add_plugins(crate::stats::StatsPlugin);

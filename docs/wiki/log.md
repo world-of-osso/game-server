@@ -1,3 +1,14 @@
+## 2026-10-23 — Shared native APL fact boundary
+
+[Native facts](systems/simc-apl.md#native-binding-boundary): six actual native6RED at5924496f9→6GREEN17.40s atdc1ee9781,7m37compile/exit0/zero warnings. Earned TP/BOK buff+Chi, actual Charge200raw→20Rage, selected starter allocation distinct from learned utility, native Provoke/Roll timers, action/control GCD and300s fixture clock; no canonical DB edits. [Proof/capability limits](../handoffs/shared-native-apl-proof-ledger.md); only explicit parity Fixture driver approved, Stockade native kit/DUNGEON_TTD_UNAVAILABLE retained, no literal-rotation claim.
+
+## 2026-10-23 — Windwalker baseline and Combo Strikes boundary
+
+[Combo Strikes](systems/auras.md#windwalker-combo-strikes-policy--2026-10-23): actual native TP→Provoke→TP without Hit Combo,83.754=83.754 RED versus99.35737 expected, then native coefficient/state1GREEN10.04s at3286b0463. Frozen300s31146 baseline ST23785.66/3T23260.47,−88.48%/−93.82%; missing FoF/RSK/SCK casts, literal adapter and per-ability/channel qualification remain open ([census](../handoffs/ww-source-census.md)). No tuning/canonical DB changes.
+
+## 2026-10-22 — Current-critter DismissPet contract selected
+
+Lead chooses TC DismissCritter identity for existing DismissPet: authoritative current journal/legacy actor,never older journal tuple. Ignored spec/test-first actual balloon,legacy,older-preservation and isolation cases: genuine3RED/16controls→20GREEN29.14s at merged65ac11760; separate pipeline1GREEN8.72s/check0-103.15s/no warnings/fmt0. Verified2026-10-23:545/1173 unchanged; three inherited master title55 blocker-list removals retain existing party-viewer action gaps, no admissions. No protocol fields,UseToy toggle,ownership deletion or native parity claim. [Authority](systems/toys.md#current-critter-dismissal-authority-2026-10-22).
 ## 2026-10-22 — Wratheye Decaystrike-only partial
 
 [Wratheye](systems/boss-scripts.md#wratheye-decaystrike-only-partial-2026-10-22): ignorednativeRED precedes AI; integrated4GREEN25.54s actualperiodicdamage/aura/clock/reset/genericlethalcredit/copy/corpse. Source5%finish/energy/totem/cloud gaps explicit; stable-keySQLfreshcopyreceipt.
@@ -16,6 +27,10 @@
 ## 2026-10-22 — Hunter pet sourced HP/armor and summon ordering
 
 [Hunter inheritance](systems/character-stats.md#hunter-pet-health-and-armor--2026-10-22): native ExpectedStat/template createHP, TC30% ownerStamina×10HP and level×50+70% ownerarmor. Separate fresh56244/max178094 RED fixed through the existing cached Stats producer before summon, without initialization/top-up state. Six native controls pass; lifecycle composite5+1 passes after authentic ExpectedStats fixture hydration and exact native377HP dismissal persistence. Check/fmt pass at01d22; parent integration gate remains separate. SimC divergence explicit; no whole DPS/Azure survival/petAP claim.
+## 2026-10-22 — Idle party follow vertical admission
+
+[Navigation](systems/navigation.md#idle-follow-vertical-range--2026-10-22): actual2651 PartySlot2/4/native route/owner support/body-fit guards pass; owner Y-only change leaves NPC30.25261yd above goal withXZgap0, while same-actor XZ-only control descends normally. db0 regression genuineRED0/1/6.06s. TC FollowMovementGenerator52→Position121–124/157 confirms3D distance. Minimal idle `within_range` height inclusion approved; horizontal speeds/bands/slots unchanged. At3009881d7 one exact9-case GREEN29.05s includes the RED plus eight existing follow controls; actual lower feet56.28169. Masterbea3356fe merged2aff72729; lead integration gate pending. No new link or damage.
+
 ## 2026-10-22 — Approved Darkflame one-way collision drop
 
 [Navigation](systems/navigation.md#one-way-collision-drop--2026-10-22): single2651 source→lower connection approved after raw-edge table; no Halls/Academy/Goldie link. Native MoveFall actual ground/LOS landingPASS, native downpath+authenticated follower routeRED atdef505bf8. Implemented explicit directed native-leg edge and owned PointMovement→MoveFall departure; no canonical bake or NPC damage. Atcff55269e four targeted native/follower/other-map testsGREEN8.03s; separate full-boss upward controls2GREEN0.06s. Mergedorigin/mastera268ba2a6 as4a4addad5 without movement changes. `FOLLOWER_NPC_FALL_DAMAGE_UNMODELED`; lead integration gate pending.
@@ -31,6 +46,10 @@ Imaginary Gun ig981 landed1aef894cf;0034 ancestry independently verified and ina
 ## 2026-10-22 — Gorek minimum-alert partial
 
 [Gorek](systems/boss-scripts.md#gorek-minimum-alert-partial--2026-10-22): ignorednativeRED→sourceMight/Aegis/Heated/Storm success-owned/namedlowerhold lanes. Post-master921957ad7 native4GREEN31.12s Normal1/projected205,first3.6sMight/actualauras/92s3cycles/reset/actualcopycredit/corpse;stable-keySQLreceipt. Anvil/selector/Stormdummy and existingroutegap retained, no wholefight/publication claim.
+
+## 2026-10-23 — Benchmark-only alternate healer actors
+
+[Healing benchmark](systems/healer-dungeon-metrics.md) now has approved source-preserving configurations for65/256/264/270/1468, explicitly labeled `HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE`. [Exact source candidates](../reports/healer-alternate-spec-source-candidates.md) retain22native root/child IDs without claiming selected-book availability. Genuine absent-policy RED atdb93c15e2:0PASS/1FAIL5.01s. Policy/primary reference remains13191-owned; bridge uses current master, independent of14752's future book helper; no canonical/production roster mutation or all-seven metrics claim.
 
 ## 2026-10-22 — Khajin non-Mythic partial
 
@@ -4081,3 +4100,7 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 - [EB cast mechanism](investigations/follower-data.md#unselected-elemental-blast-and-icefury-overload-mechanisms): after86 native-funded root hits/no120588 RED/controlPASS,117014→120588/effect1 scaling added on mergedlv991 base. Scoped postmerge GREEN pending; no selected-kit/cost/cast-time bypass.
 
 - [Overload cast-only tails](investigations/follower-data.md#unselected-elemental-blast-and-icefury-overload-mechanisms): postmerge11nativeGREEN23.93s +fivechild25%/removal/EchoGREEN10.25s; compile34m11/zero warnings. EB2 and four new child qualifiers enabled after proof; selected-kit/resource/APL limits retained.
+
+- [Lava crit ownership](investigations/follower-data.md#lava-caster-owned-flame-shock-crit-rule): approved own/foreign native285452/2854662PASS2RED9.13s. Shared predicate now requires actual aura caster and registers both payloads; no other crit/modifier/resource edits. GREEN pending on lv991-based branch.
+
+- [Lava crit ownership](investigations/follower-data.md#lava-caster-owned-flame-shock-crit-rule):4GREEN13.43s/zero warnings after2nativeRED; samebinary retained root2GREEN10.03s +actualStatsPlugin70samples2PASS12.42s. Observed285466crits5/5; cases enabled. No other crit edits or causal-DPS/parity claim.
