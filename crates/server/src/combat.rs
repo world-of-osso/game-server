@@ -626,7 +626,14 @@ pub(crate) struct AutoAttackParams<'w, 's> {
         &'static crate::hunter_pet::HunterPet,
         With<crate::hunter_pet_stats::HunterInheritedStats>,
     >,
-    owner_stats: Query<'w, 's, &'static CharacterStats>,
+    owner_stats: Query<
+        'w,
+        's,
+        (
+            &'static CharacterStats,
+            Option<&'static crate::stats::StatModifiers>,
+        ),
+    >,
     summon_modifiers: crate::auras::summon_damage::SummonDamageModifiers<'w, 's>,
     sight: SwingSight<'w, 's>,
     invisibility: Query<'w, 's, &'static crate::auras::Invisibility>,
@@ -696,15 +703,14 @@ fn auto_attack_unit(
         creature_flags: snapshot.creature_flags.as_ref(),
         temp_summoner: snapshot.temp_summoner,
         hunter_owner_ap: params.hunter_pets.get(attacker_entity).ok().map(|pet| {
-            let owner = params
+            let (owner, modifiers) = params
                 .owner_stats
                 .get(pet.owner)
                 .expect("native Hunter pet owner requires CharacterStats for melee power");
-            // Guardian stores total AP as int32 (StatSystem.cpp1389).
-            (owner.ranged_attack_power * crate::spell_cast::effects::HUNTER_PET_OWNER_AP).trunc()
+            crate::hunter_pet_stats::owner_bonus_attack_power(owner, modifiers)
         }),
         spirit_wolf: params.spirit_wolves.get(attacker_entity).ok().map(|wolf| {
-            let owner = params
+            let (owner, _) = params
                 .owner_stats
                 .get(wolf.owner)
                 .expect("Spirit Wolf owner requires CharacterStats for inherited power");

@@ -1,3 +1,7 @@
+## 2026-10-22 — Shared Hunter pet total-RAP source RED
+
+[Owner inheritance](systems/character-stats.md#hunter-pet-melee-owner-rap--2026-10-22): generic weaponAP12daba exposed bare-versus-total RAP on both pet paths. Native7a41 genuine3PASS/2RED34.56s: owner3034.9246+weapon934=3968.9246; melee583<743 owner-only floor and actual1264355 ability1899<2484, unchanged native coefficient1.90999997/variance0. One integer22% total-RAP producer now serves both; no fake intrinsic stats, cached AP state or coefficient edits. GREEN pending; the prior `critical` field compilation error is not RED evidence.
+
 ## 2026-10-22 — Hunter pet melee owner-RAP RED
 
 [Owner melee contribution](systems/character-stats.md#hunter-pet-melee-owner-rap--2026-10-22): actual Duck90 native baseline14-damage swings16.06s; ignoreded2800 genuineRED14 versus TC owner-only contribution floor266, baselinepositivePASS15.13s combined. TC22% ownerRAP/3.5×2s additive path implemented with existing coefficient and no new state; GREEN/gear controls pending. Intrinsic AP/range and SimC60% divergence remain explicit, no totalpet-DPS claim.
