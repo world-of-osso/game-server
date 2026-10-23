@@ -143,3 +143,37 @@ fn read_target_priority(world: &World, unit: Entity) -> (bool, bool) {
     // that special NPC classification remains an explicitly unqualified case.
     (full, world.get::<Player>(unit).is_none())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pom_seeded_choice_ignores_candidate_enumeration_order() {
+        let (mut h, tank) = crate::followers::kit_tests::at_level(209057, 32, |_| {});
+        let owner = h.caster;
+        let mage = crate::followers::native_fixture::spawn(h.app.world_mut(), owner, 209059)
+            .expect("authentic Meredy");
+        let hunter = crate::followers::native_fixture::spawn(h.app.world_mut(), owner, 209065)
+            .expect("authentic Austin");
+        let world = h.app.world();
+        for patient in [tank, mage, hunter] {
+            let health = world.get::<Health>(patient).unwrap();
+            assert!(health.current > 0.0 && health.current == health.max);
+        }
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(JUMP)
+            .unwrap();
+        let choose = |mut candidates: Vec<Entity>| {
+            let _seed = crate::random::seed_scope(1);
+            select_random_jump_target(world, spell, None, &mut candidates);
+            assert_eq!(candidates.len(), 1);
+            candidates[0]
+        };
+        assert_eq!(
+            choose(vec![tank, mage, hunter]),
+            choose(vec![mage, hunter, tank])
+        );
+    }
+}
