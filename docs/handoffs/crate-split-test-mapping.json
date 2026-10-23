@@ -1,0 +1,32 @@
+{
+  "status": "expected mapping; must be reconciled against actual Cargo test inventories",
+  "from_revision": "3b1222df4ae16e712e1ab4b82d74b7986450fcb6",
+  "old_package": "server",
+  "old_target": "server",
+  "rules_in_order": [
+    {
+      "old_prefix": "dungeon_simulator::graph::",
+      "new_package": "server",
+      "new_target": "server",
+      "new_prefix": "test_support::graph::",
+      "expected_cases": [
+        {"suffix": "stacked_floor_routes_choose_native_height_not_the_lower_xy_alias", "ignored": false},
+        {"suffix": "translocation_edges_are_directed_and_never_ordinary_walking", "ignored": false},
+        {"suffix": "frozen_graph_contains_an_explicit_unique_anchored_pull_order", "ignored": false},
+        {"suffix": "azure_follower_graph_covers_native_normal_population_and_has_an_authored_route", "ignored": false},
+        {"suffix": "extract_stockade_graph", "ignored": true},
+        {"suffix": "azure_extraction::extract_azure_graph", "ignored": true},
+        {"suffix": "corridor_inputs::freeze_native_corridor_inputs", "ignored": true}
+      ]
+    },
+    {
+      "old_prefix": "dungeon_simulator::",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_prefix": "dungeon_simulator::"
+    }
+  ],
+  "unmatched_server_cases": "remain in package server, target server, with unchanged names and ignored status",
+  "other_workspace_cases": "unchanged",
+  "required_proof": "Map the complete pre-split inventory with these rules; compare exact mapped package/target/name/ignored tuples to the complete post-split inventory. Counts alone are insufficient."
+}

@@ -32,7 +32,7 @@ The explicit `server/test-support` feature preserves the original unit-test RNG 
 
 Source relocation keeps algorithms and numeric data unchanged: 44 tracked simulator files move, with five graph/receipt source files lifted to core support. `../../data`, `../../content` and `../../target` paths retain their workspace location because both packages have the same manifest depth. Graph extraction-only modules/helpers remain `cfg(test)` rather than being compiled unused in a normal fixture-support dependency.
 
-Most case names retain `dungeon_simulator::...`. Seven graph cases instead map to `test_support::graph::...` in server lib: four enabled route/graph cases and three ignored extraction/capture cases. Function bodies and ignore reasons are retained. Actual Cargo test inventories/full-suite reconciliation remain acceptance gates, not inferred from this source inventory. B feature/API wiring is not yet compiler-qualified in this checkpoint.
+Most case names retain `dungeon_simulator::...`. Seven graph cases instead map to `test_support::graph::...` in server lib: four enabled route/graph cases and three ignored extraction/capture cases. [Exact expected case/target mapping](../../handoffs/crate-split-test-mapping.json) records the exceptions and unchanged-name consumer move. Function bodies and ignore reasons are retained. Actual Cargo test inventories/full-suite reconciliation remain acceptance gates, not inferred from this source inventory. B feature/API wiring is not yet compiler-qualified in this checkpoint.
 
 ## Sources
 
