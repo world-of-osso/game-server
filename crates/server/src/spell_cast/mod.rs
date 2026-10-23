@@ -196,7 +196,7 @@ mod impending_victory_tests;
 mod interruptibility;
 #[cfg(test)]
 mod invigorating_fury_tests;
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) mod native_apl;
 #[cfg(test)]
 mod periodic_healing_taken_tests;
@@ -317,10 +317,10 @@ use crate::interest::NetworkVisibility;
 use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
-pub use creature::{
-    AiTarget, ai_spell_target, creature_cast, creature_cast_empowered,
-    creature_cast_ignoring_cooldowns, creature_cast_ignoring_in_progress,
-    creature_cast_interrupting_self,
+pub use creature::{AiTarget, creature_cast};
+pub(crate) use creature::{
+    ai_spell_target, creature_cast_empowered, creature_cast_ignoring_cooldowns,
+    creature_cast_ignoring_in_progress, creature_cast_interrupting_self,
 };
 use effects::{EffectCtx, UnhandledEffects};
 use targets::{Dest, Relation};

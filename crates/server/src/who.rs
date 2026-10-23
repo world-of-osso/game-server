@@ -6,16 +6,15 @@ use shared::protocol::{QueryWho, WhoChannel, WhoCharacterSnapshot, WhoSnapshot, 
 use crate::auth::{Authenticated, InWorld};
 
 #[cfg(test)]
-use std::sync::{
-    Mutex,
-    atomic::{AtomicUsize, Ordering},
-};
+use std::sync::Mutex;
+#[cfg(any(test, feature = "test-support"))]
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub struct WhoPlugin;
 
 #[cfg(any(test, feature = "test-support"))]
 static ONLINE_ROSTER_MATERIALIZATIONS: AtomicUsize = AtomicUsize::new(0);
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 static ONLINE_ROSTER_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 impl Plugin for WhoPlugin {

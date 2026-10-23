@@ -137,7 +137,7 @@ impl GroundMap {
     }
 
     /// Explicit terrain-area fixtures grouped by actual map/tile; no production probe override.
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(test)]
     pub(crate) fn with_area_samples(samples: &[(u32, Vec3, u32)]) -> Self {
         let mut tiles: HashMap<(u32, (u32, u32)), Vec<(f32, f32, u32)>> = HashMap::new();
         for &(map, position, area) in samples {

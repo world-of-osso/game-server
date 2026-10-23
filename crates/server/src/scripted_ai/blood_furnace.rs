@@ -115,7 +115,7 @@ impl CreatureAi for TheMaker {
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
         ctx.talk(0);
-        #[cfg(any(test, feature = "test-support"))]
+        #[cfg(test)]
         if let Some(seed) = ctx
             .world
             .get::<super::tests::cast_admission::GroundCombatSeed>(ctx.me)

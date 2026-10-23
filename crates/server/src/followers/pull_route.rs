@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use super::pull_sources::{self, Source};
 use crate::creature_aggro::AggroDistance;
 use crate::maps::InMap;
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 use crate::navigation::Navigation;
 #[path = "pull_route_paths.rs"]
 mod paths;

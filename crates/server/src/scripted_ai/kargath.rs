@@ -91,7 +91,7 @@ impl Kargath {
             .expect("Kargath target list")
             .0
             .clear();
-        #[cfg(any(test, feature = "test-support"))]
+        #[cfg(test)]
         if ctx.is_casting() {
             // UnitAI::DoCast reports SPELL_FAILED_SPELL_IN_PROGRESS; Ctx short-circuits it.
             super::tests::cast_admission::record(
@@ -183,7 +183,7 @@ impl CreatureAi for Kargath {
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
         ctx.talk(0);
         self.boss.just_engaged_with(ctx);
-        #[cfg(any(test, feature = "test-support"))]
+        #[cfg(test)]
         if let Some(seed) = ctx
             .world
             .get::<super::tests::cast_admission::GroundCombatSeed>(ctx.me)

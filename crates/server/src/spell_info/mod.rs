@@ -31,7 +31,7 @@ use rusqlite::Connection;
 use serde::Serialize;
 
 pub(crate) use class_data::MAX_LEVEL;
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) use class_data::load_class_spells;
 pub use class_data::{ClassInfo, ClassSpells, SpecInfo};
 pub use immunity::SpellImmunityDefinition;

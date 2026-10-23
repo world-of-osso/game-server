@@ -891,7 +891,7 @@ impl Ctx<'_> {
             .map_or_else(String::new, |npc| npc.name.clone());
         let result =
             crate::spell_cast::creature_cast(self.world, self.me, spell_id, target, triggered);
-        #[cfg(any(test, feature = "test-support"))]
+        #[cfg(test)]
         tests::cast_admission::record(self.world, self.me, spell_id, &result);
         match result {
             Ok(()) => {
@@ -1122,7 +1122,7 @@ pub(crate) fn attack_stop(world: &mut World, unit: Entity) {
 #[cfg(test)]
 pub(crate) mod tests;
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 #[test]
 fn idle_just_appeared_full_population_is_bounded() {
     let mut app = App::new();

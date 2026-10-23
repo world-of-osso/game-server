@@ -14,10 +14,9 @@ use crate::networking::PlayerLink;
 use crate::persistence::{self, CharacterData, ClientId, DurabilityEntryData, GameDatabase};
 
 #[cfg(test)]
-use std::sync::{
-    Mutex,
-    atomic::{AtomicUsize, Ordering},
-};
+use std::sync::Mutex;
+#[cfg(any(test, feature = "test-support"))]
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default)]
 pub struct EquippedDurability {
@@ -124,7 +123,7 @@ pub struct DurabilityPlugin;
 
 #[cfg(any(test, feature = "test-support"))]
 static CHANGED_DURABILITY_PLAYERS_VISITED: AtomicUsize = AtomicUsize::new(0);
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 static CHANGED_DURABILITY_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 impl Plugin for DurabilityPlugin {

@@ -192,7 +192,7 @@ impl HeraldIntro {
         ctx.set_react_state(ReactState::Aggressive);
         ctx.do_cast_self(LOGIC_TIMER);
         ctx.world.entity_mut(ctx.me).remove::<HeraldUnkillable>();
-        #[cfg(any(test, feature = "test-support"))]
+        #[cfg(test)]
         if let Some(seed) = ctx
             .world
             .get::<super::super::tests::cast_admission::GroundCombatSeed>(ctx.me)
@@ -336,7 +336,7 @@ impl CreatureAi for HeraldIntro {
             }
         }
         boss_update_ai(self, ctx, diff_ms);
-        #[cfg(any(test, feature = "test-support"))]
+        #[cfg(test)]
         super::super::tests::cast_admission::record_ai_tick(
             ctx.world,
             ctx.me,

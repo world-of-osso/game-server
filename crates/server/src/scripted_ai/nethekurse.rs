@@ -140,7 +140,7 @@ impl CreatureAi for Nethekurse {
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
         self.boss.events.reset();
-        #[cfg(any(test, feature = "test-support"))]
+        #[cfg(test)]
         if let Some(seed) = ctx
             .world
             .get::<super::tests::cast_admission::GroundCombatSeed>(ctx.me)
@@ -375,7 +375,7 @@ pub(crate) fn filter_target_fissures(
 /// TC30745 OnEffectHitTarget(SCRIPT_EFFECT): normal CastSpell30744 at that hit.
 pub(crate) fn cast_target_fissure(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
     let result = crate::spell_cast::creature_cast(world, caster, 30744, Some(target), false);
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(test)]
     super::tests::cast_admission::record(world, caster, 30744, &result);
     if let Err(reason) = result {
         warn!(

@@ -13,10 +13,9 @@ use crate::auth::{Authenticated, InWorld};
 use crate::networking::PlayerLink;
 
 #[cfg(test)]
-use std::sync::{
-    Mutex,
-    atomic::{AtomicUsize, Ordering},
-};
+use std::sync::Mutex;
+#[cfg(any(test, feature = "test-support"))]
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Resource, Debug, Default)]
 struct CalendarState {
@@ -39,7 +38,7 @@ pub struct CalendarPlugin;
 
 #[cfg(any(test, feature = "test-support"))]
 static CALENDAR_SNAPSHOT_MATERIALIZATIONS: AtomicUsize = AtomicUsize::new(0);
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 static CALENDAR_SNAPSHOT_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 impl Plugin for CalendarPlugin {

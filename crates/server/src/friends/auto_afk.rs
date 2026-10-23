@@ -9,16 +9,15 @@ use shared::components::{Player, PresenceStatus};
 const AUTO_AFK_DURATION: Duration = Duration::from_secs(300);
 
 #[cfg(test)]
-use std::sync::{
-    Mutex,
-    atomic::{AtomicUsize, Ordering},
-};
+use std::sync::Mutex;
+#[cfg(any(test, feature = "test-support"))]
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[cfg(any(test, feature = "test-support"))]
 pub(super) static AUTO_AFK_PLAYERS_VISITED: AtomicUsize = AtomicUsize::new(0);
 #[cfg(any(test, feature = "test-support"))]
 pub(super) static AUTO_AFK_TRANSITIONS: AtomicUsize = AtomicUsize::new(0);
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(super) static AUTO_AFK_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]

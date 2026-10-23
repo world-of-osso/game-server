@@ -63,7 +63,7 @@ impl BossAi {
             return;
         }
         self.events.reset();
-        #[cfg(any(test, feature = "test-support"))]
+        #[cfg(test)]
         self.seed_fixture_events(ctx);
         self.summons.despawn_all(ctx.world);
         let Some(map) = ctx.map() else {
@@ -83,7 +83,7 @@ impl BossAi {
         }
     }
 
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(test)]
     fn seed_fixture_events(&mut self, ctx: &Ctx) {
         if let Some(seed) = ctx.world.get_resource::<super::tests::EncounterSeed>() {
             self.events.seed_rng_if_unseeded(seed.0);
@@ -94,7 +94,7 @@ impl BossAi {
     /// requires no earlier boss).
     pub fn just_engaged_with(&mut self, ctx: &mut Ctx) {
         // Some scripts have no Reset override; seed before their first schedules too.
-        #[cfg(any(test, feature = "test-support"))]
+        #[cfg(test)]
         self.seed_fixture_events(ctx);
         let Some(map) = ctx.map() else {
             return;
