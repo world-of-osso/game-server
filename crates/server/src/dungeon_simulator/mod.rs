@@ -4,6 +4,7 @@ mod campaign;
 mod catalogs;
 mod diagnostics;
 mod dps_parity;
+mod generic_map_tests;
 mod graph;
 mod healer_benchmark_tests;
 mod healer_coefficient_tests;
