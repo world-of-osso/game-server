@@ -8,7 +8,7 @@ const METEOR: u32 = 153561;
 const IMPACT: u32 = 351140;
 const BURN: u32 = 155158;
 
-fn prepare_meteor(
+pub(super) fn prepare_meteor(
     count: usize,
 ) -> (
     crate::spell_cast::test_harness::Harness,
