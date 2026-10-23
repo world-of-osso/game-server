@@ -10,8 +10,8 @@ pub(super) struct Requirements {
     pub boss_order: Vec<u32>,
 }
 
-pub(super) fn requirements(map_id: u16) -> Result<&'static Requirements, String> {
-    static REQUIREMENTS: OnceLock<BTreeMap<u16, Requirements>> = OnceLock::new();
+pub(super) fn requirements(map_id: u32) -> Result<&'static Requirements, String> {
+    static REQUIREMENTS: OnceLock<BTreeMap<u32, Requirements>> = OnceLock::new();
     let sources = REQUIREMENTS.get_or_init(|| {
         serde_json::from_str(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -34,9 +34,8 @@ fn graph_directory() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../content/dungeons")
 }
 
-fn find_graph_path(directory: &Path, map_id: u16) -> Result<PathBuf, String> {
-    let suffix = format!("-{map_id}.json");
-    let entries = std::fs::read_dir(directory)
+fn read_graph_paths(directory: &Path) -> Result<Vec<PathBuf>, String> {
+    std::fs::read_dir(directory)
         .map_err(|error| {
             format!(
                 "read frozen graph directory {}: {error}",
@@ -45,8 +44,12 @@ fn find_graph_path(directory: &Path, map_id: u16) -> Result<PathBuf, String> {
         })?
         .map(|entry| entry.map(|entry| entry.path()))
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| format!("read frozen graph entry: {error}"))?;
-    let matches: Vec<_> = entries
+        .map_err(|error| format!("read frozen graph entry: {error}"))
+}
+
+fn find_graph_path(directory: &Path, map_id: u32) -> Result<PathBuf, String> {
+    let suffix = format!("-{map_id}.json");
+    let matches: Vec<_> = read_graph_paths(directory)?
         .into_iter()
         .filter(|path| {
             path.is_file()
@@ -66,14 +69,14 @@ fn find_graph_path(directory: &Path, map_id: u16) -> Result<PathBuf, String> {
     }
 }
 
-pub(super) fn read_selected_graph() -> Result<(u16, PathBuf), String> {
+pub(super) fn read_selected_graph() -> Result<(u32, PathBuf), String> {
     let selected = match std::env::var("DUNGEON_SIMULATOR_MAP") {
         Ok(value) => value,
         Err(std::env::VarError::NotPresent) => "34".into(),
         Err(error) => return Err(format!("read DUNGEON_SIMULATOR_MAP: {error}")),
     };
     let map_id = selected
-        .parse::<u16>()
+        .parse::<u32>()
         .map_err(|error| format!("invalid DUNGEON_SIMULATOR_MAP={selected}: {error}"))?;
     let path = find_graph_path(&graph_directory(), map_id)?;
     Ok((map_id, path))
