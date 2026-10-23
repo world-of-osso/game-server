@@ -882,7 +882,7 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
-- [Shared SimC APL](systems/simc-apl.md) — literal expressions, declared variables and conditional call order; eleven source WW/Ret REDs observed, implementation GREEN/native adapters pending.
+- [Shared SimC APL](systems/simc-apl.md) — literal expressions, declared variables and conditional call order; eleven source WW/Ret RED→GREEN decisions; cases enabled, native adapters remain pending.
 
 - [Native weapon AP](systems/character-stats.md#native-weapon-attack-power--2026-10-23) — actual Tiger Palm91vs358–377 RED→four native GREEN13.89s; raw item-table AP, attack-type selection and aura366/unequip; parent integration gate pending.
 

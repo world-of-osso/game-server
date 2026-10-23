@@ -4,11 +4,11 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 
 ## What it must do
 
-- [ ] Interpret numeric truth, OR/AND/NOT, arithmetic and comparisons with pinned SimC precedence. Single `%` divides; `%%` is modulo.
+- [x] Interpret numeric truth, OR/AND/NOT, arithmetic and comparisons with pinned SimC precedence. Single `%` divides; `%%` is modulo.
 - [ ] Read explicit native facts for buff stacks/remains/up, cooldown remains/charges/duration, resources, talents, equipment/trinkets, target count/TTD, fight remains, raid-event adds, dots/debuffs and gcd. Unknown operands fail explicitly, including in otherwise inactive condition branches; never silently become false.
-- [ ] Execute declared variables using source `value`, `setif`, `value_else`, `reset` and numeric `default` semantics.
-- [ ] Preserve literal action order and conditional `call_action_list` decisions; native castability selects the first usable action. An exhausted child list returns control to its caller.
-- [ ] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.
+- [x] Execute declared variables using source `value`, `setif`, `value_else`, `reset` and numeric `default` semantics.
+- [x] Preserve literal action order and conditional `call_action_list` decisions; native castability selects the first usable action. An exhausted child list returns control to its caller.
+- [x] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.
 
 ## How it works
 
@@ -26,11 +26,11 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 
 ## Tests asserting this spec
 
-`crates/server/src/simc_apl/tests.rs`; eleven ignored expression/program RED cases pushed before implementation. Genuine11-case RED observed atc0cf6eed6 (exit101, no compiler warnings); implementation GREEN pending.
+`crates/server/src/simc_apl/tests.rs`; eleven expression/program cases pushed ignored before implementation: genuine11RED atc0cf6eed6→11GREEN ataff61cbab (exit0, zero compiler warnings,1m03 compile). Cases enabled afterward; invalid-control case additionally checks sourced call recursion.
 
 ## Known gaps (current cycle)
 
-- [ ] Qualify expression/parser and variable/list implementation GREEN, then wire native kit adapters.
+- [ ] Wire native kit adapters; library expression/variable/list decisions have11-case GREEN, not full native rotation proof.
 - [ ] Native WW and Ret fact adapters and literal per-spec action policies; Ret adapter belongs to14752.
 
 ## Out of scope

@@ -8,7 +8,6 @@ fn facts(rows: &[(&str, f64)]) -> BTreeMap<String, f64> {
 }
 
 #[test]
-#[ignore = "shared APL RED: Ret setif/default/reset not implemented"]
 fn simc_apl_ret_variables_preserve_both_setif_branches_and_initial_default() {
     //76f8118 apl_paladin.cpp21/23/27 and generators variable updates.
     let program = Program::parse(&[
@@ -53,7 +52,6 @@ fn simc_apl_ret_variables_preserve_both_setif_branches_and_initial_default() {
 }
 
 #[test]
-#[ignore = "shared APL RED: conditional native call-list selection not implemented"]
 fn simc_apl_ww_target_count_and_native_castability_select_source_order() {
     //MID2_Monk_Windwalker.simc default call rows and default_st spell rows.
     let program = Program::parse(&[
@@ -107,7 +105,6 @@ fn simc_apl_ww_target_count_and_native_castability_select_source_order() {
 }
 
 #[test]
-#[ignore = "shared APL RED: source Ret variable action/list ordering not implemented"]
 fn simc_apl_ret_finisher_variable_updates_before_native_action_selection() {
     //76f8118 apl_paladin.cpp46–49.
     let program = Program::parse(&[
@@ -156,7 +153,6 @@ fn simc_apl_ret_finisher_variable_updates_before_native_action_selection() {
 }
 
 #[test]
-#[ignore = "shared APL RED: declared empty list must return to its caller"]
 fn simc_apl_explicit_empty_list_returns_to_the_next_caller_action() {
     let program = Program::parse(&[
         ("empty", ""),
@@ -172,7 +168,6 @@ fn simc_apl_explicit_empty_list_returns_to_the_next_caller_action() {
 }
 
 #[test]
-#[ignore = "shared APL RED: invalid list/variable definitions need explicit errors"]
 fn simc_apl_invalid_control_does_not_become_an_empty_list_or_zero_variable() {
     assert!(Program::parse(&[("default", "variable,name=x,op=unknown,value=1")]).is_err());
     let program = Program::parse(&[("default", "tiger_palm,if=variable.undeclared")]).unwrap();
@@ -183,4 +178,10 @@ fn simc_apl_invalid_control_does_not_become_an_empty_list_or_zero_variable() {
     assert!(error.contains("variable.undeclared"), "{error}");
     //76f8118 action.cpp4669–4676 rejects an unknown list during initialization.
     assert!(Program::parse(&[("default", "call_action_list,name=missing")]).is_err());
+    //76f8118 player.cpp14251–14260 throws on a visited call-list cycle.
+    let program = Program::parse(&[("default", "call_action_list,name=default")]).unwrap();
+    let error = program
+        .select("default", &facts(&[]), &mut program.state(), |_| Ok(true))
+        .unwrap_err();
+    assert!(error.contains("recursive APL call_action_list"), "{error}");
 }
