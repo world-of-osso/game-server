@@ -10,17 +10,48 @@ const IGNITE: u32 = 12654;
 const BERSERK: u32 = 26662;
 const CURSE_OF_WEAKNESS: u32 = 702;
 const COUNTERSPELL: u32 = 2139;
+const INTENSIFYING_FLAME: u32 = 416714;
 const AFTER_DUMMY_COMBAT_TIMEOUT: f64 = 5.25;
+
+fn cancel_ignite_direct_hit_bridge(world: &mut bevy::prelude::World, actor: bevy::prelude::Entity) {
+    // Isolate Ignite from Intensifying Flame's separate direct-hit bridge.
+    crate::auras::remove_auras(
+        world,
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == INTENSIFYING_FLAME,
+    );
+}
+
+fn spawn_peer(run: &mut Run) -> bevy::prelude::Entity {
+    let (profile, traits) = super::read_reference(FIRE).expect("native Fire inputs");
+    let identity = super::inputs::read_actor(&profile).expect("native Fire identity");
+    let copy = *run
+        .app
+        .world()
+        .get::<crate::maps::InMap>(run.actor)
+        .unwrap();
+    let level = profile.level.parse().expect("native Fire level");
+    let actor = crate::followers::simulator::spawn_parity_attacker(
+        run.app.world_mut(),
+        FIRE,
+        level,
+        copy,
+        identity,
+    )
+    .expect("second native Fire player");
+    super::inputs::equip(run.app.world_mut(), actor, &profile).expect("native Fire equipment");
+    super::inputs::install_traits(run.app.world_mut(), actor, &traits).expect("native Fire traits");
+    for _ in 0..4 {
+        run.app.update();
+    }
+    cancel_ignite_direct_hit_bridge(run.app.world_mut(), actor);
+    actor
+}
 
 fn prepare_live_dot() -> Run {
     let mut run = prepare(FIRE, 1).expect("native Fire BiS and active traits must load");
-    // Isolate Ignite from Intensifying Flame's separate direct-hit bridge.
-    crate::auras::remove_auras(
-        run.app.world_mut(),
-        run.actor,
-        crate::auras::RemoveReason::Cancelled,
-        |aura| aura.spell_id == 416714,
-    );
+    cancel_ignite_direct_hit_bridge(run.app.world_mut(), run.actor);
     run.app
         .world_mut()
         .entity_mut(run.actor)
@@ -187,4 +218,69 @@ fn native_dummy_tc_nondamaging_spell_does_not_restart_the_damage_timer() {
         !run.app.world().get::<CombatStatus>(target).unwrap().0,
         "TC refreshes an existing dummy timer only on non-DOT damage, not a nondamaging spell"
     );
+}
+
+#[test]
+#[ignore = "opt-in two real Fire players sharing native31146; requires private parity inputs"]
+fn native_dummy_tc_each_attacker_reference_expires_independently() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_live_dot();
+    let first_hit = aura_now(run.app.world());
+    let peer = spawn_peer(&mut run);
+    let target = run.targets[0];
+    while aura_now(run.app.world()) < first_hit + 2.0 {
+        run.app.update();
+    }
+    run.app
+        .world_mut()
+        .entity_mut(peer)
+        .insert(crate::networking::CombatTarget(Some(target)));
+    crate::spell_cast::cast_for_player(run.app.world_mut(), peer, FIREBALL).expect("peer Fireball");
+    let mut landed = false;
+    for _ in 0..200 {
+        run.app.update();
+        landed = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                let peer_fireball =
+                    event.source == Some(peer.to_bits()) && event.spell_id == Some(FIREBALL);
+                let dealt_damage =
+                    event.kind == shared::protocol::CombatLogKind::Damage && event.amount > 0;
+                peer_fireball && dealt_damage
+            });
+        if landed {
+            break;
+        }
+    }
+    assert!(landed, "second native player must actually hit the dummy");
+    let peer_hit = aura_now(run.app.world());
+    while aura_now(run.app.world()) < first_hit + AFTER_DUMMY_COMBAT_TIMEOUT {
+        run.app.update();
+    }
+    assert!(!crate::combat_refs::has_active_reference_to(
+        run.app.world(),
+        target,
+        run.actor
+    ));
+    assert!(crate::combat_refs::has_active_reference_to(
+        run.app.world(),
+        target,
+        peer
+    ));
+    assert!(run.app.world().get::<CombatStatus>(target).unwrap().0);
+    assert!(!run.app.world().get::<CombatStatus>(run.actor).unwrap().0);
+    while aura_now(run.app.world()) < peer_hit + AFTER_DUMMY_COMBAT_TIMEOUT {
+        run.app.update();
+    }
+    assert!(!crate::combat_refs::has_active_reference_to(
+        run.app.world(),
+        target,
+        peer
+    ));
+    assert!(!run.app.world().get::<CombatStatus>(target).unwrap().0);
+    assert!(!run.app.world().get::<CombatStatus>(peer).unwrap().0);
 }

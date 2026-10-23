@@ -1,3 +1,7 @@
+## 2026-10-23 — TC training dummy combat exit
+
+[Dummy reference expiry](systems/combat.md#training-dummy-combat-exit--2026-10-23): independentdb17198c4 native Fireball→Ignite retention and harmless-Counterspell timer two genuine RED; LeavingCombat/ordinary Defias evade two controls PASS26.87s. Replace foreign-aura/attack-intent cleanup with TC per-attacker non-DOT timers and PvE-reference-only expiry. Five native cases/retained controls await GREEN; no follower policy or DPS claim.
+
 ## 2026-10-23 — Hit positivity independent of factions
 
 [Hit classification](systems/auras.md#hit-positivity-independent-of-factions--2026-10-23): test-only6d5d7026a genuine1PASS/1FAIL10.43s, native16166 harmful proc absent against attackable neutral faction7 after actual damage; friendly2061→36483 control passes. Spell_cast now uses TC damage/heal/landed-effect positivity, not faction hostility; GREEN pending, no proc import or parity certification.

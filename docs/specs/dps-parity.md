@@ -26,6 +26,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Training dummy combat exit
 
+- [ ] Nondamaging spells do not refresh an existing dummy damage timer. Expiry clears only that PvE pair's threat/references; other attackers stay engaged until their own timers expire, and out-of-range attack intent remains intact.
+
 - [ ] Native31146 uses TC a352b1fa `npc_training_dummy`/`NullCreatureAI`: each attacker leaves combat5s after its last non-DoT hit; DoT damage does not refresh that timer. Combat exit removes only LeavingCombat-interrupt auras, not every foreign aura, and does not enter evade. A still-live native DoT must tick beyond5s. Ordinary CreatureAI `_EnterEvadeMode` retains its conditional aura cleanup (`CreatureAI.cpp298–314`). Source: `npcs_special.cpp1382–1421`, `PassiveAI.h55–67`, `Unit.cpp9257`; no harness timer/evade exemption.
 
 ### Hunter pet melee owner RAP
