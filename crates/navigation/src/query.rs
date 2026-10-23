@@ -528,6 +528,9 @@ mod boundary_geometry_diagnostic;
 #[path = "component_diagnostic.rs"]
 mod component_diagnostic;
 #[cfg(all(test, feature = "bake"))]
+#[path = "drop_policy_diagnostic.rs"]
+mod drop_policy_diagnostic;
+#[cfg(all(test, feature = "bake"))]
 #[path = "gorek_diagnostic.rs"]
 mod gorek_diagnostic;
 #[cfg(all(test, feature = "bake"))]
