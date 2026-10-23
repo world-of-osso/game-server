@@ -430,9 +430,6 @@ pub(crate) fn rake_bleed_snapshot(world: &World, caster: Entity, amount: f32) ->
 pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
-    if let Some(hook) = batch19::damage_amount(spell_id) {
-        return Some(hook);
-    }
     match spell_id {
         super::elemental_overload::LIGHTNING_OVERLOAD
         | super::elemental_overload::CHAIN_OVERLOAD

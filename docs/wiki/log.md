@@ -4068,6 +4068,7 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 
 - 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22) HIT/Chain correction5GREEN10.43s; actual StatsPlugin70samples2PASS9.38s on same executable. Three qualified tests enabled; fullAPL/resource/other-root gaps retained.
 
+- 2026-10-23: [Native weapon AP](systems/character-stats.md#native-weapon-attack-power--2026-10-23): actual Tiger Palm91vs358–377 RED precedes generic raw-table weapon AP/attack-type/aura366 implementation; targeted4GREEN13.89s at4b9d2be73, zero compiler warnings; cases enabled afterward. Parent integration gate pending. White-hit AP/6 versus TC3.5 remains deferred and unchanged.
 - [Lava Burst Overload](investigations/follower-data.md#lava-burst-overload-qualification): fixtureNoCharges distinguished from genuine86-native-hit RED;51505→285466 added to existing HIT callback/effect1 scaling. GREEN pending; EB/Icefury cast-only scope clarified.
 
 - [Lava Overload identity](investigations/follower-data.md#lava-burst-overload-qualification): TC enum77451 is queued cast; native effect32→285466 damage at50yd/s. Direct-payload mapping is not gate-ready; ignored native wrapper/flight oracle added before correction.

@@ -892,6 +892,8 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
+- [Native weapon AP](systems/character-stats.md#native-weapon-attack-power--2026-10-23) — actual Tiger Palm91vs358–377 RED→four native GREEN13.89s; raw item-table AP, attack-type selection and aura366/unequip; parent integration gate pending.
+
 - [Profession specializations](systems/profession-specializations.md) — source-earned knowledge, irreversible trait spending, atomic wallet/recipe persistence and owner snapshots; native/request acceptance remains open.
 
 - [Gathering](systems/gathering.md) — authored GO50/skin metadata, normal and shared loot readiness, casts/progression, pool timers/persistence; twelve scoped gathering tests and linked integrated both-skin native baseline proof.
