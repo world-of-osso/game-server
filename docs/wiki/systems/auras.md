@@ -1,5 +1,15 @@
 # Auras
 
+## Periodic critical ticks — 2026-10-23
+
+TC a352b1fa `SpellAuras.cpp524–532` rejects Attr2 `CANT_CRIT` before accepting Attr8 `PERIODIC_CAN_CRIT`. `SpellAuraEffects.cpp5680/5764/5895` rolls damage, leech and healing each tick; percent damage/healing shares those paths. `CalcPeriodicCritChance6103–6113` requires a Player spell-mod owner. `Object.cpp1646–1667` resolves a Player itself or a pet/totem's direct Player owner.
+
+**`FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_SPELL_OWNER`** is an explicit project policy: actors with class `CharacterStats` (players, class followers and parity fixture actors) qualify as Player spell owners; their controlled pets/totems resolve that direct owner. Ordinary creatures without class stats or a qualifying owner retain zero periodic crit, even with a native spell-crit aura. This does not grant guardian-wide ownership, pet stats, proc forwarding or new learned spells.
+
+`spell_cast::effects` shares the normal script-aware chance computation. The original caster still owns script/target-specific modifiers and critical damage/healing aura bonuses; the qualified spell owner supplies current chance stats and spell mods. TC periodic damage always takes `SpellCriticalDamageBonus` order, not melee/ranged weapon order. Healing retains native `CritDamageAndHealing` and critical-healing multipliers. `auras::periodic` passes actual outcomes through ordinary damage/heal resolution without changing stored tick amounts, refresh pools or timing. [Contract](../../specs/auras.md#periodic-critical-ticks).
+
+Pushed native RED7b92423a7: seven cases, two controls PASS/five feature failures35.83s. Player and class-follower Barbed217200 each record zero crits over32 seeded positive ticks at22.739% native crit. Same-instance Barbed/Renew139 ignore real post-application crit changes; native pet Burning Blood98957 records zero/four with owner crit≥100. CANT+unflagged controls (341408/71023) and an ordinary creature with native +100 spell crit154611 pass. Real Denounce171884, Critical Focus75060 and Luckydo130165 isolate current chance and native bonuses without invented rows/stats/flags/amounts. GREEN/integration proof pending; controlled aura applications do not qualify root cast admission, APL or DPS parity. Evidence: engine `data/diagnostics/dps-parity-fix-2026-10-21/periodic-crit-{native-source.json,red-7b92423a7-native.log}`.
+
 ## Intensifying Flame tick bridge — 2026-10-23
 
 `FIRE_INTENSIFYING_FLAME_SIMC_TICK_BRIDGE` connects actual Ignite12654 effect0 ticks to native419800. SimC76f8118 `sc_mage.cpp2502–2567` supplies this missing bridge; TC a352b1fa has no named script and DB2 has no child trigger. Active416714 supplies the native owner-local target cap, percentage, chance and periodic mask. Its current70448 row has cap3, percentage30, chance101 and no ICD, charges or RPPM. The leaf's coefficient and flags remain native; SimC damage-flag overrides are not imported. [Contract](../../specs/auras.md#intensifying-flame).

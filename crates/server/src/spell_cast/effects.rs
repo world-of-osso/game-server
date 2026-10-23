@@ -850,22 +850,32 @@ const SPELL_ATTR2_CANT_CRIT: u32 = 0x2000_0000;
 
 /// CritChance mods and script values precede the victim's melee crit modifier.
 fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+    crit_chance_from_owner(world, caster, target, spell, caster)
+}
+
+fn crit_chance_from_owner(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+    spell_owner: Entity,
+) -> f32 {
     if super::attributes(spell, 2) & SPELL_ATTR2_CANT_CRIT != 0 {
         return 0.0;
     }
     let chance =
         super::scripts::crit_chance(world, caster, target, spell.id).unwrap_or_else(|| {
             let base = world
-                .get::<CharacterStats>(caster)
+                .get::<CharacterStats>(spell_owner)
                 .map_or(0.0, |stats| stats.crit_pct);
             let spell_bonus = if uses_weapon_crit_bonus_order(spell) {
                 0.0
             } else {
-                stat_mods(world, caster).map_or(0.0, |mods| mods.spell_crit_pct)
+                stat_mods(world, spell_owner).map_or(0.0, |mods| mods.spell_crit_pct)
             };
             spell_mods::modify(
                 world,
-                caster,
+                spell_owner,
                 spell,
                 SpellModOp::CritChance,
                 base + spell_bonus,
@@ -896,15 +906,28 @@ fn with_crit(
     if !crit {
         return (amount, false);
     }
+    (
+        critical_healing_amount(world, caster, caster, spell, amount),
+        true,
+    )
+}
+
+fn critical_healing_amount(
+    world: &World,
+    caster: Entity,
+    spell_owner: Entity,
+    spell: &SpellInfo,
+    amount: f32,
+) -> f32 {
     let bonus = spell_mods::modify(
         world,
-        caster,
+        spell_owner,
         spell,
         SpellModOp::CritDamageAndHealing,
         amount,
     );
     let multiplier = crate::auras::combat_stats::critical_healing_multiplier(world, caster);
-    (((amount + bonus) * multiplier).trunc(), true)
+    ((amount + bonus) * multiplier).trunc()
 }
 
 fn uses_weapon_crit_bonus_order(spell: &SpellInfo) -> bool {
@@ -927,10 +950,28 @@ fn with_damage_crit(
     if !crit {
         return (amount, false);
     }
+    let amount = critical_damage_amount(
+        world,
+        caster,
+        caster,
+        spell,
+        amount,
+        uses_weapon_crit_bonus_order(spell),
+    );
+    (amount, true)
+}
+
+fn critical_damage_amount(
+    world: &World,
+    caster: Entity,
+    spell_owner: Entity,
+    spell: &SpellInfo,
+    amount: f32,
+    weapon_order: bool,
+) -> f32 {
     let multiplier = world
         .get::<AuraStatMods>(caster)
         .map_or(1.0, |mods| mods.critical_damage(spell.school_mask()));
-    let weapon_order = uses_weapon_crit_bonus_order(spell);
     let base_bonus = if weapon_order {
         amount
     } else {
@@ -938,18 +979,90 @@ fn with_damage_crit(
     };
     let bonus = spell_mods::modify(
         world,
-        caster,
+        spell_owner,
         spell,
         SpellModOp::CritDamageAndHealing,
         base_bonus,
     );
     let total = amount + bonus;
-    let total = if weapon_order {
+    if weapon_order {
         total * multiplier
     } else {
         total
+    }
+}
+
+/// TC SpellAuras.cpp524–532 and Object.cpp1646–1667. The named project policy
+/// FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_SPELL_OWNER treats class CharacterStats
+/// actors as Player spell owners; ordinary creatures without one remain ineligible.
+fn periodic_spell_owner(world: &World, caster: Entity, spell: &SpellInfo) -> Option<Entity> {
+    const PERIODIC_CAN_CRIT: u32 = 0x200;
+    let allowed = super::attributes(spell, 8) & PERIODIC_CAN_CRIT != 0;
+    let denied = super::attributes(spell, 2) & SPELL_ATTR2_CANT_CRIT != 0;
+    if !allowed || denied {
+        return None;
+    }
+    if world.get::<CharacterStats>(caster).is_some() {
+        return Some(caster);
+    }
+    let owner = if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(caster) {
+        pet.owner
+    } else {
+        let summon = world.get::<super::summon::SummonedCreature>(caster)?;
+        let shares_spell_owner = summon.properties.is_pet() || summon.properties.is_totem();
+        if !shares_spell_owner {
+            return None;
+        }
+        summon.owner
     };
-    (total, true)
+    world.get::<CharacterStats>(owner).map(|_| owner)
+}
+
+/// TC AuraEffect::GetCritChanceFor/CalcPeriodicCritChance: current spell-owner
+/// chance, but the original caster still owns script and target-side modifiers.
+fn roll_periodic_crit(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> Option<Entity> {
+    let owner = periodic_spell_owner(world, caster, spell)?;
+    let chance = crit_chance_from_owner(world, caster, target, spell, owner);
+    (rand::random::<f32>() * 100.0 < chance).then_some(owner)
+}
+
+pub(crate) fn with_periodic_damage_crit(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+    amount: f32,
+) -> (f32, bool) {
+    let Some(owner) = roll_periodic_crit(world, caster, target, spell) else {
+        return (amount, false);
+    };
+    // TC SpellAuraEffects.cpp5680/5764 always uses SpellCriticalDamageBonus,
+    // including periodic spells whose defense class normally uses weapon order.
+    (
+        critical_damage_amount(world, caster, owner, spell, amount, false),
+        true,
+    )
+}
+
+pub(crate) fn with_periodic_heal_crit(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+    amount: f32,
+) -> (f32, bool) {
+    let Some(owner) = roll_periodic_crit(world, caster, target, spell) else {
+        return (amount, false);
+    };
+    (
+        critical_healing_amount(world, caster, owner, spell, amount),
+        true,
+    )
 }
 
 fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
