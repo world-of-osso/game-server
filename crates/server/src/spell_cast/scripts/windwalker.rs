@@ -122,7 +122,29 @@ pub(crate) fn combo_strikes_multiplier(world: &World, caster: Entity, spell: u32
         .find(|effect| effect.index == 0)
         .expect("native Combo Strikes effect0")
         .bonus_coefficient;
-    1.0 + stats.mastery_points * coefficient / 100.0
+    (1.0 + stats.mastery_points * coefficient / 100.0)
+        * sunfire_spiral_multiplier(world, caster, spell)
+}
+
+/// WW_SUNFIRE_SPIRAL_SIMC_POLICY: SimC76f8118 sc_monk.cpp945–953.
+/// TC has no script/binding and native1272415 has no class mask. The caller
+/// already proved active Combo Strikes; DB2 owns this selected talent's percent.
+fn sunfire_spiral_multiplier(world: &World, caster: Entity, spell: u32) -> f32 {
+    if spell != 185099 {
+        return 1.0;
+    }
+    let Some(aura) = world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1272415))
+    else {
+        return 1.0;
+    };
+    let effect = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Sunfire Spiral retains its effect0 percentage");
+    1.0 + effect.amount / 100.0
 }
 
 /// Tiger Palm rolls its learned passive's native effect0 chance on a landed hit.

@@ -7,6 +7,11 @@
 Classification now follows pinned TC a352b1fa `Spell.cpp:2849–2871`: actual positive damage is harmful, otherwise positive healing is helpful, otherwise intersect `spell_info::positivity::negative_effects` with effects that landed on this recipient. `SpellInfo.cpp:1883–1891` supplies the native positivity contract; `Unit.cpp:5587–5620` forwards the supplied actor/recipient masks without faction reclassification. Threat/attack admission remains separate. No proc masks/chances, faction rows, coefficients, charges or wire fields change.
 
 The existing `auras/procs.rs` non-weapon attribute mapping remains unchanged: this base already reads TreatAsPeriodic/IsAbility (the historical Intensifying note below describes its older revision). TDB proc import and full periodic eligibility are separate ownership. Tests: `spell_cast/hit_positivity_tests.rs`; [contract](../../specs/auras.md#native-hit-proc-masks). Exact native source receipt and RED log: engine `data/diagnostics/rotation-fidelity-2026-10-21/{generic-hit-positivity-source-qualification.json,hit-positivity-6d5d-native-red.log}`. No DPS parity claim follows from these two fixtures.
+## Sunfire Spiral combo RSK — 2026-10-23
+
+`WW_SUNFIRE_SPIRAL_SIMC_POLICY` applies earned1272415 effect0's native40% to RSK damage185099 only after ordinary Combo Strikes is active. Native aura4 has no class-mask words; pinnedTCsrc, TDB4066script bindings and TC SQL updates have no1272415/Sunfire binding. SimC76f8118 `sc_monk.cpp945–953` supplies the condition, not a coefficient. Repeating RSK clears the ordinary combo/Hit Combo state and receives neither mastery nor Sunfire.
+
+Actual native level69 TP-funded RSK→repeat-RSK: fba821595 genuineRED1561.3763 versus2185.9268 expected; b6b3a93e6 native2GREEN39.92s including original TP/Provoke mastery control. Repeated1303.1418, mastery18.63%, HitCombo1% and Sunfire40% all come from native state; no buff/resource grants. Test enabled afterward without body change. Post-fix300s ST54887.59/3T87182.52 remain−73.41%/−76.85%; [census/source/receipts](../../handoffs/ww-source-census.md#rsktp-coefficient-and-sunfire-investigation), [contract](../../specs/windwalker-parity.md).
 
 ## Intensifying Flame tick bridge — 2026-10-23
 
