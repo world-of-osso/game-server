@@ -77,6 +77,35 @@ fn dummy13_rend_applies_owned_native_bleed_and_ticks() {
 }
 
 #[test]
+fn arms_deep_wounds_native_proc_accepts_execute_but_not_slam() {
+    // TDB1210 spell_proc1261060: family4/mask536870912 selects Execute.
+    // DB2 alone has an empty family mask and cannot express this restriction.
+    for (spell, expected) in [(1464, false), (163201, true)] {
+        let _seed = crate::random::seed_scope(71_262_115);
+        let mut h = harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[1464, 163201, 260798, 1261060, 262115, 137049],
+            1,
+        )
+        .unwrap();
+        let caster = h.caster;
+        let target = h.npc;
+        apply(&mut h, caster, caster, 137049, u32::MAX);
+        apply(&mut h, caster, caster, 1261060, 1);
+        h.app.world_mut().get_mut::<Health>(target).unwrap().current = 900.0;
+        h.set_power(PowerType::Rage, 1000.0);
+        h.cast_and_deliver(spell, Some(target));
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        h.advance(1);
+        assert_eq!(
+            crate::auras::has_aura(h.app.world(), target, 262115),
+            expected,
+            "native spell{spell} must honor the sourced TDB family restriction"
+        );
+    }
+}
+
+#[test]
 fn arms_execute_native_optional_rage_scales_child_damage_from_launch_spend() {
     // TC a352b1fa spell_warr_execute_damage: 1 + (spent - base) / optional.
     // Actual SpellPower9491 supplies Arms' base200 and optional200 raw Rage.
