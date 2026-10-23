@@ -1,3 +1,7 @@
+## 2026-10-23 — Ground discovery I/O
+
+[Shared discovery helper](systems/ground-assets.md#discovery-only-payload-io--2026-10-23):51.848GB discarded reads avoided across normal/missing modes; byte-identical real outputs,275map selections and extraction missing order. Sparse48MiB fixture50,374,741-byteRED→fiveGREEN; unchanged native vehicle23.559sPASS. Shared suites10PASS/one existing opt-in skip; explicit91-case corpus/182CLIs preserves all observations, including28raw failures. Instrumented busy-host255.514→55.113s is not whole/quiet proof.
+
 ## 2026-10-22 — Per-key prepared-input publication
 
 [Per-key init](investigations/server-test-performance.md#per-key-prepared-input-initialization-redgreen-and-native-qualification): explicit30sserializationRED→7951a2d33nativeGREEN0.003339s; eight same-key readers/other-keyprogress/counts1/1/Appisolation/warmreuse. Same514sourcefive-native169.415→73.051s; fullaffectedAI542PASS/17ignored, single-moduleRSS2.176GiB plus heavy reclaim/swap, notwholebudget proof. pk1027accepted/queued. Backup wall lever and small toy catalog slice declined; nextwhole-suite top-test attribution pending.
