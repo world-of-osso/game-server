@@ -9,6 +9,72 @@ const AFTER_STEALTH: u32 = 392401;
 const STEALTH: u32 = 392403;
 const STEALTH_SPELL: u32 = 1784;
 const IMPROVED_GARROTE: u32 = 381632;
+const DEADLY_POISON: u32 = 2818;
+const DEADLY_POISON_INSTANT: u32 = 113780;
+
+fn instant_poison_hits(h: &Harness, caster: Entity) -> Vec<i32> {
+    h.inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(DEADLY_POISON_INSTANT)
+                && event.source == Some(caster.to_bits())
+        })
+        .map(|event| event.amount)
+        .collect()
+}
+
+fn trigger_native_poison(h: &mut Harness, caster: Entity, target: Entity) {
+    assert!(super::try_cast_triggered(
+        h.app.world_mut(),
+        caster,
+        DEADLY_POISON,
+        Some(target),
+        1
+    ));
+    h.advance(3);
+    assert!(
+        h.app
+            .world()
+            .get::<ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == DEADLY_POISON && aura.caster == caster),
+        "actual native poison application must exist for this caster"
+    );
+}
+
+#[test]
+fn assassination_deadly_poison_native_first_apply_has_no_instant_damage() {
+    let mut h = harness(Vec::new(), &[DEADLY_POISON, DEADLY_POISON_INSTANT], 4).unwrap();
+    h.stop_attack();
+    let (caster, target) = (h.caster, h.npc);
+    trigger_native_poison(&mut h, caster, target);
+    assert!(instant_poison_hits(&h, caster).is_empty());
+}
+
+#[test]
+fn assassination_deadly_poison_native_own_repeat_not_foreign_aura_triggers_damage() {
+    let mut h = harness(Vec::new(), &[DEADLY_POISON, DEADLY_POISON_INSTANT], 4).unwrap();
+    h.stop_attack();
+    let foreign = spawn_player(&mut h.app, 4, 1.0);
+    let (caster, target) = (h.caster, h.npc);
+    trigger_native_poison(&mut h, foreign, target);
+    trigger_native_poison(&mut h, caster, target);
+    assert!(
+        instant_poison_hits(&h, caster).is_empty(),
+        "another Rogue's actual poison does not authorize this caster's instant child"
+    );
+    trigger_native_poison(&mut h, caster, target);
+    let hits = instant_poison_hits(&h, caster);
+    assert_eq!(
+        hits.len(),
+        1,
+        "TC2818 own-aura repeat must cast native113780 exactly once"
+    );
+    assert!(hits[0] > 0, "native child must deal actual damage");
+}
 
 fn apply_native_aura(h: &mut Harness, caster: Entity, target: Entity, spell: u32) {
     crate::auras::apply_aura(
