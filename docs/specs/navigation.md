@@ -24,6 +24,13 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 
 Implementation/proof: [navigation drop ownership](../wiki/systems/navigation.md#one-way-collision-drop--2026-10-22), `crates/server/src/followers/darkflame_drop_tests.rs`. Approval is a project policy, not an inferred Retail transport. Targeted four-case GREEN at cff55269e; two separate full-boss upward controls also pass. Merged tip awaits lead integration gate.
 
+## Idle follow distance
+
+- [ ] Idle follow admission includes real vertical separation in3D distance, toward the assigned party follow point or the owner for unslotted follows. Keep existing horizontal range/tolerance, slot offsets and horizontal catch-up speed/movement budgets. TC a352b1fa FollowMovementGenerator.cpp:52 calls Position::IsInDist; Position.h:121–124,157 includes vertical distance.
+- [ ] A settled follower must start the already-connected native route when its owner changes only height and its follow point becomes30.25yd below, while same-floor nearby owners still hold and existing follow controls remain unchanged. Regression: `crates/server/src/followers/darkflame_drop_tests.rs::darkflame_drop_idle_follower_descends_when_owner_is_directly_below`.
+
+[Source/proof](../wiki/systems/navigation.md#idle-follow-vertical-range--2026-10-22). No new connector, query/profile change or NPC fall damage.
+
 ## Dense-map bake capacity
 
 - [x] Start each map with the published4×4 spatial grid. Only a proven Recast16-bit contour-vertex capacity overflow may trigger deterministic whole-map power-of-two refinement. Never change voxel/body/clearance/slope/region/simplification values or add map-specific settings to make geometry fit.

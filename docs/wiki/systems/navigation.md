@@ -2,6 +2,14 @@
 
 Contract: [navigation](../../specs/navigation.md). Phase 1 uses the same offline `los::bake::Baker` asset/placement collector as LOS, with collision selection: terrain fans/holes, shared ground MOPY/MPY2 WMO collision faces, M2 bounding hulls instead of render batches. No new geometry extractor or CDN access. Shared MH2O parsing lives in `los::liquid` and is re-exported by server ground. Modern LiquidObject IDs (>=42) resolve LVF from the exact authored vertex block size; real ocean root776382 stores81depth bytes, not81float heights.
 
+## Idle follow vertical range — 2026-10-22
+
+Post-drop production-party regression at db0ad296a establishes an admission blocker, not a missing route: real ground supports both owner floors, upper owner fits native body clearance, and the lower slot point has a five-corner native route. With PartyFollowSlot2/4 settled at(535.1,86.534424,110), owner changes only height atXZ(535.1,114) toY56.281815. After80frames the follower is unchanged, goal XZ gap0/vertical30.25261, FollowOwner.moving=false. Same actor/control changes only ownerXZ at unchanged lowerY, then naturally descends toY56.27814. The desired first descent assertion is genuine RED0PASS/1FAIL6.06s; `stacked-floor-follow-red-db0ad296a.log` in the component-investigation evidence directory.
+
+Root: `creature_ai.rs::follow_owner_system` computes idle `within_range` from XZ alone and continues before issuing Navigation. Pinned TC a352b1fa `FollowMovementGenerator.cpp:50–52` uses `PositionOkay`/`IsInDist`; `Position.h:121–124,157` uses full squared distance including verticalZ (server BevyY). Primary files are preserved as `TC-a352b1fa-FollowMovementGenerator.cpp` and `TC-a352b1fa-Position.h`, SHA256572086d151354ca3c40dab62d4638bcbd805e02b42aebcb6a9fc9d78caa23b7a /83e600e93313aa3f02f7aea2947486331eda0b2692cbc8be90435f371d4ca77d.
+
+Lead approved a minimal root fix: only the idle distance adds the actual height gap, both for a party slot and unslotted owner range. Slot positions, radii/tolerance, horizontal catch-up gap and movement budgets remain unchanged. No new path, geometry, connector or NPC damage behavior. The new RED and existing follow controls remain GREEN-pending. [Contract](../../specs/navigation.md#idle-follow-distance).
+
 ## One-way collision drop — 2026-10-22
 
 Lead approved exactly one `NAV_ONE_WAY_DROP_FROM_COLLISION` connection on2651 after the six-pair collision/source table. Halls2527, Academy2526 and Goldie2661 remain named gaps. Source component contains Waxbeard210149/order1000; target contains Blazikon208743/order2000 and Darkness208747/order7000. Evidence: game-engine `data/diagnostics/follower-nav-gorek-2026-10-22/component-investigation/one-way-drop-qualification-table.md` and `darkflame-raw-ledge-body-probe.json`.

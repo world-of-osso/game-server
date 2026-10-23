@@ -1,6 +1,10 @@
 ## 2026-10-22 — Hunter pet sourced HP/armor and summon ordering
 
 [Hunter inheritance](systems/character-stats.md#hunter-pet-health-and-armor--2026-10-22): native ExpectedStat/template createHP, TC30% ownerStamina×10HP and level×50+70% ownerarmor. Separate fresh56244/max178094 RED fixed through the existing cached Stats producer before summon, without initialization/top-up state. Six native controls pass; lifecycle composite5+1 passes after authentic ExpectedStats fixture hydration and exact native377HP dismissal persistence. Check/fmt pass at01d22; parent integration gate remains separate. SimC divergence explicit; no whole DPS/Azure survival/petAP claim.
+## 2026-10-22 — Idle party follow vertical admission
+
+[Navigation](systems/navigation.md#idle-follow-vertical-range--2026-10-22): actual2651 PartySlot2/4/native route/owner support/body-fit guards pass; owner Y-only change leaves NPC30.25261yd above goal withXZgap0, while same-actor XZ-only control descends normally. db0 regression genuineRED0/1/6.06s. TC FollowMovementGenerator52→Position121–124/157 confirms3D distance. Minimal idle `within_range` height inclusion approved; horizontal speeds/bands/slots unchanged. GREEN/controls pending; no new link or damage.
+
 ## 2026-10-22 — Approved Darkflame one-way collision drop
 
 [Navigation](systems/navigation.md#one-way-collision-drop--2026-10-22): single2651 source→lower connection approved after raw-edge table; no Halls/Academy/Goldie link. Native MoveFall actual ground/LOS landingPASS, native downpath+authenticated follower routeRED atdef505bf8. Implemented explicit directed native-leg edge and owned PointMovement→MoveFall departure; no canonical bake or NPC damage. Atcff55269e four targeted native/follower/other-map testsGREEN8.03s; separate full-boss upward controls2GREEN0.06s. Mergedorigin/mastera268ba2a6 as4a4addad5 without movement changes. `FOLLOWER_NPC_FALL_DAMAGE_UNMODELED`; lead integration gate pending.
