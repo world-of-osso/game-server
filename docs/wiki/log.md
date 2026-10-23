@@ -1,3 +1,7 @@
+## 2026-10-23 — Uldaman independent source-code gates
+
+[Staged input assembly](investigations/follower-data.md#uldaman-frozen-input-assembly--2026-10-23):e45b4ced3 parser2GREEN after readability split, scoped nav/examplescheck23.70s/zero warnings and formatGREEN, 74-node progression continuity/encounter-order acceptance1GREEN/0.005s. Existing227pose proof and immutable24,976pair extraction retained at original revisions; no unchanged matrix rerun. Real14305 native eligibility/radius capture still blocks pull selection; no runtime/canonical change.
+
 ## 2026-10-23 — Uldaman frozen input assembly
 
 [Partial data packet](investigations/follower-data.md#uldaman-frozen-input-assembly--2026-10-23):missing-artifactRED2/0.001s→227nativeGUID/formation/f32 contractGREEN1/0.049s; offline resident-nav exporter parser2GREEN/build0.94s. All24,976pairs retained,17,663positivewalks→553MSF/four-neighbour edges;74-node predefined boss progression assembled. Five unreachable native nodes not relocated/classified by faction. Empty pull route remains explicitly blocked on14305 real native corridor inputs; no runtime/canonical changes or full-ready claim.
