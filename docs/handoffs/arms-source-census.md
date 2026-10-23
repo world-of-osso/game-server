@@ -19,7 +19,7 @@ Exact argv, raw/normalized reports, profile and selected traits live under engin
 
 ## Coverage
 
-`arms-source-census-v1.json` and `arms-spell-matrix-v1.md` contain 297 spell IDs from 76 selected-trait rows, specialization grants, literal APL name candidates, reference damage channels and authored child closure. Candidate APL name matches are **not** authoritative runtime action bindings. `arms-apl-condition-ledger-v1.json` retains all148 source rows; `arms-aura-census-v1.json` inventories75 aura types. Each spell retains DB2 effects, all other difficulty rows, costs, cooldowns, aura options, PPM, descriptions, TDB signed bindings/procs, TC declarations and SimC channel shares. All runtime cells remain unmeasured; source presence never substitutes for a cast/effect test.
+`arms-source-census-v1.json` and `arms-spell-matrix-v1.md` contain 170 spell IDs from76 selected-trait rows, specialization grants,52 source-checked action/operand binding IDs, reference damage channels and authored child closure. Ambiguous NPC spell-name matches are excluded from the matrix; binding runtime behavior remains unqualified. `arms-apl-condition-ledger-v1.json` retains all148 source rows; `arms-aura-census-v1.json` inventories67 aura types. Each spell retains DB2 effects, all other difficulty rows, costs, cooldowns, aura options, PPM, descriptions, TDB signed bindings/procs, TC declarations and SimC channel shares. All runtime cells remain unmeasured; source presence never substitutes for a cast/effect test.
 
 |Channel|ST share|3T share|Current source finding|
 |---|---:|---:|---|
