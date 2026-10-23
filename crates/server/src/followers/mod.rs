@@ -46,6 +46,8 @@ mod giantkiller_tests;
 #[cfg(test)]
 mod intensifying_flame_tests;
 #[cfg(test)]
+mod kit_elemental_resource_tests;
+#[cfg(test)]
 mod kit_proc_fidelity_tests;
 #[cfg(test)]
 mod kit_rotation_fidelity_tests;
