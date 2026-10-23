@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use super::pull_sources::{self, Source};
 use crate::creature_aggro::AggroDistance;
 use crate::maps::InMap;
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 use crate::navigation::Navigation;
 #[path = "pull_route_paths.rs"]
 mod paths;
@@ -160,13 +160,13 @@ fn read_complete_route(
     paths::read(world, tank, map, key, from, to)
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(super) fn inspect_route(world: &mut World, request: &Request<'_>) -> Result<PullRoute, String> {
     read_route_with_destination(world, request, None, inspect_complete_route)?
         .ok_or_else(|| "Fixture route inspection unexpectedly pending".into())
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(super) fn inspect_point_route(
     world: &mut World,
     request: &Request<'_>,
@@ -176,7 +176,7 @@ pub(super) fn inspect_point_route(
         .ok_or_else(|| "Fixture point inspection unexpectedly pending".into())
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 fn inspect_complete_route(
     world: &mut World,
     tank: Entity,
