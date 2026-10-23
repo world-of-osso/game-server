@@ -12,6 +12,11 @@ pub trait Facts {
 /// Native adapters must supply this explicitly; no actor-wide fallback is assumed.
 pub trait ActionFacts: Facts {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String>;
+
+    /// Explicit native candidate order; unsupported adapters cannot invent a target.
+    fn target_ids(&self) -> Result<Vec<u64>, String> {
+        Err("target_if requires explicit native target candidates".into())
+    }
 }
 
 impl Facts for BTreeMap<String, f64> {
@@ -59,6 +64,8 @@ impl Expression {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Action {
     pub name: String,
+    /// Selected native target identity; None leaves the caller's current target unchanged.
+    pub target: Option<u64>,
     /// Non-if options are preserved for native action/target adapters, not discarded.
     pub options: BTreeMap<String, String>,
 }
@@ -80,5 +87,7 @@ mod context_tests;
 mod program_tests;
 #[cfg(test)]
 mod run_tests;
+#[cfg(test)]
+mod target_tests;
 #[cfg(test)]
 mod tests;
