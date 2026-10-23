@@ -10,7 +10,7 @@ Restore the missing spec73 producer channels identified by `game-engine/data/dia
 - Shield Charge's Dummy casts native385953, whose existing effect96 movement/landing dispatch casts385954. Preserve original movement, hit timing, primary/area damage, stun and resources.
 - Whirling Blade produces its native Ravager channel through existing proc/RPPM machinery; realize the timed Ravager damage children without rewriting source periods, coefficients or proc rates. Use a named SimC policy only for behavior absent from TC and DB2.
 - Phalanx's native buff producer and Shield Slam consumer emit1270116 once per eligible consumption. Bloody Rebuke follows its actual learned/equipped set eligibility and native Ravager/Revenge inputs.
-- Equipped Guillotine/Venomfang producers use native item-scaled driver amounts, proc eligibility and the authenticated set relationship; keep base versus perfected variants and missing-health scaling distinct. Do not grant procs from catalog presence or invent source amounts.
+- Equipped Guillotine/Venomfang producers use native item-scaled driver amounts, native description-variable role multipliers, proc eligibility and the authenticated set relationship; keep base versus perfected variants and missing-health scaling distinct. Do not grant procs from catalog presence or invent source amounts.
 
 ## Sources and proof
 
@@ -25,7 +25,7 @@ Restore the missing spec73 producer channels identified by `game-engine/data/dia
 |---|---|---|
 |Thunder Clap Rend|TC hit hook implemented; native damage/ownership qualified|5e69c75db both Clap cases PASS; charge case remains separate|
 |Shield Charge chain|Native movement/landing/area/stun qualified|13906f459 PASS with sourced display/reach/template metadata; valid RED59677be35 retained|
-|Whirling Blade/Ravager|Named native-RPPM producer and existing ground pulses implemented; GREEN pending|Native Ravager RED5e69c75db and updated Whirling lifetime RED542fec1aa; no standalone child kit action|
+|Whirling Blade/Ravager|Native-RPPM producer, sourced4s lifetime and timed damage/expiry qualified|1ba8cc854:2PASS13.14s; native Ravager RED5e69c75db and updated Whirling RED542fec1aa retained|
 |Phalanx/Bloody Rebuke|Phalanx four native cases qualified; Bloody Rebuke missing|5e69c75db produces1278009 but fails consumption; absence and foreign-buff controls pass; 7327a4c03 non-Clap actual-hit RED0PASS/1FAIL47.10s: Shield Slam wrongly produces the buff; Bloody Rebuke RED pending|
 |Guillotine/Venomfang|Equipped driver lifecycle exists; damage producers missing|RED pending|
 
@@ -39,4 +39,8 @@ Named `PHALANX_CLAP_ONLY` policy restricts the native proc to ordinary6343/43522
 
 Named `WHIRLING_BLADE_FOREGROUND_PRIMARY` uses ordinary non-periodic special impacts on the owner's selected target. Existing proc machinery retains native mask4116,5RPPM/haste and bad-luck timing. Named `WHIRLING_BLADE_BACKGROUND_DURATION` takes the native talent's4000ms amount into a real per-cast duration override; only that triggered snapshot changes, not SpellStore rows. Ordinary228920 remains12000ms.
 
-Named `RAVAGER_NATIVE_PULSES` reuses the existing ground-field clock and owner/map lifetime: native228920 effect1 supplies2000ms period;156287 targetB's radius14 supplies8yd, not absent targetA radius0. Both admitted ordinary/triggered casts capture their explicit enemy's position before impact, preserve original effects, and schedule child damage without an immediate pulse. This SimC ground-event subset does not certify weapon chasing or the eight-target damage-reduction policy. GREEN pending; remaining producer rows stay open.
+Named `RAVAGER_NATIVE_PULSES` reuses the existing ground-field clock and owner/map lifetime: native228920 effect1 supplies2000ms period;156287 targetB's radius14 supplies8yd, not absent targetA radius0. Both admitted ordinary/triggered casts capture their explicit enemy's position before impact, preserve original effects, and schedule child damage without an immediate pulse. This SimC ground-event subset does not certify weapon chasing or the eight-target damage-reduction policy. 1ba8cc854:2PASS13.14s, compile5m28/no warnings (`protection-ravager-green.log`), real periodic damage with ordinary12s and background4s expiry. Negative auto/secondary/absence controls are not yet qualified. Remaining producer rows stay open.
+
+### Equipped producer inputs
+
+Current world.db/runtime lack native ItemSet/ItemSetSpell and SpellDescriptionVariables/SpellXDescriptionVariables catalogs. Local70448 CSVs authenticate set2067/spec73/four pieces→1296648; set2070/two pieces→1291726, and both item drivers1291718/1291728→variable884. The shared item-instance importer must preserve these inputs and source hashes before consumers can decide equipped eligibility/role scaling. Native import RED is committed before importer changes; canonical data publication remains lead-only. Source receipt: `/home/osso/.worktrees/logs/census-tail/protection-equipped-set-source.json`.

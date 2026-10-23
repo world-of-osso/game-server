@@ -1,3 +1,7 @@
+## 2026-10-22 — Whirling/Ravager native timing GREEN and equipped-source ingress
+
+[Dispatch](systems/spell-casting.md#protection-producer-dispatch--2026-10-22):1ba8cc854 two native cases PASS13.14s/zero warnings, real156287 ticks and ordinary12s/background4s expiry; retain seven disjoint prior TC/Phalanx passes. Auto/secondary/absence and remaining item channels are open. Native set/description-variable catalogs are absent from world.db/runtime; authenticated70448 inputs now have an importer RED fixture, execution pending. Canonical import remains lead-only; no fabricated equipped bonuses or role coefficients.
+
 ## 2026-10-22 — Protection producer dispatch
 
 [Dispatch](systems/spell-casting.md#protection-producer-dispatch--2026-10-22): TC known-Rend/Charge and named Phalanx paths have seven targeted native passes across recorded scopes; corrected fixtures preserve sourced reach/template and9s cooldown. Whirling foreground-primary/native5RPPM/4000ms snapshot and shared native Ravager2000ms/8yd ground pulses implemented after actual missing-producer RED; GREEN pending. No full ability/loadout/DPS parity or chasing/soft-cap claim. [Coverage and receipts](../specs/protection-damage-producers.md).

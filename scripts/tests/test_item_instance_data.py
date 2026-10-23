@@ -1,4 +1,5 @@
 """Concrete native item-bonus rows and transactional failure boundaries."""
+import csv
 import importlib.util
 from pathlib import Path
 import sqlite3
@@ -25,6 +26,38 @@ class ItemInstanceImportTests(unittest.TestCase):
             self.assertEqual(conn.execute("SELECT * FROM untouched").fetchall(), [(70448,)])
             self.assertEqual(DATA.import_table(conn, path, "item_bonus"), 2)
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM item_bonus").fetchone()[0], 2)
+
+    def test_native_equipped_producer_set_and_role_sources_are_imported(self):
+        source = Path(__file__).resolve().parents[2] / "data/db2/12.1.5.70448"
+        with sqlite3.connect(":memory:") as conn:
+            counts = DATA.import_catalog(conn, source)
+            for table in ("item_set", "item_set_spell", "spell_description_variables",
+                          "spell_x_description_variables"):
+                self.assertIn(table, counts, f"native producer input missing: {table}")
+                self.assertGreater(counts[table], 0)
+            self.assertEqual(conn.execute(
+                "SELECT ChrSpecID,Threshold,ItemSetID FROM item_set_spell WHERE SpellID=1296648"
+            ).fetchall(), [(73, 4, 2067)])
+            self.assertEqual(conn.execute(
+                "SELECT ChrSpecID,Threshold,ItemSetID FROM item_set_spell WHERE SpellID=1291726"
+            ).fetchall(), [(0, 2, 2070)])
+            self.assertEqual(conn.execute(
+                "SELECT ItemID_0,ItemID_1,ItemID_2 FROM item_set WHERE ID=2070"
+            ).fetchone(), (270173, 268209, 268213))
+            self.assertEqual(conn.execute(
+                "SELECT SpellID,SpellDescriptionVariablesID FROM spell_x_description_variables "
+                "WHERE SpellID IN (1291718,1291728) ORDER BY SpellID"
+            ).fetchall(), [(1291718, 884), (1291728, 884)])
+            variables = conn.execute(
+                "SELECT Variables FROM spell_description_variables WHERE ID=884"
+            ).fetchone()[0]
+            with (source / "SpellDescriptionVariables.csv").open() as handle:
+                native = next(row["Variables"] for row in csv.DictReader(handle)
+                              if row["ID"] == "884")
+            self.assertEqual(variables, native)
+            self.assertEqual(conn.execute(
+                "SELECT build FROM item_instance_source WHERE table_name='item_set_spell'"
+            ).fetchone(), ("12.1.5.70448",))
 
     def test_bad_row_does_not_replace_existing_table(self):
         with tempfile.TemporaryDirectory() as root, sqlite3.connect(":memory:") as conn:
