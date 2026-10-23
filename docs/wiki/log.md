@@ -2,6 +2,10 @@
 
 Pinned SimC76f8118 selects timed adds on a run row but its child Mortal Strike still waits for main health<80% (first60.056s on main, not6s on adds). `player.cpp2467–2476` only changes active lists. Earlier24/24GREEN included a wrong inherited-child oracle; packet withdrawn before landing per lead. Corrected23PASS/1 genuineRED at2d6a66259 →24/24GREEN atad720fc3c (28.61s compile/0compiler warnings/0ignored): shared target inheritance state deleted; ordinary target min/max and non-returning runs retained. [Proof ledger](../handoffs/shared-run-target-proof-ledger.md).
 
+## 2026-10-23 — Feral baseline and action-knowledge census
+
+[Feral census](../handoffs/feral-source-census.md): exact reproduced references, private-source-view master9d13 native ST56378.65/3T62475.26, five ignored redirected-stat allocations and missing consumable residual separated from channel gaps. [Knowledge census](../handoffs/action-knowledge-census.md):990native starter books/1090kit rows; four sourced visible/parent actions, zero missing-book rejections after bridges. Runtime helper and literal Feral RED/GREEN pending.
+
 ## 2026-10-22 — Shared Hunter pet total-RAP source RED
 
 [Owner inheritance](systems/character-stats.md#hunter-pet-melee-owner-rap--2026-10-22): generic weaponAP12daba exposed bare-versus-total RAP on both pet paths. Native7a41 genuine3PASS/2RED34.56s: owner3034.9246+weapon934=3968.9246; melee583<743 owner-only floor and actual1264355 ability1899<2484, unchanged native coefficient1.90999997/variance0. One integer22% total-RAP producer now serves both; no fake intrinsic stats, cached AP state or coefficient edits. GREEN pending; the prior `critical` field compilation error is not RED evidence.

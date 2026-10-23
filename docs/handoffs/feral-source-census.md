@@ -6,7 +6,7 @@ Verified2026-10-23. Follower Ralia Dreamchaser: entry232800/spec103/class11/form
 
 Private SQLite backup of engine `data/server-world/world.db`: SHA256 `51455391e7d4962589cc66d239bf77b2dbf3f4372ec8daee80c092f1e7989d9b`. Canonical database is never written. Evidence directory: engine `data/diagnostics/feral-parity-2026-10-23/`; `db2-spell-census.json` retains full35spell effects/auras/powers/PPM rows, `oracle-factor-census.json` retains printed factors and attribution, `tdb-druid-script-bindings.json` and `tdb-feral-proc-rows.json` retain matching SQL rows. This census is not proof of actual execution.
 
-Authoritative references in engine `data/diagnostics/dps-parity-2026-10-21/`: `103.reference.single.*` ST191666.531726 DPS; `103.reference-fixed.three.*` three actual recipients247748.824618 DPS. Their ±10% bands are172499.878553–210833.184899 and222973.942157–272523.707080. Unsuffixed `103.reference.three.*` is explicitly invalid: Patchwerk clears the authored adds event. Both valid references use300s fixed time, same MID2 profile, optimal_raid=0 and seed70448. Reproduction/native master baseline still pending capacity admission.
+Authoritative references in engine `data/diagnostics/dps-parity-2026-10-21/`: `103.reference.single.*` ST191666.531726 DPS; `103.reference-fixed.three.*` three actual recipients247748.824618 DPS. Their ±10% bands are172499.878553–210833.184899 and222973.942157–272523.707080. Unsuffixed `103.reference.three.*` is explicitly invalid: Patchwerk clears the authored adds event. Both valid references use300s fixed time, same MID2 profile, optimal_raid=0 and seed70448. Both references reproduced exactly in this evidence directory. Read-only exact-master9d13ac19c native300s baseline: ST56378.653333 (−70.5850%),3T62475.256667 (−74.7828%); each sustained-clock test PASS. `source-view.proof.json` records the passing startup-loader inode proof; `baseline-master.{1,3}.proof.json` records exact binary/hash/environment and bubblewrap mount view.
 
 ## Channel/source coverage
 
@@ -21,6 +21,16 @@ Authoritative references in engine `data/diagnostics/dps-parity-2026-10-21/`: `1
 Other major ST shares: Shred5221 7.14%, cat melee6.56%, Bloodseeker Vines439531 6.54%, Lunar Inspiration155625 5.51%, item Guillotine1306604 4.21%. Three-target top channels: Rip23.89%, Rake14.33%, Lunar Inspiration7.98%, Vines7.71%, Bursting Growth6.60%. Do not absorb missing channels into coefficients.
 
 Mastery77493 already uses generic native Attr8/raw mastery scaling for followers (`auras/mastery.rs`); missing literal rotation does not establish a mastery defect. The35spell census has one TDB proc override,48484/Infected Wounds; newer Feral proc chains need an expanded child census rather than an assumption that absent rows mean zero probability.
+
+## Baseline decomposition
+
+`baseline-master-per-channel.json` combines native Rake1822+155722 and reference same-ID Convoke variants without dropping damage. ST native/reference channel damage deltas: Bite−77.2%, Rip−68.5%, Rake−69.3%, Shred+53.7%, Frenzy/Unseen/Vines/Moonfire all−100%. Three-target Rip−89.1%, Rake−98.6%, Swipe+364.6%. Overperforming filler alongside absent channels rules out an undifferentiated global multiplier.
+
+`per-slot-base-stat-diff.json` reconstructs the native source formula using ItemSparse, ItemBonus, explicit item levels, RandPropPoints and the actual generated multiplier tables. All10nonredirect slots match reference gear. Five ignored `redirected_base_stats` options explain base rating deltas(native−reference): head271528→271875 haste−62/vers+62; shoulders271526→268246 crit+5/mastery−5; chest271531→268235 crit+131/haste−69/mastery−62; hands271529→268234 vers+106/crit−48/mastery−58; legs271527→268225 haste+74/crit+69/mastery−143. Total crit+157/haste−57/mastery−268/vers+168. Shared equipment owner has the evidence; no Feral coefficient correction follows.
+
+Native base ratings1076crit/738haste/959mastery/275vers plus7crit/7haste/32mastery gems exactly reconstruct the observed1083/745/991/275. Reference base919/795/1227/107 plus23/23/197/0 gives942/818/1424/107. Remaining consumable gap16crit/16haste/165mastery is routed to the shared consumable owner. Mastery rating mismatch is not a base-mastery defect.
+
+The native fixture casts Incarnation102543 three times despite its absence from the exact selected Feral reference traits. [Generic action-knowledge census](action-knowledge-census.md) records all11profiles before enabling the controller knowledge fix; visible/parent bridges must remain admissible.
 
 ## Literal boundary
 

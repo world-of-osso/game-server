@@ -31,6 +31,10 @@
 - `Driver::new(Program)` owns variable state, snapshot, decisions and channel cancellation. `select(list, &dyn ActionFacts, &Prepared, &Equipment)` returns the source-selected `(Action, Execution)`; release immutable facts, then `execute(world, actor, action, execution)`. `should_cancel(world, actor, facts)` evaluates an active native channel's saved `cancel_if`; caller then cancels the actual cast.
 - `capture_fixture(world, actor, Encounter)` rejects dungeon clocks before inserting `LiteralParityFixture`; the native kit yields while this marker exists, preserving Follower/NPC identity. Adapters retain explicit precombat/default ordering and spec actor checks.
 
+## Feral/action-knowledge qualification
+
+[Feral source census](../../handoffs/feral-source-census.md) records exact reproduced ST/3T references, read-only master9d13ac19c native gaps and the five ignored redirected-stat allocations. [Action-knowledge census](../../handoffs/action-knowledge-census.md) covers all11followers/990starter books: four raw-unknown controller actions are actual selected visible/parent actions, leaving zero missing-book rejections after sourced bridges. Runtime shared resolver and Feral literal adapter remain unqualified; raw KnownSpells membership must not silently disable those actions.
+
 ## Sources
 
 - Pinned SimC76f8118 `engine/sim/expressions.cpp:22–154,333–440,1081–1130` — lexer, arithmetic/boolean decisions and precedence.
