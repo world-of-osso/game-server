@@ -2156,6 +2156,10 @@ pub(crate) fn replay_healer_hit(
     };
     let (amount, absorbed) = crate::auras::absorb_damage(world, victim, 1, amount);
     let amount = crate::auras::damage_transfer::route(world, attacker, victim, 1, amount);
+    let (attacker_scaling, target) = (
+        UnitScaling::of(world, attacker),
+        UnitScaling::of(world, victim),
+    );
     let damage = crate::level_scaling::damage_dealt(&attacker_scaling, &target, amount);
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
     let mut outcome = SwingOutcome {
