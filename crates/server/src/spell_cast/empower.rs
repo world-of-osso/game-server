@@ -65,12 +65,6 @@ pub(super) fn begin(
     spell: &SpellInfo,
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
-    if scripts::empower_completion(spell.id).is_none() {
-        return Err(CastFailure::Unsupported(format!(
-            "empower{} release script is not implemented",
-            spell.id
-        )));
-    }
     let stage_ends_ms = compute_stage_ends(world, caster, spell)?;
     let total = stage_ends_ms
         .last()
@@ -179,9 +173,9 @@ fn advance_channel_clock(world: &mut World, caster: Entity, dt: f32) -> (u32, u3
 }
 
 fn finish(world: &mut World, caster: Entity, spell: &SpellInfo, target: Option<Entity>) {
-    let handler =
-        scripts::empower_completion(spell.id).expect("release handler validated at admission");
-    let result = handler(world, caster, spell, target);
+    // TC Spell.cpp9057–9067: an empty completion-hook list still finishes normally.
+    let result = scripts::empower_completion(spell.id)
+        .map_or(Ok(()), |handler| handler(world, caster, spell, target));
     world.entity_mut(caster).remove::<EmpowerProgress>();
     super::finish_channel(world, caster, spell.id);
     apply_finish_gcd(world, caster);
