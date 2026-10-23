@@ -1,6 +1,6 @@
-## 2026-10-23 — Explicit APL runs and target identities
+## 2026-10-23 — Binary probe withdraws inherited-run-target oracle
 
-[Shared interpreter](systems/simc-apl.md):14PASS/4genuineRED, then explicit `Action.target`/candidate API and16PASS/8genuineRED at2088713a6. Source-grounded run switches, min/max target-before-if, strict tie order and nested call-context restoration:24/24GREEN ate7fdc4dd1,30.51s compile/0warnings/0ignored ([proof](../handoffs/shared-run-target-proof-ledger.md)). No native rotation or DPS parity claim; native target-aware dispatch remains adapter-owned.
+Pinned SimC76f8118 selects timed adds on a run row but its child Mortal Strike still waits for main health<80% (first60.056s on main, not6s on adds). `player.cpp2467–2476` only changes active lists. Earlier24/24GREEN included a wrong inherited-child oracle; packet withdrawn before landing per lead. Correction RED2d6a66259 pending; ordinary target min/max and non-returning runs remain covered. [Proof ledger](../handoffs/shared-run-target-proof-ledger.md).
 
 ## 2026-10-23 — Shared native APL fact boundary
 

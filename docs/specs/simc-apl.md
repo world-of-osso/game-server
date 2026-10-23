@@ -10,7 +10,8 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 - [x] Execute declared variables using source `value`, `setif`, `value_else`, `reset` and numeric `default` semantics.
 - [x] Preserve literal action order and conditional `call_action_list` decisions; native castability selects the first usable action. An exhausted child list returns control to its caller.
 - [x] Implement conditional `run_action_list` switches that never resume the caller after child exhaustion; reject unknown lists.
-- [x] Select explicit native targets with `target_if=min/max:<expr>` before the row's `if`; preserve native tie order, carry the chosen target through run lists, and restore call context. Unknown target operands/adapters fail explicitly.
+- [x] Select explicit native targets with `target_if=min/max:<expr>` before the row's `if`; preserve native tie order. Unknown target operands/adapters fail explicitly.
+- [ ] Scope a run row's selector to that control action. Child actions retain their own targets; run selection must not retarget them.
 - [x] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.
 
 ## How it works
@@ -33,7 +34,7 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 
 `crates/server/src/simc_apl/tests.rs`; eleven expression/program cases pushed ignored before implementation: genuine11RED atc0cf6eed6→11GREEN ataff61cbab (exit0, zero compiler warnings,1m03 compile). Cases enabled afterward; invalid-control case additionally checks sourced call recursion. Two action-context REDs at2e6f242ce→all13GREEN atcd3c7e427, zero compiler warnings; context cases enabled afterward.
 
-Run/target source extension: genuine14PASS/4RED at a446f0634; explicit `Action.target` and candidate-ID API scaffold then genuine16PASS/8RED at2088713a6 (no compiler errors). Ate7fdc4dd1 all24 shared interpreter tests pass (30.51s compile,0warnings/0ignored). Native per-target dispatch remains caller-owned; [isolated proof packet](../handoffs/shared-run-target-proof-ledger.md).
+Run/target source extension: genuine14PASS/4RED at a446f0634; explicit `Action.target` and candidate-ID API scaffold then genuine16PASS/8RED at2088713a6 (no compiler errors). Ate7fdc4dd1 all24 shared interpreter tests passed, but the real pinned SimC run-selector probe invalidated the inherited-child oracle; that packet is withdrawn. Correction RED at2d6a66259 is pending execution. Native per-target dispatch remains caller-owned; [isolated proof packet](../handoffs/shared-run-target-proof-ledger.md).
 
 ## Shared native facts
 
