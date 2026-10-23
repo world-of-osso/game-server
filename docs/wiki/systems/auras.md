@@ -1,5 +1,11 @@
 # Auras
 
+## Havoc Burning Blades dispatch — 2026-10-23
+
+`HAVOC_BURNING_BLADES_SIMC_POLICY` supplies452408→453177 dispatch for sourced positive Havoc weapon hits. DB2 supplies35% transfer,100% proc chance, native event masks and the6s/2s rolling child; generic proc admission and periodic carry are unchanged. Aura4 Dummy effects have zero triggers/eligibility masks; signed TDB proc/script dumps contain neither a452408 registration nor453177, and TC a352b1fa `spell_dh.cpp` has no Burning Blades hook. This is not a fabricated TC script or proc row. [Contract](../../specs/dps-parity.md#havoc-burning-blades-child-dispatch).
+
+Actual native BiS auto-attacks at37bf8a666 produced ordinary swings and Demon Blades203796 but no453177 ticks: genuine RED. Child-dispatch implementation awaits its targeted GREEN; amount, refresh/removal and non-auto eligibility proof remain open. ST/3T existing-kit attempts both stop at AssistedCombatRule21553/type12, so no native DPS is inferred. Sources: SimC76f8118 `sc_demon_hunter.cpp3088–3112,6878,7040,7455,8258,8506`; receipts/census under engine `data/diagnostics/havoc-parity-2026-10-23/`.
+
 ## Intensifying Flame tick bridge — 2026-10-23
 
 `FIRE_INTENSIFYING_FLAME_SIMC_TICK_BRIDGE` connects actual Ignite12654 effect0 ticks to native419800. SimC76f8118 `sc_mage.cpp2502–2567` supplies this missing bridge; TC a352b1fa has no named script and DB2 has no child trigger. Active416714 supplies the native owner-local target cap, percentage, chance and periodic mask. Its current70448 row has cap3, percentage30, chance101 and no ICD, charges or RPPM. The leaf's coefficient and flags remain native; SimC damage-flag overrides are not imported. [Contract](../../specs/auras.md#intensifying-flame).

@@ -1,3 +1,7 @@
+## 2026-10-23 — Havoc Burning Blades child-dispatch RED
+
+[452408→453177](systems/auras.md#havoc-burning-blades-dispatch--2026-10-23): actual selected BiS passive/ordinary swings but zero child ticks at37bf8a666. Named SimC dispatch added; native35% amount/100% chance/masks/rolling unchanged. Targeted GREEN pending; existing-kit ST/3T both blocked by authored AssistedCombatRule21553/type12, not fabricated DPS.
+
 ## 2026-10-23 — Shared native APL fact boundary
 
 [Native facts](systems/simc-apl.md#native-binding-boundary): six actual native6RED at5924496f9→6GREEN17.40s atdc1ee9781,7m37compile/exit0/zero warnings. Earned TP/BOK buff+Chi, actual Charge200raw→20Rage, selected starter allocation distinct from learned utility, native Provoke/Roll timers, action/control GCD and300s fixture clock; no canonical DB edits. [Proof/capability limits](../handoffs/shared-native-apl-proof-ledger.md); only explicit parity Fixture driver approved, Stockade native kit/DUNGEON_TTD_UNAVAILABLE retained, no literal-rotation claim.

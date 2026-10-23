@@ -20,21 +20,6 @@ pub(super) fn check_damage(_world: &World, _aura: &AuraInstance, event: &AuraEve
     event.damage > 0.0 && event.target.is_some() && event.spell_id != Some(IGNITE)
 }
 
-fn native_tick_count(world: &World) -> Option<u32> {
-    let dot = world.resource::<SpellStore>().get(IGNITE)?;
-    let duration = dot.misc.as_ref()?.duration?.duration_ms;
-    let period = dot
-        .effects
-        .iter()
-        .find(|effect| effect.index == 0)?
-        .aura_period_ms;
-    if duration <= 0 || period == 0 {
-        return None;
-    }
-    let ticks = duration as u32 / period;
-    (ticks > 0).then_some(ticks)
-}
-
 pub(super) fn apply_damage(
     world: &mut World,
     unit: Entity,
@@ -45,7 +30,7 @@ pub(super) fn apply_damage(
         error!("Native Ignite12846 has no effect0 percentage");
         return;
     };
-    let Some(ticks) = native_tick_count(world) else {
+    let Some(ticks) = super::periodic::damage_tick_count(world, IGNITE) else {
         error!("Native Ignite12654 has no positive periodic tick count");
         return;
     };

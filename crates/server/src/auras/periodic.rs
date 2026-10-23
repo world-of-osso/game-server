@@ -16,6 +16,22 @@ use super::{ActiveAuras, scripts};
 use crate::spell_cast::effects::{self, EffectCtx};
 use crate::spell_info::{SpellInfo, SpellStore};
 
+/// Fresh native effect0 damage schedule, shared by residual damage producers.
+pub(super) fn damage_tick_count(world: &World, spell_id: u32) -> Option<u32> {
+    let spell = world.resource::<SpellStore>().get(spell_id)?;
+    let duration = spell.misc.as_ref()?.duration?.duration_ms;
+    let period = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)?
+        .aura_period_ms;
+    if duration <= 0 || period == 0 {
+        return None;
+    }
+    let ticks = duration as u32 / period;
+    (ticks > 0).then_some(ticks)
+}
+
 /// Count a real effect0 HoT's fresh native schedule using application modifiers.
 /// Residual producers supply a total budget; native duration/period own the split.
 pub(super) fn heal_tick_count(
