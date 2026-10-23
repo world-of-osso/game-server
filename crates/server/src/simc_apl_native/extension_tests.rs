@@ -2,7 +2,7 @@
 use super::*;
 
 #[test]
-#[ignore = "native shared-fact RED: selected ranks, not learned-spell membership"]
+#[ignore = "requires native DB inputs: selected ranks, not learned-spell membership"]
 fn native_apl_extensions_talent_rank_reads_real_multirank_allocation() {
     use crate::class_progression::TraitLoadout;
     use crate::spell_info::ClassSpells;
@@ -50,7 +50,7 @@ fn native_apl_extensions_talent_rank_reads_real_multirank_allocation() {
 }
 
 #[test]
-#[ignore = "native shared-fact RED: earned Hit Combo cap and loss"]
+#[ignore = "requires native DB inputs: earned Hit Combo cap and loss"]
 fn native_apl_extensions_at_max_stacks_tracks_earned_cap_and_removal() {
     let (mut h, actor) = monk();
     let b = bindings();
@@ -93,7 +93,7 @@ fn native_apl_extensions_at_max_stacks_tracks_earned_cap_and_removal() {
 }
 
 #[test]
-#[ignore = "native shared-fact RED: spell_haste is a duration factor"]
+#[ignore = "requires native DB inputs: spell_haste is a duration factor"]
 fn native_apl_extensions_spell_haste_reads_real_derived_martial_agility() {
     let (mut h, actor) = crate::followers::kit_tests::at_level(227734, 55, |app| {
         app.add_plugins(crate::stats::StatsPlugin);
@@ -114,7 +114,7 @@ fn native_apl_extensions_spell_haste_reads_real_derived_martial_agility() {
 }
 
 #[test]
-#[ignore = "native shared-fact RED: contextual charges and full recharge"]
+#[ignore = "requires native DB inputs: contextual charges and full recharge"]
 fn native_apl_extensions_contextual_charges_follow_actual_roll_consumption() {
     let (mut h, actor) = monk();
     let b = bindings();

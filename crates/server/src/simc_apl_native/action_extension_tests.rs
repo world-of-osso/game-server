@@ -31,7 +31,7 @@ fn evoker() -> (Harness, Entity, Bindings) {
 }
 
 #[test]
-#[ignore = "native shared-fact RED: execute_time observes real cast and channel duration"]
+#[ignore = "requires native DB inputs: execute_time observes real cast and channel duration"]
 fn native_apl_extensions_execute_time_matches_actual_flame_and_disintegrate() {
     for (name, spell) in [("living_flame", 361469), ("disintegrate", 356995)] {
         let (mut h, actor, b) = evoker();
@@ -74,7 +74,7 @@ fn disintegrate_hits(h: &Harness, actor: Entity) -> usize {
 }
 
 #[test]
-#[ignore = "native shared-fact RED: ticks_remain reads unpaid native schedule"]
+#[ignore = "requires native DB inputs: ticks_remain reads unpaid native schedule"]
 fn native_apl_extensions_ticks_remain_matches_future_disintegrate_hits() {
     let (mut h, actor, b) = evoker();
     let clock = fixture(h.app.world());
@@ -96,7 +96,7 @@ fn native_apl_extensions_ticks_remain_matches_future_disintegrate_hits() {
 }
 
 #[test]
-#[ignore = "native shared-fact RED: ready includes target range, usable_in is cooldown time"]
+#[ignore = "requires native DB inputs: ready includes target range, usable_in is cooldown time"]
 fn native_apl_extensions_action_ready_distinguishes_cooldown_from_actual_range() {
     let (mut h, actor) = monk();
     let target = h.npc;
