@@ -1,3 +1,7 @@
+## 2026-10-23 — Oracle sourced prerequisite closure
+
+[Oracle](reference/simc-spell-oracle.md): all25 previously unobserved channels now have printed formula evidence,150/150 total. Pinned source-backed cast/ready-state plans use30–180s probes, earned resources/buffs and explicit precombat setup. Frost Strike/Obliterate/Arcane Missiles preserve actual child IDs instead of report-parent IDs. Actual Shaman trace reproduced98 repeated Flametongue casts starving combat; original precombat imbues restore TI without injected stacks or altered seed/reference flags.20 unittest GREEN; native parity remains unclaimed.
+
 ## 2026-10-23 — Oracle reference simulation options
 
 [Oracle](reference/simc-spell-oracle.md): reference-proof discovery/explicit selection now inherits all non-probe options, including `optimal_raid=0`; missing/conflicting proof matches fail. Earlier raid-buffed diagnostics are invalid for native factor comparison and archived; the complete150-receipt corpus is regenerated with each source command's options. Native implementation remains unchanged.
