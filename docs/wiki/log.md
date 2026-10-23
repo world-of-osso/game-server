@@ -1,3 +1,7 @@
+## 2026-10-23 — Literal controller native-facing boundary
+
+[Shared literal machinery](systems/simc-apl.md#shared-literal-fixture-machinery): original5GREEN retained after extraction; exact-order FoF117418 damage RED despite valid4s channel/226trigger. Literal AutoAttack left CreatureStateIdle; native Pursuing restores chase-facing without changing cone/coefficients/timing. At0e34d8666 native6GREEN39.89s;300s ST51416.15/3T84696.50,−75.09%/−77.51%,117418 now19045/35046DPS. [Receipts/remaining gaps](../handoffs/ww-source-census.md#fof-literal-controller-root-cause).
+
 ## 2026-10-23 — Literal Windwalker fixture boundary
 
 [Shared APL](systems/simc-apl.md): WW132literal source rows use native selected-spell readiness/actual casts without removing Follower identity; accepted4RED atb74411d5d→5GREEN35.19s at32e4610b7. ST FoF/RSK,3T SCK107270 recipients, action-context combo, exact placeholders/unknown rejection and dungeon/non-Fixture independence proved. Per-ability damage/procs and300s parity remain open; [census/receipt](../handoffs/ww-source-census.md#literal-fixture-implementation-unqualified).
