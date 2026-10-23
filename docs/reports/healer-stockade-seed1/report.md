@@ -1,0 +1,41 @@
+# Dungeon healing metrics
+
+Stockade map34 Normal, seed1, level32, same raw intake `541a4dedf0e1114307fd9972cd21642ac5ad62f6646b7a62f61c677839229eb8`. No SimC healer HPS reference.
+
+| Spec | Coverage | Deaths | Overheal % | Ending mana | Idle GCD equivalents | Consumed healer absorbs | Effective HPS | Heal+ConsumedPoints/s | Native combat seconds |
+|---|---|---|---|---|---|---|---|---|---|
+| 65 Holy Paladin | blocked | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| 256 Discipline Priest | blocked | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| 257 Holy Priest | native | 0.000 | 78.731 | 4239.064 | 549.733 | 0.000 | 105.393 | 105.393 | 2014.400 |
+| 264 Restoration Shaman | blocked | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| 270 Mistweaver Monk | blocked | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| 105 Restoration Druid | native | 0.000 | 63.306 | 4360.449 | 258.600 | 0.000 | 98.476 | 98.476 | 2014.400 |
+| 1468 Preservation Evoker | blocked | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+
+## Level scaling
+
+1132/1132 captured hits have unit scale; 0 non-unit. ABSORB_POINTS_VS_PREVENTED_HP_LEVEL_SCALING is moot for this captured intake. Factor = native damage multiplier / victim health multiplier, before integer rounding.
+
+| Spec | Replayed non-unit/arrivals | Absorb points on non-unit hits | Share of consumed points |
+|---|---|---|---|
+| 65 | not run | N/A | N/A |
+| 256 | not run | N/A | N/A |
+| 257 | 0/1132 | 0.0 | N/A (no consumed points) |
+| 264 | not run | N/A | N/A |
+| 270 | not run | N/A | N/A |
+| 105 | 0/1132 | 0.0 | N/A (no consumed points) |
+| 1468 | not run | N/A | N/A |
+
+## Coverage gaps
+
+- Spec65: ["NATIVE_HEALER_PROFILE_ABSENT"].
+- Spec256: ["NATIVE_HEALER_PROFILE_ABSENT"].
+- Spec257: ["RECORDED_FUTURE_DAMAGE_ALERTS_NOT_REPLAYED","RECORDED_SOURCE_GEOMETRY_NOT_REPLAYED","NATIVE_PARTIAL_SPELL_RESISTANCE_UNIMPLEMENTED"].
+- Spec264: ["NATIVE_HEALER_PROFILE_ABSENT"].
+- Spec270: ["NATIVE_HEALER_PROFILE_ABSENT"].
+- Spec105: ["RECORDED_FUTURE_DAMAGE_ALERTS_NOT_REPLAYED","RECORDED_SOURCE_GEOMETRY_NOT_REPLAYED","NATIVE_PARTIAL_SPELL_RESISTANCE_UNIMPLEMENTED"].
+- Spec1468: ["NATIVE_HEALER_PROFILE_ABSENT"].
+
+Metrics: healer-attributed party Heal receipts only; effective = amount − overheal. Overheal% uses raw healing as denominator. Effective HPS and Heal+Absorb/s use the frozen intake's recorded party-combat window (identical across specs even after an early wipe); native observed combat seconds remain separate. Ending mana is the observed final replay frame, not the next pull's recovered pool. Idle GCD equivalents sum alive combat-frame time with no native cast/channel or active GCD, divided by the profile heal's native hasted GCD; this is a frame-sampled readiness metric, not a counter of hypothetical healing opportunities. Zero healing/combat denominators are null. Absorbs count only healer-attributed SCHOOL_ABSORB points actually consumed on party by native damage handling, never applied/unconsumed shield capacity and never duplicated from combat-log absorbed totals. Combined throughput follows the native damage-meter convention: (effective Heal HP + consumed healer shield points) / recorded combat window. Points are not normalized prevented HP; non-unit scale retains ABSORB_POINTS_VS_PREVENTED_HP_LEVEL_SCALING with hit counts and consumed-point share.
+
+Input freezes source-side raw amounts, hit outcomes/crit flags, party slots/positions, source deaths and native pull order. Recipient mitigation is applied anew. Source brains are disabled during replay; source identity/scaling/spells remain native. Healer and companion decision policy remains unchanged. Future scripted-damage alerts are not reconstructed from a second autonomous route. Native partial spell resistance is an explicit engine gap where magic hits occur; post-mitigation recording is never used.

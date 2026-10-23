@@ -15,6 +15,15 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 - [x] Never substitute straight movement on a baked map with a missing tile, invalid artifact or unreachable endpoint. Entirely unbaked maps log that boundary explicitly and retain current movement.
 - [x] Stockade chase and home return detour around actual walls; every path segment is clear under the existing LOS query. Stormwind ground fixtures and unreachable-target evade have behavioral proof.
 
+## NAV_ONE_WAY_DROP_FROM_COLLISION
+
+- [x] Provide exactly one down-only2651 connection at the lead-approved raw upper edge(534.269,86.534424,110), reached from the native upper component through(535.1,86.534424,110). Its off-edge departure(533.88,86.534424,110) must land continuously at(533.88,56.281814,110), target polygon281475865905401. Both walking legs must remain native queried routes; never substitute an unchecked straight route.
+- [x] Followers must hold the upper authored stage, then traverse the connection when following the lower Blazikon208743/order2000 and Darkness208747/order7000 route, after upper-component Waxbeard210149/order1000. Preserve continuous departure/fall movement without normal ground snapping; reverse/upward travel remains Blocked.
+- [x] Halls2527, Academy2526 and Goldie2661 retain their named component gaps. No additional connection, canonical bake mutation or body/slope/climb/query relaxation.
+- [x] Retain existing NPC fall behavior; explicitly name `FOLLOWER_NPC_FALL_DAMAGE_UNMODELED` because existing landing damage is Player-only. Do not add NPC damage. Ordinary30.252610yd damage would be18.979% maxHP under existing formula, not an unconditional survival guarantee.
+
+Implementation/proof: [navigation drop ownership](../wiki/systems/navigation.md#one-way-collision-drop--2026-10-22), `crates/server/src/followers/darkflame_drop_tests.rs`. Approval is a project policy, not an inferred Retail transport. Targeted four-case GREEN at cff55269e; two separate full-boss upward controls also pass. Merged tip awaits lead integration gate.
+
 ## Dense-map bake capacity
 
 - [x] Start each map with the published4×4 spatial grid. Only a proven Recast16-bit contour-vertex capacity overflow may trigger deterministic whole-map power-of-two refinement. Never change voxel/body/clearance/slope/region/simplification values or add map-specific settings to make geometry fit.
