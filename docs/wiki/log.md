@@ -1,3 +1,7 @@
+## 2026-10-22 — Current-critter DismissPet contract selected
+
+Lead chooses TC DismissCritter identity for existing DismissPet: authoritative current journal/legacy actor,never older journal tuple. Spec/test-first actual balloon,legacy,older-preservation and isolation cases added;RED pending. No protocol fields,UseToy toggle,ownership deletion or native parity claim. [Authority](systems/toys.md#current-critter-dismissal-authority-2026-10-22).
+
 ## 2026-10-22 — Target73/Ruthers focused qualification
 
 Final affected15/15GREEN73.32s atd4;retained32controls139.13s+IG5 at2a paths unchanged. Ruthers real learning/UseToy/model/owner/map/radius5,natural30s expiry/30min recovery-reuse,missingauthority no actor/item recovery plus real retry. Initial two fixture failures corrected with actual LOS and GCD-vs-item distinction; observed1500ms/is_gcd=true is not30min recovery. ExactFull1173 census544→545 only82467;seven blocked-row list deltas/six unavailable-string deltas, Wikky/Carp remain exact action gaps. Check0/65.82s/no warnings/fmt0/manual readability; no native/generic-modifier/ingress/Detour claim. [Boundary](systems/toys.md#target73-caster-radius-source-boundary-2026-10-22).

@@ -2,6 +2,12 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Current-critter dismissal authority (2026-10-22)
+
+[Contract](../../specs/battle-pets.md#source-companion-target-identity). TC a352b1fa PetHandler.cpp41–62 DismissCritter resolves a supplied creature and only removes it when its GUID equals the owner's current CritterGUID. This is actor dismissal, not companion aura PetCancelAura cancellation. Lead explicitly selects that identity contract for the frozen, argument-free project DismissPet RPC: current journal or legacy critter, never an older AccountPetJournal.summoned tuple or selected/guardian/foreign substitute. No new protocol fields or invented UseToy toggle.
+
+Current implementation still dispatches DismissPet through the journal tuple. Test-first changes update the older-journal expectation and add real owned Yellow Balloon345/105229/3141, legacy Coyote51149, foreign same-species and guardian/source-noncompanion journal cases. Owned journal instances survive actor removal. Matching journal snapshots clear only for their own removed actor; removing a latest legacy actor must not remove or restore an older journal actor. Private journal replacement cleanup is a separate operation. RED pending; no new toy admission/native wire or rendering claim. Policy receipt:current-critter-dismiss-policy.json.
+
 ## Target73 caster-radius source boundary (2026-10-22)
 
 [Contract](../../specs/spell-summon-area-trigger.md#source-target73-caster-radius-destinations). TC SpellInfo321/783–827 and Spell.cpp1611–1642/7325–7329 distinguish73 from72: random direction at the caster's calculated radius, not a radial disk. Unit Radius+PerLevel×level is capped by Max; forward/strafe/falling without WALKING adds2 unless Attr9 NO_MOVEMENT_RADIUS_BONUS. Absent B entry inherits A's entry/target identity. Caster combat reach floors distance; direct collision/ground and named force-height gap remain explicit. Current standalone toy roots have no SpellClassOptions rows in canonical data or raw70448 (target73-standalone-family-audit.json); generic spell-family radius modifiers/native movement-ingress/Detour parity are not qualified here.
