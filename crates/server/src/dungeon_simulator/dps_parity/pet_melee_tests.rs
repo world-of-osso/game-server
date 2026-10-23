@@ -38,7 +38,7 @@ fn normalized_pet_swings(run: &mut Run, pet: Entity, required_hits: usize) -> Ve
             .get::<crate::auras::AuraStatMods>(pet)
             .map_or(1.0, |mods| mods.critical_damage(1));
     pet_melee_events(world, pet, run.targets[0])
-        .map(|event| event.amount as f32 / if event.critical { critical } else { 1.0 })
+        .map(|event| event.amount as f32 / if event.crit { critical } else { 1.0 })
         .collect()
 }
 
@@ -326,7 +326,7 @@ fn pet_ability_hit(world: &World, pet: Entity, target: Entity) -> Option<CombatL
                 && event.source == Some(pet.to_bits())
                 && event.target == Some(target.to_bits())
                 && event.spell_id == Some(PET_ABILITY)
-                && !event.critical
+                && !event.crit
                 && event.blocked == 0
                 && event.absorbed == 0
         })
