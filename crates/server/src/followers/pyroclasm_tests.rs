@@ -47,6 +47,10 @@ fn dps_parity_pyroclasm_hot_streak_spend_uses_native_talent_chance() {
 }
 
 fn cast_pyroblast_with_proc(proc: bool, instant: bool) -> (f32, u8) {
+    cast_spender_with_proc(PYROBLAST, proc, instant)
+}
+
+fn cast_spender_with_proc(spell_id: u32, proc: bool, instant: bool) -> (f32, u8) {
     let _seed = crate::random::seed_scope(269651);
     let (mut h, caster) = prepare(209059);
     let target = h.npc;
@@ -61,14 +65,14 @@ fn cast_pyroblast_with_proc(proc: bool, instant: bool) -> (f32, u8) {
         apply_native_buff(&mut h, caster, HOT_STREAK);
     }
     let first = h.inbox.log.len();
-    complete_cast(&mut h, caster, PYROBLAST, target);
+    complete_cast(&mut h, caster, spell_id, target);
     let remaining = pyroclasm_stacks(&h, caster);
     h.advance(100);
     let hit = h.inbox.log[first..]
         .iter()
         .find(|event| {
             event.kind == CombatLogKind::Damage
-                && event.spell_id == Some(PYROBLAST)
+                && event.spell_id == Some(spell_id)
                 && event.source == Some(caster.to_bits())
                 && event.target == Some(target.to_bits())
         })
@@ -78,7 +82,7 @@ fn cast_pyroblast_with_proc(proc: bool, instant: bool) -> (f32, u8) {
     let world = h.app.world();
     let spell = world
         .resource::<crate::spell_info::SpellStore>()
-        .get(PYROBLAST)
+        .get(spell_id)
         .unwrap();
     let multiplier = if hit.crit {
         let school = world
@@ -99,8 +103,12 @@ fn cast_pyroblast_with_proc(proc: bool, instant: bool) -> (f32, u8) {
 }
 
 fn assert_native_damage_ratio(base: f32, damage: f32, expected: f32) {
+    assert_spender_damage_ratio(PYROBLAST, base, damage, expected)
+}
+
+fn assert_spender_damage_ratio(spell_id: u32, base: f32, damage: f32, expected: f32) {
     let source = crate::spell_cast::test_harness::world_db().unwrap();
-    let half_variance = source.store.get(PYROBLAST).unwrap().effects[0]
+    let half_variance = source.store.get(spell_id).unwrap().effects[0]
         .variance
         .abs()
         / 2.0;
@@ -134,6 +142,28 @@ fn dps_parity_pyroclasm_hot_streak_instant_neither_consumes_nor_amplifies_existi
         "Hot Streak instant Pyroblast is not a Pyroclasm spender"
     );
     assert_native_damage_ratio(base, damage, 1.0);
+}
+
+#[test]
+fn fire_flamestrike_2120_pyroclasm_hardcast_spends_one_and_keeps_native_bonus() {
+    let (base, _) = cast_spender_with_proc(2120, false, false);
+    let (boosted, remaining) = cast_spender_with_proc(2120, true, false);
+    assert_eq!(
+        remaining, 1,
+        "ordinary2120 hardcast spends one actual native stack"
+    );
+    assert_spender_damage_ratio(2120, base, boosted, 3.3);
+}
+
+#[test]
+fn fire_flamestrike_2120_hot_streak_instant_does_not_spend_pyroclasm() {
+    let (base, _) = cast_spender_with_proc(2120, false, true);
+    let (damage, remaining) = cast_spender_with_proc(2120, true, true);
+    assert_eq!(
+        remaining, 2,
+        "instant2120 retains both hardcast-only stacks"
+    );
+    assert_spender_damage_ratio(2120, base, damage, 1.0);
 }
 
 #[test]
