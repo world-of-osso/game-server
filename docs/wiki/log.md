@@ -66,6 +66,9 @@ Lead chooses TC DismissCritter identity for existing DismissPet: authoritative c
 ## 2026-10-22 — Wratheye Decaystrike-only partial
 
 [Wratheye](systems/boss-scripts.md#wratheye-decaystrike-only-partial-2026-10-22): ignorednativeRED precedes AI; integrated4GREEN25.54s actualperiodicdamage/aura/clock/reset/genericlethalcredit/copy/corpse. Source5%finish/energy/totem/cloud gaps explicit; stable-keySQLfreshcopyreceipt.
+## Player Meteorite native bridges — RED and implementation
+
+[Native bridges](systems/auras.md#player-meteorite-native-bridges):81d8 actual7 cases2PASS/5FAIL75.79s, including four genuine mechanic REDs and one follower OutOfRange fixture failure.39a38 bounds destination-only non-channeled effect32 to one child dispatch;99c703 adds approved native Fireball and OOC Sphere/Glorious bridges. No GREEN or500ms recovery claim; readiness RED and follower position/Travel diagnosis precede remaining changes.
 
 ## 2026-10-23 — TC-native Intensifying Flame feedback
 

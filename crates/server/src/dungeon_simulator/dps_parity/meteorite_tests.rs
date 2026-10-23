@@ -260,6 +260,120 @@ fn advance_native_missile_flight(run: &mut Run) {
     }
 }
 
+fn read_fire_blast_start(
+    run: &mut Run,
+) -> Result<Option<bevy::prelude::Entity>, crate::spell_cast::CastFailure> {
+    let spell = run
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(FIRE_BLAST)
+        .unwrap()
+        .clone();
+    crate::spell_cast::read_native_cast_start(
+        run.app.world_mut(),
+        run.actor,
+        &spell,
+        run.targets[0],
+    )
+}
+
+fn exhaust_native_fire_blast(run: &mut Run) {
+    for _ in 0..MAX_CAST_WAIT_FRAMES {
+        match read_fire_blast_start(run) {
+            Err(crate::spell_cast::CastFailure::NoCharges) => return,
+            Ok(_) => assert!(cast_and_observe_hit(run, FIRE_BLAST)),
+            Err(error) => panic!("ordinary Fire Blast before exhaustion: {error:?}"),
+        }
+    }
+    panic!("ordinary Fire Blast never exhausted its native charges");
+}
+
+fn observe_native_fire_blast_recovery(target_count: usize, launch_missile: bool) -> f64 {
+    let _seed = crate::random::seed_scope(1260673);
+    let mut run = load_and_spawn_sunfury_targets(true, target_count);
+    exhaust_native_fire_blast(&mut run);
+    let exhausted_at = crate::spell_cast::history_now(run.app.world());
+    if launch_missile {
+        launch_native_destination_missile(&mut run);
+    }
+    for _ in 0..MAX_CAST_WAIT_FRAMES {
+        match read_fire_blast_start(&mut run) {
+            Ok(_) => return crate::spell_cast::history_now(run.app.world()) - exhausted_at,
+            Err(crate::spell_cast::CastFailure::NoCharges) => run.app.update(),
+            Err(error) => panic!("native charge recovery readiness: {error:?}"),
+        }
+    }
+    panic!("native Fire Blast charge did not recover within the observation window");
+}
+
+fn assert_one_native_recovery_adjustment(target_count: usize) {
+    let baseline = observe_native_fire_blast_recovery(target_count, false);
+    let with_missile = observe_native_fire_blast_recovery(target_count, true);
+    let reduction = baseline - with_missile;
+    assert!(
+        (reduction - 0.5).abs() <= 0.051,
+        "native1260673e3=500ms once per landing: baseline={baseline}, impact={with_missile}, reduction={reduction}"
+    );
+}
+
+#[test]
+#[ignore = "ordinary native charge expenditure/readiness; no granted charges or timer mutation"]
+fn fire_player_meteorite_native90_landing_reduces_actual_charge_recovery_st() {
+    assert_one_native_recovery_adjustment(1);
+}
+
+#[test]
+#[ignore = "ordinary native charge expenditure/readiness; one reduction, not per AoE victim"]
+fn fire_player_meteorite_native90_landing_reduces_actual_charge_recovery_3t_once() {
+    assert_one_native_recovery_adjustment(3);
+}
+
+#[test]
+#[ignore = "diagnose native follower placement/Travel before fixture-only correction"]
+fn fire_follower_meteorite_native90_idle_follow_keeps_native_cast_range() {
+    let _seed = crate::random::seed_scope(1260673);
+    let mut run = load_and_spawn_sunfury(false);
+    let owner = run
+        .app
+        .world()
+        .get::<crate::followers::Follower>(run.actor)
+        .unwrap()
+        .owner;
+    for frame in 0..=200 {
+        if frame % 40 == 0 {
+            let world = run.app.world();
+            println!(
+                "FOLLOW_TRACE frame={frame} follower={:?} owner={:?} target={:?} travel={}",
+                world.get::<shared::components::Position>(run.actor),
+                world.get::<shared::components::Position>(owner),
+                world.get::<shared::components::Position>(run.targets[0]),
+                super::super::movement::inspect_travel(world, run.actor)
+            );
+        }
+        if frame < 200 {
+            run.app.update();
+        }
+    }
+    let spell = run
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(FIREBALL)
+        .unwrap()
+        .clone();
+    let readiness = crate::spell_cast::read_native_cast_start(
+        run.app.world_mut(),
+        run.actor,
+        &spell,
+        run.targets[0],
+    );
+    assert!(
+        readiness.is_ok(),
+        "quiet native follower lost ordinary cast range: {readiness:?}"
+    );
+}
+
 #[test]
 #[ignore = "native OOC Sphere producer; no granted initial spheres or marker"]
 fn fire_player_meteorite_native90_ooc_sphere_arms_one_fire_blast_storm() {

@@ -13,6 +13,14 @@ The existing `auras/procs.rs` non-weapon attribute mapping remains unchanged: th
 
 Actual native level69 TP-funded RSK→repeat-RSK: fba821595 genuineRED1561.3763 versus2185.9268 expected; b6b3a93e6 native2GREEN39.92s including original TP/Provoke mastery control. Repeated1303.1418, mastery18.63%, HitCombo1% and Sunfire40% all come from native state; no buff/resource grants. Test enabled afterward without body change. Post-fix300s ST54887.59/3T87182.52 remain−73.41%/−76.85%; [census/source/receipts](../../handoffs/ww-source-census.md#rsktp-coefficient-and-sunfire-investigation), [contract](../../specs/windwalker-parity.md).
 
+## Player Meteorite native bridges
+
+`FIRE_PLAYER_METEORITE_NATIVE_DATA_BRIDGE` uses native70448 Pyrocosm1260673 Fireball damage/effect1 chance20%, not SimC76f8118's Pyroblast predicate. Explicit449559→449560 reconstruction preserves the structured1s delay and native449569 coefficient/variance/4yd impact. This differs from root tooltip177345/3s text. `FIRE_PLAYER_SPHERES_NATIVE_DATA_BRIDGE` connects selected448601 to native449849's8s OOC periodic dummy, one448604 up to native cap3; with449394, generated Spheres arm451073 and next Fire Blast launches count4. These bridges currently target Fire63; Arcane/combat12% Sphere acquisition are not implemented here. No initial5 or PRD11.
+
+Native81d8 gives ST timing/Pyroblast-only2PASS and four genuine mechanic REDs:64 player Fireballs produce no449569; a449560 three-target destination dispatch produces[3,3,3] hits instead of[1,1,1]; two OOC cases produce zero Sphere stacks. A fifth failure is follower OutOfRange, not producer evidence. The bounded39a38 destination-only non-channeled effect32 correction follows TC `SpellEffects.cpp725–782` and `SpellInfo.cpp1721–1756`;99c703 adds producer hooks. GREEN remains pending. Native500ms actual charge recovery is not implemented yet and requires its own readiness RED; follower placement/Travel trace precedes an approved fixture-only positioning correction. No whole449569-row completion claim.
+
+Sources: [contract](../../specs/auras.md#player-meteorite), [producer hooks](../../../crates/server/src/spell_cast/scripts/meteorite.rs), [native fixtures](../../../crates/server/src/dungeon_simulator/dps_parity/meteorite_tests.rs). Player449569 remains distinct from Phoenix-owned449569/456139 and primary Meteor351140.
+
 ## Intensifying Flame tick bridge — 2026-10-23
 
 `FIRE_INTENSIFYING_FLAME_SIMC_TICK_BRIDGE` connects actual Ignite12654 effect0 ticks to native419800. SimC76f8118 `sc_mage.cpp2502–2567` supplies this missing bridge; TC a352b1fa has no named script and DB2 has no child trigger. Active416714 supplies the native owner-local target cap, percentage, chance and periodic mask. Its current70448 row has cap3, percentage30, chance101 and no ICD, charges or RPPM. The leaf's coefficient and flags remain native; SimC damage-flag overrides are not imported. [Contract](../../specs/auras.md#intensifying-flame).
