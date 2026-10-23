@@ -260,6 +260,32 @@ fn holy_policy_native32_moderate_injury_uses_flash_not_serenity() {
 }
 
 #[test]
+fn holy_policy_native32_emergency_keeps_serenity_rescue() {
+    let mut group = native_group_at(32);
+    let target = group.h.caster;
+    damage_native_member(&mut group, target, 0.88);
+    assert!(
+        super::healer_triage::read_patient(group.h.app.world(), target)
+            .unwrap()
+            .emergency
+    );
+    let first = group.h.inbox.log.len();
+    for _ in 0..100 {
+        step_henry(&mut group);
+        if group.h.inbox.log[first..].iter().any(|event| {
+            event.source == Some(group.priest.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(2050)
+                && event.amount > event.overflow
+        }) {
+            return;
+        }
+    }
+    panic!("ordinary native Serenity must still rescue a shared emergency patient");
+}
+
+#[test]
 fn holy_binding_heals_native90_other_heal_copies_pre_overheal_amount_once() {
     let mut group = native_group();
     assert!(own_aura(&group.h, group.priest, 368275).is_some());
