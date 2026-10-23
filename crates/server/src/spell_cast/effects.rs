@@ -1326,9 +1326,6 @@ pub(crate) fn replay_healer_hit(
     else {
         return Err("SPELL_REPLAY_REQUIRES_SPELL_RECEIPT".into());
     };
-    if blocked {
-        return Err("SPELL_BLOCK_OUTCOME_REPLAY_UNAVAILABLE".into());
-    }
     let spell = world
         .resource::<super::SpellStore>()
         .get(spell_id)
@@ -1374,7 +1371,7 @@ pub(crate) fn replay_healer_hit(
         effect,
         bonus_caster,
     };
-    deal_source_damage_and_report(world, &ctx, target, damage, Some(hit.raw));
+    deal_source_damage_and_report(world, &ctx, target, damage, Some((hit.raw, blocked)));
     Ok(())
 }
 
@@ -1392,7 +1389,7 @@ fn deal_source_damage_and_report(
     ctx: &EffectCtx,
     target: Entity,
     damage: DamageInput,
-    recorded_source: Option<f32>,
+    recorded_hit: Option<(f32, bool)>,
 ) -> f32 {
     let DamageInput {
         crit,
@@ -1405,8 +1402,14 @@ fn deal_source_damage_and_report(
         return 0.0;
     }
     let school = ctx.spell.school_mask();
-    let source_amount =
-        recorded_source.unwrap_or_else(|| damage_source_amount(world, ctx, target, &damage));
+    let source_amount = recorded_hit.map_or_else(
+        || damage_source_amount(world, ctx, target, &damage),
+        |(amount, _)| amount,
+    );
+    let was_blocked = recorded_hit.map_or_else(
+        || super::hit_was_blocked(world, ctx.caster, ctx.spell.id, target),
+        |(_, blocked)| blocked,
+    );
     #[cfg(test)]
     let bonus_source_guid = crate::dungeon_simulator::healer_intake::spell_bonus_source(
         world,
@@ -1429,7 +1432,7 @@ fn deal_source_damage_and_report(
             periodic,
             crit,
             resolved_source,
-            blocked: super::hit_was_blocked(world, ctx.caster, ctx.spell.id, target),
+            blocked: was_blocked,
         },
     );
     if crate::auras::is_immune(world, target, school) {
@@ -1458,12 +1461,11 @@ fn deal_source_damage_and_report(
     let blockable = !periodic
         && !resolved_source
         && super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0;
-    let (amount, blocked) =
-        if blockable && super::hit_was_blocked(world, ctx.caster, ctx.spell.id, target) {
-            spell_block_damage(world, ctx, target, amount)
-        } else {
-            (amount, 0.0)
-        };
+    let (amount, blocked) = if blockable && was_blocked {
+        spell_block_damage(world, ctx, target, amount)
+    } else {
+        (amount, 0.0)
+    };
     let amount = if periodic {
         crate::auras::area_avoidance::reduce_damage(world, target, ctx.spell, effect, true, amount)
     } else {
