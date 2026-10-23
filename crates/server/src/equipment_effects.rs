@@ -235,7 +235,7 @@ mod tests {
             .insert(crate::class_progression::ActiveSpec(70));
         let pieces = [
             (EquipmentSlot::Head, 271465),
-            (EquipmentSlot::Shoulders, 271463),
+            (EquipmentSlot::Shoulder, 271463),
             (EquipmentSlot::Chest, 271468),
             (EquipmentSlot::Legs, 271464),
             (EquipmentSlot::Hands, 271466),
@@ -286,7 +286,7 @@ mod tests {
             .insert(crate::class_progression::ActiveSpec(70));
         let pieces = [
             (EquipmentSlot::Head, 271465),
-            (EquipmentSlot::Shoulders, 271463),
+            (EquipmentSlot::Shoulder, 271463),
             (EquipmentSlot::Chest, 271468),
             (EquipmentSlot::Legs, 271464),
         ];
