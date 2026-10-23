@@ -1758,6 +1758,7 @@ fn check_ordinary_caster_life(
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum StartCheck {
     Native,
+    ResourceMax(PowerType),
     IgnoreCastInProgress,
     TankHealCapability,
     HealerDecision,
@@ -1786,6 +1787,24 @@ pub(crate) fn read_native_cast_start(
     target: Entity,
 ) -> Result<Option<Entity>, CastFailure> {
     validate_start(world, caster, spell, Some(target), false)
+}
+
+/// Read ordinary native admission using only the chosen pool's maximum in the
+/// affordability calculation. No pool is written, granted or spent.
+pub(crate) fn read_native_cast_at_resource_max(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+    resource: PowerType,
+) -> Result<Option<Entity>, CastFailure> {
+    validate_start_with_policy(
+        world,
+        caster,
+        spell,
+        Some(target),
+        StartCheck::ResourceMax(resource),
+    )
 }
 
 /// Planner capability only: no cast, no spend, and no mutation of native GCD clocks.
@@ -1904,7 +1923,7 @@ fn validate_start_with_policy(
     teleport::check_destination(world, caster, spell)?;
     let casting_blocks_start =
         world.get::<CastState>(caster).is_some() && !allows_cast_while_casting(spell);
-    if check == StartCheck::Native && casting_blocks_start {
+    if matches!(check, StartCheck::Native | StartCheck::ResourceMax(_)) && casting_blocks_start {
         return Err(CastFailure::InProgress);
     }
     validate_history(world, caster, spell, check)?;
@@ -1927,7 +1946,11 @@ fn validate_start_with_policy(
     aura_spell_restrictions::check_target(world, caster, target, spell)?;
     toy_facing::check_cast(world, caster, spell.id, target)?;
     crate::hunter_pet::check_cast(world, caster, spell, target)?;
-    spell_costs(world, caster, spell)?;
+    let at_max = match check {
+        StartCheck::ResourceMax(power) => Some(power),
+        _ => None,
+    };
+    checked_costs(world, caster, spell, at_max)?;
     crate::profession::check_cast_items(world, caster, spell)?;
     disenchant::check_cast(world, caster, spell)?;
     Ok(target)
@@ -2189,10 +2212,37 @@ pub(crate) fn spell_costs(
     caster: Entity,
     spell: &SpellInfo,
 ) -> Result<Vec<(CostPool, f32)>, CastFailure> {
+    checked_costs(world, caster, spell, None)
+}
+
+fn cost_available(
+    world: &World,
+    caster: Entity,
+    pool: CostPool,
+    current: f32,
+    at_max: Option<PowerType>,
+) -> Result<f32, CastFailure> {
+    match pool {
+        CostPool::Power(power) if at_max == Some(power) => {
+            powers::power_value(world, caster, power)
+                .map(|(_, max)| max)
+                .ok_or(CastFailure::NotEnoughPower(power))
+        }
+        _ => Ok(current),
+    }
+}
+
+fn checked_costs(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    at_max: Option<PowerType>,
+) -> Result<Vec<(CostPool, f32)>, CastFailure> {
     applicable_costs(world, caster, spell)?
         .into_iter()
         .map(|(pool, amount, current)| {
-            if current < amount {
+            let available = cost_available(world, caster, pool, current, at_max)?;
+            if available < amount {
                 Err(match pool {
                     CostPool::Power(power) => CastFailure::NotEnoughPower(power),
                     CostPool::Health => CastFailure::NotEnoughHealth,
