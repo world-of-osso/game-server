@@ -1,5 +1,11 @@
 # Dungeon simulator
 
+## Hunter pet intrinsic/owner stats —2026-10-22
+
+The [survivability contract](../../specs/dps-parity.md#hunter-pet-survivability) follows TC Pet.cpp847–925/StatSystem1187–1310, not mixed SimC stats. `hunter_pet_stats` derives native ExpectedStat create health×template modifier, base armor level×50,30% owner Stamina truncated before×10 bonusHP and70% owner armor. Hunter spawn installs armor and inherited-health bookkeeping; owner CharacterStats changes apply only inherited HP deltas and clamp current on shrink without healing (TC Unit.cpp10070–10093). Other pet categories are unchanged; pet_levelstats/intrinsic primary stats remain absent, no fake TC fallback values are imported.
+
+Actual native reference253/level90 Duck174884 baseline1c7fa08b5: ownerStamina45218/armor1740, pet max/currentHP1, no armor/stat component. Imported level90 legacy class-level rows exist but have placeholderHP1; native ExpectedStat90/-2 has CreatureHealth141482.016 and actualDuckHealthModifier0.3. Pushed ignored3e39e8d91 gives genuine spawn(1,None) versus(178094,5718) and nativeFortitude owner-change184874 versus1 RED2, with baseline controlPASS55.57s. Implementation follows RED; GREEN pending. Source/table hashes `dps-parity-fix-2026-10-21/pet-stats-native-source.json`; Azure70 inferred2695HP is a distinct cohort, not this exact snapshot.
+
 ## Wild Thrash pet dispatch —2026-10-22
 
 Named [Wild Thrash contract](../../specs/dps-parity.md#wild-thrash-owned-pet-child-policy) binds only1264359 e0 to actual living owned controlled pets. Each pet's unchanged1264355 target plan must include the primary enemy before the existing owned-pet forwarding casts its child; ordinary area/copy selection and native1.91AP/radius10 remain authoritative. No blanket Dummy forwarding, synthetic pet or coefficient/timer change. SimC76f8118 hunter7562–7563/6796–6837 supplies the named policy where TC lacks a script and DB2 has no parent trigger; Beast Cleave and conditional multipliers remain explicit separate gaps.

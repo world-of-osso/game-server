@@ -19,6 +19,11 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [ ] `HUNTER_WILD_THRASH_PET_CHILD_SIMC`: native1264359 effect0 commands each actual living owned controlled pet whose native1264355 target plan reaches the selected enemy. Damage is cast from that pet through the existing owned-pet command path, preserving native area/coefficients and copy/ownership/range rules. No pet means no fabricated child caster. TC has no script and parent DB2 Dummy effects have zero triggers; SimC76f8118 hunter7562–7563/6796–6837 supplies only this named dispatch policy. Beast Cleave, conditional300% multiplier/cap semantics and unsupported companion/guardian models remain separate qualification gaps.
 
+### Hunter pet survivability
+
+- [ ] Actual controlled Hunter pets use native ExpectedStat CreatureHealth at their own level and template health/tuning metadata, rather than legacy class-level placeholder HP. TC Pet.cpp847–925 supplies base armor of level×50 when pet_levelstats is unavailable; no fake intrinsic primary-stat constants are imported.
+- [ ] TC Guardian stat scaling adds30% owner Stamina (integer native stat)×10 HP and70% owner armor. Spawn initializes this maximum before stored current-health hydration; real owner stat changes refresh inherited deltas without healing, clamp currentHP on maximum reduction, and preserve unrelated pet health bonuses. Demon/Mage pets and ordinary NPCs are outside this slice. SimC stable_pet70%Stamina/1.05armor remains named divergence `HUNTER_PET_SIMC_SURVIVABILITY_DIFF`, never mixed into runtime values.
+
 ### Measurement
 
 Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` clears explicit raid events for Patchwerk after parsing. The opt-in CLI integration test must observe three actual targets and an adds event; argument-string checks alone did not detect this failure.
