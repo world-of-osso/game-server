@@ -2,11 +2,11 @@
 //! Source removal is natural10s expiry. Native PetCancelAura is not exercised.
 use super::*;
 use crate::auras::ActiveAuras;
-use crate::persistence::{InventoryData, toy_store};
+use crate::persistence::{InventoryData, InventoryItemData, toy_store};
 use shared::components::{CombatStatus, Level, UnitAuras};
 use shared::protocol::{
-    InventoryChannel, InventoryError, InventoryItemData, ItemLocation, ToyCollectionUpdate,
-    ToyOperation, ToyResult, UseItem, UseToy,
+    InventoryChannel, InventoryError, ItemLocation, ToyCollectionUpdate, ToyOperation, ToyResult,
+    UseItem, UseToy,
 };
 
 const TOY: u32 = 163705;
