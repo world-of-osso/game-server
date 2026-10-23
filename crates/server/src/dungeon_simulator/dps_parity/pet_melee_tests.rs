@@ -12,6 +12,9 @@ fn pet_melee_hits(world: &World, pet: Entity, target: Entity) -> Vec<i32> {
                 && event.source == Some(pet.to_bits())
                 && event.target == Some(target.to_bits())
                 && event.spell_id.is_none()
+                && !event.glancing
+                && event.blocked == 0
+                && event.absorbed == 0
         })
         .map(|event| event.amount)
         .collect()
@@ -63,4 +66,61 @@ fn dps_parity_pet_melee_baseline_records_actual_owner_and_swing_damage() {
         })
     );
     assert!(hits.iter().all(|damage| *damage > 0));
+}
+
+fn owner_contribution_floor(world: &World, owner: Entity, pet: Entity, target: Entity) -> f32 {
+    // TC StatSystem1344/1389/1423: integer .22 ownerRAP, /3.5 per
+    // base attack second. Pet.cpp882 sets the source2000ms pet base clock.
+    let owner = world.get::<crate::stats::CharacterStats>(owner).unwrap();
+    let bonus = (owner.ranged_attack_power * 0.22).trunc() / 3.5 * 2.0;
+    let pet_mods = world.get::<crate::auras::AuraStatMods>(pet);
+    let done = pet_mods.map_or(1.0, |mods| {
+        mods.damage_done(1) * mods.autoattack_damage_mult
+    });
+    let taken = world
+        .get::<crate::auras::AuraStatMods>(target)
+        .map_or(1.0, |mods| mods.damage_taken(1));
+    let pet_scaling = crate::level_scaling::UnitScaling::of(world, pet);
+    let target_scaling = crate::level_scaling::UnitScaling::of(world, target);
+    let armor = target_scaling.armor_against(
+        world
+            .get::<crate::level_scaling::CreatureArmor>(target)
+            .unwrap()
+            .0,
+        &pet_scaling,
+    );
+    crate::combat::armor_mitigated(
+        (bonus * done * taken).round(),
+        armor,
+        &pet_scaling,
+        &target_scaling,
+        Some(world.resource::<crate::level_scaling::ArmorConstants>()),
+        pet_mods,
+    )
+    .floor()
+}
+
+#[test]
+#[ignore = "native pet owner-RAP melee RED; requires prepared parity inputs"]
+fn dps_parity_pet_melee_actual_swings_include_source_owner_ranged_ap_contribution() {
+    let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
+    let hits = collect_native_pet_swings(&mut run, pet);
+    let world = run.app.world();
+    let floor = owner_contribution_floor(world, run.actor, pet, run.targets[0]);
+    println!(
+        "NATIVE_PET_MELEE_OWNER_RAP {}",
+        json!({
+            "minimum_owner_contribution": floor, "hits": hits,
+            "pet_modifiers": format!("{:?}", world.get::<crate::auras::AuraStatMods>(pet)),
+        })
+    );
+    assert!(floor > 0.0);
+    // Intrinsic pet AP/weapon damage is unqualified, not invented here. Any
+    // nonnegative intrinsic base must still include the sourced owner share.
+    // Native misses/crit rolls remain; blocked/absorbed/glancing receipts are
+    // excluded rather than changing RNG or loosening the contribution bound.
+    assert!(
+        hits.iter().all(|damage| *damage as f32 >= floor),
+        "native pet swings{hits:?} omit source owner-RAP contribution floor{floor}"
+    );
 }
