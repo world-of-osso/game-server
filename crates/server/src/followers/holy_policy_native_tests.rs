@@ -532,10 +532,42 @@ fn effectively_damaged(group: &GroupFixture, spell: u32, target: Entity) -> bool
         })
 }
 
+/// These multi-action premises require a real nonlethal target, not the 1000HP kobold.
+fn use_native_heroic_dummy(group: &mut GroupFixture) {
+    let source = crate::spell_cast::test_harness::load_native_creature_world(&[31146]);
+    group
+        .h
+        .app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>()
+        .templates
+        .extend(source.templates);
+    let old = group.h.npc;
+    let position = *group.h.app.world().get::<Position>(old).unwrap();
+    let (x, y, z) = crate::terrain_height::bevy_to_wow(position.x, position.y, position.z);
+    let owner = group.h.caster;
+    // TDB31146/CT328/HealthModifier100, native npc_training_dummy lifetime.
+    let dummy =
+        crate::zones::summon_creature(group.h.app.world_mut(), owner, 31146, [x, y, z, 0.0])
+            .expect("sourced Heroic Training Dummy");
+    assert!(
+        group
+            .h
+            .app
+            .world()
+            .get::<crate::creature_scripts::TrainingDummy>(dummy)
+            .is_some()
+    );
+    assert!(group.h.health(dummy) > group.h.health(old));
+    group.h.app.world_mut().despawn(old);
+    group.h.npc = dummy;
+}
+
 #[test]
 fn holy_weave_native90_holy_fire_then_smite_deal_real_damage_when_safe() {
     let _rng = crate::random::seed_scope(257);
     let mut group = native_group();
+    use_native_heroic_dummy(&mut group);
     engage_weave_enemies(&mut group, 1);
     let first = group.h.npc;
     wait_henry_cast(&mut group, 14914);
@@ -824,6 +856,7 @@ fn apply_group_magic(group: &mut GroupFixture, targets: &[Entity]) {
 #[test]
 fn holy_policy_native90_mass_dispel_refuses_separated_magic_patients() {
     let mut group = native_group();
+    use_native_heroic_dummy(&mut group);
     let targets = group.members[2..].to_vec();
     apply_group_magic(&mut group, &targets);
     group
