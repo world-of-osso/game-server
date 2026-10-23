@@ -1,6 +1,8 @@
 //! Shared native fixture machinery; source rows and spec facts belong to adapters.
 pub(crate) mod equipment;
 pub(crate) mod execution;
+#[cfg(test)]
+mod tests;
 use crate::simc_apl_native::Encounter;
 use bevy::prelude::*;
 use equipment::Equipment;

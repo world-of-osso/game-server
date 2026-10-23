@@ -23,7 +23,7 @@
 
 ## Shared literal fixture machinery
 
-`dungeon_simulator::dps_parity::literal_rotation` owns reusable native item/readiness/execution state; WW source/bindings/facts remain spec-local. Extraction preserves the32e4610b7 five-test behavior; post-extraction GREEN pending.
+`dungeon_simulator::dps_parity::literal_rotation` owns reusable native item/readiness/execution state; WW source/bindings/facts remain spec-local. Extraction preserves the32e4610b7 five-test behavior; post-extraction GREEN pending. Native Player dispatch is also required for Arms actors without a follower profile; an actual Player cast followed by request-time spellbook rejection is committed as RED before implementation. Readiness alone cannot authorize a later no-longer-known Player cast.
 
 - `equipment::Equipment::load(world, actor, &mut Bindings)` reads equipped native identities/item levels/on-use definitions, registers slot cooldown aliases; `fact(name, &NativeFacts)` reads qualified trinket operands.
 - `execution::Prepared::read(world, actor, targets, &Equipment, actions, needs_snapshot)` samples actual native readiness before immutable facts borrowing. Each `NativeAction { name, spell, talent: Option<u32>, self_target }` comes from the spec adapter; inventory/provider gaps remain adapter-owned. Actual selected talents, KnownSpells and overrides gate casts.
