@@ -116,16 +116,7 @@ impl<'a> NativeFacts<'a> {
                 .iter()
                 .map(|aura| f64::from(aura.stacks))
                 .fold(0.0, f64::max)),
-            "remains" => Ok(active
-                .iter()
-                .map(|aura| {
-                    // buff.cpp2018–2028/expressions.hpp135–138: permanent is the
-                    // signed64 millisecond sentinel, not an invented finite timer.
-                    aura.expires_at
-                        .map_or(i64::MIN as f64 / 1000.0, |at| (at - now).max(0.0))
-                })
-                .reduce(f64::max)
-                .unwrap_or(0.0)),
+            "remains" => Ok(buff_remaining(&active, now)),
             _ => Err(format!("unknown native APL buff property {property}")),
         }
     }
@@ -166,21 +157,7 @@ impl<'a> NativeFacts<'a> {
             .resources
             .get(alias)
             .ok_or_else(|| format!("unknown native APL operand {operand}"))?;
-        let (current, maximum) =
-            crate::spell_cast::powers::power_value(self.world, self.actor, *power)
-                .ok_or_else(|| format!("native APL actor lacks resource {alias}"))?;
-        let table = self
-            .world
-            .resource::<crate::spell_cast::powers::PowerTypeTable>();
-        let info = table
-            .get(*power)
-            .ok_or_else(|| format!("native APL power metadata absent: {alias}"))?;
-        if info.display_modifier <= 0 {
-            return Err(format!("native APL invalid display modifier for {alias}"));
-        }
-        let display = f64::from(info.display_modifier);
-        let current = f64::from(current) / display;
-        let maximum = f64::from(maximum) / display;
+        let (current, maximum, display) = self.read_displayed_resource(*power)?;
         match property {
             "current" => Ok(current),
             "max" => Ok(maximum),
@@ -193,6 +170,27 @@ impl<'a> NativeFacts<'a> {
                 .map(|rate| (maximum - current) / (rate / display)),
             _ => Err(format!("unknown native APL resource property {property}")),
         }
+    }
+
+    fn read_displayed_resource(&self, power: PowerType) -> Result<(f64, f64, f64), String> {
+        let (current, maximum) =
+            crate::spell_cast::powers::power_value(self.world, self.actor, power)
+                .ok_or_else(|| format!("native APL actor lacks resource {power:?}"))?;
+        let table = self
+            .world
+            .resource::<crate::spell_cast::powers::PowerTypeTable>();
+        let info = table
+            .get(power)
+            .ok_or_else(|| format!("native APL power metadata absent: {power:?}"))?;
+        if info.display_modifier <= 0 {
+            return Err(format!("native APL invalid display modifier for {power:?}"));
+        }
+        let display = f64::from(info.display_modifier);
+        Ok((
+            f64::from(current) / display,
+            f64::from(maximum) / display,
+            display,
+        ))
     }
 
     fn regen(&self, power: PowerType) -> Result<f64, String> {
@@ -272,6 +270,19 @@ fn split_property<'a>(operand: &'a str, kind: &str) -> Result<(&'a str, &'a str)
     operand
         .rsplit_once('.')
         .ok_or_else(|| format!("native APL {kind} requires a property: {operand}"))
+}
+
+fn buff_remaining(auras: &[&crate::auras::AuraInstance], now: f64) -> f64 {
+    // buff.cpp2018–2028/expressions.hpp135–138: permanent is the signed64
+    // millisecond sentinel, not an invented finite timer.
+    auras
+        .iter()
+        .map(|aura| {
+            aura.expires_at
+                .map_or(i64::MIN as f64 / 1000.0, |at| (at - now).max(0.0))
+        })
+        .reduce(f64::max)
+        .unwrap_or(0.0)
 }
 
 fn bool_value(value: bool) -> f64 {
