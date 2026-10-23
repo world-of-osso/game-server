@@ -2,6 +2,12 @@
 
 Verified2026-10-23. Native DB2/TC precede SimC76f8118; no parity claim. Shared native-book helper belongs to14752. `follower_spec_kit` membership below is **not** proof of native KnownSpells membership; selected reference traits are installed separately by `dps_parity::inputs::install_traits`.
 
+## Current native target-seam blocker — 2026-10-23
+
+With landed label/positivity and native stat redirects, d45fe30e8's same compiled binary failed both actual300s attempts before a DPS report: ST21.92s/3T25.19s, `target_if requires explicit native target candidates`. The interpreter's explicit-candidate API had landed, but WW still supplied only an enemy count through WwFacts. This is not a damage/coefficient failure. Integration supplies the actual fixture entity slice in caller order to ActionFacts::target_ids and uses landed pd1035 target-aware Prepared/Execution; no first-target fallback or shared Player-path duplicate. GREEN pending.
+
+Both attempts used a new private SQLite .backup of CURRENT canonical, not the historical21ba input: canonical SHA568200017bcb3b5ed6f17931fc0994fff502c5c801f93f96197fc718bcd493bf, private copydd1de231e32c26291182dff050a8de5a5132908723ed21454eb128e45e4b05ae. Immutable failure/log/provenance at engine `data/diagnostics/ww-parity-2026-10-23/native-after-equipment-redirect-d45fe30e8/`. No new DPS/parity claim follows from these failures; prior frozen receipts remain historical.
+
 ## Missing historical reference channels
 
 | Spell / source | Native data / decision status | Test / gap |

@@ -12,6 +12,7 @@ pub(super) struct WwFacts<'a> {
     pub bindings: &'a Bindings,
     pub equipment: &'a Equipment,
     pub xuen_active: bool,
+    targets: &'a [Entity],
 }
 
 impl<'a> WwFacts<'a> {
@@ -21,16 +22,17 @@ impl<'a> WwFacts<'a> {
         bindings: &'a Bindings,
         equipment: &'a Equipment,
         encounter: crate::simc_apl_native::Encounter,
-        active_enemies: usize,
+        targets: &'a [Entity],
         xuen_active: bool,
     ) -> Self {
         Self {
-            native: NativeFacts::new(world, actor, bindings, encounter, active_enemies),
+            native: NativeFacts::new(world, actor, bindings, encounter, targets.len()),
             world,
             actor,
             bindings,
             equipment,
             xuen_active,
+            targets,
         }
     }
 }
@@ -58,6 +60,10 @@ impl Facts for WwFacts<'_> {
 }
 
 impl ActionFacts for WwFacts<'_> {
+    fn target_ids(&self, _: &Action) -> Result<Vec<u64>, String> {
+        Ok(self.targets.iter().map(|target| target.to_bits()).collect())
+    }
+
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
             "combo_strike" => self.combo_strike(action),

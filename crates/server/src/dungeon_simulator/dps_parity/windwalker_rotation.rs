@@ -107,7 +107,7 @@ impl Rotation {
             &self.bindings,
             &self.equipment,
             self.encounter,
-            targets.len(),
+            targets,
             xuen,
         );
         self.driver.select(list, &facts, prepared, &self.equipment)
@@ -126,7 +126,7 @@ impl Rotation {
             &self.bindings,
             &self.equipment,
             self.encounter,
-            targets.len(),
+            targets,
             xuen,
         );
         if self.driver.should_cancel(world, actor, &facts)? {
@@ -150,7 +150,7 @@ impl Rotation {
             &self.bindings,
             &self.equipment,
             self.encounter,
-            targets.len(),
+            targets,
             xuen,
         )
         .value_for(action, name)
