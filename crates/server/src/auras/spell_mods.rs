@@ -87,7 +87,7 @@ fn is_pct(aura_type: u32) -> bool {
 }
 
 /// Whether a spell-mod effect of `aura` applies to `spell`.
-fn affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> bool {
+pub(super) fn affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> bool {
     match effect.aura_type {
         ADD_FLAT_MODIFIER | ADD_PCT_MODIFIER => class_mask_affects(aura, effect, spell),
         _ => u32::try_from(effect.misc_values[1])
@@ -299,10 +299,12 @@ pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .filter(|aura| {
             aura.charges > 0
                 && !crate::spell_cast::scripts::preserve_unadmitted_proc(spell, aura)
-                && aura
-                    .effects
-                    .iter()
-                    .any(|effect| is_spell_mod(effect.aura_type) && affects(aura, effect, spell))
+                && aura.effects.iter().any(|effect| {
+                    // TC Player.cpp22820: zero-valued mods never enter m_appliedMods.
+                    effect.amount != 0.0
+                        && is_spell_mod(effect.aura_type)
+                        && affects(aura, effect, spell)
+                })
         })
         .map(|aura| aura.instance_id)
         .collect();
