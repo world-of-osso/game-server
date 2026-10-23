@@ -13,13 +13,13 @@ Import native TraitDefinitionEffectPoints through the normal DB2 importer; retai
 
 ## Native behavioral tests
 
-Ignored tests are pushed before production changes; genuine RED pending.
+Ignored tests were pushed before production changes. Atbc5ce36ca, `trait-points-red-v2` observed both genuine rank2 amount failures below. Rank1/lifecycle instead hit native condition20153: lowering both ranks leaves21 earlier class points, below23. Corrected controls omit native final class-group8482; the lifecycle keeps that same early-class spell book at both ranks. Runtime remains unchanged; control/lifecycle rerun pending.
 
 | Case | Native source | Expected observable | Proof |
 |---|---|---|---|
 | Rank2 Multiply | Ret selected node93009/entry115034, definition120041, spell402964; rows22216–22218; curves64686/64685/64684; points180714–180719 | Actual learned passive amounts10/-6/20 from raw5/-3/10 × curveY2 | pending |
 | Rank2 Set | Ret selected node81630/entry102622, definition107627, spell385427; rows24203–24205; curves94680/94679/94678; points284380–284385 | Actual learned passive amounts4/-4/4, replacing raw2/-2/2 | pending |
-| Rank1 controls | Same exact reference purchases except the two validated rank1 allocations | Actual passive amounts5/-3/10 and2/-2/2 | pending |
+| Rank1 controls | Native validated reference-derived purchases, two rank1 allocations and no final class-group8482 | Actual passive amounts5/-3/10 and2/-2/2 | pending |
 | Existing passive rank change | Same player and learned spell IDs, native validated1→2→1 trait configurations | Actual aura amounts follow each rank, not stale first application | pending |
 
-Reference purchases are the pinned76f8118 spec70 profile fixture. All configurations use ordinary native validation; no injected aura, effect amount, spell coefficient or resource.
+Reference purchases are the pinned76f8118 spec70 profile fixture. Rank2 witnesses retain the exact selected reference allocation; rank1/lifecycle controls omit final class-group8482, whose native condition20153 requires23 earlier class points. All configurations use ordinary native validation; no injected aura, effect amount, spell coefficient or resource.

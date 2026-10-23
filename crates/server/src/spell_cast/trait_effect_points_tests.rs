@@ -17,7 +17,11 @@ struct Allocation {
     active_ranks: u32,
 }
 
-fn selected_purchases(rank: u32) -> Vec<Purchase> {
+fn selected_purchases(
+    rank: u32,
+    tree: &crate::spell_info::TraitTree,
+    omit_late_class: bool,
+) -> Vec<Purchase> {
     let allocations: Vec<Allocation> = serde_json::from_str(include_str!(
         "../../tests/fixtures/ret_selected_traits_76f8118.json"
     ))
@@ -25,6 +29,11 @@ fn selected_purchases(rank: u32) -> Vec<Purchase> {
     allocations
         .into_iter()
         .filter(|entry| entry.active_ranks > 0)
+        // Native condition20153/group8482 requires23 earlier class points.
+        // Lowering two ranks leaves21; the rank1 control omits that late group.
+        .filter(|entry| {
+            !omit_late_class || !tree.node(entry.node_id).unwrap().groups.contains(&8482)
+        })
         .map(|entry| Purchase {
             node_id: entry.node_id,
             entry_id: entry.entry_id,
@@ -37,14 +46,21 @@ fn selected_purchases(rank: u32) -> Vec<Purchase> {
         .collect()
 }
 
-fn install_rank(h: &mut Harness, rank: u32) {
+fn install_rank(h: &mut Harness, rank: u32, omit_late_class: bool) {
     let identity = h.app.world().get::<Player>(h.caster).unwrap().clone();
+    let classes = h.app.world().resource::<crate::spell_info::ClassSpells>();
+    let tree = &classes
+        .classes
+        .iter()
+        .find(|class| class.class_id == 2)
+        .unwrap()
+        .traits;
     let (known, traits) = evaluate_player_reference_traits(
-        h.app.world().resource::<crate::spell_info::ClassSpells>(),
+        classes,
         &identity,
         70,
         90,
-        &selected_purchases(rank),
+        &selected_purchases(rank, tree, omit_late_class),
     )
     .expect("exact selected Ret traits, with two valid lower-rank controls");
     for node in [93009, 81630] {
@@ -82,7 +98,7 @@ fn native_rank(rank: u32) -> Harness {
         ActiveSpec(70),
         Level(90),
     ));
-    install_rank(&mut h, rank);
+    install_rank(&mut h, rank, rank == 1);
     h
 }
 
@@ -132,10 +148,26 @@ fn native_trait_points_rank_one_preserves_both_operations() {
 fn native_trait_points_existing_passives_follow_rank_changes() {
     let mut h = native_rank(1);
     assert_eq!(amounts(&h, SANCTIFIED_PLATES), [5.0, -3.0, 10.0]);
-    install_rank(&mut h, 2);
+    // Keep the same early-class spell book: only the two native ranks change.
+    let known_before: Vec<_> = h
+        .app
+        .world()
+        .get::<KnownSpells>(h.caster)
+        .unwrap()
+        .iter()
+        .collect();
+    install_rank(&mut h, 2, true);
+    let known_after: Vec<_> = h
+        .app
+        .world()
+        .get::<KnownSpells>(h.caster)
+        .unwrap()
+        .iter()
+        .collect();
+    assert_eq!(known_before, known_after);
     assert_eq!(amounts(&h, SANCTIFIED_PLATES), [10.0, -6.0, 20.0]);
     assert_eq!(amounts(&h, OBDURACY), [4.0, -4.0, 4.0]);
-    install_rank(&mut h, 1);
+    install_rank(&mut h, 1, true);
     assert_eq!(amounts(&h, SANCTIFIED_PLATES), [5.0, -3.0, 10.0]);
     assert_eq!(amounts(&h, OBDURACY), [2.0, -2.0, 2.0]);
 }
