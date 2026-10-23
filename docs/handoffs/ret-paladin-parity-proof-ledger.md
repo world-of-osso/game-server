@@ -240,3 +240,5 @@ All AP-coefficient rows in the raw114-spell matrix now name14754's shared weapon
 ## Native permanent action override
 
 Parent approved exposing selected DB2 TraitDefinition OverridesSpellID to NPC action resolution, not zero-override variant guessing. New ignored native fixtures request APL base85256 through the existing follower controller: selected native383328 must cast and deal its own damage; granted-only Ret must retain85256→224266 damage with no FinalVerdict. Exact76f8118 selected-rank fixture is validated through ordinary native reference traits. Both cases earn Holy Power with three ordinary native Judgments; no power, damage coefficient or timer override. RED pending; production resolver unchanged.
+
+Native resolver first execution at77c0f56ed reached two fixture setup failures, not resolver RED: ordinary Judgment returned NoCharges after its actual charge consumption. The fixture now waits on NoCharges like other native readiness failures while preserving ordinary recharge and the bounded frame budget. No runtime resolver change. `native-action-red-v3-priority.{log,proof.json}` retains the setup evidence.

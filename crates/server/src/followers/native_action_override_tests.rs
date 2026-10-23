@@ -82,7 +82,8 @@ fn earn_finisher_power(h: &mut Harness, actor: Entity) {
         ) {
             Ok(()) => generators += 1,
             Err(crate::spell_cast::CastFailure::OnCooldown)
-            | Err(crate::spell_cast::CastFailure::OnGlobalCooldown) => {}
+            | Err(crate::spell_cast::CastFailure::OnGlobalCooldown)
+            | Err(crate::spell_cast::CastFailure::NoCharges) => {}
             Err(error) => panic!("native Ret Judgment generator failed: {error:?}"),
         }
         h.advance(1);
