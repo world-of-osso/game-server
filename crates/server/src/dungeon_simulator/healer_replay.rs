@@ -61,6 +61,7 @@ fn freeze_sources(world: &mut World, actors: &BTreeMap<u32, Entity>) {
                 crate::creature_aggro::AggroRange,
                 crate::scripted_ai::CreatureAiState,
                 crate::combat::AutoAttack,
+                crate::networking::CombatTarget,
             )>()
             .insert(crate::combat::Unkillable);
     }
@@ -307,9 +308,8 @@ pub(super) fn replay(intake: &Intake, spec: u32) -> Result<Value, String> {
                 .is_some_and(|health| health.current > 0.0)
             {
                 active_sources.insert(source);
-                app.world_mut()
-                    .entity_mut(source)
-                    .insert(crate::networking::CombatTarget(Some(target)));
+                // CombatTarget re-arms native creature auto-attacks independently of AI.
+                // Combat refs admit companion decisions without starting a second hit clock.
                 crate::combat_refs::set_in_combat_with(app.world_mut(), party.owner, source);
                 app.world_mut().resource_mut::<PendingHits>().hits.push((
                     source,
