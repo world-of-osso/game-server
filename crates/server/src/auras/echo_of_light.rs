@@ -3,8 +3,7 @@
 use bevy::prelude::*;
 
 use super::procs::AuraEvent;
-use super::{ActiveAuras, AuraApplication, AuraInstance, AuraSource, aura_now, handlers};
-use crate::spell_info::SpellStore;
+use super::{ActiveAuras, AuraInstance};
 
 pub(super) const ECHO_MASTERY: u32 = 77_485;
 pub(super) const ECHO_HEAL: u32 = 77_489;
@@ -28,26 +27,6 @@ pub(super) fn check_heal(_world: &World, _aura: &AuraInstance, event: &AuraEvent
     event.heal.is_some_and(|heal| heal > 0.0)
 }
 
-fn read_tick_count(world: &World, caster: Entity, target: Entity) -> Option<u32> {
-    let spell = world.get_resource::<SpellStore>()?.get(ECHO_HEAL)?;
-    let effect = spell
-        .effects
-        .iter()
-        .find(|effect| effect.index == 0 && effect.aura == handlers::PERIODIC_HEAL)?;
-    let application = AuraApplication {
-        caster,
-        target,
-        spell_id: ECHO_HEAL,
-        effect_mask: 1,
-        source: AuraSource::Cast,
-    };
-    let duration = super::duration_ms(world, &application, spell);
-    let periodic = super::build_effect(world, caster, spell, effect, aura_now(world));
-    duration
-        .checked_div(periodic.period_ms)
-        .filter(|ticks| *ticks > 0)
-}
-
 pub(super) fn apply_echo(world: &mut World, _unit: Entity, aura: &AuraInstance, event: &AuraEvent) {
     let Some((heal, target)) = event.heal.zip(event.target) else {
         return;
@@ -59,7 +38,8 @@ pub(super) fn apply_echo(world: &mut World, _unit: Entity, aura: &AuraInstance, 
     if total <= 0.0 {
         return;
     }
-    let Some(ticks) = read_tick_count(world, event.actor, target) else {
+    let Some(ticks) = super::periodic::heal_tick_count(world, event.actor, target, ECHO_HEAL)
+    else {
         warn!("Echo of Light {ECHO_HEAL} has no valid native periodic-heal clock");
         return;
     };

@@ -1,10 +1,14 @@
 # Server test performance
 
-The server's standard lead gate must retain its native coverage while completing within15minutes and approximately8GiB RSS without swap. Shared fixture code lives in `crates/server/src/test_data/`; [measurement and implementation notes](../wiki/investigations/server-test-performance.md).
+The whole server test suite must retain every discovered case and existing ignore while completing within15minutes and approximately8GiB RSS without swap. The three-gate union is an intermediate measurement, not full-suite completion. Shared fixture code lives in `crates/server/src/test_data/`; [measurement and implementation notes](../wiki/investigations/server-test-performance.md).
 
 ## What it must do
 
 ### Execution and coverage
+
+- [x] `--full-suite` executes all discovered tests from the supplied complete Cargo artifact inventory, with no union-only filter or implicit skip.
+- [x] Report exact known and unexpected failing identities without converting failures to ignores, dropping assertions, or rewriting raw failure status.
+- [ ] Qualify the whole-suite command against900s/~8GiB with a complete all-case/ignore inventory and separate compile timing.
 
 - [x] Execute the union of the `fu913`, `sm894` and `rd912` gate filters within900s wall at approximately8GiB peak RSS with no swap;706.402s/6.77GiB/zero swap qualifies performance, with one lead-accepted known master environment/data failure reported explicitly.
 - [x] Preserve test cases, existing ignore status, assertions and native simulation steps; the complete native union accounts for2856 enabled/87 ignored without missing/extra identities.
@@ -45,7 +49,7 @@ The server's standard lead gate must retain its native coverage while completing
 - [x] Module-process execution meets900s/no-swap performance; raw functional status remains2855PASS/1known master environment/data FAIL, not all green.
 - [x] Native loader/storage integration, targeted live-App isolation and compilation pass; the matching19-case workspace-graph before/after measurements are recorded.
 - [x] Two process slots×three threads qualify the standard union below8GiB with no swap.
-- [ ] Whole-workspace full-suite batching/default adoption is not measured by the standard gate union.
+- [ ] Whole-workspace qualification takes1253.992s/6.48GiB/31.6MiBswap, exact5745enabled/191ignored coverage;900s/no-swap and default adoption remain open.
 
 ## Out of scope
 

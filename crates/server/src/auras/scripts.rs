@@ -496,6 +496,14 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        super::light_of_titans::LIGHT_OF_TITANS,
+        AuraScript {
+            check_proc: Some(super::light_of_titans::check_word),
+            on_damage_proc: Some(super::light_of_titans::apply_word_hot),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         super::ignite::MASTERY_IGNITE,
         AuraScript {
             check_proc: Some(super::ignite::check_damage),

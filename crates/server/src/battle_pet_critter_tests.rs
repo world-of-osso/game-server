@@ -1,4 +1,6 @@
 //! Real journal RPC + authored legacy summons exercise the current-critter boundary.
+#[path = "toys_imaginary_gun_tests.rs"]
+mod imaginary_gun;
 use super::*;
 use crate::spell_cast::test_harness::*;
 use crate::spell_info::SpellStore;
