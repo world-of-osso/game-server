@@ -49,6 +49,12 @@ const CONTRACT_GAPS: &[(u32, &str)] = &[
     (198206, "source party-viewer world-effect interaction"),
     (198264, "source party-viewer world-effect interaction"),
     (210975, "source party-viewer world-effect interaction"),
+    //289330 promises a pet ride; source149189 has no supplied ride/visual binding.
+    (166662, "source battle-pet ride interaction"),
+    // Source127325 promises foraging/presents in Pandaria;65096 has no supplied action binding.
+    (86594, "source forage/presents and Pandaria interaction"),
+    // Source196792 promises a kickable carp;99973 scenery alone does not implement it.
+    (131814, "source carp kick interaction"),
 ];
 
 pub(super) fn load(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, BTreeSet<String>>> {

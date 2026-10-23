@@ -45,7 +45,9 @@ fn generated_open_floor_routes_stay_short_near_subtile_and_wow_tile_corners() {
             };
             let mut map = NavigationMap::open(dir.path()).unwrap();
             for direction in [1.0, -1.0] {
-                let points = map.path(point(direction), point(-direction)).unwrap();
+                let points = map
+                    .complete_path(point(direction), point(-direction))
+                    .unwrap();
                 let length: f32 = points.windows(2).map(|p| p[0].distance(p[1])).sum();
                 eprintln!(
                     "generated seam boundary{boundary} rotate{rotate} direction{direction} length{length}"

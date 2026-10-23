@@ -879,7 +879,7 @@ fn smartai_coverage_summon_authentic_position_count_storage_and_expiry() {
         .map(Result::unwrap)
         .collect();
     world.insert_resource(crate::world_data::WorldData {
-        templates,
+        templates: templates.into(),
         class_level_base_hp,
         ..Default::default()
     });
@@ -1459,7 +1459,7 @@ fn smartai_coverage_wizzle_authored_summon_group_spawns_stores_and_expires_ambus
         .map(Result::unwrap)
         .collect();
     world.insert_resource(crate::world_data::WorldData {
-        templates,
+        templates: templates.into(),
         class_level_base_hp,
         ..Default::default()
     });
