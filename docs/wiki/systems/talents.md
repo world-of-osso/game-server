@@ -81,7 +81,7 @@ Applied trait spell entries in `TraitLoadout.spells` retain `SpellTrait { defini
 
 Aura instances snapshot learned trait identity/rank. Trait-only changes queue passive synchronization even when known IDs stay equal; only stale learned-rank passives are removed/reapplied, preserving unchanged instances. This follows TC Player.cpp29283–29284's changed-rank unlearn/relearn boundary.
 
-Current proof: [source/native ledger](../../handoffs/trait-effect-points-proof-ledger.md). Core fresh rank2 Set/Multiply, rank1 controls and actual Bezier4GREEN; same-book lifecycle genuine RED atdb9. Rank-aware passive replacement is implemented; its GREEN and unchanged-instance control are pending. Importer1GREEN exposed a schema-connection ResourceWarning; explicit close/no-leak proof pending.
+Current proof: [source/native ledger](../../handoffs/trait-effect-points-proof-ledger.md). Two fresh rank2 amount REDs, then same-book lifecycle RED atdb9; final native5GREEN34.44s at867 includes Set/Multiply rank2, rank1 controls,1→2→1 with unchanged137027 instance and native Bezier. Normal importer/no-SQLite-leak1GREEN6.825s, no warnings. Parent canonical publication/integration remains open; this is not eight-profile DPS qualification.
 
 ## Starter Build
 

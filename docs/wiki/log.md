@@ -1,6 +1,6 @@
 ## 2026-10-23 — Native trait effect-point source boundary
 
-[Trait effect points](systems/talents.md#trait-effect-points):1408 native rows/1358 curves, learned definition+total-rank metadata and TC Set/Multiply CalcValue integration. Two genuine native rank2 amount REDs atbc5; corrected rank1 class gate and existing-aura lifecycle proof remain open. Private source DB only; no canonical edits or DPS parity claim. [Proof ledger](../handoffs/trait-effect-points-proof-ledger.md).
+[Trait effect points](systems/talents.md#trait-effect-points):1408 native rows/1358 curves, learned definition+total-rank metadata and TC Set/Multiply. Fresh amount REDs atbc5/lifetime RED atdb9→native5GREEN34.44s at867, including rank1/2 and unchanged137027 instance; importer/no-SQLite-leak1GREEN6.825s, warning-free. Private delta prepared, parent publication/integration pending; no DPS parity claim. [Proof ledger](../handoffs/trait-effect-points-proof-ledger.md).
 
 ## 2026-10-23 — Shared native APL fact boundary
 

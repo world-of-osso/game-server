@@ -4,10 +4,10 @@ Native talent effect amounts follow installed DB2 TraitDefinitionEffectPoints an
 
 ## What it must do
 
-- [ ] Import native TraitDefinitionEffectPoints and every required Curve/CurvePoint through the normal DB2 importer, preserving signed operation values and source build receipts.
+- [x] Import native TraitDefinitionEffectPoints and every required Curve/CurvePoint through the normal DB2 importer, preserving signed operation values and source build receipts.
 - [ ] Applied trait spells retain their definition ID and purchased-plus-granted rank; inactive hero selections and unrelated triggered spells do not acquire that identity.
 - [ ] CalcValue evaluates the matching effect's curve at the learned rank: Set replaces the value, Multiply multiplies it, None preserves it. Apply before variance/point modifiers; variance retains the original base contribution.
-- [ ] Native rank2 and rank1 learned passives expose source-correct Set and Multiply amounts. Rank-only changes update existing passive amounts even when learned spell IDs do not change.
+- [x] Native rank2 and rank1 learned passives expose source-correct Set and Multiply amounts. Rank-only changes update existing passive amounts even when learned spell IDs do not change.
 - [ ] Current70448 referenced curves use exact TC linear/Type2 interpolation. Missing or unsupported referenced data fails explicitly; no invented curve or rank-times-amount substitute.
 
 ## How it works
@@ -31,9 +31,7 @@ Native talent effect amounts follow installed DB2 TraitDefinitionEffectPoints an
 
 ## Known gaps (current cycle)
 
-- [ ] Existing-passive rank replacement implemented after same-book lifetime RED; GREEN and unchanged-instance control pending.
-- [ ] Importer no-leak rerun after closing its schema connection.
-- [ ] Parent-owned canonical data publication and cross-spec integration gate.
+- [ ] Parent-owned canonical data publication and cross-spec integration gate; current scoped proof is native5GREEN34.44s and normal importer1GREEN6.825s at86763f914. Negative/source-wide branches not individually native-qualified remain unchecked above.
 
 ## Out of scope
 
