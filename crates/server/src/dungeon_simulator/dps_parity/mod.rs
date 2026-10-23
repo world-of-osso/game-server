@@ -7,6 +7,7 @@ mod pet_stats_tests;
 mod player_rotation;
 mod power_tests;
 mod report;
+pub(crate) mod single_spell;
 mod windwalker_rotation;
 use bevy::prelude::*;
 use serde_json::{Value, json};
