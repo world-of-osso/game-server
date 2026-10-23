@@ -2767,12 +2767,12 @@ fn plan_targets(
         } else {
             Vec::new()
         };
-        let sampled_destination = effect
+        let paired_destination = effect
             .implicit_targets
             .iter()
-            .any(|id| matches!(id, 73 | 74));
-        let ordered_destination = sampled_destination || effect.implicit_targets.contains(&148);
-        let dest = if sampled_destination {
+            .any(|id| matches!(id, 41 | 43 | 48 | 73 | 74));
+        let ordered_destination = paired_destination || effect.implicit_targets.contains(&148);
+        let dest = if paired_destination {
             selected_destination
         } else if ordered_destination {
             targets::effect_destination(world, caster, explicit, spell, effect)?
@@ -3877,6 +3877,8 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
 
 #[cfg(test)]
 mod additional_optional_power_tests;
+#[cfg(test)]
+mod caster_offset_tests;
 #[cfg(test)]
 mod class_resource_tests;
 #[cfg(test)]

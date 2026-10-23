@@ -9,6 +9,16 @@
 ## 2026-10-23 — Literal Windwalker fixture boundary
 
 [Shared APL](systems/simc-apl.md): WW132literal source rows use native selected-spell readiness/actual casts without removing Follower identity; accepted4RED atb74411d5d→5GREEN35.19s at32e4610b7. ST FoF/RSK,3T SCK107270 recipients, action-context combo, exact placeholders/unknown rejection and dungeon/non-Fixture independence proved. Per-ability damage/procs and300s parity remain open; [census/receipt](../handoffs/ww-source-census.md#literal-fixture-implementation-unqualified).
+## 2026-10-23 — Caster offsets and source balloon qualification
+
+[Offsets](systems/toys.md#caster-offsets414348-source-boundary-2026-10-23): generic41/43/48 use source73 radius/reach/motion and direct geometry, preserving existing32. Genuine9RED plus correctedB43RED;37GREEN29.07s atc0b includes actual two balloons, native direction1GREEN at e71 and area1GREEN13.27s at909 complete39 covered cases without production changes. Native fixture fixes select279366 effect1 and source NPC6/display10913 rather than weakening LOS; legitimate native misses retain receipts. Check0/67.07s/no warnings/fmt0. Exact545→547 only75042/245946,17 blocker-list/15 unavailable strings; Arena battle/action gaps and native-facing/presentation/modifier/Detour boundaries retained. No canonical/protocol writes or invented UseToy toggle.
+## 2026-10-23 — Oracle reference simulation options
+
+[Oracle](reference/simc-spell-oracle.md): reference-proof discovery/explicit selection now inherits all non-probe options, including `optimal_raid=0`; missing/conflicting proof matches fail. Earlier raid-buffed diagnostics are invalid for native factor comparison and archived; the complete150-receipt corpus is regenerated with each source command's options. Native implementation remains unchanged.
+
+## 2026-10-23 — SimC spell oracle
+
+[Oracle](reference/simc-spell-oracle.md): stdlib CLI retains pinned command/hash proof and parses printed direct/tick formulas, result stages, modifier sources and armor reductions. Top-five receipts for30 referenced specs live in game-engine diagnostics; untriggered prerequisites and native instrumentation gaps remain explicit. Recorded Arms/Blood fixtures cover conditional sources and apostrophe actor names. No native harness changes or parity certification.
 
 - [Candle/Azure normalization correction](systems/boss-scripts.md#azure-integration-correction) — 2026-10-23: actual a112 Sprouts packet-target RED0/1;9f bounds generic source normalization to self-exclusion admission, preserving published cast/log recipients; Azure timing/assertions unchanged. Focused136PASS228.63s plus private-geometry prerequisite2PASS12.03s yields composite138GREEN;14pre-existing ignored, lead full integration gate pending.
 - [Candle King native target boundary](systems/boss-scripts.md#candle-king-native-explicit-unit-boundary--2026-10-22) — 2026-10-22: actual420659 self-target InvalidTarget RED→4GREEN70.52s, TC621–678 normalization/source masks;31 retained controls, native4336 landing pending.
