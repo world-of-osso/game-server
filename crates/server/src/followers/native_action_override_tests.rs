@@ -97,6 +97,7 @@ fn earn_finisher_power(h: &mut Harness, actor: Entity, finisher: u32) {
         .clone();
     let target = h.npc;
     let mut previous = None;
+    trace_ret_boundary(h, actor, "before funding");
     for frame in 0..600 {
         let current =
             crate::spell_cast::powers::power_value(h.app.world(), actor, PowerType::HolyPower)
@@ -157,6 +158,13 @@ fn cast_controller_verdict(h: &mut Harness, actor: Entity, expected: u32) {
 fn trace_ret_boundary(h: &Harness, actor: Entity, stage: &str) {
     let world = h.app.world();
     let stats = world.get::<crate::stats::CharacterStats>(actor);
+    let known = world.get::<KnownSpells>(actor).unwrap();
+    eprintln!(
+        "native Ret known generators: Judgment={}, CrusaderStrike={}, BladeOfJustice={}",
+        known.contains(JUDGMENT),
+        known.contains(35395),
+        known.contains(184575)
+    );
     eprintln!(
         "native Ret {stage}: stats={stats:?}; actor_pos={:?}; target_pos={:?}",
         world.get::<Position>(actor),
