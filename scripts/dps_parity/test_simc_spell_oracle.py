@@ -179,6 +179,12 @@ class OracleTests(unittest.TestCase):
         self.assertGreater(batch.probe_duration(269, "rushing_wind_kick_damage"), 30)
         self.assertEqual(batch.probe_duration(71, "mortal_strike"), 30)
 
+    def test_replacement_abilities_prime_selected_hero_states(self):
+        import simc_spell_oracle_batch as batch
+        self.assertIn("pierce_the_veil", batch.action_list(1480, {"name": "reapers_toll_damage"}))
+        self.assertIn("ascendance", batch.action_list(263, {"name": "lightning_bolt_ti"}))
+        self.assertIn("windstrike", batch.action_list(263, {"name": "lightning_bolt_ti"}))
+
     def test_report_parent_aliases_retain_emitted_child_ids(self):
         import simc_spell_oracle_batch as batch
         for specialization, parent, parent_id, child, child_id in [

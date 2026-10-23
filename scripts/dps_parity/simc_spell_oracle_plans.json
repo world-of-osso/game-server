@@ -12,15 +12,15 @@
     "sources": ["engine/class_modules/sc_demon_hunter.cpp#L3680-L3695", "engine/class_modules/sc_demon_hunter.cpp#L5034-L5042", "engine/class_modules/sc_demon_hunter.cpp#L6265-L6295"]
   },
   "1480:voidsurge": {
-    "actions": ["auto_attack", "metamorphosis", "reapers_toll", "voidblade", "cull", "reap", "devour", "consume"],
+    "actions": ["auto_attack", "metamorphosis", "reapers_toll", "pierce_the_veil", "voidblade", "cull", "reap", "devour", "consume"],
     "time": 180,
-    "prerequisite": "Enter Meta through earned soul stacks, use Voidblade to prime Hungering Slash, then Reaper's Toll to consume its enabled Voidsurge trigger.",
+    "prerequisite": "Enter Meta through earned soul stacks; Pierce the Veil replaces Voidblade inside Meta and primes Hungering Slash, then Reaper's Toll consumes its enabled Voidsurge trigger.",
     "sources": ["engine/class_modules/sc_demon_hunter.cpp#L2691-L2706", "engine/class_modules/sc_demon_hunter.cpp#L3202-L3220", "engine/class_modules/sc_demon_hunter.cpp#L4947-L4960", "engine/class_modules/sc_demon_hunter.cpp#L5830-L5895", "engine/class_modules/sc_demon_hunter.cpp#L6763-L6789"]
   },
   "1480:reapers_toll_damage": {
-    "actions": ["auto_attack", "metamorphosis", "reapers_toll", "voidblade", "cull", "reap", "devour", "consume"],
+    "actions": ["auto_attack", "metamorphosis", "reapers_toll", "pierce_the_veil", "voidblade", "cull", "reap", "devour", "consume"],
     "time": 180,
-    "prerequisite": "Reaper's Toll requires both Meta and Hungering Slash; Voidblade primes Hungering Slash after earned soul stacks enable Meta.",
+    "prerequisite": "Reaper's Toll requires both Meta and Hungering Slash; Pierce the Veil primes Hungering Slash inside Meta, while ordinary Voidblade refuses this selected Demonsurge state.",
     "sources": ["engine/class_modules/sc_demon_hunter.cpp#L3202-L3220", "engine/class_modules/sc_demon_hunter.cpp#L5034-L5042", "engine/class_modules/sc_demon_hunter.cpp#L5830-L5895", "engine/class_modules/sc_demon_hunter.cpp#L6763-L6789"]
   },
   "250:vampiric_strike": {
@@ -66,10 +66,10 @@
     "sources": ["engine/class_modules/priest/sc_priest.cpp#L370-L411", "engine/class_modules/priest/sc_priest_shadow.cpp#L1507-L1512"]
   },
   "263:lightning_bolt_ti": {
-    "actions": ["auto_attack", "doom_winds", "stormstrike", "voltaic_blaze", "lightning_bolt,if=buff.maelstrom_weapon.stack>=10"],
+    "actions": ["windfury_weapon", "flametongue_weapon", "auto_attack", "ascendance", "windstrike", "stormstrike", "voltaic_blaze", "lightning_bolt,if=buff.maelstrom_weapon.stack>=10"],
     "time": 120,
-    "prerequisite": "Thorim's Invocation needs Maelstrom Weapon stacks and an eligible strike during Doom Winds; a hardcast Lightning Bolt alone is not its driver.",
-    "sources": ["engine/class_modules/sc_shaman.cpp#L5640-L5645", "engine/class_modules/sc_shaman.cpp#L12554-L12579"]
+    "prerequisite": "Prime the profile's weapon imbues and use Ascendance/Windstrike: selected Ascendance disables the ordinary Doom Winds button, while Windstrike invokes Thorim with available Maelstrom Weapon stacks.",
+    "sources": ["profiles/MID2/MID2_Shaman_Enhancement.simc#L25-L26", "engine/class_modules/sc_shaman.cpp#L5683-L5688", "engine/class_modules/sc_shaman.cpp#L8823-L8868", "engine/class_modules/sc_shaman.cpp#L12554-L12579"]
   },
   "263:tempest": {
     "actions": ["auto_attack", "tempest", "doom_winds", "stormstrike", "voltaic_blaze", "lightning_bolt,if=buff.maelstrom_weapon.stack>=10"],
