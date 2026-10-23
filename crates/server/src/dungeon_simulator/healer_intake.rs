@@ -37,6 +37,50 @@ pub(crate) struct Hit {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub(super) struct SourceSnapshot {
+    pub entry: u32,
+    pub native_level: u8,
+    pub scaling: Option<shared::level_scaling::LevelScaling>,
+}
+
+pub(super) fn snapshot_sources(
+    world: &World,
+    actors: &BTreeMap<u32, Entity>,
+) -> Result<BTreeMap<u32, SourceSnapshot>, String> {
+    actors
+        .iter()
+        .map(|(&guid, &unit)| {
+            let entry = world
+                .get::<shared::components::Npc>(unit)
+                .ok_or_else(|| format!("SOURCE_NPC_IDENTITY_ABSENT:{guid}"))?
+                .template_id;
+            let native_level = world
+                .get::<shared::components::UnitLevel>(unit)
+                .ok_or_else(|| format!("SOURCE_NATIVE_LEVEL_ABSENT:{guid}"))?
+                .0;
+            Ok((
+                guid,
+                SourceSnapshot {
+                    entry,
+                    native_level,
+                    scaling: world
+                        .get::<shared::level_scaling::LevelScaling>(unit)
+                        .copied(),
+                },
+            ))
+        })
+        .collect()
+}
+
+pub(super) fn apply_source_snapshots(
+    _world: &mut World,
+    _sources: &BTreeMap<u32, SourceSnapshot>,
+    _actors: &BTreeMap<u32, Entity>,
+) -> Result<(), String> {
+    Ok(())
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub(super) struct Frame {
     pub tick: u32,
     pub positions: Vec<Option<[f32; 3]>>,

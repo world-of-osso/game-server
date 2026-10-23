@@ -121,6 +121,67 @@ fn healer_benchmark_same_intake_replays_identical_native_numbers() {
 }
 
 #[test]
+#[ignore = "RED: recorded native source scaling not restored"]
+fn healer_benchmark_restores_recorded_source_scaling_before_native_damage() {
+    let _rng = crate::random::seed_scope(1);
+    let mut app = super::runtime::build_app();
+    let graph = app.world().resource::<super::Space>().0.clone();
+    let copy = super::runtime::create_copy(&mut app);
+    let party = crate::followers::simulator::spawn_party_with_healer(
+        app.world_mut(),
+        copy,
+        shared::components::Position {
+            x: graph.entrance[0],
+            y: graph.entrance_height,
+            z: graph.entrance[1],
+        },
+        32,
+        105,
+    )
+    .unwrap();
+    let actors = super::runtime::spawn_population(&mut app, copy);
+    let source = *actors
+        .values()
+        .find(|&&unit| {
+            app.world()
+                .get::<shared::components::Npc>(unit)
+                .unwrap()
+                .template_id
+                == 46248
+        })
+        .expect("native Riverpaw Basher");
+    let snapshots = super::healer_intake::snapshot_sources(app.world(), &actors).unwrap();
+    let native_damage = |world: &World| {
+        let attacker = crate::level_scaling::UnitScaling::of(world, source);
+        let target = crate::level_scaling::UnitScaling::of(world, party.tank);
+        (
+            attacker.level_against(&target),
+            crate::level_scaling::damage_dealt(&attacker, &target, 1_000_000.0),
+        )
+    };
+    let before = native_damage(app.world());
+    // Native46248 template and Normal difficulty rows both source delta0..1.
+    // The alternate legal spawn roll reproduces a different RNG prefix.
+    let mut scaling = app
+        .world_mut()
+        .get_mut::<shared::level_scaling::LevelScaling>(source)
+        .unwrap();
+    assert!(matches!(scaling.delta, 0 | 1));
+    scaling.delta = 1 - scaling.delta;
+    assert_ne!(
+        native_damage(app.world()),
+        before,
+        "fixture must exercise actual source-level damage mapping"
+    );
+    super::healer_intake::apply_source_snapshots(app.world_mut(), &snapshots, &actors).unwrap();
+    assert_eq!(
+        native_damage(app.world()),
+        before,
+        "identical recorded raw damage must retain identical native source-level inputs for every healer"
+    );
+}
+
+#[test]
 #[ignore = "RED: recorded combat denominator missing"]
 fn healer_benchmark_reports_frozen_combat_denominator() {
     let mut intake = small_intake();
