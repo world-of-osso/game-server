@@ -59,6 +59,7 @@ fn read_probe_execution(
     let action = Action {
         name: probe.action.into(),
         options: Default::default(),
+        target: None,
     };
     prepared.execution(&action, equipment)
 }
