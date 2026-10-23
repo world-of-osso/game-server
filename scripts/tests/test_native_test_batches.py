@@ -140,6 +140,43 @@ class NativeBatchContracts(unittest.TestCase):
         self.assertIn("third::beta", names)
         self.assertEqual(len(names), 8)
 
+    def test_measured_longest_group_runs_first_without_overlapping_memory_budget(self):
+        binary = str(self.root / "test-backend")
+        history = self.root / "previous.json"
+        history.write_text(json.dumps({"groups": [
+            {"binary": binary, "module": module, "wall_seconds": wall, "max_rss_kib": rss}
+            for module, wall, rss in [("left", 1, 3 * 2**20), ("right", 3, 3 * 2**20), ("third", 10, 4 * 2**20)]
+        ]}))
+        result = subprocess.run(
+            [sys.executable, str(RUNNER), "--artifacts", str(self.artifacts),
+             "--output", str(self.root / "output"), "--processes", "3", "--threads", "2",
+             "--history", str(history), "--memory-budget-kib", str(6 * 2**20),
+             "left::", "right::", "third::"],
+            env=dict(os.environ, NATIVE_BATCH_FIXTURE_LOG=str(self.events)),
+            capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        events = [json.loads(line) for line in self.events.read_text().splitlines()]
+        owners = {event["pid"]: event["name"].split("::")[0]
+                  for event in events if event["event"] == "case"}
+        starts = [event for event in events if event["event"] == "start"]
+        self.assertEqual(owners[starts[0]["pid"]], "third")
+        active = set()
+        weights = {"left": 3, "right": 3, "third": 4}
+        peak = 0
+        for event in sorted(events, key=lambda row: row["time"]):
+            if event["event"] == "start":
+                active.add(owners[event["pid"]])
+                peak = max(peak, len(active))
+            elif event["event"] == "end":
+                active.remove(owners[event["pid"]])
+            self.assertLessEqual(sum(weights[module] for module in active), 6)
+        self.assertEqual(peak, 2)
+        summary = json.loads((self.root / "output/summary.json").read_text())
+        self.assertEqual((summary["passed"], summary["ignored"]), (6, 1))
+        self.assertEqual((summary["processes"], summary["threads_per_process"]), (3, 2))
+        self.assertEqual(summary["missing"], [])
+
     def test_failure_is_reported_without_dropping_other_module_coverage(self):
         result, summary, events = self.run_batches("broken::", "right::")
         self.assertNotEqual(result.returncode, 0)
