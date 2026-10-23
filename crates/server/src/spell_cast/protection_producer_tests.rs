@@ -259,6 +259,29 @@ fn protection_producers_phalanx_clap_buff_is_consumed_by_shield_slam_for_real_da
 }
 
 #[test]
+#[ignore = "RED: native broad proc mask needs the named Clap-only Phalanx policy"]
+fn protection_producers_phalanx_other_melee_abilities_do_not_produce_the_clap_buff() {
+    for _ in 0..8 {
+        let mut h = phalanx_fixture(true);
+        h.cast_and_deliver(SHIELD_SLAM, Some(h.npc));
+        h.advance(5);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        if h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(SHIELD_SLAM)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        }) {
+            assert!(
+                !crate::auras::has_aura(h.app.world(), h.caster, PHALANX_BUFF),
+                "Phalanx is produced by Clap/Blast, not by Shield Slam itself"
+            );
+            return;
+        }
+    }
+    panic!("eight native Shield Slams produced no landed damage");
+}
+
+#[test]
 #[ignore = "RED control: qualify absence alongside native Phalanx restoration"]
 fn protection_producers_phalanx_catalog_presence_does_not_grant_the_talent() {
     let mut h = phalanx_fixture(false);

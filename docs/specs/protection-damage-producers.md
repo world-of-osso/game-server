@@ -26,7 +26,7 @@ Restore the missing spec73 producer channels identified by `game-engine/data/dia
 |Thunder Clap Rend|TC hit hook implemented; native damage/ownership qualified|5e69c75db both Clap cases PASS; charge case remains separate|
 |Shield Charge chain|Native-reach RED reproduced; TC hook restored; GREEN pending|59677be35:0PASS/1FAIL6.94s at missing movement, after sourced reach prerequisite passes|
 |Whirling Blade/Ravager|Missing named producer/ticks|5e69c75db native Ravager fails missing156287 tick; Whirling Blade fails missing228920 after40 real primary-target casts|
-|Phalanx/Bloody Rebuke|Native Phalanx proc producer already works; named Slam consumer missing|5e69c75db produces1278009 but fails consumption; absence and foreign-buff controls pass; Bloody Rebuke RED pending|
+|Phalanx/Bloody Rebuke|Native Phalanx proc supplies buff; named eligibility/consumer incomplete|5e69c75db produces1278009 but fails consumption; absence and foreign-buff controls pass; added non-Clap actual-hit RED pending; Bloody Rebuke RED pending|
 |Guillotine/Venomfang|Equipped driver lifecycle exists; damage producers missing|RED pending|
 
 ### First TC producer receipts
