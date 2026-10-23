@@ -68,6 +68,7 @@ mod housing_catalog;
 mod housing_quest_tests;
 mod housing_quests;
 mod hunter_pet;
+mod hunter_pet_stats;
 mod ignore_list;
 mod inspect;
 mod interest;

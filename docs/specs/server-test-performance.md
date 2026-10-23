@@ -8,6 +8,7 @@ The whole server test suite must retain every discovered case and existing ignor
 
 - [x] `--full-suite` executes all discovered tests from the supplied complete Cargo artifact inventory, with no union-only filter or implicit skip.
 - [x] Report exact known and unexpected failing identities without converting failures to ignores, dropping assertions, or rewriting raw failure status.
+- [x] Crawth's native Peck damage qualification uses a per-difficulty test-local seed through the existing native RNG seam; native hit rules and all damage/aura assertions remain unchanged, proven by repeated isolation and the original module order.
 - [ ] Qualify the whole-suite command against900s/~8GiB with a complete all-case/ignore inventory and separate compile timing.
 
 - [x] Execute the union of the `fu913`, `sm894` and `rd912` gate filters within900s wall at approximately8GiB peak RSS with no swap;706.402s/6.77GiB/zero swap qualifies performance, with one lead-accepted known master environment/data failure reported explicitly.
@@ -21,6 +22,7 @@ The whole server test suite must retain every discovered case and existing ignor
 - [x] Permit one source reader to supply concurrent Apps; do not serialize repeated database decoding behind a shared global lock.
 - [x] Keep prepared paths distinct from canonical authority, even when initial bytes match; changed content at the same path must load the changed definitions.
 - [x] App-local catalog mutations must leave sibling Apps and retained input definitions unchanged.
+- [x] Deleted prepared source files must not keep otherwise unused decoded catalogs alive after the next catalog load; existing App copies remain valid and independent, while existing canonical input stays reusable.
 - [x] Production catalog behavior and owned collection representation must remain unchanged; fixture sharing is test-only.
 
 ## How it works

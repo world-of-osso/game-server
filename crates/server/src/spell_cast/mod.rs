@@ -2372,6 +2372,26 @@ fn haste_regen_gcd_ms(world: &World, caster: Entity, spell: &SpellInfo, gcd_ms: 
     ((gcd_ms as f32 / haste.max(0.01)) as u32).clamp(MIN_GCD_MS, MAX_GCD_MS)
 }
 
+/// Observation-only benchmark seam; the actual profile heal defines a GCD equivalent.
+#[cfg(test)]
+pub(crate) fn healer_idle_gcd(world: &World, caster: Entity) -> Option<(bool, f64)> {
+    let spell_id = world
+        .get::<crate::followers::Follower>(caster)?
+        .profile
+        .heal_spell;
+    let spell = world.resource::<SpellStore>().get(spell_id)?;
+    let duration = f64::from(gcd_duration_ms(world, caster, spell)) / 1000.0;
+    if duration == 0.0 {
+        return None;
+    }
+    let now = history_now(world);
+    let busy = world.get::<CastState>(caster).is_some()
+        || world
+            .get::<SpellHistory>(caster)
+            .is_some_and(|history| history.gcd_ready_at.values().any(|&until| until > now));
+    Some((busy, duration))
+}
+
 fn start_gcd(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // Spell::CanHaveGlobalCooldown: only players and their controlled units (a creature
     // with a `CharmInfo`).
@@ -2699,9 +2719,7 @@ fn plan_targets(
                         cap,
                         ignore_target_check,
                     )
-                    .map_err(|id| {
-                        CastFailure::Unsupported(format!("implicit target {id} not supported"))
-                    })?;
+                    .map_err(|(_, failure)| failure)?;
                     selected.push((leader, units.clone(), destination));
                     (units, destination)
                 }
@@ -2731,10 +2749,12 @@ fn plan_targets(
         } else {
             Vec::new()
         };
-        let target_random_destination = effect.implicit_targets.contains(&74);
-        let ordered_destination =
-            target_random_destination || effect.implicit_targets.contains(&148);
-        let dest = if target_random_destination {
+        let sampled_destination = effect
+            .implicit_targets
+            .iter()
+            .any(|id| matches!(id, 73 | 74));
+        let ordered_destination = sampled_destination || effect.implicit_targets.contains(&148);
+        let dest = if sampled_destination {
             selected_destination
         } else if ordered_destination {
             targets::effect_destination(world, caster, explicit, spell, effect)?
@@ -3875,6 +3895,8 @@ mod source_cast_flags_tests;
 mod target148_tests;
 #[cfg(test)]
 mod target32_grounding_tests;
+#[cfg(test)]
+mod target73_tests;
 #[cfg(test)]
 mod target74_tests;
 #[cfg(test)]
