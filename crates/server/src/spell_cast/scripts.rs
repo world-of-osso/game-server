@@ -40,6 +40,7 @@ pub(super) use germination::redirect_rejuvenation;
 pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 pub(crate) mod prayer_of_mending;
+mod protection_items;
 mod scourge_strike;
 mod soul_of_the_forest;
 mod swiftmend;
@@ -55,10 +56,17 @@ pub(crate) use windwalker::{
     ordinary_combo_cast,
 };
 
-pub(super) use batch9::update_ground_pulses;
+pub(super) use batch3::consume_phalanx;
+pub(crate) use batch3::{
+    PHALANX_TALENT, WHIRLING_BLADE, cast_whirling_ravager, check_phalanx_proc,
+    check_whirling_blade_proc,
+};
 pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
+pub(super) use batch9::{spawn_ravager_field, update_ground_pulses};
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(crate) use batch20::proc_charges;
+pub(super) use protection_items::snapshot_guillotine_health;
+pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
 /// OnEffectHit runs once per effect without replacing generic or aura dispatch.
 pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
     match (spell, index) {
@@ -364,7 +372,10 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch4::STEADY_SHOT, 0) => Some(batch4::steady_shot),
         (batch4::HOWLING_BLAST, 0) => Some(batch4::howling_blast),
         (batch3::MOONFIRE, 0) => Some(batch3::moonfire),
-        (batch3::THUNDER_CLAP, 0) => Some(batch3::thunder_clap),
+        (batch3::THUNDER_CLAP | 435222, 0) => Some(batch3::thunder_clap),
+        (6572, 0) => Some(protection_items::revenge_bloody_rebuke),
+        (156287, 0) => Some(protection_items::ravager_bloody_rebuke),
+        (385952, 0) => Some(batch3::shield_charge),
         (batch3::DEVASTATE, 0) => Some(batch3::devastate),
         (SKULL_BASH, 0) => Some(skull_bash),
         (FORTIFYING_BREW, 0) => Some(fortifying_brew),

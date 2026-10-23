@@ -1,5 +1,17 @@
 # Spell Casting
 
+## Protection producer dispatch — 2026-10-22
+
+Native Attr3 `ALWAYS_HIT` bypasses avoidance after school/mechanic immunity; missile launch still evaluates reflection. Source and deterministic native Evasion RED/control evidence live in the [producer contract](../../specs/protection-damage-producers.md#native-always_hit-defense-reader); d1335d807:4PASS17.98s/no warnings, including original charge primary/splash/stun assertions.
+
+`batch3` ports pinned TC's known-Rend landed-hit hook and Shield Charge Dummy→native effect96 bridge; native movement/landing own their original children. Phalanx keeps native proc amounts/masks/child and adds only named SimC Clap eligibility and execute-time Shield Slam consumption. These paths have seven targeted native behavior/control passes; [producer contract and exact receipts](../../specs/protection-damage-producers.md) remain the coverage source.
+
+Whirling Blade uses the existing aura proc/RPPM machinery. Its named foreground/primary-target policy supplies native228920 and the talent's4000ms lifetime through a private triggered-cast snapshot, without changing the catalog. `batch9::GroundPulses` supplies the missing156287 timer using native2000ms and targetB radius14=8yd. Ordinary Ravager retains12000ms. The ground anchor is captured before direct impact; no new child rotation action or independent timer system. These two producer paths have native timing/damage/expiry GREEN; Whirling's actual auto/secondary/absence/removal boundaries are also qualified. Weapon chasing and reduced damage beyond eight targets are not certified.
+
+Equipped producers read four native tables through `item_proc_data`; actual item identities/counts/spec and aura-conditional description values drive eligibility/scaling. Guillotine snapshots target-specific health multipliers before its native one-second flight using the existing target-plan scalar; source role and native item amount stay on the private cast. Bloody Rebuke observes real free-Revenge/Ravager hit inputs with a source-backed four-piece predicate, not a granted catalog aura. Their six native equipped/metadata cases are GREEN; the cohort's separate Shield Charge splash-only failure is under native-outcome diagnosis. Numerical health-snapshot timing, Venomfang/perfected poison and broader set activation remain open. See the contract for exact post-master RED receipts and publication prerequisites.
+
+Sources: TC a352b1fa `spell_warrior.cpp1773–1789/2097–2144`; SimC76f8118 `sc_warrior.cpp1684–1690/4173–4174/5820–5977/6300–6303`; native70448 SpellEffect/SpellDuration/SpellProcsPerMinute; [spec/source graph](../../specs/protection-damage-producers.md).
+
 ## Cast while casting — 2026-10-21
 
 TC a352b1fa `Spell.cpp530–531` derives `TRIGGERED_IGNORE_CAST_IN_PROGRESS` from native Attr4/0x80. `allows_cast_while_casting` now supplies that predicate to ordinary native validation, player queue timing and follower kit admission. Instant108853 executes without replacing or interrupting the existing133 cast; near-completion requests are not incorrectly held behind that cast. Native costs, GCD, cooldown and charge checks remain unchanged. An urgent kit action with the attribute uses ordinary casting rather than the self-interruption path. Ignored native RED reproduced all three admission failures; enabled cases pass within13-case2ba4ec43a GREEN. After merging enemy-count policy, the one-target follower-kit fixture passes again at5368e1070. [Contract](../../specs/cast-while-casting.md); tests `followers/cast_while_casting_tests.rs`.
