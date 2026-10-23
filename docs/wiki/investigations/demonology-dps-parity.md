@@ -38,9 +38,13 @@ The borrowed unknown-pre9d13 binary after the template-only delta produced3T1271
 
 `FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_MINION_FLAGS` is an explicitly approved project policy extending the class-follower spell-owner bridge: controlled minions/guardians inherit PLAYER_CONTROLLED8 from a player-affected owner through existing `faction::player_affected`. TC a352b1fa `Unit.cpp6286–6289` sets this flag only for actual Player owners; applying it to a class-stat follower is a project extension, not a TC claim. Ordinary NPC owners without8 remain unchanged; wild/non-minion summons retain their existing lifecycle, and companion immunities still OR with ownership. All owned guardian paths share `spawn_summon`; controlled Hunter pets/Felguard already unconditionally carry8 through `hunter_pet::spawn`, so that separate path needs no change.
 
-## Power-regeneration interaction (open)
+## Power-regeneration interaction (native boundary qualified)
 
-Own b5b118d86 reports3T36121.01 DPS with7170647 Firebolt damage, but this output is **unqualified**: the existing native Imp energy-lifecycle test fails12casts versus100/20=5. `powers::read_creature_power_regeneration` treated every NPC with ownership flag8 as a player-resource subject, bypassing authored `UNIT_FLAG2_REGENERATE_POWER`. Wild Imp/Dreadstalker/Tyrant templates have unit_flags2=0; Felguard has2048. Ownership is not a regeneration capability. Player-resource classification now uses actual `Player`, `Follower` and `HunterPet` components, not ownership flags. Other NPCs, including temporary guardians, honor the template flag (TC Creature.cpp954–955; native field is unit_flags2 bit0x800). Felguard's authored flag remains2048, and its controlled-pet role stays explicit. The source-qualified100Energy/20cost Imp lifecycle RED and live follower/Felguard regeneration controls gate acceptance; GREEN remains pending.
+Own b5b118d86 reports3T36121.01 DPS with7170647 Firebolt damage, but this output is **unqualified**: the existing native Imp energy-lifecycle test fails12casts versus100/20=5. `powers::read_creature_power_regeneration` treated every NPC with ownership flag8 as a player-resource subject, bypassing authored `UNIT_FLAG2_REGENERATE_POWER`. Wild Imp/Dreadstalker/Tyrant templates have unit_flags2=0; Felguard has2048. Ownership is not a regeneration capability. Player-resource classification now uses actual `Player`, `Follower` and `HunterPet` components, not ownership flags. Other NPCs, including temporary guardians, honor the template flag (TC Creature.cpp954–955; native field is unit_flags2 bit0x800). Felguard's authored flag remains2048, and its controlled-pet role stays explicit. Production correction088f90e32 changes only role classification. Own088 cohort has5PASS/1fixtureFAIL49.59s: Imp exactly five casts/exhaustion/despawn, real90 neutral-dummy Firebolt damage, hostile native binding, ordinary-NPC control and actual-player10Energy/s pass. The new role control reached native Legion Strike OutOfRange after its follower Mana assertions passed;81034539f fixes only fixture pet placement. Own810 follow-up2PASS24.96s qualifies real follower Mana, controlled Felguard Energy and controlled Wolf Focus regeneration. Seven distinct cases qualify current production; no compiler messages, private SHA22a233f978cc50921a4e1fa05dfc59630ed151a2d2c2d9d7af9e10843b66fb81 unchanged. Receipts `minion-regen-green.*` preserve the initial fixture failure; `minion-regen-controls-green.*` contain follow-up success and own810 executable SHA. Lead pushed810 as mf1052; DPS parity remains open.
+
+## Conditional Firebolt targeting (open)
+
+`FEL_FIREBOLT_CONDITIONAL_TARGET_POLICY_ABSENT`: local DB2 and pinned SimC spell data both give104318 ChainTargets5, but SimC76f8118 `sc_warlock_pets.cpp754–765` keeps ordinary Firebolt single-target and enables the extra four recipients only with Unstable Soul1281512. Unconditional native ChainTargets is not qualified against that conditional behavior. Do not tune the stored target count to compensate; native conditional policy remains missing.
 
 ## Evidence
 
@@ -51,7 +55,7 @@ Artifacts under engine `data/diagnostics/demo-parity-2026-10-23/`: `266.referenc
 - [Oracle contract](../reference/simc-spell-oracle.md) — match actors/formula IDs and compare first differing factor.
 - [Parity contract](../../specs/dps-parity.md) — matched inputs and native-boundary requirements.
 - [Guardian dispatch](../../../crates/server/src/spell_cast/guardian.rs) — actual spell bindings and native admission.
-- [Wild Imp source importer](../../../scripts/add_guardian_templates.py) — publishes qualified55659 only, not unqualified98035.
+- [Wild Imp source importer](../../../scripts/add_guardian_templates.py) — publishes requested native Effect28/56 template roots and their authentic models.
 
 ## See Also
 

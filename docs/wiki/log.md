@@ -1,3 +1,7 @@
+## 2026-10-23 — Guardian ownership and power-role boundary GREEN
+
+[Demonology investigation](investigations/demonology-dps-parity.md#power-regeneration-interaction-native-boundary-qualified): own0885PASS/1fixtureFAIL49.59s plus fixture-only8102PASS24.96s qualify seven distinct cases: native Imp100/20 five-cast exhaustion/despawn, real90 neutral-dummy Firebolt, hostile binding, ordinary-NPC control, actual-player Energy, follower/Felguard resources and controlled-pet Focus. Explicit Player/Follower/HunterPet roles replace ownership flag8 as regeneration permission; other NPCs honor authored flags. Both builds have0 compiler messages; private DB SHA unchanged. Lead pushed810 as mf1052. Old b5 DPS remains unqualified; conditional Firebolt targeting and native DPS parity remain open.
+
 ## 2026-10-23 — Native Player literal target/request boundary
 
 [Shared execution](systems/simc-apl.md#shared-literal-fixture-machinery): actual Human casts with pinned269 gear/traits reproduce1WW controlPASS/6assertionRED at4f91688e8 (34.94s runtime). Readiness now keyed by action/target; harmful precasts read native selection; Player delivery uses normal explicit-target requests and refuses expired targets. Retarget changes only the running AA victim, not selection/timers. Creature delivery retained. After hp1026 merge e99b879e8:7GREEN27.17s (18m08 compile/0compiler warnings); [proof](../handoffs/literal-player-dispatch-proof-ledger.md). Setup-only Position field compile error is not RED evidence. No numeric or DPS qualification claim.
