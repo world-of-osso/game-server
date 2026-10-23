@@ -55,7 +55,7 @@ Native behavioral tests: `simc_apl_native/tests.rs` (earned Hit Combo and Chi, r
 - [ ] Contextual `charges`, `charges_fractional` and `full_recharge_time` follow the proposed action's actual native category.
 - [ ] Contextual `ticks_remain` counts future scheduled native ticks; `action.<name>.ready` includes native admission, while `usable_in` is remaining cooldown time.
 
-Ignored native regressions in `simc_apl_native/{extension_tests,action_extension_tests}.rs` precede implementation. At89f985420 all seven reach genuine unknown-operand/property RED in18.52s with native prerequisite state intact; GREEN remains pending. Source: pinned SimC76f8118 `player.cpp11822,12369`, `buff.cpp457–462`, `action.cpp3266–3333` and `dot.cpp526–532`. These shared predicates remain fixture-only; no Dev-local duplicate resolver.
+Ignored native regressions in `simc_apl_native/{extension_tests,action_extension_tests}.rs` precede implementation. At89f985420 all seven reach genuine unknown-operand/property RED in18.52s with native prerequisite state intact; atbb504b366 the same seven pass20.07s against the historical inputs. Tests remain opt-in; post-tp1034 runs require current canonical trait-point rows. Source: pinned SimC76f8118 `player.cpp11822,12369`, `buff.cpp457–462`, `action.cpp3266–3333` and `dot.cpp526–532`. These shared predicates remain fixture-only; no Dev-local duplicate resolver.
 
 ## Native haste composition boundary
 
