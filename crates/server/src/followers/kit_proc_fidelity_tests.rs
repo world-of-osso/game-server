@@ -673,10 +673,10 @@ fn fund_native_elemental_blast(h: &mut Harness, caster: Entity, target: Entity) 
             .resource::<crate::spell_info::SpellStore>()
             .get(117014)
             .unwrap();
-        crate::spell_cast::spell_costs(world, caster, spell)
+        crate::spell_cast::applicable_costs(world, caster, spell)
             .unwrap()
             .into_iter()
-            .filter_map(|(pool, amount)| {
+            .filter_map(|(pool, amount, _current)| {
                 matches!(
                     pool,
                     crate::spell_cast::CostPool::Power(PowerType::Maelstrom)
