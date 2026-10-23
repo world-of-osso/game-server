@@ -1,6 +1,6 @@
 # Stockade seed1 healer replay results
 
-Generated2026-10-23 at `e2ff0eccb0c0ad6820f2c9a1e411e1f432571e40` from the [unchanged native recording](../../../content/dungeons/healer-benchmark/README.md). [Combined report](report.md), [exact JSON](report.json), and standalone spec-number JSON/Markdown retain native results and explicit gaps. No missing follower profile receives invented metrics.
+Generated2026-10-23 at `dce76186cb4d870e7d51fb1bbbf5afb66ce67440` after rebasing onto master `a268ba2a6` from the [unchanged native recording](../../../content/dungeons/healer-benchmark/README.md). [Combined report](report.md), [exact JSON](report.json), and standalone spec-number JSON/Markdown retain native results and explicit gaps. No missing follower profile receives invented metrics.
 
 ## Proof
 
@@ -10,7 +10,7 @@ Capacity-admitted command, run through `agent-run healer-metrics`:
 python3 scripts/build-host.py --build-host native --test -p server healer_benchmark_ -- --ignored --nocapture --skip capture_stockade_and_report --test-threads=1
 ```
 
-14PASS/0FAIL,179.73s native test runtime. Includes concrete200/150/50 fight extraction, consumed-only shield attribution, frozen denominator, native recipient armor/DR/shields, identical-intake positive-healing determinism, recorded source scaling, actual recorded spell-block replay, non-unit consumed-point attribution, standalone reports,15 direct-heal coefficient probes, and full persisted Stockade replay. No second autonomous route run; no broad workspace/check gate claimed.
+14PASS/0FAIL,209.11s native test runtime. Earlier pre-rebase e2ff0eccb proof passed14/0 in179.73s; its snapshot numbers differ and are superseded here by this exact-code run. This does not establish full-recording cross-revision equivalence. Includes concrete200/150/50 fight extraction, consumed-only shield attribution, frozen denominator, native recipient armor/DR/shields, identical-intake positive-healing determinism, recorded source scaling, actual recorded spell-block replay, non-unit consumed-point attribution, standalone reports,15 direct-heal coefficient probes, and full persisted Stockade replay. No second autonomous route run; no broad workspace/check gate claimed.
 
 Historical metrics RED at836428a95:0PASS/2FAIL. Full persisted replay RED atdc3879f04:13PASS/1FAIL overall; autonomous raw pressure blocked native rows. Fail-fast diagnostic atc00beba81 reproduced extra source swings at tick930. Removing replay-owned source CombatTarget projection fixes the second native swing clock without changing healer policy. Earlier recorded spell-block failure and child-only Penance fixture failure remain distinguished from coefficient mismatch.
 

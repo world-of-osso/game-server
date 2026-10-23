@@ -1,6 +1,6 @@
 # Dungeon healing metrics
 
-Standing healer benchmark: fixed recorded dungeon pressure, not a SimC HPS comparison. The adapter observes a real Stockade run, then replays one shared raw-hit timeline through native healer kits and recipient mitigation. Source inspection verified2026-10-22; native recording and targeted controls executed2026-10-23. [Frozen recording/provenance](../../../content/dungeons/healer-benchmark/README.md) is retained unchanged. [Native results and proof](../../reports/healer-stockade-seed1/README.md):14 targeted controls pass at e2ff0eccb, including full1132-hit replay for105/257 and15 direct-heal probes; five missing-profile gaps remain. Initial full-replay spell-block and second native swing-clock failures are fixed without approximating input.
+Standing healer benchmark: fixed recorded dungeon pressure, not a SimC HPS comparison. The adapter observes a real Stockade run, then replays one shared raw-hit timeline through native healer kits and recipient mitigation. Source inspection verified2026-10-22; native recording and targeted controls executed2026-10-23. [Frozen recording/provenance](../../../content/dungeons/healer-benchmark/README.md) is retained unchanged. [Native results and proof](../../reports/healer-stockade-seed1/README.md):14 targeted controls pass at rebased dce76186c, including full1132-hit replay for105/257 and15 direct-heal probes; five missing-profile gaps remain. Initial full-replay spell-block and second native swing-clock failures are fixed without approximating input.
 
 ## Capture and replay
 

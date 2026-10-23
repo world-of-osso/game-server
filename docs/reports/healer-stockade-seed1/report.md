@@ -6,10 +6,10 @@ Stockade map34 Normal, seed1, level32, same raw intake `541a4dedf0e1114307fd9972
 |---|---|---|---|---|---|---|---|---|---|
 | 65 Holy Paladin | blocked | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
 | 256 Discipline Priest | blocked | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
-| 257 Holy Priest | native | 0.000 | 78.152 | 4296.876 | 545.733 | 0.000 | 106.629 | 106.629 | 2014.400 |
+| 257 Holy Priest | native | 0.000 | 78.731 | 4239.064 | 549.733 | 0.000 | 105.393 | 105.393 | 2014.400 |
 | 264 Restoration Shaman | blocked | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
 | 270 Mistweaver Monk | blocked | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
-| 105 Restoration Druid | native | 0.000 | 63.179 | 4355.131 | 266.933 | 0.000 | 95.456 | 95.456 | 2014.400 |
+| 105 Restoration Druid | native | 0.000 | 63.306 | 4360.449 | 258.600 | 0.000 | 98.476 | 98.476 | 2014.400 |
 | 1468 Preservation Evoker | blocked | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
 
 ## Level scaling
