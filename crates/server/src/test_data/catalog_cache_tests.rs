@@ -6,7 +6,8 @@ use rusqlite::hooks::{AuthAction, AuthContext, Authorization};
 use rusqlite::{Connection, OpenFlags};
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Barrier};
+use std::sync::{Arc, Barrier, Condvar, Mutex};
+use std::time::Duration;
 
 #[derive(Clone, Debug, PartialEq)]
 struct Catalog(Vec<(u32, String)>);
@@ -41,14 +42,38 @@ fn deny_catalog_reads(db: &Connection) {
     }));
 }
 
+#[derive(Default)]
+struct ReleaseProbe {
+    count: Mutex<usize>,
+    changed: Condvar,
+}
+
+impl ReleaseProbe {
+    fn count(&self) -> usize {
+        *self.count.lock().unwrap()
+    }
+
+    fn wait_for_drop(&self) -> usize {
+        const RELEASE_DEADLINE: Duration = Duration::from_secs(30);
+        let count = self.count.lock().unwrap();
+        // Another lookup may own the removed slot until its out-of-lock drop runs.
+        let (count, _) = self
+            .changed
+            .wait_timeout_while(count, RELEASE_DEADLINE, |count| *count == 0)
+            .unwrap();
+        *count
+    }
+}
+
 struct RetainedCatalog {
     rows: Catalog,
-    released: Arc<AtomicUsize>,
+    released: Arc<ReleaseProbe>,
 }
 
 impl Drop for RetainedCatalog {
     fn drop(&mut self) {
-        self.released.fetch_add(1, Ordering::SeqCst);
+        *self.released.count.lock().unwrap() += 1;
+        self.released.changed.notify_all();
     }
 }
 
@@ -59,7 +84,7 @@ fn deleted_prepared_input_releases_definitions_after_live_apps_drop() {
     let prepared = directory.path().join("prepared.db");
     write_catalog(&canonical);
     std::fs::copy(&canonical, &prepared).unwrap();
-    let released = Arc::new(AtomicUsize::new(0));
+    let released = Arc::new(ReleaseProbe::default());
     let definitions = catalog_cache::load(&prepared, || {
         Ok(RetainedCatalog {
             rows: read_catalog(&readonly(&prepared))?,
@@ -72,7 +97,7 @@ fn deleted_prepared_input_releases_definitions_after_live_apps_drop() {
     let canonical_db = readonly(&canonical);
     let canonical_rows = catalog_cache::load(&canonical, || read_catalog(&canonical_db)).unwrap();
     assert_eq!(
-        released.load(Ordering::SeqCst),
+        released.count(),
         0,
         "live Apps must retain their decoded definitions"
     );
@@ -86,10 +111,10 @@ fn deleted_prepared_input_releases_definitions_after_live_apps_drop() {
     );
     assert_eq!(canonical_rows.0, sibling.rows.0);
     assert_eq!(local.0, [(133, "only one App".into())]);
-    assert_eq!(released.load(Ordering::SeqCst), 0);
+    assert_eq!(released.count(), 0);
     drop(sibling);
     assert_eq!(
-        released.load(Ordering::SeqCst),
+        released.wait_for_drop(),
         1,
         "deleted source must not retain definitions after the last App drops"
     );
@@ -109,7 +134,7 @@ fn deleted_prepared_input_with_no_live_app_releases_on_next_catalog_load() {
     let canonical = directory.path().join("canonical.db");
     write_catalog(&prepared);
     write_catalog(&canonical);
-    let released = Arc::new(AtomicUsize::new(0));
+    let released = Arc::new(ReleaseProbe::default());
     let definitions = catalog_cache::load(&prepared, || {
         Ok(RetainedCatalog {
             rows: read_catalog(&readonly(&prepared))?,
@@ -118,15 +143,11 @@ fn deleted_prepared_input_with_no_live_app_releases_on_next_catalog_load() {
     })
     .unwrap();
     drop(definitions);
-    assert_eq!(
-        released.load(Ordering::SeqCst),
-        0,
-        "existing input remains reusable"
-    );
+    assert_eq!(released.count(), 0, "existing input remains reusable");
     std::fs::remove_file(&prepared).unwrap();
     catalog_cache::load(&canonical, || read_catalog(&readonly(&canonical))).unwrap();
     assert_eq!(
-        released.load(Ordering::SeqCst),
+        released.wait_for_drop(),
         1,
         "obsolete prepared input must release decoded resources"
     );
