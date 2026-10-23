@@ -1,4 +1,4 @@
-//! TC a352b1fa TheStoneVault: inherited intro deaths and authored arrival unlock.
+//! TC a352b1fa TheStoneVault: inherited intro deaths, arrival and Normal parent clocks.
 //! Conversation25768 remains explicitly unported; its source3s delay is retained.
 use bevy::prelude::*;
 use shared::components::{Npc, Position, PowerType, UnitFlags};
@@ -20,6 +20,9 @@ const START_INTRO: i32 = 0;
 const START_COMBAT_POINT: u32 = 1;
 const SKARDYN_SPAWN: u32 = 447230;
 const ANCHOR: u32 = 45313;
+const VOLATILE_SPIKE: u32 = 424903;
+const REFRACTING_BEAM: u32 = 452738;
+const SEISMIC_SMASH: u32 = 424888;
 // Local scheduler keys for the two authored TaskScheduler lambdas.
 const WALK: u32 = 1;
 const UNLOCK: u32 = 2;
@@ -124,6 +127,29 @@ fn set_appearance_energy(world: &mut World, actor: Entity) {
 }
 
 impl Edna {
+    fn cast_parent(&mut self, ctx: &mut Ctx, event: u32) {
+        let repeat_ms = match event {
+            VOLATILE_SPIKE => {
+                ctx.talk(2);
+                ctx.do_cast(VOLATILE_SPIKE);
+                14_600
+            }
+            REFRACTING_BEAM => {
+                ctx.talk(3);
+                ctx.do_cast(REFRACTING_BEAM);
+                10_900
+            }
+            SEISMIC_SMASH => {
+                ctx.talk(4);
+                ctx.talk(5);
+                ctx.do_cast_victim(SEISMIC_SMASH);
+                23_100
+            }
+            _ => unreachable!("unknown EDNA Normal parent event"),
+        };
+        self.boss.events.schedule(event, repeat_ms);
+    }
+
     fn advance_intro(&mut self, ctx: &mut Ctx, diff_ms: u32) {
         self.intro.update(u64::from(diff_ms));
         while let Some(event) = self.intro.execute_event() {
@@ -155,6 +181,10 @@ impl Edna {
 }
 
 impl CreatureAi for Edna {
+    fn encounter_schedule(&self) -> Option<&EventMap> {
+        Some(&self.boss.events)
+    }
+
     fn reset(&mut self, ctx: &mut Ctx) {
         self.boss.reset(ctx);
         // TC BossAI::_Reset cancels TaskScheduler tasks, not instance intro data.
@@ -187,16 +217,31 @@ impl CreatureAi for Edna {
 
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
+        ctx.talk(1);
+        self.boss.events.schedule(VOLATILE_SPIKE, 8_100);
+        self.boss.events.schedule(REFRACTING_BEAM, 11_800);
+        self.boss.events.schedule(SEISMIC_SMASH, 15_400);
     }
 
     fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
         self.intro.reset();
         self.boss.just_died(ctx);
+        ctx.talk(9);
     }
 
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
         // Source scheduler advances before UpdateVictim, including idle intro.
         self.advance_intro(ctx, diff_ms);
-        ctx.update_victim();
+        if !ctx.update_victim() {
+            return;
+        }
+        self.boss.events.update(u64::from(diff_ms));
+        if ctx.is_casting() {
+            return;
+        }
+        // Source executes one due EventMap event, not every overdue parent.
+        if let Some(event) = self.boss.events.execute_event() {
+            self.cast_parent(ctx, event);
+        }
     }
 }
