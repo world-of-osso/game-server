@@ -6,8 +6,8 @@ Retail equipment set bonuses use native ItemSet/ItemSetSpell data and TC a352b1f
 
 - [x] Normal DB2 import preserves native set identities, thresholds, specialization, subtree and build receipts without replacing unrelated data.
 - [ ] Original equipped item identities determine set counts; stat-allocation redirects do not change set membership.
-- [ ] Apply the eligible native set spell when its piece threshold is reached; remove it below threshold; re-equipping restores it without duplicate auras.
-- [ ] Specialization changes replace only set-owned spells. Preserve ordinary item, enchant and learned passive auras.
+- [x] Apply the eligible native set spell when its piece threshold is reached; remove it below threshold; re-equipping restores it without duplicate auras.
+- [x] Specialization changes replace only set-owned spells; native weapon aura instance is preserved. Ordinary enchant and learned-passive isolation remain unqualified.
 - [ ] Honor native inactive flags, skill requirements and selected hero-subtree restrictions.
 - [ ] APL set facts use native membership/threshold eligibility and the explicit SIMC_TIER_ALIAS_ITEMSET_BINDING policy; unknown tier operands error.
 
@@ -30,7 +30,7 @@ Retail equipment set bonuses use native ItemSet/ItemSetSpell data and TC a352b1f
 
 ## Known gaps (current cycle)
 
-- [ ] Native runtime GREEN and parent integration gate.
+- [ ] Parent integration gate (targeted native lifecycle and equipment/commerce controls7GREEN53.88s at a8bd77d3b; broader integration pending).
 - [ ] Generic set APL operands and alias binding.
 - [ ] Actual tier child proc/effect qualification and resulting DPS parity.
 
