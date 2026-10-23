@@ -1,3 +1,7 @@
+## 2026-10-23 — Ruby native upper-stage boundary
+
+[Native gap](systems/navigation.md#ruby-upper-stage-native-gap--2026-10-23): complete source/upper-target components and exact coarse minimum established; local collision windows observed without collector problems. Target has nearby sampled collision, but swept body, ground-mask/flight phase and authored ascent remain unqualified. Read-only diagnostics only; no connector/bake/profile/DB change. [Idle follow](systems/navigation.md#idle-follow-vertical-range--2026-10-22) receipt corrected to LANDEDfo1010, preserving known Leymor failure/isolated stormkeeper qualification.
+
 ## 2026-10-22 — Current-critter DismissPet contract selected
 
 Lead chooses TC DismissCritter identity for existing DismissPet: authoritative current journal/legacy actor,never older journal tuple. Ignored spec/test-first actual balloon,legacy,older-preservation and isolation cases: genuine3RED/16controls→20GREEN29.14s at merged65ac11760; separate pipeline1GREEN8.72s/check0-103.15s/no warnings/fmt0. Verified2026-10-23:545/1173 unchanged; three inherited master title55 blocker-list removals retain existing party-viewer action gaps, no admissions. No protocol fields,UseToy toggle,ownership deletion or native parity claim. [Authority](systems/toys.md#current-critter-dismissal-authority-2026-10-22).
