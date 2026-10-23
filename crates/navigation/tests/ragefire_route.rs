@@ -21,7 +21,7 @@ fn ragefire_baked_route_probe() {
     let from = read_point("RAGEFIRE_ROUTE_FROM");
     let to = read_point("RAGEFIRE_ROUTE_TO");
     let points = map
-        .path(from, to)
+        .complete_path(from, to)
         .expect("complete baked route, never a direct shortcut");
     assert!(points.len() >= 2);
     assert!(points.first().unwrap().distance(from) < 3.0);

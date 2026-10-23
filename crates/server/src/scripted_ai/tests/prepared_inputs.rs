@@ -71,6 +71,11 @@ pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<P
         186738 => Some("umbrelskul"),
         196482 => Some("ancient"),
         190609 => Some("doragosa"),
+        189727 => Some("khajin"),
+        189722 => Some("gulping-goliath"),
+        194181 => Some("vexamus"),
+        186616 => Some("granyth"),
+        186120 => Some("treemouth"),
         188252 => Some("melidrussa"),
         189232 => Some("kokia"),
         184580 | 184581 | 184582 => Some("lost-dwarves"),
@@ -78,6 +83,9 @@ pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<P
         184124 => Some("talondras"),
         184422 => Some("emberon"),
         215405 => Some("anubzekt"),
+        210156 => Some("skarmorak"),
+
+        216619 => Some("orator"),
         215407 => Some("kikatal"),
         207946 => Some("dailcry"),
         _ => None,
@@ -116,8 +124,8 @@ fn decode_encounter_inputs(
     let mut inputs = PreparedInputs::default();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     if [
-        20923, 196482, 190609, 188252, 189232, 184580, 184581, 184582, 184018, 184124, 184422,
-        215405, 215407, 207946,
+        20923, 196482, 190609, 194181, 188252, 189232, 184580, 184581, 184582, 184018, 184124,
+        184422, 215405, 215407, 207946, 216619, 186616, 186120, 210156, 189722, 189727,
     ]
     .contains(&entry)
     {

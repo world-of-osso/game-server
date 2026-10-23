@@ -2,6 +2,35 @@
 
 Server-side aura runtime in `crates/server/src/auras/`: aura instances on active units, periodic effects, procs, spell and stat modifiers, removal and `UnitAuras` replication. See [auras](../wiki/systems/auras.md).
 
+## Native hit proc masks
+
+TC a352b1fa `Spell.cpp:2343–2400`: melee/ranged defense classes keep their
+weapon ability masks. Other spells select helpful/harmful periodic masks for
+native Attr3 TreatAsPeriodic, else ability masks for Attr0 IsAbility, else spell
+masks. DefenseType0 alone must not force an ability mask. Native Word of Glory's
+real helpful hit must therefore reach Light of the Titans' native proc mask.
+Preserve family masks, proc chance, triggered eligibility and charges. Record the
+native catalog eligibility diff and a changed non-Paladin source control; no
+spell-ID exception or blanket proc certification.
+
+## Native rolling periodic refresh
+
+TC a352b1fa `SpellAuraEffects.cpp:832–873` supplies the rolling-amount rule.
+This is shared aura execution, not an Echo/Ignite proc or learned-spell grant.
+
+- [x] Native Attr10 `ROLLING_PERIODIC` selects one shared carry path for periodic damage/healing, including335467 leech.
+- [x] Settle old due ticks once, then add the same caster/spell/effect's unpaid stored amount over the refreshed scheduled ticks; retain the existing native phase.
+- [x] Preserve Barbed's authored five-amount normalization and seven-initial/six-refreshed clock; never apply its normalization to other spells or carry its old pool twice.
+- [x] Unflagged periodic healing and foreign caster pools remain independent; preserve existing fractional snapshots and payment rounding rather than requantizing them during refresh.
+- [x] Ordinary native child aura/cast execution gains this behavior automatically; class producers still own their sourced incoming amount.
+- [ ] Qualify actual12654 producer integration separately; its flag uses the same shared path, but the Ignite producer belongs to another slice.
+
+Generic native boundary assertions:
+`crates/server/src/auras/rolling_periodic_tests.rs`; native Echo/ownership assertions:
+`crates/server/src/followers/holy_policy_native_tests/echo_of_light.rs`.
+Existing Barbed and335467 regressions remain required controls. This does not
+certify all native flagged spell producers or change periodic-clock ownership.
+
 ## Census generic resource/state/duration slice (2026-10-20)
 
 Pinned TC a352b1fa and native70448, without spell-ID branches:
@@ -57,13 +86,37 @@ Native70448 Voltaic Blaze470057 has Dummy effect0, not the older TC direct-damag
 
 Actual active77756 rolls its native effect0 chance from real own188389 periodic damage. Normalize ticks by the number of own Flame Shocks within100 yards on the same map; ticks below6 fail, then roll `1-(1-nativeChance/100)^normalizedTicks`, resetting the counter on a proc (TC a352b1fa `spell_shaman.cpp:1793–1844`). Trigger actual77762; restore one native Lava Burst charge (TC1846–1867). A proc earned during an ordinary51505 hardcast restores its charge only after completion and survives that hardcast; the next admitted instant51505 consumes it (SimC76f8118 `sc_shaman.cpp:7230–7258,12000–12020`). Admission markers use the real native modifier/classmask, not an AI buff grant. Igneous Potential and other talent consequences are not covered by this selected-default-kit slice.
 
+## Fire Meteor
+
+Meteor153561 uses the pinned TC `spell_mage.cpp1544–1595` scripted destination chain:177345/AT3467 lives its native3000ms, natural removal emits153564, and its native1s missile delay/child effects create351140 impact and175396 burn. The expiry cast uses ordinary destination admission/TRIGGERED_NONE: a concurrent follower hardcast at3s rejects153564 without interrupting that original cast (TC Spell.cpp3474). Initial177345 and burn155158 waive only cast-in-progress/reporting as their source scripts specify. SimC's unconditional delayed impact through a hardcast is a recorded divergence, not an authorized policy override. Burn field uses authored AT1712/6211 sphere geometry (8yd, TDB40120; agrees with native SpellRadius14), native4000ms lifetime, and ordinary155158500ms periodic aura on hostile entry; leaving/removing the field removes only its caster's burn. Preserve native impact recipients/coefficients and existing cast/missile/area/aura execution, not a hardcoded synthetic damage pulse. Ground-action `min_enemies` is an authored per-entry/APL decision: Meteor1, Consecration1, existing Earthquake3 and Flamestrike3 remain distinct rather than one AoE default. Producer/copy publication and impact/burn acceptance require separate native proofs.
+
+## Fire Ignite
+
+Native12846 positive eligible damage procs ordinary12654 on the damaged target. Derive each new tick amount from the live effect0 percentage and native12654 duration/period tick count; an actually admitted Hot Streak Pyroblast/Flamestrike doubles that percentage even after the proc is consumed. Preserve the existing native proc masks/chance/trigger filtering, owner identity and generic flag-driven ROLLING_PERIODIC unpaid carry; Ignite must not feed itself. No granted proc, stat scalar or fixed invented tick schedule. Source: TC a352b1fa `spell_mage.cpp1292–1328`, `SpellAuraEffects.cpp832–840`. Native70 ordinary-hit RED atbd01d38e0 precedes producer879c22515. Integrated8f222d517 passes ordinary Fireball production, exact nine native ticks/no self-cascade, consumed Hot Streak missile doubling, and actual second-Fireball unpaid carry through the shared flag-driven path. Broader spread/Intensifying Flame/Burnout and full Fire parity remain unproved.
+
 ## Fire Hot Streak
 
-Native-kit followers retain their actual level-gated selected spell IDs in KnownSpells, including non-aura passives, without a Player or player-only grants. Actual known native195283 (Effect3, not an aura) enables ordinary landed direct Fireball133, Fire Blast108853/319836, Pyroblast11366 and Scorch2948 hits to produce Heating Up48107 on a crit, convert existing Heating Up to Hot Streak48108 on the next crit, or clear Heating Up on a noncrit (TC a352b1fa `spell_mage.cpp:1037–1100`; current eligible actions: SimC76f8118). Periodic/copy/triggered damage must not enter this ordinary-hit bridge. Snapshot actual native cast-time-modifier instances at cast admission; only Pyroblast/Flamestrike1254851 admitted with48108 consume that instance after successful cast, before missile impact. Hot Streak earned during a hardcast belongs to the next cast (TC marker `m_appliedMods`; SimC `sc_mage.cpp:2427`). Additional Ignite/Pyroclasm/scorch-finish/talent and other-trigger consequences remain separate gaps.
+Native-kit followers retain their actual level-gated selected spell IDs in KnownSpells, including non-aura passives, without a Player or player-only grants. Actual known native195283 (Effect3, not an aura) enables ordinary landed direct Fireball133, Fire Blast108853/319836, Pyroblast11366 and Scorch2948 hits to produce Heating Up48107 on a crit, convert existing Heating Up to Hot Streak48108 on the next crit, or clear Heating Up on a noncrit (TC a352b1fa `spell_mage.cpp:1037–1100`; current eligible actions: SimC76f8118). Periodic/copy/triggered damage must not enter this ordinary-hit bridge. Snapshot actual native cast-time-modifier instances at cast admission; only Pyroblast11366/Flamestrike2120 or1254851 admitted with48108 consume that instance after successful cast, before missile impact. Hot Streak earned during a hardcast belongs to the next cast (TC marker `m_appliedMods`; SimC `sc_mage.cpp:2427`). Additional Ignite/Pyroclasm/scorch-finish/talent and other-trigger consequences remain separate gaps.
+
+## Elemental Overload cast consequences
+
+Actual168534 effect0 supplies the Lightning Bolt188196→45284 chance and one-third that chance for each Chain Lightning188443→45297 hit. A source191634 charged modifier matched into the triggering cast guarantees its overloads; merely observing a live buff is insufficient. Each landed hostile root target receives a normal `TRIGGERED_NONE` child cast400ms after that hit, retaining the actual target and native missile data. Root flight time precedes the400ms wait. TC a352 `spell_shaman.cpp:2124–2230`, `SpellDefines.h:493` and TDB168534 `SpellPhaseMask=2` (HIT, `SpellMgr.h:225`) qualify this boundary; SimC76f8118 schedules during travel instead and does not override the pinned TC timing.
+
+The actual168534 effect1 amount scales45284/45297 damage at impact, retaining native modifiers and normal crit/mitigation/rounding. Native382032 Echo Chamber is already108/PointsIndex1 in the aura calculation; do not substitute an invented flat coefficient from historical tooltip wording. Lava/Elemental Blast/Icefury, Ascendance extra overloads, full proc-table import and resource scripts remain uncertified. Mastery-point coefficient production remains the existing separate stat consumer.
+
+## Inundate utility-cast resource policy
+
+`INUNDATE_NATIVE_SUCCESSFUL_UTILITY_CASTS` limits actual378776→378777 procs to successful Purge370, Cleanse Spirit51886, Healing Stream Totem5394, Hex51514 and Wind Shear57994 casts while the caster is in combat. Use the existing successful-cast event once, not every hit/target or ordinary damaging spell; actual passive presence and native child amount8 remain authoritative. Native70448 description names this list. Pinned TC a352 `spell_shaman.cpp` has no matching script, and TDB1210.26091 `spell_proc` has neither signed378776 row, so this is a named source-description policy, not a fabricated family mask. SimC76f8118 `sc_shaman.cpp:8527–8534,9367–9374` supplies utility execute/gain boundaries. This does not certify broad utility AI decisions or all five spells' downstream effect behavior.
+
+## Feel the Burn and asynchronous stacks
+
+Native383391 procs383395 only from actual Fire Blast108853, not arbitrary harmful spells (native70448 description; SimC76f8118 `sc_mage.cpp:4583`). Retain its native100ms proc recovery,2 mastery per stack,4s duration and100-stack cap. Each application expires independently rather than refreshing every existing stack.
+
+For finite stacking auras with native attribute490 (`Attributes_15 & 0x400`, SimC `data_enums.hh:1910`, `buff.cpp:777–782`), retain each applied stack's absolute expiry. Partial expiry decrements stacks and refreshes derived stats/replicated views; final expiry uses ordinary aura removal. A new application exceeding the native cap replaces the oldest expiration slots (`buff.cpp:2649–2692`). Unflagged stacking auras retain ordinary refresh semantics. This does not certify every flag490 spell's producer, amounts or consumption behavior.
 
 ## Pyroclasm Hot Streak policy
 
-`MAGE_PYROCLASM_SIMC_HOT_STREAK_TRIGGER` rolls the actual active269650 effect0 chance when a cast truly spends its admitted Hot Streak. Trigger native269651, retaining its native duration and two-stack cap. Ordinary Pyroblast11366/Flamestrike1254851 admitted with positive cast time use269651 effect0 damage percentage and consume one live stack at completion; instant casts neither spend nor receive that hardcast-only bonus. Retain the numeric bonus through missile impact after consumption.70448 supplies chance15 and bonus230%; SimC76f8118 `sc_mage.cpp2326–2428,6444–6446` supplies trigger/consumer semantics. TC has no Pyroclasm script and DB2 has no269650 proc row, so this is an explicit project policy. Other set/talent consequences remain outside this slice. [Implementation and proof](../wiki/systems/auras.md#pyroclasm-hot-streak-policy--2026-10-21).
+`MAGE_PYROCLASM_SIMC_HOT_STREAK_TRIGGER` rolls the actual active269650 effect0 chance when a cast truly spends its admitted Hot Streak. Trigger native269651, retaining its native duration and two-stack cap. Ordinary Pyroblast11366/Flamestrike2120 or1254851 admitted with positive cast time use269651 effect0 damage percentage and consume one live stack at completion; instant casts neither spend nor receive that hardcast-only bonus. Retain the numeric bonus through missile impact after consumption.70448 supplies chance15 and bonus230%; SimC76f8118 `sc_mage.cpp2326–2428,6444–6446` supplies trigger/consumer semantics. TC has no Pyroclasm script and DB2 has no269650 proc row, so this is an explicit project policy. Other set/talent consequences remain outside this slice. [Implementation and proof](../wiki/systems/auras.md#pyroclasm-hot-streak-policy--2026-10-21).
 
 ## Devastation Essence Burst
 
@@ -80,7 +133,7 @@ Actual learned403521 replaces Omen113043's proc chance with its native effect2 v
 ## What it must do
 
 - [x] Apply aura effects (6, 35, 65) as one instance per target and resolution, with per-effect amounts from base points, SP/AP coefficients and the caster's spell modifiers.
-- [x] Stack and refresh: same caster refreshes duration and adds a stack up to `CumulativeAura`; other casters coexist for harmful, periodic or DoT-stacking-rule auras, else replace.
+- [x] Stack and refresh: same caster normally refreshes duration and adds a stack up to `CumulativeAura`; native asynchronous-stack auras retain each application's expiry. Other casters coexist for harmful, periodic or DoT-stacking-rule auras, else replace.
 - [x] Expire on duration (0/-1 permanent); remove on death (except passives and allow-while-dead), `CancelAura` (own positive non-passive cancelable auras), dispel (effect 38 by dispel type), channel end, charge/absorb depletion, unlearned passives and despawned casters.
 - [x] Remove auras on the interrupt flags that have a system: hostile action received, damage, non-periodic damage, action (cast), moving, attacking, entering/leaving combat, spec change.
 - [x] Tick periodic damage/heal/energize/trigger/dummy effects every period until expiry. Each deadline follows the original application/owning-area phase plus its native period ordinal; fractional-second periods must not accumulate drift or lose a tick at exact expiry across repeated lifetimes. Preserve refresh phase, ExtraInitialPeriod's application tick, area alignment, native periods/expiry and callback order.

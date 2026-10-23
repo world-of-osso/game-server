@@ -1,5 +1,73 @@
 # Auras
 
+## Light of the Titans and hit proc masks — 2026-10-22
+
+Native378405's selected effect0 supplies the40% contribution and child378412;
+its native10s/2s schedule owns five ticks. The aura script consumes actual resolved
+Word of Glory85673 healing on the real patient and executes the ordinary child.
+Native effect1's200% bonus applies only when that patient is the caster and an
+actual harmful periodic health-damage aura is active. SimC76f8118 paladin1129–1177
+and1251–1258 supplies the hook/condition, not its obsolete50%/NYI amount.
+
+The shared fresh periodic-heal clock reader moved unchanged from Echo into
+`periodic::heal_tick_count`; Echo/Prismatic/Ignite remain intact. Unpaid pool
+carry stays shared and flag-driven, not another Titans accumulator.
+
+Initial actual Word hits still lacked the child after adding the producer:
+`spell_hit_masks` classified all DefenseType0 hits as abilities. TC a352b1fa
+`Spell.cpp:2343–2400` instead keeps melee/ranged weapon masks, then reads
+Attr3 TreatAsPeriodic and Attr0 IsAbility for the non-weapon path. Word85673 is
+therefore a helpful spell0x4000, matching378405, not an ability0x400.
+
+Native producer RED465af2443 crosses real Judgment-earned Holy Power and Word
+healing; mask/control tip2fb442aa2 passes12cases with only self-DoT bonus tick110
+versus329 RED. Narrow bonus58ec9656c, merged891b9ab1d, passes19native cases38.11s,
+check0/2m08s/zero warnings/fmtPASS. Existing test expectations changed: **none**.
+The [census](../../handoffs/native-hit-proc-mask-census.md) enumerates334969possible
+spell-mask changes and5670static proc-aura candidate diffs; it is not a count of
+observed procs. The lead requires a full workspace gate before landing.
+[Contract](../../specs/light-of-the-titans.md),
+[exact proof ledger](../../handoffs/light-of-the-titans-proof-ledger.md).
+Actual repeated-Word pool integration, PvP scaling and effectiveness stay separate.
+
+## Native rolling periodic refresh — 2026-10-22
+
+`refresh::prepare_application(world,target,new,spell)` reads native Attr10
+`ROLLING_PERIODIC` and owns the single shared carry pass. It settles already-due
+old ticks once, then matches same caster/spell/source/effect index/aura type and
+adds unpaid stored amount over the refreshed scheduled ticks. Native phase stays
+owned by `AuraInstance::refresh_from`; no new timer or partial-tick mechanism.
+TC a352b1fa `SpellAuraEffects.cpp:832–849` supplies the rule. Fractional snapshots
+remain intact; existing damage/heal payment rounding is unchanged.
+
+Barbed217200 normalizes only its fresh authored five-amount budget to the native
+schedule: seven initial ticks, six refreshed. Its old pool goes through the shared
+pass, never a second spell-local accumulator.335467 periodic leech also uses that
+flag path with no separate carry branch. This preserves its existing fractional
+amount contract. No spell-ID exception gates general carry.
+
+External interface is unchanged: ordinary native aura application, including
+`cast_triggered_with_effect0_amount` with a sourced **per-tick** incoming amount,
+gets carry automatically.12654 has the flag and uses this path; its actual Ignite
+producer qualification belongs to the other slice, not these tests.
+
+Native71023 Languish demonstrates5vs8 RED on refresh without amount overrides;
+real Henry77489 independently demonstrates a lost unpaid heal pool. Shared
+production5622db488 plus29e0d8a61 fraction fix, integratedaeeaa1b87, passes19cases
+77.83s including generic damage/unflagged Renew, Echo6, Barbed4,3354671, Binding5
+and PoH1. The first13-case run deliberately exposed the unnecessary new storage
+rounding; no test oracle was weakened to fix it.
+[Contract](../../specs/auras.md#native-rolling-periodic-refresh),
+[proof ledger](../../handoffs/healer-echo-of-light-proof-ledger.md),
+[Echo investigation](../investigations/holy-priest-follower-ai.md#echo-of-light-producer-and-shared-rolling-carry--2026-10-22).
+## Native asynchronous stack expirations — 2026-10-22
+
+Native attribute490 is `Attributes_15 & 0x400`: SimC76f8118 `data_enums.hh:1910` names `SX_ASYNCHRONOUS_STACKING_AURA`; `buff.cpp:777–782` enables asynchronous lifetimes when native maximum stacks exceed1. Pinned TC a352 labels the same bit `ATTR15_UNK10`; no TC semantic claim is inferred from that label.
+
+`AuraInstance.stack_expirations` stores absolute deadlines for finite flagged applications. Refresh adds incoming deadlines rather than extending old ones, replacing oldest slots on native-cap overflow (`buff.cpp:2649–2692`). Ordinary aura updates decrement expired stacks and refresh derived stats/replicated views; zero remaining stacks enter the existing expiration/removal path. Nonflagged auras retain ordinary refresh behavior. No new timer constants, spell-ID whitelist or wire fields. Implementationac5eb241d gives native11GREEN41.86s atc43cc8dcb, zero warnings, including real Feel-the-Burn acquisition/non-Fire-Blast exclusion, independent4s expiry/native100-cap oldest replacement and retained ordinary proc/cadence controls. Cases enabled at25c4d4fb4. A later996ec234 merge changes aura/proc/stat consumers; current integration proof remains required. This does not certify every flagged spell's producer, periodic phase or consumption behavior.
+
+[Feel the Burn native RED](../investigations/follower-data.md#feel-the-burn-native-eligibility-and-overlap--2026-10-22) exercises this generic lifetime boundary through two real Fire Blasts. [Contract](../../specs/auras.md#feel-the-burn-and-asynchronous-stacks).
+
 ## Pyroclasm Hot Streak policy — 2026-10-21
 
 `MAGE_PYROCLASM_SIMC_HOT_STREAK_TRIGGER` extends the existing Hot Streak cast-boundary hook, not generic proc masks. A true admitted48108 consumption rolls active269650 effect0 (native15%) and casts269651 with its native duration/two-stack cap. SimC76f8118 `sc_mage.cpp2326–2428,6444–6446` supplies the policy; pinned TC has no script and native269650 is DUMMY4 without proc options or a trigger. Native269651's230% value wins over reference numbers.
