@@ -16,6 +16,15 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - [ ] Enforce `SCRIPTED_BOSS_PULL_WHEN_READY` and `CLEARED_STATE_ALWAYS_PULLS_NEXT_PACK` from the [follower policy](follower-dungeons.md): no numeric forecast may strand a cleared, full-ready party before its next single pack. No overlap or chained adds on that admission.
 - [ ] Preserve approved tank policy: ten active-combat seconds of current-run DPS/healing measurements, retained through OOC travel/recovery/holds and reset at dungeon start or full wipe; separate five-second health stability remains wall-clock. Preserve 30% HP reserve, first single pack, affordable sourced heal, every member above 80% across five seconds before overlap, static spawns until observed dead, caster collection and hazard reaction.
 
+## Generic source construction
+
+- [x] Prepare new-map source topology without a compiled map registry: retain exact Normal actor GUIDs, formation identity, native float poses, follower205 MapDifficulty tuning and unique authored Entrance. Order explicit `raid_encounter_creature` bindings by DungeonEncounter then source JournalEncounterCreature order.
+- [x] Missing/ambiguous entrance, follower difficulty, encounter boss binding, source boss spawn or nav bake must produce a named `FOLLOWER_GRAPH_*` refusal; never fabricate an actor, route, radius or walk connection.
+- [ ] Ruby2521 and Halls2527 must qualify native edges and corridor-input radii, then run the ignored source-map terminal fixture. Halls currently refuses missing final encounter2618 binding; Ruby joint-actor completeness remains explicitly limited to published raid bindings.
+- [ ] Existing34/2515 graph bytes and behavior must remain unchanged. New-map source preparation never rewrites their files or substitutes their radii.
+
+Implementation: `scripts/follower_simulator_sources.py`; behavioral native-source fixtures: `scripts/tests/test_follower_simulator_sources.py`; ignored terminal proof: `crates/server/src/dungeon_simulator/generic_map_tests.rs`. Generic dispatch/metadata remains the separate existing `graph_selection.rs` interface; Uldaman capture remains separately owned.
+
 ## Pet diagnostic evidence
 
 Each regular party sample also records actual controlled pets, their owner/entity/template/level provenance, HP, position, CombatRefs, threat and cast/motion state. Record related opponents even when initial acquisition has zero threat. Retain those diagnostic identities after pet Death, enemy evade/home and despawn so reset transitions and unavailable state remain observable; never fabricate missing HP/position. Terminal unit snapshots include those pets. These observations do not change party admission, threat, AI or healer policy.

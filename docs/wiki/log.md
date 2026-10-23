@@ -1,3 +1,7 @@
+## 2026-10-23 — Generic follower graph source inputs
+
+[Source preparation](systems/dungeon-simulator.md#generic-native-source-inputs--2026-10-23): genuine ignored Ruby/Halls missing-graph RED, six native-source producer tests GREEN. No new dispatch or guessed walk/radius data; Halls2618 binding refuses explicitly. Runtime terminal proof remains pending.
+
 ## 2026-10-23 — Caster offsets and source balloon qualification
 
 [Offsets](systems/toys.md#caster-offsets414348-source-boundary-2026-10-23): generic41/43/48 use source73 radius/reach/motion and direct geometry, preserving existing32. Genuine9RED plus correctedB43RED;37GREEN29.07s atc0b includes actual two balloons, native direction1GREEN at e71 and area1GREEN13.27s at909 complete39 covered cases without production changes. Native fixture fixes select279366 effect1 and source NPC6/display10913 rather than weakening LOS; legitimate native misses retain receipts. Check0/67.07s/no warnings/fmt0. Exact545→547 only75042/245946,17 blocker-list/15 unavailable strings; Arena battle/action gaps and native-facing/presentation/modifier/Detour boundaries retained. No canonical/protocol writes or invented UseToy toggle.

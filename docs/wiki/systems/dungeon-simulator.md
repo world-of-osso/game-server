@@ -1,5 +1,12 @@
 # Dungeon simulator
 
+## Generic native source inputs — 2026-10-23
+
+`follower_simulator_sources.py` opens canonical world.db read-only and prepares new-map topology inputs for the existing filename-suffix/explicit-requirements dispatch. It retains Normal source actors/formations/poses, uses actual follower205 MapDifficulty tuning and a unique Entrance, and orders raid boss bindings by DungeonEncounter then native JournalEncounterCreature order. It emits an unqualified topology/point list plus a source receipt; no edges, acquisition radii or pull route are guessed. Native `follower_edges` and the existing corridor author must qualify those separately. [Contract](../../specs/dungeon-simulator.md#generic-source-construction).
+
+Six native-source tests pass for Ruby identities and named missing-entrance/boss/nav/difficulty failures. Ruby2521 prepares307actors/306packs,CT2845/entrance100030, explicit boss188252→189232→190485. The final binding is Erkhart5392, not Kyrakka5393; unbound joint actors are not inferred from journal adds. Halls2527 has four DungeonEncounter rows but only three bound/spawned actors, so preparation explicitly refuses `FOLLOWER_GRAPH_MISSING_ENCOUNTER_BOSS_SOURCE_2527: encounter2618`, not a three-boss clear. Both ignored terminal tests first failed on missing graph files; actual native route/terminal qualification remains pending. Existing34/2515 graph files are untouched.
+
+
 ## Hunter pet intrinsic/owner stats —2026-10-22
 
 The [survivability contract](../../specs/dps-parity.md#hunter-pet-survivability) follows TC Pet.cpp847–925/StatSystem1187–1310, not mixed SimC stats. `hunter_pet_stats` derives native ExpectedStat create health×template modifier, base armor level×50,30% owner Stamina truncated before×10 bonusHP and70% owner armor. Hunter spawn installs armor and inherited-health bookkeeping; owner CharacterStats changes apply only inherited HP deltas and clamp current on shrink without healing (TC Unit.cpp10070–10093). Other pet categories are unchanged; pet_levelstats/intrinsic primary stats remain absent, no fake TC fallback values are imported.
