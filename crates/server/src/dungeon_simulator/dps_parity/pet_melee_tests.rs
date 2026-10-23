@@ -2,6 +2,8 @@
 use super::*;
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 
+const PET_ABILITY: u32 = 1264355;
+
 fn pet_melee_events(
     world: &World,
     pet: Entity,
@@ -94,9 +96,7 @@ fn dps_parity_pet_melee_baseline_records_actual_owner_and_swing_damage() {
 fn physical_damage_multiplier(world: &World, pet: Entity, target: Entity) -> f32 {
     let done = world
         .get::<crate::auras::AuraStatMods>(pet)
-        .map_or(1.0, |mods| {
-            mods.damage_done(1) * mods.autoattack_damage_mult
-        });
+        .map_or(1.0, |mods| mods.damage_done(1));
     let taken = world
         .get::<crate::auras::AuraStatMods>(target)
         .map_or(1.0, |mods| mods.damage_taken(1));
@@ -123,7 +123,14 @@ fn owner_contribution_floor(world: &World, owner: Entity, pet: Entity, target: E
         "actual native weapon must contribute owner total RAP"
     );
     let bonus = (total * 0.22).trunc() / 3.5 * 2.0;
-    let damage = (bonus * physical_damage_multiplier(world, pet, target)).round();
+    let auto = world
+        .get::<crate::auras::AuraStatMods>(pet)
+        .map_or(1.0, |mods| mods.autoattack_damage_mult);
+    mitigated_physical_floor(world, pet, target, bonus * auto)
+}
+
+fn mitigated_physical_floor(world: &World, pet: Entity, target: Entity, base: f32) -> f32 {
+    let damage = (base * physical_damage_multiplier(world, pet, target)).round();
     let pet_scaling = crate::level_scaling::UnitScaling::of(world, pet);
     let target_scaling = crate::level_scaling::UnitScaling::of(world, target);
     let armor = target_scaling.armor_against(
@@ -306,5 +313,90 @@ fn dps_parity_pet_melee_owner_only_melee_ap_buff_does_not_change_swings() {
     assert!(
         (after[0] - before[0]).abs() <= 1.0,
         "pet must inherit RAP, not the independently increased melee AP"
+    );
+}
+
+fn pet_ability_hit(world: &World, pet: Entity, target: Entity) -> Option<CombatLogEvent> {
+    world
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .find(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.source == Some(pet.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(PET_ABILITY)
+                && !event.critical
+                && event.blocked == 0
+                && event.absorbed == 0
+        })
+        .cloned()
+}
+
+fn cast_native_pet_ability(run: &mut Run, pet: Entity) -> CombatLogEvent {
+    let target = run.targets[0];
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    for _ in 0..16 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), pet, PET_ABILITY, Some(target), 1);
+        run.app.update();
+        if let Some(hit) = pet_ability_hit(run.app.world(), pet, target) {
+            return hit;
+        }
+    }
+    panic!("native1264355 did not produce an unblocked/unabsorbed normal pet damage receipt");
+}
+
+#[test]
+#[ignore = "native pet ability total-owner-RAP RED; requires prepared parity inputs"]
+fn dps_parity_pet_melee_shared_owner_rap_source_includes_weapon_ap_in_actual_ability() {
+    let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
+    collect_native_pet_swings(&mut run, pet, 1);
+    let hit = cast_native_pet_ability(&mut run, pet);
+    let world = run.app.world();
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(PET_ABILITY)
+        .unwrap();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.effect == crate::spell_cast::effects::EFFECT_SCHOOL_DAMAGE)
+        .unwrap();
+    assert_eq!(
+        effect.variance, 0.0,
+        "native1264355 source has zero damage variance"
+    );
+    let total_rap = owner_total_ranged_ap(world, run.actor);
+    let bare_rap = world
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .ranged_attack_power;
+    assert!(
+        total_rap > bare_rap,
+        "actual equipped weapon must contribute owner total RAP"
+    );
+    let pet_power = (total_rap * 0.22).trunc();
+    let floor = mitigated_physical_floor(
+        world,
+        pet,
+        run.targets[0],
+        pet_power * effect.bonus_coefficient_from_ap,
+    );
+    println!(
+        "NATIVE_PET_ABILITY_TOTAL_RAP {}",
+        json!({
+            "owner_bare_rap": bare_rap, "owner_total_rap": total_rap,
+            "native_ap_coefficient": effect.bonus_coefficient_from_ap, "pet_power": pet_power,
+            "damage": hit.amount, "minimum_owner_contribution": floor,
+        })
+    );
+    assert!(
+        hit.amount as f32 >= floor,
+        "native1264355 damage{} omits equipped-weapon owner RAP; minimum{floor}",
+        hit.amount
     );
 }

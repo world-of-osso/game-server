@@ -27,6 +27,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Hunter pet melee owner RAP
 
 - [ ] Actual controlled Hunter pet auto-attacks include the TC StatSystem.cpp1344/1389/1423 owner contribution: integer22% owner total ranged AP (including equipped weapon AP through the ordinary producer), divided by3.5 and multiplied by the source two-second pet base attack time, additive before existing damage modifiers, armor and hit outcomes. Real later owner stat changes are read live; a caster-only melee-AP buff must not change pet swings when owner RAP is unchanged. Spell-command AP coefficients, Spirit Wolf, Demon/Mage pets and ordinary NPCs retain their existing behavior.
+- [ ] Hunter pet ability damage inherits the same integer22% owner total RAP source as melee, including equipped weapon AP; native1264355 damage qualifies the actual effect boundary before the shared input changes. Ability coefficients/variance and native target geometry stay unchanged.
 - [ ] Intrinsic pet AP/weapon damage remains an explicit unqualified gap; do not invent pet_levelstats or import TC's fake primary stats/approximate weapon range. SimC stable_pet60% ownerAP is named divergence `HUNTER_PET_SIMC_OWNER_AP_DIFF`, not mixed with TC22% RAP. Contribution proofs do not certify total pet DPS or Azure survival.
 
 ### Measurement
