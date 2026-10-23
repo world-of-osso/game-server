@@ -26,7 +26,8 @@ parser.add_argument("filters", nargs="*")
 args = parser.parse_args()
 assert open('relative-input.txt').read() == 'package fixture'
 cases = [(module + "::" + case, False) for module in ["left", "right", "third"] for case in ["alpha", "beta"]]
-cases += [("left::ignored", True), ("broken::failure", False)]
+cases += [("left::ignored", True), ("broken::failure", False),
+          ("left::opening_admission_does_not_recruit_unprojected_source_packs", False)]
 selected = [(name, ignored) for name, ignored in cases
             if (not args.filters or any((value == name if args.exact else value in name) for value in args.filters))
             and not any(value in name for value in args.skip)]
@@ -117,6 +118,27 @@ class NativeBatchContracts(unittest.TestCase):
                 active -= 1
         self.assertEqual((peak, active), (2, 0))
         self.assertTrue(all(group["cpu_seconds"] > 0 for group in summary["groups"]))
+
+    def test_full_suite_preserves_union_exclusions_and_reports_known_failures(self):
+        result = subprocess.run(
+            [sys.executable, str(RUNNER), "--artifacts", str(self.artifacts),
+             "--output", str(self.root / "output"), "--full-suite",
+             "--known-failure", "broken::failure"],
+            env=dict(os.environ, NATIVE_BATCH_FIXTURE_LOG=str(self.events)),
+            capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 1, result.stderr)
+        summary = json.loads((self.root / "output/summary.json").read_text())
+        self.assertEqual((summary["passed"], summary["failed"], summary["ignored"]), (7, 1, 1))
+        self.assertEqual(summary["known_failures"], ["broken::failure"])
+        self.assertEqual(summary["unexpected_failures"], [])
+        self.assertEqual(summary["missing"], [])
+        self.assertEqual(summary["extra"], [])
+        events = [json.loads(line) for line in self.events.read_text().splitlines()]
+        names = {event["name"] for event in events if event["event"] == "case"}
+        self.assertIn("left::opening_admission_does_not_recruit_unprojected_source_packs", names)
+        self.assertIn("third::beta", names)
+        self.assertEqual(len(names), 8)
 
     def test_failure_is_reported_without_dropping_other_module_coverage(self):
         result, summary, events = self.run_batches("broken::", "right::")
