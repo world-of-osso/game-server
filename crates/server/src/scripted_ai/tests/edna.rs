@@ -53,6 +53,30 @@ fn source_copy(difficulty: u32) -> (Harness, Entity, InMap, Vec<Entity>) {
     (h, boss, map, golems)
 }
 
+fn unlock(h: &mut Harness, boss: Entity, map: InMap, golems: &[Entity]) {
+    for &golem in golems {
+        super::herald_intro::kill_actor(h, golem);
+    }
+    for _ in 0..500 {
+        h.advance(0.05);
+        if intro_state(h, map) == 3 {
+            break;
+        }
+    }
+    assert_eq!(
+        intro_state(h, map),
+        3,
+        "authentic five-death/movement unlock"
+    );
+    assert!(!immune(h, boss));
+    let mut near = *h.app.world().get::<Position>(boss).unwrap();
+    near.x += 3.0;
+    let player = h.player();
+    let peer = h.players[1].0;
+    h.app.world_mut().entity_mut(player).insert(near);
+    h.app.world_mut().entity_mut(peer).insert(near);
+}
+
 fn intro_state(h: &mut Harness, map: InMap) -> u32 {
     instance_script::get_data(h.app.world_mut(), map, INTRO_STATE)
 }
@@ -152,4 +176,79 @@ fn encounter_coverage_edna_death_counter_is_copy_owned_and_idle_time_does_not_un
             .all(|go| go.caster != boss.to_bits() || go.spell_id != ANCHOR)
     );
     assert!(h.app.world().get::<movement::PointMovement>(boss).is_none());
+}
+
+#[test]
+#[ignore = "EDNA source appearance RED must execute before implementation"]
+fn encounter_coverage_edna_appearance_sets_source_energy_four_without_unlock() {
+    for difficulty in [1, 205] {
+        let (h, boss, _, _) = source_copy(difficulty);
+        let energy = crate::spell_cast::powers::power_value(
+            h.app.world(),
+            boss,
+            shared::components::PowerType::Energy,
+        )
+        .unwrap()
+        .0;
+        assert_eq!(energy, 4.0, "TC JustAppeared; no fixture power grant");
+        assert!(immune(&h, boss));
+    }
+}
+
+#[test]
+#[ignore = "EDNA native qualification, execute with source intro RED"]
+fn encounter_coverage_edna_native_seismic_smash_damage_and_copy_isolation() {
+    for difficulty in [1, 205] {
+        let (mut h, boss, _, _) = source_copy(difficulty);
+        let mut near = *h.app.world().get::<Position>(boss).unwrap();
+        near.x += 3.0;
+        let player = h.player();
+        let peer = h.players[1].0;
+        h.app.world_mut().entity_mut(player).insert(near);
+        h.app.world_mut().entity_mut(peer).insert(near);
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 424888, Some(player), false)
+            .expect("ordinary sourced victim cast, no immunity edits or bypass flags");
+        assert_eq!(h.app.world().get::<CastState>(boss).unwrap().duration, 4.0);
+        h.advance(4.2);
+        assert!(
+            h.inbox(0)
+                .log
+                .iter()
+                .any(|event| event.kind == CombatLogKind::Damage
+                    && event.source == Some(boss.to_bits())
+                    && event.target == Some(player.to_bits())
+                    && event.spell_id == Some(424888)
+                    && event.amount > 0)
+        );
+        assert!(
+            h.inbox(1)
+                .log
+                .iter()
+                .all(|event| event.source != Some(boss.to_bits()))
+        );
+        assert!(
+            immune(&h, boss),
+            "outgoing qualification never strips source PC immunity"
+        );
+    }
+}
+
+#[test]
+#[ignore = "EDNA combat RED follows authentic intro GREEN"]
+fn encounter_coverage_edna_first_spike_after_authentic_unlock_normal_projected205() {
+    for difficulty in [1, 205] {
+        let (mut h, boss, map, golems) = source_copy(difficulty);
+        unlock(&mut h, boss, map, &golems);
+        h.engage(boss);
+        h.advance(7.9);
+        assert!(h.app.world().get::<CastState>(boss).is_none());
+        h.advance(0.3);
+        let cast = h
+            .app
+            .world()
+            .get::<CastState>(boss)
+            .expect("TC first Volatile Spike8.1s native admission");
+        assert_eq!(cast.spell_id, 424903);
+        assert_eq!(cast.duration, 2.5, "native70448 CastingTimeIndex20");
+    }
 }
