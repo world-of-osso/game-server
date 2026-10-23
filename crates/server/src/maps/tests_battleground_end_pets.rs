@@ -54,6 +54,15 @@ fn create_native_pet(h: &mut Harness, owner: &Traveler, class: u8) -> Entity {
         .get_mut::<Player>(owner.player)
         .unwrap()
         .class = class;
+    if class == 3 {
+        // Traveler omits character-sheet fields. Supply the normal producer's
+        // inputs; native tame resolves CharacterStats through that producer.
+        h.app.world_mut().entity_mut(owner.player).insert((
+            shared::components::UnitStats::default(),
+            shared::components::CombatRatings::default(),
+            shared::components::DerivedStats::default(),
+        ));
+    }
     let spell_id = if class == 3 { 13481 } else { 688 };
     let spell = h
         .app

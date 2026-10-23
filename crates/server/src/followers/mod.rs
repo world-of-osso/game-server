@@ -1,6 +1,8 @@
 //! User-approved player-spec combat bridge for authenticated Retail followers.
 mod ai;
 mod catalog;
+#[cfg(test)]
+mod darkflame_drop_tests;
 mod empower_policy;
 mod hazards;
 mod healer_context;
