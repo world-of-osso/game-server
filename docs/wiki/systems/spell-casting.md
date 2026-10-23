@@ -2,6 +2,8 @@
 
 ## Protection producer dispatch — 2026-10-22
 
+Native Attr3 `ALWAYS_HIT` bypasses avoidance after school/mechanic immunity; missile launch still evaluates reflection. Source and deterministic native Evasion RED/control evidence live in the [producer contract](../../specs/protection-damage-producers.md#native-always_hit-defense-reader); GREEN remains pending.
+
 `batch3` ports pinned TC's known-Rend landed-hit hook and Shield Charge Dummy→native effect96 bridge; native movement/landing own their original children. Phalanx keeps native proc amounts/masks/child and adds only named SimC Clap eligibility and execute-time Shield Slam consumption. These paths have seven targeted native behavior/control passes; [producer contract and exact receipts](../../specs/protection-damage-producers.md) remain the coverage source.
 
 Whirling Blade uses the existing aura proc/RPPM machinery. Its named foreground/primary-target policy supplies native228920 and the talent's4000ms lifetime through a private triggered-cast snapshot, without changing the catalog. `batch9::GroundPulses` supplies the missing156287 timer using native2000ms and targetB radius14=8yd. Ordinary Ravager retains12000ms. The ground anchor is captured before direct impact; no new child rotation action or independent timer system. These two producer paths have native timing/damage/expiry GREEN; Whirling's actual auto/secondary/absence/removal boundaries are also qualified. Weapon chasing and reduced damage beyond eight targets are not certified.

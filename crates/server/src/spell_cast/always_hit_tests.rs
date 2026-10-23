@@ -12,7 +12,6 @@ const SPELL_REFLECTION: u32 = 23920;
 const UNHOLY_CURSE: u32 = 20006;
 
 #[test]
-#[ignore = "RED: native ALWAYS_HIT flag has no generic defense bypass reader"]
 fn census_always_hit_native_charge_chain_bypasses_evasion_but_plain_slam_does_not() {
     let (mut h, target, near, _) = charge_fixture();
     let control = spawn_npc(&mut h.app, 3.0);
@@ -91,12 +90,17 @@ fn census_always_hit_native_charge_chain_bypasses_evasion_but_plain_slam_does_no
 }
 
 #[test]
-#[ignore = "RED control: ALWAYS_HIT must preserve prior school immunity"]
 fn census_always_hit_charge_landing_keeps_native_school_immunity() {
     let (mut h, target, near, _) = charge_fixture();
     // Actual642 effect0 school-immunity127; qualify the defense input, not spell eligibility.
     apply_passive(&mut h, target, DIVINE_SHIELD);
     apply_passive(&mut h, near, DIVINE_SHIELD);
+    // Landing's area is caster-centered; both immune recipients must be in range.
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(h.caster)
+        .unwrap()
+        .x = 8.0;
     h.inbox = Default::default();
     assert!(crate::spell_cast::try_cast_triggered(
         h.app.world_mut(),
@@ -131,7 +135,6 @@ fn census_always_hit_charge_landing_keeps_native_school_immunity() {
 }
 
 #[test]
-#[ignore = "RED control: ALWAYS_HIT must preserve native reflection before defense"]
 fn census_always_hit_magic_spell_still_reflects() {
     let mut h = fixture(false);
     let target = h.npc;

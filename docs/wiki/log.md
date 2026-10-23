@@ -1,3 +1,7 @@
+## 2026-10-22 — Native ALWAYS_HIT avoidance RED
+
+[Producer contract](../specs/protection-damage-producers.md#native-always_hit-defense-reader): d3de60bba native5277 Evasion deterministically makes385953 dodge, preventing movement; ordinary23922 avoidance and23920→20006 reflection qualify their inputs. Separate immunity-area assertion had an out-of-range fixture recipient, corrected without changing native data. Generic Attr3 reader implemented after immunity; GREEN pending.
+
 ## 2026-10-22 — Equipped producer GREEN; Shield Charge receipt diagnosis
 
 [Coverage](../specs/protection-damage-producers.md):93ca4b7d1 cohort17PASS/1FAIL51.93s/no warnings; all six equipped/metadata cases now pass, including both actual Bloody Rebuke tick inputs and parsed role/set predicates. Previously-green Shield Charge lacked a positive splash receipt in this draw; added native-outcome diagnostics, no production-cause assumption or RNG/flag changes. Retain seventeen disjoint passes; remaining poison/numerical timing and whole-batch acceptance stay open.
