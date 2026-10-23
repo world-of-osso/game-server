@@ -3921,3 +3921,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 - [Lava Burst Overload](investigations/follower-data.md#lava-burst-overload-qualification): fixtureNoCharges distinguished from genuine86-native-hit RED;51505→285466 added to existing HIT callback/effect1 scaling. GREEN pending; EB/Icefury cast-only scope clarified.
 
 - [Lava Overload identity](investigations/follower-data.md#lava-burst-overload-qualification): TC enum77451 is queued cast; native effect32→285466 damage at50yd/s. Direct-payload mapping is not gate-ready; ignored native wrapper/flight oracle added before correction.
+
+- [Lava wrapper](investigations/follower-data.md#lava-burst-overload-qualification): native285466damage/no77451Go genuineRED1FAIL1PASS14.71s. Queuedcast corrected to77451; damage285466 retains effect1 scaling, native wrapper flight unchanged. GREEN pending.
