@@ -323,6 +323,24 @@ fn dps_parity_single_spell_follower_armor_penetration() {
         (armor - expected).abs() < 0.0001,
         "FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_ARMOR_PENETRATION: {armor} vs {expected}"
     );
+    let result = receipt["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "result" && event["spell_id"] == 100780)
+        .unwrap();
+    let effective_armor = result["factors"]["target_armor"].as_f64().unwrap();
+    assert!(
+        (effective_armor - 1293.6).abs() < 0.001,
+        "capture must expose actual post280 armor, not its pre-penetration input: {effective_armor}"
+    );
+    let armor_event = receipt["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "armor" && event["spell_id"] == 100780)
+        .unwrap();
+    assert_eq!(armor_event["factors"]["armor_coefficient"], 3430.0);
 }
 
 #[test]
