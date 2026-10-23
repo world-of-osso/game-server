@@ -1,3 +1,7 @@
+## 2026-10-22 — Approved Darkflame one-way collision drop
+
+[Navigation](systems/navigation.md#one-way-collision-drop--2026-10-22): single2651 source→lower connection approved after raw-edge table; no Halls/Academy/Goldie link. Native MoveFall actual ground/LOS landingPASS, native downpath+authenticated follower routeRED atdef505bf8. Implemented explicit directed native-leg edge and owned PointMovement→MoveFall departure; no canonical bake or NPC damage. `FOLLOWER_NPC_FALL_DAMAGE_UNMODELED`; targetedGREEN pending.
+
 ## 2026-10-22 — Khajin non-Mythic partial
 
 [Khajin](systems/boss-scripts.md#khajin-non-mythic-partial--2026-10-22): ignorednativeRED→sourceShock/Hail/Surge lanes; post-master930e63f96 native4GREEN20.76s Normal1/projected205, real7sHail,90s5/3/3completions/reset/actualsecondcopycredit/corpse. ManualinstantShock fixture observes0.1s beforeautomatic6s request, noAI/timer bypass. Surge/Boulder/controller gaps and stable-key SQLreceipt retained.

@@ -2,6 +2,18 @@
 
 Contract: [navigation](../../specs/navigation.md). Phase 1 uses the same offline `los::bake::Baker` asset/placement collector as LOS, with collision selection: terrain fans/holes, shared ground MOPY/MPY2 WMO collision faces, M2 bounding hulls instead of render batches. No new geometry extractor or CDN access. Shared MH2O parsing lives in `los::liquid` and is re-exported by server ground. Modern LiquidObject IDs (>=42) resolve LVF from the exact authored vertex block size; real ocean root776382 stores81depth bytes, not81float heights.
 
+## One-way collision drop — 2026-10-22
+
+Lead approved exactly one `NAV_ONE_WAY_DROP_FROM_COLLISION` connection on2651 after the six-pair collision/source table. Halls2527, Academy2526 and Goldie2661 remain named gaps. Source component contains Waxbeard210149/order1000; target contains Blazikon208743/order2000 and Darkness208747/order7000. Evidence: game-engine `data/diagnostics/follower-nav-gorek-2026-10-22/component-investigation/one-way-drop-qualification-table.md` and `darkflame-raw-ledge-body-probe.json`.
+
+The explicit directed edge joins two native walking corridors, not a synthetic floor or canonical bake edit. Upper native anchor(535.1,86.534424,110) reaches approved raw edge534.269/86.534/110; departure(533.88,86.534424,110) clears the unchanged radius before descending to raw56.281814 on target polygon281475865905401. `NavigationPath.collision_drop` carries the transition separately from ordinary walking points; pure escape candidates remain walking-only. Worker queries retain existing8192-node/extent/profile behavior. A reverse request cannot walk to the upper source and has no upward edge.
+
+Server navigation stops walking at the upper anchor, then owns native `PointMovement` to departure and existing `MoveFall` gravity to the lower support. Ownership excludes ordinary follow/chase/ground snapping; landing resumes route planning from actual feet. Missing native fall/incorrect landing blocks explicitly rather than teleporting. This reuses existing movement, replication and map collision readers; it adds no NPC physics/damage formula or alternate endpoint.
+
+`FOLLOWER_NPC_FALL_DAMAGE_UNMODELED` remains explicit: existing NPC MoveFall does not apply Player-only landing damage. Candidate height30.252610yd predicts18.979% maxHP ordinary damage under the existing formula, conditional on current health/modifiers if that rule were applied. Do not silently equate the existing NPC behavior with sourced immunity.
+
+At test-onlydef505bf8: actual native MoveFall/ground/LOS continuous landing PASS; native downward navigation and authenticated follower upper→Blazikon progression both RED, stationary/unreachable rather than fixture/compile failures. Implementation GREEN remains pending. [Contract](../../specs/navigation.md#nav_one_way_drop_from_collision); `crates/navigation/src/collision_drop.rs`, `crates/server/src/navigation/collision_drop.rs`, `crates/server/src/followers/darkflame_drop_tests.rs`.
+
 ## Partial corridor continuation — 2026-10-22
 
 Canonical Neltharus entrance→Gorek189478 is connected: native-link BFS visits26936polygons and reaches the target. Production8192-node A* returns PARTIAL|OUT_OF_NODES after296polygons; native successive queries from each final polygon reach Gorek in296/263/84polygons (251/245/75projected corners), without changing assets, search extents or pool size. The old query discarded the first corridor, so the actual mover immediately returned Blocked; both library and server mover have observed RED tests. Evidence: `data/diagnostics/follower-nav-gorek-2026-10-22/` in game-engine.

@@ -52,6 +52,35 @@ fn darkflame_drop_native_navigation_connects_downward_but_never_upward() {
 }
 
 #[test]
+#[ignore = "requires actual2527/2526/2661 navigation assets"]
+fn darkflame_drop_policy_preserves_the_three_unapproved_map_gaps() {
+    for (map_id, from, to) in [
+        (
+            2527,
+            Vec3::new(-0.370431, 20.8162, -228.269),
+            Vec3::new(-353.12274, -67.9066, 155.7234),
+        ),
+        (
+            2526,
+            Vec3::new(1410.22, 955.637, 2771.71),
+            Vec3::new(1815.2512, 904.01917, 2783.9756),
+        ),
+        (
+            2661,
+            Vec3::new(2650.88, 101.042, 4835.88),
+            Vec3::new(2649.0535, 110.600006, 5013.1484),
+        ),
+    ] {
+        let mut map =
+            ::navigation::NavigationMap::open(&navigation_root().join(map_id.to_string())).unwrap();
+        assert!(
+            map.complete_path(from, to).is_err(),
+            "map{map_id} has no approved drop"
+        );
+    }
+}
+
+#[test]
 #[ignore = "requires actual2651 navigation/ground assets"]
 fn darkflame_drop_native_move_fall_lands_continuously_on_target_polygon() {
     use crate::scripted_ai::fall_movement;
@@ -135,6 +164,7 @@ fn darkflame_drop_follower_sim_traverses_only_after_upper_route_stage() {
         app.add_systems(
             Update,
             (
+                crate::scripted_ai::movement::point_movement_system,
                 crate::scripted_ai::fall_movement::advance_falls,
                 crate::scripted_ai::fall_movement::release_finished_falls,
             )
