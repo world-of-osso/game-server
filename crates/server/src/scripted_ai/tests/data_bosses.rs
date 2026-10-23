@@ -47,6 +47,8 @@ mod azure_telash_return;
 mod broggok;
 #[path = "bromach.rs"]
 mod bromach;
+#[path = "candle_king.rs"]
+mod candle_king;
 #[path = "celebras.rs"]
 mod celebras;
 #[path = "crawth.rs"]
@@ -490,8 +492,8 @@ fn encounter_fixture(
             spawn_prepared_actor(&mut app, inputs.authored_spawn(difficulty), map, difficulty);
         let near = if [
             ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 16807, 17306, 17308,
-            209230, 215405, 215407, 216619, 207946, 194181, 186616, 186120, 210156, 210108, 189722,
-            189727, 186116, 189478,
+            209230, 215405, 215407, 216619, 207946, 194181, 186616, 186120, 210156, 210108, 208745,
+            189722, 189727, 186116, 189478,
         ]
         .contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)

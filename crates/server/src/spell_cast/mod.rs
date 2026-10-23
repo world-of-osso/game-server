@@ -190,6 +190,8 @@ mod interruptibility;
 #[cfg(test)]
 mod invigorating_fury_tests;
 #[cfg(test)]
+pub(crate) mod native_apl;
+#[cfg(test)]
 mod periodic_healing_taken_tests;
 mod sanctuary;
 pub(crate) use interruptibility::can_interrupt_cast;
@@ -732,6 +734,16 @@ impl SpellHistory {
                     .category_ready_at
                     .get(&category)
                     .is_some_and(|&at| at > now))
+    }
+
+    /// TC a352b1fa SpellHistory.cpp:709–736 GetRemainingCooldown: a live own
+    /// entry wins; otherwise consult its category. Expired entries are not live.
+    pub(crate) fn remaining_cooldown_ms(&self, spell: &SpellInfo, now: f64) -> u64 {
+        let category = spell.categories.as_ref().map_or(0, |c| c.category);
+        let own_deadline = self.spell_ready_at.get(&spell.id).filter(|&&at| at > now);
+        let deadline = own_deadline.or_else(|| self.category_ready_at.get(&category));
+        let remaining = deadline.copied().unwrap_or(now) - now;
+        (remaining.max(0.0) * 1000.0) as u64
     }
 
     pub(crate) fn on_gcd(&self, spell: &SpellInfo, now: f64) -> bool {
@@ -3519,6 +3531,40 @@ fn category_cooldown_modifier_ms(world: &World, caster: Entity, category: u32) -
     total
 }
 
+fn base_cooldowns(spell: &SpellInfo) -> (u32, u32) {
+    let (spell_ms, category_ms) = spell
+        .cooldowns
+        .as_ref()
+        .map_or((0, 0), |cd| (cd.recovery_ms, cd.category_recovery_ms));
+    let spell_ms = if spell.id == mobile_banking::MOBILE_BANKING {
+        shared::guild_perks::MOBILE_BANKING_COOLDOWN_2H
+    } else {
+        spell_ms
+    };
+    (spell_ms, category_ms)
+}
+
+fn cooldown_recovery_ms(world: &World, caster: Entity, spell: &SpellInfo, base: u32) -> u32 {
+    if base == 0 {
+        return 0;
+    }
+    let modified = modify(world, caster, spell, SpellModOp::Cooldown, base as f32);
+    let hasted = haste_regen_cooldown_ms(world, caster, spell, modified);
+    let rate = recovery_rate::multiplier(world, caster, spell);
+    let recovered = if rate == 1.0 {
+        hasted
+    } else {
+        (f64::from(hasted) * rate).trunc() as f32
+    };
+    let category = spell.categories.as_ref().map_or(0, |c| c.category);
+    let adjusted = if recovered > 0.0 {
+        recovered + category_cooldown_modifier_ms(world, caster, category)
+    } else {
+        recovered
+    };
+    adjusted.max(0.0).round() as u32
+}
+
 fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // SpellHistory::HandleCooldowns returns before consuming a charge or starting
     // a clock when source flag 0x2 is set. The cast's GCD remains independent.
@@ -3527,38 +3573,12 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
     let now = history_now(world);
     let ready_credit = control_dream::ready_credit_ms(world, caster, spell, now);
-    let (base_recovery_ms, base_category_ms) = spell
-        .cooldowns
-        .as_ref()
-        .map_or((0, 0), |cd| (cd.recovery_ms, cd.category_recovery_ms));
-    let base_recovery_ms = if spell.id == mobile_banking::MOBILE_BANKING {
-        shared::guild_perks::MOBILE_BANKING_COOLDOWN_2H
-    } else {
-        base_recovery_ms
-    };
+    let (base_recovery_ms, base_category_ms) = base_cooldowns(spell);
     let category = spell.categories.as_ref().map_or(0, |c| c.category);
-    let category_modifier_ms = category_cooldown_modifier_ms(world, caster, category);
-    let cooldown = |base: u32| {
-        if base == 0 {
-            return 0;
-        }
-        let modified = modify(world, caster, spell, SpellModOp::Cooldown, base as f32);
-        let hasted = haste_regen_cooldown_ms(world, caster, spell, modified);
-        let rate = recovery_rate::multiplier(world, caster, spell);
-        let recovered = if rate == 1.0 {
-            hasted
-        } else {
-            (f64::from(hasted) * rate).trunc() as f32
-        };
-        let adjusted = if recovered > 0.0 {
-            recovered + category_modifier_ms
-        } else {
-            recovered
-        };
-        adjusted.max(0.0).round() as u32
-    };
-    let recovery_ms = cooldown(base_recovery_ms).saturating_sub(ready_credit);
-    let category_ms = cooldown(base_category_ms).saturating_sub(ready_credit);
+    let recovery_ms =
+        cooldown_recovery_ms(world, caster, spell, base_recovery_ms).saturating_sub(ready_credit);
+    let category_ms =
+        cooldown_recovery_ms(world, caster, spell, base_category_ms).saturating_sub(ready_credit);
     let mods = charge_mods(world, caster, spell);
     let mut entity = world.entity_mut(caster);
     let mut history = entity.entry::<SpellHistory>().or_default();

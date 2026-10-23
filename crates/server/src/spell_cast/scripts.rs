@@ -49,7 +49,8 @@ mod windwalker;
 mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
 pub(crate) use windwalker::{
-    DANCE_OF_CHIJI, after_dance_cast_event, check_dance_proc, ordinary_combo_cast,
+    DANCE_OF_CHIJI, after_dance_cast_event, check_dance_proc, combo_strikes_multiplier,
+    ordinary_combo_cast,
 };
 
 pub(super) use batch9::update_ground_pulses;
@@ -439,7 +440,9 @@ pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32)
         batch3::SCORCH => batch3::scorch_crit(world, caster, target),
         batch12::GARGOYLE_STRIKE => batch12::gargoyle_crit(world, caster),
         FIRE_BLAST | batch5::CHAOS_BOLT | voltaic_blaze::DAMAGE => Some(100.0),
-        batch5::LAVA_BURST_DAMAGE => batch5::lava_burst_crit(world, target),
+        batch5::LAVA_BURST_DAMAGE | super::elemental_overload::LAVA_OVERLOAD_DAMAGE => {
+            batch5::lava_burst_crit(world, caster, target)
+        }
         _ => None,
     }
 }
@@ -451,9 +454,6 @@ pub(crate) fn rake_bleed_snapshot(world: &World, caster: Entity, amount: f32) ->
 pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
-    if let Some(hook) = batch19::damage_amount(spell_id) {
-        return Some(hook);
-    }
     match spell_id {
         super::elemental_overload::LIGHTNING_OVERLOAD
         | super::elemental_overload::CHAIN_OVERLOAD
