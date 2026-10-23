@@ -52,6 +52,7 @@ fn arms_native_apl_target_health_reads_the_actual_selected_unit() {
 #[test]
 fn arms_native_apl_target_aura_remains_requires_this_casters_real_aura() {
     let mut h = warrior();
+    let foreign = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 0.0);
     let binding = Bindings {
         buffs: [
             ("colossus_smash".into(), COLOSSUS_WOUND),
@@ -65,6 +66,24 @@ fn arms_native_apl_target_aura_remains_requires_this_casters_real_aura() {
         (REND_DOT, "dot.rend_dot"),
     ] {
         let remaining = format!("{prefix}.remains");
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: foreign,
+                target: h.npc,
+                spell_id: spell,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        assert!(
+            h.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(h.npc)
+                .unwrap()
+                .iter()
+                .any(|aura| aura.spell_id == spell && aura.caster == foreign)
+        );
         let before = NativeFacts::new(
             h.app.world(),
             h.caster,
