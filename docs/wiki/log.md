@@ -1,3 +1,7 @@
+## 2026-10-23 — Earlier main-MDT / direct Wowhead source gap
+
+[Bounded source pass](investigations/follower-data.md#earlier-main-mdt-history-and-direct-wowhead-source-gap--2026-10-23):16immutable snapshots/496seconds, no qualified clone. Native texture labels found, but fixed840×555 is not a proved historical art inverse; renderer tile width/4+5 retained as source limitation, no alternate normalization adopted. Followed standing Wowhead path:84body pins unchanged/genuine empty mappers, plus newly fetched own213932also empty. All4maps remain source-blocked/noXY/noSQL/no aliases/tolerance changes/canonical writes.
+
 ## 2026-10-23 — Pinned Legacy history / 27-map coverage
 
 [History and coverage](investigations/follower-data.md#pinned-legacy-history-and-27-map-coverage--2026-10-23):27difficulty205 maps/878qualified trash poses independently match publication; per-map runnable gate separates missing components from unproved ones. Official Legacyc6 ancestry14file revisions has byte-identical zone/frame/clone data; prior3map rejection proofs retained, Dawn2anchors1140.671/473.526yd also reject. Four named chain gaps/noSQL; no aliases/tolerance changes/canonical writes. Script baseline6c00e0df1; four owner13106 component gaps and unapproved drops explicit.
