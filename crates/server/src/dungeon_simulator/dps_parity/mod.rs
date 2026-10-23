@@ -1,5 +1,7 @@
 //! Native 300s dummy qualification. This measures the existing kit, not a new rotation.
 mod inputs;
+#[cfg(test)]
+mod meteorite_tests;
 mod player_rotation;
 mod report;
 use bevy::prelude::*;
