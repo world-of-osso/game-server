@@ -242,6 +242,10 @@ fn apply_trigger_spells(
     }
     for &unit in inside {
         if periodic || !trigger.inside.contains(&unit) {
+            if trigger.spell_id == meteor::BURN_FIELD {
+                meteor::cast_burn_on_entry(world, trigger, unit);
+                continue;
+            }
             super::cast_triggered_with_item_level(
                 world,
                 trigger.caster,

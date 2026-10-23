@@ -21,13 +21,9 @@ pub(crate) fn cast_meteor(world: &mut World, ctx: &EffectCtx, _effect: &SpellEff
         warn!("Meteor153561 has no authored destination");
         return;
     };
-    crate::spell_cast::cast_triggered_at_destination(
-        world,
-        ctx.caster,
-        DELAY_FIELD,
-        dest.position,
-        ctx.depth + 1,
-    );
+    if let Err(reason) = cast_at_destination(world, ctx.caster, DELAY_FIELD, dest.position, true) {
+        debug!(?reason, "Meteor delay field admission failed");
+    }
 }
 
 pub(super) fn is_delay_field(spell: u32, properties: i32) -> bool {
@@ -48,15 +44,43 @@ pub(super) fn burn_binding(world: &World) -> Result<(f32, Relation, u32), String
 
 pub(super) fn expire_delay(world: &mut World, trigger: &SpellAreaTrigger, position: Vec3) {
     if trigger.spell_id == DELAY_FIELD {
-        crate::spell_cast::cast_triggered_at_destination(
-            world,
-            trigger.caster,
-            METEOR_MISSILE,
-            position,
-            // TC OnRemove starts a new spell after the native3s lifetime;
-            // it is not nested inside the original effect-dispatch stack.
-            0,
-        );
+        // TC OnRemove uses TRIGGERED_NONE. In particular, an admitted hardcast
+        // rejects this new spell; SimC's unconditional delayed impact differs.
+        if let Err(reason) =
+            cast_at_destination(world, trigger.caster, METEOR_MISSILE, position, false)
+        {
+            debug!(?reason, "Meteor expiry missile admission failed");
+        }
+    }
+}
+
+fn cast_at_destination(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    position: Vec3,
+    ignore_in_progress: bool,
+) -> Result<(), crate::spell_cast::CastFailure> {
+    let mut spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+        .cloned()
+        .ok_or(crate::spell_cast::CastFailure::UnknownSpell)?;
+    spell.cast_destination = Some(position.to_array());
+    let target =
+        crate::spell_cast::validate_start(world, caster, &spell, None, ignore_in_progress)?;
+    crate::spell_cast::begin_validated_cast(world, caster, &spell, target)
+}
+
+pub(super) fn cast_burn_on_entry(world: &mut World, trigger: &SpellAreaTrigger, unit: Entity) {
+    // Source OnUnitEnter waives only cast-in-progress/reporting, not all checks.
+    if let Err(reason) = crate::spell_cast::creature_cast_ignoring_in_progress(
+        world,
+        trigger.caster,
+        BURN_DAMAGE,
+        Some(unit),
+    ) {
+        debug!(?reason, "Meteor burn entry admission failed");
     }
 }
 
