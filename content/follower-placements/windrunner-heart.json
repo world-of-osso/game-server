@@ -1,0 +1,208 @@
+{
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "calibration_entries": [
+    188252,
+    189232
+  ],
+  "map_id": 2805,
+  "entrance_id": null,
+  "entrance_gap": "FOLLOWER_ENTRANCE_UNSOURCED_2805",
+  "entries": [
+    {
+      "entry": 231636,
+      "ordinal": 4,
+      "map_id": 2805,
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2658",
+      "journal_encounter_id": 2658,
+      "cache_sha256": "696c4030c712d562eb0b984a61ea71da3f933e11f59d7ac6d5654b3dfae0cb6c",
+      "faction_policy": "FOLLOWER_BOSS_HOSTILE_FROM_JOURNAL_ENCOUNTER",
+      "faction_donor": 188252,
+      "donor_reason": "Unique journal actor on follower map qualifies hostile-known under explicit lead policy; no same-map native positive faction16 donor. Sourced Dragonflight boss Melidrussa188252 donates faction16 only; no stats/CT donation or invented NPC reaction.",
+      "journal_actor_source": {
+        "policy": "JEC_EXACT_NAME_UNIQUE_DISPLAY_PREVIEW",
+        "journal_encounter_id": 2658,
+        "journal_actor_id": 5844,
+        "mdt_boss_source": {
+          "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+          "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+          "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961"
+        }
+      },
+      "source_floor": 6,
+      "source_floor_evidence": {
+        "policy": "FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_UPWARD_CONSENSUS",
+        "wmo_group_id": 74082,
+        "placement_unique_id": 65464215,
+        "maximum_height_difference_yards": 1,
+        "triangles": [
+          {
+            "triangle_index": 8463,
+            "height": 343.2374140470906,
+            "upward": true,
+            "world_vertices": [
+              [
+                5215.997669219971,
+                -3137.389259338379,
+                342.06382942199707
+              ],
+              [
+                5216.130628585815,
+                -3139.738540649414,
+                342.5115222930908
+              ],
+              [
+                5216.869329452515,
+                -3137.0587272644043,
+                344.32139778137207
+              ]
+            ]
+          },
+          {
+            "triangle_index": 8561,
+            "height": 330.89757514955755,
+            "upward": false,
+            "world_vertices": [
+              [
+                5216.953145027161,
+                -3136.1141452789307,
+                331.59382820129395
+              ],
+              [
+                5216.953145027161,
+                -3139.608256340027,
+                330.1427478790283
+              ],
+              [
+                5211.203218460083,
+                -3138.715142250061,
+                330.1247730255127
+              ]
+            ]
+          },
+          {
+            "triangle_index": 10909,
+            "height": 330.5345768363143,
+            "upward": false,
+            "world_vertices": [
+              [
+                5215.355490207672,
+                -3137.9985218048096,
+                330.3086414337158
+              ],
+              [
+                5216.953169345856,
+                -3137.252468109131,
+                330.82994270324707
+              ],
+              [
+                5216.953170776367,
+                -3138.796929359436,
+                329.91197395324707
+              ]
+            ]
+          },
+          {
+            "triangle_index": 41477,
+            "height": 342.70351868932653,
+            "upward": true,
+            "world_vertices": [
+              [
+                5216.8692278862,
+                -3139.6298418045044,
+                341.3499927520752
+              ],
+              [
+                5216.869154930115,
+                -3137.6229515075684,
+                342.82005500793457
+              ],
+              [
+                5215.194988250732,
+                -3137.8105392456055,
+                342.4684314727783
+              ]
+            ]
+          },
+          {
+            "triangle_index": 49417,
+            "height": 343.54262134904747,
+            "upward": true,
+            "world_vertices": [
+              [
+                5212.100974082947,
+                -3138.3303546905518,
+                343.09016609191895
+              ],
+              [
+                5216.97219991684,
+                -3138.879207611084,
+                343.09016609191895
+              ],
+              [
+                5216.972200393677,
+                -3129.935194015503,
+                346.72935676574707
+              ]
+            ]
+          },
+          {
+            "triangle_index": 50376,
+            "height": 325.4425927066185,
+            "upward": false,
+            "world_vertices": [
+              [
+                5210.4099378585815,
+                -3132.7542304992676,
+                330.24763679504395
+              ],
+              [
+                5216.946558475494,
+                -3133.9803791046143,
+                330.2293872833252
+              ],
+              [
+                5216.975616455078,
+                -3140.4864416122437,
+                322.08467292785645
+              ]
+            ]
+          }
+        ],
+        "source_files": [
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/6099383.wdt",
+            "sha256": "0596ceb2c71206d93f24a583d7bb581df813b0642400f506929e12d606ac3874"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/6099464.adt",
+            "sha256": "d854475ed2567fbc596a9198c45407df1703ef4080a03438e234c8c4efb00bb4"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/6047551.wmo",
+            "sha256": "8e2ac6bd1c5b001c95eeb610679bc792eec397c61bae1174eb9a4adbda4c04fa"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/6156701.wmo",
+            "sha256": "000b726b137b4d1ea06fddfb5d0f9b7f3df420e2f5408443b1bf5fad4af58819"
+          }
+        ],
+        "research_proof": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/windrunner-remaining-source-floor-research.json",
+        "research_proof_sha256": "2f86eace7d7208f34f4b0219c8449f1a7b64727daa83ba68dffc0406b87483b7"
+      }
+    }
+  ],
+  "source_gaps": [],
+  "surface_proof": {
+    "path": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/midnight-2805-2658-covering-surfaces.json",
+    "sha256": "f47db07d7f4138be73dfd44df2e7fd535cb8649815b1506d0678bf8d2176269f"
+  },
+  "preserved_placement_sources": [
+    {
+      "receipt": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/windrunner-emberdawn-packet-1/receipt.json",
+      "sha256": "235883b460003bad2da13c470f814b2145e6ca1af16e4108cd954a6f4a4651db"
+    }
+  ]
+}

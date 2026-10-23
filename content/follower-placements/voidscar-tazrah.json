@@ -1,0 +1,50 @@
+{
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "calibration_entries": [
+    188252,
+    189232
+  ],
+  "map_id": 2923,
+  "entrance_id": null,
+  "entrance_gap": "FOLLOWER_ENTRANCE_UNSOURCED_2923",
+  "entries": [
+    {
+      "entry": 238887,
+      "ordinal": 1,
+      "map_id": 2923,
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2791",
+      "journal_encounter_id": 2791,
+      "faction_policy": "FOLLOWER_BOSS_HOSTILE_FROM_JOURNAL_ENCOUNTER",
+      "faction_donor": 188252,
+      "donor_reason": "Exact unique native name plus pinned own MDT boss entry establishes preview-only journal binding on follower205; Melidrussa188252 donates faction16 only, own native modifiers/CT/models retained.",
+      "journal_actor_source": {
+        "policy": "JEC_EXACT_NAME_UNIQUE_DISPLAY_PREVIEW",
+        "journal_encounter_id": 2791,
+        "journal_actor_id": 5960,
+        "mdt_boss_source": {
+          "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+          "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+          "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961"
+        }
+      }
+    }
+  ],
+  "source_gaps": [],
+  "surface_proof": {
+    "path": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/midnight-2923-2791-covering-surfaces.json",
+    "sha256": "cfd72b341eb6d3dfc158d85f64a8a8ad99721d026423a4ab15d902888dbc0bb1"
+  },
+  "preserved_placement_sources": [
+    {
+      "receipt": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/voidscar-atroxus-packet-1/receipt.json",
+      "sha256": "5363753440bf048c6e75cae7ce043d09f65912ab264355f0bcf90a960280ab29"
+    },
+    {
+      "receipt": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/voidscar-trash-packet-1/receipt.json",
+      "sha256": "5b7624294ff55455819eb0fa21f0b9cb06bc01e3628671c4ecfca26de0356a19"
+    }
+  ]
+}

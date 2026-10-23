@@ -1,0 +1,62 @@
+{
+  "map_id": 2516,
+  "entrance_id": 100026,
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "entries": [
+    {
+      "entry": 186151,
+      "ordinal": 0,
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2477",
+      "journal_encounter_id": 2477,
+      "cache_sha256": "15a6bd8b80e1091bad27993558cd4a1285324ab1687bda1436942a4dfdde01c4",
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/Dragonflight/TheNokhudOffensive/BalakarKhan.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "e5e6280b900d35106b61694d08c1b1908bb58f5bdcc2b02f2aa638b8d0e54066",
+        "journal_actor_id": 5377
+      },
+      "faction_donor": 189232,
+      "donor_reason": "No native Nokhud population; sourced Dragonflight boss faction16 with matching hostile A/H react. Own Normal1 class, ContentTuning and budget retained."
+    },
+    {
+      "entry": 186338,
+      "ordinal": 1,
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2478",
+      "journal_encounter_id": 2478,
+      "cache_sha256": "3881a14af36b897e11aca59890a3352b1418e6f02541443d48dd931181960e93",
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/Dragonflight/TheNokhudOffensive/TeeraAndMaruuk.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "0339bf77f3bdf51fae0cb8187b2671d369e7d6ef82ecf9fc862abcfffb5c96dc",
+        "journal_actor_id": 5381
+      },
+      "faction_donor": 189232,
+      "donor_reason": "No native Nokhud population; sourced Dragonflight boss faction16 with matching hostile A/H react. Own Normal1 class, ContentTuning and budget retained."
+    },
+    {
+      "entry": 186616,
+      "ordinal": 4,
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2498",
+      "journal_encounter_id": 2498,
+      "cache_sha256": "665033eacba947e8d7fee5ffa02b311dd95841d6af2dd0479834b72d82bca11a",
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/Dragonflight/TheNokhudOffensive/Granyth.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "3938e92887285c27d3b1d6aa9022a34920ca0cf72f41cd08d3e22c7cda70e87d",
+        "journal_actor_id": 5384
+      },
+      "faction_donor": 189232,
+      "donor_reason": "No native Nokhud population; sourced Dragonflight boss faction16 with matching hostile A/H react. Own Normal1 class, ContentTuning and budget retained."
+    }
+  ],
+  "source_gaps": [
+    {"entry": 186339, "reserved_ordinal": 2, "name": "FOLLOWER_PLACEMENT_NO_INDIVIDUAL_SOURCE_186339", "reason": "Teera has no individual cached marker. A shared JournalEncounter2478 marker cannot position a separately identified actor; lead explicitly rejected co-location. Require an individual TDB, held-out-validated MDT, or Wowhead point. No invented offset or actor alias."},
+    {"entry": 186615, "reserved_ordinal": 3, "name": "FOLLOWER_PLACEMENT_NO_BAKED_SUPPORT_2516_186615", "journal_encounter_id": 2497, "wow_xy": [-2469.25035560143, 2774.111445334274], "reason": "No baked walkable polygon covers precise authenticated JournalEncounter2497 XY. No source coordinate shift or height invented; initial packet receipt retains the empty support list."}
+  ],
+  "calibration_entries": [188252, 189232]
+}

@@ -5,11 +5,13 @@ import json
 import math
 from pathlib import Path
 import re
+import struct
 
 from wowhead_forever import percent_to_world
 
 BUILD = "12.1.5.70448"
 TABLES = ("AreaTable", "UiMap", "UiMapAssignment", "UiMapGroupMember")
+SINGLE_FRAME_POLICY = 'FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME'
 
 
 def digest(path):
@@ -17,13 +19,13 @@ def digest(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def read_db2(directory):
+def read_db2(directory, additional_tables=()):
     directory = Path(directory)
     receipt = json.loads((directory / "receipt.json").read_text())
     if receipt["identity"]["build"] != BUILD or receipt["identity"]["extraction_source"] != "authenticated-local-CASC-content-root":
         raise ValueError("require authenticated local CASC build70448")
     tables, proof = {}, {}
-    for table in TABLES:
+    for table in (*TABLES, *additional_tables):
         path = directory / f"{table}.csv"
         metadata = receipt["tables"][table]
         if not metadata["content_authenticated"] or metadata["unreadable_records"] or digest(path) != metadata["csv_sha256"]:
@@ -70,11 +72,21 @@ def read_cached_npc(cache, entry):
                 cache_body=str(body), cache_sha256=digest(body), cache_metadata=metadata)
 
 
-def select_assignment(tables, map_id, marker):
-    area = next(row for row in tables["AreaTable"] if int(row["ID"]) == marker["zone"])
+def select_assignment(tables, map_id, marker, policy=None):
+    area = next((row for row in tables["AreaTable"] if int(row["ID"]) == marker["zone"]), None)
+    if area is None:
+        raise ValueError(f"Wowhead zone{marker['zone']} absent from authenticated AreaTable")
     if int(area["ContinentID"]) != map_id:
         raise ValueError("Wowhead zone does not belong to requested DB2 map")
     assignments = [row for row in tables["UiMapAssignment"] if int(row["MapID"]) == map_id]
+    if policy == SINGLE_FRAME_POLICY:
+        if len(assignments) != 1 or marker['floor'] != 0:
+            raise ValueError('single-frame policy requires exactly one map assignment and observed floor0')
+        if any(row['UiMapID'] == assignments[0]['UiMapID'] for row in tables['UiMapGroupMember']):
+            raise ValueError('single-frame policy requires absent DB2 group-floor identity')
+        return assignments
+    if policy is not None:
+        raise ValueError('unknown explicit marker projection policy')
     map_ids = {row["UiMapID"] for row in assignments}
     floors = {row["UiMapID"] for row in tables["UiMapGroupMember"]
               if row["UiMapID"] in map_ids and int(row["FloorIndex"]) == marker["floor"]}
@@ -86,6 +98,60 @@ def select_assignment(tables, map_id, marker):
     if len(bounds) != 1:
         raise ValueError("floor has multiple horizontal bounds; cannot guess assignment")
     return candidates
+
+
+def measure_assignment_spread_yards(assignments):
+    keys = ('UiMin_0', 'UiMin_1', 'UiMax_0', 'UiMax_1', 'Region_0', 'Region_1', 'Region_3', 'Region_4')
+    values = {key: [float(a[key]) for a in assignments] for key in keys}
+    if not all(math.isfinite(v) for column in values.values() for v in column):
+        raise ValueError('journal assignments have nonfinite horizontal bounds')
+    widths = [[float(a[f'UiMax_{i}']) - float(a[f'UiMin_{i}']) for i in (0, 1)] for a in assignments]
+    if any(width <= 0 for pair in widths for width in pair):
+        raise ValueError('journal assignments have degenerate UI bounds')
+    u_scale = max(abs(float(a['Region_4']) - float(a['Region_1'])) / w[0] for a, w in zip(assignments, widths))
+    v_scale = max(abs(float(a['Region_3']) - float(a['Region_0'])) / w[1] for a, w in zip(assignments, widths))
+    spreads = {key: max(column) - min(column) for key, column in values.items()}
+    for axis, scale in ((0, u_scale), (1, v_scale)):
+        for edge in ('UiMin', 'UiMax'):
+            spreads[f'{edge}_{axis}'] *= scale
+    return spreads
+
+
+def resolve_journal_assignments(assignments, marker):
+    if not assignments:
+        raise ValueError('journal UiMap has no assignment on the requested map')
+    spread = measure_assignment_spread_yards(assignments)
+    if any(value > 0.001 for value in spread.values()):
+        raise ValueError('journal UiMap horizontal bounds are not equivalent within0.001yd')
+    chosen = min(assignments, key=lambda a: int(a['OrderIndex']))
+    points = [transform_marker(marker, [a]) for a in assignments]
+    projected = {axis: max(p[i] for p in points) - min(p[i] for p in points) for i, axis in enumerate(('x', 'y'))}
+    proof = dict(policy='FOLLOWER_PLACEMENT_EQUIVALENT_UIMAP_ASSIGNMENTS', bounds_tolerance_yards=0.001,
+                 component_spread_yards=spread, projected_axis_spread_yards=projected,
+                 chosen_assignment_id=int(chosen['ID']), chosen_order_index=int(chosen['OrderIndex']),
+                 order_source='TC a352b1fa DB2Stores.cpp:3154-3157; exact lowest-OrderIndex row, no averaging')
+    return [chosen] + [a for a in assignments if a is not chosen], proof
+
+
+def read_journal_marker(tables, map_id, entry, journal_id):
+    rows = [r for r in tables['JournalEncounter'] if int(r['ID']) == journal_id]
+    if len(rows) != 1:
+        raise ValueError('placement requires one authenticated journal encounter row')
+    row = rows[0]
+    assignments = [a for a in tables['UiMapAssignment']
+                   if a['UiMapID'] == row['UiMapID'] and int(a['MapID']) == map_id]
+    floors = {int(g['FloorIndex']) for g in tables['UiMapGroupMember'] if g['UiMapID'] == row['UiMapID']}
+    if len(floors) > 1:
+        raise ValueError('journal UiMap has ambiguous floor identities')
+    percent = [float(row['Map_0']) * 100, float(row['Map_1']) * 100]
+    if not all(math.isfinite(v) and 0 <= v <= 100 for v in percent):
+        raise ValueError('journal marker is outside its UiMap')
+    marker = dict(ui_map_id=int(row['UiMapID']), floor=next(iter(floors)) if floors else None, percent=percent)
+    assignments, resolution = resolve_journal_assignments(assignments, marker)
+    page = dict(entry=entry, source_table='JournalEncounter', source_row=row, assignment_resolution=resolution,
+                source_row_sha256=hashlib.sha256(json.dumps(row, sort_keys=True).encode()).hexdigest(),
+                url=f'db2:{BUILD}/JournalEncounter#{journal_id}', markers=[marker])
+    return page, marker, assignments
 
 
 def transform_marker(marker, assignments):
@@ -118,10 +184,130 @@ def triangle_height(point, triangle):
     return wa * a[1] + wb * b[1] + wc * c[1]
 
 
-def read_source_floor_support(record, marker, assignments, heights):
-    if 'source_floor_z_bounds' not in record:
-        return heights
+def match_upward_source_floor(evidence, marker, assignments, heights):
+    x, y = transform_marker(marker, assignments)
+    upward = []
+    for triangle in evidence['triangles']:
+        a, b, c = triangle['world_vertices']
+        normal_z = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+        if normal_z <= 0:
+            continue
+        bevy = [(v[0], v[2], -v[1]) for v in (a, b, c)]
+        height = triangle_height((x, -y), bevy)
+        if height is not None:
+            upward.append(height)
+    if not upward:
+        raise ValueError('source floor group has no upward triangle at source XY')
+    if evidence['policy'] == 'FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_GROUP_UPWARD_TRIANGLE' and len(upward) != 1:
+        raise ValueError('source floor group requires exactly one upward triangle at source XY')
+    tolerance = evidence['maximum_height_difference_yards']
+    if not math.isfinite(tolerance) or tolerance <= 0:
+        raise ValueError('source floor matching tolerance must be finite and positive')
+    matched = [z for z in heights if all(abs(z - height) <= tolerance for height in upward)]
+    if len(matched) != 1:
+        raise ValueError('source upward floor requires exactly one baked candidate within tolerance')
+    return matched
+
+
+def read_binary_chunks(data):
+    offset = 0
+    while offset < len(data):
+        if offset + 8 > len(data):
+            raise ValueError('truncated source chunk header')
+        size = struct.unpack_from('<I', data, offset + 4)[0]
+        end = offset + 8 + size
+        if end > len(data):
+            raise ValueError('truncated source chunk payload')
+        yield data[offset:offset + 4][::-1], data[offset + 8:end]
+        offset = end
+
+
+def sample_authored_terrain_cell(payload, x, y):
+    # wow-adt882b2fc McnkHeader/parse_terrain_height_chunks; los/bake/adt.rs141–180.
+    corner_x, corner_y, base = struct.unpack_from('<3f', payload, 104)
+    unit = (1600 / 3) / 128
+    if not (corner_x - 8 * unit <= x <= corner_x and corner_y - 8 * unit <= y <= corner_y):
+        return []
+    row = min(7, int((corner_x - x) / unit))
+    col = min(7, int((corner_y - y) / unit))
+    flags = struct.unpack_from('<I', payload)[0]
+    if flags & 0x10000:
+        hole = struct.unpack_from('<Q', payload, 20)[0] >> (row * 8 + col) & 1
+    else:
+        hole = struct.unpack_from('<H', payload, 60)[0] >> ((row // 2) * 4 + col // 2) & 1
+    if hole:
+        return []
+    heights = struct.unpack('<145f', dict(read_binary_chunks(payload[128:]))[b'MCVT'])
+    def vertex(r, c, height):
+        return (corner_x - r * unit, base + height, -(corner_y - c * unit))
+    def outer(r, c):
+        return vertex(r, c, heights[r * 17 + c])
+    tl, tr = outer(row, col), outer(row, col + 1)
+    bl, br = outer(row + 1, col), outer(row + 1, col + 1)
+    center = vertex(row + 0.5, col + 0.5, heights[row * 17 + 9 + col])
+    triangles = ((tl, tr, center), (tr, br, center), (br, bl, center), (bl, tl, center))
+    return [height for triangle in triangles if (height := triangle_height((x, -y), triangle)) is not None]
+
+
+def validate_covering_wmo_audit(evidence, verified):
+    report = json.loads(Path(evidence['covering_wmo_report']).read_text())
+    roots = evidence['covering_wmo_roots']
+    expected = {placement['model'] for placement in report['placements']}
+    if report['missing_group_files'] or not expected or expected != {int(Path(root['path']).stem) for root in roots}:
+        raise ValueError('covering WMO audit incomplete')
+    for root in roots:
+        path = Path(root['path'])
+        chunks = dict(read_binary_chunks(path.read_bytes()))
+        groups = {row[0] for row in struct.iter_unpack('<I', chunks[b'GFID'])} - {0}
+        required = {str(path), *(str(path.with_name(f'{fdid}.wmo')) for fdid in groups)}
+        if groups != set(root['checked_group_file_ids']) or not required <= verified:
+            raise ValueError('covering WMO audit incomplete')
+    return report
+
+
+def match_authored_terrain_floor(record, marker, assignments, heights):
     evidence = record['source_floor_evidence']
+    if record['entry'] != 211089 or evidence['selection_scope'] != 'PROJECT_SELECTION_NOT_TC_SPAWN_Z' or evidence['maximum_height_difference_yards'] != 1:
+        raise ValueError('terrain ground selection is approved only for Anub within1yd, not TC spawn-Z')
+    if marker['floor'] != record['source_floor']:
+        raise ValueError('source terrain floor differs from the journal floor')
+    verified = set()
+    for artifact in evidence['source_files']:
+        if digest(artifact['path']) != artifact['sha256']:
+            raise ValueError('source terrain evidence file changed')
+        verified.add(artifact['path'])
+    if not {evidence['terrain_file'], evidence['covering_wmo_report']} <= verified:
+        raise ValueError('terrain and covering WMO report require source hashes')
+    report = validate_covering_wmo_audit(evidence, verified)
+    x, y = transform_marker(marker, assignments)
+    for group in report['groups']:
+        for hit in group['hits'].get(str(record['entry']), []):
+            a, b, c = hit['world_vertices']
+            normal = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+            height = triangle_height((x, -y), [(v[0], v[2], -v[1]) for v in (a, b, c)])
+            if normal > 0 and height is not None and any(abs(height - z) <= 1 for z in heights):
+                raise ValueError('covering source has an upward WMO floor near a baked candidate')
+    ground = []
+    for tag, payload in read_binary_chunks(Path(evidence['terrain_file']).read_bytes()):
+        if tag == b'MCNK':
+            ground.extend(sample_authored_terrain_cell(payload, x, y))
+    if len(ground) != 1:
+        raise ValueError('require a unique authored non-hole terrain triangle at source XY')
+    selected = [height for height in heights if abs(height - ground[0]) <= 1]
+    if len(selected) != 1:
+        raise ValueError('authored terrain requires exactly one baked candidate within1yd')
+    return selected
+
+
+def read_source_floor_support(record, marker, assignments, heights):
+    evidence = record.get('source_floor_evidence')
+    if isinstance(evidence, dict) and evidence.get('policy') == 'FOLLOWER_PLACEMENT_Z_FROM_AUTHORED_TERRAIN_TRIANGLE':
+        return match_authored_terrain_floor(record, marker, assignments, heights)
+    triangle_policy = (isinstance(evidence, dict) and evidence.get('policy') in (
+        'FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_GROUP_UPWARD_TRIANGLE',
+        'FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_UPWARD_CONSENSUS'))
+    if 'source_floor_z_bounds' not in record and not triangle_policy:
+        return heights
     if marker['floor'] != record['source_floor']:
         raise ValueError('source WMO floor differs from the cached marker floor')
     matching = [a for a in assignments if int(a['WMOGroupID']) == evidence['wmo_group_id']
@@ -131,6 +317,8 @@ def read_source_floor_support(record, marker, assignments, heights):
     for artifact in evidence['source_files']:
         if digest(artifact['path']) != artifact['sha256']:
             raise ValueError('source WMO floor evidence file changed')
+    if triangle_policy:
+        return match_upward_source_floor(evidence, marker, assignments, heights)
     if evidence['rotation_degrees'][0] != 0 or evidence['rotation_degrees'][2] != 0:
         raise ValueError('floor bounds require an explicit vertical transform for tilted placements')
     bounds = [evidence['placement_position_z'] + z * evidence['scale'] for z in evidence['group_local_z']]

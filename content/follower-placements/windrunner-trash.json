@@ -1,0 +1,467 @@
+{
+  "placement_policy": "FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS",
+  "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+  "guid_base": 61000000,
+  "first_trash_ordinal": 100,
+  "guarded_faction_updates": [],
+  "density_policy": "FOLLOWER_TRASH_DENSITY_FROM_MDT_COUNT",
+  "map_id": 2805,
+  "entrance_id": null,
+  "density_source": {
+    "policy": "FOLLOWER_TRASH_DENSITY_FROM_MDT_COUNT",
+    "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+    "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+    "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961"
+  },
+  "entries": [
+    {
+      "entry": 232070,
+      "map_id": 2805,
+      "cache_sha256": "d7f7d558efe21828b53feee7ef455a917b88d4046d83c81ba17503def8e8e4ce",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 43
+      }
+    },
+    {
+      "entry": 232071,
+      "map_id": 2805,
+      "cache_sha256": "d1176e58f4a4534288939e469f41c8fb864484ce1d42ae03a311410b7eecfbfb",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 99
+      }
+    },
+    {
+      "entry": 232113,
+      "map_id": 2805,
+      "cache_sha256": "28536fd5307b6a8127d0343f6b7b8ba5a0b9704557aa9f7d05d127083a44db75",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 251
+      }
+    },
+    {
+      "entry": 232116,
+      "map_id": 2805,
+      "cache_sha256": "b6f7b7aef73eec090e261b28b5eb640155270720db661d9aaa032d21a4092d09",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 285
+      }
+    },
+    {
+      "entry": 232173,
+      "map_id": 2805,
+      "cache_sha256": "04f2ef8ce3dba2c39dafe567fd111d437eebfa44e0505474ecac1a8a559c82b2",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 385
+      }
+    },
+    {
+      "entry": 232171,
+      "map_id": 2805,
+      "cache_sha256": "adfc0367dc29be08ea3d9f968aeb6bdee16d736652a6566275b7d719e72921d6",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 441
+      }
+    },
+    {
+      "entry": 232232,
+      "map_id": 2805,
+      "cache_sha256": "56e98a9f06ec7fcec5dc85454e55865099926d8606d7c62c5de406cf2c7e230c",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 525
+      }
+    },
+    {
+      "entry": 232175,
+      "map_id": 2805,
+      "cache_sha256": "accfc1496b59feb0e016b271d28f4c61422d0a3eb7252e65847ced2fead7d364",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 577
+      }
+    },
+    {
+      "entry": 232176,
+      "map_id": 2805,
+      "cache_sha256": "13956e0012fbc42fcdd2200b786267a466e8c3c56043170830307bfd7530df01",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 614
+      }
+    },
+    {
+      "entry": 232056,
+      "map_id": 2805,
+      "cache_sha256": "78728a6b6037f736c6608d6f00f62a963c27e622c0e6734a68ceffa16536803a",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 643
+      }
+    },
+    {
+      "entry": 234673,
+      "map_id": 2805,
+      "cache_sha256": "629828f97478df214d51f1d8595bb740c86bb3c74b50d414a571ca2350fc0a12",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 694
+      }
+    },
+    {
+      "entry": 232067,
+      "map_id": 2805,
+      "cache_sha256": "72782ace78c2a1f4e2aa1c8b855409f41ce55f5bee974daf26c8ab84526df0fe",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 935
+      }
+    },
+    {
+      "entry": 232063,
+      "map_id": 2805,
+      "cache_sha256": "8e3bed1dd12e4c3e14309eb19892f841cd51f51ce095528ad4fc0413377f8fd5",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 974
+      }
+    },
+    {
+      "entry": 238099,
+      "map_id": 2805,
+      "cache_sha256": "d6ee27932a7a0c601563ee3808a7138894a11c51361ef3fe6ad0522bec242b68",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 1002
+      }
+    },
+    {
+      "entry": 236894,
+      "map_id": 2805,
+      "cache_sha256": "62cd0fb9308e757055c9fae2795eba44b6d8d7483b9d13b62a295aebffe6426c",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 1270
+      }
+    },
+    {
+      "entry": 238049,
+      "map_id": 2805,
+      "cache_sha256": "c6a63c9f4b52ab3ce73ce859e7c0ee73c10505ef3606b0b084ccfafedb3f0d60",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 1295
+      }
+    },
+    {
+      "entry": 232119,
+      "map_id": 2805,
+      "cache_sha256": "e76876cdeb73621143c2d7e33fcb8d1797e87ba701a79bc463c117026b31943f",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 1324
+      }
+    },
+    {
+      "entry": 232283,
+      "map_id": 2805,
+      "cache_sha256": "6993f1f5cde6ffeb72e59351a9744d59ec9fb5b82d3684a458b4fcaea1bb7695",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 1425
+      }
+    },
+    {
+      "entry": 232147,
+      "map_id": 2805,
+      "cache_sha256": "500f60fc9b6f87a6820f52154237533759b05f250b2732e136fca786b19dea55",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 1472
+      }
+    },
+    {
+      "entry": 232148,
+      "map_id": 2805,
+      "cache_sha256": "0c8ccb04a88a7bba67f69d55623f9c4ab316e0922db01cd3e27f803e6785e9d2",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 1514
+      }
+    },
+    {
+      "entry": 232146,
+      "map_id": 2805,
+      "cache_sha256": "f844b8c7b6ca9de9e8d456b8049636724cf5866a3b4f0565a97f069c98d69210",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 1561
+      }
+    },
+    {
+      "entry": 258868,
+      "map_id": 2805,
+      "cache_sha256": "82c499dd930975f18ae5a9be127bdf8672860175484c8133ac3cc6e178b9b605",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Windrunner MDT enemy entry qualifies native0 known-hostile; no same-map native positive faction16 donor; Melidrussa188252 donates faction16 only, own modifiers/models retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/WindrunnerSpire.lua",
+        "sha256": "52a9d7a9f758feafc6db2f920a325a8baefd34afa9c872ae974bf22badb55895",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "source_line": 1895
+      }
+    }
+  ],
+  "source_gaps": [
+    {
+      "entry": 232122,
+      "marker_count": null,
+      "status": "FOLLOWER_TRASH_OWN_MAPPER_SOURCE_UNAVAILABLE",
+      "reason": "cached NPC page lacks g_mapperData\\s*=\\s*",
+      "url": "https://www.wowhead.com/npc=232122",
+      "entity": {
+        "classification": 1,
+        "displayName": "Phalanx Breaker",
+        "displayNames": [
+          "Phalanx Breaker"
+        ],
+        "id": 232122,
+        "name": "Phalanx Breaker",
+        "names": [
+          "Phalanx Breaker"
+        ],
+        "type": 6
+      },
+      "cache_body": "/home/osso/.cache/wowhead-cache/e6294626c10e808a26ae67cdacc8511e18ee1252bb0ca63c022bd713faacc9be.html",
+      "cache_sha256": "596d44cee28169b7ace01ae201f2c611651601cf8d206fddba3d174fe2b3601b",
+      "cache_metadata": {
+        "url": "https://www.wowhead.com/npc=232122",
+        "fetched": 1792706660.6103783,
+        "status": 200,
+        "bytes": 313141
+      }
+    },
+    {
+      "entry": 232121,
+      "marker_count": null,
+      "status": "FOLLOWER_TRASH_OWN_MAPPER_SOURCE_UNAVAILABLE",
+      "reason": "cached NPC page lacks g_mapperData\\s*=\\s*",
+      "url": "https://www.wowhead.com/npc=232121",
+      "entity": {
+        "classification": 1,
+        "displayName": "Phalanx Breaker",
+        "displayNames": [
+          "Phalanx Breaker"
+        ],
+        "id": 232121,
+        "name": "Phalanx Breaker",
+        "names": [
+          "Phalanx Breaker"
+        ],
+        "type": 6
+      },
+      "cache_body": "/home/osso/.cache/wowhead-cache/72a39fd6d464db2a4e3a43391593f553fc1fd1d1fd888136ba9c65a7301dc5ed.html",
+      "cache_sha256": "5e9e888f9144ed4ee57af60344c3add5fe4654785058a7b8431bf102861a31ea",
+      "cache_metadata": {
+        "url": "https://www.wowhead.com/npc=232121",
+        "fetched": 1792706756.782593,
+        "status": 200,
+        "bytes": 317472
+      }
+    },
+    {
+      "entry": 232118,
+      "status": "FOLLOWER_TRASH_ENCOUNTER_ADD_EXCLUDED",
+      "journal_encounter_id": 2655,
+      "journal_section_ids": [
+        30455,
+        30597
+      ],
+      "summon_spell_id": 465954,
+      "observed_marker_count": 227,
+      "excluded_single_z_count": 56,
+      "excluded_density_count": 3,
+      "source_proof": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/windrunner-232118-encounter-helper-source.json",
+      "source_proof_sha256": "1292e311e35ee236f0b57a36163a3698fd2e1f3a57391fa5586f4489abc93fcb",
+      "open_proof_point": "No native encoded edge from journal466556/465956 dummy to465954 summon; retained as missing edge, not fabricated."
+    }
+  ],
+  "surface_sha256": "881d798787bebce3238d7538b9e5b73769d861d89d6d4bdf694672207f039c16",
+  "surface_proof": {
+    "path": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/windrunner-trash-surface-preflight.json",
+    "sha256": "2f9c03f290854f6ddb4277e1709a4941be27a7855cdd47e57676620c681fb482"
+  },
+  "nav_files_sha256": {
+    "39_22.nav": "6226416c0938de3e291a691c8da45ece4aa1be5f2cc9648708f0eaa609d3f93e",
+    "38_22.nav": "e30d47f766a9bb9cacf1d6ca9eb800f5ee695945a5c04e79bf70c0d8e532c9f0",
+    "38_20.nav": "bde4862252c2b72c7794b6d0d76cff1f66e61b38e18612004736a62ecd85ab58",
+    "37_23.nav": "7bbd7b2053c9979ddbaa1983b2eee2c90c7ac26d3bb184c92f1cbb48f2c66c26",
+    "36_21.nav": "c5a49ce2f6c896a9a0cd4f1efdf835bef90dcd53ad4861d9f3fc270b39132cec",
+    "36_20.nav": "100aec361c6e062546ef9820c7d5b47d02ca315b004d6d8814bedc17d95c80cd",
+    "38_23.nav": "a45d59aab562e8f435fa03a2c4dbcd11051768ea797583dfb4dce348b881627a",
+    "36_22.nav": "6bba5d01fc31e417b9a6ccb35d755c9902a07987250fc854f68f230e29ebb17b",
+    "39_23.nav": "6ebc88fa7649e82f9d46a7be1d12ad523c110770c24af15aa6f49c3a3bae35e2",
+    "39_20.nav": "19df4e6dffe666c0229895f3a93ca42fdce957d7db7013017cf5bdde21e4e8f1",
+    "38_21.nav": "ef62db53846da6852318963d34c27e68727bc381d429c9cfe0f40538f4fddfc7",
+    "37_20.nav": "068c510bcedec60da8a06e413b8c696953ebf7651ca2986d95016ab4132cc5c0",
+    "37_22.nav": "1c9c01e062c8c52180d207bb16a038e23cd0c9ed8144550b086eadadc2761d3e",
+    "36_23.nav": "46d54b81aae2d9dc81646f5b1d83a8e80907e98fcca84ae53e940f28f2d51729",
+    "39_21.nav": "7135a0bbe815f0feb591157417089f153ccdc6c3f6197906693c56e85a0512fd",
+    "37_21.nav": "4fae6102e597c4657312c8068cc2f58fefd5ba690e3fd3dd946c3c0412d137ea"
+  }
+}

@@ -1,0 +1,333 @@
+{
+  "placement_policy": "FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS",
+  "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+  "guid_base": 61000000,
+  "first_trash_ordinal": 100,
+  "guarded_faction_updates": [],
+  "density_policy": "FOLLOWER_TRASH_DENSITY_FROM_MDT_COUNT",
+  "map_id": 2993,
+  "entrance_id": null,
+  "density_source": {
+    "policy": "FOLLOWER_TRASH_DENSITY_FROM_MDT_COUNT",
+    "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+    "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+    "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961"
+  },
+  "entries": [
+    {
+      "entry": 270306,
+      "map_id": 2993,
+      "cache_sha256": "1b74e4269599dc4a83c2a53b710714c6514cbab40eadc8ca73bc6f8a65ad0954",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 53
+      }
+    },
+    {
+      "entry": 261552,
+      "map_id": 2993,
+      "cache_sha256": "b6df4aedc214ea2ae822a27997b15912cc2ee0ccde451e03c1cc1dd5098e7b0c",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 117
+      }
+    },
+    {
+      "entry": 261557,
+      "map_id": 2993,
+      "cache_sha256": "e66749d340c5698bb61ec37574df45f1bbb0d723fd4d2a414fb039367166a389",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 231
+      }
+    },
+    {
+      "entry": 261556,
+      "map_id": 2993,
+      "cache_sha256": "4abb97ee3fe476e889e1ea18f0e74c4c93b83f04d8cfacfd28683002d2ac41cf",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 331
+      }
+    },
+    {
+      "entry": 263112,
+      "map_id": 2993,
+      "cache_sha256": "15c954a40ed8097bb46743a2fe3e6dd2fa565729deafb2eb8194c8fed0922ae4",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 354
+      }
+    },
+    {
+      "entry": 261560,
+      "map_id": 2993,
+      "cache_sha256": "36717d931d85769b8ceda0554cd23ba0a2743244427d811d87216d0951afb501",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 493
+      }
+    },
+    {
+      "entry": 261553,
+      "map_id": 2993,
+      "cache_sha256": "b6720b0e506a3c5eaebc213502c75bcfdb8b231521a606c743782c963af123c8",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 598
+      }
+    },
+    {
+      "entry": 263109,
+      "map_id": 2993,
+      "cache_sha256": "7362584353e9479b60ba9432d78ba2ac450c6d2f5e3f3589d79892c2a5f59b98",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 735
+      }
+    },
+    {
+      "entry": 261573,
+      "map_id": 2993,
+      "cache_sha256": "ede07bb29ffd07c35b33f5ed7eb55b67facbf715b8b39a65eb50034c483c9962",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 791
+      }
+    },
+    {
+      "entry": 261554,
+      "map_id": 2993,
+      "cache_sha256": "090c75a6604063ff37c1aa4c4b209184cb7cb4b02f1fa3802b1f410ea400a016",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 835
+      }
+    },
+    {
+      "entry": 261550,
+      "map_id": 2993,
+      "cache_sha256": "32a4184e0c045cae8c81197b8d6943b654f0d295016a317dc0cb0890a5b06c7c",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 902
+      }
+    },
+    {
+      "entry": 262011,
+      "map_id": 2993,
+      "cache_sha256": "87ba172461ebedf61b12c5fdd7a079f3b868298e7179c08bc0f1d9ec1062581a",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 1096
+      }
+    },
+    {
+      "entry": 271453,
+      "map_id": 2993,
+      "cache_sha256": "eafdfc7f2dc6d6c736c63a891324400b8f2d6901f730f648d6aee37b632e7dc6",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 1137
+      }
+    },
+    {
+      "entry": 262398,
+      "map_id": 2993,
+      "cache_sha256": "553e9b60e0ccb09975a5b62c4126a5005bbeaded3408ea5894d8e798cf808191",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 1464
+      }
+    },
+    {
+      "entry": 264798,
+      "map_id": 2993,
+      "cache_sha256": "af2cd2946b5628cddacb18c545e1af48e4f89907bf5039e976970039f83da03c",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 1506
+      }
+    },
+    {
+      "entry": 270378,
+      "map_id": 2993,
+      "cache_sha256": "afe8676a84dc70c8626c48f2b5281d54960ba490a0febf049ea497ac7062827b",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 1551
+      }
+    },
+    {
+      "entry": 270417,
+      "map_id": 2993,
+      "cache_sha256": "27a9a752ed3ddb176a7eed8e3c426236f47c238583bc0600a061f487a77144e3",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Altar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/AltarOfFangs.lua",
+        "sha256": "1b35a0c5e5c9207cdb94988d306758c40950e9d2348d75d53d2313dbc8223b2e",
+        "source_line": 1572
+      }
+    }
+  ],
+  "source_gaps": [
+    {
+      "entry": 268358,
+      "status": "FOLLOWER_TRASH_OWN_MAPPER_SOURCE_UNAVAILABLE",
+      "marker_count": null,
+      "reason": "cached NPC page lacks g_mapperData\\s*=\\s*",
+      "cache_body": "/home/osso/.cache/wowhead-cache/7785bee2ae768c63e756c923c70d1541499ebee1e1a84d717dd25d9b6a3569cc.html",
+      "cache_sha256": "d21d4ee120b4cdbbbaef445a324bedc432b437ea966cd77b8d2628da80234f96"
+    }
+  ],
+  "surface_sha256": "47455f88cfafaac6f8db7839cf37128cac1374de676e9a5bf43f8dd8b2bc0664",
+  "surface_proof": {
+    "path": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/altar-trash-surface-preflight.json",
+    "sha256": "0209e2739800447d5d81f08424a792073bf36a31856a3d4ab5a11691cbe83234",
+    "full_stream_sha256": "8c65d4b90421955abeca3cceca11183aee6ea7970255eedc95a62c17a4bb5ea5",
+    "full_polygon_count": 580184
+  },
+  "nav_files_sha256": {
+    "26_29.nav": "f222363ff8241c5489315f6f2318e4fa56b0ade165e4d95ef6423d2923fb495a",
+    "26_27.nav": "d33b1134618767f2d72b9bb83e94e86a95914e7247f064c5242a687e84cf9f33",
+    "27_28.nav": "e1a2349920a05e11431414672343dc244b85057cffa399f73f15c92a2a99f31a",
+    "30_30.nav": "227151b735fc93c629199a7155e812cd7958fe08250f7633ae0f837b5e5e0100",
+    "25_30.nav": "ce8e7152ae571745bb5ad197374b8ca99a02f0bc3e1468b8e0fe325fc7b08df6",
+    "30_28.nav": "ffc20eb68e728180aa979324d4a3f1681c9fa724b5854dc218ff351eb435b39d",
+    "25_28.nav": "8eaecd9353abe6d28b90f27b97a9295e8dc18eb6c455406712ab0579212e021a",
+    "29_28.nav": "08882d282bffbc5475ac106f2eacab94f4cf02accb38333bbcbc62f0b099c31b",
+    "28_27.nav": "5478b56d3fa739635ebba572295abf15cb5e85972495fd68a545b6d00dc936f5",
+    "30_27.nav": "4f8f8f1b448a921a0f2908db291c684c2e4a1281096440e52059c15b9b8c662e",
+    "28_29.nav": "c0d26acd5318aaf7bee01640b887335f62c6c2029effeec39db9f3a9ea621ab9",
+    "26_28.nav": "61da960a563a966f94028c5097f605a363843d0285fc32d613f79fef61f2df8d",
+    "28_28.nav": "18c7b148538ea4dc8c35cc78e18938a88bcd9eb118147ea7808448223486532d",
+    "25_27.nav": "de53fc4c623ed842eb861d14767cf96846bd894639d46596a4d19a9ccd35e208",
+    "27_29.nav": "c77b6c057fe69d62957ec82615723a8f8da24cabc26792e988ab9747d9d0193b",
+    "28_30.nav": "b469fb1f19cb0da5a4503a319b832b6c30e3dfb51fba9d11d918408c92dd218d",
+    "29_27.nav": "9e6f27cdbaeab618e81030ad8ecb187f4f75a929968dc8d3375b82b4b340c421",
+    "27_27.nav": "e89829ba5aef93acbd6fd424d2baabd905eb2837e6012f02a621b17e315b0403",
+    "29_30.nav": "8b8ebe32542ad84d97660b17b3c14ee39fa5dda9e8e48e02fdb1cc32811a102e",
+    "27_30.nav": "ab2168ac7f3af2c821608b35b9db953c73ee92aeb8d79b6952237087f34073b2",
+    "26_30.nav": "1f36e99d981829221074ddaa0aff1f6f1ac64b34326147d161ab5baf1cf6ca4b",
+    "30_29.nav": "2810e0a53fc5707fb946e8919148d87d78ed8a2ff9c98ff2984d787a48fef830",
+    "25_29.nav": "13e643fb3d3111bb6f5a8cc8a2a7e4c706c8c1bf9881e0f25f7c56d4c3acff0c",
+    "29_29.nav": "09ecccc1cd11cbf8450bd065a9ab8c471d9354adf9d6221602b2813fc1fdfca3"
+  }
+}

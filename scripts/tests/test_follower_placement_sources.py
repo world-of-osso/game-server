@@ -65,6 +65,109 @@ class FollowerPlacementSources(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'recorded WMO transform'):
             read_source_floor_support(damaged, marker, assignments, observed)
 
+    def test_journal_marker_wins_over_rounded_wowhead_and_reports_large_disagreement(self):
+        from follower_placements import derive_placement, read_binding_tables
+        binding_tables, _ = read_binding_tables(Path(os.environ['FOLLOWER_PLACEMENT_DB2']))
+        tables = self.tables | binding_tables
+        for entry, map_id, journal_id, expected in [
+            (194181, 2526, 2509, (1815.2512440319297, -2783.9755457624997)),
+            (190485, 2521, 2503, None),
+        ]:
+            with self.subTest(entry=entry):
+                page = read_cached_npc(self.cache, entry)
+                record = dict(entry=entry, journal_encounter_id=journal_id, cache_sha256=page['cache_sha256'])
+                manifest = dict(map_id=map_id, placement_policy='FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP')
+                result = derive_placement(record, manifest, tables, self.cache, [], Path('unused'), Path('unused'),
+                                          dict(LocX=0, LocY=0, LocZ=0))
+                if expected is not None:
+                    self.assertEqual(tuple(result['wow_xy']), expected)
+                else:
+                    self.assertGreater(result['wowhead_comparison']['distance_yards'], 5)
+                    self.assertEqual(result['wowhead_comparison']['finding'], 'FOLLOWER_JOURNAL_WOWHEAD_XY_DISAGREEMENT')
+                self.assertEqual(result['page']['source_table'], 'JournalEncounter')
+                self.assertEqual(result['page']['source_row']['ID'], str(journal_id))
+
+    def test_avanoxx_equivalent_assignment_bounds_choose_native_order_without_averaging(self):
+        from follower_placements import derive_placement, read_binding_tables
+        binding_tables, _ = read_binding_tables(Path(os.environ['FOLLOWER_PLACEMENT_DB2']))
+        tables = self.tables | binding_tables
+        record = dict(entry=213179, journal_encounter_id=2583)
+        manifest = dict(map_id=2660, placement_policy='FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP')
+        result = derive_placement(record, manifest, tables, self.cache, [], Path('unused'), Path('unused'),
+                                  dict(LocX=0, LocY=0, LocZ=0))
+        self.assertEqual(result['wow_xy'], [-103.24485721595764, 424.63702790355273])
+        resolution = result['page']['assignment_resolution']
+        self.assertEqual(resolution['policy'], 'FOLLOWER_PLACEMENT_EQUIVALENT_UIMAP_ASSIGNMENTS')
+        self.assertEqual(resolution['chosen_assignment_id'], 68441)
+        self.assertEqual(result['assignments'][0]['OrderIndex'], '0')
+        self.assertEqual(len(result['assignments']), 67)
+        self.assertEqual({a['Region_1'] for a in result['assignments']}, {'124.999763', '125'})
+        self.assertGreater(resolution['projected_axis_spread_yards']['y'], 0)
+        self.assertLessEqual(max(resolution['component_spread_yards'].values()), 0.001)
+        for key, value in [('Region_1', '125.01'), ('UiMin_0', '0.00001')]:
+            divergent = copy.deepcopy(tables)
+            assignment = next(a for a in divergent['UiMapAssignment'] if a['ID'] == '68460')
+            assignment[key] = value
+            with self.assertRaisesRegex(ValueError, 'not equivalent'):
+                derive_placement(record, manifest, divergent, self.cache, [], Path('unused'), Path('unused'),
+                                 dict(LocX=0, LocY=0, LocZ=0))
+
+    def test_darkness_upward_consensus_requires_every_hit_and_one_baked_candidate(self):
+        from follower_placements import read_binding_tables
+        from follower_placement_sources import read_journal_marker
+        manifest_path = Path(__file__).resolve().parents[2] / 'content/follower-placements/darkflame-cleft.json'
+        record = next(r for r in json.loads(manifest_path.read_text())['entries'] if r['entry'] == 208747)
+        binding_tables, _ = read_binding_tables(Path(os.environ['FOLLOWER_PLACEMENT_DB2']))
+        _, marker, assignments = read_journal_marker(self.tables | binding_tables, 2651, 208747, 2561)
+        observed = [0.2, 59.8, 87.64274795119454]
+        self.assertEqual(read_source_floor_support(record, marker, assignments, observed), [59.8])
+        with self.assertRaisesRegex(ValueError, 'one baked candidate'):
+            read_source_floor_support(record, marker, assignments, observed + [59.7])
+        separated = copy.deepcopy(record)
+        for vertex in separated['source_floor_evidence']['triangles'][-1]['world_vertices']:
+            vertex[2] += 22
+        with self.assertRaisesRegex(ValueError, 'one baked candidate'):
+            read_source_floor_support(separated, marker, assignments, observed)
+
+    def test_nokhud_journal_uses_explicit_uimap_without_inventing_a_group_floor(self):
+        from follower_placements import derive_placement, read_binding_tables
+        binding_tables, _ = read_binding_tables(Path(os.environ['FOLLOWER_PLACEMENT_DB2']))
+        page = read_cached_npc(self.cache, 186151)
+        record = dict(entry=186151, journal_encounter_id=2477, cache_sha256=page['cache_sha256'])
+        manifest = dict(map_id=2516, placement_policy='FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP')
+        result = derive_placement(record, manifest, self.tables | binding_tables, self.cache, [],
+                                  Path('unused'), Path('unused'), dict(LocX=0, LocY=0, LocZ=0))
+        self.assertEqual(result['wow_xy'], [-536.0531378044291, 4163.211154128592])
+        self.assertIsNone(result['marker']['floor'])
+        self.assertEqual({a['UiMapID'] for a in result['assignments']}, {'2093'})
+        self.assertEqual(result['wowhead_comparison']['status'], 'COMPARED')
+
+    def test_halls_upward_floor_triangles_exclude_ceilings_and_ambiguous_nav_surfaces(self):
+        manifest_path = Path(__file__).resolve().parents[2] / 'content/follower-placements/halls-of-infusion.json'
+        records = {r['entry']: r for r in json.loads(manifest_path.read_text())['entries']}
+        for entry, observed, expected in [
+            (189722, [-190.51663351740984, -67.90195139447695, 25.439383706251334], -67.90195139447695),
+            (189727, [-190.64583, -100.40612940495758, 9.387790624059264], -100.40612940495758),
+        ]:
+            with self.subTest(entry=entry):
+                record = records[entry]
+                marker = read_cached_npc(self.cache, entry)['markers'][0]
+                assignments = select_assignment(self.tables, 2527, marker)
+                self.assertEqual(read_source_floor_support(record, marker, assignments, observed), [expected])
+                ambiguous = observed + [expected + 0.1]
+                with self.assertRaisesRegex(ValueError, 'one baked candidate'):
+                    read_source_floor_support(record, marker, assignments, ambiguous)
+                two_upwards = copy.deepcopy(record)
+                two_upwards['source_floor_evidence']['triangles'].append(copy.deepcopy(record['source_floor_evidence']['triangles'][1]))
+                with self.assertRaisesRegex(ValueError, 'one upward'):
+                    read_source_floor_support(two_upwards, marker, assignments, observed)
+                damaged = copy.deepcopy(record)
+                damaged['source_floor_evidence']['source_files'][0]['sha256'] = '0' * 64
+                with self.assertRaisesRegex(ValueError, 'evidence file changed'):
+                    read_source_floor_support(damaged, marker, assignments, observed)
+                with self.assertRaisesRegex(ValueError, 'marker floor'):
+                    read_source_floor_support(record, dict(marker, floor=0), assignments, observed)
+
     def test_teera_actual_empty_mapper_is_an_explicit_source_gap_not_a_crash(self):
         try:
             page = read_cached_npc(self.cache, 186339)
@@ -72,6 +175,26 @@ class FollowerPlacementSources(unittest.TestCase):
             self.fail(f'actual empty Wowhead mapper crashed rather than reporting no markers: {error}')
         self.assertEqual(page['entity']['id'], 186339)
         self.assertEqual(page['markers'], [])
+
+    def test_single_assignment_ungrouped_frame_keeps_observed_floor_separate(self):
+        marker = read_cached_npc(self.cache, 244887)['markers'][0]
+        self.assertEqual(marker, dict(zone=16359, floor=0, percent=[52.8, 57.3]))
+        policy = 'FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME'
+        assignments = select_assignment(self.tables, 2859, marker, policy)
+        self.assertEqual([(row['ID'], row['UiMapID']) for row in assignments], [('69155', '2500')])
+        for mutation in ('duplicate_assignment', 'known_group_floor', 'observed_nonzero_floor', 'foreign_zone'):
+            with self.subTest(mutation=mutation):
+                tables, changed = copy.deepcopy(self.tables), dict(marker)
+                if mutation == 'duplicate_assignment':
+                    tables['UiMapAssignment'].append(dict(assignments[0], ID='0'))
+                elif mutation == 'known_group_floor':
+                    tables['UiMapGroupMember'].append(dict(tables['UiMapGroupMember'][0], ID='0', UiMapID='2500', FloorIndex='0'))
+                elif mutation == 'observed_nonzero_floor':
+                    changed['floor'] = 1
+                else:
+                    changed['zone'] = 14971
+                with self.assertRaises(ValueError):
+                    select_assignment(tables, 2859, changed, policy)
 
     def test_foreign_map_marker_cannot_be_reinterpreted_as_neltharus(self):
         page = read_cached_npc(self.cache, 188252)

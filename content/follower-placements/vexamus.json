@@ -1,0 +1,43 @@
+{
+  "map_id": 2526,
+  "entrance_id": 100018,
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "entries": [
+    {
+      "entry": 194181,
+      "ordinal": 0,
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2509",
+      "journal_encounter_id": 2509,
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/Dragonflight/AlgetharAcademy/Vexamus.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "cd5fb85b3a200c05722a565fe332c8879492a85e241633d5c783c51d724ae031",
+        "journal_actor_id": 5411
+      },
+      "cache_sha256": "66163f27b3822b520fd2985e5594248ee452604423014357bc198f27530287fc",
+      "faction_donor": 190609,
+      "donor_reason": "Same-Academy Normal1 boss Echo of Doragosa faction16 with matching sourced hostile A/H react; own Vexamus class, ContentTuning and budget retained.",
+      "source_floor": 0,
+      "source_floor_reference_height": 904.0077893316047,
+      "source_floor_evidence": {
+        "policy": "FOLLOWER_PLACEMENT_Z_FROM_SAME_ROOM_NATIVE_ANCHORS",
+        "approval": "Lead approved for Vexamus only, 2026-10-22; at least two native same-room anchors within a few yards must agree on one baked candidate. Not a blanket nearest-Z rule.",
+        "anchors": [
+          {"guid": 9001421, "entry": 195416, "name": "Magic Book", "map_id": 2526, "wow_xyz": [1815.54, -2783.76, 903.52]},
+          {"guid": 9001226, "entry": 189668, "name": "Professor Maxdormu", "map_id": 2526, "wow_xyz": [1811.5, -2783.67, 903.52]}
+        ],
+        "marker_wow_xy": [1815.2512440319297, -2783.9755457624997],
+        "maximum_horizontal_distance_yards": 5,
+        "maximum_vertical_difference_yards": 1,
+        "initial_wowhead_rejected_surface_heights": [807.1927971673523],
+        "rejected_surface_heights_at_journal_xy": [807.1348686963983],
+        "method": "Both native encounter-room anchors must agree within1yd on exactly one baked candidate at the precise authenticated JournalEncounter/UiMap XY. Initial rounded-Wowhead support904.007789 is an anchor reference, not a forced final height; its rejected807.192797 candidate was over96yd below both anchors. Current candidates are resampled at DB2 XY; no position shift or synthesized height."
+      },
+      "navigation_gap": "FOLLOWER_ROUTE_INCOMPLETE_2526_194181"
+    }
+  ],
+  "calibration_entries": [188252, 189232]
+}
