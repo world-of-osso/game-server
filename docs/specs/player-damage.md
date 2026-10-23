@@ -62,6 +62,13 @@ Examples
 
 - [x] Player passives with armor EquippedItemClass4 and ATTR8_REQUIRES_EQUIPPED_INV_TYPES (Plate/Mail/Leather Specialization, Nethermancy, Wizardry, Mysticism) apply only while head, shoulders, chest, waist, legs, feet, wrists and hands all hold an item of that class and subclass mask; equipping or unequipping re-checks (TC Player.cpp3104–3117, 8297–8317, 26217–26228, 26258–26281; Item.cpp1477–1509). Creatures and followers keep them unconditionally.
 
+Partial magical resistance (pinned TC a352b1fa)
+- [ ] Use TC's raw nonnegative school resistance and discrete10% buckets, including the native exhausted-distribution tail; never substitute a classic resistance/level normalization.
+- [ ] Preserve the native school-minimum, physical/Holy/Chaos Bolt exceptions, caster/owner penetration and ignore-resistance semantics. Missing source producers remain explicit gaps, not invented base stats.
+- [ ] Apply resistance before SCHOOL_ABSORB, transfers and level-scaled health commit; cap resisted units to current damage, publish actual `resisted` units and preserve unconsumed shield capacity on full resistance.
+- [ ] Native direct casts/missiles and periodic damage share resistance handling; actual aura application/removal changes mitigation without changing source coefficients, variance, timers or IDs.
+- [ ] Prove native29127 fire resistance with1218304's sourced ignore modifier, ordinary133 impacts,188389 periodic ticks and17 shield ordering. Keep existing generic ProcHitMask and producer coverage limits distinct from HP/receipt proof.
+
 ## How it works
 
 - [Player damage](../wiki/systems/player-damage.md) — swing pipeline, armor, spell amounts
@@ -79,6 +86,8 @@ Examples
 - `crates/server/src/spell_cast/effects.rs` — TRIGGER_MISSILE, variance, versatility, armor on physical spells
 
 ## Tests asserting this spec
+
+- `crates/server/src/spell_cast/partial_resistance_tests.rs` — ignored native direct/periodic partial-resistance and before-shield controls; prepared RED, not yet executed.
 
 - `crates/server/src/melee_tests.rs` — weapon damage, off hand, roll, haste, hit-table chances and order (player and creature swingers, a victim that cannot avoid), outcomes, a player's shield block share, armor.
 - `crates/server/src/combat_npc_victim_block_tests.rs` — qualified10021/62356effect0 signed51 and actual62627 fold; native positive block despite expertise, cancellation/foreign/signed/negative/behind/NO_BLOCK, with actual NPC broadcast messages and no62356effect1/dodge49 change.

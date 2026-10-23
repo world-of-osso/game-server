@@ -648,6 +648,7 @@
 
 - [Signed attacker enemy dodge](systems/player-damage.md#shared-weapon-spell-defense-roll) — native251 before expertise/clamp; authenticated Strike damage RED→GREEN11 with signed/clamp/removal/ownership and Evasion/expertise controls; full251/abilities remain open.
 
+- [Partial magical resistance source boundary](systems/player-damage.md#partial-magical-resistance-source-boundary--2026-10-23) — pinned TC raw-resistance CDF, native22/269 source states and direct/periodic/shield RED controls prepared; no classic normalization or execution claim.
 - [Physical mechanic resistance](systems/player-damage.md#shared-weapon-spell-defense-roll) — native aura117 bucket before NoActiveDefense; neutral-NPC RED invalidated; corrected hostile40 genuine stun RED→GREEN3,256 miss/resist outcomes; full hit/ability acceptance open.
 
 - [Non-player expertise dodge consumer](systems/player-damage.md#shared-weapon-spell-defense-roll) — native240/4 caster-only reduction; receiver-corrected62627/38598 Strike/Evasion RED→GREEN, removal/ownership and merged31 controls/check/fmt pass; wider hit system remains open.

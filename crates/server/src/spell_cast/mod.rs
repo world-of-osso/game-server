@@ -258,6 +258,8 @@ pub(crate) mod open_lock;
 #[cfg(test)]
 mod open_lock_tests;
 #[cfg(test)]
+mod partial_resistance_tests;
+#[cfg(test)]
 mod portal_tests;
 pub mod powers;
 #[cfg(test)]

@@ -177,6 +177,14 @@ Real BB gun67531 carries0.01percent and only effect165. Native RED9e862790 accep
 
 Live proof: `game-engine/data/diagnostics/playerdamage-20260926/` (server and client combat logs, kill screenshot).
 
+## Partial magical resistance source boundary — 2026-10-23
+
+Pinned TC a352b1fa `Unit.cpp1779–1888` samples resistance before absorbs. `CalculateAverageResistReduction` returns raw nonnegative school resistance, not the classic resistance/(resistance+levelConstant) formula. `GetResistance(mask)` selects the minimum native integer school value (`Unit.h793`, `Unit.cpp13273–13286`). The discrete10% CDF can exhaust all11 entries; its tail bucket11 is preserved before aura269's ignore-resistance adjustment, then `DamageInfo::ResistDamage` caps to current damage. Holy/player and Chaos Bolt exceptions, caster/mod-owner penetration and mixed-school weakest-mitigation rules remain explicit source boundaries.
+
+Native29127 Maypole has aura22 +10fire; native1218304 Prototype Auto-Advertiser has aura269 ignore50% with mask127. Those exact source states produce55% resisted units under the pinned tail-bucket semantics, not a fabricated coefficient or a classic formula. Prepared ignored tests use ordinary Fireball133 impacts, actual Flame Shock1883892000ms periodic ticks and Power Word: Shield17 capacity/removal to exercise HP/receipts and resistance-before-absorb ordering. RED is committed first but not executed during the server-test-performance quiet window; no implementation/GREEN claim.
+
+Current runtime logs magical22 as unhandled and exposes no magic pool; `event.resisted` remains0. Template/item resistance ingress and generic ProcHitMask/full-resist proc eligibility are separate unqualified boundaries, not silently certified by a damage formula. [Contract](../../specs/player-damage.md) and [prepared native controls](../../../crates/server/src/spell_cast/partial_resistance_tests.rs).
+
 ## Sources
 
 - [melee.rs](../../../crates/server/src/melee.rs) — weapon damage, hit table, outcome, armor formula

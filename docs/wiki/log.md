@@ -32,6 +32,10 @@ Imaginary Gun ig981 landed1aef894cf;0034 ancestry independently verified and ina
 
 [Gorek](systems/boss-scripts.md#gorek-minimum-alert-partial--2026-10-22): ignorednativeRED→sourceMight/Aegis/Heated/Storm success-owned/namedlowerhold lanes. Post-master921957ad7 native4GREEN31.12s Normal1/projected205,first3.6sMight/actualauras/92s3cycles/reset/actualcopycredit/corpse;stable-keySQLreceipt. Anvil/selector/Stormdummy and existingroutegap retained, no wholefight/publication claim.
 
+## 2026-10-23 — Native partial resistance source/RED preparation
+
+[Partial magical resistance](systems/player-damage.md#partial-magical-resistance-source-boundary--2026-10-23): pinnedTC a352b1fa returns raw integer school resistance; parent explicitly requires that semantics, no classic normalization. Native29127+1218304 yields55% via tail bucket11/50%ignore. Three ignored direct133/periodic188389/before-shield17 controls prepared on isolated native-partial-resistance; no execution during quiet window, no implementation/GREEN claim. Existing proc-mask/template/item ingress gaps remain explicit.
+
 ## 2026-10-22 — Khajin non-Mythic partial
 
 [Khajin](systems/boss-scripts.md#khajin-non-mythic-partial--2026-10-22): ignorednativeRED→sourceShock/Hail/Surge lanes; post-master930e63f96 native4GREEN20.76s Normal1/projected205, real7sHail,90s5/3/3completions/reset/actualsecondcopycredit/corpse. ManualinstantShock fixture observes0.1s beforeautomatic6s request, noAI/timer bypass. Surge/Boulder/controller gaps and stable-key SQLreceipt retained.
