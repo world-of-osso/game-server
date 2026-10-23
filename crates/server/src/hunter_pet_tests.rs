@@ -227,9 +227,18 @@ fn hunter_tames_a_diseased_young_wolf_after_the_channel() {
         world.get::<ModelDisplay>(pet).unwrap().display_id,
         WOLF_DISPLAY
     );
+    // Native ExpectedStat10/-2 CreatureHealth377.342255, template299
+    // HealthModifier1; Guardian::InitStatsForLevel truncates rather than ceils.
+    // This fixed-stat harness has zero owner Stamina, so no inherited HP.
+    let expected_health = 377.0;
+    let health = world.get::<Health>(pet).unwrap();
+    assert_eq!(health.max, expected_health);
+    assert_eq!(health.current, expected_health, "new tame must arrive full");
+    let mut expected_pet = stored_wolf();
+    expected_pet.health = Some(expected_health);
     let expected = StoredPetStable {
         current: Some(0),
-        active: [Some(stored_wolf()), None, None, None, None],
+        active: [Some(expected_pet), None, None, None, None],
         ..Default::default()
     };
     assert_eq!(stable(&h).unwrap().stored, expected);
