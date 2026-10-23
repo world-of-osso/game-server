@@ -71,6 +71,8 @@ mod gnomeregan;
 mod granyth;
 #[path = "data_bosses_group_criteria.rs"]
 mod group_criteria;
+#[path = "gulping_goliath.rs"]
+mod gulping_goliath;
 #[path = "herald_call.rs"]
 mod herald_call;
 #[path = "herald_damage.rs"]
@@ -475,7 +477,7 @@ fn encounter_fixture(
             spawn_prepared_actor(&mut app, inputs.authored_spawn(difficulty), map, difficulty);
         let near = if [
             ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 16807, 17306, 17308,
-            209230, 215405, 215407, 216619, 207946, 194181, 186616, 186120, 210156,
+            209230, 215405, 215407, 216619, 207946, 194181, 186616, 186120, 210156, 189722,
         ]
         .contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)
