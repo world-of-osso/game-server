@@ -600,7 +600,7 @@ Sources: [native utility tests](../../../crates/server/src/followers/kit_utility
 
 ## NPC native starter knowledge — 2026-10-23
 
-The nb997 merged gate exposed old partial-book oracles: native starter SanctifiedPlates402964 and FelArmor386124 now apply even without controller rows. Source-backed corrections and the initial-passive-sync/removal ordering boundary are recorded in the [native-book audit](../../handoffs/native-follower-book-proof-ledger.md#nb997-source-correct-oracle-audit); no runtime helper change is required. Focused GREEN pending.
+The nb997 merged gate exposed old partial-book oracles: native starter SanctifiedPlates402964 and FelArmor386124 now apply even without controller rows. Source-backed corrections and the initial-passive-sync/removal ordering boundary are recorded in the [native-book audit](../../handoffs/native-follower-book-proof-ledger.md#nb997-source-correct-oracle-audit); no runtime helper change is required. At77c0f56ed the native passive/defensive/provenance packet is21GREEN; this is not the full integration gate.
 
 Controller rows previously doubled as NPC spell grants: extending a Frenzy action alias learned both274837/1243807, no TraitLoadout was attached, and a Ret70 reinitialization without controller rows retained spec66. Three pushed native fixtures reproduce these boundaries (0PASS/3RED,25.40s; dev profile, frozen464fbb46 source). Prior opt2 SHED/compile interruptions were not RED.
 
