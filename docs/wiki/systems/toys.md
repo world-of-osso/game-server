@@ -2,6 +2,16 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Target73 caster-radius source boundary (2026-10-22)
+
+[Contract](../../specs/spell-summon-area-trigger.md#source-target73-caster-radius-destinations). TC SpellInfo321/783–827 and Spell.cpp1611–1642/7325–7329 distinguish73 from72: random direction at the caster's calculated radius, not a radial disk. Unit Radius+PerLevel×level is capped by Max; forward/strafe/falling without WALKING adds2 unless Attr9 NO_MOVEMENT_RADIUS_BONUS. Absent B entry inherits A's entry/target identity. Caster combat reach floors distance; direct collision/ground and named force-height gap remain explicit. Current standalone toy roots have no SpellClassOptions rows; generic spell-family radius modifiers/native movement-ingress/Detour parity are not qualified here.
+
+Read-only audit:1758 native73 effect rows,55 raw70448 rows across9 tables pinned in target73-source-provenance.json. Native65440 Min10/Max15 retains15;75080 [72,73] gives B fixed7;38981 [1,73]/A15/Babsent inherits15;260080 A-radius0 floors to caster reach;346444 [73,16] requires shared center/recipients;224373 authors NO_MOVEMENT_RADIUS_BONUS;81037 retains force-height refusal.
+
+All eight toy contracts were audited against actual content/tdb templates. Canonical creature_template is not the runtime content view: earlier absence there is not a new data gap. Ruthers82467/120108/61667 is a source actor candidate (radius5,30s,30min recovery), pending actual UseToy GREEN. Wikky86594 promises forage/presents/Pandaria and Carp131814 promises kick interaction; blank AI/SmartAI does not establish these actions. Exact action markers keep both unavailable independently of selector73.
+
+Test267f2df53 gives12RED/20controlsPASS111.11s; movement extensionda1f46808 gives14RED/20controlsPASS111.18s. No compile/setup failure: unsupported73 suppresses native dummy planning or refuses real Ruthers UseToy; required action markers are absent. Implementation follows RED: sourced73 ordered destination, shared sampled recipient plan and explicit authority failures. Paired planning retains actual CastFailure instead of relabeling missing collision as an unsupported selector; unit-only integer-error API still returns its selector ID. GREEN/census/check pending; no new admission claim.
+
 ## Imaginary Gun companion visual boundary (2026-10-22)
 
 [Contract](../../specs/toys.md#imaginary-gun-companion-visual).163705/279843 authors one zero-payload aura4 at150/0,10000ms duration and180000ms item recovery,all attribute words0. Raw visual80422 binds caster event3→13 kit103289/AnimKit9670/animation1074 and companion aura event7→8 kit103290/AnimKit1669/ANIM_DEATH1. Complete61row/29table animation/sound/fallback closure has no missing references or new ordinary models; eight additional root/item/clock rows across nine raw tables are pinned in imaginary-gun-source-provenance.json. A visual death pose is not a fabricated server death/health/stand state.

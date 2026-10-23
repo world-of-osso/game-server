@@ -2674,9 +2674,7 @@ fn plan_targets(
                         cap,
                         ignore_target_check,
                     )
-                    .map_err(|id| {
-                        CastFailure::Unsupported(format!("implicit target {id} not supported"))
-                    })?;
+                    .map_err(|(_, failure)| failure)?;
                     selected.push((leader, units.clone(), destination));
                     (units, destination)
                 }
@@ -2706,10 +2704,12 @@ fn plan_targets(
         } else {
             Vec::new()
         };
-        let target_random_destination = effect.implicit_targets.contains(&74);
-        let ordered_destination =
-            target_random_destination || effect.implicit_targets.contains(&148);
-        let dest = if target_random_destination {
+        let sampled_destination = effect
+            .implicit_targets
+            .iter()
+            .any(|id| matches!(id, 73 | 74));
+        let ordered_destination = sampled_destination || effect.implicit_targets.contains(&148);
+        let dest = if sampled_destination {
             selected_destination
         } else if ordered_destination {
             targets::effect_destination(world, caster, explicit, spell, effect)?
