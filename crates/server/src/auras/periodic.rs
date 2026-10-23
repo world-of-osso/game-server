@@ -16,6 +16,33 @@ use super::{ActiveAuras, scripts};
 use crate::spell_cast::effects::{self, EffectCtx};
 use crate::spell_info::{SpellInfo, SpellStore};
 
+/// Count a real effect0 HoT's fresh native schedule using application modifiers.
+/// Residual producers supply a total budget; native duration/period own the split.
+pub(super) fn heal_tick_count(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell_id: u32,
+) -> Option<u32> {
+    let spell = world.get_resource::<SpellStore>()?.get(spell_id)?;
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0 && effect.aura == PERIODIC_HEAL)?;
+    let application = super::AuraApplication {
+        caster,
+        target,
+        spell_id,
+        effect_mask: 1,
+        source: super::AuraSource::Cast,
+    };
+    let duration = super::duration_ms(world, &application, spell);
+    let periodic = super::build_effect(world, caster, spell, effect, super::aura_now(world));
+    duration
+        .checked_div(periodic.period_ms)
+        .filter(|ticks| *ticks > 0)
+}
+
 /// Triggered spells cast by ticks resolve at this depth (no proc events).
 const TICK_TRIGGER_DEPTH: u8 = 1;
 const WILD_GROWTH: u32 = 48438;
@@ -148,6 +175,9 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
             let agony_tick = spell.id == super::agony::AGONY && tick.effect_index == 0;
             let advance_agony = agony_tick && !super::is_immune(world, unit, spell.school_mask());
             effects::deal_effect_damage(world, &ctx, effect, unit, tick.amount, false, true);
+            if spell.id == super::ignite::IGNITE && tick.effect_index == 0 {
+                super::ignite::trigger_intensifying_flame(world, tick.caster, unit, tick.amount);
+            }
             if advance_agony {
                 super::agony::advance_stack(world, unit, tick.instance_id);
             }

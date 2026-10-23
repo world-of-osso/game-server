@@ -34,6 +34,7 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     254513, // Barrier Generator (channeled shield visual, not an absorb)
     261981, // Spitzy
     272071, // Roar of Rezan: one-shot caster sound107006/animation74, no gameplay payload.
+    279843, // Imaginary Gun: source10s current-critter death-pose visual, not actual death.
     286277, // Worn Cloak
     300104, 300144, // War Banner: source CurrentPvpFaction condition and combat interrupts
     302273, // Heart of a Champion
@@ -58,6 +59,7 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     455023,  // Filmless Camera
     462145,  // Lampyridae Lure
     465642, 1215495, // Coldflame Ring/Cyrce's Circlet: permanent owner attachments.
+    467730,  // Spotlight: source30min selected raid-member visual, not a caster substitute.
     1269949, // Valdekar's Special
     1280563, // Lil' Scoots' Pillow
     1237584, 1271973, 1298433, // Etheric / Dominating / Corrosive Victory
@@ -110,7 +112,17 @@ pub(crate) fn is_visual_aura(spell: &SpellInfo, effect: &SpellEffect) -> bool {
 }
 
 pub(crate) fn is_visual_only(spell: &SpellInfo) -> bool {
-    spell.has_spell_visual
+    // Exact companion contract: no caster alias or gameplay sibling admission.
+    let authored_recipient = match spell.id {
+        279843 => matches!(spell.effects.as_slice(), [effect]
+            if effect.index == 0
+                && effect.effect == 6
+                && effect.aura == crate::auras::handlers::DUMMY
+                && effect.implicit_targets == [150, 0]),
+        _ => true,
+    };
+    authored_recipient
+        && spell.has_spell_visual
         && VISUAL_ONLY_SPELLS.contains(&spell.id)
         && spell.effects.iter().any(|effect| effect.effect != 0)
         && spell.effects.iter().all(|effect| {

@@ -20,6 +20,17 @@ pub(super) fn output_directory() -> std::path::PathBuf {
 pub(super) fn write_report(report: &super::campaign::Report) -> Result<(), String> {
     let directory = output_directory();
     std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
+    let events = report
+        .performance
+        .get("combat_events")
+        .ok_or("final simulator report lacks its native combat-event trace")?;
+    let export = serde_json::json!({"seed":report.seed,"status":report.status,
+        "reason":report.detail,"events":events});
+    std::fs::write(
+        directory.join(format!("combat-events-{}.json", report.seed)),
+        serde_json::to_vec_pretty(&export).map_err(|error| error.to_string())?,
+    )
+    .map_err(|error| format!("write native combat-event export: {error}"))?;
     std::fs::write(
         directory.join(format!("run-{}.json", report.seed)),
         serde_json::to_vec_pretty(&report).unwrap(),
@@ -55,6 +66,10 @@ pub(super) fn build_app() -> App {
 }
 
 pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
+    build_runtime_app(catalogs)
+}
+
+fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
     let mut app = App::new();
     app.insert_resource(super::Space(super::graph::read_graph().unwrap()));
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
@@ -68,6 +83,7 @@ pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>)
         crate::creature_scripts::CreatureScriptsPlugin,
         crate::scripted_ai::ScriptedAiPlugin,
         crate::followers::FollowerPlugin,
+        crate::hunter_pet::HunterPetPlugin,
         crate::pet_control::PetControlPlugin,
         crate::stats::StatsPlugin,
     ));
@@ -79,6 +95,7 @@ pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>)
         (
             crate::followers::simulator::update_leader,
             super::movement::update,
+            crate::creature_ai::no_path_evade_system,
         )
             .chain()
             .after(crate::followers::update_ai),

@@ -18,7 +18,7 @@ fn native_undead() -> crate::world_data::WorldData {
     templates.retain(|entry, _| [FLESH_EATER, 6, 113].contains(entry));
     assert_eq!(templates[&FLESH_EATER].creature_type, 6);
     crate::world_data::WorldData {
-        templates,
+        templates: templates.into(),
         ..Default::default()
     }
 }
@@ -412,7 +412,7 @@ fn class_completeness_native_creature_type_damage_applies_to_offhand_against_pla
         stats.off_hand = Some(weapon);
     }
     let mut attack = crate::combat::AutoAttack::new(victim);
-    attack.timer = 100.0;
+    attack.timer = std::time::Duration::from_secs(100);
     h.app.world_mut().entity_mut(caster).insert(attack);
     let before = h.health(victim);
     h.advance(2);

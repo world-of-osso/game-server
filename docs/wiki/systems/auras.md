@@ -1,5 +1,104 @@
 # Auras
 
+## Intensifying Flame tick bridge — 2026-10-23
+
+`FIRE_INTENSIFYING_FLAME_SIMC_TICK_BRIDGE` connects actual Ignite12654 effect0 ticks to native419800. SimC76f8118 `sc_mage.cpp2502–2567` supplies this missing bridge; TC a352b1fa has no named script and DB2 has no child trigger. Active416714 supplies the native owner-local target cap, percentage, chance and periodic mask. Its current70448 row has cap3, percentage30, chance101 and no ICD, charges or RPPM. The leaf's coefficient and flags remain native; SimC damage-flag overrides are not imported. [Contract](../../specs/auras.md#intensifying-flame).
+
+The periodic-damage boundary passes the actual base tick amount directly to the bridge, before `update_auras` removes expired auras. Deferred `process_aura_events` runs after expiry and cannot recover the final tick's base amount from live aura state. Counting living targets with this caster's actual Ignite also excludes other owners. No new `AuraEvent` fields, kit changes or talent grants.
+
+Ignored native a996 tests produce three genuine REDs: ordinary one/three-target ticks emit no419800, and natural expiry records nine Ignite ticks but zero children. The cap fixture now uses two ordinary Fireballs and the two actual starting Fire Blast charges, keeping four banks concurrent within their native9s lifetime. At68f5, exact native30% amount at one/three targets, four-target refusal and an unmodified-native feedback case pass4/5; the original natural-expiry oracle fails for a source-qualified reason, not a missing tick.
+
+TC's result deliberately differs from SimC. Parsed pinned TDB1210.26091 has no12846 `spell_proc` override; its only relevant script binding is12846→`spell_mage_ignite`, whose pinned a352b1fa CheckProc requires positive damage without excluding419800. SpellMgr.cpp1823–1831 generates the unrestricted native effect-family mask. Actual68f5 trace records nine12654 damage ticks, nine419800 damage events and nine12654 AuraRefreshed events, extending the original11.1s deadline to20.1s. SimC's plain `spell_t` Intensifying action does not enter its mage Ignite producer. Production preserves TC eligibility; no invented filter or mask change.
+
+Final natural-expiry credit is therefore isolated in a test only: after an ordinary Fireball earns its native bank, remove actual12846 while retaining416714 and native values. A separate unmodified-native case asserts the real feedback and refreshed deadline. Three retained core-Ignite formula/rolling/Hot-Streak controls remove only416714, preserving12846, level70 and original assertions; all four retained cases pass16.66s at68f5. These controlled states are script isolation, not selected-trait admission. Finalf6b53c0d3 passes all five native feature cases9.19s (compile5m17, zero warnings), including nine actual ticks and children, with the ninth at natural expiry in that explicit script isolation. Retained production/core-test source hashes remain identical to68f5; its four-case proof remains valid without another run.
+
+Known separate gap at3854/68f5: native419800 TREAT_AS_PERIODIC has no proc-event classification consumer. Ignite accepts both direct/periodic masks, so this does not change the feedback decision; other proc families remain unqualified. Sources: `auras/ignite.rs`, `auras/periodic.rs`, `followers/intensifying_flame_tests.rs`; exact source hashes and logs in engine `data/diagnostics/rotation-fidelity-2026-10-21/{intensifying-tc-proc-source-receipt.json,intensifying-68f5-native-feedback-diagnostic.log,intensifying-68f5-retained-isolated-ignite.log}`.
+## Light of the Titans and hit proc masks — 2026-10-22
+
+Native378405's selected effect0 supplies the40% contribution and child378412;
+its native10s/2s schedule owns five ticks. The aura script consumes actual resolved
+Word of Glory85673 healing on the real patient and executes the ordinary child.
+Native effect1's200% bonus applies only when that patient is the caster and an
+actual harmful periodic health-damage aura is active. SimC76f8118 paladin1129–1177
+and1251–1258 supplies the hook/condition, not its obsolete50%/NYI amount.
+
+The shared fresh periodic-heal clock reader moved unchanged from Echo into
+`periodic::heal_tick_count`; Echo/Prismatic/Ignite remain intact. Unpaid pool
+carry stays shared and flag-driven, not another Titans accumulator.
+
+Initial actual Word hits still lacked the child after adding the producer:
+`spell_hit_masks` classified all DefenseType0 hits as abilities. TC a352b1fa
+`Spell.cpp:2343–2400` instead keeps melee/ranged weapon masks, then reads
+Attr3 TreatAsPeriodic and Attr0 IsAbility for the non-weapon path. Word85673 is
+therefore a helpful spell0x4000, matching378405, not an ability0x400.
+
+Native producer RED465af2443 crosses real Judgment-earned Holy Power and Word
+healing; mask/control tip2fb442aa2 passes12cases with only self-DoT bonus tick110
+versus329 RED. Narrow bonus58ec9656c, merged891b9ab1d, passes19native cases38.11s,
+check0/2m08s/zero warnings/fmtPASS. Existing test expectations changed: **none**.
+The [census](../../handoffs/native-hit-proc-mask-census.md) enumerates334969possible
+spell-mask changes and5670static proc-aura candidate diffs; it is not a count of
+observed procs. The lead requires a full workspace gate before landing.
+[Contract](../../specs/light-of-the-titans.md),
+[exact proof ledger](../../handoffs/light-of-the-titans-proof-ledger.md).
+Actual repeated-Word pool integration, PvP scaling and effectiveness stay separate.
+
+## Native rolling periodic refresh — 2026-10-22
+
+`refresh::prepare_application(world,target,new,spell)` reads native Attr10
+`ROLLING_PERIODIC` and owns the single shared carry pass. It settles already-due
+old ticks once, then matches same caster/spell/source/effect index/aura type and
+adds unpaid stored amount over the refreshed scheduled ticks. Native phase stays
+owned by `AuraInstance::refresh_from`; no new timer or partial-tick mechanism.
+TC a352b1fa `SpellAuraEffects.cpp:832–849` supplies the rule. Fractional snapshots
+remain intact; existing damage/heal payment rounding is unchanged.
+
+Barbed217200 normalizes only its fresh authored five-amount budget to the native
+schedule: seven initial ticks, six refreshed. Its old pool goes through the shared
+pass, never a second spell-local accumulator.335467 periodic leech also uses that
+flag path with no separate carry branch. This preserves its existing fractional
+amount contract. No spell-ID exception gates general carry.
+
+External interface is unchanged: ordinary native aura application, including
+`cast_triggered_with_effect0_amount` with a sourced **per-tick** incoming amount,
+gets carry automatically.12654 has the flag and uses this path; its actual Ignite
+producer qualification belongs to the other slice, not these tests.
+
+Native71023 Languish demonstrates5vs8 RED on refresh without amount overrides;
+real Henry77489 independently demonstrates a lost unpaid heal pool. Shared
+production5622db488 plus29e0d8a61 fraction fix, integratedaeeaa1b87, passes19cases
+77.83s including generic damage/unflagged Renew, Echo6, Barbed4,3354671, Binding5
+and PoH1. The first13-case run deliberately exposed the unnecessary new storage
+rounding; no test oracle was weakened to fix it.
+[Contract](../../specs/auras.md#native-rolling-periodic-refresh),
+[proof ledger](../../handoffs/healer-echo-of-light-proof-ledger.md),
+[Echo investigation](../investigations/holy-priest-follower-ai.md#echo-of-light-producer-and-shared-rolling-carry--2026-10-22).
+## Native asynchronous stack expirations — 2026-10-22
+
+Native attribute490 is `Attributes_15 & 0x400`: SimC76f8118 `data_enums.hh:1910` names `SX_ASYNCHRONOUS_STACKING_AURA`; `buff.cpp:777–782` enables asynchronous lifetimes when native maximum stacks exceed1. Pinned TC a352 labels the same bit `ATTR15_UNK10`; no TC semantic claim is inferred from that label.
+
+`AuraInstance.stack_expirations` stores absolute deadlines for finite flagged applications. Refresh adds incoming deadlines rather than extending old ones, replacing oldest slots on native-cap overflow (`buff.cpp:2649–2692`). Ordinary aura updates decrement expired stacks and refresh derived stats/replicated views; zero remaining stacks enter the existing expiration/removal path. Nonflagged auras retain ordinary refresh behavior. No new timer constants, spell-ID whitelist or wire fields. Implementationac5eb241d gives native11GREEN41.86s atc43cc8dcb, zero warnings, including real Feel-the-Burn acquisition/non-Fire-Blast exclusion, independent4s expiry/native100-cap oldest replacement and retained ordinary proc/cadence controls. Cases enabled at25c4d4fb4. A later996ec234 merge changes aura/proc/stat consumers; current integration proof remains required. This does not certify every flagged spell's producer, periodic phase or consumption behavior.
+
+[Feel the Burn native RED](../investigations/follower-data.md#feel-the-burn-native-eligibility-and-overlap--2026-10-22) exercises this generic lifetime boundary through two real Fire Blasts. [Contract](../../specs/auras.md#feel-the-burn-and-asynchronous-stacks).
+
+## Pyroclasm Hot Streak policy — 2026-10-21
+
+`MAGE_PYROCLASM_SIMC_HOT_STREAK_TRIGGER` extends the existing Hot Streak cast-boundary hook, not generic proc masks. A true admitted48108 consumption rolls active269650 effect0 (native15%) and casts269651 with its native duration/two-stack cap. SimC76f8118 `sc_mage.cpp2326–2428,6444–6446` supplies the policy; pinned TC has no script and native269650 is DUMMY4 without proc options or a trigger. Native269651's230% value wins over reference numbers.
+
+The ordinary per-cast clone records whether admission had positive cast time. At launch, eligible11366/2120/1254851 hardcasts retain one269651 effect0 percentage in the existing numeric modifier snapshot; after launch they spend one stack through the native stack-loss path without refreshing its timer. This preserves damage after consumption and through missiles, and excludes instant casts even if buff state changes during an in-flight hardcast. Hot Streak consumption remains tied to the exact admitted instance. Native RED reproduced64 HS spends without a proc and two retained stacks after a hardcast; corrected instant-control oracle accounts for real crit outcomes/authored variance rather than assuming identical RNG. Four enabled native cases pass within the13-case first-batch GREEN at2ba4ec43a (22.04s); final integration checks pass at5368e1070. [Contract](../../specs/auras.md#pyroclasm-hot-streak-policy); tests `followers/pyroclasm_tests.rs`.
+
+## RPPM haste modifiers — 2026-10-21
+
+`SpellInfo::ProcsPerMinute` now retains the native Type1 Param/Coeff rows, loaded once with the base-rate catalog. TC a352b1fa `SpellInfo.cpp4292–4308/4358–4371` multiplies the rate by each selected haste factor before computing probability and bad-luck protection. Params1–5 use this engine's existing unified derived haste; Flags are not haste semantics. All159 current70448 Type1 rows have PlayerConditionID0. Native325201 PPM57/mod221 with actual learned55 Martial Agility1272685 (30% haste) reproduced expected94.78624% vs42.625% before implementation. The enabled donor passes at compileddfe5ff537 (23.38s) and in the2ba4ec43a control batch. Other modifier types2–8 remain named unsupported work, including selected73 aura202560's Type8 row. [Contract](../../specs/auras.md#data-driven-rppm-haste); test `auras/dance_rppm_tests.rs`.
+
+## Windwalker Combo Strikes policy — 2026-10-23
+
+`WW_COMBO_STRIKES_SIMC_POLICY` separates ordinary successful combo order from learned Hit Combo. SimC76f8118 `monk/sc_monk.cpp142–156/358–373` supplies first-action activation/repeat removal and damage eligibility; pinned TC has no115636 script. Native115636 effect0 coefficient2.3287499 times raw mastery points supplies the percentage. The published kit's damage children consume this state without advancing it; utility and white hits do not. Actual level10TP→Provoke→TP without Hit Combo gives genuine83.754=83.754 RED versus99.35737 expected first damage. GREEN and remaining per-ability/channel/proc qualification stay in the [source census](../../handoffs/ww-source-census.md), not inferred from this boundary. [Contract](../../specs/windwalker-parity.md).
+
+## Fists of Fury SimC cadence — 2026-10-21
+
+`FISTS_OF_FURY_SIMC_TICK_CADENCE` overrides only the base period for113656's117418 damage trigger to1000ms before ordinary period modifiers. Native70448's166ms PERIODIC_DUMMY heartbeat previously produced25 damage hits per4s channel. SimC76f8118 `monk/sc_monk.cpp1789–1796` supplies1s ticks with tick0 (five over4s); native Attributes5 already supplies the initial tick. The control heartbeat120086, native damage/cost/duration and generic226 toy bridge stay unchanged. TC a352b1fa has no FoF script; `SpellAuraEffects.cpp1324–1326` leaves226 handled via scripts. Ignored native RED confirms25vs5; enabled cadence case passes in the13-case2ba4ec43a GREEN. [Contract](../../specs/auras.md#fists-of-fury-damage-cadence); test `followers/kit_proc_fidelity_tests.rs::dps_parity_fists_of_fury_simc_tick_cadence_preserves_five_native_damage_hits`.
+
 ## Census generic resource, state, duration and sanctuary — 2026-10-20
 
 |Family|Native behavior / boundary|Pinned TC a352b1fa source|

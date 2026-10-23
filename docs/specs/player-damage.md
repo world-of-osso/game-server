@@ -5,6 +5,7 @@ Players deal Retail damage: auto-attacks swing the equipped weapon with attack p
 ## What it must do
 
 Auto-attack
+- [x] Main-hand, off-hand and ranged autorepeat countdowns use exact durations, with resets truncated to native integer milliseconds (TC Unit.cpp670–673/Unit.h710–713,1541). A2s attack is ready at the40th50ms tick, not41; retain each hand's phase and200ms display delay without epsilon fixes.
 - [x] Attack admission and hostile spell targeting honor authored UNIT_FLAG_NON_ATTACKABLE, NON_ATTACKABLE_2, NOT_SELECTABLE and IMMUNE_TO_PC. PC immunity blocks players/player-controlled sources, not independent creatures. Neutral unflagged creatures remain attackable; faction masks/lists are unchanged.
 - [x] A player's swing rolls a whole number between trunc((weapon min + AP / 6 × weapon speed) × (1 + versatility)) and the same for weapon max (Player::CalculateMinMaxDamage, StatSystem.cpp:435-485; Unit::CalculateDamage, Unit.cpp:2490-2539). AP / 6 is SimC's `WEAPON_POWER_COEFFICIENT`; TrinityCore divides by 3.5 (StatSystem.cpp:455).
 - [x] Without a weapon the main hand is unarmed: 1-2 at 2.0 s (`BASE_MINDAMAGE`/`BASE_MAXDAMAGE`).

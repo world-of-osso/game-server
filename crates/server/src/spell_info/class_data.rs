@@ -41,7 +41,7 @@ const ATTR13_CONTENT_ABILITY: u32 = 0x10000;
 #[cfg_attr(test, derive(Clone))]
 pub struct ClassSpells {
     /// Sorted by class ID.
-    pub classes: Vec<ClassInfo>,
+    pub classes: crate::catalog_data::CatalogData<Vec<ClassInfo>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -198,8 +198,10 @@ pub(crate) fn load_class_spells(conn: &Connection) -> rusqlite::Result<ClassSpel
                 default_skills: default_skill_lines(conn, class_id, skill_line)?,
             })
         })
-        .collect::<rusqlite::Result<_>>()?;
-    Ok(ClassSpells { classes })
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(ClassSpells {
+        classes: classes.into(),
+    })
 }
 
 /// `SKILL_FLAG_ALWAYS_MAX_VALUE` (DBCEnums.h:2394).

@@ -72,6 +72,9 @@ fn dummy19_mutilate_variable394_half_offhand() {
         .iter()
         .find(|e| e.spell_id == Some(27576) && e.kind == CombatLogKind::Damage)
         .unwrap();
+    // Native27576 is exclusive offhand: TC Unit.cpp6880–6891 selects OFF_ATTACK;
+    // Unit.cpp9991–9995 halves its AP once. Tooltip variable394 describes that
+    // result, not a second per-spell multiplier after native coefficient scaling.
     assert_eq!(mh.amount, 115);
     assert_eq!(oh.amount, 58);
 }

@@ -1,5 +1,30 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Caster-and-ability critical chance slice — 2026-10-22
+
+- Native308 on the recipient sums chance only for the aura's caster and matching native class-family/effect mask. Pinned TC's actual308 consumer is Magic defense1; do not invent a melee/ranged/defense0 consumer from its comment. Preserve native CANT_CRIT and existing base/spell/script chance rules.
+- Native1266748 Vital Clarity+15 matches Vivify116670 and Sheilun's Gift399491 through separate mask words. Native378957+30 and248212+10 sum for matching Magic Wildfire Bomb, not ranged Aimed Shot/Serpent Sting or defense0 Kill Command. Actual246733 marker+1000 guarantees Riptide's direct critical healing without changing RNG, but not other Shaman heals. Removal and foreign-caster/recipient independence remain required. [Source and proof](../diagnostics/census-tail-70448.md).
+
+## Caster-owned armor bypass slice — 2026-10-22
+
+- Native345 on the physical victim sums only effects whose caster matches the attacker, capped above at100%. Apply that fraction to the full current armor after native level scaling, before269 ignore/floor and280 level-capped penetration. Do not turn the sum into independent products, add a lower clamp, or consume an aura on the attacker instead.
+- Physical spells, actual autoswings and current generic-creature melee forecasts share this reader; removal restores prior damage/estimates. A finite matching345 must bound the forecast's validity when its expiration changes effective bypass; a foreign caster's aura cannot impose that deadline. Native91021+20,165944+50,316220+30 and108126+100 qualify ordering, sum/cap, ownership and lifecycle. Forecast receipts use an ordinary sourced Stockade actor and native follower profile; the separate numeric swing fixture fixes weapon100/AP0 without changing RNG or native armor constants. [Source and proof](../diagnostics/census-tail-70448.md).
+
+## Critical-healing amount slice — 2026-10-22
+
+- Caster-owned native50 multiplies the whole critical heal after existing CritDamageAndHealing spell modifiers; multiply independent signed factors and truncate the resulting critical amount to native integer healing. MiscValue is not a school filter in pinned TC. Ordinary noncritical heals, native cannot-crit spells and other aura recipients remain unaffected; removal restores prior amount.
+- Actual154611 Bio Spores aura57+100 guarantees critical hits without changing RNG or stats. Native462587+15 affects Arcane394806 despite MiscValue8;200376+50 and154429−25 compose multiplicatively; native310443 heal5 demonstrates10×1.15→11 integer truncation. Existing periodic heals that never roll crit are not newly made critical. [Source and proof](../diagnostics/census-tail-70448.md).
+
+## Caster-owned healing taken slice — 2026-10-22
+
+- Native504 on the recipient multiplies direct and periodic healing only from that aura's caster. Multiply independent signed amounts, without a school/family filter or strongest-only aggregation. Honor the existing259 sign permissions from native attr6/13; other healers and recipients remain independent, and removal restores prior healing.
+- Native357556+50,411036+10 and1271318−9.0909 qualify multiplication, ownership/removal and ignored/negative-permitted healing. Native366155 Reversion's authored0 is identity, not an inferred Golden Hour bonus. This slice does not change283 or Reversion scripts. [Source and proof](../diagnostics/census-tail-70448.md).
+
+## Optional power-runtime boundaries — 2026-10-22
+
+- An App may retain native PowerPools while SpellCastPlugin/PowerTypeTable is absent. Unrelated aura application/removal, including native44521 preparation at world-port ACK, must not panic, replace the catalog with an empty table, or invent maximum/current power. Native178 capacity recalculation warns and leaves existing non-Mana pools unchanged when the native catalog is unavailable.
+- The same missing catalog must explicitly refuse pet spawning, follower initialization and follower resource conditions before mutating their existing state: warn and return None, an error or false respectively. With a real catalog, keep native definitions, display divisors and existing capacity/regen rules. [Regression proof and caller audit](../diagnostics/census-tail-70448.md).
+
 ## Periodic-healing taken slice — 2026-10-22
 
 - Native259 changes only periodic healing received by its owner. Multiply strongest negative and strongest positive contributions independently, not every aura or their sum; removal updates subsequent ticks of an already-running HoT.
