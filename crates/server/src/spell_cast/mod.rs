@@ -707,6 +707,14 @@ impl SpellHistory {
             .map(|(spell, _)| spell)
     }
 
+    #[cfg(test)]
+    pub(crate) fn last_successful_cast(&self) -> Option<u32> {
+        self.successful_casts
+            .iter()
+            .max_by_key(|(_, order)| *order)
+            .map(|(&spell, _)| spell)
+    }
+
     fn record_successful_cast(&mut self, spell: u32) {
         self.cast_sequence += 1;
         self.successful_casts.insert(spell, self.cast_sequence);
@@ -735,6 +743,16 @@ impl SpellHistory {
                     .category_ready_at
                     .get(&category)
                     .is_some_and(|&at| at > now))
+    }
+
+    /// TC a352b1fa SpellHistory.cpp:709–736 GetRemainingCooldown: a live own
+    /// entry wins; otherwise consult its category. Expired entries are not live.
+    pub(crate) fn remaining_cooldown_ms(&self, spell: &SpellInfo, now: f64) -> u64 {
+        let category = spell.categories.as_ref().map_or(0, |c| c.category);
+        let own_deadline = self.spell_ready_at.get(&spell.id).filter(|&&at| at > now);
+        let deadline = own_deadline.or_else(|| self.category_ready_at.get(&category));
+        let remaining = deadline.copied().unwrap_or(now) - now;
+        (remaining.max(0.0) * 1000.0) as u64
     }
 
     pub(crate) fn on_gcd(&self, spell: &SpellInfo, now: f64) -> bool {
@@ -2752,12 +2770,12 @@ fn plan_targets(
         } else {
             Vec::new()
         };
-        let sampled_destination = effect
+        let paired_destination = effect
             .implicit_targets
             .iter()
-            .any(|id| matches!(id, 73 | 74));
-        let ordered_destination = sampled_destination || effect.implicit_targets.contains(&148);
-        let dest = if sampled_destination {
+            .any(|id| matches!(id, 41 | 43 | 48 | 73 | 74));
+        let ordered_destination = paired_destination || effect.implicit_targets.contains(&148);
+        let dest = if paired_destination {
             selected_destination
         } else if ordered_destination {
             targets::effect_destination(world, caster, explicit, spell, effect)?
@@ -3862,6 +3880,8 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
 
 #[cfg(test)]
 mod additional_optional_power_tests;
+#[cfg(test)]
+mod caster_offset_tests;
 #[cfg(test)]
 mod class_resource_tests;
 #[cfg(test)]

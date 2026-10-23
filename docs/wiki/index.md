@@ -1,5 +1,11 @@
 - [Zero-valued modifier charges](investigations/follower-data.md#lightning-launch-maelstrom-children--2026-10-22) — native four-path/removal/SK10GREEN + non-Shaman nonzero1GREEN; seven retained root/SK controls, source-scoped StatsPlugin70 samples; late PoM proc ownership remains separate.
 - [Lightning launch Maelstrom](investigations/follower-data.md#lightning-launch-maelstrom-children--2026-10-22) — native four-path/removal/SK10GREEN + nonzero Mage1GREEN; launch children, actual controller BP0 and parent modifier-charge ownership qualified.
+- [Demonology DPS parity](investigations/demonology-dps-parity.md) — exact ST196789.57/3T420736.29 reference reproduction; owner/pet/summon census and missing native guardian input boundary; native parity open.
+- [Devastation Giantkiller policy](investigations/follower-data.md#devastation-giantkiller-policy--2026-10-22) — actual native mastery4RED; source-backed health/Tyranny multiplier implemented pending GREEN, measured ST/3T gaps and literal APL remain open.
+- [Shared native APL facts](systems/simc-apl.md#native-binding-boundary) — actual earned buffs/resources, selected talents, cooldown/charge/action-GCD and fixture clocks; six native RED→GREEN17.40s, unknown/dungeon-TTD predicates explicit; WW132row literal fixture5GREEN35.19s, damage/proc qualification and Ret integration open.
+- [Caster offsets and balloons](systems/toys.md#caster-offsets414348-source-boundary-2026-10-23) — source41/43/48 shared geometry; real75042/245946 learning,1s cast,60s expiry,Dismiss/reuse.39 covered cases across37+1+1/check0-67.07s/fmt0,545→547 exacttwo; Arena battle gap retained, native-facing/presentation/modifier/Detour gaps explicit.
+- [SimC spell oracle](reference/simc-spell-oracle.md) — pinned single-spell factor receipts, passive/buff sources, child IDs and native field mapping; short probes do not certify DPS parity.
+- [Candle/Azure normalization correction](systems/boss-scripts.md#azure-integration-correction) — local Sprouts packet-target RED→composite138GREEN; preserve supplied recipient outside EXCLUDE_CASTER self-admission; Azure/Candle/native controls retained, lead full gate pending.
 - [Shared native APL facts](systems/simc-apl.md#native-binding-boundary) — actual earned buffs/resources, selected talents, cooldown/charge/action-GCD and fixture clocks; six native RED→GREEN17.40s, unknown/dungeon-TTD predicates explicit; literal spec integration remains open.
 - [Windwalker Combo Strikes policy](systems/auras.md#windwalker-combo-strikes-policy--2026-10-23) — native raw-mastery coefficient, ordinary first/repeat state independent of Hit Combo; TP→Provoke→TP genuine RED→GREEN1/1. ST/3T frozen baseline gaps and remaining action/channel qualification explicit.
 - [Current-critter dismissal](systems/toys.md#current-critter-dismissal-authority-2026-10-22) — authorized DismissPet contract now targets actual current journal/legacy critter,not older journal tuple. Real balloon/legacy/older-preservation/isolation RED3/controls16→20GREEN29.14s; pipeline545 unchanged/check0-103.15s/fmt0 at65ac. No protocol or UseToy-toggle change.
@@ -104,6 +110,8 @@
 - [Holy Priest follower AI](investigations/holy-priest-follower-ai.md) — bounded43GREEN/1shared PoH lifetime RED, full frozen80-report comparisons; no clears/overall-quality claim, Azure deaths25→34,18 named script gaps retained.
 - [Follower healer triage](systems/follower-healer-triage.md) — named project policy design, pending behavioral proof; [complete Crenna70448 kit census](reference/follower-resto-70448-kit.md).
 - [Azure translocation](systems/azure-translocation.md) — explicit book/POI endpoint policy, source gossip derivation, staged-nav components and native interaction RED/GREEN ledger.
+- [Candle King native target boundary](systems/boss-scripts.md#candle-king-native-explicit-unit-boundary--2026-10-22) — actual Molds self-target RED→4GREEN Normal/projected205, TC normalization and31 retained controls; native4336 destination landing pending.
+
 - [Skarmorak TC Shell partial](systems/boss-scripts.md#skarmorak-tc-shell-controller-partial--2026-10-22) — native first-Smash/absorb-exit RED→composite4GREEN, real meleeConsumed/Shattered/rearm/copy-credit; natural120s survival and child/controller gaps explicit.
 - [Orator TC energy partial](systems/boss-scripts.md#orator-tc-energy-controller-partial--2026-10-22) — actual100-vs0 nativeRED→4GREEN56.12s Normal/projected205; native energy/children/copy lifecycle, immutable binding producer and controller gaps explicit.
 - [Deios source ingress boundary](systems/boss-scripts.md#deios-source-ingress-boundary--2026-10-21) — native outgoingWing/control2PASS, first6.3sWingRED; source PC immunity320 preserved, no invented unlock or combat proof.
@@ -899,7 +907,7 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
-- [Shared SimC APL](systems/simc-apl.md) — literal expressions, declared variables and conditional call order; eleven source WW/Ret decisions plus two action-context RED→GREEN cases;13GREEN, cases enabled; native adapters remain pending.
+- [Shared SimC APL](systems/simc-apl.md) — literal expressions, variables and call order;13 historical GREEN. Explicit run/target extension:16PASS/8genuineRED→24/24GREEN ate7fdc4dd1; native target-aware dispatch remains adapter-owned.
 
 - [Native weapon AP](systems/character-stats.md#native-weapon-attack-power--2026-10-23) — actual Tiger Palm91vs358–377 RED→four native GREEN13.89s; raw item-table AP, attack-type selection and aura366/unequip; parent integration gate pending.
 
@@ -1100,3 +1108,5 @@ Debug logs and root cause analyses.
 - [Census effect77](systems/spell-casting.md#census-effect77--2026-10-20) —44-root source mapping, Subduing Grasp E1 partial port; unmatched slots stay named gaps.
 
 - [Ruby entrance follow/formation](investigations/follower-data.md#ruby-entrance-follow-and-formation--2026-10-22) — absent runtime bake freezes admission; native23s RED proves identical pet follow points independently stack all4. Approved deterministic party slots; native23s GREEN,464controlsPASS, Stockade/Henry simulator clears and all-targets/fmtPASS.
+
+- [NPC native starter knowledge](investigations/follower-data.md#npc-native-starter-knowledge--2026-10-23) — shared runtime/exporter source-book boundary; three native RED→GREEN cases and990 exact exported loadouts; broader integration pending.

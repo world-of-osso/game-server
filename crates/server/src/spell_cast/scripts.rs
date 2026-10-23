@@ -31,6 +31,8 @@ mod empower_evoker;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
+mod giantkiller;
+pub(super) use giantkiller::multiplier as giantkiller_multiplier;
 pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
