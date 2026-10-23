@@ -2,6 +2,10 @@
 
 Server-side aura runtime in `crates/server/src/auras/`: aura instances on active units, periodic effects, procs, spell and stat modifiers, removal and `UnitAuras` replication. See [auras](../wiki/systems/auras.md).
 
+## Label point modifiers on existing auras
+
+Native aura218/219 point modifiers must update affected self-owned passive/permanent aura effect amounts on add, change and removal, independent of application order. Use native labels and Points/PointsIndex0–4; charged modifiers must not recalculate passive amounts, and the triggering effect cannot modify itself. Preserve the target aura instance, duration, stacks and periodic phase. TC's authored Overflowing Maelstrom384669 temporary-aura exception remains eligible. Changed point-modifier effects propagate to their dependants while retaining the original triggering-effect exclusion. Native WW1258122 makes Efficient Training450989 effects0/1 equal40 instead of20; native Ret1258011 makes Second Sunrise431474 equal20/50 instead of15/30. Unlearning restores unmodified amounts without reapplying the target. TC a352b1fa `SpellAuraEffects.cpp1194–1249`; [source census/proof](../handoffs/aura-label-points-proof-ledger.md).
+
 ## Native hit proc masks
 
 - [ ] Classify each landed hit by TC damage/healing/effect positivity, not faction relation: positive damage is harmful; otherwise positive healing is helpful; otherwise inspect only effects landing on that recipient.
@@ -192,6 +196,7 @@ Actual learned403521 replaces Omen113043's proc chance with its native effect2 v
 - `crates/server/src/auras/periodic.rs`: periodic ticks.
 - `crates/server/src/auras/procs.rs`: `AuraEvent` queue, procs, event interrupts.
 - `crates/server/src/auras/spell_mods.rs`: `SpellModOp`, modifier matching, charge use.
+- `crates/server/src/auras/point_mods.rs`: existing owned aura amount recalculation after label point-modifier lifecycle changes.
 - `crates/server/src/auras/stat_mods.rs`: `StatModifiers`/`AuraStatMods` computation.
 - `crates/server/src/auras/handlers.rs`: aura type registry.
 - `crates/server/src/auras/scripts.rs`: `AuraScripts` hooks, including Turtle's catalog pacify child lifecycle.

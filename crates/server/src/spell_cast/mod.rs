@@ -166,6 +166,7 @@ mod dummy9_tests;
 mod dummy_tests;
 pub mod effects;
 pub(crate) mod efflorescence;
+mod elemental_resource;
 mod empower;
 #[cfg(test)]
 mod empower_input_tests;
@@ -2570,7 +2571,9 @@ pub(crate) fn execute_cast(
     if let Some(hook) = scripts::after_cast(spell.id) {
         hook(world, caster, spell);
     }
-    spell_mods::consume_charges(world, caster, spell);
+    if !spell.cast_parent_owns_modifier_charges {
+        spell_mods::consume_charges(world, caster, spell);
+    }
     blooming_infusion::after_cast(world, caster, spell);
     druid_transform::after_cast(world, caster, spell);
     // Spell::finish (Spell.cpp:4448-4450): some spells stop the caster's auto-attack.
