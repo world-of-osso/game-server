@@ -147,8 +147,26 @@ fn encounter_coverage_irideus_projected_first_four_lane_clocks_and_overload_aura
 fn encounter_coverage_irideus_projected_repeats_generic_credit_copy_and_corpse() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_irideus(difficulty);
+        let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
+        h.app
+            .world_mut()
+            .insert_resource(super::super::cast_admission::CastAdmissions {
+                actor: boss,
+                origin,
+                entries: Vec::new(),
+            });
         h.engage(boss);
         h.advance(90.0);
+        eprintln!(
+            "Irideus projected{difficulty} admissions={:?}; counts={:?}; player={:?}; boss={:?}",
+            h.app
+                .world()
+                .resource::<super::super::cast_admission::CastAdmissions>()
+                .entries,
+            [FIST, SURGE, OVERLOAD, VOLLEY].map(|spell| completed_casts(&h, boss, spell)),
+            h.health(h.player()),
+            h.health(boss)
+        );
         for spell in [FIST, SURGE, OVERLOAD, VOLLEY] {
             assert!(
                 completed_casts(&h, boss, spell) >= 2,
