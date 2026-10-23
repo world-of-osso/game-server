@@ -136,6 +136,16 @@ fn encounter_coverage_edna_five_inherited_stringid_deaths_force_walk_arrival_unl
             "TC DONE from authored arrival callback"
         );
         assert!(!immune(&h, boss));
+        let home = h
+            .app
+            .world()
+            .get::<crate::creature_ai::HomePosition>(boss)
+            .expect("native Anchor Here updates home, not original respawn data");
+        assert_eq!(home.position, COMBAT_POSITION);
+        assert_eq!(
+            home.orientation,
+            h.app.world().get::<Rotation>(boss).unwrap().y
+        );
         assert!(
             h.inbox(0)
                 .spell_gos
@@ -176,6 +186,30 @@ fn encounter_coverage_edna_death_counter_is_copy_owned_and_idle_time_does_not_un
             .all(|go| go.caster != boss.to_bits() || go.spell_id != ANCHOR)
     );
     assert!(h.app.world().get::<movement::PointMovement>(boss).is_none());
+}
+
+#[test]
+#[ignore = "Native Anchor Here effect RED must execute before implementation"]
+fn encounter_coverage_edna_native_anchor_sets_home_position_without_unlock() {
+    let (mut h, boss, map, _) = source_copy(1);
+    h.app.world_mut().entity_mut(boss).insert(COMBAT_POSITION);
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, ANCHOR, Some(boss), false)
+        .expect("ordinary native45313 script effect");
+    let home = h
+        .app
+        .world()
+        .get::<crate::creature_ai::HomePosition>(boss)
+        .expect("TC spell_gen_anchor_here effect0 sets current home position");
+    assert_eq!(home.position, COMBAT_POSITION);
+    assert_eq!(
+        home.orientation,
+        h.app.world().get::<Rotation>(boss).unwrap().y
+    );
+    assert!(
+        immune(&h, boss),
+        "native anchor alone does not remove PC immunity"
+    );
+    assert_eq!(intro_state(&mut h, map), 0);
 }
 
 #[test]
