@@ -21,6 +21,7 @@ The whole server test suite must retain every discovered case and existing ignor
 - [x] Permit one source reader to supply concurrent Apps; do not serialize repeated database decoding behind a shared global lock.
 - [x] Keep prepared paths distinct from canonical authority, even when initial bytes match; changed content at the same path must load the changed definitions.
 - [x] App-local catalog mutations must leave sibling Apps and retained input definitions unchanged.
+- [ ] Deleted prepared source files must not keep otherwise unused decoded catalogs alive after the next catalog load; existing App copies remain valid and independent, while existing canonical input stays reusable.
 - [x] Production catalog behavior and owned collection representation must remain unchanged; fixture sharing is test-only.
 
 ## How it works
