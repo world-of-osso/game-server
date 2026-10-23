@@ -351,7 +351,7 @@ fn toy_coverage_imaginary_gun_visual_payload_recipient_and_gameplay_sibling_drif
             1 => changed.effects[0].base_points = 1.0,
             2 => changed.effects[0].implicit_targets = [1, 0],
             3 => {
-                let mut damage = source.get(116).unwrap().effects[0].clone();
+                let mut damage = source.get(228597).unwrap().effects[0].clone();
                 damage.index = 1;
                 changed.effects.push(damage);
             }
