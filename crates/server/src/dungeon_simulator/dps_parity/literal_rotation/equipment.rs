@@ -7,6 +7,10 @@ use server::simc_apl::{Action, Facts};
 use shared::protocol::EquipmentSlot;
 use std::collections::BTreeMap;
 
+#[cfg(test)]
+#[path = "equipment_tests.rs"]
+mod tests;
+
 const ALGETHAR_PUZZLE_BOX: u32 = 193701;
 
 #[derive(Clone, Copy)]
