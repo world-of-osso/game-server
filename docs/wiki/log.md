@@ -1,5 +1,24 @@
 - [Candle/Azure normalization correction](systems/boss-scripts.md#azure-integration-correction) — 2026-10-23: actual a112 Sprouts packet-target RED0/1;9f bounds generic source normalization to self-exclusion admission, preserving published cast/log recipients; Azure timing/assertions unchanged. Focused136PASS228.63s plus private-geometry prerequisite2PASS12.03s yields composite138GREEN;14pre-existing ignored, lead full integration gate pending.
 - [Candle King native target boundary](systems/boss-scripts.md#candle-king-native-explicit-unit-boundary--2026-10-22) — 2026-10-22: actual420659 self-target InvalidTarget RED→4GREEN70.52s, TC621–678 normalization/source masks;31 retained controls, native4336 landing pending.
+## 2026-10-22 — Hunter pet sourced HP/armor and summon ordering
+
+[Hunter inheritance](systems/character-stats.md#hunter-pet-health-and-armor--2026-10-22): native ExpectedStat/template createHP, TC30% ownerStamina×10HP and level×50+70% ownerarmor. Separate fresh56244/max178094 RED fixed through the existing cached Stats producer before summon, without initialization/top-up state. Six native controls pass; lifecycle composite5+1 passes after authentic ExpectedStats fixture hydration and exact native377HP dismissal persistence. Check/fmt pass at01d22; parent integration gate remains separate. SimC divergence explicit; no whole DPS/Azure survival/petAP claim.
+## 2026-10-22 — Approved Darkflame one-way collision drop
+
+[Navigation](systems/navigation.md#one-way-collision-drop--2026-10-22): single2651 source→lower connection approved after raw-edge table; no Halls/Academy/Goldie link. Native MoveFall actual ground/LOS landingPASS, native downpath+authenticated follower routeRED atdef505bf8. Implemented explicit directed native-leg edge and owned PointMovement→MoveFall departure; no canonical bake or NPC damage. Atcff55269e four targeted native/follower/other-map testsGREEN8.03s; separate full-boss upward controls2GREEN0.06s. Mergedorigin/mastera268ba2a6 as4a4addad5 without movement changes. `FOLLOWER_NPC_FALL_DAMAGE_UNMODELED`; lead integration gate pending.
+## 2026-10-22 — Target73/Ruthers focused qualification
+
+Final affected15/15GREEN73.32s atd4;retained32controls139.13s+IG5 at2a paths unchanged. Ruthers real learning/UseToy/model/owner/map/radius5,natural30s expiry/30min recovery-reuse,missingauthority no actor/item recovery plus real retry. Initial two fixture failures corrected with actual LOS and GCD-vs-item distinction; observed1500ms/is_gcd=true is not30min recovery. ExactFull1173 census544→545 only82467;seven blocked-row list deltas/six unavailable-string deltas, Wikky/Carp remain exact action gaps. Check0/65.82s/no warnings/fmt0/manual readability; no native/generic-modifier/ingress/Detour claim. [Boundary](systems/toys.md#target73-caster-radius-source-boundary-2026-10-22).
+
+## 2026-10-22 — Target73 source mechanism test-first
+
+1758 native rows/55 raw rows9tables;14RED/20controlsPASS111.18s after movement-mask/NO_MOVEMENT_RADIUS_BONUS extension. Caster extent/reach/direct authority/shared area sample implemented after RED; Wikky forage/presents/Pandaria and Carp kick remain exact gaps, Ruthers actual-use qualification pending. [Boundary](systems/toys.md#target73-caster-radius-source-boundary-2026-10-22).
+
+Imaginary Gun ig981 landed1aef894cf;0034 ancestry independently verified and inactive local/remote branch cleaned. Gate suite2170PASS/1follower_combatrefs_native_three_targets_reach_area_policyFAIL/8ignored1657.20s,check0/fmt0;land merge/fmt/check/push0. Not an all-green integration suite; no unrelated-fix/native claim.
+## 2026-10-22 — Gorek minimum-alert partial
+
+[Gorek](systems/boss-scripts.md#gorek-minimum-alert-partial--2026-10-22): ignorednativeRED→sourceMight/Aegis/Heated/Storm success-owned/namedlowerhold lanes. Post-master921957ad7 native4GREEN31.12s Normal1/projected205,first3.6sMight/actualauras/92s3cycles/reset/actualcopycredit/corpse;stable-keySQLreceipt. Anvil/selector/Stormdummy and existingroutegap retained, no wholefight/publication claim.
+
 ## 2026-10-22 — Khajin non-Mythic partial
 
 [Khajin](systems/boss-scripts.md#khajin-non-mythic-partial--2026-10-22): ignorednativeRED→sourceShock/Hail/Surge lanes; post-master930e63f96 native4GREEN20.76s Normal1/projected205, real7sHail,90s5/3/3completions/reset/actualsecondcopycredit/corpse. ManualinstantShock fixture observes0.1s beforeautomatic6s request, noAI/timer bypass. Surge/Boulder/controller gaps and stable-key SQLreceipt retained.
@@ -4025,3 +4044,11 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 - 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22): native child effectiveness/removal/Echo GREEN; real long-flight HIT-timing and three-target Chain RED. Per-hit correction and native45297 mapping committed; GREEN pending.
 
 - 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22) HIT/Chain correction5GREEN10.43s; actual StatsPlugin70samples2PASS9.38s on same executable. Three qualified tests enabled; fullAPL/resource/other-root gaps retained.
+
+- [Lava Burst Overload](investigations/follower-data.md#lava-burst-overload-qualification): fixtureNoCharges distinguished from genuine86-native-hit RED;51505→285466 added to existing HIT callback/effect1 scaling. GREEN pending; EB/Icefury cast-only scope clarified.
+
+- [Lava Overload identity](investigations/follower-data.md#lava-burst-overload-qualification): TC enum77451 is queued cast; native effect32→285466 damage at50yd/s. Direct-payload mapping is not gate-ready; ignored native wrapper/flight oracle added before correction.
+
+- [Lava wrapper](investigations/follower-data.md#lava-burst-overload-qualification): native285466damage/no77451Go genuineRED1FAIL1PASS14.71s. Queuedcast corrected to77451; damage285466 retains effect1 scaling, native wrapper flight unchanged. GREEN pending.
+
+- [Lava wrapper](investigations/follower-data.md#lava-burst-overload-qualification):2GREEN18.14s, actual77451Go→285466Damage with0.7s/35yd flight; samebinary actualStatsPlugin70samples2PASS14.36s. Qualified Lava cases enabled; crit/resources and unselectedEB/Ice remain separate.
