@@ -3925,3 +3925,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0â
 - [Lava wrapper](investigations/follower-data.md#lava-burst-overload-qualification): native285466damage/no77451Go genuineRED1FAIL1PASS14.71s. Queuedcast corrected to77451; damage285466 retains effect1 scaling, native wrapper flight unchanged. GREEN pending.
 
 - [Lava wrapper](investigations/follower-data.md#lava-burst-overload-qualification):2GREEN18.14s, actual77451Goâ†’285466Damage with0.7s/35yd flight; samebinary actualStatsPlugin70samples2PASS14.36s. Qualified Lava cases enabled; crit/resources and unselectedEB/Ice remain separate.
+
+- [Unselected EB/Ice](investigations/follower-data.md#unselected-elemental-blast-and-icefury-overload-mechanisms): nativeIce86-hit/no219271 genuineRED/controlPASS; minimal cast-only mapping added, GREEN pending. EBfundingAPI corrected without pool injection; EBRED pending, no production map.
