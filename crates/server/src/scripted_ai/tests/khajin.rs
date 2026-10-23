@@ -64,7 +64,9 @@ fn encounter_coverage_khajin_projected_native_damage_and_isolation() {
             let player = h.player();
             crate::spell_cast::creature_cast(h.app.world_mut(), boss, spell, Some(player), false)
                 .expect("native Khajin damage admission");
-            h.advance(8.0);
+            // Instant Shock completes before its scheduled6s request; Hail needs
+            // its native7s cast. Do not count an automatic Shock as this manual one.
+            h.advance(if spell == SHOCK { 0.1 } else { 8.0 });
             assert_eq!(completed_casts(&h, boss, spell), 1);
             assert!(
                 h.inbox(0)
