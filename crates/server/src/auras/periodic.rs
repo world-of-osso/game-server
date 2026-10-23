@@ -175,6 +175,9 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
             let agony_tick = spell.id == super::agony::AGONY && tick.effect_index == 0;
             let advance_agony = agony_tick && !super::is_immune(world, unit, spell.school_mask());
             effects::deal_effect_damage(world, &ctx, effect, unit, tick.amount, false, true);
+            if spell.id == super::ignite::IGNITE && tick.effect_index == 0 {
+                super::ignite::trigger_intensifying_flame(world, tick.caster, unit, tick.amount);
+            }
             if advance_agony {
                 super::agony::advance_stack(world, unit, tick.instance_id);
             }

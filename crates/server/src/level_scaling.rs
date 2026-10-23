@@ -391,6 +391,16 @@ pub(crate) fn health_loss(attacker: &UnitScaling, victim: &UnitScaling, damage: 
     (damage / victim.health_multiplier(attacker)).trunc()
 }
 
+/// Observation-only mapping of one pre-scaling damage/shield point into victim HP.
+#[cfg(test)]
+pub(crate) fn damage_to_hp_scale(world: &World, attacker: Entity, victim: Entity) -> f32 {
+    let (attacker, victim) = (
+        UnitScaling::of(world, attacker),
+        UnitScaling::of(world, victim),
+    );
+    attacker.damage_multiplier(&victim) / victim.health_multiplier(&attacker)
+}
+
 /// Combat-log damage beyond remaining health, in the logged damage's units.
 /// Use the actual truncated health loss rather than recomputing its scaling.
 pub(crate) fn damage_overkill(amount: f32, scaled_loss: f32, health_before: f32) -> f32 {
