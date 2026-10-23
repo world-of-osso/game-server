@@ -4,9 +4,8 @@ Scope: engine-free `server::simc_apl`; no native rotation/DPS qualification.
 
 ## Corrected isolated packet
 
-- `42ed29079`: five run/control regressions.
-- `e8940cbb7`: explicit `Action.target`, candidate API scaffold and target regressions; existing native fixture Action constructors updated.
-- `arms-apl-gate-implementation`: replacement implementation and corrected oracle, assembled from verified `ad720fc3c` plus proof-only documentation. Resolve this local gate ref for the third cherry-pick; never use old `e7fdc4dd1`.
+- `arms-apl-gate-implementation`: one scoped squashed replacement on master23a0ec04c, covering run/control tests, `Action.target`/candidate API and constructors, min/max selection, corrected child oracle and verified `ad720fc3c` implementation plus proof-only docs.
+- Resolve that local gate ref for the single cherry-pick. It replaces original `42ed29079`/`e8940cbb7`/`e7fdc4dd1`; do not cherry-pick the old stack.
 
 Do not merge the whole Arms branch: independent enabled native REDs and opt-in schedule REDs are not this packet. Lead reports original ar1024 pulled before landing; corrected packet still requires its independent integration gate after ww1025.
 
