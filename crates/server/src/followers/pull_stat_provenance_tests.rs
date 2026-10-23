@@ -1,6 +1,7 @@
 //! Read-only native aura/stat contribution comparison, not an admission or HP override.
 use super::Follower;
-use super::pull_admission_tests::{NATIVE_GARRICK_MAX_HEALTH, add_native_dps};
+use super::passive_stats_tests::{GARRICK_STAMINA_SOURCES, garrick_source_stamina};
+use super::pull_admission_tests::add_native_dps;
 use super::pull_forecast_tests::{add_native_healer, source_fixture_with_plugins};
 use bevy::prelude::*;
 use shared::components::{Health, Level, UnitLevel};
@@ -65,9 +66,18 @@ fn native_tank_stat_provenance_partial_and_full_kit() {
     let profile = h.app.world().get::<Follower>(tank).unwrap().profile.clone();
     super::spawning::initialize(h.app.world_mut(), owner, tank, profile.clone()).unwrap();
     h.advance(3);
-    print_passive_contributions(h.app.world(), tank, "partial");
-    assert_native_health(h.app.world(), tank, 10696.0);
-    assert!(!crate::auras::has_aura(h.app.world(), tank, 402964));
+    print_passive_contributions(h.app.world(), tank, "unpublished-controller");
+    // Controller publication must not alter native starter talents or their stats.
+    let expected = garrick_source_stamina(h.app.world(), GARRICK_STAMINA_SOURCES);
+    assert_native_health(h.app.world(), tank, expected.health);
+    assert!(crate::auras::has_aura(h.app.world(), tank, 402964));
+    assert!(
+        h.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(tank)
+            .unwrap()
+            .contains(402964)
+    );
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -78,7 +88,7 @@ fn native_tank_stat_provenance_partial_and_full_kit() {
     super::spawning::initialize(h.app.world_mut(), owner, tank, profile).unwrap();
     h.advance(3);
     print_passive_contributions(h.app.world(), tank, "full-solo");
-    assert_native_health(h.app.world(), tank, NATIVE_GARRICK_MAX_HEALTH);
+    assert_native_health(h.app.world(), tank, expected.health);
     let sanctified = h
         .app
         .world()
@@ -101,5 +111,5 @@ fn native_tank_stat_provenance_partial_and_full_kit() {
     add_native_dps(&mut h, map);
     h.advance(3);
     print_passive_contributions(h.app.world(), tank, "full-party");
-    assert_native_health(h.app.world(), tank, NATIVE_GARRICK_MAX_HEALTH);
+    assert_native_health(h.app.world(), tank, expected.health);
 }

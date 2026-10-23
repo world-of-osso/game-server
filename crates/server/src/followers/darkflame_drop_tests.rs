@@ -2,6 +2,7 @@
 use super::profile_behavior_tests::spawn_profile_fixture_with_plugins;
 use crate::ground::{GroundMap, GroundProbe};
 use crate::maps::InMap;
+use crate::spell_cast::test_harness::Harness;
 use bevy::prelude::*;
 use shared::components::{Health, Position};
 use std::collections::HashMap;
@@ -156,27 +157,42 @@ fn darkflame_drop_native_move_fall_lands_continuously_on_target_polygon() {
     );
 }
 
-#[test]
-#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
-fn darkflame_drop_follower_sim_traverses_only_after_upper_route_stage() {
-    let (mut h, follower, _) = spawn_profile_fixture_with_plugins(209057, |app| {
-        crate::creature_ai::install_follow_fixture(app);
-        app.add_systems(
-            Update,
-            (
-                crate::scripted_ai::movement::point_movement_system,
-                crate::scripted_ai::fall_movement::advance_falls,
-                crate::scripted_ai::fall_movement::release_finished_falls,
-            )
-                .chain(),
-        );
-    });
+fn install_native_follow_movement(app: &mut App) {
+    crate::creature_ai::install_follow_fixture(app);
+    app.add_systems(
+        Update,
+        (
+            crate::scripted_ai::movement::point_movement_system,
+            crate::scripted_ai::fall_movement::advance_falls,
+            crate::scripted_ai::fall_movement::release_finished_falls,
+        )
+            .chain(),
+    );
+}
+
+fn create_native_follower_fixture() -> (Harness, Entity) {
+    let (mut h, follower, _) =
+        spawn_profile_fixture_with_plugins(209057, install_native_follow_movement);
     h.app
         .insert_resource(GroundMap::new(&assets(), HashMap::from([(MAP, WDT)])));
     crate::navigation::install_fixture(
         &mut h.app,
         crate::navigation::Navigation::new(&navigation_root()),
     );
+    place_follower_on_upper(&mut h, follower);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((position(UPPER), InMap::continent(MAP)));
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = None;
+    (h, follower)
+}
+
+fn place_follower_on_upper(h: &mut Harness, follower: Entity) {
     let (speed_walk, speed_run) = {
         let template = &h
             .app
@@ -197,15 +213,12 @@ fn darkflame_drop_follower_sim_traverses_only_after_upper_route_stage() {
             speed_run,
         },
     ));
-    h.app
-        .world_mut()
-        .entity_mut(h.caster)
-        .insert((position(UPPER), InMap::continent(MAP)));
-    h.app
-        .world_mut()
-        .get_mut::<crate::networking::CombatTarget>(h.caster)
-        .unwrap()
-        .0 = None;
+}
+
+#[test]
+#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
+fn darkflame_drop_follower_sim_traverses_only_after_upper_route_stage() {
+    let (mut h, follower) = create_native_follower_fixture();
     h.advance(8);
     assert!(
         point(*h.app.world().get::<Position>(follower).unwrap()).distance(UPPER) < 0.1,
@@ -245,5 +258,87 @@ fn darkflame_drop_follower_sim_traverses_only_after_upper_route_stage() {
     assert!(
         fall_samples > 15,
         "follower must traverse continuously rather than snap between floors"
+    );
+}
+
+#[test]
+#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
+fn darkflame_drop_idle_follower_descends_when_owner_is_directly_below() {
+    let (mut h, follower) = create_native_follower_fixture();
+    // Actual party-slot branch: slot2/4 places its settled follow point at UPPER.
+    let upper_owner = Vec3::new(UPPER.x, UPPER.y, 114.0);
+    let lower_owner = Vec3::new(upper_owner.x, LANDING.y, upper_owner.z);
+    h.app
+        .world_mut()
+        .entity_mut(follower)
+        .insert(crate::creature_ai::PartyFollowSlot::new(2, 4));
+    h.app.world_mut().entity_mut(h.caster).insert((
+        position(upper_owner),
+        shared::components::Rotation {
+            x: 0.0,
+            y: -std::f32::consts::PI / 12.0,
+            z: 0.0,
+        },
+    ));
+    for owner in [upper_owner, lower_owner] {
+        let probe = h
+            .app
+            .world_mut()
+            .resource_mut::<GroundMap>()
+            .ground_in(InMap::continent(MAP), owner);
+        assert!(
+            matches!(probe, GroundProbe::Supported(y) if (y-owner.y).abs()<0.05),
+            "physical owner support required at {owner:?}: {probe:?}"
+        );
+    }
+    let lower_follow_point = Vec3::new(UPPER.x, LANDING.y, UPPER.z);
+    let mut native =
+        ::navigation::NavigationMap::open(&navigation_root().join(MAP.to_string())).unwrap();
+    let route = native
+        .complete_path(UPPER, lower_follow_point)
+        .expect("approved native route to the lower party follow point must exist");
+    let owner_upper_surface = native
+        .complete_path(upper_owner, upper_owner)
+        .expect("upper owner must fit the unchanged native body profile");
+    assert!(owner_upper_surface.last().unwrap().distance(upper_owner) < ::navigation::CELL_HEIGHT);
+    h.advance(8);
+    let upper = point(*h.app.world().get::<Position>(follower).unwrap());
+    assert!(
+        upper.distance(UPPER) < 0.1,
+        "same-floor nearby owner correctly holds still"
+    );
+    *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position(lower_owner);
+    h.advance(80);
+    let feet = point(*h.app.world().get::<Position>(follower).unwrap());
+    eprintln!(
+        "STACKED_FLOOR_FOLLOW_ADMISSION party_slot=2/4 route_corners={} owner={lower_owner:?} lower_follow_point={lower_follow_point:?} initial={upper:?} final={feet:?} goal_horizontal={} goal_vertical={} follow={:?}",
+        route.len(),
+        (feet.x - lower_follow_point.x).hypot(feet.z - lower_follow_point.z),
+        feet.y - lower_follow_point.y,
+        h.app
+            .world()
+            .get::<crate::creature_ai::FollowOwner>(follower)
+    );
+    // Change horizontal separation only; the same actor must then use the route.
+    let far_follow_point = Vec3::new(406.7775, LANDING.y, 155.27142);
+    native
+        .complete_path(UPPER, far_follow_point)
+        .expect("horizontal control party point is reachable");
+    let far_owner = Vec3::new(
+        far_follow_point.x + upper_owner.x - UPPER.x,
+        lower_owner.y,
+        far_follow_point.z + upper_owner.z - UPPER.z,
+    );
+    *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position(far_owner);
+    h.advance(80);
+    let control = point(*h.app.world().get::<Position>(follower).unwrap());
+    eprintln!("STACKED_FLOOR_FOLLOW_XZ_CONTROL owner={far_owner:?} feet={control:?}");
+    assert!(
+        control.y < UPPER.y - 20.0,
+        "same follower/route must descend once XZ separation grows: {control:?}"
+    );
+    assert!(
+        feet.y < LANDING.y + 1.0,
+        "idle follower must not treat a reachable owner30yd below as already in range: {feet:?}"
     );
 }

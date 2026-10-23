@@ -31,6 +31,9 @@ mod bypass_armor_tests;
 #[cfg(test)]
 #[path = "caster_ability_crit_tests.rs"]
 mod caster_ability_crit_tests;
+#[cfg(test)]
+#[path = "windwalker_mastery_tests.rs"]
+mod windwalker_mastery_tests;
 
 use crate::random as rand;
 use std::collections::HashSet;
@@ -1299,6 +1302,7 @@ fn damage_source_amount(
             * crate::auras::summon_damage::multiplier(world, bonus_caster)
             * creature_type_damage_multiplier(world, bonus_caster, target, ctx.spell)
             * mechanic_damage_multiplier(world, bonus_caster, ctx.spell, effect)
+            * super::scripts::combo_strikes_multiplier(world, bonus_caster, ctx.spell.id)
     };
     let bonus_ctx = EffectCtx {
         caster: bonus_caster,

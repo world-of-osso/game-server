@@ -22,7 +22,14 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 - [x] Halls2527, Academy2526 and Goldie2661 retain their named component gaps. No additional connection, canonical bake mutation or body/slope/climb/query relaxation.
 - [x] Retain existing NPC fall behavior; explicitly name `FOLLOWER_NPC_FALL_DAMAGE_UNMODELED` because existing landing damage is Player-only. Do not add NPC damage. Ordinary30.252610yd damage would be18.979% maxHP under existing formula, not an unconditional survival guarantee.
 
-Implementation/proof: [navigation drop ownership](../wiki/systems/navigation.md#one-way-collision-drop--2026-10-22), `crates/server/src/followers/darkflame_drop_tests.rs`. Approval is a project policy, not an inferred Retail transport. Targeted four-case GREEN at cff55269e; two separate full-boss upward controls also pass. Merged tip awaits lead integration gate.
+Implementation/proof: [navigation drop ownership](../wiki/systems/navigation.md#one-way-collision-drop--2026-10-22), `crates/server/src/followers/darkflame_drop_tests.rs`. Approval is a project policy, not an inferred Retail transport. Targeted four-case GREEN at cff55269e; two separate full-boss upward controls also pass. Darkflame079ab7a36 landed via dd996; gate's only failure was known leymor_fissure.
+
+## Idle follow distance
+
+- [x] Idle follow admission includes real vertical separation in3D distance, toward the assigned party follow point or the owner for unslotted follows. Keep existing horizontal range/tolerance, slot offsets and horizontal catch-up speed/movement budgets. TC a352b1fa FollowMovementGenerator.cpp:52 calls Position::IsInDist; Position.h:121–124,157 includes vertical distance.
+- [x] A settled follower must start the already-connected native route when its owner changes only height and its follow point becomes30.25yd below, while same-floor nearby owners still hold and existing follow controls remain unchanged. Regression: `crates/server/src/followers/darkflame_drop_tests.rs::darkflame_drop_idle_follower_descends_when_owner_is_directly_below`.
+
+[Source/proof](../wiki/systems/navigation.md#idle-follow-vertical-range--2026-10-22): one nine-case GREEN at3009881d7 covers the new RED and eight existing follow controls; merged tip awaits lead gate. No new connector, query/profile change or NPC fall damage.
 
 ## Dense-map bake capacity
 
