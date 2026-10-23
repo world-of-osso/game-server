@@ -4151,3 +4151,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0â
 - [Lava crit ownership](investigations/follower-data.md#lava-caster-owned-flame-shock-crit-rule): approved own/foreign native285452/2854662PASS2RED9.13s. Shared predicate now requires actual aura caster and registers both payloads; no other crit/modifier/resource edits. GREEN pending on lv991-based branch.
 
 - [Lava crit ownership](investigations/follower-data.md#lava-caster-owned-flame-shock-crit-rule):4GREEN13.43s/zero warnings after2nativeRED; samebinary retained root2GREEN10.03s +actualStatsPlugin70samples2PASS12.42s. Observed285466crits5/5; cases enabled. No other crit edits or causal-DPS/parity claim.
+
+- 2026-10-23: Demonology266 reference reproduction and recursive owner/Felguard/summon census; private canonical-copy missing guardian publications recorded in [[demonology-dps-parity]]. Native baseline and parity remain open.
