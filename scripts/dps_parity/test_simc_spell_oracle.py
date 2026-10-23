@@ -207,6 +207,17 @@ class OracleTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             oracle.build_profile(source, ["auto_attack"], ["bad\nactions=other"])
 
+    def test_elemental_weapons_value_function_is_not_a_passive_product(self):
+        data = oracle.parse_log((HERE / "fixtures/elemental-weapons-recorded.txt").read_text())
+        modifier = data["modifiers"][0]
+        self.assertEqual(modifier["source_spell_id"], 408390)
+        self.assertEqual(modifier["application"], "conditional_or_dynamic")
+        self.assertEqual(modifier["value"], 0)
+        passive = data["summary"]["188196"]["passive_multipliers"]["direct"]
+        self.assertIsNone(passive["product"])
+        self.assertEqual(passive["sources"], [])
+        self.assertEqual(data["summary"]["188196"]["sp_coefficient"], [1.7])
+
     def test_invalid_action_is_rejected(self):
         with self.assertRaises(ValueError):
             oracle.build_profile('mage="Test"', ["bad\nactions=other"])

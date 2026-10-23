@@ -1,3 +1,7 @@
+## 2026-10-23 — Oracle conditional multiplier classification
+
+[Oracle](reference/simc-spell-oracle.md): recorded Elemental Weapons408390 value-function/condition row reproduced passive misclassification. Such action-effects now retain printed values/raw text as `conditional_or_dynamic` and are excluded from passive products; no runtime multiplier is inferred from startup placeholders. Existing raw logs are reparsed without new simulations.
+
 ## 2026-10-23 — Oracle sourced prerequisite closure
 
 [Oracle](reference/simc-spell-oracle.md): all25 previously unobserved channels now have printed formula evidence,150/150 total. Pinned source-backed cast/ready-state plans use30–180s probes, earned resources/buffs and explicit precombat setup. Frost Strike/Obliterate/Arcane Missiles preserve actual child IDs instead of report-parent IDs. Actual Shaman trace reproduced98 repeated Flametongue casts starving combat; original precombat imbues restore TI without injected stacks or altered seed/reference flags.20 unittest GREEN; native parity remains unclaimed.
