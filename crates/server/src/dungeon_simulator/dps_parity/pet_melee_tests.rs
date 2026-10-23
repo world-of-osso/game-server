@@ -1,13 +1,17 @@
 //! Actual native Hunter pet swings before owner-RAP inheritance changes.
 use super::*;
-use shared::protocol::CombatLogKind;
+use shared::protocol::{CombatLogEvent, CombatLogKind};
 
-fn pet_melee_hits(world: &World, pet: Entity, target: Entity) -> Vec<i32> {
+fn pet_melee_events(
+    world: &World,
+    pet: Entity,
+    target: Entity,
+) -> impl Iterator<Item = &CombatLogEvent> {
     world
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0
         .iter()
-        .filter(|event| {
+        .filter(move |event| {
             event.kind == CombatLogKind::Damage
                 && event.source == Some(pet.to_bits())
                 && event.target == Some(target.to_bits())
@@ -16,7 +20,23 @@ fn pet_melee_hits(world: &World, pet: Entity, target: Entity) -> Vec<i32> {
                 && event.blocked == 0
                 && event.absorbed == 0
         })
+}
+
+fn pet_melee_hits(world: &World, pet: Entity, target: Entity) -> Vec<i32> {
+    pet_melee_events(world, pet, target)
         .map(|event| event.amount)
+        .collect()
+}
+
+fn normalized_pet_swings(run: &mut Run, pet: Entity) -> Vec<f32> {
+    collect_native_pet_swings(run, pet);
+    let world = run.app.world();
+    let critical = 2.0
+        * world
+            .get::<crate::auras::AuraStatMods>(pet)
+            .map_or(1.0, |mods| mods.critical_damage(1));
+    pet_melee_events(world, pet, run.targets[0])
+        .map(|event| event.amount as f32 / if event.critical { critical } else { 1.0 })
         .collect()
 }
 
@@ -122,5 +142,91 @@ fn dps_parity_pet_melee_actual_swings_include_source_owner_ranged_ap_contributio
     assert!(
         hits.iter().all(|damage| *damage as f32 >= floor),
         "native pet swings{hits:?} omit source owner-RAP contribution floor{floor}"
+    );
+}
+
+#[test]
+#[ignore = "native pet live owner-RAP equipment control; requires prepared parity inputs"]
+fn dps_parity_pet_melee_live_owner_equipment_removal_and_restore_changes_swings() {
+    let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
+    let before = normalized_pet_swings(&mut run, pet);
+    let owner = run.actor;
+    let before_ap = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap()
+        .ranged_attack_power;
+    let equipment = run
+        .app
+        .world()
+        .get::<crate::stats::EquippedItems>(owner)
+        .unwrap()
+        .clone();
+    let modifiers = run
+        .app
+        .world()
+        .get::<crate::stats::EquippedItemModifiers>(owner)
+        .unwrap()
+        .clone();
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::EquippedItems>(owner)
+        .unwrap()
+        .items
+        .clear();
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::EquippedItemModifiers>(owner)
+        .unwrap()
+        .items
+        .clear();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let without_ap = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap()
+        .ranged_attack_power;
+    assert!(
+        without_ap < before_ap,
+        "actual reference gear must contribute RAP"
+    );
+    let without = normalized_pet_swings(&mut run, pet);
+    run.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert((equipment, modifiers));
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::stats::CharacterStats>(owner)
+            .unwrap()
+            .ranged_attack_power,
+        before_ap
+    );
+    let restored = normalized_pet_swings(&mut run, pet);
+    let lowest = |hits: &[f32]| hits.iter().copied().reduce(f32::min).unwrap();
+    let highest = |hits: &[f32]| hits.iter().copied().reduce(f32::max).unwrap();
+    println!(
+        "NATIVE_PET_MELEE_GEAR {}",
+        json!({
+            "before_owner_rap": before_ap, "without_owner_rap": without_ap,
+            "before_uncritical_hits": before, "without_uncritical_hits": without,
+            "restored_uncritical_hits": restored,
+        })
+    );
+    assert!(
+        highest(&without) < lowest(&before),
+        "removing real owner gear must lower pet swings"
+    );
+    assert!(
+        lowest(&restored) > highest(&without),
+        "restoring real owner gear must raise pet swings"
     );
 }
