@@ -1511,6 +1511,8 @@ fn try_swing(
         attacker.entity,
         raw_armor,
     );
+    #[cfg(test)]
+    let source_multiplier = context.summon_modifiers.multiplier(attacker.entity) * versus;
     let swing = swing_damage(
         attacker,
         &weapon,
@@ -1523,7 +1525,7 @@ fn try_swing(
                 .taken_multiplier(attacker.entity, avoidance.1.as_deref())
             * versus,
         #[cfg(test)]
-        (context.summon_modifiers.multiplier(attacker.entity) * versus),
+        source_multiplier,
     );
     let armored = armor_mitigated(
         swing.amount,
