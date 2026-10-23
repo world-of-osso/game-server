@@ -166,6 +166,24 @@ fn damage(h: &Harness, actor: Entity, spell: u32) -> i64 {
 }
 
 #[test]
+#[ignore = "native private DB: selected alias must not expose a passive endpoint"]
+fn action_knowledge_passive_endpoint_is_not_a_controller_action() {
+    let (h, actor) = ret_fixture(&selected_ret_purchases());
+    let world = h.app.world();
+    let known = world.get::<KnownSpells>(actor).unwrap();
+    assert!(known.contains(404542));
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(404542)
+        .unwrap();
+    assert!(crate::auras::is_passive(spell));
+    let resolve = crate::dungeon_simulator::dps_parity::literal_rotation::execution::resolve_action;
+    assert_eq!(resolve(world, actor, 35395).unwrap(), None);
+    assert_eq!(resolve(world, actor, 404542).unwrap(), None);
+    assert!(world.get::<KnownSpells>(actor).unwrap().contains(404542));
+}
+
+#[test]
 #[ignore = "native Ret selected Final Verdict must replace the controller base action"]
 fn follower_native_action_override_casts_selected_final_verdict_with_real_damage() {
     let _seed = crate::random::seed_scope(70448);
