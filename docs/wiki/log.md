@@ -1,3 +1,7 @@
+## 2026-10-23 — Whole-suite ranked attribution
+
+[Ranked source/phase matrix](investigations/server-test-performance.md#whole-suite-ranked-attribution--2026-10-23): all5880timings/top25=933.474test-s,37censored warnings joined. Required60s real wait distinguished from4h virtual expiry. Partial dummy profile safety-aborted/no retry; separate exactSQLite3.49 read-only attribution finds49.95millionVMsteps/98,948rows per uncached Disenchant Startup. Cache saving remains a model/proposal, not implementation or whole-budget proof.
+
 ## 2026-10-23 — Ground discovery I/O
 
 [Shared discovery helper](systems/ground-assets.md#discovery-only-payload-io--2026-10-23):51.848GB discarded reads avoided across normal/missing modes; byte-identical real outputs,275map selections and extraction missing order. Sparse48MiB fixture50,374,741-byteRED→fiveGREEN; unchanged native vehicle23.559sPASS. Shared suites10PASS/one existing opt-in skip; explicit91-case corpus/182CLIs preserves all observations, including28raw failures. Instrumented busy-host255.514→55.113s is not whole/quiet proof.
