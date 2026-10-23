@@ -67,6 +67,7 @@ mod umbrelskul;
 mod vexamus;
 pub(crate) mod wailing_caverns;
 pub mod waypoint_path;
+mod wratheye;
 
 use std::collections::VecDeque;
 
@@ -409,6 +410,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == gutshot::SCRIPT {
         return gutshot::creature_ai(world, creature);
     }
+    if script_name == wratheye::SCRIPT {
+        return wratheye::creature_ai(world, creature);
+    }
     if script_name == anubzekt::SCRIPT {
         return anubzekt::creature_ai(world, creature);
     }
@@ -496,6 +500,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || script_name == candle_king::SCRIPT
         || script_name == anubzekt::SCRIPT
         || script_name == gutshot::SCRIPT
+        || script_name == wratheye::SCRIPT
         || script_name == gorek::SCRIPT
         || script_name == khajin::SCRIPT
         || script_name == gulping_goliath::SCRIPT

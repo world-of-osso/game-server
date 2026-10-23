@@ -272,7 +272,7 @@ fn receive_dismiss_requests(world: &mut World) {
         })
         .collect();
     for (connection, owner) in requests {
-        let error = dismiss_companion(world, owner).err();
+        let error = dismiss_current_critter(world, owner).err();
         refresh_catalog_snapshot(world, owner);
         send_pet_update(world, connection, owner, error);
     }
@@ -477,6 +477,13 @@ fn spawn_companion(
         ));
     }
     pet.id()
+}
+
+fn dismiss_current_critter(world: &mut World, owner: Entity) -> Result<(), String> {
+    let actor = crate::spell_cast::summon::current_critter(world, owner)
+        .ok_or("no current critter summoned")?;
+    crate::spell_cast::summon::despawn_summon(world, actor);
+    Ok(())
 }
 
 fn dismiss_companion(world: &mut World, owner: Entity) -> Result<(), String> {
