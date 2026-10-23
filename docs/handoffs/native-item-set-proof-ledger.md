@@ -20,6 +20,12 @@ Native70448 ItemSet2062 Radiance of the Consecrated Flame has items271468/271466
 - Private `item-sets.delta.sql` SHA3032b1eb6d352e6a32d042e072575292772f7fa809b4570e7d130922b347b4ed adds only the two tables and build receipts to unchanged trait-enabled private source. Canonical publication remains parent-owned.
 - Source census: active native sets have no nonzero shapeshift mask/exclude fields (one zero-mask StanceBarOrder-only row27733). Heirloom level/bonus-curve retirement and non-Retail set namespaces are not qualified by this slice.
 
+## Current-master reconciliation (parent approved2026-10-23)
+
+Masterdd63aec17 includes native ItemProcInputs and item_instance_data.PRODUCER_TABLES. The latter is now the single normal importer owner: duplicate-registration source test genuinely RED atbd8ec4a79 →GREEN0.635s atfc60b4a26, real producer importer exercised (not mocked), native1008/2971 and item_instance_source receipts retained. Native DDL remains for source-projected standalone fixtures.
+
+Parent requires ItemProcInputs as the sole set catalog/predicate, with one count helper reading each original ItemTemplate's native ItemSparse.ItemSet. Native source shows241 active members absent from ItemSet.ItemID display arrays. New ignored RED fixtures use real Dark Arctic38591/38592 (set754/2pc51273), inactive Arcanist201 (3pc41657), and Blood Tiger442 (skill165/rank300,2pc41670). Native RED execution is capacity-queued; predicate reconciliation is not implemented before that evidence.
+
 ## Input compatibility inventory (read-only audit2026-10-23)
 
 Production loader deliberately requires both native tables; no empty-table fallback. `item-sets-canonical-readonly.proof.json` compares all canonical table values with native70448 CSVs:1008/2971 exact. Canonical `data/world.db` resolves engine `data/server-world/world.db`; its `item_instance_source` records native CSV hashes, while `db2_build` has no set receipts. Generic NUMERIC schema matches the item-instance import helper; the historical invocation/actor is not established. Normal importer now owns durable table registration.
