@@ -33,7 +33,7 @@
 
 ## Feral/action-knowledge qualification
 
-[Feral source census](../../handoffs/feral-source-census.md) records exact reproduced ST/3T references, read-only master9d13ac19c native gaps and the five ignored redirected-stat allocations. [Action-knowledge census](../../handoffs/action-knowledge-census.md) covers all11followers/990starter books: four raw-unknown controller actions are actual selected visible/parent actions, leaving zero missing-book rejections after sourced bridges. Runtime shared resolver and Feral literal adapter remain unqualified; raw KnownSpells membership must not silently disable those actions.
+[Feral source census](../../handoffs/feral-source-census.md) records exact reproduced ST/3T references, historical read-only native gaps from a supplied binary now qualified UNKNOWN_PRE_9D13_MISLABELED (not master proof) and the five ignored redirected-stat allocations. [Action-knowledge census](../../handoffs/action-knowledge-census.md) covers all11followers/990starter books: four raw-unknown controller actions are actual selected visible/parent actions, leaving zero missing-book rejections after sourced bridges. Own shared resolver c3934c31d has15/15native GREEN plus four-stage empower control; existing Ret controls stop on their direct Judgment generator's unretried NoCharges and await Ret-owner correction/integration gate. Feral literal adapter remains unqualified; raw KnownSpells membership must not silently disable those actions.
 
 ## Sources
 

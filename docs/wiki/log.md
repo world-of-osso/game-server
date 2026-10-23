@@ -8,7 +8,7 @@ Pinned SimC76f8118 selects timed adds on a run row but its child Mortal Strike s
 
 ## 2026-10-23 — Feral baseline and action-knowledge census
 
-[Feral census](../handoffs/feral-source-census.md): exact reproduced references, private-source-view master9d13 native ST56378.65/3T62475.26, five ignored redirected-stat allocations and missing consumable residual separated from channel gaps. [Knowledge census](../handoffs/action-knowledge-census.md):990native starter books/1090kit rows; four sourced visible/parent actions, zero missing-book rejections after bridges. Runtime helper and literal Feral RED/GREEN pending.
+[Feral census](../handoffs/feral-source-census.md): exact reproduced references, private-source-view historical native ST56378.65/3T62475.26 (supplied binary's9d13label withdrawn: UNKNOWN_PRE_9D13_MISLABELED), five ignored redirected-stat allocations and missing consumable residual separated from channel gaps. [Knowledge census](../handoffs/action-knowledge-census.md):990native starter books/1090kit rows; four sourced visible/parent actions, zero missing-book rejections after bridges. Own shared-helper a95c0df7a10FAIL/5PASS→c3934c31d15/15GREEN38.29s, four-stage empower PASS13.06s. Ret integration awaits its direct Judgment generator-fixture NoCharges correction; literal Feral/native current ST/3T remain pending.
 
 ## 2026-10-22 — Shared Hunter pet total-RAP source RED
 
