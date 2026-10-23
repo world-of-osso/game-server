@@ -97,6 +97,9 @@ fn hunter(db: &Path, entry: u32) -> Option<Harness> {
                 OpenFlags::SQLITE_OPEN_READ_ONLY,
             )
             .unwrap();
+            // Native hunter create-health now reads ExpectedStat directly;
+            // retain the source table, not only already-evaluated templates.
+            app.world_mut().resource_mut::<WorldData>().expected_stats = load_expected_stats(&conn);
             app.insert_resource(crate::npc_interaction::load_gossip_catalog(&conn).unwrap());
             app.init_resource::<StableInbox>()
                 .add_systems(First, collect_stable_inbox);
