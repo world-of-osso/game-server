@@ -98,6 +98,7 @@ const ACTION_CALL_KILLEDMONSTER: u32 = 33;
 const ACTION_SET_INST_DATA: u32 = 34;
 const ACTION_DIE: u32 = 37;
 const ACTION_ATTACK_START: u32 = 49;
+const ACTION_SET_IMMUNE_PC: u32 = 144;
 const ACTION_SET_IMMUNE_NPC: u32 = 145;
 const ACTION_FORCE_DESPAWN: u32 = 41;
 const ACTION_WP_START: u32 = 53;
@@ -275,6 +276,7 @@ fn supports_action(kind: u32) -> bool {
             | ACTION_SET_INST_DATA
             | ACTION_DIE
             | ACTION_ATTACK_START
+            | ACTION_SET_IMMUNE_PC
             | ACTION_SET_IMMUNE_NPC
             | ACTION_FORCE_DESPAWN
             | ACTION_FAIL_QUEST
@@ -700,8 +702,13 @@ impl SmartAi {
                 return Self::cast_targets(ctx, event, targets);
             }
             ACTION_ATTACK_START => combat::attack_random_target(ctx, &targets),
-            ACTION_SET_IMMUNE_NPC => {
-                combat::set_npc_immunity(ctx, &targets, event.action_params[0] != 0)
+            ACTION_SET_IMMUNE_PC | ACTION_SET_IMMUNE_NPC => {
+                let mask = if event.action_type == ACTION_SET_IMMUNE_PC {
+                    shared::components::UnitFlags::IMMUNE_TO_PC
+                } else {
+                    shared::components::UnitFlags::IMMUNE_TO_NPC
+                };
+                combat::set_immunity(ctx, &targets, mask, event.action_params[0] != 0)
             }
             ACTION_SET_EVENT_PHASE => self.phase = event.action_params[0],
             ACTION_SET_INST_DATA => return instance_data::apply(ctx, event.action_params),

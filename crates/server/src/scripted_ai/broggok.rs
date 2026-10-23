@@ -39,13 +39,14 @@ struct Broggok {
 
 impl Broggok {
     fn set_released(ctx: &mut Ctx, released: bool) {
-        let mut flags = *ctx.world.get::<UnitFlags>(ctx.me).expect("creature flags");
         if released {
-            flags.0 &= !UnitFlags::NOT_SELECTABLE;
+            crate::creature_aggro::clear_unit_flags(ctx.world, ctx.me, UnitFlags::NOT_SELECTABLE);
         } else {
-            flags.0 |= UnitFlags::NOT_SELECTABLE;
+            ctx.world
+                .get_mut::<UnitFlags>(ctx.me)
+                .expect("creature flags")
+                .0 |= UnitFlags::NOT_SELECTABLE;
         }
-        ctx.world.entity_mut(ctx.me).insert(flags);
         ctx.set_react_state(if released {
             ReactState::Aggressive
         } else {

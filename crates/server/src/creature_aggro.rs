@@ -126,6 +126,69 @@ pub(crate) fn insert_aggro_components(entity: &mut EntityCommands, mode: AggroMo
     }
 }
 
+/// Shared RemoveUnitFlag: a real PC-immunity exit must refresh combat ingress.
+pub(crate) fn clear_unit_flags(world: &mut World, unit: Entity, mask: u32) {
+    let removed = {
+        let Some(mut flags) = world.get_mut::<UnitFlags>(unit) else {
+            return;
+        };
+        let removed = flags.0 & mask;
+        flags.0 &= !mask;
+        removed
+    };
+    if removed == 0 {
+        return;
+    }
+    if removed & UnitFlags::IMMUNE_TO_PC != 0
+        && world.get::<shared::components::Npc>(unit).is_some()
+    {
+        refresh_combat_participation(world, unit);
+    }
+    if let Some(queue) = world.get_resource::<ReplicationDirtyQueue>() {
+        queue.mark(unit);
+    }
+}
+
+fn read_current_aggro_mode(world: &World, unit: Entity) -> Option<AggroMode> {
+    let npc = world.get::<shared::components::Npc>(unit)?;
+    let map = *world.get::<InMap>(unit)?;
+    let flags = world.get::<UnitFlags>(unit)?;
+    let difficulty = crate::zones::map_difficulty_id(world, map);
+    let template = world
+        .get_resource::<crate::world_data::WorldData>()?
+        .template_for(npc.template_id, difficulty)?;
+    Some(AggroMode::for_template(
+        template.creature_type,
+        template.flags_extra,
+        flags.0,
+        &template.script_name,
+    ))
+}
+
+fn refresh_combat_participation(world: &mut World, unit: Entity) {
+    let Some(mode) = read_current_aggro_mode(world, unit) else {
+        warn!(
+            ?unit,
+            "cleared PC immunity but native combat template/context is missing"
+        );
+        return;
+    };
+    // Other passive reasons (trigger, critter, training dummy) remain authoritative.
+    if mode == AggroMode::Passive {
+        return;
+    }
+    let mut actor = world.entity_mut(unit);
+    actor.entry::<ThreatTable>().or_default();
+    actor
+        .entry::<CreatureState>()
+        .or_insert(CreatureState::Idle);
+    if mode == AggroMode::Aggressive {
+        actor.insert(AggroRange);
+    } else {
+        actor.remove::<AggroRange>();
+    }
+}
+
 type Victims<'w, 's> = Query<
     'w,
     's,

@@ -302,14 +302,12 @@ fn remove_molten_immunity(
 }
 fn set_molten_flags(world: &mut World, actor: Entity, apply: bool) {
     let mask = UnitFlags::IMMUNE_TO_PC | UnitFlags::NOT_SELECTABLE;
-    let mut flags = world
-        .get::<UnitFlags>(actor)
-        .copied()
-        .unwrap_or(UnitFlags(0));
     if apply {
-        flags.0 |= mask;
+        world
+            .get_mut::<UnitFlags>(actor)
+            .expect("Molten Gold target retains unit flags")
+            .0 |= mask;
     } else {
-        flags.0 &= !mask;
+        crate::creature_aggro::clear_unit_flags(world, actor, mask);
     }
-    world.entity_mut(actor).insert(flags);
 }

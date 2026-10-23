@@ -170,17 +170,15 @@ struct Kelidan {
 impl Kelidan {
     /// `SetImmuneToNPC`, `SetUninteractible` and the matching react state.
     fn set_dormant(ctx: &mut Ctx, dormant: bool) {
-        let mut flags = *ctx
-            .world
-            .get::<UnitFlags>(ctx.me)
-            .expect("creature unit flags");
         let bits = UnitFlags::IMMUNE_TO_NPC | UnitFlags::NOT_SELECTABLE;
         if dormant {
-            flags.0 |= bits;
+            ctx.world
+                .get_mut::<UnitFlags>(ctx.me)
+                .expect("creature unit flags")
+                .0 |= bits;
         } else {
-            flags.0 &= !bits;
+            crate::creature_aggro::clear_unit_flags(ctx.world, ctx.me, bits);
         }
-        ctx.world.entity_mut(ctx.me).insert(flags);
         ctx.set_react_state(if dormant {
             ReactState::Passive
         } else {

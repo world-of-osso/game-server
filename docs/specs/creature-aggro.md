@@ -9,6 +9,7 @@ A dormant creature's threat membership publishes only after it actually survives
 ### Who takes part (`AggroMode`, from `creature_template` at load)
 
 - [x] Critters (`type` 8), non-combat pets (`type` 12), triggers (`flags_extra` 0x80), `IMMUNE_TO_PC` units (`unit_flags` 0x100) and `npc_training_dummy` creatures have no threat list: they never aggro, never chase and never swing, however they are attacked.
+- [ ] When a shared runtime flag clear removes an existing `IMMUNE_TO_PC`, recompute combat participation from the source template plus current flags. Restore eligible threat/state/proximity participation without resetting health, power, existing threat/victim or script react state. Other passive reasons and unchanged static immunity remain authoritative; SmartAI and boss-script clears use the same transition, not a per-frame observer.
 - [x] Civilians (`flags_extra` 0x2, e.g. Kobold Vermin) never aggro on sight but fight back when attacked.
 - [x] Every other creature aggroes on sight when it is hostile to the player (FactionTemplate reaction Hostile); a neutral creature (e.g. Stonetusk Boar, template 189) only fights back.
 

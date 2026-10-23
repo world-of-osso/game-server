@@ -263,9 +263,11 @@ impl super::CreatureAi for Leymor {
             crate::auras::remove_auras(ctx.world, ctx.me, RemoveReason::Cancelled, |aura| {
                 aura.spell_id == STASIS
             });
-            if let Some(mut flags) = ctx.world.get_mut::<UnitFlags>(ctx.me) {
-                flags.0 &= !(UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC);
-            }
+            crate::creature_aggro::clear_unit_flags(
+                ctx.world,
+                ctx.me,
+                UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC,
+            );
             ctx.do_cast_self(ARCANE_ERUPTION);
             ctx.talk(0);
         }

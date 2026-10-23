@@ -199,16 +199,15 @@ impl CreatureAi for GoldenSerpent {
 
 /// `SetFaction` + `SetUninteractible` of the intro branch.
 fn set_intro_presence(ctx: &mut Ctx, faction: u32, uninteractible: bool) {
-    let mut flags = *ctx
-        .world
-        .get::<UnitFlags>(ctx.me)
-        .expect("population unit flags");
     if uninteractible {
-        flags.0 |= UnitFlags::NOT_SELECTABLE;
+        ctx.world
+            .get_mut::<UnitFlags>(ctx.me)
+            .expect("population unit flags")
+            .0 |= UnitFlags::NOT_SELECTABLE;
     } else {
-        flags.0 &= !UnitFlags::NOT_SELECTABLE;
+        crate::creature_aggro::clear_unit_flags(ctx.world, ctx.me, UnitFlags::NOT_SELECTABLE);
     }
     ctx.world
         .entity_mut(ctx.me)
-        .insert((UnitFactionTemplate(faction), flags));
+        .insert(UnitFactionTemplate(faction));
 }

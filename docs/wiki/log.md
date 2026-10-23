@@ -1,3 +1,7 @@
+## 2026-10-23 — Runtime PC-immunity combat projection
+
+[Shared transition](systems/creature-aggro.md#runtime-pc-immunity-clear--2026-10-23): authentic EDNA unlock exposed missing combat ingress after PC flags cleared. Real Leviroth47170/SmartAI144 chain RED ataf3 (PC256 retained), native Seismic scoped-positive control PASS; generic clear/metadata re-projection and source144 implemented afterward. Staticimmune policy and current stats/power/threat/react state preserved; GREEN pending.
+
 ## 2026-10-23 — EDNA inherited-death intro and native anchor
 
 [EDNA intro](systems/boss-scripts.md#edna-authored-intro--2026-10-23): actual8-case RED2PASS/6FAIL10.18s precedes runtime death counter/copy data, source3s/forcewalk/arrival+1s unlock and native45313 home-position hook. Preserve flags320 until real completion; no fixture DONE/immunity edits. At1aec authentic intro/appearance/anchor/copy4GREEN22.60s, producer1GREEN9.439s; remaining clocks genuinely RED past unlock. Landed Candle normalization is reused for the new Normal/projected205 parent-clock implementation; combat GREEN and DirectSeismic hit-table diagnosis pending. Conversation25768 and authored controller gaps remain explicit.

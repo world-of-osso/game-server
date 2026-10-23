@@ -108,9 +108,7 @@ fn remove_spawn_aura(world: &mut World, actor: Entity) {
 }
 
 fn remove_pc_immunity(world: &mut World, actor: Entity) {
-    if let Some(mut flags) = world.get_mut::<UnitFlags>(actor) {
-        flags.0 &= !UnitFlags::IMMUNE_TO_PC;
-    }
+    crate::creature_aggro::clear_unit_flags(world, actor, UnitFlags::IMMUNE_TO_PC);
 }
 
 fn set_appearance_energy(world: &mut World, actor: Entity) {
