@@ -39,6 +39,15 @@ The existing scenery88381/127771 and88584/128180 remains ordinary Ally/Title0 Te
 
 Actor-only admission does not certify Blingtron gifts/combat, clone stacking, jumpable collision geometry, native rendering, or unresolved scripts. Totem/vehicle/possession and other blocked action contracts do not acquire support merely from this title dispatch.
 
+## Imaginary Gun companion visual
+
+- [ ] Exact163705/279843 uses its source one-zero-payload aura4 at150/0 and10000ms duration on the actual current critter, with the owner as caster. Actual physical learning/journal SummonPet/UseToy must apply and replicate only to that actor, not the selected foreign unit, owner or owned guardian.
+- [ ] Preserve recipient/owner health, appearance, position, flags and ownership; do not invent a server death/stand state from the authored target ANIM_DEATH kit. Natural10s expiry removes both aura and replicated view, and the source180000ms item recovery gates real reuse.
+- [ ] Missing visual, nonzero payload, changed recipient and appended gameplay effects refuse before cast/recovery. Source150 may select no unit: zero REQUIRE_ALL_TARGETS flags and the independent caster kit do not authorize caster/guardian substitution or an invented no-companion refusal.
+- [ ] Natural expiry qualifies as authored removal per lead decision. TC SpellHandler259–315 refuses PetCancelAura for companions (guardian/charmed only); native packet rejection is explicitly unqualified, not simulated through the frozen self-only CancelAura RPC. No protocol changes or native animation/sound playback certificate.
+
+Behavioral backing: `crates/server/src/toys_imaginary_gun_tests.rs` uses the actual journal RPC fixture; RED/GREEN pending.
+
 ## Server-scope visual-only census rule
 
 A dummy aura counts as satisfied at server scope only when all four conditions hold: source contract is visual/audio only; authored visual chain resolves completely; slots have no trigger/misc/item/mechanic/gameplay payload; actual UseToy applies and replicates the aura and proves its authored removal lifecycle: successful real CancelAura where the source allows it, otherwise a real cancellation refusal plus natural expiry. Native pixels/audio remain a separate proof boundary. Successful cast, aura4 alone or zero-valued slots are insufficient.

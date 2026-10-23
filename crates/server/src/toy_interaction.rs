@@ -49,6 +49,8 @@ const CONTRACT_GAPS: &[(u32, &str)] = &[
     (198206, "source party-viewer world-effect interaction"),
     (198264, "source party-viewer world-effect interaction"),
     (210975, "source party-viewer world-effect interaction"),
+    //289330 promises a pet ride; source149189 has no supplied ride/visual binding.
+    (166662, "source battle-pet ride interaction"),
 ];
 
 pub(super) fn load(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, BTreeSet<String>>> {

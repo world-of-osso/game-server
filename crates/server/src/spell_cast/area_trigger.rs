@@ -7,6 +7,7 @@
 mod aura_owned;
 mod catalog;
 mod frozen_ground;
+pub(super) mod meteor;
 mod vault_rune;
 
 pub(crate) use aura_owned::{on_applied as on_aura_applied, on_removed as on_aura_removed};
@@ -94,14 +95,29 @@ pub(super) fn create_area_trigger(world: &mut World, ctx: &EffectCtx, effect: &S
             radius.radius_max
         }
     });
-    let relation = trigger_relation(world, effect);
-    if effect.trigger_spell == 0 {
+    let (radius, relation, trigger_spell) = if ctx.spell.id == meteor::BURN_FIELD {
+        match meteor::burn_binding(world) {
+            Ok(binding) => binding,
+            Err(reason) => {
+                warn!("Meteor Burn not created: {reason}");
+                return;
+            }
+        }
+    } else {
+        (
+            radius,
+            trigger_relation(world, effect),
+            effect.trigger_spell,
+        )
+    };
+    let scripted_delay = meteor::is_delay_field(ctx.spell.id, effect.misc_values[0]);
+    if trigger_spell == 0 && !scripted_delay {
         warn!(
             "Spell {}: area trigger {} has no trigger binding; lifecycle only",
             ctx.spell.id, effect.misc_values[0]
         );
     }
-    if radius <= 0.0 {
+    if radius <= 0.0 && !scripted_delay {
         warn!(
             "Spell {}: area trigger {} has no spell radius; area actions disabled",
             ctx.spell.id, effect.misc_values[0]
@@ -112,7 +128,7 @@ pub(super) fn create_area_trigger(world: &mut World, ctx: &EffectCtx, effect: &S
             SpellAreaTrigger {
                 caster: ctx.caster,
                 spell_id: ctx.spell.id,
-                trigger_spell: effect.trigger_spell,
+                trigger_spell,
                 radius,
                 expires_at: (duration >= 0).then_some(now + f64::from(duration) / 1000.0),
                 period_ms: effect.aura_period_ms,
@@ -169,12 +185,22 @@ fn update_trigger(world: &mut World, entity: Entity) {
         return;
     };
     let now = crate::auras::aura_now(world);
-    let owner_map = world.get::<InMap>(trigger.caster);
-    let trigger_map = world.get::<InMap>(entity);
+    let owner_map = world.get::<InMap>(trigger.caster).copied();
+    let trigger_map = world.get::<InMap>(entity).copied();
     if trigger.expires_at.is_some_and(|expiry| now >= expiry)
         || owner_map.is_none()
         || owner_map != trigger_map
     {
+        meteor::remove_exited(world, &trigger, &[]);
+        if owner_map.is_some() && owner_map == trigger_map {
+            if let Some(position) = world.get::<Position>(entity).copied() {
+                meteor::expire_delay(
+                    world,
+                    &trigger,
+                    Vec3::new(position.x, position.y, position.z),
+                );
+            }
+        }
         debug!("Despawn area trigger {entity}: spell {}", trigger.spell_id);
         world.entity_mut(entity).despawn();
         return;
@@ -194,6 +220,7 @@ fn update_trigger(world: &mut World, entity: Entity) {
         trigger.relation,
         0,
     );
+    meteor::remove_exited(world, &trigger, &inside);
     apply_trigger_spells(world, &trigger, &inside, now);
     if let Some(mut stored) = world.get_mut::<SpellAreaTrigger>(entity) {
         stored.inside = inside.into_iter().collect();
@@ -215,6 +242,10 @@ fn apply_trigger_spells(
     }
     for &unit in inside {
         if periodic || !trigger.inside.contains(&unit) {
+            if trigger.spell_id == meteor::BURN_FIELD {
+                meteor::cast_burn_on_entry(world, trigger, unit);
+                continue;
+            }
             super::cast_triggered_with_item_level(
                 world,
                 trigger.caster,

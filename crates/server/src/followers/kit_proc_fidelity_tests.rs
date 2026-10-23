@@ -58,18 +58,21 @@ fn dps_parity_fists_of_fury_simc_tick_cadence_preserves_five_native_damage_hits(
     let first = h.inbox.log.len();
     complete_cast(&mut h, caster, 113656, target);
     h.advance(200);
-    let hits = h.inbox.log[first..]
+    // Native melee defenses can turn a child tick into a Miss/Dodge. Count
+    // every resolved117418 tick without changing those source defense rolls.
+    let tick_outcomes: Vec<_> = h.inbox.log[first..]
         .iter()
         .filter(|event| {
-            event.kind == CombatLogKind::Damage
+            matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
                 && event.source == Some(caster.to_bits())
                 && event.target == Some(target.to_bits())
                 && event.spell_id == Some(117418)
         })
-        .count();
+        .collect();
     assert_eq!(
-        hits, 5,
-        "FISTS_OF_FURY_SIMC_TICK_CADENCE: one native4s channel, tick0 then1s ticks; not one hit each166ms dummy heartbeat"
+        tick_outcomes.len(),
+        5,
+        "FISTS_OF_FURY_SIMC_TICK_CADENCE: one native4s channel, tick0 then1s ticks, including legal defenses; not one hit each166ms dummy heartbeat: {tick_outcomes:?}"
     );
 }
 

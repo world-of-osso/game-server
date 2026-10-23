@@ -1,5 +1,35 @@
 # Auras
 
+## Light of the Titans and hit proc masks — 2026-10-22
+
+Native378405's selected effect0 supplies the40% contribution and child378412;
+its native10s/2s schedule owns five ticks. The aura script consumes actual resolved
+Word of Glory85673 healing on the real patient and executes the ordinary child.
+Native effect1's200% bonus applies only when that patient is the caster and an
+actual harmful periodic health-damage aura is active. SimC76f8118 paladin1129–1177
+and1251–1258 supplies the hook/condition, not its obsolete50%/NYI amount.
+
+The shared fresh periodic-heal clock reader moved unchanged from Echo into
+`periodic::heal_tick_count`; Echo/Prismatic/Ignite remain intact. Unpaid pool
+carry stays shared and flag-driven, not another Titans accumulator.
+
+Initial actual Word hits still lacked the child after adding the producer:
+`spell_hit_masks` classified all DefenseType0 hits as abilities. TC a352b1fa
+`Spell.cpp:2343–2400` instead keeps melee/ranged weapon masks, then reads
+Attr3 TreatAsPeriodic and Attr0 IsAbility for the non-weapon path. Word85673 is
+therefore a helpful spell0x4000, matching378405, not an ability0x400.
+
+Native producer RED465af2443 crosses real Judgment-earned Holy Power and Word
+healing; mask/control tip2fb442aa2 passes12cases with only self-DoT bonus tick110
+versus329 RED. Narrow bonus58ec9656c, merged891b9ab1d, passes19native cases38.11s,
+check0/2m08s/zero warnings/fmtPASS. Existing test expectations changed: **none**.
+The [census](../../handoffs/native-hit-proc-mask-census.md) enumerates334969possible
+spell-mask changes and5670static proc-aura candidate diffs; it is not a count of
+observed procs. The lead requires a full workspace gate before landing.
+[Contract](../../specs/light-of-the-titans.md),
+[exact proof ledger](../../handoffs/light-of-the-titans-proof-ledger.md).
+Actual repeated-Word pool integration, PvP scaling and effectiveness stay separate.
+
 ## Native rolling periodic refresh — 2026-10-22
 
 `refresh::prepare_application(world,target,new,spell)` reads native Attr10

@@ -1,5 +1,5 @@
 //! Owned navigation queries off the simulation thread; no synchronous wait API.
-use crate::NavigationMap;
+use crate::{NavigationMap, NavigationPath};
 use glam::Vec3;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -32,7 +32,7 @@ pub enum Query {
 
 #[derive(Clone, Debug)]
 pub enum Output {
-    Path(Vec<Vec3>),
+    Path(NavigationPath),
     Collision(Vec3),
     Candidates(Vec<Result<Vec<Vec3>, String>>),
 }
@@ -366,14 +366,20 @@ fn query_owned_map(
 fn run_query(map: &mut NavigationMap, query: Query) -> Result<Output, String> {
     let output = match query {
         Query::Path { from, to } => Output::Path(map.path(from, to)?),
-        Query::SmoothPath { from, to } => Output::Path(map.smooth_waypoint_path(from, to)?),
+        Query::SmoothPath { from, to } => Output::Path(NavigationPath {
+            points: map.smooth_waypoint_path(from, to)?,
+            complete: true,
+        }),
         Query::Collision { from, to } => {
             map.path(from, from)?;
             Output::Collision(map.first_collision(from, to)?)
         }
-        Query::Candidates { from, targets } => {
-            Output::Candidates(targets.into_iter().map(|to| map.path(from, to)).collect())
-        }
+        Query::Candidates { from, targets } => Output::Candidates(
+            targets
+                .into_iter()
+                .map(|to| map.complete_path(from, to))
+                .collect(),
+        ),
         #[cfg(test)]
         Query::Panic => unreachable!("panic control handled before map loading"),
     };

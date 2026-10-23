@@ -55,6 +55,9 @@ struct Route {
     last_target: Vec3,
     expected_from: Vec3,
     path: Result<Corners, String>,
+    complete: bool,
+    partial_endpoint_reached: bool,
+    partial_endpoints: HashSet<[u32; 3]>,
     reach: f32,
 }
 
@@ -154,7 +157,7 @@ impl Route {
         };
         let position_is_current =
             horizontal(self.expected_from - point(request.from)) <= TELEPORT_DISTANCE;
-        same_goal && target_is_current && position_is_current
+        same_goal && target_is_current && position_is_current && !self.partial_endpoint_reached
     }
 }
 
