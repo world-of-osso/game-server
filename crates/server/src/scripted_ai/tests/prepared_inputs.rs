@@ -71,6 +71,9 @@ pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<P
         186738 => Some("umbrelskul"),
         196482 => Some("ancient"),
         190609 => Some("doragosa"),
+        194181 => Some("vexamus"),
+        186616 => Some("granyth"),
+        186120 => Some("treemouth"),
         188252 => Some("melidrussa"),
         189232 => Some("kokia"),
         184580 | 184581 | 184582 => Some("lost-dwarves"),
@@ -117,8 +120,8 @@ fn decode_encounter_inputs(
     let mut inputs = PreparedInputs::default();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     if [
-        20923, 196482, 190609, 188252, 189232, 184580, 184581, 184582, 184018, 184124, 184422,
-        215405, 215407, 207946, 216619,
+        20923, 196482, 190609, 194181, 188252, 189232, 184580, 184581, 184582, 184018, 184124,
+        184422, 215405, 215407, 207946, 216619, 186616, 186120,
     ]
     .contains(&entry)
     {
@@ -150,7 +153,7 @@ fn decode_encounter_inputs(
         Vec::new()
     };
     let mut templates = canonical.map_or_else(
-        || crate::world_data::load_templates(&conn, &expected),
+        || crate::world_data::load_templates(&conn, &expected).into(),
         |data| data.templates.clone(),
     );
     templates.retain(|id, _| {
@@ -214,10 +217,10 @@ fn decode_encounter_inputs(
             Default::default()
         };
     inputs.push(WorldData {
-        templates,
-        difficulty_templates,
+        templates: templates.into(),
+        difficulty_templates: difficulty_templates.into(),
         spawns_by_map: crate::world_data::build_spawns_by_map(&spawns),
-        spawns,
+        spawns: spawns.into(),
         template_string_ids,
         spawn_string_ids,
         script_spawn_groups,

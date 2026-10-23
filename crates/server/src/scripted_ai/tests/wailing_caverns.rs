@@ -38,7 +38,7 @@ fn cobrahn_with_events(extra_events: Vec<smart_ai::SmartEvent>) -> (Harness, Ent
         .map(Result::unwrap)
         .collect();
     app.insert_resource(WorldData {
-        templates,
+        templates: templates.into(),
         class_level_base_hp,
         class_level_base_mana: data.base_mana.clone(),
         ..Default::default()

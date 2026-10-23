@@ -63,8 +63,8 @@ fn load_prepared_inputs(
     templates.retain(|entry, _| selected.contains(entry));
     crate::world_data::load_template_models(conn, &mut templates);
     data.difficulty_templates =
-        crate::world_data::load_difficulty_templates(conn, &data.expected_stats, &templates);
-    data.templates = templates;
+        crate::world_data::load_difficulty_templates(conn, &data.expected_stats, &templates).into();
+    data.templates = templates.into();
     data.addons = crate::world_data::load_spawn_addons(conn);
     data.template_addons = crate::world_data::load_template_addons(conn);
     data.equipment = crate::test_data::world_data().equipment.clone();

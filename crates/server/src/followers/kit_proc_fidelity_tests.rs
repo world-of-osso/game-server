@@ -58,18 +58,21 @@ fn dps_parity_fists_of_fury_simc_tick_cadence_preserves_five_native_damage_hits(
     let first = h.inbox.log.len();
     complete_cast(&mut h, caster, 113656, target);
     h.advance(200);
-    let hits = h.inbox.log[first..]
+    // Native melee defenses can turn a child tick into a Miss/Dodge. Count
+    // every resolved117418 tick without changing those source defense rolls.
+    let tick_outcomes: Vec<_> = h.inbox.log[first..]
         .iter()
         .filter(|event| {
-            event.kind == CombatLogKind::Damage
+            matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
                 && event.source == Some(caster.to_bits())
                 && event.target == Some(target.to_bits())
                 && event.spell_id == Some(117418)
         })
-        .count();
+        .collect();
     assert_eq!(
-        hits, 5,
-        "FISTS_OF_FURY_SIMC_TICK_CADENCE: one native4s channel, tick0 then1s ticks; not one hit each166ms dummy heartbeat"
+        tick_outcomes.len(),
+        5,
+        "FISTS_OF_FURY_SIMC_TICK_CADENCE: one native4s channel, tick0 then1s ticks, including legal defenses; not one hit each166ms dummy heartbeat: {tick_outcomes:?}"
     );
 }
 
@@ -409,6 +412,74 @@ fn proc_fidelity_262_inundate_native_wind_shear_without_passive_does_not_grant_r
             .iter()
             .all(|event| event.spell_id != Some(378777) || event.source != Some(caster.to_bits())),
         "a successful native utility cast does not invent its removed Inundate driver"
+    );
+}
+
+#[test]
+fn proc_fidelity_262_native_stormkeeper_lightning_bolt_triggers_overload_damage() {
+    let (mut h, caster) = prepare(209053);
+    assert!(has_aura(h.app.world(), caster, 168534));
+    complete_cast(&mut h, caster, 191634, caster);
+    assert!(has_aura(h.app.world(), caster, 191634));
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    complete_cast(&mut h, caster, 188196, target);
+    h.advance(30);
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(188196)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.amount > 0
+        }),
+        "actual Stormkeeper-affected native Lightning Bolt must land"
+    );
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(45284)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.amount > 0
+        }),
+        "real native Stormkeeper-affected cast guarantees actual45284 Elemental Overload, not a synthetic scalar on Lightning Bolt"
+    );
+}
+
+#[test]
+fn proc_fidelity_262_native_stormkeeper_without_mastery_does_not_invent_overload() {
+    let (mut h, caster) = prepare(209053);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 168534,
+    );
+    assert!(!has_aura(h.app.world(), caster, 168534));
+    complete_cast(&mut h, caster, 191634, caster);
+    assert!(has_aura(h.app.world(), caster, 191634));
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    complete_cast(&mut h, caster, 188196, target);
+    h.advance(4);
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .all(|event| event.spell_id != Some(45284)),
+        "overload follows the sourced400ms callback, not immediate root impact"
+    );
+    h.advance(30);
+    assert!(h.inbox.log[first..].iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(188196)
+            && event.source == Some(caster.to_bits())
+    }));
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .all(|event| event.spell_id != Some(45284) || event.source != Some(caster.to_bits())),
+        "Stormkeeper cannot invent the removed Mastery passive"
     );
 }
 

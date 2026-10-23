@@ -34,6 +34,7 @@ pub(super) struct MemberSample {
 pub(super) struct Sample {
     at: f64,
     members: Vec<MemberSample>,
+    pets: Vec<serde_json::Value>,
 }
 
 #[derive(Serialize)]
@@ -1351,6 +1352,7 @@ struct Run {
     last_owner_position: Vec3,
     last_resources: Vec<(Option<f32>, Option<f32>)>,
     healer_metrics: super::healer_metrics::Recorder,
+    pet_recorder: super::diagnostics::PetRecorder,
 }
 
 pub(super) fn run(seed: u64) -> Result<Report, String> {
@@ -1363,37 +1365,65 @@ pub(super) fn run_cached(
 ) -> Result<Report, String> {
     let _rng_scope = crate::random::seed_scope(seed);
     let started = std::time::Instant::now();
-    let mut run = spawn_run(seed, catalogs)?;
+    let run = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        spawn_run(seed, catalogs)
+    })) {
+        Ok(Ok(run)) => run,
+        Ok(Err(error)) => return Ok(aborted_initialization(seed, started, error)),
+        Err(panic) => return Ok(aborted_initialization(seed, started, panic_reason(panic))),
+    };
     let setup = started.elapsed();
+    run_prepared(run, catalogs, started, setup)
+}
+
+fn run_prepared(
+    mut run: Run,
+    catalogs: &mut Option<super::catalogs::Catalogs>,
+    started: std::time::Instant,
+    setup: std::time::Duration,
+) -> Result<Report, String> {
     let mut timings = [std::time::Duration::ZERO; 3];
     let mut ticks = 0;
-    for tick in 0..MAX_TICKS {
-        let observe = std::time::Instant::now();
-        if tick % 10 == 0 {
-            run.sample();
-        }
-        if run.finished() {
-            break;
-        }
-        timings[0] += observe.elapsed();
-        let control = std::time::Instant::now();
-        if let Err(error) = run.control() {
-            run.report.status = "blocked".into();
-            run.report.detail = error;
-            break;
-        }
-        timings[1] += control.elapsed();
-        let update = std::time::Instant::now();
-        run.app.update();
-        run.healer_metrics.observe_frame(run.app.world());
-        timings[2] += update.elapsed();
-        ticks += 1;
-        if tick % 1000 == 0 {
-            run.write_progress(ticks, started, setup, &timings)?;
-        }
-        if run.stalled() {
-            break;
-        }
+    let outcome =
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> Result<(), String> {
+            for tick in 0..MAX_TICKS {
+                let observe = std::time::Instant::now();
+                if tick % 10 == 0 {
+                    run.sample();
+                }
+                if run.finished() {
+                    break;
+                }
+                timings[0] += observe.elapsed();
+                let control = std::time::Instant::now();
+                if let Err(error) = run.control() {
+                    run.report.status = "blocked".into();
+                    run.report.detail = error;
+                    break;
+                }
+                timings[1] += control.elapsed();
+                let update = std::time::Instant::now();
+                run.app.update();
+                run.healer_metrics.observe_frame(run.app.world());
+                timings[2] += update.elapsed();
+                ticks += 1;
+                if tick % 1000 == 0 {
+                    run.write_progress(ticks, started, setup, &timings)?;
+                }
+                if run.stalled() {
+                    break;
+                }
+            }
+            Ok(())
+        }));
+    let abort = match outcome {
+        Ok(Ok(())) => None,
+        Ok(Err(error)) => Some(error),
+        Err(panic) => Some(panic_reason(panic)),
+    };
+    if let Some(reason) = abort {
+        run.report.status = "aborted".into();
+        run.report.detail = format!("gameplay execution aborted: {reason}");
     }
     run.sample();
     run.report.performance = run.performance(ticks, started, setup, &timings);
@@ -1419,6 +1449,32 @@ pub(super) fn run_cached(
     }
     *catalogs = Some(super::catalogs::Catalogs::take(run.app.world_mut()));
     Ok(run.report)
+}
+
+fn panic_reason(panic: Box<dyn std::any::Any + Send>) -> String {
+    if let Some(reason) = panic.downcast_ref::<String>() {
+        return reason.clone();
+    }
+    if let Some(reason) = panic.downcast_ref::<&str>() {
+        return (*reason).into();
+    }
+    "non-text panic payload".into()
+}
+
+fn aborted_initialization(seed: u64, started: std::time::Instant, reason: String) -> Report {
+    Report {
+        seed,
+        status: "aborted".into(),
+        failed_pack: None,
+        bosses_killed: Vec::new(),
+        simulated_seconds: 0.0,
+        wall_seconds: started.elapsed().as_secs_f64(),
+        detail: format!("gameplay initialization aborted: {reason}"),
+        samples: Vec::new(),
+        pulls: Vec::new(),
+        performance: serde_json::json!({"combat_events": [], "initialization_complete": false}),
+        terminal_units: serde_json::json!([]),
+    }
 }
 
 fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Result<Run, String> {
@@ -1461,6 +1517,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         last_owner_position,
         last_resources: Vec::new(),
         healer_metrics,
+        pet_recorder: Default::default(),
         report: Report {
             seed,
             status: "running".into(),
@@ -1511,6 +1568,7 @@ impl Run {
             .iter()
             .map(|(guid, actor)| (Some(*guid), *actor))
             .chain(self.members().map(|actor| (None, actor)))
+            .chain(self.pet_recorder.units().map(|actor| (None, actor)))
             .map(|(guid, actor)| super::diagnostics::inspect_unit(self.app.world(), guid, actor))
             .collect();
         serde_json::json!(units)
@@ -1571,8 +1629,12 @@ impl Run {
     }
 
     fn sample(&mut self) {
-        let members = self
-            .members()
+        let entities: Vec<_> = self.members().collect();
+        let pets = self
+            .pet_recorder
+            .sample(self.app.world(), &entities, &self.actors);
+        let members = entities
+            .into_iter()
             .map(|entity| {
                 let world = self.app.world();
                 let health = world.get::<Health>(entity);
@@ -1601,6 +1663,7 @@ impl Run {
         self.report.samples.push(Sample {
             at: self.now(),
             members,
+            pets,
         });
     }
 

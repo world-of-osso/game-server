@@ -7,8 +7,8 @@ fn test_world_data(template: CreatureTemplate) -> WorldData {
     let mut templates = HashMap::new();
     templates.insert(template.entry, template);
     WorldData {
-        templates,
-        spawns: Vec::new(),
+        templates: templates.into(),
+        spawns: Vec::new().into(),
         spawns_by_map: HashMap::new(),
         waypoints: HashMap::new(),
         ..Default::default()
