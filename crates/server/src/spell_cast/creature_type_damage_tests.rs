@@ -18,7 +18,7 @@ fn native_undead() -> crate::world_data::WorldData {
     templates.retain(|entry, _| [FLESH_EATER, 6, 113].contains(entry));
     assert_eq!(templates[&FLESH_EATER].creature_type, 6);
     crate::world_data::WorldData {
-        templates,
+        templates: templates.into(),
         ..Default::default()
     }
 }

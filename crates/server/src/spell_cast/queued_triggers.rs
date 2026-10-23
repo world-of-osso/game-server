@@ -119,6 +119,33 @@ pub(super) fn schedule_full_trigger(
         .push_back(trigger);
 }
 
+/// Source script callback using default TRIGGERED_NONE, not FULL_MASK.
+/// Unlike effect160, this preserves the source caster and chosen target.
+pub(super) fn schedule_normal_cast(
+    world: &mut World,
+    ctx: &super::EffectCtx,
+    target: Entity,
+    spell_id: u32,
+    delay_ms: u32,
+) {
+    let due_ms = now_ms(world) + u64::from(delay_ms);
+    let trigger = QueuedTrigger {
+        kind: QueuedCastKind::NormalForce,
+        caster: ctx.caster,
+        target,
+        destination: None,
+        spell_id,
+        depth: 0,
+        item_level: None,
+    };
+    world
+        .resource_mut::<PendingTriggers>()
+        .0
+        .entry(due_ms)
+        .or_default()
+        .push_back(trigger);
+}
+
 /// Remove one event before invoking it; nested zero-delay events follow it.
 pub(crate) fn resolve_due(world: &mut World) {
     let now_ms = now_ms(world);

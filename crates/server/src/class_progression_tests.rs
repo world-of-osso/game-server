@@ -1075,8 +1075,8 @@ fn world_with_creature(entry: u32, min_level: u8) -> crate::world_data::WorldDat
         regenerates_health: true,
     };
     crate::world_data::WorldData {
-        templates: std::collections::HashMap::from([(entry, template)]),
-        spawns: Vec::new(),
+        templates: std::collections::HashMap::from([(entry, template)]).into(),
+        spawns: Vec::new().into(),
         spawns_by_map: std::collections::HashMap::new(),
         waypoints: std::collections::HashMap::new(),
         ..Default::default()
