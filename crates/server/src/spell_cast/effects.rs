@@ -1271,12 +1271,12 @@ fn damage_source_amount(
         caster: bonus_caster,
         ..*ctx
     };
-    (if resolved_source {
+    let source = if resolved_source {
         amount
     } else {
         modded_amount(world, &bonus_ctx, amount, periodic)
-    } * done)
-        .max(0.0)
+    };
+    source * done
 }
 
 fn damage_taken(world: &World, ctx: &EffectCtx, target: Entity, damage: &DamageInput) -> f32 {
