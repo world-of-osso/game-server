@@ -1,0 +1,540 @@
+{
+  "verified": "2026-10-23",
+  "source": "read-only canonical world.db DB2/previously authenticated follower_profiles; no canonical mutation",
+  "scope": "Candidate native rows only; not a validated starter book, policy, legal build or availability certificate. Traits/overrides require existing native evaluator owned by agent14752. Decision policy and primary heal/GCD reference owned by13191.",
+  "configurations": [
+    {
+      "requested_spec": 65,
+      "native_specialization": {
+        "ID": 65,
+        "Name_lang": "Holy",
+        "ClassID": 2,
+        "Role": 1,
+        "PrimaryStatPriority": 1
+      },
+      "source_profile": {
+        "entry": 209057,
+        "name": "Captain Garrick",
+        "class_id": 2,
+        "spec_id": 66,
+        "identity_spell": 458306,
+        "label": "Protection Paladin"
+      },
+      "bridge": "HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE",
+      "spells": [
+        {
+          "spell_id": 19750,
+          "name": "Flash of Light",
+          "levels": [
+            {
+              "ID": 3681,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 4,
+              "SpellLevel": 4,
+              "SpellID": 19750
+            }
+          ],
+          "specialization_rows": [],
+          "class_skill_rows": [
+            {
+              "ID": 44512,
+              "SkillLine": 800,
+              "Spell": 19750,
+              "ClassMask": 0,
+              "AcquireMethod": 2,
+              "SupercedesSpell": 0,
+              "RaceMasks_0": 0,
+              "RaceMasks_1": 0
+            }
+          ]
+        },
+        {
+          "spell_id": 82326,
+          "name": "Holy Light",
+          "levels": [
+            {
+              "ID": 16241,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 11,
+              "SpellLevel": 11,
+              "SpellID": 82326
+            }
+          ],
+          "specialization_rows": [
+            {
+              "Description_lang": "",
+              "ID": 6910,
+              "SpecID": 65,
+              "SpellID": 82326,
+              "OverridesSpellID": 0,
+              "DisplayOrder": 12
+            }
+          ],
+          "class_skill_rows": []
+        },
+        {
+          "spell_id": 20473,
+          "name": "Holy Shock",
+          "levels": [
+            {
+              "ID": 3795,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 10,
+              "SpellLevel": 10,
+              "SpellID": 20473
+            }
+          ],
+          "specialization_rows": [],
+          "class_skill_rows": []
+        },
+        {
+          "spell_id": 25914,
+          "name": "Holy Shock",
+          "levels": [
+            {
+              "ID": 4833,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 19,
+              "SpellLevel": 19,
+              "SpellID": 25914
+            }
+          ],
+          "specialization_rows": [],
+          "class_skill_rows": [
+            {
+              "ID": 27279,
+              "SkillLine": 800,
+              "Spell": 25914,
+              "ClassMask": 0,
+              "AcquireMethod": 3,
+              "SupercedesSpell": 0,
+              "RaceMasks_0": 0,
+              "RaceMasks_1": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "requested_spec": 256,
+      "native_specialization": {
+        "ID": 256,
+        "Name_lang": "Discipline",
+        "ClassID": 5,
+        "Role": 1,
+        "PrimaryStatPriority": 0
+      },
+      "source_profile": {
+        "entry": 215011,
+        "name": "Henry Garrick",
+        "class_id": 5,
+        "spec_id": 257,
+        "identity_spell": 458314,
+        "label": "Holy Priest"
+      },
+      "bridge": "HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE",
+      "spells": [
+        {
+          "spell_id": 2061,
+          "name": "Flash Heal",
+          "levels": [
+            {
+              "ID": 289,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 3,
+              "SpellLevel": 3,
+              "SpellID": 2061
+            }
+          ],
+          "specialization_rows": [],
+          "class_skill_rows": [
+            {
+              "ID": 43487,
+              "SkillLine": 804,
+              "Spell": 2061,
+              "ClassMask": 0,
+              "AcquireMethod": 2,
+              "SupercedesSpell": 0,
+              "RaceMasks_0": 0,
+              "RaceMasks_1": 0
+            }
+          ]
+        },
+        {
+          "spell_id": 47540,
+          "name": "Penance",
+          "levels": [
+            {
+              "ID": 10385,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 11,
+              "SpellLevel": 11,
+              "SpellID": 47540
+            }
+          ],
+          "specialization_rows": [
+            {
+              "Description_lang": "",
+              "ID": 6779,
+              "SpecID": 256,
+              "SpellID": 47540,
+              "OverridesSpellID": 0,
+              "DisplayOrder": 5
+            }
+          ],
+          "class_skill_rows": []
+        },
+        {
+          "spell_id": 47757,
+          "name": "Penance",
+          "levels": [
+            {
+              "ID": 10410,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 1,
+              "SpellLevel": 1,
+              "SpellID": 47757
+            }
+          ],
+          "specialization_rows": [],
+          "class_skill_rows": []
+        },
+        {
+          "spell_id": 47750,
+          "name": "Penance",
+          "levels": [
+            {
+              "ID": 10406,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 0,
+              "SpellLevel": 0,
+              "SpellID": 47750
+            }
+          ],
+          "specialization_rows": [],
+          "class_skill_rows": []
+        },
+        {
+          "spell_id": 17,
+          "name": "Power Word: Shield",
+          "levels": [
+            {
+              "ID": 4,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 4,
+              "SpellLevel": 4,
+              "SpellID": 17
+            }
+          ],
+          "specialization_rows": [],
+          "class_skill_rows": [
+            {
+              "ID": 43486,
+              "SkillLine": 804,
+              "Spell": 17,
+              "ClassMask": 0,
+              "AcquireMethod": 2,
+              "SupercedesSpell": 0,
+              "RaceMasks_0": 0,
+              "RaceMasks_1": 0
+            }
+          ]
+        },
+        {
+          "spell_id": 194509,
+          "name": "Power Word: Radiance",
+          "levels": [
+            {
+              "ID": 34839,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 0,
+              "SpellLevel": 0,
+              "SpellID": 194509
+            }
+          ],
+          "specialization_rows": [],
+          "class_skill_rows": []
+        }
+      ]
+    },
+    {
+      "requested_spec": 264,
+      "native_specialization": {
+        "ID": 264,
+        "Name_lang": "Restoration",
+        "ClassID": 7,
+        "Role": 1,
+        "PrimaryStatPriority": 0
+      },
+      "source_profile": {
+        "entry": 209053,
+        "name": "Shuja Grimaxe",
+        "class_id": 7,
+        "spec_id": 262,
+        "identity_spell": 458346,
+        "label": "Elemental Shaman"
+      },
+      "bridge": "HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE",
+      "spells": [
+        {
+          "spell_id": 77472,
+          "name": "Healing Wave",
+          "levels": [
+            {
+              "ID": 14547,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 10,
+              "SpellLevel": 10,
+              "SpellID": 77472
+            }
+          ],
+          "specialization_rows": [
+            {
+              "Description_lang": "",
+              "ID": 7142,
+              "SpecID": 264,
+              "SpellID": 77472,
+              "OverridesSpellID": 8004,
+              "DisplayOrder": 11
+            }
+          ],
+          "class_skill_rows": []
+        },
+        {
+          "spell_id": 8004,
+          "name": "Healing Surge",
+          "levels": [
+            {
+              "ID": 1255,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 4,
+              "SpellLevel": 4,
+              "SpellID": 8004
+            }
+          ],
+          "specialization_rows": [],
+          "class_skill_rows": [
+            {
+              "ID": 43500,
+              "SkillLine": 924,
+              "Spell": 8004,
+              "ClassMask": 64,
+              "AcquireMethod": 2,
+              "SupercedesSpell": 0,
+              "RaceMasks_0": 0,
+              "RaceMasks_1": 0
+            }
+          ]
+        },
+        {
+          "spell_id": 61295,
+          "name": "Riptide",
+          "levels": [
+            {
+              "ID": 12684,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 10,
+              "SpellLevel": 10,
+              "SpellID": 61295
+            }
+          ],
+          "specialization_rows": [],
+          "class_skill_rows": []
+        },
+        {
+          "spell_id": 1064,
+          "name": "Chain Heal",
+          "levels": [
+            {
+              "ID": 197,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 21,
+              "SpellLevel": 21,
+              "SpellID": 1064
+            }
+          ],
+          "specialization_rows": [],
+          "class_skill_rows": []
+        }
+      ]
+    },
+    {
+      "requested_spec": 270,
+      "native_specialization": {
+        "ID": 270,
+        "Name_lang": "Mistweaver",
+        "ClassID": 10,
+        "Role": 1,
+        "PrimaryStatPriority": 0
+      },
+      "source_profile": {
+        "entry": 227734,
+        "name": "Bo",
+        "class_id": 10,
+        "spec_id": 269,
+        "identity_spell": 458660,
+        "label": "Windwalker Monk"
+      },
+      "bridge": "HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE",
+      "spells": [
+        {
+          "spell_id": 116670,
+          "name": "Vivify",
+          "levels": [
+            {
+              "ID": 21240,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 4,
+              "SpellLevel": 4,
+              "SpellID": 116670
+            }
+          ],
+          "specialization_rows": [],
+          "class_skill_rows": [
+            {
+              "ID": 43518,
+              "SkillLine": 829,
+              "Spell": 116670,
+              "ClassMask": 512,
+              "AcquireMethod": 2,
+              "SupercedesSpell": 0,
+              "RaceMasks_0": 0,
+              "RaceMasks_1": 0
+            }
+          ]
+        },
+        {
+          "spell_id": 124682,
+          "name": "Enveloping Mist",
+          "levels": [
+            {
+              "ID": 24614,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 0,
+              "SpellLevel": 0,
+              "SpellID": 124682
+            }
+          ],
+          "specialization_rows": [],
+          "class_skill_rows": []
+        },
+        {
+          "spell_id": 115175,
+          "name": "Soothing Mist",
+          "levels": [
+            {
+              "ID": 20918,
+              "DifficultyID": 0,
+              "MaxLevel": 0,
+              "MaxPassiveAuraLevel": 0,
+              "BaseLevel": 0,
+              "SpellLevel": 0,
+              "SpellID": 115175
+            }
+          ],
+          "specialization_rows": [],
+          "class_skill_rows": []
+        }
+      ]
+    },
+    {
+      "requested_spec": 1468,
+      "native_specialization": {
+        "ID": 1468,
+        "Name_lang": "Preservation",
+        "ClassID": 13,
+        "Role": 1,
+        "PrimaryStatPriority": 0
+      },
+      "source_profile": {
+        "entry": 215240,
+        "name": "Kybel",
+        "class_id": 13,
+        "spec_id": 1467,
+        "identity_spell": 458349,
+        "label": "Devastation Evoker"
+      },
+      "bridge": "HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE",
+      "spells": [
+        {
+          "spell_id": 361469,
+          "name": "Living Flame",
+          "levels": [],
+          "specialization_rows": [],
+          "class_skill_rows": [
+            {
+              "ID": 46382,
+              "SkillLine": 2810,
+              "Spell": 361469,
+              "ClassMask": 4096,
+              "AcquireMethod": 2,
+              "SupercedesSpell": 0,
+              "RaceMasks_0": 0,
+              "RaceMasks_1": 0
+            }
+          ]
+        },
+        {
+          "spell_id": 361509,
+          "name": "Living Flame",
+          "levels": [],
+          "specialization_rows": [],
+          "class_skill_rows": []
+        },
+        {
+          "spell_id": 355936,
+          "name": "Dream Breath",
+          "levels": [],
+          "specialization_rows": [],
+          "class_skill_rows": []
+        },
+        {
+          "spell_id": 366155,
+          "name": "Reversion",
+          "levels": [],
+          "specialization_rows": [],
+          "class_skill_rows": []
+        },
+        {
+          "spell_id": 364343,
+          "name": "Echo",
+          "levels": [],
+          "specialization_rows": [],
+          "class_skill_rows": []
+        }
+      ]
+    }
+  ]
+}
