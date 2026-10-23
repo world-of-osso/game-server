@@ -15,8 +15,9 @@ prepare_literal is an explicit entry scaffold mirroring the current late handoff
 - Literal Feral must have neither1126 nor an earlier kit1126 CastSuccess at pull; current late capture should fail.
 - Nonliteral Feral retains1126/native kit, proving controller isolation.
 - Literal Demo must honor declared initial0 shards before precombat and retain native selected Felguard17252; no grants or after-cast resets.
+- Native Demo ST must deal first damage within10s after the pull, with one target and no add-wave/re-engagement loop. Parent relayed14861's fresh-canonical0DPS ordering: Felguard30146's6s cast is only0.15s complete at engagement; owner/dummy refs expire at5.2s before completion. The test retains Follower/NPC identity and the normal native controller, so literal takeover cannot itself manufacture a failure. Runtime RED pending;14861's0–10s proof is pending.
 
-All three are opt-in with prepared profile/native source-view reasons. Runtime RED pending before implementation. These cases do not yet qualify ordered multi-action selection, cast/GCD timing, all start options or complete precombat execution.
+All four are opt-in with prepared profile/native source-view reasons. Runtime RED pending before implementation. These cases do not yet qualify ordered multi-action selection, cast/GCD completion at pull, all start options or complete precombat execution. Native first-damage control complements rather than replaces the cast/GCD boundary assertions.
 
 ## Dependencies
 

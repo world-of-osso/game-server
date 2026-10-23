@@ -1,4 +1,5 @@
 //! Literal handoff and profile initialization must precede native warmup.
+//! Native pet precasts must finish before engagement and the fight clock.
 use super::*;
 use crate::auras::ActiveAuras;
 use shared::components::PowerType;
@@ -52,6 +53,39 @@ fn literal_precombat_leaves_nonliteral_native_feral_kit_unchanged() {
             .unwrap()
             .has_spell(1126),
         "ordinary native fixture kit still applies its actual class buff"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared266 profile/current native source view; native Demo ST pull regression"]
+fn literal_precombat_demo_st_deals_damage_within_ten_seconds_after_pull() {
+    const POST_PULL_TICKS: u32 = 200;
+    const FIRST_DAMAGE_DEADLINE_SECONDS: f64 = 10.0;
+    let _seed = crate::random::seed_scope(70448);
+    let (profile, traits) = read_reference(266).unwrap();
+    let mut run = prepare_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Follower,
+    )
+    .unwrap();
+    engage(&mut run);
+    let pulled_at = crate::spell_cast::now(run.app.world());
+    for _ in 0..POST_PULL_TICKS {
+        run.app.update();
+        let elapsed = crate::spell_cast::now(run.app.world()) - pulled_at;
+        let combat = report::combat(run.app.world(), &run.damage_targets, elapsed);
+        if combat["total_damage"].as_u64().unwrap() > 0 {
+            assert!(elapsed <= FIRST_DAMAGE_DEADLINE_SECONDS + 0.001);
+            println!("Demo ST first native damage at pull+{elapsed:.3}s: {combat}");
+            return;
+        }
+    }
+    panic!(
+        "Demo ST must deal native damage within {FIRST_DAMAGE_DEADLINE_SECONDS}s after pull, \
+         without add-wave re-engagement; final state {}",
+        report::engagement(run.app.world(), run.actor, &run.targets)
     );
 }
 
