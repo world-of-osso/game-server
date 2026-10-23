@@ -192,6 +192,115 @@ fn ruby_resource_limited_tail_native_component_probe() {
     );
 }
 
+#[test]
+#[ignore = "requires canonical2521 assets and FOLLOWER_GOREK_DIAGNOSTICS"]
+fn ruby_disconnected_component_geometry_export() {
+    use std::io::Write;
+    let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
+    let output = PathBuf::from(std::env::var_os("FOLLOWER_GOREK_DIAGNOSTICS").unwrap());
+    let mut nav = NavigationMap::open(&root.join("2521")).unwrap();
+    load_all_diagnostic_tiles(&mut nav);
+    let filter = filter();
+    let entrance = Vec3::new(1386.2, 131.0, 169.719);
+    let target = Vec3::new(1773.8756, 313.123, -18.689396);
+    let (source_ref, _) = nav.nearest(entrance, &filter).unwrap();
+    let (target_ref, _) = nav.nearest(target, &filter).unwrap();
+    let source = connected_polygons(&nav, source_ref, &filter);
+    let destination = connected_polygons(&nav, target_ref, &filter);
+    let intersection = source
+        .keys()
+        .filter(|key| destination.contains_key(key))
+        .count();
+    let mut trace = std::fs::File::create(output.join("ruby-component-geometry.txt")).unwrap();
+    writeln!(trace, "loaded_tiles={} source_polygons={} target_polygons={} intersection={intersection} source_reaches_target={} target_reaches_source={}", nav.loaded.len(), source.len(), destination.len(), source.contains_key(&target_ref), destination.contains_key(&source_ref)).unwrap();
+    for (label, point) in [
+        ("entrance", entrance),
+        ("runtime_erkhart_190485", target),
+        (
+            "actual_repeat_endpoint",
+            Vec3::new(1641.4063, 167.84453, 11.979166),
+        ),
+        (
+            "tdb_melidrussa_188252",
+            Vec3::new(1551.33, 129.782, 257.688),
+        ),
+        ("tdb_kokia_189232", Vec3::new(1643.71, 331.257, 131.701)),
+        ("tdb_kyrakka_199790", Vec3::new(1864.12, 332.153, -14.5156)),
+        ("tdb_drake_9001663", Vec3::new(1551.32, 232.711, 266.693)),
+    ] {
+        match nav.nearest(point, &filter) {
+            Ok((reference, projected)) => writeln!(trace, "point={label} requested={point:?} reference={reference} projected={projected:?} in_source={} in_target={}", source.contains_key(&reference), destination.contains_key(&reference)).unwrap(),
+            Err(error) => writeln!(trace, "point={label} requested={point:?} projection_error={error}").unwrap(),
+        }
+    }
+    write_diagnostic_component_polygons(&nav, &source, &output.join("ruby-source-polygons.csv"));
+    write_diagnostic_component_polygons(
+        &nav,
+        &destination,
+        &output.join("ruby-target-polygons.csv"),
+    );
+    eprintln!(
+        "Ruby full-map geometry: source={} target={} intersection={intersection}",
+        source.len(),
+        destination.len()
+    );
+}
+
+fn load_all_diagnostic_tiles(nav: &mut NavigationMap) {
+    let mut tiles = Vec::new();
+    for entry in std::fs::read_dir(&nav.dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_none_or(|extension| extension != "nav") {
+            continue;
+        }
+        let (row, col) = path
+            .file_stem()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .split_once('_')
+            .unwrap();
+        tiles.push((row.parse::<u32>().unwrap(), col.parse::<u32>().unwrap()));
+    }
+    tiles.sort_unstable();
+    for tile in tiles {
+        nav.load_tile(tile).unwrap();
+    }
+}
+
+fn write_diagnostic_component_polygons(
+    nav: &NavigationMap,
+    component: &std::collections::HashMap<dtPolyRef, dtPolyRef>,
+    output: &Path,
+) {
+    use std::io::{BufWriter, Write};
+    let mut csv = BufWriter::new(std::fs::File::create(output).unwrap());
+    writeln!(
+        csv,
+        "reference,vertices,x0,y0,z0,x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,x5,y5,z5"
+    )
+    .unwrap();
+    let mut references: Vec<_> = component.keys().copied().collect();
+    references.sort_unstable();
+    for reference in references {
+        let (tile, polygon) = tile_and_poly(nav, reference);
+        // SAFETY: immutable owned Detour mesh, validated native polygon vertices.
+        unsafe {
+            let polygon = std::ptr::read_unaligned(polygon);
+            let count = usize::from(polygon.vertCount);
+            assert!(count <= polygon.verts.len());
+            write!(csv, "{reference},{count}").unwrap();
+            for index in &polygon.verts[..count] {
+                let point =
+                    std::slice::from_raw_parts((*tile).verts.add(usize::from(*index) * 3), 3);
+                write!(csv, ",{},{},{}", point[0], point[1], point[2]).unwrap();
+            }
+        }
+        writeln!(csv).unwrap();
+    }
+    csv.flush().unwrap();
+}
+
 fn tile_and_poly(nav: &NavigationMap, reference: dtPolyRef) -> (*const dtMeshTile, *const dtPoly) {
     let mut tile = std::ptr::null();
     let mut poly = std::ptr::null();
