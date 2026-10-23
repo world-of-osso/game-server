@@ -1963,6 +1963,17 @@ fn remove_aura(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target
     );
 }
 
+/// TC SpellInfo.cpp1721–1756: a non-channeled parent's destination-only child
+/// does not need a unit target, even when the parent's area selector finds units.
+pub(super) fn has_destination_only_missile_child(world: &World, effect: &SpellEffect) -> bool {
+    const TARGET_FLAG_DEST_LOCATION: u32 = 0x40;
+    world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(effect.trigger_spell)
+        .and_then(|child| child.target_restrictions.as_ref())
+        .is_some_and(|targets| targets.targets == TARGET_FLAG_DEST_LOCATION)
+}
+
 /// TC EffectTriggerMissileSpell HIT mode (SpellEffects.cpp:757-788), distinct from
 /// the existing HIT_TARGET handler: forward destination, retaining child costs.
 pub(super) fn trigger_missile_at_destination(

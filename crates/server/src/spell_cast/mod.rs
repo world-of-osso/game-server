@@ -2870,9 +2870,13 @@ fn resolve_effects(
             handler(world, &ctx, effect);
             continue;
         }
-        // TC EffectTriggerMissileSpell's HIT mode: destination effects have no
-        // hit units, but still cast their child once with the parent's destination.
-        if effect.effect == effects::EFFECT_TRIGGER_MISSILE && units.is_empty() {
+        // TC HIT dispatches a destination-only child once, even when an area
+        // selector found units. HIT_TARGET belongs to unit-targeted children.
+        if effect.effect == effects::EFFECT_TRIGGER_MISSILE
+            && (units.is_empty()
+                || (!is_channeled(spell)
+                    && effects::has_destination_only_missile_child(world, effect)))
+        {
             effects::trigger_missile_at_destination(world, &ctx, effect);
             continue;
         }
