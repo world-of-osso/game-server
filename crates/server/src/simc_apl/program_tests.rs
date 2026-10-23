@@ -156,6 +156,22 @@ fn simc_apl_ret_finisher_variable_updates_before_native_action_selection() {
 }
 
 #[test]
+#[ignore = "shared APL RED: declared empty list must return to its caller"]
+fn simc_apl_explicit_empty_list_returns_to_the_next_caller_action() {
+    let program = Program::parse(&[
+        ("empty", ""),
+        ("default", "call_action_list,name=empty"),
+        ("default", "tiger_palm"),
+    ])
+    .unwrap();
+    let selected = program
+        .select("default", &facts(&[]), &mut program.state(), |_| Ok(true))
+        .unwrap()
+        .unwrap();
+    assert_eq!(selected.name, "tiger_palm");
+}
+
+#[test]
 #[ignore = "shared APL RED: invalid list/variable definitions need explicit errors"]
 fn simc_apl_invalid_control_does_not_become_an_empty_list_or_zero_variable() {
     assert!(Program::parse(&[("default", "variable,name=x,op=unknown,value=1")]).is_err());
@@ -165,10 +181,6 @@ fn simc_apl_invalid_control_does_not_become_an_empty_list_or_zero_variable() {
         .select("default", &facts(&[]), &mut state, |_| Ok(true))
         .unwrap_err();
     assert!(error.contains("variable.undeclared"), "{error}");
-    let program = Program::parse(&[("default", "call_action_list,name=missing")]).unwrap();
-    assert!(
-        program
-            .select("default", &facts(&[]), &mut program.state(), |_| Ok(true))
-            .is_err()
-    );
+    //76f8118 action.cpp4669–4676 rejects an unknown list during initialization.
+    assert!(Program::parse(&[("default", "call_action_list,name=missing")]).is_err());
 }

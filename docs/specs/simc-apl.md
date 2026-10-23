@@ -24,7 +24,7 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 
 ## Tests asserting this spec
 
-`crates/server/src/simc_apl/tests.rs`; ten ignored expression/program RED cases pushed before implementation. Runtime result pending.
+`crates/server/src/simc_apl/tests.rs`; eleven ignored expression/program RED cases pushed before implementation. Runtime result pending.
 
 ## Known gaps (current cycle)
 
