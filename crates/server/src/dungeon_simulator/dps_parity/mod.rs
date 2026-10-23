@@ -103,7 +103,7 @@ fn prepare_reference(
     identity: crate::followers::simulator::ParityActor,
 ) -> Result<Run, String> {
     let spec_id = profile.spec_id;
-    let mut app = super::runtime::build_pet_app();
+    let mut app = super::runtime::build_app();
     inputs::install_reference_catalogs(&mut app)?;
     let copy = super::runtime::create_copy(&mut app);
     let level = profile
