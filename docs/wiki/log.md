@@ -1,3 +1,7 @@
+## 2026-10-22 — Light of the Titans and native hit masks
+
+[Native Titans](systems/auras.md#light-of-the-titans-and-hit-proc-masks--2026-10-22): ordinary Judgment-earned Word actualmissing378412 RED→native40% HoT; shared Defense0 mask root fixed per TC attrs, then actualhostileDoT110vs329 RED→native200%selfbonus. Merged891b9ab1d19GREEN38.11s/check0/2m08s/zero warnings/fmtPASS. Existing test expectations unchanged; [census](../../docs/handoffs/native-hit-proc-mask-census.md)334969spell/5670staticcandidateaura changes; fullworkspaceleadgate required, no efficacy/completeproducer claim.
+
 ## 2026-10-22 — Imaginary Gun companion server contract qualified
 
 Exact279843 shape admissionbec533e21 follows four genuineUseToyREDs;26GREEN191.47s plus corrected-filter Coyote4GREEN38.62s/check0-53.68s/no warnings/fmt0. Full1173 census543→544 only163705,no other row/reason delta. Real owned-journal/legacy current critter,10s recipient aura/natural expiry,180s natural recovery/reuse,foreign/guardian/ordinary-Ally isolation,invariants,four drifts. Compile/import and missile-sibling fixture failures excluded; three capacity-only attempts separately retained. Native animation/audio/PetCancelAura rejection unqualified. [Toy source boundary](systems/toys.md#imaginary-gun-companion-visual-boundary-2026-10-22).
