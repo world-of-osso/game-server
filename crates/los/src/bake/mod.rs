@@ -314,7 +314,8 @@ impl Baker {
             .unwrap_or_else(|| format!("fdid {fdid}"))
     }
 
-    fn path_fdid(&self, path: &str) -> Option<u32> {
+    /// Look up an authored model path in the local listfile database.
+    pub fn path_fdid(&self, path: &str) -> Option<u32> {
         let path = path.to_lowercase();
         // MMDX names `.mdx`/`.mdl`; the listfile holds the `.m2`.
         let path = match path.rsplit_once('.') {
