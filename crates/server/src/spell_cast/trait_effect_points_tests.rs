@@ -2,8 +2,9 @@
 //! TC a352b1fa Player.cpp29422 and SpellInfo.cpp532–553.
 use super::test_harness::{Harness, harness_with_plugins, world_db};
 use crate::auras::ActiveAuras;
-use crate::class_progression::evaluate_player_reference_traits;
+use crate::class_progression::{KnownSpells, TraitLoadout, evaluate_player_reference_traits};
 use crate::trait_config::Purchase;
+use bevy::prelude::DetectChangesMut;
 use shared::components::{ActiveSpec, Level, Player};
 
 const SANCTIFIED_PLATES: u32 = 402964;
@@ -60,8 +61,14 @@ fn install_rank(h: &mut Harness, rank: u32) {
     assert!(known.contains(OBDURACY));
     h.app
         .world_mut()
-        .entity_mut(h.caster)
-        .insert((known, traits, ActiveSpec(70), Level(90)));
+        .get_mut::<KnownSpells>(h.caster)
+        .unwrap()
+        .set_if_neq(known);
+    h.app
+        .world_mut()
+        .get_mut::<TraitLoadout>(h.caster)
+        .unwrap()
+        .set_if_neq(traits);
     h.advance(3);
 }
 
@@ -70,6 +77,11 @@ fn native_rank(rank: u32) -> Harness {
     let native = world_db().unwrap();
     h.app.insert_resource(native.store.clone());
     h.app.insert_resource(native.classes.clone());
+    h.app.world_mut().entity_mut(h.caster).insert((
+        TraitLoadout::default(),
+        ActiveSpec(70),
+        Level(90),
+    ));
     install_rank(&mut h, rank);
     h
 }
