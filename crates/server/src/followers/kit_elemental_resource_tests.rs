@@ -45,10 +45,6 @@ const CHAIN_OVERLOAD: ResourceCase = ResourceCase {
 
 fn spawn_resource_fixture(case: ResourceCase) -> (Harness, Entity, Vec<Entity>) {
     let (mut h, caster) = at_level(209053, 70, |_| {});
-    // Isolate one cast's resources without changing controller amounts or RNG.
-    crate::auras::remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |aura| {
-        aura.spell_id == 168534
-    });
     assert!(has_aura(h.app.world(), caster, CONTROLLER));
     let origin = *h.app.world().get::<Position>(caster).unwrap();
     let distance = if case.targets == 1 { 35.0 } else { 8.0 };
@@ -68,6 +64,13 @@ fn spawn_resource_fixture(case: ResourceCase) -> (Harness, Entity, Vec<Entity>) 
         targets.push(target);
     }
     (h, caster, targets)
+}
+
+fn isolate_one_cast_resources(h: &mut Harness, caster: Entity) {
+    // Remove the acquisition driver, not controller amounts or RNG.
+    crate::auras::remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 168534
+    });
 }
 
 fn controller_amount(h: &Harness, caster: Entity, index: u8) -> f32 {
@@ -124,6 +127,7 @@ fn energize_receipts(
 
 fn assert_native_launch_energize(case: ResourceCase) {
     let (mut h, caster, targets) = spawn_resource_fixture(case);
+    isolate_one_cast_resources(&mut h, caster);
     let amount = controller_amount(&h, caster, case.controller_effect);
     let expected = amount * case.targets as f32;
     let (before, maximum) = power_value(h.app.world(), caster, PowerType::Maelstrom).unwrap();
@@ -189,6 +193,7 @@ fn assert_native_launch_energize(case: ResourceCase) {
 
 fn assert_removed_controller_blocks_energize(case: ResourceCase) {
     let (mut h, caster, targets) = spawn_resource_fixture(case);
+    isolate_one_cast_resources(&mut h, caster);
     crate::auras::remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |aura| {
         aura.spell_id == CONTROLLER
     });
@@ -208,6 +213,70 @@ fn assert_removed_controller_blocks_energize(case: ResourceCase) {
         before
     );
     assert!(energize_receipts(&h.inbox.log[first..], caster, case.energize).is_empty());
+}
+
+fn stormkeeper_charges(h: &Harness, caster: Entity) -> u8 {
+    h.app
+        .world()
+        .get::<ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 191634)
+        .map_or(0, |aura| aura.charges)
+}
+
+fn assert_energize_preserves_parent_stormkeeper_uses(case: ResourceCase) {
+    let (mut h, caster, targets) = spawn_resource_fixture(case);
+    assert!(has_aura(h.app.world(), caster, 168534));
+    complete_cast(&mut h, caster, 191634, caster);
+    assert_eq!(stormkeeper_charges(&h, caster), 2);
+    let first = h.inbox.log.len();
+    for remaining in [1, 0] {
+        super::kit_clearcasting_tests::wait_for_gcd(&mut h, caster, case.spell);
+        let target = h.npc;
+        crate::spell_cast::creature_cast(
+            h.app.world_mut(),
+            caster,
+            case.spell,
+            Some(target),
+            false,
+        )
+        .unwrap();
+        assert!(
+            h.app
+                .world()
+                .get::<shared::casting::CastState>(caster)
+                .is_none(),
+            "both actual native SK uses must still make their parent instant"
+        );
+        h.advance(40);
+        assert_eq!(
+            stormkeeper_charges(&h, caster),
+            remaining,
+            "energize helpers must not independently spend their triggering parent's SK charge"
+        );
+    }
+    assert_damage_targets(&h.inbox.log[first..], caster, case, &targets);
+    let overload = if case.spell == 188196 { 45284 } else { 45297 };
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Damage
+                && event.source == Some(caster.to_bits())
+                && event.spell_id == Some(overload)),
+        "actual Mastery/SK Overload path must run, including its resource child"
+    );
+}
+
+#[test]
+#[ignore = "native resource helper parent-charge ownership qualification pending"]
+fn native_elemental_resource_lightning_energize_preserves_two_stormkeeper_uses() {
+    assert_energize_preserves_parent_stormkeeper_uses(LIGHTNING);
+}
+#[test]
+#[ignore = "native resource helper parent-charge ownership qualification pending"]
+fn native_elemental_resource_chain_energize_preserves_two_stormkeeper_uses() {
+    assert_energize_preserves_parent_stormkeeper_uses(CHAIN);
 }
 
 #[test]
