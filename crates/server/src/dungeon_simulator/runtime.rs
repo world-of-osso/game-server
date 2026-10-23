@@ -66,6 +66,10 @@ pub(super) fn build_app() -> App {
 }
 
 pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
+    build_runtime_app(catalogs)
+}
+
+fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
     let mut app = App::new();
     app.insert_resource(super::Space(super::graph::read_graph().unwrap()));
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));

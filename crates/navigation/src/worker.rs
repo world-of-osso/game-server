@@ -369,6 +369,7 @@ fn run_query(map: &mut NavigationMap, query: Query) -> Result<Output, String> {
         Query::SmoothPath { from, to } => Output::Path(NavigationPath {
             points: map.smooth_waypoint_path(from, to)?,
             complete: true,
+            collision_drop: None,
         }),
         Query::Collision { from, to } => {
             map.path(from, from)?;
@@ -377,7 +378,7 @@ fn run_query(map: &mut NavigationMap, query: Query) -> Result<Output, String> {
         Query::Candidates { from, targets } => Output::Candidates(
             targets
                 .into_iter()
-                .map(|to| map.complete_path(from, to))
+                .map(|to| map.complete_walk_path(from, to))
                 .collect(),
         ),
         #[cfg(test)]
