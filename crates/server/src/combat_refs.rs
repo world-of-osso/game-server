@@ -109,10 +109,7 @@ fn begin_combat(world: &mut World, a: Entity, b: Entity, suppress_b: bool) {
     let existing = world
         .get::<CombatRefs>(a)
         .is_some_and(|refs| refs.0.contains_key(&b));
-    let timed =
-        !holds_fight(world, a) || !holds_fight(world, b) || both_player_controlled(world, a, b);
-    let expires_at =
-        timed.then(|| world.resource::<Time>().elapsed_secs_f64() + PVP_COMBAT_TIMEOUT_SECS);
+    let expires_at = read_reference_deadline(world, a, b);
     for (unit, other, suppressed) in [(a, b, false), (b, a, suppress_b && !existing)] {
         store_combat_reference(
             world,
@@ -124,6 +121,23 @@ fn begin_combat(world: &mut World, a: Entity, b: Entity, suppress_b: bool) {
             },
         );
     }
+}
+
+fn read_reference_deadline(world: &World, a: Entity, b: Entity) -> Option<f64> {
+    let pvp = both_player_controlled(world, a, b);
+    let dummy_pair = world
+        .get::<crate::creature_scripts::TrainingDummy>(a)
+        .is_some()
+        || world
+            .get::<crate::creature_scripts::TrainingDummy>(b)
+            .is_some();
+    let both_hold_fight = holds_fight(world, a) && holds_fight(world, b);
+    let timed = if dummy_pair {
+        pvp
+    } else {
+        pvp || !both_hold_fight
+    };
+    timed.then(|| world.resource::<Time>().elapsed_secs_f64() + PVP_COMBAT_TIMEOUT_SECS)
 }
 
 fn store_combat_reference(world: &mut World, unit: Entity, other: Entity, reference: CombatRef) {
@@ -258,13 +272,10 @@ fn can_begin_combat(world: &World, a: Entity, b: Entity) -> bool {
 }
 
 /// Controlled units have no threat list but retain ordinary PvE references.
-/// Training dummy PvE timeouts belong to npc_training_dummy::DamageTaken,
-/// not generic reference refreshes (which also include nondamaging spells).
+/// Dummy pairs bypass this generic threat-less policy in begin_combat:
+/// npc_training_dummy owns their PvE timers regardless of the attacker's role.
 fn holds_fight(world: &World, unit: Entity) -> bool {
     player_controlled(world, unit)
-        || world
-            .get::<crate::creature_scripts::TrainingDummy>(unit)
-            .is_some()
         || world.get::<ThreatTable>(unit).is_some()
         || world
             .get::<shared::components::UnitIsPet>(unit)
