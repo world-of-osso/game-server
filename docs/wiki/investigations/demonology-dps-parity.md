@@ -40,7 +40,7 @@ The borrowed unknown-pre9d13 binary after the template-only delta produced3T1271
 
 ## Power-regeneration interaction (open)
 
-Own b5b118d86 reports3T36121.01 DPS with7170647 Firebolt damage, but this output is **unqualified**: the existing native Imp energy-lifecycle test fails12casts versus100/20=5. `powers::read_creature_power_regeneration` treated every NPC with ownership flag8 as a player-resource subject, bypassing authored `UNIT_FLAG2_REGENERATE_POWER`. Wild Imp/Dreadstalker/Tyrant templates have unit_flags2=0; Felguard has2048. Ownership is not a regeneration capability. Lead approved restricting the player-resource path to actual Players, class followers and controlled pets; temporary guardians must honor the template flag (TC Creature.cpp954–955). Correction and controls remain pending.
+Own b5b118d86 reports3T36121.01 DPS with7170647 Firebolt damage, but this output is **unqualified**: the existing native Imp energy-lifecycle test fails12casts versus100/20=5. `powers::read_creature_power_regeneration` treated every NPC with ownership flag8 as a player-resource subject, bypassing authored `UNIT_FLAG2_REGENERATE_POWER`. Wild Imp/Dreadstalker/Tyrant templates have unit_flags2=0; Felguard has2048. Ownership is not a regeneration capability. Player-resource classification now uses actual `Player`, `Follower` and `HunterPet` components, not ownership flags. Other NPCs, including temporary guardians, honor the template flag (TC Creature.cpp954–955; native field is unit_flags2 bit0x800). Felguard's authored flag remains2048, and its controlled-pet role stays explicit. The source-qualified100Energy/20cost Imp lifecycle RED and live follower/Felguard regeneration controls gate acceptance; GREEN remains pending.
 
 ## Evidence
 

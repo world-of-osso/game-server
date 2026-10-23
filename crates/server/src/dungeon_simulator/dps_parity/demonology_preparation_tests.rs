@@ -78,6 +78,114 @@ fn dps_parity_demo_native_guldan_imps_attack_the_selected_dummy() {
     );
 }
 
+fn advance_until_cast_finished(run: &mut Run, unit: Entity) {
+    for _ in 0..400 {
+        if run
+            .app
+            .world()
+            .get::<shared::casting::CastState>(unit)
+            .is_none()
+        {
+            return;
+        }
+        run.app.update();
+    }
+    panic!("native resource-control cast never finished");
+}
+
+fn cast_and_finish(run: &mut Run, unit: Entity, spell: u32) {
+    let target = run.targets[0];
+    for _ in 0..400 {
+        match crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            unit,
+            spell,
+            Some(target),
+            false,
+        ) {
+            Ok(()) => {
+                advance_until_cast_finished(run, unit);
+                return;
+            }
+            Err(
+                crate::spell_cast::CastFailure::InProgress
+                | crate::spell_cast::CastFailure::OnGlobalCooldown
+                | crate::spell_cast::CastFailure::OnCooldown
+                | crate::spell_cast::CastFailure::NotEnoughPower(_),
+            ) => run.app.update(),
+            Err(error) => panic!("native resource-control spell{spell}: {error:?}"),
+        }
+    }
+    panic!("native resource-control spell{spell} never became ready");
+}
+
+#[test]
+#[ignore = "native class-follower and Felguard regen control; requires private DB and spec266 profile"]
+fn dps_parity_demo_native_follower_and_felguard_keep_resource_regeneration() {
+    use shared::components::{Mana, Position, PowerType};
+    let mut run = prepare(266, 1).unwrap();
+    let controller = fixture_player(&run);
+    run.app.world_mut().entity_mut(controller).insert(Position {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    });
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+    run.app
+        .world_mut()
+        .get_mut::<crate::pet_control::PetCharm>(pet)
+        .unwrap()
+        .react = shared::protocol::REACT_PASSIVE;
+    crate::pet_control::order_companion_pet(run.app.world_mut(), run.actor, None);
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    // Exclusive fixture controller prevents unrelated casts from spending the
+    // pools while ordinary native spells/regeneration exercise both real roles.
+    literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter).unwrap();
+    let actor = run.actor;
+    cast_and_finish(&mut run, actor, 686);
+    let before = run.app.world().get::<Mana>(actor).unwrap().current;
+    assert!(before < run.app.world().get::<Mana>(actor).unwrap().max);
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let after = run.app.world().get::<Mana>(actor).unwrap().current;
+    assert!(
+        after > before,
+        "real class-follower mana must regenerate after native Shadow Bolt"
+    );
+    cast_and_finish(&mut run, pet, 30213);
+    let (before, maximum) =
+        crate::spell_cast::powers::power_value(run.app.world(), pet, PowerType::Energy).unwrap();
+    assert!(
+        before < maximum,
+        "native Legion Strike must spend Felguard Energy"
+    );
+    let rate = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::powers::PowerTypeTable>()
+        .get(PowerType::Energy)
+        .unwrap()
+        .regen_combat;
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let after = crate::spell_cast::powers::power_value(run.app.world(), pet, PowerType::Energy)
+        .unwrap()
+        .0;
+    assert!(
+        (after - before - rate).abs() < 0.01,
+        "real controlled Felguard keeps its native per-second Energy rate: before{before}, after{after}, rate{rate}"
+    );
+}
+
 fn summon_count(world: &World, owner: Entity) -> usize {
     world
         .resource::<ObservedCombatEvents>()
