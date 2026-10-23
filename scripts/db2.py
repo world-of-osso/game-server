@@ -103,8 +103,6 @@ TABLES = [
     "SpecSetMember",
     "Item",
     "ItemSparse",
-    "ItemSet",
-    "ItemSetSpell",
     "ItemDisenchantLoot",
     "ItemAppearance",
     "ItemModifiedAppearance",
