@@ -75,7 +75,15 @@ fn markdown(report: &Value) -> String {
     text
 }
 
-fn write_per_spec_markdown(_report: &Value, _directory: &Path) -> Result<(), String> {
+fn write_per_spec_markdown(report: &Value, directory: &Path) -> Result<(), String> {
+    for row in report["specs"].as_array().unwrap() {
+        let spec = row["spec"].as_u64().unwrap();
+        let mut single = report.clone();
+        single["specs"] = json!([row]);
+        let path = directory.join(format!("{spec}.md"));
+        std::fs::write(&path, markdown(&single))
+            .map_err(|error| format!("write {}: {error}", path.display()))?;
+    }
     Ok(())
 }
 
@@ -124,6 +132,7 @@ pub(super) fn report(intake: &Intake, bytes: &[u8], directory: &Path) -> Result<
         "level":intake.level,"recorded_combat_seconds":super::healer_replay::recorded_combat_seconds(intake),"intake_blake3":blake3::hash(bytes).to_hex().to_string(),
         "intake_hits":intake.hits.len(),"intake_duration_ticks":intake.end_tick,
         "source_status":intake.source_status,"specs":rows});
+    write_per_spec_markdown(&report, directory)?;
     write_json(&directory.join("report.json"), &report)?;
     std::fs::write(directory.join("report.md"), markdown(&report))
         .map_err(|error| error.to_string())?;
