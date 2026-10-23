@@ -194,6 +194,8 @@ fn encounter_coverage_skarmorak_native_smash_damage_and_actual_energy_cost() {
 #[test]
 fn encounter_coverage_skarmorak_source_shell_refill_channel_rearm_and_copy_credit() {
     for difficulty in [1, 205] {
+        // Replay native melee rolls without replacing any hit or absorb amount.
+        let _rng = crate::random::seed_scope(u64::from(SMASH) + u64::from(difficulty));
         let (mut h, boss, map) = skarmorak_copy(difficulty);
         let peer_map = create_peer_copy(&mut h, difficulty);
         record_absorb_removals(&mut h);
@@ -242,8 +244,6 @@ fn encounter_coverage_skarmorak_source_shell_refill_channel_rearm_and_copy_credi
             423324
         );
         let player = h.player();
-        h.app
-            .insert_resource(crate::spell_cast::test_harness::ObservedCombatEvents::default());
         let mut queue = bevy::ecs::world::CommandQueue::default();
         let mut commands = Commands::new(&mut queue, h.app.world());
         crate::combat::start_attack(&mut commands, player, boss, None);
@@ -284,18 +284,6 @@ fn encounter_coverage_skarmorak_source_shell_refill_channel_rearm_and_copy_credi
                     && event.kind == CombatLogKind::Damage
             })
             .count();
-        eprintln!(
-            "Skarmorak native break difficulty{difficulty} time{break_time} player{player:?} boss{boss:?} health{:?} events{:?}",
-            h.health(boss),
-            h.app
-                .world()
-                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-                .0
-                .iter()
-                .filter(|event| event.source == Some(player.to_bits())
-                    || event.target == Some(boss.to_bits()))
-                .collect::<Vec<_>>()
-        );
         assert!(
             damage > 0,
             "actual native autoattack damage, no fabricated hit amount"
