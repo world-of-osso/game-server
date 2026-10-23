@@ -787,13 +787,11 @@ fn assert_unselected_native_root_without_mastery(root: u32, child: u32) {
 }
 
 #[test]
-#[ignore = "unselected native EB cast-mechanism RED/GREEN pending"]
 fn proc_fidelity_262_native_unselected_eb_overload_cast_mechanism() {
     assert_unselected_native_overload_acquisition(117014, 120588);
 }
 
 #[test]
-#[ignore = "unselected native EB removed-Mastery control pending"]
 fn proc_fidelity_262_native_unselected_eb_without_mastery_has_no_overload() {
     assert_unselected_native_root_without_mastery(117014, 120588);
 }

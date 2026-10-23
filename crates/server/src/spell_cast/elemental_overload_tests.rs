@@ -187,25 +187,21 @@ fn native_lightning_overload_uses_mastery_effect1_and_removal_restores_child_bas
 }
 
 #[test]
-#[ignore = "native Chain child effectiveness positive qualification pending"]
 fn native_chain_overload_uses_mastery_effect1_and_removal_restores_child_base() {
     qualify_native_overload_effectiveness(45297);
 }
 
 #[test]
-#[ignore = "native Lava damage-child effectiveness positive qualification pending"]
 fn native_lava_overload_uses_mastery_effect1_and_removal_restores_child_base() {
     qualify_native_overload_effectiveness(285466);
 }
 
 #[test]
-#[ignore = "native EB child effectiveness positive qualification pending"]
 fn native_eb_overload_uses_mastery_effect1_and_removal_restores_child_base() {
     qualify_native_overload_effectiveness(120588);
 }
 
 #[test]
-#[ignore = "native Icefury child effectiveness positive qualification pending"]
 fn native_icefury_overload_uses_mastery_effect1_and_removal_restores_child_base() {
     qualify_native_overload_effectiveness(219271);
 }
