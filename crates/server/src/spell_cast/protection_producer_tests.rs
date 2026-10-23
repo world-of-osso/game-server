@@ -16,6 +16,8 @@ const PHALANX_DAMAGE: u32 = 1_270_116;
 const SHIELD_SLAM: u32 = 23_922;
 const RAVAGER: u32 = 228_920;
 const RAVAGER_TICK: u32 = 156_287;
+const WHIRLING_BLADE: u32 = 1_235_113;
+const DEVASTATE: u32 = 20_243;
 
 fn fixture(rend: bool) -> Harness {
     let ids = [
@@ -107,6 +109,57 @@ fn clap(rend: bool) -> (Harness, Vec<Entity>) {
         }
     }
     panic!("eight native Thunder Clap casts produced no landed damage");
+}
+
+/// SimC76f8118 sc_warrior.cpp1684–1690: foreground special impact on
+/// the primary target rolls native1235113 RPPM and emits228920.
+#[test]
+#[ignore = "RED: native Whirling Blade dummy has no Ravager producer"]
+fn protection_producers_whirling_blade_native_rppm_emits_ravager_from_real_impacts() {
+    let mut h = fixture(false);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            DEVASTATE,
+            WHIRLING_BLADE,
+        ]));
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(shared::components::Health {
+            current: 1_000_000.0,
+            max: 1_000_000.0,
+        });
+    let caster = h.caster;
+    apply_passive(&mut h, caster, WHIRLING_BLADE);
+    h.select(Some(h.npc));
+    h.advance(3);
+    // Real casts, native5 RPPM and real simulation time. No edited flags,
+    // chances, proc timers or seeded RNG; the bounded sequence includes bad luck protection.
+    for _ in 0..40 {
+        h.cast_and_deliver(DEVASTATE, Some(h.npc));
+        h.advance(40);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        if h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(RAVAGER)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        }) {
+            return;
+        }
+    }
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(DEVASTATE)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0)
+    );
+    panic!(
+        "native Whirling Blade failed to emit Ravager during40 actual primary-target special casts"
+    );
 }
 
 /// Native228920 effect1 provides a2000ms PERIODIC_DUMMY and12s duration.
