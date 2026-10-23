@@ -1407,6 +1407,31 @@ fn deal_source_damage_and_report(
     let school = ctx.spell.school_mask();
     let source_amount =
         recorded_source.unwrap_or_else(|| damage_source_amount(world, ctx, target, &damage));
+    #[cfg(test)]
+    let bonus_source_guid = crate::dungeon_simulator::healer_intake::spell_bonus_source(
+        world,
+        ctx.caster,
+        damage.bonus_caster,
+        target,
+    );
+    #[cfg(test)]
+    crate::dungeon_simulator::healer_intake::record(
+        world,
+        ctx.caster,
+        target,
+        school,
+        source_amount,
+        crate::dungeon_simulator::healer_intake::HitKind::Spell {
+            spell_id: ctx.spell.id,
+            depth: ctx.depth,
+            bonus_source_guid,
+            effect_index: effect.map(|effect| u32::from(effect.index)),
+            periodic,
+            crit,
+            resolved_source,
+            blocked: super::hit_was_blocked(world, ctx.caster, ctx.spell.id, target),
+        },
+    );
     if crate::auras::is_immune(world, target, school) {
         let mut event = log_amount(ctx, target, CombatLogKind::Miss(MissKind::Immune));
         event.periodic = periodic;

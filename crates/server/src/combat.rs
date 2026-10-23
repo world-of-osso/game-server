@@ -1592,6 +1592,28 @@ fn try_swing(
     } else {
         outcome_damage * critical_multiplier
     };
+    #[cfg(test)]
+    {
+        let source = attacker.entity;
+        let raw = swing.raw;
+        let kind = crate::dungeon_simulator::healer_intake::HitKind::Melee {
+            hand: u8::from(hand == Hand::Off),
+            outcome: format!("{kind:?}"),
+            level_difference,
+            critical_multiplier,
+            weapon_speed: weapon.speed,
+        };
+        commands.queue(move |world: &mut World| {
+            crate::dungeon_simulator::healer_intake::record(
+                world,
+                source,
+                target_entity,
+                1,
+                raw,
+                kind,
+            )
+        });
+    }
     let absorption = crate::auras::consume_absorbs(
         avoidance
             .1
