@@ -6,7 +6,7 @@ this runner only executes test binaries and never changes compilation settings.
 The caller owns admission, host safety floors and immutable-input checks.
 """
 import argparse
-from collections import Counter, defaultdict, deque
+from collections import Counter, defaultdict
 import hashlib
 import json
 import os
@@ -25,8 +25,6 @@ FILTERS = (
     "warlock", "demon", "guardian", "imp", "tyrant", "summon",
 )
 SKIP = "opening_admission_does_not_recruit_unprojected_source_packs"
-PROCESSES = 2
-THREADS = 3
 TIMER = """import json,resource,subprocess,sys,time
 start=time.monotonic()
 result=subprocess.run(sys.argv[2:])
@@ -79,9 +77,9 @@ def discover_groups(binaries, filters, skips, output, env):
     return plan, expected
 
 
-def launch_group(group, output, env):
+def launch_group(group, output, env, threads):
     tag = group["tag"]
-    command = [group["binary"], *group["tests"], "--exact", "--test-threads", str(THREADS),
+    command = [group["binary"], *group["tests"], "--exact", "--test-threads", str(threads),
                "-Z", "unstable-options", "--format", "json", "--report-time"]
     phase_env = dict(env, DUNGEON_SIMULATOR_OUTPUT=str(output / (tag + "-reports")))
     with (output / (tag + ".jsonl")).open("w") as stdout, (output / (tag + ".log")).open("w") as stderr:
@@ -152,8 +150,31 @@ def read_finished_groups(active, output):
     return remaining, rows, events
 
 
-def execute_groups(plan, output, env):
-    pending = deque(plan)
+def admit_group(pending, active, budget):
+    used = sum(job["group"]["reserved_rss_kib"] for job in active)
+    group = next((group for group in pending if used + group["reserved_rss_kib"] <= budget), None)
+    if group is not None:
+        pending.remove(group)
+    return group
+
+
+def schedule_groups(plan, history, budget):
+    if history is None:
+        for group in plan:
+            group["reserved_rss_kib"] = 0
+        return
+    previous = {(row["binary"], row["module"]): row for row in json.loads(history.read_text())["groups"]}
+    for group in plan:
+        measured = previous[(group["binary"], group["module"])]
+        group["reserved_rss_kib"] = measured["max_rss_kib"]
+        group["previous_wall_seconds"] = measured["wall_seconds"]
+        if group["reserved_rss_kib"] > budget:
+            raise ValueError(f"measured module {group['module']} exceeds memory admission budget")
+    plan.sort(key=lambda group: -group["previous_wall_seconds"])
+
+
+def execute_groups(plan, output, env, options):
+    pending = list(plan)
     active = []
     rows = []
     events = []
@@ -165,8 +186,11 @@ def execute_groups(plan, output, env):
     try:
         with (output / "host-memory.jsonl").open("w", buffering=1) as timeline:
             while pending or active:
-                while pending and len(active) < PROCESSES:
-                    active.append(launch_group(pending.popleft(), output, env))
+                while pending and len(active) < options.processes:
+                    group = admit_group(pending, active, options.memory_budget_kib)
+                    if group is None:
+                        break
+                    active.append(launch_group(group, output, env, options.threads))
                 sample_and_write_memory(members, started, output, timeline, peaks)
                 remaining, finished, completed = read_finished_groups(active, output)
                 active = remaining
@@ -194,8 +218,16 @@ def main():
     parser.add_argument("--skip", action="append", default=[])
     parser.add_argument("--full-suite", action="store_true", help="all discovered tests; no implicit union filters or skip")
     parser.add_argument("--known-failure", action="append", default=[], metavar="EXACT_NAME", help="label, never suppress, an expected failing identity")
+    parser.add_argument("--processes", type=int, default=2)
+    parser.add_argument("--threads", type=int, default=3)
+    parser.add_argument("--history", type=Path, help="complete prior module wall/RSS summary for longest-first memory admission")
+    parser.add_argument("--memory-budget-kib", type=int, default=8 * 2**20)
     parser.add_argument("filters", nargs="*")
     args = parser.parse_args()
+    if not (1 <= args.processes <= 4 and 1 <= args.threads <= 3):
+        parser.error("supported calibration range is1–4 processes and1–3 threads per process")
+    if args.memory_budget_kib <= 0:
+        parser.error("memory admission budget must be positive")
     if args.full_suite and args.filters:
         parser.error("--full-suite cannot be combined with test filters")
     filters = args.filters or (() if args.full_suite else FILTERS)
@@ -204,7 +236,9 @@ def main():
     env = dict(os.environ, RUSTC_BOOTSTRAP="1")
     binaries = read_binaries(args.artifacts)
     plan, expected = discover_groups(binaries, filters, skips, args.output, env)
-    rows, events, peaks, execution_wall = execute_groups(plan, args.output, env)
+    schedule_groups(plan, args.history, args.memory_budget_kib)
+    (args.output / "plan.json").write_text(json.dumps(plan, indent=2))
+    rows, events, peaks, execution_wall = execute_groups(plan, args.output, env, args)
     observed = Counter((binary, event["name"], event["event"] == "ignored") for binary, event in events)
     usage = resource.getrusage(resource.RUSAGE_CHILDREN)
     failures = {event["name"] for _, event in events if event["event"] == "failed"}
@@ -218,8 +252,9 @@ def main():
                "missing": serialize_missing(expected - observed),
                "extra": serialize_missing(observed - expected), "groups": rows,
                "wall_seconds": time.monotonic() - started, "execution_wall_seconds": execution_wall,
-               "cpu_seconds": usage.ru_utime + usage.ru_stime, "processes": PROCESSES,
-               "threads_per_process": THREADS, **peaks}
+               "cpu_seconds": usage.ru_utime + usage.ru_stime, "processes": args.processes,
+               "threads_per_process": args.threads, "history": str(args.history) if args.history else None,
+               "memory_admission_budget_kib": args.memory_budget_kib, **peaks}
     (args.output / "summary.json").write_text(json.dumps(summary, indent=2))
     return int(bool(summary["failed"] or summary["missing"] or summary["extra"]
                     or any(row["exit_code"] != 0 for row in rows)))
