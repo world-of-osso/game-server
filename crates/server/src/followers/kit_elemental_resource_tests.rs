@@ -278,6 +278,57 @@ fn assert_energize_preserves_parent_stormkeeper_uses(case: ResourceCase) {
 }
 
 #[test]
+#[ignore = "native nonzero charge-consumption control pending"]
+fn native_elemental_resource_nonzero_mage_modifier_still_spends_charge() {
+    const PRESENCE_OF_MIND: u32 = 205025;
+    const ARCANE_BLAST: u32 = 30451;
+    let mut h =
+        crate::spell_cast::test_harness::harness(Vec::new(), &[PRESENCE_OF_MIND, ARCANE_BLAST], 8)
+            .expect("native Mage modifier and damage spell");
+    let caster = h.caster;
+    complete_cast(&mut h, caster, PRESENCE_OF_MIND, caster);
+    let modifier = super::kit_clearcasting_tests::own_aura(&h, caster, PRESENCE_OF_MIND).unwrap();
+    assert_eq!(modifier.charges, 2);
+    assert!(
+        modifier
+            .effects
+            .iter()
+            .any(|effect| effect.aura_type == 108 && effect.amount == -100.0)
+    );
+    super::kit_clearcasting_tests::wait_for_gcd(&mut h, caster, ARCANE_BLAST);
+    let target = h.npc;
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, ARCANE_BLAST, Some(target), false)
+        .unwrap();
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .is_none()
+    );
+    assert_eq!(
+        super::kit_clearcasting_tests::own_aura(&h, caster, PRESENCE_OF_MIND)
+            .unwrap()
+            .charges,
+        1
+    );
+    h.advance(30);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Damage
+                && event.source == Some(caster.to_bits())
+                && event.spell_id == Some(ARCANE_BLAST))
+    );
+    assert_eq!(
+        super::kit_clearcasting_tests::own_aura(&h, caster, PRESENCE_OF_MIND)
+            .unwrap()
+            .charges,
+        1
+    );
+}
+
+#[test]
 #[ignore = "native resource helper parent-charge ownership qualification pending"]
 fn native_elemental_resource_lightning_energize_preserves_two_stormkeeper_uses() {
     assert_energize_preserves_parent_stormkeeper_uses(LIGHTNING);
