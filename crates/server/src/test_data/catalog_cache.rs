@@ -88,7 +88,8 @@ pub(crate) fn load<T: Send + Sync + 'static>(
         );
         rusqlite::Error::ToSqlConversionFailure(Box::new(context))
     })?;
-    let slot = catalog_slot::<T>(input);
+    let slot = catalog_slot::<T>(input)
+        .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))?;
     let mut cached = slot
         .lock()
         .expect("fixture catalog initialization poisoned");
@@ -136,21 +137,48 @@ fn hash_snapshot(path: &Path, before: FileVersion) -> io::Result<[u8; 32]> {
     Ok(*hasher.finalize().as_bytes())
 }
 
-fn catalog_slot<T: Send + Sync + 'static>(input: Input) -> Arc<CatalogSlot<T>> {
+fn remove_deleted_inputs(
+    inputs: &mut HashMap<PathBuf, InputCatalogs>,
+) -> io::Result<Vec<InputCatalogs>> {
+    let mut deleted = Vec::new();
+    for path in inputs.keys() {
+        let exists = path.try_exists().map_err(|error| {
+            io::Error::new(
+                error.kind(),
+                format!("inspect cached fixture source {}: {error}", path.display()),
+            )
+        })?;
+        if !exists {
+            deleted.push(path.clone());
+        }
+    }
+    Ok(deleted
+        .into_iter()
+        .map(|path| {
+            inputs
+                .remove(&path)
+                .expect("deleted fixture input collected under the registry lock")
+        })
+        .collect())
+}
+
+fn catalog_slot<T: Send + Sync + 'static>(input: Input) -> io::Result<Arc<CatalogSlot<T>>> {
     static CATALOGS: OnceLock<Mutex<HashMap<PathBuf, InputCatalogs>>> = OnceLock::new();
-    let slot = {
+    let (slot, expired) = {
         let mut inputs = CATALOGS
             .get_or_init(Default::default)
             .lock()
             .expect("fixture catalog registry poisoned");
+        let expired = remove_deleted_inputs(&mut inputs)?;
         let catalogs = inputs.entry(input.path).or_insert_with(|| InputCatalogs {
             digest: input.digest,
             types: HashMap::new(),
         });
-        catalogs.cache_slot::<T>(input.digest)
+        (catalogs.cache_slot::<T>(input.digest), expired)
     };
+    drop(expired);
     match slot.downcast::<CatalogSlot<T>>() {
-        Ok(slot) => slot,
+        Ok(slot) => Ok(slot),
         Err(_) => unreachable!("fixture catalog TypeId does not match its stored slot"),
     }
 }
