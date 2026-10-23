@@ -71,6 +71,8 @@ mod gnomeregan;
 mod granyth;
 #[path = "data_bosses_group_criteria.rs"]
 mod group_criteria;
+#[path = "gulping_goliath.rs"]
+mod gulping_goliath;
 #[path = "herald_call.rs"]
 mod herald_call;
 #[path = "herald_damage.rs"]
@@ -97,6 +99,8 @@ mod herald_reset;
 mod kargath;
 #[path = "kelidan.rs"]
 mod kelidan;
+#[path = "khajin.rs"]
+mod khajin;
 #[path = "kikatal.rs"]
 mod kikatal;
 #[path = "kokia.rs"]
@@ -127,6 +131,8 @@ mod omrogg;
 mod orator;
 #[path = "porung.rs"]
 mod porung;
+#[path = "skarmorak.rs"]
+mod skarmorak;
 #[path = "talondras.rs"]
 mod talondras;
 #[path = "the_maker.rs"]
@@ -382,7 +388,7 @@ fn encounter_fixture(
     inputs.install(&mut app);
     // Keep producer-authenticated map/binding inputs already installed in this app.
     let mut maps = app.world().resource::<MapStore>().clone();
-    if matches!(entry, 234648 | 215405 | 215407 | 207946 | 216619) {
+    if matches!(entry, 234648 | 215405 | 215407 | 207946 | 216619 | 210156) {
         // Install production ground before source addon application or combat.
         // Mirror Image, Blink, Eye and the Orator source arena use real ground.
         let wdt = maps.maps.get(&map_id).unwrap().wdt_file_data_id;
@@ -473,7 +479,7 @@ fn encounter_fixture(
             spawn_prepared_actor(&mut app, inputs.authored_spawn(difficulty), map, difficulty);
         let near = if [
             ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 16807, 17306, 17308,
-            209230, 215405, 215407, 216619, 207946, 194181, 186616, 186120,
+            209230, 215405, 215407, 216619, 207946, 194181, 186616, 186120, 210156, 189722, 189727,
         ]
         .contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)
