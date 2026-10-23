@@ -407,6 +407,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
 /// to 100%; Retail108853 tooltip explicitly renders `${$s1*2}`.
 pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32) -> Option<f32> {
     match spell_id {
+        133 | hot_streak::PYROBLAST => firestarter_crit(world, caster, target),
         batch17::REGROWTH => batch17::regrowth_crit(world, caster, target),
         batch14::EYE_BEAM_DAMAGE => batch14::eye_beam_crit(world, caster),
         batch3::SHRED if batch11::shred_stealth_bonus(world, caster) => {
@@ -435,6 +436,17 @@ pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32)
         }
         _ => None,
     }
+}
+
+/// TC a352b1fa spell_mage.cpp762–779: actual205026 effect0 supplies the HP threshold.
+fn firestarter_crit(world: &World, caster: Entity, target: Entity) -> Option<f32> {
+    let aura = world
+        .get::<crate::auras::ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.spell_id == 205026)?;
+    let threshold = aura.effects.iter().find(|effect| effect.index == 0)?.amount;
+    let health = world.get::<shared::components::Health>(target)?;
+    (health.current / health.max * 100.0 >= threshold).then_some(100.0)
 }
 
 pub(crate) fn rake_bleed_snapshot(world: &World, caster: Entity, amount: f32) -> f32 {
