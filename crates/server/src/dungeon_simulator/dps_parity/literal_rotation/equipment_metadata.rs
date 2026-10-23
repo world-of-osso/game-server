@@ -119,7 +119,7 @@ fn stat_names(effect: &SpellEffect) -> Vec<&'static str> {
         handlers::MOD_TOTAL_STAT_PERCENTAGE => PRIMARY_STATS
             .iter()
             .filter(|(index, _)| {
-                effect.misc_values[1] == 0 || effect.misc_values[1] & (1 << index) != 0
+                effect.misc_values[1] == 0 || effect.misc_values[1] & (1 << *index) != 0
             })
             .map(|(_, name)| *name)
             .collect(),
@@ -148,42 +148,83 @@ fn rating_names(mask: u32) -> Vec<&'static str> {
 fn read_cooldown(store: &SpellStore, effect: &ItemEffect) -> Result<Cooldown, String> {
     let mut spell = read_spell(store, effect.spell_id)?.clone();
     let proc = effect.trigger == ON_EQUIP;
-    if !proc && (effect.cooldown_ms >= 0 || effect.category_cooldown_ms >= 0) {
-        // Native spell values apply only when BOTH item fields are negative.
-        // Zero and mixed signs are authoritative, not a per-field fallback.
-        let cooldowns = spell.cooldowns.get_or_insert_with(Default::default);
-        cooldowns.recovery_ms = effect.cooldown_ms.max(0) as u32;
-        cooldowns.category_recovery_ms = effect.category_cooldown_ms.max(0) as u32;
-        spell
-            .categories
-            .get_or_insert_with(Default::default)
-            .category = effect.category;
+    if !proc {
+        apply_item_recovery(&mut spell, effect);
     }
-    let duration_ms = if proc {
-        spell
-            .aura_options
-            .as_ref()
-            .map_or(0, |row| row.proc_category_recovery_ms.max(0) as u32)
-    } else {
-        spell.cooldowns.as_ref().map_or(0, |row| {
-            row.recovery_ms.max(
-                if spell
-                    .categories
-                    .as_ref()
-                    .is_some_and(|row| row.category != 0)
-                {
-                    row.category_recovery_ms
-                } else {
-                    0
-                },
-            )
-        })
-    };
+    let duration_ms = cooldown_duration_ms(&spell, proc);
     Ok(Cooldown {
         spell,
         proc,
         duration: f64::from(duration_ms) / 1000.0,
     })
+}
+
+fn apply_item_recovery(spell: &mut SpellInfo, effect: &ItemEffect) {
+    if effect.cooldown_ms < 0 && effect.category_cooldown_ms < 0 {
+        return;
+    }
+    // Zero and mixed signs are authoritative, not a per-field fallback.
+    let cooldowns = spell.cooldowns.get_or_insert_with(Default::default);
+    cooldowns.recovery_ms = effect.cooldown_ms.max(0) as u32;
+    cooldowns.category_recovery_ms = effect.category_cooldown_ms.max(0) as u32;
+    spell
+        .categories
+        .get_or_insert_with(Default::default)
+        .category = effect.category;
+}
+
+fn cooldown_duration_ms(spell: &SpellInfo, proc: bool) -> u32 {
+    if proc {
+        spell
+            .aura_options
+            .as_ref()
+            .map_or(0, |row| row.proc_category_recovery_ms.max(0) as u32)
+    } else {
+        let category_present = spell
+            .categories
+            .as_ref()
+            .is_some_and(|row| row.category != 0);
+        spell.cooldowns.as_ref().map_or(0, |row| {
+            let category_ms = if category_present {
+                row.category_recovery_ms
+            } else {
+                0
+            };
+            row.recovery_ms.max(category_ms)
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[ignore = "native ItemEffect source-only cooldown override matrix"]
+    fn literal_equipment_native_item_cooldown_zero_and_mixed_signs() {
+        let world = super::super::tests::load_world();
+        let effects = &world
+            .resource::<crate::stats::NativeItemInstances>()
+            .effects
+            .effects;
+        let store = world.resource::<SpellStore>();
+        // Exact native rows: zero/positive, negative/positive, zero/negative,
+        // zero/zero, negative/zero, both-negative, positive/negative.
+        let expected = [
+            (45, 60.0),
+            (553, 60.0),
+            (15477, 0.0),
+            (15541, 0.0),
+            (31108, 0.0),
+            (170101, 120.0),
+            (4894, 180.0),
+        ];
+        let actual: Vec<_> = expected
+            .iter()
+            .map(|&(id, _)| (id, read_cooldown(store, &effects[&id]).unwrap().duration))
+            .collect();
+        assert_eq!(actual, expected);
+    }
 }
 
 fn read_spell(store: &SpellStore, id: u32) -> Result<&SpellInfo, String> {

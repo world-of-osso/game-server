@@ -14,16 +14,7 @@ pub(super) fn read_set_facts(
         .collect();
     let catalog = &world.resource::<ItemTemplates>().item_sets;
     let mut facts = BTreeMap::new();
-    for row in include_str!("set_aliases_76f8118.csv")
-        .lines()
-        .filter(|line| !line.starts_with('#') && !line.is_empty())
-    {
-        let (tier, id) = row
-            .split_once(',')
-            .ok_or("invalid pinned ItemSet alias row")?;
-        let id = id
-            .parse::<u32>()
-            .map_err(|error| format!("native set alias {row}: {error}"))?;
+    for (tier, id) in parse_tier_aliases()? {
         let set = catalog
             .sets
             .get(&id)
@@ -35,4 +26,20 @@ pub(super) fn read_set_facts(
         }
     }
     Ok(facts)
+}
+
+fn parse_tier_aliases() -> Result<Vec<(&'static str, u32)>, String> {
+    include_str!("set_aliases_76f8118.csv")
+        .lines()
+        .filter(|line| !line.starts_with('#') && !line.is_empty())
+        .map(|row| {
+            let (tier, id) = row
+                .split_once(',')
+                .ok_or("invalid pinned ItemSet alias row")?;
+            let id = id
+                .parse()
+                .map_err(|error| format!("native set alias {row}: {error}"))?;
+            Ok((tier, id))
+        })
+        .collect()
 }

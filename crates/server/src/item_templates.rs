@@ -300,10 +300,10 @@ fn load_item_names(conn: &Connection) -> rusqlite::Result<BTreeMap<String, BTree
     let mut names: BTreeMap<String, BTreeSet<u32>> = BTreeMap::new();
     for row in rows {
         let (id, name) = row?;
-        names
-            .entry(normalized_item_name(&name))
-            .or_default()
-            .insert(id);
+        let normalized = normalized_item_name(&name);
+        if !normalized.is_empty() {
+            names.entry(normalized).or_default().insert(id);
+        }
     }
     Ok(names)
 }

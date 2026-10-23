@@ -4,7 +4,7 @@ use crate::simc_apl_native::{Encounter, FightStyle};
 use shared::item_data::ItemDefinitionSource;
 use std::path::PathBuf;
 
-fn load_world() -> World {
+pub(super) fn load_world() -> World {
     let path = PathBuf::from(std::env::var_os("DPS_PARITY_WORLD_DB").expect("private native DB"));
     let db =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)

@@ -14,7 +14,7 @@ Native ItemEffect/bonus rows and SpellStore supply metadata. TC a352b1fa SpellHi
 - At a8bd77d3b, Equipment5genuineRED (including exact Ele names/native tier operands), while native set/equipment/commerce7PASS53.88s. `item-set-green-equipment-red-v2-full.log`.
 - After lp1033/master6b2f73a27 merge,61473b22e native set/equipment/commerce7PASS + Equipment7genuineRED74.81s,9m33compile, zero Rust warnings. Added missing-child rejection and shared-child DAG witnesses, native field operands still unsupported. `equipment-red-v3-full.log`/`.proof.json` record the exact historical source-mechanics DB, not a current DPS measurement.
 - Native source receipt `equipment-native-source-v1.json` includes original ItemEffects/spells/durations for Badge61034, Puzzle193701, Mirror207581, Bloodthirsty139329, AraKara219314, Guillotine270173 and Thunderfury19019. Tests do not fabricate spell/item IDs, timings or numeric combat grants. Malformed-graph tests alter only test-owned graph edges.
-- Generic implementation follows these REDs; targeted GREEN pending. No proc-execution or DPS claim.
+- Generic implementation33fa641d1 follows these REDs; targeted GREEN pending. No proc-execution or DPS claim. Native ItemEffect zero/mixed-sign source controls additionally cover45/553/15477/15541/31108/170101/4894; zero overrides retain0 despite native spell recovery500/1000ms, while native4894 takes180s instead of its spell's120s. These assert source calculation, not those items' cast execution.
 
 ## Explicit gaps
 

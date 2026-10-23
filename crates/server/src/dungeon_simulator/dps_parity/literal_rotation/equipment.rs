@@ -40,6 +40,17 @@ struct Slot {
     metadata: Metadata,
 }
 
+impl Slot {
+    fn empty(native_slot: EquipmentSlot) -> Self {
+        Self {
+            item_id: 0,
+            native_slot,
+            on_use: None,
+            metadata: Metadata::default(),
+        }
+    }
+}
+
 pub(crate) struct Equipment {
     slots: BTreeMap<String, Slot>,
     equipped: BTreeSet<u32>,
@@ -94,14 +105,7 @@ impl Equipment {
 
     pub fn fact(&self, name: &str, native: &NativeFacts<'_>) -> Result<f64, String> {
         if let Some(item) = name.strip_prefix("equipped.") {
-            let equipped = if let Ok(id) = item.parse::<u32>() {
-                self.equipped.contains(&id)
-            } else {
-                self.named_ids(item)?
-                    .iter()
-                    .any(|id| self.equipped.contains(id))
-            };
-            return Ok(boolean(equipped));
+            return self.equipped_fact(item);
         }
         if name.starts_with("set_bonus.") {
             return self
@@ -148,6 +152,17 @@ impl Equipment {
             )),
             _ => Err(format!("unknown literal trinket fact {field}")),
         }
+    }
+
+    fn equipped_fact(&self, item: &str) -> Result<f64, String> {
+        let equipped = if let Ok(id) = item.parse::<u32>() {
+            self.equipped.contains(&id)
+        } else {
+            self.named_ids(item)?
+                .iter()
+                .any(|id| self.equipped.contains(id))
+        };
+        Ok(boolean(equipped))
     }
 
     fn named_ids(&self, name: &str) -> Result<&BTreeSet<u32>, String> {
@@ -215,13 +230,18 @@ fn read_slot(world: &World, actor: Entity, slot: EquipmentSlot) -> Result<Slot, 
         .ok_or("native equipped items absent")?;
     let Some(&(_, source, item_id)) = equipped.items.iter().find(|(found, _, _)| *found == slot)
     else {
-        return Ok(Slot {
-            item_id: 0,
-            native_slot: slot,
-            on_use: None,
-            metadata: Metadata::default(),
-        });
+        return Ok(Slot::empty(slot));
     };
+    read_slot_item(world, actor, slot, source, item_id)
+}
+
+fn read_slot_item(
+    world: &World,
+    actor: Entity,
+    slot: EquipmentSlot,
+    source: ItemDefinitionSource,
+    item_id: u32,
+) -> Result<Slot, String> {
     let template = world
         .resource::<ItemTemplates>()
         .get(source, item_id)
@@ -233,36 +253,61 @@ fn read_slot(world: &World, actor: Entity, slot: EquipmentSlot) -> Result<Slot, 
         &properties.bonus_list,
         &native.bonuses,
     )?;
-    let effects = server::item_instance::effects::equipped_item_effects(
+    let metadata = read_slot_metadata(world, item_id, &modified.effect_ids)?;
+    let on_use = read_item_use(
+        world,
         item_id,
-        &modified.effect_ids,
-        &native.effects,
+        template,
+        properties,
+        &modified,
+        metadata.use_buff,
     )?;
-    let metadata = Metadata::load(world.resource::<crate::spell_info::SpellStore>(), &effects)?;
-    let on_use = template
-        .on_use
-        .map(|on_use| -> Result<_, String> {
-            let item_level = server::item_instance::item_instance_stats(
-                &modified.scaling,
-                template.inventory_type,
-                properties,
-                world.resource::<crate::item_stats::ItemScalingTables>(),
-            )?
-            .item_level;
-            Ok(ItemUse {
-                item_id,
-                on_use,
-                item_level,
-                stat_buff: metadata.use_buff,
-            })
-        })
-        .transpose()?;
     Ok(Slot {
         item_id,
         native_slot: slot,
         on_use,
         metadata,
     })
+}
+
+fn read_slot_metadata(
+    world: &World,
+    item_id: u32,
+    bonus_effects: &[u32],
+) -> Result<Metadata, String> {
+    let native = world.resource::<NativeItemInstances>();
+    let effects = server::item_instance::effects::equipped_item_effects(
+        item_id,
+        bonus_effects,
+        &native.effects,
+    )?;
+    Metadata::load(world.resource::<crate::spell_info::SpellStore>(), &effects)
+}
+
+fn read_item_use(
+    world: &World,
+    item_id: u32,
+    template: &crate::item_templates::ItemTemplate,
+    properties: &server::item_instance::ItemInstanceModifiers,
+    modified: &server::item_instance::bonuses::BonusResult,
+    stat_buff: bool,
+) -> Result<Option<ItemUse>, String> {
+    let Some(on_use) = template.on_use else {
+        return Ok(None);
+    };
+    let item_level = server::item_instance::item_instance_stats(
+        &modified.scaling,
+        template.inventory_type,
+        properties,
+        world.resource::<crate::item_stats::ItemScalingTables>(),
+    )?
+    .item_level;
+    Ok(Some(ItemUse {
+        item_id,
+        on_use,
+        item_level,
+        stat_buff,
+    }))
 }
 
 fn read_modifiers(
