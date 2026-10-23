@@ -121,6 +121,8 @@ mod maraudon;
 mod melidrussa;
 #[path = "native_target148.rs"]
 mod native_target148;
+#[path = "neltharus_initial.rs"]
+mod neltharus_initial;
 #[path = "nethekurse.rs"]
 mod nethekurse;
 #[path = "noxxion.rs"]
