@@ -24,6 +24,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [ ] Actual controlled Hunter pets use native ExpectedStat CreatureHealth at their own level and template health/tuning metadata, rather than legacy class-level placeholder HP. TC Pet.cpp847–925 supplies base armor of level×50 when pet_levelstats is unavailable; no fake intrinsic primary-stat constants are imported.
 - [ ] TC Guardian stat scaling adds30% owner Stamina (integer native stat)×10 HP and70% owner armor. Before summon snapshots its owner, the existing shared Stats producer resolves current gear/passives; a fresh pet therefore starts full under that resolved maximum. Spawn initializes this maximum before stored current-health hydration; persisted wounds remain wounded. Real owner stat changes refresh inherited deltas without healing, clamp currentHP on maximum reduction, and preserve unrelated pet health bonuses. Demon/Mage pets and ordinary NPCs are outside this slice. SimC stable_pet70%Stamina/1.05armor remains named divergence `HUNTER_PET_SIMC_SURVIVABILITY_DIFF`, never mixed into runtime values.
 
+### Training dummy combat exit
+
+- [ ] Native31146 uses TC a352b1fa `npc_training_dummy`/`NullCreatureAI`: each attacker leaves combat5s after its last non-DoT hit; DoT damage does not refresh that timer. Combat exit removes only LeavingCombat-interrupt auras, not every foreign aura, and does not enter evade. A still-live native DoT must tick beyond5s. Ordinary CreatureAI `_EnterEvadeMode` retains its conditional aura cleanup (`CreatureAI.cpp298–314`). Source: `npcs_special.cpp1382–1421`, `PassiveAI.h55–67`, `Unit.cpp9257`; no harness timer/evade exemption.
+
 ### Measurement
 
 Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` clears explicit raid events for Patchwerk after parsing. The opt-in CLI integration test must observe three actual targets and an adds event; argument-string checks alone did not detect this failure.
