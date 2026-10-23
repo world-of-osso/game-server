@@ -1,3 +1,7 @@
+## 2026-10-22 — One-way collision-drop qualification table
+
+[Component investigation](investigations/follower-nav-component-splits.md#one-way-collision-drop-qualification): complete native boundary projections, sourced encounter progression and existing-reader expanded Halls/Darkflame raw windows. Six-pair table sent before any implementation. Halls235 sampled raw projections obstructed; Academy/Goldie zero native down projections. Darkflame raw top/target refs plus0.389yd-outward shaft have clear static body boxes and30.252610yd/18.979%maxHP ordinary fall; literal-edge ray/continuous trajectory/landing support and Player-only damage boundaries remain explicit. No qualified/approved link, bake or canonical mutation.
+
 ## 2026-10-22 — Follower component traversal-source pass
 
 [Source investigation](investigations/follower-nav-component-splits.md): canonical five-map/eight-pair native components exported with unchanged input hashes; measured nearest polygons and existing-reader collision/WMO provenance. Sixboss four-map source rows checked for triggers, transports, doors, vehicles, SmartAI and authored sets, with candidate distances to both entire native components. None supplies an established crossing; no new connector policy. Azure exact Rune/book→receiver/pack native split matches existing directed book policy. Private Goldie filter experiment remains negative.
