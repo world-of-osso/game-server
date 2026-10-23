@@ -95,28 +95,24 @@ fn late_modifier(class: u8, target: u32, modifier: u32, base: [f32; 2], boosted:
 }
 
 #[test]
-#[ignore = "native label point recalculation RED before generic implementation"]
 fn native_label_points_late_monk_modifier_recalculates_efficient_training() {
     // Native450989 effects0/1=20;1258122 effects15/16 add20 by label5146.
     late_modifier(10, 450989, 1258122, [20.0, 20.0], [40.0, 40.0]);
 }
 
 #[test]
-#[ignore = "native non-Monk label point recalculation RED before generic implementation"]
 fn native_label_points_late_paladin_modifier_recalculates_second_sunrise() {
     // Native431474 effects0/1=15/30;1258011 effects19/20 add5/20 by label4716.
     late_modifier(2, 431474, 1258011, [15.0, 30.0], [20.0, 50.0]);
 }
 
 #[test]
-#[ignore = "native percent-label all-effect points RED"]
 fn native_label_points_percent_warlock_modifier_recalculates_flames_of_xoroth() {
     // Native429657 effects0/1=4;137044 effect12 applies -1% by label7018/op8.
     late_modifier(9, 429657, 137044, [4.0, 4.0], [3.96, 3.96]);
 }
 
 #[test]
-#[ignore = "native early modifier and removal order control"]
 fn native_label_points_early_modifier_and_unlearn_restore_the_same_amounts() {
     let mut h = harness(Vec::new(), &[1258122, 450989], 10).unwrap();
     h.advance(3);

@@ -1,6 +1,6 @@
 # Native aura label-point recalculation
 
-Verified source2026-10-23; four genuine native runtime REDs confirmed atcf496f61b. Generic implementation GREEN/lead gates pending. Native70448/TC a352b1fa precede SimC76f8118. Contract: [auras](../specs/auras.md#label-point-modifiers-on-existing-auras).
+Verified2026-10-23: four genuine native REDs atcf496f61b10.52s → four targeted GREEN at52cb1563414.07s. Generic implementation7063331b9 plus item-level preservation52cb15634; lead integration gates and300s parity remain open. Native70448/TC a352b1fa precede SimC76f8118. Contract: [auras](../specs/auras.md#label-point-modifiers-on-existing-auras).
 
 ## Root boundary
 
@@ -19,7 +19,7 @@ TC `SpellAuraEffects.cpp1194–1249` applies/removes a spell modifier before rec
 
 `auras/point_mod_tests.rs` changes native knowledge and runs actual passive synchronization; no invented spell rows, coefficient changes, direct effect-amount writes or buff/resource grants. It separately checks live CalcValue sees the modifier, distinguishing stale stored aura state from bad label matching.
 
-## Runtime RED and implementation gate
+## Runtime RED→GREEN and integration gate
 
 `cf496f61b`, native build exit0/zero warnings18m40; four cases fail at the expected stale-amount assertion in10.52s. Proof/log: engine `data/diagnostics/ww-parity-2026-10-23/aura-label-points-red.{build.log,build-proof.json,output.log,proof.json}`. Binary SHA and exact command are in the proof. Runtime command from this checkout:
 
@@ -30,7 +30,7 @@ DPS_PARITY_ACTOR=follower TMPDIR=/var/tmp/osso
 agent-run ww-monk-parity python3 scripts/dps_parity_native.py target/debug/deps/game_server-49562a93a94e52d1 native_label_points --ignored --nocapture --test-threads=1
 ```
 
-`point_mods` hooks apply/refresh/remove and stack loss, reusing existing CalcValue and label matching. Only effect amounts change; native dependent point-modifier chains propagate with TC's original triggering-effect exclusion. Guard/source coverage is not interchangeable with runtime coverage: frozen native data has no charged218/219 point-source row or self-label source selecting its own effect, so neither guard is claimed as a native lifecycle test. Four selected cases do not qualify every affected producer or300s parity. GREEN pending.
+`point_mods` hooks apply/refresh/remove and stack loss, reusing existing CalcValue and label matching. Only effect amounts change; native dependent point-modifier chains propagate with TC's original triggering-effect exclusion. Guard/source coverage is not interchangeable with runtime coverage: frozen native data has no charged218/219 point-source row or self-label source selecting its own effect, so neither guard is claimed as a native lifecycle test. Four selected cases do not qualify every affected producer or300s parity. At52cb15634 all four pass14.07s; native build exit0/zero warnings18m37. Evidence `aura-label-points-green.{build.log,build-proof.json,output.log,proof.json}`. Binary SHA256 `194c2939b2b68882d2335985939c69c961c7c3acb14ccb91de291e8aeb5bbcdf`. Sourceview read-only binds the frozen file above over `/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db` inside the child mount namespace only. Source-only follow-up removes four ignore annotations, leaving production/test bodies unchanged: retained52cb binary command above still needs `--ignored`; rebuilding the activated tip omits `--ignored`. Broad/check/readability acceptance belongs to the lead; no duplicate implementation gate run.
 
 ## Cross-spec source census
 
