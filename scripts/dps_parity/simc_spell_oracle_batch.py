@@ -16,7 +16,7 @@ DRIVERS = {
     269: {'rising_sun_kick_damage': ['rising_sun_kick'], 'rushing_wind_kick_damage': ['rushing_wind_kick', 'blackout_kick'], 'dual_threat': []},
     71: {'execute_damage': ['execute'], 'slayers_strike': ['mortal_strike'], 'mortal_strike_bladestorm_unhinged': ['bladestorm'], 'bladestorm_mh': ['bladestorm']},
     577: {'burning_blades': ['immolation_aura', 'blade_dance', 'chaos_strike'], 'demonsurge': ['metamorphosis', 'eye_beam', 'blade_dance', 'chaos_strike'], 'death_sweep_first_blood_4': ['metamorphosis', 'death_sweep'], 'annihilation_damage_1': ['metamorphosis', 'annihilation']},
-    1467: {'azure_sweep': ['azure_sweep', 'eternity_surge'], 'bombardments': ['deep_breath', 'disintegrate'], 'scintillation': ['disintegrate']},
+    1467: {'azure_sweep': ['azure_sweep', 'eternity_surge'], 'bombardments': ['disintegrate', 'eternity_surge', 'fire_breath'], 'scintillation': ['disintegrate']},
     253: {'bloodshed': ['bestial_wrath'], 'melee': ['kill_command']},
     63: {'ignite': ['pyroblast'], 'intensifying_flame': ['fire_blast', 'pyroblast']},
     72: {'crushing_blow_mh': ['recklessness', 'raging_blow'], 'crushing_blow_oh': ['recklessness', 'raging_blow'], 'slayers_strike': ['rampage'], 'bladestorm_mh': ['bladestorm']},

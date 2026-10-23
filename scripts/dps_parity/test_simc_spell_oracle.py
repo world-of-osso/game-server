@@ -1,9 +1,11 @@
 """Behavior tests using verbatim lines from the pinned SimC Arms probe."""
 import importlib.util
 from pathlib import Path
+import sys
 import unittest
 
 HERE = Path(__file__).parent
+sys.path.insert(0, str(HERE))
 spec = importlib.util.spec_from_file_location("oracle", HERE / "simc_spell_oracle.py")
 oracle = importlib.util.module_from_spec(spec)
 if spec.loader and Path(spec.origin).exists():
@@ -19,6 +21,25 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(len(data["events"]), 1)
         self.assertEqual(data["events"][0]["actor"], "MID2_Death_Knight_Blood_San'layn")
         self.assertEqual(data["events"][0]["spell_id"], 206930)
+
+    def test_actor_wide_modifier_preserves_source_without_fabricating_spell(self):
+        data = oracle.parse_log((HERE / "fixtures/actor-modifier-recorded.txt").read_text())
+        modifier = data["modifiers"][0]
+        self.assertIsNone(modifier["spell_id"])
+        self.assertEqual(modifier["actor"], "MID2_Warrior_Arms")
+        self.assertEqual(modifier["kind"], "all_crit_damage_multiplier")
+        self.assertEqual(modifier["source_spell_id"], 1258209)
+        self.assertEqual(modifier["value"], 0.6)
+
+    def test_presence_and_consumed_stack_modifiers_are_not_passives(self):
+        data = oracle.parse_log((HERE / "fixtures/conditional-recorded.txt").read_text())
+        self.assertEqual(len(data["modifiers"]), 3)
+        present, consumed, override = data["modifiers"]
+        self.assertEqual(present["application"], "buff_present")
+        self.assertEqual(consumed["application"], "per_consumed_buff_stack")
+        self.assertEqual(consumed["kind"], "cost")
+        self.assertEqual(consumed["value"], -100)
+        self.assertTrue(override["value_override"])
 
     def test_records_direct_and_child_periodic_factors(self):
         data = self.parse()
@@ -83,6 +104,43 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(len(actual), 1)
         self.assertEqual(actual[0]["share_pct"], 30)
         self.assertEqual(actual[0]["actors"], ["duck", "animal_companion"])
+
+    def test_timeout_keeps_command_hashes_and_failure_proof(self):
+        import json
+        import subprocess
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            profile = root / "test.simc"
+            profile.write_text('mage="Test"\n')
+            binary = root / "simc"
+            binary.write_bytes(b"test binary")
+            output = root / "probe.json"
+            with patch.object(oracle, "BINARY", binary), patch.object(oracle.subprocess, "run", side_effect=subprocess.TimeoutExpired(["simc"], 180)):
+                with self.assertRaises(subprocess.TimeoutExpired):
+                    oracle.run_oracle(profile, ["scorch"], output)
+            proof = json.loads(output.with_suffix(".proof.json").read_text())
+            self.assertEqual(proof["binary_sha256"], oracle.sha256(binary))
+            self.assertEqual(proof["profile_sha256"], oracle.sha256(profile))
+            self.assertIn("TimeoutExpired", proof["error"])
+            self.assertTrue(output.with_suffix(".simc").exists())
+
+    def test_profile_accepts_specialization_name_without_hero_ambiguity(self):
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            profiles = root / "profiles/MID2"
+            profiles.mkdir(parents=True)
+            expected = profiles / "MID2_Mage_Fire.simc"
+            expected.touch()
+            (profiles / "MID2_Mage_Fire_Frostfire.simc").touch()
+            with patch.object(oracle, "SIMC_ROOT", root):
+                self.assertEqual(oracle.resolve_profile("Fire"), expected)
+                self.assertEqual(oracle.resolve_profile("Mage_Fire"), expected)
+                with self.assertRaises(ValueError):
+                    oracle.resolve_profile("missing")
 
     def test_invalid_action_is_rejected(self):
         with self.assertRaises(ValueError):

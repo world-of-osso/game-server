@@ -20,9 +20,9 @@ ACTION = re.compile(r"Action '([^']+)' \((\d+)\)")
 AMOUNT = re.compile(r"([\d.]+) (?:Player|Pet|Enemy) '(.+?)' (direct|tick) amount for Action '([^']+)' \((\d+)\)(.*)")
 RESULT = re.compile(r"([\d.]+) (\S+) (\S+) ([^:]+): (.*\bresult=.*)")
 STARTUP = re.compile(r"^[\d.]+ (.+?) \((\d+)\) eff#(\d+) modifying (.+?) \((\d+)\) (\S+)(.*)")
-EFFECT = re.compile(r"action-effects: Action '([^']+)' \((\d+)\) (.+?) modified by (.+?) (per stack of buff|from) (.+?) \((\d+)#(\d+)\)")
+EFFECT = re.compile(r"action-effects: Action '([^']+)' \((\d+)\) (.+?) modified by (.+?) (per consumed stack of buff|per stack of buff|with buff|from) (.+?) \((\d+)#(\d+)\)")
 ARMOR = re.compile(r"Action '([^']+)' \((\d+)\).* reduced by ([\d.]+)% from armor \(armor=([\d.]+), armor coeff=([\d.]+)\)")
-KIND = {"direct_damage": "direct", "direct damage": "direct", "periodic_damage": "periodic", "tick damage": "periodic", "crit bonus multiplier": "crit_bonus", "auto attack": "auto_attack"}
+KIND = {"direct_damage": "direct", "direct damage": "direct", "periodic_damage": "periodic", "tick damage": "periodic", "crit bonus multiplier": "crit_bonus", "auto attack": "auto_attack", "flat cost": "cost", "cost percent": "cost"}
 
 
 def scalar(value):
@@ -43,11 +43,17 @@ def modifier_value(text):
 
 
 def parse_modifier(line, number):
+    actor_match = re.match(r"^[\d.]+ (.+?) \((\d+)\) eff#(\d+) modifying Player '(.+?)' (\S+)(.*)", line)
+    if actor_match:
+        source, source_id, effect, actor, kind, tail = actor_match.groups()
+        value, unit = modifier_value(tail)
+        return {"action": None, "spell_id": None, "actor": actor, "scope": "actor", "source_name": source, "source_spell_id": int(source_id), "effect_index": int(effect), "kind": KIND.get(kind, kind), "value": value, "unit": unit, "application": "passive", "line": number, "raw": line}
     match = EFFECT.search(line)
     if match:
         name, spell, kind, value, mode, source, source_id, effect = match.groups()
+        override = "(value override)" in value
         value, unit = modifier_value(value)
-        application = "per_buff_stack" if mode == "per stack of buff" else "mastery_scaled" if unit == "mastery_coefficient" else "passive"
+        application = {"per stack of buff": "per_buff_stack", "per consumed stack of buff": "per_consumed_buff_stack", "with buff": "buff_present"}.get(mode, "mastery_scaled" if unit == "mastery_coefficient" else "passive")
     else:
         match = STARTUP.search(line)
         if not match:
@@ -55,7 +61,8 @@ def parse_modifier(line, number):
         source, source_id, effect, name, spell, kind, tail = match.groups()
         value, unit = modifier_value(tail)
         application = "passive"
-    return {"action": name, "spell_id": int(spell), "source_name": source, "source_spell_id": int(source_id), "effect_index": int(effect), "kind": KIND.get(kind, kind), "value": value, "unit": unit, "application": application, "line": number, "raw": line}
+        override = False
+    return {"printed_kind": kind, "value_override": override, "action": name, "spell_id": int(spell), "source_name": source, "source_spell_id": int(source_id), "effect_index": int(effect), "kind": KIND.get(kind, kind), "value": value, "unit": unit, "application": application, "line": number, "raw": line}
 
 
 def observed(events, key):
@@ -128,7 +135,8 @@ def resolve_profile(value):
     if path.is_file():
         return path.resolve()
     name = re.sub(r"[^a-z0-9]", "", value.lower().removeprefix("mid2_"))
-    matches = [p for p in (SIMC_ROOT / "profiles/MID2").glob("*.simc") if re.sub(r"[^a-z0-9]", "", p.stem.lower().removeprefix("mid2_")) == name]
+    suffix = "_" + re.sub(r"[ -]", "_", value.lower())
+    matches = [p for p in (SIMC_ROOT / "profiles/MID2").glob("*.simc") if re.sub(r"[^a-z0-9]", "", p.stem.lower().removeprefix("mid2_")) == name or p.stem.lower().endswith(suffix)]
     if len(matches) != 1:
         raise ValueError(f"profile {value!r} not found or ambiguous; use full MID2 profile name or path")
     return matches[0]
@@ -148,10 +156,17 @@ def run_oracle(profile, actions, output, targets=1, duration=30):
     generated.write_text(build_profile(profile.read_text(), actions))
     command = [str(RUNNER), "simc-oracle", str(BINARY), str(generated), f"desired_targets={targets}", f"max_time={duration}", "fixed_time=1", "vary_combat_length=0", "iterations=1", "threads=1", "deterministic=1", "seed=70448", "target_level=93", "item_db_source=local", "fight_style=Patchwerk", "log=1", "debug=1", f"output={log}"]
     proof = {"command": command, "binary_sha256": sha256(BINARY), "profile": str(profile), "profile_sha256": sha256(profile), "generated_profile_sha256": sha256(generated), "revision": REVISION, "actions": actions, "targets": targets, "time": duration, "started_unix": time.time(), "environment": {"TMPDIR": "/var/tmp/osso"}}
-    with output.with_suffix(".console.txt").open("w") as console:
-        result = subprocess.run(command, stdout=console, stderr=subprocess.STDOUT, env={**os.environ, "TMPDIR": "/var/tmp/osso"}, check=False, timeout=180)
-    proof.update(exit_code=result.returncode, elapsed_seconds=time.time() - proof["started_unix"])
     proof_path.write_text(json.dumps(proof, indent=2) + "\n")
+    try:
+        with output.with_suffix(".console.txt").open("w") as console:
+            result = subprocess.run(command, stdout=console, stderr=subprocess.STDOUT, env={**os.environ, "TMPDIR": "/var/tmp/osso"}, check=False, timeout=180)
+        proof["exit_code"] = result.returncode
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        proof.update(exit_code=None, error=f"{type(exc).__name__}: {exc}")
+        raise
+    finally:
+        proof["elapsed_seconds"] = time.time() - proof["started_unix"]
+        proof_path.write_text(json.dumps(proof, indent=2) + "\n")
     if result.returncode:
         raise RuntimeError(f"SimC exited {result.returncode}; see {output.with_suffix('.console.txt')}")
     data = parse_log(log.read_text())
