@@ -1,5 +1,13 @@
 # Retail follower data and approved spec bridge
 
+## Devastation Giantkiller policy — 2026-10-22
+
+The legal1467 reference omits native-Augmentation-only98931/122279 from both inputs and SimC (`hero_talents=122279:0`); all other allocated/effective ranks match. Fresh1000-iteration references remain113727.53ST/182444.53three-target. Frozen1cf83f408 native300s measurements are15650.57/20146.43 (−86.24%/−88.96%), not parity acceptance. The obsolete pet-only constructor's duplicate-plugin crash was independently replaced on master by478afccc0.
+
+Native362980 has Aura4 and a1.5 mastery-point coefficient but no TC a352b1fa consequence script. Actual frozen4RED at0d07469b8 shows identical damage with/without the real mastery aura: Flame2995, Disintegrate2090 and Deep Breath DoT2598 at12% native mastery. `DEVASTATION_GIANTKILLER_SIMC_POLICY` wires that existing aura amount into ordinary direct/periodic Evoker-family224 damage, with pinned target-health30% floor and Tyranny exceptions; implementation awaits GREEN. Already-resolved copies, other spell families and healing do not enter this multiplier. See the [bounded contract and source policy](../../specs/devastation-parity.md).
+
+Sources: native70448 SpellEffect902053/SpellMisc362980; SimC76f8118 `sc_evoker.cpp4613–4629,5721,6165,7449`. Evidence: `game-engine/data/diagnostics/dev-evoker-parity-2026-10-22/`; no canonical data writes or coefficient tuning.
+
 ## Party-pet threat coverage — 2026-10-22
 
 Gatept976 exposed an older CombatRefs fixture's live-APL coupling, not a1-versus3 admitted-enemy regression: the three enemies already pass, then line163 expects Meteor's published `min_enemies=3` while the new Fire policy publishes1. Reproduced on unchanged3d16 native binary in5.45s. The fixture now clones native Meteor geometry and explicitly sets its own three-target threshold; its enemy-count/area/no-pull expectations remain unchanged, and no production Fire policy or canonical row is rewritten. Refreshed controls follow separately.
@@ -597,6 +605,16 @@ Interrupt ownership is deliberately separate:9468's planner orders engaged caste
 The provider is now staged test-only in [kit_interrupt.rs](../../../crates/server/src/followers/kit_interrupt.rs), matching the planner's unwired stage and leaving production `ai.rs`/`kit_ai.rs` unchanged. af37937fb passes five native cases: uninterruptible refusal, source-level gate, Rebuke-before-ready-Shield after native cooldown, ordered second in-range caster and failed replacement preserving cast/navigation intent. Its motion case already moves to the source reach with an ordinary parent Go, but initially expected an unsupported triggered-child CastSuccess event. The normal full-mask child path emits no such event; the corrected oracle compares actual motion against an ordinary106839 cast instead of inventing a packet. d60a0daac then passes that motion case plus absent-row legacy compatibility and actual learned level17 Felguard/denied level16 Axe Toss cases (owner Shadow Bolt preserved), four native cases in62.79s. Consolidated provider9PASS; all nine tests enabled. Runtime activation and old-path removal remain a separate atomic joint-gate commit with9468, not a standalone shipped interrupt claim.
 
 Sources: [native utility tests](../../../crates/server/src/followers/kit_utility_tests.rs), [joint interrupt REDs](../../../crates/server/src/followers/kit_interrupt_tests.rs), [shared aura eligibility](../../../crates/server/src/auras/mod.rs), [producer and policy](../../../scripts/follower_spec_kits.py), [SQL replay tests](../../../scripts/test_follower_spec_kits.py). Logs and COPY receipts: engine `data/diagnostics/follower-kits-2026-10-18/`; `native-caster-curse-diagnostic-149545007.log`, `curse-bo-core-data-red-a4db6672e.log`, `receipt-utilities.json`.
+
+## NPC native starter knowledge — 2026-10-23
+
+The nb997 merged gate exposed old partial-book oracles: native starter SanctifiedPlates402964 and FelArmor386124 now apply even without controller rows. Source-backed corrections and the initial-passive-sync/removal ordering boundary are recorded in the [native-book audit](../../handoffs/native-follower-book-proof-ledger.md#nb997-source-correct-oracle-audit); no runtime helper change is required. At77c0f56ed the native passive/defensive/provenance packet is21GREEN; this is not the full integration gate.
+
+Controller rows previously doubled as NPC spell grants: extending a Frenzy action alias learned both274837/1243807, no TraitLoadout was attached, and a Ret70 reinitialization without controller rows retained spec66. Three pushed native fixtures reproduce these boundaries (0PASS/3RED,25.40s; dev profile, frozen464fbb46 source). Prior opt2 SHED/compile interruptions were not RED.
+
+The runtime and exporter now share `evaluate_npc_starter`: requested NPC spec at every level1–90, race-neutral automatic class/default skills, level-qualified spec spells and validated starter talents, with native overridden bases removed. It preserves the exporter's literal computation, including no separate mastery addition. Initialization synchronizes only the resulting known passives and attaches KnownSpells/TraitLoadout/ActiveSpec without a Player or kit-row grant. Player progression retains its existing spec resolution and uses the shared trait-loadout constructor only. At ea101bd41 the unchanged three fixtures pass32.74s under the explicit dev profile; native source export passes105.66s and all990 loadouts/trees equal frozen464fbb46 data. Optimized/full follower and paired Stockade integration remain pending.
+
+Sources: [native computation](../../../crates/server/src/class_progression.rs), [NPC initialization](../../../crates/server/src/followers/spawning.rs), [source exporter](../../../crates/server/src/followers/kit_source_tests.rs), [behavior fixtures](../../../crates/server/src/followers/native_book_tests.rs), [proof ledger](../../handoffs/native-follower-book-proof-ledger.md), [contract](../../specs/follower-dungeons.md#native-source-book). See also [[class-progression]] and [[dungeon-simulator]].
 
 ## Level-gated full-spec bridge — 2026-10-18
 
