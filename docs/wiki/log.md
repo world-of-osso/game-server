@@ -4054,3 +4054,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0â
 - [Overload cast-only tails](investigations/follower-data.md#unselected-elemental-blast-and-icefury-overload-mechanisms): postmerge11nativeGREEN23.93s +fivechild25%/removal/EchoGREEN10.25s; compile34m11/zero warnings. EB2 and four new child qualifiers enabled after proof; selected-kit/resource/APL limits retained.
 
 - [Lava crit ownership](investigations/follower-data.md#lava-caster-owned-flame-shock-crit-rule): approved own/foreign native285452/2854662PASS2RED9.13s. Shared predicate now requires actual aura caster and registers both payloads; no other crit/modifier/resource edits. GREEN pending on lv991-based branch.
+
+- [Lava crit ownership](investigations/follower-data.md#lava-caster-owned-flame-shock-crit-rule):4GREEN13.43s/zero warnings after2nativeRED; samebinary retained root2GREEN10.03s +actualStatsPlugin70samples2PASS12.42s. Observed285466crits5/5; cases enabled. No other crit edits or causal-DPS/parity claim.
