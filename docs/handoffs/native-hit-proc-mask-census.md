@@ -50,7 +50,7 @@ ownership/depth, damage/heal eligibility, known spells and real targets still
 apply. Therefore do **not** describe3015 gains as3015 newly observed procs.
 This census intentionally includes aura-options rows without generic trigger
 types so explicitly scripted auras are not omitted; `has_trigger_type` is shown.
-The lead's broad aura/proc/spell_cast gate remains required.
+The lead's full-workspace integration gate remains required.
 
 ## Non-Paladin TC spot-check
 

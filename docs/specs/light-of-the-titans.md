@@ -8,11 +8,11 @@ See [aura execution](../wiki/systems/auras.md#native-rolling-periodic-refresh--2
 
 ## What it must do
 
-- [ ] Successful ordinary Word of Glory healing with actual learned378405 produces owned378412 on the actual patient, including self healing.
-- [ ] Native effect0 percentage of the resolved pre-overheal heal supplies the total, distributed over the child's actual duration/period; no copied coefficient or direct health mutation.
-- [ ] Native effect1 bonus applies only to self Word while afflicted by actual harmful periodic health damage; do not borrow it for another patient.
-- [ ] Actors without the learned talent and unrelated direct heals do not produce the HoT.
-- [ ] Retain shared rolling carry, native resource costs/earning, tick phase and normal expiry; no duplicated spell-local pool.
+- [x] Successful ordinary Word of Glory healing with actual learned378405 produces owned378412 on the actual patient, including self healing.
+- [x] Native effect0 percentage of the resolved pre-overheal heal supplies the total, distributed over the child's actual duration/period; no copied coefficient or direct health mutation.
+- [x] Native effect1 bonus applies only to self Word while afflicted by actual harmful periodic health damage; do not borrow it for another patient.
+- [x] Actors without the learned talent and unrelated direct heals do not produce the HoT.
+- [x] Retain native resource costs/earning and normal expiry; use shared rolling application with no duplicated spell-local pool.
 
 ## How it works
 
@@ -30,7 +30,8 @@ See [aura execution](../wiki/systems/auras.md#native-rolling-periodic-refresh--2
 
 ## Known gaps (current cycle)
 
-- [ ] Qualify actual HoT amount/expiry, self-DoT enhancement and retained shared carry after the producer RED.
+- [ ] Actual repeated-Word378412 unpaid-pool integration is not separately qualified; generic carry and Echo controls pass, but do not substitute for that exact producer sequence.
+- [ ] Lead full-workspace integration gate for the accompanying shared proc-mask correction remains required.
 
 ## Out of scope
 

@@ -1,3 +1,7 @@
+## 2026-10-22 — Light of the Titans and native hit masks
+
+[Native Titans](systems/auras.md#light-of-the-titans-and-hit-proc-masks--2026-10-22): ordinary Judgment-earned Word actualmissing378412 RED→native40% HoT; shared Defense0 mask root fixed per TC attrs, then actualhostileDoT110vs329 RED→native200%selfbonus. Merged891b9ab1d19GREEN38.11s/check0/2m08s/zero warnings/fmtPASS. Existing test expectations unchanged; [census](../../docs/handoffs/native-hit-proc-mask-census.md)334969spell/5670staticcandidateaura changes; fullworkspaceleadgate required, no efficacy/completeproducer claim.
+
 ## 2026-10-22 — Native pet diagnostic history
 
 [Pet samples](systems/dungeon-simulator.md#pet-diagnostic-history-2026-10-22): realpet/Death/evade/despawn RED12.76s→4baGREEN11.66s.0.5s samples/terminal nowretainnativepetidentity,HP/position/refs/threatandrelatedopponentresetstates,includingzero-threatacquisitionandexplicitunavailablevaluesafterdespawn. Diagnostic-only, noAI/heal/threatmutation. Retainedabort/export+summary2PASS; single seed7capturequeued, notReliability.
