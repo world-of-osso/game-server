@@ -9,6 +9,10 @@ use bevy::prelude::*;
 use shared::item_data::ItemDefinitionSource::Retail;
 use std::collections::HashMap;
 
+#[cfg(test)]
+#[path = "disenchant_cache_tests.rs"]
+mod cache_tests;
+
 pub const EFFECT_DISENCHANT: u32 = 99;
 const ENCHANTING: u32 = 333;
 
