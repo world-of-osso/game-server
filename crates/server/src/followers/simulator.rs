@@ -133,7 +133,35 @@ pub(crate) fn spawn_party(
     copy: crate::maps::InMap,
     at: Position,
 ) -> Result<Party, String> {
-    let configuration = PartyConfiguration::read()?;
+    spawn_configured_party(world, copy, at, PartyConfiguration::read()?)
+}
+
+/// Explicit benchmark actor selection, without process-global environment mutation.
+pub(crate) fn spawn_party_with_healer(
+    world: &mut World,
+    copy: crate::maps::InMap,
+    at: Position,
+    level: u8,
+    spec: u32,
+) -> Result<Party, String> {
+    let healer = world
+        .resource::<FollowerCatalog>()
+        .profiles
+        .iter()
+        .find(|profile| profile.spec_id == spec && profile.role == shared::group::GroupRole::Healer)
+        .ok_or_else(|| format!("NATIVE_HEALER_PROFILE_ABSENT:{spec}"))?
+        .entry;
+    let mut entries = DEFAULT_PARTY;
+    entries[1] = healer;
+    spawn_configured_party(world, copy, at, PartyConfiguration { level, entries })
+}
+
+fn spawn_configured_party(
+    world: &mut World,
+    copy: crate::maps::InMap,
+    at: Position,
+    configuration: PartyConfiguration,
+) -> Result<Party, String> {
     let difficulty_id = world
         .resource::<crate::maps::InstanceManager>()
         .copy_difficulty(copy)
