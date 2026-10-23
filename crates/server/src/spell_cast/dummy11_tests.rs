@@ -358,7 +358,7 @@ fn dummy11_lava_lash_applies_owned_lashing_flames_only_with_rank() {
     for rank in [false, true] {
         let mut h = harness_with_native_enemy_dodge_reduction(
             Vec::new(),
-            &[60103, 334046, 334168, 188389, 188196, 343725],
+            &[60103, 334046, 334168, 188389, 188196, 343725, 214815],
             7,
         )
         .unwrap();

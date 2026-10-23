@@ -1,5 +1,7 @@
 //! Actual owned-journal RPCs plus physical learning/UseToy; no seeded CritterGUID.
 //! Source removal is natural10s expiry. Native PetCancelAura is not exercised.
+#[path = "toys_caster_balloon_tests.rs"]
+mod caster_balloons;
 use super::*;
 use crate::auras::ActiveAuras;
 use crate::persistence::{InventoryData, InventoryItemData, toy_store};
@@ -76,6 +78,10 @@ fn collect_results(h: &mut Harness) -> Vec<ToyResult> {
 }
 
 fn learn(h: &mut Harness, character: u64) {
+    learn_item(h, character, TOY);
+}
+
+fn learn_item(h: &mut Harness, character: u64, toy: u32) {
     let db = &h.app.world().resource::<GameDatabase>().db;
     crate::persistence::save_inventory(
         db,
@@ -84,7 +90,7 @@ fn learn(h: &mut Harness, character: u64) {
             gold: 0,
             items: vec![InventoryItemData {
                 item_guid: crate::persistence::next_id(db, "item_instance"),
-                item_id: TOY,
+                item_id: toy,
                 name: String::new(),
                 quality: 1,
                 required_level: 1,
@@ -110,16 +116,20 @@ fn learn(h: &mut Harness, character: u64) {
         "{results:?}; {:?}",
         h.inbox.inventory_errors
     );
-    assert!(toy_store::load(&h.app.world().resource::<GameDatabase>().db, 1).contains_key(&TOY));
+    assert!(toy_store::load(&h.app.world().resource::<GameDatabase>().db, 1).contains_key(&toy));
 }
 
 fn activate(h: &mut Harness) -> Vec<ToyResult> {
+    activate_item(h, TOY)
+}
+
+fn activate_item(h: &mut Harness, toy: u32) -> Vec<ToyResult> {
     h.app
         .world_mut()
         .get_mut::<MessageSender<UseToy>>(h.connection)
         .unwrap()
         .send::<CollectionChannel>(UseToy {
-            item_id: TOY,
+            item_id: toy,
             destination: None,
             witness: None,
         });

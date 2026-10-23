@@ -13,7 +13,7 @@ pub(crate) struct Party {
     pub members: Vec<Entity>,
 }
 
-/// NPC followers execute level-gated kit rows; they do not carry Player KnownSpells.
+/// Controller actions are level-gated kit rows, separate from the native NPC spellbook.
 pub(crate) fn available_kit_spells(world: &World, unit: Entity) -> Vec<u32> {
     let follower = world
         .get::<Follower>(unit)
@@ -30,6 +30,8 @@ pub(crate) fn available_kit_spells(world: &World, unit: Entity) -> Vec<u32> {
         .map(|entry| entry.spell_id)
         .collect()
 }
+
+pub(crate) mod healer_profiles;
 
 const DEFAULT_PARTY: [u32; 5] = [209057, 209072, 209053, 209059, 209065];
 
@@ -144,16 +146,11 @@ pub(crate) fn spawn_party_with_healer(
     level: u8,
     spec: u32,
 ) -> Result<Party, String> {
-    let healer = world
-        .resource::<FollowerCatalog>()
-        .profiles
-        .iter()
-        .find(|profile| profile.spec_id == spec && profile.role == shared::group::GroupRole::Healer)
-        .ok_or_else(|| format!("NATIVE_HEALER_PROFILE_ABSENT:{spec}"))?
-        .entry;
-    let mut entries = DEFAULT_PARTY;
-    entries[1] = healer;
-    spawn_configured_party(world, copy, at, PartyConfiguration { level, entries })
+    let healer = healer_profiles::configure(world, spec)?;
+    healer_profiles::require_policy(world, &healer, level)?;
+    let mut profiles = read_party_profiles(world, DEFAULT_PARTY)?;
+    profiles[1] = healer;
+    spawn_profiled_party(world, copy, at, level, profiles)
 }
 
 fn spawn_configured_party(
@@ -162,17 +159,27 @@ fn spawn_configured_party(
     at: Position,
     configuration: PartyConfiguration,
 ) -> Result<Party, String> {
+    let profiles = read_party_profiles(world, configuration.entries)?;
+    spawn_profiled_party(world, copy, at, configuration.level, profiles)
+}
+
+fn spawn_profiled_party(
+    world: &mut World,
+    copy: crate::maps::InMap,
+    at: Position,
+    level: u8,
+    profiles: Vec<Profile>,
+) -> Result<Party, String> {
     let difficulty_id = world
         .resource::<crate::maps::InstanceManager>()
         .copy_difficulty(copy)
         .ok_or("simulator copy lacks native difficulty")?
         .difficulty_id;
-    let profiles = read_party_profiles(world, configuration.entries)?;
     let leader = profiles[4].clone();
     let owner = initialize_player_owner(
         world,
         &leader,
-        configuration.level,
+        level,
         copy,
         at,
         crate::maps::DungeonDifficulty(difficulty_id),
