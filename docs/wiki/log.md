@@ -1,3 +1,7 @@
+## 2026-10-23 — Uldaman native endpoint qualification
+
+[Read-only source/nav proof](investigations/follower-data.md#uldaman-native-ordered-endpoint-qualification--2026-10-23):5authenticated encounters/7native bosses/4NPCpatrol paths41nodes preserved, actual runtime-addon namespaces observed. Approved capacityADD navigation-only examples build34.14s/exit0/no warnings;9exact source ordered corridors complete0.59s/all9nav hashes unchanged. All3dwarves retained/no invented points. Frozen party profile and simulator2451 support remain named gaps; no runtime/SQL/canonical changes.
+
 ## 2026-10-23 — Coverage reconciliation / native Rak'tul
 
 [Reconciled coverage](investigations/follower-data.md#coverage-reconciliation-and-native-raktul-precedence--2026-10-23):preserved exact predecessor pair/10SQL checks, appended seven script/nav/runnable/source artifact checks;27maps/98encounters/878derivedtrash retained. NativeRak'tul11000391/runtime31000391 must not duplicate; Maisara onlyVordaza unplaced. Khajin58ce397a1 landed; CandleKingck985 failed onSkarmorak regression/fixing14745. NextUldaman native route-source qualification is read-only, patrols notparty routes.
