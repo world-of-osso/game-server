@@ -14,7 +14,7 @@ pub trait ActionFacts: Facts {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String>;
 
     /// Explicit native candidate order; unsupported adapters cannot invent a target.
-    fn target_ids(&self) -> Result<Vec<u64>, String> {
+    fn target_ids(&self, _action: &Action) -> Result<Vec<u64>, String> {
         Err("target_if requires explicit native target candidates".into())
     }
 }
