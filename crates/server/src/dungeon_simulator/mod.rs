@@ -3,7 +3,7 @@ mod batch;
 mod campaign;
 mod catalogs;
 mod diagnostics;
-mod dps_parity;
+pub(crate) mod dps_parity;
 mod graph;
 mod healer_benchmark_tests;
 mod healer_coefficient_tests;
