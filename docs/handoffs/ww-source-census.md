@@ -8,6 +8,10 @@ With landed label/positivity and native stat redirects, d45fe30e8's same compile
 
 Both attempts used a new private SQLite .backup of CURRENT canonical, not the historical21ba input: canonical SHA568200017bcb3b5ed6f17931fc0994fff502c5c801f93f96197fc718bcd493bf, private copydd1de231e32c26291182dff050a8de5a5132908723ed21454eb128e45e4b05ae. Immutable failure/log/provenance at engine `data/diagnostics/ww-parity-2026-10-23/native-after-equipment-redirect-d45fe30e8/`. No new DPS/parity claim follows from these failures; prior frozen receipts remain historical.
 
+## FoF alignment and Momentum Boost source — 2026-10-23
+
+[Detailed source/eligibility ledger](ww-momentum-boost-source-ledger.md): the initial first-three-ordinal oracle comparison mixed a MID2 tier2pc extra action with regular channel ticks.14913 owns native tier application; do not fabricate a WW extra hit. The aligned TP→TP→FoF probe exposes a real producer-state divergence: native451297 already has2stacks after TP priming; SimC only triggers it from FoF impacts.451294 is an actually selected ordinary spec talent, with a native unrestricted family mask/ability+periodic proc source and no identified aura/hero gate. It is NOT in TC's default-refusal set; no native restriction change or copied SimC ramp follows from these observations.
+
 ## Missing historical reference channels
 
 | Spell / source | Native data / decision status | Test / gap |
