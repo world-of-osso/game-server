@@ -1,3 +1,7 @@
+## 2026-10-23 — Ruby Wowhead avenue parked
+
+[Upper-stage gap](systems/navigation.md#ruby-upper-stage-native-gap--2026-10-23): maintained rate-limited fetches identify distinct Radiant Drake taxi spells, but local70448 effects stop at opaque action sets without a sourced forward destination. No aliases/connector/bake added. Ruby remains named and parked; Halls is next by two-boss route impact.
+
 ## 2026-10-23 — Ruby native upper-stage boundary
 
 [Native gap](systems/navigation.md#ruby-upper-stage-native-gap--2026-10-23): complete source/upper-target components and exact coarse minimum established; local collision windows observed without collector problems. Target has nearby sampled collision, but swept body, ground-mask/flight phase and authored ascent remain unqualified. Read-only diagnostics only; no connector/bake/profile/DB change. [Idle follow](systems/navigation.md#idle-follow-vertical-range--2026-10-22) receipt corrected to LANDEDfo1010, preserving known Leymor failure/isolated stormkeeper qualification.
