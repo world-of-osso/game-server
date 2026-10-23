@@ -1,3 +1,7 @@
+## 2026-10-23 — Native Venomfang periodic/expiry GREEN
+
+[Coverage](../specs/protection-damage-producers.md#venomfang-poison-lifecycle): ca3a4077b3PASS10.42s/compile11m56/no warnings. Real equipped poison deals owned periodic damage, never bursts early, retains its native burst after unequip, and emits exactly one partial plus one final expiry burst. Catalog absence does not proc. Perfected-impact poison and numerical health-snapshot proof remain open.
+
 ## 2026-10-23 — Native taunt adjudication and equipped Venomfang RED
 
 [Producer contract](../specs/protection-damage-producers.md#venomfang-poison-lifecycle): c88451c055PASS/1FAIL11.41s/compile13m34/no warnings. Real follower-AI avoidable43263/Evasion and unmodified ALWAYS_HIT62124 controls pass, as do both native tank-success profiles without fabricated hit stats. Actual equipped219-level Venomfang inputs pass but poison damage is missing. Sourced poison/retained burst and per-native-stack expiry hook implemented; GREEN pending. Perfected poison/numerical timing remain open.

@@ -27,7 +27,7 @@ Restore the missing spec73 producer channels identified by `game-engine/data/dia
 |Shield Charge chain|Native ALWAYS_HIT reader qualified; original charge assertions pass|d1335d807:4PASS17.98s, actual Evasion avoidance/control, immunity, reflection and ordinary charge primary/area/stun|
 |Whirling Blade/Ravager|Native-RPPM producer, sourced4s lifetime and timed damage/expiry qualified|1ba8cc854:2PASS13.14s; native Ravager RED5e69c75db and updated Whirling RED542fec1aa retained|
 |Phalanx/Bloody Rebuke|Phalanx and native-equipped Bloody Rebuke behavior/controls GREEN|5e69c75db produces1278009 but fails consumption; absence and foreign-buff controls pass; 7327a4c03 non-Clap actual-hit RED0PASS/1FAIL47.10s: Shield Slam wrongly produces the buff; Ignored actual four-piece free-Revenge/Ravager-tick RED and three-piece/paid controls committed, execution pending|
-|Guillotine/Venomfang|Base Guillotine/equipment/role controls GREEN; Venomfang poison/expiry implemented after native RED; GREEN pending|93ca4b7d1 equipped/control passes retained; c88451c05 Venomfang missing-periodic RED; perfected poison and numerical snapshot proof open|
+|Guillotine/Venomfang|Base Guillotine/equipment/role controls GREEN; Venomfang poison/expiry native GREEN3 after native RED|93ca4b7d1 equipped/control passes retained; c88451c05 Venomfang missing-periodic RED; perfected poison and numerical snapshot proof open|
 
 ### Native ALWAYS_HIT defense reader
 
@@ -57,7 +57,7 @@ Native equipped268209/219-level1291718 supplies both scaled effects; native desc
 
 Named `VENOMFANG_EQUIPPED_DRIVER` preserves native proc masks/5RPPM and excludes its own poison/burst actions. It supplies the source-scaled effect0 amount to native1306635; the aura stores a separate native effect1/role amount at application/refresh, so expiry does not depend on a still-equipped weapon or a rounded coefficient ratio. Native1000ms period,6000ms duration,20-stack limit and asynchronous flag490 stay unchanged. Named `VENOMFANG_STACK_EXPIRY` retains the native effect1→1306639 edge but dispatches it on stack expiry, not launch (SimC unique_gear_midnight.cpp6283–6315). The generic asynchronous reader invokes its optional script hook for every expired native stack, including the last; no second whole-aura remove callback duplicates it. SimC buff.cpp224–279/2497 schedules independent application expiries, even if server-frame deadlines coincide. Existing periodic-before-expiry ordering retains the final native tick without importing SimC's scheduler-specific1ms adjustment.
 
-GREEN pending for owned periodic damage, no early burst, actual unequip, partial/last expiry counts and catalog absence. Supplemental partial-expiry coverage has no separate pre-implementation RED. Perfected-impact poison and numerical Guillotine health timing remain open; no full ability/legal-loadout/DPS claim.
+ca3a4077b GREEN:3PASS10.42s, compile11m56/no warnings (`venomfang-green.log`): owned periodic damage, no early burst, actual unequip with retained expiry damage, partial then last expiry counts and catalog absence pass. Supplemental partial-expiry coverage has no separate pre-implementation RED. Perfected-impact poison and numerical Guillotine health timing remain open; no full ability/legal-loadout/DPS claim.
 
 ### Equipped producer inputs
 
