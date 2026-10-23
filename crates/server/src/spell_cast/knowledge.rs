@@ -20,8 +20,12 @@ pub(crate) fn resolve_actor_action(
         .get::<KnownSpells>(actor)
         .ok_or_else(|| CastFailure::Unsupported("native action actor lacks KnownSpells".into()))?;
     let resolved = resolve_aliases(world, actor, requested)?;
-    if world.resource::<SpellStore>().get(resolved).is_none() {
-        return Err(CastFailure::UnknownSpell);
+    let spell = world
+        .resource::<SpellStore>()
+        .get(resolved)
+        .ok_or(CastFailure::UnknownSpell)?;
+    if crate::auras::is_passive(spell) {
+        return Err(CastFailure::NotKnown);
     }
     if known.contains(resolved) {
         return Ok(resolved);

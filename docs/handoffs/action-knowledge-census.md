@@ -45,6 +45,10 @@ Own c3934c31da0f5f05fc58e9a11dfda0f7e9da655c GREEN:15/15PASS,38.29stest,22m30com
 
 Proofs: `knowledge-green`, `empower-resolved-control`, `ret-final-verdict-control`, `ret-base-verdict-control` `.proof.json`/`.output.log` under the engine evidence directory. Own binary SHA256 `8dffa7758d3f9cf7a3d075384ff05e15d34ed8294a09e0f3f26286eef279e2e7`; shared-protocol2abc7fa844f6e71d93203ce5421ae853e884854d. Exact argv/environment/revision are in proof sidecars. This tip contains **no** TDB proc provenance importer or generic default-proc refusal guard; those await the effective audited source manifest.
 
+## Passive endpoint correction
+
+Native selected Ret TraitDefinition141572 replaces35395 with404542, but404542 is PASSIVE (Attributes0=64). Controller/APL knowledge is not permission to manually cast a passive. Own c51184367 genuine native RED returnsSome404542 instead of unavailable:1FAIL/18.25s,18m55compile,1155.11swall,zero compiler warnings; `knowledge-passive-red.{proof.json,output.log}`. After complete normalization, the shared resolver now rejects a passive final endpoint with existing `CastFailure::NotKnown`. Literal selection treats that as unavailable and falls through, not a fatal unsupported gap. The known book and low-level passive casting remain unchanged; passive→active Berserk/HoG bridges remain permitted. GREEN qualification pending;14781 receives the same contract through the lead.
+
 ## Sources
 
 - [Existing producer bridges](../../scripts/follower_spec_kits.py), `SIMC_TALENT_CAST_ACTIONS` and its pinned source citations.
