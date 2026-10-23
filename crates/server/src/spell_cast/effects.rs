@@ -1031,7 +1031,7 @@ fn roll_periodic_crit(
     (rand::random::<f32>() * 100.0 < chance).then_some(owner)
 }
 
-pub(crate) fn with_periodic_damage_crit(
+fn roll_periodic_damage_crit(
     world: &World,
     caster: Entity,
     target: Entity,
@@ -1049,7 +1049,7 @@ pub(crate) fn with_periodic_damage_crit(
     )
 }
 
-pub(crate) fn with_periodic_heal_crit(
+fn roll_periodic_heal_crit(
     world: &World,
     caster: Entity,
     target: Entity,
@@ -1557,6 +1557,13 @@ fn deal_source_damage_and_report(
         || damage_source_amount(world, ctx, target, &damage),
         |(amount, _)| amount,
     );
+    // TC Unit.cpp6913 / SpellAuraEffects.cpp5680: flat periodic modifiers
+    // belong to the tick before its critical bonus, not outside that bonus.
+    let (source_amount, crit) = if periodic && !resolved_source {
+        roll_periodic_damage_crit(world, ctx.caster, target, ctx.spell, source_amount)
+    } else {
+        (source_amount, crit)
+    };
     let was_blocked = recorded_hit.map_or_else(
         || super::hit_was_blocked(world, ctx.caster, ctx.spell.id, target),
         |(_, blocked)| blocked,
@@ -1860,6 +1867,12 @@ pub fn apply_heal(
     let amount = (modded_amount(world, ctx, amount, periodic) * done * taken * named)
         .max(0.0)
         .round();
+    // TC SpellAuraEffects.cpp5893–5897: healing bonuses precede the tick roll.
+    let (amount, crit) = if periodic {
+        roll_periodic_heal_crit(world, ctx.caster, target, ctx.spell, amount)
+    } else {
+        (amount, crit)
+    };
     apply_resolved_heal(world, ctx, target, amount, crit, periodic);
 }
 

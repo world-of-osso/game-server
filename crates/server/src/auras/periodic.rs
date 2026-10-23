@@ -174,9 +174,7 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
         PERIODIC_DAMAGE => {
             let agony_tick = spell.id == super::agony::AGONY && tick.effect_index == 0;
             let advance_agony = agony_tick && !super::is_immune(world, unit, spell.school_mask());
-            let (amount, crit) =
-                effects::with_periodic_damage_crit(world, tick.caster, unit, spell, tick.amount);
-            effects::deal_effect_damage(world, &ctx, effect, unit, amount, crit, true);
+            effects::deal_effect_damage(world, &ctx, effect, unit, tick.amount, false, true);
             if spell.id == super::ignite::IGNITE && tick.effect_index == 0 {
                 super::ignite::trigger_intensifying_flame(world, tick.caster, unit, tick.amount);
             }
@@ -187,29 +185,28 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
                 crate::spell_cast::scripts::deathmark_energy(world, tick.caster, spell);
             }
         }
-        PERIODIC_LEECH => {
-            let (amount, crit) =
-                effects::with_periodic_damage_crit(world, tick.caster, unit, spell, tick.amount);
-            effects::deal_leech(world, &ctx, effect, unit, amount, crit, true);
-        }
-        PERIODIC_DAMAGE_PERCENT => {
-            let base = max_health * tick.amount / 100.0;
-            let (amount, crit) =
-                effects::with_periodic_damage_crit(world, tick.caster, unit, spell, base);
-            effects::deal_effect_damage(world, &ctx, effect, unit, amount, crit, true);
-        }
+        PERIODIC_LEECH => effects::deal_leech(world, &ctx, effect, unit, tick.amount, false, true),
+        PERIODIC_DAMAGE_PERCENT => effects::deal_effect_damage(
+            world,
+            &ctx,
+            effect,
+            unit,
+            max_health * tick.amount / 100.0,
+            false,
+            true,
+        ),
         PERIODIC_HEAL => {
             let amount = periodic_heal_amount(world, unit, spell, tick);
-            let (amount, crit) =
-                effects::with_periodic_heal_crit(world, tick.caster, unit, spell, amount);
-            effects::apply_heal(world, &ctx, unit, amount, crit, true);
+            effects::apply_heal(world, &ctx, unit, amount, false, true);
         }
-        OBS_MOD_HEALTH => {
-            let base = max_health * tick.amount / 100.0;
-            let (amount, crit) =
-                effects::with_periodic_heal_crit(world, tick.caster, unit, spell, base);
-            effects::apply_heal(world, &ctx, unit, amount, crit, true);
-        }
+        OBS_MOD_HEALTH => effects::apply_heal(
+            world,
+            &ctx,
+            unit,
+            max_health * tick.amount / 100.0,
+            false,
+            true,
+        ),
         PERIODIC_ENERGIZE => energize(world, &ctx, unit, tick),
         OBS_MOD_POWER => obs_mod_power(world, &ctx, unit, tick),
         PERIODIC_TRIGGER_SPELL
