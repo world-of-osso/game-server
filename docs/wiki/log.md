@@ -1,3 +1,7 @@
+## 2026-10-23 — Coverage reconciliation / native Rak'tul
+
+[Reconciled coverage](investigations/follower-data.md#coverage-reconciliation-and-native-raktul-precedence--2026-10-23):preserved exact predecessor pair/10SQL checks, appended seven script/nav/runnable/source artifact checks;27maps/98encounters/878derivedtrash retained. NativeRak'tul11000391/runtime31000391 must not duplicate; Maisara onlyVordaza unplaced. Khajin58ce397a1 landed; CandleKingck985 failed onSkarmorak regression/fixing14745. NextUldaman native route-source qualification is read-only, patrols notparty routes.
+
 ## 2026-10-23 — Earlier main-MDT / direct Wowhead source gap
 
 [Bounded source pass](investigations/follower-data.md#earlier-main-mdt-history-and-direct-wowhead-source-gap--2026-10-23):16immutable snapshots/496seconds, no qualified clone. Native texture labels found, but fixed840×555 is not a proved historical art inverse; renderer tile width/4+5 retained as source limitation, no alternate normalization adopted. Followed standing Wowhead path:84body pins unchanged/genuine empty mappers, plus newly fetched own213932also empty. All4maps remain source-blocked/noXY/noSQL/no aliases/tolerance changes/canonical writes.

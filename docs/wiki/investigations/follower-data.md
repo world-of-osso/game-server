@@ -1,5 +1,13 @@
 # Retail follower data and approved spec bridge
 
+## Coverage reconciliation and native Rak'tul precedence — 2026-10-23
+
+Successor owns the reconciled `follower-27-map-coverage.{json,md}`. Preserve predecessor's exact pair and10SQL/census checks in `follower-27-map-coverage-predecessor.*`; all27maps/98encounters/878derived-trash rows/native source facts remain, with seven additional artifact checks for script/nav/runnability/source-result fields. The earlier writer was closed predecessor14708, not a new canonical publication; no related process remained and none was killed. Reconciler is diagnostic `reconcile-27-map-coverage.py`.
+
+**Rak'tul248605 already has native11000391/runtime31000391 at(-275.219,-256.767,-13.2698). Never duplicate or relocate it.** Maisara has only Vordaza248595 unplaced. Historical journal0/0WMO floor observations do not override native spawns: seven such observations are not seven missing actors. `coverage-native-precedence-corrections.json` retains this distinction.
+
+Latest script delta: Khajin landed in58ce397a1; CandleKingck985 **failed** its gate through a Skarmorak regression, fix in progress under14745. Earlier gating notes describe older snapshots, not current landing status. Base script evidence remains6c00e0df1, separate from whole-fight proof. Runnable-end-to-end remains NO where a prerequisite is known missing, otherwise NOT_ESTABLISHED; tile/profile/ScriptName presence alone cannot certify completion. Lead approved next read-only Uldaman2451 native route-source qualification, not runtime changes; NPC patrols cannot be relabelled party routes.
+
 ## Earlier main-MDT history and direct Wowhead source gap — 2026-10-23
 
 Lead approved a time-capped earlier-main-MDT pass, then the existing direct Wowhead policy for any unsourced map. The source slice finished in496seconds:16immutable snapshots,4each for2516/2519/2527/2662, selected by retirement/custom-map/sublevel history rather than residuals. Engine diagnostics `follower-placements-2026-10-22/main-mdt-history-readonly/` pins full revisions/blob identities; `main-mdt-history-qualification.{json,md}` retains all eligible anchors and all assignment screens. No historical clone qualifies, no fitted parameter/outlier/alias/coordinate shift is adopted; bounded selection is not exhaustive upstream history.
