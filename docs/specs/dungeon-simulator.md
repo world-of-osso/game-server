@@ -19,8 +19,8 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 ## Generic source construction
 
 - [x] Prepare new-map source topology without a compiled map registry: retain exact Normal actor GUIDs, formation identity, native float poses, follower205 MapDifficulty tuning and unique authored Entrance. Order explicit `raid_encounter_creature` bindings by DungeonEncounter then source JournalEncounterCreature order.
-- [x] Missing/ambiguous entrance, follower difficulty, encounter boss binding, source boss spawn or nav bake must produce a named `FOLLOWER_GRAPH_*` refusal; never fabricate an actor, route, radius or walk connection.
-- [ ] Ruby2521 and Halls2527 must qualify native edges and corridor-input radii, then run the ignored source-map terminal fixture. Halls currently refuses missing final encounter2618 binding; Ruby joint-actor completeness remains explicitly limited to published raid bindings.
+- [x] Missing/ambiguous entrance, follower difficulty, encounter boss binding, source boss spawn, nav bake or complete native boss walk progression must produce a named `FOLLOWER_GRAPH_*` refusal; never fabricate an actor, route, radius or walk connection.
+- [ ] Ruby2521 and Halls2527 must qualify native edges and corridor-input radii, then run the ignored source-map terminal fixture. Halls currently refuses missing final encounter2618 binding; Ruby refuses the measured native Melidrussa→Kokia walk disconnection. Ruby joint-actor completeness remains explicitly limited to published raid bindings.
 - [ ] Existing34/2515 graph bytes and behavior must remain unchanged. New-map source preparation never rewrites their files or substitutes their radii.
 
 Implementation: `scripts/follower_simulator_sources.py`; behavioral native-source fixtures: `scripts/tests/test_follower_simulator_sources.py`; ignored terminal proof: `crates/server/src/dungeon_simulator/generic_map_tests.rs`. Generic dispatch/metadata remains the separate existing `graph_selection.rs` interface; Uldaman capture remains separately owned.
