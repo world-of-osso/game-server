@@ -102,6 +102,7 @@ fn dps_parity_pet_stats_spawn_inherits_native_owner_health_and_armor() {
 fn dps_parity_pet_stats_native_owner_stamina_change_refreshes_and_removes() {
     const FORTITUDE: u32 = 21562;
     let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
+    let current_hp = run.app.world().get::<Health>(pet).unwrap().current;
     let before = run
         .app
         .world()
@@ -137,6 +138,11 @@ fn dps_parity_pet_stats_native_owner_stamina_change_refreshes_and_removes() {
         "native-fortitude-owner-change",
     );
     assert_eq!(
+        run.app.world().get::<Health>(pet).unwrap().current,
+        current_hp,
+        "native maximum growth must not heal the pet"
+    );
+    assert_eq!(
         run.app.world().get::<Health>(pet).unwrap().max,
         expected_hunter_max_hp(run.app.world(), run.actor, pet)
     );
@@ -161,5 +167,64 @@ fn dps_parity_pet_stats_native_owner_stamina_change_refreshes_and_removes() {
     assert_eq!(
         run.app.world().get::<Health>(pet).unwrap().max,
         expected_hunter_max_hp(run.app.world(), run.actor, pet)
+    );
+    assert_eq!(
+        run.app.world().get::<Health>(pet).unwrap().current,
+        current_hp,
+        "removal below maximum must preserve current health"
+    );
+}
+
+#[test]
+#[ignore = "native pet foreign owner control; requires prepared parity inputs"]
+fn dps_parity_pet_stats_foreign_controller_stats_do_not_change_the_pet_or_dummy() {
+    let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
+    let controller = run
+        .app
+        .world()
+        .get::<crate::followers::Follower>(run.actor)
+        .unwrap()
+        .owner;
+    let before = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(controller)
+        .unwrap()
+        .primary
+        .stamina;
+    let original = run.app.world().get::<Health>(pet).unwrap().max;
+    let armor = run
+        .app
+        .world()
+        .get::<crate::level_scaling::CreatureArmor>(pet)
+        .unwrap()
+        .0;
+    let dummy = run.app.world().get::<Health>(run.targets[0]).unwrap().max;
+    crate::spell_cast::cast_triggered(run.app.world_mut(), controller, 21562, Some(controller), 1);
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<crate::stats::CharacterStats>(controller)
+            .unwrap()
+            .primary
+            .stamina
+            > before,
+        "real foreign controller stats must change before exclusion assertion"
+    );
+    assert_eq!(run.app.world().get::<Health>(pet).unwrap().max, original);
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::level_scaling::CreatureArmor>(pet)
+            .unwrap()
+            .0,
+        armor
+    );
+    assert_eq!(
+        run.app.world().get::<Health>(run.targets[0]).unwrap().max,
+        dummy
     );
 }
