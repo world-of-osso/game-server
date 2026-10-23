@@ -3,6 +3,7 @@ mod elemental_rotation_tests;
 mod engagement_tests;
 mod inputs;
 pub(crate) mod literal_rotation;
+mod periodic_crit_tests;
 mod pet_child_tests;
 mod pet_melee_tests;
 mod pet_stats_tests;

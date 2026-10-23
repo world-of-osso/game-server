@@ -22,6 +22,18 @@ Preserve family masks, proc chance, triggered eligibility and charges. Record th
 native catalog eligibility diff and a changed non-Paladin source control; no
 spell-ID exception or blanket proc certification.
 
+## Periodic critical ticks
+
+TC a352b1fa `SpellAuras.cpp:524–532` and `SpellAuraEffects.cpp:5680,5764,5895,6103–6113` define eligibility, per-tick rolls and native damage/healing bonuses.
+
+- [ ] Attr2 `CANT_CRIT` overrides Attr8 `PERIODIC_CAN_CRIT`; unflagged periodic effects never crit.
+- [ ] Eligible damage, leech, percent damage, healing and percent healing roll current crit each tick through the normal script-aware crit calculation, not an application-time snapshot. Flat `PeriodicHealingAndDamage` bonuses belong inside the critical multiplier.
+- [ ] `FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_SPELL_OWNER`: class `CharacterStats` actors qualify as Player spell owners; controlled pets/totems use their direct class owner's current chance. Ordinary creatures without such an owner retain zero periodic crit.
+- [ ] Keep the original caster for target-owned/script modifiers and native critical damage/healing bonuses; use the spell owner for chance stats and spell modifiers. Periodic damage uses spell critical-bonus order even for melee/ranged defense classes.
+- [ ] Preserve native amounts, coefficients, clocks, rolling carry and event attribution; critical damage/healing events carry their actual crit outcome.
+
+Native boundary fixtures: `dungeon_simulator/dps_parity/periodic_crit_tests.rs`. Controlled real-row aura applications qualify aura-to-tick behavior, not cast admission, learned spells, rotations or whole-spec parity. [Policy and evidence](../wiki/systems/auras.md#periodic-critical-ticks--2026-10-23).
+
 ## Native rolling periodic refresh
 
 TC a352b1fa `SpellAuraEffects.cpp:832–873` supplies the rolling-amount rule.
