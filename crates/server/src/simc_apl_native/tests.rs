@@ -2,6 +2,9 @@ use super::*;
 use crate::spell_cast::test_harness::Harness;
 use crate::spell_info::SpellStore;
 
+#[path = "extension_tests.rs"]
+mod extensions;
+
 const TIGER_PALM: u32 = 100780;
 const BLACKOUT_KICK: u32 = 100784;
 const HIT_COMBO: u32 = 196740;
