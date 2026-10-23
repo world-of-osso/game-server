@@ -8,6 +8,8 @@ from pathlib import Path
 import sqlite3
 import struct
 
+from freeze_follower_route import boss_packs, build_adjacency, shortest_path, squared_distance
+
 MAP_ID = 2451
 ENTRANCE_ID = 100032
 NEIGHBOURS = 4
@@ -123,6 +125,25 @@ def unreachable_packs(graph):
     return sorted(set(adjacency) - reached)
 
 
+def freeze_native_progression(graph, requirements):
+    """Freeze boss-path topology only; actual native radii still own pull selection."""
+    if graph["map_id"] != MAP_ID or requirements["gate_entries"]:
+        raise ValueError("native progression requires map2451 and separate qualification for static gates")
+    packs = {pack["id"]: pack for pack in graph["packs"]}
+    adjacency = build_adjacency(graph)
+    origin = [graph["entrance"][0], graph["entrance_height"], graph["entrance"][1]]
+    progression = []
+    for goal in boss_packs(packs, requirements):
+        nearest = min(packs, key=lambda identity: (
+            squared_distance(pack_point(packs[identity]), origin), identity,
+        ))
+        nodes = shortest_path(adjacency, nearest, goal)
+        continuous = progression and progression[-1] == nodes[0]
+        progression.extend(nodes[1:] if continuous else nodes)
+        origin = pack_point(packs[goal])
+    return progression
+
+
 def write_graph(path, graph):
     path.write_text(json.dumps(graph, indent=2) + "\n")
 
@@ -137,6 +158,9 @@ def main():
     freeze = subcommands.add_parser("freeze-edges")
     freeze.add_argument("--graph", type=Path, required=True)
     freeze.add_argument("--edges", type=Path, required=True)
+    progression = subcommands.add_parser("freeze-progression")
+    progression.add_argument("--graph", type=Path, required=True)
+    progression.add_argument("--requirements", type=Path, required=True)
     args = parser.parse_args()
     if args.action == "prepare":
         destinations = [args.graph.resolve(), args.points.resolve()]
@@ -148,13 +172,18 @@ def main():
             ",".join(str(value) for value in [pack["id"], *pack_point(pack)]) + "\n"
             for pack in graph["packs"]
         ))
-    else:
+    elif args.action == "freeze-edges":
         graph = json.loads(args.graph.read_text())
         if graph["map_id"] != MAP_ID or graph["route"]:
             raise ValueError("expected un-authored Uldaman source topology")
         candidates = read_native_edges(args.edges, graph["packs"])
         graph["edges"] = select_native_edges(graph["packs"], candidates)
         graph["unreachable"] = unreachable_packs(graph)
+        write_graph(args.graph, graph)
+    else:
+        graph = json.loads(args.graph.read_text())
+        requirements = json.loads(args.requirements.read_text())[str(MAP_ID)]
+        graph["boss_path"] = freeze_native_progression(graph, requirements)
         write_graph(args.graph, graph)
     print(f"Uldaman native topology packs={len(graph['packs'])} edges={len(graph['edges'])}; "
           "pull route remains unqualified until real native corridor inputs")
