@@ -201,6 +201,26 @@ const SKULL_BASH_INTERRUPT: u32 = 93_985;
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
 pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
+/// TC a352b1fa spell_generic.cpp4914–4925:45313 anchors a hit creature's current home.
+fn anchor_here(world: &mut World, _caster: Entity, target: Entity, _depth: u8) {
+    use shared::components::{Npc, Position, Rotation};
+    if world.get::<Npc>(target).is_none() {
+        return;
+    }
+    let Some((position, rotation)) = world
+        .get::<Position>(target)
+        .zip(world.get::<Rotation>(target))
+    else {
+        warn!(?target, "Anchor Here45313 hit creature without native pose");
+        return;
+    };
+    let home = crate::creature_ai::HomePosition {
+        position: *position,
+        orientation: rotation.y,
+    };
+    world.entity_mut(target).insert(home);
+}
+
 /// TC a352b1fa spell_dk.cpp663–673: victim casts the pull back at the owner.
 fn death_grip(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     super::cast_triggered(world, caster, 243_912, Some(target), depth + 1);
@@ -263,6 +283,7 @@ pub(super) fn consumes_effect_value(spell_id: u32, effect_index: u8) -> bool {
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (45313, 0) => Some(anchor_here),
         (crate::scripted_ai::orator::TERRORIZE_SELECTOR, 0) => {
             Some(crate::scripted_ai::orator::terrorize_hit)
         }

@@ -158,6 +158,7 @@ mod tests {
                     handled_area_triggers: Default::default(),
                     data: Default::default(),
                     ramparts_sentry_deaths: 0,
+                    edna_intro_kills: 0,
                     ramparts_reset_delays: Vec::new(),
                 },
             )])));

@@ -1,5 +1,15 @@
 # Boss scripts
 
+## EDNA authored intro — 2026-10-23
+
+TC a352b1fa `TheStoneVault/{boss_edna.cpp,instance_the_stonevault.cpp,the_stonevault.h}` requires five real `HasStringId("edna_intro_trash")` deaths. Template210109 supplies that inherited StringId to source10002119/123/124/127/177 despite null spawn StringIds. The earlier spawn-only empty query was incomplete, not a population gap. Primary210108/map2652/2854bit0 matches native70448 Journal2572/5586/display120054; sourceclass4/flags320 and all actors remain unchanged by the binding-only producer.
+
+Actual6aa nativeRED2PASS/6FAIL10.18s: native4s Seismic damage/copy isolation and split-copy negative pass; appearance100vs4, fifth-death intro0vs1 and absent nativeAnchorhome fail. ProducerRED missingimport_edna4.438s precedes producer05fd. The first runtime slice connects the real lethal boundary to copy-owned `edna_intro_kills` and data6, then source3s→ForceWalk to Bevy `(1.94097,361.66537,-0.512153)`→actual point1 MovementInform→1s→introDONE/text0/native45313/PC-immunity removal. Scheduler runs before UpdateVictim and is cancelled by actor reset/death without resetting copy intro data. Appearance sets the existing nativeEnergy pool4; no fixture grants or duplicate power allocation.
+
+TC `Spells/spell_generic.cpp4914–4925`45313 effect0 sets current creature HomePosition/orientation, independent of original respawn data. The native effect hook implements that anchor; it is not an aura. Native bool FULL_MASK has no ordinary SpellGo, so the fixture qualifies accepted source request plus actual home-position effect, not a nonexistent wire event. Foreign-copy control allocates a real independent instance. All tests remain ignored pending GREEN; parent clocks are deliberately not implemented until authentic-unlock combatRED is observed. `CONVERSATION25768_CONTROLLER_UNPORTED` retains the explicitly approved3s timer without inventing audio/actors or duplicating the pending conversation runtime. Other authored controllers, defeated464827 and TC evade-despawn remain named partial boundaries in the [contract](../../specs/boss-scripts.md#tww-edna-source-admission).
+
+Sources: [intro/death controller](../../../crates/server/src/scripted_ai/edna.rs), [native anchor](../../../crates/server/src/spell_cast/scripts.rs), local receipts `game-engine/data/diagnostics/follower-bosses-tww-2026-10-22/edna-*` pin publicTC/native70448 evidence. Runtime GREEN remains pending.
+
 ## Skarmorak TC Shell-controller partial — 2026-10-22
 
 Actual210156/map2652/2880bit1 is authenticated by TC a352b1fa `TheStoneVault/boss_skarmorak.cpp`, source spawn10002291 and native70448 Journal2579/5608/display118714. Sourceclass4/flags64/flags2=0/addons429974/422359 and all actor/native/population data remain intact. Independent producer `--encounter skarmorak` RED→1GREEN7.658s proves binding-only preservation/idempotence/conflict; stable-key delta receipt verifies twice-replayed fresh copy. Follower205 fixtures explicitly project the authored Normal placement, not205 stat/spawn rows. Receipts: `game-engine/data/diagnostics/follower-bosses-tww-2026-10-22/skarmorak-*`.

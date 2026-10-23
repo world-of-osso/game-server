@@ -1823,6 +1823,7 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
         crate::mythic_plus::record_kill(world, npc);
         crate::maps::raid::record_creature_death(world, npc);
         crate::scripted_ai::hellfire_ramparts::on_unit_death(world, npc);
+        crate::scripted_ai::edna::on_unit_death(world, npc);
         crate::zones::notify_group_depletion(world, npc);
     });
 }

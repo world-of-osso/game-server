@@ -90,6 +90,13 @@ fn immune(h: &Harness, actor: Entity) -> bool {
 fn encounter_coverage_edna_five_inherited_stringid_deaths_force_walk_arrival_unlock() {
     for difficulty in [1, 205] {
         let (mut h, boss, map, golems) = source_copy(difficulty);
+        let clock = h.app.world().resource::<Time>().elapsed_secs_f64();
+        h.app
+            .insert_resource(super::cast_admission::CastAdmissions {
+                actor: boss,
+                origin: clock,
+                entries: Vec::new(),
+            });
         let origin = *h.app.world().get::<Position>(boss).unwrap();
         for &golem in &golems[..4] {
             super::herald_intro::kill_actor(&mut h, golem);
@@ -136,6 +143,7 @@ fn encounter_coverage_edna_five_inherited_stringid_deaths_force_walk_arrival_unl
             "TC DONE from authored arrival callback"
         );
         assert!(!immune(&h, boss));
+        assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 64);
         let home = h
             .app
             .world()
@@ -146,12 +154,20 @@ fn encounter_coverage_edna_five_inherited_stringid_deaths_force_walk_arrival_unl
             home.orientation,
             h.app.world().get::<Rotation>(boss).unwrap().y
         );
+        // Native bool FULL_MASK does not emit ordinary SpellGo. Qualify its
+        // accepted request together with the real home-position effect above.
+        let anchors: Vec<_> = h
+            .app
+            .world()
+            .resource::<super::cast_admission::CastAdmissions>()
+            .entries
+            .iter()
+            .filter(|attempt| attempt.spell == ANCHOR)
+            .collect();
+        assert_eq!(anchors.len(), 1);
         assert!(
-            h.inbox(0)
-                .spell_gos
-                .iter()
-                .any(|go| go.caster == boss.to_bits() && go.spell_id == ANCHOR),
-            "native45313 script-effect cast after arrival+1s, not an aura"
+            anchors[0].result.is_ok(),
+            "native45313 admission after arrival+1s"
         );
         assert_eq!(
             get_boss_state(h.app.world_mut(), map, 0),
@@ -164,10 +180,8 @@ fn encounter_coverage_edna_five_inherited_stringid_deaths_force_walk_arrival_unl
 #[ignore = "EDNA source intro RED must execute before implementation"]
 fn encounter_coverage_edna_death_counter_is_copy_owned_and_idle_time_does_not_unlock() {
     let (mut h, boss, map, golems) = source_copy(1);
-    let other = InMap {
-        instance_id: map.instance_id + 1,
-        ..map
-    };
+    let other = allocate_peer_copy(&mut h, 1);
+    assert_ne!(other, map);
     // Existing fixture peer belongs to this distinct copy. Moving one authentic
     // golem there lets the real lethal boundary prove copy ownership.
     h.app.world_mut().entity_mut(golems[0]).insert(other);
@@ -180,10 +194,10 @@ fn encounter_coverage_edna_death_counter_is_copy_owned_and_idle_time_does_not_un
     assert_eq!(intro_state(&mut h, other), 0);
     assert!(immune(&h, boss));
     assert!(
-        h.inbox(0)
-            .spell_gos
-            .iter()
-            .all(|go| go.caster != boss.to_bits() || go.spell_id != ANCHOR)
+        h.app
+            .world()
+            .get::<crate::creature_ai::HomePosition>(boss)
+            .is_none()
     );
     assert!(h.app.world().get::<movement::PointMovement>(boss).is_none());
 }

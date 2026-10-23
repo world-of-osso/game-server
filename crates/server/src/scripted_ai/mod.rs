@@ -29,6 +29,7 @@ pub(crate) mod caster_chase;
 pub mod creature_text;
 mod dailcry;
 mod doragosa;
+pub(crate) mod edna;
 mod emberon;
 pub mod event_map;
 mod gorek;
@@ -410,6 +411,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == skarmorak::SCRIPT {
         return skarmorak::creature_ai(world, creature);
     }
+    if script_name == edna::SCRIPT {
+        return edna::creature_ai(world, creature);
+    }
     if script_name == kikatal::SCRIPT {
         return kikatal::creature_ai(world, creature);
     }
@@ -491,6 +495,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || script_name == gulping_goliath::SCRIPT
         || script_name == orator::SCRIPT
         || script_name == skarmorak::SCRIPT
+        || script_name == edna::SCRIPT
         || script_name == granyth::SCRIPT
         || script_name == treemouth::SCRIPT
         || script_name == kikatal::SCRIPT

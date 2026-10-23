@@ -1,3 +1,7 @@
+## 2026-10-23 — EDNA inherited-death intro and native anchor
+
+[EDNA intro](systems/boss-scripts.md#edna-authored-intro--2026-10-23): actual8-case RED2PASS/6FAIL10.18s precedes runtime death counter/copy data, source3s/forcewalk/arrival+1s unlock and native45313 home-position hook. Preserve flags320 until real completion; no fixture DONE/immunity edits. Conversation25768 and authored controller gaps explicit; runtime GREEN/combat clocks pending.
+
 ## 2026-10-22 — Hunter pet sourced HP/armor and summon ordering
 
 [Hunter inheritance](systems/character-stats.md#hunter-pet-health-and-armor--2026-10-22): native ExpectedStat/template createHP, TC30% ownerStamina×10HP and level×50+70% ownerarmor. Separate fresh56244/max178094 RED fixed through the existing cached Stats producer before summon, without initialization/top-up state. Six native controls pass; lifecycle composite5+1 passes after authentic ExpectedStats fixture hydration and exact native377HP dismissal persistence. Check/fmt pass at01d22; parent integration gate remains separate. SimC divergence explicit; no whole DPS/Azure survival/petAP claim.

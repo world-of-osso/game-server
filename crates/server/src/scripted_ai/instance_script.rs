@@ -62,6 +62,8 @@ pub struct InstanceScript {
     pub(crate) data: HashMap<u32, u32>,
     /// Ramparts OnUnitDeath state, discarded with this copy; not a saved boss bit.
     pub(crate) ramparts_sentry_deaths: u8,
+    /// Stonevault template-inherited intro deaths; transient for this copy.
+    pub(crate) edna_intro_kills: u8,
     /// Remaining ms of scheduled Ramparts reset events; copy-owned, not actor-owned.
     pub(crate) ramparts_reset_delays: Vec<u32>,
 }
@@ -113,6 +115,7 @@ fn compatibility_catalog(map_id: u32) -> InstanceScript {
         handled_area_triggers: HashSet::new(),
         data: HashMap::new(),
         ramparts_sentry_deaths: 0,
+        edna_intro_kills: 0,
         ramparts_reset_delays: Vec::new(),
     };
     for row in include_str!("encounter_compat.csv")
