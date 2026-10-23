@@ -4,8 +4,8 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on active
 
 ## Native hit proc masks
 
-- [ ] Classify each landed hit by TC damage/healing/effect positivity, not faction relation: positive damage is harmful; otherwise positive healing is helpful; otherwise inspect only effects landing on that recipient.
-- [ ] Native harmful-hit procs must work against neutral attackable faction7 (training dummy31146); friendly2061 healing must preserve native36488→36483 helpful eligibility.
+- [x] Classify each landed hit by TC damage/healing/effect positivity, not faction relation: positive damage is harmful; otherwise positive healing is helpful; otherwise inspect only effects landing on that recipient.
+- [x] Native harmful-hit procs must work against neutral attackable faction7 (training dummy31146); friendly2061 healing must preserve native36488→36483 helpful eligibility.
 
 Behavioral fixtures: `crates/server/src/spell_cast/hit_positivity_tests.rs`.
 

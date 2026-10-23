@@ -1,6 +1,6 @@
 ## 2026-10-23 — Hit positivity independent of factions
 
-[Hit classification](systems/auras.md#hit-positivity-independent-of-factions--2026-10-23): test-only6d5d7026a genuine1PASS/1FAIL10.43s, native16166 harmful proc absent against attackable neutral faction7 after actual damage; friendly2061→36483 control passes. Spell_cast now uses TC damage/heal/landed-effect positivity, not faction hostility; GREEN pending, no proc import or parity certification.
+[Hit classification](systems/auras.md#hit-positivity-independent-of-factions--2026-10-23): test-only6d5d7026a genuine1PASS/1FAIL10.43s, native16166 harmful proc absent against attackable neutral faction7 after actual damage; friendly2061→36483 control passes. Spell_cast now uses TC damage/heal/landed-effect positivity, not faction hostility;825ff923a passes2GREEN14.42s/compile13m31/zero warnings. No proc import or parity certification; independent integration remains lead-owned.
 
 ## 2026-10-23 — Shared native APL fact boundary
 
