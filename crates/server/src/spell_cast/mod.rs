@@ -14,6 +14,8 @@
 
 use crate::random as rand;
 #[cfg(test)]
+mod assassination_native_tests;
+#[cfg(test)]
 mod achievement_damage_tests;
 #[cfg(test)]
 mod achievement_healing_tests;
