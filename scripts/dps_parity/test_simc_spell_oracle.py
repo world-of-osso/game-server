@@ -171,6 +171,26 @@ class OracleTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     oracle.resolve_profile("missing")
 
+    def test_primed_plans_supply_ready_actions_and_bounded_duration(self):
+        import simc_spell_oracle_batch as batch
+        self.assertIn("crushing_blow", batch.action_list(72, {"name": "crushing_blow_mh"}))
+        self.assertNotIn("raging_blow", batch.action_list(72, {"name": "crushing_blow_mh"}))
+        self.assertIn("void_torrent", batch.action_list(258, {"name": "void_blast"}))
+        self.assertGreater(batch.probe_duration(269, "rushing_wind_kick_damage"), 30)
+        self.assertEqual(batch.probe_duration(71, "mortal_strike"), 30)
+
+    def test_report_parent_aliases_retain_emitted_child_ids(self):
+        import simc_spell_oracle_batch as batch
+        for specialization, parent, parent_id, child, child_id in [
+            (62, "arcane_missiles", 5143, "arcane_missiles_tick", 7268),
+            (251, "frost_strike", 49143, "frost_strike_damage", 222026),
+            (251, "obliterate", 49020, "obliterate_damage", 222024),
+        ]:
+            event = {"event": "direct_amount", "action": child, "spell_id": child_id}
+            actual = batch.matching_formulas(specialization, {"name": parent, "spell_id": parent_id}, [event])
+            self.assertEqual(actual, [event])
+            self.assertEqual(actual[0]["spell_id"], child_id)
+
     def test_invalid_action_is_rejected(self):
         with self.assertRaises(ValueError):
             oracle.build_profile('mage="Test"', ["bad\nactions=other"])

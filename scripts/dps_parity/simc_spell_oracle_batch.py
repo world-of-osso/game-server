@@ -3,6 +3,8 @@
 import argparse
 import json
 from pathlib import Path
+import shutil
+import time
 
 from simc_spell_oracle import run_oracle, sha256
 
@@ -10,6 +12,7 @@ ENGINE = Path('/home/osso/Projects/world-of-osso/game-engine')
 REFERENCES = ENGINE / 'data/diagnostics/dps-parity-2026-10-21'
 OUTPUT = ENGINE / 'data/diagnostics/simc-spell-oracle-2026-10-23'
 PRIORITY = [70, 269, 71, 577, 259, 1467, 63, 253]
+PROBE_PLANS = json.loads(Path(__file__).with_name('simc_spell_oracle_plans.json').read_text())
 # Explicit minimal public SimC cast drivers for reported child/proc channels.
 DRIVERS = {
     70: {'final_verdict': ['templars_verdict'], 'dawnlight': ['avenging_wrath', 'wake_of_ashes', 'templars_verdict'], 'divine_arbiter': ['divine_storm,if=buff.divine_arbiter_verdict.up', 'templars_verdict'], 'crusading_strike': [], 'perfected_guillotine': ['use_items']},
@@ -68,8 +71,15 @@ def top_channels(data):
     return sorted(grouped.values(), key=lambda row: row['damage'], reverse=True)[:5]
 
 
+def probe_duration(spec, name):
+    return PROBE_PLANS.get(f'{spec}:{name}', {}).get('time', 30)
+
+
 def action_list(spec, channel):
     name = channel['name']
+    plan = PROBE_PLANS.get(f'{spec}:{name}')
+    if plan:
+        return plan['actions']
     driver = DRIVERS.get(spec, {}).get(name, [name])
     if name.startswith('auto_attack') or name == 'auto_shot':
         driver = []
@@ -109,6 +119,9 @@ FORMULA_ALIASES = {
     (1467, 'fire_breath'): {'fire_breath_damage'},
     (254, 'rapid_fire'): {'rapid_fire_tick'},
     (103, 'feral_frenzy'): {'feral_frenzy_tick'},
+    (62, 'arcane_missiles'): {'arcane_missiles_tick'},
+    (251, 'frost_strike'): {'frost_strike_damage', 'frost_strike_offhand'},
+    (251, 'obliterate'): {'obliterate_damage', 'obliterate_offhand'},
 }
 
 
@@ -119,19 +132,30 @@ def matching_formulas(spec, channel, events):
         or e['action'] in aliases)]
 
 
-def generate_spec(spec, output=OUTPUT, references=REFERENCES):
+def generate_spec(spec, output=OUTPUT, references=REFERENCES, untriggered_only=False):
     reference, raw, reference_proof, profile = reference_for(spec, references)
     channels = top_channels(json.loads(reference.read_text()))
-    receipts = []
+    manifest = output / str(spec) / 'manifest.json'
+    receipts = json.loads(manifest.read_text()) if untriggered_only else []
+    if untriggered_only:
+        pending = {(r['channel']['name'], r['channel']['spell_id']) for r in receipts if r['status'] != 'observed'}
+        channels = [c for c in channels if (c['name'], c['spell_id']) in pending]
     for channel in channels:
         filename = f"{channel['name']}.json"
         # Preserve separate IDs if a report uses one action name for several spells.
         if sum(c['name'] == channel['name'] for c in channels) > 1:
             filename = f"{channel['name']}__{channel['spell_id']}.json"
         path = output / str(spec) / filename
-        metadata = {'spec_id': spec, 'channel': channel, 'reference': str(raw), 'normalized_reference': str(reference), 'reference_sha256': sha256(raw), 'reference_proof': str(reference_proof), 'profile_policy': 'exact source profile from reference proof; MID1 where reference used MID1'}
+        if path.exists():
+            archive = path.parent / 'attempts' / f'{path.stem}-{time.time_ns()}'
+            archive.mkdir(parents=True)
+            for suffix in ('.json', '.txt', '.simc', '.proof.json', '.console.txt'):
+                artifact = path.with_suffix(suffix)
+                if artifact.exists():
+                    shutil.copy2(artifact, archive / artifact.name)
+        metadata = {'driver_plan': PROBE_PLANS.get(f"{spec}:{channel['name']}"), 'spec_id': spec, 'channel': channel, 'reference': str(raw), 'normalized_reference': str(reference), 'reference_sha256': sha256(raw), 'reference_proof': str(reference_proof), 'profile_policy': 'exact source profile from reference proof; MID1 where reference used MID1'}
         try:
-            data = run_oracle(profile, action_list(spec, channel), path, reference_proof=reference_proof)
+            data = run_oracle(profile, action_list(spec, channel), path, duration=probe_duration(spec, channel['name']), reference_proof=reference_proof)
             observed = matching_formulas(spec, channel, data['events'])
             metadata['observed_formula_actions'] = sorted({(e['action'], e['spell_id']) for e in observed})
             metadata['status'] = 'observed' if observed else 'NOT_TRIGGERED_BY_MINIMAL_DRIVERS'
@@ -141,16 +165,17 @@ def generate_spec(spec, output=OUTPUT, references=REFERENCES):
         except RuntimeError as exc:
             metadata.update(status='SIMC_ACTION_INITIALIZATION_FAILED', error=str(exc))
             path.write_text(json.dumps({'selection': metadata, 'factors': None, 'proof': str(path.with_suffix('.proof.json'))}, indent=2) + '\n')
+        receipts = [r for r in receipts if r['path'] != str(path)]
         receipts.append({'path': str(path), **metadata})
         print(f"{spec} {channel['name']}: {metadata['status']}", flush=True)
-    manifest = output / str(spec) / 'manifest.json'
+    receipts.sort(key=lambda r: -r['channel']['share_pct'])
     manifest.write_text(json.dumps(receipts, indent=2) + '\n')
     write_index(output)
     return receipts
 
 
 def write_index(output):
-    text = ['# SimC spell oracle — 2026-10-23', '', 'Pinned 76f8118cf3f7f41dad20708e8328e1f4ab2deebc. One deterministic 30 s probe per selected channel; reference simulation options inherited (optimal_raid=0), not DPS parity certification. Pet contributions with the same name/ID are combined for top-five selection. Receipt v5 Frost251 native-legality exclusion remains in force.', '', 'Each JSON retains all observed children/procs and links adjacent `.simc`, `.txt`, `.proof.json`, and console output. `NOT_TRIGGERED` means no formula evidence for the requested channel, not zero damage or an inferred formula. Initialization failures retain actual SimC errors.', '', '| Spec | Channel | Reference share | Formula records | Status |', '|---|---|---:|---:|---|']
+    text = ['# SimC spell oracle — 2026-10-23', '', 'Pinned 76f8118cf3f7f41dad20708e8328e1f4ab2deebc. One deterministic probe per selected channel (30s default, longer sourced prerequisite plans recorded per receipt); reference simulation options inherited (optimal_raid=0), not DPS parity certification. Pet contributions with the same name/ID are combined for top-five selection. Receipt v5 Frost251 native-legality exclusion remains in force.', '', 'Each JSON retains all observed children/procs and links adjacent `.simc`, `.txt`, `.proof.json`, and console output. `NOT_TRIGGERED` means no formula evidence for the requested channel, not zero damage or an inferred formula. Initialization failures retain actual SimC errors.', '', '| Spec | Channel | Reference share | Formula records | Status |', '|---|---|---:|---:|---|']
     for manifest in sorted(output.glob('*/manifest.json'), key=lambda p: int(p.parent.name)):
         for row in json.loads(manifest.read_text()):
             channel = row['channel']
@@ -162,13 +187,14 @@ def write_index(output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--spec', type=int, action='append')
+    parser.add_argument('--untriggered', action='store_true', help='rerun only existing unobserved manifest channels; retain prior artifacts')
     parser.add_argument('--references', type=Path, default=REFERENCES)
     parser.add_argument('--output', type=Path, default=OUTPUT)
     args = parser.parse_args()
     available = {int(p.name.split('.')[0]) for p in args.references.rglob('*.reference.single.normalized.json')}
     specs = args.spec or [s for s in PRIORITY if s in available] + sorted(available - set(PRIORITY))
     for spec in specs:
-        generate_spec(spec, args.output, args.references)
+        generate_spec(spec, args.output, args.references, args.untriggered)
 
 
 if __name__ == '__main__':

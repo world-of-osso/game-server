@@ -8,6 +8,7 @@ Single-spell formula receipts from public SimC `76f8118cf3f7f41dad20708e8328e1f4
 python3 scripts/dps_parity/simc_spell_oracle.py --profile Arms --action auto_attack --action mortal_strike --output /var/tmp/osso/mortal_strike.json
 python3 -m unittest discover -s scripts/dps_parity -p 'test_simc_spell_oracle.py'
 python3 scripts/dps_parity/simc_spell_oracle_batch.py --spec 70
+python3 scripts/dps_parity/simc_spell_oracle_batch.py --untriggered
 ```
 
 Repeated actions retain APL priority: enabling cooldowns first, spell next, resource generators last. `--targets` defaults to1, `--time` to30s. Names resolve within pinned MID2; explicit paths permit the labelled MID1 Devastation reference. No automatic tier substitution. Original action lists are stripped. Simulation options come from the profile's recorded single-target reference proof, including `optimal_raid=0` and every other non-default flag. `--reference-proof PATH` selects an exact proof; missing/conflicting matches fail rather than enable default raid buffs. Only targets, duration, iterations/threads, deterministic logging and output destinations are probe controls; fixed-time/vary-length, seed, target level, fight style and all other flags remain inherited. The proof records inherited options, explicit overrides and source-proof hash. `agent-run simc-oracle` uses `TMPDIR=/var/tmp/osso`; adjacent `.simc`, `.txt`, `.console.txt` and `.proof.json` retain exact argv, revision and hashes.
@@ -37,11 +38,13 @@ No native instrumentation is added here. Existing field names come from `dps_par
 
 Passive products itemise printed percentage sources, deduplicated by source/effect/value. They are attribution aids, **not extra multipliers applied atop `mult`**. `per_buff_stack`, `per_consumed_buff_stack`, `buff_present` and `mastery_scaled` remain conditional. Actor-wide modifiers carry `scope=actor` and no invented action ID. Unprinted factors are null; unsupported grammar stays in `unparsed_relevant_lines`; ambiguous result IDs stay null with candidates. Spell0 requires action/actor disambiguation. All observed children/procs remain, but co-occurrence does not prove causality.
 
-`NOT_TRIGGERED_BY_MINIMAL_DRIVERS` means no matching formula observed in30s, not zero damage. Startup modifiers may still print. Failures retain actual errors/proof; no values are fabricated.
+Batch prerequisite plans record complete APLs, durations and pinned public-source locations in `simc_spell_oracle_plans.json`. Longer probes retain reference options/profile/seed. Priming uses actual casts and earned buffs/pools, never injected stacks or fabricated coefficients; intentional idle windows are labelled probe choices. `--untriggered` retains previous artifacts and only reruns unresolved manifest channels. Report parents with printed damage/tick children remain explicitly mapped without changing emitted IDs.
+
+`NOT_TRIGGERED_BY_MINIMAL_DRIVERS` means no matching formula observed during the recorded probe duration, not zero damage. Startup modifiers may still print. Failures retain actual errors/proof; no values are fabricated.
 
 ## Sources
 
-- [CLI](../../../scripts/dps_parity/simc_spell_oracle.py), [batch driver map](../../../scripts/dps_parity/simc_spell_oracle_batch.py), [recorded tests](../../../scripts/dps_parity/test_simc_spell_oracle.py).
+- [CLI](../../../scripts/dps_parity/simc_spell_oracle.py), [batch driver map](../../../scripts/dps_parity/simc_spell_oracle_batch.py), [sourced prerequisite plans](../../../scripts/dps_parity/simc_spell_oracle_plans.json), [recorded tests](../../../scripts/dps_parity/test_simc_spell_oracle.py).
 - [Native receipt fields](../../../crates/server/src/dungeon_simulator/dps_parity/report.rs).
 - [Parity specification](../../specs/dps-parity.md).
 

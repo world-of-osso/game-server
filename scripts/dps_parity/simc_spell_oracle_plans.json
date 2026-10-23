@@ -1,0 +1,152 @@
+{
+  "103:unseen_slash": {
+    "actions": ["cat_form", "auto_attack", "tigers_fury", "ferocious_bite", "shred"],
+    "time": 120,
+    "prerequisite": "Ferocious Bite rolls the Unseen Attack proc using spent combo points; Rake/Rip alone never call it.",
+    "sources": ["engine/class_modules/sc_druid.cpp#L4300-L4328"]
+  },
+  "1480:cull_damage": {
+    "actions": ["auto_attack", "metamorphosis", "cull", "reap", "devour", "consume"],
+    "time": 180,
+    "prerequisite": "Consume generates fragments; Reap consumes them to build Void Metamorphosis stacks. Cull requires active Metamorphosis and no Eradicate.",
+    "sources": ["engine/class_modules/sc_demon_hunter.cpp#L3680-L3695", "engine/class_modules/sc_demon_hunter.cpp#L5034-L5042", "engine/class_modules/sc_demon_hunter.cpp#L6265-L6295"]
+  },
+  "1480:voidsurge": {
+    "actions": ["auto_attack", "metamorphosis", "reapers_toll", "voidblade", "cull", "reap", "devour", "consume"],
+    "time": 180,
+    "prerequisite": "Enter Meta through earned soul stacks, use Voidblade to prime Hungering Slash, then Reaper's Toll to consume its enabled Voidsurge trigger.",
+    "sources": ["engine/class_modules/sc_demon_hunter.cpp#L2691-L2706", "engine/class_modules/sc_demon_hunter.cpp#L3202-L3220", "engine/class_modules/sc_demon_hunter.cpp#L4947-L4960", "engine/class_modules/sc_demon_hunter.cpp#L5830-L5895", "engine/class_modules/sc_demon_hunter.cpp#L6763-L6789"]
+  },
+  "1480:reapers_toll_damage": {
+    "actions": ["auto_attack", "metamorphosis", "reapers_toll", "voidblade", "cull", "reap", "devour", "consume"],
+    "time": 180,
+    "prerequisite": "Reaper's Toll requires both Meta and Hungering Slash; Voidblade primes Hungering Slash after earned soul stacks enable Meta.",
+    "sources": ["engine/class_modules/sc_demon_hunter.cpp#L3202-L3220", "engine/class_modules/sc_demon_hunter.cpp#L5034-L5042", "engine/class_modules/sc_demon_hunter.cpp#L5830-L5895", "engine/class_modules/sc_demon_hunter.cpp#L6763-L6789"]
+  },
+  "250:vampiric_strike": {
+    "actions": ["auto_attack", "vampiric_blood", "death_strike", "heart_strike"],
+    "time": 120,
+    "prerequisite": "Gift of the San'layn enables Vampiric Strike; Death Strike also rolls the proc, and Heart Strike dispatches the replacement while its buff is present.",
+    "sources": ["engine/class_modules/sc_death_knight.cpp#L7378-L7401", "engine/class_modules/sc_death_knight.cpp#L10126-L10134", "engine/class_modules/sc_death_knight.cpp#L11359-L11400"]
+  },
+  "251:frost_strike": {
+    "actions": ["auto_attack", "frost_strike", "howling_blast"],
+    "time": 30,
+    "prerequisite": "Report parent49143 dispatches separate main/offhand damage actions; preserve their printed IDs rather than rewriting them as the report ID.",
+    "sources": ["engine/class_modules/sc_death_knight.cpp#L10965-L11080"]
+  },
+  "251:obliterate": {
+    "actions": ["auto_attack", "obliterate", "howling_blast"],
+    "time": 30,
+    "prerequisite": "Report parent49020 dispatches separate physical main/offhand damage actions; preserve emitted IDs.",
+    "sources": ["engine/class_modules/sc_death_knight.cpp#L11887-L12030"]
+  },
+  "252:necrotic_bolt": {
+    "actions": ["raise_dead", "auto_attack", "army_of_the_dead", "putrefy", "dark_transformation", "death_coil", "festering_strike", "scourge_strike"],
+    "time": 120,
+    "prerequisite": "Putrefying a lesser ghoul summons the Lord-of-the-Dead Magus, whose MID2 Necrotic Bolt is1297086; ordinary Death Coil cannot summon that actor alone.",
+    "sources": ["engine/class_modules/sc_death_knight.cpp#L3715-L3738", "engine/class_modules/sc_death_knight.cpp#L4660-L4680", "engine/class_modules/sc_death_knight.cpp#L15498-L15502"]
+  },
+  "252:death_order": {
+    "actions": ["raise_dead", "auto_attack", "army_of_the_dead", "death_coil", "festering_strike", "scourge_strike"],
+    "time": 120,
+    "prerequisite": "Army supplies lesser army ghouls; ordered summons invoke their single-target Death Order, and runic-power spending can issue more orders.",
+    "sources": ["engine/class_modules/sc_death_knight.cpp#L3758-L3775", "engine/class_modules/sc_death_knight.cpp#L6740-L6772", "engine/class_modules/sc_death_knight.cpp#L13535-L13555"]
+  },
+  "255:strike_as_one": {
+    "actions": ["summon_pet", "auto_attack", "kill_command", "raptor_strike"],
+    "time": 60,
+    "prerequisite": "Strike as One is dispatched from the owner's ability through the actual main pet; an unsummoned pet cannot execute it.",
+    "sources": ["engine/class_modules/sc_hunter.cpp#L1358-L1374", "engine/class_modules/sc_hunter.cpp#L2875-L2895", "engine/class_modules/sc_hunter.cpp#L6429-L6457"]
+  },
+  "258:void_blast": {
+    "actions": ["void_blast", "void_torrent", "mind_blast", "mind_flay"],
+    "time": 60,
+    "prerequisite": "Void Torrent creates Entropic Rift; Void Blast is ready only during that Rift or the Torrent channel, not from Voidform alone.",
+    "sources": ["engine/class_modules/priest/sc_priest.cpp#L370-L411", "engine/class_modules/priest/sc_priest_shadow.cpp#L1507-L1512"]
+  },
+  "263:lightning_bolt_ti": {
+    "actions": ["auto_attack", "doom_winds", "stormstrike", "voltaic_blaze", "lightning_bolt,if=buff.maelstrom_weapon.stack>=10"],
+    "time": 120,
+    "prerequisite": "Thorim's Invocation needs Maelstrom Weapon stacks and an eligible strike during Doom Winds; a hardcast Lightning Bolt alone is not its driver.",
+    "sources": ["engine/class_modules/sc_shaman.cpp#L5640-L5645", "engine/class_modules/sc_shaman.cpp#L12554-L12579"]
+  },
+  "263:tempest": {
+    "actions": ["auto_attack", "tempest", "doom_winds", "stormstrike", "voltaic_blaze", "lightning_bolt,if=buff.maelstrom_weapon.stack>=10"],
+    "time": 180,
+    "prerequisite": "Consuming Maelstrom Weapon rolls Tempest's enabling buff; the Tempest action must then be selected because normal Lightning Bolt is blocked while it is up.",
+    "sources": ["engine/class_modules/sc_shaman.cpp#L7532-L7537", "engine/class_modules/sc_shaman.cpp#L10041-L10048", "engine/class_modules/sc_shaman.cpp#L12155-L12189"]
+  },
+  "265:blackened_soul": {
+    "actions": ["summon_pet", "wither,if=!dot.wither.ticking", "malevolence", "unstable_affliction,if=!dot.unstable_affliction.ticking", "shadow_bolt"],
+    "time": 120,
+    "prerequisite": "Blackened Soul collapses Wither stacks; Agony/UA without Wither never supply the target stack state.",
+    "sources": ["engine/class_modules/warlock/sc_warlock_actions.cpp#L1128-L1158", "engine/class_modules/warlock/sc_warlock_actions.cpp#L1208-L1250"]
+  },
+  "267:blackened_soul": {
+    "actions": ["summon_pet", "wither,if=!dot.wither.ticking", "malevolence", "chaos_bolt", "incinerate"],
+    "time": 120,
+    "prerequisite": "Use Wither explicitly in the Hellcaller profile; Blackened Soul is its stack-collapse damage rather than an Immolate child.",
+    "sources": ["engine/class_modules/warlock/sc_warlock_actions.cpp#L1128-L1158", "engine/class_modules/warlock/sc_warlock_actions.cpp#L1208-L1250"]
+  },
+  "268:purified_spirit": {
+    "actions": ["celestial_brew,if=time>10&buff.aspect_of_harmony_accumulator.value>0&!buff.aspect_of_harmony_spender.up", "keg_smash,if=!buff.aspect_of_harmony_spender.up", "tiger_palm,if=!buff.aspect_of_harmony_spender.up"],
+    "time": 90,
+    "prerequisite": "Prime the accumulator for10 probe seconds, spend through Celestial Brew, then withhold attacks while the spender is active so its natural expiry retains a nonzero pool for Purified Spirit. No injected pool or buff.",
+    "sources": ["engine/class_modules/monk/sc_monk.cpp#L4758-L4765", "engine/class_modules/monk/sc_monk.cpp#L4989-L5028", "profiles/MID2/MID2_Monk_Brewmaster.simc#L41-L60"]
+  },
+  "269:rushing_wind_kick_damage": {
+    "actions": ["auto_attack", "rushing_wind_kick", "blackout_kick", "tiger_palm"],
+    "time": 120,
+    "prerequisite": "Blackout Kick with Combo Breaker rolls the Rushing Wind Kick enabling buff; the raid-free30s probe did not earn this random prerequisite. Allow120s without changing seed or injecting stacks.",
+    "sources": ["engine/class_modules/monk/sc_monk.cpp#L1143-L1205", "engine/class_modules/monk/sc_monk.cpp#L1405-L1423"]
+  },
+  "581:meteor_shower_damage": {
+    "actions": ["auto_attack", "metamorphosis", "spirit_bomb", "fracture"],
+    "time": 60,
+    "prerequisite": "Meta grants Dark Matter; Spirit Bomb damage consumes it through dark_matter_trigger_t to execute Meteor Shower. Soul Cleave is not that trigger.",
+    "sources": ["engine/class_modules/sc_demon_hunter.cpp#L3177-L3200", "engine/class_modules/sc_demon_hunter.cpp#L5007-L5030", "engine/class_modules/sc_demon_hunter.cpp#L5330-L5336"]
+  },
+  "62:arcane_missiles": {
+    "actions": ["arcane_missiles", "arcane_blast"],
+    "time": 30,
+    "prerequisite": "Clearcasting enables Missiles; the already-observed formula is its7268 tick action, not report parent5143.",
+    "sources": ["engine/class_modules/sc_mage.cpp#L3193-L3235"]
+  },
+  "62:prismatic_bolt": {
+    "actions": ["prismatic_bolt", "arcane_barrage,if=buff.arcane_charge.stack=4", "arcane_blast"],
+    "time": 120,
+    "prerequisite": "Arcane Barrage rolls Prismatic Bolt using current Arcane Salvo stacks; build charges with Blast and explicitly select the replacement Bolt while its buff is present.",
+    "sources": ["engine/class_modules/sc_mage.cpp#L2716-L2747", "engine/class_modules/sc_mage.cpp#L2890-L2950"]
+  },
+  "64:shatter_ice_lance": {
+    "actions": ["flurry", "ice_lance,if=debuff.freezing.stack>0|buff.fingers_of_frost.up", "frostbolt"],
+    "time": 60,
+    "prerequisite": "Prime Freezing/Fingers of Frost before Ice Lance; naked Lance spam never builds its Shatter target state.",
+    "sources": ["profiles/MID2/MID2_Mage_Frost.simc#L102-L114", "engine/class_modules/sc_mage.cpp#L1889-L1892", "engine/class_modules/sc_mage.cpp#L5790"]
+  },
+  "66:hammer_of_wrath": {
+    "actions": ["auto_attack", "avenging_wrath", "hammer_of_wrath", "judgment", "blessed_hammer"],
+    "time": 30,
+    "prerequisite": "Hammer of Wrath requires its enabling buff; the Protection Avenging Wrath implementation grants it.",
+    "sources": ["engine/class_modules/paladin/sc_paladin.cpp#L1799-L1802", "engine/class_modules/paladin/sc_paladin_protection.cpp#L740-L754"]
+  },
+  "66:divine_guidance": {
+    "actions": ["auto_attack", "consecration,if=buff.divine_guidance.up", "shield_of_the_righteous", "judgment", "blessed_hammer"],
+    "time": 60,
+    "prerequisite": "Holy-power spenders create Divine Guidance stacks; only then can Consecration consume those stacks for its damage child.",
+    "sources": ["engine/class_modules/paladin/sc_paladin.hpp#L1738-L1740", "engine/class_modules/paladin/sc_paladin.cpp#L375-L400", "engine/class_modules/paladin/sc_paladin.cpp#L562-L570"]
+  },
+  "72:crushing_blow_mh": {
+    "actions": ["auto_attack", "recklessness", "crushing_blow", "bloodthirst"],
+    "time": 30,
+    "prerequisite": "Use the distinct Crushing Blow action while Recklessness and Reckless Abandon are active; ordinary Raging Blow explicitly refuses that state.",
+    "sources": ["engine/class_modules/sc_warrior.cpp#L5072-L5076", "engine/class_modules/sc_warrior.cpp#L5119-L5144", "engine/class_modules/sc_warrior.cpp#L5231-L5244"]
+  },
+  "72:crushing_blow_oh": {
+    "actions": ["auto_attack", "recklessness", "crushing_blow", "bloodthirst"],
+    "time": 30,
+    "prerequisite": "Use Crushing Blow rather than Raging Blow under Recklessness; the parent dispatches its distinct main/offhand actions.",
+    "sources": ["engine/class_modules/sc_warrior.cpp#L5072-L5076", "engine/class_modules/sc_warrior.cpp#L5119-L5144", "engine/class_modules/sc_warrior.cpp#L5231-L5244"]
+  }
+}
