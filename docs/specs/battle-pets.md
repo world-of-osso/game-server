@@ -17,7 +17,7 @@
 - [x] Real journal requests and sourced legacy summon/replacement/natural-expiry/dismiss/map-exit/owner-teardown cases prove this state boundary. This does not admit unresolved companion-toy scripts or certify native rendering/wire-field parity.
 - [x] DismissPet resolves the authenticated owner's authoritative current critter (journal or legacy), matching TC DismissCritter. It never substitutes an older journal tuple, selected foreign actor, guardian or source noncompanion. No current critter means refusal without removing those actors or deleting owned records.
 - [x] Removing a current journal actor clears its matching active journal tuple/snapshot; removing a current legacy actor preserves any older journal actor/tuple and never restores it as current. Private journal replacement cleanup remains separate from RPC dismissal targeting.
-- [ ] Real current Yellow Balloon, legacy critter, older-journal preservation and foreign/noncompanion/guardian cases prove the dismissal contract. No protocol fields or invented UseToy toggle; native wire/presentation parity remains separate.
+- [x] Real current Yellow Balloon, legacy critter, older-journal preservation and foreign/noncompanion/guardian cases prove the dismissal contract. No protocol fields or invented UseToy toggle; native wire/presentation parity remains separate.
 
 ## Owned combat state
 
