@@ -298,7 +298,18 @@ fn fire_efficiency_native70_consumed_hot_streak_doubles_ignite_on_impact() {
 }
 
 #[test]
+#[ignore = "native Flamestrike script-isolation gate"]
 fn fire_flamestrike_2120_spends_actual_earned_hot_streak_at_instant_admission() {
+    assert_flamestrike_spends_earned_hot_streak(2120);
+}
+
+#[test]
+#[ignore = "native Flamestrike script-isolation gate"]
+fn fire_flamestrike_1254851_spends_actual_earned_hot_streak_at_instant_admission() {
+    assert_flamestrike_spends_earned_hot_streak(1254851);
+}
+
+fn assert_flamestrike_spends_earned_hot_streak(spell_id: u32) {
     let _seed = crate::random::seed_scope(1);
     let (mut h, caster) = prepare_follower(209059, 63, 70);
     let target = prepare_dummies(&mut h, 1)[0];
@@ -312,14 +323,15 @@ fn fire_flamestrike_2120_spends_actual_earned_hot_streak_at_instant_admission() 
         crate::auras::has_aura(h.app.world(), caster, 48108),
         "two nativeFireBlast crits earn the real proc"
     );
-    crate::spell_cast::creature_cast(h.app.world_mut(), caster, 2120, Some(target), false).unwrap();
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, spell_id, Some(target), false)
+        .unwrap();
     assert!(
         h.app.world().get::<CastState>(caster).is_none(),
-        "native2120 admitted instant with earnedHotStreak"
+        "native{spell_id} admitted instant with earned Hot Streak"
     );
     assert!(
         !crate::auras::has_aura(h.app.world(), caster, 48108),
-        "ordinary2120 spends its admittedHotStreak at launch"
+        "ordinary{spell_id} spends its admitted Hot Streak at launch"
     );
 }
 

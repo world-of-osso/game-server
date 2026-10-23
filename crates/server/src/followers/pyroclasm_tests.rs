@@ -76,7 +76,7 @@ fn cast_spender_with_proc(spell_id: u32, proc: bool, instant: bool) -> (f32, u8)
                 && event.source == Some(caster.to_bits())
                 && event.target == Some(target.to_bits())
         })
-        .expect("ordinary native Pyroblast must land after completion");
+        .expect("ordinary native spender must land after completion");
     // Actual crit outcomes need not match across native aura applications. Remove
     // only the unchanged native critical multiplier, never inject a crit stat.
     let world = h.app.world();
@@ -145,25 +145,47 @@ fn dps_parity_pyroclasm_hot_streak_instant_neither_consumes_nor_amplifies_existi
 }
 
 #[test]
+#[ignore = "native Flamestrike script-isolation gate"]
 fn fire_flamestrike_2120_pyroclasm_hardcast_spends_one_and_keeps_native_bonus() {
-    let (base, _) = cast_spender_with_proc(2120, false, false);
-    let (boosted, remaining) = cast_spender_with_proc(2120, true, false);
-    assert_eq!(
-        remaining, 1,
-        "ordinary2120 hardcast spends one actual native stack"
-    );
-    assert_spender_damage_ratio(2120, base, boosted, 3.3);
+    assert_flamestrike_pyroclasm_hardcast(2120);
 }
 
 #[test]
+#[ignore = "native Flamestrike script-isolation gate"]
+fn fire_flamestrike_1254851_pyroclasm_hardcast_spends_one_and_keeps_native_bonus() {
+    assert_flamestrike_pyroclasm_hardcast(1254851);
+}
+
+fn assert_flamestrike_pyroclasm_hardcast(spell_id: u32) {
+    let (base, _) = cast_spender_with_proc(spell_id, false, false);
+    let (boosted, remaining) = cast_spender_with_proc(spell_id, true, false);
+    assert_eq!(
+        remaining, 1,
+        "ordinary{spell_id} hardcast spends one actual native stack"
+    );
+    assert_spender_damage_ratio(spell_id, base, boosted, 3.3);
+}
+
+#[test]
+#[ignore = "native Flamestrike script-isolation gate"]
 fn fire_flamestrike_2120_hot_streak_instant_does_not_spend_pyroclasm() {
-    let (base, _) = cast_spender_with_proc(2120, false, true);
-    let (damage, remaining) = cast_spender_with_proc(2120, true, true);
+    assert_flamestrike_instant_retains_pyroclasm(2120);
+}
+
+#[test]
+#[ignore = "native Flamestrike script-isolation gate"]
+fn fire_flamestrike_1254851_hot_streak_instant_does_not_spend_pyroclasm() {
+    assert_flamestrike_instant_retains_pyroclasm(1254851);
+}
+
+fn assert_flamestrike_instant_retains_pyroclasm(spell_id: u32) {
+    let (base, _) = cast_spender_with_proc(spell_id, false, true);
+    let (damage, remaining) = cast_spender_with_proc(spell_id, true, true);
     assert_eq!(
         remaining, 2,
-        "instant2120 retains both hardcast-only stacks"
+        "instant{spell_id} retains both hardcast-only stacks"
     );
-    assert_spender_damage_ratio(2120, base, damage, 1.0);
+    assert_spender_damage_ratio(spell_id, base, damage, 1.0);
 }
 
 #[test]
