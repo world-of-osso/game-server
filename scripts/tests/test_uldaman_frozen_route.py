@@ -47,6 +47,22 @@ class UldamanFrozenSourceAcceptance(unittest.TestCase):
             self.assertEqual([f32_bytes(v) for v in pack["position"]],
                              [f32_bytes(leader["position_x"]), f32_bytes(-leader["position_y"])])
 
+    def test_native_progression_keeps_encounter_order_and_only_frozen_walk_edges(self):
+        graph = self.read_graph()
+        path = graph["boss_path"]
+        self.assertGreater(len(path), 0)
+        edges = {frozenset((e["from"], e["to"])) for e in graph["edges"]}
+        for left, right in zip(path, path[1:]):
+            self.assertIn(frozenset((left, right)), edges)
+        dwarves = {29004390, 29004392, 29004388}
+        self.assertTrue(dwarves <= set(path))
+        ordered = [29004320, 29004417, 29004496, 29004522]
+        self.assertLess(max(path.index(guid) for guid in dwarves), path.index(ordered[0]))
+        positions = [path.index(guid) for guid in ordered]
+        self.assertEqual(positions, sorted(positions))
+        self.assertEqual(graph["teleports"], [])
+        self.assertFalse(set(dwarves | set(ordered)) & set(graph["unreachable"]))
+
     def test_frozen_pulls_keep_all_native_bosses_and_no_duplicate_pack(self):
         graph = self.read_graph()
         route = graph["route"]
