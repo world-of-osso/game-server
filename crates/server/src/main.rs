@@ -18,7 +18,6 @@ mod battle_pets;
 mod calendar;
 mod catalog_data;
 mod chair;
-mod character_stats_data;
 mod class_progression;
 mod collection;
 mod combat;
@@ -33,7 +32,6 @@ mod creature_tap;
 mod creature_tooltip;
 mod currency;
 mod damage_meter;
-mod db2_source_build;
 mod death;
 mod duel;
 #[cfg(test)]
@@ -44,7 +42,6 @@ mod equipment_admin_types;
 mod equipment_effects;
 mod experience;
 mod faction;
-mod faction_reaction;
 mod followers;
 mod frame_stats;
 mod friends;
@@ -133,7 +130,6 @@ mod spawn_pools;
 mod spell_area;
 mod spell_cast;
 mod spell_info;
-mod spell_scaling_data;
 mod stand_state;
 mod stats;
 #[cfg(feature = "system-timings")]
@@ -170,11 +166,13 @@ mod world_quest_objectives;
 mod world_quest_rewards;
 mod world_quests;
 mod world_time;
-mod xp_data;
 mod zones;
 
 use bevy::prelude::*;
 use lightyear::prelude::{ReplicationMetadata, server::ServerPlugins};
+use server_catalog::{
+    character_stats_data, db2_source_build, faction_reaction, spell_scaling_data, xp_data,
+};
 use std::time::Duration;
 
 /// Server tick rate: 20Hz (50ms per tick).
