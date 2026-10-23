@@ -175,6 +175,7 @@ fn decode_encounter_inputs(
             || (entry == 17381 && *id == 17370)
             || (entry == 186737 && *id == 197204)
             || (entry == 186739 && *id == 190187)
+            || (entry == 210108 && *id == 210109)
             || (entry == 184018 && *id == 186696)
             || ([184580, 184581, 184582].contains(&entry) && [184580, 184581, 184582].contains(id))
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
@@ -203,7 +204,7 @@ fn decode_encounter_inputs(
         .map(Result::unwrap)
         .collect();
     let (template_string_ids, spawn_string_ids, script_spawn_groups, reset_spawn_groups) =
-        if populate {
+        if populate || entry == 210108 {
             (
                 crate::world_data::load_template_string_ids(&conn).unwrap(),
                 crate::world_data::load_spawn_string_ids(&conn).unwrap(),
