@@ -30,6 +30,7 @@ fn cast_count(h: &Harness, boss: Entity, spell: u32) -> usize {
 #[test]
 fn encounter_coverage_crawth_native_peck_damage_qualifies() {
     for difficulty in [1, 205] {
+        let _rng = crate::random::seed_scope(u64::from(PECK) + u64::from(difficulty));
         let (mut h, boss, _) = crawth_copy(difficulty);
         let player = h.player();
         h.engage(boss);
