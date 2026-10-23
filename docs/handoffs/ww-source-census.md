@@ -25,6 +25,10 @@ Published kit is a short priority list: Zenith→FoF→Strike of the Windlord→
 
 Selected trait export has79active entries:78 spell definitions and one selection node101232/entry125046 (TraitDefinitionID0, subtree65). The selection node is not an absent native spell. Full per-selected-spell execution matrix remains open.
 
+## Source inventory artifact
+
+Engine `data/diagnostics/ww-parity-2026-10-23/269-source-census-v1.json` (SHA256 `6e8464b9c0a16f4aba97199036e9bf93424775dbdca6ac6f1d4e9811c675b6af`) preserves108 IDs:78 selected spell definitions union IDs from the frozen ST reference action report. Each row contains raw DB2 effects/coefficients, selected entry identity and published kit intervals; all current runtime statuses are explicitly `UNPROVEN_CURRENT_REVISION`. This inventory does not cover every unreachable default-APL action and is not the final execution matrix.
+
 ## Sources
 
 - Native70448 `spell_effect`, `spell_aura_options`, `trait_node_entry`, `trait_definition`, `follower_spec_kit` read-only SQL; canonical database unchanged.
