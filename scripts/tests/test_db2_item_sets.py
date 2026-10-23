@@ -2,6 +2,7 @@
 from contextlib import closing
 from pathlib import Path
 import sqlite3
+import os
 import sys
 import tempfile
 import unittest
@@ -9,9 +10,22 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import db2
+import skyborne_kit_fixture
+from scripts.tests.fixture_env import requires_env
 
 
 class ItemSetImportTests(unittest.TestCase):
+    @requires_env('FOREVER_DB2_SOURCE')
+    def test_owned_kit_projection_retains_required_native_set_catalogs(self):
+        with closing(skyborne_kit_fixture.fixture_database(Path(os.environ['FOREVER_DB2_SOURCE']))) as conn:
+            tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            self.assertTrue({'item_set', 'item_set_spell'}.issubset(tables),
+                            'owned runtime kit projection must retain native set catalogs')
+            # This captured starting kit contains no Retail set pieces.
+            self.assertEqual(conn.execute('SELECT count(*) FROM item_sparse WHERE ItemSet!=0').fetchone(), (0,))
+            self.assertEqual(conn.execute('SELECT count(*) FROM item_set').fetchone(), (0,))
+            self.assertEqual(conn.execute('SELECT count(*) FROM item_set_spell').fetchone(), (0,))
+
     def test_native_ret_and_elemental_sets_survive_normal_import(self):
         tables = [name for name in db2.TABLES if name in {'ItemSet', 'ItemSetSpell'}]
         with tempfile.TemporaryDirectory() as directory:
