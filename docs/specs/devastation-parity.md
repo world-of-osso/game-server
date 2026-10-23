@@ -31,6 +31,12 @@ Four ignored `giantkiller_native_*` cases were pushed at3caafcc03 before impleme
 - [x] Giantkiller targeted GREEN and full floor/Tyranny/exclusion qualification atf50689cfa (4/4,25.40s).
 - [ ] Literal APL dispatch, remaining native damage channels, consumables and final300s parity. Historical pre-Giantkiller1cf83f408 measures15650.57ST/20146.43three-target versus113727.53/182444.53 (−86.24%/−88.96%); these are diagnosis, not acceptance.
 
+## Native build divergences
+
+`DEVASTATION_REFINED_ESSENCE_BUILD_DIVERGENCE`: native70448 `SpellEffect` for1261452/EffectIndex1 is aura108, operation22 (`PeriodicHealingAndDamage`), base+15%. Pinned SimC70391 applies+25% to Disintegrate. Preserve native+15%; never tune it to the oracle. Evidence: `game-engine/data/diagnostics/dev-evoker-parity-2026-10-22/disintegrate-factor-source-receipt.json` records read-only native rows and the no-raid oracle factors/hash. This delta is data provenance, not a missing consequence or a parity-band waiver. Retire when the authenticated source builds agree.
+
+Arcane Intensity375618's base8% versus SimC16% is not this divergence: selected rank2 requires native rank-derived effect points. The shared trait-rank lifecycle owns that correction; Dev must re-check its deployed data receipt before attributing a remaining numerical difference.
+
 ## Out of scope
 
 No coefficient/stat tuning, canonical data changes, unrelated specialization scripts, alternate APL evaluator or claim that a SimC policy is an implemented TC script. TC a352b1fa has no362980 handler. DB2 supplies the mastery amount; pinned `sc_evoker.cpp4613–4629,5721,6165,7449` supplies only the explicit health/Tyranny application policy. Retire this policy when authenticated native behavior replaces those formula assumptions.
