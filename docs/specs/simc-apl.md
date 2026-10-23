@@ -12,9 +12,9 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] Implement conditional `run_action_list` switches that never resume the caller after child exhaustion; reject unknown lists.
 - [x] Select explicit native targets with `target_if=min/max:<expr>` before the row's `if`; preserve native tie order. Unknown target operands/adapters fail explicitly.
 - [x] Scope a run row's selector to that control action. Child actions retain their own targets; run selection must not retarget them.
-- [ ] Sample native cast readiness independently for each action/target pair. Harmful precasts use the actor's actual selected enemy when combat candidates have not yet been supplied.
-- [ ] Deliver Player literal spells through ordinary Player requests with the selected explicit target, rechecking knowledge and rejecting expired identities rather than redirecting. Preserve selected and AA targets; retain native creature dispatch for WW followers.
-- [ ] `retarget_auto_attack` changes only the running AA victim, preserving both swing timers and the actor's selection. An already-running AA must not restart onto the primary target.
+- [x] Sample native cast readiness independently for each action/target pair. Harmful precasts use the actor's actual selected enemy when combat candidates have not yet been supplied.
+- [x] Deliver Player literal spells through ordinary Player requests with the selected explicit target, rechecking knowledge and rejecting expired identities rather than redirecting. Preserve selected and AA targets; retain native creature dispatch for WW followers.
+- [x] `retarget_auto_attack` changes only the running AA victim, preserving both swing timers and the actor's selection. An already-running AA must not restart onto the primary target.
 - [x] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.
 
 ## How it works
@@ -39,7 +39,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 Run/target source extension: genuine14PASS/4RED at a446f0634; explicit `Action.target` and candidate-ID API scaffold then genuine16PASS/8RED at2088713a6 (no compiler errors). Ate7fdc4dd1 all24 shared interpreter tests passed, but the real pinned SimC run-selector probe invalidated the inherited-child oracle; that packet is withdrawn. Corrected binary-backed oracle:23PASS/1 genuine assertion RED at2d6a66259 →24/24GREEN atad720fc3c (28.61s compile,0compiler warnings/0ignored). Native per-target dispatch remains caller-owned; [isolated proof packet](../handoffs/shared-run-target-proof-ledger.md).
 
-Player execution boundary: seven actual native cases at4f91688e8 give1WW controlPASS/6genuine assertionRED (34.94s runtime). Normal Player delivery, per-target admission, harmful precast and AA-only retarget implementation awaits targeted GREEN. [Shared machinery](../wiki/systems/simc-apl.md#shared-literal-fixture-machinery).
+Player execution boundary: seven actual native cases at4f91688e8 give1WW controlPASS/6genuine assertionRED (34.94s runtime). At e99b879e8 after hp1026, all7 pass (27.17s runtime,18m08 compile,0compiler warnings). [Scoped proof](../handoffs/literal-player-dispatch-proof-ledger.md); broader integration remains lead-owned. [Shared machinery](../wiki/systems/simc-apl.md#shared-literal-fixture-machinery).
 
 ## Shared native facts
 
