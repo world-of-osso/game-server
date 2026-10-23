@@ -2,7 +2,7 @@
 
 ## Protection producer dispatch — 2026-10-22
 
-Native Attr3 `ALWAYS_HIT` bypasses avoidance after school/mechanic immunity; missile launch still evaluates reflection. Source and deterministic native Evasion RED/control evidence live in the [producer contract](../../specs/protection-damage-producers.md#native-always_hit-defense-reader); GREEN remains pending.
+Native Attr3 `ALWAYS_HIT` bypasses avoidance after school/mechanic immunity; missile launch still evaluates reflection. Source and deterministic native Evasion RED/control evidence live in the [producer contract](../../specs/protection-damage-producers.md#native-always_hit-defense-reader); d1335d807:4PASS17.98s/no warnings, including original charge primary/splash/stun assertions.
 
 `batch3` ports pinned TC's known-Rend landed-hit hook and Shield Charge Dummy→native effect96 bridge; native movement/landing own their original children. Phalanx keeps native proc amounts/masks/child and adds only named SimC Clap eligibility and execute-time Shield Slam consumption. These paths have seven targeted native behavior/control passes; [producer contract and exact receipts](../../specs/protection-damage-producers.md) remain the coverage source.
 

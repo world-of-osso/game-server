@@ -1,3 +1,7 @@
+## 2026-10-22 — Native ALWAYS_HIT defense GREEN
+
+[Producer contract](../specs/protection-damage-producers.md#native-always_hit-defense-reader): d1335d8074PASS17.98s/compile3m16/no warnings. Actual Evasion cannot stop native Charge movement/landing; ordinary Slam still avoids. Both native immune recipients and native magic reflection retain their receipts; original ordinary Charge primary/splash/stun assertions pass. Prior seventeen disjoint producer passes retained; poison and numerical timing remain open.
+
 ## 2026-10-22 — Native ALWAYS_HIT avoidance RED
 
 [Producer contract](../specs/protection-damage-producers.md#native-always_hit-defense-reader): d3de60bba native5277 Evasion deterministically makes385953 dodge, preventing movement; ordinary23922 avoidance and23920→20006 reflection qualify their inputs. Separate immunity-area assertion had an out-of-range fixture recipient, corrected without changing native data. Generic Attr3 reader implemented after immunity; GREEN pending.

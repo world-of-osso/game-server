@@ -24,7 +24,7 @@ Restore the missing spec73 producer channels identified by `game-engine/data/dia
 |Producer|Status|Proof|
 |---|---|---|
 |Thunder Clap Rend|TC hit hook implemented; native damage/ownership qualified|5e69c75db both Clap cases PASS; charge case remains separate|
-|Shield Charge chain|Prior native GREEN; current single positive-area assertion failed, diagnosis pending|Merged1dbfec04b PASS;93ca4b7d1 fails positive splash receipt; diagnostics now retain actual native outcomes|
+|Shield Charge chain|Native ALWAYS_HIT reader qualified; original charge assertions pass|d1335d807:4PASS17.98s, actual Evasion avoidance/control, immunity, reflection and ordinary charge primary/area/stun|
 |Whirling Blade/Ravager|Native-RPPM producer, sourced4s lifetime and timed damage/expiry qualified|1ba8cc854:2PASS13.14s; native Ravager RED5e69c75db and updated Whirling RED542fec1aa retained|
 |Phalanx/Bloody Rebuke|Phalanx and native-equipped Bloody Rebuke behavior/controls GREEN|5e69c75db produces1278009 but fails consumption; absence and foreign-buff controls pass; 7327a4c03 non-Clap actual-hit RED0PASS/1FAIL47.10s: Shield Slam wrongly produces the buff; Ignored actual four-piece free-Revenge/Ravager-tick RED and three-piece/paid controls committed, execution pending|
 |Guillotine/Venomfang|Base Guillotine/equipment/role controls GREEN; health snapshot implemented; Venomfang/perfected poison missing|Ignored actual219-level270173 equip/base-child and catalog/unequip controls committed; RED execution pending; Venomfang pending|
@@ -33,7 +33,7 @@ Restore the missing spec73 producer channels identified by `game-engine/data/dia
 
 Native385952/385953/385954 carry Attr3 `0x00040000`. Pinned TC Object.cpp1947–1995 returns success after immunity/reflection but before avoidance. Native Evasion5277 supplies200% dodge without edited metadata or RNG. d3de60bba targeted RED:1PASS/2FAIL9.95s, compile11m05/no warnings (`always-hit-red.log`): ordinary23922 avoids correctly, while385953 logs `Miss(Dodge)` and prevents movement. Native23920 reflects native20006 correctly. The immunity control already logs primary385954 `Miss(Immune)` but its second assertion was invalid: the area recipient was outside the caster-centered landing radius. Move the caster into actual landing range for that control; preserve both immune recipients and require their receipts. This fixture failure is not production RED.
 
-The generic defense reader now honors ALWAYS_HIT only after native school/mechanic immunity. Reflection remains its separate missile-launch decision. Native spell/effect rows, defense chances and RNG remain unchanged. Three targeted controls and the affected ordinary charge case require GREEN before acceptance; seventeen disjoint equipped/producer passes remain retained.
+The generic defense reader now honors ALWAYS_HIT only after native school/mechanic immunity. Reflection remains its separate missile-launch decision. Native spell/effect rows, defense chances and RNG remain unchanged. d1335d807 targeted GREEN:4PASS17.98s, compile3m16/no warnings (`always-hit-green.log`): native Evasion chain bypass with ordinary Slam avoidance, both native immunity receipts, native magic reflection, and original positive primary/splash/stun charge assertions pass. Seventeen disjoint equipped/producer passes remain retained; no unchanged cohort replay.
 
 ### First TC producer receipts
 
