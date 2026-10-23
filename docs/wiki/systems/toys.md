@@ -2,6 +2,12 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Caster offsets41/43/48 source boundary (2026-10-23)
+
+[Contract](../../specs/spell-summon-area-trigger.md#source-caster-offsets414348). TC a352b1fa SpellInfo108–135/770–827 and Spell.cpp1611–1642 specify front-right41/back-left43/back48, caster CalcRadius/motion and combat-reach floor. Only corners41/43 use default3 when their own entry is absent; back48 inherits A or starts at0. Reuse source73 extent and direct collision/ground once; paired target selection owns the final emitted center. Existing32 grounding-only behavior is unchanged. FORCE_DEST_LOCATION retains the MAX_HEIGHT gap; family modifiers/native movement ingress/Detour remain unqualified.
+
+Pinned83 raw rows/11 tables and1361 native selector rows, plus four source actor/model records. Initial0678: nine genuine RED/14controls19.39s; one fixture-only native35972 effect43 action filter hid B43. Corrected0679 target-selection boundary genuinely refuses43,1RED/1control5.74s. Balloon tests use real learning/UseToy, source1s cast/60s actor, zero item recovery and DismissPet, never an invented UseToy toggle. Actual GREEN/admission pending; pipeline remains545. Evidence:caster-offset-source-provenance.json and caster-offset-proof-ledger.json.
+
 ## Current-critter dismissal authority (2026-10-22)
 
 [Contract](../../specs/battle-pets.md#source-companion-target-identity). TC a352b1fa PetHandler.cpp41–62 DismissCritter resolves a supplied creature and only removes it when its GUID equals the owner's current CritterGUID. This is actor dismissal, not companion aura PetCancelAura cancellation. Lead explicitly selects that identity contract for the frozen, argument-free project DismissPet RPC: current journal or legacy critter, never an older AccountPetJournal.summoned tuple or selected/guardian/foreign substitute. No new protocol fields or invented UseToy toggle.
