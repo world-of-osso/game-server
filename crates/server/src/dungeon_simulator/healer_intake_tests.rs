@@ -16,9 +16,10 @@ fn healer_benchmark_raw_spell_receipt_precedes_native_absorb() {
             source: crate::auras::AuraSource::Cast,
         },
     );
+    let bonus_caster = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 5.0);
     h.app.insert_resource(Capture {
         members: vec![h.caster],
-        sources: [(h.npc, (6, 6))].into(),
+        sources: [(h.npc, (6, 6)), (bonus_caster, (7, 6))].into(),
         ..Default::default()
     });
     let spell = h
@@ -29,19 +30,18 @@ fn healer_benchmark_raw_spell_receipt_precedes_native_absorb() {
         .unwrap()
         .clone();
     let before = h.health(h.caster);
-    crate::spell_cast::effects::deal_damage(
+    crate::spell_cast::effects::deal_damage_shield(
         h.app.world_mut(),
         &crate::spell_cast::effects::EffectCtx {
             caster: h.npc,
             spell: &spell,
-            depth: 0,
+            depth: 1,
             dest: None,
             chain_multiplier: 1.0,
         },
+        bonus_caster,
         h.caster,
         200.0,
-        false,
-        false,
     );
     assert_eq!(
         h.app.world().get::<Health>(h.caster).unwrap().current,
@@ -58,6 +58,15 @@ fn healer_benchmark_raw_spell_receipt_precedes_native_absorb() {
     assert_eq!(hits[0].school, 4);
     assert_eq!(hits[0].target_slot, 0);
     assert_eq!(hits[0].source_guid, 6);
+    let flags = serde_json::to_value(&hits[0].kind).unwrap();
+    assert_eq!(
+        flags["Spell"]["depth"], 1,
+        "triggered incoming hits retain native proc eligibility"
+    );
+    assert_eq!(
+        flags["Spell"]["bonus_source_guid"], 7,
+        "shield owner and aura caster retain separate native identities"
+    );
 }
 
 pub(super) fn small_intake() -> Intake {
