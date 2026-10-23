@@ -31,6 +31,11 @@ A gameplay panic or initialization failure must return an explicit `aborted` res
 - [ ] Run Azure seeds1–10 with `--jobs`, unchanged Garrick/Crenna/Shuja/Meredy/Austin roster and native205 ContentTuning2155 maximum level70; report every clear/wipe/stall/block and root cause.
 - [x] Rerun Stockade seeds1–10 after generic source-height preservation: native-height batch12 all10 clear/30boss Deaths/0failures.
 
+## Data-driven map dispatch
+
+- [ ] Accept any selected map with exactly one valid `content/dungeons/*-<map_id>.json` graph and explicit source difficulty/boss order in `route-requirements.json`. Keep the existing map34 CLI default; invalid, missing, ambiguous or mismatched selections fail explicitly instead of selecting another map.
+- [ ] Preserve existing frozen graph bytes and route order. Difficulty and required bosses come from data, never map-specific Rust branches; all actors in shared encounters remain required. Native corridor capture uses this same dispatch without changing its eligibility/radius calculation.
+
 ## Uldaman frozen source-route packet
 
 - [x] Freeze map2451's same-map Normal population and native formation identities/heights in `content/dungeons/uldaman-2451.json`, using the existing Stockade/Azure graph and `FOLLOWER_ROUTE_BOSS_PATH_CORRIDOR` format. Native NPC patrols are not party progression routes.

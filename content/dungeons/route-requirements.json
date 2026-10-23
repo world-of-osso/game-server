@@ -1,15 +1,18 @@
 {
   "34": {
+    "difficulty_id": 1,
     "boss_order": [46383, 46254, 46264],
     "gate_entries": {},
     "source": "Preserve qualified Stockade boss order: Moloch, Hogger, Overheat (prior route indices18/32/66)."
   },
   "2451": {
+    "difficulty_id": 205,
     "boss_order": [184581, 184582, 184580, 184018, 184124, 184422, 184125],
     "gate_entries": {},
     "source": "Authenticated70448 DungeonEncounter OrderIndex0/1000/2000/3000/4000; shared Lost Dwarves uses JournalEncounterCreature OrderIndex Baelog0/Eric1/Olaf2. All native actors retained; no new static prerequisite inferred."
   },
   "2515": {
+    "difficulty_id": 205,
     "boss_order": [186644, 186739, 186737, 186738],
     "gate_entries": {"186644": [191164]},
     "source": "TC a352b1fa Azure instance encounter order; leymor_arcane_tender group and native205 intro fixture require all three191164, source formation29001816."
