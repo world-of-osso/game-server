@@ -37,7 +37,14 @@ fn prepare_ignites(target_count: usize) -> (Harness, Entity, Vec<Entity>) {
                 .unwrap()
                 .iter()
                 .any(|aura| { aura.spell_id == IGNITE && aura.caster == caster }),
-            "ordinary Fireball must produce this caster's actual Ignite on every target"
+            "ordinary Fireball must produce this caster's actual Ignite on every target: target={}, now={}, own events={:?}",
+            target.to_bits(),
+            aura_now(h.app.world()),
+            h.inbox
+                .log
+                .iter()
+                .filter(|event| event.source == Some(caster.to_bits()))
+                .collect::<Vec<_>>()
         );
     }
     (h, caster, targets)
