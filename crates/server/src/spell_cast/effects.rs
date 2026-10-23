@@ -1302,6 +1302,7 @@ pub(super) fn damage_before_mitigation(
             * crate::auras::summon_damage::multiplier(world, bonus_caster)
             * creature_type_damage_multiplier(world, bonus_caster, target, ctx.spell)
             * mechanic_damage_multiplier(world, bonus_caster, ctx.spell, effect)
+            * super::scripts::combo_strikes_multiplier(world, bonus_caster, ctx.spell.id)
     };
     let taken = if effect.is_some_and(|effect| {
         matches!(
