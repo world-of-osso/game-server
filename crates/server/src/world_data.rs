@@ -191,7 +191,7 @@ pub const GROUP_AI_FLAG_FOLLOW_LEADER: u32 = 0x200;
 
 #[derive(Resource, Clone, Default)]
 pub struct WorldData {
-    pub templates: HashMap<u32, CreatureTemplate>,
+    pub templates: crate::catalog_data::CatalogData<HashMap<u32, CreatureTemplate>>,
     /// Actual zephras_row_source reconstructed template markers select authored fixed stats.
     pub(crate) authored_templates: HashSet<u32>,
     pub(crate) summon_levels: summon_levels::SummonLevels,
@@ -199,8 +199,9 @@ pub struct WorldData {
     pub(crate) jump_charge_params: crate::spell_cast::jump_charge::JumpChargeParams,
     /// `content_creature_template_difficulty`: the template of an entry in a dungeon copy
     /// at that difficulty (`CreatureTemplate::GetDifficulty`), keyed (entry, difficulty).
-    pub difficulty_templates: HashMap<(u32, u32), CreatureTemplate>,
-    pub spawns: Vec<CreatureSpawn>,
+    pub difficulty_templates:
+        crate::catalog_data::CatalogData<HashMap<(u32, u32), CreatureTemplate>>,
+    pub spawns: crate::catalog_data::CatalogData<Vec<CreatureSpawn>>,
     pub spawns_by_map: HashMap<u16, Vec<usize>>,
     /// Keyed by `waypoint_data.id` (path ID, not creature guid).
     pub waypoints: HashMap<u32, WaypointPath>,
@@ -269,6 +270,16 @@ impl WorldData {
 }
 
 pub fn load_world_data(path: &Path) -> WorldData {
+    #[cfg(test)]
+    return crate::test_data::catalog_cache::load(path, || Ok(read_world_data(path)))
+        .expect("load immutable world fixture definitions")
+        .as_ref()
+        .clone();
+    #[cfg(not(test))]
+    read_world_data(path)
+}
+
+fn read_world_data(path: &Path) -> WorldData {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("Failed to open world.db");
 
@@ -318,12 +329,12 @@ pub fn load_world_data(path: &Path) -> WorldData {
     );
 
     WorldData {
-        templates,
+        templates: templates.into(),
         authored_templates,
         summon_levels,
         jump_charge_params,
-        difficulty_templates,
-        spawns,
+        difficulty_templates: difficulty_templates.into(),
+        spawns: spawns.into(),
         spawns_by_map,
         waypoints,
         addons,

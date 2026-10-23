@@ -165,7 +165,7 @@ fn import_class_world() -> std::sync::Arc<tempfile::TempDir> {
 /// Explicit native template authority for fixtures whose spells restrict creature type.
 pub(crate) fn load_native_creature_world(entries: &[u32]) -> crate::world_data::WorldData {
     let source = crate::test_data::world_data();
-    let templates = entries
+    let templates: std::collections::HashMap<_, _> = entries
         .iter()
         .map(|entry| {
             let template = source
@@ -176,7 +176,7 @@ pub(crate) fn load_native_creature_world(entries: &[u32]) -> crate::world_data::
         })
         .collect();
     crate::world_data::WorldData {
-        templates,
+        templates: templates.into(),
         expected_stats: source.expected_stats.clone(),
         ..Default::default()
     }

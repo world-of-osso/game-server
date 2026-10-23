@@ -10,6 +10,55 @@
 
 [Dispatch](systems/spell-casting.md#protection-producer-dispatch--2026-10-22): TC known-Rend/Charge and named Phalanx paths have seven targeted native passes across recorded scopes; corrected fixtures preserve sourced reach/template and9s cooldown. Whirling foreground-primary/native5RPPM/4000ms snapshot and shared native Ravager2000ms/8yd ground pulses implemented after actual missing-producer RED; GREEN pending. No full ability/loadout/DPS parity or chasing/soft-cap claim. [Coverage and receipts](../specs/protection-damage-producers.md).
 
+## 2026-10-22 — Target73/Ruthers focused qualification
+
+Final affected15/15GREEN73.32s atd4;retained32controls139.13s+IG5 at2a paths unchanged. Ruthers real learning/UseToy/model/owner/map/radius5,natural30s expiry/30min recovery-reuse,missingauthority no actor/item recovery plus real retry. Initial two fixture failures corrected with actual LOS and GCD-vs-item distinction; observed1500ms/is_gcd=true is not30min recovery. ExactFull1173 census544→545 only82467;seven blocked-row list deltas/six unavailable-string deltas, Wikky/Carp remain exact action gaps. Check0/65.82s/no warnings/fmt0/manual readability; no native/generic-modifier/ingress/Detour claim. [Boundary](systems/toys.md#target73-caster-radius-source-boundary-2026-10-22).
+
+## 2026-10-22 — Target73 source mechanism test-first
+
+1758 native rows/55 raw rows9tables;14RED/20controlsPASS111.18s after movement-mask/NO_MOVEMENT_RADIUS_BONUS extension. Caster extent/reach/direct authority/shared area sample implemented after RED; Wikky forage/presents/Pandaria and Carp kick remain exact gaps, Ruthers actual-use qualification pending. [Boundary](systems/toys.md#target73-caster-radius-source-boundary-2026-10-22).
+
+Imaginary Gun ig981 landed1aef894cf;0034 ancestry independently verified and inactive local/remote branch cleaned. Gate suite2170PASS/1follower_combatrefs_native_three_targets_reach_area_policyFAIL/8ignored1657.20s,check0/fmt0;land merge/fmt/check/push0. Not an all-green integration suite; no unrelated-fix/native claim.
+## 2026-10-22 — Gorek minimum-alert partial
+
+[Gorek](systems/boss-scripts.md#gorek-minimum-alert-partial--2026-10-22): ignorednativeRED→sourceMight/Aegis/Heated/Storm success-owned/namedlowerhold lanes. Post-master921957ad7 native4GREEN31.12s Normal1/projected205,first3.6sMight/actualauras/92s3cycles/reset/actualcopycredit/corpse;stable-keySQLreceipt. Anvil/selector/Stormdummy and existingroutegap retained, no wholefight/publication claim.
+
+## 2026-10-22 — Khajin non-Mythic partial
+
+[Khajin](systems/boss-scripts.md#khajin-non-mythic-partial--2026-10-22): ignorednativeRED→sourceShock/Hail/Surge lanes; post-master930e63f96 native4GREEN20.76s Normal1/projected205, real7sHail,90s5/3/3completions/reset/actualsecondcopycredit/corpse. ManualinstantShock fixture observes0.1s beforeautomatic6s request, noAI/timer bypass. Surge/Boulder/controller gaps and stable-key SQLreceipt retained.
+## 2026-10-22 — Light of the Titans and native hit masks
+
+[Native Titans](systems/auras.md#light-of-the-titans-and-hit-proc-masks--2026-10-22): ordinary Judgment-earned Word actualmissing378412 RED→native40% HoT; shared Defense0 mask root fixed per TC attrs, then actualhostileDoT110vs329 RED→native200%selfbonus. Merged891b9ab1d19GREEN38.11s/check0/2m08s/zero warnings/fmtPASS. Existing test expectations unchanged; [census](../../docs/handoffs/native-hit-proc-mask-census.md)334969spell/5670staticcandidateaura changes; fullworkspaceleadgate required, no efficacy/completeproducer claim.
+
+## 2026-10-22 — Imaginary Gun companion server contract qualified
+
+Exact279843 shape admissionbec533e21 follows four genuineUseToyREDs;26GREEN191.47s plus corrected-filter Coyote4GREEN38.62s/check0-53.68s/no warnings/fmt0. Full1173 census543→544 only163705,no other row/reason delta. Real owned-journal/legacy current critter,10s recipient aura/natural expiry,180s natural recovery/reuse,foreign/guardian/ordinary-Ally isolation,invariants,four drifts. Compile/import and missile-sibling fixture failures excluded; three capacity-only attempts separately retained. Native animation/audio/PetCancelAura rejection unqualified. [Toy source boundary](systems/toys.md#imaginary-gun-companion-visual-boundary-2026-10-22).
+
+## 2026-10-22 — Target74 landed; Imaginary Gun capacity-only attempt
+
+Target74 tg967 landedec7b24f9f,2165PASS/0FAIL/8ignored2350.45s/check0-129s/fmt0;d23 independently ancestor of911d7be82,inactive local/remote branch cleaned. Imaginary Gun test/spec21a1 pushed/readback clean; first60 normal-capacity checks started no build, not RED. [Toy boundaries](systems/toys.md#imaginary-gun-companion-visual-boundary-2026-10-22).
+
+## 2026-10-22 — Imaginary Gun companion visual source/fixture
+
+[Toys](systems/toys.md#imaginary-gun-companion-visual-boundary-2026-10-22):163705/279843 source150 companion aura10s/item recovery180s. Caster1074 and target1669/ANIM_DEATH1 are authored visual bindings,not invented gameplay death.61rows29tables complete animation/sound/fallback metadata plus8root/item/clock snapshots;actual-journal/physical-learning/UseToy tests added,RED pending. Lead accepts natural expiry;TC companion PetCancelAura refusal remains source-only/unqualified,no protocol edit. No implementation/admission/native playback claim. PriorCritterct944 landed452b49b78 independently ancestry-verified/branch cleaned;target74d23 queuedtg967 owns check/format and localcheck cancelled explicitly.
+## 2026-10-22 — Native pet diagnostic history
+
+[Pet samples](systems/dungeon-simulator.md#pet-diagnostic-history-2026-10-22): realpet/Death/evade/despawn RED12.76s→4baGREEN11.66s.0.5s samples/terminal nowretainnativepetidentity,HP/position/refs/threatandrelatedopponentresetstates,includingzero-threatacquisitionandexplicitunavailablevaluesafterdespawn. Diagnostic-only, noAI/heal/threatmutation. Retainedabort/export+summary2PASS; single seed7capturequeued, notReliability.
+
+## 2026-10-22 — Abort-safe native simulator evidence
+
+[Recoverable aborts](systems/dungeon-simulator.md#abort-safe-run-evidence-2026-10-22): native FixedUpdate unwind RED10.13s→544GREEN21.36s preserves291ordered events in final aborted report and separate status/reason export. Native summary1PASS/process runner3PASS; real invalid-level initialization writesbothfiles/aborted1 beforeexpectedclear-assertionexit101. No silent clear, invented events or SIGKILL guarantee. [Pending history](systems/dungeon-simulator.md#native-evade-releases-pending-pull-history-2026-10-22) bounded native reset RED→3cebGREEN; oldseed7stall retired afterformation integration.
+## 2026-10-22 — Elemental Overload actual-cast RED
+
+[Cast boundary](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22): actualownMastery/SK/Lightning damage passes,45284absent; genuine1RED/removedMastery1positive8.51s/zero warnings. TC400ms/defaultNONE callback and native effect amounts qualified; first188196→45284 consequence445c3ccc6 uses actual charged-modifier provenance, no livebuff guess. Timingcontrolbf4098b52 and targetedGREEN pending; other roots/additionaloverloads/fullAPL remain open. Inundate prior packet landed through leadin962.
+
+## 2026-10-22 — Target74 paired destination/recipient proof
+
+[Toys](systems/toys.md#target74-and-cranky-crab-source-action-boundary-2026-10-22): sourceMax/inheritedA identity, explicit-target reference/direct geometry and one sampled center cached with recipients per processed group. Generic49f4476e8 follows9RED/control8PASS44.14s plus native86088 ordering1RED/control1PASS26.25s; exact166662 ride-gap ca56cd3f4 is separate. Composite34GREEN111.78s retains148 physical/selector, critter, Coyote,99104slot6,21,dummy and census controls. Pipeline543 unchanged;onlyCrab target74 becomes source battle-pet ride interaction gap. Fmt0/manual readability;check pending. No live player-cast default/native playback/Crab ride certificate. Initial compile-only fixture failure and no-admission capacity attempt are excluded and retained separately.
+
+## 2026-10-22 — Target74 and Cranky Crab source action audit
+
+[Toys](systems/toys.md#target74-and-cranky-crab-source-action-boundary-2026-10-22):74 centers explicit object, not the independently selected150 critter; source B421 Radius3/Min3/Max6 must use Max6 before Max-Min sampling. SourceCrab289330 promises a battle-pet ride but149189 lacks a sourced vehicle/AI/script binding. Generic destination support must retain that named action gap, not false-admit scenery. Native70448 geometry/authority and ride-marker tests added; RED pending.
 ## 2026-10-22 — Partial corridor continuation
 
 [Navigation](systems/navigation.md#partial-corridor-continuation--2026-10-22): Gorek native graph26936polygons connected; unchanged8192pool reaches in296/263/84polygons over three queries. Production library+mover RED reproduce discarded partial corridor/immediate Blocked. Typed resource-limited partial paths and segment-end repath keep asset/pool/tolerance values; completed-search disconnects stay immediately Blocked. At884178a15 Gorek path/mover and three Brackenhide movers GREEN, genuine-disconnect/complete-leg controls GREEN; combined48controls40PASS/8existing ignored Stockade/current-victim FAIL. Baseline/follower/check gates pending, no overall acceptance.
@@ -83,6 +132,10 @@
 ## 2026-10-22 — Feel the Burn native eligibility and async stack RED
 
 [Native boundaries](investigations/follower-data.md#feel-the-burn-native-eligibility-and-overlap--2026-10-22): actualFireBlast2mastery4s positive; actualFireballwrongproc and independent4s application2vs1 are genuine2RED/21.74s. [Generic native490](systems/auras.md#native-asynchronous-stack-expirations--2026-10-22) has pinned SimC authority plus exact70448 flag, no guessed per-spell timer. Runtimeac5eb241d/source/spec committed; GREEN pending, cases remain ignored. Frozen Ascendance entry packetb11 unchanged.
+## 2026-10-22 — Vexamus projected native partial
+
+[Vexamus](systems/boss-scripts.md#vexamus-projected-native-partial--2026-10-22): ignored firstExpulsion/Bomb RED before source5→18/15→18 lanes. Post-master d1336fa13 native4GREEN49.02s Normal1/projectedFollower205, real cone damage,82s ongoing completions, actual second copy, credit/corpse/native-home-reset; producer1GREEN and stable-key SQL receipt. Energy/MaxdormuOrbs/Bombdummy/timeline context remain gaps, no whole-fight/publication claim.
+
 ## 2026-10-22 — Native power receipt observability
 ## 2026-10-22 — Utility Attr4 master refresh
 
@@ -125,7 +178,19 @@
 ## 2026-10-22 — Ki'katal source-clock partial
 
 [Ki'katal](investigations/follower-data.md#kikatal-source-clock-partial--2026-10-22): ignored native firstWebsRED→5b036e1ea3/3GREEN57.40s, eleven90s requests perNormal/Follower, nativeVolley/Singularity damage, evade/rearm, actualcopy-credit/corpse proof. Binding-only producer1/1GREEN preserves source/native/population; lower-bound alerts and absentcontrollers remain gaps. Canonical database untouched.
+## 2026-10-22 — Party-pet threat coverage
+
+[Coverage](investigations/follower-data.md#party-pet-threat-coverage--2026-10-22): corrected native2REDbe6f75d86→3GREEN971491e4c proves actualDuck/Felguard pet-onlyenemy admission and existingGarrick62124pickup. Localcombatmembership only; party/healer/stat/PetAIpolicyunchanged. Real4baAzureseed7 petdeath/reset is recorded separately from older0b ordering; no fullAzure proof. Merged470 controls17PASS14.65s/check3m22s/formatPASS, zero warnings; scope retains CC and launch suppression.
+
+## 2026-10-22 — Attacked controlled-unit owners and pet PvE references
+
+[Combat](systems/combat.md#attacked-controlled-unit-owners--2026-10-22): separate TC-sourced owner-engagement and PvE-lifetime fixes follow pushed ignored REDs. Native melee/direct/133impact/lethal owner-zero-threat cases plus30squietPvE/bothcontrolledPvP give6GREEN31.60s at56e758740. No followercoverage/healerpolicy/stat changes; dungeon controls pending.
+
 ## 2026-10-22 — Active party combat references
+
+## 2026-10-22 — Meteor admission, impact and TC cast boundary
+
+Authored ground-action thresholds replace blanketmin3 forMeteor. TCroot/ATexpiry/missile/nativeimpact/burn chain passes four native cases; ordinary expiry preserves concurrent hardcast rejection rather than SimC FULL_MASK-like outcome. Copy-only stable-key delta and explicit old-policy/prerequisite failures retained. See [Meteor](investigations/follower-data.md#meteor-authored-admission-and-tc-delayed-impact--2026-10-22).
 
 ## 2026-10-22 — Fire Ignite producer and shared rolling integration
 
@@ -159,6 +224,17 @@ Native BM10 passes at4f88 (16.25s): initial75, exact2s cadence, ordinary retarge
 ## 2026-10-21 — Native DPS parity adapter
 
 [Adapter](systems/dungeon-simulator.md#native-dps-parity-adapter--2026-10-21): source-qualified instance/linked effects and physical armor enchants; separate allocated/effective SimC traits. Real NPC follower and native living out-of-range controller avoid first-tick-only false acceptance. Merged24controls GREEN; actual pet absence/no learned casts and missing30s add replacement give three explicit ignored REDs. Existing pet systems/native metadata and timed native summon retirement now pass all3 opt-in300s qualifications atd698d1d3b (Hunter76petcasts, Demo50petcasts,10waves/20distinctadds); source/stat/rotation parity remains unproved. Stable-key Duck174884 SQL/receipt only, no canonical mutation or fabricated stats. Original18 SimC runs retained; expanded reference coverage now60 benchmarks across30 selected profiles, with actual three-target recipient evidence. Eight actor-aware factor ledgers expose missing output/per-hit/count differences and excess FoF pulses; conditional guardian means need whole-player sample weighting. Current16/16 native execution cases pass, but timed-three reveals a real passive-dummy multi-enemy admission gap: follower AI does not count CombatRefs-only targets, and only the main dummy is the owner's victim. No fake threat/flags or AI edits. Bounded113-spell/206-base-effect comparison agrees70391/70448 in16 fields; effective multipliers remain unisolated. Health-phase/consumable/item-option differences and whole40-spec acceptance remain open.
+## 2026-10-22 — Granyth finite pre-Lance partial
+
+[Granyth](systems/boss-scripts.md#granyth-finite-pre-lance-partial--2026-10-22): ignoredRED firstShards/finite/reset before10.6/23.9Shards+15.5Stomp. Post-master25f9ffe17 native4GREEN62.73s Normal1/projectedFollower205, real area damage/copy-credit/corpse/native-home reset; producer1GREEN and stable-key SQL receipt. EruptionEnergy/Lance/reload/Mythicadds remain named gaps, no whole-fight/publication claim.
+## 2026-10-22 — Treemouth non-Mythic partial
+
+[Treemouth](systems/boss-scripts.md#treemouth-non-mythic-partial--2026-10-22): ignored firstWhip/Spit/reset RED before source3lanes/namedlowerhold policy. Post-master5c2efe459 native4GREEN48.84s Normal1/projectedFollower205, real cone damage/native-home/reset/copy-credit/corpse; stable-key SQL fresh-copy receipt. Energy/Consume/slime/selector context remains gaps, no whole-fight/publication claim.
+
+## 2026-10-22 — Gulping Goliath native partial
+
+[Goliath](systems/boss-scripts.md#gulping-goliath-native-partial--2026-10-22): ignorednativeRED→3GREEN/1GulpRED; actual18.1InvalidTarget from EXCLUDE_CASTER selftarget, ordinaryno-explicitAOE fixes exactlane1GREEN25.90s. Composite4scopes Normal1/projected205: actualCroak/Toxicchilddamage,82s twofourlanecompletions/reset/realcopycredit/corpse. SourceSwog/Hangry/selector gaps and stable-key SQLreceipt retained; publicationlead-owned.
+
 ## 2026-10-22 — Class4 zone-only ingress
 
 [Optional power metadata](investigations/follower-data.md#class4-zone-only-ingress--2026-10-22): az914b real205 VaultRune summon exposed a shared zone-entry resource panic. Production now preserves source stats/identity and explicitly warns/leaves power absent when SpellCastPlugin is not installed; no fake pools or fixture-only patch. Present-table native initialization is unchanged. Native832762da4 reproof: real failingRune1/1 (17.91s), present-table class4Energy+Anub4 controls5/5 (70.99s); no duplicate broad gate.
@@ -227,6 +303,7 @@ Native BM10 passes at4f88 (16.25s): initial75, exact2s cadence, ordinary retarge
 ## 2026-10-21 — Orb affinity passives are normal specialization state
 
 [Toys](systems/toys.md#thaumaturgists-orb-specialization-affinity-source-boundary-2026-10-21): source136928/127850 isolated44rows/26tables/two models; earlier missing-root-helper interpretation withdrawn.137031/2/3 are actual Holy/Disc/Shadow spec passives with source auto-cast flag, not new toy effects. Test-first3e2537dca requires normal KnownSpells→AuraPlugin passive application and source affinity before actualUseToy; First01ce988b7 run censusRED1/control2PASS plus3excludedfixture-spec-lookup failures60.03s; lightweight harness intentionally strips specs. Fixture-onlybf9f138a3 keeps full nativeClassSpells fromloader;correctedRED pending, no admission/GREEN/native color/class-login claim. Source5min aura/10min recovery and Priest/level11 guard retained; census539 unchanged.
+- [Skarmorak TC Shell partial](systems/boss-scripts.md#skarmorak-tc-shell-controller-partial--2026-10-22) — 2026-10-22: first4.6s Smash/absorb-exit RED→composite4GREEN; native25Energy/refill/meleeConsumed/Shattered/rearm/copy-credit, natural120s survival gap retained.
 - [Orator TC energy partial](systems/boss-scripts.md#orator-tc-energy-controller-partial--2026-10-22) — 2026-10-22: native100-vsTC0 RED→4GREEN56.12s, exact source/native energy/parent/child/copy lifecycle; strict preappearance packet isolation, binding producer1GREEN and explicit controller gaps.
 - [rd902 Imp fixture identities](investigations/follower-data.md#rd902-native-roster-fixture-identities--2026-10-22) — native handles1-versus3 RED→parallel11GREEN66.08s; signed3001 joined Guardian1GREEN/retained3GREEN, zero native/toy references; tests/fixtures only.
 - [Base Tyrant owner SP](investigations/follower-data.md#base-tyrant-owner-spell-power--2026-10-21) — native270481 actual7vs47.305897 RED→merged11GREEN106.38s; retained guardian11GREEN35.07s; merged ST/3T8864/13204 reports equal91cf, no Demonbolt/Core sample or isolated/statistical claim.
@@ -354,6 +431,14 @@ Native BM10 passes at4f88 (16.25s): initial75, exact2s cadence, ordinary retarge
 ## 2026-10-21 — Holy native policy boundary
 
 [Holy Priest](investigations/holy-priest-follower-ai.md): native temporary-threat2GREEN and native90 damage/stat controlGREEN atf53b75c0b; six policy REDs justify the real-context adapter. Integration GREEN pending; target118 Fortitude coverage ignored pending generic correction, never replaced by individual buffs.
+## 2026-10-22 — Class4 zone-only ingress
+
+[Optional power metadata](investigations/follower-data.md#class4-zone-only-ingress--2026-10-22): az914b real205 VaultRune summon exposed a shared zone-entry resource panic. Production now preserves source stats/identity and explicitly warns/leaves power absent when SpellCastPlugin is not installed; no fake pools or fixture-only patch. Present-table native initialization is unchanged. Native832762da4 reproof: real failingRune1/1 (17.91s), present-table class4Energy+Anub4 controls5/5 (70.99s); no duplicate broad gate.
+
+## 2026-10-21 — Remaining follower boss ingress
+
+[Source inventory](investigations/follower-data.md#remaining-boss-source-ingress--2026-10-21): read-only27maps/98Normalencounters with2777a9d Lua/70448 journal/source placements. RemainingDF17 have no placed primaries; City blanks retainPCimmunity. Lead excludes unplaced/fake-unlock combat; Anub'zekt ignoredRED→native76ca45582 GREEN5/5: source Energy and four encounter cases in Normal1/Follower205; enabled after proof, absent-ground fixture cause corrected with authored terrain. Thirty-three requests, first Eye spend, later Energy denial, DOT/reset/copy-credit/corpse behavior proven; whole-fight/controller gaps retained.
+
 ## 2026-10-21 — Actual scripted boss alert clocks
 
 [Boss alerts](systems/bossmod-data.md#scripted-clock-continuation--2026-10-21): explicit six current-Lua scripts publish selected EventMap requests with source labels/colors/counts; other SmartAI-only clocks stay excluded. Canonical catalog absent; retained private Kokia legacy clocks cannot supply current requests. Real Kokia missing-snapshot RED→post-master2/2GREEN; actual private5981 Kokia205 both-skin1920 countdown/actual warnings/kill-clear accepted with ten inspected originals; source gaps retained.
@@ -3942,6 +4027,10 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 [Private-account residue](investigations/trading-post-residue.md): vendors1615/1608 already have October46 membership and complete70448 item/transmog rows. Cached Wowhead agrees; historical fb_tpui_mod expired ownership is test-state residue. No code, SQL, state repair or RED→GREEN claim.
 
+## 2026-10-22 — Native immutable fixture sharing
+
+[Server performance](investigations/server-test-performance.md#cache-implementation-boundary-in-progress):8b61e8bc0 shares test-only catalog/spell payloads while production aliases retain owned types. Native App isolation3/3, real SQLite cache controls6/6, spell isolation/server-side append controls4/4 pass. Exact old/current binary census5542→5543 adds only the new isolation test, with no removals/ignore drift. Qualified matching workspace-graph cohort19/19PASS: summed isolated CPU787.220→554.693s; prepared3-App RSS3161604→1283496KiB, with explicitly higher cold-case RSS. Completed quiet six-thread union2856PASS/87ignored/zero coverage drift:1348.305s,4757.822CPU,6.15GiBRSS/7.08GiBswap;900s remains unmet. Module-process batching acb1539e0 qualifies the same native union706.402s/6.77GiBRSS/zero swap, exact2856enabled/87ignored coverage,2855PASS/1lead-accepted known Talondras master environment failure. Full workspace batching remains unmeasured. Package-only exploratory measurements are excluded.
+
 ## 2026-10-22 — Server test performance profile
 
 [Server test performance](investigations/server-test-performance.md): copied fu913 baseline plus49Hz sample identifies unoptimized server-instantiated generic ECS/iterator paths despite optimized dependencies. Add test-only server opt2/debug1, preserving assertions/overflow checks. Baseline/optimized CPU, wall, RSS and complete900s union acceptance remain pending; shared-host swapping is recorded, not attributed to code.
@@ -3955,3 +4044,15 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 ## 2026-10-22 — Brackenhide source-floor packet
 
 [Six boss placements](investigations/follower-data.md#brackenhide-source-floors-and-route-gaps--2026-10-22): exact source marker/floor transforms and own TDB stats; authored WMO group bounds disambiguate Wratheye from outdoor roofs without supplying Z. Actual missing-six RED→six-primary GREEN, replay3×; three route gaps remain separate. No unsupported War-band offsets, canonical writes or dungeon-clear claim.
+
+- 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22): native child effectiveness/removal/Echo GREEN; real long-flight HIT-timing and three-target Chain RED. Per-hit correction and native45297 mapping committed; GREEN pending.
+
+- 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22) HIT/Chain correction5GREEN10.43s; actual StatsPlugin70samples2PASS9.38s on same executable. Three qualified tests enabled; fullAPL/resource/other-root gaps retained.
+
+- [Lava Burst Overload](investigations/follower-data.md#lava-burst-overload-qualification): fixtureNoCharges distinguished from genuine86-native-hit RED;51505→285466 added to existing HIT callback/effect1 scaling. GREEN pending; EB/Icefury cast-only scope clarified.
+
+- [Lava Overload identity](investigations/follower-data.md#lava-burst-overload-qualification): TC enum77451 is queued cast; native effect32→285466 damage at50yd/s. Direct-payload mapping is not gate-ready; ignored native wrapper/flight oracle added before correction.
+
+- [Lava wrapper](investigations/follower-data.md#lava-burst-overload-qualification): native285466damage/no77451Go genuineRED1FAIL1PASS14.71s. Queuedcast corrected to77451; damage285466 retains effect1 scaling, native wrapper flight unchanged. GREEN pending.
+
+- [Lava wrapper](investigations/follower-data.md#lava-burst-overload-qualification):2GREEN18.14s, actual77451Go→285466Damage with0.7s/35yd flight; samebinary actualStatsPlugin70samples2PASS14.36s. Qualified Lava cases enabled; crit/resources and unselectedEB/Ice remain separate.

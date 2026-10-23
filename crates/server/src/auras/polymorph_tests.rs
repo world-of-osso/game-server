@@ -49,7 +49,7 @@ fn world_data() -> WorldData {
         .retain(|entry, _| [KOBOLD_VERMIN, 16372, TRAINING_DUMMY, BLACKROCK_SPY].contains(entry));
     crate::world_data::load_template_models(&conn, &mut templates);
     WorldData {
-        templates,
+        templates: templates.into(),
         ..Default::default()
     }
 }

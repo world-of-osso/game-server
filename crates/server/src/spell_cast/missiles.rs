@@ -227,7 +227,7 @@ fn land_now(
             }
             // `PreprocessTarget` engages the target, which is still the reflector.
             if super::starts_combat(world, caster, reflector, spell) {
-                crate::combat_refs::set_in_combat_with(world, reflector, caster);
+                crate::combat_refs::engage_attacked_target(world, caster, reflector);
             }
             resolve_effects(world, caster, spell, &plan, depth);
         }
@@ -250,7 +250,7 @@ fn hit(world: &mut World, caster: Entity, spell: &SpellInfo, plan: &TargetPlan, 
     }
     for target in super::hit_units(plan) {
         if super::starts_combat(world, caster, target, spell) {
-            crate::combat_refs::set_in_combat_with(world, target, caster);
+            crate::combat_refs::engage_attacked_target(world, caster, target);
         }
     }
     resolve_effects(world, caster, spell, plan, depth);

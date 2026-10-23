@@ -17,14 +17,22 @@ pub(crate) struct Dungeon {
 }
 
 #[derive(Resource, Default)]
+#[cfg_attr(test, derive(Clone))]
 pub(crate) struct FollowerCatalog {
-    pub profiles: Vec<Profile>,
-    pub follower_ids: HashSet<u32>,
-    pub dungeons: HashMap<u32, Dungeon>,
-    pub(super) kits: Vec<super::kit::Entry>,
+    pub profiles: crate::catalog_data::CatalogData<Vec<Profile>>,
+    pub follower_ids: crate::catalog_data::CatalogData<HashSet<u32>>,
+    pub dungeons: crate::catalog_data::CatalogData<HashMap<u32, Dungeon>>,
+    pub(super) kits: crate::catalog_data::CatalogData<Vec<super::kit::Entry>>,
 }
 
 pub(crate) fn load_catalog(db: &Connection) -> rusqlite::Result<FollowerCatalog> {
+    #[cfg(test)]
+    return crate::test_data::catalog_cache::load_connection(db, || read_catalog(db));
+    #[cfg(not(test))]
+    read_catalog(db)
+}
+
+fn read_catalog(db: &Connection) -> rusqlite::Result<FollowerCatalog> {
     let mut ids = db.prepare("SELECT id FROM follower_lfg_dungeons WHERE difficulty_id=205")?;
     let follower_ids = ids
         .query_map([], |row| row.get(0))?
@@ -76,10 +84,10 @@ pub(crate) fn load_catalog(db: &Connection) -> rusqlite::Result<FollowerCatalog>
         dungeons.entry(dungeon.id).or_insert(dungeon);
     }
     Ok(FollowerCatalog {
-        profiles,
-        follower_ids,
-        dungeons,
-        kits: super::kit::load(db)?,
+        profiles: profiles.into(),
+        follower_ids: follower_ids.into(),
+        dungeons: dungeons.into(),
+        kits: super::kit::load(db)?.into(),
     })
 }
 

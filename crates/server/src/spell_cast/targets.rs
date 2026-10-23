@@ -97,8 +97,12 @@ enum Selector {
     DestTowardsCaster,
     ///72: random point in this slot's radius span around the caster.
     CasterRandom,
+    ///73: caster CalcRadius extent with random direction, not a radial disk.
+    CasterRadius,
     ///86/91: random direction;86 samples the radius span,91 keeps the radius.
     DestRandom,
+    ///74: explicit-object-centered CalcRadius(nullptr), not the current critter.
+    DestTargetRandom,
     /// Destination moved forward (78) or backward (79) by this slot's DB2 radius.
     DestOffset(f32),
     /// 55 DEST_CASTER_FRONT_LEAP: radius of this target slot, collision checked on execution.
@@ -170,6 +174,8 @@ fn selector(id: u32) -> Option<Selector> {
         78 => Selector::DestOffset(0.0),
         79 => Selector::DestOffset(std::f32::consts::PI),
         72 => Selector::CasterRandom,
+        73 => Selector::CasterRadius,
+        74 => Selector::DestTargetRandom,
         86 | 91 => Selector::DestRandom,
         55 => Selector::ForwardLeap,
         53 => Selector::CenterExplicit(Enemy),
@@ -224,7 +230,7 @@ pub fn explicit_requirement<'a>(
         .find_map(|id| match selector(id)? {
             Selector::Explicit(relation) | Selector::CenterExplicit(relation) => Some(relation),
             Selector::AllyOrRaid | Selector::ExplicitCorpseAlly => Some(Relation::Ally),
-            Selector::DestTargetOffset(_) => Some(Relation::Any),
+            Selector::DestTargetOffset(_) | Selector::DestTargetRandom => Some(Relation::Any),
             _ => None,
         })
 }
@@ -439,20 +445,54 @@ pub fn select_targets(
     max_targets: u32,
     ignore_relation: bool,
 ) -> Result<Vec<Entity>, u32> {
+    select_targets_and_destination(
+        world,
+        caster,
+        explicit,
+        spell,
+        effect,
+        max_targets,
+        ignore_relation,
+    )
+    .map(|(units, _)| units)
+    .map_err(|(id, _)| id)
+}
+
+fn unsupported_selection(id: u32) -> (u32, super::CastFailure) {
+    (
+        id,
+        super::CastFailure::Unsupported(format!("implicit target {id} not supported")),
+    )
+}
+
+/// Return the sampled ordered destination with its recipients so a cast cannot
+/// re-roll74 after selecting an area. TC Spell.cpp741–800 shares effect groups.
+pub(super) fn select_targets_and_destination(
+    world: &mut World,
+    caster: Entity,
+    explicit: Option<Entity>,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    max_targets: u32,
+    ignore_relation: bool,
+) -> Result<(Vec<Entity>, Option<Dest>), (u32, super::CastFailure)> {
     let caster_pos = position(world, caster).unwrap_or_default();
     let mut center = None;
     let mut units = Vec::new();
     let mut selected_any = false;
-    let ordered = effect.implicit_targets.contains(&148);
+    let ordered = effect
+        .implicit_targets
+        .iter()
+        .any(|&id| matches!(id, 73 | 74 | 148));
     let mut destination = spell.cast_destination.map(|point| Dest {
         position: Vec3::from_array(point),
         orientation: orientation(world, caster),
     });
     for (slot, &id) in effect.implicit_targets.iter().enumerate() {
         if id == 79 && unsupported_target(effect) == Some(79) {
-            return Err(79);
+            return Err(unsupported_selection(79));
         }
-        let selector = selector(id).ok_or(id)?;
+        let selector = selector(id).ok_or_else(|| unsupported_selection(id))?;
         if ordered && ordered_destination::sets_destination(selector) {
             destination = ordered_destination::select_slot(
                 world,
@@ -463,12 +503,16 @@ pub fn select_targets(
                 slot,
                 destination,
             )
-            .map_err(|_| id)?;
+            .map_err(|failure| (id, failure))?;
             center = destination.map(|destination| destination.position);
             continue;
         }
         match selector {
-            Selector::None | Selector::ForwardLeap | Selector::DestTowardsCaster => {}
+            Selector::None
+            | Selector::ForwardLeap
+            | Selector::DestTowardsCaster
+            | Selector::CasterRadius
+            | Selector::DestTargetRandom => {}
             Selector::ExistingDest => {
                 // TC Spell::InitExplicitTargets:666–678 initializes an absent
                 // required destination from the supplied object target, else self.
@@ -629,20 +673,15 @@ pub fn select_targets(
                         .map(Vec3::from_array)
                         .or_else(|| explicit.and_then(|unit| position(world, unit)))
                 };
-                units.extend(directed_units(
-                    world,
-                    caster,
-                    spell,
-                    effect,
-                    slot,
-                    destination,
-                    max_targets,
-                )?);
+                units.extend(
+                    directed_units(world, caster, spell, effect, slot, destination, max_targets)
+                        .map_err(unsupported_selection)?,
+                );
             }
             Selector::EntryAreaSource | Selector::EntryAreaDestination => {
                 selected_any = true;
                 let origin = if matches!(selector, Selector::EntryAreaDestination) {
-                    center.ok_or(id)?
+                    center.ok_or_else(|| unsupported_selection(id))?
                 } else {
                     center.unwrap_or(caster_pos)
                 };
@@ -688,7 +727,7 @@ pub fn select_targets(
     }
     units = limit_spell_targets(spell, caster, units, 0);
     units.dedup();
-    Ok(units)
+    Ok((units, destination))
 }
 
 /// TC a352b1fa SelectImplicitAreaTargets passes center to AddUnitTarget;
@@ -1220,14 +1259,20 @@ fn clamp_player_front_distance(world: &World, caster: Entity, target: u32, dista
     distance.max(reach)
 }
 
-/// TC a352b1fa SpellInfo.cpp CalcRadius:72/86 sample (Max-Min)*sqrt(rand_norm());
+/// TC a352b1fa SpellInfo.cpp CalcRadius:72/74/86 sample (Max-Min)*sqrt(rand_norm());
 ///91 only randomizes direction. Unlike GetRandomPoint, CalcRadius does not add Min.
 fn random_destination(point: Vec3, effect: &SpellEffect, slot: usize) -> Vec3 {
     let mut rng = rand::thread_rng();
     let angle = rand::Rng::gen_range(&mut rng, 0.0..std::f32::consts::TAU);
     let source_slot = radius_slot(effect, slot);
-    let maximum = radius(effect, source_slot);
-    let distance = if matches!(effect.implicit_targets[source_slot], 72 | 86) {
+    //74 calls CalcRadius(nullptr): use authored Max, without caster level/mods.
+    let maximum = if effect.implicit_targets[slot] == 74 {
+        effect.radius[source_slot].map_or(0.0, |entry| entry.radius_max)
+    } else {
+        radius(effect, source_slot)
+    };
+    // An absent B radius inherits A's target identity as well as its entry.
+    let distance = if matches!(effect.implicit_targets[source_slot], 72 | 74 | 86) {
         let minimum = effect.radius[source_slot].map_or(0.0, |entry| entry.radius_min);
         let area_fraction = rand::Rng::gen_range(&mut rng, 0.0_f32..1.0);
         (maximum - minimum) * area_fraction.sqrt()
@@ -1334,6 +1379,10 @@ fn effect_dest_slot(
             .or_else(|| position(world, explicit.unwrap_or(caster))),
         Selector::CasterRandom => {
             position(world, caster).map(|point| random_destination(point, effect, slot))
+        }
+        Selector::DestTargetRandom => {
+            let target = explicit.filter(|target| same_map(world, caster, *target))?;
+            position(world, target).map(|point| random_destination(point, effect, slot))
         }
         Selector::DestRandom => {
             let origin = dest

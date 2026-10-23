@@ -273,3 +273,130 @@ fn native_pet_only_enemy_reset_does_not_strand_the_next_authored_pull() {
     );
     assert!(run.report.bosses_killed.is_empty());
 }
+
+#[test]
+#[ignore = "explicit native gameplay schedule-unwind and durable abort report/export boundary"]
+fn native_schedule_abort_preserves_report_and_ordered_combat_events() {
+    let _rng_scope = crate::random::seed_scope(7);
+    let started = std::time::Instant::now();
+    let mut run = spawn_run(7, &mut None).unwrap();
+    let tank = run.party.tank;
+    let enemy = run.actors[&29001799];
+    crate::combat::deal_direct_damage(run.app.world_mut(), tank, enemy, 1.0);
+    let before = serde_json::to_value(
+        &run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0,
+    )
+    .unwrap();
+    assert!(
+        before
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|event| event["kind"] == "Damage"
+                && event["source"] == tank.to_bits()
+                && event["target"] == enemy.to_bits()
+                && event["amount"] == 1)
+    );
+    run.app.add_systems(bevy::prelude::FixedUpdate, || {
+        panic!("explicit native FixedUpdate abort regression");
+    });
+    let report = super::run_prepared(run, &mut None, started, started.elapsed())
+        .expect("schedule unwind must become an explicit aborted report, not lose evidence");
+    assert_eq!(report.status, "aborted");
+    assert!(
+        report
+            .detail
+            .contains("explicit native FixedUpdate abort regression")
+    );
+    let trace = report.performance["combat_events"].as_array().unwrap();
+    assert!(
+        trace.starts_with(before.as_array().unwrap()),
+        "the ordered native combat trace before the abort must survive unchanged"
+    );
+    super::super::runtime::write_report(&report).unwrap();
+    let output = super::super::runtime::output_directory();
+    let saved: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(output.join("run-7.json")).unwrap()).unwrap();
+    let exported: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(output.join("combat-events-7.json")).unwrap())
+            .unwrap();
+    assert_eq!(saved["status"], "aborted");
+    assert!(
+        saved["detail"]
+            .as_str()
+            .unwrap()
+            .contains("explicit native FixedUpdate abort regression")
+    );
+    assert_eq!(exported["events"], report.performance["combat_events"]);
+    assert_eq!(exported["status"], "aborted");
+    assert_eq!(exported["reason"], saved["detail"]);
+}
+
+#[test]
+#[ignore = "explicit native pet diagnostic samples, provenance, reset and disappearance"]
+fn native_pet_samples_retain_health_provenance_and_the_enemy_reset() {
+    let _rng_scope = crate::random::seed_scope(7);
+    let mut run = spawn_run(7, &mut None).unwrap();
+    let owner = run.party.owner;
+    for _ in 0..200 {
+        run.app.update();
+        if crate::hunter_pet::summoned_pet(run.app.world(), owner).is_some() {
+            break;
+        }
+    }
+    let pet =
+        crate::hunter_pet::summoned_pet(run.app.world(), owner).expect("native CallPet input");
+    let enemy = run.actors[&29001792];
+    crate::combat::deal_direct_damage(run.app.world_mut(), pet, enemy, 1.0);
+    run.sample();
+    let first = serde_json::to_value(run.report.samples.last().unwrap()).unwrap();
+    let pets = first["pets"]
+        .as_array()
+        .expect("sample must expose actual controlled pets");
+    let observed = pets
+        .iter()
+        .find(|row| row["pet"]["entity"] == pet.to_bits())
+        .unwrap();
+    assert_eq!(observed["owner"], owner.to_bits());
+    assert_eq!(observed["pet"]["hunter_pet_owner"], owner.to_bits());
+    assert_eq!(observed["pet"]["npc_entry"], 174884);
+    assert_eq!(observed["pet"]["unit_level"], 70);
+    assert!(observed["pet"]["health"][0].as_f64().unwrap() > 0.0);
+    assert!(
+        observed["opponents"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["entity"] == enemy.to_bits())
+    );
+    crate::combat::kill_unit(run.app.world_mut(), enemy, pet);
+    crate::creature_aggro::enter_evade_mode(run.app.world_mut(), enemy);
+    run.sample();
+    let returning = serde_json::to_value(run.report.samples.last().unwrap()).unwrap();
+    let observed = &returning["pets"][0];
+    assert_eq!(observed["pet"]["health"][0], 0.0);
+    assert!(
+        observed["opponents"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["entity"] == enemy.to_bits()
+                && row["state"].as_str().unwrap().contains("Returning"))
+    );
+    run.app.world_mut().despawn(pet);
+    run.sample();
+    let absent = serde_json::to_value(run.report.samples.last().unwrap()).unwrap();
+    assert_eq!(absent["pets"][0]["pet"]["entity"], pet.to_bits());
+    assert_eq!(absent["pets"][0]["pet"]["exists"], false);
+    assert_eq!(absent["pets"][0]["pet"]["health"], serde_json::Value::Null);
+    assert!(
+        run.inspect_units()
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["entity"] == pet.to_bits() && row["exists"] == false)
+    );
+}

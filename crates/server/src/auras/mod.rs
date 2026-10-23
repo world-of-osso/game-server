@@ -44,6 +44,7 @@ pub(crate) mod health_pct_trigger;
 mod ignite;
 pub mod invisibility;
 mod item_requirements;
+mod light_of_titans;
 mod linked;
 pub(crate) mod linked_summon;
 pub(crate) mod mastery;
@@ -55,6 +56,8 @@ mod natures_guardian;
 pub(crate) mod observations;
 mod periodic;
 pub(crate) mod power_amount_trigger;
+#[cfg(test)]
+mod proc_mask_tests;
 pub mod procs;
 mod refresh;
 pub(crate) mod reward_mods;

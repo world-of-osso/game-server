@@ -220,7 +220,7 @@ pub(super) fn load_spell_store(conn: &Connection) -> rusqlite::Result<SpellStore
     load_spell_visuals(conn, &mut spells)?;
     serverside::load_serverside_spells(conn, &lookups, &mut spells)?;
     finish(&mut spells);
-    Ok(SpellStore { spells })
+    Ok(SpellStore::from_spells(spells))
 }
 
 /// Add a copy's server-side spells to an already loaded store.
@@ -230,8 +230,17 @@ pub(super) fn append_serverside_spells(
     store: &mut SpellStore,
 ) -> rusqlite::Result<usize> {
     let lookups = Lookups::load(conn)?;
-    let count = serverside::load_serverside_spells(conn, &lookups, &mut store.spells)?;
-    finish(&mut store.spells);
+    let file_ids: Vec<_> = store.spells.iter().map(|spell| spell.id).collect();
+    let mut additional = serverside::read_additional_spells(conn, &lookups, &file_ids)?;
+    finish(&mut additional);
+    let count = additional.len();
+    for spell in additional {
+        let index = store
+            .spells
+            .binary_search_by_key(&spell.id, |existing| existing.id)
+            .expect_err("serverside spell IDs were checked against existing definitions");
+        store.spells.insert(index, spell.into());
+    }
     Ok(count)
 }
 

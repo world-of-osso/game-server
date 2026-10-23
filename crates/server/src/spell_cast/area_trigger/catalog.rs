@@ -12,6 +12,7 @@ pub(crate) struct AuraFieldCatalog(HashMap<u32, Result<FieldDefinition, String>>
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum FieldScript {
     VaultRune,
+    MeteorBurn,
 }
 
 #[cfg_attr(test, derive(Clone))]
@@ -64,7 +65,7 @@ impl FieldDefinition {
 pub(crate) fn load_catalog(connection: &Connection) -> rusqlite::Result<AuraFieldCatalog> {
     let mut statement = connection.prepare(
         "SELECT DISTINCT EffectMiscValue_0 FROM spell_effect \
-         WHERE (EffectAura=395 OR (Effect=179 AND SpellID=387149 AND EffectMiscValue_0=26505)) \
+         WHERE (EffectAura=395 OR (Effect=179 AND ((SpellID=387149 AND EffectMiscValue_0=26505) OR (SpellID=175396 AND EffectMiscValue_0=1712)))) \
          AND EffectMiscValue_0>0 ORDER BY EffectMiscValue_0",
     )?;
     let properties = statement
@@ -133,6 +134,15 @@ fn select_script(id: u32, properties: &SphereProperties) -> Result<Option<FieldS
     if properties.script_name.is_empty() {
         return Ok(None);
     }
+    if id == super::meteor::BURN_PROPERTIES
+        && properties.template == super::meteor::BURN_TEMPLATE
+        && properties.script_name == "at_mage_meteor_burn"
+        && !properties.custom
+        && properties.flags == 0
+        && properties.curve == 0
+    {
+        return Ok(Some(FieldScript::MeteorBurn));
+    }
     let native_identity = id == super::vault_rune::CREATE_PROPERTIES
         && properties.template == super::vault_rune::TEMPLATE
         && properties.script_name == super::vault_rune::SCRIPT_NAME;
@@ -167,6 +177,7 @@ fn load_action(
         (Some(FieldScript::VaultRune), [(0, super::vault_rune::PROTECTION, 1)]) => {
             Ok((super::vault_rune::PROTECTION, Relation::Ally))
         }
+        (Some(FieldScript::MeteorBurn), []) => Ok((super::meteor::BURN_DAMAGE, Relation::Enemy)),
         _ => Err(format!(
             "Aura395 template {}/{}: unsupported actions {actions:?}",
             properties.template, properties.custom

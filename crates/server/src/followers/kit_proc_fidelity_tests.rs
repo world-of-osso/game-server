@@ -58,18 +58,21 @@ fn dps_parity_fists_of_fury_simc_tick_cadence_preserves_five_native_damage_hits(
     let first = h.inbox.log.len();
     complete_cast(&mut h, caster, 113656, target);
     h.advance(200);
-    let hits = h.inbox.log[first..]
+    // Native melee defenses can turn a child tick into a Miss/Dodge. Count
+    // every resolved117418 tick without changing those source defense rolls.
+    let tick_outcomes: Vec<_> = h.inbox.log[first..]
         .iter()
         .filter(|event| {
-            event.kind == CombatLogKind::Damage
+            matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
                 && event.source == Some(caster.to_bits())
                 && event.target == Some(target.to_bits())
                 && event.spell_id == Some(117418)
         })
-        .count();
+        .collect();
     assert_eq!(
-        hits, 5,
-        "FISTS_OF_FURY_SIMC_TICK_CADENCE: one native4s channel, tick0 then1s ticks; not one hit each166ms dummy heartbeat"
+        tick_outcomes.len(),
+        5,
+        "FISTS_OF_FURY_SIMC_TICK_CADENCE: one native4s channel, tick0 then1s ticks, including legal defenses; not one hit each166ms dummy heartbeat: {tick_outcomes:?}"
     );
 }
 
@@ -409,6 +412,496 @@ fn proc_fidelity_262_inundate_native_wind_shear_without_passive_does_not_grant_r
             .iter()
             .all(|event| event.spell_id != Some(378777) || event.source != Some(caster.to_bits())),
         "a successful native utility cast does not invent its removed Inundate driver"
+    );
+}
+
+#[test]
+fn proc_fidelity_262_native_stormkeeper_lightning_bolt_triggers_overload_damage() {
+    let (mut h, caster) = prepare(209053);
+    assert!(has_aura(h.app.world(), caster, 168534));
+    complete_cast(&mut h, caster, 191634, caster);
+    assert!(has_aura(h.app.world(), caster, 191634));
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    complete_cast(&mut h, caster, 188196, target);
+    h.advance(30);
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(188196)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.amount > 0
+        }),
+        "actual Stormkeeper-affected native Lightning Bolt must land"
+    );
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(45284)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.amount > 0
+        }),
+        "real native Stormkeeper-affected cast guarantees actual45284 Elemental Overload, not a synthetic scalar on Lightning Bolt"
+    );
+}
+
+#[test]
+fn proc_fidelity_262_native_stormkeeper_chain_lightning_overloads_each_hit_target() {
+    let (mut h, caster) = prepare(209053);
+    let target = h.npc;
+    let second = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 10.0);
+    let third = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 12.0);
+    complete_cast(&mut h, caster, 191634, caster);
+    assert!(has_aura(h.app.world(), caster, 168534));
+    assert!(has_aura(h.app.world(), caster, 191634));
+    let first_log = h.inbox.log.len();
+    let first_go = h.inbox.go.len();
+    complete_cast(&mut h, caster, 188443, target);
+    h.advance(60);
+    for target in [target, second, third] {
+        assert!(
+            h.inbox.log[first_log..].iter().any(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(188443)
+                    && event.source == Some(caster.to_bits())
+                    && event.target == Some(target.to_bits())
+            }),
+            "actual native Chain Lightning must hit each of three hostile targets"
+        );
+    }
+    let child_casts = h.inbox.go[first_go..]
+        .iter()
+        .filter(|event| event.caster == caster.to_bits() && event.spell_id == 45297)
+        .count();
+    assert_eq!(
+        child_casts, 3,
+        "TC HIT-phase native SK modifier guarantees one normal45297 cast per root hit, not one per parent cast"
+    );
+    assert!(h.inbox.log[first_log..].iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(45297)
+            && event.source == Some(caster.to_bits())
+            && event.amount > 0
+    }));
+}
+
+#[test]
+fn proc_fidelity_262_native_stormkeeper_chain_without_mastery_has_no_overload() {
+    let (mut h, caster) = prepare(209053);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 168534,
+    );
+    complete_cast(&mut h, caster, 191634, caster);
+    assert!(has_aura(h.app.world(), caster, 191634));
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    complete_cast(&mut h, caster, 188443, target);
+    h.advance(60);
+    assert!(h.inbox.log[first..].iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(188443)
+            && event.source == Some(caster.to_bits())
+            && event.target == Some(target.to_bits())
+    }));
+    assert!(
+        h.inbox.log[first..].iter().all(|event| {
+            event.spell_id != Some(45297) || event.source != Some(caster.to_bits())
+        })
+    );
+}
+
+fn complete_recovered_native_cast(h: &mut Harness, caster: Entity, spell_id: u32, target: Entity) {
+    for _ in 0..400 {
+        let recovery = {
+            let world = h.app.world();
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(spell_id)
+                .unwrap();
+            crate::spell_cast::read_healer_recovery(world, caster, spell)
+        };
+        match recovery {
+            Ok(()) => {
+                complete_cast(h, caster, spell_id, target);
+                return;
+            }
+            Err(
+                crate::spell_cast::CastFailure::NoCharges
+                | crate::spell_cast::CastFailure::OnCooldown
+                | crate::spell_cast::CastFailure::OnGlobalCooldown,
+            ) => h.advance(1),
+            Err(failure) => panic!("native{spell_id} recovery failed: {failure:?}"),
+        }
+    }
+    panic!("native{spell_id} did not naturally recover within400 frames");
+}
+
+#[test]
+fn proc_fidelity_262_native_lava_burst_natural_overload_preserves_wrapper_flight() {
+    const ACQUISITION_MISS_BUDGET: f64 = 1e-6;
+    const TARGET_DISTANCE: f32 = 35.0;
+    const OVERLOAD_SPEED: f32 = 50.0;
+    let (mut h, caster) = prepare(209053);
+    let chance = super::kit_clearcasting_tests::own_aura(&h, caster, 168534)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount as f64;
+    assert!((0.0..100.0).contains(&chance) && chance > 0.0);
+    let attempts = (ACQUISITION_MISS_BUDGET.ln() / (1.0 - chance / 100.0).ln()).ceil() as usize;
+    let target = h.npc;
+    let mut position = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(caster)
+        .unwrap();
+    position.x += TARGET_DISTANCE;
+    h.app.world_mut().entity_mut(target).insert(position);
+    for attempt in 1..=attempts {
+        let cast_start = h.inbox.log.len();
+        let go_start = h.inbox.go.len();
+        complete_recovered_native_cast(&mut h, caster, 51505, target);
+        let mut wrapper_go_at = None;
+        let mut overload_hit_at = None;
+        for _ in 0..60 {
+            h.advance(1);
+            let now = crate::spell_cast::now(h.app.world());
+            if wrapper_go_at.is_none()
+                && h.inbox.go[go_start..]
+                    .iter()
+                    .any(|event| event.caster == caster.to_bits() && event.spell_id == 77451)
+            {
+                wrapper_go_at = Some(now);
+            }
+            if h.inbox.log[cast_start..].iter().any(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(285466)
+                    && event.source == Some(caster.to_bits())
+                    && event.target == Some(target.to_bits())
+            }) {
+                overload_hit_at = Some(now);
+                break;
+            }
+        }
+        assert!(
+            h.inbox.log[cast_start..].iter().any(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(285452)
+                    && event.source == Some(caster.to_bits())
+                    && event.target == Some(target.to_bits())
+            }),
+            "each actual native51505 must land its authored285452 damage payload"
+        );
+        if let Some(hit_at) = overload_hit_at {
+            let go_at = wrapper_go_at.expect(
+                "TC enum77451/native effect32 wrapper must cast before285466 damage; direct damage-child cast bypasses authored flight",
+            );
+            let flight = hit_at - go_at;
+            let expected_flight = f64::from(TARGET_DISTANCE / OVERLOAD_SPEED);
+            let frame = frame_seconds(&h);
+            assert!(
+                (expected_flight - frame..=expected_flight + 2.0 * frame).contains(&flight),
+                "native77451 must retain35yd/50yds flight before285466 damage: actual={flight}, expected={expected_flight}"
+            );
+            println!(
+                "LAVA_OVERLOAD native_chance={chance}% attempts={attempt}/{attempts} wrapper_flight={flight}"
+            );
+            return;
+        }
+    }
+    panic!(
+        "actual51505 casts/{attempts} authored285452 hits with native chance={chance}% produced no285466; miss budget={ACQUISITION_MISS_BUDGET}"
+    );
+}
+
+#[test]
+fn proc_fidelity_262_native_lava_burst_without_mastery_has_no_overload() {
+    let (mut h, caster) = prepare(209053);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 168534,
+    );
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    let first_go = h.inbox.go.len();
+    complete_recovered_native_cast(&mut h, caster, 51505, target);
+    h.advance(30);
+    assert!(h.inbox.log[first..].iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(285452)
+            && event.source == Some(caster.to_bits())
+            && event.target == Some(target.to_bits())
+    }));
+    assert!(
+        h.inbox.log[first..].iter().all(|event| {
+            event.spell_id != Some(285466) || event.source != Some(caster.to_bits())
+        })
+    );
+    assert!(
+        h.inbox.go[first_go..]
+            .iter()
+            .all(|event| { event.caster != caster.to_bits() || event.spell_id != 77451 })
+    );
+}
+
+fn prepare_unselected_overload_root(root: u32) -> (Harness, Entity) {
+    let (mut h, caster) = at_level(209053, 70, |_| {});
+    let mut health = h.app.world_mut().get_mut::<Health>(h.npc).unwrap();
+    health.max = 1_000_000_000.0;
+    health.current = health.max;
+    assert!(
+        !h.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(caster)
+            .unwrap()
+            .contains(root),
+        "cast-mechanism-only qualification must not silently become a selected-kit certificate"
+    );
+    (h, caster)
+}
+
+fn fund_native_elemental_blast(h: &mut Harness, caster: Entity, target: Entity) {
+    let cost: f32 = {
+        let world = h.app.world();
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(117014)
+            .unwrap();
+        crate::spell_cast::spell_costs(world, caster, spell)
+            .unwrap()
+            .into_iter()
+            .filter_map(|(pool, amount)| {
+                matches!(
+                    pool,
+                    crate::spell_cast::CostPool::Power(PowerType::Maelstrom)
+                )
+                .then_some(amount)
+            })
+            .sum()
+    };
+    for _ in 0..32 {
+        let before = power_value(h.app.world(), caster, PowerType::Maelstrom)
+            .unwrap()
+            .0;
+        if before >= cost {
+            return;
+        }
+        assert!(has_aura(h.app.world(), caster, 343725));
+        complete_recovered_native_cast(h, caster, 188196, target);
+        h.advance(20);
+        let after = power_value(h.app.world(), caster, PowerType::Maelstrom)
+            .unwrap()
+            .0;
+        assert!(
+            after > before,
+            "actual native Lightning Bolt must earn the Maelstrom used by EB; no pool injection"
+        );
+    }
+    panic!("actual Lightning casts failed to fund native EB cost{cost}");
+}
+
+fn cast_unselected_native_root(h: &mut Harness, caster: Entity, root: u32, target: Entity) {
+    if root == 117014 {
+        fund_native_elemental_blast(h, caster, target);
+    }
+    complete_recovered_native_cast(h, caster, root, target);
+    h.advance(80);
+}
+
+fn assert_unselected_native_overload_acquisition(root: u32, child: u32) {
+    const ACQUISITION_MISS_BUDGET: f64 = 1e-6;
+    let (mut h, caster) = prepare_unselected_overload_root(root);
+    let chance = super::kit_clearcasting_tests::own_aura(&h, caster, 168534)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount as f64;
+    assert!(chance > 0.0 && chance < 100.0);
+    let attempts = (ACQUISITION_MISS_BUDGET.ln() / (1.0 - chance / 100.0).ln()).ceil() as usize;
+    let target = h.npc;
+    for attempt in 1..=attempts {
+        let first = h.inbox.log.len();
+        cast_unselected_native_root(&mut h, caster, root, target);
+        let events = &h.inbox.log[first..];
+        assert!(
+            events
+                .iter()
+                .any(|event| event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(root)
+                    && event.source == Some(caster.to_bits())
+                    && event.target == Some(target.to_bits())),
+            "actual native{root} must damage its target on every trial"
+        );
+        if events.iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(child)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+        }) {
+            println!(
+                "UNSELECTED_OVERLOAD cast-only root={root} child={child} chance={chance}% attempt={attempt}/{attempts}"
+            );
+            return;
+        }
+    }
+    panic!(
+        "cast-only native{root}: {attempts} actual root hits/chance{chance}% but no{child}; miss budget={ACQUISITION_MISS_BUDGET}"
+    );
+}
+
+fn assert_unselected_native_root_without_mastery(root: u32, child: u32) {
+    let (mut h, caster) = prepare_unselected_overload_root(root);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 168534,
+    );
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    cast_unselected_native_root(&mut h, caster, root, target);
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(root)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits()))
+    );
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .all(|event| event.spell_id != Some(child) || event.source != Some(caster.to_bits()))
+    );
+}
+
+#[test]
+#[ignore = "unselected native EB cast-mechanism RED/GREEN pending"]
+fn proc_fidelity_262_native_unselected_eb_overload_cast_mechanism() {
+    assert_unselected_native_overload_acquisition(117014, 120588);
+}
+
+#[test]
+#[ignore = "unselected native EB removed-Mastery control pending"]
+fn proc_fidelity_262_native_unselected_eb_without_mastery_has_no_overload() {
+    assert_unselected_native_root_without_mastery(117014, 120588);
+}
+
+#[test]
+#[ignore = "unselected native Icefury cast-mechanism RED/GREEN pending"]
+fn proc_fidelity_262_native_unselected_icefury_overload_cast_mechanism() {
+    assert_unselected_native_overload_acquisition(210714, 219271);
+}
+
+#[test]
+#[ignore = "unselected native Icefury removed-Mastery control pending"]
+fn proc_fidelity_262_native_unselected_icefury_without_mastery_has_no_overload() {
+    assert_unselected_native_root_without_mastery(210714, 219271);
+}
+
+#[test]
+fn proc_fidelity_262_native_long_flight_overload_waits_400ms_after_root_hit() {
+    let (mut h, caster) = prepare(209053);
+    assert!(has_aura(h.app.world(), caster, 168534));
+    let mut target_position = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(caster)
+        .unwrap();
+    target_position.x += 35.0;
+    let target = h.npc;
+    h.app.world_mut().entity_mut(target).insert(target_position);
+    complete_cast(&mut h, caster, 191634, caster);
+    assert!(has_aura(h.app.world(), caster, 191634));
+    wait_for_gcd(&mut h, caster, 188196);
+    let first_log = h.inbox.log.len();
+    let first_go = h.inbox.go.len();
+    let launched_at = crate::spell_cast::now(h.app.world());
+    creature_cast(h.app.world_mut(), caster, 188196, Some(target), false).unwrap();
+    let mut root_hit_at = None;
+    let mut child_go_at = None;
+    for _ in 0..120 {
+        h.advance(1);
+        let now = crate::spell_cast::now(h.app.world());
+        if root_hit_at.is_none()
+            && h.inbox.log[first_log..].iter().any(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(188196)
+                    && event.source == Some(caster.to_bits())
+                    && event.target == Some(target.to_bits())
+            })
+        {
+            root_hit_at = Some(now);
+        }
+        if child_go_at.is_none()
+            && h.inbox.go[first_go..]
+                .iter()
+                .any(|event| event.caster == caster.to_bits() && event.spell_id == 45284)
+        {
+            child_go_at = Some(now);
+        }
+        if root_hit_at.is_some() && child_go_at.is_some() {
+            break;
+        }
+    }
+    let root_hit_at = root_hit_at.expect("actual long-flight188196 must damage target");
+    let child_go_at = child_go_at.expect("actual SK modifier must guarantee normal45284 cast");
+    let frame = frame_seconds(&h);
+    assert!(
+        root_hit_at - launched_at > 0.4 + frame,
+        "native root flight must distinguish HIT scheduling from launch scheduling"
+    );
+    let delay = child_go_at - root_hit_at;
+    assert!(
+        (0.4 - frame..=0.4 + 2.0 * frame).contains(&delay),
+        "TC168534 SpellPhaseMask2=HIT: normal child must launch400ms after actual root hit; root={root_hit_at}, child={child_go_at}, delay={delay}"
+    );
+}
+
+#[test]
+fn proc_fidelity_262_native_stormkeeper_without_mastery_does_not_invent_overload() {
+    let (mut h, caster) = prepare(209053);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 168534,
+    );
+    assert!(!has_aura(h.app.world(), caster, 168534));
+    complete_cast(&mut h, caster, 191634, caster);
+    assert!(has_aura(h.app.world(), caster, 191634));
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    complete_cast(&mut h, caster, 188196, target);
+    h.advance(4);
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .all(|event| event.spell_id != Some(45284)),
+        "overload follows the sourced400ms callback, not immediate root impact"
+    );
+    h.advance(30);
+    assert!(h.inbox.log[first..].iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(188196)
+            && event.source == Some(caster.to_bits())
+    }));
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .all(|event| event.spell_id != Some(45284) || event.source != Some(caster.to_bits())),
+        "Stormkeeper cannot invent the removed Mastery passive"
     );
 }
 
