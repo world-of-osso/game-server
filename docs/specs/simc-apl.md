@@ -30,6 +30,12 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 
 `crates/server/src/simc_apl/tests.rs`; eleven expression/program cases pushed ignored before implementation: genuine11RED atc0cf6eed6→11GREEN ataff61cbab (exit0, zero compiler warnings,1m03 compile). Cases enabled afterward; invalid-control case additionally checks sourced call recursion. Two action-context REDs at2e6f242ce→all13GREEN atcd3c7e427, zero compiler warnings; context cases enabled afterward.
 
+## Shared native facts
+
+`crate::simc_apl_native` binds gameplay state to the engine-free traits without moving the interpreter into the server binary. Explicit alias registries identify native actions, buffs, talents and resource types; absent aliases fail, never become false. Buff up/stack/remains, real cooldowns/charges/durations, displayed resources, action-bound GCD and engaged enemy counts come from native state. The fixed-time parity encounter supplies elapsed/fight-remains/target-TTD and fight style; dungeon TTD/fight-remains remain explicit unavailable predicates, not estimates or a fallback. Spec adapters add only spec-specific facts.
+
+Native behavioral tests: `simc_apl_native/tests.rs` (earned Hit Combo and Chi, real Provoke cooldown, real Roll charges, actual Charge Rage display conversion, fixture clock and unavailable dungeon predicates). Ignored RED scaffolding precedes bindings; no native-adapter qualification yet.
+
 ## Known gaps (current cycle)
 
 - [ ] Wire native kit adapters; library expression/variable/list decisions have11-case GREEN, not full native rotation proof.
