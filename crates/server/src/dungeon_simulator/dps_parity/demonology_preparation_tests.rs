@@ -3,6 +3,66 @@ use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
+#[test]
+#[ignore = "native level90 actual Hand of Guldan imp attack boundary; private guardian-template DB required"]
+fn dps_parity_demo_native_guldan_imps_attack_the_selected_dummy() {
+    let _scope = crate::random::seed_scope(70448);
+    let mut run = prepare(266, 3).unwrap();
+    for _ in 0..200 {
+        run.app.update();
+    }
+    engage(&mut run);
+    let mut observed = std::collections::HashSet::new();
+    for tick in 0..1200 {
+        run.app.update();
+        let world = run.app.world_mut();
+        let imps: Vec<_> = world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .filter(|(_, summon)| summon.owner == run.actor && summon.spell_id == 104317)
+            .map(|(entity, _)| entity)
+            .collect();
+        for imp in imps {
+            if observed.insert(imp) {
+                let spell = world
+                    .resource::<crate::spell_info::SpellStore>()
+                    .get(104318)
+                    .unwrap()
+                    .clone();
+                let owner_target = world
+                    .get::<crate::networking::CombatTarget>(run.actor)
+                    .and_then(|target| target.0);
+                let admission =
+                    crate::spell_cast::read_native_cast_start(world, imp, &spell, run.targets[0]);
+                println!(
+                    "DEMO_IMP tick={tick} entity={imp:?} owner_target={owner_target:?} admission={admission:?}"
+                );
+            }
+        }
+    }
+    assert!(
+        !observed.is_empty(),
+        "ordinary native Hand of Guldan must actually spawn Wild Imps"
+    );
+    let hits = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(104318)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
+    assert!(
+        hits > 0,
+        "actual level90 native Wild Imps must attack the selected dummy; observed {} actors",
+        observed.len()
+    );
+}
+
 fn summon_count(world: &World, owner: Entity) -> usize {
     world
         .resource::<ObservedCombatEvents>()
