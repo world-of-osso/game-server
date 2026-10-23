@@ -3,9 +3,6 @@
 use std::collections::BTreeMap;
 
 use crate::spell_info::load_class_spells;
-use crate::trait_config::{
-    TraitContext, build_config, starter_purchases, talent_spell_entries, unspent,
-};
 
 #[test]
 #[ignore = "producer: set FOLLOWER_KIT_SOURCE_OUTPUT to an unused JSON path"]
@@ -20,60 +17,19 @@ fn follower_kit_export_native_source() {
     let classes = load_class_spells(&db).unwrap();
     let mut loadouts = Vec::new();
     for profile in profiles {
-        let class = classes
-            .classes
-            .iter()
-            .find(|c| c.class_id == profile.class_id)
-            .unwrap();
-        let spec = class
-            .specs
-            .iter()
-            .find(|s| s.spec_id == profile.spec_id)
-            .unwrap();
         for level in 1..=90 {
-            let context = TraitContext {
-                spec_id: profile.spec_id,
+            let (spells, traits) = crate::class_progression::evaluate_npc_starter(
+                &classes,
+                profile.class_id,
+                profile.spec_id,
                 level,
-            };
-            let purchases = starter_purchases(&class.traits, context).unwrap();
-            let config = build_config(&class.traits, context, &purchases).unwrap();
-            let talents: Vec<_> = talent_spell_entries(&class.traits, &config).collect();
-            let mut known = BTreeMap::new();
-            for spell in &class.learnable {
-                if [1, 2, 4].contains(&spell.acquire_method)
-                    && spell.required_level <= u32::from(level)
-                    && spell.race_masks == [0, 0]
-                {
-                    known.insert(spell.spell_id, spell.passive);
-                }
-            }
-            for spell in crate::class_progression::default_skill_spells(class, 0, level) {
-                known.insert(spell.spell_id, spell.passive);
-            }
-            for spell in &spec.spells {
-                if spell.required_level <= u32::from(level) {
-                    known.insert(spell.spell_id, spell.passive);
-                }
-            }
-            for entry in &talents {
-                known.insert(entry.spell_id, entry.passive);
-            }
-            let overrides = talents
+            )
+            .unwrap();
+            let known: BTreeMap<_, _> = spells
                 .iter()
-                .filter(|entry| entry.overrides_spell_id != 0)
-                .map(|entry| entry.overrides_spell_id)
-                .chain(
-                    spec.spells
-                        .iter()
-                        .filter(|s| {
-                            s.overrides_spell_id != 0 && s.required_level <= u32::from(level)
-                        })
-                        .map(|s| s.overrides_spell_id),
-                );
-            for overridden in overrides {
-                known.remove(&overridden);
-            }
-            let budget = unspent(&class.traits, context, &config);
+                .map(|spell| (spell.spell_id, spell.passive))
+                .collect();
+            let (config, budget) = traits.source_config();
             assert!(budget.iter().all(|(_, points)| *points >= 0));
             loadouts.push(serde_json::json!({
                 "entry": profile.entry, "spec_id": profile.spec_id, "class_id": profile.class_id,

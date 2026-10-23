@@ -125,6 +125,8 @@ mod rest;
 mod scripted_ai;
 mod seething_parachute;
 mod sheet_visibility;
+#[cfg(test)]
+mod simc_apl_native;
 mod skyriding;
 mod spawn_groups;
 mod spawn_pools;

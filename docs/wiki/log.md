@@ -1,6 +1,15 @@
 ## 2026-10-23 — Caster offsets and source balloon qualification
 
 [Offsets](systems/toys.md#caster-offsets414348-source-boundary-2026-10-23): generic41/43/48 use source73 radius/reach/motion and direct geometry, preserving existing32. Genuine9RED plus correctedB43RED;37GREEN29.07s atc0b includes actual two balloons, native direction1GREEN at e71 and area1GREEN13.27s at909 complete39 covered cases without production changes. Native fixture fixes select279366 effect1 and source NPC6/display10913 rather than weakening LOS; legitimate native misses retain receipts. Check0/67.07s/no warnings/fmt0. Exact545→547 only75042/245946,17 blocker-list/15 unavailable strings; Arena battle/action gaps and native-facing/presentation/modifier/Detour boundaries retained. No canonical/protocol writes or invented UseToy toggle.
+- [Candle/Azure normalization correction](systems/boss-scripts.md#azure-integration-correction) — 2026-10-23: actual a112 Sprouts packet-target RED0/1;9f bounds generic source normalization to self-exclusion admission, preserving published cast/log recipients; Azure timing/assertions unchanged. Focused136PASS228.63s plus private-geometry prerequisite2PASS12.03s yields composite138GREEN;14pre-existing ignored, lead full integration gate pending.
+- [Candle King native target boundary](systems/boss-scripts.md#candle-king-native-explicit-unit-boundary--2026-10-22) — 2026-10-22: actual420659 self-target InvalidTarget RED→4GREEN70.52s, TC621–678 normalization/source masks;31 retained controls, native4336 landing pending.
+## 2026-10-23 — Shared native APL fact boundary
+
+[Native facts](systems/simc-apl.md#native-binding-boundary): six actual native6RED at5924496f9→6GREEN17.40s atdc1ee9781,7m37compile/exit0/zero warnings. Earned TP/BOK buff+Chi, actual Charge200raw→20Rage, selected starter allocation distinct from learned utility, native Provoke/Roll timers, action/control GCD and300s fixture clock; no canonical DB edits. [Proof/capability limits](../handoffs/shared-native-apl-proof-ledger.md); only explicit parity Fixture driver approved, Stockade native kit/DUNGEON_TTD_UNAVAILABLE retained, no literal-rotation claim.
+
+## 2026-10-23 — Windwalker baseline and Combo Strikes boundary
+
+[Combo Strikes](systems/auras.md#windwalker-combo-strikes-policy--2026-10-23): actual native TP→Provoke→TP without Hit Combo,83.754=83.754 RED versus99.35737 expected, then native coefficient/state1GREEN10.04s at3286b0463. Frozen300s31146 baseline ST23785.66/3T23260.47,−88.48%/−93.82%; missing FoF/RSK/SCK casts, literal adapter and per-ability/channel qualification remain open ([census](../handoffs/ww-source-census.md)). No tuning/canonical DB changes.
 
 ## 2026-10-22 — Current-critter DismissPet contract selected
 
@@ -42,6 +51,10 @@ Imaginary Gun ig981 landed1aef894cf;0034 ancestry independently verified and ina
 ## 2026-10-22 — Gorek minimum-alert partial
 
 [Gorek](systems/boss-scripts.md#gorek-minimum-alert-partial--2026-10-22): ignorednativeRED→sourceMight/Aegis/Heated/Storm success-owned/namedlowerhold lanes. Post-master921957ad7 native4GREEN31.12s Normal1/projected205,first3.6sMight/actualauras/92s3cycles/reset/actualcopycredit/corpse;stable-keySQLreceipt. Anvil/selector/Stormdummy and existingroutegap retained, no wholefight/publication claim.
+
+## 2026-10-23 — Benchmark-only alternate healer actors
+
+[Healing benchmark](systems/healer-dungeon-metrics.md) now has approved source-preserving configurations for65/256/264/270/1468, explicitly labeled `HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE`. [Exact source candidates](../reports/healer-alternate-spec-source-candidates.md) retain22native root/child IDs without claiming selected-book availability. Genuine absent-policy RED atdb93c15e2:0PASS/1FAIL5.01s. Policy/primary reference remains13191-owned; bridge uses current master, independent of14752's future book helper; no canonical/production roster mutation or all-seven metrics claim.
 
 ## 2026-10-22 — Khajin non-Mythic partial
 
@@ -4072,6 +4085,7 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 
 - 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22) HIT/Chain correction5GREEN10.43s; actual StatsPlugin70samples2PASS9.38s on same executable. Three qualified tests enabled; fullAPL/resource/other-root gaps retained.
 
+- 2026-10-23: Native NPC starter-book runtime/exporter helper; Frenzy alias, absent TraitLoadout and Ret requested-spec REDs reproduced. Shared helper implemented; GREEN/990-source equality pending. See [follower data](investigations/follower-data.md#npc-native-starter-knowledge--2026-10-23).
 - 2026-10-23: [Native weapon AP](systems/character-stats.md#native-weapon-attack-power--2026-10-23): actual Tiger Palm91vs358–377 RED precedes generic raw-table weapon AP/attack-type/aura366 implementation; targeted4GREEN13.89s at4b9d2be73, zero compiler warnings; cases enabled afterward. Parent integration gate pending. White-hit AP/6 versus TC3.5 remains deferred and unchanged.
 
 - 2026-10-23: [Shared SimC APL](systems/simc-apl.md): pushed eleven ignored WW/Ret expressions/variables/call-list REDs, observed11FAIL atc0cf6eed6; shared implementationaff61cbab passes11GREEN (zero compiler warnings), cases enabled afterward; native adapter integration remains pending.
@@ -4092,3 +4106,7 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 - [EB cast mechanism](investigations/follower-data.md#unselected-elemental-blast-and-icefury-overload-mechanisms): after86 native-funded root hits/no120588 RED/controlPASS,117014→120588/effect1 scaling added on mergedlv991 base. Scoped postmerge GREEN pending; no selected-kit/cost/cast-time bypass.
 
 - [Overload cast-only tails](investigations/follower-data.md#unselected-elemental-blast-and-icefury-overload-mechanisms): postmerge11nativeGREEN23.93s +fivechild25%/removal/EchoGREEN10.25s; compile34m11/zero warnings. EB2 and four new child qualifiers enabled after proof; selected-kit/resource/APL limits retained.
+
+- [Lava crit ownership](investigations/follower-data.md#lava-caster-owned-flame-shock-crit-rule): approved own/foreign native285452/2854662PASS2RED9.13s. Shared predicate now requires actual aura caster and registers both payloads; no other crit/modifier/resource edits. GREEN pending on lv991-based branch.
+
+- [Lava crit ownership](investigations/follower-data.md#lava-caster-owned-flame-shock-crit-rule):4GREEN13.43s/zero warnings after2nativeRED; samebinary retained root2GREEN10.03s +actualStatsPlugin70samples2PASS12.42s. Observed285466crits5/5; cases enabled. No other crit edits or causal-DPS/parity claim.

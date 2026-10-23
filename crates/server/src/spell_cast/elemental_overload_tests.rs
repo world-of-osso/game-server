@@ -158,25 +158,21 @@ fn cast_lava_damage_with_flame_shock(
 }
 
 #[test]
-#[ignore = "TC caster-owned Flame Shock root crit RED/GREEN pending"]
 fn native_lava_crit_root_own_flame_shock_guarantees_crit() {
     assert!(cast_lava_damage_with_flame_shock(285452, true).crit);
 }
 
 #[test]
-#[ignore = "TC foreign Flame Shock root crit RED/GREEN pending"]
 fn native_lava_crit_root_foreign_flame_shock_does_not_guarantee_crit() {
     assert!(!cast_lava_damage_with_flame_shock(285452, false).crit);
 }
 
 #[test]
-#[ignore = "TC caster-owned Flame Shock Overload crit RED/GREEN pending"]
 fn native_lava_crit_overload_own_flame_shock_guarantees_crit() {
     assert!(cast_lava_damage_with_flame_shock(285466, true).crit);
 }
 
 #[test]
-#[ignore = "TC foreign Flame Shock Overload crit RED/GREEN pending"]
 fn native_lava_crit_overload_foreign_flame_shock_does_not_guarantee_crit() {
     assert!(!cast_lava_damage_with_flame_shock(285466, false).crit);
 }
