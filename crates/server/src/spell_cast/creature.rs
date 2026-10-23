@@ -127,7 +127,15 @@ fn load_creature_cast(
         .ok_or(CastFailure::UnknownSpell)?;
     let requirement = targets::explicit_requirement(handled_effects(&spell));
     let supplied = target.or_else(|| default_scripted_target(world, caster, requirement));
-    let explicit = explicit_targets::normalize_unit_target(world, &mut spell, supplied);
+    // Normalize only the redundant self object rejected by EXCLUDE_CASTER.
+    // Other supplied objects still own this runtime's cast/packet/log recipient;
+    // dropping them globally loses NPC child CastSuccess delivery to players.
+    let redundant_self = supplied == Some(caster) && targets::excludes_caster(&spell);
+    let explicit = if redundant_self {
+        explicit_targets::normalize_unit_target(world, &mut spell, supplied)
+    } else {
+        supplied
+    };
     Ok((spell, explicit))
 }
 
