@@ -101,8 +101,17 @@ fn resto_policy_emergency_direct_rescue_precedes_delayed_hot() {
 fn resto_policy_emergency_keeps_ready_native_swiftmend_priority() {
     let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(32);
     let tank = party[2];
-    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 33763, Some(tank), false).unwrap();
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 774, Some(tank), false).unwrap();
     super::super::kit_clearcasting_tests::wait_for_gcd(&mut h, healer, 18562);
+    assert_eq!(
+        crate::auras::aura_state::read_computed_state(
+            h.app.world(),
+            tank,
+            crate::auras::aura_state::DRUID_PERIODIC_HEAL,
+        ),
+        Some(true),
+        "native Rejuvenation must qualify the actual Swiftmend prerequisite"
+    );
     damage(&mut h, tank, 0.9);
     let first = h.inbox.log.len();
     decide(&mut h, healer, &[tank, healer]);
