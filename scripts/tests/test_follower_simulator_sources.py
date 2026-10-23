@@ -8,7 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-from follower_simulator_sources import SourceGap, read_source_graph
+from follower_simulator_sources import SourceGap, native_float, read_source_graph
 
 WORLD = Path("/home/osso/Projects/world-of-osso/game-server/data/world.db")
 NAV = Path("/home/osso/Projects/world-of-osso/game-server/data/ground/navmesh")
@@ -59,6 +59,14 @@ class NativeFollowerSourceTests(unittest.TestCase):
         expected = {row[0] for row in self.db.execute("SELECT guid FROM content_creature WHERE map=2521 AND (spawnMask&1)!=0")}
         self.assertEqual(actual, expected)
         self.assertEqual(len(actual), 307)
+        source = {row["guid"]: row for row in self.db.execute("SELECT * FROM content_creature WHERE map=2521")}
+        for pack in graph["packs"]:
+            leader = source[pack["id"]]
+            self.assertEqual(pack["height"], native_float(leader["position_z"]))
+            self.assertEqual(pack["position"], [native_float(leader["position_x"]), native_float(-leader["position_y"])])
+            for actor in pack["spawns"]:
+                native = source[actor["guid"]]
+                self.assertEqual(actor["position"], [native_float(native["position_x"]), native_float(-native["position_y"])])
         self.assertEqual(graph["route"], [])
         self.assertFalse(receipt["pull_route_qualified"])
 
