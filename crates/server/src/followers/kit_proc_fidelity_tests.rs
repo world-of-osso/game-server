@@ -512,6 +512,32 @@ fn proc_fidelity_262_native_stormkeeper_chain_without_mastery_has_no_overload() 
     );
 }
 
+fn complete_recovered_lava_burst(h: &mut Harness, caster: Entity, target: Entity) {
+    for _ in 0..400 {
+        let recovery = {
+            let world = h.app.world();
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(51505)
+                .unwrap();
+            crate::spell_cast::read_healer_recovery(world, caster, spell)
+        };
+        match recovery {
+            Ok(()) => {
+                complete_cast(h, caster, 51505, target);
+                return;
+            }
+            Err(
+                crate::spell_cast::CastFailure::NoCharges
+                | crate::spell_cast::CastFailure::OnCooldown
+                | crate::spell_cast::CastFailure::OnGlobalCooldown,
+            ) => h.advance(1),
+            Err(failure) => panic!("native Lava Burst recovery failed: {failure:?}"),
+        }
+    }
+    panic!("native Lava Burst did not naturally recover a charge within400 frames");
+}
+
 #[test]
 #[ignore = "native Lava Burst Overload mapping pending natural-chance RED/GREEN"]
 fn proc_fidelity_262_native_lava_burst_natural_mastery_produces_overload() {
@@ -530,7 +556,7 @@ fn proc_fidelity_262_native_lava_burst_natural_mastery_produces_overload() {
     let first = h.inbox.log.len();
     for attempt in 1..=attempts {
         let cast_start = h.inbox.log.len();
-        complete_cast(&mut h, caster, 51505, target);
+        complete_recovered_lava_burst(&mut h, caster, target);
         h.advance(30);
         assert!(
             h.inbox.log[cast_start..].iter().any(|event| {
@@ -568,7 +594,7 @@ fn proc_fidelity_262_native_lava_burst_without_mastery_has_no_overload() {
     );
     let target = h.npc;
     let first = h.inbox.log.len();
-    complete_cast(&mut h, caster, 51505, target);
+    complete_recovered_lava_burst(&mut h, caster, target);
     h.advance(30);
     assert!(h.inbox.log[first..].iter().any(|event| {
         event.kind == CombatLogKind::Damage
