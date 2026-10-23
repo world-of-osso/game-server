@@ -9,6 +9,12 @@ Spec269 rotation spells and selected talents execute through native admission, r
 - Measure300s against native dummy31146 and the3target fixture with matched pinned gear/talents. Reference ST206443.72 and3T376559.68; each native result must be within±10%.
 - Produce one native Stockade simulation receipt with the WW kit.
 
+## Literal fixture driver boundary
+
+Only explicit parity `Encounter::Fixture` activates the literal WW driver; it owns that actor's decisions without changing native follower identity, admission or combat handlers. Full pinned action lists and options remain literal, with shared native ActionFacts plus WW-specific combo/equipment/configuration facts. Unknown predicates/options are explicit errors or cited execution gaps, never a legacy-priority fallback. Unselected spells cannot leak from old generic kit rows. Actual30s ST/3T cast/recipient tests and proposed-action combo tests precede implementation.
+
+Stockade keeps its separately requested native kit driver. Loading a literal WW driver for a dungeon must reject `DUNGEON_TTD_UNAVAILABLE` before capturing its controller. A later health-trend TTD source packet is requested only after WW parity; live estimator implementation is not authorized.
+
 ## Qualification and exclusions
 
 [Source census and current capability matrix](../handoffs/ww-source-census.md) owns per-ability proof and remaining gaps. `spell_cast/windwalker_mastery_tests.rs` tests actual TP→Provoke→TP without learned Hit Combo; genuine RED precedes implementation. This one boundary does not qualify all eligibility, channel snapshot or proc behavior.
