@@ -136,10 +136,33 @@ fn fire_efficiency_native70_ordinary_fireball_earns_native_ignite() {
     );
 }
 
+/// Test-only script isolation: retain native70/mastery, remove only the new bridge.
+/// Unmodified native Intensifying Flame→Ignite feedback has its own integration case.
+fn isolate_ignite_producer(h: &mut crate::spell_cast::test_harness::Harness, caster: Entity) {
+    let instance = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 416714)
+        .expect("actual selected native416714")
+        .instance_id;
+    crate::auras::remove_instance(
+        h.app.world_mut(),
+        caster,
+        instance,
+        crate::auras::RemoveReason::Cancelled,
+    );
+    assert!(crate::auras::has_aura(h.app.world(), caster, 12846));
+    assert!(!crate::auras::has_aura(h.app.world(), caster, 416714));
+}
+
 #[test]
 fn fire_efficiency_native70_ignite_uses_native_share_and_cannot_feed_itself() {
     let _seed = crate::random::seed_scope(1);
     let (mut h, caster) = prepare_follower(209059, 63, 70);
+    isolate_ignite_producer(&mut h, caster);
     let target = prepare_dummies(&mut h, 1)[0];
     h.app
         .world_mut()
@@ -220,6 +243,7 @@ fn fire_efficiency_native70_ignite_uses_native_share_and_cannot_feed_itself() {
 fn fire_efficiency_native70_consumed_hot_streak_doubles_ignite_on_impact() {
     let _seed = crate::random::seed_scope(1);
     let (mut h, caster) = prepare_follower(209059, 63, 70);
+    isolate_ignite_producer(&mut h, caster);
     let targets = prepare_dummies(&mut h, 2);
     for target in &targets {
         h.app
@@ -361,6 +385,7 @@ fn land_fireball(
 fn fire_efficiency_native70_ordinary_ignite_refresh_keeps_unpaid_native_damage() {
     let _seed = crate::random::seed_scope(1);
     let (mut h, caster) = prepare_follower(209059, 63, 70);
+    isolate_ignite_producer(&mut h, caster);
     let target = prepare_dummies(&mut h, 1)[0];
     h.app
         .world_mut()

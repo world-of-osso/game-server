@@ -2,6 +2,7 @@
 mod engagement_tests;
 mod inputs;
 mod pet_child_tests;
+mod pet_stats_tests;
 mod player_rotation;
 mod power_tests;
 mod report;
@@ -102,7 +103,7 @@ fn prepare_reference(
     identity: crate::followers::simulator::ParityActor,
 ) -> Result<Run, String> {
     let spec_id = profile.spec_id;
-    let mut app = super::runtime::build_pet_app();
+    let mut app = super::runtime::build_app();
     inputs::install_reference_catalogs(&mut app)?;
     let copy = super::runtime::create_copy(&mut app);
     let level = profile
