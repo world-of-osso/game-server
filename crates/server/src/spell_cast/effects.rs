@@ -25,6 +25,12 @@
 #[cfg(test)]
 #[path = "aura_stat_spell_tests.rs"]
 mod aura_stat_spell_tests;
+#[cfg(test)]
+#[path = "bypass_armor_tests.rs"]
+mod bypass_armor_tests;
+#[cfg(test)]
+#[path = "caster_ability_crit_tests.rs"]
+mod caster_ability_crit_tests;
 
 use crate::random as rand;
 use std::collections::HashSet;
@@ -315,7 +321,15 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
             .get::<crate::hunter_pet::SummonedDemon>(unit)
             .is_some()
         {
-            return demon_power_stats(world, summon.owner);
+            let entry = world
+                .get::<shared::components::Npc>(unit)
+                .map(|npc| npc.template_id);
+            let spell_share = match (summon.spell_id, entry) {
+                (104317, Some(55659)) => WILD_IMP_OWNER_SPELL_POWER,
+                (265187, Some(135002)) => TYRANT_OWNER_SPELL_POWER,
+                _ => DEMON_OWNER_SPELL_POWER,
+            };
+            return demon_power_stats(world, summon.owner, spell_share);
         }
     }
     if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(unit) {
@@ -326,7 +340,7 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
         {
             // TC StatSystem.cpp1358: controlled SUMMON_PET uses the IsPet branch.
             // Water Elemental's separate40% branch is for non-pet guardians, not56.
-            return demon_power_stats(world, pet.owner);
+            return demon_power_stats(world, pet.owner, DEMON_OWNER_SPELL_POWER);
         }
         return (0.0, hunter_pet_attack_power(world, pet.owner));
     }
@@ -344,17 +358,20 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
 
 /// Guardian::UpdateAttackPowerAndDamage (TC StatSystem.cpp:1358-1367): demons
 /// inherit 15% spell bonus and 57% AP from the owner's fire/shadow spell power.
+/// Source-qualified Wild Imp and base Tyrant use their explicit SimC SP policies.
 /// CharacterStats currently exposes one spell-power value, not school-specific values.
-fn demon_power_stats(world: &World, owner: Entity) -> (f32, f32) {
+fn demon_power_stats(world: &World, owner: Entity, spell_share: f32) -> (f32, f32) {
     let power = world
         .get::<CharacterStats>(owner)
         .map_or(0.0, |stats| stats.spell_power.max(0.0));
-    (
-        power * DEMON_OWNER_SPELL_POWER,
-        power * DEMON_OWNER_ATTACK_POWER,
-    )
+    (power * spell_share, power * DEMON_OWNER_ATTACK_POWER)
 }
 
+// WARLOCK_WILD_IMP_OWNER_SP_SIMC: constructor705 overrides base19.
+// Keep native104318 coefficient; do not adopt SimC's unvalidated AP share.
+const WILD_IMP_OWNER_SPELL_POWER: f32 = 1.2;
+// WARLOCK_TYRANT_OWNER_SP_SIMC: constructor1510 retains base19 SP1.0.
+const TYRANT_OWNER_SPELL_POWER: f32 = 1.0;
 const DEMON_OWNER_SPELL_POWER: f32 = 0.15;
 const DEMON_OWNER_ATTACK_POWER: f32 = 0.57;
 
@@ -743,6 +760,11 @@ fn armor_reduced(
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
     };
+    let armor = crate::auras::combat_stats::armor_after_bypass(
+        world.get::<crate::auras::ActiveAuras>(target),
+        caster,
+        armor,
+    );
     let armor = crate::auras::combat_stats::armor_after_ignore(world, caster, spell, armor);
     crate::combat::armor_mitigated(
         amount,
@@ -822,7 +844,9 @@ fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo)
     } else {
         0.0
     };
-    (chance + modifier).max(0.0)
+    let caster_ability =
+        crate::auras::combat_stats::caster_ability_critical_chance(world, caster, target, spell);
+    (chance + modifier + caster_ability).max(0.0)
 }
 
 fn with_crit(
@@ -843,7 +867,8 @@ fn with_crit(
         SpellModOp::CritDamageAndHealing,
         amount,
     );
-    (amount + bonus, true)
+    let multiplier = crate::auras::combat_stats::critical_healing_multiplier(world, caster);
+    (((amount + bonus) * multiplier).trunc(), true)
 }
 
 fn uses_weapon_crit_bonus_order(spell: &SpellInfo) -> bool {
@@ -1261,8 +1286,9 @@ pub(super) fn damage_before_mitigation(
     } else {
         modded_amount(world, &bonus_ctx, amount, periodic)
     } * done
-        * taken)
-        .max(0.0)
+        * taken
+        * ctx.spell.cast_damage_multiplier.unwrap_or(1.0))
+    .max(0.0)
 }
 
 fn deal_damage_and_report(
@@ -1442,8 +1468,10 @@ fn push_damage_event(
             target_mask: [taken | procs::PROC_TAKE_ANY_DAMAGE, 0],
             spell_id: Some(ctx.spell.id),
             can_proc: ctx.depth == 0,
+            cast_used_proc_modifier: !ctx.spell.cast_proc_mods.is_empty(),
             periodic,
             damage,
+            heal: None,
             reflected: false,
         },
     );
@@ -1468,8 +1496,10 @@ fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
             target_mask: [procs::PROC_DEATH, 0],
             spell_id: None,
             can_proc,
+            cast_used_proc_modifier: false,
             periodic: false,
             damage: 0.0,
+            heal: None,
             reflected: false,
         },
     );
@@ -1536,8 +1566,12 @@ pub fn apply_heal(
     } else {
         1.0
     };
-    let taken =
-        stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult) * periodic_taken;
+    let caster_taken = crate::auras::combat_stats::caster_healing_taken_multiplier(
+        world, ctx.caster, target, ctx.spell,
+    );
+    let taken = stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult)
+        * periodic_taken
+        * caster_taken;
     let named = super::scripts::healing_multiplier(world, ctx.caster, ctx.spell)
         * super::scripts::soul_of_the_forest_direct_multiplier(
             world, ctx.caster, ctx.spell, periodic,
@@ -1591,6 +1625,7 @@ fn apply_resolved_heal(
     event.periodic = periodic;
     log_event(world, event);
     if !periodic {
+        super::record_hit_heal(world, ctx.caster, ctx.spell.id, target, amount);
         super::scripts::heal_beacon(world, ctx, target, effective);
         super::scripts::cast_expel_harm_damage(world, ctx, amount);
     }
@@ -1604,8 +1639,10 @@ fn apply_resolved_heal(
                 target_mask: [procs::PROC_TAKE_HELPFUL_PERIODIC, 0],
                 spell_id: Some(ctx.spell.id),
                 can_proc: ctx.depth == 0,
+                cast_used_proc_modifier: !ctx.spell.cast_proc_mods.is_empty(),
                 periodic: true,
                 damage: 0.0,
+                heal: Some(amount),
                 reflected: false,
             },
         );

@@ -54,6 +54,18 @@ WINDWALKER_PRIORITIES = {
     101546: 115, 100784: 120, 100780: 150,
 }
 
+# Authored ground-action decisions, not a minimum implied by the AoE role.
+# SimC76f8118 mage.cpp207/216/231/238 permits Meteor on one target;
+# Flamestrike uses the explicit >=3 cutoff. Consecration remains a single-target
+# Protection action; Earthquake retains its existing basic AoE-list >=3 policy.
+GROUND_AOE_MIN_ENEMIES = {
+    'Consecration': 1,
+    'Earthquake': 3,
+    'Flamestrike': 3,
+    'Meteor': 1,
+}
+
+
 def dps_rotation_policy(spec, name):
     """Bounded SimC76f8118 decisions on the actual selected native70448 book."""
     # mage.cpp210–224: Hot Streak spenders, otherwise Fireball; no Arcane Explosion.
@@ -122,6 +134,11 @@ def combat_policy(spec, name, spell, dispel_effects, control_effects):
         return policy('attack', 110, required_aura=264173,
                       resources=[dict(power='SoulShards', below=4)])
 
+    # SimC apl_shaman79/103: after native Shock actions84, before spenders85.
+    if spec == 262 and spell == 1219480:
+        return policy('buff', 84, 'self', combat=True, missing_aura=1219480,
+                      cooldown_remaining_above=dict(spell_id=191634, seconds=15))
+
     rotation = dps_rotation_policy(spec, name)
     if rotation is not None:
         return rotation
@@ -167,8 +184,9 @@ def combat_policy(spec, name, spell, dispel_effects, control_effects):
         return policy('buff', 80, 'self', combat=True, missing_aura=spell, required_aura=5217)
     if name in {'Avenging Wrath', 'Combustion', 'Dragonrage', 'Zenith', 'Bestial Wrath', "Tiger's Fury", 'Stormkeeper', 'Summon Demonic Tyrant', 'Divine Toll', 'Mirror Image'}:
         return policy('buff', 80, 'self', combat=True, missing_aura=spell)
-    if name in {'Consecration', 'Earthquake', 'Flamestrike', 'Meteor'}:
-        return policy('aoe', 85, 'self' if name == 'Consecration' else 'enemy', min_enemies=1 if spec == 66 else 3, ground=True)
+    if name in GROUND_AOE_MIN_ENEMIES:
+        return policy('aoe', 85, 'self' if name == 'Consecration' else 'enemy',
+                      min_enemies=GROUND_AOE_MIN_ENEMIES[name], ground=True)
     if name in {'Thunder Clap', 'Revenge', 'Whirlwind', 'Chain Lightning', 'Spinning Crane Kick', 'Azure Strike', 'Pyre', 'Swipe', 'Primal Wrath', 'Thrash', 'Holy Nova', 'Arcane Explosion'}:
         return policy('aoe', 90, min_enemies=1 if name == 'Thunder Clap' else 3,
                       source_center=name not in {'Chain Lightning', 'Azure Strike', 'Pyre'})
@@ -287,7 +305,10 @@ def read_description_reference_sources(db2, references):
 # in the selected native loadout enable the named cast actions.
 # Native TraitDefinition108167 VisibleSpellID106951 and108183 OverridesSpellID106951;
 # SimC sc_druid.cpp3933-3946,10699 suppresses Berserk when Incarnation is learned.
+# Elemental114050's native description names1219480; SimCsc_shaman11419
+# selects that actual self action, not the legacy enemy-targeted DUMMY parent.
 SIMC_TALENT_CAST_ACTIONS = {
+    262: ((114050, 1219480, ()),),
     266: ((1250273, 105174, ()), (426115, 264178, ())),
     103: ((343223, 106951, (102543,)),),
 }

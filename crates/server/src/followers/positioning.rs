@@ -91,8 +91,13 @@ fn read_approach_path(
         return Ok(None);
     };
     match result? {
-        Some(Output::Path(path)) if !path.is_empty() => Ok(Some(path)),
-        Some(Output::Path(_)) => Err("Follower positioning route is empty".into()),
+        Some(Output::Path(path)) => {
+            let points = path.into_complete()?;
+            if points.is_empty() {
+                return Err("Follower positioning route is empty".into());
+            }
+            Ok(Some(points))
+        }
         None => Err("Follower positioning has no authored navigation bake".into()),
         Some(_) => Err("Follower positioning received a non-path result".into()),
     }

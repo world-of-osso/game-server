@@ -518,8 +518,8 @@ mod tests {
         let mut templates = HashMap::new();
         templates.insert(1, rest_template(npc_flags));
         WorldData {
-            templates,
-            spawns: vec![rest_spawn(position_x, position_y)],
+            templates: templates.into(),
+            spawns: vec![rest_spawn(position_x, position_y)].into(),
             spawns_by_map: HashMap::from([(0, vec![0])]),
             waypoints: HashMap::new(),
             ..Default::default()

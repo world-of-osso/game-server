@@ -48,6 +48,8 @@ pub(crate) const WORLD_DB_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../
 /// One already matched charged spell modifier, retained by its launched cast.
 #[derive(Debug, Clone)]
 pub(crate) struct ChargedSpellModifier {
+    /// Actual native source of the already matched modifier, not a live-aura guess.
+    pub aura_spell_id: u32,
     pub op: i32,
     pub percent: bool,
     pub amount: f32,
@@ -89,19 +91,26 @@ pub struct SpellInfo {
     /// CheckCast skips SpellHistory::IsReady; HandleCooldowns does no writes.
     #[serde(skip)]
     pub(crate) cast_ignore_cooldowns: bool,
-    /// Successful-launch charged modifiers; None means not yet snapshotted.
+    /// Successful-launch consumed modifiers (charges or scripted stacks).
+    /// None means not yet snapshotted.
     #[serde(skip)]
     pub(crate) cast_charge_mods: Option<Vec<ChargedSpellModifier>>,
     /// Script-owned cast-time proc instances that actually modified admission.
     /// Retained through hardcasts/missiles; triggered casts do not acquire markers.
     #[serde(skip)]
     pub(crate) cast_proc_mods: Vec<u32>,
+    /// Whether this ordinary cast had positive cast time at admission, not its DB2 base.
+    #[serde(skip)]
+    pub(crate) cast_was_hardcast: bool,
     /// NPC-selected release rank; None holds for explicit release or native max hold.
     #[serde(skip)]
     pub(crate) cast_empower_to: Option<u8>,
     /// Completed native empower stage passed into release spell/effect snapshots.
     #[serde(skip)]
     pub(crate) cast_empower_level: Option<u8>,
+    /// Scripted effectiveness on this cast's damage only, retained through flight.
+    #[serde(skip)]
+    pub(crate) cast_damage_multiplier: Option<f32>,
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,
@@ -249,10 +258,18 @@ pub struct SpellAuraOptions {
     pub proc_type_mask: [u32; 2],
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct ProcsPerMinute {
     pub base_proc_rate: f32,
     pub flags: u32,
+    /// SpellProcsPerMinuteMod Type1; never infer haste scaling from Flags.
+    pub haste_modifiers: Vec<ProcsPerMinuteHasteModifier>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct ProcsPerMinuteHasteModifier {
+    pub parameter: u32,
+    pub coefficient: f32,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
@@ -364,7 +381,7 @@ pub struct EmpowerStage {
 #[derive(Resource, Debug, Default)]
 #[cfg_attr(test, derive(Clone))]
 pub struct SpellStore {
-    spells: Vec<SpellInfo>,
+    spells: crate::catalog_data::CatalogData<Vec<crate::catalog_data::CatalogData<SpellInfo>>>,
 }
 
 impl SpellInfo {
@@ -403,10 +420,19 @@ impl SpellInfo {
 }
 
 impl SpellStore {
+    fn from_spells(spells: Vec<SpellInfo>) -> Self {
+        #[cfg(test)]
+        return Self {
+            spells: spells.into_iter().map(Into::into).collect(),
+        };
+        #[cfg(not(test))]
+        Self { spells }
+    }
+
     #[cfg(test)]
     pub(crate) fn fixture(mut spells: Vec<SpellInfo>) -> Self {
         spells.sort_by_key(|spell| spell.id);
-        Self { spells }
+        Self::from_spells(spells)
     }
 
     /// Production's server-side loader against an independent prepared copy.
@@ -444,8 +470,49 @@ impl SpellStore {
     }
 }
 
+#[test]
+fn fixture_spell_edits_and_insertions_leave_retained_and_sibling_stores_unchanged() {
+    let retained = SpellStore::fixture(vec![SpellInfo {
+        id: 133,
+        name: "Fireball".into(),
+        effects: vec![SpellEffect {
+            index: 0,
+            effect: 2,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }]);
+    let sibling = retained.clone();
+    let mut local = retained.clone();
+    local.spells[0].name = "local Fireball".into();
+    local.spells[0].effects[0].effect = 10;
+    local.spells.push(
+        SpellInfo {
+            id: 585,
+            name: "Smite".into(),
+            ..Default::default()
+        }
+        .into(),
+    );
+    for unchanged in [&retained, &sibling] {
+        assert_eq!(unchanged.len(), 1);
+        assert_eq!(unchanged.get(133).unwrap().name, "Fireball");
+        assert_eq!(unchanged.get(133).unwrap().effects[0].effect, 2);
+        assert!(unchanged.get(585).is_none());
+    }
+    assert_eq!(local.get(133).unwrap().effects[0].effect, 10);
+    assert_eq!(local.get(585).unwrap().name, "Smite");
+}
+
 /// Load every spell and the class spell lists from world.db.
 pub fn load_spell_data(conn: &Connection) -> rusqlite::Result<(SpellStore, ClassSpells)> {
+    #[cfg(test)]
+    return crate::test_data::catalog_cache::load_connection(conn, || read_spell_data(conn));
+    #[cfg(not(test))]
+    read_spell_data(conn)
+}
+
+fn read_spell_data(conn: &Connection) -> rusqlite::Result<(SpellStore, ClassSpells)> {
     Ok((
         load::load_spell_store(conn)?,
         class_data::load_class_spells(conn)?,

@@ -136,6 +136,49 @@ fn a_despawned_opponent_ends_the_fight_and_the_dead_cannot_begin_one() {
     assert!(!in_combat(&app, hero));
 }
 
+fn controlled_pet(app: &mut App, owner: Entity) -> Entity {
+    app.world_mut()
+        .spawn((
+            health(),
+            shared::components::UnitSummonedBy(owner.to_bits()),
+            shared::components::UnitIsPet(true),
+            shared::components::UnitFlags(crate::faction::UNIT_FLAG_PLAYER_CONTROLLED),
+        ))
+        .id()
+}
+
+#[test]
+fn pet_combat_refs_npc_pet_survives_quiet_pve_until_explicit_stop() {
+    let mut app = app();
+    let owner = player(&mut app, "Hunter");
+    let pet = controlled_pet(&mut app, owner);
+    let wolf = creature(&mut app);
+    set_in_combat_with(app.world_mut(), wolf, pet);
+    advance_secs(&mut app, 30.0);
+    assert!(
+        in_combat(&app, wolf) && in_combat(&app, pet),
+        "TC NPC versus controlled pet uses a non-timed PvE CombatReference"
+    );
+    crate::combat::combat_stop(app.world_mut(), wolf);
+    assert!(!in_combat(&app, wolf) && !in_combat(&app, pet));
+}
+
+#[test]
+fn pet_combat_refs_both_controlled_sides_keep_native_pvp_timeout() {
+    let mut app = app();
+    let owner = player(&mut app, "Hunter");
+    let other = player(&mut app, "Opponent");
+    let pet = controlled_pet(&mut app, owner);
+    set_in_combat_with(app.world_mut(), pet, other);
+    advance_secs(&mut app, 4.0);
+    assert!(in_combat(&app, pet) && in_combat(&app, other));
+    set_in_combat_with(app.world_mut(), other, pet);
+    advance_secs(&mut app, 4.0);
+    assert!(in_combat(&app, pet) && in_combat(&app, other));
+    advance_secs(&mut app, 1.5);
+    assert!(!in_combat(&app, pet) && !in_combat(&app, other));
+}
+
 /// Agony 980: an instant harmful periodic-damage aura, first tick 2 s after the hit.
 const AGONY: u32 = 980;
 /// Polymorph 118: harmful, 1.7 s cast, `SPELL_ATTR1_NO_THREAT` (no initial aggro).

@@ -260,7 +260,7 @@ fn query_edges(
         for to in &packs[index + 1..] {
             let start = source_point(data, from.id);
             let end = source_point(data, to.id);
-            let Ok(points) = nav.path(start, end) else {
+            let Ok(points) = nav.complete_path(start, end) else {
                 continue;
             };
             let yards: f32 = points

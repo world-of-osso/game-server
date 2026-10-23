@@ -85,7 +85,7 @@ fn hunter(db: &Path, entry: u32) -> Option<Harness> {
         false,
         |app| {
             app.insert_resource(WorldData {
-                templates,
+                templates: templates.into(),
                 ..Default::default()
             });
             app.insert_resource(db);
@@ -163,6 +163,25 @@ fn pet_out(h: &Harness) -> Entity {
 fn saved(h: &Harness) -> StoredPetStable {
     let db = h.app.world().resource::<GameDatabase>();
     load_pet_stable(&db.db, CHARACTER_ID).expect("stable saved")
+}
+
+#[test]
+fn powers_pet_spawn_without_catalog_leaves_stable_and_world_unchanged() {
+    let path = db_path();
+    seed_stable(&path, None);
+    let mut h = hunter(&path, DISEASED_YOUNG_WOLF).unwrap();
+    let owner = h.caster;
+    let position = *h.app.world().get::<Position>(owner).unwrap();
+    let before = stable(&h).unwrap().stored.clone();
+    let entities = h.app.world().entities().len();
+    h.app
+        .world_mut()
+        .remove_resource::<PowerTypeTable>()
+        .unwrap();
+    assert!(spawn_pet(h.app.world_mut(), owner, 0, position, 0.0).is_none());
+    assert_eq!(stable(&h).unwrap().stored, before);
+    assert_eq!(h.app.world().entities().len(), entities);
+    assert!(!h.app.world().contains_resource::<PowerTypeTable>());
 }
 
 #[test]

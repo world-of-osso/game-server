@@ -189,6 +189,7 @@ pub(crate) fn snapshot_charged_modifiers(
                 is_spell_mod(effect.aura_type) && affects(aura, effect, spell)
             });
             effects.map(move |effect| ChargedSpellModifier {
+                aura_spell_id: aura.spell_id,
                 op: effect.misc_values[0],
                 percent: is_pct(effect.aura_type),
                 amount: stacked_amount(aura, effect),
