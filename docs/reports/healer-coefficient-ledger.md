@@ -11,7 +11,7 @@ Verified source snapshot: 2026-10-22. DB2 `data/world.db`, Normal `DifficultyID=
 
 ## Native amount probe scope
 
-`dungeon_simulator::healer_coefficient_tests::healer_benchmark_core_direct_heal_amounts_match_db2_tc_ledger` covers15 direct child/direct heals across all seven specs. Follower profile absence does not block isolated player coefficient probes. Triggered native casts isolate amount from cast admission; these are not full parent spell/channel/empower qualifications.
+`dungeon_simulator::healer_coefficient_tests::healer_benchmark_core_direct_heal_amounts_match_db2_tc_ledger` covers15 direct child/direct heals across all seven specs. Follower profile absence does not block isolated player coefficient probes. Triggered native casts isolate amount from cast admission, except Penance: DB2 child47750 targets77 (channel target), so its probe uses actual47540→47757 and inspects the healing bolt. These are not full talent/empower qualifications. The initial child-only47750 fixture emitted CastSuccess without a heal; this was a fixture-admission failure, not evidence of a coefficient mismatch.
 
 | Spec | Spell | Direct/periodic SP coefficient by effect | Base SP100 heal/tick | Amount proof |
 |---|---|---|---|---|

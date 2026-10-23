@@ -31,10 +31,10 @@ fn healer_benchmark_core_direct_heal_amounts_match_db2_tc_ledger() {
             expected > 0.0,
             "spec{spec} spell{spell}: coefficient source pending"
         );
-        let spells = if spell == 18562 {
-            vec![spell, 774]
-        } else {
-            vec![spell]
+        let spells = match spell {
+            18562 => vec![spell, 774],
+            47750 => vec![47540, 47758, 47757, 47666, 47750],
+            _ => vec![spell],
         };
         let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &spells, class).unwrap();
         if spell == 18562 {
@@ -51,30 +51,46 @@ fn healer_benchmark_core_direct_heal_amounts_match_db2_tc_ledger() {
         }
         h.app
             .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
-        h.app.world_mut().get_mut::<Health>(h.caster).unwrap().max = 100_000.0;
-        h.app
-            .world_mut()
-            .get_mut::<Health>(h.caster)
-            .unwrap()
-            .current = 1.0;
-        crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, spell, Some(h.caster), true)
+        let target = if spell == 47750 {
+            crate::spell_cast::test_harness::spawn_player(&mut h.app, 5, 2.0)
+        } else {
+            h.caster
+        };
+        *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
+            current: 1.0,
+            max: 100_000.0,
+        };
+        if spell == 47750 {
+            // DB2 target77 needs the real47540→47757 channel target, not a direct child cast.
+            h.cast_and_deliver(47540, Some(target));
+            h.advance(50);
+        } else {
+            crate::spell_cast::creature_cast(
+                h.app.world_mut(),
+                h.caster,
+                spell,
+                Some(target),
+                true,
+            )
             .unwrap();
-        h.advance(1);
+            h.advance(1);
+        }
         let events = &h
             .app
             .world()
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
-        let heal = events
-            .iter()
-            .find(|event| {
-                event.kind == CombatLogKind::Heal
-                    && event.spell_id == Some(spell)
-                    && event.target == Some(h.caster.to_bits())
-            })
-            .unwrap_or_else(|| {
-                panic!("spec{spec} spell{spell}: native direct heal absent: {events:?}")
-            });
+        let Some(heal) = events.iter().find(|event| {
+            event.kind == CombatLogKind::Heal
+                && !event.periodic
+                && event.spell_id == Some(spell)
+                && event.target == Some(target.to_bits())
+        }) else {
+            let error = format!("spec{spec} spell{spell}: native direct heal absent: {events:?}");
+            println!("HEAL_COEFFICIENT_MISSING {error}");
+            mismatches.push(error);
+            continue;
+        };
         let delta = variance * 0.5;
         let range =
             (expected * (1.0 - delta)).round() as i32..=(expected * (1.0 + delta)).round() as i32;
