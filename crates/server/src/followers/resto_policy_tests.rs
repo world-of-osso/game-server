@@ -98,6 +98,28 @@ fn resto_policy_emergency_direct_rescue_precedes_delayed_hot() {
 }
 
 #[test]
+fn resto_policy_emergency_keeps_ready_native_swiftmend_priority() {
+    let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(32);
+    let tank = party[2];
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 33763, Some(tank), false).unwrap();
+    super::super::kit_clearcasting_tests::wait_for_gcd(&mut h, healer, 18562);
+    damage(&mut h, tank, 0.9);
+    let first = h.inbox.log.len();
+    decide(&mut h, healer, &[tank, healer]);
+    h.advance(1);
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(18562)
+                && event.source == Some(healer.to_bits())
+                && event.target == Some(tank.to_bits())
+                && event.amount > event.overflow
+        }),
+        "ready native instant Swiftmend must precede cast-time emergency Regrowth"
+    );
+}
+
+#[test]
 fn resto_policy_late_tank_lifebloom_refresh_uses_native_bloom() {
     let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(32);
     let tank = party[2];
