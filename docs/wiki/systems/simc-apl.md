@@ -10,7 +10,10 @@
 | Buff/cooldown/resource/talent/equipment/target facts | `Facts::value` supplies explicit numeric paths; every referenced operand is bound before evaluation, including inactive branches | WW Tiger Palm, Ret ES/trinket conditions GREEN; native adapters still pending |
 | Variables | First declaration's numeric default (native default0); source `set`, `setif`, `value_else`, `reset`; per-actor `Program::state()` | Ret default/setif/reset decisions GREEN |
 | Conditional call lists | Literal row order, first native-usable action; exhausted/explicit empty child returns to caller; unknown call rejected and recursion errors explicit | WW ST/3T and Ret finisher unit decisions GREEN; recursion control added afterward |
+| Per-action facts | `ActionFacts::value_for(&Action, operand)` is mandatory for Program; no actor-wide fallback. SimC combo_strike and plain gcd are action-bound | Two ignored context REDs pushed; runtime RED/wiring pending |
 | Native follower execution | Caller-owned spellbook, facts, target semantics and `creature_cast` integration | Not implemented here yet; Ret adapter belongs to14752, WW adapter remains open |
+
+`Facts` remains the standalone expression interface. `Program::select` requires `ActionFacts`; actor-only snapshots cannot represent proposed-action combo checks or call-control gcd0. `BTreeMap` explicitly models context-independent numeric fixtures.
 
 `Program::parse` takes `(list, literal)` rows; an empty literal declares an intentionally empty list. `Program::select` updates variables and returns an `Action` with its non-`if` options intact. Target selectors, cancellation and item options are not silently interpreted or dropped: native adapters must implement them or report cited gaps. Unsupported expression syntax, control options and variable operations fail explicitly.
 

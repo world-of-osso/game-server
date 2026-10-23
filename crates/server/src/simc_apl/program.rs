@@ -1,5 +1,5 @@
 //! Source-ordered variables/calls, SimC76f8118 variable.cpp and action.cpp4648–4689.
-use super::{Action, Expression, Facts, Variables};
+use super::{Action, ActionFacts, Expression, Facts, Variables};
 use std::collections::BTreeMap;
 
 #[derive(Debug)]
@@ -84,7 +84,7 @@ impl Program {
     pub fn select(
         &self,
         list: &str,
-        facts: &dyn Facts,
+        facts: &dyn ActionFacts,
         variables: &mut Variables,
         mut usable: impl FnMut(&Action) -> Result<bool, String>,
     ) -> Result<Option<Action>, String> {
@@ -184,7 +184,7 @@ impl Program {
 }
 
 struct Selection<'a> {
-    facts: &'a dyn Facts,
+    facts: &'a dyn ActionFacts,
     variables: &'a mut Variables,
     usable: &'a mut dyn FnMut(&Action) -> Result<bool, String>,
     stack: Vec<String>,

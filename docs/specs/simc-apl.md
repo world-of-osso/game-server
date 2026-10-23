@@ -6,6 +6,7 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 
 - [x] Interpret numeric truth, OR/AND/NOT, arithmetic and comparisons with pinned SimC precedence. Single `%` divides; `%%` is modulo.
 - [ ] Read explicit native facts for buff stacks/remains/up, cooldown remains/charges/duration, resources, talents, equipment/trinkets, target count/TTD, fight remains, raid-event adds, dots/debuffs and gcd. Unknown operands fail explicitly, including in otherwise inactive condition branches; never silently become false.
+- [ ] Bind action-dependent facts (`combo_strike`, plain `gcd`, action minimum GCD) to each source row, including variable/call control actions. An actor-wide value is not equivalent.
 - [x] Execute declared variables using source `value`, `setif`, `value_else`, `reset` and numeric `default` semantics.
 - [x] Preserve literal action order and conditional `call_action_list` decisions; native castability selects the first usable action. An exhausted child list returns control to its caller.
 - [x] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.
@@ -22,6 +23,7 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 - `crates/server/src/simc_apl/program.rs` — source-order variables and call lists.
 - `crates/server/src/simc_apl/tests.rs` — concrete WW/Ret behavioral expressions.
 - `crates/server/src/simc_apl/program_tests.rs` — variable lifetimes, source-order calls and native castability decisions.
+- `crates/server/src/simc_apl/context_tests.rs` — proposed-action combo decisions and Ret call-control GCD.
 - `crates/server/src/lib.rs` — engine-free evaluator export.
 
 ## Tests asserting this spec
