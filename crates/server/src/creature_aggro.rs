@@ -158,7 +158,7 @@ fn read_current_aggro_mode(world: &World, unit: Entity) -> Option<AggroMode> {
         .get_resource::<crate::world_data::WorldData>()?
         .template_for(npc.template_id, difficulty)?;
     Some(AggroMode::for_template(
-        template.creature_type,
+        u32::from(template.creature_type),
         template.flags_extra,
         flags.0,
         &template.script_name,
