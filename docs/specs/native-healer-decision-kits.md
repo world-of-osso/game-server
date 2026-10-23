@@ -21,6 +21,7 @@ Named project decision kits for the five approved alternate healer configuration
 
 - `crates/server/src/followers/native_healer_kit_tests.rs` — per-spec native admission, primary/GCD and real-healing contract.
 - `crates/server/src/followers/simulator/healer_profiles.rs` — independently owned approved alternate actor bridge; policy consumes its contract.
+- `crates/server/src/followers/kit_source_tests.rs` — existing starter-build validator source export, extended to approved alternate configurations with explicit source-spec/bridge metadata.
 - `scripts/follower_spec_kits.py` — existing native-book publication format; no canonical writes from this work.
 
 ## Tests asserting this spec
