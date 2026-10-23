@@ -194,8 +194,6 @@ fn encounter_coverage_skarmorak_native_smash_damage_and_actual_energy_cost() {
 #[test]
 fn encounter_coverage_skarmorak_source_shell_refill_channel_rearm_and_copy_credit() {
     for difficulty in [1, 205] {
-        // Replay native melee rolls without replacing any hit or absorb amount.
-        let _rng = crate::random::seed_scope(u64::from(difficulty));
         let (mut h, boss, map) = skarmorak_copy(difficulty);
         let peer_map = create_peer_copy(&mut h, difficulty);
         record_absorb_removals(&mut h);
@@ -244,6 +242,8 @@ fn encounter_coverage_skarmorak_source_shell_refill_channel_rearm_and_copy_credi
             423324
         );
         let player = h.player();
+        // Replay this native melee boundary, independent of setup/prephase draws.
+        let _rng = crate::random::seed_scope(u64::from(difficulty));
         let mut queue = bevy::ecs::world::CommandQueue::default();
         let mut commands = Commands::new(&mut queue, h.app.world());
         crate::combat::start_attack(&mut commands, player, boss, None);
