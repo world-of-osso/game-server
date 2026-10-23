@@ -42,6 +42,14 @@ Post-sync desktop `--map 2991 --all --no-eyes` exits 0: **72 tiles, 2,171,579 tr
 
 Owned output is `<engine-data>/los/2991/`; desktop scratch output is `/home/osso-test/game-engine-trial/zephras-ground/los/2991/`. Other maps and global eye tables were preserved. Runtime `LosMap` loads the bake and blocks the vertical interior probe `(2934.333,1334.333,900)`→`(2934.333,1334.333,500)` at Z 746.51. An exact-center vertical ray was clear before the ground lookup fix: baked mesh vertices retain independent f32 rounding; sub-milliyard mesh cracks remain unverified. The ground-query fix does not change baked vertices.
 
+## Discovery-only payload I/O — 2026-10-23
+
+`GroundFiles.read(..., contents=False)` retains registration, per-map deduplication and file-open failures, but does not read root ADT, WMO-group or vehicle-M2 payloads that callers discard. WDT/obj0/WMO-root bytes still drive the identical dependency walk. Both deploy CLI modes and `extract_ground.missing_files` use this shared helper; runtime geometry parsing is unchanged.
+
+The whole-suite vehicle case measured73.838s in the earlier fixed295 run. Original normal/missing CLI profiles on the same frozena2 source read52.875GB;51.848GB were discarded payloads. An uninstalled discovery prototype preserves both stdout/stderr byte-for-byte: normal output1,543,745bytes, missing572bytes. Sequential busy-host instrumented modes total255.514→55.113s wall and117.111→39.914CPU-s; this is not a randomized quiet forecast. The unchanged795 native vehicle assertions pass with that prototype in23.315s. Resource regression first fails at50,374,741read bytes against a1MiB budget for48MiB of sparse payloads; existing path/missing assertions pass before that budget assertion.
+
+Evidence: canonical `game-engine/data/diagnostics/server-test-perf-2026-10-22/whole-suite-top-tests/ground-profile/`, including per-mode summaries/pstats/output, prototype comparison, native receipt and resource RED. Whole-suite900s/zero-swap remains unqualified; [performance investigation](../investigations/server-test-performance.md).
+
 ## Before-only metadata tooling qualification
 
 The [ground-files qualification ledger](../../handoffs/wow-formats-ground-files-qualification.md) records actual ordered walks plus normal/missing CLI outputs and failures on frozen real/synthetic inputs. It makes no decoder replacement or deploy/extraction claim. Existing permissive chunk/record/group handling is script policy, not permission to substitute stricter runtime projections. A raw-field reuse boundary and any cross-language entry point require separate approval.
