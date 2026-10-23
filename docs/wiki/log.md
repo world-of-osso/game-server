@@ -23,7 +23,7 @@ Imaginary Gun ig981 landed1aef894cf;0034 ancestry independently verified and ina
 
 ## 2026-10-23 — Benchmark-only alternate healer actors
 
-[Healing benchmark](systems/healer-dungeon-metrics.md) now has approved source-preserving configurations for65/256/264/270/1468, explicitly labeled `HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE`. [Exact source candidates](../reports/healer-alternate-spec-source-candidates.md) retain22native root/child IDs without claiming selected-book availability. Genuine absent-policy RED atdb93c15e2:0PASS/1FAIL5.01s. Policy/primary reference and native-book qualification remain13191/14752 dependencies; no canonical/production roster mutation or all-seven metrics claim.
+[Healing benchmark](systems/healer-dungeon-metrics.md) now has approved source-preserving configurations for65/256/264/270/1468, explicitly labeled `HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE`. [Exact source candidates](../reports/healer-alternate-spec-source-candidates.md) retain22native root/child IDs without claiming selected-book availability. Genuine absent-policy RED atdb93c15e2:0PASS/1FAIL5.01s. Policy/primary reference remains13191-owned; bridge uses current master, independent of14752's future book helper; no canonical/production roster mutation or all-seven metrics claim.
 
 ## 2026-10-22 — Khajin non-Mythic partial
 

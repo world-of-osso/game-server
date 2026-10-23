@@ -38,7 +38,7 @@ The standing healer benchmark replays recorded dungeon incoming hits in the head
 ## Known gaps (current cycle)
 
 - [ ] NATIVE_HEALER_POLICY_ABSENT:65,256,264,270,1468 until13191 publishes explicit available decision kits. The approved alternate-spec actor bridge is not an authored follower identity claim; production roster remains unchanged.
-- [ ] Alternate specs also require the policy-owned primary heal/GCD reference and qualified native book initialization (14752); no zero-reference idle metrics or duplicate book evaluator.
+- [ ] Alternate specs require the policy-owned primary heal/GCD reference; no zero-reference idle metrics. Use current master's unchanged book initialization. The separate14752 native-book helper is not a bridge dependency and is not duplicated.
 - [x] RED fixtures committed and pushed before implementation; historical behavioral RED executed. Targeted14PASS/0FAIL after master rebase at dce76186c (209.11s), including persisted actual Stockade replay and15 sourced direct-heal probes. [Generated native results and proof scope](../reports/healer-stockade-seed1/README.md). Broader integration gates remain lead-owned.
 
 ## Approved alternate-spec benchmark bridge

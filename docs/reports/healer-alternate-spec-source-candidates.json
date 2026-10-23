@@ -1,7 +1,7 @@
 {
   "verified": "2026-10-23",
   "source": "read-only canonical world.db DB2/previously authenticated follower_profiles; no canonical mutation",
-  "scope": "Candidate native rows only; not a validated starter book, policy, legal build or availability certificate. Traits/overrides require existing native evaluator owned by agent14752. Decision policy and primary heal/GCD reference owned by13191.",
+  "scope": "Candidate native rows only; not a validated starter book, policy, legal build or availability certificate. Bridge uses current master's unchanged book initialization; agent14752's future native-book helper is independent, not a bridge prerequisite. Decision policy and primary heal/GCD reference owned by13191.",
   "configurations": [
     {
       "requested_spec": 65,
