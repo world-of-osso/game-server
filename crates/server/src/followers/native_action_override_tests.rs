@@ -72,25 +72,68 @@ fn ret_fixture(purchases: &[Purchase]) -> (Harness, Entity) {
     (h, actor)
 }
 
-fn earn_finisher_power(h: &mut Harness, actor: Entity, finisher: u32) {
-    let world = h.app.world();
+fn finisher_power_cost(world: &World, actor: Entity, finisher: u32) -> f32 {
     let spell = world
         .resource::<crate::spell_info::SpellStore>()
         .get(finisher)
         .unwrap();
-    let required = crate::spell_cast::applicable_costs(world, actor, spell)
+    crate::spell_cast::applicable_costs(world, actor, spell)
         .unwrap()
         .into_iter()
         .filter(|(pool, _, _)| *pool == crate::spell_cast::CostPool::Power(PowerType::HolyPower))
         .map(|(_, amount, _)| amount)
-        .sum();
+        .sum()
+}
+
+fn earn_finisher_power(h: &mut Harness, actor: Entity, finisher: u32) {
+    use crate::spell_cast::{CastFailure, native_apl};
+    let required = finisher_power_cost(h.app.world(), actor, finisher);
+    let judgment = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(JUDGMENT)
+        .unwrap()
+        .clone();
     let target = h.npc;
-    // An admitted Judgment may miss: use earned native power, not cast count.
-    super::rotation_refresh_tests::generate_power(
-        h,
-        actor,
-        (PowerType::HolyPower, required),
-        &[(JUDGMENT, target)],
+    let mut previous = None;
+    for frame in 0..600 {
+        let current =
+            crate::spell_cast::powers::power_value(h.app.world(), actor, PowerType::HolyPower)
+                .unwrap()
+                .0;
+        let charges =
+            native_apl::cooldown_value(h.app.world(), actor, &judgment, "charges").unwrap();
+        if previous != Some((current, charges)) {
+            eprintln!(
+                "native Ret funding frame{frame}: HolyPower={current}/{required}, Judgment charges={charges}"
+            );
+            previous = Some((current, charges));
+        }
+        if current >= required {
+            return;
+        }
+        match crate::spell_cast::creature_cast(
+            h.app.world_mut(),
+            actor,
+            JUDGMENT,
+            Some(target),
+            false,
+        ) {
+            Ok(()) => {}
+            Err(
+                CastFailure::OnCooldown
+                | CastFailure::OnGlobalCooldown
+                | CastFailure::NoCharges
+                | CastFailure::InProgress
+                | CastFailure::NotEnoughPower(_),
+            ) => {}
+            Err(reason) => panic!("native Ret Judgment generator failed: {reason:?}"),
+        }
+        h.advance(1);
+    }
+    panic!(
+        "native Ret generators did not earn required{required} Holy Power within600 frames; last state{previous:?}"
     );
 }
 
