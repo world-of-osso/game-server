@@ -1,6 +1,6 @@
 ## 2026-10-22 — Low-hanging filter candidate
 
-[Navigation candidate](systems/navigation.md#low-hanging-filter-candidate--2026-10-22): pinned TC filter stage precedes ledge/headroom. Concrete supported-floor/0.8yd obstruction route RED atc84c7f051; unchanged-climb filter candidate added,2yd/steep negative controls and private four-tile2661experiment pending. No per-map cause or publication claimed.
+[Navigation candidate](systems/navigation.md#low-hanging-filter-candidate--2026-10-22): pinned TC filter stage precedes ledge/headroom. Concrete supported-floor/0.8yd obstruction route REDc84→GREENb4261PASS0.25s with unchanged-climb filter;2yd/steep negativesPASS. One private2661four-tile bake8.53s/exit0 changes no canonical/input hashes but Goldie remains disconnected:3203canonical vs3032private entrance polygons, both Blocked. Negative map experiment; no full rebake/publication or physical cause claim.
 
 ## 2026-10-22 — Partial corridor continuation
 
