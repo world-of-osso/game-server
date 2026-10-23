@@ -22,6 +22,10 @@ TABLES = {
     "GemProperties": "gem_properties",
     "ItemEffect": "item_effect",
     "ItemXItemEffect": "item_x_item_effect",
+    "ItemSet": "item_set",
+    "ItemSetSpell": "item_set_spell",
+    "SpellDescriptionVariables": "spell_description_variables",
+    "SpellXDescriptionVariables": "spell_x_description_variables",
 }
 
 
