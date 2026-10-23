@@ -27,8 +27,8 @@ use crate::profession::PlayerProfessions;
 use crate::race_class::race_mask_allows;
 use crate::spell_info::{ClassInfo, ClassSpells, SpecInfo};
 use crate::trait_config::{
-    ConfigEntry, Purchase, TraitContext, build_config, granted_entries, starter_purchases,
-    talent_spell_entries, unspent,
+    ConfigEntry, Purchase, TraitContext, build_config, granted_entries,
+    ranked_talent_spell_entries, starter_purchases, unspent,
 };
 
 /// Retail spec choice unlocks at level 10; below it the class "Initial" spec is active.
@@ -132,7 +132,7 @@ pub struct TraitLoadout {
     tree_id: u32,
     entries: Vec<ConfigEntry>,
     unspent: Vec<(u32, i32)>,
-    spells: Vec<KnownSpell>,
+    spells: Vec<AppliedTraitSpell>,
     /// `(TraitDefinition.OverridesSpellID, SpellID)` of the applied talents, then
     /// `(SpecializationSpells.OverridesSpellID, SpellID)` of the spec's learned spells:
     /// the baseline spell is not known and its bar buttons show the replacement.
@@ -143,7 +143,17 @@ impl TraitLoadout {
     /// Integration point for the aura runtime: active and passive spells of
     /// the applied talents, in config order. Known spells include them.
     pub fn active_talent_spells(&self) -> impl Iterator<Item = KnownSpell> + '_ {
-        self.spells.iter().copied()
+        self.spells.iter().map(|spell| spell.known)
+    }
+
+    /// TC GetTraitInfoForSpell: metadata belongs to this learned definition spell,
+    /// not arbitrary triggered children or matching spell names.
+    pub(crate) fn spell_trait(&self, spell_id: u32) -> Option<SpellTrait> {
+        self.spells
+            .iter()
+            .rev()
+            .find(|spell| spell.known.spell_id == spell_id)
+            .map(|spell| spell.trait_info)
     }
 
     #[cfg(test)]
@@ -223,6 +233,19 @@ fn publish_learned_spells(
             send(&mut senders, connection, SpellsLearned { spells: learned });
         }
     }
+}
+
+/// TC PlayerSpellTrait, attached when an applied trait learns its definition spell.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct SpellTrait {
+    pub definition_id: u32,
+    pub rank: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct AppliedTraitSpell {
+    known: KnownSpell,
+    trait_info: SpellTrait,
 }
 
 /// A known spell and its SPELL_ATTR0_PASSIVE flag.
@@ -535,21 +558,27 @@ fn build_trait_loadout(
     ctx: TraitContext,
     entries: Vec<ConfigEntry>,
 ) -> TraitLoadout {
-    let talents: Vec<_> = talent_spell_entries(&class.traits, &entries).collect();
+    let talents: Vec<_> = ranked_talent_spell_entries(&class.traits, &entries).collect();
     TraitLoadout {
         tree_id: class.traits.tree_id,
         unspent: unspent(&class.traits, ctx, &entries),
         spells: talents
             .iter()
-            .map(|entry| KnownSpell {
-                spell_id: entry.spell_id,
-                passive: entry.passive,
+            .map(|(entry, rank)| AppliedTraitSpell {
+                known: KnownSpell {
+                    spell_id: entry.spell_id,
+                    passive: entry.passive,
+                },
+                trait_info: SpellTrait {
+                    definition_id: entry.definition_id,
+                    rank: *rank,
+                },
             })
             .collect(),
         overrides: talents
             .iter()
-            .filter(|entry| entry.overrides_spell_id != 0)
-            .map(|entry| (entry.overrides_spell_id, entry.spell_id))
+            .filter(|(entry, _)| entry.overrides_spell_id != 0)
+            .map(|(entry, _)| (entry.overrides_spell_id, entry.spell_id))
             .chain(spec_overrides(spec, ctx.level))
             .collect(),
         entries,

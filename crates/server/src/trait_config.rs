@@ -241,12 +241,21 @@ pub fn talent_spell_entries<'a>(
     tree: &'a TraitTree,
     entries: &'a [ConfigEntry],
 ) -> impl Iterator<Item = &'a TraitNodeEntry> + 'a {
+    ranked_talent_spell_entries(tree, entries).map(|(entry, _)| entry)
+}
+
+/// Applied definition spells with purchased plus granted ranks (TC ApplyTraitEntry).
+pub fn ranked_talent_spell_entries<'a>(
+    tree: &'a TraitTree,
+    entries: &'a [ConfigEntry],
+) -> impl Iterator<Item = (&'a TraitNodeEntry, u32)> + 'a {
     let sub_tree = selected_sub_tree(tree, entries);
     entries.iter().filter_map(move |config_entry| {
         let node = tree.node(config_entry.node_id)?;
         let applies = node.sub_tree_id == 0 || Some(node.sub_tree_id) == sub_tree;
         let entry = node.entry(config_entry.entry_id)?;
-        (applies && config_entry.total() > 0 && entry.spell_id != 0).then_some(entry)
+        (applies && config_entry.total() > 0 && entry.spell_id != 0)
+            .then_some((entry, config_entry.total()))
     })
 }
 

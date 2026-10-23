@@ -189,7 +189,7 @@ fn dummy4_renewing_mist_cast_applies_catalog_hot_and_expires() {
 }
 
 fn chain_lightning(with_rank: bool) {
-    let mut ids = vec![188443];
+    let mut ids = vec![188443, 195897];
     if with_rank {
         ids.push(343725);
     }

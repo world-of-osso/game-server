@@ -51,7 +51,7 @@ use crate::auras::{AuraStatMods, SpellModOp, spell_mods};
 use crate::creature_scripts::{TrainingDummy, health_loss};
 use crate::item_stats::WeaponDamage;
 use crate::level_scaling::{ArmorConstants, CreatureArmor, UnitScaling};
-use crate::spell_info::{SpellEffect, SpellInfo};
+use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::{CharacterStats, WeaponAttackType};
 
 /// TC SharedDefines.h592: ignore armor/crit/block damage-taken adjustments.
@@ -599,7 +599,8 @@ pub(crate) fn modded_base_points(
     effect: &SpellEffect,
 ) -> f32 {
     let base_points = calc_base_value(world, caster, spell, effect);
-    modify_base_points(world, caster, spell, effect, base_points)
+    let value = trait_base_points(world, caster, spell, effect, base_points);
+    modify_base_points(world, caster, spell, effect, value)
 }
 
 /// TC CalcValue applies variance before level contributions and point modifiers.
@@ -610,14 +611,37 @@ pub(super) fn roll_base_points(
     effect: &SpellEffect,
 ) -> f32 {
     let base_points = calc_base_value(world, caster, spell, effect);
+    let value = trait_base_points(world, caster, spell, effect, base_points);
     let delta = (effect.variance * 0.5).abs();
     let rolled_points = if delta == 0.0 {
-        base_points
+        value
     } else {
         let roll = rand::Rng::gen_range(&mut rand::thread_rng(), -delta..=delta);
-        base_points + base_points * roll
+        value + base_points * roll
     };
     modify_base_points(world, caster, spell, effect, rolled_points)
+}
+
+/// TC CalcValue applies the learned definition/rank before variance and modifiers.
+fn trait_base_points(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    value: f32,
+) -> f32 {
+    let trait_info = world
+        .get::<crate::class_progression::TraitLoadout>(caster)
+        .and_then(|traits| traits.spell_trait(spell.id));
+    let Some(trait_info) = trait_info else {
+        return value;
+    };
+    world.resource::<SpellStore>().trait_base_points(
+        trait_info.definition_id,
+        trait_info.rank,
+        effect.index,
+        value,
+    )
 }
 
 fn modify_base_points(
@@ -1911,8 +1935,9 @@ fn roll_power_burn_amount(
     } else {
         calc_base_value(world, ctx.caster, ctx.spell, effect)
     };
+    let value = trait_base_points(world, ctx.caster, ctx.spell, effect, base);
     let variance = roll_power_drain_variance(effect.variance);
-    let rolled = base + base * variance;
+    let rolled = value + base * variance;
     let amount = modify_base_points(world, ctx.caster, ctx.spell, effect, rolled).round();
     (amount >= 0.0).then_some(amount)
 }
