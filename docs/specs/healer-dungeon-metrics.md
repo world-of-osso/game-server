@@ -48,6 +48,15 @@ The standing healer benchmark replays recorded dungeon incoming hits in the head
 
 JSON and Markdown label each alternate configuration with source entry/spec and requested spec, including blocked rows. Absent available decision rows report `NATIVE_HEALER_POLICY_ABSENT` before any party spawn; an unprovided primary heal reference reports `NATIVE_HEALER_PRIMARY_HEAL_ABSENT` rather than inventing idle normalization. Native class/spec mismatch blocks admission. [Exact source candidates and dependency boundaries](../reports/healer-alternate-spec-source-candidates.md) distinguish IDs from validated starter-book availability.
 
+## Explicit private policy catalog
+
+- [ ] `FOLLOWER_KIT_DB` selects a private read-only FollowerCatalog for benchmark replay without modifying the generic runtime, canonical DB, production roster or current book initializer.
+- [ ] An explicit unreadable/invalid catalog returns named `PRIVATE_FOLLOWER_CATALOG` gaps and null metrics; never create an empty DB or silently run canonical policy instead.
+- [ ] Missing source actors/rows in a successfully loaded private catalog retain their source-admission errors, never borrow canonical replacements. Keep input provenance visible in artifacts.
+- [ ] Verify environment selection through process-isolated report invocations; private fixtures copy authentic catalog tables and remove a source row without inventing profiles or healer decisions.
+
+Prepared controls: `crates/server/src/dungeon_simulator/healer_policy_input_tests.rs`. RED execution is pending normal admission; no implementation or GREEN claim.
+
 ## Out of scope
 
 - Healer decision-policy changes, invented follower profiles, player-healer rotation policy and simulator map/route edits: lead/other-agent ownership.

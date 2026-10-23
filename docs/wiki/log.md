@@ -21,6 +21,10 @@ Imaginary Gun ig981 landed1aef894cf;0034 ancestry independently verified and ina
 
 [Gorek](systems/boss-scripts.md#gorek-minimum-alert-partial--2026-10-22): ignorednativeRED→sourceMight/Aegis/Heated/Storm success-owned/namedlowerhold lanes. Post-master921957ad7 native4GREEN31.12s Normal1/projected205,first3.6sMight/actualauras/92s3cycles/reset/actualcopycredit/corpse;stable-keySQLreceipt. Anvil/selector/Stormdummy and existingroutegap retained, no wholefight/publication claim.
 
+## 2026-10-23 — Private healer policy input RED preparation
+
+[Private benchmark input](systems/healer-dungeon-metrics.md#private-policy-input-boundary-prepared-red): current runtime ignores FOLLOWER_KIT_DB despite follower fixtures supporting it. Two ignored process-boundary controls prepared: missing explicit file must not use canonical metrics/create a DB; authentic private catalog minus209057 must preserve source absence. No guessed kits, canonical/generic-runtime changes, execution or implementation claim. Parent authorized benchmark-only catalog override;13191 owns actual rows/primary references.
+
 ## 2026-10-23 — Benchmark-only alternate healer actors
 
 [Healing benchmark](systems/healer-dungeon-metrics.md) now has approved source-preserving configurations for65/256/264/270/1468, explicitly labeled `HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE`. [Exact source candidates](../reports/healer-alternate-spec-source-candidates.md) retain22native root/child IDs without claiming selected-book availability. Genuine absent-policy RED atdb93c15e2:0PASS/1FAIL5.01s→5ed84c22316GREEN195.63s: source config identities/class/spec, no partial party/roster mutation, blocked bridge JSON/MD and retained14native replay controls. This is not five new actors executed or all-seven metrics. Policy/primary reference remains13191-owned; bridge uses current master, independent of14752's future book helper; no canonical/production roster mutation or all-seven metrics claim.

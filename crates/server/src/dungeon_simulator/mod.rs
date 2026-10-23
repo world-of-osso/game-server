@@ -11,6 +11,7 @@ pub(crate) mod healer_intake;
 mod healer_intake_tests;
 mod healer_metrics;
 mod healer_metrics_tests;
+mod healer_policy_input_tests;
 mod healer_replay;
 mod healer_report;
 mod movement;

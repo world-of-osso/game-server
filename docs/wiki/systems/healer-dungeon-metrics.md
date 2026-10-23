@@ -37,6 +37,12 @@ Run via capacity admission and `agent-run`, using targeted server tests only:
 
 Only105 Crenna209072 and257 Henry215011 have authored healer follower profiles in the verified source DB. The approved benchmark-only `HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE` reuses authenticated same-class actors for65/256/264/270/1468 without rewriting source identity/display or production roster; [source candidates](../../reports/healer-alternate-spec-source-candidates.md). A configured actor is not a decision policy: absent available kit rows return `NATIVE_HEALER_POLICY_ABSENT` before spawning, and a missing policy-owned primary heal reference returns `NATIVE_HEALER_PRIMARY_HEAL_ABSENT`. JSON/Markdown retain source and requested specs even on blocked rows. The bridge uses current master's unchanged book initialization.14752's separate future native-book helper is not a bridge prerequisite; no parallel evaluator or guessed kit is added. Isolated native coefficient probes still cover all seven specs independently of dungeon actor availability. The determinism fixture derives an80%-of-native-HP pre-armor injury from actual source/target scaling, runs6s and requires positive native healing; identical zero-healing traces do not qualify.
 
+## Private policy input boundary (prepared RED)
+
+Existing follower fixtures consume `FOLLOWER_KIT_DB`, but the benchmark's runtime currently loads the canonical catalog and ignores that explicit selection. Approved follow-up loads the private FollowerCatalog only into the benchmark App, with current native class/book initialization unchanged; no generic runtime or canonical/production mutation.
+
+Two process-isolated ignored controls cover a nonexistent explicit catalog (no canonical native-metric substitution or empty-file creation) and a private copy of authentic catalog tables missing source209057 (no canonical actor replacement). The latter deliberately tests source refusal, not a guessed policy. Test subprocesses inherit the admitted agent slice; native report output and source errors are observed rather than mutating process-global environment inside a shared test executable. Implementation/RED execution remain pending; [contract](../../specs/healer-dungeon-metrics.md#explicit-private-policy-catalog).
+
 ## Sources
 
 - [Feature contract](../../specs/healer-dungeon-metrics.md)
