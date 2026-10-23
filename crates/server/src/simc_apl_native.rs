@@ -290,4 +290,6 @@ fn bool_value(value: bool) -> f64 {
 }
 
 #[cfg(test)]
+mod target_tests;
+#[cfg(test)]
 mod tests;
