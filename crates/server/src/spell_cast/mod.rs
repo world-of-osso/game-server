@@ -1342,12 +1342,23 @@ pub(crate) fn cast_for_player(
     player: Entity,
     spell_id: u32,
 ) -> Result<(), CastFailure> {
+    cast_for_player_with_target(world, player, spell_id, None)
+}
+
+/// Use the normal Player request path without changing its selected/AA victim.
+/// None means the request uses the Player's native selected target.
+pub(crate) fn cast_for_player_with_target(
+    world: &mut World,
+    player: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
+) -> Result<(), CastFailure> {
     let request = SpellCastIntent {
         target_item_guid: None,
         destination: None,
         spell_id: Some(spell_id),
         spell: String::new(),
-        target_entity: None,
+        target_entity: target.map(Entity::to_bits),
         witness: None,
     };
     request_cast(world, player, &request).map_err(|(spell_id, failure)| {
@@ -1568,15 +1579,16 @@ fn request_cast(
         };
         return Err((spell.id, failure));
     }
-    let explicit = request
-        .target_entity
-        .and_then(Entity::try_from_bits)
-        .filter(|&target| world.get_entity(target).is_ok())
-        .or_else(|| {
-            world
-                .get::<CombatTarget>(caster)
-                .and_then(|target| target.0)
-        });
+    let explicit = match request.target_entity {
+        Some(bits) => Some(
+            Entity::try_from_bits(bits)
+                .filter(|&target| world.get_entity(target).is_ok())
+                .ok_or((spell.id, CastFailure::NoTarget))?,
+        ),
+        None => world
+            .get::<CombatTarget>(caster)
+            .and_then(|target| target.0),
+    };
     let explicit = if disenchant::is_disenchant(&spell)
         || (request.target_item_guid.is_some()
             && spell.effects.iter().any(open_lock::is_item_effect))
