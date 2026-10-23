@@ -118,7 +118,6 @@ fn create_peer_copy(h: &mut Harness, difficulty: u32) -> InMap {
 }
 
 #[test]
-#[ignore = "RED: TC Skarmorak AI is not ported"]
 fn encounter_coverage_skarmorak_first_smash_normal_and_projected205_tc_clock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = skarmorak_copy(difficulty);
@@ -147,7 +146,6 @@ fn encounter_coverage_skarmorak_first_smash_normal_and_projected205_tc_clock() {
 }
 
 #[test]
-#[ignore = "Qualification: native source power and damage, not a timer port"]
 fn encounter_coverage_skarmorak_native_smash_damage_and_actual_energy_cost() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = skarmorak_copy(difficulty);
@@ -194,7 +192,6 @@ fn encounter_coverage_skarmorak_native_smash_damage_and_actual_energy_cost() {
 }
 
 #[test]
-#[ignore = "RED: TC Skarmorak energy/Shell/Discharge clocks not ported"]
 fn encounter_coverage_skarmorak_source_shell_refill_channel_rearm_and_copy_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = skarmorak_copy(difficulty);
@@ -380,7 +377,6 @@ fn encounter_coverage_skarmorak_source_shell_refill_channel_rearm_and_copy_credi
 }
 
 #[test]
-#[ignore = "RED: TC Skarmorak reset clocks not ported"]
 fn encounter_coverage_skarmorak_generic_evade_rearms_without_fabricated_energy() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = skarmorak_copy(difficulty);
