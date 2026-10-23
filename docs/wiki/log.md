@@ -141,6 +141,10 @@
 
 ## 2026-10-22 — Active party combat references
 
+## 2026-10-22 — Meteor admission, impact and TC cast boundary
+
+Authored ground-action thresholds replace blanketmin3 forMeteor. TCroot/ATexpiry/missile/nativeimpact/burn chain passes four native cases; ordinary expiry preserves concurrent hardcast rejection rather than SimC FULL_MASK-like outcome. Copy-only stable-key delta and explicit old-policy/prerequisite failures retained. See [Meteor](investigations/follower-data.md#meteor-authored-admission-and-tc-delayed-impact--2026-10-22).
+
 ## 2026-10-22 — Fire Ignite producer and shared rolling integration
 
 Ordinary Fireball→Ignite RED precedes per-spell producer; native4GREEN covers exact9ticks, no self-cascade, consumed HotStreak doubling and actual unpaid refresh. Shared flag-driven carry reused from13191, not forked. Controlled naked70 baseline/decomposition and integrated single-seed observation qualify stats, idle and nohero reference differences. See [Fire70](investigations/follower-data.md#fire70-ignite-producer-and-controlled-baseline--2026-10-22).
