@@ -34,6 +34,8 @@ mod fire_efficiency_tests;
 #[cfg(test)]
 mod formation_tests;
 #[cfg(test)]
+mod giantkiller_tests;
+#[cfg(test)]
 mod kit_proc_fidelity_tests;
 #[cfg(test)]
 mod kit_rotation_fidelity_tests;
