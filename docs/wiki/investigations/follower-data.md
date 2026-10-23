@@ -2,6 +2,8 @@
 
 ## Party-pet threat coverage — 2026-10-22
 
+Gatept976 exposed an older CombatRefs fixture's live-APL coupling, not a1-versus3 admitted-enemy regression: the three enemies already pass, then line163 expects Meteor's published `min_enemies=3` while the new Fire policy publishes1. Reproduced on unchanged3d16 native binary in5.45s. The fixture now clones native Meteor geometry and explicitly sets its own three-target threshold; its enemy-count/area/no-pull expectations remain unchanged, and no production Fire policy or canonical row is rewritten. Refreshed controls follow separately.
+
 Approved follower policy includes an actual living same-copy summoned hunter/warlock pet when checking enemy victim, active references and threat entries. `party_units` and healer patients stay unchanged; the expanded vector is local to `engaged_enemies`. Existing lost-threat priority/taunt behavior handles the admitted pet attacker. Foreign pets and unengaged packs remain excluded; pet-native taunt/autocast/positioning and HP/armor are separate work.
 
 Actual sourceCallPet Duck174884 and ordinary Felguard17252 native fixtures acquire an enemy solely through `AttackStart(pet)` with one zero-threat entry, before the first hit's owner-engagement bridge. Pushed ignored83a352bc3 had an incomplete Idle-state setup; correctedbe6f75d86 gives genuine2RED11.29s (empty admission versus actual pet attacker). Minimal971491e4c gives3GREEN14.99s: both admitted enemies receive actual native Garrick62124 and switch victim to the tank; foreign-pet/unengaged control stays excluded. No pet-stat mutation.
