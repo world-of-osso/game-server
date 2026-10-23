@@ -811,9 +811,38 @@ def import_skarmorak(connection):
     return [210156]
 
 
+def import_edna(connection):
+    """TC a352b1fa EDNA primary; preserve authored immunity and inherited intro actors."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2652, entry=210108, encounter_id=2854, bit=0,
+                   script='boss_edna', ai='', journal_id=2572,
+                   actor_id=5586, display_id=120054, spawn_guid=10002128,
+                   spawn_difficulties='1,2,8,23')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('''SELECT name,AIName,ScriptName,unit_class,unit_flags,unit_flags2
+        FROM content_creature_template WHERE entry=210108''').fetchone()
+    if runtime != ('E.D.N.A.', '', 'boss_edna', 4, 320, 0):
+        raise ValueError('EDNA runtime identity or source class/immunity changed')
+    inherited = connection.execute(
+        'SELECT StringId FROM tdb_creature_template WHERE entry=210109'
+    ).fetchone()
+    spawns = connection.execute('''SELECT guid,map,spawnDifficulties FROM tdb_creature
+        WHERE id=210109 ORDER BY guid''').fetchall()
+    expected = [(guid, 2652, '1,2,8,23') for guid in
+                [10002119, 10002123, 10002124, 10002127, 10002177]]
+    if inherited != ('edna_intro_trash',) or spawns != expected:
+        raise ValueError('EDNA inherited intro actor identity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    return [210108]
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','vexamus','granyth','treemouth','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry','orator','skarmorak'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','vexamus','granyth','treemouth','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry','orator','skarmorak','edna'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -841,6 +870,8 @@ def main():
                 entries = import_anubzekt(conn)
             elif args.encounter == 'skarmorak':
                 entries = import_skarmorak(conn)
+            elif args.encounter == 'edna':
+                entries = import_edna(conn)
             elif args.encounter == 'orator':
                 entries = import_orator(conn)
             elif args.encounter == 'kikatal':
