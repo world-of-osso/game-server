@@ -88,6 +88,7 @@ fn dps_parity_equipment_redirected_base_stats_are_modeled_without_hiding_other_o
 }
 
 #[test]
+#[ignore = "requires prepared103 profile, native database and scripts/dps_parity_native.py source view"]
 fn dps_parity_equipment_redirected_native_base_stats_match_all_fifteen_slots() {
     // Exact per-slot base ratings from pinned76f8118's103 profile. All ten
     // non-redirected controls already agree; only the five tier allocations differ.
@@ -153,6 +154,7 @@ fn dps_parity_equipment_redirected_native_base_stats_match_all_fifteen_slots() {
 }
 
 #[test]
+#[ignore = "requires prepared103 profile, native database and scripts/dps_parity_native.py source view"]
 fn dps_parity_equipment_redirected_base_stats_reject_invalid_native_donors() {
     let mut app = equipment_app();
     let actor = spawn_reference_player(&mut app);
