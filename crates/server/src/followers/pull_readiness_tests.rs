@@ -219,7 +219,12 @@ fn swiftmend_charge_count(h: &Harness, healer: Entity) -> usize {
     else {
         return 1;
     };
-    let mods = crate::auras::charge_mods(h.app.world(), healer, category.charge_category);
+    let mods = crate::auras::charge_mods(
+        h.app.world(),
+        healer,
+        category.charge_category,
+        category.charge_type_mask,
+    );
     (category.max_charges as i32 + mods.extra_charges).clamp(0, u8::MAX as i32) as usize
 }
 

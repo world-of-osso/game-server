@@ -17,6 +17,7 @@
 
 use crate::random as rand;
 mod algethar_academy;
+mod anubzekt;
 pub(crate) mod azure_vault;
 mod azureblade;
 mod blood_furnace;
@@ -24,14 +25,23 @@ pub mod boss_ai;
 pub mod bossmod;
 mod broggok;
 mod bromach;
+mod candle_king;
 pub(crate) mod caster_chase;
 pub mod creature_text;
+mod dailcry;
 mod doragosa;
+mod emberon;
 pub mod event_map;
+mod gorek;
+mod granyth;
+mod gulping_goliath;
+mod gutshot;
 pub(crate) mod hellfire_ramparts;
 pub mod instance_script;
 pub(crate) mod jump_movement;
 pub(crate) mod kargath;
+mod khajin;
+mod kikatal;
 pub mod kings_rest;
 mod kokia;
 mod lost_dwarves;
@@ -42,15 +52,22 @@ pub mod movement;
 pub mod murder_row;
 pub(crate) mod nethekurse;
 pub(crate) mod nethekurse_intro;
+pub(crate) mod orator;
 pub(crate) mod ragefire_chasm;
 pub(crate) mod ruby_life_pools;
+mod scripted_alerts;
 pub(crate) mod shattered_halls;
+mod skarmorak;
 pub mod smart_ai;
+mod talondras;
 pub mod the_stockade;
+mod treemouth;
 pub(crate) mod tww_rookery;
 mod umbrelskul;
+mod vexamus;
 pub(crate) mod wailing_caverns;
 pub mod waypoint_path;
+mod wratheye;
 
 use std::collections::VecDeque;
 
@@ -115,6 +132,8 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, azure_vault::register_aura_scripts)
             .add_systems(Startup, blood_furnace::register_aura_scripts)
             .add_systems(Startup, shattered_halls::register_aura_scripts)
+            .add_systems(Startup, orator::register_aura_scripts)
+            .add_systems(Startup, skarmorak::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
@@ -261,6 +280,10 @@ pub enum Hook {
 /// TrinityCore `CreatureAI` virtuals the Stockade scripts override. Defaults do
 /// what `CreatureAI`/`ScriptedAI` do when a script does not override them.
 pub trait CreatureAi: Send + Sync + 'static {
+    /// Explicit source-owned script schedules opt into real-clock alerts.
+    fn encounter_schedule(&self) -> Option<&EventMap> {
+        None
+    }
     /// Read-only script requests, not impact-time or damage-amount predictions.
     fn scheduled_damage(&self) -> Vec<ScheduledDamage> {
         Vec::new()
@@ -363,6 +386,51 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if azure_vault::is_creature_script(script_name) {
         return azure_vault::creature_ai(world, creature, script_name);
     }
+    if script_name == candle_king::SCRIPT {
+        return candle_king::creature_ai(world, creature);
+    }
+    if script_name == emberon::SCRIPT {
+        return emberon::creature_ai(world, creature);
+    }
+    if script_name == gulping_goliath::SCRIPT {
+        return gulping_goliath::creature_ai(world, creature);
+    }
+    if script_name == granyth::SCRIPT {
+        return granyth::creature_ai(world, creature);
+    }
+    if script_name == treemouth::SCRIPT {
+        return treemouth::creature_ai(world, creature);
+    }
+    if script_name == gorek::SCRIPT {
+        return gorek::creature_ai(world, creature);
+    }
+    if script_name == khajin::SCRIPT {
+        return khajin::creature_ai(world, creature);
+    }
+    if script_name == gutshot::SCRIPT {
+        return gutshot::creature_ai(world, creature);
+    }
+    if script_name == wratheye::SCRIPT {
+        return wratheye::creature_ai(world, creature);
+    }
+    if script_name == anubzekt::SCRIPT {
+        return anubzekt::creature_ai(world, creature);
+    }
+    if script_name == orator::SCRIPT {
+        return orator::creature_ai(world, creature);
+    }
+    if script_name == skarmorak::SCRIPT {
+        return skarmorak::creature_ai(world, creature);
+    }
+    if script_name == kikatal::SCRIPT {
+        return kikatal::creature_ai(world, creature);
+    }
+    if script_name == dailcry::SCRIPT {
+        return dailcry::creature_ai(world, creature);
+    }
+    if script_name == talondras::SCRIPT {
+        return talondras::creature_ai(world, creature);
+    }
     if script_name == bromach::SCRIPT {
         return bromach::creature_ai(world, creature);
     }
@@ -427,6 +495,21 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || ruby_life_pools::is_creature_script(script_name)
         || script_name == lost_dwarves::SCRIPT
         || script_name == bromach::SCRIPT
+        || script_name == talondras::SCRIPT
+        || script_name == emberon::SCRIPT
+        || script_name == candle_king::SCRIPT
+        || script_name == anubzekt::SCRIPT
+        || script_name == gutshot::SCRIPT
+        || script_name == wratheye::SCRIPT
+        || script_name == gorek::SCRIPT
+        || script_name == khajin::SCRIPT
+        || script_name == gulping_goliath::SCRIPT
+        || script_name == orator::SCRIPT
+        || script_name == skarmorak::SCRIPT
+        || script_name == granyth::SCRIPT
+        || script_name == treemouth::SCRIPT
+        || script_name == kikatal::SCRIPT
+        || script_name == dailcry::SCRIPT
         || hellfire_ramparts::is_creature_script(script_name)
         || blood_furnace::is_creature_script(script_name)
         || shattered_halls::is_creature_script(script_name)
@@ -668,6 +751,9 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
         Hook::QuestAccepted { player, quest_id } => ai.quest_accepted(&mut ctx, player, quest_id),
         Hook::QuestRewarded { player, quest_id } => ai.quest_rewarded(&mut ctx, player, quest_id),
         Hook::SpellHit { caster, spell_id } => ai.spell_hit(&mut ctx, caster, spell_id),
+    }
+    if let Some(events) = ai.encounter_schedule() {
+        scripted_alerts::publish_schedule(ctx.world, me, events);
     }
 }
 

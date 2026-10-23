@@ -25,6 +25,15 @@
 #[cfg(test)]
 #[path = "aura_stat_spell_tests.rs"]
 mod aura_stat_spell_tests;
+#[cfg(test)]
+#[path = "bypass_armor_tests.rs"]
+mod bypass_armor_tests;
+#[cfg(test)]
+#[path = "caster_ability_crit_tests.rs"]
+mod caster_ability_crit_tests;
+#[cfg(test)]
+#[path = "windwalker_mastery_tests.rs"]
+mod windwalker_mastery_tests;
 
 use crate::random as rand;
 use std::collections::HashSet;
@@ -43,7 +52,7 @@ use crate::creature_scripts::{TrainingDummy, health_loss};
 use crate::item_stats::WeaponDamage;
 use crate::level_scaling::{ArmorConstants, CreatureArmor, UnitScaling};
 use crate::spell_info::{SpellEffect, SpellInfo};
-use crate::stats::CharacterStats;
+use crate::stats::{CharacterStats, WeaponAttackType};
 
 /// TC SharedDefines.h592: ignore armor/crit/block damage-taken adjustments.
 const ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS: u32 = 0x100;
@@ -57,6 +66,7 @@ pub const EFFECT_POWER_DRAIN: u32 = 8;
 pub const EFFECT_POWER_BURN: u32 = 62;
 pub const EFFECT_HEALTH_LEECH: u32 = 9;
 pub const EFFECT_HEAL: u32 = 10;
+pub const EFFECT_HEAL_MAX_HEALTH: u32 = 67;
 pub const EFFECT_QUEST_COMPLETE: u32 = 16;
 pub const EFFECT_KILL_CREDIT_PERSONAL: u32 = 90;
 pub const EFFECT_KILL_CREDIT: u32 = 134;
@@ -67,6 +77,7 @@ pub const EFFECT_TRIGGER_MISSILE: u32 = 32;
 pub const EFFECT_DISPEL: u32 = 38;
 pub const EFFECT_WEAPON_DAMAGE: u32 = 58;
 pub const EFFECT_SEND_EVENT: u32 = 61;
+pub const EFFECT_THREAT: u32 = 63;
 pub const EFFECT_TRIGGER_SPELL: u32 = 64;
 pub const EFFECT_INTERRUPT_CAST: u32 = 68;
 pub const EFFECT_NORMALIZED_WEAPON_DMG: u32 = 121;
@@ -119,6 +130,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_HEALTH_LEECH => health_leech,
         EFFECT_KILL_CREDIT_PERSONAL | EFFECT_KILL_CREDIT => quest_kill_credit,
         EFFECT_HEAL => heal,
+        EFFECT_HEAL_MAX_HEALTH => heal_max_health,
         crate::death::resurrection::EFFECT_RESURRECT
         | crate::death::resurrection::EFFECT_RESURRECT_WITH_AURA => {
             crate::death::resurrection::send_offer
@@ -137,6 +149,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         // missile's spell hits the unit target synchronously.
         EFFECT_TRIGGER_MISSILE => trigger_spell,
         EFFECT_SEND_EVENT => send_game_event,
+        EFFECT_THREAT => add_fixed_threat,
         EFFECT_INTERRUPT_CAST => interrupt_cast,
         EFFECT_HEAL_PCT => heal_pct,
         EFFECT_FORCE_CAST => force_cast,
@@ -156,6 +169,54 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         crate::hunter_pet::EFFECT_DISMISS_PET => crate::hunter_pet::effect_dismiss_pet,
         _ => return None,
     })
+}
+
+/// TC SpellEffects.cpp2948–2964 and ThreatManager.cpp382–409: computed value,
+/// no threat modifiers, damage or forced victim. Redirects remain unmodelled.
+fn add_fixed_threat(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    let living_caster = world
+        .get::<Health>(ctx.caster)
+        .is_some_and(|health| health.current > 0.0);
+    if !living_caster || world.get::<Npc>(target).is_none() {
+        return;
+    }
+    if super::attributes(ctx.spell, 1) & super::SPELL_ATTR1_NO_THREAT != 0 {
+        return;
+    }
+    let no_initial_threat =
+        super::attributes(ctx.spell, 2) & super::SPELL_ATTR2_NO_INITIAL_THREAT != 0;
+    let engaged = world
+        .get::<shared::components::CombatStatus>(target)
+        .is_some_and(|status| status.0);
+    if no_initial_threat && !engaged {
+        return;
+    }
+    let amount = roll_base_points(world, ctx.caster, ctx.spell, effect);
+    crate::creature_aggro::add_unmodified_threat(world, target, ctx.caster, amount);
+}
+
+/// Build70448 SpellTargetRestrictions: exclude levels before hit/combat bookkeeping.
+/// Pinned TC loads this field but does not consume it; this is DB2-backed behavior.
+pub(super) fn retain_threat_level_targets(
+    world: &World,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    units: &mut Vec<Entity>,
+) {
+    if effect.effect != EFFECT_THREAT {
+        return;
+    }
+    let cap = spell
+        .target_restrictions
+        .as_ref()
+        .map_or(0, |data| data.max_target_level);
+    if cap != 0 {
+        units.retain(|target| {
+            world
+                .get::<shared::components::UnitLevel>(*target)
+                .is_some_and(|level| u32::from(level.0) <= cap)
+        });
+    }
 }
 
 /// TC EffectInstaKill hit-target branch. The existing Unit::Kill path handles
@@ -263,7 +324,15 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
             .get::<crate::hunter_pet::SummonedDemon>(unit)
             .is_some()
         {
-            return demon_power_stats(world, summon.owner);
+            let entry = world
+                .get::<shared::components::Npc>(unit)
+                .map(|npc| npc.template_id);
+            let spell_share = match (summon.spell_id, entry) {
+                (104317, Some(55659)) => WILD_IMP_OWNER_SPELL_POWER,
+                (265187, Some(135002)) => TYRANT_OWNER_SPELL_POWER,
+                _ => DEMON_OWNER_SPELL_POWER,
+            };
+            return demon_power_stats(world, summon.owner, spell_share);
         }
     }
     if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(unit) {
@@ -274,7 +343,7 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
         {
             // TC StatSystem.cpp1358: controlled SUMMON_PET uses the IsPet branch.
             // Water Elemental's separate40% branch is for non-pet guardians, not56.
-            return demon_power_stats(world, pet.owner);
+            return demon_power_stats(world, pet.owner, DEMON_OWNER_SPELL_POWER);
         }
         return (0.0, hunter_pet_attack_power(world, pet.owner));
     }
@@ -292,17 +361,20 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
 
 /// Guardian::UpdateAttackPowerAndDamage (TC StatSystem.cpp:1358-1367): demons
 /// inherit 15% spell bonus and 57% AP from the owner's fire/shadow spell power.
+/// Source-qualified Wild Imp and base Tyrant use their explicit SimC SP policies.
 /// CharacterStats currently exposes one spell-power value, not school-specific values.
-fn demon_power_stats(world: &World, owner: Entity) -> (f32, f32) {
+fn demon_power_stats(world: &World, owner: Entity, spell_share: f32) -> (f32, f32) {
     let power = world
         .get::<CharacterStats>(owner)
         .map_or(0.0, |stats| stats.spell_power.max(0.0));
-    (
-        power * DEMON_OWNER_SPELL_POWER,
-        power * DEMON_OWNER_ATTACK_POWER,
-    )
+    (power * spell_share, power * DEMON_OWNER_ATTACK_POWER)
 }
 
+// WARLOCK_WILD_IMP_OWNER_SP_SIMC: constructor705 overrides base19.
+// Keep native104318 coefficient; do not adopt SimC's unvalidated AP share.
+const WILD_IMP_OWNER_SPELL_POWER: f32 = 1.2;
+// WARLOCK_TYRANT_OWNER_SP_SIMC: constructor1510 retains base19 SP1.0.
+const TYRANT_OWNER_SPELL_POWER: f32 = 1.0;
 const DEMON_OWNER_SPELL_POWER: f32 = 0.15;
 const DEMON_OWNER_ATTACK_POWER: f32 = 0.57;
 
@@ -586,19 +658,7 @@ pub(crate) fn effect_power_bonus(
     effect: &SpellEffect,
 ) -> f32 {
     let (spell_power, melee_attack_power) = power_stats(world, caster, takes_healing_power(effect));
-    // Unit.cpp6880–6890 chooses RAP for non-melee ranged weapon spells only.
-    let attack_power = if is_ranged_weapon_spell(spell)
-        && spell
-            .categories
-            .as_ref()
-            .is_none_or(|categories| categories.defense_type != DEFENSE_MELEE)
-    {
-        world
-            .get::<CharacterStats>(caster)
-            .map_or(0.0, |stats| stats.ranged_attack_power)
-    } else {
-        melee_attack_power
-    };
+    let attack_power = effect_attack_power(world, caster, spell, melee_attack_power);
     let modify = |op, value| spell_mods::modify(world, caster, spell, op, value);
     let coefficient = modify(SpellModOp::BonusCoefficient, effect.bonus_coefficient);
     let ap_coefficient = modify(
@@ -606,6 +666,51 @@ pub(crate) fn effect_power_bonus(
         effect.bonus_coefficient_from_ap,
     );
     coefficient * spell_power + ap_coefficient * attack_power
+}
+
+/// TC Unit.cpp6880–6890/7400–7409/7674–7683 shares damage/heal/absorb selection.
+fn effect_attack_power(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    inherited_melee_power: f32,
+) -> f32 {
+    let attack_type = spell_attack_type(spell);
+    // Equipped player/follower class stats are distinct from guardian inherited AP.
+    let equipped_class = world.get::<Player>(caster).is_some()
+        || world.get::<crate::followers::Follower>(caster).is_some();
+    if equipped_class && let Some(stats) = world.get::<CharacterStats>(caster) {
+        return stats.total_attack_power(
+            attack_type,
+            world.get::<crate::stats::StatModifiers>(caster),
+        );
+    }
+    if matches!(attack_type, WeaponAttackType::Ranged) {
+        world
+            .get::<CharacterStats>(caster)
+            .map_or(0.0, |stats| stats.ranged_attack_power)
+    } else {
+        inherited_melee_power
+    }
+}
+
+fn spell_attack_type(spell: &SpellInfo) -> WeaponAttackType {
+    let ranged = is_ranged_weapon_spell(spell)
+        && spell
+            .categories
+            .as_ref()
+            .is_none_or(|categories| categories.defense_type != DEFENSE_MELEE);
+    if ranged {
+        return WeaponAttackType::Ranged;
+    }
+    let attributes = super::attributes(spell, 3);
+    const REQUIRES_MAIN_HAND: u32 = 0x0000_0400;
+    const REQUIRES_OFF_HAND: u32 = 0x0100_0000;
+    if attributes & REQUIRES_OFF_HAND != 0 && attributes & REQUIRES_MAIN_HAND == 0 {
+        WeaponAttackType::OffHand
+    } else {
+        WeaponAttackType::MainHand
+    }
 }
 
 /// One main-hand weapon hit. A creature (no `CharacterStats`) rolls its own weapon
@@ -678,18 +783,24 @@ fn armor_reduced(
         world.get::<CharacterStats>(target),
     ) {
         (Some(armor), _) => {
-            let multiplier = crate::auras::base_armor::pet_multiplier(
-                world.get::<crate::stats::StatModifiers>(target),
+            let modifiers = world.get::<crate::stats::StatModifiers>(target);
+            let armor = crate::auras::base_armor::unscaled_armor(
+                armor.0,
+                modifiers,
                 world.get::<crate::hunter_pet::HunterPet>(target),
                 world.get::<super::summon::SummonedCreature>(target),
             );
-            let modifiers = world.get::<crate::stats::StatModifiers>(target);
-            target_scaling.armor_against(armor.0 * multiplier, &caster_scaling)
+            target_scaling.armor_against(armor, &caster_scaling)
                 * crate::auras::base_armor::total_multiplier(modifiers)
         }
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
     };
+    let armor = crate::auras::combat_stats::armor_after_bypass(
+        world.get::<crate::auras::ActiveAuras>(target),
+        caster,
+        armor,
+    );
     let armor = crate::auras::combat_stats::armor_after_ignore(world, caster, spell, armor);
     crate::combat::armor_mitigated(
         amount,
@@ -697,6 +808,7 @@ fn armor_reduced(
         &caster_scaling,
         &target_scaling,
         world.get_resource::<ArmorConstants>(),
+        world.get::<crate::auras::AuraStatMods>(caster),
     )
 }
 
@@ -768,7 +880,9 @@ fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo)
     } else {
         0.0
     };
-    (chance + modifier).max(0.0)
+    let caster_ability =
+        crate::auras::combat_stats::caster_ability_critical_chance(world, caster, target, spell);
+    (chance + modifier + caster_ability).max(0.0)
 }
 
 fn with_crit(
@@ -789,7 +903,8 @@ fn with_crit(
         SpellModOp::CritDamageAndHealing,
         amount,
     );
-    (amount + bonus, true)
+    let multiplier = crate::auras::combat_stats::critical_healing_multiplier(world, caster);
+    (((amount + bonus) * multiplier).trunc(), true)
 }
 
 fn uses_weapon_crit_bonus_order(spell: &SpellInfo) -> bool {
@@ -841,7 +956,9 @@ fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     let amount = with_variance(
         scaled_amount(world, ctx.caster, ctx.spell, effect),
         effect.variance,
-    ) * ctx.chain_multiplier;
+    );
+    let empower_bonus = super::scripts::empower_damage_bonus(world, ctx.caster, ctx.spell);
+    let amount = (amount + empower_bonus) * ctx.chain_multiplier;
     let (amount, crit) = with_damage_crit(world, ctx.caster, target, ctx.spell, amount);
     deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
@@ -1118,7 +1235,10 @@ fn mechanic_damage_multiplier(
 fn spell_block_damage(world: &World, ctx: &EffectCtx, target: Entity, amount: f32) -> (f32, f32) {
     let mut percent = spell_block_percent(world, ctx.caster, target).trunc();
     if crate::combat::roll_critical_block(world.get::<crate::auras::ActiveAuras>(target)) {
-        percent *= 2.0;
+        // TC Unit.cpp1248 reads638 on the attacker, not the blocking recipient.
+        let multiplier =
+            stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.critical_block_amount_mult);
+        percent = (percent * 2.0 * multiplier).trunc();
     }
     let blocked = (amount * percent / 100.0).trunc().min(amount);
     (amount - blocked, blocked)
@@ -1153,7 +1273,7 @@ fn ignores_caster_damage_modifiers(spell: &SpellInfo) -> bool {
 
 /// Numeric source amount before rounding, armor, absorbs, transfer or health scaling.
 /// Callers retain their own spell's downstream resolution and native attributes.
-pub(super) fn damage_before_mitigation(
+fn damage_source_amount(
     world: &World,
     ctx: &EffectCtx,
     target: Entity,
@@ -1182,8 +1302,22 @@ pub(super) fn damage_before_mitigation(
             * crate::auras::summon_damage::multiplier(world, bonus_caster)
             * creature_type_damage_multiplier(world, bonus_caster, target, ctx.spell)
             * mechanic_damage_multiplier(world, bonus_caster, ctx.spell, effect)
+            * super::scripts::combo_strikes_multiplier(world, bonus_caster, ctx.spell.id)
     };
-    let taken = if effect.is_some_and(|effect| {
+    let bonus_ctx = EffectCtx {
+        caster: bonus_caster,
+        ..*ctx
+    };
+    let source = if resolved_source {
+        amount
+    } else {
+        modded_amount(world, &bonus_ctx, amount, periodic)
+    };
+    source * done
+}
+
+fn damage_taken(world: &World, ctx: &EffectCtx, target: Entity, damage: &DamageInput) -> f32 {
+    if damage.effect.is_some_and(|effect| {
         matches!(
             effect.effect,
             EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT | EFFECT_POWER_BURN
@@ -1191,19 +1325,91 @@ pub(super) fn damage_before_mitigation(
     }) {
         crate::auras::damage_resilience_multiplier(world, target, ctx.spell)
     } else {
-        crate::auras::damage_taken_multiplier(world, target, bonus_caster, ctx.spell)
+        crate::auras::damage_taken_multiplier(world, target, damage.bonus_caster, ctx.spell)
+    }
+}
+
+/// Source amount followed by the native recipient reduction and authored cast multiplier.
+pub(super) fn damage_before_mitigation(
+    world: &World,
+    ctx: &EffectCtx,
+    target: Entity,
+    damage: &DamageInput,
+) -> f32 {
+    (damage_source_amount(world, ctx, target, damage)
+        * damage_taken(world, ctx, target, damage)
+        * ctx.spell.cast_damage_multiplier.unwrap_or(1.0))
+    .max(0.0)
+}
+
+#[cfg(test)]
+pub(crate) fn replay_healer_hit(
+    world: &mut World,
+    source: Entity,
+    target: Entity,
+    hit: &crate::dungeon_simulator::healer_intake::Hit,
+) -> Result<(), String> {
+    use crate::dungeon_simulator::healer_intake::HitKind;
+    let HitKind::Spell {
+        spell_id,
+        depth,
+        bonus_source_guid,
+        effect_index,
+        periodic,
+        crit,
+        resolved_source,
+        blocked,
+    } = hit.kind
+    else {
+        return Err("SPELL_REPLAY_REQUIRES_SPELL_RECEIPT".into());
     };
-    let bonus_ctx = EffectCtx {
-        caster: bonus_caster,
-        ..*ctx
-    };
-    (if resolved_source {
-        amount
+    let spell = world
+        .resource::<super::SpellStore>()
+        .get(spell_id)
+        .cloned()
+        .ok_or_else(|| format!("NATIVE_SPELL_ABSENT:{spell_id}"))?;
+    if spell.school_mask() != hit.school {
+        return Err("RECORDED_SPELL_SCHOOL_CHANGED".into());
+    }
+    let effect = effect_index
+        .map(|index| {
+            spell
+                .effects
+                .iter()
+                .find(|effect| u32::from(effect.index) == index)
+                .ok_or_else(|| format!("NATIVE_SPELL_EFFECT_ABSENT:{spell_id}:{index}"))
+        })
+        .transpose()?;
+    let bonus_caster = if let Some(guid) = bonus_source_guid {
+        world
+            .get_resource::<crate::dungeon_simulator::healer_intake::Capture>()
+            .and_then(|capture| {
+                capture
+                    .sources
+                    .iter()
+                    .find_map(|(&unit, &(candidate, _))| (candidate == guid).then_some(unit))
+            })
+            .ok_or_else(|| format!("NATIVE_BONUS_CASTER_ABSENT:{guid}"))?
     } else {
-        modded_amount(world, &bonus_ctx, amount, periodic)
-    } * done
-        * taken)
-        .max(0.0)
+        source
+    };
+    let ctx = EffectCtx {
+        caster: source,
+        spell: &spell,
+        depth,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    let damage = DamageInput {
+        amount: hit.raw,
+        crit,
+        periodic,
+        resolved_source,
+        effect,
+        bonus_caster,
+    };
+    deal_source_damage_and_report(world, &ctx, target, damage, Some((hit.raw, blocked)));
+    Ok(())
 }
 
 fn deal_damage_and_report(
@@ -1211,6 +1417,16 @@ fn deal_damage_and_report(
     ctx: &EffectCtx,
     target: Entity,
     damage: DamageInput,
+) -> f32 {
+    deal_source_damage_and_report(world, ctx, target, damage, None)
+}
+
+fn deal_source_damage_and_report(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    damage: DamageInput,
+    recorded_hit: Option<(f32, bool)>,
 ) -> f32 {
     let DamageInput {
         crit,
@@ -1223,13 +1439,50 @@ fn deal_damage_and_report(
         return 0.0;
     }
     let school = ctx.spell.school_mask();
+    let source_amount = recorded_hit.map_or_else(
+        || damage_source_amount(world, ctx, target, &damage),
+        |(amount, _)| amount,
+    );
+    let was_blocked = recorded_hit.map_or_else(
+        || super::hit_was_blocked(world, ctx.caster, ctx.spell.id, target),
+        |(_, blocked)| blocked,
+    );
+    #[cfg(test)]
+    let bonus_source_guid = crate::dungeon_simulator::healer_intake::spell_bonus_source(
+        world,
+        ctx.caster,
+        damage.bonus_caster,
+        target,
+    );
+    #[cfg(test)]
+    crate::dungeon_simulator::healer_intake::record(
+        world,
+        ctx.caster,
+        target,
+        school,
+        source_amount,
+        crate::dungeon_simulator::healer_intake::HitKind::Spell {
+            spell_id: ctx.spell.id,
+            depth: ctx.depth,
+            bonus_source_guid,
+            effect_index: effect.map(|effect| u32::from(effect.index)),
+            periodic,
+            crit,
+            resolved_source,
+            blocked: was_blocked,
+        },
+    );
     if crate::auras::is_immune(world, target, school) {
         let mut event = log_amount(ctx, target, CombatLogKind::Miss(MissKind::Immune));
         event.periodic = periodic;
         log_event(world, event);
         return 0.0;
     }
-    let amount = damage_before_mitigation(world, ctx, target, &damage).round();
+    let amount = (source_amount
+        * damage_taken(world, ctx, target, &damage)
+        * ctx.spell.cast_damage_multiplier.unwrap_or(1.0))
+    .max(0.0)
+    .round();
     let amount = if periodic {
         amount
     } else {
@@ -1245,12 +1498,11 @@ fn deal_damage_and_report(
     let blockable = !periodic
         && !resolved_source
         && super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0;
-    let (amount, blocked) =
-        if blockable && super::hit_was_blocked(world, ctx.caster, ctx.spell.id, target) {
-            spell_block_damage(world, ctx, target, amount)
-        } else {
-            (amount, 0.0)
-        };
+    let (amount, blocked) = if blockable && was_blocked {
+        spell_block_damage(world, ctx, target, amount)
+    } else {
+        (amount, 0.0)
+    };
     let amount = if periodic {
         crate::auras::area_avoidance::reduce_damage(world, target, ctx.spell, effect, true, amount)
     } else {
@@ -1383,8 +1635,10 @@ fn push_damage_event(
             target_mask: [taken | procs::PROC_TAKE_ANY_DAMAGE, 0],
             spell_id: Some(ctx.spell.id),
             can_proc: ctx.depth == 0,
+            cast_used_proc_modifier: !ctx.spell.cast_proc_mods.is_empty(),
             periodic,
             damage,
+            heal: None,
             reflected: false,
         },
     );
@@ -1409,8 +1663,10 @@ fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
             target_mask: [procs::PROC_DEATH, 0],
             spell_id: None,
             can_proc,
+            cast_used_proc_modifier: false,
             periodic: false,
             damage: 0.0,
+            heal: None,
             reflected: false,
         },
     );
@@ -1423,6 +1679,27 @@ fn heal(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity
     ) * ctx.chain_multiplier;
     let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
     apply_heal(world, ctx, target, amount, crit, false);
+}
+
+/// TC EffectHealMaxHealth: zero value selects caster max; nonzero selects missing HP.
+/// This effect does not call SpellHealingBonusDone/Taken before shared heal resolution.
+fn heal_max_health(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    let Some(health) = world
+        .get::<Health>(target)
+        .filter(|health| health.current > 0.0)
+    else {
+        return;
+    };
+    let amount = if roll_base_points(world, ctx.caster, ctx.spell, effect).trunc() == 0.0 {
+        world
+            .get::<Health>(ctx.caster)
+            .map_or(0.0, |health| health.max)
+    } else {
+        health.max - health.current
+    };
+    let amount = amount * ctx.chain_multiplier;
+    let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
+    apply_resolved_heal(world, ctx, target, amount, crit, false);
 }
 
 /// 136 HEAL_PCT: BasePoints% of the target's max health.
@@ -1451,7 +1728,17 @@ pub fn apply_heal(
     let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult)
         * versatility_multiplier(world, ctx.caster)
         * crate::auras::combat_stats::healing_multiplier(world, ctx.caster, target, ctx.spell);
-    let taken = stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult);
+    let periodic_taken = if periodic {
+        crate::auras::combat_stats::periodic_healing_taken_multiplier(world, target, ctx.spell)
+    } else {
+        1.0
+    };
+    let caster_taken = crate::auras::combat_stats::caster_healing_taken_multiplier(
+        world, ctx.caster, target, ctx.spell,
+    );
+    let taken = stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult)
+        * periodic_taken
+        * caster_taken;
     let named = super::scripts::healing_multiplier(world, ctx.caster, ctx.spell)
         * super::scripts::soul_of_the_forest_direct_multiplier(
             world, ctx.caster, ctx.spell, periodic,
@@ -1505,6 +1792,7 @@ fn apply_resolved_heal(
     event.periodic = periodic;
     log_event(world, event);
     if !periodic {
+        super::record_hit_heal(world, ctx.caster, ctx.spell.id, target, amount);
         super::scripts::heal_beacon(world, ctx, target, effective);
         super::scripts::cast_expel_harm_damage(world, ctx, amount);
     }
@@ -1518,8 +1806,10 @@ fn apply_resolved_heal(
                 target_mask: [procs::PROC_TAKE_HELPFUL_PERIODIC, 0],
                 spell_id: Some(ctx.spell.id),
                 can_proc: ctx.depth == 0,
+                cast_used_proc_modifier: !ctx.spell.cast_proc_mods.is_empty(),
                 periodic: true,
                 damage: 0.0,
+                heal: Some(amount),
                 reflected: false,
             },
         );

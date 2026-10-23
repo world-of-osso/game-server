@@ -139,8 +139,10 @@ pub(super) fn proc_reflector(world: &mut World, caster: Entity, reflector: Entit
             ],
             spell_id: None,
             can_proc: true,
+            cast_used_proc_modifier: false,
             periodic: false,
             damage: 0.0,
+            heal: None,
             reflected: true,
         },
     );

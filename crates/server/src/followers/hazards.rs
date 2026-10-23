@@ -139,9 +139,7 @@ pub(super) fn point_route_crosses_hostile_field(
 fn read_route_hazard(world: &mut World, unit: Entity, to: Position, goal: Goal) -> Option<bool> {
     let fields = hostile_fields(world, unit);
     if fields.is_empty() {
-        if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
-            nav.cancel_query(unit, goal);
-        }
+        // Idle-sight qualification shares this approach probe even without fields.
         return Some(false);
     }
     let (Some(from), Some(map)) = (
@@ -166,10 +164,16 @@ fn read_route_hazard(world: &mut World, unit: Entity, to: Position, goal: Goal) 
         nav.cancel_query(unit, goal);
     }
     Some(match result {
-        Ok(Some(Output::Path(mut path))) => {
-            path.insert(0, point(from));
-            !route_leaves_fields(&path, &fields)
-        }
+        Ok(Some(Output::Path(path))) => match path.into_complete() {
+            Ok(mut points) => {
+                points.insert(0, point(from));
+                !route_leaves_fields(&points, &fields)
+            }
+            Err(error) => {
+                debug!("Follower {unit} field-aware approach query: {error}");
+                false
+            }
+        },
         Ok(None) => false,
         Ok(Some(_)) => {
             error!("Follower {unit} field-aware approach returned a non-path result");

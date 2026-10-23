@@ -1,5 +1,97 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Caster-and-ability critical chance slice — 2026-10-22
+
+- Native308 on the recipient sums chance only for the aura's caster and matching native class-family/effect mask. Pinned TC's actual308 consumer is Magic defense1; do not invent a melee/ranged/defense0 consumer from its comment. Preserve native CANT_CRIT and existing base/spell/script chance rules.
+- Native1266748 Vital Clarity+15 matches Vivify116670 and Sheilun's Gift399491 through separate mask words. Native378957+30 and248212+10 sum for matching Magic Wildfire Bomb, not ranged Aimed Shot/Serpent Sting or defense0 Kill Command. Actual246733 marker+1000 guarantees Riptide's direct critical healing without changing RNG, but not other Shaman heals. Removal and foreign-caster/recipient independence remain required. [Source and proof](../diagnostics/census-tail-70448.md).
+
+## Caster-owned armor bypass slice — 2026-10-22
+
+- Native345 on the physical victim sums only effects whose caster matches the attacker, capped above at100%. Apply that fraction to the full current armor after native level scaling, before269 ignore/floor and280 level-capped penetration. Do not turn the sum into independent products, add a lower clamp, or consume an aura on the attacker instead.
+- Physical spells, actual autoswings and current generic-creature melee forecasts share this reader; removal restores prior damage/estimates. A finite matching345 must bound the forecast's validity when its expiration changes effective bypass; a foreign caster's aura cannot impose that deadline. Native91021+20,165944+50,316220+30 and108126+100 qualify ordering, sum/cap, ownership and lifecycle. Forecast receipts use an ordinary sourced Stockade actor and native follower profile; the separate numeric swing fixture fixes weapon100/AP0 without changing RNG or native armor constants. [Source and proof](../diagnostics/census-tail-70448.md).
+
+## Critical-healing amount slice — 2026-10-22
+
+- Caster-owned native50 multiplies the whole critical heal after existing CritDamageAndHealing spell modifiers; multiply independent signed factors and truncate the resulting critical amount to native integer healing. MiscValue is not a school filter in pinned TC. Ordinary noncritical heals, native cannot-crit spells and other aura recipients remain unaffected; removal restores prior amount.
+- Actual154611 Bio Spores aura57+100 guarantees critical hits without changing RNG or stats. Native462587+15 affects Arcane394806 despite MiscValue8;200376+50 and154429−25 compose multiplicatively; native310443 heal5 demonstrates10×1.15→11 integer truncation. Existing periodic heals that never roll crit are not newly made critical. [Source and proof](../diagnostics/census-tail-70448.md).
+
+## Caster-owned healing taken slice — 2026-10-22
+
+- Native504 on the recipient multiplies direct and periodic healing only from that aura's caster. Multiply independent signed amounts, without a school/family filter or strongest-only aggregation. Honor the existing259 sign permissions from native attr6/13; other healers and recipients remain independent, and removal restores prior healing.
+- Native357556+50,411036+10 and1271318−9.0909 qualify multiplication, ownership/removal and ignored/negative-permitted healing. Native366155 Reversion's authored0 is identity, not an inferred Golden Hour bonus. This slice does not change283 or Reversion scripts. [Source and proof](../diagnostics/census-tail-70448.md).
+
+## Optional power-runtime boundaries — 2026-10-22
+
+- An App may retain native PowerPools while SpellCastPlugin/PowerTypeTable is absent. Unrelated aura application/removal, including native44521 preparation at world-port ACK, must not panic, replace the catalog with an empty table, or invent maximum/current power. Native178 capacity recalculation warns and leaves existing non-Mana pools unchanged when the native catalog is unavailable.
+- The same missing catalog must explicitly refuse pet spawning, follower initialization and follower resource conditions before mutating their existing state: warn and return None, an error or false respectively. With a real catalog, keep native definitions, display divisors and existing capacity/regen rules. [Regression proof and caller audit](../diagnostics/census-tail-70448.md).
+
+## Periodic-healing taken slice — 2026-10-22
+
+- Native259 changes only periodic healing received by its owner. Multiply strongest negative and strongest positive contributions independently, not every aura or their sum; removal updates subsequent ticks of an already-running HoT.
+- Respect native attr6 IGNORE_HEALING_MODIFIERS and attr13 ALWAYS_ALLOW_NEGATIVE_HEALING_PERCENT_MODIFIERS for259. Direct healing, other recipients and positive modifiers on ignored heals remain unchanged. Existing118/283 behavior is outside this slice.
+- Native116849 Life Cocoon+50,145384+25, real Renew ticks and native70691/108359 attribute controls qualify the positive path. No native negative259 row exists in current source, so the source-backed negative branch has no native behavioral qualification; no fabricated row or full Life Cocoon/script claim. [Source and proof](../diagnostics/census-tail-70448.md).
+
+## Physical resistance/armor slice — 2026-10-21
+
+- Native22 physical school adds signed TOTAL_VALUE armor after base142/stat-derived armor and before total101/bonus466. Use the same flat value for Player stats and NPC physical mitigation/autoattack armor paths. Removal restores prior values; native360827's authored0 remains0.
+- Real28790+700,5480−200 and52022 total20% qualify signed changes/order and actual NPC mitigation. **AURA_22_NONPHYSICAL_RESISTANCE_POOLS_ABSENT** remains explicit for nonphysical masks; do not turn fire resistance into armor or register a warning-only field. Blistering Scales donor-armor/script behavior is not derived from descriptions or certified here. [Source and proof](../diagnostics/census-tail-70448.md).
+
+## Charge recovery type-mask slice — 2026-10-21
+
+- Native205 adds signed recovery milliseconds when its MiscValue mask intersects actual SpellCategory.TypeMask, before existing charge multipliers/haste. Keep category-specific453 independent. Load TypeMask for native DB2 and TDB spells through their existing category joins; no substitute category cache or inferred masks.
+- Native383228 Swift Justice205 reduces Judgment20271 from11s to9s, not Crusader Strike35395; its separate453 reduces Crusader Strike6s→4s. Existing pending charge clocks are not retimed by205; later consumption reflects application/removal. Foreign recipients cannot modify this caster. [Source and proof](../diagnostics/census-tail-70448.md).
+
+## Base-rating conversion slice — 2026-10-21
+
+- Native198 adds truncated percentage of the highest selected original base rating to each selected destination rating, before405 percentage changes. Do not consume source rating or feed already converted/percentage-modified ratings back into conversion. Preserve existing463 ordering and removal.
+- Native231065 Lightning Reflexes100% Crit→Dodge and3156078% Haste→Avoidance qualify matching masks, truncation,405 source/target ordering. **AURA_198_SPLIT_RATING_DESTINATION_UNREPRESENTED** remains for native304775: shared CombatRatings unifies Versatility damage/healing/taken, so healing-only destination cannot be applied to all Versatility. Reject unknown or partial destination fields explicitly and retain their warning; do not expand protocol in this slice. [Source and proof](../diagnostics/census-tail-70448.md).
+
+## Maximum-power percentage slice — 2026-10-21
+
+- Native178 is Player-only and composes matching power TOTAL_PCT factors multiplicatively. Keep Mana separate from419 BASE_PCT/create-mana cost basis. Applying/removing/recalculating178 changes current power by the maximum-capacity delta, preserving absolute deficit with ordinary clamping and power-threshold hooks.
+- Native190740 Savant uses actual mastery-scaled amount;210126 and228451 qualify Mana/419 composition and matching Energy, removal at low current and ordinary subsequent stat/power recomputation. NPCs gain no178 capacity or current power. No new power representation or canonical data change. [Source and proof](../diagnostics/census-tail-70448.md).
+
+## Critical-block amount slice — 2026-10-21
+
+- Preserve literal pinned TC owner-side semantics: victim253 determines whether a block is critical, while attacker638 multiplies the critical-block amount. Do not silently reinterpret native429638 Martial Expert as a defender-owned multiplier based on its name.
+- Autoswings double already-truncated ordinary blocked damage, then multiply/truncate638. Physical spells double the integral blocked percentage, multiply/truncate638, then compute/cap blocked damage. Ordinary blocks, critical strikes and other actors remain unaffected; removal restores prior amount. This qualifies pinned arithmetic, not independent Retail owner-side parity. [Source and native receipts](../diagnostics/census-tail-70448.md).
+
+## Explicit corpse-ally selector slice — 2026-10-21
+
+- Selector121 selects only the explicitly supplied dead friendly unit. A missing, living, non-unit or hostile recipient yields no selection, not caster fallback. Preserve the ordinary ally lane21 for living Soulstone20707 recipients.
+- Use existing explicit relation validation and dead-unit owner entities, as existing resurrection targeting does. This certifies native20707 effect2/121 selection and preserves ordinary living cast admission, not corpse-GUID protocol, body-position routing or complete Soulstone scripts. [Native source and proof](../diagnostics/census-tail-70448.md).
+
+## Maximum-health healing effect slice — 2026-10-21
+
+- Native67 effect value0 selects caster maximum HP; nonzero selects recipient missing HP. It heals living recipients only and preserves caster health, native crit restrictions, ordinary heal logs/overheal and healing-threat delivery.
+- Do not apply ordinary healing-done/taken or versatility bonuses: TC EffectHealMaxHealth queues the raw health-derived value, not SpellHealingBonusDone/Taken. Native633 Lay on Hands and17683 Full Heal qualify both branches; this does not qualify unrelated Lay on Hands scripts/cooldown effects. [Source and proof](../diagnostics/census-tail-70448.md).
+
+## Global mana cost aura slice — 2026-10-21
+
+- Native423 sums signed percentages across recipient-owned auras and multiplies mana cost after existing school/spell modifiers; truncate native integer costs before existing sign preservation. Other powers and owners remain unchanged; removal restores prior costs. Optional Mana cost uses the same multiplier before available-power clamping.
+- Native1270845 Mana Confluence−5%,108294−50%,203704+30% and327140−100% qualify additive reduction/increase and no accidental generation; real365350 optional Mana qualifies the second cost branch. No native spell/amount/catalog changes. [Source and proof](../diagnostics/census-tail-70448.md).
+
+## Global cast movement aura slice — 2026-10-21
+
+- Native377 grants cast/channel movement without a family/label/amount constraint, except native attr13 movement-prohibition. Existing cast refresh, channel movement and removal/expiry logic remain authoritative.
+- Native212653 Shimmer650ms must update active Fireball, admit moving foreign-family Lightning Bolt and preserve existing Disintegrate channel until removed/expired; another recipient's aura cannot grant permission. Do not alter Blink/teleport behavior. [Native source and proof](../diagnostics/census-tail-70448.md).
+
+## Asphyxiate generic stun/gravity slice — 2026-10-21
+
+- Native298 must share12's stun consumers: stop the first active cast, block non-allowed casts, stop movement and expose stunned status to existing combat/AI readers. Native221562 also retains existing shared gravity-disable state.
+- Removing either source cannot release another298/12 stun or488 gravity source; removing the last restores ordinary state. No new client projection or creature floating/threat subsystem is claimed. [Native tests and source](../diagnostics/census-tail-70448.md).
+
+## Generic armor-penetration census slice — 2026-10-21
+
+- Native280 sums on Players only, clamps0–100 at physical armor reduction and applies to the TC victim-level penetrable-armor cap, not all armor. Preserve native mitigation and reversible removal; controlled NPCs gain no Player-only penetration.
+- Native450990 Martial Precision12% and177112 Pureshot Aura100% qualify the physical spell boundary. The same capped-armor consumer serves autoattacks and their forecast. All seven active70448 aura280 spells have no equipped-item requirement rows; weapon-filter/rating behavior outside these native inputs remains unqualified. Do not invent a new equipment or rating system. [Source and proof ledger](../diagnostics/census-tail-70448.md).
+
+## Generic flight-speed census slice — 2026-10-21
+
+- Unmounted players and uncontrolled NPCs sum native206 vehicle-flight and208 normal-flight percentages. Player-controlled NPCs instead take strongest positive206; mounted units instead take strongest207 with native209 mounted-always factors. Preserve211 nonstacking bonus, slows, normalization and removal.
+- Correct the former208 mounted-always alias to source209; existing native208 Crow Speed must no longer increase mounted flight. Native125883 Zen Flight,48403 Crow Speed,13587 Mount Speed and33948 Flight Form Speed qualify these branches without changing DB2 inputs.
+- This slice does not implement210 vehicle-always or missing charmer-to-vehicle propagation; those remain separate causes/boundaries. No new flying permission, ownership/control or client projection system. [Source and targeted proof](../diagnostics/census-tail-70448.md).
+
 ## Generic combat/stat aura census slice — 2026-10-20
 
 Generic consumers cover57,103,145,240,269,316,354,404,405,419,422,463 with native70448 spell definitions. Preserve native masks, stacking, rating truncation, create-mana cost basis and reversible changes; do not introduce per-spell cases. Aura419 changes maximum mana without granting proportional current mana; removal only clamps. Aura316's generic absorption accounting must not invent death prevention.

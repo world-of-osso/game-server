@@ -417,6 +417,187 @@ def import_ancient(connection):
     return [196482]
 
 
+def import_gulping_goliath(connection):
+    """Bind Lua-authenticated Goliath; no native actor, spell or placement edits."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2527, entry=189722, encounter_id=2616, bit=1,
+                   script='', ai='', journal_id=2507, actor_id=5448, display_id=103584)
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=189722').fetchone()
+    if runtime not in [('Gulping Goliath','','',0), ('Gulping Goliath','','boss_gulping_goliath',0)]:
+        raise ValueError('Gulping Goliath runtime binding or source flags changed')
+    for spell, child in [(385181,385187),(385442,385451)]:
+        effect = connection.execute('''SELECT Effect,EffectAura,EffectTriggerSpell FROM spell_effect
+            WHERE SpellID=? AND DifficultyID=0 AND EffectIndex=0''', (spell,)).fetchone()
+        if effect != (6,23,child):
+            raise ValueError(f'Gulping Goliath native periodic identity changed: {spell}')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_gulping_goliath' WHERE entry=189722")
+    return [189722]
+
+
+def import_vexamus(connection):
+    """Lua-authenticated primary; derived placement and native actor stay unchanged."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2526, entry=194181, encounter_id=2562, bit=0,
+                   script='', ai='', journal_id=2509, actor_id=5411, display_id=107525)
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=194181').fetchone()
+    if runtime not in [('Vexamus','','',0), ('Vexamus','','boss_vexamus',0)]:
+        raise ValueError('Vexamus runtime binding or source flags changed')
+    effect = connection.execute('''SELECT Effect,ImplicitTarget_0 FROM spell_effect
+        WHERE SpellID=385958 AND DifficultyID=0 AND EffectIndex=0''').fetchone()
+    if effect != (2,104):
+        raise ValueError('Vexamus native Expulsion identity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_vexamus' WHERE entry=194181")
+    return [194181]
+
+
+def import_granyth(connection):
+    """Bind Lua-authenticated Granyth; preserve canonical derived actor/placement."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2516, entry=186616, encounter_id=2637, bit=3,
+                   script='', ai='', journal_id=2498, actor_id=5384, display_id=105823)
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=186616').fetchone()
+    if runtime not in [('Granyth','','',0), ('Granyth','','boss_granyth',0)]:
+        raise ValueError('Granyth runtime binding or source flags changed')
+    for spell in [388817,385916]:
+        effect = connection.execute('''SELECT Effect,ImplicitTarget_0,ImplicitTarget_1 FROM spell_effect
+            WHERE SpellID=? AND DifficultyID=0 AND EffectIndex=0''', (spell,)).fetchone()
+        if effect != (2,18,16):
+            raise ValueError(f'Granyth native area identity changed: {spell}')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_granyth' WHERE entry=186616")
+    return [186616]
+
+
+def import_treemouth(connection):
+    """Bind Lua-authenticated Treemouth; preserve derived actor/placement and DB2."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2520, entry=186120, encounter_id=2568, bit=1,
+                   script='', ai='', journal_id=2473, actor_id=5340, display_id=106294)
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=186120').fetchone()
+    if runtime not in [('Treemouth','','',0), ('Treemouth','','boss_treemouth',0)]:
+        raise ValueError('Treemouth runtime binding or source flags changed')
+    for spell in [377559,376811]:
+        effect = connection.execute('''SELECT Effect,ImplicitTarget_0 FROM spell_effect
+            WHERE SpellID=? AND DifficultyID=0 AND EffectIndex=?''',
+            (spell, 0 if spell == 377559 else 1)).fetchone()
+        if effect != (2,104):
+            raise ValueError(f'Treemouth native cone identity changed: {spell}')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_treemouth' WHERE entry=186120")
+    return [186120]
+
+def import_khajin(connection):
+    """Bind Lua-authenticated Khajin; preserve native actor, placement and spells."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2527, entry=189727, encounter_id=2617, bit=2,
+                   script='', ai='', journal_id=2510, actor_id=5405, display_id=107064)
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=189727').fetchone()
+    if runtime not in [('Khajin the Unyielding','','',0), ('Khajin the Unyielding','','boss_khajin',0)]:
+        raise ValueError('Khajin runtime binding or source flags changed')
+    for spell, target in [(385963,25),(386757,18)]:
+        effect = connection.execute('''SELECT Effect,ImplicitTarget_0 FROM spell_effect
+            WHERE SpellID=? AND DifficultyID=0 AND EffectIndex=0''', (spell,)).fetchone()
+        if effect != (2,target):
+            raise ValueError(f'Khajin native damage identity changed: {spell}')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_khajin' WHERE entry=189727")
+    return [189727]
+
+
+def import_wratheye(connection):
+    """Bind Decaystrike-only partial without actor, spell or population mutation."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2520, entry=186121, encounter_id=2569, bit=2,
+                   script='', ai='', journal_id=2474, actor_id=5417, display_id=106069)
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=186121').fetchone()
+    if runtime not in [('Decatriarch Wratheye','','',0), ('Decatriarch Wratheye','','boss_wratheye',0)]:
+        raise ValueError('Wratheye runtime binding or source flags changed')
+    effects = connection.execute('''SELECT EffectIndex,Effect,EffectAura,EffectAuraPeriod,EffectTriggerSpell,ImplicitTarget_0
+        FROM spell_effect WHERE SpellID=373912 AND DifficultyID=0 ORDER BY EffectIndex''').fetchall()
+    if effects != [(0,6,23,800,373915,6), (1,6,23,800,373917,6)]:
+        raise ValueError('Wratheye native Decaystrike periodic children changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_wratheye' WHERE entry=186121")
+    return [186121]
+
+
+def import_gutshot(connection):
+    """Bind local Lua Gutshot partial; no power, population or spell mutation."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2520, entry=186116, encounter_id=2567, bit=0,
+                   script='', ai='', journal_id=2472, actor_id=5339, display_id=109135)
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=186116').fetchone()
+    if runtime not in [('Gutshot','','',0), ('Gutshot','','boss_gutshot',0)]:
+        raise ValueError('Gutshot runtime binding or source flags changed')
+    effect = connection.execute('''SELECT Effect,EffectTriggerSpell,ImplicitTarget_0 FROM spell_effect
+        WHERE SpellID=384353 AND DifficultyID=0 AND EffectIndex=0''').fetchone()
+    if effect != (32,384343,25):
+        raise ValueError('Gutshot native Gut Shot child identity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_gutshot' WHERE entry=186116")
+    return [186116]
+
+
+def import_gorek(connection):
+    """Bind Lua-authenticated Gorek; preserve native actor/placement/child metadata."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2519, entry=189478, encounter_id=2612, bit=2,
+                   script='', ai='', journal_id=2489, actor_id=5363, display_id=107189)
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=189478').fetchone()
+    if runtime not in [('Forgemaster Gorek','','',0), ('Forgemaster Gorek','','boss_gorek',0)]:
+        raise ValueError('Gorek runtime binding or source flags changed')
+    for spell, aura, target in [(374635,377,1),(374533,4,25)]:
+        effect = connection.execute('''SELECT Effect,EffectAura,ImplicitTarget_0 FROM spell_effect
+            WHERE SpellID=? AND DifficultyID=0 AND EffectIndex=0''', (spell,)).fetchone()
+        if effect != (6,aura,target):
+            raise ValueError(f'Gorek native aura identity changed: {spell}')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_gorek' WHERE entry=189478")
+    return [189478]
+
+
 def import_doragosa(connection):
     """Current Retail local Lua binding, no source actor or difficulty mutation."""
     import encounter_cpp_bindings
@@ -541,6 +722,55 @@ def import_bromach(connection):
     return [184018,186696]
 
 
+def import_talondras(connection):
+    """Explicit Lua184124↔2557 identity; keep runtime109735, not journal thumbnail."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2451, entry=184124, encounter_id=2557, bit=2,
+                   script='', ai='', journal_id=2484, actor_id=5356, display_id=106790,
+                   spawn_guid=9004417, spawn_difficulties='2,8,23,1')
+    bindings = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=184124').fetchone()
+    if runtime not in [('Sentinel Talondras','','',64),('Sentinel Talondras','','boss_sentinel_talondras',64)]:
+        raise ValueError('Talondras runtime identity or flags changed')
+    native = connection.execute('SELECT Effect,ImplicitTarget_0,ImplicitTarget_1 FROM spell_effect WHERE SpellID=372701 AND DifficultyID=0 AND EffectIndex=0').fetchone()
+    if native != (2,22,15):
+        raise ValueError('Talondras native Stomp identity changed')
+    models = connection.execute('SELECT CreatureDisplayID FROM tdb_creature_template_model WHERE CreatureID=184124 ORDER BY Idx').fetchall()
+    if models != [(109735,)]:
+        raise ValueError('Talondras actual TDB model identity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', bindings)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_sentinel_talondras' WHERE entry=184124")
+    return [184124]
+
+
+def import_emberon(connection):
+    """Lua184422↔2558 identity only; preserve native indefinite channel and actor."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2451, entry=184422, encounter_id=2558, bit=3,
+                   script='', ai='', journal_id=2476, actor_id=5404, display_id=107816,
+                   spawn_guid=9004496, spawn_difficulties='2,8,23,1')
+    bindings = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=184422').fetchone()
+    if runtime not in [('Emberon','','',64),('Emberon','','boss_emberon',64)]:
+        raise ValueError('Emberon runtime identity or flags changed')
+    native = connection.execute('''SELECT EffectIndex,Effect,EffectAura,EffectAuraPeriod,EffectTriggerSpell
+        FROM spell_effect WHERE SpellID=368990 AND DifficultyID=0 AND EffectIndex IN(1,3)
+        ORDER BY EffectIndex''').fetchall()
+    if native != [(1,6,23,3000,369025),(3,6,23,3000,395681)]:
+        raise ValueError('Emberon native periodic channel identity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', bindings)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_emberon' WHERE entry=184422")
+    return [184422]
+
+
 def import_porung_binding(connection):
     """Reuse the sole authenticated primary-actor profile; no combat/template edits."""
     import encounter_cpp_bindings
@@ -548,6 +778,83 @@ def import_porung_binding(connection):
     rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
     connection.executescript(encounter_cpp_bindings.binding_sql(rows))
     return [primary['entry']]
+
+
+def import_anubzekt(connection):
+    """Local2777a9d Lua binding; preserve actual215405 population/native data."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2660, entry=215405, encounter_id=2906, bit=1,
+                   script='', ai='', journal_id=2584, actor_id=5726, display_id=115723,
+                   spawn_guid=10004042, spawn_difficulties='1,2,8,23,205')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute(
+        'SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=215405'
+    ).fetchone()
+    if runtime not in [("Anub'zekt", '', '', 64), ("Anub'zekt", '', 'littlewigs_anubzekt', 64)]:
+        raise ValueError('Anubzekt runtime binding or source flags changed')
+    native = connection.execute('''SELECT Effect,EffectAura,EffectAuraPeriod,ImplicitTarget_0,ImplicitTarget_1
+        FROM spell_effect WHERE SpellID=433740 AND DifficultyID=0 AND EffectIndex=0''').fetchone()
+    if native != (6, 3, 500, 22, 15):
+        raise ValueError('Anubzekt native Infestation433740 identity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='littlewigs_anubzekt' WHERE entry=215405")
+    return [215405]
+
+
+def import_kikatal(connection):
+    """Local2777a9d Lua binding; preserve actual215407 population/native data."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2660, entry=215407, encounter_id=2901, bit=0,
+                   script='', ai='', journal_id=2585, actor_id=5632, display_id=117473,
+                   spawn_guid=10004111, spawn_difficulties='1,2,8,23,205')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute(
+        'SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=215407'
+    ).fetchone()
+    if runtime not in [("Ki'katal the Harvester", '', '', 64),
+                       ("Ki'katal the Harvester", '', 'littlewigs_kikatal', 64)]:
+        raise ValueError('Kikatal runtime binding or source flags changed')
+    native = connection.execute('''SELECT Effect,ImplicitTarget_0,ImplicitTarget_1
+        FROM spell_effect WHERE SpellID=432130 AND DifficultyID=0 AND EffectIndex=0''').fetchone()
+    if native != (3, 1, 0):
+        raise ValueError('Kikatal native Erupting Webs432130 identity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='littlewigs_kikatal' WHERE entry=215407")
+    return [215407]
+
+
+def import_dailcry(connection):
+    """Local2777a9d Lua binding; preserve source placement excluding205."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2649, entry=207946, encounter_id=2847, bit=1,
+                   script='', ai='', journal_id=2571, actor_id=5714, display_id=118879,
+                   spawn_guid=10001094, spawn_difficulties='1,2,8,23')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute(
+        'SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=207946'
+    ).fetchone()
+    if runtime not in [('Captain Dailcry', '', '', 64),
+                       ('Captain Dailcry', '', 'littlewigs_dailcry', 64)]:
+        raise ValueError('Dailcry runtime binding or source flags changed')
+    native = connection.execute('''SELECT Effect,ImplicitTarget_0,ImplicitTarget_1
+        FROM spell_effect WHERE SpellID=424414 AND DifficultyID=0 AND EffectIndex=0''').fetchone()
+    if native != (2, 6, 0):
+        raise ValueError('Dailcry native Pierce Armor424414 identity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='littlewigs_dailcry' WHERE entry=207946")
+    return [207946]
 
 
 def import_kyrioss_schedule(connection):
@@ -577,9 +884,69 @@ def import_kyrioss_schedule(connection):
     return [209230]
 
 
+def import_orator(connection):
+    """TC a352b1fa primary216619 binding only; keep actual class4/flags and actors."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2669, entry=216619, encounter_id=2907, bit=1,
+                   script='boss_orator_krix_vizk', ai='', journal_id=2594,
+                   actor_id=5620, display_id=116692, spawn_guid=10002880,
+                   spawn_difficulties='1,2,8,23')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('''SELECT name,AIName,ScriptName,unit_class,unit_flags,unit_flags2
+        FROM content_creature_template WHERE entry=216619''').fetchone()
+    if runtime != ("Orator Krix'vizk", '', 'boss_orator_krix_vizk', 4, 64, 0):
+        raise ValueError('Orator runtime identity or source class/flags changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    return [216619]
+
+
+def import_skarmorak(connection):
+    """TC a352b1fa primary210156; retain native class4/flags/stats and all actors."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2652, entry=210156, encounter_id=2880, bit=1,
+                   script='boss_skarmorak', ai='', journal_id=2579,
+                   actor_id=5608, display_id=118714, spawn_guid=10002291,
+                   spawn_difficulties='1,2,8,23')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('''SELECT name,AIName,ScriptName,unit_class,unit_flags,unit_flags2
+        FROM content_creature_template WHERE entry=210156''').fetchone()
+    if runtime != ('Skarmorak', '', 'boss_skarmorak', 4, 64, 0):
+        raise ValueError('Skarmorak runtime identity or source class/flags changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    return [210156]
+
+
+def import_candle_king(connection):
+    """TC a352b1fa primary binding only; preserve source script/actors/native spells."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2651, entry=208745, encounter_id=2787, bit=0,
+                   script='boss_the_candle_king', ai='', journal_id=2560,
+                   actor_id=5595, display_id=114508, spawn_guid=10002793,
+                   spawn_difficulties='1,2,8,23')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('''SELECT name,AIName,ScriptName,unit_flags
+        FROM content_creature_template WHERE entry=208745''').fetchone()
+    if runtime != ('The Candle King', '', 'boss_the_candle_king', 64):
+        raise ValueError('Candle King runtime identity or source flags changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    return [208745]
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss','lost-dwarves','bromach'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','khajin','gorek','gutshot','wratheye','vexamus','granyth','treemouth','gulping-goliath','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry','orator','skarmorak','candle-king'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -603,12 +970,40 @@ def main():
                 entries = import_porung_binding(conn)
             elif args.encounter == 'kyrioss':
                 entries = import_kyrioss_schedule(conn)
+            elif args.encounter == 'anubzekt':
+                entries = import_anubzekt(conn)
+            elif args.encounter == 'skarmorak':
+                entries = import_skarmorak(conn)
+            elif args.encounter == 'candle-king':
+                entries = import_candle_king(conn)
+            elif args.encounter == 'orator':
+                entries = import_orator(conn)
+            elif args.encounter == 'kikatal':
+                entries = import_kikatal(conn)
+            elif args.encounter == 'dailcry':
+                entries = import_dailcry(conn)
             elif args.encounter == 'azureblade':
                 entries = import_azureblade(conn)
             elif args.encounter == 'umbrelskul':
                 entries = import_umbrelskul(conn)
             elif args.encounter == 'ancient':
                 entries = import_ancient(conn)
+            elif args.encounter == 'gulping-goliath':
+                entries = import_gulping_goliath(conn)
+            elif args.encounter == 'vexamus':
+                entries = import_vexamus(conn)
+            elif args.encounter == 'granyth':
+                entries = import_granyth(conn)
+            elif args.encounter == 'treemouth':
+                entries = import_treemouth(conn)
+            elif args.encounter == 'gorek':
+                entries = import_gorek(conn)
+            elif args.encounter == 'khajin':
+                entries = import_khajin(conn)
+            elif args.encounter == 'gutshot':
+                entries = import_gutshot(conn)
+            elif args.encounter == 'wratheye':
+                entries = import_wratheye(conn)
             elif args.encounter == 'doragosa':
                 entries = import_doragosa(conn)
             elif args.encounter == 'melidrussa':
@@ -619,6 +1014,10 @@ def main():
                 entries = import_lost_dwarves(conn)
             elif args.encounter == 'bromach':
                 entries = import_bromach(conn)
+            elif args.encounter == 'talondras':
+                entries = import_talondras(conn)
+            elif args.encounter == 'emberon':
+                entries = import_emberon(conn)
             elif args.encounter == 'herald':
                 entries = import_herald_actors(conn)
             elif args.encounter == 'herald-nazan':

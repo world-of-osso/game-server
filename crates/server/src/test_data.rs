@@ -4,6 +4,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
+pub(crate) mod catalog_cache;
+
 /// Advance the real selection/admission path until its player is published.
 pub(crate) fn wait_for_selected_player(
     app: &mut bevy::prelude::App,
@@ -40,6 +42,12 @@ pub(crate) fn drain_persistence(db: &crate::persistence::GameDatabase) {
         );
         std::thread::yield_now();
     }
+}
+
+/// Consume a committed operation's queued credits, then fence its durable writes.
+pub(crate) fn advance_and_drain_persistence(app: &mut bevy::prelude::App) {
+    app.update();
+    drain_persistence(app.world().resource::<crate::persistence::GameDatabase>());
 }
 
 /// Immutable canonical input, parsed once per test process. Apps clone before editing.

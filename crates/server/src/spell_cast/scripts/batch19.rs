@@ -4,7 +4,6 @@ use crate::spell_info::SpellInfo;
 use bevy::prelude::*;
 
 pub(super) const FLURRY: u32 = 44614;
-const MUTILATE_OFFHAND: u32 = 27576;
 const DISPERSION: u32 = 47585;
 const INTANGIBILITY: u32 = 288733;
 const HAVOC: u32 = 80240;
@@ -24,19 +23,6 @@ pub(in crate::spell_cast) fn effect_enabled(
     spell != FLURRY
         || index == 0
         || u32::from(index) <= script_effect_value(world, caster, FLURRY, 0) as u32
-}
-
-///1329 variable394 explicitly halves27576s2. Not a universal offhand rule.
-pub(super) fn mutilate_offhand(
-    _world: &World,
-    _caster: Entity,
-    _target: Entity,
-    amount: f32,
-) -> f32 {
-    amount * 0.5
-}
-pub(super) fn damage_amount(spell: u32) -> Option<super::DamageAmountHook> {
-    (spell == MUTILATE_OFFHAND).then_some(mutilate_offhand)
 }
 
 ///47585 variable872 defines total healing, including288733s2 and duration

@@ -2,14 +2,22 @@
 #[cfg(feature = "bake")]
 pub mod bake;
 mod query;
-pub use query::NavigationMap;
 pub use query::read_walkable_polygons;
+pub use query::{CollisionDrop, NavigationMap, NavigationPath};
 pub mod worker;
 
 pub const TILE_SIZE: f32 = 1600.0 / 3.0;
 pub const SUBDIVISIONS: u32 = 4;
 pub const SUBTILE_SIZE: f32 = TILE_SIZE / SUBDIVISIONS as f32;
-pub const CELL_SIZE: f32 = TILE_SIZE / 2048.0;
+pub const TILE_CELLS: u32 = 2048;
+pub const CELL_SIZE: f32 = TILE_SIZE / TILE_CELLS as f32;
+
+pub fn grid_subtile_size(subdivisions: u32) -> Result<f32, String> {
+    if !subdivisions.is_power_of_two() || !(SUBDIVISIONS..=TILE_CELLS).contains(&subdivisions) {
+        return Err(format!("invalid navigation grid {subdivisions}"));
+    }
+    Ok(TILE_SIZE / subdivisions as f32)
+}
 pub const CELL_HEIGHT: f32 = 0.2;
 /// Same body radius as shared::los::body::BODY_RADIUS (TrinityCore ObjectDefines.h).
 pub const AGENT_RADIUS: f32 = 0.388;

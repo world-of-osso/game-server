@@ -19,9 +19,11 @@
 mod abundance;
 pub(crate) mod agony;
 pub(crate) mod area_avoidance;
+mod async_stacks;
 pub(crate) mod augmentation;
 pub(crate) mod aura_state;
 pub(crate) mod base_armor;
+mod binding_heals;
 mod charred_warblades;
 pub(crate) mod combat_stats;
 pub(crate) mod damage_shield;
@@ -30,6 +32,7 @@ mod damage_shield_tests;
 pub(crate) mod damage_transfer;
 mod earthen_rage;
 pub(crate) mod ebon_might;
+mod echo_of_light;
 pub(crate) mod effect_immunity;
 mod fear;
 mod fel_devastation;
@@ -38,8 +41,10 @@ mod fleeing;
 pub(crate) mod forecast;
 pub(crate) mod handlers;
 pub(crate) mod health_pct_trigger;
+mod ignite;
 pub mod invisibility;
 mod item_requirements;
+mod light_of_titans;
 mod linked;
 pub(crate) mod linked_summon;
 pub(crate) mod mastery;
@@ -47,11 +52,17 @@ mod mechanic_duration;
 pub(crate) mod mechanic_immunity;
 pub mod mount;
 mod natures_guardian;
+#[cfg(test)]
+pub(crate) mod observations;
 mod periodic;
 pub(crate) mod power_amount_trigger;
+#[cfg(test)]
+mod proc_mask_tests;
 pub mod procs;
 mod refresh;
 pub(crate) mod reward_mods;
+#[cfg(test)]
+mod rolling_periodic_tests;
 pub mod scripts;
 pub mod shapeshift;
 pub mod spell_mods;
@@ -149,6 +160,7 @@ impl Plugin for AuraPlugin {
                     init_unit_auras,
                     mount::apply_flight_style,
                     sync_passive_auras,
+                    crate::equipment_effects::sync_equipment_effects,
                     update_auras,
                     procs::process_aura_events,
                     health_pct_trigger::trigger_on_health_pct,
@@ -176,6 +188,8 @@ pub enum AuraSource {
     /// Passive spell in the unit's `KnownSpells` (talent passives apply
     /// once the trait system adds talent spells to `KnownSpells`).
     KnownSpell,
+    /// Native on-equip/enchant spell owned by this physical equipment slot.
+    Equipment(shared::protocol::EquipmentSlot),
     /// Authored spell_area autocast; cannot be canceled by the player.
     SpellArea,
 }
@@ -236,6 +250,8 @@ pub struct AuraInstance {
     pub spell_id: u32,
     pub caster: Entity,
     pub source: AuraSource,
+    /// Item-level snapshot of the applied aura effects.
+    pub cast_item_level: Option<u16>,
     pub from_player: bool,
     pub effects: Vec<AuraEffectState>,
     /// Full duration in ms; 0 is permanent.
@@ -244,6 +260,8 @@ pub struct AuraInstance {
     pub stacks: u8,
     /// `CumulativeAura` (+ MaxAuraStacks mods); 0 does not stack.
     pub max_stacks: u8,
+    /// Native flag490: one absolute deadline per asynchronous application stack.
+    stack_expirations: Vec<f64>,
     /// Proc charges left; 0 has no charges.
     pub charges: u8,
     pub passive: bool,
@@ -295,21 +313,35 @@ impl AuraInstance {
         }
     }
 
+    fn refresh_stacks(&mut self, new: &Self) {
+        self.max_stacks = new.max_stacks;
+        if self.max_stacks == 0 {
+            return;
+        }
+        let combined = u16::from(self.stacks) + u16::from(new.stacks);
+        if !new.stack_expirations.is_empty() {
+            let overflow = combined.saturating_sub(u16::from(self.max_stacks));
+            self.stack_expirations = async_stacks::merge_expirations(
+                &self.stack_expirations,
+                &new.stack_expirations,
+                usize::from(overflow),
+            );
+            self.expires_at = self.stack_expirations.last().copied();
+        }
+        self.stacks = if self.spell_id == agony::AGONY {
+            // Native980 refresh keeps damage level, raising only a new initial floor.
+            self.stacks.max(new.stacks).min(self.max_stacks)
+        } else {
+            // Normal and async applications both add the requested native stack amount.
+            combined.min(u16::from(self.max_stacks)) as u8
+        };
+    }
+
     /// Refresh duration/amounts/charges; add requested stacks except Agony's preserved floor.
     fn refresh_from(&mut self, new: AuraInstance) {
         self.duration_ms = new.duration_ms;
         self.expires_at = new.expires_at;
-        self.max_stacks = new.max_stacks;
-        if self.max_stacks > 0 {
-            self.stacks = if self.spell_id == agony::AGONY {
-                // Native980 refresh keeps damage level, raising only a new initial floor.
-                self.stacks.max(new.stacks).min(self.max_stacks)
-            } else {
-                // Unit::_TryStackingOrRefreshingExistingAura adds the requested
-                // cast's stack amount; ordinary applications still request one.
-                self.stacks.saturating_add(new.stacks).min(self.max_stacks)
-            };
-        }
+        self.refresh_stacks(&new);
         self.charges = new.charges;
         self.guardian_heal_pct = new.guardian_heal_pct;
         for fresh in new.effects {
@@ -357,7 +389,7 @@ impl ActiveAuras {
 
     /// Under a `SPELL_AURA_MOD_STUN` effect (AzerothCore `UNIT_STATE_STUNNED`).
     pub fn is_stunned(&self) -> bool {
-        self.has_type(handlers::MOD_STUN)
+        self.has_type(handlers::MOD_STUN) || self.has_type(handlers::MOD_STUN_DISABLE_GRAVITY)
     }
 
     /// Under a `SPELL_AURA_MOD_CONFUSE` effect (TrinityCore `UNIT_STATE_CONFUSED`).
@@ -591,6 +623,44 @@ fn duration_ms(world: &World, application: &AuraApplication, spell: &SpellInfo) 
     mechanic_duration::modify_duration(world, application, spell, duration)
 }
 
+/// Fresh maximum duration through the same caster/target modifier path as apply.
+/// A carried refresh duration is not the next cast's Pandemic threshold.
+pub(crate) fn maximum_duration_ms(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell_id: u32,
+) -> Option<u32> {
+    let mut spell = world.resource::<SpellStore>().get(spell_id)?.clone();
+    let duration = spell.misc.as_mut()?.duration.as_mut()?;
+    if duration.max_duration_ms <= 0 {
+        return None;
+    }
+    duration.duration_ms = duration.max_duration_ms;
+    duration.per_resource_ms = 0;
+    let application = AuraApplication {
+        caster,
+        target,
+        spell_id,
+        effect_mask: u32::MAX,
+        source: AuraSource::Cast,
+    };
+    Some(duration_ms(world, &application, &spell))
+}
+
+/// FISTS_OF_FURY_SIMC_TICK_CADENCE: SimC76f8118 monk/sc_monk.cpp1789–1796
+/// uses1s damage ticks, including tick0 (five over4s). TC has no FoF script;
+/// its generic226 handler does nothing. Preserve the approved toy trigger bridge.
+fn periodic_base_interval_ms(spell: &SpellInfo, effect: &SpellEffect) -> u32 {
+    const FISTS_OF_FURY: u32 = 113656;
+    const FISTS_OF_FURY_DAMAGE: u32 = 117418;
+    if spell.id == FISTS_OF_FURY && effect.trigger_spell == FISTS_OF_FURY_DAMAGE {
+        1000
+    } else {
+        effect.aura_period_ms
+    }
+}
+
 fn build_effect(
     world: &World,
     caster: Entity,
@@ -607,13 +677,14 @@ fn build_effect(
     };
     let amount = scripts::snapshot_periodic_amount(world, caster, spell, effect, amount);
     let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
-    let period_ms = if effect.aura_period_ms > 0 {
+    let base_period_ms = periodic_base_interval_ms(spell, effect);
+    let period_ms = if base_period_ms > 0 {
         spell_mods::modify(
             world,
             caster,
             spell,
             SpellModOp::Period,
-            effect.aura_period_ms as f32,
+            base_period_ms as f32,
         )
         .max(1.0) as u32
     } else {
@@ -701,20 +772,24 @@ fn build_instance(
             effect.amount = (max_health * 0.1).floor();
         }
     }
+    let stacks = spell
+        .cast_aura_stacks
+        .unwrap_or_else(|| agony::initial_stacks(world, caster, spell.id))
+        .min(max_stacks.max(1));
+    let expires_at = (duration_ms > 0).then(|| now + f64::from(duration_ms) / 1000.0);
     AuraInstance {
         instance_id: 0,
         spell_id: spell.id,
         caster,
         source: application.source,
+        cast_item_level: spell.cast_item_level,
         from_player: world.get::<Player>(caster).is_some(),
         effects,
         duration_ms,
-        expires_at: (duration_ms > 0).then(|| now + f64::from(duration_ms) / 1000.0),
-        stacks: spell
-            .cast_aura_stacks
-            .unwrap_or_else(|| agony::initial_stacks(world, caster, spell.id))
-            .min(max_stacks.max(1)),
+        expires_at,
+        stacks,
         max_stacks,
+        stack_expirations: async_stacks::initial_expirations(spell, max_stacks, stacks, expires_at),
         charges: charges.clamp(0.0, 255.0) as u8,
         passive,
         hidden: passive || attributes(spell, 0) & ATTR0_DO_NOT_DISPLAY != 0,
@@ -753,7 +828,6 @@ fn build_instance(
 
 fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
     for effect in &aura.effects {
-        let supported_amount = !linked::is_linked(effect.aura_type) || effect.amount == 0.0;
         let duration_gap = mechanic_duration::positive_source_gap(effect)
             || mechanic_duration::invalid_mechanic_source_gap(effect);
         let duration_supported = !duration_gap;
@@ -762,10 +836,22 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
                 .immunity
                 .as_ref()
                 .is_some_and(|definition| !definition.has_unmodeled_fields());
+        let rating_supported = effect.aura_type != handlers::MOD_COMBAT_RATING_FROM_COMBAT_RATING
+            || crate::stats::supports_rating_conversion(
+                effect.misc_values[0] as u32,
+                effect.misc_values[1] as u32,
+            );
+        let resistance_supported =
+            effect.aura_type != handlers::MOD_RESISTANCE || effect.misc_values[0] & !1 == 0;
         let handled = handlers::is_handled(effect.aura_type)
-            && supported_amount
-            && duration_supported
-            && immunity_supported;
+            && [
+                duration_supported,
+                immunity_supported,
+                rating_supported,
+                resistance_supported,
+            ]
+            .into_iter()
+            .all(|supported| supported);
         if handled
             || scripts::consumes_named_field(aura.spell_id, effect.index)
             || crate::scripted_ai::kings_rest::handles_molten_gold_effect(aura.spell_id, effect)
@@ -784,6 +870,12 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
 }
 
 fn describe_unhandled_aura(effect: &AuraEffectState) -> String {
+    if effect.aura_type == handlers::MOD_RESISTANCE {
+        return "has nonphysical resistance schools without runtime resistance pools".into();
+    }
+    if effect.aura_type == handlers::MOD_COMBAT_RATING_FROM_COMBAT_RATING {
+        return "has unrepresented source or split destination rating masks".into();
+    }
     if effect.aura_type == handlers::MECHANIC_IMMUNITY_MASK {
         return if effect.immunity.is_some() {
             format!(
@@ -797,12 +889,7 @@ fn describe_unhandled_aura(effect: &AuraEffectState) -> String {
             )
         };
     }
-    if linked::is_linked(effect.aura_type) {
-        format!(
-            "nonzero linked amount {} for child {} remains a source gap",
-            effect.amount, effect.trigger_spell
-        )
-    } else if mechanic_duration::invalid_mechanic_source_gap(effect) {
+    if mechanic_duration::invalid_mechanic_source_gap(effect) {
         format!(
             "duration mechanic {} does not fit the pinned mask; source gap",
             effect.misc_values[0]
@@ -988,7 +1075,7 @@ pub(crate) fn apply_aura_with_spell(
     if instance.effects.is_empty() {
         return;
     }
-    refresh::prepare_application(world, target, &mut instance);
+    refresh::prepare_application(world, target, &mut instance, spell);
     log_unhandled_types(world, &instance);
     ensure_aura_components(world, target);
     mechanic_immunity::remove_matching(world, target, &instance);
@@ -1024,6 +1111,8 @@ pub(crate) fn apply_aura_with_spell(
     let shared_slot = shares_stack_slot_between_casters(spell);
     let previous_rate =
         crate::spell_cast::recovery_rate::capture_previous_rate_aura(world, target, &instance);
+    #[cfg(test)]
+    let observed_previous = observations::previous_stacks(world, target, &instance);
     let stacking = world
         .get_mut::<ActiveAuras>(target)
         .expect("aura components ensured")
@@ -1042,11 +1131,14 @@ pub(crate) fn apply_aura_with_spell(
         .and_then(|auras| auras.get(id))
         .cloned()
         .expect("aura just stored");
+    #[cfg(test)]
+    observations::applied(world, &aura, observed_previous);
     if kind == CombatLogKind::AuraApplied {
         crate::achievement::record_gain_aura(world, target, aura.spell_id);
         crate::quest::record_gain_aura(world, target, spell.id);
         if shapeshift::aura_form(&aura).is_some() {
             shapeshift::remove_other_forms(world, target, id);
+            shapeshift::apply_form_boosts(world, target, &aura);
         }
         world_state::on_applied(world, target, &aura);
         scripts::run_apply(world, target, &aura);
@@ -1076,9 +1168,12 @@ pub(crate) fn apply_aura_with_spell(
 }
 
 fn stuns(aura: &AuraInstance) -> bool {
-    aura.effects
-        .iter()
-        .any(|effect| effect.aura_type == handlers::MOD_STUN)
+    aura.effects.iter().any(|effect| {
+        matches!(
+            effect.aura_type,
+            handlers::MOD_STUN | handlers::MOD_STUN_DISABLE_GRAVITY
+        )
+    })
 }
 
 /// TC Unit::SetControlled(UNIT_STATE_STUNNED) stops the current cast only when
@@ -1362,6 +1457,9 @@ fn overkill_absorb_amount(world: &World, unit: Entity, loss: f32, school: u32) -
 }
 
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
+    shapeshift::remove_form_boosts(world, unit, aura);
+    #[cfg(test)]
+    observations::removed(world, unit, aura, reason);
     world_state::on_removed(world, unit, aura);
     scripts::run_remove(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
@@ -1502,7 +1600,11 @@ pub(crate) fn spend_stack(world: &mut World, unit: Entity, instance_id: u32) {
     if aura.stacks <= 1 {
         remove_instance(world, unit, instance_id, RemoveReason::Consumed);
     } else {
+        #[cfg(test)]
+        let observed = (aura.caster, aura.spell_id);
         aura.stacks -= 1;
+        #[cfg(test)]
+        observations::spent_stack(world, unit, observed.0, observed.1);
         auras_changed(world, unit);
     }
 }
@@ -1519,11 +1621,13 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     let previous_threat = world
         .get::<AuraStatMods>(unit)
         .map_or(0.0, |mods| mods.temporary_threat);
+    let player_controlled_npc = world.get::<Npc>(unit).is_some()
+        && crate::faction::player_affected(false, world.get::<shared::components::UnitFlags>(unit));
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return;
     };
     auras.dirty = true;
-    let (mut stats, mut combat) = stat_mods::compute(&auras);
+    let (mut stats, mut combat) = stat_mods::compute(&auras, player_controlled_npc);
     stats.max_health_pct += scripts::fount_max_health_pct(unit, &auras);
     let growth = scripts::protective_growth_multiplier(unit, &auras);
     let primary_support = ebon_might::primary_bonus(&auras);
@@ -1531,11 +1635,18 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     // NPCs that happen to carry the follower class-stat bridge.
     if world.get::<Player>(unit).is_none() {
         stats.primary_base_pct = UnitStats::default();
+        // TC Unit.cpp1720 excludes even player-controlled NPCs from280.
+        combat.armor_penetration_pct = 0.0;
+        stats.max_mana_pct = 0.0;
+        stats.rating_from_rating.clear();
+        combat.max_power_mult.clear();
     }
     ebon_might::add_primary_bonus(world, unit, primary_support, &mut stats);
     for multiplier in &mut combat.damage_taken_mult {
         *multiplier *= growth;
     }
+    let max_power_changes =
+        crate::spell_cast::powers::max_power_percent_changes(world, unit, &stats, &combat);
     if let Some(mut stored) = world.get_mut::<AuraStatMods>(unit)
         && *stored != combat
     {
@@ -1549,6 +1660,7 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     if current != stats {
         world.entity_mut(unit).insert(stats);
     }
+    crate::spell_cast::powers::apply_max_power_percent_changes(world, unit, max_power_changes);
     let current_threat = world
         .get::<AuraStatMods>(unit)
         .map_or(0.0, |mods| mods.temporary_threat);
@@ -1811,6 +1923,8 @@ pub(crate) fn consume_absorbs(
 
 pub(crate) fn finish_absorbs(world: &mut World, unit: Entity, result: AbsorbResult) {
     for (caster, soaked) in result.contributions {
+        #[cfg(test)]
+        crate::dungeon_simulator::healer_intake::record_absorb(world, caster, unit, soaked);
         crate::damage_meter::record_absorb(world, caster, soaked);
     }
     if !result.depleted.is_empty() {
@@ -1841,7 +1955,9 @@ pub fn cast_blocker(world: &World, caster: Entity, spell: &SpellInfo) -> Option<
         .categories
         .as_ref()
         .map_or(0, |categories| categories.prevention_type);
-    if attributes(spell, 5) & ATTR5_ALLOW_WHILE_STUNNED == 0 && has(&[handlers::MOD_STUN]) {
+    if attributes(spell, 5) & ATTR5_ALLOW_WHILE_STUNNED == 0
+        && has(&[handlers::MOD_STUN, handlers::MOD_STUN_DISABLE_GRAVITY])
+    {
         return Some(CastBlock::Stunned);
     }
     if prevention & PREVENTION_SILENCE != 0
@@ -1882,14 +1998,28 @@ pub enum CastBlock {
 pub struct ChargeMods {
     /// MOD_MAX_CHARGES 411.
     pub extra_charges: i32,
-    /// CHARGE_RECOVERY_MOD 453, ms.
+    /// Category453 and TypeMask205 flat recovery milliseconds.
     pub recovery_flat_ms: f32,
     /// CHARGE_RECOVERY_MULTIPLIER 454, haste457 and category rate148.
     pub recovery_mult: f32,
 }
 
-/// Charge auras of `unit` whose MiscValue is `charge_category`.
-pub fn charge_mods(world: &World, unit: Entity, charge_category: u32) -> ChargeMods {
+fn charge_effect_matches(effect: &AuraEffectState, category: u32, type_mask: u32) -> bool {
+    let selector = effect.misc_values[0] as u32;
+    if effect.aura_type == handlers::MOD_CHARGE_RECOVERY_BY_TYPE_MASK {
+        selector & type_mask != 0
+    } else {
+        selector == category
+    }
+}
+
+/// Charge auras matching the native category ID, or205 intersecting its TypeMask.
+pub fn charge_mods(
+    world: &World,
+    unit: Entity,
+    charge_category: u32,
+    charge_type_mask: u32,
+) -> ChargeMods {
     let mut mods = ChargeMods {
         extra_charges: 0,
         recovery_flat_ms: 0.0,
@@ -1913,12 +2043,14 @@ pub fn charge_mods(world: &World, unit: Entity, charge_category: u32) -> ChargeM
         for effect in aura
             .effects
             .iter()
-            .filter(|effect| effect.misc_values[0] as u32 == charge_category)
+            .filter(|effect| charge_effect_matches(effect, charge_category, charge_type_mask))
         {
             let amount = effect.amount * stacks;
             match effect.aura_type {
                 handlers::MOD_MAX_CHARGES => mods.extra_charges += amount.round() as i32,
-                handlers::CHARGE_RECOVERY_MOD => mods.recovery_flat_ms += amount,
+                handlers::CHARGE_RECOVERY_MOD | handlers::MOD_CHARGE_RECOVERY_BY_TYPE_MASK => {
+                    mods.recovery_flat_ms += amount
+                }
                 handlers::CHARGE_RECOVERY_MULTIPLIER => mods.recovery_mult *= 1.0 + amount / 100.0,
                 handlers::MOD_CHARGE_RECOVERY_RATE => {
                     mods.recovery_mult *= 100.0 / (100.0 + amount.max(-99.0));
@@ -1965,7 +2097,7 @@ pub fn channel_ended(world: &mut World, caster: Entity, spell_id: u32) {
     }
 }
 
-fn aura_can_be_dispelled(aura: &AuraInstance, hostile: bool, dispel_type: u32) -> bool {
+pub(crate) fn aura_can_be_dispelled(aura: &AuraInstance, hostile: bool, dispel_type: u32) -> bool {
     !aura.passive
         && aura.dispel_type != 0
         && (dispel_type == DISPEL_ALL || u32::from(aura.dispel_type) == dispel_type)
@@ -2185,6 +2317,7 @@ fn update_auras(world: &mut World, units: &mut QueryState<AuraUnit, Without<Grid
         } else {
             remove_on_death(world, unit);
         }
+        async_stacks::expire_async_stacks(world, unit, now);
         // TC Unit.cpp438/2969–2973 updates/expires owned auras even on dead units.
         // ALLOW_AURA_WHILE_DEAD preserves an aura on death, not past its duration.
         remove_auras(world, unit, RemoveReason::Expired, |aura| {
@@ -2363,6 +2496,8 @@ fn receive_cancel_aura(world: &mut World) {
 
 #[cfg(test)]
 mod combat_stat_tests;
+#[cfg(test)]
+mod max_power_pct_tests;
 #[cfg(test)]
 mod periodic_deadline_tests;
 #[cfg(test)]

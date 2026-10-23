@@ -1,23 +1,52 @@
 //! User-approved player-spec combat bridge for authenticated Retail followers.
 mod ai;
 mod catalog;
+#[cfg(test)]
+mod darkflame_drop_tests;
+mod empower_policy;
 mod hazards;
+#[cfg(test)]
+mod healer_benchmark_profile_tests;
 mod healer_context;
+#[cfg(test)]
+mod healer_group_cancel_tests;
 mod healer_policy;
 mod healer_triage;
 mod holy_policy;
+#[cfg(test)]
+mod holy_policy_native_tests;
+#[cfg(test)]
+mod holy_priest_tests;
+#[cfg(test)]
+mod holy_threat_tests;
 mod kit;
 mod kit_ai;
 mod kit_area;
 #[cfg(test)]
+mod kit_defensive_fidelity_tests;
+#[cfg(test)]
+mod kit_empower_tests;
+#[cfg(test)]
 mod kit_hunter_policy_tests;
 mod kit_interrupt;
+#[cfg(test)]
+mod kit_light_of_titans_tests;
+mod kit_overrides;
+
+#[cfg(test)]
+mod fire_efficiency_tests;
+#[cfg(test)]
+mod formation_tests;
+#[cfg(test)]
+mod intensifying_flame_tests;
 #[cfg(test)]
 mod kit_proc_fidelity_tests;
 #[cfg(test)]
 mod kit_rotation_fidelity_tests;
 #[cfg(test)]
 mod kit_rotation_tests;
+#[cfg(test)]
+mod meteor_tests;
 mod pack_identity;
 mod party;
 mod positioning;
@@ -62,10 +91,17 @@ mod rotation_dummy_tests;
 pub(crate) mod simulator;
 mod spawning;
 mod stockade_diagnostic;
+mod tank_defense;
 mod tank_frontal;
 mod tank_planner;
 #[cfg(test)]
 mod tank_planner_tests;
+mod utility;
+#[cfg(test)]
+mod utility_buff_tests;
+mod utility_interrupt;
+#[cfg(test)]
+mod utility_policy_tests;
 
 use bevy::prelude::*;
 use shared::group::GroupRole;
@@ -110,13 +146,17 @@ impl Follower {
         entity: Entity,
         level: u8,
         dungeon_difficulty: u32,
+        display_id: u32,
     ) -> crate::group::OnlineMember {
         crate::group::OnlineMember {
             entity: entity.to_bits(),
             name: self.profile.name.clone(),
             class: self.profile.class_id,
             level,
-            portrait: Default::default(),
+            portrait: shared::protocol::GroupPortraitAppearance {
+                creature_display_id: Some(display_id),
+                ..Default::default()
+            },
             dungeon_difficulty,
             raid_difficulty: Default::default(),
         }
@@ -187,6 +227,8 @@ mod catalog_tests;
 #[cfg(test)]
 mod cc_tests;
 #[cfg(test)]
+mod combat_refs_tests;
+#[cfg(test)]
 mod control_cast_stop_tests;
 #[cfg(test)]
 mod defensive_tests;
@@ -219,7 +261,7 @@ mod kit_swiftmend_consumption_tests;
 #[cfg(test)]
 mod kit_swiftmend_tests;
 #[cfg(test)]
-mod kit_tests;
+pub(crate) mod kit_tests;
 #[cfg(test)]
 mod kit_tranquil_mind_tests;
 #[cfg(test)]
@@ -233,9 +275,27 @@ mod navigation_tests;
 #[cfg(test)]
 mod passive_stats_tests;
 #[cfg(test)]
+mod pet_coverage_tests;
+#[cfg(test)]
 mod pet_tests;
 #[cfg(test)]
 mod profile_behavior_tests;
+#[cfg(test)]
+mod pyroclasm_tests;
+#[cfg(test)]
+mod rotation_defense_tests;
+#[cfg(test)]
+mod rotation_imp_tests;
+#[cfg(test)]
+mod rotation_measurements;
+#[cfg(test)]
+mod rotation_override_tests;
+#[cfg(test)]
+mod rotation_proc_tests;
+#[cfg(test)]
+mod rotation_refresh_tests;
+#[cfg(test)]
+mod rotation_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

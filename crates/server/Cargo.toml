@@ -11,7 +11,7 @@ wow-adt = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882
 wow-wmo = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false }
 # Static seat offsets only; activation tracks and rendering data are not needed by vehicles.
 wow-m2 = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false, features = ["attachments"] }
-shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "74e67cf" }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "186134ff880f1a6a7b754e4ce43456d775a44caf" }
 # Read-only packet iteration and exact send-stage ordering for diagnostic census only.
 lightyear_link = { version = "0.28", optional = true, features = ["test_utils"] }
 lightyear_transport = { version = "0.28", optional = true }
@@ -63,6 +63,12 @@ name = "game-server-site-export"
 path = "src/bin/site_export.rs"
 
 [dev-dependencies]
+# Content-address frozen fixture inputs; already present in the workspace graph.
+blake3 = "1.8"
+# Exercise actual SQLite read authorization when proving cache I/O reuse.
+rusqlite = { version = "0.35", features = ["hooks"] }
+# Frozen engine-free AssistedCombat catalog/predicates; parity reuses authored decisions verbatim.
+game-engine-core = { git = "ssh://git@github.com/world-of-osso/game-engine.git", rev = "9ef2efe2d317b837d352fe8c5227086a4fdcd490" }
 # Measure publication bytes with the exact codec used by Lightyear messages.
 lightyear_serde = "0.28"
 # Bake concrete collision fixtures for fleeing's real Detour path boundary.

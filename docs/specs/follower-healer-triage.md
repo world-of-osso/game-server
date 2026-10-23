@@ -4,15 +4,18 @@
 
 ## What it must do
 
-- [ ] Rank living same-copy patients using missing HP, recent effective incoming damage, tank role and remaining native periodic healing/absorb capacity; deterministic ties.
-- [ ] Budget native mana and prefer efficient effective healing under low mana/low damage; prioritize rescue when projected death is within the policy emergency horizon.
-- [ ] Stop a normal direct heal when its patient becomes topped; reassess/retarget without restarting an already useful cast every AI tick.
-- [ ] Pre-apply missing HoTs/shields against exposed real encounter EventMap deadlines; never invent spell metadata or numeric damage forecasts.
+- [x] Rank living same-copy patients using missing HP, recent effective incoming damage, tank role and remaining native periodic healing/absorb capacity; deterministic ties.
+- [x] Budget native mana and prefer efficient effective healing under low mana/low damage; prioritize rescue when projected death is within the policy emergency horizon.
+- [x] Restoration emergency patients receive ready direct Regrowth before routine delayed HoTs when native instant-rescue cooldowns are unavailable; retain ready Swiftmend and Nature's Swiftness priority.
+- [x] Stop a normal single-target direct heal when its patient becomes topped; reassess/retarget without restarting an already useful cast every AI tick.
+- [x] For normal area/chain heals, cancel only if no living injured recipient remains in the prepared cast's actual native effect target set; preserve native radius/selector/chain rules and existing single-target/channel behavior.
+- [x] Pre-apply missing HoTs/shields against exposed real encounter EventMap deadlines; never invent spell metadata or numeric damage forecasts.
 - [ ] Approach patients using native spell range, LOS, hazard and native-sight-safe movement; do not cross an unpulled sight envelope to heal.
-- [ ] Permit damage only while the living party is safe.
-- [ ] Expose a common read-only triage snapshot/decision hook used by both specialization policies before generic ordered kit rows.
-- [ ] Drive Crenna's learned Restoration105 heal/HoT/proc/cooldown/utility synergies through existing native execution; record absent kit/native mechanics as named gaps rather than fake effects.
-- [ ] Publish paired seeds1–20 clears/deaths/pull-end mana/overheal plus tank HoT uptime and native proc consumption; separate unavailable talent metrics from zero use.
+- [x] Permit damage only while the living party is safe.
+- [x] Expose a common read-only triage snapshot/decision hook used by both specialization policies before generic ordered kit rows.
+- [x] Drive Crenna's learned Restoration105 heal/HoT/proc/cooldown/utility synergies through existing native execution; record absent kit/native mechanics as named gaps rather than fake effects.
+- [x] Native Efflorescence must initialize its actual summon aura, heal at the placed field through its native owner and honor the source target-selection cap/priority; never synthesize healing or resources.
+- [x] Publish paired seeds1–20 clears/deaths/pull-end mana/overheal plus tank HoT uptime and native proc consumption; separate unavailable talent metrics from zero use.
 
 ## How it works
 
@@ -25,15 +28,21 @@
 - `crates/server/src/followers/healer_context.rs` — exposed script deadlines and native-radius injury snapshots.
 - `crates/server/src/scripted_ai/{mod,event_map,the_stockade}.rs` — read-only scheduled-damage hook and actual Hogger deadline mapping.
 - `crates/server/src/followers/healer_triage_tests.rs` — native input/executor behavioral regressions.
+- `crates/server/src/auras/observations.rs` — test-only native application/removal/partial-spend receipts.
+- `crates/server/src/dungeon_simulator/healer_metrics.rs` — passive frame/pack-death/mana/HoT/proc reporting.
 
 ## Tests asserting this spec
 
-- `crates/server/src/followers/healer_triage_tests.rs` — tests committed, RED execution pending.
+- `crates/server/src/followers/healer_triage_tests.rs` — qualified common regressions and native Nature's Swiftness/Clearcasting decisions.
+- `crates/server/src/followers/resto_policy_tests.rs` — native Restoration pressure, upkeep, group buff, proc, unsafe-cast, Efflo runtime/admission/replacement and target-cap/player-priority regressions.
+- `crates/server/src/dungeon_simulator/healer_metrics_tests.rs` — native pull-end/mana/HoT/proc accounting contract.
 
 ## Known gaps (current cycle)
 
-- [ ] Complete Restoration policy depth and paired simulator metrics beyond the qualified common framework/native cooldown slice.
+- [ ] Production navigation/pixel acceptance remains separate from frozen-plane simulator evidence.
+- [ ] `FOLLOWER_RESTO_EFFLO_NPC_PRIORITY_UNQUALIFIED`: NPC static-flag4 treat-as-raid classification has no native producer; represented player/group/injury priority and target cap are qualified.
 - [ ] `FOLLOWER_RESTO_CONVOKE_NOT_LEARNED`: absent from local105 kit.
+- [ ] `UTILITY_LAYER_REZ_PENDING`: Rebirth decision/native NPC-caster execution belongs to the utility layer; reserve its generic-row veto and consume that layer after landing.
 - [ ] `FOLLOWER_RESTO_SOTF_WILD_GROWTH_BONUS_UNIMPLEMENTED`: current native bonus supports Regrowth/Rejuvenation/Germination only.
 
 ## Out of scope

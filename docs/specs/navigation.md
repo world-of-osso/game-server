@@ -7,13 +7,35 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 - [x] Produce reproducible per-tile navigation beside `<ground dir>/los`, covering existing LOS maps/tiles starting with map 0; include Stockade global-WMO geometry for acceptance.
 - [x] Voxelize walkable surfaces deterministically and exclude slopes exceeding the shared player slope limit.
 - [x] Include collision-bearing WMO floors, walls and open doorways, terrain holes and M2 doodad collision hulls, with agent clearance/radius/climb; mark authored terrain water as a distinct area. M2 hull faces use their transformed authored collision normals: upward support faces within the shared slope limit remain walkable; underside/steep faces remain obstacles. Never classify an entire support model as a nonwalkable obstruction.
-- [x] Query connected tiles and return string-pulled corners; reject incomplete/unreachable routes instead of crossing obstacles. Use pinned TC a352b1fa PathGenerator.cpp:141's nominal5-yard vertical nearest-poly extent; retain current0.8-yard horizontal bounds, without its larger-search fallback or shortcuts.
+- [ ] Query connected tiles and return string-pulled corners. Preserve a nonempty PARTIAL|OUT_OF_NODES native corridor as explicitly incomplete, ending on its final polygon. A completed search reporting PARTIAL without OUT_OF_NODES proves disconnection and stays immediately Blocked, retaining stationary/five-second CannotReachTarget behavior; never string-pull to the unreachable requested destination. Keep the existing8192-node pool. Movers walk partial corridors, request the next segment from their actual endpoint, and report arrival only after a complete corridor. No-progress or repeated partial endpoints become Blocked, preserving genuinely unreachable-target evade. Complete-route admissions/inspections reject incomplete results instead of treating them as full connectivity. Use pinned TC a352b1fa PathGenerator.cpp:141's nominal5-yard vertical nearest-poly extent; retain current0.8-yard horizontal bounds, without its larger-search fallback or shortcuts.
 - After a complete A* query, remove tile-corner portal-midpoint detours only through a complete native mesh-surface corridor reaching the same destination polygon/floor. Retain every resulting polygon crossing/detail projection and lower-cost-area preference; require an actually shorter projected route. Obstructed rays retain the valid around-obstacle corridor; query failures/buffer exhaustion remain errors. Never substitute an unchecked world-space line or modify canonical mesh data for a query defect.
 - Melee chase stop and final-leg navigation arrival use one shared3Dreach predicate around the actual victim; retain the existing2yd value or smaller follower reach and independent actual LOS requirement. Ground travel solves its final intersection with that same sphere while retaining horizontal speed budgets and exact floor correction. A victim about0.5yd below and2yd away horizontally must cause movement into real reach, not a stationary pursuing loop.
 - [x] Chase, return-home and waypoint legs follow paths; chase replans after its target moves more than one yard. Creature/follower height correction uses collidable WMO map heights without the player walkable-slope filter, following TC a352b1fa Object.cpp:709–746/3131–3136 and Map.h:329. Player height sampling and its slope filter remain unchanged.
 - [x] Continuous failed chase reachability holds movement, then enters the existing evade lifecycle after five seconds outside raids (threat/combat cleared, return-home). A reachable path or new victim resets the timeout; raid maps do not use this timeout.
 - [x] Never substitute straight movement on a baked map with a missing tile, invalid artifact or unreachable endpoint. Entirely unbaked maps log that boundary explicitly and retain current movement.
 - [x] Stockade chase and home return detour around actual walls; every path segment is clear under the existing LOS query. Stormwind ground fixtures and unreachable-target evade have behavioral proof.
+
+## NAV_ONE_WAY_DROP_FROM_COLLISION
+
+- [x] Provide exactly one down-only2651 connection at the lead-approved raw upper edge(534.269,86.534424,110), reached from the native upper component through(535.1,86.534424,110). Its off-edge departure(533.88,86.534424,110) must land continuously at(533.88,56.281814,110), target polygon281475865905401. Both walking legs must remain native queried routes; never substitute an unchecked straight route.
+- [x] Followers must hold the upper authored stage, then traverse the connection when following the lower Blazikon208743/order2000 and Darkness208747/order7000 route, after upper-component Waxbeard210149/order1000. Preserve continuous departure/fall movement without normal ground snapping; reverse/upward travel remains Blocked.
+- [x] Halls2527, Academy2526 and Goldie2661 retain their named component gaps. No additional connection, canonical bake mutation or body/slope/climb/query relaxation.
+- [x] Retain existing NPC fall behavior; explicitly name `FOLLOWER_NPC_FALL_DAMAGE_UNMODELED` because existing landing damage is Player-only. Do not add NPC damage. Ordinary30.252610yd damage would be18.979% maxHP under existing formula, not an unconditional survival guarantee.
+
+Implementation/proof: [navigation drop ownership](../wiki/systems/navigation.md#one-way-collision-drop--2026-10-22), `crates/server/src/followers/darkflame_drop_tests.rs`. Approval is a project policy, not an inferred Retail transport. Targeted four-case GREEN at cff55269e; two separate full-boss upward controls also pass. Darkflame079ab7a36 landed via dd996; gate's only failure was known leymor_fissure.
+
+## Idle follow distance
+
+- [x] Idle follow admission includes real vertical separation in3D distance, toward the assigned party follow point or the owner for unslotted follows. Keep existing horizontal range/tolerance, slot offsets and horizontal catch-up speed/movement budgets. TC a352b1fa FollowMovementGenerator.cpp:52 calls Position::IsInDist; Position.h:121–124,157 includes vertical distance.
+- [x] A settled follower must start the already-connected native route when its owner changes only height and its follow point becomes30.25yd below, while same-floor nearby owners still hold and existing follow controls remain unchanged. Regression: `crates/server/src/followers/darkflame_drop_tests.rs::darkflame_drop_idle_follower_descends_when_owner_is_directly_below`.
+
+[Source/proof](../wiki/systems/navigation.md#idle-follow-vertical-range--2026-10-22): one nine-case GREEN at3009881d7 covers the new RED and eight existing follow controls; merged tip awaits lead gate. No new connector, query/profile change or NPC fall damage.
+
+## Dense-map bake capacity
+
+- [x] Start each map with the published4×4 spatial grid. Only a proven Recast16-bit contour-vertex capacity overflow may trigger deterministic whole-map power-of-two refinement. Never change voxel/body/clearance/slope/region/simplification values or add map-specific settings to make geometry fit.
+- [x] Preserve ordinary4×4 payload bytes. Read spatial grid width from validated encoded Detour bounds; reject mixed grids and retain explicit errors for empty/invalid/unreachable navigation, without a direct-route substitution.
+- [x] Prove real2669tile31_37 RED→GREEN, mixed-grid rejection, refined cross-tile connectivity, and ordinary-grid byte identity before publishing refined maps. [Grid contract](../wiki/design/navigation-worker.md#encoded-navigation-grid-contract).
 
 ## Nonblocking server queries
 
@@ -75,6 +97,9 @@ Source and implementation: [smooth script waypoints](../wiki/systems/navigation.
 
 ## Tests asserting this spec
 
+- `crates/navigation/tests/dense_authored_tile.rs` — productionCLI real2669tile31_37 capacity RED→GREEN plus querying the authored baked floor.
+- `crates/navigation/tests/refined_grid.rs` — generated refined-grid cross-WoW-tile routes in both directions and explicit mixed-grid rejection. Recorded patchedAzure4×4 payload hashes remain identical; four full repaired-map outputs are uniformly8×8 with unchanged encoded body parameters.
+
 - `crates/server/src/followers/hazard_reaction_tests.rs` and native Azure prediction/escape controls — +50ms source-curve contact, no early movement before250ms, first-ready-tick movement, actual held-worker standing inside, predicted escape and actual aura cleanup. Requested policy cohort passes33/0fail/0ignored; merged-master acceptance remains lead-owned.
 
 - `crates/navigation/src/worker_tests.rs` — worker coalescing/cancel/error/death and real query variants; current dispatch recheck passes all six controls.
@@ -90,9 +115,8 @@ Source and implementation: [smooth script waypoints](../wiki/systems/navigation.
 
 ## Known gaps (current cycle)
 
-- [ ] Lead-owned release/publication; local full LOS-tile bake coverage is complete.
+- [ ] Lead-owned release/publication; requested27 follower maps are staged with complete LOS/M2/nav tile coverage, not full gameplay reachability. Their20authored entrance→boss queries yield8PASS/12unavailable;18maps lack an authored entrance and4lack Normal boss spawns. [Receipts/grid boundary](../wiki/design/navigation-worker.md#encoded-navigation-grid-contract).
 - [ ] Lead must preserve vendored native build/config inputs in the release snapshot; see [deployment boundary](../wiki/systems/navigation.md#lead-owned-shipping).
-- [ ] Full workspace formatting has an unchanged inherited module-order failure; only changed-file formatting is passing.
 
 ## Out of scope
 

@@ -8,6 +8,24 @@
 
 Ordinary NPCs without `CharacterStats` still have no class-derived spell power, attack power or crit. Approved followers carry `CharacterStats` and the stat fields required by this same production query, while remaining NPCs rather than persisted players. Their absent `SheetOwner` keeps owner-only sheet fields hidden; health/mana replication remains ordinary.
 
+## Native weapon attack power — 2026-10-23
+
+`CharacterStats.weapon_attack_power` retains raw integer main/off/ranged weapon AP from unrounded item-table DPS×6, including effective instance level/quality (TC a352b1fa Player.cpp8180–8191). Sheet melee/RAP fields remain unchanged. Native coefficient selection adds max(main,ranged) weapon AP for main/ranged attacks, or adds offhand AP and halves the full offhand sum, before the appropriate AP percentage (Unit.cpp9973–10000). Damage/heal/absorb coefficients share the ranged/exclusive-offhand/main selection; equipped player and approved follower stats do not replace guardian inheritance. Aura366 derived SP/healing power now reads total main-hand AP; weapon/white-hit inputs retain bare AP to avoid double-counting.
+
+Ignored actual Tiger Palm RED:91 vs TC358–377 from base98+weapon291, native coefficient0.9 and Battle Shout1.05. Generic implementation committed after that RED; four targeted native cases pass13.89s at4b9d2be73 (zero compiler warnings), including offhand/ranged percentages and SP/unequip. Tests are now enabled; parent-owned integration gates remain pending. Autoattack AP/6 versus TC3.5 remains an explicit deferred discrepancy, unchanged. [Proof/source ledger](../../handoffs/ww-weapon-ap-proof-ledger.md).
+
+## Follower mastery amount refresh — 2026-10-21
+
+`auras/mastery.rs` originally admitted only `Player`, although approved followers already had `CharacterStats.mastery_points`. This left native76671/76857 aura166 AP bonuses and168534 aura108 damage modifiers at zero on the NPC bridge. The same attribute-driven calculation and amount refresh now admit `Player` or `Follower`; an arbitrary NPC carrying `CharacterStats` remains excluded. Source: TC a352b1fa `SpellInfo.cpp600` / `StatSystem.cpp549`, extended only by the existing [follower class-stat policy](../investigations/follower-data.md).70448 coefficients are unchanged. Native ignored RED reproduced AP620 vs669.6 and Lightning Bolt modifier157.5 vs166.118; enabled mastery/NPC controls pass in the13-case2ba4ec43a GREEN (22.04s). Tests: `followers/passive_stats_tests.rs` (`dps_parity_follower_native_*`).
+
+## Hunter pet health and armor — 2026-10-22
+
+`hunter_pet_stats.rs` derives controlled Hunter pet create health from native ExpectedStat/template metadata, then adds truncated30% owner Stamina×10 HP. Base armor is level×50 plus70% owner armor, truncated. Sources: TC a352b1fa `Pet.cpp847–925` and `StatSystem.cpp1187–1310`; [requirements](../../specs/dps-parity.md#hunter-pet-survivability). Legacy class-level rows exist but contain HP1 placeholders; absent `pet_levelstats` does not justify fabricated primary stats. SimC stable_pet70%Stamina/1.05armor is named divergence `HUNTER_PET_SIMC_SURVIVABILITY_DIFF`, not runtime policy.
+
+FixedUpdate Call Pet can precede Update's equipment/passive calculation. Summon invokes the existing cached `stats::update_character_stats` producer before reading owner stats, matching the Ebon Might snapshot pattern. Fresh currentHP equals the correct maximum without a top-up flag or second formula. Stored wounded currentHP hydrates afterward. Later `Changed<CharacterStats>` refresh applies only the inherited maximum delta, preserving unrelated health bonuses; growth does not heal and shrink clamps current (TC `Unit.cpp10070–10093`). Armor feeds existing physical-damage consumers. Demon/Mage pets and ordinary NPCs retain their existing paths.
+
+Native exact253/level90 Duck174884 reproduced HP1/no armor versus178094HP/5718armor. Separate ordering RED reproduced current56244/max178094; shared-producer fix and six native controls pass, including full fresh summon, real Fortitude growth/removal without healing, reference gear removal/restoration and foreign-controller exclusion. Lifecycle proofs retain real23HP reopened wounds,17HP logout fence, three revive controls and exact hydrated-health dismissal/recall. Fixtures load actual ExpectedStats; the legacy378HP seed clamps to native377, so dismissal asserts persistence of actual hydrated currentHP, not the stale pre-hydration seed. Receipts: game-engine `data/diagnostics/dps-parity-fix-2026-10-21/pet-stats-gate-packet.md`. This is not pet melee AP, whole pet aura/stat parity, new mob-hit mitigation proof or Azure survival acceptance.
+
 ## Sources
 
 | Data | Source | Status |
@@ -69,12 +87,14 @@ The [native producer](../../../scripts/item_instance_data.py) reads the existing
 
 | Resolution | Current coverage |
 |---|---|
-| ItemBonus | Types1/2/3/6/25/49/52: level delta, allocation, quality, sockets, crafted-stat replacement, Midnight config and crafting level. Type23 retains ItemEffect IDs; the SQLite resolver joins base/bonus effect IDs to real spell/trigger/cooldown fields. Execution remains open. |
+| ItemBonus | Types1/2/3/6/25/49/52: level delta, allocation, quality, sockets, crafted-stat replacement, Midnight config and crafting level. Type23 retains ItemEffect IDs; the SQLite resolver joins base/bonus effect IDs to real spell/trigger/cooldown fields. Native on-equip auras execute; scripted proc completeness remains open. |
 | Explicit level / crafted choices | Existing RandPropPoints/weapon formula; no repeated legacy squish. Placeholders24/25 are replaced in order, never split into invented allocations. |
-| Enchants / gems | Native type5 stats use the existing gtSpellScaling data and native level cap; GemProperties resolves the enchant. Type3 spell IDs are preserved by the resolver, but automatic equip-aura/proc execution remains open. |
+| Enchants / gems | Native type5 stats use the existing gtSpellScaling data and native level cap; GemProperties resolves the enchant. Physical-resistance type4/school0 contributes truncated, minimum-one armor (native8163 gives27 armor plus41 Strength/Agility); other resistance schools remain explicit gaps. SourceTC a352b1fa Player.cpp13509–13531. Type3 equip spells use the production aura path. Native8039 parent1236742 has authored BP0 but a nonzero item-scaling coefficient; LINKED_2 forwards the resolved amount to child1241710. |
 | Inventory / stats | GUID persistence, owned projection, initial/delta delivery and modifier-only StatsPlugin refresh. Owned GUID hydration/projection passed after their genuine REDs, alongside modifier-only Stats and legacy source controls. |
 
 Proof:18 library regressions pass (including three missing-effect RED→GREEN cases); the actual native chest271468/enchant7987 modifier-only boundary failed687 versus737 before consumer wiring, then passed alongside the unchanged level20 Arcane gear control. Two subsequent native GUID-hydration/projection cases gave genuine RED before implementation, then passed in the24-case library/main integration run. This is not DPS parity or a deployment claim; [the parity contract](../../specs/dps-parity.md) tracks the remaining harness and measurements.
+
+Equipment qualification at447552507: native base268209, enchant8039, bonus13771 and item-level100→200 refresh all pass, including removal of linked children. LINKED/LINKED_2 follow TrinityCore a352b1fa `SpellAuraEffects.cpp5299–5335`: zero preserves child BP0, nonzero overrides it. The older test rejecting nonzero children contradicts that source; its replacement asserts native471492→471491 BP10 and392221→392223 BP8 plus owned removal. This does not qualify scripted procs or300s DPS.
 
 Sources: [instance resolver](../../../crates/server/src/item_instance.rs), [bonus/enchant loaders](../../../crates/server/src/item_instance/load.rs), [GUID store](../../../crates/server/src/item_instance/store.rs), [inventory model](../../../crates/server/src/inventory_model.rs), [stat consumer](../../../crates/server/src/stats.rs). Pinned behavior reference: SimC76f8118 `sc_item_data.cpp` and `item.cpp1740`.
 
@@ -154,7 +174,7 @@ The spawned `Health` comes from redb. The first recompute keeps the persisted ra
 ### Gear
 
 - **Scaled item levels:** Wowhead shows some old items at a level other than ItemSparse `ItemLevel` (Vendetta 20 at 83, Riverpaw Leather Vest 6 at 80, Forlorn Breastplate 35 at 34). The source of that scaling (drop context bonus lists, ContentTuning, `PlayerLevelToItemLevelCurveID`) is not identified; the server uses the static, squished level. Explicit instance bonus lists use the qualified types [above](#instance-properties--2026-10-21); automatic bonus-tree/drop-context selection remains absent.
-- **Not modeled:** automatic equip-aura/proc execution, the effects of leech, avoidance and speed (only their sheet percentages), bonus armor, ranged swings. Explicit gem/enchant stats use the qualified instance path [above](#instance-properties--2026-10-21). Auto-attacks swing `main_hand` and `off_hand` ([[player-damage]]).
+- **Not fully modeled:** scripted equipment procs, the effects of leech, avoidance and speed (only their sheet percentages), bonus armor, ranged swings. Explicit gem/enchant stats use the qualified instance path [above](#instance-properties--2026-10-21). Auto-attacks swing `main_hand` and `off_hand` ([[player-damage]]).
 - **Admin grant:** `grant-equipment` writes equipment without the inventory change queue, so an online player's `EquippedItems` updates at the next inventory change or relog.
 
 ### Other

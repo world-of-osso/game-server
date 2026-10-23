@@ -59,7 +59,7 @@ fn read_estimate(
         interval_secs: f64::from(projection.attacker.swing_time(&WeaponDamage::UNARMED)),
         next_swing_secs: world
             .get::<AutoAttack>(enemy)
-            .map_or(0.0, |attack| f64::from(attack.timer.max(0.0))),
+            .map_or(0.0, |attack| attack.timer.as_secs_f64()),
         remaining_health: f64::from(tank_level_health),
         valid_until: read_stat_deadline(world, projection),
         level: world
@@ -219,6 +219,8 @@ fn read_swing_projection(
         target_health,
     );
     let armor = read_armor(world, tank, &source_scaling, &target_scaling);
+    let armor =
+        crate::auras::combat_stats::armor_after_bypass(target_auras, attacker.entity, armor);
     let blocked_pct = blocked_pct(
         victim,
         &source_scaling,
@@ -289,6 +291,7 @@ fn armored_damage(world: &World, projection: &SwingProjection, base: f32) -> f32
         &projection.source_scaling,
         &projection.target_scaling,
         world.get_resource::<ArmorConstants>(),
+        projection.attacker.mods,
     )
 }
 
@@ -336,12 +339,21 @@ fn largest_damage(world: &World, projection: &SwingProjection, base: f32) -> f64
 }
 
 fn read_stat_deadline(world: &World, projection: &SwingProjection) -> Option<f64> {
-    [projection.attacker.entity, projection.target]
+    let stat_deadline = [projection.attacker.entity, projection.target]
         .into_iter()
         .filter_map(|unit| {
             let auras = world.get::<crate::auras::ActiveAuras>(unit)?;
             crate::auras::forecast::first_melee_stat_expiry(unit, auras)
         })
+        .min_by(f64::total_cmp);
+    let bypass_deadline = world
+        .get::<crate::auras::ActiveAuras>(projection.target)
+        .and_then(|auras| {
+            crate::auras::forecast::first_armor_bypass_expiry(projection.attacker.entity, auras)
+        });
+    stat_deadline
+        .into_iter()
+        .chain(bypass_deadline)
         .min_by(f64::total_cmp)
 }
 

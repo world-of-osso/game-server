@@ -91,6 +91,9 @@ pub(super) fn run_periodic(world: &mut World, unit: Entity, aura: &AuraInstance,
     }
 }
 
+pub(super) const INUNDATE: u32 = 378776;
+const FEEL_THE_BURN: u32 = 383391;
+const FIRE_BLAST: u32 = 108853;
 const ASPECT_OF_THE_TURTLE: u32 = 186_265;
 const TURTLE_PACIFY: u32 = 205_769;
 const BARKSKIN: u32 = 22_812;
@@ -224,6 +227,9 @@ pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
         || (spell_id == crate::spell_cast::blooming_infusion::BLOOMING_INFUSION
             && effect_index == 0)
         || (spell_id == crate::spell_cast::control_dream::CONTROL_OF_THE_DREAM && effect_index == 0)
+        || (spell_id == 109186 && effect_index == 0)
+        || (spell_id == 200183 && effect_index == 0)
+        || (spell_id == 390994 && effect_index == 1)
         || (spell_id == PROTECTIVE_GROWTH && effect_index == 0)
         || (spell_id == LINGERING_HEALING && effect_index == 1)
         || (spell_id == FOUNT_OF_STRENGTH && effect_index == 2)
@@ -236,6 +242,7 @@ pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
         || (spell_id == 47788 && effect_index == 2)
         || (spell_id == crate::spell_cast::scripts::prayer_of_mending::WARD && effect_index == 0)
         || (spell_id == 288733 && effect_index == 1)
+        || (spell_id == crate::spell_cast::toy_coyote::HAT && effect_index == 0)
 }
 
 /// Mainline740s6 supplies the caster's Tranquility shield cap.
@@ -277,6 +284,11 @@ pub(super) fn snapshot_periodic_amount(
     effect: &crate::spell_info::SpellEffect,
     amount: f32,
 ) -> f32 {
+    let amount = if effect.aura == super::PERIODIC_DAMAGE_AURA {
+        super::spell_mods::snapshot_periodic_amount(world, caster, spell, amount)
+    } else {
+        amount
+    };
     let amount = crate::spell_cast::scripts::snapshot_soul_of_the_forest(
         world, caster, spell, effect, amount,
     );
@@ -330,8 +342,53 @@ pub(super) fn effect_enabled(
     spell_id != 187827 || effect_index != 3 || super::has_aura(world, caster, 321068)
 }
 
+/// Native383391 names only Fire Blast; SimC76f8118 sc_mage.cpp4583.
+fn check_feel_the_burn_proc(
+    _world: &World,
+    _aura: &AuraInstance,
+    event: &super::procs::AuraEvent,
+) -> bool {
+    event.spell_id == Some(FIRE_BLAST)
+}
+
+/// INUNDATE_NATIVE_SUCCESSFUL_UTILITY_CASTS:70448 description, no pinned TDB proc row.
+fn check_inundate_proc(
+    world: &World,
+    _aura: &AuraInstance,
+    event: &super::procs::AuraEvent,
+) -> bool {
+    let utility_cast = matches!(event.spell_id, Some(370 | 51886 | 5394 | 51514 | 57994));
+    let in_combat = world
+        .get::<shared::components::CombatStatus>(event.actor)
+        .is_some_and(|status| status.0);
+    utility_cast && in_combat
+}
+
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    scripts.0.insert(
+        INUNDATE,
+        AuraScript {
+            check_proc: Some(check_inundate_proc),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        FEEL_THE_BURN,
+        AuraScript {
+            check_proc: Some(check_feel_the_burn_proc),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        crate::spell_cast::efflorescence::DUMMY,
+        AuraScript {
+            on_periodic: Some(crate::spell_cast::efflorescence::pulse),
+            ..Default::default()
+        },
+    );
+    crate::spell_cast::toy_coyote::register(&mut scripts);
     super::abundance::register(&mut scripts);
+    crate::spell_cast::scripts::holy_priest::register(&mut scripts);
     crate::spell_cast::scripts::prayer_of_mending::register(&mut scripts);
     super::earthen_rage::register(&mut scripts);
     super::spirit_wolf::register(&mut scripts);
@@ -371,6 +428,13 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         AuraScript {
             on_apply: Some(crate::spell_cast::scripts::replace_lifebloom),
             on_remove: Some(crate::spell_cast::scripts::bloom_lifebloom),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        crate::spell_cast::scripts::DANCE_OF_CHIJI,
+        AuraScript {
+            check_proc: Some(crate::spell_cast::scripts::check_dance_proc),
             ..Default::default()
         },
     );
@@ -428,6 +492,38 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         ENDURING_TORMENT,
         AuraScript {
             on_periodic: Some(toggle_enduring_torment),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        super::light_of_titans::LIGHT_OF_TITANS,
+        AuraScript {
+            check_proc: Some(super::light_of_titans::check_word),
+            on_damage_proc: Some(super::light_of_titans::apply_word_hot),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        super::ignite::MASTERY_IGNITE,
+        AuraScript {
+            check_proc: Some(super::ignite::check_damage),
+            on_damage_proc: Some(super::ignite::apply_damage),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        super::echo_of_light::ECHO_MASTERY,
+        AuraScript {
+            check_proc: Some(super::echo_of_light::check_heal),
+            on_damage_proc: Some(super::echo_of_light::apply_echo),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        super::binding_heals::BINDING_HEALS,
+        AuraScript {
+            check_proc: Some(super::binding_heals::check_heal),
+            on_damage_proc: Some(super::binding_heals::transfer_heal),
             ..Default::default()
         },
     );

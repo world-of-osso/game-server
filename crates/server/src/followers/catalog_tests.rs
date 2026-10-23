@@ -24,7 +24,12 @@ fn follower_population_catalog_lists_every_map_with_authentic_sources() {
         .unwrap()
         .collect::<rusqlite::Result<_>>()
         .unwrap();
-    assert_eq!(expected, BTreeSet::from([2451, 2515, 2521, 2526, 2648]));
+    // The TDB-authored entrances stay queueable; published derived entrances
+    // (FOLLOWER_ENTRANCE_FROM_EXIT_PORTAL) only add maps.
+    assert!(
+        expected.is_superset(&BTreeSet::from([2451, 2515, 2521, 2526, 2648])),
+        "{expected:?}"
+    );
     db.execute_batch(
         "DELETE FROM content_creature WHERE map IN
             (SELECT map_id FROM follower_lfg_dungeons WHERE difficulty_id=205);

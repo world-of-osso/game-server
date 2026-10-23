@@ -20,6 +20,17 @@ pub(super) fn output_directory() -> std::path::PathBuf {
 pub(super) fn write_report(report: &super::campaign::Report) -> Result<(), String> {
     let directory = output_directory();
     std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
+    let events = report
+        .performance
+        .get("combat_events")
+        .ok_or("final simulator report lacks its native combat-event trace")?;
+    let export = serde_json::json!({"seed":report.seed,"status":report.status,
+        "reason":report.detail,"events":events});
+    std::fs::write(
+        directory.join(format!("combat-events-{}.json", report.seed)),
+        serde_json::to_vec_pretty(&export).map_err(|error| error.to_string())?,
+    )
+    .map_err(|error| format!("write native combat-event export: {error}"))?;
     std::fs::write(
         directory.join(format!("run-{}.json", report.seed)),
         serde_json::to_vec_pretty(&report).unwrap(),
@@ -55,6 +66,10 @@ pub(super) fn build_app() -> App {
 }
 
 pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
+    build_runtime_app(catalogs)
+}
+
+fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
     let mut app = App::new();
     app.insert_resource(super::Space(super::graph::read_graph().unwrap()));
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
@@ -68,15 +83,19 @@ pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>)
         crate::creature_scripts::CreatureScriptsPlugin,
         crate::scripted_ai::ScriptedAiPlugin,
         crate::followers::FollowerPlugin,
+        crate::hunter_pet::HunterPetPlugin,
+        crate::pet_control::PetControlPlugin,
         crate::stats::StatsPlugin,
     ));
     app.init_resource::<crate::maps::InstanceManager>();
     app.init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    app.init_resource::<crate::spell_cast::holy_metrics::HolyMetrics>();
     app.add_systems(
         FixedUpdate,
         (
             crate::followers::simulator::update_leader,
             super::movement::update,
+            crate::creature_ai::no_path_evade_system,
         )
             .chain()
             .after(crate::followers::update_ai),
@@ -114,11 +133,7 @@ fn load_gameplay_data(app: &mut App) {
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap();
-    let mut data = crate::world_data::load_world_data(&crate::test_data::world_db_path());
-    // The approved simulation geometry is a plane. Native combat/stat inputs stay intact.
-    for spawn in data.spawns.iter_mut().filter(|spawn| spawn.map == 34) {
-        spawn.position_z = 0.0;
-    }
+    let data = crate::world_data::load_world_data(&crate::test_data::world_db_path());
     app.insert_resource(data.armor_constants.clone());
     app.insert_resource(data);
     let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
@@ -138,18 +153,20 @@ fn load_gameplay_data(app: &mut App) {
 }
 
 pub(super) fn create_copy(app: &mut App) -> crate::maps::InMap {
+    let graph = &app.world().resource::<super::Space>().0;
+    let (map_id, difficulty_id) = (graph.map_id, graph.difficulty_id());
     app.world_mut()
         .resource_scope(|world, maps: Mut<crate::maps::MapStore>| {
             world
                 .resource_mut::<crate::maps::InstanceManager>()
                 .create_map(
                     &maps,
-                    34,
+                    map_id,
                     crate::maps::instances::InstanceEntrant {
                         character_id: 1,
                         group: None,
                         leader: 1,
-                        difficulty_id: 1,
+                        difficulty_id,
                         ..default()
                     },
                     crate::maps::instances::Now {
@@ -166,6 +183,12 @@ pub(super) fn spawn_population(
     app: &mut App,
     copy: crate::maps::InMap,
 ) -> std::collections::BTreeMap<u32, Entity> {
+    let difficulty_id = app
+        .world()
+        .resource::<crate::maps::InstanceManager>()
+        .copy_difficulty(copy)
+        .expect("native simulator copy difficulty")
+        .difficulty_id;
     let mut queue = bevy::ecs::world::CommandQueue::default();
     app.world_mut()
         .resource_scope(|world, data: Mut<crate::world_data::WorldData>| {
@@ -175,7 +198,7 @@ pub(super) fn spawn_population(
                 &data,
                 crate::zones::MapContent {
                     map: copy,
-                    difficulty_id: 1,
+                    difficulty_id,
                     dead_bosses: Vec::new(),
                 },
                 false,
@@ -230,7 +253,7 @@ pub(super) fn run_first_pack() -> Result<(), String> {
         copy,
         Position {
             x: graph.entrance[0],
-            y: 0.0,
+            y: graph.entrance_height,
             z: graph.entrance[1],
         },
     )?;
@@ -257,7 +280,7 @@ pub(super) fn run_first_pack() -> Result<(), String> {
         .collect();
     let at = Position {
         x: pack.position[0] - 2.0,
-        y: 0.0,
+        y: pack.height,
         z: pack.position[1],
     };
     for unit in party.members.iter().copied().chain([party.owner]) {

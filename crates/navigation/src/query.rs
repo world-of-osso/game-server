@@ -8,6 +8,9 @@ use std::path::{Path, PathBuf};
 mod polygons;
 pub use polygons::read_walkable_polygons;
 
+#[path = "collision_drop.rs"]
+mod collision_drop;
+pub use collision_drop::CollisionDrop;
 #[path = "smooth.rs"]
 mod smooth;
 #[path = "visibility.rs"]
@@ -17,6 +20,25 @@ struct Corridor {
     start: [f32; 3],
     end: [f32; 3],
     polygons: Vec<dtPolyRef>,
+    complete: bool,
+}
+
+/// A walkable segment; an incomplete end is not arrival at the requested target.
+#[derive(Clone, Debug, PartialEq)]
+pub struct NavigationPath {
+    pub points: Vec<Vec3>,
+    pub complete: bool,
+    pub collision_drop: Option<CollisionDrop>,
+}
+
+impl NavigationPath {
+    pub fn into_complete(self) -> Result<Vec<Vec3>, String> {
+        if self.complete {
+            Ok(self.points)
+        } else {
+            Err("unreachable target (incomplete corridor)".into())
+        }
+    }
 }
 
 const MAX_PATH: usize = 2048;
@@ -29,6 +51,7 @@ const NEAREST_EXTENTS: [f32; 3] = [0.8, 5.0, 0.8];
 pub struct NavigationMap {
     dir: PathBuf,
     loaded: HashSet<(u32, u32)>,
+    subtile_width: Option<f32>,
     mesh: *mut dtNavMesh,
     query: *mut dtNavMeshQuery,
 }
@@ -44,27 +67,13 @@ impl NavigationMap {
             Self {
                 dir: dir.to_path_buf(),
                 loaded: HashSet::new(),
+                subtile_width: None,
                 mesh: dtAllocNavMesh(),
                 query: dtAllocNavMeshQuery(),
             }
         };
         if map.mesh.is_null() || map.query.is_null() {
             return Err("Detour allocation failed".into());
-        }
-        let params = dtNavMeshParams {
-            orig: [-32.0 * TILE_SIZE, 0.0, -32.0 * TILE_SIZE],
-            tileWidth: SUBTILE_SIZE,
-            tileHeight: SUBTILE_SIZE,
-            maxTiles: 65536,
-            maxPolys: 65536,
-        };
-        // SAFETY: pointers are non-null, params lives through init and is copied.
-        unsafe {
-            status((*map.mesh).init(&params), "mesh initialization")?;
-            status(
-                (*map.query).init(map.mesh, MAX_NODES),
-                "query initialization",
-            )?;
         }
         Ok(map)
     }
@@ -108,14 +117,46 @@ impl NavigationMap {
         Ok(Vec3::from_array(projected))
     }
 
-    pub fn path(&mut self, start: Vec3, end: Vec3) -> Result<Vec<Vec3>, String> {
+    pub fn path(&mut self, start: Vec3, end: Vec3) -> Result<NavigationPath, String> {
+        let walking = self.walking_path(start, end);
+        let disconnected =
+            matches!(&walking, Err(error) if error == "unreachable target (incomplete corridor)");
+        if disconnected && self.has_collision_drop() {
+            return self.path_via_collision_drop(start, end);
+        }
+        walking
+    }
+
+    fn walking_path(&mut self, start: Vec3, end: Vec3) -> Result<NavigationPath, String> {
         let corridor = self.query_corridor(start, end)?;
-        self.pull_corners(&corridor.start, &corridor.end, &corridor.polygons)
+        let points = self.pull_corners(&corridor.start, &corridor.end, &corridor.polygons)?;
+        Ok(NavigationPath {
+            points,
+            complete: corridor.complete,
+            collision_drop: None,
+        })
+    }
+
+    /// Inspection/admission requires the entire destination, not a walkable prefix.
+    pub fn complete_path(&mut self, start: Vec3, end: Vec3) -> Result<Vec<Vec3>, String> {
+        self.path(start, end)?.into_complete()
+    }
+
+    /// Escape candidates are walking-only; their callers do not own off-mesh motion.
+    pub(crate) fn complete_walk_path(
+        &mut self,
+        start: Vec3,
+        end: Vec3,
+    ) -> Result<Vec<Vec3>, String> {
+        self.walking_path(start, end)?.into_complete()
     }
 
     /// TC a352b1fa default PathGenerator surface stepping, only for C++ waypoints.
     pub fn smooth_waypoint_path(&mut self, start: Vec3, end: Vec3) -> Result<Vec<Vec3>, String> {
         let corridor = self.query_corridor(start, end)?;
+        if !corridor.complete {
+            return Err("unreachable target (incomplete corridor)".into());
+        }
         self.find_smooth_path(start, end, corridor.polygons)
     }
 
@@ -143,20 +184,60 @@ impl NavigationMap {
             )
         };
         status(result, "path search")?;
-        if result & (DT_PARTIAL_RESULT | DT_BUFFER_TOO_SMALL | DT_OUT_OF_NODES) != 0
-            || count == 0
-            || corridor[count as usize - 1] != end_ref
-        {
+        if result & DT_BUFFER_TOO_SMALL != 0 || count == 0 {
             return Err("unreachable target (incomplete corridor)".into());
         }
-        self.optimize_visible_corridor(
-            Corridor {
-                start: start_pos,
-                end: end_pos,
-                polygons: corridor[..count as usize].to_vec(),
+        let last_ref = corridor[count as usize - 1];
+        let complete = last_ref == end_ref;
+        let exhaustion_flags = DT_PARTIAL_RESULT | DT_OUT_OF_NODES;
+        let exhausted = result & exhaustion_flags == exhaustion_flags;
+        // A completed search proves a disconnect. Only resource-limited searches
+        // may expose a walkable prefix; preserve stationary CannotReachTarget policy.
+        if !complete && !exhausted {
+            return Err("unreachable target (incomplete corridor)".into());
+        }
+        let reachable_end = if complete {
+            end_pos
+        } else {
+            self.project_partial_end(last_ref, &start_pos, &end_pos)?
+        };
+        let corridor = Corridor {
+            start: start_pos,
+            end: reachable_end,
+            polygons: corridor[..count as usize].to_vec(),
+            complete,
+        };
+        if complete {
+            self.optimize_visible_corridor(corridor, &filter)
+        } else {
+            Ok(corridor)
+        }
+    }
+
+    fn project_partial_end(
+        &self,
+        reference: dtPolyRef,
+        start: &[f32; 3],
+        target: &[f32; 3],
+    ) -> Result<[f32; 3], String> {
+        let mut endpoint = [0.0; 3];
+        // TC a352b1fa PathGenerator.cpp adjusts incomplete ends onto the last poly.
+        // SAFETY: the reference came from this query; all arrays have three floats.
+        status(
+            unsafe {
+                (*self.query).closestPointOnPoly(
+                    reference,
+                    target.as_ptr(),
+                    endpoint.as_mut_ptr(),
+                    std::ptr::null_mut(),
+                )
             },
-            &filter,
-        )
+            "partial corridor endpoint",
+        )?;
+        if endpoint == *start {
+            return Err("unreachable target (partial corridor made no progress)".into());
+        }
+        Ok(endpoint)
     }
 
     fn nearest(
@@ -270,6 +351,9 @@ impl NavigationMap {
                 }
             }
         }
+        if self.subtile_width.is_none() {
+            return Err("navigation map has no walkable tiles".into());
+        }
         Ok(())
     }
 
@@ -288,8 +372,38 @@ impl NavigationMap {
         Ok(())
     }
 
+    fn initialize_grid(&mut self, width: f32) -> Result<(), String> {
+        if let Some(current) = self.subtile_width {
+            return if current == width {
+                Ok(())
+            } else {
+                Err(format!(
+                    "mixed navigation grids: tile widths {current} and {width}"
+                ))
+            };
+        }
+        let params = dtNavMeshParams {
+            orig: [-32.0 * TILE_SIZE, 0.0, -32.0 * TILE_SIZE],
+            tileWidth: width,
+            tileHeight: width,
+            maxTiles: 65536,
+            maxPolys: 65536,
+        };
+        // SAFETY: uniquely owned non-null pointers; init copies these parameters.
+        unsafe {
+            status((*self.mesh).init(&params), "mesh initialization")?;
+            status(
+                (*self.query).init(self.mesh, MAX_NODES),
+                "query initialization",
+            )?;
+        }
+        self.subtile_width = Some(width);
+        Ok(())
+    }
+
     fn add_packet(&mut self, bytes: &[u8]) -> Result<(), String> {
         validate_packet(bytes)?;
+        self.initialize_grid(packet_subtile_width(bytes)?)?;
         // SAFETY: validated complete trusted bake buffer; owned allocator memory is
         // transferred to mesh on success and freed here on failure.
         unsafe {
@@ -341,13 +455,41 @@ fn status(value: dtStatus, operation: &str) -> Result<(), String> {
     }
 }
 
+fn packet_subtile_width(bytes: &[u8]) -> Result<f32, String> {
+    // SAFETY: caller validated this complete POD header; byte alignment is not assumed.
+    let header = unsafe { std::ptr::read_unaligned(bytes.as_ptr().cast::<dtMeshHeader>()) };
+    let width = header.bmax[0] - header.bmin[0];
+    let height = header.bmax[2] - header.bmin[2];
+    if !width.is_finite() || !height.is_finite() || width <= 0.0 {
+        return Err("invalid navigation grid bounds".into());
+    }
+    let subdivisions = (TILE_SIZE / width).round() as u32;
+    let canonical_width = grid_subtile_size(subdivisions)?;
+    // Absolute world coordinates round to f32 before subtraction; allow their ULPs,
+    // not a geometry/agent tolerance or a different grid resolution.
+    let magnitude = header.bmin[0]
+        .abs()
+        .max(header.bmax[0].abs())
+        .max(header.bmin[2].abs())
+        .max(header.bmax[2].abs())
+        .max(width);
+    let rounding_error = magnitude * f32::EPSILON * 4.0;
+    if (width - canonical_width).abs() > rounding_error
+        || (height - canonical_width).abs() > rounding_error
+    {
+        return Err("nonuniform navigation grid bounds".into());
+    }
+    Ok(canonical_width)
+}
+
 fn decode_packets(bytes: &[u8]) -> Result<Vec<&[u8]>, String> {
     if bytes.len() < 12 || &bytes[..8] != MAGIC {
         return Err("invalid navigation artifact header".into());
     }
     let count = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
-    if count > SUBDIVISIONS * SUBDIVISIONS {
-        return Err("too many subtiles".into());
+    let minimum_packet_bytes = 4 + std::mem::size_of::<dtMeshHeader>();
+    if count as usize > (bytes.len() - 12) / minimum_packet_bytes {
+        return Err("too many subtiles for navigation artifact length".into());
     }
     let mut remaining = &bytes[12..];
     let mut packets = Vec::new();
@@ -404,6 +546,13 @@ fn validate_packet(bytes: &[u8]) -> Result<(), String> {
 mod seam_tests;
 
 #[cfg(all(test, feature = "bake"))]
+#[path = "gorek_diagnostic.rs"]
+mod gorek_diagnostic;
+#[cfg(all(test, feature = "bake"))]
+#[path = "gorek_iterative_diagnostic.rs"]
+mod gorek_iterative_diagnostic;
+
+#[cfg(all(test, feature = "bake"))]
 mod tests {
     use super::*;
     fn ground_dir() -> PathBuf {
@@ -444,7 +593,7 @@ mod tests {
         let start = Vec3::new(1591.1461, 127.144, 200.2604);
         let end = Vec3::new(1590.1045, 127.144, 202.60416);
         let path = nav
-            .path(start, end)
+            .complete_path(start, end)
             .expect("authored metalplate doorway must remain traversable");
         let mut los = los::LosMap::new(&ground.join("los/2521"));
         for segment in path.windows(2) {
@@ -456,7 +605,7 @@ mod tests {
         }
         eprintln!("Ruby metalplate doorway route: {path:?}");
         let approach = nav
-            .path(
+            .complete_path(
                 wow(1386.2, -169.719, 131.0),
                 wow(1551.33, -257.688, 126.01431),
             )
@@ -515,7 +664,7 @@ mod tests {
     fn stockade_repath_to_other_cell_has_clear_segments() {
         let mut map = NavigationMap::open(&ground_dir().join("navmesh/34")).unwrap();
         let path = map
-            .path(wow(128.5, 52.0, -33.86), wow(103.0, 76.0, -34.86))
+            .complete_path(wow(128.5, 52.0, -33.86), wow(103.0, 76.0, -34.86))
             .unwrap();
         let mut los = los::LosMap::new(&ground_dir().join("los/34"));
         for pair in path.windows(2) {
@@ -532,7 +681,7 @@ mod tests {
         let mut map = NavigationMap::open(&ground_dir().join("navmesh/34")).unwrap();
         let a = wow(115.646, 46.6108, -34.8562);
         let b = wow(128.5, 52.0, -33.86);
-        let path = map.path(a, b).expect("Stockade floor route");
+        let path = map.complete_path(a, b).expect("Stockade floor route");
         assert!(path.len() > 2, "wall requires corners: {path:?}");
         let mut los = los::LosMap::new(&ground_dir().join("los/34"));
         assert!(

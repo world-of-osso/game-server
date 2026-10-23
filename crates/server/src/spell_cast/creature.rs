@@ -19,6 +19,8 @@ use super::{
 use crate::creature_ai::CreatureState;
 use crate::spell_info::{SpellInfo, SpellStore};
 
+mod explicit_targets;
+
 /// Triggered casts resolve without proc events (`TRIGGERED_DISALLOW_PROC_EVENTS`).
 const TRIGGERED_DEPTH: u8 = 1;
 
@@ -52,6 +54,24 @@ pub(crate) fn creature_cast(
     );
     super::missiles::launch(world, caster, &spell, plan, TRIGGERED_DEPTH);
     Ok(())
+}
+
+/// Ordinary NPC empower admission with an explicitly selected release stage.
+pub(crate) fn creature_cast_empowered(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
+    stage: u8,
+) -> Result<(), CastFailure> {
+    let (mut spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
+    if stage == 0 || spell.empower_stages.is_empty() {
+        return Err(CastFailure::Unsupported(format!(
+            "spell{spell_id} cannot empower to stage{stage}"
+        )));
+    }
+    spell.cast_empower_to = Some(stage);
+    start_cast(world, caster, &spell, explicit)
 }
 
 /// TC source flag0x2: ordinary cast except SpellHistory::IsReady/HandleCooldowns.
@@ -100,13 +120,22 @@ fn load_creature_cast(
     spell_id: u32,
     target: Option<Entity>,
 ) -> Result<(SpellInfo, Option<Entity>), CastFailure> {
-    let spell = world
+    let mut spell = world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(spell_id))
         .cloned()
         .ok_or(CastFailure::UnknownSpell)?;
     let requirement = targets::explicit_requirement(handled_effects(&spell));
-    let explicit = target.or_else(|| default_scripted_target(world, caster, requirement));
+    let supplied = target.or_else(|| default_scripted_target(world, caster, requirement));
+    // Normalize only the redundant self object rejected by EXCLUDE_CASTER.
+    // Other supplied objects still own this runtime's cast/packet/log recipient;
+    // dropping them globally loses NPC child CastSuccess delivery to players.
+    let redundant_self = supplied == Some(caster) && targets::excludes_caster(&spell);
+    let explicit = if redundant_self {
+        explicit_targets::normalize_unit_target(world, &mut spell, supplied)
+    } else {
+        supplied
+    };
     Ok((spell, explicit))
 }
 
@@ -126,12 +155,19 @@ fn default_scripted_target(
                 world.get::<shared::components::Health>(target).is_some()
                     && targets::relation_matches(world, caster, target, relation)
             })
-    } else if relation == targets::Relation::Ally {
+    } else if matches!(
+        relation,
+        targets::Relation::Ally | targets::Relation::Raid | targets::Relation::Minipet
+    ) {
         None
     } else {
         victim(world, caster)
     };
-    selected.or_else(|| (relation != targets::Relation::Enemy).then_some(caster))
+    let defaults_to_self = !matches!(
+        relation,
+        targets::Relation::Enemy | targets::Relation::Minipet
+    );
+    selected.or_else(|| defaults_to_self.then_some(caster))
 }
 
 /// `AISpellInfoType::target` (`UnitAI::FillAISpellInfo`), which `DoCast(spellId)`

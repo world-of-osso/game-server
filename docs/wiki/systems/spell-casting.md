@@ -1,5 +1,9 @@
 # Spell Casting
 
+## Cast while casting — 2026-10-21
+
+TC a352b1fa `Spell.cpp530–531` derives `TRIGGERED_IGNORE_CAST_IN_PROGRESS` from native Attr4/0x80. `allows_cast_while_casting` now supplies that predicate to ordinary native validation, player queue timing and follower kit admission. Instant108853 executes without replacing or interrupting the existing133 cast; near-completion requests are not incorrectly held behind that cast. Native costs, GCD, cooldown and charge checks remain unchanged. An urgent kit action with the attribute uses ordinary casting rather than the self-interruption path. Ignored native RED reproduced all three admission failures; enabled cases pass within13-case2ba4ec43a GREEN. After merging enemy-count policy, the one-target follower-kit fixture passes again at5368e1070. [Contract](../../specs/cast-while-casting.md); tests `followers/cast_while_casting_tests.rs`.
+
 ## Ordered target148 destination — 2026-10-21
 
 `targets/ordered_destination.rs` handles target148 generically in native TargetA/TargetB order (TC a352b1fa Spell.cpp1690–1738), including the center consumed by destination-area unit selection. Radius comes from the active slot; movement direction is destination→caster, while destination facing is caster→original destination. Following78/79 uses caster facing,87 retains the already-selected destination and138 grounds at its own slot, not after all selection. Effect254 mixed148/87 no longer requires a user ground point when the unit target supplies its native initial destination.
@@ -38,6 +42,12 @@ Existing `scripts::after_cast` binds184364 to `cast_invigorating_fury_heal`: act
 Qualification75546aaad3PASS16.13s first: native8s/-30% actual700 damage/120s recovery/noGCD, actual KnownSpell383468→11s natural expiry, and actual800wound→100heal while preserving native Warrior64382's1500ms CastState plus owned CastSuccess. That is cast admission/completion qualification, not equipment or Shattering Throw damage parity. Pushed ignored788ff0e68 then yielded genuine3RED/3controls18.31s: all talented roots lack the owned385174 event; missing/unlearned/foreign-owner controls pass. Consumer4a5aaa555 then passed all six ignored behavioral cases in25.43s with0warnings before enabling. Retained3 qualification cases plus fresh6 behavior cases form a nine-case composite, not one nine-test batch. Lead integration/check/fmt gate pending. No HP/regen/combat/RNG/clock writes or frozen idle-health oracle; bounded fixture evidence is not class/legal-loadout/rotation/UDP/census proof.
 
 Sources: [contract](../../specs/class-completeness.md#invigorating-fury-consequence-active70448), `crates/server/src/spell_cast/{scripts.rs,invigorating_fury_tests.rs,invigorating_fury_behavior_tests.rs}`; pinned TC a352b1fa `spell_warrior.cpp77–78/1380–1405`; engine diagnostics `data/diagnostics/class-coverage-b-2026-10-17/invigorating-fury-*` include nine CSV hashes matching accepted active70448 receipt (not per-table authentication claims), native rows and exact proof commands/receipts. Wider Enraged Regeneration/Bloodthirst interactions remain unqualified; aura248 deferred.
+
+## Exact attack countdowns — 2026-10-22
+
+`AutoAttack.timer/off_hand_timer` and `AutoRepeat.ready_in` are `Duration`, not floating seconds. Shared `melee::attack_timer_duration` truncates resets to integer milliseconds like TC a352b1fa `Unit.cpp:670–673`/`Unit.h:710–713,1541`; both executors subtract actual `Time.delta()` with saturating exact arithmetic. Remaining creature-timer rescaling and200ms off-hand staggering retain the same native units; forecast publishes remaining seconds via `as_secs_f64` without changing its external units.
+
+Production melee RED at29443d178 leaves90HP rather than80 at exactly40×50ms after its first native2s swing; this calls `auto_attack_system`, not the legacy test helper's duplicate countdown. BM also exposed repeat frames[0,40,81,122,163]. `f32` subtraction left7.8231e−7s after40ticks. No tolerance widening or named gap substitutes for the generic fix. Exact40/80 boundary, melee/offhand/rescale, nativeAutoShot and BM GREEN pending; policy and proc-mask ownership remain separate.
 
 ## Auto Shot autorepeat — 2026-10-19
 
@@ -331,7 +341,7 @@ Stormkeeper's aura construction initializes charges from191634s5 before ordinary
 
 ## Nineteenth batch: counts, healing totals and owned damage
 
-[Contract](../../specs/spell-dummy-scripts.md#nineteenth-batch-counts-healing-totals-and-owned-damage), [source/census/all40](../../spell-dummy19-coverage.md). `scripts/batch19.rs` consumes Flurry's explicit count, Mutilate variable394 and Dispersion variable872. Dispersion preserves native extra-initial ticks; its description's total is distributed across native ticks with ordinary rounding, including Intangibility and existing Altered Form duration modifiers. This distribution is a local total/clock derivation, not independently observed Retail tick amounts.
+[Contract](../../specs/spell-dummy-scripts.md#nineteenth-batch-counts-healing-totals-and-owned-damage), [source/census/all40](../../spell-dummy19-coverage.md). `scripts/batch19.rs` consumes Flurry's explicit count and Dispersion variable872. Mutilate variable394 describes the native exclusive-offhand AP halving (TC Unit.cpp6880–6891/9991–9995); the generic AP path owns it, without a second spell-specific multiplier. Dispersion preserves native extra-initial ticks; its description's total is distributed across native ticks with ordinary rounding, including Intangibility and existing Altered Form duration modifiers. This distribution is a local total/clock derivation, not independently observed Retail tick amounts.
 
 Dispel passes the actual dispeller to the named34914→87204 response. Havoc's native single-target mark replaces only this owner's other mark. Direct single-target family-matched spell damage can echo its effective amount at s1 percent; the copied branch skips source modifiers/crit and recursion, but retains destination defenses. Rain of Fire's explicitly area-owned42223 child is excluded even though its per-enemy selector is6. Specialized child selectors/range/destination-mitigation live parity remain gaps.
 

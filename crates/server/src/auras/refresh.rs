@@ -1,20 +1,51 @@
-//! Named reapplication rules explicitly described in local Mainline spell data.
+//! Native rolling-periodic carry and source-backed named reapplication normalizations.
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, Health};
 
 use super::{ActiveAuras, AuraInstance, aura_now, periodic};
+use crate::spell_info::SpellInfo;
 
-const SHADOW_WORD_MADNESS: u32 = 335467;
+const ROLLING_PERIODIC: u32 = 0x4000;
 const BARBED_SHOT: u32 = 217200;
 const IGNORE_PAIN: u32 = 190456;
 const PROTECTION_WARRIOR: u32 = 73;
+const SHIELD_BLOCK: u32 = 132404;
+const SHIELD_OF_THE_RIGHTEOUS: u32 = 132403;
+const RIP: u32 = 1079;
+const RAKE: u32 = 155722;
 
-pub(super) fn prepare_application(world: &mut World, target: Entity, new: &mut AuraInstance) {
+#[derive(Clone, Copy)]
+enum DurationCarry {
+    Pandemic,
+    Extend,
+    CappedExtend(u32),
+}
+
+pub(super) fn prepare_application(
+    world: &mut World,
+    target: Entity,
+    new: &mut AuraInstance,
+    spell: &SpellInfo,
+) {
+    let rolling = spell
+        .misc
+        .as_ref()
+        .is_some_and(|misc| misc.attributes[10] & ROLLING_PERIODIC != 0);
+    if rolling {
+        settle_previous_ticks(world, target, new);
+    }
     match new.spell_id {
-        SHADOW_WORD_MADNESS => roll_remaining_damage(world, target, new),
-        BARBED_SHOT => roll_barbed_damage(world, target, new),
+        BARBED_SHOT => normalize_barbed_damage(world, target, new),
         IGNORE_PAIN => accumulate_ignore_pain(world, target, new),
+        RIP | RAKE => carry_duration(world, target, new, DurationCarry::Pandemic),
+        SHIELD_BLOCK => carry_duration(world, target, new, DurationCarry::Extend),
+        SHIELD_OF_THE_RIGHTEOUS => {
+            carry_duration(world, target, new, DurationCarry::CappedExtend(3));
+        }
         _ => {}
+    }
+    if rolling {
+        roll_remaining_periodic(world, target, new);
     }
 }
 
@@ -28,6 +59,30 @@ fn previous(world: &World, target: Entity, new: &AuraInstance) -> Option<AuraIns
         .cloned()
 }
 
+/// SimC76f8118: action.cpp4612 Pandemic; sc_warrior.cpp7196 Extend;
+/// sc_paladin.cpp2870 caps SoTR at three freshly calculated native durations.
+/// Snapshot amounts and existing periodic phase remain owned by refresh_from.
+fn carry_duration(world: &World, target: Entity, new: &mut AuraInstance, rule: DurationCarry) {
+    let Some(old) = previous(world, target, new) else {
+        return;
+    };
+    let Some((old_expiry, _)) = old.expires_at.zip(new.expires_at) else {
+        return;
+    };
+    let now = aura_now(world);
+    let remaining = (old_expiry - now).max(0.0);
+    let duration = f64::from(new.duration_ms) / 1_000.0;
+    let refreshed = match rule {
+        DurationCarry::Pandemic => remaining.max(duration + remaining.min(duration * 0.30)),
+        DurationCarry::Extend => duration + remaining,
+        DurationCarry::CappedExtend(count) => {
+            (duration + remaining).min(duration * f64::from(count))
+        }
+    };
+    new.duration_ms = (refreshed * 1_000.0).round() as u32;
+    new.expires_at = Some(now + refreshed);
+}
+
 /// Count scheduled ticks, including a tick exactly at expiry, without altering phase.
 fn remaining_ticks(next: f64, expiry: f64, period_ms: u32) -> u32 {
     if period_ms == 0 || next > expiry + 1e-6 {
@@ -36,27 +91,28 @@ fn remaining_ticks(next: f64, expiry: f64, period_ms: u32) -> u32 {
     (((expiry - next) / (f64::from(period_ms) / 1000.0) + 1e-6).floor() as u32) + 1
 }
 
-///335467: "all remaining damage is added to the new effect", not Pandemic.
-fn roll_remaining_damage(world: &mut World, target: Entity, new: &mut AuraInstance) {
-    let Some(old) = previous(world, target, new) else {
-        return;
-    };
-    // Resolve old due ticks before taking its unpaid damage; they cannot be paid twice.
-    periodic::run_ticks_until(world, target, old.instance_id, aura_now(world));
+/// Settle due ticks before reading the unpaid pool, so refresh cannot pay them twice.
+fn settle_previous_ticks(world: &mut World, target: Entity, new: &AuraInstance) {
+    if let Some(old) = previous(world, target, new) {
+        periodic::run_ticks_until(world, target, old.instance_id, aura_now(world));
+    }
+}
+
+/// TC a352b1fa SpellAuraEffects.cpp832–849: same caster/spell/effect unpaid
+/// amount is distributed over the new total ticks. Use this runtime's retained
+/// phase when counting that future schedule (Barbed has seven initial, six refreshed).
+fn roll_remaining_periodic(world: &World, target: Entity, new: &mut AuraInstance) {
     let Some(old) = previous(world, target, new) else {
         return;
     };
     let Some((old_expiry, new_expiry)) = old.expires_at.zip(new.expires_at) else {
         return;
     };
-    for fresh in &mut new.effects {
-        if fresh.aura_type != super::handlers::PERIODIC_LEECH {
-            continue;
-        }
+    for fresh in new.effects.iter_mut().filter(|effect| effect.period_ms > 0) {
         let Some(prior) = old
             .effects
             .iter()
-            .find(|effect| effect.index == fresh.index)
+            .find(|effect| effect.index == fresh.index && effect.aura_type == fresh.aura_type)
         else {
             continue;
         };
@@ -68,12 +124,9 @@ fn roll_remaining_damage(world: &mut World, target: Entity, new: &mut AuraInstan
     }
 }
 
-///217200's description totals five damage amounts, while the native clock
-///has seven ticks. Distribute that total without replacing the native clock.
-fn roll_barbed_damage(world: &mut World, target: Entity, new: &mut AuraInstance) {
-    if let Some(old) = previous(world, target, new) {
-        periodic::run_ticks_until(world, target, old.instance_id, aura_now(world));
-    }
+///217200's description totals five damage amounts. Normalize only the fresh
+/// budget to its native schedule; the shared rolling pass owns all unpaid carry.
+fn normalize_barbed_damage(world: &World, target: Entity, new: &mut AuraInstance) {
     let old = previous(world, target, new);
     let count = crate::spell_cast::scripts::script_effect_value(world, new.caster, BARBED_SHOT, 1);
     let expiry = new.expires_at.expect("Barbed Shot native duration");
@@ -82,22 +135,18 @@ fn roll_barbed_damage(world: &mut World, target: Entity, new: &mut AuraInstance)
         .iter_mut()
         .find(|effect| effect.index == 0)
         .expect("Barbed Shot periodic damage");
-    let new_budget = fresh.amount * count;
-    let (next, old_budget) = old
-        .as_ref()
-        .and_then(|aura| unpaid_barbed_damage(aura, fresh.index))
-        .unwrap_or((fresh.next_tick_at(), 0.0));
+    let next = match old.as_ref().and_then(|aura| {
+        aura.effects
+            .iter()
+            .find(|effect| effect.index == fresh.index)
+    }) {
+        Some(prior) => prior.next_tick_at(),
+        None => fresh.next_tick_at(),
+    };
     let future = remaining_ticks(next, expiry, fresh.period_ms);
     if future > 0 {
-        fresh.amount = (new_budget + old_budget) / future as f32;
+        fresh.amount = fresh.amount * count / future as f32;
     }
-}
-
-fn unpaid_barbed_damage(aura: &AuraInstance, index: u8) -> Option<(f64, f32)> {
-    let effect = aura.effects.iter().find(|effect| effect.index == index)?;
-    let unpaid = remaining_ticks(effect.next_tick_at(), aura.expires_at?, effect.period_ms);
-    let budget = effect.amount * aura.stack_multiplier() * unpaid as f32;
-    Some((effect.next_tick_at(), budget))
 }
 
 ///190456 c3/s4: remaining shields accumulate to the native percent-health cap.

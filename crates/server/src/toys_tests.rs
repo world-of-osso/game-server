@@ -14,6 +14,8 @@ mod bashiok;
 mod breakfast;
 #[path = "toys_citizens_tests.rs"]
 mod citizens;
+#[path = "toys_coyote_tests.rs"]
+mod coyote;
 #[path = "toys_default_summon_tests.rs"]
 mod default_summons;
 #[path = "toys_disguise_tests.rs"]
@@ -40,6 +42,8 @@ mod group_inheritance;
 mod group_private;
 #[path = "toys_hearthstone_tests.rs"]
 mod hearthstones;
+#[path = "toys_kvaldir_tests.rs"]
+mod kvaldir;
 #[path = "toys_loa_cosmetic_tests.rs"]
 mod loa_cosmetics;
 #[path = "toys_offering_kit_tests.rs"]
@@ -66,6 +70,8 @@ mod stone_whistle;
 mod summon_closure;
 #[path = "toys_summon_level_tests.rs"]
 mod summon_levels;
+#[path = "toys_target73_tests.rs"]
+mod target73;
 #[path = "toys_visual_census_tests.rs"]
 mod visual_census;
 #[path = "toys_waywatcher_tests.rs"]
@@ -6605,6 +6611,7 @@ fn report_toy_census(path: &std::path::Path, report_variable: &str) -> serde_jso
     world.insert_resource(crate::spell_cast::teleport_positions::load_positions(&conn).unwrap());
     world.insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
     world.insert_resource(shared_item_templates(path));
+    world.insert_resource(crate::conditions::load_spell_target_conditions(path).unwrap());
     let has_summon_properties: bool = conn
         .query_row(
             "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='summon_properties')",

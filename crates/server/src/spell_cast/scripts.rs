@@ -2,6 +2,8 @@
 //! spell's DB2 effects do not carry.
 
 use crate::random as rand;
+
+mod after_cast_auras;
 mod batch10;
 mod batch11;
 mod batch12;
@@ -24,13 +26,16 @@ mod batch8;
 mod batch9;
 mod chrono_flame;
 mod clearcasting;
+mod elemental_ascendance;
+mod empower_evoker;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
+pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
-pub(super) use hot_streak::record_fire_hit;
+pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 pub(crate) mod prayer_of_mending;
 mod scourge_strike;
@@ -39,8 +44,14 @@ mod swiftmend;
 pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direct_multiplier;
 pub(crate) use soul_of_the_forest::snapshot_amount as snapshot_soul_of_the_forest;
 mod touch_of_death;
+mod windwalker;
+
 mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
+pub(crate) use windwalker::{
+    DANCE_OF_CHIJI, after_dance_cast_event, check_dance_proc, combo_strikes_multiplier,
+    ordinary_combo_cast,
+};
 
 pub(super) use batch9::update_ground_pulses;
 pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
@@ -63,6 +74,9 @@ pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::Ca
 }
 
 pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
+    if (spell, index) == (super::area_trigger::meteor::METEOR, 0) {
+        return Some(super::area_trigger::meteor::cast_meteor);
+    }
     if spell == super::mobile_banking::MOBILE_BANKING && index == 0 {
         return Some(super::mobile_banking::summon_chest);
     }
@@ -78,6 +92,9 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
 }
 /// Native per-unit scripts replace the default effect handler before dispatch.
 pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+    if (spell, index) == (super::toy_coyote::DESPAWN, 0) {
+        return Some(super::toy_coyote::despawn);
+    }
     if (spell, index) == (super::toy_flag::TARGETING, 0) {
         return Some(super::toy_flag::plant);
     }
@@ -105,6 +122,7 @@ pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u
         && batch13::effect_enabled(spell, index)
         && batch15::effect_enabled(world, caster, spell, index)
         && batch23::effect_enabled(world, caster, spell, index)
+        && super::guardian::effect_enabled(world, caster, spell, index)
 }
 
 use bevy::prelude::*;
@@ -246,6 +264,9 @@ pub(super) fn consumes_effect_value(spell_id: u32, effect_index: u8) -> bool {
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (crate::scripted_ai::orator::TERRORIZE_SELECTOR, 0) => {
+            Some(crate::scripted_ai::orator::terrorize_hit)
+        }
         (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::cast_damage),
         (49_576, 0) => Some(death_grip),
         (108_199, 1) => Some(cast_subduing_grasp),
@@ -297,6 +318,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch14::BLIZZARD_DAMAGE, 0) => Some(batch14::slow_blizzard),
         (batch14::SURVIVAL_COMMAND, 0) => Some(batch14::command_pet),
         (KILL_COMMAND, 0) => Some(batch14::command_beast),
+        (batch14::WILD_THRASH, 0) => Some(batch14::wild_thrash),
         (batch14::WILDFIRE_BOMB, 2) => Some(batch14::bomb_primary),
         (batch14::CONSUME, 0) => Some(batch14::consume_fury),
         (batch13::REND, 0) => Some(batch13::apply_rend_bleed),
@@ -397,7 +419,9 @@ pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32)
         batch3::SCORCH => batch3::scorch_crit(world, caster, target),
         batch12::GARGOYLE_STRIKE => batch12::gargoyle_crit(world, caster),
         FIRE_BLAST | batch5::CHAOS_BOLT | voltaic_blaze::DAMAGE => Some(100.0),
-        batch5::LAVA_BURST_DAMAGE => batch5::lava_burst_crit(world, target),
+        batch5::LAVA_BURST_DAMAGE | super::elemental_overload::LAVA_OVERLOAD_DAMAGE => {
+            batch5::lava_burst_crit(world, caster, target)
+        }
         _ => None,
     }
 }
@@ -409,10 +433,14 @@ pub(crate) fn rake_bleed_snapshot(world: &World, caster: Entity, amount: f32) ->
 pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
-    if let Some(hook) = batch19::damage_amount(spell_id) {
-        return Some(hook);
-    }
     match spell_id {
+        super::elemental_overload::LIGHTNING_OVERLOAD
+        | super::elemental_overload::CHAIN_OVERLOAD
+        | super::elemental_overload::LAVA_OVERLOAD_DAMAGE
+        | super::elemental_overload::ICEFURY_OVERLOAD
+        | super::elemental_overload::ELEMENTAL_BLAST_OVERLOAD => {
+            Some(super::elemental_overload::scale_damage)
+        }
         crate::auras::agony::AGONY => Some(crate::auras::agony::tick_damage),
         touch_of_death::TOUCH_OF_DEATH => Some(touch_of_death::damage),
         batch13::SHADOW_WORD_DEATH => Some(batch13::death_execute),
@@ -508,15 +536,32 @@ pub(crate) fn preserve_unadmitted_proc(
 }
 
 /// `SpellCastFn` on `AfterCast`: runs once on the caster after the spell resolved.
+pub(super) type EmpowerCompleteHook =
+    fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> Result<(), super::CastFailure>;
+
+pub(super) fn empower_completion(spell_id: u32) -> Option<EmpowerCompleteHook> {
+    match spell_id {
+        357208 | 382266 | 359073 | 382411 => Some(empower_evoker::release),
+        _ => None,
+    }
+}
+
+pub(super) use empower_evoker::damage_bonus as empower_damage_bonus;
+
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
+    if let Some(hook) = after_cast_auras::hook(spell_id) {
+        return Some(hook);
+    }
     match spell_id {
+        holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
+        prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
             Some(essence_burst::roll_essence_burst)
         }
-        hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE => {
-            Some(hot_streak::consume_admitted_hot_streak)
+        hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE | hot_streak::NATIVE_FLAMESTRIKE => {
+            Some(hot_streak::consume_procs_and_roll_pyroclasm)
         }
         lava_surge::LAVA_BURST => Some(lava_surge::restore_deferred_charge),
         IMPENDING_VICTORY => Some(heal_and_consume_victorious),
@@ -968,11 +1013,22 @@ fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f6
         .get(spell_id)
         .and_then(|spell| spell.categories.as_ref())
         .map_or(0, |category| category.charge_category);
-    let Some(mut history) = world.get_mut::<super::SpellHistory>(caster) else {
+    #[cfg(test)]
+    let before = super::holy_metrics::read_recharge(world, caster, charge_category, now);
+    let reduced = world
+        .get_mut::<super::SpellHistory>(caster)
+        .map(|mut history| {
+            reduce_running_timers(&mut history, charge_category, spell_id, now, seconds)
+        });
+    #[cfg(test)]
+    {
+        let after = super::holy_metrics::read_recharge(world, caster, charge_category, now);
+        let applied = (before - after).max(0.0).min(seconds);
+        super::holy_metrics::record_reduction(world, caster, spell_id, seconds, applied);
+    }
+    let Some((charges, remaining_ms)) = reduced else {
         return;
     };
-    let (charges, remaining_ms) =
-        reduce_running_timers(&mut history, charge_category, spell_id, now, seconds);
     if let Some(charges) = charges {
         super::send_to_owner(world, caster, charges);
     }
@@ -1335,6 +1391,9 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
 
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
+        elemental_ascendance::ASCENDANCE => Some(elemental_ascendance::cast_entry),
+        100780 => Some(windwalker::tiger_palm_hit),
+
         lava_surge::PROC => Some(lava_surge::restore_on_proc_hit),
         swiftmend::SWIFTMEND => Some(swiftmend::hit),
         soul_of_the_forest::REGROWTH => Some(clearcasting::regrowth_hit),

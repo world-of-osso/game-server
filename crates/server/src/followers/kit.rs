@@ -32,14 +32,40 @@ pub(super) enum Target {
     Tank,
 }
 
+/// APL quantities use displayed units; native PowerType.DisplayModifier supplies scale.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ResourceCondition {
+    pub power: shared::components::PowerType,
+    pub min: Option<f32>,
+    pub below: Option<f32>,
+    pub min_deficit: Option<f32>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct CooldownThreshold {
+    pub spell_id: u32,
+    pub seconds: f64,
+}
+
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub(super) struct Conditions {
     pub target: Target,
     pub health_below: Option<f32>,
     pub missing_aura: Option<u32>,
+    pub required_aura: Option<u32>,
+    pub refresh_fraction: Option<f32>,
+    pub refresh_seconds: Option<f32>,
+    pub tank_defensive_sequence: bool,
+    pub no_repeat_group: Vec<u32>,
+    pub resources: Vec<ResourceCondition>,
+    pub cooldown_remaining_above: Option<CooldownThreshold>,
+
     pub required_self_aura: Option<u32>,
     pub refreshable_aura: Option<u32>,
+    pub target_if_min_aura: Option<u32>,
     pub min_enemies: usize,
     pub min_injured: usize,
     pub attacked: bool,

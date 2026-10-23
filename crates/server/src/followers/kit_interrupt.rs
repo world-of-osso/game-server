@@ -10,19 +10,48 @@ use crate::spell_info::SpellStore;
 const SPELL_EFFECT_INTERRUPT_CAST: u32 = 68;
 const DEMONOLOGY_SPEC: u32 = 266;
 
-/// `true` means an ordinary source-valid interrupt cast was accepted, not that
-/// the hit is guaranteed to land. Never retarget, pursue or alter navigation.
+#[derive(Clone, Copy, PartialEq)]
+pub(super) enum InterruptPhase {
+    Primary,
+    IncludingDamage,
+}
+
+/// Test entry for the complete native kick set; production selects a phase explicitly.
+#[cfg(test)]
 pub(super) fn try_interrupt_candidates(
     world: &mut World,
     unit: Entity,
     profile: &Profile,
     candidates: &[Entity],
 ) -> bool {
-    let spells = read_source_interrupt_spells(world, unit, profile);
+    try_interrupt_candidates_in_phase(
+        world,
+        unit,
+        profile,
+        candidates,
+        InterruptPhase::IncludingDamage,
+    )
+}
+
+/// `true` means an ordinary source-valid interrupt cast was accepted, not that
+/// the hit is guaranteed to land. Never retarget, pursue or alter navigation.
+pub(super) fn try_interrupt_candidates_in_phase(
+    world: &mut World,
+    unit: Entity,
+    profile: &Profile,
+    candidates: &[Entity],
+    phase: InterruptPhase,
+) -> bool {
+    let spells = read_source_interrupt_spells(world, unit, profile, phase);
     for &target in candidates {
-        if crate::auras::has_breakable_by_damage_cc(world, target) {
+        if crate::auras::has_breakable_by_damage_cc(world, target)
+            || super::utility_interrupt::reserved(world, target)
+        {
             continue;
         }
+        let Some(cast) = world.get::<shared::casting::CastState>(target).cloned() else {
+            continue;
+        };
         let accepted = match spells.as_deref() {
             Some(spells) if profile.spec_id != DEMONOLOGY_SPEC => {
                 crate::spell_cast::can_interrupt_cast(world, unit, target)
@@ -33,6 +62,7 @@ pub(super) fn try_interrupt_candidates(
             _ => interrupt_enemy(world, unit, target, profile.spec_id),
         };
         if accepted {
+            super::utility_interrupt::reserve(world, unit, target, &cast);
             return true;
         }
     }
@@ -45,6 +75,7 @@ fn read_source_interrupt_spells(
     world: &World,
     unit: Entity,
     profile: &Profile,
+    phase: InterruptPhase,
 ) -> Option<Vec<u32>> {
     let catalog = world.get_resource::<FollowerCatalog>()?;
     let entries: Vec<_> = catalog
@@ -62,6 +93,7 @@ fn read_source_interrupt_spells(
     let store = world.resource::<SpellStore>();
     let mut spells: Vec<_> = learned
         .filter(|entry| is_interrupt_entry(entry, store))
+        .filter(|entry| phase == InterruptPhase::IncludingDamage || entry.slot == Slot::Interrupt)
         .map(|entry| (entry.slot != Slot::Interrupt, entry.spell_id))
         .collect();
     // Stable partition preserves the source table's priority/ID ordering, but

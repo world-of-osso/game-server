@@ -35,6 +35,19 @@ pub(crate) struct CannotReachTarget {
     target: u64,
     elapsed: Duration,
 }
+/// Record a continuously blocked chase without restarting its native evade clock.
+pub(crate) fn mark_chase_blocked(world: &mut World, entity: Entity, target: u64) {
+    if world
+        .get::<CannotReachTarget>(entity)
+        .is_none_or(|blocked| blocked.target != target)
+    {
+        world.entity_mut(entity).insert(CannotReachTarget {
+            target,
+            elapsed: Duration::ZERO,
+        });
+    }
+}
+
 /// Idle pause range in seconds after reaching a wander destination.
 const IDLE_MIN_SECS: f32 = 2.0;
 const IDLE_MAX_SECS: f32 = 5.0;
@@ -61,6 +74,7 @@ type Roaming = (
     Without<crate::scripted_ai::waypoint_path::PathMovement>,
     Without<crate::scripted_ai::jump_movement::JumpMovement>,
     Without<crate::scripted_ai::fall_movement::FallMovement>,
+    Without<crate::navigation::collision_drop::CollisionDropMovement>,
     Without<crate::spell_cast::charge::ChargeMovement>,
 );
 /// Active creatures that are not confused, feared or in flight: chase and leash run.
@@ -71,6 +85,7 @@ pub(crate) type ActiveUncontrolled = (
     Without<crate::knockback::KnockbackFlight>,
     Without<crate::scripted_ai::jump_movement::JumpMovement>,
     Without<crate::scripted_ai::fall_movement::FallMovement>,
+    Without<crate::navigation::collision_drop::CollisionDropMovement>,
     Without<crate::spell_cast::charge::ChargeMovement>,
 );
 
@@ -216,6 +231,23 @@ impl FollowOwner {
             owner,
             moving: false,
         }
+    }
+}
+
+/// FOLLOWER_PARTY_FOLLOW_SLOTS: project spacing policy, not Retail-authored angles.
+/// TC a352b1fa CreatureGroups.cpp:291–295 passes each member's angle/distance
+/// to MoveFormation. Keep that member identity through combat/regroup transitions.
+#[derive(Component, Clone, Copy)]
+pub(crate) struct PartyFollowSlot(f32);
+
+impl PartyFollowSlot {
+    pub(crate) fn new(slot: usize, member_count: usize) -> Self {
+        let fraction = if member_count > 1 {
+            slot as f32 / (member_count - 1) as f32
+        } else {
+            0.5
+        };
+        Self(PET_FOLLOW_ANGLE + (2.0 * fraction - 1.0) * PET_FOLLOW_ANGLE_TOLERANCE)
     }
 }
 
@@ -885,12 +917,9 @@ pub(crate) fn chase_system(
                 Step::Blocked => {
                     let stride = Stride::still(*pos);
                     queues.apply(entity, &mut pos, bearing, stride);
-                    if cannot_reach.is_none_or(|blocked| blocked.target != target) {
-                        commands.entity(entity).insert(CannotReachTarget {
-                            target,
-                            elapsed: Duration::ZERO,
-                        });
-                    }
+                    commands.queue(move |world: &mut World| {
+                        mark_chase_blocked(world, entity, target);
+                    });
                     continue;
                 }
             },
@@ -937,7 +966,7 @@ type Chaser = (
 
 /// `Creature::Update`: no-path evade after five seconds, never on raid maps.
 /// Reachable paths remove the flag; a new chase records a fresh timeout.
-fn no_path_evade_system(
+pub(crate) fn no_path_evade_system(
     time: Res<Time>,
     maps: Res<MapStore>,
     nav: Option<Res<Navigation>>,
@@ -1115,6 +1144,7 @@ type Follower = (
     Bearing,
     Option<&'static crate::followers::Follower>,
     Option<&'static crate::followers::FollowerReach>,
+    Option<&'static PartyFollowSlot>,
 );
 
 /// Where an owner stands and how fast it runs.
@@ -1182,8 +1212,19 @@ fn follow_owner_system(
             ))
         })
         .collect();
-    for (entity, mut pos, mut follow, health, cast, mods, map, bearing, companion, companion_pet) in
-        &mut units.p0()
+    for (
+        entity,
+        mut pos,
+        mut follow,
+        health,
+        cast,
+        mods,
+        map,
+        bearing,
+        companion,
+        companion_pet,
+        slot,
+    ) in &mut units.p0()
     {
         let Some(leader) = leaders.get(&follow.owner) else {
             continue;
@@ -1200,12 +1241,24 @@ fn follow_owner_system(
         }
         let reach = 2.0 * FOLLOW_COMBAT_REACH + PET_FOLLOW_DIST;
         let gap = (leader.position.x - pos.x).hypot(leader.position.z - pos.z);
-        if !follow.moving && gap <= reach + FOLLOW_RANGE_TOLERANCE {
+        let point = slot.map_or_else(
+            || follow_point(&leader, *pos, reach),
+            |slot| follow_point_at_angle(&leader, slot.0, reach),
+        );
+        // TC a352b1fa FollowMovementGenerator.cpp:52 uses IsInDist;
+        // Position.h:121–124,157 includes vertical separation in squared distance.
+        let vertical_gap = leader.position.y - pos.y;
+        let within_range = if slot.is_some() {
+            let point_gap = (point.0 - pos.x).hypot(point.1 - pos.z);
+            point_gap.hypot(vertical_gap) <= FOLLOW_RANGE_TOLERANCE
+        } else {
+            gap.hypot(vertical_gap) <= reach + FOLLOW_RANGE_TOLERANCE
+        };
+        if !follow.moving && within_range {
             let here = *pos;
             queues.apply(entity, &mut pos, bearing, Stride::still(here));
             continue;
         }
-        let point = follow_point(&leader, *pos, reach);
         let run_speed = leader.speed * speed_mod * catch_up_factor(gap);
         let movement = if companion.is_some() || companion_pet.is_some() {
             let request = map.map(|map| MoveRequest {
@@ -1312,7 +1365,11 @@ fn follow_point(leader: &Leader, follower: Position, reach: f32) -> (f32, f32) {
     let off = (relative - PET_FOLLOW_ANGLE + PI).rem_euclid(TAU) - PI;
     let angle =
         PET_FOLLOW_ANGLE + off.clamp(-PET_FOLLOW_ANGLE_TOLERANCE, PET_FOLLOW_ANGLE_TOLERANCE);
-    let absolute = orientation + angle;
+    follow_point_at_angle(leader, angle, reach)
+}
+
+fn follow_point_at_angle(leader: &Leader, angle: f32, reach: f32) -> (f32, f32) {
+    let absolute = leader.rotation_y - std::f32::consts::FRAC_PI_2 + angle;
     (
         leader.position.x + reach * absolute.cos(),
         leader.position.z - reach * absolute.sin(),
@@ -1627,13 +1684,8 @@ pub(crate) fn return_to_spawn_system(
             &mut Position,
             &SpawnPoint,
             &mut CreatureState,
-            Option<&mut shared::components::Mana>,
-            Option<&crate::zones::SpawnAddonAuras>,
-            Option<(&crate::zones::SpawnPose, &mut shared::components::UnitPose)>,
             Option<&InMap>,
             Bearing,
-            Option<&mut shared::components::Health>,
-            Has<crate::spell_cast::powers::CreatureHealthRegenTimer>,
             Option<&crate::scripted_ai::movement::ScriptedPath>,
             Option<&HomePosition>,
             Option<&mut crate::scripted_ai::waypoint_path::PathMovement>,
@@ -1653,13 +1705,8 @@ pub(crate) fn return_to_spawn_system(
         mut pos,
         spawn,
         mut state,
-        mana,
-        addon_auras,
-        pose,
         map,
         bearing,
-        health,
-        regen,
         escort,
         explicit_home,
         default_waypoint,
@@ -1674,19 +1721,7 @@ pub(crate) fn return_to_spawn_system(
         }
         bevy::log::debug!(?entity, from = ?*pos, ?spawn, driver = "return_home", "return movement");
         let speed = spawn.speed_run * BASE_RUN_SPEED;
-        let home = explicit_home.map_or_else(
-            || {
-                escort.map_or(
-                    Position {
-                        x: spawn.x,
-                        y: spawn.y,
-                        z: spawn.z,
-                    },
-                    |escort| escort.home,
-                )
-            },
-            |home| home.position,
-        );
+        let home = return_home_position(spawn, explicit_home, escort);
         let (mut next_position, reached) = match (nav.as_deref_mut(), map) {
             (Some(nav), Some(map)) => match nav.advance(
                 entity,
@@ -1736,38 +1771,81 @@ pub(crate) fn return_to_spawn_system(
         queues.apply(entity, &mut pos, bearing, stride);
         if reached {
             *state = CreatureState::Idle;
-            commands.queue(move |world: &mut World| {
-                crate::scripted_ai::dispatch(
-                    world,
-                    entity,
-                    crate::scripted_ai::Hook::JustReachedHome,
-                );
-            });
-            if let Some(mut mana) = mana
-                && mana.current != mana.max
-            {
-                mana.current = mana.max;
-            }
-            if let Some(mut health) = health.filter(|_| !regen)
-                && health.current != health.max
-            {
-                health.current = health.max;
-                if let Some(replication) = queues.replication.as_deref() {
-                    replication.mark(entity);
-                }
-            }
-            if let Some(auras) = addon_auras {
-                commands
-                    .entity(entity)
-                    .insert(crate::zones::AddonAuras(auras.0.clone()));
-            }
-            if let Some((spawn_pose, mut pose)) = pose
-                && pose.set_if_neq(spawn_pose.0)
-                && let Some(replication) = queues.replication.as_deref()
-            {
-                replication.mark(entity);
-            }
+            commands.queue(move |world: &mut World| finish_return_home(world, entity));
         }
+    }
+}
+
+pub(crate) fn return_home_position(
+    spawn: &SpawnPoint,
+    home: Option<&HomePosition>,
+    escort: Option<&crate::scripted_ai::movement::ScriptedPath>,
+) -> Position {
+    home.map_or_else(
+        || {
+            escort.map_or(
+                Position {
+                    x: spawn.x,
+                    y: spawn.y,
+                    z: spawn.z,
+                },
+                |path| path.home,
+            )
+        },
+        |home| home.position,
+    )
+}
+
+fn restore_home_resources(world: &mut World, entity: Entity) -> bool {
+    if let Some(mut mana) = world.get_mut::<shared::components::Mana>(entity)
+        && mana.current != mana.max
+    {
+        mana.current = mana.max;
+    }
+    let regenerates = world
+        .get::<crate::spell_cast::powers::CreatureHealthRegenTimer>(entity)
+        .is_some();
+    let mut replicate = false;
+    if !regenerates
+        && let Some(mut health) = world.get_mut::<shared::components::Health>(entity)
+        && health.current != health.max
+    {
+        health.current = health.max;
+        replicate = true;
+    }
+    replicate
+}
+
+fn restore_home_pose(world: &mut World, entity: Entity) -> bool {
+    let mut replicate = false;
+    if let Some(mut motion) = world.get_mut::<CreatureMotion>(entity) {
+        replicate |= motion.set_if_neq(CreatureMotion::Still);
+    }
+    if let Some(spawn_pose) = world.get::<crate::zones::SpawnPose>(entity) {
+        let spawn_pose = spawn_pose.0;
+        if let Some(mut pose) = world.get_mut::<shared::components::UnitPose>(entity) {
+            replicate |= pose.set_if_neq(spawn_pose);
+        }
+    }
+    replicate
+}
+
+/// Shared native home arrival; physical and frozen-edge movers call this only at home.
+pub(crate) fn finish_return_home(world: &mut World, entity: Entity) {
+    world.entity_mut(entity).insert(CreatureState::Idle);
+    let resources_changed = restore_home_resources(world, entity);
+    let pose_changed = restore_home_pose(world, entity);
+    if (resources_changed || pose_changed)
+        && let Some(queue) = world.get_resource::<ReplicationDirtyQueue>()
+    {
+        queue.mark(entity);
+    }
+    let addon_auras = world
+        .get::<crate::zones::SpawnAddonAuras>(entity)
+        .map(|auras| crate::zones::AddonAuras(auras.0.clone()));
+    crate::scripted_ai::dispatch(world, entity, crate::scripted_ai::Hook::JustReachedHome);
+    if let Some(auras) = addon_auras {
+        world.entity_mut(entity).insert(auras);
     }
 }
 

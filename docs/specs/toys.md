@@ -21,6 +21,14 @@ Do not add these three Toy rows until a real contract is established and approve
 
 Sources: TC a352b1fa `SpellAuraEffects.cpp:2969–2983`, `Unit.cpp:13933–13961`, `MovementInfo.h:71`. This server-state boundary does not certify native steering, rendering, or all other contracts on mixed-aura toys.
 
+## Source-native companion levels
+
+- [x] SummonProperties UseCreatureLevel0x100 selects source-native creature level/difficulty before dependent stats even for non-guardian companions; it must not silently inherit the caster's level.
+- [x] Native99104 effect28/properties3141/creature53453/display38340 preserves source-native regional birth: actual map1220/area7558 selects tuning332/native45 despite caster10. Follow designation, immunity, permanent lifetime, slot replacement and owner-map cleanup remain unchanged.
+- [x] Admitted flagged actors Keg Pony71137 and Stored Wisdom192485 retain tuning73/native30 in real Northshire, rather than caster80, and preserve source3/5-minute lifetimes.
+
+Sources: TC a352b1fa `DBCEnums.h:2780`, `TemporarySummon.cpp:240–253`, `Creature.cpp:1128–1143,1610–1618,3122–3173`. Missing destination-area context remains a refusal, not a guessed level. Ordinary temporary zone spawning currently skips regional tuning; its birth1 is not a valid source oracle. This mechanism proof does not certify that separate parity gap, the unimplemented99104 target43/dummy4 cast, or arbitrary native rendering.
+
 ## Native default TempSummon title dispatch
 
 - [x] Ordinary Wild/Ally titles use TC a352b1fa's default TempSummon branch unless they select an explicit guardian/companion/totem/vehicle path or joined spawn-group route (`SpellEffects.cpp:1957–2024`, `Object.cpp:1191–1265`). A Construct7/Name27/new61 label is not itself a missing control implementation.
@@ -31,17 +39,56 @@ The existing scenery88381/127771 and88584/128180 remains ordinary Ally/Title0 Te
 
 Actor-only admission does not certify Blingtron gifts/combat, clone stacking, jumpable collision geometry, native rendering, or unresolved scripts. Totem/vehicle/possession and other blocked action contracts do not acquire support merely from this title dispatch.
 
+## Imaginary Gun companion visual
+
+- [ ] Exact163705/279843 uses its source one-zero-payload aura4 at150/0 and10000ms duration on the actual current critter, with the owner as caster. Actual physical learning/journal SummonPet/UseToy must apply and replicate only to that actor, not the selected foreign unit, owner or owned guardian.
+- [ ] Preserve recipient/owner health, appearance, position, flags and ownership; do not invent a server death/stand state from the authored target ANIM_DEATH kit. Natural10s expiry removes both aura and replicated view, and the source180000ms item recovery gates real reuse.
+- [ ] Missing visual, nonzero payload, changed recipient and appended gameplay effects refuse before cast/recovery. Source150 may select no unit: zero REQUIRE_ALL_TARGETS flags and the independent caster kit do not authorize caster/guardian substitution or an invented no-companion refusal.
+- [ ] Natural expiry qualifies as authored removal per lead decision. TC SpellHandler259–315 refuses PetCancelAura for companions (guardian/charmed only); native packet rejection is explicitly unqualified, not simulated through the frozen self-only CancelAura RPC. No protocol changes or native animation/sound playback certificate.
+
+Behavioral backing: `crates/server/src/toys_imaginary_gun_tests.rs` uses the actual journal RPC fixture; RED/GREEN pending.
+
 ## Server-scope visual-only census rule
 
-A dummy aura counts as satisfied at server scope only when all four conditions hold: source contract is visual/audio only; authored visual chain resolves completely; slots have no trigger/misc/item/mechanic/gameplay payload; actual UseToy applies and replicates the aura and real CancelAura removes it. Native pixels/audio remain a separate proof boundary. Successful cast, aura4 alone or zero-valued slots are insufficient.
+A dummy aura counts as satisfied at server scope only when all four conditions hold: source contract is visual/audio only; authored visual chain resolves completely; slots have no trigger/misc/item/mechanic/gameplay payload; actual UseToy applies and replicates the aura and proves its authored removal lifecycle: successful real CancelAura where the source allows it, otherwise a real cancellation refusal plus natural expiry. Native pixels/audio remain a separate proof boundary. Successful cast, aura4 alone or zero-valued slots are insufficient.
 
 - [x] Gleaming Arcanocrystal201927/395705: hold/refract the source crystal; complete70448 visual119030/event/kit/ordinary models/positioners/animation and sound graph, source20000ms owner aura and120000ms recovery.
 - [x] Lost Compass202711/399041: hold out the source compass; complete70448 visual125287/event/kit/model/positioner/AnimKit graph, source indefinite owner aura and1000ms recovery. This does not admit Wayfinder's Compass388275 or implement navigation.
 - [x] Hot Buttered Popcorn162539/202432: eating/held-popcorn visual only, source10000ms owner aura and60000ms recovery. Retain the hidden-aura-icon flag; it is not an invented gameplay effect.
 - [x] Banner of the Burning Blade168014/295037: wear the source banner, source600000ms owner aura and3600000ms recovery. No summon, faction change or full-hour reuse claim.
+- [x] Yennu's Kite202022/396236: source300000ms owner attachment and3600000ms recovery; keep native arena/rated restriction. Actual learning/use/replication/cancellation and immediate cooldown refusal proved.
+- [x] Chowdar's Favorite Ribbon242323/1232024: source600000ms owner attachment and true zero recovery/category/GCD; real cancellation followed by immediate successful reuse reapplies and replicates the aura.
+- [x] Fast-Growing Seed210411/425503: source peaceful3000ms cast,30000ms owner visual aura and60000ms recovery retained. No aura or SpellGo before completion; natural aura expiry/recovery, actual reuse and cancellation proved. Combat and source drift refuse without starting recovery. No spawned plant entity or gameplay reward.
+- [x] Skull of Corruption143544/219708 and Fel Focusing Crystal143545/219871: source Demon Hunter-only permanent contemplation visuals,30000ms recovery. Actual source-eligible learning/use/owner replication/cancellation preserves player state; wrong class and absentvisual/payload drift refuse without effects/recovery. Native contemplation animation remains separate.
+- [x] Spotlight Materializer1000 230924/467730 retains source target57 raid membership,1800000ms recipient aura and3600000ms recovery. Actual grouped selected recipient receives replicated aura from the caster and can cancel it; caster/foreign ally do not receive substitutes. Foreign allies refuse before cast/recovery. Generic target57 must reject foreign allies for ordinary native spells too, while target21 retains ordinary ally eligibility. Missing visual/nonzero payload refuse on eligible group recipients. Pipeline qualification retains named generic gap SPELL_ATTR0_ONLY_OUTDOORS_UNENFORCED_NO_INDOOR_STATE; no fabricated indoor state or outdoor eligibility parity. No native spotlight pixels/full-hour reuse claim.
+- [x] Ancient Amani Mask279052/1303320 retains the source600000ms owner visual aura,900000ms recovery and NO_AURA_CANCEL flag. Actual voluntary cancellation must leave the aura replicated; natural expiry removes it and natural recovery permits actual reuse. Preserve owner health/body/position; missing visual/nonzero payload refuse without effects/recovery. No native mask-rendering claim.
+- [x] Thaumaturgist's Orb136928/127850 retains its source Priest class/level11 eligibility, instant self aura4/300000ms duration/600000ms item recovery. Source affinity conditions read existing Holy/Discipline/Shadow specialization passives137031/137032/137033; the toy must not invent or apply those passives. Prove source-linked known passives through the normal aura runtime before use, actual owner aura/replication/cancellation/invariants/recovery refusal across all three affinity states, preserved class passive after cancellation, wrong-class refusal and two drift refusals. Native color/dual-Discipline visual selection and full5-minute expiry/10-minute reuse remain separate.
+- [x] Coldflame Ring228789/465642 and Cyrce's Circlet235041/1215495 retain exact instant self visual auras, source permanent duration and120000ms/zero item recovery respectively. Prove real owner-only apply/replicate/cancel/invariants, Coldflame recovery refusal and actual Cyrce cancellation→immediate reuse with a new SpellGo and replicated aura. Missing visual/nonzero payload must refuse both. Source customization/shape selectors are appearance variants, not gameplay or a fabricated race56; native metal-hand rendering and fullColdflame reuse remain separate.
+- [x] All-Seeing Eyes175140/318571: exact source instant owner attachment,600000ms aura and1800000ms item recovery. Prove real bag learning/UseToy, owner-only replication/cancellation, unchanged health/body/position, recovery refusal and absent-visual/nonzero-payload refusal. Do not infer gameplay from its race/gender/shapeshift visual selectors; native selection and natural10-minute expiry/30-minute reuse remain separate.
+- [x] Obsidian Battle Horn204687/406077: source peaceful500ms cast,5000ms owner visual/sound aura and60000ms item recovery. No early effect; natural expiry/recovery/reuse, real cancellation, combat/drift refusal and unchanged player state proved. No invented aggro/action or native sound-playback certificate.
 - [x] These source-complete identities use the existing strict visual-only pipeline, real bag learning/UseToy, owner-only aura replication, real cancellation and unchanged health/body/position. Missing visual or changed nonzero payload still refuses without effects/cooldown.
 
 No generic dummy executor or new per-toy script is added. Pure zero payload does not admit Gadgetzan23453, Last Relic82674, Loot-A-Rang84342, or unbound modern script aliases.
+
+## Sourced threat effects and Kvaldir audience
+
+- [x] Effect63 adds its computed source amount to an eligible living creature's threat list, ignoring school/taunt threat multipliers without dealing damage or forcing a taunt. The EffectThreat handler skips its addition for dead casters, creatures without threat lists and source no-threat flags. Ordinary threat generation retains its modifiers. These handler guards do not certify every generic hostile-hit bookkeeping path; Kvaldir's source no-threat flags are zero.
+- [x] Kvaldir Raiding Horn129111/197828 retains its1500ms cast,40-yard hostile source-area selection, literal MaxTargetLevel49 and120000ms item recovery. Ineligible levels must be filtered before zero-threat hit/combat bookkeeping; MaxTargetLevel0 remains uncapped. Prove actual bag learning/UseToy, no early effect, eligible combat acquisition and range/map-copy/dead/friendly controls.
+- [x] Battle Horn86565/126318 remains unavailable after generic63 support: its source description additionally promises a Pandaria-native audience, but canonical data supplies no complete audience binding. Do not infer native creature identity from current map or invent entry lists.
+
+Sources: TC a352b1fa `SpellEffects.cpp:2948–2964`, `ThreatManager.cpp:382–409`; build70448 SpellTargetRestrictions28425, SpellRadius23, SpellCastTimes16, ContentTuning2067 and ItemEffect26627. The level cap is a DB2-backed project behavior, not a claim that pinned TC consumes MaxTargetLevel at runtime. Native sound, unrepresented threat redirects and natural full120-second reuse remain outside this proof. [Source/proof status](../wiki/systems/toys.md#effect63-and-kvaldir-source-boundary-2026-10-21).
+
+## Source-owned temporary summon targets
+
+- [x] Implicit-target condition33 target0/other-target1/relationOwnedBy3 compares the real cast's caster with source ownership of represented temporary summons. Minion and ordinary Ally ownership qualify; an ordinary Wild summoner alone does not. Existing object-entry/StringId conditions, source radius and map-copy boundaries remain effective. Corrected real Coyote51149 selection and legacy/current entry control pass2/2. Other ownership representations are not certified by this bounded mechanism.
+- [x] Don Carlos' Famous Hat134019/52172 retains the source permanent marker and real51149→28267/25265 companion. Removing the Hat aura casts its computed authored amount52173; that source child unsummons only its condition-selected temporary creatures. Root/child/owned-entry condition drift refuses before use. Real cancellation/reuse/category1476 recovery and other-owner/unowned controls proved. Native hat rendering, physical follow and companion-level parity are separate.
+
+## Exact seasonal pennant aura slots
+
+- [x] Obsidian206267/412530, Crimson206343/412912, Verdant210497/425994, Draconic211869/430508, Forged225933/456798, Unbound Legend227538/460082, Unbound Strategist227539/460083, Prized235519/1217166 and Astral242636/1233142 preserve authored self aura4 slot0 amount1, indefinite duration and120000ms item recovery.
+- [x] Actual learning/UseToy applies and replicates only the owner's amount1 aura; real cancellation removes it without changing health/body/position, immediate reuse refuses on source recovery. Missing visual or amount2 drift refuses every identity without effects/recovery.
+
+These exact slots use the existing amount-aware cosmetic-aura gate, not the zero-payload visual-only registry or a generic dummy executor. Complete70448 ordinary-model chains include source race/sex conditions. Native art selection/playback, acquisition rewards and full120-second reuse are separate; arena restrictions stay enforced.
 
 ## Flag of Ownership source script
 

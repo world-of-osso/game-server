@@ -48,6 +48,7 @@ pub struct EquippedItemModifiers {
 pub struct NativeItemInstances {
     pub bonuses: server::item_instance::bonuses::ItemBonusTables,
     pub enchants: server::item_instance::enchants::EnchantmentTables,
+    pub effects: server::item_instance::effects::ItemEffectTables,
 }
 
 /// Aura stat changes across create/base, bonus and total stages. Absent means none.
@@ -66,10 +67,14 @@ pub struct StatModifiers {
     pub ratings_flat: CombatRatings,
     /// Aura405: ordered rating mask/percent pairs; truncation occurs per effect.
     pub rating_percent_mods: Vec<(u32, f32)>,
+    /// Aura198: source rating mask, destination rating mask, percent of highest base rating.
+    pub rating_from_rating: Vec<(u32, u32, f32)>,
     /// Aura463: composed percentage of base melee crit rating added to parry.
     pub crit_to_parry_pct: f32,
     /// Aura419: composed BASE_PCT mana modifier; never changes create-mana costs.
     pub base_mana_pct: f32,
+    /// Aura178: composed TOTAL_PCT Mana modifier, separate from419 BASE_PCT.
+    pub max_mana_pct: f32,
     /// Aura404: presence replaces both AP bases, including an authored zero.
     pub attack_power_from_sp_pct: Option<f32>,
     pub crit_pct: f32,
@@ -97,6 +102,8 @@ pub struct StatModifiers {
     pub armor_from_primary_stat_pct: f32,
     /// Aura142: composed base/gear armor percentage, excluding stat-derived armor.
     pub base_armor_pct: f32,
+    /// Aura22 physical: signed TOTAL_VALUE armor, after BASE_PCT and stat-derived armor.
+    pub total_armor_flat: f32,
     /// Aura466: composed final armor percentage, applied after stat-derived armor.
     pub bonus_armor_pct: f32,
     /// Aura101 physical: composed armor TOTAL_PCT, applied after stat-derived armor.
@@ -142,6 +149,21 @@ pub struct StatInputs {
     pub gear_ratings: CombatRatings,
 }
 
+/// TC Player.cpp8180: integer AP from each equipped weapon's unrounded table DPS.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct WeaponAttackPower {
+    pub main_hand: f32,
+    pub off_hand: f32,
+    pub ranged: f32,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum WeaponAttackType {
+    MainHand,
+    OffHand,
+    Ranged,
+}
+
 /// Derived stats of a player (server-only).
 #[derive(Component, Debug, Clone, Copy, Default, PartialEq)]
 pub struct CharacterStats {
@@ -153,7 +175,7 @@ pub struct CharacterStats {
     /// Create mana (gtBaseMP), 0 for classes without mana. `PowerCostPct`
     /// costs use this unmodified basis, not the effective maximum.
     pub base_mana: f32,
-    /// Effective mana maximum after aura419's BASE_PCT modifier.
+    /// Effective mana maximum after419 BASE_PCT and178 TOTAL_PCT modifiers.
     pub max_mana: f32,
     /// Damage spell power: Intellect when the main stat is Intellect, else 0
     /// (Unit::SpellBaseDamageBonusDone, Unit.cpp:7118-7119).
@@ -165,6 +187,7 @@ pub struct CharacterStats {
     /// Melee AP; ranged casts use the separate source RangedAttackPower field.
     pub attack_power: f32,
     pub ranged_attack_power: f32,
+    pub weapon_attack_power: WeaponAttackPower,
     pub crit_pct: f32,
     pub haste_pct: f32,
     pub mastery_pct: f32,
@@ -187,6 +210,38 @@ pub struct CharacterStats {
 }
 
 impl CharacterStats {
+    /// TC Unit.cpp9973–10000: weapon AP precedes the respective AP percentage.
+    /// The sheet AP already includes that percentage; white/weapon hits keep it alone.
+    pub(crate) fn total_attack_power(
+        &self,
+        attack_type: WeaponAttackType,
+        modifiers: Option<&StatModifiers>,
+    ) -> f32 {
+        let ranged = matches!(attack_type, WeaponAttackType::Ranged);
+        let off_hand = matches!(attack_type, WeaponAttackType::OffHand);
+        let base = if ranged {
+            self.ranged_attack_power
+        } else {
+            self.attack_power
+        };
+        let percentage = modifiers.map_or(0.0, |mods| {
+            if ranged {
+                mods.ranged_attack_power_pct
+            } else {
+                mods.attack_power_pct
+            }
+        });
+        let weapon = if off_hand {
+            self.weapon_attack_power.off_hand
+        } else {
+            self.weapon_attack_power
+                .main_hand
+                .max(self.weapon_attack_power.ranged)
+        };
+        let total = (base + weapon * (1.0 + percentage / 100.0)).max(0.0);
+        if off_hand { total * 0.5 } else { total }
+    }
+
     /// Unit.cpp7036/8229: incoming damage uses half the combined rating and
     /// aura471 percentage; damage cannot fall below zero.
     pub(crate) fn versatility_damage_taken_multiplier(&self) -> f32 {
@@ -361,9 +416,54 @@ fn armor_from_stats(primary: &UnitStats, main: Option<PrimaryStat>, mods: &StatM
     (explicit + main_value * mods.armor_from_primary_stat_pct) / 100.0
 }
 
+/// Native unified rating fields cannot represent a destination-only sub-rating.
+pub(crate) fn supports_rating_conversion(source: u32, target: u32) -> bool {
+    if source == 0 || target == 0 {
+        return false;
+    }
+    let mut empty = CombatRatings::default();
+    let masks = rating_fields(&mut empty).map(|(mask, _)| mask);
+    let known = masks.iter().fold(0, |known, mask| known | *mask);
+    if source & !known != 0 || target & !known != 0 {
+        return false;
+    }
+    masks
+        .iter()
+        .all(|mask| target & *mask == 0 || target & *mask == *mask)
+}
+
+/// TC Player.cpp5256–5269 reads only the original base ratings, before405.
+fn apply_rating_conversions(
+    base: CombatRatings,
+    ratings: &mut CombatRatings,
+    conversions: &[(u32, u32, f32)],
+) {
+    for &(source, target, percent) in conversions {
+        let mut raw = base;
+        let highest = rating_fields(&mut raw)
+            .into_iter()
+            .filter(|(mask, _)| source & mask != 0)
+            .map(|(_, value)| *value)
+            .reduce(f32::max);
+        if let Some(highest) = highest {
+            let bonus = (highest * percent / 100.0).trunc();
+            add_rating_bonus(ratings, target, bonus);
+        }
+    }
+}
+
+fn add_rating_bonus(ratings: &mut CombatRatings, target: u32, bonus: f32) {
+    for (mask, value) in rating_fields(ratings) {
+        if target & mask != 0 {
+            *value += bonus;
+        }
+    }
+}
+
 /// TC Player.cpp5271-5279: sequential integer rating changes, then base crit conversion.
 fn modified_ratings(base: CombatRatings, mods: &StatModifiers) -> CombatRatings {
     let mut ratings = base;
+    apply_rating_conversions(base, &mut ratings, &mods.rating_from_rating);
     for &(mask, percent) in &mods.rating_percent_mods {
         for (bits, value) in rating_fields(&mut ratings) {
             if mask & bits != 0 {
@@ -460,11 +560,16 @@ pub fn compute_character_stats(
             + mods.max_health_flat)
             .floor(),
         base_mana: base_mana.unwrap_or(0.0),
-        max_mana: (base_mana.unwrap_or(0.0) * (1.0 + mods.base_mana_pct / 100.0)).round(),
+        max_mana: (base_mana.unwrap_or(0.0)
+            * (1.0 + mods.base_mana_pct / 100.0)
+            * (1.0 + mods.max_mana_pct / 100.0))
+            .round()
+            .max(0.0),
         spell_power,
         healing_power,
         attack_power,
         ranged_attack_power,
+        weapon_attack_power: WeaponAttackPower::default(),
         crit_pct: BASE_CRIT_PCT + rating_value(ratings.crit, CRIT_RATING[level]) + mods.crit_pct,
         haste_pct: rating_value(ratings.haste, HASTE_RATING[level]) + mods.haste_pct,
         mastery_pct: mastery_points * input.mastery_coefficient,
@@ -475,7 +580,8 @@ pub fn compute_character_stats(
         avoidance_pct: tertiary_rating_value(ratings.avoidance, AVOIDANCE_RATING[level]),
         speed_pct: tertiary_rating_value(ratings.speed, SPEED_RATING[level]),
         armor: ((ratings.armor * (1.0 + mods.base_armor_pct / 100.0)
-            + armor_from_stats(&primary, input.primary_stat, &mods))
+            + armor_from_stats(&primary, input.primary_stat, &mods)
+            + mods.total_armor_flat)
             * (1.0 + mods.total_armor_pct / 100.0)
             * (1.0 + mods.bonus_armor_pct / 100.0))
             .floor(),
@@ -690,8 +796,8 @@ impl ItemData<'_> {
                     .find(|(key, _)| *key == slot)
                     .map(|(_, state)| state)
             });
-            let stats = self.equipped_stats(template, source, properties, level);
-            gear.apply_item(slot, template, stats);
+            let (stats, weapon_ap) = self.equipped_stats(template, source, properties, level);
+            gear.apply_item(slot, template, stats, weapon_ap);
         }
         gear
     }
@@ -702,10 +808,17 @@ impl ItemData<'_> {
         source: shared::item_data::ItemDefinitionSource,
         properties: Option<&server::item_instance::ItemInstanceModifiers>,
         level: u8,
-    ) -> crate::item_stats::ItemStats {
+    ) -> (crate::item_stats::ItemStats, f32) {
         let tables = self.scaling_tables(source);
         let Some(properties) = properties else {
-            return item_stats(template, tables);
+            let stats = item_stats(template, tables);
+            let weapon_ap = calculate_weapon_attack_power(
+                &template.scaling,
+                template.inventory_type,
+                stats.item_level,
+                tables,
+            );
+            return (stats, weapon_ap);
         };
         assert_eq!(
             source,
@@ -726,7 +839,7 @@ fn compute_native_instance_stats(
     level: u8,
     native: &NativeItemInstances,
     tables: &ItemScalingTables,
-) -> crate::item_stats::ItemStats {
+) -> (crate::item_stats::ItemStats, f32) {
     let modified = server::item_instance::bonuses::apply_item_bonuses(
         &template.scaling,
         &properties.bonus_list,
@@ -741,27 +854,53 @@ fn compute_native_instance_stats(
     )
     .unwrap_or_else(|error| panic!("resolve equipped item stats: {error}"));
     let mut blocks = vec![stats.block];
-    blocks.extend(instance_enchant_blocks(properties, level, &native.enchants));
+    blocks.extend(
+        instance_enchant_contributions(properties, level, &native.enchants)
+            .into_iter()
+            .map(|contribution| contribution.stats),
+    );
     let (primary, secondary) = sum_equipment_stats(&blocks);
     stats.block = ItemStatBlock { primary, secondary };
-    stats
+    let weapon_ap = calculate_weapon_attack_power(
+        &modified.scaling,
+        template.inventory_type,
+        stats.item_level,
+        tables,
+    );
+    (stats, weapon_ap)
 }
 
-fn instance_enchant_blocks(
+fn calculate_weapon_attack_power(
+    item: &shared::item_scaling::ItemScaling,
+    inventory_type: u8,
+    item_level: u16,
+    tables: &ItemScalingTables,
+) -> f32 {
+    const ITEM_CLASS_WEAPON: u8 = 2;
+    if item.class_id != ITEM_CLASS_WEAPON || item.delay_ms == 0 {
+        return 0.0;
+    }
+    let dps = shared::item_scaling::weapon_dps(tables, item, inventory_type, item_level)
+        .expect("equipped weapon requires its native DPS table");
+    // TC GetDPS returns float; truncation happens after its float multiplication.
+    (dps as f32 * 6.0).trunc()
+}
+
+pub(crate) fn instance_enchant_contributions(
     properties: &server::item_instance::ItemInstanceModifiers,
     level: u8,
     tables: &server::item_instance::enchants::EnchantmentTables,
-) -> Vec<ItemStatBlock> {
+) -> Vec<server::item_instance::enchants::EnchantContribution> {
     use server::item_instance::enchants::{enchantment_stats, gem_stats};
     let enchant = enchantment_stats(properties.enchant, level, tables)
         .unwrap_or_else(|error| panic!("resolve equipped enchant: {error}"));
-    let mut blocks = vec![enchant.stats];
+    let mut contributions = vec![enchant];
     for &gem in &properties.gems {
         let contribution = gem_stats(gem, level, tables)
             .unwrap_or_else(|error| panic!("resolve equipped gem {gem}: {error}"));
-        blocks.push(contribution.stats);
+        contributions.push(contribution);
     }
-    blocks
+    contributions
 }
 
 #[derive(Default)]
@@ -769,6 +908,7 @@ struct Gear {
     blocks: Vec<ItemStatBlock>,
     main_hand: WeaponDamage,
     off_hand: Option<WeaponDamage>,
+    weapon_attack_power: WeaponAttackPower,
     has_weapon: bool,
     shield_armor: Option<f32>,
     health_regen: f32,
@@ -780,6 +920,7 @@ impl Gear {
         slot: EquipmentSlot,
         template: &crate::item_templates::ItemTemplate,
         stats: crate::item_stats::ItemStats,
+        weapon_ap: f32,
     ) {
         self.blocks.push(stats.block);
         self.health_regen += stats.health_regen;
@@ -789,10 +930,16 @@ impl Gear {
         match (slot, stats.weapon) {
             (EquipmentSlot::MainHand, Some(weapon)) => {
                 self.main_hand = weapon;
+                if weapon.kind == shared::components::WeaponType::Ranged {
+                    self.weapon_attack_power.ranged = weapon_ap;
+                } else {
+                    self.weapon_attack_power.main_hand = weapon_ap;
+                }
                 self.has_weapon = true;
             }
             (EquipmentSlot::OffHand, Some(weapon)) => {
                 self.off_hand = Some(weapon);
+                self.weapon_attack_power.off_hand = weapon_ap;
                 self.has_weapon = true;
             }
             _ => {}
@@ -928,6 +1075,19 @@ pub(crate) fn update_character_stats(
         };
         stats.main_hand = gear.main_hand;
         stats.off_hand = gear.off_hand;
+        stats.weapon_attack_power = gear.weapon_attack_power;
+        if let Some(mods) = mods
+            && mods.spell_power_from_ap_pct > 0.0
+        {
+            // TC Unit.cpp7103–7108/7602–7607 uses total main-hand AP for aura366.
+            let power = (stats.total_attack_power(WeaponAttackType::MainHand, Some(mods))
+                * mods.spell_power_from_ap_pct
+                / 100.0
+                + 0.5)
+                .floor();
+            stats.spell_power = power;
+            stats.healing_power = power;
+        }
         stats.health_regen = gear.health_regen;
         stats.defense = player_defense(
             class_id,

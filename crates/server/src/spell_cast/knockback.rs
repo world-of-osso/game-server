@@ -152,8 +152,10 @@ fn emit_knockback_proc(world: &mut World, caster: Entity, target: Entity) {
             target_mask: [0, crate::auras::procs::PROC2_KNOCKBACK],
             spell_id: None,
             can_proc: true,
+            cast_used_proc_modifier: false,
             periodic: false,
             damage: 0.0,
+            heal: None,
             reflected: false,
         },
     );

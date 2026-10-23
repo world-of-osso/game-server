@@ -15,6 +15,16 @@ pub(super) fn inspect_unit(world: &World, guid: Option<u32>, actor: Entity) -> s
         .map(|aura| serde_json::json!({"spell": aura.spell_id, "expires_at": aura.expires_at, "caster": aura.caster.to_bits()})).collect();
     serde_json::json!({"guid": guid, "entity": actor.to_bits(), "exists": world.get_entity(actor).is_ok(),
         "name": world.get::<shared::components::Npc>(actor).map(|npc| &npc.name),
+        "npc_entry": world.get::<shared::components::Npc>(actor).map(|npc| npc.template_id),
+        "unit_level": world.get::<shared::components::UnitLevel>(actor).map(|level| level.0),
+        "hunter_pet_owner": world.get::<crate::hunter_pet::HunterPet>(actor).map(|pet| pet.owner.to_bits()),
+        "summoned_by": world.get::<shared::components::UnitSummonedBy>(actor).map(|summoned| summoned.0),
+        "follower_spec": world.get::<crate::followers::Follower>(actor).map(|follower| follower.profile.spec_id),
+        "level": world.get::<shared::components::Level>(actor).map(|level| level.0),
+        "map": format!("{:?}", world.get::<crate::maps::InMap>(actor)),
+        "faction": world.get::<shared::components::UnitFactionTemplate>(actor).map(|faction| faction.0),
+        "powers": format!("{:?}", world.get::<crate::spell_cast::powers::PowerPools>(actor)),
+        "mana": world.get::<shared::components::Mana>(actor).map(|mana| [mana.current, mana.max]),
         "health": health.map(|health| [health.current, health.max]),
         "position": position.map(|position| [position.x, position.y, position.z]),
         "state": format!("{:?}", world.get::<crate::creature_ai::CreatureState>(actor)),
@@ -82,4 +92,77 @@ pub(super) fn read_process_memory() -> serde_json::Value {
         })
         .collect();
     serde_json::to_value(memory).unwrap()
+}
+
+/// Diagnostic identities persist after native cleanup; never affect combat membership.
+#[derive(Default)]
+pub(super) struct PetRecorder {
+    pets: std::collections::BTreeMap<Entity, PetRecord>,
+}
+
+struct PetRecord {
+    owner: Entity,
+    opponents: std::collections::BTreeSet<Entity>,
+}
+
+impl PetRecorder {
+    pub(super) fn units(&self) -> impl Iterator<Item = Entity> + '_ {
+        self.pets.keys().copied()
+    }
+
+    pub(super) fn sample(
+        &mut self,
+        world: &World,
+        members: &[Entity],
+        actors: &std::collections::BTreeMap<u32, Entity>,
+    ) -> Vec<serde_json::Value> {
+        for &owner in members {
+            if let Some(pet) = crate::hunter_pet::summoned_pet(world, owner) {
+                self.pets.entry(pet).or_insert_with(|| PetRecord {
+                    owner,
+                    opponents: Default::default(),
+                });
+            }
+        }
+        self.pets
+            .iter_mut()
+            .map(|(&pet, record)| {
+                record
+                    .opponents
+                    .extend(crate::combat_refs::active_opponents(world, pet));
+                if let Some(target) = world
+                    .get::<crate::networking::CombatTarget>(pet)
+                    .and_then(|target| target.0)
+                {
+                    record.opponents.insert(target);
+                }
+                // Include zero-threat native acquisition, not just positive damage threat.
+                record
+                    .opponents
+                    .extend(actors.values().copied().filter(|actor| {
+                        world
+                            .get::<shared::components::ThreatTable>(*actor)
+                            .is_some_and(|table| {
+                                table
+                                    .entries()
+                                    .iter()
+                                    .any(|entry| entry.entity == pet.to_bits())
+                            })
+                    }));
+                let opponents: Vec<_> = record
+                    .opponents
+                    .iter()
+                    .copied()
+                    .map(|actor| {
+                        let guid = world
+                            .get::<crate::zones::CreatureOrigin>(actor)
+                            .map(|source| source.guid);
+                        inspect_unit(world, guid, actor)
+                    })
+                    .collect();
+                serde_json::json!({"owner":record.owner.to_bits(),
+                "pet":inspect_unit(world,None,pet),"opponents":opponents})
+            })
+            .collect()
+    }
 }
