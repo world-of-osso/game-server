@@ -8,7 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-from follower_simulator_sources import SourceGap, native_float, read_source_graph
+from follower_simulator_sources import SourceGap, native_float, qualify_walk_edges, read_source_graph
 
 WORLD = Path("/home/osso/Projects/world-of-osso/game-server/data/world.db")
 NAV = Path("/home/osso/Projects/world-of-osso/game-server/data/ground/navmesh")
@@ -73,6 +73,13 @@ class NativeFollowerSourceTests(unittest.TestCase):
     def test_halls_refuses_missing_final_encounter_not_a_three_boss_clear(self):
         with self.assertRaisesRegex(SourceGap, "MISSING_ENCOUNTER_BOSS_SOURCE_2527: encounter2618"):
             read_source_graph(self.db, 2527, NAV / "2527", self.journal)
+
+    def test_native_ruby_upper_boss_disconnect_refuses_instead_of_inventing_a_connector(self):
+        graph, requirements, _ = self.read_ruby()
+        edges = Path("/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-power-scaling-2026-10-22/generic-2521/edges.csv")
+        self.assertTrue(edges.is_file(), "run the pinned native Ruby edge exporter first")
+        with self.assertRaisesRegex(SourceGap, "MISSING_BOSS_WALK_PATH_2521: no frozen path from pack29001489 to pack29001667"):
+            qualify_walk_edges(graph, requirements, edges)
 
     def test_missing_entrance_is_a_named_source_refusal(self):
         self.db.execute("DELETE FROM tdb_world_safe_locs WHERE MapID=2521")

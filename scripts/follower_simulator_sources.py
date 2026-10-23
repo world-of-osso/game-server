@@ -126,6 +126,30 @@ def read_source_graph(db, map_id, nav_directory, journal_rows):
     return graph, requirements, receipt
 
 
+def qualify_walk_edges(graph, requirements, edges_path):
+    # Reuse the source-qualified native exporter reader/forest rule; no new map dispatch.
+    from uldaman_frozen_topology import read_native_edges, select_native_edges, unreachable_packs
+    from freeze_follower_route import boss_packs, build_adjacency, shortest_path
+
+    graph = dict(graph)
+    candidates = read_native_edges(edges_path, graph["packs"])
+    graph["edges"] = select_native_edges(graph["packs"], candidates)
+    graph["unreachable"] = unreachable_packs(graph)
+    adjacency = build_adjacency(graph)
+    packs = {pack["id"]: pack for pack in graph["packs"]}
+    current = graph["entrance_pack"]
+    progression = []
+    for goal in boss_packs(packs, requirements):
+        try:
+            nodes = shortest_path(adjacency, current, goal)
+        except ValueError as error:
+            refuse(graph["map_id"], "MISSING_BOSS_WALK_PATH", str(error))
+        progression.extend(nodes[1:] if progression else nodes)
+        current = goal
+    graph["boss_path"] = progression
+    return graph
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", type=Path, required=True)
@@ -133,6 +157,7 @@ def main():
     parser.add_argument("--nav", type=Path, required=True)
     parser.add_argument("--journal-creatures", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--edges", type=Path, help="qualified all-pairs native exporter CSV")
     args = parser.parse_args()
     destinations = [args.output / name for name in [f"follower-{args.map}.json", "requirements.json",
                                                    "points.csv", "receipt.json", "refusal.json"]]
@@ -144,6 +169,8 @@ def main():
     with sqlite3.connect(args.db.resolve().as_uri() + "?mode=ro", uri=True) as db:
         try:
             graph, requirements, receipt = read_source_graph(db, args.map, args.nav, journal_rows)
+            if args.edges is not None:
+                graph = qualify_walk_edges(graph, requirements, args.edges)
         except SourceGap as error:
             (args.output / "refusal.json").write_text(json.dumps({"map_id": args.map,
                 "status": "source_refused", "reason": str(error)}, indent=2) + "\n")
