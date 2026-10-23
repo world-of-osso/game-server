@@ -1,7 +1,7 @@
 //! Actual combat log accounting; no inferred hits or fabricated stat contributions.
 use bevy::prelude::*;
 use serde_json::{Value, json};
-use shared::protocol::CombatLogKind;
+use shared::protocol::{CombatLogEvent, CombatLogKind};
 use std::collections::BTreeMap;
 
 pub(super) fn stats(world: &World, actor: Entity) -> Value {
@@ -87,6 +87,29 @@ pub(super) fn sample_buffs(world: &World, actor: Entity, counts: &mut BTreeMap<u
     }
 }
 
+fn summarize_target_damage(events: &[CombatLogEvent], targets: &[Entity]) -> Value {
+    let mut recipients: BTreeMap<_, (u64, u32)> = targets
+        .iter()
+        .map(|target| (target.to_bits(), (0, 0)))
+        .collect();
+    for event in events
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Damage)
+    {
+        let Some((damage, hits)) = event.target.and_then(|target| recipients.get_mut(&target))
+        else {
+            continue;
+        };
+        *damage += u64::try_from(event.amount).expect("nonnegative damage log");
+        *hits += 1;
+    }
+    let rows: Vec<_> = recipients
+        .into_iter()
+        .map(|(target, (damage, hits))| json!({"target": target, "damage": damage, "hits": hits}))
+        .collect();
+    json!(rows)
+}
+
 pub(super) fn combat(world: &World, targets: &[Entity], seconds: f64) -> Value {
     let events = &world
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
@@ -113,7 +136,8 @@ pub(super) fn combat(world: &World, targets: &[Entity], seconds: f64) -> Value {
             "share_pct": if total > 0 { damage as f64 * 100.0 / total as f64 } else { 0.0 }})
     }).collect();
     json!({"dps": total as f64 / seconds, "total_damage": total, "actions": actions,
-        "event_count": events.len(), "energize": energize_receipts(events),
+        "event_count": events.len(), "damage_by_target": summarize_target_damage(events, targets),
+        "energize": energize_receipts(events),
         "energize_units": "raw_logged_integer"})
 }
 
@@ -193,4 +217,96 @@ pub(super) fn gaps(profile: &super::inputs::Profile, is_player: bool) -> Vec<Str
         );
     }
     gaps
+}
+
+#[test]
+fn native_damage_recipient_accounting_preserves_retired_and_zero_output_targets() {
+    let mut world = World::new();
+    let actor = world.spawn_empty().id();
+    let pet = world.spawn_empty().id();
+    let main = world.spawn_empty().id();
+    let first_add = world.spawn_empty().id();
+    let second_add = world.spawn_empty().id();
+    let untouched = world.spawn_empty().id();
+    let unrelated = world.spawn_empty().id();
+    let damage = |target: Option<Entity>, amount| CombatLogEvent {
+        source: Some(actor.to_bits()),
+        target: target.map(Entity::to_bits),
+        spell_id: Some(116),
+        school_mask: 16,
+        amount,
+        overflow: 0,
+        absorbed: 0,
+        resisted: 0,
+        blocked: 0,
+        crit: false,
+        glancing: false,
+        periodic: false,
+        extra_spell_id: None,
+        timestamp_unix_ms: 0,
+        kind: CombatLogKind::Damage,
+    };
+    world.insert_resource(crate::spell_cast::test_harness::ObservedCombatEvents(vec![
+        damage(Some(main), 100),
+        CombatLogEvent {
+            source: Some(pet.to_bits()),
+            periodic: true,
+            ..damage(Some(first_add), 200)
+        },
+        damage(Some(second_add), 300),
+        damage(Some(second_add), 0),
+        CombatLogEvent {
+            kind: CombatLogKind::Heal,
+            ..damage(Some(second_add), 900)
+        },
+        damage(Some(unrelated), 999),
+        damage(None, 999),
+        CombatLogEvent {
+            kind: CombatLogKind::CastSuccess,
+            ..damage(None, 0)
+        },
+    ]));
+    world.despawn(first_add);
+
+    let report = combat(&world, &[main, first_add, second_add, untouched], 300.0);
+    assert_eq!(report["total_damage"], 600);
+    assert_eq!(report["dps"], 2.0);
+    let recipients: BTreeMap<_, _> = report["damage_by_target"]
+        .as_array()
+        .expect("native receipt must retain damage recipients")
+        .iter()
+        .map(|row| {
+            (
+                row["target"].as_u64().unwrap(),
+                (
+                    row["damage"].as_u64().unwrap(),
+                    row["hits"].as_u64().unwrap(),
+                ),
+            )
+        })
+        .collect();
+    assert_eq!(
+        recipients,
+        BTreeMap::from([
+            (main.to_bits(), (100, 1)),
+            (first_add.to_bits(), (200, 1)),
+            (second_add.to_bits(), (300, 2)),
+            (untouched.to_bits(), (0, 0)),
+        ])
+    );
+    let actions = report["actions"].as_array().unwrap();
+    let owner_action = actions
+        .iter()
+        .find(|row| row["actor"] == actor.to_bits())
+        .unwrap();
+    assert_eq!(owner_action["damage"], 400);
+    assert_eq!(owner_action["hits"], 3);
+    assert_eq!(owner_action["count"], 1);
+    let pet_action = actions
+        .iter()
+        .find(|row| row["actor"] == pet.to_bits())
+        .unwrap();
+    assert_eq!(pet_action["damage"], 200);
+    assert_eq!(pet_action["hits"], 1);
+    assert_eq!(pet_action["count"], 0);
 }

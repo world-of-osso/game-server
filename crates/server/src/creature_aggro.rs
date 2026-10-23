@@ -747,6 +747,7 @@ pub(crate) fn enter_evade_mode(world: &mut World, creature: Entity) {
         target.0 = None;
     }
     crate::combat::combat_stop(world, creature);
+    crate::followers::pull_history::record_evade(world, creature);
     crate::scripted_ai::dispatch(world, creature, crate::scripted_ai::Hook::EnterEvadeMode);
 }
 

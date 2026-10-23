@@ -124,6 +124,7 @@ pub(super) fn update(world: &mut World, entity: Entity) {
     match script {
         None => update_actions(world, entity, &trigger),
         Some(FieldScript::VaultRune) => super::vault_rune::update(world, entity, &trigger),
+        Some(FieldScript::MeteorBurn) => update_actions(world, entity, &trigger),
     }
 }
 
@@ -250,7 +251,7 @@ fn remove_field(world: &mut World, entity: Entity) {
         .expect("created field has a supported source definition")
         .script;
     match script {
-        None => {
+        None | Some(FieldScript::MeteorBurn) => {
             for &unit in &trigger.inside {
                 undo_action(world, &trigger, unit);
             }

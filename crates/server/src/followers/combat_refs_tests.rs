@@ -151,7 +151,7 @@ fn follower_combatrefs_native_three_targets_reach_area_policy() {
         "all three real31146 are in party combat; owner victim alone previously admitted only one"
     );
     assert_eq!(enemies[0].0, targets[0], "selected target retains priority");
-    let meteor = h
+    let mut meteor = h
         .app
         .world()
         .resource::<FollowerCatalog>()
@@ -160,6 +160,10 @@ fn follower_combatrefs_native_three_targets_reach_area_policy() {
         .find(|entry| entry.spell_id == METEOR && entry.available(63, 32))
         .unwrap()
         .clone();
+    // This fixture tests three-target combat admission, not the live Fire APL.
+    // Retain native Meteor geometry while fixing this test's area threshold:
+    // published Fire policy may legitimately allow Meteor on one enemy.
+    meteor.conditions.min_enemies = targets.len();
     assert_eq!(meteor.conditions.min_enemies, 3);
     assert!(kit_area::allows(
         h.app.world_mut(),

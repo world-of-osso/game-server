@@ -474,7 +474,7 @@ fn query_ground_waypoints(
     };
     navigation.cancel_query(launch_from.entity, goal);
     let route = match result? {
-        Some(::navigation::worker::Output::Path(route)) => route,
+        Some(::navigation::worker::Output::Path(route)) => route.into_complete()?,
         None => return Err("ground path map has no navigation bake".into()),
         Some(_) => return Err("ground waypoint returned a non-path result".into()),
     };

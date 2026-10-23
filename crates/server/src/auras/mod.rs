@@ -19,6 +19,7 @@
 mod abundance;
 pub(crate) mod agony;
 pub(crate) mod area_avoidance;
+mod async_stacks;
 pub(crate) mod augmentation;
 pub(crate) mod aura_state;
 pub(crate) mod base_armor;
@@ -31,6 +32,7 @@ mod damage_shield_tests;
 pub(crate) mod damage_transfer;
 mod earthen_rage;
 pub(crate) mod ebon_might;
+mod echo_of_light;
 pub(crate) mod effect_immunity;
 mod fear;
 mod fel_devastation;
@@ -39,8 +41,10 @@ mod fleeing;
 pub(crate) mod forecast;
 pub(crate) mod handlers;
 pub(crate) mod health_pct_trigger;
+mod ignite;
 pub mod invisibility;
 mod item_requirements;
+mod light_of_titans;
 mod linked;
 pub(crate) mod linked_summon;
 pub(crate) mod mastery;
@@ -52,9 +56,13 @@ mod natures_guardian;
 pub(crate) mod observations;
 mod periodic;
 pub(crate) mod power_amount_trigger;
+#[cfg(test)]
+mod proc_mask_tests;
 pub mod procs;
 mod refresh;
 pub(crate) mod reward_mods;
+#[cfg(test)]
+mod rolling_periodic_tests;
 pub mod scripts;
 pub mod shapeshift;
 pub mod spell_mods;
@@ -252,6 +260,8 @@ pub struct AuraInstance {
     pub stacks: u8,
     /// `CumulativeAura` (+ MaxAuraStacks mods); 0 does not stack.
     pub max_stacks: u8,
+    /// Native flag490: one absolute deadline per asynchronous application stack.
+    stack_expirations: Vec<f64>,
     /// Proc charges left; 0 has no charges.
     pub charges: u8,
     pub passive: bool,
@@ -303,21 +313,35 @@ impl AuraInstance {
         }
     }
 
+    fn refresh_stacks(&mut self, new: &Self) {
+        self.max_stacks = new.max_stacks;
+        if self.max_stacks == 0 {
+            return;
+        }
+        let combined = u16::from(self.stacks) + u16::from(new.stacks);
+        if !new.stack_expirations.is_empty() {
+            let overflow = combined.saturating_sub(u16::from(self.max_stacks));
+            self.stack_expirations = async_stacks::merge_expirations(
+                &self.stack_expirations,
+                &new.stack_expirations,
+                usize::from(overflow),
+            );
+            self.expires_at = self.stack_expirations.last().copied();
+        }
+        self.stacks = if self.spell_id == agony::AGONY {
+            // Native980 refresh keeps damage level, raising only a new initial floor.
+            self.stacks.max(new.stacks).min(self.max_stacks)
+        } else {
+            // Normal and async applications both add the requested native stack amount.
+            combined.min(u16::from(self.max_stacks)) as u8
+        };
+    }
+
     /// Refresh duration/amounts/charges; add requested stacks except Agony's preserved floor.
     fn refresh_from(&mut self, new: AuraInstance) {
         self.duration_ms = new.duration_ms;
         self.expires_at = new.expires_at;
-        self.max_stacks = new.max_stacks;
-        if self.max_stacks > 0 {
-            self.stacks = if self.spell_id == agony::AGONY {
-                // Native980 refresh keeps damage level, raising only a new initial floor.
-                self.stacks.max(new.stacks).min(self.max_stacks)
-            } else {
-                // Unit::_TryStackingOrRefreshingExistingAura adds the requested
-                // cast's stack amount; ordinary applications still request one.
-                self.stacks.saturating_add(new.stacks).min(self.max_stacks)
-            };
-        }
+        self.refresh_stacks(&new);
         self.charges = new.charges;
         self.guardian_heal_pct = new.guardian_heal_pct;
         for fresh in new.effects {
@@ -748,6 +772,11 @@ fn build_instance(
             effect.amount = (max_health * 0.1).floor();
         }
     }
+    let stacks = spell
+        .cast_aura_stacks
+        .unwrap_or_else(|| agony::initial_stacks(world, caster, spell.id))
+        .min(max_stacks.max(1));
+    let expires_at = (duration_ms > 0).then(|| now + f64::from(duration_ms) / 1000.0);
     AuraInstance {
         instance_id: 0,
         spell_id: spell.id,
@@ -757,12 +786,10 @@ fn build_instance(
         from_player: world.get::<Player>(caster).is_some(),
         effects,
         duration_ms,
-        expires_at: (duration_ms > 0).then(|| now + f64::from(duration_ms) / 1000.0),
-        stacks: spell
-            .cast_aura_stacks
-            .unwrap_or_else(|| agony::initial_stacks(world, caster, spell.id))
-            .min(max_stacks.max(1)),
+        expires_at,
+        stacks,
         max_stacks,
+        stack_expirations: async_stacks::initial_expirations(spell, max_stacks, stacks, expires_at),
         charges: charges.clamp(0.0, 255.0) as u8,
         passive,
         hidden: passive || attributes(spell, 0) & ATTR0_DO_NOT_DISPLAY != 0,
@@ -1048,7 +1075,7 @@ pub(crate) fn apply_aura_with_spell(
     if instance.effects.is_empty() {
         return;
     }
-    refresh::prepare_application(world, target, &mut instance);
+    refresh::prepare_application(world, target, &mut instance, spell);
     log_unhandled_types(world, &instance);
     ensure_aura_components(world, target);
     mechanic_immunity::remove_matching(world, target, &instance);
@@ -2288,6 +2315,7 @@ fn update_auras(world: &mut World, units: &mut QueryState<AuraUnit, Without<Grid
         } else {
             remove_on_death(world, unit);
         }
+        async_stacks::expire_async_stacks(world, unit, now);
         // TC Unit.cpp438/2969–2973 updates/expires owned auras even on dead units.
         // ALLOW_AURA_WHILE_DEAD preserves an aura on death, not past its duration.
         remove_auras(world, unit, RemoveReason::Expired, |aura| {
