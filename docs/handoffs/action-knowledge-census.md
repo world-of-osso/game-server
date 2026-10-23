@@ -33,11 +33,13 @@ Artifacts: engine `data/diagnostics/feral-parity-2026-10-23/all-follower-native-
 
 There are zero missing-from-book rejections after these four sourced bridges in the990starter books. This source/metadata census does **not** prove a new runtime helper or every custom reference loadout; native behavioral RED/GREEN remains required. Never admit arbitrary same-name spell IDs or all class talents.
 
-## Shared helper contract (draft)
+## Shared helper contract (implemented, GREEN pending)
 
 `crate::spell_cast::knowledge::resolve_actor_action(&World, Entity, requested: u32) -> Result<u32, CastFailure>` returns the actual cast ID. It must preserve raw knowledge, selected TraitDefinition visible/override actions and native aura overrides. Existing source-qualified parent bridges are ledgered only where native metadata lacks an action link. Unknown/unselected actions fail; no new spell is inserted into KnownSpells. Both ordinary follower kit selection and literal fixture execution consume the same result. Generic NPC request admission is unchanged.
 
-Seven native cases are committed in `followers/action_knowledge_tests.rs`: selected Feral106951 and Demo105174 on both controller paths, unselected Incarnation on both paths, and selected Demoniac→Demonbolt literal admission. They are pending execution, not claimed RED/GREEN. The explicit Feral reference-loadout control separately exercises30s native kit and checks granted Shred remains usable.
+Fifteen native cases in `followers/action_knowledge_tests.rs` cover both controller paths, actual cast IDs from passive/override parents, Cat Swipe's existing48629 form source, Elemental/Demonology sourced parent actions, unselected Incarnation and the complete990starter-book admission census. Genuine RED at a95c0df7a:10FAIL/5PASS,51.69s test,48m39s cold compile,exit101,zero compiler warnings. Actual kit positive controls pass; actual unselected Incarnation casts and missing literal IDs fail. Exact command/environment live in engine diagnostics `knowledge-red.proof.json`. The explicit Feral reference-loadout control separately exercises30s native kit and checks granted Shred remains usable.
+
+The implementation imports native TraitDefinition.VisibleSpellID and caches only the selected definition links in TraitLoadout. `spell_cast::knowledge::resolve_actor_action` is shared by both consumers; the former kit-only native form resolver is moved beneath that module. `SIMC_KNOWN_PARENT_CAST_ACTION` covers only the existing114050→1219480 and426115→264178 projections where DB2 has no operative action link. Selected visible/override metadata is resolved first. No same-name inference or spellbook insertion occurs. GREEN and broad integration remain open.
 
 ## Sources
 

@@ -14,6 +14,12 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 - [x] Scope a run row's selector to that control action. Child actions retain their own targets; run selection must not retarget them.
 - [x] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.
 
+## Native action permission
+
+- [ ] Ordinary follower kits and literal fixtures use the same native action admission. A row is allowed only by the actor's actual known spell, selected trait visible/override action, or an explicitly sourced known-parent action policy.
+- [ ] Admission returns the actual cast spell, preserving selected trait replacements and native form/aura overrides; passive talent IDs must not be cast instead of their visible actions. No controller row grants new KnownSpells membership and NPC identity does not bypass the controller gate.
+- [ ] All11native starter profiles across levels1–90 retain their published cast actions, including Feral Berserk/Cat Swipe, Demonology Hand of Gul'dan/Demonbolt and Elemental Ascendance. Unselected Incarnation remains rejected. Exact custom reference loadouts retain their own selected books, not the default kit's talents.
+
 ## How it works
 
 - [Shared APL evaluator](../wiki/systems/simc-apl.md).

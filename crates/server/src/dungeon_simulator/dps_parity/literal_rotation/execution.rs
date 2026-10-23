@@ -114,17 +114,11 @@ fn talent_permits(world: &World, actor: Entity, talent: Option<u32>) -> Result<b
 }
 
 pub(crate) fn resolve_action(world: &World, actor: Entity, id: u32) -> Result<Option<u32>, String> {
-    let known = world
-        .get::<crate::class_progression::KnownSpells>(actor)
-        .ok_or("native literal actor lacks KnownSpells")?;
-    if crate::auras::overrides::resolve_spell(world, actor, id) != id {
-        return Ok(None);
+    match crate::spell_cast::knowledge::resolve_actor_action(world, actor, id) {
+        Ok(resolved) => Ok(Some(resolved)),
+        Err(crate::spell_cast::CastFailure::UnknownSpell) => Ok(None),
+        Err(reason) => Err(format!("native literal action knowledge: {reason:?}")),
     }
-    let permitted = known.contains(id)
-        || known
-            .iter()
-            .any(|base| crate::auras::overrides::resolve_spell(world, actor, base) == id);
-    Ok(permitted.then_some(id))
 }
 
 fn native_ready(

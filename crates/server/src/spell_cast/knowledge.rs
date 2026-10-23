@@ -1,0 +1,84 @@
+//! Native action permission shared by follower kits and literal fixture casts.
+//! Selected trait metadata wins; named parent projections cover missing DB2 links.
+mod form;
+
+use bevy::prelude::*;
+use std::collections::HashSet;
+
+use super::CastFailure;
+use crate::class_progression::{KnownSpells, TraitLoadout};
+use crate::spell_info::SpellStore;
+
+/// Resolve a known spell, selected visible action or sourced parent action.
+/// NPC identity never bypasses this controller-level knowledge check.
+pub(crate) fn resolve_actor_action(
+    world: &World,
+    actor: Entity,
+    requested: u32,
+) -> Result<u32, CastFailure> {
+    let known = world
+        .get::<KnownSpells>(actor)
+        .ok_or_else(|| CastFailure::Unsupported("native action actor lacks KnownSpells".into()))?;
+    let resolved = resolve_aliases(world, actor, requested)?;
+    if world.resource::<SpellStore>().get(resolved).is_none() {
+        return Err(CastFailure::UnknownSpell);
+    }
+    if known.contains(resolved) {
+        return Ok(resolved);
+    }
+    for parent in known.iter() {
+        if resolve_aliases(world, actor, parent)? == resolved {
+            return Ok(resolved);
+        }
+    }
+    Err(CastFailure::UnknownSpell)
+}
+
+fn resolve_aliases(world: &World, actor: Entity, requested: u32) -> Result<u32, CastFailure> {
+    let mut current = requested;
+    let mut visited = HashSet::new();
+    loop {
+        if !visited.insert(current) {
+            return Err(CastFailure::Unsupported(format!(
+                "native action alias cycle for spell{requested}"
+            )));
+        }
+        let selected = selected_trait_action(world, actor, current);
+        let projected = project_known_parent(world, actor, selected);
+        let resolved = form::resolve_action(world, actor, projected)?;
+        if resolved == current {
+            return Ok(resolved);
+        }
+        current = resolved;
+    }
+}
+
+fn selected_trait_action(world: &World, actor: Entity, requested: u32) -> u32 {
+    let Some(traits) = world.get::<TraitLoadout>(actor) else {
+        return requested;
+    };
+    traits
+        .overrides
+        .iter()
+        .chain(&traits.visible_actions)
+        .find_map(|&(base, action)| (base == requested && base != action).then_some(action))
+        .unwrap_or(requested)
+}
+
+/// SIMC_KNOWN_PARENT_CAST_ACTION: existing follower_spec_kits.py projections.
+/// Elemental114050's native description names1219480 (sc_shaman.cpp11419).
+/// Demoniac426115 enables264178 (sc_warlock_init.cpp249–250). Neither pair
+/// has an operative TraitDefinition visible/override link in native70448.
+fn project_known_parent(world: &World, actor: Entity, requested: u32) -> u32 {
+    if !world
+        .get::<KnownSpells>(actor)
+        .is_some_and(|known| known.contains(requested))
+    {
+        return requested;
+    }
+    match requested {
+        114050 => 1219480,
+        426115 => 264178,
+        _ => requested,
+    }
+}

@@ -353,6 +353,7 @@ pub(crate) mod jump_charge;
 mod knockback;
 #[cfg(test)]
 mod knockback_tests;
+pub(crate) mod knowledge;
 mod school_costs;
 pub(crate) mod teleport;
 pub(crate) mod teleport_positions;
