@@ -232,7 +232,7 @@ fn literal_player_readiness_cannot_reuse_primary_admission_for_far_secondary() {
     let (mut run, equipment) = human(3);
     select_palm(&mut run, &mut palm_driver(false), &equipment);
     let far = make_secondary_low(&mut run);
-    run.app.world_mut().get_mut::<Position>(far).unwrap().0[0] = 100.0;
+    run.app.world_mut().get_mut::<Position>(far).unwrap().x = 100.0;
     let prepared = prepare_palm(&mut run, &equipment);
     let facts = TargetFacts {
         world: run.app.world(),
