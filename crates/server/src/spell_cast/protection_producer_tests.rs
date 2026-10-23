@@ -4,6 +4,8 @@ use bevy::prelude::*;
 use shared::components::Position;
 use shared::protocol::{CombatLogKind, EquipmentSlot};
 
+#[path = "always_hit_tests.rs"]
+mod always_hit;
 #[path = "protection_item_tests.rs"]
 mod items;
 
@@ -511,8 +513,7 @@ fn protection_producers_tc_thunder_clap_without_known_rend_preserves_slow_only()
         && event.kind == CombatLogKind::AuraApplied));
 }
 
-#[test]
-fn protection_producers_tc_shield_charge_moves_then_native_landing_children_deal_damage() {
+fn charge_fixture() -> (Harness, Entity, Entity, Entity) {
     let mut h = fixture(false);
     let target = h.npc;
     // The ordinary spell fixture NPC omits display identity. Native charge
@@ -539,6 +540,12 @@ fn protection_producers_tc_shield_charge_moves_then_native_landing_children_deal
     });
     let near = spawn_npc(&mut h.app, 12.0);
     let far = spawn_npc(&mut h.app, 30.0);
+    (h, target, near, far)
+}
+
+#[test]
+fn protection_producers_tc_shield_charge_moves_then_native_landing_children_deal_damage() {
+    let (mut h, target, near, far) = charge_fixture();
     h.cast_and_deliver(SHIELD_CHARGE, Some(target));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(
