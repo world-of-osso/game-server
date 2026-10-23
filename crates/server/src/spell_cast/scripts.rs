@@ -557,7 +557,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
             Some(essence_burst::roll_essence_burst)
         }
-        hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE => {
+        hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE | hot_streak::NATIVE_FLAMESTRIKE => {
             Some(hot_streak::consume_procs_and_roll_pyroclasm)
         }
         lava_surge::LAVA_BURST => Some(lava_surge::restore_deferred_charge),
