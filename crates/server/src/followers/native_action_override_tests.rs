@@ -132,6 +132,7 @@ fn earn_finisher_power(h: &mut Harness, actor: Entity, finisher: u32) {
         }
         h.advance(1);
     }
+    trace_ret_boundary(h, actor, "funding timeout");
     panic!(
         "native Ret generators did not earn required{required} Holy Power within600 frames; last state{previous:?}"
     );
@@ -150,6 +151,39 @@ fn cast_controller_verdict(h: &mut Harness, actor: Entity, expected: u32) {
     earn_finisher_power(h, actor, expected);
     uses_spell(h, actor, expected);
     h.advance(10);
+    trace_ret_boundary(h, actor, "after controller verdict");
+}
+
+fn trace_ret_boundary(h: &Harness, actor: Entity, stage: &str) {
+    let world = h.app.world();
+    let stats = world.get::<crate::stats::CharacterStats>(actor);
+    eprintln!(
+        "native Ret {stage}: stats={stats:?}; actor_pos={:?}; target_pos={:?}",
+        world.get::<Position>(actor),
+        world.get::<Position>(h.npc)
+    );
+    for event in h.inbox.log.iter().filter(|event| {
+        event.source == Some(actor.to_bits())
+            && event.spell_id.is_some_and(|id| {
+                [
+                    JUDGMENT,
+                    FINAL_VERDICT,
+                    TEMPLARS_VERDICT,
+                    TEMPLARS_VERDICT_DAMAGE,
+                ]
+                .contains(&id)
+            })
+    }) {
+        eprintln!("native Ret event {event:?}");
+    }
+    for cast in h
+        .inbox
+        .go
+        .iter()
+        .filter(|cast| cast.caster == actor.to_bits())
+    {
+        eprintln!("native Ret go {cast:?}");
+    }
 }
 
 fn damage(h: &Harness, actor: Entity, spell: u32) -> i64 {
