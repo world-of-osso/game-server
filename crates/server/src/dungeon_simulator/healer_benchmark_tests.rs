@@ -83,6 +83,23 @@ fn small_fight() -> serde_json::Value {
             receipt(party.owner, party.tank, CombatLogKind::Heal, 999, 0),
             receipt(party.owner, party.members[2], CombatLogKind::Death, 0, 0),
         ]);
+    // Only consumed native shield points count, never capacity merely applied.
+    app.world_mut()
+        .get_mut::<crate::stats::CharacterStats>(healer)
+        .unwrap()
+        .healing_power = 100.0;
+    crate::auras::apply_aura(
+        app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: healer,
+            target: party.tank,
+            spell_id: 17,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let (remaining, consumed) = crate::auras::absorb_damage(app.world_mut(), party.tank, 4, 200.0);
+    assert_eq!((remaining, consumed), (0.0, 200.0));
     recorder.observe_frame(app.world());
     recorder.report(app.world())["dungeon_healing"].clone()
 }
@@ -98,6 +115,14 @@ fn healer_benchmark_extracts_known_small_fight() {
     assert_eq!(metrics["effective_hps"], 50.0);
     assert_eq!(metrics["mana_at_end"], 123.0);
     assert_eq!(metrics["combat_seconds"], 3.0);
+}
+
+#[test]
+#[ignore = "RED: consumed healer shield points missing from metrics"]
+fn healer_benchmark_extracts_only_consumed_absorbs() {
+    let metrics = small_fight();
+    assert_eq!(metrics["absorbed_damage"], 200.0);
+    assert_eq!(metrics["effective_healing_plus_absorbed_damage"], 350.0);
 }
 
 #[test]

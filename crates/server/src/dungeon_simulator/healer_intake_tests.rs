@@ -112,6 +112,25 @@ fn healer_benchmark_same_intake_replays_identical_native_numbers() {
 }
 
 #[test]
+#[ignore = "RED: recorded combat denominator missing"]
+fn healer_benchmark_reports_frozen_combat_denominator() {
+    let mut intake = small_intake();
+    intake.end_tick = 20;
+    let mut out_of_combat = intake.frames[0].clone();
+    out_of_combat.tick = 11;
+    out_of_combat.in_combat = false;
+    intake.frames.push(out_of_combat);
+    let report = super::healer_replay::replay(&intake, 105).unwrap();
+    let metrics = &report["metrics"];
+    assert_eq!(metrics["recorded_combat_seconds"], 0.5);
+    assert!(metrics["native_combat_seconds"].is_number());
+    assert_eq!(
+        metrics["effective_hps"].as_f64().unwrap(),
+        metrics["effective_healing"].as_f64().unwrap() / 0.5
+    );
+}
+
+#[test]
 #[ignore = "explicit native recipient mitigation replay control"]
 fn healer_benchmark_raw_spell_replay_applies_recipient_reduction_and_absorb_once() {
     for (aura, expected_loss) in [(None, 200.0), (Some(102342), 160.0), (Some(17), 0.0)] {
