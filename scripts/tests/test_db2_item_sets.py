@@ -34,7 +34,6 @@ class ItemSetImportTests(unittest.TestCase):
                 conn.execute('CREATE TABLE unrelated(value TEXT)')
                 conn.execute("INSERT INTO unrelated VALUES('preserved')")
             with patch.object(db2, 'TABLES', tables), \
-                    patch.object(db2.item_instance_data, 'import_catalog', return_value={}), \
                     patch.object(db2.skyborne_data, 'load_rows', return_value={}), \
                     patch.object(db2.skyborne_data, 'import_rows'):
                 db2.import_tables('12.1.5.70448', db2.DEFAULT_CSV_ROOT, database, Path(directory))
@@ -58,6 +57,9 @@ class ItemSetImportTests(unittest.TestCase):
                 ).fetchall(), [(1296625, 2), (1296626, 4)])
                 self.assertEqual(conn.execute(
                     'SELECT table_name,build FROM db2_build ORDER BY table_name'
+                ).fetchall(), [], 'producer tables must have one importer owner, not duplicate DB2 registration')
+                self.assertEqual(conn.execute(
+                    "SELECT table_name,build FROM item_instance_source WHERE table_name IN ('item_set','item_set_spell') ORDER BY table_name"
                 ).fetchall(), [('item_set', '12.1.5.70448'), ('item_set_spell', '12.1.5.70448')])
                 self.assertEqual(conn.execute('SELECT value FROM unrelated').fetchone(), ('preserved',))
 

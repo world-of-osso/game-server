@@ -10,6 +10,9 @@ fn native_world() -> World {
     .unwrap();
     let mut world = World::new();
     world.insert_resource(load(&conn).unwrap());
+    world.insert_resource(
+        crate::item_templates::load_item_templates(&crate::test_data::world_db_path()).unwrap(),
+    );
     world
 }
 
