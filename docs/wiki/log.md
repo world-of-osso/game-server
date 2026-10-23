@@ -1,3 +1,7 @@
+## 2026-10-23 — Assassination native Garrote boundaries
+
+[Assassination parity](investigations/assassination-dps-parity.md): pinned ST186209.205/3T265841.453; existing native player controller stops at413/condition12. Native Garrote snapshot1RED/2controlsPASS, earned Stealth-bonus lifecycle1RED/no-talent controlPASS. TC-backed correction implemented; GREEN pending, no DPS-band claim.
+
 ## 2026-10-23 — Hit positivity independent of factions
 
 [Hit classification](systems/auras.md#hit-positivity-independent-of-factions--2026-10-23): test-only6d5d7026a genuine1PASS/1FAIL10.43s, native16166 harmful proc absent against attackable neutral faction7 after actual damage; friendly2061→36483 control passes. Spell_cast now uses TC damage/heal/landed-effect positivity, not faction hostility; GREEN pending, no proc import or parity certification.

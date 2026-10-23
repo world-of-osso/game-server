@@ -292,7 +292,9 @@ pub(super) fn snapshot_periodic_amount(
     let amount = crate::spell_cast::scripts::snapshot_soul_of_the_forest(
         world, caster, spell, effect, amount,
     );
-    if spell.id == RAKE_BLEED && effect.index == 0 {
+    if (spell.id, effect.index) == (super::improved_garrote::GARROTE, 0) {
+        super::improved_garrote::snapshot_amount(world, caster, amount)
+    } else if spell.id == RAKE_BLEED && effect.index == 0 {
         crate::spell_cast::scripts::rake_bleed_snapshot(world, caster, amount)
     } else {
         let amount =
@@ -652,6 +654,7 @@ fn apply_rogue_stealth(world: &mut World, unit: Entity, _aura: &AuraInstance) {
     ] {
         crate::spell_cast::cast_triggered(world, unit, spell_id, Some(unit), 1);
     }
+    super::improved_garrote::apply_stealth(world, unit);
 }
 
 fn remove_rogue_stealth(
@@ -663,6 +666,7 @@ fn remove_rogue_stealth(
     super::remove_auras(world, unit, reason, |aura| {
         matches!(aura.spell_id, ROGUE_STEALTH_AURA | ROGUE_STEALTH_SHAPESHIFT)
     });
+    super::improved_garrote::remove_stealth(world, unit);
 }
 
 /// TC a352b1fa spell_druid.cpp:297-316, spell_dru_barkskin. Effect 2's
