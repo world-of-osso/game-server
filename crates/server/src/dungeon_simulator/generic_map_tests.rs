@@ -2,7 +2,7 @@
 #[test]
 #[ignore = "explicit Ruby2521/Halls2527 source topology and terminal qualification"]
 fn ruby_or_halls_native_graph_runs_to_a_terminal_state() {
-    let selected: u16 = std::env::var("DUNGEON_SIMULATOR_MAP")
+    let selected: u32 = std::env::var("DUNGEON_SIMULATOR_MAP")
         .expect("select Ruby2521 or Halls2527")
         .parse()
         .unwrap();
