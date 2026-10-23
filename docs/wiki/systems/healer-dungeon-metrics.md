@@ -18,9 +18,11 @@ Native future scripted-damage alerts are not reconstructed. Native partial spell
 | Overheal % |100 × healer-attributed party Heal overflow / raw healing; null for no healing |
 | Mana at end | Observed final replay-frame mana/current and maximum |
 | Idle GCD equivalents | Alive combat-frame time with no cast/channel or active native GCD, divided by profile heal's native hasted GCD; frame-sampled readiness, not hypothetical cast opportunities |
-| Effective HPS | Sum(raw heal − overheal) / observed party combat seconds; null for zero combat |
+| Effective HPS | Sum(raw heal − overheal) / frozen intake recorded combat seconds; null for zero combat; native observed combat seconds remain separate |
+| Consumed healer absorbs | Native SCHOOL_ABSORB points actually consumed on party, attributed to healer caster before aura removal |
+| Combined throughput | (Effective healing + consumed healer absorbs) / the same recorded combat window, including early-wipe comparisons |
 
-Absorbs affect survival and mana through native mitigation but are not mislabeled as effective healing. Native pull-end mana remains separately available in the ordinary simulator observations.
+The native absorb consumer already retains caster/consumed-amount contributions. An observation-only hook records those before aura removal, including follower casters; applied/unconsumed capacity and incoming combat-log `absorbed` totals are not added. Absorbs remain distinct from Heal HPS and also contribute to the combined throughput column. Native pull-end mana remains separately available in the ordinary simulator observations.
 
 ## Commands and artifacts
 

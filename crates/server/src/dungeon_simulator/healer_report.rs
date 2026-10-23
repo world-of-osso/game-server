@@ -46,14 +46,14 @@ fn format_metric(value: &Value, key: &str) -> String {
 
 fn markdown(report: &Value) -> String {
     let mut text = format!(
-        "# Dungeon healing metrics\n\nStockade map34 Normal, seed{}, level{}, same raw intake `{}`. No SimC healer HPS reference.\n\n| Spec | Coverage | Deaths | Overheal % | Ending mana | Idle GCD equivalents | Effective HPS |\n|---|---|---|---|---|---|---|\n",
+        "# Dungeon healing metrics\n\nStockade map34 Normal, seed{}, level{}, same raw intake `{}`. No SimC healer HPS reference.\n\n| Spec | Coverage | Deaths | Overheal % | Ending mana | Idle GCD equivalents | Consumed healer absorbs | Effective HPS | Heal+Absorb/s | Native combat seconds |\n|---|---|---|---|---|---|---|---|---|---|\n",
         report["seed"],
         report["level"],
         report["intake_blake3"].as_str().unwrap()
     );
     for row in report["specs"].as_array().unwrap() {
         text.push_str(&format!(
-            "| {} {} | {} | {} | {} | {} | {} | {} |\n",
+            "| {} {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |\n",
             row["spec"],
             row["name"].as_str().unwrap(),
             row["status"].as_str().unwrap(),
@@ -61,14 +61,17 @@ fn markdown(report: &Value) -> String {
             format_metric(row, "overheal_pct"),
             format_metric(row, "mana_at_end"),
             format_metric(row, "idle_gcds"),
-            format_metric(row, "effective_hps")
+            format_metric(row, "absorbed_damage"),
+            format_metric(row, "effective_hps"),
+            format_metric(row, "effective_throughput_hps"),
+            format_metric(row, "native_combat_seconds")
         ));
     }
     text.push_str("\n## Coverage gaps\n\n");
     for row in report["specs"].as_array().unwrap() {
         text.push_str(&format!("- Spec{}: {}.\n", row["spec"], row["gaps"]));
     }
-    text.push_str("\nMetrics: healer-attributed party Heal receipts only; effective = amount − overheal. Overheal% uses raw healing as denominator. Effective HPS uses observed party combat seconds. Ending mana is the observed final replay frame, not the next pull's recovered pool. Idle GCD equivalents sum alive combat-frame time with no native cast/channel or active GCD, divided by the profile heal's native hasted GCD; this is a frame-sampled readiness metric, not a counter of hypothetical healing opportunities. Zero healing/combat denominators are null. Absorbed damage is preserved by native mitigation, but is not falsely counted as healing HPS.\n\nInput freezes source-side raw amounts, hit outcomes/crit flags, party slots/positions, source deaths and native pull order. Recipient mitigation is applied anew. Source brains are disabled during replay; source identity/scaling/spells remain native. Healer and companion decision policy remains unchanged. Future scripted-damage alerts are not reconstructed from a second autonomous route. Native partial spell resistance is an explicit engine gap where magic hits occur; post-mitigation recording is never used.\n");
+    text.push_str("\nMetrics: healer-attributed party Heal receipts only; effective = amount − overheal. Overheal% uses raw healing as denominator. Effective HPS and Heal+Absorb/s use the frozen intake's recorded party-combat window (identical across specs even after an early wipe); native observed combat seconds remain separate. Ending mana is the observed final replay frame, not the next pull's recovered pool. Idle GCD equivalents sum alive combat-frame time with no native cast/channel or active GCD, divided by the profile heal's native hasted GCD; this is a frame-sampled readiness metric, not a counter of hypothetical healing opportunities. Zero healing/combat denominators are null. Absorbs count only healer-attributed SCHOOL_ABSORB points actually consumed on party by native damage handling, never applied/unconsumed shield capacity and never duplicated from combat-log absorbed totals. Combined throughput is (effective healing + consumed healer absorbs) / the same recorded combat window.\n\nInput freezes source-side raw amounts, hit outcomes/crit flags, party slots/positions, source deaths and native pull order. Recipient mitigation is applied anew. Source brains are disabled during replay; source identity/scaling/spells remain native. Healer and companion decision policy remains unchanged. Future scripted-damage alerts are not reconstructed from a second autonomous route. Native partial spell resistance is an explicit engine gap where magic hits occur; post-mitigation recording is never used.\n");
     text
 }
 
@@ -89,7 +92,7 @@ pub(super) fn report(intake: &Intake, bytes: &[u8], directory: &Path) -> Result<
         rows.push(row);
     }
     let report = json!({"schema":1,"map_id":intake.map_id,"difficulty_id":intake.difficulty_id,"seed":intake.seed,
-        "level":intake.level,"intake_blake3":blake3::hash(bytes).to_hex().to_string(),
+        "level":intake.level,"recorded_combat_seconds":super::healer_replay::recorded_combat_seconds(intake),"intake_blake3":blake3::hash(bytes).to_hex().to_string(),
         "intake_hits":intake.hits.len(),"intake_duration_ticks":intake.end_tick,
         "source_status":intake.source_status,"specs":rows});
     write_json(&directory.join("report.json"), &report)?;

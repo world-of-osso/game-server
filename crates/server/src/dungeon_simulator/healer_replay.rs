@@ -74,6 +74,18 @@ fn incoming_count(world: &World, members: &[Entity], actors: &BTreeMap<u32, Enti
         .count()
 }
 
+pub(super) fn recorded_combat_seconds(intake: &Intake) -> f64 {
+    let mut frame = 0;
+    let mut ticks = 0_u32;
+    for tick in 1..=intake.end_tick {
+        while frame + 1 < intake.frames.len() && intake.frames[frame + 1].tick <= tick {
+            frame += 1;
+        }
+        ticks += u32::from(intake.frames[frame].in_combat);
+    }
+    f64::from(ticks) * 0.05
+}
+
 pub(super) fn replay(intake: &Intake, spec: u32) -> Result<Value, String> {
     if intake.schema != 1 || intake.map_id != 34 || intake.difficulty_id != 1 {
         return Err("INTAKE_SCHEMA_OR_STOCKADE_NORMAL_COPY_MISMATCH".into());
@@ -191,6 +203,23 @@ pub(super) fn replay(intake: &Intake, spec: u32) -> Result<Value, String> {
         }
     }
     let observations = recorder.report(app.world());
+    let mut metrics = observations["dungeon_healing"].clone();
+    let recorded_combat = recorded_combat_seconds(intake);
+    metrics["native_combat_seconds"] = metrics["combat_seconds"].clone();
+    metrics["recorded_combat_seconds"] = json!(recorded_combat);
+    metrics["effective_hps"] = json!(
+        (recorded_combat > 0.0)
+            .then(|| metrics["effective_healing"].as_f64().unwrap() / recorded_combat)
+    );
+    metrics["effective_throughput_hps"] = json!((recorded_combat > 0.0).then(|| {
+        metrics["effective_healing_plus_absorbed_damage"]
+            .as_f64()
+            .unwrap()
+            / recorded_combat
+    }));
+    metrics["throughput_denominator"] = json!(
+        "frozen intake recorded party-combat window; identical for all specs including early wipes"
+    );
     let mut gaps = vec!["RECORDED_FUTURE_DAMAGE_ALERTS_NOT_REPLAYED"];
     if intake.hits.iter().any(|hit| hit.school & !1 != 0) {
         gaps.push("NATIVE_PARTIAL_SPELL_RESISTANCE_UNIMPLEMENTED");
@@ -206,7 +235,7 @@ pub(super) fn replay(intake: &Intake, spec: u32) -> Result<Value, String> {
         return Err("UNRECORDED_NATIVE_INCOMING_DAMAGE".into());
     }
     Ok(json!({"spec":spec,"status":"native","seed":intake.seed,
-        "metrics":observations["dungeon_healing"],"gaps":gaps,
+        "metrics":metrics,"gaps":gaps,
         "intake_hits":intake.hits.len(),"native_damage_receipts":incoming_count(app.world(), &members, &actors),
         "source_status":intake.source_status,"duration_ticks":intake.end_tick}))
 }

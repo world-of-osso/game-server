@@ -63,6 +63,7 @@ pub(crate) struct Capture {
     pub sources: BTreeMap<Entity, (u32, u32)>,
     pub start_tick: u32,
     pub hits: Vec<Hit>,
+    pub consumed_absorbs: BTreeMap<Entity, f64>,
     pub gaps: Vec<String>,
 }
 
@@ -101,6 +102,16 @@ pub(crate) fn record(
         raw,
         kind,
     });
+}
+
+/// Called only for points the native absorb consumer actually removed.
+pub(crate) fn record_absorb(world: &mut World, caster: Entity, target: Entity, amount: f32) {
+    let Some(mut capture) = world.get_resource_mut::<Capture>() else {
+        return;
+    };
+    if capture.members.contains(&target) {
+        *capture.consumed_absorbs.entry(caster).or_default() += f64::from(amount);
+    }
 }
 
 pub(crate) fn note_unrecorded_direct(world: &mut World, source: Entity, target: Entity) {

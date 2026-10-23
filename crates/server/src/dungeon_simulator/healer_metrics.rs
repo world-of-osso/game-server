@@ -338,6 +338,12 @@ impl Recorder {
                 (*spell, fraction)
             })
             .collect();
+        let absorbed = world
+            .resource::<super::healer_intake::Capture>()
+            .consumed_absorbs
+            .get(&self.healer)
+            .copied()
+            .unwrap_or(0.0);
         serde_json::json!({
             "recorded_intake": {
                 "schema": 1,
@@ -355,6 +361,9 @@ impl Recorder {
                 "party_deaths": self.party_deaths,
                 "raw_healing": self.raw_healing,
                 "effective_healing": self.raw_healing - self.overhealing,
+                "absorbed_damage": absorbed,
+                "effective_healing_plus_absorbed_damage": (self.raw_healing - self.overhealing) as f64 + absorbed,
+                "absorb_definition": "healer-cast native SCHOOL_ABSORB points consumed on party; applied/unconsumed shield capacity excluded",
                 "overhealing": self.overhealing,
                 "overheal_pct": (self.raw_healing > 0).then(|| 100.0 * self.overhealing as f64 / self.raw_healing as f64),
                 "effective_hps": (self.combat_seconds > 0.0).then(|| (self.raw_healing - self.overhealing) as f64 / self.combat_seconds),
