@@ -7,6 +7,7 @@ mod dps_parity;
 mod graph;
 mod healer_metrics;
 mod healer_metrics_tests;
+mod healer_benchmark_tests;
 mod movement;
 mod runtime;
 pub(crate) use graph::Space;
