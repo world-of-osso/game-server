@@ -1,5 +1,13 @@
 # Retail follower data and approved spec bridge
 
+## Party-pet threat coverage — 2026-10-22
+
+Approved follower policy includes an actual living same-copy summoned hunter/warlock pet when checking enemy victim, active references and threat entries. `party_units` and healer patients stay unchanged; the expanded vector is local to `engaged_enemies`. Existing lost-threat priority/taunt behavior handles the admitted pet attacker. Foreign pets and unengaged packs remain excluded; pet-native taunt/autocast/positioning and HP/armor are separate work.
+
+Actual sourceCallPet Duck174884 and ordinary Felguard17252 native fixtures acquire an enemy solely through `AttackStart(pet)` with one zero-threat entry, before the first hit's owner-engagement bridge. Pushed ignored83a352bc3 had an incomplete Idle-state setup; correctedbe6f75d86 gives genuine2RED11.29s (empty admission versus actual pet attacker). Minimal971491e4c gives3GREEN14.99s: both admitted enemies receive actual native Garrick62124 and switch victim to the tank; foreign-pet/unengaged control stays excluded. No pet-stat mutation.
+
+The separate real-run counterexample is14116's revision4ba895978 Azureseed7, not older0bseed7: Sapling29001846 holds only Duck zero threat/active references at1822–1824s, then pet death1824–1824.5s and actual Returning→Idle reset by1826s. Level70Duck2695HP and passive-only heals belong to separate scaling/policy questions. The run times out3600s after one Leymor Death; no fullAzure clear/survival improvement is inferred. Evidence: engine `data/diagnostics/sim-azure-evade-2026-10-22/azure-pet-trace-for-13817.json`; tests/logs in `data/diagnostics/follower-combatrefs-2026-10-21/`. [Contract](../../specs/follower-dungeons.md#gameplay-acceptance-remains-open-until-behaviorallive-proof). Retained controls/current-master check remain pending.
+
 ### Fire70 Ignite producer and controlled baseline — 2026-10-22
 
 Controlled naked70 single-target60s seed1 at99eafbe7b produces743.9667DPS versus supplied pinnedSimC1369.2046 mean:54.3357%, not the historical52.36% Azure/SimC ratio. Exact56 starter configuration and79 live known spells match the supplied source; native initialSP152.25/crit7/haste2/mastery5.313 nearly matches reference152/7/2/5.313. Sampled after-AI idle is0.05s, so blanket idle/stat-budget explanations are unsupported. Default nohero SimC routes SF with unset SF Flamestrike thresholds and executes11.303 STFlamestrikes; retain that reference qualification rather than copying it into native policy. Full reproducible decomposition is `game-engine/data/diagnostics/rotation-fidelity-2026-10-21/fire70-baseline-decomposition.{md,json}`.

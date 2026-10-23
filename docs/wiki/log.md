@@ -135,6 +135,10 @@
 ## 2026-10-22 — Ki'katal source-clock partial
 
 [Ki'katal](investigations/follower-data.md#kikatal-source-clock-partial--2026-10-22): ignored native firstWebsRED→5b036e1ea3/3GREEN57.40s, eleven90s requests perNormal/Follower, nativeVolley/Singularity damage, evade/rearm, actualcopy-credit/corpse proof. Binding-only producer1/1GREEN preserves source/native/population; lower-bound alerts and absentcontrollers remain gaps. Canonical database untouched.
+## 2026-10-22 — Party-pet threat coverage
+
+[Coverage](investigations/follower-data.md#party-pet-threat-coverage--2026-10-22): corrected native2REDbe6f75d86→3GREEN971491e4c proves actualDuck/Felguard pet-onlyenemy admission and existingGarrick62124pickup. Localcombatmembership only; party/healer/stat/PetAIpolicyunchanged. Real4baAzureseed7 petdeath/reset is recorded separately from older0b ordering; no fullAzure proof. Retained controls pending.
+
 ## 2026-10-22 — Attacked controlled-unit owners and pet PvE references
 
 [Combat](systems/combat.md#attacked-controlled-unit-owners--2026-10-22): separate TC-sourced owner-engagement and PvE-lifetime fixes follow pushed ignored REDs. Native melee/direct/133impact/lethal owner-zero-threat cases plus30squietPvE/bothcontrolledPvP give6GREEN31.60s at56e758740. No followercoverage/healerpolicy/stat changes; dungeon controls pending.
