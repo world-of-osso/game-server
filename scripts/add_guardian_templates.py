@@ -58,7 +58,7 @@ def main():
     parser.add_argument("--spell", action="append", type=int, help="native summon spell root; repeatable, replaces default guardian selection")
     args = parser.parse_args()
     live = Path(__file__).resolve().parents[1] / "data/world.db"
-    if args.db.name == "world.db" or (args.db.exists() and args.db.samefile(live)):
+    if args.db.name == "world.db" or (args.db.exists() and live.exists() and args.db.samefile(live)):
         parser.error("prepare a database copy, not the live world.db")
     if not args.db.is_file():
         parser.error("database copy does not exist")

@@ -1,6 +1,8 @@
 """Native summon-effect template publication, with real DB2/TDB rows on a private copy."""
+import importlib.util
 import os
 from pathlib import Path
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -8,9 +10,30 @@ import tempfile
 import unittest
 
 
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+spec = importlib.util.spec_from_file_location("guardian_templates", ROOT / "scripts/add_guardian_templates.py")
+guardian_templates = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(guardian_templates)
+
+
+class GuardianSourceRootFixtureTests(unittest.TestCase):
+    def test_native_effects_select_only_summoned_creatures_and_deduplicate_roots(self):
+        with sqlite3.connect(":memory:") as db:
+            db.execute("CREATE TABLE spell_effect (SpellID INT,DifficultyID INT,Effect INT,EffectMiscValue_0 INT)")
+            db.executemany("INSERT INTO spell_effect VALUES (?,?,?,?)", [
+                (104317, 0, 28, 55659), (193331, 0, 28, 98035), (193332, 0, 28, 98035),
+                (104317, 1, 28, 17252), (104317, 0, 3, 17252),
+            ])
+            self.assertEqual(guardian_templates.summon_entries(db, [104317, 193331, 193332]), [55659, 98035])
+            with self.assertRaisesRegex(ValueError, "spell 686 has no native creature summon effect"):
+                guardian_templates.summon_entries(db, [104317, 686])
+
+
+@unittest.skipUnless(os.environ.get("DPS_PARITY_WORLD_DB"), "DPS_PARITY_WORLD_DB native DB fixture is unset")
 class GuardianSourceRootsTests(unittest.TestCase):
     def test_explicit_native_summon_roots_publish_exact_tdb_models_without_world_spawns(self):
-        root = Path(__file__).resolve().parents[1]
+        root = ROOT
         source_path = Path(os.environ["DPS_PARITY_WORLD_DB"])
         with tempfile.TemporaryDirectory(prefix="guardian-source-roots-") as directory:
             prepared_path = Path(directory) / "prepared.sqlite"
@@ -26,11 +49,15 @@ class GuardianSourceRootsTests(unittest.TestCase):
                     "ORDER BY EffectMiscValue_0"
                 ).fetchall()
                 self.assertEqual(source_entries, [(55659,), (98035,)])
-            command = [sys.executable, str(root / "scripts/add_guardian_templates.py"),
+            script = Path(directory) / "scripts/add_guardian_templates.py"
+            script.parent.mkdir()
+            shutil.copyfile(root / "scripts/add_guardian_templates.py", script)
+            environment = dict(os.environ, PYTHONPATH=str(root / "scripts"))
+            command = [sys.executable, str(script),
                        "--db", str(prepared_path), "--spell", "104317",
                        "--spell", "193331", "--spell", "193332"]
             for attempt in range(2):
-                result = subprocess.run(command, capture_output=True, text=True, check=False)
+                result = subprocess.run(command, capture_output=True, text=True, check=False, env=environment)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 with sqlite3.connect(prepared_path) as prepared:
                     self.assertEqual(prepared.execute(
