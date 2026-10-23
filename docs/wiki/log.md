@@ -173,6 +173,10 @@ Native BM10 passes at4f88 (16.25s): initial75, exact2s cadence, ordinary retarge
 
 [Treemouth](systems/boss-scripts.md#treemouth-non-mythic-partial--2026-10-22): ignored firstWhip/Spit/reset RED before source3lanes/namedlowerhold policy. Post-master5c2efe459 native4GREEN48.84s Normal1/projectedFollower205, real cone damage/native-home/reset/copy-credit/corpse; stable-key SQL fresh-copy receipt. Energy/Consume/slime/selector context remains gaps, no whole-fight/publication claim.
 
+## 2026-10-22 — Gulping Goliath native partial
+
+[Goliath](systems/boss-scripts.md#gulping-goliath-native-partial--2026-10-22): ignorednativeRED→3GREEN/1GulpRED; actual18.1InvalidTarget from EXCLUDE_CASTER selftarget, ordinaryno-explicitAOE fixes exactlane1GREEN25.90s. Composite4scopes Normal1/projected205: actualCroak/Toxicchilddamage,82s twofourlanecompletions/reset/realcopycredit/corpse. SourceSwog/Hangry/selector gaps and stable-key SQLreceipt retained; publicationlead-owned.
+
 ## 2026-10-22 — Class4 zone-only ingress
 
 [Optional power metadata](investigations/follower-data.md#class4-zone-only-ingress--2026-10-22): az914b real205 VaultRune summon exposed a shared zone-entry resource panic. Production now preserves source stats/identity and explicitly warns/leaves power absent when SpellCastPlugin is not installed; no fake pools or fixture-only patch. Present-table native initialization is unchanged. Native832762da4 reproof: real failingRune1/1 (17.91s), present-table class4Energy+Anub4 controls5/5 (70.99s); no duplicate broad gate.

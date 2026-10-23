@@ -66,6 +66,7 @@
 - [Granyth finite pre-Lance partial](systems/boss-scripts.md#granyth-finite-pre-lance-partial--2026-10-22) — sourced2Shards/1Stomp; ignoredRED→4nativeGREEN Normal/projected205, area damage/reset/copy-credit; Energy/Lance gaps explicit.
 
 - [Treemouth non-Mythic partial](systems/boss-scripts.md#treemouth-non-mythic-partial--2026-10-22) — source3lanes/namedminimumalert holds; ignoredRED→4nativeGREEN Normal/projected205, cone damage/reset/copy-credit; energy/Consume/slime gaps.
+- [Gulping Goliath native partial](systems/boss-scripts.md#gulping-goliath-native-partial--2026-10-22) — source4lanes/nativeperiodicdamage/reset/copycredit; composite4GREEN, Gulp nativeexclude-caster corrected; Swog/Hangry/selector gaps.
 - [Ring modifier source correction](systems/toys.md#ring-modifier-interpretation-and-source-boundary-2026-10-21) — type9/asset56 is transform aura, not missing race;95rows/29tables/two models resolved; actualUseToy/censusRED3→8GREEN/check/fmt; permanent owner auras/realCyrcezero-CDreuse;537→539, native metal-hand proof separate.
 - [All-Seeing Eyes source boundary](systems/toys.md#all-seeing-eyes-source-boundary-2026-10-21) —279rows/26tables/ordinary model; race/gender/shape selectors, RED2→6GREEN; post-master Eyes+Kvaldir10GREEN/check/fmt,536→537; native/long-duration proof separate.
 - [Barbed native target boundaries](investigations/follower-data.md#barbed-shot-secondary-targets--2026-10-21) — original/foreignDoT/actualPolymorph/80yd controls4PASS62.29s; affected BM StatsPlugin3PASS65.31s, no equalgear/causal DPS claim.

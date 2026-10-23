@@ -55,7 +55,6 @@ fn completed_casts(h: &Harness, boss: Entity, spell: u32) -> usize {
 }
 
 #[test]
-#[ignore = "native Goliath periodic qualification"]
 fn encounter_coverage_gulping_goliath_projected_native_periodic_damage_and_isolation() {
     for difficulty in [1, 205] {
         for (parent, child) in [(CROAK, 385187), (TOXIC, 385451)] {
@@ -87,7 +86,6 @@ fn encounter_coverage_gulping_goliath_projected_native_periodic_damage_and_isola
 }
 
 #[test]
-#[ignore = "RED before native Goliath scripting"]
 fn encounter_coverage_gulping_goliath_projected_first_croak_source_clock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = projected_goliath(difficulty);
@@ -107,34 +105,11 @@ fn encounter_coverage_gulping_goliath_projected_first_croak_source_clock() {
 }
 
 #[test]
-#[ignore = "RED before native Goliath scripting"]
 fn encounter_coverage_gulping_goliath_projected_lanes_credit_and_corpse() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_goliath(difficulty);
-        let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
-        h.app
-            .insert_resource(super::cast_admission::CastAdmissions {
-                actor: boss,
-                origin,
-                entries: Vec::new(),
-            });
         h.engage(boss);
         h.advance(45.0);
-        eprintln!(
-            "GOLIATH {difficulty} admissions {:?}",
-            h.app
-                .world()
-                .resource::<super::cast_admission::CastAdmissions>()
-                .entries
-        );
-        eprintln!(
-            "GOLIATH completions {:?}",
-            h.inbox(0)
-                .spell_gos
-                .iter()
-                .map(|go| (go.spell_id, go.caster))
-                .collect::<Vec<_>>()
-        );
         for spell in [CROAK, TOXIC, 385551, 385531] {
             assert_eq!(
                 completed_casts(&h, boss, spell),
@@ -190,7 +165,6 @@ fn encounter_coverage_gulping_goliath_projected_lanes_credit_and_corpse() {
 }
 
 #[test]
-#[ignore = "RED before native Goliath scripting"]
 fn encounter_coverage_gulping_goliath_projected_evade_rearms_first_croak() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_goliath(difficulty);
