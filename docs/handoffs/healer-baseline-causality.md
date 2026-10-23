@@ -39,10 +39,14 @@ All three retain zero deaths,978 native damage receipts,1,132 replayed unit-scal
 
 ## First-divergence probe, not a proven fix
 
-Approved diagnostic branch `healer-pom-trace`, source5c673448c2a45b57a28697bd688e992cbe77ead7, adds only test logging to the PoM selector and a cloned seeded-RNG fingerprint. It does not consume the actual RNG stream or alter target selection. The two intended fresh-process replays compare actual candidate order/health/priority, RNG fingerprints and selected recipients. Capacity admission is pending; no trace result exists yet.
+Approved diagnostic branch `healer-pom-trace`, source5c673448c2a45b57a28697bd688e992cbe77ead7, adds only test logging to the PoM selector and a cloned seeded-RNG fingerprint. It does not consume the actual RNG stream or alter target selection. Same-executable fresh replays both pass:1PASS142.34s after13m42s compilation, then1PASS138.72s. `pom-trace-{first,repeat}.log`, corresponding report directories, process manifest and input/output comparison JSON preserve proof.
+
+The first filter invocation is ALREADY different before selection:63.5s/31 full-health candidates/RNG6777585509892753992 versus543.9s/four candidates including an injured tank/RNG1450986670114740747. Total invocations7 versus6. These are plan-filter observations, not proof of successful jump execution.105 remains identical157001effective/98.476447eHPS/258.6idle.257 varies166637/104.520479/549.5 versus164955/103.465471/551.066667; both zero deaths. Thus this trace does NOT establish PoM candidate canonicalization as the residual's cause: state/time/RNG already diverged upstream of its first selection. Do not land a sort merely to satisfy the prepared unit counterexample.
 
 PoM retains the best injury/player-priority bucket then shuffles it. Its upstream area query sorts by distance without an equal-distance identity tie-breaker. This suggests an enumeration-order hypothesis, not proof that the measured replays actually differ there. Bevy EntityHash is deterministic; unordered MapUnits is not itself evidence, and this area query does not use MapUnits.
 
-Separate source0af61cea864698638ace922f563740f466bb3727 prepares a seeded cyclic-permutation counterexample with authentic native level32 Garrick/Meredy/Austin and155793 metadata. It is committed but NOT RUN. Production canonicalization is absent. Accept the hypothesis only with observed process-boundary evidence; preserve TC priority and uniform selection if fixing it. No benchmark/capture changes, fabricated stats or canonical DB writes.
+Separate source0af61cea864698638ace922f563740f466bb3727 prepares a seeded cyclic-permutation counterexample with authentic native level32 Garrick/Meredy/Austin and155793 metadata. It is committed but NOT RUN. Production canonicalization is absent.
+
+Next diagnostic18d1fe65ba7791f05d448c717615ac80c7eac45d logs follower cast inputs in `creature.rs::load_creature_cast`: time, cloned RNG fingerprint, spell/recipient, native HP/mana/cast/auras. It covers ordinary and interrupting-self admission without editing benchmark/capture seams or changing execution. Its same-binary process pair is pending normal capacity admission; no result yet. No fabricated stats or canonical DB writes.
 
 Native roots alias checkout; no independent-source-copy proof. Published reproducibility and whole-production equivalence remain open.
