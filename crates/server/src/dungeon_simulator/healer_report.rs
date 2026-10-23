@@ -102,7 +102,15 @@ fn markdown(report: &Value) -> String {
     text
 }
 
-fn write_per_spec_markdown(_report: &Value, _directory: &Path) -> Result<(), String> {
+fn write_per_spec_markdown(report: &Value, directory: &Path) -> Result<(), String> {
+    for row in report["specs"].as_array().unwrap() {
+        let spec = row["spec"].as_u64().unwrap();
+        let mut single = report.clone();
+        single["specs"] = json!([row]);
+        let path = directory.join(format!("{spec}.md"));
+        std::fs::write(&path, markdown(&single))
+            .map_err(|error| format!("write {}: {error}", path.display()))?;
+    }
     Ok(())
 }
 
