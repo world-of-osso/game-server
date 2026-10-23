@@ -1,0 +1,2 @@
+0.000 action-effects: Action 'lightning_bolt_ti' (188196) direct damage modified by 0.0% (value function) with condition from Elemental Weapons (408390#1)
+2.448 Player 'MID2_Shaman_Enhancement_Stormbringer' direct amount for Action 'lightning_bolt_ti' (188196): amount=49040.924564 initial_amount=49040.924564 weapon=0 base=0 s_mod=1.7 s_power=3478 a_mod=0 a_power=0 mult=8.294308 w_mult=0 w_slot_mod=1 bonus_da=0
