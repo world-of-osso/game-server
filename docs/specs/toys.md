@@ -15,7 +15,7 @@ Do not add these three Toy rows until a real contract is established and approve
 
 ## Authored item faction eligibility
 
-- [ ] Existing ItemTemplate eligibility enforces ItemFlags2 Horde-only0x1 and Alliance-only0x2 together with source class/race masks. An all-races mask does not erase those faction flags; use the character's existing base faction, not arena/mercenary identity. Do not rewrite source masks or add protocol fields.
+- [x] Existing ItemTemplate eligibility enforces ItemFlags2 Horde-only0x1 and Alliance-only0x2 together with source class/race masks. An all-races mask does not erase those faction flags; use the character's existing base faction, not arena/mercenary identity. Do not rewrite source masks or add protocol fields.
 - [ ] Wrong-faction physical learning refuses without consuming the item or granting account ownership. An already owned toy remains account-wide, but a same-account opposite-faction character cannot use it or start recovery/apply effects.
 - [ ] Correct-side learning/use still succeeds with source effects/recovery, and unrestricted items plus existing class/race restrictions remain unchanged. Metadata checks cover all54 currently flagged toys; this is contextual eligibility, not54 new lifecycle or native-rendering qualifications. Global1173 census remains547.
 

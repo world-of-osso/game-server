@@ -2,6 +2,12 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Item faction flags eligibility (2026-10-23)
+
+[Contract](../../specs/toys.md#authored-item-faction-eligibility). TC a352b1fa ItemTemplate.h226–227 and Player.cpp11215–11219 gate Horde-only0x1/Alliance-only0x2 before source race/class checks; ToyHandler.cpp28–51 calls CanUseItem before learning consumes a physical toy. Existing project ToyLearn/Use share `ItemTemplate::allows`. That predicate now reads the already loaded `ItemScaling.flags2`, preserving raw class/race masks and the existing character base-faction lookup. No per-toy branch, protocol field or PvP identity rewrite.
+
+Source70448 has54 faction-flagged toys,26 currently pipeline-admitted; all54 have all-class/all-race masks, so those masks cannot replace faction flags. At pushed3c308abc5 genuine5RED/4controls23.58s: opposite-faction physical learning consumed both source banners and granted ownership, and same-account opposing characters successfully used them and started10000ms recovery. Correct-side war banners, existing gladiator race guards and native item attributes passed; catalog baseline547. Tests use real persisted characters/learning/UseToy and wire replies; GREEN pending, no admission delta promised. Evidence:faction-item-flags-source-provenance.json and faction-item-flags-proof-ledger.json.
+
 ## Caster offsets41/43/48 source boundary (2026-10-23)
 
 [Contract](../../specs/spell-summon-area-trigger.md#source-caster-offsets414348). TC a352b1fa SpellInfo108–135/770–827 and Spell.cpp1611–1642 specify front-right41/back-left43/back48, caster CalcRadius/motion and combat-reach floor. Only corners41/43 use default3 when their own entry is absent; back48 inherits A or starts at0. Reuse source73 extent and direct collision/ground once; paired target selection owns the final emitted center. Existing32 grounding-only behavior is unchanged. FORCE_DEST_LOCATION retains the MAX_HEIGHT gap; family modifiers/native movement ingress/Detour remain unqualified.
