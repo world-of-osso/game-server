@@ -1,8 +1,6 @@
 //! Equipped70448 item producers; native item/set/role source ingress precedes scripts.
 use super::{DEVASTATE, Harness, Inbox, apply_passive, fixture};
 use shared::protocol::{CombatLogKind, EquipmentSlot};
-use std::path::PathBuf;
-use std::sync::OnceLock;
 
 const GUILLOTINE_ITEM: u32 = 270173;
 const GUILLOTINE_DRIVER: u32 = 1291728;
@@ -16,32 +14,10 @@ const RAVAGER: u32 = 228920;
 const RAVAGER_TICK: u32 = 156287;
 
 fn native_catalog_connection() -> rusqlite::Connection {
-    static DIRECTORY: OnceLock<tempfile::TempDir> = OnceLock::new();
-    let directory = DIRECTORY.get_or_init(|| {
-        let root =
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/protection-item-fixtures");
-        std::fs::create_dir_all(&root).unwrap();
-        let directory = tempfile::tempdir_in(root).unwrap();
-        let path = directory.path().join("producer.db");
-        std::fs::File::create(&path).unwrap();
-        let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let output = std::process::Command::new("python3")
-            .arg(repo.join("scripts/item_instance_data.py"))
-            .arg("--db2-dir")
-            .arg(repo.join("data/db2/12.1.5.70448"))
-            .arg("--db")
-            .arg(&path)
-            .output()
-            .expect("import native equipped-producer catalogs into an isolated database");
-        assert!(
-            output.status.success(),
-            "{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-        directory
-    });
+    // The installed native database includes ordinary CurvePoint/scaling inputs
+    // as well as the lead-published producer catalogs. Tests never modify it.
     rusqlite::Connection::open_with_flags(
-        directory.path().join("producer.db"),
+        crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap()

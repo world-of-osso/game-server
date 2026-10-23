@@ -1,3 +1,7 @@
+## 2026-10-22 — Whirling eligibility controls and equipped fixture correction
+
+[Producer coverage](../specs/protection-damage-producers.md): bfc6fc286 Whirling4PASS40.75s/no warnings adds actual white/secondary/absent-passive/removal proof. Item/tier5-case attempt is INVALID RED: partial temporary catalog omitted CurvePoint before gameplay; replaced by read-only installed native inputs, not fabricated scaling. Lead published native equipped catalogs using additive76cf8b7c5 with unchanged repeat mtime/quick_check ok; Rust consumers and meaningful item/tier RED remain open.
+
 ## 2026-10-22 — Whirling/Ravager native timing GREEN and equipped-source ingress
 
 [Dispatch](systems/spell-casting.md#protection-producer-dispatch--2026-10-22):1ba8cc854 two native cases PASS13.14s/zero warnings, real156287 ticks and ordinary12s/background4s expiry; retain seven disjoint prior TC/Phalanx passes. Auto/secondary/absence and remaining item channels are open. Native set/description-variable catalogs are absent from world.db/runtime; authenticated70448 inputs now have an importer RED fixture, execution pending. Canonical import remains lead-only; no fabricated equipped bonuses or role coefficients.
