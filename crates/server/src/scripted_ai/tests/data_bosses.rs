@@ -73,6 +73,8 @@ mod granyth;
 mod group_criteria;
 #[path = "gulping_goliath.rs"]
 mod gulping_goliath;
+#[path = "gutshot.rs"]
+mod gutshot;
 #[path = "herald_call.rs"]
 mod herald_call;
 #[path = "herald_damage.rs"]
@@ -480,6 +482,7 @@ fn encounter_fixture(
         let near = if [
             ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 16807, 17306, 17308,
             209230, 215405, 215407, 216619, 207946, 194181, 186616, 186120, 210156, 189722, 189727,
+            186116,
         ]
         .contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)
