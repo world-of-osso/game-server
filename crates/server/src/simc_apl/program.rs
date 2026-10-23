@@ -108,7 +108,6 @@ impl Program {
             variables,
             usable: &mut usable,
             stack: Vec::new(),
-            target: None,
         };
         self.select_list(list, &mut selection)
     }
@@ -151,31 +150,19 @@ impl Program {
                     self.assign(name, assignment, &action, selection)?
                 }
                 Body::Call(name) => {
-                    if let Some(action) = self.select_child(name, action.target, selection)? {
+                    if let Some(action) = self.select_list(name, selection)? {
                         return Ok(Some(action));
                     }
                 }
-                // action.cpp4749–4763 switches the active list; exhaustion cannot
-                // resume this list as call_action_list does.
-                Body::Run(name) => return self.select_child(name, action.target, selection),
+                // action.cpp4749–4763 switches lists without resuming this caller.
+                // player.cpp2467–2476 changes no child targets: the run's selector
+                // belongs only to that control row, not its child actions.
+                Body::Run(name) => return self.select_list(name, selection),
                 Body::Action if (selection.usable)(&action)? => return Ok(Some(action)),
                 Body::Action => {}
             }
         }
         Ok(None)
-    }
-
-    fn select_child(
-        &self,
-        list: &str,
-        target: Option<u64>,
-        selection: &mut Selection<'_>,
-    ) -> Result<Option<Action>, String> {
-        let caller_target = selection.target;
-        selection.target = target;
-        let result = self.select_list(list, selection);
-        selection.target = caller_target;
-        result
     }
 
     fn assign(
@@ -219,7 +206,6 @@ struct Selection<'a> {
     variables: &'a mut Variables,
     usable: &'a mut dyn FnMut(&Action) -> Result<bool, String>,
     stack: Vec<String>,
-    target: Option<u64>,
 }
 
 fn condition_passes(
@@ -249,7 +235,6 @@ fn evaluate_for(
 /// Candidate order/eligibility belongs to native adapters, never the interpreter.
 fn bind_target(rule: &Rule, selection: &Selection<'_>) -> Result<Option<Action>, String> {
     let mut action = rule.action.clone();
-    action.target = selection.target;
     let Some(selector) = &rule.target else {
         return Ok(Some(action));
     };
