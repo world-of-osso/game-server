@@ -83,6 +83,56 @@ fn use_again(h: &mut Harness, balloon: &Balloon) -> Entity {
     assert_actor(h, balloon)
 }
 
+fn summon_replacing_journal(
+    h: &mut Harness,
+    yellow_balloon: u64,
+    character: u64,
+    balloon: &Balloon,
+) -> Entity {
+    let journal_actor = summon_journal_actor(h, yellow_balloon, YELLOW_BALLOON);
+    learn_item(h, character, balloon.toy);
+    h.select(Some(h.npc));
+    advance_journal(h, 2);
+    start_cast(h, balloon);
+    let first = assert_actor(h, balloon);
+    assert!(
+        h.app.world().get_entity(journal_actor).is_err(),
+        "same authored slot6 replacement"
+    );
+    let connection = h.connection;
+    let replies = take_journal_replies(h, connection);
+    assert!(replies.iter().any(|r| r.summoned_pet_id.is_none()));
+    first
+}
+
+fn assert_natural_expiry(h: &mut Harness, first: Entity) {
+    advance_journal(h, 1_100);
+    assert!(
+        h.app.world().get_entity(first).is_ok(),
+        "still before source60s expiry"
+    );
+    advance_journal(h, 120);
+    assert!(h.app.world().get_entity(first).is_err(), "source60s expiry");
+    assert_eq!(
+        crate::spell_cast::summon::current_critter(h.app.world(), h.caster),
+        None
+    );
+}
+
+fn dismiss_reuse_and_leave_map(h: &mut Harness, balloon: &Balloon) {
+    let second = use_again(h, balloon);
+    let replies = request_dismiss(h);
+    assert!(replies.iter().any(|r| r.error.is_none()));
+    assert!(h.app.world().get_entity(second).is_err());
+    let third = use_again(h, balloon);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(InMap::continent(1));
+    advance_journal(h, 2);
+    assert!(h.app.world().get_entity(third).is_err());
+}
+
 fn prove_balloon(balloon: Balloon) {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, ids, character) = fixture(&dir.path().join("balloon.redb"));
@@ -93,41 +143,9 @@ fn prove_balloon(balloon: Balloon) {
     );
     let health = *h.app.world().get::<Health>(h.caster).unwrap();
     let position = *h.app.world().get::<Position>(h.caster).unwrap();
-    let journal_actor = summon_journal_actor(&mut h, ids.yellow_balloon, YELLOW_BALLOON);
-    learn_item(&mut h, character, balloon.toy);
-    h.select(Some(h.npc));
-    advance_journal(&mut h, 2);
-    start_cast(&mut h, &balloon);
-    let first = assert_actor(&mut h, &balloon);
-    assert!(
-        h.app.world().get_entity(journal_actor).is_err(),
-        "same authored slot6 replaces journal runtime actor"
-    );
-    let connection = h.connection;
-    let replies = take_journal_replies(&mut h, connection);
-    assert!(replies.iter().any(|r| r.summoned_pet_id.is_none()));
-    advance_journal(&mut h, 1_100);
-    assert!(
-        h.app.world().get_entity(first).is_ok(),
-        "still before source60s expiry"
-    );
-    advance_journal(&mut h, 120);
-    assert!(h.app.world().get_entity(first).is_err(), "source60s expiry");
-    assert_eq!(
-        crate::spell_cast::summon::current_critter(h.app.world(), h.caster),
-        None
-    );
-    let second = use_again(&mut h, &balloon);
-    let replies = request_dismiss(&mut h);
-    assert!(replies.iter().any(|r| r.error.is_none()));
-    assert!(h.app.world().get_entity(second).is_err());
-    let third = use_again(&mut h, &balloon);
-    h.app
-        .world_mut()
-        .entity_mut(h.caster)
-        .insert(InMap::continent(1));
-    advance_journal(&mut h, 2);
-    assert!(h.app.world().get_entity(third).is_err());
+    let first = summon_replacing_journal(&mut h, ids.yellow_balloon, character, &balloon);
+    assert_natural_expiry(&mut h, first);
+    dismiss_reuse_and_leave_map(&mut h, &balloon);
     assert_eq!(h.app.world().get::<Health>(h.caster), Some(&health));
     assert_eq!(h.app.world().get::<Position>(h.caster), Some(&position));
     let db = &h.app.world().resource::<GameDatabase>().db;

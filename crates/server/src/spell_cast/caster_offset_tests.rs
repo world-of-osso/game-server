@@ -51,12 +51,21 @@ fn plan(h: &mut Harness, id: u32) -> Result<Vec<PlannedEffect>, CastFailure> {
 }
 
 fn destination(h: &mut Harness, id: u32) -> targets::Dest {
-    plan(h, id)
-        .expect("source caster offset planned")
-        .into_iter()
-        .find(|effect| effect.index == 0)
-        .and_then(|effect| effect.dest)
-        .expect("source destination emitted")
+    let spell = world_db().unwrap().store.get(id).unwrap().clone();
+    //35972's effect43 action is unhandled; exercise native target selection without
+    //claiming that teleport action works or letting the action filter hide B43.
+    targets::select_targets_and_destination(
+        h.app.world_mut(),
+        h.caster,
+        Some(h.npc),
+        &spell,
+        &spell.effects[0],
+        0,
+        false,
+    )
+    .expect("source caster offset selected")
+    .1
+    .expect("source destination emitted")
 }
 
 fn assert_offset(h: &mut Harness, origin: Position, id: u32, angle: f32, distance: f32) {
