@@ -9,6 +9,7 @@ const FIREBALL: u32 = 133;
 const IGNITE: u32 = 12654;
 const BERSERK: u32 = 26662;
 const CURSE_OF_WEAKNESS: u32 = 702;
+const COUNTERSPELL: u32 = 2139;
 const AFTER_DUMMY_COMBAT_TIMEOUT: f64 = 5.25;
 
 fn prepare_live_dot() -> Run {
@@ -156,5 +157,34 @@ fn native_dummy_tc_fix_keeps_ordinary_creature_evade_aura_removal() {
     assert!(
         !crate::auras::has_aura(run.app.world(), creature, CURSE_OF_WEAKNESS),
         "ordinary CreatureAI EnterEvadeMode still removes its foreign auras"
+    );
+}
+
+#[test]
+#[ignore = "opt-in real31146 TC non-damage refresh boundary; requires private parity inputs"]
+fn native_dummy_tc_nondamaging_spell_does_not_restart_the_damage_timer() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_live_dot();
+    let until = aura_now(run.app.world()) + AFTER_DUMMY_COMBAT_TIMEOUT;
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let target = run.targets[0];
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::networking::CombatTarget>(run.actor)
+            .unwrap()
+            .0,
+        Some(target)
+    );
+    crate::spell_cast::cast_for_player(run.app.world_mut(), run.actor, COUNTERSPELL)
+        .expect("ordinary native Counterspell must start without dealing damage");
+    while aura_now(run.app.world()) < until {
+        run.app.update();
+    }
+    assert!(
+        !run.app.world().get::<CombatStatus>(target).unwrap().0,
+        "TC refreshes an existing dummy timer only on non-DOT damage, not a nondamaging spell"
     );
 }
