@@ -14,6 +14,7 @@ TC `SpellAuraEffects.cpp1194–1249` applies/removes a spell modifier before rec
 |---|---|---|
 | Efficient Training450989 | Native effects0/1=20; Windwalker1258122 effects15/16 aura219, label5146, ops3/12, flat20 |20 without modifier;40 with modifier in either apply order; restore20 on modifier removal. Ignored RED pushed before implementation; runtime pending |
 | Second Sunrise431474, Ret control | Native effects0/1=15/30; Retribution1258011 effects19/20 aura219, label4716, flat5/20 |15/30→20/50 on late modifier, restore on removal, same aura instance/lifetime. Ignored RED before implementation; runtime pending |
+| Flames of Xoroth429657, percent control | Native effects0/1=4; Demonology137044 effect12 aura218/op8, label7018,−1% |4→3.96 on both effects with late modifier; removal restores4. Runtime pending |
 | Modifier-first/remove | Same unchanged native Monk definitions, ordinary KnownSpells passive sync |40 at construction; source removal restores20 without reapplying target. Runtime pending |
 
 `auras/point_mod_tests.rs` changes native knowledge and runs actual passive synchronization; no invented spell rows, coefficient changes, direct effect-amount writes or buff/resource grants. It separately checks live CalcValue sees the modifier, distinguishing stale stored aura state from bad label matching.
