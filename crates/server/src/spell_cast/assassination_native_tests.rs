@@ -7,6 +7,8 @@ use shared::protocol::CombatLogKind;
 const GARROTE: u32 = 703;
 const AFTER_STEALTH: u32 = 392401;
 const STEALTH: u32 = 392403;
+const STEALTH_SPELL: u32 = 1784;
+const IMPROVED_GARROTE: u32 = 381632;
 
 fn apply_native_aura(h: &mut Harness, caster: Entity, target: Entity, spell: u32) {
     crate::auras::apply_aura(
@@ -67,6 +69,40 @@ fn garrote_tick(buffs: &[u32], foreign: bool, remove_before_tick: bool) -> (f32,
         })
         .expect("ordinary native Garrote must produce its real periodic damage");
     (amount, tick.amount)
+}
+
+#[test]
+fn assassination_garrote_native_stealth_earns_and_replaces_its_owned_bonus() {
+    let mut h = harness(
+        Vec::new(),
+        &[
+            GARROTE,
+            AFTER_STEALTH,
+            STEALTH,
+            STEALTH_SPELL,
+            IMPROVED_GARROTE,
+        ],
+        4,
+    )
+    .unwrap();
+    let caster = h.caster;
+    let enemy = h.npc;
+    crate::combat::combat_stop(h.app.world_mut(), caster);
+    crate::combat::combat_stop(h.app.world_mut(), enemy);
+    apply_native_aura(&mut h, caster, caster, IMPROVED_GARROTE);
+    h.cast_and_deliver(STEALTH_SPELL, Some(caster));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(crate::auras::has_aura(h.app.world(), caster, STEALTH));
+    assert!(!crate::auras::has_aura(
+        h.app.world(),
+        caster,
+        AFTER_STEALTH
+    ));
+    crate::auras::remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == STEALTH_SPELL
+    });
+    assert!(!crate::auras::has_aura(h.app.world(), caster, STEALTH));
+    assert!(crate::auras::has_aura(h.app.world(), caster, AFTER_STEALTH));
 }
 
 #[test]
