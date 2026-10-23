@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Prepare source-bound Darkglare and Wild Imp templates/models on a database copy.
+"""Prepare source-bound guardian templates/models on a database copy.
 
 python3 scripts/add_guardian_templates.py --db data/world.db.new
-No synthetic creature, spell list, stat inheritance or model substitution.
+python3 scripts/add_guardian_templates.py --db data/world.db.new --spell 104317 --spell 193331
+Explicit spell roots select native Effect28/56 creature IDs; no synthetic rows,
+spell lists, stat inheritance or model substitution.
 """
 import argparse
 import sqlite3
@@ -16,11 +18,23 @@ DARKGLARE = 103673
 SOURCE_BOUND_GUARDIANS = (DARKGLARE, 55659)
 
 
-def add_guardian_templates(conn):
+def summon_entries(conn, spell_roots):
+    entries = set()
+    for spell in spell_roots:
+        rows = conn.execute("""SELECT DISTINCT EffectMiscValue_0 FROM spell_effect
+            WHERE SpellID=? AND DifficultyID=0 AND Effect IN (28,56) AND EffectMiscValue_0>0""", (spell,)).fetchall()
+        if not rows:
+            raise ValueError(f"spell {spell} has no native creature summon effect")
+        entries.update(row[0] for row in rows)
+    return sorted(entries)
+
+
+def add_guardian_templates(conn, spell_roots=None):
+    entries = SOURCE_BOUND_GUARDIANS if spell_roots is None else summon_entries(conn, spell_roots)
     retail_content.create_retail_map_table(conn)
     retail_content.create_difficulty_table(conn)
     conn.create_function("health_expansion", 1, retail_content.health_expansion, deterministic=True)
-    return [entry for entry in SOURCE_BOUND_GUARDIANS if prepare_template(conn, entry)]
+    return [entry for entry in entries if prepare_template(conn, entry)]
 
 
 def prepare_template(conn, entry):
@@ -41,6 +55,7 @@ def prepare_template(conn, entry):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", required=True, type=Path)
+    parser.add_argument("--spell", action="append", type=int, help="native summon spell root; repeatable, replaces default guardian selection")
     args = parser.parse_args()
     live = Path(__file__).resolve().parents[1] / "data/world.db"
     if args.db.name == "world.db" or (args.db.exists() and args.db.samefile(live)):
@@ -48,7 +63,7 @@ def main():
     if not args.db.is_file():
         parser.error("database copy does not exist")
     with sqlite3.connect(args.db) as conn:
-        added = add_guardian_templates(conn)
+        added = add_guardian_templates(conn, args.spell)
     print(f"added guardian templates: {added}")
 
 

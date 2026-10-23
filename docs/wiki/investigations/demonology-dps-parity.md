@@ -13,10 +13,10 @@ Reference `stats_pets` is a map, not a `pets` list. Recursively include each sta
 | Source | DPS | Share |
 |---|---:|---:|
 | Owner |59016.525249368|29.98966%|
-| Felguard |7940.939825147|4.03525%|
+| Felguard |7940.939825147|4.03524%|
 | Temporary summons |129832.10982591129|65.97509%|
 
-Largest channels include Wild Imp10431822.67446%, Tyrant12640939.07443%, Demonbolt2641785.48728%, isolated Implosion13060775.47617%, Imp Lord12771164.45704%. These are full-reference shares, not oracle probe shares.
+Largest channels include Wild Imp10431822.67446%, Tyrant12640939.07443%, Demonbolt2641785.48728%, isolated Implosion13060775.47622%, Imp Lord12771164.45704%. These are full-reference shares, not oracle probe shares.
 
 ## Native data boundary
 
@@ -24,7 +24,11 @@ Private SQLite backup of canonical engine `data/server-world/world.db` has SHA25
 
 Native guardian dispatch explicitly binds Wild Imp55659→104318 and base Tyrant135002→270481. Antoran Tyrant250289 instead reads `GuardianSpells`; source absence must be resolved before diagnosing its per-hit damage. Public SimC `sc_warlock_pets.cpp1510–1548` selects250289 via native265187effect3 and binds1264093; its two-second repeat cadence is explicit SimC policy, not yet claimed as DB2/TC-authored behavior.
 
-The source census records63 spell IDs/101 native DB2 effect rows, aura options, PPM rows, powers, cooldowns, class masks and labels. Raw TDB1210 `spell_script_names` matches only686→`spell_warl_shadow_bolt` and264178→`spell_warl_demonbolt` among the census. No matching signed `spell_proc` rows were observed. TC a352b1fa `spell_warlock.cpp691–710` implements Demonbolt's after-cast energize; absent TC scripts do not authorize invented summon timers or multipliers.
+The damage-channel census records63 spell IDs/101 native DB2 effect rows. Including75 active selected talent entries expands it to131 IDs/227 effects, with aura options, PPM rows, powers, cooldowns, class masks and labels. Raw TDB1210 `spell_script_names` matches686→`spell_warl_shadow_bolt`,264178→`spell_warl_demonbolt` and three utility spells710/108416/111400 across that expanded census. No matching signed `spell_proc` or PPM rows were observed. TC a352b1fa `spell_warlock.cpp691–710` implements Demonbolt's after-cast energize; absent TC scripts do not authorize invented summon timers or multipliers.
+
+## Explicit summon-root publication
+
+`add_guardian_templates.py --spell104317 --spell193331 --spell193332` (each option and number separated by a space) selects native difficulty0 Effect28/56 creature IDs, deduplicates them and copies exact TDB templates/models through the existing retail-content importer. These roots resolve to55659 and98035. Explicit roots replace the default Darkglare/Wild Imp selection; they do not add fabricated spell lists, alter world spawns or broaden the default Wild Imp publication. Missing summon metadata fails before publication; reruns preserve the same model rows.
 
 ## Evidence
 
