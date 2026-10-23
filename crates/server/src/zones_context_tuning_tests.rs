@@ -39,6 +39,13 @@ fn follower205_summoned_vault_rune_inherits_normal_stats_not_base_zero() {
     )
     .expect("actual template can be summoned without terrain");
     queue.apply(&mut world);
+    assert!(
+        world
+            .get::<crate::spell_cast::powers::PowerPools>(rune)
+            .is_none(),
+        "zone-only world without native power metadata must not invent Energy"
+    );
+    assert!(world.get::<shared::components::Mana>(rune).is_none());
     let scaling = world
         .get::<LevelScaling>(rune)
         .expect("205 must inherit Normal tuning, not untuned base0");
@@ -88,7 +95,8 @@ fn herald_context_startup_publishes_ground_before_ordinary_continent_stats() {
     data.spawns = vec![CreatureSpawn {
         template_entry: NAZAN,
         ..source_spawn
-    }];
+    }]
+    .into();
     data.spawns_by_map = HashMap::from([(0, vec![0])]);
     let connection = Connection::open_with_flags(
         crate::test_data::world_db_path(),
@@ -229,11 +237,11 @@ pub(super) fn sourced_nazan_fixture() -> WorldData {
     };
     WorldData {
         summon_levels: crate::world_data::summon_levels::SummonLevels::load(&connection).unwrap(),
-        templates,
-        difficulty_templates,
+        templates: templates.into(),
+        difficulty_templates: difficulty_templates.into(),
         expected_stats,
         class_level_base_hp: crate::test_data::world_data().class_level_base_hp.clone(),
-        spawns: vec![spawn],
+        spawns: vec![spawn].into(),
         spawns_by_map: HashMap::from([(RAMPARTS as u16, vec![0])]),
         ..Default::default()
     }
@@ -316,10 +324,11 @@ fn herald_context_missing_ordinary_area_is_explicit_not_legacy_level() {
     data.spawns[0].spawn_difficulties = vec![0];
     let hogger = crate::test_data::world_data().templates[&448].clone();
     data.templates.insert(448, hogger);
+    let original_spawn = data.spawns[0].clone();
     data.spawns.push(CreatureSpawn {
         guid: 2,
         template_entry: 448,
-        ..data.spawns[0].clone()
+        ..original_spawn
     });
     data.spawns_by_map = HashMap::from([(0, vec![0, 1])]);
     let mut app = App::new();

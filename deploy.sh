@@ -48,17 +48,20 @@ ssh "$SERVER_HOST" "ln -sfn ${db2_build} ${STATE_DIR}/data/db2/active && chown -
 echo "Uploading ground (WDTs, ADTs and WMOs of the spawned and hosted maps)..."
 python3 scripts/ground_files.py --world-db data/world.db --cache ../game-engine/data > "$GROUND_LIST"
 rsync -a --files-from="$GROUND_LIST" ../game-engine/data/ "${SERVER_HOST}:${GROUND_DIR}/"
+# sakuin's 79 GB disk cannot hold every baked map (2026-10-22 crash loop): ship LOS and navigation
+# only for the same spawned/hosted maps as the ground, and remove the rest from the server.
+map_filter=$(python3 scripts/ground_files.py --world-db data/world.db --cache ../game-engine/data --print-map-ids | sed 's|.*|--include=/&/***|')
 echo "Uploading line of sight (los-bake output beside the ground; docs/specs/line-of-sight.md)..."
 # The server refuses to start without the eye table; a map without tiles has no LOS geometry.
 test -f ../game-engine/data/los/eye_heights.tsv || { echo "No LOS bake: run los-bake (docs/specs/line-of-sight.md)" >&2; exit 1; }
 # Stockade supplement must be promoted into this cache before this --delete sync.
 test -d ../game-engine/data/los/34 || { echo "Missing Stockade LOS: copy data/ground/los/34/ into ../game-engine/data/los/34/" >&2; exit 1; }
-rsync -a --delete ../game-engine/data/los/ "${SERVER_HOST}:${GROUND_DIR}/los/"
+rsync -a --delete --delete-excluded $map_filter --exclude='/*/' ../game-engine/data/los/ "${SERVER_HOST}:${GROUND_DIR}/los/"
 
 echo "Uploading navigation (incremental nav-bake output)..."
 test -d data/ground/navmesh || { echo "No navigation bake: run nav-bake (docs/specs/navigation.md)" >&2; exit 1; }
 # Delete stale navigation artifacts only, never neighboring ground/LOS assets.
-rsync -a --delete data/ground/navmesh/ "${SERVER_HOST}:${GROUND_DIR}/navmesh/"
+rsync -a --delete --delete-excluded $map_filter --exclude='/*/' data/ground/navmesh/ "${SERVER_HOST}:${GROUND_DIR}/navmesh/"
 
 ssh "$SERVER_HOST" "chown -R game-server:game-server ${STATE_DIR}"
 

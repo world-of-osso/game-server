@@ -6,8 +6,8 @@ Manifest generation only; it does not claim equal gear or measured DPS.
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
-import re
 
 SPECS = {
     66: "Paladin_Protection", 73: "Warrior_Protection", 105: None, 257: None,
@@ -62,21 +62,33 @@ def parse_profile(text):
     return profile
 
 
-def parse_selected_talents(debug_text):
-    # Pinned player.cpp2872 emits exact trait identities during profile decoding.
-    pattern = re.compile(r"adding (\S+) talent .*? \(node=(\d+) entry=(\d+) rank=(\d+)/(\d+)\)")
+def parse_selected_talents(metadata):
+    # Read actual player_traits, not player.cpp2872's consumed tiered-node rank.
+    try:
+        records = json.loads(metadata)
+    except json.JSONDecodeError as error:
+        raise ValueError("No selected talent JSON metadata from pinned SimC") from error
+    if not isinstance(records, list) or not records:
+        raise ValueError("No selected talent records from pinned SimC")
     selected = {}
-    for match in pattern.finditer(debug_text):
-        tree, node, entry, rank, maximum = match.groups()
-        if not 0 < int(rank) <= int(maximum):
-            raise ValueError(f"Invalid selected talent rank: {match.group()}")
-        value = {"tree": tree, "node_id": int(node), "entry_id": int(entry), "ranks": int(rank)}
-        key = (int(node), int(entry))
+    required = {"tree", "node_id", "entry_id", "ranks", "max_ranks", "active_ranks"}
+    for row in records:
+        if not isinstance(row, dict) or not required.issubset(row):
+            raise ValueError(f"Incomplete selected talent record: {row!r}")
+        if not isinstance(row["tree"], str) or not row["tree"]:
+            raise ValueError(f"Invalid selected talent tree: {row!r}")
+        if any(type(row[key]) is not int or row[key] <= 0
+               for key in required - {"tree", "active_ranks"}):
+            raise ValueError(f"Invalid selected talent identity/rank: {row!r}")
+        if row["ranks"] > row["max_ranks"]:
+            raise ValueError(f"Invalid selected talent rank: {row!r}")
+        if type(row["active_ranks"]) is not int or not 0 <= row["active_ranks"] <= row["ranks"]:
+            raise ValueError(f"Invalid active talent rank: {row!r}")
+        value = {key: row[key] for key in ("tree", "node_id", "entry_id", "ranks", "active_ranks")}
+        key = (row["node_id"], row["entry_id"])
         if key in selected and selected[key] != value:
-            raise ValueError(f"Conflicting selected talent records for node {node}, entry {entry}")
+            raise ValueError(f"Conflicting selected talent records for {key}")
         selected[key] = value
-    if not selected:
-        raise ValueError("No selected talent metadata in the SimC debug output")
     return [selected[key] for key in sorted(selected)]
 
 
@@ -111,15 +123,50 @@ def normalize_simc(report):
             "buffs": {buff["name"]: buff.get("uptime", 0) for buff in player["buffs"]}}
 
 
+def flatten_stat_sheet(sheet):
+    values = {}
+    for section in ("attribute", "stats"):
+        for stat, value in sheet.get(section, {}).items():
+            name = f"{section}.{stat}"
+            if not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise ValueError(f"Stat {name} must be a finite number: {value!r}")
+            values[name] = value
+    return values
+
+
+def compare_stat_value(name, reference, server):
+    row = {"stat": name, "reference": reference, "server": server,
+           "delta_pct": None, "flag": True}
+    if reference is None:
+        return dict(row, status="missing_reference")
+    if server is None:
+        return dict(row, status="missing_server")
+    if reference == 0 and server != 0:
+        return dict(row, status="zero_reference")
+    delta = (server - reference) * 100 / abs(reference) if reference else 0.0
+    return dict(row, delta_pct=delta, flag=abs(delta) > 5, status="measured")
+
+
+def compare_stat_sheets(reference, server):
+    """Compare identically-unitized attribute/stats maps; absent data is not zero."""
+    reference = flatten_stat_sheet(reference)
+    server = flatten_stat_sheet(server)
+    return [compare_stat_value(name, reference.get(name), server.get(name))
+            for name in sorted(reference.keys() | server.keys())]
+
+
 def build_simc_arguments(profile, mode, output):
     if mode not in {"single", "three"}:
         raise ValueError(f"Unknown parity scenario: {mode}")
-    arguments = [profile["profile"], "fight_style=Patchwerk", "desired_targets=1",
+    arguments = [profile["profile"], "desired_targets=1",
                  "max_time=300", "fixed_time=1", "vary_combat_length=0",
                  "iterations=1000", "threads=1", "optimal_raid=0", "seed=70448",
                  f'target_level={int(profile["level"]) + 3}', "report_details=1",
                  f"json={output}.{mode}.json", f"output={output}.{mode}.txt"]
+    if mode == "single":
+        arguments.append("fight_style=Patchwerk")
     if mode == "three":
+        # Patchwerk clears explicit raid_events in sim.cpp2318; default NONE keeps them.
         # Stock DungeonSlice forces360s/1main target; use reproducible3-target packs.
         arguments.append("raid_events=adds,count=2,count_range=0,first=0,cooldown=30,duration=30,cooldown_stddev=0,duration_stddev=0")
     return arguments

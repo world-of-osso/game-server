@@ -20,7 +20,7 @@ fn swing_events(app: &mut App, attacker: Entity, swings: usize) -> Vec<CombatEve
         app.world_mut()
             .get_mut::<AutoAttack>(attacker)
             .unwrap()
-            .timer = 0.0;
+            .timer = std::time::Duration::ZERO;
         app.world_mut()
             .run_system_once(auto_attack_system)
             .expect("auto-attack system should run");

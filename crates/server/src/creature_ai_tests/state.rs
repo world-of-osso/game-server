@@ -166,8 +166,8 @@ fn pursuing_pauses_waypoint() {
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins);
     app.insert_resource(WorldData {
-        templates: HashMap::new(),
-        spawns: vec![],
+        templates: HashMap::new().into(),
+        spawns: vec![].into(),
         spawns_by_map: HashMap::new(),
         waypoints,
         ..Default::default()

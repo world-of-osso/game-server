@@ -74,6 +74,27 @@ class FollowerKitDeltaTests(unittest.TestCase):
         self.assertEqual(receipt['changed_specs'], [63, 253, 262, 1467])
         self.assertEqual(receipt['sql_sha256'], hashlib.sha256(self.sql.read_bytes()).hexdigest())
 
+    def test_added_qualified_action_replays_idempotently_without_changing_other_intervals(self):
+        action = (262, 1219480, 51, 90, 'buff', 85,
+                  '{"target":"self","missing_aura":1219480}', 'native')
+        with sqlite3.connect(self.prepared) as db:
+            db.execute('INSERT INTO follower_spec_kit VALUES (?,?,?,?,?,?,?,?)', action)
+        result = self.produce()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        expected = sorted([old if old[0] == 66 else new
+                           for old, new in zip(self.original, self.desired)] + [action])
+        self.assertEqual(read_rows(self.output), expected)
+        replay = self.root / 'added-reordered.db'
+        write_database(replay, list(reversed(self.original)))
+        with sqlite3.connect(replay) as db:
+            db.executescript(self.sql.read_text())
+            db.executescript(self.sql.read_text())
+            self.assertEqual(db.execute('SELECT value FROM preserved').fetchone()[0],
+                             'native source metadata')
+        self.assertEqual(read_rows(replay), expected)
+        self.assertEqual(read_rows(self.source), self.original)
+        self.assertIn([262, 1219480, 51], json.loads(self.receipt.read_text())['changed_interval_keys'])
+
     def test_missing_interval_is_rejected_before_any_output_is_published(self):
         with sqlite3.connect(self.prepared) as db:
             db.execute('DELETE FROM follower_spec_kit WHERE spec_id=262')

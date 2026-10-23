@@ -227,8 +227,8 @@ fn class_completeness_native_autoattack_range_extends_off_hand_swings() {
         .world_mut()
         .get_mut::<crate::combat::AutoAttack>(caster)
         .unwrap();
-    attack.timer = 99.0;
-    attack.off_hand_timer = 0.0;
+    attack.timer = std::time::Duration::from_secs(99);
+    attack.off_hand_timer = std::time::Duration::ZERO;
     drop(attack);
     h.app
         .world_mut()
@@ -244,7 +244,7 @@ fn class_completeness_native_autoattack_range_extends_off_hand_swings() {
             .get::<crate::combat::AutoAttack>(caster)
             .unwrap()
             .off_hand_timer
-            > 0.0
+            > std::time::Duration::ZERO
     );
 }
 
@@ -264,6 +264,6 @@ fn class_completeness_native_autoattack_range_negative_restricts_actual_swing() 
             .get::<crate::combat::AutoAttack>(caster)
             .unwrap()
             .timer
-            <= 0.0
+            == std::time::Duration::ZERO
     );
 }

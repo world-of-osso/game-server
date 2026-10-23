@@ -833,7 +833,14 @@ fn spawn_pet(
             return None;
         }
     };
-    let pools = PowerPools::from_table(world.resource::<PowerTypeTable>(), vec![power]);
+    let Some(table) = world.get_resource::<PowerTypeTable>() else {
+        warn!(
+            "Pet{} powers unavailable: PowerTypeTable is not installed",
+            stored.creature_entry
+        );
+        return None;
+    };
+    let pools = PowerPools::from_table(table, vec![power]);
     let current_health = stored.health.unwrap_or(health).clamp(0.0, health);
     stored.health = Some(current_health);
     if !summoned && stored.specialization.is_none() {

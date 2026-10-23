@@ -20,7 +20,7 @@
 //! is not until the spell lands and refreshes the reference (Spell.cpp:2763-2764,
 //! `CombatReference::Refresh`, CombatManager.cpp:88-106).
 //!
-//! Not modelled: the other suppressions (vanish, feign death), pets and guardians.
+//! Not modelled: the other suppressions (vanish, feign death).
 
 use std::collections::HashMap;
 
@@ -55,12 +55,44 @@ struct CombatRef {
     suppressed: bool,
 }
 
+/// TC a352b1fa Unit.h:1071 / CombatManager.cpp:236-243 identify the pair;
+/// HasPvECombat/GetAnyTarget (:155-187) exclude references suppressed for this unit.
+/// A missile target engages on impact, not launch (Spell.cpp:2763-2764).
+pub(crate) fn has_active_reference_to(world: &World, unit: Entity, other: Entity) -> bool {
+    world
+        .get::<CombatRefs>(unit)
+        .and_then(|refs| refs.0.get(&other))
+        .is_some_and(|reference| !reference.suppressed)
+}
+
 /// `CombatManager::SetInCombatWith`: `a` and `b` are in combat with each other, and a
 /// timed reference between them restarts its timeout (`RefreshTimer`). Refused like
 /// `CombatManager::CanBeginCombat` (CombatManager.cpp:24-58) for the same unit twice, a
 /// dead unit or an evading creature.
 pub(crate) fn set_in_combat_with(world: &mut World, a: Entity, b: Entity) {
     begin_combat(world, a, b, false);
+}
+
+/// TC a352b1fa Unit.cpp:2271,9281-9287: an actual attack engages the target
+/// and its direct owner before damage can kill it. Owner engagement is zero threat,
+/// not a transfer of the pet's damage threat. Launch-only references bypass this.
+pub(crate) fn engage_attacked_target(world: &mut World, attacker: Entity, target: Entity) {
+    if !can_begin_combat(world, attacker, target) {
+        return;
+    }
+    set_in_combat_with(world, attacker, target);
+    let owner = world
+        .get::<shared::components::UnitSummonedBy>(target)
+        .and_then(|owner| Entity::try_from_bits(owner.0));
+    let Some(owner) = owner.filter(|owner| world.get_entity(*owner).is_ok()) else {
+        return;
+    };
+    if world.get::<ThreatTable>(owner).is_some() {
+        // Unit::EngageWithTarget (:8511-8520) delegates to native AddThreat(0).
+        crate::creature_aggro::add_threat(world, owner, attacker, 0.0);
+    } else {
+        set_in_combat_with(world, owner, attacker);
+    }
 }
 
 /// `SetInCombatWith(b, addSecondUnitSuppressed = true)` (CombatManager.cpp:191-218): a new
@@ -77,7 +109,8 @@ fn begin_combat(world: &mut World, a: Entity, b: Entity, suppress_b: bool) {
     let existing = world
         .get::<CombatRefs>(a)
         .is_some_and(|refs| refs.0.contains_key(&b));
-    let timed = !holds_fight(world, a) || !holds_fight(world, b) || both_players(world, a, b);
+    let timed =
+        !holds_fight(world, a) || !holds_fight(world, b) || both_player_controlled(world, a, b);
     let expires_at =
         timed.then(|| world.resource::<Time>().elapsed_secs_f64() + PVP_COMBAT_TIMEOUT_SECS);
     for (unit, other, suppressed) in [(a, b, false), (b, a, suppress_b && !existing)] {
@@ -125,7 +158,7 @@ pub(crate) fn sanctuary(world: &mut World, unit: Entity) {
         .map(|refs| refs.0.keys().copied().collect())
         .unwrap_or_default();
     for other in others {
-        if both_players(world, unit, other) {
+        if both_player_controlled(world, unit, other) {
             if let Some(mut refs) = world.get_mut::<CombatRefs>(unit) {
                 refs.0.get_mut(&other).expect("listed reference").suppressed = true;
             }
@@ -186,13 +219,26 @@ fn can_begin_combat(world: &World, a: Entity, b: Entity) -> bool {
     a != b && !dead(a) && !dead(b) && !evading(a) && !evading(b)
 }
 
-/// A player, or a creature with a threat list, whose AI ends its fights.
+/// Controlled units have no threat list but retain ordinary PvE references.
+/// Preserve the existing timeout policy for uncontrolled threat-less dummies.
 fn holds_fight(world: &World, unit: Entity) -> bool {
-    world.get::<Player>(unit).is_some() || world.get::<ThreatTable>(unit).is_some()
+    player_controlled(world, unit)
+        || world.get::<ThreatTable>(unit).is_some()
+        || world
+            .get::<shared::components::UnitIsPet>(unit)
+            .is_some_and(|pet| pet.0)
 }
 
-fn both_players(world: &World, a: Entity, b: Entity) -> bool {
-    world.get::<Player>(a).is_some() && world.get::<Player>(b).is_some()
+fn player_controlled(world: &World, unit: Entity) -> bool {
+    crate::faction::player_affected(
+        world.get::<Player>(unit).is_some(),
+        world.get::<shared::components::UnitFlags>(unit),
+    )
+}
+
+/// TC a352b1fa CombatManager.cpp:210-216: only both-player-controlled is PvP.
+fn both_player_controlled(world: &World, a: Entity, b: Entity) -> bool {
+    player_controlled(world, a) && player_controlled(world, b)
 }
 
 /// `CombatManager::UpdateOwnerCombatState`: `CombatStatus` follows whether `unit` holds

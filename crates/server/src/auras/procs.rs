@@ -28,6 +28,10 @@
 //! (`HandleBreakableCCAuraProc`), runs the aura's script `on_proc`, then spends
 //! one charge.
 
+#[cfg(test)]
+#[path = "dance_rppm_tests.rs"]
+mod dance_rppm_tests;
+
 use crate::random as rand;
 use bevy::prelude::*;
 
@@ -111,10 +115,15 @@ pub struct AuraEvent {
     pub spell_id: Option<u32>,
     /// False for events of triggered spells (they interrupt but never proc).
     pub can_proc: bool,
+    /// The launch snapshot actually used an admitted cast-time proc modifier.
+    /// This is local event provenance, not replicated spell or aura state.
+    pub cast_used_proc_modifier: bool,
     pub periodic: bool,
     /// Damage the event dealt to `target` after absorbs, in its health units (level
     /// scaling); 0 for no damage.
     pub damage: f32,
+    /// Resolved healing before overheal, or None when this hit did not heal.
+    pub heal: Option<f32>,
     /// `PROC_HIT_REFLECT`: `target` reflected the actor's spell (`ProcReflectDelayed`,
     /// Spell.cpp:2412-2436). Only reflect auras proc off it, and only off it.
     pub reflected: bool,
@@ -140,10 +149,28 @@ pub fn spell_hit_masks(spell: &SpellInfo, harmful: bool) -> (u32, u32) {
     match (defense, harmful) {
         (2, _) => (PROC_DEAL_MELEE_ABILITY, PROC_TAKE_MELEE_ABILITY),
         (3, _) => (PROC_DEAL_RANGED_ABILITY, PROC_TAKE_RANGED_ABILITY),
-        (1, true) => (PROC_DEAL_HARMFUL_SPELL, PROC_TAKE_HARMFUL_SPELL),
-        (1, false) => (PROC_DEAL_HELPFUL_SPELL, PROC_TAKE_HELPFUL_SPELL),
-        (_, true) => (PROC_DEAL_HARMFUL_ABILITY, PROC_TAKE_HARMFUL_ABILITY),
-        (_, false) => (PROC_DEAL_HELPFUL_ABILITY, PROC_TAKE_HELPFUL_ABILITY),
+        _ => non_weapon_hit_masks(spell, harmful),
+    }
+}
+
+/// TC a352b1fa Spell.cpp2379–2400: default hit classification reads native
+/// attributes, not DefenseType0 versus1 (Word of Glory has DefenseType0).
+fn non_weapon_hit_masks(spell: &SpellInfo, harmful: bool) -> (u32, u32) {
+    const TREAT_AS_PERIODIC: u32 = 0x0200_0000;
+    const IS_ABILITY: u32 = 0x10;
+    let attributes = spell.misc.as_ref().map_or([0; 17], |misc| misc.attributes);
+    if attributes[3] & TREAT_AS_PERIODIC != 0 {
+        return if harmful {
+            (PROC_DEAL_HARMFUL_PERIODIC, PROC_TAKE_HARMFUL_PERIODIC)
+        } else {
+            (PROC_DEAL_HELPFUL_PERIODIC, PROC_TAKE_HELPFUL_PERIODIC)
+        };
+    }
+    match (attributes[0] & IS_ABILITY != 0, harmful) {
+        (true, true) => (PROC_DEAL_HARMFUL_ABILITY, PROC_TAKE_HARMFUL_ABILITY),
+        (true, false) => (PROC_DEAL_HELPFUL_ABILITY, PROC_TAKE_HELPFUL_ABILITY),
+        (false, true) => (PROC_DEAL_HARMFUL_SPELL, PROC_TAKE_HARMFUL_SPELL),
+        (false, false) => (PROC_DEAL_HELPFUL_SPELL, PROC_TAKE_HELPFUL_SPELL),
     }
 }
 
@@ -288,6 +315,11 @@ fn proc_mask(world: &World, aura: &AuraInstance) -> [u32; 2] {
     if aura.spell_id == crate::spell_cast::scripts::DANCE_OF_CHIJI {
         return [0, PROC2_CAST_SUCCESSFUL];
     }
+    // INUNDATE_NATIVE_SUCCESSFUL_UTILITY_CASTS: its explicit list includes friendly
+    // utility casts too; native harmful-hit masks do not express successful casts.
+    if aura.spell_id == scripts::INUNDATE {
+        return [0, PROC2_CAST_SUCCESSFUL];
+    }
     world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(aura.spell_id))
@@ -350,6 +382,35 @@ fn proc_matches(
         })
 }
 
+/// TC SpellInfo.cpp4292–4308/4358–4371: Type1 rows select haste channels;
+/// all five channels use this engine's existing unified derived haste stat.
+fn read_haste_modified_ppm(
+    world: &World,
+    unit: Entity,
+    ppm: &crate::spell_info::ProcsPerMinute,
+) -> f32 {
+    let haste = world
+        .get::<crate::stats::CharacterStats>(unit)
+        .map_or(0.0, |stats| stats.haste_pct);
+    ppm.haste_modifiers
+        .iter()
+        .filter(|modifier| matches!(modifier.parameter, 1..=5))
+        .fold(ppm.base_proc_rate, |rate, modifier| {
+            rate * (1.0 + haste / 100.0 * modifier.coefficient)
+        })
+}
+
+fn rppm_chance(ppm: f32, last_attempt: f64, last_success: f64, now: f64) -> f32 {
+    if ppm <= 0.0 {
+        return 0.0;
+    }
+    let average_interval = 60.0 / f64::from(ppm);
+    let since_attempt = (now - last_attempt).min(PPM_MAX_ATTEMPT_GAP);
+    let since_success = (now - last_success).min(1000.0);
+    let bad_luck = (1.0 + (since_success / average_interval - 1.5) * 3.0).max(1.0);
+    (bad_luck * f64::from(ppm) * since_attempt / 60.0).clamp(0.0, 1.0) as f32 * 100.0
+}
+
 /// Chance in percent, updating the RPPM attempt timer.
 fn proc_chance(world: &mut World, unit: Entity, id: u32, now: f64) -> f32 {
     let Some(aura) = world
@@ -368,14 +429,11 @@ fn proc_chance(world: &mut World, unit: Entity, id: u32, now: f64) -> f32 {
     };
     let options = spell.aura_options.as_deref();
     let ppm = options
-        .and_then(|options| options.procs_per_minute)
-        .map_or(0.0, |ppm| ppm.base_proc_rate);
-    let chance = if ppm > 0.0 {
-        let average_interval = 60.0 / f64::from(ppm);
-        let since_attempt = (now - timers.last_attempt_at).min(PPM_MAX_ATTEMPT_GAP);
-        let since_success = (now - timers.last_success_at).min(1000.0);
-        let bad_luck = (1.0 + (since_success / average_interval - 1.5) * 3.0).max(1.0);
-        (bad_luck * f64::from(ppm) * since_attempt / 60.0).clamp(0.0, 1.0) as f32 * 100.0
+        .and_then(|options| options.procs_per_minute.as_ref())
+        .filter(|ppm| ppm.base_proc_rate > 0.0);
+    let chance = if let Some(ppm) = ppm {
+        let rate = read_haste_modified_ppm(world, unit, ppm);
+        rppm_chance(rate, timers.last_attempt_at, timers.last_success_at, now)
     } else {
         options.map_or(0.0, |options| options.proc_chance as f32)
     };
