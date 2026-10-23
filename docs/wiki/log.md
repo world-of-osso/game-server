@@ -1,3 +1,12 @@
+## 2026-10-22 — Target73/Ruthers focused qualification
+
+Final affected15/15GREEN73.32s atd4;retained32controls139.13s+IG5 at2a paths unchanged. Ruthers real learning/UseToy/model/owner/map/radius5,natural30s expiry/30min recovery-reuse,missingauthority no actor/item recovery plus real retry. Initial two fixture failures corrected with actual LOS and GCD-vs-item distinction; observed1500ms/is_gcd=true is not30min recovery. ExactFull1173 census544→545 only82467;seven blocked-row list deltas/six unavailable-string deltas, Wikky/Carp remain exact action gaps. Check0/65.82s/no warnings/fmt0/manual readability; no native/generic-modifier/ingress/Detour claim. [Boundary](systems/toys.md#target73-caster-radius-source-boundary-2026-10-22).
+
+## 2026-10-22 — Target73 source mechanism test-first
+
+1758 native rows/55 raw rows9tables;14RED/20controlsPASS111.18s after movement-mask/NO_MOVEMENT_RADIUS_BONUS extension. Caster extent/reach/direct authority/shared area sample implemented after RED; Wikky forage/presents/Pandaria and Carp kick remain exact gaps, Ruthers actual-use qualification pending. [Boundary](systems/toys.md#target73-caster-radius-source-boundary-2026-10-22).
+
+Imaginary Gun ig981 landed1aef894cf;0034 ancestry independently verified and inactive local/remote branch cleaned. Gate suite2170PASS/1follower_combatrefs_native_three_targets_reach_area_policyFAIL/8ignored1657.20s,check0/fmt0;land merge/fmt/check/push0. Not an all-green integration suite; no unrelated-fix/native claim.
 ## 2026-10-22 — Gorek minimum-alert partial
 
 [Gorek](systems/boss-scripts.md#gorek-minimum-alert-partial--2026-10-22): ignorednativeRED→sourceMight/Aegis/Heated/Storm success-owned/namedlowerhold lanes. Post-master921957ad7 native4GREEN31.12s Normal1/projected205,first3.6sMight/actualauras/92s3cycles/reset/actualcopycredit/corpse;stable-keySQLreceipt. Anvil/selector/Stormdummy and existingroutegap retained, no wholefight/publication claim.
