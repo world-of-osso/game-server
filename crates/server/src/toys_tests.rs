@@ -70,6 +70,8 @@ mod stone_whistle;
 mod summon_closure;
 #[path = "toys_summon_level_tests.rs"]
 mod summon_levels;
+#[path = "toys_target73_tests.rs"]
+mod target73;
 #[path = "toys_visual_census_tests.rs"]
 mod visual_census;
 #[path = "toys_waywatcher_tests.rs"]

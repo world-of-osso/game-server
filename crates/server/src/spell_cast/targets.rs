@@ -97,6 +97,8 @@ enum Selector {
     DestTowardsCaster,
     ///72: random point in this slot's radius span around the caster.
     CasterRandom,
+    ///73: caster CalcRadius extent with random direction, not a radial disk.
+    CasterRadius,
     ///86/91: random direction;86 samples the radius span,91 keeps the radius.
     DestRandom,
     ///74: explicit-object-centered CalcRadius(nullptr), not the current critter.
@@ -157,7 +159,10 @@ fn selector(id: u32) -> Option<Selector> {
         119 => Selector::RaidCorpses,
         121 => Selector::ExplicitCorpseAlly,
         32 | 44 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
+        41 => Selector::CasterOffset(-std::f32::consts::FRAC_PI_4),
         42 => Selector::CasterOffset(-3.0 * std::f32::consts::FRAC_PI_4),
+        43 => Selector::CasterOffset(3.0 * std::f32::consts::FRAC_PI_4),
+        48 => Selector::CasterOffset(std::f32::consts::PI),
         47 => Selector::CasterOffset(0.0),
         49 => Selector::CasterOffset(-std::f32::consts::FRAC_PI_2),
         50 => Selector::CasterOffset(std::f32::consts::FRAC_PI_2),
@@ -172,6 +177,7 @@ fn selector(id: u32) -> Option<Selector> {
         78 => Selector::DestOffset(0.0),
         79 => Selector::DestOffset(std::f32::consts::PI),
         72 => Selector::CasterRandom,
+        73 => Selector::CasterRadius,
         74 => Selector::DestTargetRandom,
         86 | 91 => Selector::DestRandom,
         55 => Selector::ForwardLeap,
@@ -452,6 +458,14 @@ pub fn select_targets(
         ignore_relation,
     )
     .map(|(units, _)| units)
+    .map_err(|(id, _)| id)
+}
+
+fn unsupported_selection(id: u32) -> (u32, super::CastFailure) {
+    (
+        id,
+        super::CastFailure::Unsupported(format!("implicit target {id} not supported")),
+    )
 }
 
 /// Return the sampled ordered destination with its recipients so a cast cannot
@@ -464,7 +478,7 @@ pub(super) fn select_targets_and_destination(
     effect: &SpellEffect,
     max_targets: u32,
     ignore_relation: bool,
-) -> Result<(Vec<Entity>, Option<Dest>), u32> {
+) -> Result<(Vec<Entity>, Option<Dest>), (u32, super::CastFailure)> {
     let caster_pos = position(world, caster).unwrap_or_default();
     let mut center = None;
     let mut units = Vec::new();
@@ -472,16 +486,16 @@ pub(super) fn select_targets_and_destination(
     let ordered = effect
         .implicit_targets
         .iter()
-        .any(|&id| matches!(id, 74 | 148));
+        .any(|&id| matches!(id, 41 | 43 | 48 | 73 | 74 | 148));
     let mut destination = spell.cast_destination.map(|point| Dest {
         position: Vec3::from_array(point),
         orientation: orientation(world, caster),
     });
     for (slot, &id) in effect.implicit_targets.iter().enumerate() {
         if id == 79 && unsupported_target(effect) == Some(79) {
-            return Err(79);
+            return Err(unsupported_selection(79));
         }
-        let selector = selector(id).ok_or(id)?;
+        let selector = selector(id).ok_or_else(|| unsupported_selection(id))?;
         if ordered && ordered_destination::sets_destination(selector) {
             destination = ordered_destination::select_slot(
                 world,
@@ -492,7 +506,7 @@ pub(super) fn select_targets_and_destination(
                 slot,
                 destination,
             )
-            .map_err(|_| id)?;
+            .map_err(|failure| (id, failure))?;
             center = destination.map(|destination| destination.position);
             continue;
         }
@@ -500,6 +514,7 @@ pub(super) fn select_targets_and_destination(
             Selector::None
             | Selector::ForwardLeap
             | Selector::DestTowardsCaster
+            | Selector::CasterRadius
             | Selector::DestTargetRandom => {}
             Selector::ExistingDest => {
                 // TC Spell::InitExplicitTargets:666–678 initializes an absent
@@ -661,20 +676,15 @@ pub(super) fn select_targets_and_destination(
                         .map(Vec3::from_array)
                         .or_else(|| explicit.and_then(|unit| position(world, unit)))
                 };
-                units.extend(directed_units(
-                    world,
-                    caster,
-                    spell,
-                    effect,
-                    slot,
-                    destination,
-                    max_targets,
-                )?);
+                units.extend(
+                    directed_units(world, caster, spell, effect, slot, destination, max_targets)
+                        .map_err(unsupported_selection)?,
+                );
             }
             Selector::EntryAreaSource | Selector::EntryAreaDestination => {
                 selected_any = true;
                 let origin = if matches!(selector, Selector::EntryAreaDestination) {
-                    center.ok_or(id)?
+                    center.ok_or_else(|| unsupported_selection(id))?
                 } else {
                     center.unwrap_or(caster_pos)
                 };

@@ -1,0 +1,31 @@
+{
+  "command": [
+    "/home/osso/Projects/world-of-osso/game-engine/scripts/agent/agent-run",
+    "dps-parity",
+    "/home/osso/.worktrees/simc-76f8118/engine/simc",
+    "/home/osso/.worktrees/simc-76f8118/profiles/MID2/MID2_Warrior_Arms.simc",
+    "desired_targets=1",
+    "max_time=300",
+    "fixed_time=1",
+    "vary_combat_length=0",
+    "iterations=1000",
+    "threads=1",
+    "optimal_raid=0",
+    "seed=70448",
+    "target_level=93",
+    "report_details=1",
+    "json=/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21/all-spec-expanded-references/71.reference.single.json",
+    "output=/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21/all-spec-expanded-references/71.reference.single.txt",
+    "fight_style=Patchwerk",
+    "item_db_source=local"
+  ],
+  "spec_id": 71,
+  "mode": "single",
+  "simc_sha256": "6415c116d22e191d436eea7e5e4485fb49ac47c265fa8706f4e7b43b4dbabba4",
+  "profile_sha256": "847080503d43467467dc6102416f61397f9f2a9cbb2160da614b636a7e088afc",
+  "started_unix": 1792636880.7482777,
+  "exit_code": 0,
+  "wall_seconds": 5.434030286967754,
+  "dps": 188596.2720914555,
+  "fight_length": 300.0
+}

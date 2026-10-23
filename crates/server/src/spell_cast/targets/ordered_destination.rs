@@ -4,6 +4,8 @@
 use super::*;
 
 const FORCE_DEST_LOCATION: u32 = 0x1;
+const NO_MOVEMENT_RADIUS_BONUS: u32 = 0x4000_0000;
+const RUNNING_RANGE_BONUS: f32 = 2.0;
 const FORCE_LOCATION_GAP: &str = "SPELL_DEST_FORCE_LOCATION_MAX_HEIGHT_ABSENT";
 
 pub(in crate::spell_cast) fn check_destination_support(
@@ -14,7 +16,7 @@ pub(in crate::spell_cast) fn check_destination_support(
             effect
                 .implicit_targets
                 .iter()
-                .any(|&id| matches!(id, 74 | 148))
+                .any(|&id| matches!(id, 41 | 43 | 48 | 73 | 74 | 148))
         });
     if needs_force_height {
         // Spell.cpp9286–9292 selects Object.cpp2802–2826 MAX_HEIGHT/ten-step queries.
@@ -32,6 +34,7 @@ pub(super) fn sets_destination(selector: Selector) -> bool {
             | Selector::ExistingDest
             | Selector::DestTowardsCaster
             | Selector::CasterRandom
+            | Selector::CasterRadius
             | Selector::DestTargetRandom
             | Selector::DestRandom
             | Selector::DestOffset(_)
@@ -72,6 +75,14 @@ pub(super) fn select_slot(
 ) -> Result<Option<Dest>, super::super::CastFailure> {
     check_destination_support(spell)?;
     let id = effect.implicit_targets[slot];
+    if id == 73 {
+        return sample_caster_radius_destination(world, caster, spell, effect, slot).map(Some);
+    }
+    if matches!(id, 41 | 43 | 48)
+        && let Some(Selector::CasterOffset(angle)) = selector(id)
+    {
+        return move_caster_offset_destination(world, caster, spell, effect, slot, angle).map(Some);
+    }
     let destination = effect_dest_slot(world, caster, explicit, effect, slot, id, previous);
     match id {
         74 => {
@@ -93,6 +104,120 @@ pub(super) fn select_slot(
         62 | 138 => ground_destination(world, caster, effect, destination),
         _ => Ok(destination),
     }
+}
+
+/// Spell.cpp1611–1642:73 retains CalcRadius extent, then applies caster reach.
+fn sample_caster_radius_destination(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    slot: usize,
+) -> Result<Dest, super::super::CastFailure> {
+    let distance = sample_caster_radius_extent(world, caster, spell, effect, slot);
+    let angle = rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..std::f32::consts::TAU);
+    move_caster_destination(world, caster, distance, angle, 73)
+}
+
+/// Spell.cpp1625–1636: only corners use3 when this slot has no radius entry.
+fn move_caster_offset_destination(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    slot: usize,
+    angle: f32,
+) -> Result<Dest, super::super::CastFailure> {
+    let id = effect.implicit_targets[slot];
+    let missing_corner_radius = matches!(id, 41 | 43) && effect.radius[slot].is_none();
+    let distance = if missing_corner_radius {
+        DEFAULT_TOTEM_DISTANCE
+    } else {
+        sample_caster_radius_extent(world, caster, spell, effect, slot)
+    };
+    let angle = orientation(world, caster) + angle;
+    move_caster_destination(world, caster, distance, angle, id)
+}
+
+fn move_caster_destination(
+    world: &mut World,
+    caster: Entity,
+    distance: f32,
+    angle: f32,
+    selector: u32,
+) -> Result<Dest, super::super::CastFailure> {
+    let start = position(world, caster).ok_or(super::super::CastFailure::InvalidTarget)?;
+    let reach = crate::scripted_ai::model_reach::combat_reach(world, caster).ok_or_else(|| {
+        super::super::CastFailure::Unsupported(format!(
+            "target{selector} requires caster combat reach"
+        ))
+    })?;
+    let distance = distance.max(reach);
+    let destination = Dest {
+        position: start + Vec3::new(distance * angle.cos(), 0.0, -distance * angle.sin()),
+        orientation: orientation(world, caster),
+    };
+    move_destination(world, caster, start, destination, selector)
+}
+
+/// CalcRadius(m_caster): absent B radius inherits A's entry; a missing entry is0.
+fn sample_caster_radius_extent(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    slot: usize,
+) -> f32 {
+    let source_slot = radius_slot(effect, slot);
+    let Some(entry) = effect.radius[source_slot] else {
+        return 0.0;
+    };
+    let extent = read_caster_radius_cap(world, caster, entry);
+    let bonus = if super::super::attributes(spell, 9) & NO_MOVEMENT_RADIUS_BONUS == 0
+        && has_running_range_bonus(world, caster)
+    {
+        RUNNING_RANGE_BONUS
+    } else {
+        0.0
+    };
+    let extent = extent + bonus;
+    if matches!(effect.implicit_targets[source_slot], 72 | 74 | 86) {
+        let minimum = (entry.radius_min - bonus).max(0.0);
+        let fraction = rand::Rng::gen_range(&mut rand::thread_rng(), 0.0_f32..1.0);
+        (extent - minimum) * fraction.sqrt()
+    } else {
+        extent
+    }
+}
+
+fn read_caster_radius_cap(
+    world: &World,
+    caster: Entity,
+    entry: crate::spell_info::SpellRadius,
+) -> f32 {
+    let level = world
+        .get::<shared::components::Level>(caster)
+        .map(|level| level.0)
+        .or_else(|| {
+            world
+                .get::<shared::components::UnitLevel>(caster)
+                .map(|level| level.0)
+        });
+    level.map_or(entry.radius_max, |level| {
+        (entry.radius + entry.radius_per_level * f32::from(level)).min(entry.radius_max)
+    })
+}
+
+/// CanIncreaseRangeByMovement: forward/strafe/falling, never walk mode.
+fn has_running_range_bonus(world: &World, caster: Entity) -> bool {
+    use shared::components::PlayerMotion;
+    let running = PlayerMotion::FORWARD
+        | PlayerMotion::STRAFE_LEFT
+        | PlayerMotion::STRAFE_RIGHT
+        | PlayerMotion::FALLING;
+    world
+        .get::<PlayerMotion>(caster)
+        .is_some_and(|motion| motion.0 & running != 0 && !motion.contains(PlayerMotion::WALKING))
 }
 
 /// Supported direct-ray branch of Object.cpp2833–2920, using the same collision
