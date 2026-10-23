@@ -15,6 +15,7 @@ const ATTR0_NO_ACTIVE_DEFENSE: u32 = 0x0020_0000;
 const ATTR3_COMPLETELY_BLOCKED: u32 = 0x8;
 const ATTR8_NO_ATTACK_BLOCK: u32 = 0x1;
 const ATTR3_NO_AVOIDANCE: u32 = 0x40;
+const ATTR3_ALWAYS_HIT: u32 = 0x0004_0000;
 const ATTR7_NO_ATTACK_MISS: u32 = 0x0200_0000;
 const ATTR7_NO_ATTACK_DODGE: u32 = 0x0080_0000;
 #[cfg(test)]
@@ -141,7 +142,9 @@ fn roll_defense(
     if school_immune || mechanic_immunity::blocks_mechanic(world, unit, spell, 0) {
         return Some(MissKind::Immune);
     }
-    if attributes(spell, 3) & ATTR3_NO_AVOIDANCE != 0 {
+    // Object::SpellHitResult: ALWAYS_HIT bypasses avoidance, not immunity.
+    // Reflection remains a separate launch decision in missiles::launch.
+    if attributes(spell, 3) & (ATTR3_NO_AVOIDANCE | ATTR3_ALWAYS_HIT) != 0 {
         return None;
     }
     let defense = spell
