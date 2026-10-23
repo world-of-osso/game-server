@@ -10,6 +10,7 @@ The standing healer benchmark replays recorded dungeon incoming hits in the head
 - [ ] Report JSON and Markdown party deaths, overheal percentage, ending mana, idle GCD equivalents and effective healing per combat second for specs65,256,257,264,270,105,1468; blocked specs retain null metrics and named gaps.
 - [ ] Use the frozen intake's recorded combat window for eHPS and combined effective healing-plus-absorb throughput, even after early wipes; retain native observed combat seconds separately.
 - [ ] Attribute only actually consumed native healer-cast shield points to absorbed damage, excluding applied/unconsumed capacity and combat-log double counting; report absorbed damage and combined throughput in their own columns.
+- [ ] Retain the native damage-meter consumed-point convention, not normalized prevented HP. Record each hit's native level-scaling factor and unit/non-unit counts; retain ABSORB_POINTS_VS_PREVENTED_HP_LEVEL_SCALING for non-unit cases and report their share of consumed points. If all captured hits are unit scale, explicitly mark the gap moot with the count. Do not add a wider prevented-HP observer.
 - [ ] Prove extraction with a concrete200-raw/150-effective/50-overheal3s fight and repeatability with identical intake.
 - [ ] Keep core-heal coefficient and native per-cast amount checks against DB2 and TrinityCore, separately from dungeon-policy performance.
 
@@ -24,6 +25,7 @@ The standing healer benchmark replays recorded dungeon incoming hits in the head
 - `crates/server/src/{combat.rs,spell_cast/effects.rs}`: narrow native source-amount capture and recipient mitigation replay seams.
 - `crates/server/src/followers/simulator.rs`: explicit native healer-profile selection; no policy changes.
 - `crates/server/src/spell_cast/mod.rs`: observation-only native cast/GCD readiness seam.
+- `crates/server/src/level_scaling.rs`: test-only accessor for the native damage-to-HP level factor.
 - `docs/reports/healer-coefficient-ledger.json`: exact DB2 rows and source evidence.
 
 ## Tests asserting this spec

@@ -10,18 +10,37 @@ struct PendingHits {
     hits: Vec<(Entity, Entity, Hit)>,
     error: Option<String>,
     manual_raw_receipts: usize,
+    replayed_hits: usize,
+    non_unit_hits: usize,
 }
 
 fn deliver_hits(world: &mut World) {
     let hits = std::mem::take(&mut world.resource_mut::<PendingHits>().hits);
     for (source, target, hit) in hits {
         let before = world.resource::<super::healer_intake::Capture>().hits.len();
+        let scale = crate::level_scaling::damage_to_hp_scale(world, source, target);
+        if !scale.is_finite() || scale <= 0.0 {
+            world.resource_mut::<PendingHits>().error =
+                Some("NATIVE_REPLAY_LEVEL_SCALING_FACTOR_INVALID".into());
+            return;
+        }
+        world
+            .resource_mut::<super::healer_intake::Capture>()
+            .active_hit_scale = Some((target, scale));
+        {
+            let mut pending = world.resource_mut::<PendingHits>();
+            pending.replayed_hits += 1;
+            pending.non_unit_hits += usize::from(scale != 1.0);
+        }
         let result = match hit.kind {
             HitKind::Melee { .. } => crate::combat::replay_healer_hit(world, source, target, &hit),
             HitKind::Spell { .. } => {
                 crate::spell_cast::effects::replay_healer_hit(world, source, target, &hit)
             }
         };
+        world
+            .resource_mut::<super::healer_intake::Capture>()
+            .active_hit_scale = None;
         let added = world.resource::<super::healer_intake::Capture>().hits.len() - before;
         world.resource_mut::<PendingHits>().manual_raw_receipts += added;
         if let Err(error) = result {
@@ -86,8 +105,22 @@ pub(super) fn recorded_combat_seconds(intake: &Intake) -> f64 {
     f64::from(ticks) * 0.05
 }
 
-fn level_scaling_report(_world: &World, _healer: Entity, _recorded: &[Hit]) -> Value {
-    json!({})
+fn level_scaling_report(world: &World, healer: Entity, recorded: &[Hit]) -> Value {
+    let usage = world
+        .resource::<super::healer_intake::Capture>()
+        .consumed_absorbs
+        .get(&healer)
+        .copied()
+        .unwrap_or_default();
+    let pending = world.resource::<PendingHits>();
+    let non_unit = super::healer_intake::non_unit_hits(recorded);
+    json!({"recorded_hits":recorded.len(),"recorded_unit_hits":recorded.len()-non_unit,
+        "recorded_non_unit_hits":non_unit,"replayed_hits":pending.replayed_hits,"replayed_non_unit_hits":pending.non_unit_hits,
+        "absorbed_points_on_non_unit_hits":usage.non_unit,"absorbed_points_unknown_scale":usage.unknown_scale,
+        "absorbed_points_non_unit_share":(usage.total>0.0).then(||usage.non_unit/usage.total),
+        "gap_moot_for_intake":!recorded.is_empty() && non_unit==0 && pending.non_unit_hits==0 && usage.unknown_scale==0.0,
+        "factor_definition":"native damage multiplier / victim health multiplier, before integer rounding",
+        "absorb_convention":"native consumed shield points, not normalized prevented HP"})
 }
 
 #[test]
@@ -161,6 +194,12 @@ fn healer_benchmark_counts_nonunit_hit_absorbed_point_share() {
         .resource::<super::healer_intake::Capture>()
         .hits
         .clone();
+    // Persisted intake enters a fresh observation context, not the recording hit's tag.
+    app.insert_resource(super::healer_intake::Capture {
+        members: vec![healer],
+        sources: [(source, (guid, pack))].into(),
+        ..Default::default()
+    });
     app.insert_resource(PendingHits {
         hits: vec![(source, healer, recorded[0].clone())],
         ..Default::default()
@@ -188,7 +227,12 @@ pub(super) fn replay(intake: &Intake, spec: u32) -> Result<Value, String> {
             .windows(2)
             .any(|pair| pair[0].tick > pair[1].tick)
         || intake.hits.iter().any(|hit| {
-            hit.tick == 0 || hit.tick > intake.end_tick || !hit.raw.is_finite() || hit.raw < 0.0
+            hit.tick == 0
+                || hit.tick > intake.end_tick
+                || !hit.raw.is_finite()
+                || hit.raw < 0.0
+                || !hit.level_scaling_factor.is_finite()
+                || hit.level_scaling_factor <= 0.0
         })
     {
         return Err("INVALID_INTAKE_TIMELINE".into());
@@ -314,10 +358,14 @@ pub(super) fn replay(intake: &Intake, spec: u32) -> Result<Value, String> {
     metrics["throughput_denominator"] = json!(
         "frozen intake recorded party-combat window; identical for all specs including early wipes"
     );
+    let scaling = level_scaling_report(app.world(), party.members[1], &intake.hits);
     let mut gaps = vec![
         "RECORDED_FUTURE_DAMAGE_ALERTS_NOT_REPLAYED",
         "RECORDED_SOURCE_GEOMETRY_NOT_REPLAYED",
     ];
+    if scaling["gap_moot_for_intake"] == false {
+        gaps.push("ABSORB_POINTS_VS_PREVENTED_HP_LEVEL_SCALING");
+    }
     if intake.hits.iter().any(|hit| hit.school & !1 != 0) {
         gaps.push("NATIVE_PARTIAL_SPELL_RESISTANCE_UNIMPLEMENTED");
     }
@@ -332,7 +380,7 @@ pub(super) fn replay(intake: &Intake, spec: u32) -> Result<Value, String> {
         return Err("UNRECORDED_NATIVE_INCOMING_DAMAGE".into());
     }
     Ok(json!({"spec":spec,"status":"native","seed":intake.seed,
-        "metrics":metrics,"gaps":gaps,
+        "metrics":metrics,"gaps":gaps,"level_scaling":scaling,
         "intake_hits":intake.hits.len(),"native_damage_receipts":incoming_count(app.world(), &members, &actors),
         "source_status":intake.source_status,"duration_ticks":intake.end_tick}))
 }

@@ -19,10 +19,12 @@ Native future scripted-damage alerts and moving enemy-source geometry are not re
 | Mana at end | Observed final replay-frame mana/current and maximum |
 | Idle GCD equivalents | Alive combat-frame time with no cast/channel or active native GCD, divided by profile heal's native hasted GCD; frame-sampled readiness, not hypothetical cast opportunities |
 | Effective HPS | Sum(raw heal − overheal) / frozen intake recorded combat seconds; null for zero combat; native observed combat seconds remain separate |
-| Consumed healer absorbs | Native SCHOOL_ABSORB points actually consumed on party, attributed to healer caster before aura removal |
+| Consumed healer absorbs | Native SCHOOL_ABSORB points actually consumed on party before level scaling, attributed to healer caster before aura removal; native damage-meter convention, not normalized prevented HP |
 | Combined throughput | (Effective healing + consumed healer absorbs) / the same recorded combat window, including early-wipe comparisons |
 
-The native absorb consumer already retains caster/consumed-amount contributions. An observation-only hook records those before aura removal, including follower casters; applied/unconsumed capacity and incoming combat-log `absorbed` totals are not added. Absorbs remain distinct from Heal HPS and also contribute to the combined throughput column. Native pull-end mana remains separately available in the ordinary simulator observations.
+Every raw hit records `level_scaling_factor = native damage multiplier / victim health multiplier`, before integer rounding. JSON/MD report total/unit/non-unit counts and each native replay's share of healer-consumed points on non-unit hits. `ABSORB_POINTS_VS_PREVENTED_HP_LEVEL_SCALING` is retained for non-unit cases; all-unit captures explicitly mark it moot with the count. No counterfactual prevented-HP observer or normalization is implemented.
+
+The native absorb consumer already retains caster/consumed-amount contributions. An observation-only hook records those before aura removal, including follower casters, tagged by the active recorded/replayed hit's native level factor; applied/unconsumed capacity and incoming combat-log `absorbed` totals are not added. Absorbs remain distinct from Heal HPS and also contribute to the combined throughput column. Native pull-end mana remains separately available in the ordinary simulator observations.
 
 ## Commands and artifacts
 

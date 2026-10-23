@@ -55,6 +55,7 @@ fn healer_benchmark_raw_spell_receipt_precedes_native_absorb() {
         "raw intake receipt must survive full absorption"
     );
     assert_eq!(hits[0].raw, 200.0);
+    assert_eq!(hits[0].level_scaling_factor, 1.0);
     assert_eq!(hits[0].school, 4);
     assert_eq!(hits[0].target_slot, 0);
     assert_eq!(hits[0].source_guid, 6);
@@ -115,6 +116,11 @@ pub(super) fn small_intake() -> Intake {
         target_slot: 0,
         school: 1,
         raw,
+        level_scaling_factor: crate::level_scaling::damage_to_hp_scale(
+            app.world(),
+            actors[&pack.spawns[0].guid],
+            party.tank,
+        ),
         kind: HitKind::Melee {
             hand: 0,
             outcome: "Hit".into(),
@@ -262,6 +268,11 @@ fn healer_benchmark_raw_spell_replay_applies_recipient_reduction_and_absorb_once
             target_slot: 0,
             school: 4,
             raw: 200.0,
+            level_scaling_factor: crate::level_scaling::damage_to_hp_scale(
+                h.app.world(),
+                h.npc,
+                h.caster,
+            ),
             kind: HitKind::Spell {
                 spell_id: 133,
                 depth: 0,
@@ -302,6 +313,11 @@ fn healer_benchmark_raw_melee_replay_applies_native_armor_and_shield() {
         target_slot: 0,
         school: 1,
         raw: 200.0,
+        level_scaling_factor: crate::level_scaling::damage_to_hp_scale(
+            h.app.world(),
+            h.npc,
+            h.caster,
+        ),
         kind: HitKind::Melee {
             hand: 0,
             outcome: "Hit".into(),

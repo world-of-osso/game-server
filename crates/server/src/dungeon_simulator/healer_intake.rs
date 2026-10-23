@@ -33,6 +33,8 @@ pub(crate) struct Hit {
     pub school: u32,
     /// Source bonuses/crit already applied; target reductions/armor/absorbs not applied.
     pub raw: f32,
+    /// Native damage multiplier / victim health multiplier, before integer rounding.
+    pub level_scaling_factor: f32,
     pub kind: HitKind,
 }
 
@@ -130,13 +132,27 @@ pub(super) struct Intake {
     pub gaps: Vec<String>,
 }
 
+#[derive(Clone, Copy, Default)]
+pub(super) struct ConsumedAbsorbPoints {
+    pub total: f64,
+    pub non_unit: f64,
+    pub unknown_scale: f64,
+}
+
+pub(super) fn non_unit_hits(hits: &[Hit]) -> usize {
+    hits.iter()
+        .filter(|hit| hit.level_scaling_factor != 1.0)
+        .count()
+}
+
 #[derive(Resource, Default)]
 pub(crate) struct Capture {
     pub members: Vec<Entity>,
     pub sources: BTreeMap<Entity, (u32, u32)>,
     pub start_tick: u32,
     pub hits: Vec<Hit>,
-    pub consumed_absorbs: BTreeMap<Entity, f64>,
+    pub(super) consumed_absorbs: BTreeMap<Entity, ConsumedAbsorbPoints>,
+    pub(super) active_hit_scale: Option<(Entity, f32)>,
     pub(super) source_snapshots: BTreeMap<u32, SourceSnapshot>,
     pub gaps: Vec<String>,
 }
@@ -153,6 +169,7 @@ pub(crate) fn record(
         return;
     }
     let now = tick(world);
+    let level_scaling_factor = crate::level_scaling::damage_to_hp_scale(world, source, target);
     let mut capture = world.resource_mut::<Capture>();
     let Some(target_slot) = capture.members.iter().position(|&unit| unit == target) else {
         return;
@@ -166,6 +183,15 @@ pub(crate) fn record(
         }
         return;
     };
+    if !level_scaling_factor.is_finite() || level_scaling_factor <= 0.0 {
+        capture.active_hit_scale = None;
+        let gap = "NATIVE_LEVEL_SCALING_FACTOR_INVALID".to_string();
+        if !capture.gaps.contains(&gap) {
+            capture.gaps.push(gap);
+        }
+        return;
+    }
+    capture.active_hit_scale = Some((target, level_scaling_factor));
     let tick = now.saturating_sub(capture.start_tick);
     capture.hits.push(Hit {
         tick,
@@ -174,6 +200,7 @@ pub(crate) fn record(
         target_slot,
         school,
         raw,
+        level_scaling_factor,
         kind,
     });
 }
@@ -207,7 +234,18 @@ pub(crate) fn record_absorb(world: &mut World, caster: Entity, target: Entity, a
         return;
     };
     if capture.members.contains(&target) {
-        *capture.consumed_absorbs.entry(caster).or_default() += f64::from(amount);
+        let scale = capture
+            .active_hit_scale
+            .filter(|(unit, _)| *unit == target)
+            .map(|(_, scale)| scale);
+        let usage = capture.consumed_absorbs.entry(caster).or_default();
+        let points = f64::from(amount);
+        usage.total += points;
+        match scale {
+            Some(scale) if scale == 1.0 => {}
+            Some(_) => usage.non_unit += points,
+            None => usage.unknown_scale += points,
+        }
     }
 }
 
@@ -216,6 +254,7 @@ pub(crate) fn note_unrecorded_direct(world: &mut World, source: Entity, target: 
         return;
     };
     if capture.members.contains(&target) && capture.sources.contains_key(&source) {
+        capture.active_hit_scale = None;
         let gap = "DIRECT_DAMAGE_WITHOUT_RAW_MITIGATION_BOUNDARY".to_string();
         if !capture.gaps.contains(&gap) {
             capture.gaps.push(gap);
