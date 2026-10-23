@@ -104,7 +104,10 @@ fn collect_updates(world: &World, unit: Entity, modifier: &PointModifier<'_>) ->
         .iter()
         .filter(|aura| can_recalculate(unit, aura, modifier.aura))
         .flat_map(|aura| {
-            let spell = super::lookup_spell(world, aura.spell_id);
+            let spell = super::lookup_spell(world, aura.spell_id).map(|mut spell| {
+                spell.cast_item_level = aura.cast_item_level;
+                spell
+            });
             aura.effects.iter().filter_map(move |state| {
                 compute_update(world, modifier, aura, state, spell.as_ref()?)
             })
