@@ -29,7 +29,16 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "MATCHED_BASE_VARIANCE_RANGE",
+        "observed_amount": 310,
+        "expected_unmodified": 315.6,
+        "allowed_range": [
+          308,
+          323
+        ],
+        "revision": "e43626007ef39ecaa287f0f506eadc96cb540c46"
+      },
       "gaps": []
     },
     {
@@ -51,7 +60,16 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "MATCHED_BASE_VARIANCE_RANGE",
+        "observed_amount": 3282,
+        "expected_unmodified": 3250.0,
+        "allowed_range": [
+          3169,
+          3331
+        ],
+        "revision": "e43626007ef39ecaa287f0f506eadc96cb540c46"
+      },
       "gaps": []
     },
     {
@@ -85,7 +103,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -107,7 +127,16 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "MATCHED_BASE_VARIANCE_RANGE",
+        "observed_amount": 1122,
+        "expected_unmodified": 1117.0,
+        "allowed_range": [
+          1089,
+          1145
+        ],
+        "revision": "e43626007ef39ecaa287f0f506eadc96cb540c46"
+      },
       "gaps": []
     },
     {
@@ -129,7 +158,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -151,7 +182,16 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "MATCHED_BASE_VARIANCE_RANGE",
+        "observed_amount": 685,
+        "expected_unmodified": 682.0,
+        "allowed_range": [
+          665,
+          699
+        ],
+        "revision": "e43626007ef39ecaa287f0f506eadc96cb540c46"
+      },
       "gaps": []
     },
     {
@@ -173,7 +213,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -195,8 +237,18 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
-      "gaps": []
+      "amount_probe": {
+        "status": "MATCHED_BASE_VARIANCE_RANGE",
+        "observed_amount": 409,
+        "expected_unmodified": 401.1,
+        "allowed_range": [
+          391,
+          411
+        ],
+        "revision": "e43626007ef39ecaa287f0f506eadc96cb540c46"
+      },
+      "gaps": [],
+      "probe_invocation": "47540 ->47757 native channel ->47750 bolt; DB2 implicit target77"
     },
     {
       "spec": 256,
@@ -217,7 +269,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -275,7 +329,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -297,7 +353,16 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "MATCHED_BASE_VARIANCE_RANGE",
+        "observed_amount": 988,
+        "expected_unmodified": 972.861,
+        "allowed_range": [
+          949,
+          997
+        ],
+        "revision": "e43626007ef39ecaa287f0f506eadc96cb540c46"
+      },
       "gaps": []
     },
     {
@@ -319,7 +384,16 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "MATCHED_BASE_VARIANCE_RANGE",
+        "observed_amount": 698,
+        "expected_unmodified": 682.0,
+        "allowed_range": [
+          665,
+          699
+        ],
+        "revision": "e43626007ef39ecaa287f0f506eadc96cb540c46"
+      },
       "gaps": []
     },
     {
@@ -365,7 +439,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -399,7 +475,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -421,7 +499,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -443,7 +523,16 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "MATCHED_BASE_VARIANCE_RANGE",
+        "observed_amount": 1487,
+        "expected_unmodified": 1501.0,
+        "allowed_range": [
+          1463,
+          1539
+        ],
+        "revision": "e43626007ef39ecaa287f0f506eadc96cb540c46"
+      },
       "gaps": []
     },
     {
@@ -465,7 +554,16 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "MATCHED_BASE_VARIANCE_RANGE",
+        "observed_amount": 1114,
+        "expected_unmodified": 1100.0,
+        "allowed_range": [
+          1073,
+          1128
+        ],
+        "revision": "e43626007ef39ecaa287f0f506eadc96cb540c46"
+      },
       "gaps": []
     },
     {
@@ -499,7 +597,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -545,7 +645,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -567,7 +669,16 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "MATCHED_BASE_VARIANCE_RANGE",
+        "observed_amount": 264,
+        "expected_unmodified": 258.0,
+        "allowed_range": [
+          252,
+          264
+        ],
+        "revision": "e43626007ef39ecaa287f0f506eadc96cb540c46"
+      },
       "gaps": []
     },
     {
@@ -613,7 +724,16 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "MATCHED_BASE_VARIANCE_RANGE",
+        "observed_amount": 861,
+        "expected_unmodified": 861.12,
+        "allowed_range": [
+          861,
+          861
+        ],
+        "revision": "e43626007ef39ecaa287f0f506eadc96cb540c46"
+      },
       "gaps": []
     },
     {
@@ -683,7 +803,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -729,7 +851,16 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "MATCHED_BASE_VARIANCE_RANGE",
+        "observed_amount": 541,
+        "expected_unmodified": 536.0,
+        "allowed_range": [
+          523,
+          549
+        ],
+        "revision": "e43626007ef39ecaa287f0f506eadc96cb540c46"
+      },
       "gaps": []
     },
     {
@@ -751,7 +882,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -773,7 +906,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -807,7 +942,16 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "MATCHED_BASE_VARIANCE_RANGE",
+        "observed_amount": 1028,
+        "expected_unmodified": 1037.0,
+        "allowed_range": [
+          1011,
+          1063
+        ],
+        "revision": "e43626007ef39ecaa287f0f506eadc96cb540c46"
+      },
       "gaps": []
     },
     {
@@ -841,7 +985,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -899,7 +1045,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -921,7 +1069,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -955,7 +1105,16 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "MATCHED_BASE_VARIANCE_RANGE",
+        "observed_amount": 767,
+        "expected_unmodified": 780.0,
+        "allowed_range": [
+          761,
+          800
+        ],
+        "revision": "e43626007ef39ecaa287f0f506eadc96cb540c46"
+      },
       "gaps": []
     },
     {
@@ -1001,7 +1160,9 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "NOT_PROBED_FULL_SPELL_BEHAVIOR"
+      },
       "gaps": []
     },
     {
@@ -1035,8 +1196,24 @@
           "EffectTriggerSpell": 0
         }
       ],
-      "amount_probe": "PENDING",
+      "amount_probe": {
+        "status": "MATCHED_BASE_VARIANCE_RANGE",
+        "observed_amount": 240,
+        "expected_unmodified": 240.0,
+        "allowed_range": [
+          240,
+          240
+        ],
+        "revision": "e43626007ef39ecaa287f0f506eadc96cb540c46"
+      },
       "gaps": []
     }
-  ]
+  ],
+  "native_amount_verified": "2026-10-23",
+  "native_proof": {
+    "revision": "e43626007ef39ecaa287f0f506eadc96cb540c46",
+    "filter": "healer_benchmark_core_direct_heal_amounts_match_db2_tc_ledger -- --ignored --nocapture --test-threads=1",
+    "result": "15 probe rows matched; 1PASS/0FAIL in18.02s",
+    "scope": "untraited base/variance range; not exact TC integer-rounding or full-talent equivalence"
+  }
 }
