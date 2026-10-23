@@ -159,7 +159,10 @@ fn selector(id: u32) -> Option<Selector> {
         119 => Selector::RaidCorpses,
         121 => Selector::ExplicitCorpseAlly,
         32 | 44 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
+        41 => Selector::CasterOffset(-std::f32::consts::FRAC_PI_4),
         42 => Selector::CasterOffset(-3.0 * std::f32::consts::FRAC_PI_4),
+        43 => Selector::CasterOffset(3.0 * std::f32::consts::FRAC_PI_4),
+        48 => Selector::CasterOffset(std::f32::consts::PI),
         47 => Selector::CasterOffset(0.0),
         49 => Selector::CasterOffset(-std::f32::consts::FRAC_PI_2),
         50 => Selector::CasterOffset(std::f32::consts::FRAC_PI_2),
@@ -483,7 +486,7 @@ pub(super) fn select_targets_and_destination(
     let ordered = effect
         .implicit_targets
         .iter()
-        .any(|&id| matches!(id, 73 | 74 | 148));
+        .any(|&id| matches!(id, 41 | 43 | 48 | 73 | 74 | 148));
     let mut destination = spell.cast_destination.map(|point| Dest {
         position: Vec3::from_array(point),
         orientation: orientation(world, caster),
