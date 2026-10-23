@@ -445,6 +445,76 @@ fn proc_fidelity_262_native_stormkeeper_lightning_bolt_triggers_overload_damage(
 }
 
 #[test]
+#[ignore = "native Chain Lightning Overload mapping pending RED/GREEN"]
+fn proc_fidelity_262_native_stormkeeper_chain_lightning_overloads_each_hit_target() {
+    let (mut h, caster) = prepare(209053);
+    let target = h.npc;
+    let second = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 10.0);
+    let third = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 12.0);
+    complete_cast(&mut h, caster, 191634, caster);
+    assert!(has_aura(h.app.world(), caster, 168534));
+    assert!(has_aura(h.app.world(), caster, 191634));
+    let first_log = h.inbox.log.len();
+    let first_go = h.inbox.go.len();
+    complete_cast(&mut h, caster, 188443, target);
+    h.advance(60);
+    for target in [target, second, third] {
+        assert!(
+            h.inbox.log[first_log..].iter().any(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(188443)
+                    && event.source == Some(caster.to_bits())
+                    && event.target == Some(target.to_bits())
+            }),
+            "actual native Chain Lightning must hit each of three hostile targets"
+        );
+    }
+    let child_casts = h.inbox.go[first_go..]
+        .iter()
+        .filter(|event| event.caster == caster.to_bits() && event.spell_id == 45297)
+        .count();
+    assert_eq!(
+        child_casts, 3,
+        "TC HIT-phase native SK modifier guarantees one normal45297 cast per root hit, not one per parent cast"
+    );
+    assert!(h.inbox.log[first_log..].iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(45297)
+            && event.source == Some(caster.to_bits())
+            && event.amount > 0
+    }));
+}
+
+#[test]
+#[ignore = "native Chain Lightning removed-Mastery control pending qualification"]
+fn proc_fidelity_262_native_stormkeeper_chain_without_mastery_has_no_overload() {
+    let (mut h, caster) = prepare(209053);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 168534,
+    );
+    complete_cast(&mut h, caster, 191634, caster);
+    assert!(has_aura(h.app.world(), caster, 191634));
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    complete_cast(&mut h, caster, 188443, target);
+    h.advance(60);
+    assert!(h.inbox.log[first..].iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(188443)
+            && event.source == Some(caster.to_bits())
+            && event.target == Some(target.to_bits())
+    }));
+    assert!(
+        h.inbox.log[first..].iter().all(|event| {
+            event.spell_id != Some(45297) || event.source != Some(caster.to_bits())
+        })
+    );
+}
+
+#[test]
 #[ignore = "TC HIT-phase Overload400ms timing pending native RED/GREEN"]
 fn proc_fidelity_262_native_long_flight_overload_waits_400ms_after_root_hit() {
     let (mut h, caster) = prepare(209053);
