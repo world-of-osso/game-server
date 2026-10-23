@@ -266,7 +266,10 @@ fn encounter_coverage_edna_native_seismic_smash_damage_and_copy_isolation() {
                     && event.source == Some(boss.to_bits())
                     && event.target == Some(player.to_bits())
                     && event.spell_id == Some(424888)
-                    && event.amount > 0)
+                    && event.amount > 0),
+            "native Seismic Smash damage difficulty{difficulty}; logs={:?}; gos={:?}",
+            h.inbox(0).log,
+            h.inbox(0).spell_gos
         );
         assert!(
             h.inbox(1)
