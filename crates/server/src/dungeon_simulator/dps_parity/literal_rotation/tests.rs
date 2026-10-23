@@ -443,7 +443,7 @@ fn literal_player_resource_query_preserves_actual_pools() {
         };
         for _ in 0..3 {
             assert_eq!(
-                prepared.resource_limited(&action, &equipment),
+                prepared.resource_limited(&action, &equipment, PowerType::Energy),
                 Ok(expected),
                 "zero Energy limits only the otherwise-native-ready target"
             );
@@ -454,6 +454,79 @@ fn literal_player_resource_query_preserves_actual_pools() {
             "neither precompute nor query may grant, spend or temporarily replace pools"
         );
     }
+    assert!(casts(run.app.world(), run.actor).is_empty());
+}
+
+#[test]
+#[ignore = "actual native selected-pool query; requires frozen parity inputs"]
+fn literal_player_resource_query_does_not_fill_other_powers() {
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
+    let _scope = crate::random::seed_scope(70448);
+    let (mut run, equipment) = human(1);
+    select_palm(&mut run, &mut palm_driver(false), &equipment);
+    {
+        let mut pools = run
+            .app
+            .world_mut()
+            .get_mut::<PowerPools>(run.actor)
+            .unwrap();
+        pools.get_mut(PowerType::Energy).unwrap().current = 0.0;
+        pools.get_mut(PowerType::Chi).unwrap().current = 0.0;
+    }
+    let before = run
+        .app
+        .world()
+        .get::<PowerPools>(run.actor)
+        .unwrap()
+        .clone();
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(100784)
+        .unwrap();
+    assert!(
+        crate::spell_cast::applicable_costs(run.app.world(), run.actor, spell)
+            .unwrap()
+            .iter()
+            .any(
+                |(pool, amount, _)| *pool == crate::spell_cast::CostPool::Power(PowerType::Chi)
+                    && *amount > 0.0
+            )
+    );
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        run.actor,
+        &run.targets,
+        &equipment,
+        [NativeAction {
+            name: "blackout_kick",
+            spell: 100784,
+            talent: None,
+            self_target: false,
+        }],
+        false,
+    )
+    .unwrap();
+    let action = Action {
+        name: "blackout_kick".into(),
+        target: Some(run.targets[0].to_bits()),
+        options: Default::default(),
+    };
+    // SimC10644–10818 changes only the selected pool, not every resource.
+    assert_eq!(
+        prepared.resource_limited(&action, &equipment, PowerType::Energy),
+        Ok(false)
+    );
+    assert_eq!(
+        prepared.resource_limited(&action, &equipment, PowerType::Chi),
+        Ok(true)
+    );
+    assert_eq!(
+        run.app.world().get::<PowerPools>(run.actor).unwrap(),
+        &before
+    );
     assert!(casts(run.app.world(), run.actor).is_empty());
 }
 

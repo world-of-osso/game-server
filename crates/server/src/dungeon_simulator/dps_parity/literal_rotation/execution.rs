@@ -64,6 +64,7 @@ impl Prepared {
         &self,
         action: &Action,
         _equipment: &Equipment,
+        _resource: shared::components::PowerType,
     ) -> Result<bool, String> {
         Err(format!(
             "NATIVE_LITERAL_RESOURCE_QUERY_UNAVAILABLE: {}",
