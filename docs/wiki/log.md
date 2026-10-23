@@ -1,3 +1,7 @@
+## 2026-10-23 — Shared native APL fact boundary
+
+[Native facts](systems/simc-apl.md#native-binding-boundary): six actual native6RED at5924496f9→6GREEN17.40s atdc1ee9781,7m37compile/exit0/zero warnings. Earned TP/BOK buff+Chi, actual Charge200raw→20Rage, selected starter allocation distinct from learned utility, native Provoke/Roll timers, action/control GCD and300s fixture clock; no canonical DB edits. [Proof/capability limits](../handoffs/shared-native-apl-proof-ledger.md); only explicit parity Fixture driver approved, Stockade native kit/DUNGEON_TTD_UNAVAILABLE retained, no literal-rotation claim.
+
 ## 2026-10-23 — Windwalker baseline and Combo Strikes boundary
 
 [Combo Strikes](systems/auras.md#windwalker-combo-strikes-policy--2026-10-23): actual native TP→Provoke→TP without Hit Combo,83.754=83.754 RED versus99.35737 expected, then native coefficient/state1GREEN10.04s at3286b0463. Frozen300s31146 baseline ST23785.66/3T23260.47,−88.48%/−93.82%; missing FoF/RSK/SCK casts, literal adapter and per-ability/channel qualification remain open ([census](../handoffs/ww-source-census.md)). No tuning/canonical DB changes.

@@ -79,7 +79,6 @@ fn action(name: &str) -> Action {
 }
 
 #[test]
-#[ignore = "shared native ActionFacts RED: earned native buff/resource/talent bindings"]
 fn native_apl_facts_follow_earned_buff_stacks_resources_and_repeat_removal() {
     let (mut h, actor) = monk();
     let b = bindings();
@@ -111,7 +110,6 @@ fn native_apl_facts_follow_earned_buff_stacks_resources_and_repeat_removal() {
 }
 
 #[test]
-#[ignore = "shared native ActionFacts RED: evaluated native allocation, not generic known spells"]
 fn native_apl_facts_read_selected_traits_without_promoting_learned_utility_to_talent() {
     use crate::class_progression::{KnownSpells, TraitLoadout};
     use crate::spell_info::ClassSpells;
@@ -180,7 +178,6 @@ fn native_apl_facts_read_selected_traits_without_promoting_learned_utility_to_ta
 }
 
 #[test]
-#[ignore = "shared native ActionFacts RED: successful native cooldown and action-bound GCD"]
 fn native_apl_facts_read_native_cooldown_and_bind_control_action_gcd() {
     let (mut h, actor) = monk();
     let b = bindings();
@@ -207,7 +204,6 @@ fn native_apl_facts_read_native_cooldown_and_bind_control_action_gcd() {
 }
 
 #[test]
-#[ignore = "shared native ActionFacts RED: real Roll charge consumption/recharge"]
 fn native_apl_facts_read_real_roll_charge_count_and_recharge_clock() {
     let (mut h, actor) = monk();
     let b = bindings();
@@ -230,7 +226,6 @@ fn native_apl_facts_read_real_roll_charge_count_and_recharge_clock() {
 }
 
 #[test]
-#[ignore = "shared native ActionFacts RED: one fixture clock for fight and every target"]
 fn native_apl_facts_fixture_clock_and_unavailable_dungeon_ttd_are_explicit() {
     let (mut h, actor) = monk();
     let b = bindings();
@@ -274,7 +269,6 @@ fn native_apl_facts_fixture_clock_and_unavailable_dungeon_ttd_are_explicit() {
 }
 
 #[test]
-#[ignore = "shared native ActionFacts RED: native Charge generates displayed Rage rather than raw tenths"]
 fn native_apl_facts_convert_real_charge_rage_using_native_display_modifier() {
     use crate::spell_cast::test_harness::harness_with;
     use shared::components::Position;
