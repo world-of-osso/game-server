@@ -7,7 +7,7 @@ Eight bounded spell/rank entries across low-count Frost Mage/Shadow Priest/Destr
 | Entry | Done / deterministic native behavioral proof | Missing / uncertified |
 |---|---|---|
 |44614 Flurry|Native s1 count3 selects three228596→228354 bolts instead of four stored slots; real children complete through missile path.|Freezing/talent bridges; not full spell parity. Dummy count root closes.|
-|1329 Mutilate|Variable394 halves27576 damage,5374 remains full; real root/children115+58 at fixture AP100.|Root/child zero/Base1 markers, poison and weapon variants remain unassigned.|
+|1329 Mutilate|Native exclusive-offhand AP selection halves27576 once; variable394 describes that result,5374 remains full; real root/children115+58 at fixture AP100.|Root/child zero/Base1 markers, poison and weapon variants remain unassigned.|
 |34914 Vampiric Touch|Actual527 dispel applies87204 Horror to the dispeller from original owner; expiry/cancel never retaliate. Batch18 leech retained.|Aura4 Base2 and talent paths remain unidentified.|
 |47585 Dispersion|Native25-percent total, seven native ticks including extra-initial; normal per-tick rounding gives252 healing at maxHP1000.|Equal tick distribution inferred from total and clock, not independently observed Retail tick amounts; aura4 Base100/Base7, movement immunity/attack restrictions remain uncertified.|
 |288733 Intangibility|Native s2 adds25-percent total; seven ticks give497 after ordinary rounding. Both ranks snapshot; dropping rank later does not alter ticks.|No invented universal modifier; other talent variants uncertified.|
