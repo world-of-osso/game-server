@@ -5,15 +5,21 @@ use super::*;
 #[test]
 fn guardians_ordinary_npc_owner_keeps_uncontrolled_imp_and_hostile_casts() {
     let mut h = harness(Vec::new(), &[104317, 104318], 9).unwrap();
-    h.app.insert_resource(crate::world_data::load_world_data(
-        &world_db().unwrap().powers_db,
-    ));
-    h.app.init_resource::<ObservedCombatEvents>();
+    let data = crate::world_data::load_world_data(&world_db().unwrap().powers_db);
     let owner = h.npc;
-    h.app
-        .world_mut()
-        .entity_mut(owner)
-        .insert(crate::networking::CombatTarget(Some(h.caster)));
+    let entry = h
+        .app
+        .world()
+        .get::<shared::components::Npc>(owner)
+        .unwrap()
+        .template_id;
+    let native_level = data.templates[&entry].min_level;
+    h.app.insert_resource(data);
+    h.app.init_resource::<ObservedCombatEvents>();
+    h.app.world_mut().entity_mut(owner).insert((
+        shared::components::UnitLevel(native_level),
+        crate::networking::CombatTarget(Some(h.caster)),
+    ));
     assert!(super::try_cast_triggered(
         h.app.world_mut(),
         owner,
