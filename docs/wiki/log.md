@@ -1,3 +1,7 @@
+## 2026-10-22 — Whole-suite overlap and fixture-cost bounds
+
+[Performance](investigations/server-test-performance.md#fixed-source-whole-suite-overlap-and-costs): fixed295e96b4c whole5880enabled/229ignored,1021.809s/6.72GiBRSS/1.065GiBswap; no missing/extra,900s/no-swap still open. Toys/followers start517s/237s earlier but total work binds;3slot splitting no win, conservative4slot+split model938s before new setup. Meteor isolated frozena2FAIL/canonicalPASS is kit publication drift. Concurrent source-specific drop probe128/128GREEN; target pin retained after pruning incident. No new optimization/quiet proof claimed.
+
 ## 2026-10-22 — Gorek minimum-alert partial
 
 [Gorek](systems/boss-scripts.md#gorek-minimum-alert-partial--2026-10-22): ignorednativeRED→sourceMight/Aegis/Heated/Storm success-owned/namedlowerhold lanes. Post-master921957ad7 native4GREEN31.12s Normal1/projected205,first3.6sMight/actualauras/92s3cycles/reset/actualcopycredit/corpse;stable-keySQLreceipt. Anvil/selector/Stormdummy and existingroutegap retained, no wholefight/publication claim.

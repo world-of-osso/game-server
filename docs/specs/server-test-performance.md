@@ -51,7 +51,7 @@ The whole server test suite must retain every discovered case and existing ignor
 - [x] Module-process execution meets900s/no-swap performance; raw functional status remains2855PASS/1known master environment/data FAIL, not all green.
 - [x] Native loader/storage integration, targeted live-App isolation and compilation pass; the matching19-case workspace-graph before/after measurements are recorded.
 - [x] Two process slots×three threads qualify the standard union below8GiB with no swap.
-- [ ] Whole-workspace qualification takes1253.992s/6.48GiB/31.6MiBswap, exact5745enabled/191ignored coverage;900s/no-swap and default adoption remain open.
+- [ ] Whole-workspace900s/no-swap qualification and default adoption remain open; [latest complete measurements and cost bounds](../wiki/investigations/server-test-performance.md#fixed-source-whole-suite-overlap-and-costs) retain raw failures and exact inventories.
 
 ## Out of scope
 
