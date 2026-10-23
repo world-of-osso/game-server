@@ -235,7 +235,7 @@ Gate/agent command after a complete workspace build's Cargo JSON receipt:
 python3 scripts/native_test_batches.py --artifacts BUILD_ARTIFACT_JSONL --output NEW_RESULT_DIR --full-suite
 ```
 
-Pass known identities via repeatable `--known-failure`; the lead owns classification. Agents require their normal capacity admission and `agent-run OWNER`; the caller retains immutable-input/floor monitoring and includes any separately qualified serial case exactly once in full coverage/time. The executable regression proves full-suite mode includes an otherwise excluded union case and a module outside union filters, keeps the existing ignore, and reports a known failed case as failed. Initial RED is1FAIL/2PASS because full-suite/known-failure switches are absent. Native whole-suite timing remains pending;706s for2856 enabled cases does not establish the whole-suite target.
+Pass known identities via repeatable `--known-failure`; the lead owns classification. Agents require their normal capacity admission and `agent-run OWNER`; the caller retains immutable-input/floor monitoring and includes any separately qualified serial case exactly once in full coverage/time. The executable regression proves full-suite mode includes an otherwise excluded union case and a module outside union filters, keeps the existing ignore, and reports a known failed case as failed. Initial RED is1FAIL/2PASS because full-suite/known-failure switches are absent;98f6a1ca7 passes3/3 in1.322s, including the unchanged union controls. Native whole-suite timing remains pending;706s for2856 enabled cases does not establish the whole-suite target.
 
 ## Gate invocation
 
