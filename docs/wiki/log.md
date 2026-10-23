@@ -85,6 +85,10 @@
 ## 2026-10-22 — Feel the Burn native eligibility and async stack RED
 
 [Native boundaries](investigations/follower-data.md#feel-the-burn-native-eligibility-and-overlap--2026-10-22): actualFireBlast2mastery4s positive; actualFireballwrongproc and independent4s application2vs1 are genuine2RED/21.74s. [Generic native490](systems/auras.md#native-asynchronous-stack-expirations--2026-10-22) has pinned SimC authority plus exact70448 flag, no guessed per-spell timer. Runtimeac5eb241d/source/spec committed; GREEN pending, cases remain ignored. Frozen Ascendance entry packetb11 unchanged.
+## 2026-10-22 — Vexamus projected native partial
+
+[Vexamus](systems/boss-scripts.md#vexamus-projected-native-partial--2026-10-22): ignored firstExpulsion/Bomb RED before source5→18/15→18 lanes. Post-master d1336fa13 native4GREEN49.02s Normal1/projectedFollower205, real cone damage,82s ongoing completions, actual second copy, credit/corpse/native-home-reset; producer1GREEN and stable-key SQL receipt. Energy/MaxdormuOrbs/Bombdummy/timeline context remain gaps, no whole-fight/publication claim.
+
 ## 2026-10-22 — Native power receipt observability
 ## 2026-10-22 — Utility Attr4 master refresh
 
@@ -165,6 +169,13 @@ Native BM10 passes at4f88 (16.25s): initial75, exact2s cadence, ordinary retarge
 ## 2026-10-21 — Native DPS parity adapter
 
 [Adapter](systems/dungeon-simulator.md#native-dps-parity-adapter--2026-10-21): source-qualified instance/linked effects and physical armor enchants; separate allocated/effective SimC traits. Real NPC follower and native living out-of-range controller avoid first-tick-only false acceptance. Merged24controls GREEN; actual pet absence/no learned casts and missing30s add replacement give three explicit ignored REDs. Existing pet systems/native metadata and timed native summon retirement now pass all3 opt-in300s qualifications atd698d1d3b (Hunter76petcasts, Demo50petcasts,10waves/20distinctadds); source/stat/rotation parity remains unproved. Stable-key Duck174884 SQL/receipt only, no canonical mutation or fabricated stats. Original18 SimC runs retained; expanded reference coverage now60 benchmarks across30 selected profiles, with actual three-target recipient evidence. Eight actor-aware factor ledgers expose missing output/per-hit/count differences and excess FoF pulses; conditional guardian means need whole-player sample weighting. Current16/16 native execution cases pass, but timed-three reveals a real passive-dummy multi-enemy admission gap: follower AI does not count CombatRefs-only targets, and only the main dummy is the owner's victim. No fake threat/flags or AI edits. Bounded113-spell/206-base-effect comparison agrees70391/70448 in16 fields; effective multipliers remain unisolated. Health-phase/consumable/item-option differences and whole40-spec acceptance remain open.
+## 2026-10-22 — Granyth finite pre-Lance partial
+
+[Granyth](systems/boss-scripts.md#granyth-finite-pre-lance-partial--2026-10-22): ignoredRED firstShards/finite/reset before10.6/23.9Shards+15.5Stomp. Post-master25f9ffe17 native4GREEN62.73s Normal1/projectedFollower205, real area damage/copy-credit/corpse/native-home reset; producer1GREEN and stable-key SQL receipt. EruptionEnergy/Lance/reload/Mythicadds remain named gaps, no whole-fight/publication claim.
+## 2026-10-22 — Treemouth non-Mythic partial
+
+[Treemouth](systems/boss-scripts.md#treemouth-non-mythic-partial--2026-10-22): ignored firstWhip/Spit/reset RED before source3lanes/namedlowerhold policy. Post-master5c2efe459 native4GREEN48.84s Normal1/projectedFollower205, real cone damage/native-home/reset/copy-credit/corpse; stable-key SQL fresh-copy receipt. Energy/Consume/slime/selector context remains gaps, no whole-fight/publication claim.
+
 ## 2026-10-22 — Class4 zone-only ingress
 
 [Optional power metadata](investigations/follower-data.md#class4-zone-only-ingress--2026-10-22): az914b real205 VaultRune summon exposed a shared zone-entry resource panic. Production now preserves source stats/identity and explicitly warns/leaves power absent when SpellCastPlugin is not installed; no fake pools or fixture-only patch. Present-table native initialization is unchanged. Native832762da4 reproof: real failingRune1/1 (17.91s), present-table class4Energy+Anub4 controls5/5 (70.99s); no duplicate broad gate.
@@ -3947,6 +3958,10 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-22 — Trading Post residue classification
 
 [Private-account residue](investigations/trading-post-residue.md): vendors1615/1608 already have October46 membership and complete70448 item/transmog rows. Cached Wowhead agrees; historical fb_tpui_mod expired ownership is test-state residue. No code, SQL, state repair or RED→GREEN claim.
+
+## 2026-10-22 — Native immutable fixture sharing
+
+[Server performance](investigations/server-test-performance.md#cache-implementation-boundary-in-progress):8b61e8bc0 shares test-only catalog/spell payloads while production aliases retain owned types. Native App isolation3/3, real SQLite cache controls6/6, spell isolation/server-side append controls4/4 pass. Exact old/current binary census5542→5543 adds only the new isolation test, with no removals/ignore drift. Qualified matching workspace-graph cohort19/19PASS: summed isolated CPU787.220→554.693s; prepared3-App RSS3161604→1283496KiB, with explicitly higher cold-case RSS. Six-thread union stops at global RAM floor after1000PASS/0FAIL; four-thread retry and full900s/~8GiB qualification remain open. Package-only exploratory measurements are excluded.
 
 ## 2026-10-22 — Server test performance profile
 
