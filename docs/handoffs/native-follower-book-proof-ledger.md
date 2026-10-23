@@ -32,6 +32,8 @@ Lead assigned native-book helper to Ret14752. Ported ignored REDs1131e1685, Stoc
 
 Artifacts live under engine `data/diagnostics/ret-parity-2026-10-23/`. Moved the allocated ended-owner target into game-server-ret-parity/target, without copying it. It contains only a3.4GiB partial dependency build and no game_server executable; native compiler is Arch1.99.0, unlike the older1.98.1 docs. Parent confirmed no genuinely warm1.99 ended-owner cache is available.
 
+| Priority attempt | Proof | Result |
+|---|---|---|
 | v5 priority | `native-book-red-v5.proof.json` | ADD24.5GiBfree, -j1 compile1577s, later SHED5.1GiBfree; no tests, **not RED** |
 | v6 priority | `native-book-red-v6.proof.json` | ADD22.1GiBfree, compile1032s through server/core; later SHED5.5GiBfree, disk425GiB; no tests, **not RED** |
 
