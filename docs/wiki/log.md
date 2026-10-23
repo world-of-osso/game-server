@@ -1,3 +1,7 @@
+## 2026-10-23 — Authored item faction eligibility
+
+[Eligibility](systems/toys.md#item-faction-flags-eligibility-2026-10-23): shared ItemTemplate::allows now enforces already-loaded source faction flags. Actual wrong-side learning/owned-use fiveRED→nineGREEN12.47s at039dced6c,54-item metadata matrix and retained controls; complete1173pipeline identical547. No race-mask/protocol/PvP identity changes or new toy admissions. Fmt0/manual readability; required check pending.
+
 ## 2026-10-23 — Caster offsets and source balloon qualification
 
 [Offsets](systems/toys.md#caster-offsets414348-source-boundary-2026-10-23): generic41/43/48 use source73 radius/reach/motion and direct geometry, preserving existing32. Genuine9RED plus correctedB43RED;37GREEN29.07s atc0b includes actual two balloons, native direction1GREEN at e71 and area1GREEN13.27s at909 complete39 covered cases without production changes. Native fixture fixes select279366 effect1 and source NPC6/display10913 rather than weakening LOS; legitimate native misses retain receipts. Check0/67.07s/no warnings/fmt0. Exact545→547 only75042/245946,17 blocker-list/15 unavailable strings; Arena battle/action gaps and native-facing/presentation/modifier/Detour boundaries retained. No canonical/protocol writes or invented UseToy toggle.
