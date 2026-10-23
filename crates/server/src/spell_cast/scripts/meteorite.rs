@@ -63,6 +63,13 @@ fn is_fire(world: &World, unit: Entity) -> bool {
 }
 
 fn check_fireball(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
+    #[cfg(test)]
+    if event.spell_id == Some(FIREBALL) {
+        eprintln!(
+            "METEORITE_PROC_TRACE actor_mask={:?} damage={} actor={:?} aura_caster={:?}",
+            event.actor_mask, event.damage, event.actor, aura.caster
+        );
+    }
     is_fire(world, event.actor)
         && event.actor == aura.caster
         && event.spell_id == Some(FIREBALL)

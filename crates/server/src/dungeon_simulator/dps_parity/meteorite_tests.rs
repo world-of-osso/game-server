@@ -37,8 +37,32 @@ fn load_and_spawn_sunfury_targets(player_actor: bool, target_count: usize) -> Ru
     } else {
         ParityActor::Follower
     };
-    let run = prepare_reference(profile, &traits, target_count, identity)
+    let mut run = prepare_reference(profile, &traits, target_count, identity)
         .expect("native reference admission");
+    if !player_actor {
+        let owner = run
+            .app
+            .world()
+            .get::<crate::followers::Follower>(run.actor)
+            .unwrap()
+            .owner;
+        // Match the existing reference spawn, not the distant native graph node.
+        let spawn = shared::components::Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        };
+        run.app.world_mut().entity_mut(run.actor).insert(spawn);
+        run.app.world_mut().entity_mut(owner).insert(spawn);
+        super::super::movement::forget_party_travel(run.app.world_mut(), owner);
+    }
+    println!(
+        "METEORITE_NATIVE_CLASSIFICATION hostile={} actor_spec={:?}",
+        crate::spell_cast::targets::is_hostile(run.app.world(), run.actor, run.targets[0]),
+        run.app
+            .world()
+            .get::<shared::components::ActiveSpec>(run.actor)
+    );
     let known = run.app.world().get::<KnownSpells>(run.actor).unwrap();
     for spell in [FIREBALL, PYROBLAST, PYROCOSM, GLORIOUS] {
         assert!(
@@ -282,6 +306,8 @@ fn exhaust_native_fire_blast(run: &mut Run) {
     for _ in 0..MAX_CAST_WAIT_FRAMES {
         match read_fire_blast_start(run) {
             Err(crate::spell_cast::CastFailure::NoCharges) => return,
+            // Native108853 has a500ms per-cast lockout in addition to charges.
+            Err(crate::spell_cast::CastFailure::OnCooldown) => run.app.update(),
             Ok(_) => assert!(cast_and_observe_hit(run, FIRE_BLAST)),
             Err(error) => panic!("ordinary Fire Blast before exhaustion: {error:?}"),
         }
