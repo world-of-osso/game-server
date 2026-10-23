@@ -7,6 +7,8 @@ mod empower_policy;
 mod hazards;
 #[cfg(test)]
 mod healer_benchmark_profile_tests;
+#[cfg(test)]
+mod native_healer_kit_tests;
 mod healer_context;
 #[cfg(test)]
 mod healer_group_cancel_tests;
