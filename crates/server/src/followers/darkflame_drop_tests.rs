@@ -262,7 +262,7 @@ fn darkflame_drop_follower_sim_traverses_only_after_upper_route_stage() {
 }
 
 #[test]
-#[ignore = "unresolved stacked-floor follow admission; requires actual2651 assets/profile"]
+#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
 fn darkflame_drop_idle_follower_descends_when_owner_is_directly_below() {
     let (mut h, follower) = create_native_follower_fixture();
     // Actual party-slot branch: slot2/4 places its settled follow point at UPPER.
