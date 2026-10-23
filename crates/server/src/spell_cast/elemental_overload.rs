@@ -9,6 +9,9 @@ const MASTERY: u32 = 168534;
 const STORMKEEPER: u32 = 191634;
 const LIGHTNING_BOLT: u32 = 188196;
 const CHAIN_LIGHTNING: u32 = 188443;
+const LAVA_BURST: u32 = 51505;
+const LAVA_OVERLOAD: u32 = 77451;
+pub(super) const LAVA_OVERLOAD_DAMAGE: u32 = 285466;
 pub(super) const LIGHTNING_OVERLOAD: u32 = 45284;
 pub(super) const CHAIN_OVERLOAD: u32 = 45297;
 const OVERLOAD_DELAY_MS: u32 = 400;
@@ -38,6 +41,7 @@ pub(super) fn after_hit(world: &mut World, caster: Entity, spell: &SpellInfo, ta
     let overload = match spell.id {
         LIGHTNING_BOLT => LIGHTNING_OVERLOAD,
         CHAIN_LIGHTNING => CHAIN_OVERLOAD,
+        LAVA_BURST => LAVA_OVERLOAD,
         _ => return,
     };
     let Some(chance) = mastery_amount(world, caster, 0) else {
