@@ -2,8 +2,8 @@
 //! Percent and tick count are native; generic ROLLING_PERIODIC owns unpaid carry.
 use bevy::prelude::*;
 
-use super::AuraInstance;
 use super::procs::AuraEvent;
+use super::{ActiveAuras, AuraInstance};
 use crate::spell_info::SpellStore;
 
 pub(super) const MASTERY_IGNITE: u32 = 12846;
