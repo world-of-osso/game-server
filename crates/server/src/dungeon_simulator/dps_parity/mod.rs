@@ -6,6 +6,7 @@ mod pet_stats_tests;
 mod player_rotation;
 mod power_tests;
 mod report;
+mod windwalker_rotation;
 use bevy::prelude::*;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
