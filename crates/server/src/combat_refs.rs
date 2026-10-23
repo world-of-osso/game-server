@@ -148,7 +148,10 @@ fn store_combat_reference(world: &mut World, unit: Entity, other: Entity, refere
 /// TC CombatReference::EndCombat: end only this PvE pair. A dummy's timer
 /// never calls CombatStop, so unrelated references and attack intent survive.
 pub(crate) fn end_pve_reference(world: &mut World, unit: Entity, other: Entity) {
-    if both_player_controlled(world, unit, other) {
+    let existing = world
+        .get::<CombatRefs>(unit)
+        .is_some_and(|refs| refs.0.contains_key(&other));
+    if !existing || both_player_controlled(world, unit, other) {
         return;
     }
     for (endpoint, opponent) in [(unit, other), (other, unit)] {
