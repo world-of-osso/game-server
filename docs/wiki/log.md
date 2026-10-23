@@ -4048,3 +4048,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0â
 - [Unselected EB/Ice](investigations/follower-data.md#unselected-elemental-blast-and-icefury-overload-mechanisms): nativeIce86-hit/no219271 genuineRED/controlPASS; minimal cast-only mapping added, GREEN pending. EBfundingAPI corrected without pool injection; EBRED pending, no production map.
 
 - [Unselected EB/Ice](investigations/follower-data.md#unselected-elemental-blast-and-icefury-overload-mechanisms): Ice2GREEN11.99s/zero warnings, enabled; samebinary genuineEB86-funded-root-hit RED/controlPASS18.71s. No selected-kit/wholeAPL certificate.
+
+- [EB cast mechanism](investigations/follower-data.md#unselected-elemental-blast-and-icefury-overload-mechanisms): after86 native-funded root hits/no120588 RED/controlPASS,117014â†’120588/effect1 scaling added on mergedlv991 base. Scoped postmerge GREEN pending; no selected-kit/cost/cast-time bypass.

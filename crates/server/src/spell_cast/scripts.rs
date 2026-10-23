@@ -437,7 +437,8 @@ pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
         super::elemental_overload::LIGHTNING_OVERLOAD
         | super::elemental_overload::CHAIN_OVERLOAD
         | super::elemental_overload::LAVA_OVERLOAD_DAMAGE
-        | super::elemental_overload::ICEFURY_OVERLOAD => {
+        | super::elemental_overload::ICEFURY_OVERLOAD
+        | super::elemental_overload::ELEMENTAL_BLAST_OVERLOAD => {
             Some(super::elemental_overload::scale_damage)
         }
         crate::auras::agony::AGONY => Some(crate::auras::agony::tick_damage),
