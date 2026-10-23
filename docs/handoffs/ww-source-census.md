@@ -6,7 +6,7 @@ Verified2026-10-23. Native DB2/TC precede SimC76f8118; no parity claim. Shared n
 
 | Spell / source | Native data / decision status | Test / gap |
 |---|---|---|
-| Tiger Palm100780; TC Unit.cpp6869–6891/9973–10000, Player.cpp8180 | Native AP coefficient0.9; castable; coefficient input omits weapon AP | Ignored RED `dps_parity_native_tiger_palm_includes_equipped_weapon_ap_before_battle_shout` pushed0cef21dfc; capacity blocked, not yet observed |
+| Tiger Palm100780; TC Unit.cpp6869–6891/9973–10000, Player.cpp8180 | Native AP coefficient0.9; castable; coefficient input omits weapon AP | Pushed0cef21dfc genuine RED91vs358–377→native GREEN at4b9d2be73; enabled afterward, parent gate pending |
 | Rising Sun Kick107428→185099; DB2 trigger + TC `spell_monk_rising_sun_kick` | Native damage AP coefficient1.43799996; same generic missing weapon AP | Shared fix must cover native child; no fresh qualified damage proof |
 | Mastery: Combo Strikes115636; SimC `sc_monk.cpp:142–156,358–373` | Native aura4/coeff2.3287499, no damage multiplier or child trigger. Native `windwalker.rs` contains Hit Combo/Combo Breaker/Dance, not Combo Strikes | Spec-specific missing scripted-policy candidate; full TC monk source has no Combo Strikes script; not yet implemented or behavior-proven |
 | Rushing Wind Kick467307→468179; SimC `sc_monk.cpp:5838–5839` | Native trigger64 and child school damage/AP1.79750001 exist. Selected talent1250566 is aura4/60;467307 absent from published spec269 action rows | Missing APL action/book-family binding; need exact acquired native book after14752 helper. No fresh cast proof |

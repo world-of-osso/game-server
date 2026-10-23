@@ -7,7 +7,6 @@ const BATTLE_SHOUT: u32 = 6673;
 const AIMED_SHOT: u32 = 19434;
 
 #[test]
-#[ignore = "weapon AP regression: observe native RED before implementation"]
 fn dps_parity_native_tiger_palm_includes_equipped_weapon_ap_before_battle_shout() {
     use shared::item_data::ItemDefinitionSource::Retail;
     use shared::protocol::{CombatLogKind, EquipmentSlot};
@@ -143,7 +142,6 @@ fn assert_native_effect_ap(h: &Harness, spell_id: u32, attack_power: f32) {
 }
 
 #[test]
-#[ignore = "opt-in native weapon AP boundary control"]
 fn dps_parity_native_weapon_ap_ranged_uses_ranged_multiplier_and_native_bow() {
     use shared::protocol::EquipmentSlot::MainHand;
     // Native item2504: Worn Shortbow, rather than rounded swing-bound reconstruction.
@@ -158,7 +156,6 @@ fn dps_parity_native_weapon_ap_ranged_uses_ranged_multiplier_and_native_bow() {
 }
 
 #[test]
-#[ignore = "opt-in native weapon AP boundary control"]
 fn dps_parity_native_weapon_ap_offhand_halves_base_and_own_weapon_not_main_hand() {
     use shared::protocol::EquipmentSlot::{MainHand, OffHand};
     const OFFHAND_WHIRLWIND: u32 = 44949;
@@ -181,7 +178,6 @@ fn dps_parity_native_weapon_ap_offhand_halves_base_and_own_weapon_not_main_hand(
 }
 
 #[test]
-#[ignore = "opt-in native weapon AP boundary control"]
 fn dps_parity_native_weapon_ap_spell_power_and_unequip_follow_native_total_ap() {
     use shared::protocol::EquipmentSlot::MainHand;
     let mut h = harness_with(Vec::new(), &[1258011, BATTLE_SHOUT], 2, true).unwrap();

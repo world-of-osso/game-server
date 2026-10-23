@@ -12,7 +12,7 @@ Ordinary NPCs without `CharacterStats` still have no class-derived spell power, 
 
 `CharacterStats.weapon_attack_power` retains raw integer main/off/ranged weapon AP from unrounded item-table DPS×6, including effective instance level/quality (TC a352b1fa Player.cpp8180–8191). Sheet melee/RAP fields remain unchanged. Native coefficient selection adds max(main,ranged) weapon AP for main/ranged attacks, or adds offhand AP and halves the full offhand sum, before the appropriate AP percentage (Unit.cpp9973–10000). Damage/heal/absorb coefficients share the ranged/exclusive-offhand/main selection; equipped player and approved follower stats do not replace guardian inheritance. Aura366 derived SP/healing power now reads total main-hand AP; weapon/white-hit inputs retain bare AP to avoid double-counting.
 
-Ignored actual Tiger Palm RED:91 vs TC358–377 from base98+weapon291, native coefficient0.9 and Battle Shout1.05. Generic implementation committed after that RED; targeted GREEN/integration gates pending. Autoattack AP/6 versus TC3.5 remains an explicit deferred discrepancy, unchanged. [Proof/source ledger](../../handoffs/ww-weapon-ap-proof-ledger.md).
+Ignored actual Tiger Palm RED:91 vs TC358–377 from base98+weapon291, native coefficient0.9 and Battle Shout1.05. Generic implementation committed after that RED; four targeted native cases pass13.89s at4b9d2be73 (zero compiler warnings), including offhand/ranged percentages and SP/unequip. Tests are now enabled; parent-owned integration gates remain pending. Autoattack AP/6 versus TC3.5 remains an explicit deferred discrepancy, unchanged. [Proof/source ledger](../../handoffs/ww-weapon-ap-proof-ledger.md).
 
 ## Follower mastery amount refresh — 2026-10-21
 
