@@ -25,6 +25,7 @@ Shared urgency ranking prefers shorter cast time before effective healing, and e
 
 ## Remaining gates and limits
 
-- Post-master targeted integration, check and format receipts pending.
+- Master8290f38e0 integrated cleanly at5b9ff82e110ecd62f82c4f3220f5c56a47d2e1ec. All6 targeted native tests PASS11.95s; helper checkEXIT0/10.38s/no warnings; format PASS. Receipts: `postmaster-native-green.log`, `postmaster-check.log`, `postmaster-format.log`. Manual changed-Rust readability: no violations.
+- Four S/T source hashes match before/after; frozen SQLite remains SHA2566b8b5e96b2a1f0caac05df74abce559516cacae9279d85e669d97edfd0dd7f2c. `postmaster-inputs.json` records scope: helper native roots alias checkout, not an independent-copy attestation. Lead integration gate remains separate.
 - Agent14737's GREEN healer JSON/MD benchmark is the required effectiveness measurement; not yet available here. No survival, HPS, mana-efficiency, route-reliability or overall-quality improvement claimed.
 - Holy decision diagnosis continues separately; no Holy production changes in this slice.
