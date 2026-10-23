@@ -1,3 +1,7 @@
+## 2026-10-23 — Uldaman frozen input assembly
+
+[Partial data packet](investigations/follower-data.md#uldaman-frozen-input-assembly--2026-10-23):missing-artifactRED2/0.001s→227nativeGUID/formation/f32 contractGREEN1/0.049s; offline resident-nav exporter parser2GREEN/build0.94s. All24,976pairs retained,17,663positivewalks→553MSF/four-neighbour edges;74-node predefined boss progression assembled. Five unreachable native nodes not relocated/classified by faction. Empty pull route remains explicitly blocked on14305 real native corridor inputs; no runtime/canonical changes or full-ready claim.
+
 ## 2026-10-23 — Uldaman native endpoint qualification
 
 [Read-only source/nav proof](investigations/follower-data.md#uldaman-native-ordered-endpoint-qualification--2026-10-23):5authenticated encounters/7native bosses/4NPCpatrol paths41nodes preserved, actual runtime-addon namespaces observed. Approved capacityADD navigation-only examples build34.14s/exit0/no warnings;9exact source ordered corridors complete0.59s/all9nav hashes unchanged. All3dwarves retained/no invented points. Frozen party profile and simulator2451 support remain named gaps; no runtime/SQL/canonical changes.
