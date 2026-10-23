@@ -30,6 +30,35 @@ pub(super) struct Equipment {
 }
 
 impl Equipment {
+    fn stat_redirect(&self, world: &World) -> Result<Option<(EquipmentSlot, u32)>, String> {
+        let Some(value) = self.options.get("redirected_base_stats") else {
+            return Ok(None);
+        };
+        let id: u32 = value.parse().map_err(|error| {
+            format!(
+                "reference {} item{} redirected_base_stats {value:?}: {error}",
+                self.slot, self.item_id
+            )
+        })?;
+        // Pinned item.cpp95/1314: zero is the explicit no-redirect value.
+        if id == 0 {
+            return Ok(None);
+        }
+        let templates = world
+            .get_resource::<crate::item_templates::ItemTemplates>()
+            .ok_or("redirected_base_stats requires native item catalogs")?;
+        if templates
+            .get(shared::item_data::ItemDefinitionSource::Retail, id)
+            .is_none()
+        {
+            return Err(format!(
+                "reference {} item{}: native redirected_base_stats item{id} absent",
+                self.slot, self.item_id
+            ));
+        }
+        Ok(Some((slot(&self.slot)?, id)))
+    }
+
     pub fn modifiers(&self) -> ItemInstanceModifiers {
         ItemInstanceModifiers {
             bonus_list: self.bonus_list.clone(),
@@ -200,9 +229,17 @@ pub(super) fn equip(world: &mut World, unit: Entity, profile: &Profile) -> Resul
         .iter()
         .map(|item| Ok((slot(&item.slot)?, item.modifiers())))
         .collect::<Result<Vec<_>, String>>()?;
+    let base_stat_redirects = profile
+        .equipment
+        .iter()
+        .filter_map(|item| item.stat_redirect(world).transpose())
+        .collect::<Result<Vec<_>, _>>()?;
     world.entity_mut(unit).insert((
         crate::stats::EquippedItems { items },
-        crate::stats::EquippedItemModifiers { items: modifiers },
+        crate::stats::EquippedItemModifiers {
+            items: modifiers,
+            base_stat_redirects,
+        },
     ));
     Ok(())
 }

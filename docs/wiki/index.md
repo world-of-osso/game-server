@@ -1,3 +1,4 @@
+- [Profile stat redirects](systems/character-stats.md#profile-stat-allocation-redirects--2026-10-23) — native donor allocations, original item identity/effects;15-slot regression reproduces5tier mismatches/10matchingcontrols,3RED11.02s; GREEN pending.
 - [Label point recalculation](systems/auras.md#label-point-modifier-recalculation--2026-10-23) — generic218/219 lifecycle boundary; four native genuine REDs10.52s→4GREEN14.07s at52cb15634; lead integration/300s parity open, no data/rank changes.
 - [Hit positivity independent of factions](systems/auras.md#hit-positivity-independent-of-factions--2026-10-23) — native harmful neutral-target RED plus passing friendly-heal control; TC damage/heal/landed-effect classification, GREEN pending.
 - [Demonology DPS parity](investigations/demonology-dps-parity.md) — exact ST196789.57/3T420736.29 reference reproduction; owner/pet/summon census and missing native guardian input boundary; native parity open.
