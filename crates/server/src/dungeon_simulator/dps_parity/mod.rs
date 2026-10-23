@@ -3,6 +3,7 @@ mod engagement_tests;
 mod inputs;
 pub(crate) mod literal_rotation;
 mod pet_child_tests;
+mod pet_melee_tests;
 mod pet_stats_tests;
 mod player_rotation;
 mod power_tests;

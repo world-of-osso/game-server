@@ -1,3 +1,5 @@
+- [Hit positivity independent of factions](systems/auras.md#hit-positivity-independent-of-factions--2026-10-23) — native harmful neutral-target RED plus passing friendly-heal control; TC damage/heal/landed-effect classification, GREEN pending.
+- [Demonology DPS parity](investigations/demonology-dps-parity.md) — exact ST196789.57/3T420736.29 reference reproduction; owner/pet/summon census and missing native guardian input boundary; native parity open.
 - [Devastation Giantkiller policy](investigations/follower-data.md#devastation-giantkiller-policy--2026-10-22) — actual native mastery4RED; source-backed health/Tyranny multiplier implemented pending GREEN, measured ST/3T gaps and literal APL remain open.
 - [Shared native APL facts](systems/simc-apl.md#native-binding-boundary) — actual earned buffs/resources, selected talents, cooldown/charge/action-GCD and fixture clocks; six native RED→GREEN17.40s, unknown/dungeon-TTD predicates explicit; WW132row literal fixture5GREEN35.19s, damage/proc qualification and Ret integration open.
 - [Caster offsets and balloons](systems/toys.md#caster-offsets414348-source-boundary-2026-10-23) — source41/43/48 shared geometry; real75042/245946 learning,1s cast,60s expiry,Dismiss/reuse.39 covered cases across37+1+1/check0-67.07s/fmt0,545→547 exacttwo; Arena battle gap retained, native-facing/presentation/modifier/Detour gaps explicit.
@@ -904,7 +906,7 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
-- [Shared SimC APL](systems/simc-apl.md) — literal expressions, declared variables and conditional call order; eleven source WW/Ret decisions plus two action-context RED→GREEN cases;13GREEN, cases enabled; native adapters remain pending.
+- [Shared SimC APL](systems/simc-apl.md) — literal expressions, variables and call order;13 historical GREEN. Explicit run/target extension:16PASS/8genuineRED→24/24GREEN ate7fdc4dd1; native target-aware dispatch remains adapter-owned.
 
 - [Native weapon AP](systems/character-stats.md#native-weapon-attack-power--2026-10-23) — actual Tiger Palm91vs358–377 RED→four native GREEN13.89s; raw item-table AP, attack-type selection and aura366/unequip; parent integration gate pending.
 

@@ -14,6 +14,7 @@ fn fixture(world: &World) -> Encounter {
 fn action(name: &str) -> Action {
     Action {
         name: name.into(),
+        target: None,
         options: Default::default(),
     }
 }
