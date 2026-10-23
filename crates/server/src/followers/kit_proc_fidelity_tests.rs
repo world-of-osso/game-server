@@ -540,8 +540,10 @@ fn complete_recovered_lava_burst(h: &mut Harness, caster: Entity, target: Entity
 
 #[test]
 #[ignore = "native Lava Burst Overload mapping pending natural-chance RED/GREEN"]
-fn proc_fidelity_262_native_lava_burst_natural_mastery_produces_overload() {
+fn proc_fidelity_262_native_lava_burst_natural_overload_preserves_wrapper_flight() {
     const ACQUISITION_MISS_BUDGET: f64 = 1e-6;
+    const TARGET_DISTANCE: f32 = 35.0;
+    const OVERLOAD_SPEED: f32 = 50.0;
     let (mut h, caster) = prepare(209053);
     let chance = super::kit_clearcasting_tests::own_aura(&h, caster, 168534)
         .unwrap()
@@ -553,11 +555,39 @@ fn proc_fidelity_262_native_lava_burst_natural_mastery_produces_overload() {
     assert!((0.0..100.0).contains(&chance) && chance > 0.0);
     let attempts = (ACQUISITION_MISS_BUDGET.ln() / (1.0 - chance / 100.0).ln()).ceil() as usize;
     let target = h.npc;
-    let first = h.inbox.log.len();
+    let mut position = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(caster)
+        .unwrap();
+    position.x += TARGET_DISTANCE;
+    h.app.world_mut().entity_mut(target).insert(position);
     for attempt in 1..=attempts {
         let cast_start = h.inbox.log.len();
+        let go_start = h.inbox.go.len();
         complete_recovered_lava_burst(&mut h, caster, target);
-        h.advance(30);
+        let mut wrapper_go_at = None;
+        let mut overload_hit_at = None;
+        for _ in 0..60 {
+            h.advance(1);
+            let now = crate::spell_cast::now(h.app.world());
+            if wrapper_go_at.is_none()
+                && h.inbox.go[go_start..]
+                    .iter()
+                    .any(|event| event.caster == caster.to_bits() && event.spell_id == 77451)
+            {
+                wrapper_go_at = Some(now);
+            }
+            if h.inbox.log[cast_start..].iter().any(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(285466)
+                    && event.source == Some(caster.to_bits())
+                    && event.target == Some(target.to_bits())
+            }) {
+                overload_hit_at = Some(now);
+                break;
+            }
+        }
         assert!(
             h.inbox.log[cast_start..].iter().any(|event| {
                 event.kind == CombatLogKind::Damage
@@ -567,13 +597,20 @@ fn proc_fidelity_262_native_lava_burst_natural_mastery_produces_overload() {
             }),
             "each actual native51505 must land its authored285452 damage payload"
         );
-        if h.inbox.log[first..].iter().any(|event| {
-            event.kind == CombatLogKind::Damage
-                && event.spell_id == Some(285466)
-                && event.source == Some(caster.to_bits())
-                && event.target == Some(target.to_bits())
-        }) {
-            println!("LAVA_OVERLOAD native_chance={chance}% attempts={attempt}/{attempts}");
+        if let Some(hit_at) = overload_hit_at {
+            let go_at = wrapper_go_at.expect(
+                "TC enum77451/native effect32 wrapper must cast before285466 damage; direct damage-child cast bypasses authored flight",
+            );
+            let flight = hit_at - go_at;
+            let expected_flight = f64::from(TARGET_DISTANCE / OVERLOAD_SPEED);
+            let frame = frame_seconds(&h);
+            assert!(
+                (expected_flight - frame..=expected_flight + 2.0 * frame).contains(&flight),
+                "native77451 must retain35yd/50yds flight before285466 damage: actual={flight}, expected={expected_flight}"
+            );
+            println!(
+                "LAVA_OVERLOAD native_chance={chance}% attempts={attempt}/{attempts} wrapper_flight={flight}"
+            );
             return;
         }
     }
@@ -594,6 +631,7 @@ fn proc_fidelity_262_native_lava_burst_without_mastery_has_no_overload() {
     );
     let target = h.npc;
     let first = h.inbox.log.len();
+    let first_go = h.inbox.go.len();
     complete_recovered_lava_burst(&mut h, caster, target);
     h.advance(30);
     assert!(h.inbox.log[first..].iter().any(|event| {
@@ -606,6 +644,11 @@ fn proc_fidelity_262_native_lava_burst_without_mastery_has_no_overload() {
         h.inbox.log[first..].iter().all(|event| {
             event.spell_id != Some(285466) || event.source != Some(caster.to_bits())
         })
+    );
+    assert!(
+        h.inbox.go[first_go..]
+            .iter()
+            .all(|event| { event.caster != caster.to_bits() || event.spell_id != 77451 })
     );
 }
 
