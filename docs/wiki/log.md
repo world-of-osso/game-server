@@ -1,3 +1,7 @@
+## 2026-10-23 — Halls wider raw support observation
+
+[Halls boundary](systems/navigation.md#halls-wider-raw-support-boundary--2026-10-23): new full-WDT raw collector passes with no problems; compact full-scope exact-edge analysis retains all eligible support and confirms the seeded patch gap. Alternate stepping/liquid/dynamic/body traversal remains unqualified; no connector/bake/profile change or movement acceptance. Existing native proof reused unchanged.
+
 ## 2026-10-23 — Ruby Wowhead avenue parked
 
 [Upper-stage gap](systems/navigation.md#ruby-upper-stage-native-gap--2026-10-23): maintained rate-limited fetches identify distinct Radiant Drake taxi spells, but local70448 effects stop at opaque action sets without a sourced forward destination. No aliases/connector/bake added. Ruby remains named and parked; Halls is next by two-boss route impact.

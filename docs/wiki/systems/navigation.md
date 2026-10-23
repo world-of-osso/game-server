@@ -2,6 +2,16 @@
 
 Contract: [navigation](../../specs/navigation.md). Phase 1 uses the same offline `los::bake::Baker` asset/placement collector as LOS, with collision selection: terrain fans/holes, shared ground MOPY/MPY2 WMO collision faces, M2 bounding hulls instead of render batches. No new geometry extractor or CDN access. Shared MH2O parsing lives in `los::liquid` and is re-exported by server ground. Modern LiquidObject IDs (>=42) resolve LVF from the exact authored vertex block size; real ocean root776382 stores81depth bytes, not81float heights.
 
+## Halls wider raw support boundary — 2026-10-23
+
+Halls2527 affects189722/189727. All40 current native files hash-match the prior complete5990/9968 component proof; no repeat BFS/query batch. The known5.422yd coarse gap and4.954492yd corresponding raw rise still exceed unchanged1.6yd climb. Current source census has no placed TDB NPCs or map spell destinations/click bindings; its one GO is the exit portal, not an internal traversal contract.
+
+New read-only diagnosticbbdf29968 exports the full WDT4290690 collision collector, not a new nav/LOS bake:1PASS3.33s/compile2m22,3303438triangle rows across40active tiles, zero collector problems,40nav/WDT hashes unchanged. Authored-M2 obstacle tags are retained. Compact arrays/vertex-face incidence avoid per-face Python object amplification while retaining all2855081 unique eligible support faces/1685240vertices. Five exact-edge controls pass, including signed-zero identity and no near-coordinate snapping; these are algorithm controls, not world movement proof.
+
+The actual native boundary seeds lie0.0581/0.1437yd from their raw triangles. Expanding exact shared raw edges over the full eligible dataset gives110source/1277target support faces, still disconnected; their exact closest pair remains4.954492yd. This removes the old small-window limit for these two seeded patches, not for all physical traversal modes. Alternate-mesh stepping, liquid/dynamic travel, body clearance and authored transition state remain unqualified. No raw-route counterexample or new connector/bake/profile remedy is established; keep `FOLLOWER_NAV_COMPONENT_SPLIT_2527` named.
+
+Sources: `crates/navigation/src/halls_collision_diagnostic.rs`; game-engine `data/diagnostics/follower-nav-gorek-2026-10-22/halls-investigation/{source-preflight.json,full-raw-receipt.json,halls-full-raw.txt,raw-topology.json,raw-topology-compact-math-tests.log}`. Existing corresponding-boundary classification remains in sibling `component-investigation/raw-boundary-final-classification.md`.
+
 ## Ruby upper-stage native gap — 2026-10-23
 
 `FOLLOWER_ROUTE_INCOMPLETE_2521_190485` is a disconnected native upper stage, not merely A* pool exhaustion. Read-only export0ce5a0ba9 passes1/1 in1.89s: all12 canonical tiles contain330542 entrance-component polygons and13348 target-component polygons, zero intersection and no reachability either way. Melidrussa188252 projects into the entrance component; Kokia189232 and journal-placed Erkhart190485 share the upper target component. Source194667 Radiant Drake atY232.711 has no nearby native polygon. All12 native hashes match the placement packet and remain unchanged during observation.
