@@ -75,6 +75,35 @@ fn markdown(report: &Value) -> String {
     text
 }
 
+fn write_per_spec_markdown(_report: &Value, _directory: &Path) -> Result<(), String> {
+    Ok(())
+}
+
+#[test]
+#[ignore = "RED: standalone per-spec Markdown artifact missing"]
+fn healer_benchmark_writes_standalone_per_spec_markdown() {
+    std::fs::create_dir_all("/var/tmp/osso").unwrap();
+    let directory = tempfile::tempdir_in("/var/tmp/osso").unwrap();
+    let report = json!({"seed":1,"level":32,"intake_blake3":"concrete-fight-input",
+    "specs":[
+        {"spec":105,"name":"Restoration Druid","status":"native","gaps":[],
+         "metrics":{"party_deaths":1,"overheal_pct":25.0,"mana_at_end":123.0,"idle_gcds":2.0,
+             "absorbed_damage":200.0,"effective_hps":50.0,"effective_throughput_hps":116.6666666667,"native_combat_seconds":3.0}},
+        {"spec":65,"name":"Holy Paladin","status":"blocked","metrics":null,"gaps":["NATIVE_HEALER_PROFILE_ABSENT"]}
+    ]});
+    write_per_spec_markdown(&report, directory.path()).unwrap();
+    let druid =
+        std::fs::read_to_string(directory.path().join("105.md")).expect("standalone native report");
+    assert!(druid.contains("| 105 Restoration Druid | native |"));
+    assert!(druid.contains("116.667"));
+    assert!(!druid.contains("Holy Paladin"));
+    let paladin =
+        std::fs::read_to_string(directory.path().join("65.md")).expect("standalone blocked report");
+    assert!(paladin.contains("NATIVE_HEALER_PROFILE_ABSENT"));
+    assert!(paladin.contains("N/A"));
+    assert!(!paladin.contains("Restoration Druid"));
+}
+
 pub(super) fn report(intake: &Intake, bytes: &[u8], directory: &Path) -> Result<Value, String> {
     std::fs::create_dir_all(directory).map_err(|error| error.to_string())?;
     let mut rows = Vec::new();
