@@ -288,6 +288,16 @@ fn darkflame_drop_idle_follower_descends_when_owner_is_directly_below() {
             .world()
             .get::<crate::creature_ai::FollowOwner>(follower)
     );
+    // Change horizontal separation only; the same actor must then use the route.
+    let far_owner = Vec3::new(406.7775, LANDING.y, 155.27142);
+    *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position(far_owner);
+    h.advance(80);
+    let control = point(*h.app.world().get::<Position>(follower).unwrap());
+    eprintln!("STACKED_FLOOR_FOLLOW_XZ_CONTROL owner={far_owner:?} feet={control:?}");
+    assert!(
+        control.y < UPPER.y - 20.0,
+        "same follower/route must descend once XZ separation grows: {control:?}"
+    );
     assert!(
         feet.y < LANDING.y + 1.0,
         "idle follower must not treat a reachable owner30yd below as already in range: {feet:?}"
