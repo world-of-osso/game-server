@@ -34,6 +34,7 @@ pub(super) struct MemberSample {
 pub(super) struct Sample {
     at: f64,
     members: Vec<MemberSample>,
+    pets: Vec<serde_json::Value>,
 }
 
 #[derive(Serialize)]
@@ -1351,6 +1352,7 @@ struct Run {
     last_owner_position: Vec3,
     last_resources: Vec<(Option<f32>, Option<f32>)>,
     healer_metrics: super::healer_metrics::Recorder,
+    pet_recorder: super::diagnostics::PetRecorder,
 }
 
 pub(super) fn run(seed: u64) -> Result<Report, String> {
@@ -1515,6 +1517,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         last_owner_position,
         last_resources: Vec::new(),
         healer_metrics,
+        pet_recorder: Default::default(),
         report: Report {
             seed,
             status: "running".into(),
@@ -1565,6 +1568,7 @@ impl Run {
             .iter()
             .map(|(guid, actor)| (Some(*guid), *actor))
             .chain(self.members().map(|actor| (None, actor)))
+            .chain(self.pet_recorder.units().map(|actor| (None, actor)))
             .map(|(guid, actor)| super::diagnostics::inspect_unit(self.app.world(), guid, actor))
             .collect();
         serde_json::json!(units)
@@ -1625,8 +1629,12 @@ impl Run {
     }
 
     fn sample(&mut self) {
-        let members = self
-            .members()
+        let entities: Vec<_> = self.members().collect();
+        let pets = self
+            .pet_recorder
+            .sample(self.app.world(), &entities, &self.actors);
+        let members = entities
+            .into_iter()
             .map(|entity| {
                 let world = self.app.world();
                 let health = world.get::<Health>(entity);
@@ -1655,6 +1663,7 @@ impl Run {
         self.report.samples.push(Sample {
             at: self.now(),
             members,
+            pets,
         });
     }
 

@@ -149,10 +149,28 @@ pub fn spell_hit_masks(spell: &SpellInfo, harmful: bool) -> (u32, u32) {
     match (defense, harmful) {
         (2, _) => (PROC_DEAL_MELEE_ABILITY, PROC_TAKE_MELEE_ABILITY),
         (3, _) => (PROC_DEAL_RANGED_ABILITY, PROC_TAKE_RANGED_ABILITY),
-        (1, true) => (PROC_DEAL_HARMFUL_SPELL, PROC_TAKE_HARMFUL_SPELL),
-        (1, false) => (PROC_DEAL_HELPFUL_SPELL, PROC_TAKE_HELPFUL_SPELL),
-        (_, true) => (PROC_DEAL_HARMFUL_ABILITY, PROC_TAKE_HARMFUL_ABILITY),
-        (_, false) => (PROC_DEAL_HELPFUL_ABILITY, PROC_TAKE_HELPFUL_ABILITY),
+        _ => non_weapon_hit_masks(spell, harmful),
+    }
+}
+
+/// TC a352b1fa Spell.cpp2379–2400: default hit classification reads native
+/// attributes, not DefenseType0 versus1 (Word of Glory has DefenseType0).
+fn non_weapon_hit_masks(spell: &SpellInfo, harmful: bool) -> (u32, u32) {
+    const TREAT_AS_PERIODIC: u32 = 0x0200_0000;
+    const IS_ABILITY: u32 = 0x10;
+    let attributes = spell.misc.as_ref().map_or([0; 17], |misc| misc.attributes);
+    if attributes[3] & TREAT_AS_PERIODIC != 0 {
+        return if harmful {
+            (PROC_DEAL_HARMFUL_PERIODIC, PROC_TAKE_HARMFUL_PERIODIC)
+        } else {
+            (PROC_DEAL_HELPFUL_PERIODIC, PROC_TAKE_HELPFUL_PERIODIC)
+        };
+    }
+    match (attributes[0] & IS_ABILITY != 0, harmful) {
+        (true, true) => (PROC_DEAL_HARMFUL_ABILITY, PROC_TAKE_HARMFUL_ABILITY),
+        (true, false) => (PROC_DEAL_HELPFUL_ABILITY, PROC_TAKE_HELPFUL_ABILITY),
+        (false, true) => (PROC_DEAL_HARMFUL_SPELL, PROC_TAKE_HARMFUL_SPELL),
+        (false, false) => (PROC_DEAL_HELPFUL_SPELL, PROC_TAKE_HELPFUL_SPELL),
     }
 }
 

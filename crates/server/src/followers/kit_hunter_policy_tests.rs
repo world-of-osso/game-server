@@ -10,7 +10,7 @@ const AUSTIN: u32 = 209065;
 const NATIVE_DUCK: u32 = 174884;
 const WATERFOWL: u32 = 125;
 
-fn prepare_native_duck(
+pub(super) fn prepare_native_duck(
     level: u8,
 ) -> (
     crate::spell_cast::test_harness::Harness,

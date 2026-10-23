@@ -85,7 +85,7 @@ fn hunter(db: &Path, entry: u32) -> Option<Harness> {
         false,
         |app| {
             app.insert_resource(WorldData {
-                templates,
+                templates: templates.into(),
                 ..Default::default()
             });
             app.insert_resource(db);

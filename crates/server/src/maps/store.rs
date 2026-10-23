@@ -493,6 +493,13 @@ impl MapStore {
 }
 
 pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
+    #[cfg(test)]
+    return crate::test_data::catalog_cache::load_connection(conn, || read_map_store(conn));
+    #[cfg(not(test))]
+    read_map_store(conn)
+}
+
+fn read_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
     let safe_locs = load_safe_locs(conn)?;
     Ok(MapStore {
         maps: load_maps(conn)?,

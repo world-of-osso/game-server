@@ -73,6 +73,9 @@ pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::Ca
 }
 
 pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
+    if (spell, index) == (super::area_trigger::meteor::METEOR, 0) {
+        return Some(super::area_trigger::meteor::cast_meteor);
+    }
     if spell == super::mobile_banking::MOBILE_BANKING && index == 0 {
         return Some(super::mobile_banking::summon_chest);
     }
@@ -431,6 +434,10 @@ pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
         return Some(hook);
     }
     match spell_id {
+        super::elemental_overload::LIGHTNING_OVERLOAD
+        | super::elemental_overload::CHAIN_OVERLOAD => {
+            Some(super::elemental_overload::scale_damage)
+        }
         crate::auras::agony::AGONY => Some(crate::auras::agony::tick_damage),
         touch_of_death::TOUCH_OF_DEATH => Some(touch_of_death::damage),
         batch13::SHADOW_WORD_DEATH => Some(batch13::death_execute),
@@ -550,7 +557,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
             Some(essence_burst::roll_essence_burst)
         }
-        hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE => {
+        hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE | hot_streak::NATIVE_FLAMESTRIKE => {
             Some(hot_streak::consume_procs_and_roll_pyroclasm)
         }
         lava_surge::LAVA_BURST => Some(lava_surge::restore_deferred_charge),
