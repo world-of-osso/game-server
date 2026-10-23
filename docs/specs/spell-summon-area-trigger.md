@@ -34,8 +34,8 @@ Server effects 28 and 179 use authentic spell/world records. Source: `crates/ser
 - `crates/server/src/spell_cast/area_trigger.rs`: area lifetime, enter/periodic trigger execution.
 - `crates/server/src/spell_cast/effects.rs`: once-per-cast dispatch.
 - `crates/server/src/spell_cast/targets.rs`: destinations, summon selectors and paired sampled destination/recipients.
-- `crates/server/src/spell_cast/targets/ordered_destination.rs`: source74/148 direct collision/ground authority and force-location gap.
-- `crates/server/src/spell_cast/mod.rs`: processed effect-group cache preserves the sampled74 destination with its recipients.
+- `crates/server/src/spell_cast/targets/ordered_destination.rs`: source73/74/148 direct collision/ground authority,73 caster radius/motion and force-location gap.
+- `crates/server/src/spell_cast/mod.rs`: processed effect-group cache preserves sampled73/74 destinations with their recipients.
 - `crates/server/src/toy_interaction.rs`: exact source-described ride/action gaps remain unavailable independently of selector support.
 - `scripts/db2.py`, `scripts/db2_schema.sql`: local SummonProperties extraction/import.
 
@@ -43,6 +43,8 @@ Server effects 28 and 179 use authentic spell/world records. Source: `crates/ser
 
 - `crates/server/src/spell_cast/summon_at_tests.rs`: real-data cast/lifecycle tests.
 - `crates/server/src/spell_cast/target74_tests.rs`: real70448 destination/radius/origin/map/authority boundaries and preserved Crab action gap.
+- `crates/server/src/spell_cast/target73_tests.rs`: native caster-radius/movement/reach/ordered-area/authority cases and exact preserved Wikky/Carp action gaps.
+- `crates/server/src/toys_target73_tests.rs`: real Ruthers learning/UseToy/source actor/natural30s expiry/30min recovery reuse and rejected-cast GCD-vs-item-recovery retry.
 
 ## Known gaps (current cycle)
 
