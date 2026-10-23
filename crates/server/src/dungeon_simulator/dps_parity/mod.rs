@@ -215,6 +215,13 @@ fn apply_fixed_time_target_health(run: &mut Run, tick: u32) -> Result<(), String
 }
 
 fn advance_combat(run: &mut Run) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>), String> {
+    advance_combat_observed(run, |_| {})
+}
+
+fn advance_combat_observed(
+    run: &mut Run,
+    mut observe: impl FnMut(&Run),
+) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>), String> {
     let start_time = run
         .app
         .world()
@@ -233,6 +240,7 @@ fn advance_combat(run: &mut Run) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>)
     }
     let mut buffs = BTreeMap::new();
     let mut samples = vec![report::engagement(run.app.world(), run.actor, &run.targets)];
+    observe(run);
     drive_player(run)?;
     for tick in 1..=TICKS {
         apply_fixed_time_target_health(run, tick)?;
@@ -245,6 +253,7 @@ fn advance_combat(run: &mut Run) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>)
         if tick < TICKS {
             drive_player(run)?;
         }
+        observe(run);
         report::sample_buffs(run.app.world(), run.actor, &mut buffs);
         if matches!(tick, 1 | 20 | LAST_30S_START | TICKS) {
             samples.push(report::engagement(run.app.world(), run.actor, &run.targets));
@@ -412,6 +421,122 @@ fn dps_parity_native_bis_dummy_records_300s() {
         "NATIVE_DPS spec{spec} targets{count}: {}",
         report["combat"]["dps"]
     );
+}
+
+#[test]
+#[ignore = "opt-in actual300s per-wave health/TTD; requires private parity inputs"]
+fn dps_parity_fixture_add_health_and_ttd_follow_each_summon_lifetime() {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    use server::simc_apl::{Action, ActionFacts};
+    let _seed_scope = crate::random::seed_scope(70_448);
+    let (profile, traits) = read_reference(66).unwrap();
+    let mut run = prepare_reference(
+        profile,
+        &traits,
+        3,
+        crate::followers::simulator::ParityActor::Follower,
+    )
+    .unwrap();
+    engage(&mut run);
+    let started_at = crate::spell_cast::now(run.app.world());
+    let encounter = Encounter::Fixture {
+        started_at,
+        duration: 300.0,
+        style: FightStyle::Patchwerk,
+    };
+    let bindings = Bindings::default();
+    let mut seen = [false; 10];
+    let mut errors = Vec::new();
+    let (seconds, _, _) = advance_combat_observed(&mut run, |run| {
+        let elapsed = crate::spell_cast::now(run.app.world()) - started_at;
+        let millis = (elapsed * 1000.0).round() as u32;
+        let wave = (millis / 30_010) as usize;
+        if wave >= seen.len() {
+            return;
+        }
+        let age = millis % 30_010;
+        if age >= 30_000 {
+            if run.targets.len() != 1 {
+                errors.push(format!(
+                    "{elapsed}s: expected absent adds, got{} targets",
+                    run.targets.len()
+                ));
+            }
+            return;
+        }
+        if age < 15_000 || seen[wave] {
+            return;
+        }
+        seen[wave] = true;
+        if run.targets.len() != 3 {
+            errors.push(format!(
+                "wave{wave}: expected3 targets, got{}",
+                run.targets.len()
+            ));
+        }
+        let facts = NativeFacts::new(
+            run.app.world(),
+            run.actor,
+            &bindings,
+            encounter,
+            run.targets.len(),
+        );
+        for (index, &target) in run.targets.iter().enumerate() {
+            // sc_enemy.cpp1053–1101: timed adds use their own expiration, not300s.
+            let expected_ttd = if index == 0 {
+                300.0 - elapsed
+            } else {
+                f64::from(30_000 - age) / 1000.0
+            };
+            let lifetime = if index == 0 { 300.0 } else { 30.0 };
+            let expected_pct = expected_ttd / lifetime * 100.0;
+            let health = run
+                .app
+                .world()
+                .get::<shared::components::Health>(target)
+                .unwrap();
+            let native_pct = f64::from(health.current) * 100.0 / f64::from(health.max);
+            let action = Action {
+                name: "auto_attack".into(),
+                target: Some(target.to_bits()),
+                options: Default::default(),
+            };
+            let readings = [
+                ("native health", Ok(native_pct), expected_pct),
+                (
+                    "target.health.pct",
+                    facts.value_for(&action, "target.health.pct"),
+                    expected_pct,
+                ),
+                (
+                    "target.time_to_die",
+                    facts.value_for(&action, "target.time_to_die"),
+                    expected_ttd,
+                ),
+                // player.hpp964 and raid_event.cpp77: main boss, timed ENEMY_ADDs not bosses.
+                (
+                    "target.is_boss",
+                    facts.value_for(&action, "target.is_boss"),
+                    if index == 0 { 1.0 } else { 0.0 },
+                ),
+            ];
+            for (label, actual, expected) in readings {
+                match actual {
+                    Ok(value) if (value - expected).abs() < 0.001 => {}
+                    other => errors.push(format!(
+                        "wave{wave}/target{index} {label}: {other:?}, expected{expected}"
+                    )),
+                }
+            }
+        }
+    })
+    .unwrap();
+    assert!((seconds - 300.0).abs() < 0.001);
+    assert!(
+        seen.into_iter().all(|seen| seen),
+        "all10 waves must actually be observed"
+    );
+    assert!(errors.is_empty(), "{}", errors.join("\n"));
 }
 
 #[test]
