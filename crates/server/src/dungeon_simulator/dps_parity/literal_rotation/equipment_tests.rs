@@ -152,6 +152,80 @@ fn literal_equipment_native_identity_matches_actual_equipment_not_catalog_member
 }
 
 #[test]
+#[ignore = "requires private native Ele trinket identities; all names bind explicitly"]
+fn literal_equipment_native_named_trinkets_are_slot_specific() {
+    let mut world = load_world();
+    for (item, name) in [
+        (234217, "funhouse_lens"),
+        (273649, "stormbound_emblem_of_dazar"),
+        (270169, "hex_lords_dooming_idol"),
+        (270168, "font_of_venomous_rage"),
+    ] {
+        let actor = equip(&mut world, item, 193701);
+        let first = format!("trinket.1.is.{name}");
+        let second = format!("trinket.2.is.{name}");
+        assert_eq!(
+            read_facts(
+                &world,
+                actor,
+                &[&first, &second, "trinket.2.is.algethar_puzzle_box"]
+            ),
+            vec![Ok(1.0), Ok(0.0), Ok(1.0)],
+            "native item{item}"
+        );
+        assert!(read_facts(&world, actor, &["trinket.1.is.not_a_native_item_name"])[0].is_err());
+    }
+}
+
+#[test]
+#[ignore = "requires private native ItemSet2062 and explicit pinned tier alias policy"]
+fn literal_equipment_native_set_facts_follow_original_piece_counts_and_spec() {
+    let mut world = load_world();
+    let actor = equip(&mut world, 193701, 270173);
+    world
+        .entity_mut(actor)
+        .insert(crate::class_progression::ActiveSpec(70));
+    let pieces = [
+        (EquipmentSlot::Head, 271465),
+        (EquipmentSlot::Shoulder, 271463),
+        (EquipmentSlot::Chest, 271468),
+        (EquipmentSlot::Legs, 271464),
+    ];
+    for (count, expected) in [
+        (0, [0.0, 0.0]),
+        (1, [0.0, 0.0]),
+        (2, [1.0, 0.0]),
+        (4, [1.0, 1.0]),
+        (3, [1.0, 0.0]),
+    ] {
+        world
+            .get_mut::<EquippedItems>(actor)
+            .unwrap()
+            .items
+            .retain(|(slot, _, _)| !pieces.iter().any(|(piece, _)| piece == slot));
+        world.get_mut::<EquippedItems>(actor).unwrap().items.extend(
+            pieces[..count]
+                .iter()
+                .map(|&(slot, id)| (slot, ItemDefinitionSource::Retail, id)),
+        );
+        assert_eq!(
+            read_facts(&world, actor, &["set_bonus.mid2_2pc", "set_bonus.mid2_4pc"]),
+            expected.map(Ok).to_vec(),
+            "native set2062 count{count}"
+        );
+    }
+    world
+        .entity_mut(actor)
+        .insert(crate::class_progression::ActiveSpec(71));
+    assert_eq!(
+        read_facts(&world, actor, &["set_bonus.mid2_2pc"]),
+        vec![Ok(0.0)],
+        "foreign spec cannot receive Paladin set"
+    );
+    assert!(read_facts(&world, actor, &["set_bonus.unknown_tier_4pc"])[0].is_err());
+}
+
+#[test]
 #[ignore = "requires private native item spells; zero cooldown without item-specific exception"]
 fn literal_equipment_native_passive_zero_cooldown_and_unknown_operand_boundary() {
     let mut world = load_world();
