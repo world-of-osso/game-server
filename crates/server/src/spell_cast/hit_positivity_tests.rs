@@ -14,6 +14,7 @@ fn assert_native_proc(h: &Harness, passive: u32, chance: u32, mask: u32) {
     assert_eq!(options.proc_type_mask, [mask, 0]);
     assert_eq!(options.proc_category_recovery_ms, 0);
     assert!(has_aura(h.app.world(), h.caster, passive));
+    eprintln!("HIT_POSITIVITY_NATIVE passive={passive} chance={chance} mask={mask:#x}");
 }
 
 #[test]
@@ -35,6 +36,7 @@ fn hit_positivity_native_harmful_proc_on_neutral_attackable_target() {
         h.npc,
         super::targets::Relation::Enemy,
     ));
+    eprintln!("HIT_POSITIVITY_NATIVE target_faction=7 hostile=false attackable=true");
     assert!(!has_aura(h.app.world(), h.caster, 260734));
     let before = h.health(h.npc);
     h.cast_and_deliver(51505, Some(h.npc));
