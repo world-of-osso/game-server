@@ -25,6 +25,7 @@ fn healer_benchmark_core_direct_heal_amounts_match_db2_tc_ledger() {
         (1468, 13, 361509, 780.0, 0.05),
         (1468, 13, 364343, 240.0, 0.0),
     ];
+    let mut mismatches = Vec::new();
     for (spec, class, spell, expected, variance) in cases {
         assert!(
             expected > 0.0,
@@ -77,15 +78,19 @@ fn healer_benchmark_core_direct_heal_amounts_match_db2_tc_ledger() {
         let delta = variance * 0.5;
         let range =
             (expected * (1.0 - delta)).round() as i32..=(expected * (1.0 + delta)).round() as i32;
-        assert!(
-            range.contains(&heal.amount),
-            "spec{spec} spell{spell}: {} outside {range:?}",
-            heal.amount
-        );
-        assert_eq!(heal.overflow, 0);
+        if !range.contains(&heal.amount) || heal.overflow != 0 {
+            mismatches.push(format!(
+                "spec{spec} spell{spell}: amount{} outside {range:?} or unexpected overheal{}",
+                heal.amount, heal.overflow
+            ));
+        }
         println!(
             "HEAL_COEFFICIENT spec={spec} spell={spell} amount={} expected={expected} range={range:?}",
             heal.amount
         );
     }
+    assert!(
+        mismatches.is_empty(),
+        "native core-heal coefficient mismatches: {mismatches:?}"
+    );
 }
