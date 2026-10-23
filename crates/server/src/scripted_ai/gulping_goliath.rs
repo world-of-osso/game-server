@@ -81,10 +81,12 @@ impl BossScript for Goliath {
             }
             _ => return,
         };
-        if event == BELLY_SLAM {
-            ctx.do_cast_victim(event);
-        } else {
-            ctx.do_cast_self(event);
+        match event {
+            BELLY_SLAM => ctx.do_cast_victim(event),
+            // Native EXCLUDE_CASTER rejects an explicit self target. Source18/8
+            // owns the Gulp cone; omit explicit target rather than invent one.
+            GULP => ctx.do_cast_aoe(event),
+            _ => ctx.do_cast_self(event),
         }
         self.boss.events.repeat(repeat);
     }
