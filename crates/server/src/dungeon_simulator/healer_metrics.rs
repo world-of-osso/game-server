@@ -37,16 +37,7 @@ pub(super) struct Recorder {
     tank_hot_seconds: BTreeMap<u32, f64>,
     any_hot_seconds: f64,
     party_deaths: u64,
-    raw_healing: u64,
-    overhealing: u64,
-    idle_gcd_seconds: f64,
-    idle_gcds: f64,
     pull_ends: Vec<PullEnd>,
-    frames: Vec<super::healer_intake::Frame>,
-    source_deaths: Vec<(u32, u32)>,
-    map_id: u32,
-    difficulty_id: u32,
-    level: u8,
 }
 
 pub(super) fn start(
@@ -64,29 +55,6 @@ pub(super) fn start(
                 .is_some_and(|follower| follower.profile.role == shared::group::GroupRole::Healer)
         })
         .expect("native simulator party includes a healer");
-    let members: Vec<_> = party.members.iter().copied().chain([party.owner]).collect();
-    let sources = graph
-        .packs
-        .iter()
-        .flat_map(|pack| {
-            pack.spawns
-                .iter()
-                .map(|spawn| (actors[&spawn.guid], (spawn.guid, pack.id)))
-        })
-        .collect();
-    let start_tick = super::healer_intake::tick(world);
-    let (source_snapshots, gaps) = match super::healer_intake::snapshot_sources(world, actors) {
-        Ok(sources) => (sources, Vec::new()),
-        Err(gap) => (BTreeMap::new(), vec![gap]),
-    };
-    world.insert_resource(super::healer_intake::Capture {
-        members: members.clone(),
-        sources,
-        start_tick,
-        source_snapshots,
-        gaps,
-        ..Default::default()
-    });
     let actor_packs = graph
         .packs
         .iter()
@@ -115,27 +83,10 @@ pub(super) fn start(
         })
         .collect();
     crate::auras::observations::start(world, healer);
-    let level = world.get::<shared::components::Level>(healer).unwrap().0;
-    let initial_frame = super::healer_intake::Frame {
-        tick: 0,
-        positions: members
-            .iter()
-            .map(|&unit| {
-                world
-                    .get::<shared::components::Position>(unit)
-                    .map(|at| [at.x, at.y, at.z])
-            })
-            .collect(),
-        in_combat: members.iter().any(|&unit| {
-            world
-                .get::<CombatStatus>(unit)
-                .is_some_and(|status| status.0)
-        }),
-    };
     Recorder {
         healer,
         tank: party.tank,
-        members,
+        members: party.members.iter().copied().chain([party.owner]).collect(),
         actor_packs,
         packs,
         event_cursor: world.resource::<ObservedCombatEvents>().0.len(),
@@ -145,16 +96,7 @@ pub(super) fn start(
         tank_hot_seconds: available_periodic_heals(world, healer),
         any_hot_seconds: 0.0,
         party_deaths: 0,
-        raw_healing: 0,
-        overhealing: 0,
-        idle_gcd_seconds: 0.0,
-        idle_gcds: 0.0,
         pull_ends: Vec::new(),
-        frames: vec![initial_frame],
-        source_deaths: Vec::new(),
-        map_id: graph.map_id,
-        difficulty_id: graph.difficulty_id(),
-        level,
     }
 }
 
@@ -181,24 +123,6 @@ impl Recorder {
         let now = world.resource::<Time<Virtual>>().elapsed_secs_f64();
         let dt = now - self.last_frame;
         self.last_frame = now;
-        let capture = world.resource::<super::healer_intake::Capture>();
-        self.frames.push(super::healer_intake::Frame {
-            tick: super::healer_intake::tick(world).saturating_sub(capture.start_tick),
-            positions: self
-                .members
-                .iter()
-                .map(|&unit| {
-                    world
-                        .get::<shared::components::Position>(unit)
-                        .map(|at| [at.x, at.y, at.z])
-                })
-                .collect(),
-            in_combat: self.members.iter().any(|&unit| {
-                world
-                    .get::<CombatStatus>(unit)
-                    .is_some_and(|status| status.0)
-            }),
-        });
         self.observe_combat_coverage(world, dt);
         let events = &world.resource::<ObservedCombatEvents>().0;
         for event in &events[self.event_cursor..] {
@@ -217,15 +141,6 @@ impl Recorder {
             return;
         }
         self.combat_seconds += dt;
-        let alive = world
-            .get::<Health>(self.healer)
-            .is_some_and(|health| health.current > 0.0);
-        if alive
-            && let Some((false, duration)) = crate::spell_cast::healer_idle_gcd(world, self.healer)
-        {
-            self.idle_gcd_seconds += dt;
-            self.idle_gcds += dt / duration;
-        }
         if !world
             .get::<Health>(self.tank)
             .is_some_and(|health| health.current > 0.0)
@@ -260,14 +175,6 @@ impl Recorder {
         let source = event.source.and_then(Entity::try_from_bits);
         let target = event.target.and_then(Entity::try_from_bits);
         match event.kind {
-            CombatLogKind::Heal
-                if source == Some(self.healer)
-                    && target.is_some_and(|unit| self.members.contains(&unit)) =>
-            {
-                let raw = event.amount.max(0) as u64;
-                self.raw_healing += raw;
-                self.overhealing += (event.overflow.max(0) as u64).min(raw);
-            }
             CombatLogKind::Damage => self.observe_pack_engagement(source, target, now),
             CombatLogKind::Death => {
                 if let Some(target) = target {
@@ -304,13 +211,6 @@ impl Recorder {
     }
 
     fn observe_pack_death(&mut self, world: &World, target: Entity, now: f64) {
-        let capture = world.resource::<super::healer_intake::Capture>();
-        if let Some(&(guid, _)) = capture.sources.get(&target) {
-            self.source_deaths.push((
-                super::healer_intake::tick(world).saturating_sub(capture.start_tick),
-                guid,
-            ));
-        }
         let Some(&pack_id) = self.actor_packs.get(&target) else {
             return;
         };
@@ -344,46 +244,7 @@ impl Recorder {
                 (*spell, fraction)
             })
             .collect();
-        let absorb_usage = world
-            .resource::<super::healer_intake::Capture>()
-            .consumed_absorbs
-            .get(&self.healer)
-            .copied()
-            .unwrap_or_default();
-        let absorbed = absorb_usage.total;
         serde_json::json!({
-            "recorded_intake": {
-                "schema": 1,
-                "map_id": self.map_id,
-                "difficulty_id": self.difficulty_id,
-                "level": self.level,
-                "source_deaths": self.source_deaths,
-                "end_tick": self.frames.last().map_or(0, |frame| frame.tick),
-                "hits": world.resource::<super::healer_intake::Capture>().hits,
-                "sources": world.resource::<super::healer_intake::Capture>().source_snapshots,
-                "frames": self.frames,
-                "pulls": self.pull_ends,
-                "gaps": world.resource::<super::healer_intake::Capture>().gaps,
-            },
-            "dungeon_healing": {
-                "party_deaths": self.party_deaths,
-                "raw_healing": self.raw_healing,
-                "effective_healing": self.raw_healing - self.overhealing,
-                "absorbed_damage": absorbed,
-                "absorbed_points_on_non_unit_hits": absorb_usage.non_unit,
-                "absorbed_points_unknown_scale": absorb_usage.unknown_scale,
-                "effective_healing_plus_absorbed_damage": (self.raw_healing - self.overhealing) as f64 + absorbed,
-                "absorb_definition": "healer-cast native SCHOOL_ABSORB points consumed on party before level scaling; not normalized prevented HP; applied/unconsumed shield capacity excluded",
-                "overhealing": self.overhealing,
-                "overheal_pct": (self.raw_healing > 0).then(|| 100.0 * self.overhealing as f64 / self.raw_healing as f64),
-                "effective_hps": (self.combat_seconds > 0.0).then(|| (self.raw_healing - self.overhealing) as f64 / self.combat_seconds),
-                "combat_seconds": self.combat_seconds,
-                "mana_at_end": world.get::<Mana>(self.healer).map(|mana| mana.current),
-                "max_mana": world.get::<Mana>(self.healer).map(|mana| mana.max),
-                "idle_gcd_seconds": self.idle_gcd_seconds,
-                "idle_gcds": self.idle_gcds,
-                "idle_definition": "alive, in party combat, no active cast/channel or native GCD; equivalents use profile heal native hasted GCD"
-            },
             "sample_period_seconds": world.resource::<Time<Fixed>>().timestep().as_secs_f64(),
             "healer": self.healer.to_bits(), "tank": self.tank.to_bits(),
             "pull_ends": self.pull_ends, "party_deaths": self.party_deaths,

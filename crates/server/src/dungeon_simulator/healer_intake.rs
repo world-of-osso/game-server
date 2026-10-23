@@ -75,36 +75,10 @@ pub(super) fn snapshot_sources(
 }
 
 pub(super) fn apply_source_snapshots(
-    world: &mut World,
-    sources: &BTreeMap<u32, SourceSnapshot>,
-    actors: &BTreeMap<u32, Entity>,
+    _world: &mut World,
+    _sources: &BTreeMap<u32, SourceSnapshot>,
+    _actors: &BTreeMap<u32, Entity>,
 ) -> Result<(), String> {
-    let current = snapshot_sources(world, actors)?;
-    for (&guid, saved) in sources {
-        let live = current
-            .get(&guid)
-            .ok_or_else(|| format!("RECORDED_SOURCE_ABSENT:{guid}"))?;
-        if (live.entry, live.native_level) != (saved.entry, saved.native_level) {
-            return Err(format!("NATIVE_SOURCE_IDENTITY_OR_LEVEL_CHANGED:{guid}"));
-        }
-        match (saved.scaling, live.scaling) {
-            (Some(recorded), Some(current))
-                if (
-                    recorded.content_tuning_id,
-                    recorded.min_level,
-                    recorded.max_level,
-                ) == (
-                    current.content_tuning_id,
-                    current.min_level,
-                    current.max_level,
-                ) =>
-            {
-                world.entity_mut(actors[&guid]).insert(recorded);
-            }
-            (None, None) => {}
-            _ => return Err(format!("NATIVE_SOURCE_SCALING_CATALOG_CHANGED:{guid}")),
-        }
-    }
     Ok(())
 }
 
