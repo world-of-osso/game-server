@@ -1,7 +1,8 @@
 //! Source41/43/48 caster destinations; sampled spell actions are not executed here.
 use super::test_harness::{Harness, harness, world_db};
 use super::*;
-use shared::components::{PlayerMotion, Position, Rotation};
+use shared::components::{ModelDisplay, Npc, PlayerMotion, Position, Rotation};
+use shared::protocol::CombatLogKind;
 
 const FRONT_RIGHT: u32 = 155043;
 const BACK_LEFT: u32 = 105229;
@@ -180,7 +181,12 @@ fn toy_coverage_caster_offset_native_area_uses_final_emitted_center() {
         y: origin.y,
         z: origin.z - 6.0 * angle.sin(),
     };
-    h.app.world_mut().entity_mut(h.npc).insert(center);
+    let entry = h.app.world().get::<Npc>(h.npc).unwrap().template_id;
+    let display_id = crate::test_data::world_data().templates[&entry].models[0].display_id;
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert((center, ModelDisplay { display_id }));
     h.app
         .init_resource::<super::test_harness::ObservedCombatEvents>();
     let spell = world_db().unwrap().store.get(BACK_AREA).unwrap().clone();
@@ -194,28 +200,39 @@ fn toy_coverage_caster_offset_native_area_uses_final_emitted_center() {
         false,
     )
     .unwrap();
-    println!("source126336 paired pre-defense recipients/destination: {paired:?}");
-    let effects = plan(&mut h, BACK_AREA).unwrap();
-    println!(
-        "source126336 observed hit receipts: {:?}",
-        h.app
-            .world()
-            .resource::<super::test_harness::ObservedCombatEvents>()
-            .0
+    let selected_center = paired.1.expect("native48 selected destination");
+    assert!(
+        crate::line_of_sight::sees_area_center(h.app.world(), h.npc, selected_center.position),
+        "authored Kobold display must supply the real LOS body"
     );
+    assert_eq!(paired.0, vec![h.npc], "pre-defense source area membership");
+    let effects = plan(&mut h, BACK_AREA).unwrap();
+    let receipts = &h
+        .app
+        .world()
+        .resource::<super::test_harness::ObservedCombatEvents>()
+        .0;
+    let native_miss = receipts.iter().any(|event| {
+        let this_cast =
+            event.spell_id == Some(BACK_AREA) && event.source == Some(h.caster.to_bits());
+        let this_miss =
+            event.target == Some(h.npc.to_bits()) && matches!(event.kind, CombatLogKind::Miss(_));
+        this_cast && this_miss
+    });
     for effect in effects {
-        let dest = effect.dest.expect("native48/16 destination");
-        assert!(
-            effect.units.contains(&h.npc),
-            "native recipient at emitted center: index{} units{:?}, dest{dest:?}, input{center:?}, enemy{}, same_map{}, sight{}",
-            effect.index,
-            effect.units,
-            targets::relation_matches(h.app.world(), h.caster, h.npc, targets::Relation::Enemy),
-            targets::same_map(h.app.world(), h.caster, h.npc),
-            crate::line_of_sight::sees_area_center(h.app.world(), h.npc, dest.position),
+        let dest = effect.dest.expect("native48/16 emitted destination");
+        assert_eq!(
+            dest.position, selected_center.position,
+            "selected and emitted centers agree"
         );
         assert!((dest.position.x - center.x).abs() < 0.001);
         assert!((dest.position.z - center.z).abs() < 0.001);
+        assert!(effect.units.iter().all(|unit| paired.0.contains(unit)));
+        //Native126336 has magic defenses: disappearance must have a real Miss receipt.
+        assert!(
+            effect.units.contains(&h.npc) || native_miss,
+            "unexplained recipient loss: {effect:?}; {receipts:?}"
+        );
     }
 }
 
