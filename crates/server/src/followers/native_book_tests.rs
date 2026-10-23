@@ -61,6 +61,71 @@ fn follower_native_book_does_not_learn_both_frenzy_variants_from_controller_alia
     }
 }
 
+#[test]
+#[ignore = "native Ret source book on an actual Garrick NPC, without published Ret controller rows"]
+fn follower_native_book_retribution_uses_requested_spec_and_native_starter_talents() {
+    use crate::trait_config::{
+        TraitContext, build_config, starter_purchases, talent_spell_entries,
+    };
+    for level in [1, 10, 32, 57, 90] {
+        let (mut h, actor) = at_level(209057, level, |_| {});
+        let mut profile = h
+            .app
+            .world()
+            .get::<Follower>(actor)
+            .unwrap()
+            .profile
+            .clone();
+        profile.spec_id = 70;
+        let expected: Vec<_> = {
+            let classes = h.app.world().resource::<crate::spell_info::ClassSpells>();
+            let class = classes
+                .classes
+                .iter()
+                .find(|class| class.class_id == 2)
+                .unwrap();
+            let context = TraitContext { spec_id: 70, level };
+            let purchases = starter_purchases(&class.traits, context).unwrap();
+            let config = build_config(&class.traits, context, &purchases).unwrap();
+            talent_spell_entries(&class.traits, &config)
+                .map(|entry| entry.spell_id)
+                .collect()
+        };
+        let owner = h.caster;
+        let players_before = count_players(h.app.world_mut());
+        spawning::initialize(h.app.world_mut(), owner, actor, profile).unwrap();
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::ActiveSpec>(actor)
+                .map(|spec| spec.0),
+            Some(70),
+            "Ret initializer must use requested NPC specialization at level{level}, even without kit rows"
+        );
+        let known = h.app.world().get::<KnownSpells>(actor).unwrap();
+        for spell in &expected {
+            assert!(
+                known.contains(*spell),
+                "Ret starter spell{spell} missing at level{level}"
+            );
+        }
+        let traits = h
+            .app
+            .world()
+            .get::<TraitLoadout>(actor)
+            .expect("Ret native trait loadout");
+        assert_eq!(
+            traits
+                .active_talent_spells()
+                .map(|spell| spell.spell_id)
+                .collect::<Vec<_>>(),
+            expected
+        );
+        assert!(h.app.world().get::<Player>(actor).is_none());
+        assert_eq!(count_players(h.app.world_mut()), players_before);
+    }
+}
+
 fn count_players(world: &mut World) -> usize {
     world.query::<&Player>().iter(world).count()
 }
