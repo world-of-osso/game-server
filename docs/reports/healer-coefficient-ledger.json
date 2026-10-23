@@ -1,0 +1,1042 @@
+{
+  "verified": "2026-10-22",
+  "db": "data/world.db",
+  "tc_revision": "a352b1fa",
+  "tdb": "TDB1210",
+  "simc_revision": "76f8118",
+  "simc_healer_hps_reference": null,
+  "formula_sources": [
+    "src/server/game/Entities/Unit/Unit.cpp:7345-7456",
+    "src/server/game/Spells/SpellEffects.cpp:1246-1293"
+  ],
+  "rows": [
+    {
+      "spec": 65,
+      "spell": 19750,
+      "name": "Flash of Light",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 10981,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 3.1559999,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 65,
+      "spell": 82326,
+      "name": "Holy Light",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 81809,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 32.5,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 65,
+      "spell": 20473,
+      "name": "Holy Shock",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 11465,
+          "EffectIndex": 0,
+          "Effect": 3,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 20.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 1145338,
+          "EffectIndex": 1,
+          "Effect": 30,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 1.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 65,
+      "spell": 25914,
+      "name": "Holy Shock",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 15852,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 11.1700001,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 65,
+      "spell": 85673,
+      "name": "Word of Glory",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 86977,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 4.15799999,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 256,
+      "spell": 2061,
+      "name": "Flash Heal",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 613,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 6.82000017,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 256,
+      "spell": 47540,
+      "name": "Penance",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 39751,
+          "EffectIndex": 0,
+          "Effect": 3,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 120.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 256,
+      "spell": 47750,
+      "name": "Penance",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 39995,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 4.01100016,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 256,
+      "spell": 17,
+      "name": "Power Word: Shield",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 13,
+          "EffectIndex": 0,
+          "Effect": 6,
+          "EffectAura": 69,
+          "EffectBonusCoefficient": 4.63800001,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 256,
+      "spell": 194509,
+      "name": "Power Word: Radiance",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 285534,
+          "EffectIndex": 0,
+          "Effect": 3,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 298593,
+          "EffectIndex": 1,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 5.75,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 298594,
+          "EffectIndex": 2,
+          "Effect": 3,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 4.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 298595,
+          "EffectIndex": 3,
+          "Effect": 3,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 60.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 257,
+      "spell": 2060,
+      "name": "Heal",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 612,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 9.72861004,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 257,
+      "spell": 2061,
+      "name": "Flash Heal",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 613,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 6.82000017,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 257,
+      "spell": 596,
+      "name": "Prayer of Healing",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 243,
+          "EffectIndex": 0,
+          "Effect": 64,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 98367
+        },
+        {
+          "ID": 105332,
+          "EffectIndex": 1,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 5.7874198,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 1207850,
+          "EffectIndex": 2,
+          "Effect": 0,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 5.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 257,
+      "spell": 139,
+      "name": "Renew",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 95,
+          "EffectIndex": 0,
+          "Effect": 6,
+          "EffectAura": 8,
+          "EffectBonusCoefficient": 0.60927999,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 3000,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 256131,
+          "EffectIndex": 1,
+          "Effect": 6,
+          "EffectAura": 283,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 257,
+      "spell": 33076,
+      "name": "Prayer of Mending",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 22870,
+          "EffectIndex": 0,
+          "Effect": 3,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 4.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 264,
+      "spell": 77472,
+      "name": "Healing Wave",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 68093,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 15.0100002,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 264,
+      "spell": 8004,
+      "name": "Healing Surge",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 3235,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 11.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 264,
+      "spell": 61295,
+      "name": "Riptide",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 55127,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 6.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 55128,
+          "EffectIndex": 1,
+          "Effect": 6,
+          "EffectAura": 8,
+          "EffectBonusCoefficient": 0.796999991,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 3000,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 264,
+      "spell": 1064,
+      "name": "Chain Heal",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 387,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 2.30999994,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 219186,
+          "EffectIndex": 1,
+          "Effect": 3,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 30.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 1050689,
+          "EffectIndex": 2,
+          "Effect": 3,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 20.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 270,
+      "spell": 116670,
+      "name": "Vivify",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 131794,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 2.57999992,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 270,
+      "spell": 124682,
+      "name": "Enveloping Mist",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 157840,
+          "EffectIndex": 0,
+          "Effect": 6,
+          "EffectAura": 8,
+          "EffectBonusCoefficient": 1.43519998,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 1000,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 290817,
+          "EffectIndex": 1,
+          "Effect": 6,
+          "EffectAura": 283,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 10.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 874900,
+          "EffectIndex": 2,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 8.61120033,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 270,
+      "spell": 115175,
+      "name": "Soothing Mist",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 128871,
+          "EffectIndex": 0,
+          "Effect": 6,
+          "EffectAura": 8,
+          "EffectBonusCoefficient": 2.0999999,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 1000,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 1149950,
+          "EffectIndex": 1,
+          "Effect": 6,
+          "EffectAura": 87,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 1319104,
+          "EffectIndex": 2,
+          "Effect": 6,
+          "EffectAura": 330,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 1.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 1339342,
+          "EffectIndex": 3,
+          "Effect": 6,
+          "EffectAura": 87,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 1339348,
+          "EffectIndex": 4,
+          "Effect": 6,
+          "EffectAura": 312,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 105,
+      "spell": 8936,
+      "name": "Regrowth",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 3728,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 5.36000013,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 3729,
+          "EffectIndex": 1,
+          "Effect": 6,
+          "EffectAura": 8,
+          "EffectBonusCoefficient": 0.224968001,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 2000,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 1215971,
+          "EffectIndex": 2,
+          "Effect": 6,
+          "EffectAura": 87,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 105,
+      "spell": 774,
+      "name": "Rejuvenation",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 311,
+          "EffectIndex": 0,
+          "Effect": 6,
+          "EffectAura": 8,
+          "EffectBonusCoefficient": 0.924000025,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 3000,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 105,
+      "spell": 33763,
+      "name": "Lifebloom",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 23639,
+          "EffectIndex": 0,
+          "Effect": 6,
+          "EffectAura": 8,
+          "EffectBonusCoefficient": 0.268400013,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 1000,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 105,
+      "spell": 18562,
+      "name": "Swiftmend",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 10065,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 10.3699999,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 1326779,
+          "EffectIndex": 1,
+          "Effect": 0,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 40.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 105,
+      "spell": 48438,
+      "name": "Wild Growth",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 40640,
+          "EffectIndex": 0,
+          "Effect": 6,
+          "EffectAura": 8,
+          "EffectBonusCoefficient": 0.481000006,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 1000,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 40641,
+          "EffectIndex": 1,
+          "Effect": 3,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 5.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 1468,
+      "spell": 355936,
+      "name": "Dream Breath",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 889431,
+          "EffectIndex": 0,
+          "Effect": 6,
+          "EffectAura": 395,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 5.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 905039,
+          "EffectIndex": 1,
+          "Effect": 6,
+          "EffectAura": 395,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 996450,
+          "EffectIndex": 2,
+          "Effect": 3,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 40.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 1237470,
+          "EffectIndex": 3,
+          "Effect": 6,
+          "EffectAura": 147,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 1468,
+      "spell": 361469,
+      "name": "Living Flame",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 899400,
+          "EffectIndex": 0,
+          "Effect": 3,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 1468,
+      "spell": 361509,
+      "name": "Living Flame",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 899463,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 7.80000019,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 907224,
+          "EffectIndex": 1,
+          "Effect": 6,
+          "EffectAura": 8,
+          "EffectBonusCoefficient": 0.129999995,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0500000007,
+          "EffectAuraPeriod": 3000,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 1468,
+      "spell": 366155,
+      "name": "Reversion",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 907578,
+          "EffectIndex": 0,
+          "Effect": 6,
+          "EffectAura": 8,
+          "EffectBonusCoefficient": 0.42750001,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 2000,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 1003140,
+          "EffectIndex": 1,
+          "Effect": 6,
+          "EffectAura": 504,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 1264301,
+          "EffectIndex": 2,
+          "Effect": 6,
+          "EffectAura": 69,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    },
+    {
+      "spec": 1468,
+      "spell": 364343,
+      "name": "Echo",
+      "difficulty_id": 0,
+      "effects": [
+        {
+          "ID": 904256,
+          "EffectIndex": 0,
+          "Effect": 10,
+          "EffectAura": 0,
+          "EffectBonusCoefficient": 2.4000001,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 0.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        },
+        {
+          "ID": 904257,
+          "EffectIndex": 1,
+          "Effect": 6,
+          "EffectAura": 4,
+          "EffectBonusCoefficient": 0.0,
+          "BonusCoefficientFromAP": 0.0,
+          "EffectBasePointsF": 70.0,
+          "Variance": 0.0,
+          "EffectAuraPeriod": 0,
+          "EffectTriggerSpell": 0
+        }
+      ],
+      "amount_probe": "PENDING",
+      "gaps": []
+    }
+  ]
+}

@@ -8,6 +8,7 @@ mod graph;
 mod healer_metrics;
 mod healer_metrics_tests;
 mod healer_benchmark_tests;
+mod healer_coefficient_tests;
 mod movement;
 mod runtime;
 pub(crate) use graph::Space;
