@@ -36,6 +36,16 @@ Shared native follower decision evaluation interprets pinned SimC76f8118 conditi
 
 Native behavioral tests: `simc_apl_native/tests.rs` (earned Hit Combo and Chi, real Provoke cooldown, real Roll charges, actual Charge Rage display conversion, fixture clock and unavailable dungeon predicates). Six pushed ignored native cases produce genuine6RED at5924496f9 (13.24s test/8m18compile/exit101; three scaffold dead-field warnings). Atdc1ee9781 the same six native cases pass6/6 in17.40s (7m37compile),exit0,zero compiler warnings; tests enabled afterward without body changes ([native proof ledger](../handoffs/shared-native-apl-proof-ledger.md)). Current native fact seam is fixture-only (`cfg(test)`), matching the approved explicit parity Fixture driver boundary; live dungeon APL/TTD is not enabled.
 
+## Assigned native fact extensions
+
+- [ ] `talent.<name>.rank` reads selected native total ranks, not learned-spell membership.
+- [ ] `buff.<name>.at_max_stacks` follows earned native stacks and the instance's modified cap.
+- [ ] `spell_haste` is the actual derived spell-duration factor; `execute_time` observes ordinary cast/GCD or channel duration.
+- [ ] Contextual `charges`, `charges_fractional` and `full_recharge_time` follow the proposed action's actual native category.
+- [ ] Contextual `ticks_remain` counts future scheduled native ticks; `action.<name>.ready` includes native admission, while `usable_in` is remaining cooldown time.
+
+Ignored native regressions in `simc_apl_native/{extension_tests,action_extension_tests}.rs` precede implementation. Source: pinned SimC76f8118 `player.cpp11822,12369`, `buff.cpp457–462`, `action.cpp3266–3333` and `dot.cpp526–532`. These shared predicates remain fixture-only; no Dev-local duplicate resolver.
+
 ## Known gaps (current cycle)
 
 - [ ] Wire native kit adapters; library expression/variable/list decisions have11-case GREEN, not full native rotation proof.
