@@ -1,0 +1,1 @@
+0.000 Powerful Eversong Diamond (1258209) eff#2 modifying Player 'MID2_Warrior_Arms' all_crit_damage_multiplier by 0.6% (orig=0 prev=0[0/100%] now=0[0/100.6%])

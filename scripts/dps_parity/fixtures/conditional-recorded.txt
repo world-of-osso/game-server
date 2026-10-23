@@ -1,0 +1,3 @@
+0.000 action-effects: Action 'divine_storm' (53385) direct damage modified by 15.0% with buff avenging_wrath (31884#1)
+0.000 action-effects: Action 'divine_storm' (53385) cost percent modified by -100.0% per consumed stack of buff empyrean_power (326733#2)
+0.000 action-effects: Action 'disintegrate' (356995) direct damage modified by 15.0% (value override) with buff rising_fury (1271783#2)

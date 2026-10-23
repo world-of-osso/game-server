@@ -8,6 +8,11 @@ Native aura218/219 point modifiers must update affected self-owned passive/perma
 
 ## Native hit proc masks
 
+- [ ] Classify each landed hit by TC damage/healing/effect positivity, not faction relation: positive damage is harmful; otherwise positive healing is helpful; otherwise inspect only effects landing on that recipient.
+- [ ] Native harmful-hit procs must work against neutral attackable faction7 (training dummy31146); friendly2061 healing must preserve native36488→36483 helpful eligibility.
+
+Behavioral fixtures: `crates/server/src/spell_cast/hit_positivity_tests.rs`.
+
 TC a352b1fa `Spell.cpp:2343–2400`: melee/ranged defense classes keep their
 weapon ability masks. Other spells select helpful/harmful periodic masks for
 native Attr3 TreatAsPeriodic, else ability masks for Attr0 IsAbility, else spell

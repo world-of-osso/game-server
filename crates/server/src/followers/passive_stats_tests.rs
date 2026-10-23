@@ -10,6 +10,56 @@ use crate::stats::{CharacterStats, StatModifiers, StatsPlugin};
 const GARRICK: u32 = 209057;
 const AEGIS_OF_LIGHT: u32 = 353367;
 const RIGHTEOUS_FURY: u32 = 25780;
+pub(super) const GARRICK_STAMINA_SOURCES: &[u32] = &[AEGIS_OF_LIGHT, 86102, 402964];
+
+pub(super) struct SourceStamina {
+    pub percent: f32,
+    pub stamina: f32,
+    pub health: f32,
+}
+
+fn source_stamina_percent(world: &World, spell_id: u32) -> f64 {
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let spell = store.get(spell_id).unwrap();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    assert_eq!(effect.aura, 137);
+    assert!(matches!(effect.misc_values[1], 0 | 4));
+    let protection = store.get(137028).unwrap();
+    let modifier = protection
+        .effects
+        .iter()
+        .find(|effect| effect.index == 30)
+        .unwrap();
+    assert_eq!((modifier.aura, modifier.misc_values), (218, [3, 2602]));
+    let label_matches = spell.labels.contains(&(modifier.misc_values[1] as u32));
+    let amount = f64::from(effect.base_points);
+    if label_matches {
+        amount * (1.0 + f64::from(modifier.base_points) / 100.0)
+    } else {
+        amount
+    }
+}
+
+/// Independent input-row oracle: native aura137 product, int32 stamina, local HP game table.
+/// TC Unit.cpp5026–5050, Unit.h784/UpdateFields.h456, StatSystem.cpp285–325.
+pub(super) fn garrick_source_stamina(world: &World, spells: &[u32]) -> SourceStamina {
+    let factor: f64 = spells
+        .iter()
+        .map(|&spell| 1.0 + source_stamina_percent(world, spell) / 100.0)
+        .product();
+    let base = f64::from(crate::character_stats_data::CLASS_BASE_STATS[2][31][2]);
+    let hp_per_stamina = f64::from(crate::character_stats_data::HP_PER_STAMINA[31]);
+    let stamina = base * factor;
+    SourceStamina {
+        percent: ((factor - 1.0) * 100.0) as f32,
+        stamina: stamina as f32,
+        health: (stamina.floor() * hp_per_stamina) as f32,
+    }
+}
 
 fn mastery_follower(entry: u32) -> (Harness, Entity) {
     let (mut h, unit, profile) = spawn_profile_fixture_with_plugins(entry, |app| {
@@ -219,6 +269,8 @@ fn spawn_level32_garrick() -> (Harness, Entity) {
         .insert((Level(32), UnitLevel(32)));
     let unit = super::spawning::spawn(h.app.world_mut(), h.caster, profile).unwrap();
     assert!(crate::auras::has_aura(h.app.world(), unit, AEGIS_OF_LIGHT));
+    // Drain initial Changed<KnownSpells> synchronization before testing later removal.
+    h.advance(3);
     (h, unit)
 }
 
@@ -227,26 +279,25 @@ fn follower_passive_stats_real_spec66_stamina_recomputes_max_health() {
     let (mut h, unit) = spawn_level32_garrick();
     h.advance(3);
     let modifiers = h.app.world().get::<StatModifiers>(unit).unwrap();
-    // Native70448: independent Aegis353367 +30% and Plate86102 +5%,
-    // both137/mask4, no SAME_EFFECT group: 1.30*1.05=1.365 (TC GetTotalAuraMultiplier).
-    // Base class2/level32 stamina980 ->1337.7; floor1337*gtHpPerSta32=8 ->10696HP.
-    // No fixture stat or health overrides.
-    assert_eq!(modifiers.primary_pct.stamina, 36.5);
+    // Native starter node93009/entry115034 adds Sanctified Plates402964.
+    // Its label2602/+5% gets Protection137028e30's +50%: 1.30*1.05*1.075.
+    // Raw class2/level32 stamina980 and HPPerSta8 yield floor1438.0275*8=11504.
+    let expected = garrick_source_stamina(h.app.world(), GARRICK_STAMINA_SOURCES);
+    assert!((modifiers.primary_pct.stamina - expected.percent).abs() < 0.0001);
     let health = h.app.world().get::<Health>(unit).unwrap();
     assert_eq!(
-        health.max, 10696.0,
-        "native passive modifiers were stored but not applied"
+        health.max, expected.health,
+        "native starter-book passive modifiers were stored but not applied"
     );
     assert_eq!(health.current, health.max);
-    assert_eq!(
-        h.app
-            .world()
-            .get::<CharacterStats>(unit)
-            .unwrap()
-            .primary
-            .stamina,
-        1337.7
-    );
+    let stamina = h
+        .app
+        .world()
+        .get::<CharacterStats>(unit)
+        .unwrap()
+        .primary
+        .stamina;
+    assert!((stamina - expected.stamina).abs() < 0.001);
 }
 
 #[test]
@@ -256,19 +307,20 @@ fn follower_passive_stats_real_aegis_removal_and_reapply_refresh_max_health() {
         aura.spell_id == AEGIS_OF_LIGHT
     });
     h.advance(3);
-    assert_eq!(
-        h.app
-            .world()
-            .get::<StatModifiers>(unit)
-            .unwrap()
-            .primary_pct
-            .stamina,
-        5.0
-    );
+    assert!(!crate::auras::has_aura(h.app.world(), unit, AEGIS_OF_LIGHT));
+    let remaining = garrick_source_stamina(h.app.world(), &[86102, 402964]);
+    let percent = h
+        .app
+        .world()
+        .get::<StatModifiers>(unit)
+        .unwrap()
+        .primary_pct
+        .stamina;
+    assert!((percent - remaining.percent).abs() < 0.0001);
     assert_eq!(
         h.app.world().get::<Health>(unit).unwrap().max,
-        8232.0,
-        "remaining native5% stamina must reach the same production stat calculation"
+        remaining.health,
+        "remaining Plate/Sanctified stamina must use native class inputs"
     );
     let spell = h
         .app
@@ -288,8 +340,9 @@ fn follower_passive_stats_real_aegis_removal_and_reapply_refresh_max_health() {
         },
     );
     h.advance(3);
+    let expected = garrick_source_stamina(h.app.world(), GARRICK_STAMINA_SOURCES);
     let health = h.app.world().get::<Health>(unit).unwrap();
-    assert_eq!(health.max, 10696.0);
+    assert_eq!(health.max, expected.health);
     assert_eq!(health.current, health.max);
 }
 
@@ -314,7 +367,11 @@ fn follower_passive_stats_owned_evade_preserves_native_spec_and_threat_auras() {
     // Production no-path/leash lifecycle entry, followed by real aura/stat systems.
     crate::creature_aggro::enter_evade_mode(h.app.world_mut(), unit);
     h.advance(3);
-    assert_eq!(h.app.world().get::<Health>(unit).unwrap().max, 10696.0);
+    let expected = garrick_source_stamina(h.app.world(), GARRICK_STAMINA_SOURCES);
+    assert_eq!(
+        h.app.world().get::<Health>(unit).unwrap().max,
+        expected.health
+    );
     assert!(crate::auras::has_aura(h.app.world(), unit, AEGIS_OF_LIGHT));
     assert!(crate::auras::has_aura(h.app.world(), unit, RIGHTEOUS_FURY));
     assert_eq!(
