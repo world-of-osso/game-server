@@ -34,6 +34,7 @@ The whole server test suite must retain every discovered case and existing ignor
 ## Implementation inventory
 
 - `Cargo.toml` — server test optimization profile.
+- `crates/server/src/scripted_ai/tests/prepared_inputs.rs` — short-held key registry and per-key initializer slots; snapshot/import/decode paths are unchanged.
 - `crates/server/src/test_data/catalog_cache.rs` — immutable typed definitions keyed by source path/content.
 - `crates/server/src/catalog_data.rs` — production-owned/test-shared collection backing; live edits detach. Spell entries share independently so prepared server-side additions do not copy unrelated definitions.
 - Spell, class, follower and large world collections use this backing in tests; world path and read-only spell/follower/map loaders reuse complete decoded inputs. Writable and in-memory connections continue reading their local SQL state.

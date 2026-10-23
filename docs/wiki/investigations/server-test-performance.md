@@ -310,6 +310,14 @@ Meteor is accepted input drift, not an observed code failure: same frozen binary
 
 Evidence under the usual diagnostics root: `current-master-fixed-3x3/{summary,context,module-timeline,test-costs,schedule-models}.json`, `performance-analysis.md`, raw host/module timelines, `meteor-classification/results.json`, and `current-master-fixed-preflight-summary.json`. No performance implementation follows this analysis without the next bounded evidence/approval.
 
+## Per-key prepared-input initialization (qualification pending)
+
+Normal-admission phase attribution at51f2b629d preserves all eight selected native outcomes on fresh qualified source51455391…98d9b. The five prepared cases take169.415s:19cachelookups,12misses/7hits,291.579summed thread-seconds cross-key wait and158.479s global-mutex hold. Snapshot/import/decode account for100.829/18.453/35.872s. A fixed-work three-worker replay removing only cross-key waiting models75.430s, not a measured whole-suite saving. The normal run also observes ancestor memory.high reclaim, so parallel IO and RSS require actual qualification.
+
+New regression03cb7fd24 gates an initializer while eight readers request its key, then requires a different key to finish before releasing the gate. The original global mutex reproduces the intended30.012s/exit101 RED; constructor counts1/1, installed independent resources and warm reuse pass before the unrelated-key progress assertion fails. Gate cleanup occurs before asserting, avoiding poisoned-cache collateral failure.
+
+The registry now stores `Arc<Mutex<Option<Arc<PreparedInputs>>>>` per InputKey. Its global guard covers only lookup/insertion; the per-key mutex covers the existing complete initializer and publication. Identical keys still initialize once, different keys may prepare concurrently, and a failed initializer remains poisoned for that key. No snapshots, importers, decoding, native assertions or gameplay steps change. GREEN and native concurrency/RSS qualification are pending; whole900s/no-swap remains open.
+
 ## Gate invocation
 
 Use the committed default `test` profile through ordinary `cargo test --locked --workspace --no-fail-fast -- <union filters> --skip opening_admission_does_not_recruit_unprojected_source_packs --test-threads 4`, with no kit override and a hash-frozen, writable-copy-compatible private source layout. The qualified frontal case must run separately/serially with its actual bake receipt; include its execution receipt in total coverage/time. Four threads are the **measured baseline, not an accepted final recommendation**: memory-bounded heavy-test scheduling still needs proof. Nextest supplies isolated timing/RSS here; cold per-test process isolation is not assumed faster for thousands of native fixtures. Exact full argv is preserved in `union.log`/`union-provenance.json`; filters remain the literal three-gate union. No timeout, retry, ignore or assertion policy changes to manufacture acceptance.
