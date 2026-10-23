@@ -2,6 +2,9 @@
 use super::{DEVASTATE, Harness, Inbox, apply_passive, fixture};
 use shared::protocol::{CombatLogKind, EquipmentSlot};
 
+#[path = "venomfang_tests.rs"]
+mod venomfang;
+
 const GUILLOTINE_ITEM: u32 = 270173;
 const GUILLOTINE_DRIVER: u32 = 1291728;
 const GUILLOTINE_DAMAGE: u32 = 1306604;
