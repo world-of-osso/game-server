@@ -110,7 +110,7 @@ fn talent_permits(world: &World, actor: Entity, talent: Option<u32>) -> Result<b
         .any(|spell| spell.spell_id == talent))
 }
 
-fn knows_action(world: &World, actor: Entity, id: u32) -> Result<bool, String> {
+pub(crate) fn knows_action(world: &World, actor: Entity, id: u32) -> Result<bool, String> {
     let known = world
         .get::<crate::class_progression::KnownSpells>(actor)
         .ok_or("native literal actor lacks KnownSpells")?;
