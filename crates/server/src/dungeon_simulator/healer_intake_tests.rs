@@ -74,6 +74,18 @@ pub(super) fn small_intake() -> Intake {
     let graph = super::graph::read_graph().unwrap();
     let mut app = super::runtime::build_app();
     let copy = super::runtime::create_copy(&mut app);
+    let party = crate::followers::simulator::spawn_party_with_healer(
+        app.world_mut(),
+        copy,
+        shared::components::Position {
+            x: graph.entrance[0],
+            y: graph.entrance_height,
+            z: graph.entrance[1],
+        },
+        32,
+        105,
+    )
+    .unwrap();
     let actors = super::runtime::spawn_population(&mut app, copy);
     let sources = super::healer_intake::snapshot_sources(app.world(), &actors).unwrap();
     let pack = graph
@@ -81,19 +93,34 @@ pub(super) fn small_intake() -> Intake {
         .iter()
         .find(|pack| pack.id == graph.route[0].pack)
         .unwrap();
+    let attacker = crate::level_scaling::UnitScaling::of(app.world(), actors[&pack.spawns[0].guid]);
+    let target = crate::level_scaling::UnitScaling::of(app.world(), party.tank);
+    let mapped = crate::level_scaling::damage_dealt(&attacker, &target, 1_000_000.0);
+    assert!(
+        mapped > 0.0,
+        "fixture needs a positive native damage mapping"
+    );
+    // Fixture severity, not a game coefficient: 80% of native HP before armor/DR.
+    let raw = app.world().get::<Health>(party.tank).unwrap().max
+        * target.health_multiplier(&attacker)
+        * 0.8
+        * 1_000_000.0
+        / mapped;
+    let level_difference =
+        i32::from(target.level_against(&attacker)) - i32::from(attacker.level_against(&target));
     let hit = Hit {
         tick: 2,
         source_guid: pack.spawns[0].guid,
         pack: pack.id,
         target_slot: 0,
         school: 1,
-        raw: 80.0,
+        raw,
         kind: HitKind::Melee {
             hand: 0,
             outcome: "Hit".into(),
-            level_difference: 0,
+            level_difference,
             critical_multiplier: 1.0,
-            weapon_speed: 2.0,
+            weapon_speed: crate::combat::AUTO_ATTACK_INTERVAL,
         },
     };
     Intake {
@@ -102,16 +129,16 @@ pub(super) fn small_intake() -> Intake {
         map_id: 34,
         difficulty_id: 1,
         level: 32,
-        end_tick: 40,
+        end_tick: 120,
         source_status: "concrete_fixture".into(),
-        hits: vec![hit.clone(), Hit { tick: 5, ..hit }],
+        hits: vec![hit],
         sources,
         frames: vec![Frame {
             tick: 0,
             positions: vec![Some([graph.entrance[0], graph.entrance_height, graph.entrance[1]]); 5],
             in_combat: true,
         }],
-        pulls: serde_json::json!([{ "pack":pack.id,"start_tick":1,"end_tick":40 }]),
+        pulls: serde_json::json!([{ "pack":pack.id,"start_tick":1,"end_tick":120 }]),
         source_deaths: vec![],
         gaps: vec![],
     }
@@ -123,6 +150,10 @@ fn healer_benchmark_same_intake_replays_identical_native_numbers() {
     let intake = small_intake();
     let first = super::healer_replay::replay(&intake, 105).unwrap();
     assert!(first["metrics"]["effective_hps"].is_number());
+    assert!(
+        first["metrics"]["effective_healing"].as_u64().unwrap() > 0,
+        "determinism must exercise real native healing, not identical zero traces"
+    );
     assert_eq!(first, super::healer_replay::replay(&intake, 105).unwrap());
 }
 
