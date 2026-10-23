@@ -392,15 +392,15 @@ fn takes_healing_power(effect: &SpellEffect) -> bool {
     }
 }
 
-/// `Guardian::UpdateAttackPowerAndDamage` for a hunter pet (StatSystem.cpp:1336-1345): its
-/// owner's ranged attack power × 0.22. The pet's own `2 × Strength - 20` needs `pet_levelstats`,
-/// which is not imported.
-const HUNTER_PET_OWNER_AP: f32 = 0.22;
-
+/// TC Guardian1344/1389: the same owner-total-RAP contribution as melee.
 fn hunter_pet_attack_power(world: &World, owner: Entity) -> f32 {
-    world
+    let stats = world
         .get::<CharacterStats>(owner)
-        .map_or(0.0, |stats| stats.ranged_attack_power * HUNTER_PET_OWNER_AP)
+        .expect("native Hunter pet owner requires CharacterStats for inherited power");
+    crate::hunter_pet_stats::owner_bonus_attack_power(
+        stats,
+        world.get::<crate::stats::StatModifiers>(owner),
+    )
 }
 
 const SPELL_ATTR0_SCALES_WITH_CREATURE_LEVEL: u32 = 0x0008_0000;
@@ -1327,6 +1327,7 @@ fn damage_source_amount(
             * creature_type_damage_multiplier(world, bonus_caster, target, ctx.spell)
             * mechanic_damage_multiplier(world, bonus_caster, ctx.spell, effect)
             * super::scripts::combo_strikes_multiplier(world, bonus_caster, ctx.spell.id)
+            * super::scripts::giantkiller_multiplier(world, ctx.caster, target, ctx.spell)
     };
     let bonus_ctx = EffectCtx {
         caster: bonus_caster,

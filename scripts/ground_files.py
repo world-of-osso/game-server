@@ -68,8 +68,8 @@ class GroundFiles:
         self.map_id = map_id
         self.seen = set()
 
-    def read(self, relative):
-        """The file's bytes once per map (None if already read or not cached)."""
+    def read(self, relative, *, contents=True):
+        """Register once per map; read bytes only when needed to discover dependencies."""
         if relative in self.seen:
             return None
         self.seen.add(relative)
@@ -78,7 +78,8 @@ class GroundFiles:
             self.missing.append((self.map_id, relative))
             return None
         self.present[relative] = None
-        return path.read_bytes()
+        with path.open("rb") as stream:
+            return stream.read() if contents else None
 
     def add_wmo(self, fdid):
         root = self.read(f"models/{fdid}.wmo")
@@ -91,7 +92,7 @@ class GroundFiles:
         for offset in range(0, min(len(gfid), count * 4) - 3, 4):
             group = struct.unpack_from("<I", gfid, offset)[0]
             if group:
-                self.read(f"models/{group}.wmo")
+                self.read(f"models/{group}.wmo", contents=False)
 
     def add_map(self, wdt_fdid):
         wdt = self.read(f"terrain/{wdt_fdid}.wdt")
@@ -107,7 +108,7 @@ class GroundFiles:
         for offset in range(0, len(maid) - MAID_ENTRY_SIZE + 1, MAID_ENTRY_SIZE):
             root, obj0 = struct.unpack_from("<II", maid, offset)
             if root:
-                self.read(f"terrain/{root}.adt")
+                self.read(f"terrain/{root}.adt", contents=False)
             if obj0:
                 placements = self.read(f"terrain/{obj0}.adt")
                 if placements is not None:
@@ -209,7 +210,7 @@ def add_vehicle_models(files, world_db):
                 )
             if files.map_id != f"vehicle {vehicle}":
                 files.start_map(f"vehicle {vehicle}")
-            files.read(f"models/{fdid}.m2")
+            files.read(f"models/{fdid}.m2", contents=False)
 
 
 def add_map_selection(parser):
