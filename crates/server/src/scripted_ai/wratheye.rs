@@ -6,9 +6,9 @@ use super::{CreatureAi, Ctx};
 
 pub(super) const SCRIPT: &str = "boss_wratheye";
 const DECAYSTRIKE: u32 = 373912;
-const FIRST_STRIKE_MS: u32 = 10_600;
-const SHORT_REPEAT_MS: u32 = 19_400;
-const LONG_REPEAT_MS: u32 = 25_500;
+const FIRST_STRIKE_MS: u64 = 10_600;
+const SHORT_REPEAT_MS: u64 = 19_400;
+const LONG_REPEAT_MS: u64 = 25_500;
 
 pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn CreatureAi>> {
     let map = *world.get::<crate::maps::InMap>(actor)?;
@@ -24,7 +24,7 @@ pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn Creatu
 
 struct Wratheye {
     boss: BossAi,
-    next_repeat_ms: u32,
+    next_repeat_ms: u64,
 }
 
 impl CreatureAi for Wratheye {
