@@ -286,3 +286,190 @@ fn encounter_coverage_edna_first_spike_after_authentic_unlock_normal_projected20
         assert_eq!(cast.duration, 2.5, "native70448 CastingTimeIndex20");
     }
 }
+
+fn completed_casts(h: &Harness, boss: Entity, spell: u32) -> usize {
+    h.inbox(0)
+        .spell_gos
+        .iter()
+        .filter(|go| go.caster == boss.to_bits() && go.spell_id == spell)
+        .count()
+}
+
+fn allocate_peer_copy(h: &mut Harness, difficulty: u32) -> InMap {
+    let maps = h.app.world().resource::<MapStore>().clone();
+    let copy = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::maps::InstanceManager>()
+        .create_map(
+            &maps,
+            MAP,
+            crate::maps::instances::InstanceEntrant {
+                character_id: 2002,
+                leader: 2002,
+                difficulty_id: difficulty,
+                ..Default::default()
+            },
+            crate::maps::instances::Now {
+                elapsed: 0.0,
+                unix: 0,
+            },
+        )
+        .unwrap()
+        .map;
+    let peer = h.players[1].0;
+    h.app
+        .world_mut()
+        .entity_mut(peer)
+        .insert((copy, crate::persistence::ClientId(2002)));
+    copy
+}
+
+#[test]
+#[ignore = "EDNA ongoing source clocks RED follows authentic intro GREEN"]
+fn encounter_coverage_edna_ongoing_native_occupancy_damage_and_copy_credit() {
+    for difficulty in [1, 205] {
+        let (mut h, boss, map, golems) = source_copy(difficulty);
+        unlock(&mut h, boss, map, &golems);
+        let peer = allocate_peer_copy(&mut h, difficulty);
+        assert_ne!(peer, map);
+        let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
+        h.app
+            .insert_resource(super::cast_admission::CastAdmissions {
+                actor: boss,
+                origin,
+                entries: Vec::new(),
+            });
+        h.engage(boss);
+        h.advance(60.0);
+        let attempts = &h
+            .app
+            .world()
+            .resource::<super::cast_admission::CastAdmissions>()
+            .entries;
+        for (spell, times) in [
+            (424903, &[8.1, 22.7, 37.3, 51.9][..]),
+            (452738, &[11.8, 25.2, 36.1, 47.0, 57.9][..]),
+            (424888, &[15.4, 39.8][..]),
+        ] {
+            let lane: Vec<_> = attempts
+                .iter()
+                .filter(|attempt| attempt.spell == spell)
+                .collect();
+            assert_eq!(lane.len(), times.len(), "source lane{spell}: {attempts:?}");
+            for (attempt, expected) in lane.into_iter().zip(times) {
+                assert!(
+                    (attempt.time - expected).abs() <= 0.15,
+                    "source/native occupancy {attempt:?}, expected{expected}; all{attempts:?}"
+                );
+                assert!(
+                    attempt.result.is_ok(),
+                    "source request admission{attempt:?}"
+                );
+            }
+            assert_eq!(completed_casts(&h, boss, spell), times.len());
+        }
+        let player = h.player();
+        assert_eq!(
+            h.inbox(0)
+                .log
+                .iter()
+                .filter(|event| event.kind == CombatLogKind::Damage
+                    && event.source == Some(boss.to_bits())
+                    && event.target == Some(player.to_bits())
+                    && event.spell_id == Some(424888)
+                    && event.amount > 0)
+                .count(),
+            2
+        );
+        assert!(
+            h.inbox(1)
+                .spell_gos
+                .iter()
+                .all(|go| go.caster != boss.to_bits())
+        );
+        assert!(
+            h.inbox(1)
+                .log
+                .iter()
+                .all(|event| event.source != Some(boss.to_bits()))
+        );
+        crate::combat::kill_unit(h.app.world_mut(), player, boss);
+        h.advance(0.1);
+        assert_eq!(
+            get_boss_state(h.app.world_mut(), map, 0),
+            Some(EncounterState::Done)
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .resource::<crate::maps::InstanceManager>()
+                .completed_encounters(map),
+            1
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .resource::<crate::maps::InstanceManager>()
+                .completed_encounters(peer),
+            0
+        );
+        assert!(
+            h.inbox(0)
+                .ends
+                .iter()
+                .any(|end| end.encounter_id == 2854 && end.success)
+        );
+        assert!(h.inbox(1).ends.is_empty());
+        let before = [424903, 452738, 424888].map(|spell| completed_casts(&h, boss, spell));
+        h.advance(30.0);
+        assert_eq!(
+            [424903, 452738, 424888].map(|spell| completed_casts(&h, boss, spell)),
+            before
+        );
+    }
+}
+
+#[test]
+#[ignore = "EDNA generic reset proof follows authentic intro/combat GREEN"]
+fn encounter_coverage_edna_generic_evade_keeps_intro_done_and_rearms_parent_clock() {
+    for difficulty in [1, 205] {
+        let (mut h, boss, map, golems) = source_copy(difficulty);
+        unlock(&mut h, boss, map, &golems);
+        h.engage(boss);
+        h.advance(11.0);
+        assert_eq!(completed_casts(&h, boss, 424903), 1);
+        let player = h.player();
+        h.app.world_mut().get_mut::<Position>(player).unwrap().x += 1000.0;
+        crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+        h.advance(30.0);
+        assert_eq!(
+            intro_state(&mut h, map),
+            3,
+            "actor reset never owns copy intro state"
+        );
+        assert!(!immune(&h, boss));
+        assert_eq!(
+            get_boss_state(h.app.world_mut(), map, 0),
+            Some(EncounterState::NotStarted)
+        );
+        let before = completed_casts(&h, boss, 424903);
+        assert_eq!(before, 1);
+        let mut near = *h.app.world().get::<Position>(boss).unwrap();
+        near.x += 3.0;
+        h.app.world_mut().entity_mut(player).insert(near);
+        h.engage(boss);
+        h.advance(7.9);
+        assert!(h.app.world().get::<CastState>(boss).is_none());
+        h.advance(0.3);
+        assert_eq!(
+            h.app.world().get::<CastState>(boss).unwrap().spell_id,
+            424903
+        );
+        assert_eq!(
+            completed_casts(&h, boss, 424903),
+            before,
+            "new native cast has not completed"
+        );
+    }
+}
