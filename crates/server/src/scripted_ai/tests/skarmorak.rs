@@ -195,7 +195,7 @@ fn encounter_coverage_skarmorak_native_smash_damage_and_actual_energy_cost() {
 fn encounter_coverage_skarmorak_source_shell_refill_channel_rearm_and_copy_credit() {
     for difficulty in [1, 205] {
         // Replay native melee rolls without replacing any hit or absorb amount.
-        let _rng = crate::random::seed_scope(u64::from(SMASH) + u64::from(difficulty));
+        let _rng = crate::random::seed_scope(u64::from(difficulty));
         let (mut h, boss, map) = skarmorak_copy(difficulty);
         let peer_map = create_peer_copy(&mut h, difficulty);
         record_absorb_removals(&mut h);
@@ -286,7 +286,13 @@ fn encounter_coverage_skarmorak_source_shell_refill_channel_rearm_and_copy_credi
             .count();
         assert!(
             damage > 0,
-            "actual native autoattack damage, no fabricated hit amount"
+            "actual native autoattack damage, no fabricated hit amount; difficulty{difficulty}, receipts{:?}",
+            h.inbox(0)
+                .log
+                .iter()
+                .filter(|event| event.source == Some(player.to_bits())
+                    && event.target == Some(boss.to_bits()))
+                .collect::<Vec<_>>()
         );
         h.advance(19.3);
         let attempts = &h
