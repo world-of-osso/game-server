@@ -15,6 +15,7 @@ reconstructed factions (zephras_content.py); mixed-source rows use `db2_row_sour
 
 import argparse
 import csv
+from contextlib import closing
 import hashlib
 import json
 import os
@@ -79,6 +80,7 @@ TABLES = [
     "TraitNode",
     "TraitNodeEntry",
     "TraitDefinition",
+    "TraitDefinitionEffectPoints",
     "TraitEdge",
     "TraitCond",
     "TraitCost",
@@ -206,18 +208,18 @@ def check_csvs(csv_dir):
     missing = [db2 for db2 in TABLES if not (csv_dir / f"{db2}.csv").is_file()]
     if missing:
         raise SystemExit(f"Missing CSVs in {csv_dir}: {', '.join(missing)}")
-    schema = sqlite3.connect(":memory:")
-    schema.executescript(SCHEMA_SQL.read_text())
-    for db2 in TABLES:
-        name = table_name(db2)
-        with (csv_dir / f"{db2}.csv").open(newline="", encoding="utf-8") as handle:
-            header = next(csv.reader(handle))
-        columns = [row[1] for row in schema.execute(f"PRAGMA table_info({name})")]
-        if not set(columns).issubset(header):
-            raise SystemExit(
-                f"{db2}.csv header does not match {name} in {SCHEMA_SQL.name}:\n"
-                f"  csv:    {header}\n  schema: {columns}"
-            )
+    with closing(sqlite3.connect(":memory:")) as schema:
+        schema.executescript(SCHEMA_SQL.read_text())
+        for db2 in TABLES:
+            name = table_name(db2)
+            with (csv_dir / f"{db2}.csv").open(newline="", encoding="utf-8") as handle:
+                header = next(csv.reader(handle))
+            columns = [row[1] for row in schema.execute(f"PRAGMA table_info({name})")]
+            if not set(columns).issubset(header):
+                raise SystemExit(
+                    f"{db2}.csv header does not match {name} in {SCHEMA_SQL.name}:\n"
+                    f"  csv:    {header}\n  schema: {columns}"
+                )
 
 
 def reapply_zephras_factions(conn):
