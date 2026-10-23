@@ -282,9 +282,13 @@ fn assert_energize_preserves_parent_stormkeeper_uses(case: ResourceCase) {
 fn native_elemental_resource_nonzero_mage_modifier_still_spends_charge() {
     const PRESENCE_OF_MIND: u32 = 205025;
     const ARCANE_BLAST: u32 = 30451;
-    let mut h =
-        crate::spell_cast::test_harness::harness(Vec::new(), &[PRESENCE_OF_MIND, ARCANE_BLAST], 8)
-            .expect("native Mage modifier and damage spell");
+    const ARCANE_CHARGE: u32 = 36032;
+    let mut h = crate::spell_cast::test_harness::harness(
+        Vec::new(),
+        &[PRESENCE_OF_MIND, ARCANE_BLAST, ARCANE_CHARGE],
+        8,
+    )
+    .expect("native Mage modifier, damage spell and charge-dependent values");
     let caster = h.caster;
     complete_cast(&mut h, caster, PRESENCE_OF_MIND, caster);
     let modifier = super::kit_clearcasting_tests::own_aura(&h, caster, PRESENCE_OF_MIND).unwrap();
