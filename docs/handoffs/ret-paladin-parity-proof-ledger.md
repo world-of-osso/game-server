@@ -228,3 +228,11 @@ All1267 native difficulty0 Aura4+Trigger roots are retained in `aura4-trigger-so
 | 1247729 Thermal Void | Mage | not in11 exports | 1247730,1247730 |
 | 1260647 Overclock | Evoker | not in11 exports | 431442 |
 | 1262034 Gift of the Wild | Druid | 105,103 | 1126 |
+
+## Explicit Hammer of Wrath knowledge policy
+
+`RET_HAMMER_OF_WRATH_KNOWN_FROM_SELECTED_TALENT_SIMC` is lead-approved2026-10-23: NPC/parity spec70 with selected1241288 may know exactly24275. Pinned SimC `sc_paladin.cpp3407–3412` resolves Ret `hammer_of_wrath` to24275;4192 reads selected class talent. No effect/coefficient/timer changes. Native SkillLineAbility43121 is AcquireMethod3 **NeverLearned** (TC DBCEnums.h2375–2382), not a trainer grant. Native70448 SpellLearnSpell.csv and TDB spell_learn_spell have no24275/1241288 learn relation; TraitDefinition138267 has no override/visible spell. This is an explicit reference-derived knowledge exception, not native DB2 learning and not generic method3 import. Implementation/RED pending.
+
+## Shared melee AP dependency
+
+All AP-coefficient rows in the raw114-spell matrix now name14754's shared weapon-derived-AP fix as a dependency. Lead reported genuine TigerPalm RED91 damage versus TC358–377; no Ret per-hit ratio exists yet and Ret does not modify the shared formula. Parent integrates that fix before final same-gear measurements.
