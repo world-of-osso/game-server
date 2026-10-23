@@ -13,18 +13,19 @@ def numeric(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
-def select_impact(receipt, spell_id, index=0):
+def select_impact(receipt, spell_id, index=0, action=None):
     events = receipt.get("events", [])
     positions = [i for i, event in enumerate(events)
-                 if event.get("spell_id") == spell_id and event.get("event") in FORMULA_EVENTS]
+                 if event.get("spell_id") == spell_id and event.get("event") in FORMULA_EVENTS
+                 and (action is None or event.get("action") == action)]
     if index < 0 or index >= len(positions):
-        raise ValueError(f"spell{spell_id}: impact index{index} absent ({len(positions)} formula records)")
+        raise ValueError(f"spell{spell_id}/action={action!r}: impact index{index} absent ({len(positions)} formula records)")
     first = events[positions[index]]
     identity = (first.get("actor"), first.get("action"))
     stop = next((i for i in positions[index + 1:]
                  if (events[i].get("actor"), events[i].get("action")) == identity), len(events))
     selected = {"formula": dict(first.get("factors", {})), "result": {}, "armor": {},
-                "kind": first["event"], "derivations": {},
+                "kind": first["event"], "action": first.get("action"), "derivations": {},
                 "attribution": dict(first.get("factor_attribution", {})),
                 "sources": dict(first.get("factor_sources", {})), "time": first.get("time")}
     for event in events[positions[index] + 1:stop]:
@@ -80,11 +81,12 @@ def coefficient_term_active(name, native, oracle):
     return True
 
 
-def diff_receipts(native, oracle, spell_id, native_index=0, oracle_index=0, tolerance=1e-6):
+def diff_receipts(native, oracle, spell_id, native_index=0, oracle_index=0, tolerance=1e-6,
+                  native_action=None, oracle_action=None):
     if tolerance < 0 or not math.isfinite(tolerance):
         raise ValueError("tolerance must be finite and nonnegative")
-    left = select_impact(native, spell_id, native_index)
-    right = select_impact(oracle, spell_id, oracle_index)
+    left = select_impact(native, spell_id, native_index, native_action)
+    right = select_impact(oracle, spell_id, oracle_index, oracle_action)
     derive_printed_components(left, right)
     rows = []
     for stage in ("formula", "result", "armor"):
@@ -101,6 +103,7 @@ def diff_receipts(native, oracle, spell_id, native_index=0, oracle_index=0, tole
     status = "different" if "different" in statuses else "incomplete" if not rows or statuses - {"match"} else "match"
     return {"schema_version": 1, "spell_id": spell_id, "status": status, "factors": rows,
             "native_impact": native_index, "oracle_impact": oracle_index,
+            "native_action": left["action"], "oracle_action": right["action"],
             "native_time": left["time"], "simc_time": right["time"],
             "native_result": left["result"].get("result"), "simc_result": right["result"].get("result"),
             "limitations": ["Ordinal impact selection does not align buffs, procs or independent crit rolls; inspect both recorded states.",
@@ -114,6 +117,8 @@ def main():
     parser.add_argument("--native", type=Path, required=True)
     parser.add_argument("--oracle", type=Path, required=True)
     parser.add_argument("--spell-id", type=int, required=True)
+    parser.add_argument("--native-action", help="exact native action series; impact index is within this series")
+    parser.add_argument("--oracle-action", help="exact oracle action series; separates same-ID tier/proc hits")
     parser.add_argument("--native-impact", type=int, default=0)
     parser.add_argument("--oracle-impact", type=int, default=0)
     parser.add_argument("--tolerance", type=float, default=1e-6)
@@ -121,7 +126,8 @@ def main():
     args = parser.parse_args()
     try:
         native, oracle = (json.loads(path.read_text()) for path in (args.native, args.oracle))
-        result = diff_receipts(native, oracle, args.spell_id, args.native_impact, args.oracle_impact, args.tolerance)
+        result = diff_receipts(native, oracle, args.spell_id, args.native_impact, args.oracle_impact,
+                               args.tolerance, args.native_action, args.oracle_action)
         result["proof"] = {label: {"path": str(path.resolve()), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
                            for label, path in (("native", args.native), ("oracle", args.oracle))}
         output = json.dumps(result, indent=2, allow_nan=False) + "\n"

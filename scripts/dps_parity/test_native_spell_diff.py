@@ -80,6 +80,32 @@ class NativeDiffTests(unittest.TestCase):
         self.assertFalse(power["coefficient_term_active"])
         self.assertEqual(output["status"], "match")
 
+    def test_same_id_real_fof_hits_select_the_requested_action_series(self):
+        receipt = parse_log((HERE / "fixtures/fof-same-id-recorded.txt").read_text())
+        tier = diff.select_impact(receipt, 117418, action="fists_of_fury_damage_mid2_2pc")
+        regular = diff.select_impact(receipt, 117418, action="fists_of_fury_damage")
+        self.assertEqual(tier["time"], regular["time"])
+        self.assertEqual(tier["result"]["actual_amount"], 17604.07)
+        self.assertEqual(regular["result"]["actual_amount"], 35208.14)
+        self.assertEqual(regular["action"], "fists_of_fury_damage")
+
+    def test_missing_action_does_not_select_another_same_id_hit(self):
+        receipt = parse_log((HERE / "fixtures/fof-same-id-recorded.txt").read_text())
+        with self.assertRaises(ValueError):
+            diff.select_impact(receipt, 117418, action="missing_fof_action")
+
+    def test_diff_records_independent_native_and_oracle_action_selection(self):
+        receipt = parse_log((HERE / "fixtures/fof-same-id-recorded.txt").read_text())
+        result = diff.diff_receipts(
+            receipt, receipt, 117418,
+            native_action="fists_of_fury_damage", oracle_action="fists_of_fury_damage",
+        )
+        self.assertEqual(result["status"], "match")
+        self.assertEqual(result["native_action"], "fists_of_fury_damage")
+        self.assertEqual(result["oracle_action"], "fists_of_fury_damage")
+        damage = next(row for row in result["factors"] if row["factor"] == "actual_amount")
+        self.assertEqual(damage["native"], 35208.14)
+
     def test_empty_factor_records_are_incomplete_not_matching(self):
         empty = {"events": [{"event": "direct_amount", "spell_id": 12294, "factors": {}}]}
         self.assertEqual(diff.diff_receipts(empty, empty, 12294)["status"], "incomplete")

@@ -1,3 +1,7 @@
+## 2026-10-23 — Arms per-spell and FoF identity boundary
+
+[Per-spell oracle](reference/simc-spell-oracle.md): real Arms Player MS1GREEN20.60s at4bda4a241 after consistent current-native snapshot fixed stale missing-item_set input; coefficient/armor match, AP/source product differ. Explicit action-series selectors separate two real FoF117418 hits at one timestamp. New actual two-TP→FoF oracle retains0 Momentum before FoF versus native2; state is not forged to align damage.
+
 ## 2026-10-23 — Follower armor penetration policy
 
 [Armor source ledger](investigations/follower-armor-penetration.md): installed ExpectedStat armor1470/K3430 and native450990/280=12 sourced against TC a352b1fa. Real WW follower receipt RED0.300011vs0.273859; explicit player-equivalent class-follower policy implemented, ordinary player-controlled NPC remains excluded. Native policy fraction/damage now proved ata9a17aa4c (39471, rounded stage0.2738695), controls3GREEN13.55s. Observer RED exposed pre280 metadata1470; actual effective armor/K/mitigation scalar now returned from the same native calculations. Current998083262 native3/controls3/math1/forecast8GREEN, exact checker GREEN; TP39471 and all three FoF hit amounts remain unchanged by observation. Max-level player item-level K curve remains a separate unqualified branch.
