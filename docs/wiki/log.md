@@ -145,6 +145,10 @@
 
 ## 2026-10-22 — Active party combat references
 
+## 2026-10-22 — Meteor admission, impact and TC cast boundary
+
+Authored ground-action thresholds replace blanketmin3 forMeteor. TCroot/ATexpiry/missile/nativeimpact/burn chain passes four native cases; ordinary expiry preserves concurrent hardcast rejection rather than SimC FULL_MASK-like outcome. Copy-only stable-key delta and explicit old-policy/prerequisite failures retained. See [Meteor](investigations/follower-data.md#meteor-authored-admission-and-tc-delayed-impact--2026-10-22).
+
 ## 2026-10-22 — Fire Ignite producer and shared rolling integration
 
 Ordinary Fireball→Ignite RED precedes per-spell producer; native4GREEN covers exact9ticks, no self-cascade, consumed HotStreak doubling and actual unpaid refresh. Shared flag-driven carry reused from13191, not forked. Controlled naked70 baseline/decomposition and integrated single-seed observation qualify stats, idle and nohero reference differences. See [Fire70](investigations/follower-data.md#fire70-ignite-producer-and-controlled-baseline--2026-10-22).
@@ -3993,3 +3997,7 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 ## 2026-10-22 — Brackenhide source-floor packet
 
 [Six boss placements](investigations/follower-data.md#brackenhide-source-floors-and-route-gaps--2026-10-22): exact source marker/floor transforms and own TDB stats; authored WMO group bounds disambiguate Wratheye from outdoor roofs without supplying Z. Actual missing-six RED→six-primary GREEN, replay3×; three route gaps remain separate. No unsupported War-band offsets, canonical writes or dungeon-clear claim.
+
+- 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22): native child effectiveness/removal/Echo GREEN; real long-flight HIT-timing and three-target Chain RED. Per-hit correction and native45297 mapping committed; GREEN pending.
+
+- 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22) HIT/Chain correction5GREEN10.43s; actual StatsPlugin70samples2PASS9.38s on same executable. Three qualified tests enabled; fullAPL/resource/other-root gaps retained.

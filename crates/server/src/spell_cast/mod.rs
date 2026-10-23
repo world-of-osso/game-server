@@ -359,6 +359,8 @@ mod toy_weather;
 mod toy_wormhole;
 
 mod elemental_overload;
+#[cfg(test)]
+mod elemental_overload_tests;
 pub(crate) mod queued_triggers;
 
 pub struct SpellCastPlugin;
@@ -2514,7 +2516,6 @@ pub(crate) fn execute_cast(
     if let Some(hook) = scripts::after_cast(spell.id) {
         hook(world, caster, spell);
     }
-    elemental_overload::after_cast(world, caster, spell, explicit);
     spell_mods::consume_charges(world, caster, spell);
     blooming_infusion::after_cast(world, caster, spell);
     druid_transform::after_cast(world, caster, spell);
@@ -3202,6 +3203,9 @@ fn push_hit_events(
                 reflected: false,
             },
         );
+        if harmful {
+            elemental_overload::after_hit(world, caster, spell, target);
+        }
     }
 }
 

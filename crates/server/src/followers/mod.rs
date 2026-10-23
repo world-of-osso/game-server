@@ -39,6 +39,8 @@ mod kit_proc_fidelity_tests;
 mod kit_rotation_fidelity_tests;
 #[cfg(test)]
 mod kit_rotation_tests;
+#[cfg(test)]
+mod meteor_tests;
 mod pack_identity;
 mod party;
 mod positioning;
