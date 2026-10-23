@@ -152,11 +152,35 @@ fn fire_intensifying_flame_native70_final_tick_is_credited_before_natural_expiry
         .unwrap()
         .period_ms;
     let native_ticks = ignite.duration_ms / period_ms;
-    let remaining = ignite.expires_at.unwrap() - aura_now(h.app.world());
+    let original_expiry = ignite.expires_at.unwrap();
+    let remaining = original_expiry - aura_now(h.app.world());
     let frames = (remaining / frame_seconds(&h)).ceil() as usize + 2;
     let first = h.inbox.log.len();
-    h.advance(frames);
-    assert!(!has_aura(h.app.world(), target, IGNITE));
+    let mut previous_expiry = original_expiry;
+    let mut expiry_changes = Vec::new();
+    for _ in 0..frames {
+        h.advance(1);
+        let expiry = h.app.world().get::<ActiveAuras>(target).and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == IGNITE && aura.caster == caster)
+                .and_then(|aura| aura.expires_at)
+        });
+        if let Some(expiry) = expiry
+            && expiry != previous_expiry
+        {
+            expiry_changes.push((aura_now(h.app.world()), expiry));
+            previous_expiry = expiry;
+        }
+    }
+    assert!(
+        !has_aura(h.app.world(), target, IGNITE),
+        "Ignite survives original expiry{original_expiry}; expiry_changes={expiry_changes:?}; own events={:?}",
+        h.inbox.log[first..]
+            .iter()
+            .filter(|event| event.source == Some(caster.to_bits()))
+            .collect::<Vec<_>>()
+    );
     let count = |spell_id| {
         h.inbox.log[first..]
             .iter()
