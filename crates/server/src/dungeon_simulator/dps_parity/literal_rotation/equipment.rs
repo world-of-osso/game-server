@@ -81,7 +81,7 @@ impl Equipment {
     pub fn uses(&self) -> impl Iterator<Item = (&str, ItemUse)> + '_ {
         SLOTS
             .iter()
-            .filter_map(|&(name, _)| self.slots[name].on_use.map(|item| (name, item)))
+            .filter_map(move |&(name, _)| self.slots[name].on_use.map(|item| (name, item)))
     }
 
     pub fn slot_for_action(&self, action: &Action) -> Result<Option<&str>, String> {
