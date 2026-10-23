@@ -1,3 +1,7 @@
+## 2026-10-23 — Per-spell merge / periodic crit ownership
+
+Merged current master4a2deb367 into native-spell-diff. Resolution retains owner-aware periodic crit eligibility/order and signed target-crit semantics, while direct and periodic damage capture records the actual rolled chance/result without another RNG draw. Parent rebuilt batch gate pending; prior acceptance scopes are unchanged.
+
 ## 2026-10-23 — Arms per-spell and FoF identity boundary
 
 [Per-spell oracle](reference/simc-spell-oracle.md): real Arms Player MS1GREEN20.60s at4bda4a241 after consistent current-native snapshot fixed stale missing-item_set input; coefficient/armor match, AP/source product differ. Explicit action-series selectors separate two real FoF117418 hits at one timestamp. New actual two-TP→FoF oracle retains0 Momentum before FoF versus native2; state is not forged to align damage.
@@ -6,6 +10,12 @@
 
 [Armor source ledger](investigations/follower-armor-penetration.md): installed ExpectedStat armor1470/K3430 and native450990/280=12 sourced against TC a352b1fa. Real WW follower receipt RED0.300011vs0.273859; explicit player-equivalent class-follower policy implemented, ordinary player-controlled NPC remains excluded. Native policy fraction/damage now proved ata9a17aa4c (39471, rounded stage0.2738695), controls3GREEN13.55s. Observer RED exposed pre280 metadata1470; actual effective armor/K/mitigation scalar now returned from the same native calculations. Current998083262 native3/controls3/math1/forecast8GREEN, exact checker GREEN; TP39471 and all three FoF hit amounts remain unchanged by observation. Max-level player item-level K curve remains a separate unqualified branch.
 
+## 2026-10-23 — Periodic critical ticks
+
+[Periodic crit](systems/auras.md#periodic-critical-ticks--2026-10-23): TC-native eligibility/live rolls and critical damage/healing bonuses, with explicit `FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_SPELL_OWNER` policy for class actors and owned pets/totems. Native RED7b924:2controlsPASS/5featureFAIL35.83s, then first7GREEN42.94s. Required real1943+21880 ordering REDcf191c5: native flat +10 raises normal10937→11038, critical73726 versus74307.8125 expected; initial follower259 fixture failure explicitly invalid. Move periodic roll behind numeric source/flat bonuses; final GREEN pending. Clocks, attribution, APL and pet stats unchanged.
+## 2026-10-23 — Native trait effect-point source boundary
+
+[Trait effect points](systems/talents.md#trait-effect-points):1408 native rows/1358 curves, learned definition+total-rank metadata and TC Set/Multiply. Fresh amount REDs atbc5/lifetime RED atdb9→native5GREEN34.44s at867, including rank1/2 and unchanged137027 instance; importer/no-SQLite-leak1GREEN6.825s, warning-free. Private delta prepared, parent publication/integration pending; no DPS parity claim. [Proof ledger](../handoffs/trait-effect-points-proof-ledger.md).
 ## 2026-10-23 — Native Player literal target/request boundary
 
 [Shared execution](systems/simc-apl.md#shared-literal-fixture-machinery): actual Human casts with pinned269 gear/traits reproduce1WW controlPASS/6assertionRED at4f91688e8 (34.94s runtime). Readiness now keyed by action/target; harmful precasts read native selection; Player delivery uses normal explicit-target requests and refuses expired targets. Retarget changes only the running AA victim, not selection/timers. Creature delivery retained. After hp1026 merge e99b879e8:7GREEN27.17s (18m08 compile/0compiler warnings); [proof](../handoffs/literal-player-dispatch-proof-ledger.md). Setup-only Position field compile error is not RED evidence. No numeric or DPS qualification claim.
