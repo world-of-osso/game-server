@@ -9,6 +9,8 @@ use shared::protocol::{CombatLogEvent, CombatLogKind};
 
 const BARBED_SHOT: u32 = 217200;
 const RENEW: u32 = 139;
+const RUPTURE: u32 = 1943;
+const IMPROVED_RUPTURE: u32 = 21880;
 const PLAGUE_BOMB: u32 = 341408;
 const LANGUISH: u32 = 71023;
 const BURNING_BLOOD: u32 = 98957;
@@ -322,6 +324,88 @@ fn dps_parity_periodic_crit_native_renew_reads_current_crit_after_application() 
     assert!(
         (critical.amount as f32 - expected).abs() <= 2.0,
         "native heal critical bonus: expected {expected}, got {critical:?}"
+    );
+}
+
+#[test]
+#[ignore = "native flat periodic bonus ordering RED/GREEN; requires prepared parity inputs"]
+fn dps_parity_periodic_crit_native_rupture_flat_bonus_precedes_critical_multiplier() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = native_actor(259, ParityActor::Follower);
+    let (caster, target) = (run.actor, run.targets[0]);
+    assert_native_flags(&run, RUPTURE, true, false);
+    apply_native_aura(&mut run, caster, caster, DENOUNCE);
+    apply_native_aura(&mut run, caster, target, RUPTURE);
+    let without_flat = first_new_tick(&mut run, caster, target, RUPTURE);
+    assert!(!without_flat.crit);
+
+    apply_native_aura(&mut run, caster, caster, IMPROVED_RUPTURE);
+    let flat = run
+        .app
+        .world()
+        .get::<ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == IMPROVED_RUPTURE)
+        .unwrap()
+        .effects[0]
+        .amount;
+    assert_eq!(flat, 10.0, "unmodified native21880 flat periodic bonus");
+    apply_native_aura(&mut run, caster, caster, DENOUNCE);
+    apply_native_aura(&mut run, caster, target, RUPTURE);
+    let normal = first_new_tick(&mut run, caster, target, RUPTURE);
+    assert!(!normal.crit);
+    assert!(
+        normal.amount > without_flat.amount,
+        "native flat bonus must alter actual normal tick: {without_flat:?} -> {normal:?}"
+    );
+
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Dispelled,
+        |aura| aura.spell_id == DENOUNCE,
+    );
+    apply_native_aura(&mut run, caster, caster, LUCKYDO);
+    assert!(
+        run.app
+            .world()
+            .get::<CharacterStats>(caster)
+            .unwrap()
+            .crit_pct
+            >= 100.0
+    );
+    let critical = first_new_tick(&mut run, caster, target, RUPTURE);
+    assert!(critical.crit);
+    let world = run.app.world();
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(RUPTURE)
+        .unwrap();
+    let multiplier = world
+        .get::<crate::auras::AuraStatMods>(caster)
+        .unwrap()
+        .critical_damage(spell.school_mask());
+    // TC Unit.cpp6913 applies flat PeriodicHealingAndDamage before
+    // SpellAuraEffects.cpp5680 rolls/bonuses the entire resulting tick.
+    let bonus = crate::auras::spell_mods::modify(
+        world,
+        caster,
+        spell,
+        crate::auras::spell_mods::SpellModOp::CritDamageAndHealing,
+        normal.amount as f32 * (2.0 * multiplier - 1.0),
+    );
+    let expected = normal.amount as f32 + bonus;
+    let critical_factor = expected / normal.amount as f32;
+    // Each receipt rounds once: propagate the normal receipt's half-unit error.
+    let rounding_bound = ((critical_factor + 1.0) / 2.0).ceil();
+    println!(
+        "NATIVE_PERIODIC_FLAT_CRIT {}",
+        json!({"spell":RUPTURE,"modifier":IMPROVED_RUPTURE,"flat":flat,"without_flat":without_flat.amount,"normal_with_flat":normal.amount,"critical":critical.amount,"expected":expected,"rounding_bound":rounding_bound})
+    );
+    assert!(
+        (critical.amount as f32 - expected).abs() <= rounding_bound,
+        "TC crit includes (base + native flat) before multiplication: expected {expected}, got {critical:?}"
     );
 }
 
