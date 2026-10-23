@@ -55,7 +55,6 @@ fn completed_casts(h: &Harness, boss: Entity, spell: u32) -> usize {
 }
 
 #[test]
-#[ignore = "Gorek native aura input qualification"]
 fn encounter_coverage_gorek_projected_native_auras_and_isolation() {
     for difficulty in [1, 205] {
         for spell in [MIGHT, HEATED] {
@@ -77,7 +76,6 @@ fn encounter_coverage_gorek_projected_native_auras_and_isolation() {
 }
 
 #[test]
-#[ignore = "RED before native Gorek scripting"]
 fn encounter_coverage_gorek_projected_first_might_source_clock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = projected_gorek(difficulty);
@@ -94,7 +92,6 @@ fn encounter_coverage_gorek_projected_first_might_source_clock() {
 }
 
 #[test]
-#[ignore = "RED before native Gorek scripting"]
 fn encounter_coverage_gorek_projected_lanes_credit_and_corpse() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_gorek(difficulty);
@@ -147,7 +144,6 @@ fn encounter_coverage_gorek_projected_lanes_credit_and_corpse() {
 }
 
 #[test]
-#[ignore = "RED before native Gorek scripting"]
 fn encounter_coverage_gorek_projected_evade_rearms_first_might() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_gorek(difficulty);
