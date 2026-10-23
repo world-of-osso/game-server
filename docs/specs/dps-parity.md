@@ -49,6 +49,13 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 - [x] Source-backed prerequisite plans may use bounded longer durations and actual enabling casts/earned stacks. Explicit repeated precombat actions replace the stripped setup and are recorded separately in proof; no invented buff values or silent reference-option changes.
 - [x] Select top-five reference damage channels per spec, retain channel shares/provenance and explicit untriggered-channel gaps; diagnostic probes do not certify native±10% parity. Native cast instrumentation remains owned by spec parity harnesses.
 
+### Native per-spell differential harness
+
+- [ ] A shared test-side helper reuses reference-profile preparation, native31146 and literal fixture readiness/dispatch for exactly one requested cast or N observed damage ticks; no forked rotation or synthetic follower profile. First native fixture is follower269 Tiger Palm, then Arms12294 after shared Player dispatch supports its real actor.
+- [ ] Capture actual calculation-stage inputs/outputs without rerolling variance/crit or recomputing a second formula. JSON retains base, AP/SP terms, applied multipliers, crit, versatility and armor reduction in oracle-compatible per-hit events. Missing attribution is explicitly `unattributed product`, not a guessed aura source.
+- [ ] Native fixtures preserve reference gear/talents and exclude raid buffs. Explicit priming casts may earn required resources/state; no production damage tuning belongs to this diagnostic.
+- [ ] A stdlib Python CLI diffs matched formula/result/armor factors, retains both result states and provenance, and distinguishes actual differences from unprinted factors. Identical recorded factors and concrete counterfactual deltas have unittest coverage.
+
 ## How it works
 
 - [Character stats and gear](../wiki/systems/character-stats.md#gear).

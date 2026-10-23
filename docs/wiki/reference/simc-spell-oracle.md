@@ -42,10 +42,18 @@ Batch prerequisite plans record complete APLs, durations and pinned public-sourc
 
 `NOT_TRIGGERED_BY_MINIMAL_DRIVERS` means no matching formula observed during the recorded probe duration, not zero damage. Startup modifiers may still print. Failures retain actual errors/proof; no values are fabricated.
 
+## Native factor comparison consumer
+
+```text
+python3 scripts/dps_parity/native_spell_diff.py --native native.json --oracle oracle.json --spell-id 100780 --output diff.json
+```
+
+The stdlib consumer selects one ordinal impact per receipt, uses the final result stage, and compares each printed numeric formula/result/armor factor. It preserves native `unattributed product` labels, marks absent factors unavailable rather than zero, and records both input hashes. Exit0 means matching printed factors,1 means a difference/incomplete evidence,2 means invalid input. Recorded/counterfactual tests and a43-factor WW oracle self-control qualify this consumer; native per-hit producer acceptance remains pending.
+
 ## Sources
 
 - [CLI](../../../scripts/dps_parity/simc_spell_oracle.py), [batch driver map](../../../scripts/dps_parity/simc_spell_oracle_batch.py), [sourced prerequisite plans](../../../scripts/dps_parity/simc_spell_oracle_plans.json), [recorded tests](../../../scripts/dps_parity/test_simc_spell_oracle.py).
-- [Native receipt fields](../../../crates/server/src/dungeon_simulator/dps_parity/report.rs).
+- [Native receipt fields](../../../crates/server/src/dungeon_simulator/dps_parity/report.rs); [factor comparison consumer](../../../scripts/dps_parity/native_spell_diff.py).
 - [Parity specification](../../specs/dps-parity.md).
 
 ## See Also
