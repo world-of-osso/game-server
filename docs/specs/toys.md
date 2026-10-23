@@ -13,6 +13,14 @@
 
 Do not add these three Toy rows until a real contract is established and approved through the source/RED/publication/GREEN flow. [Source/code/asset matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18). This source boundary does not certify native rendering, every historical toy's full lifecycle, uncovered natural30-minute/hour reuse or footstep/particle presentation; those remain separately scoped follow-ups.
 
+## Authored item faction eligibility
+
+- [ ] Existing ItemTemplate eligibility enforces ItemFlags2 Horde-only0x1 and Alliance-only0x2 together with source class/race masks. An all-races mask does not erase those faction flags; use the character's existing base faction, not arena/mercenary identity. Do not rewrite source masks or add protocol fields.
+- [ ] Wrong-faction physical learning refuses without consuming the item or granting account ownership. An already owned toy remains account-wide, but a same-account opposite-faction character cannot use it or start recovery/apply effects.
+- [ ] Correct-side learning/use still succeeds with source effects/recovery, and unrestricted items plus existing class/race restrictions remain unchanged. Metadata checks cover all54 currently flagged toys; this is contextual eligibility, not54 new lifecycle or native-rendering qualifications. Global1173 census remains547.
+
+Sources: TC a352b1fa Player.cpp11215–11219, ToyHandler.cpp28–51; local70448 ItemSparse.Flags_1. Project learning/use share `check_item_requirements` and `ItemTemplate::allows`.
+
 ## Turn while falling
 
 - [x] Aura409 preserves the source turn-while-falling ability in existing replicated PlayerMotion bit39 (`0x0000008000000000`), without changing the protocol schema. Apply and removal reconcile the current aura set; removing one owner must not clear another owner's ability or unrelated movement flags.
