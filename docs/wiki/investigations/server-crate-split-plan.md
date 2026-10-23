@@ -1,6 +1,6 @@
 # Server crate split plan
 
-Verified: 2026-10-23. **Land one tiny catalog mechanics proof, then prioritize (A) thin bin/existing server lib, (B) separate simulator/parity crate, (C) area test crates.** This is a source-backed plan, not a measured crate-split speedup. No gameplay changes or Cargo builds were performed for this investigation.
+Verified: 2026-10-23. **Land one tiny catalog mechanics proof, then prioritize (A) thin bin/existing server lib, (B) separate simulator/parity crate, (C) area test crates.** This is a source-backed plan, not a measured crate-split speedup. Initial source analysis performed no gameplay changes or Cargo builds. An execution baseline was subsequently attempted under the expanded parent grant; its safety abort is recorded below.
 
 ## Evidence and reproducibility
 
@@ -104,6 +104,12 @@ Absolute per-step minute predictions beyond the known baseline would be fabricat
 Scope changed after initial analysis: implementation approved by parent. Build grant is `CAPACITY_ID=lead_split_14933`, explicit `-j 4`, one build at a time, `TMPDIR=/var/tmp/osso`, ADD/HOLD/SHED admission through `/home/osso/.worktrees/logs/capacity.sh`; all builds/tests through engine `scripts/agent/agent-run`. Execution checkout: `/home/osso/.worktrees/game-server-crate-split`, branch `crate-split-step-N` from fresh origin/master. Push feature branches only; parent gates full suite and lands.
 
 Before cut 1, warm the **same unsplit execution tip** and measure one appended-comment parity-source edit rebuild. After each cut, repeat the identical edit with fixed machine/jobs/profile/incremental/features/target selection; record wall/user/system CPU, revision, exact command, edited file/line, dirty Cargo targets and test census. Establish a fresh unsplit pair if intervening master changes are incorporated; do not credit master changes or cold dependency builds to extraction. No timings in the planning packet. Agent 14179's runner appends one comment, not a semantic assertion/gameplay change: label results accordingly; measured frontend/incremental reuse is not a promise for arbitrary code edits. Parent specifies opt2/-j2 for paired measurements, -j4 for ordinary step builds. Initial read-only investigation did not consume optional cargo-check permission.
+
+### First execution baseline attempt: resource abort, not a timing result
+
+The fixed-source opt2/-j2 primer on `46c2bf608` was admitted with 15.3GiB host memory available, then safety-aborted when host availability fell to 6,234,888KiB (5.95GiB), below the runner's mandatory 6GiB floor. Observed primer telemetry spans 1,865.805s (~31m06s), **including cold dependencies**; the timed child did not finish, so this is neither a successful compile duration nor a warm edit measurement. Peak sampled aggregate RSS+swap was 6,837,420KiB (~6.52GiB); separate noncoincident maxima were RSS4,694,692KiB and swap3,248,124KiB. Disk remained above the 300GiB stop floor.
+
+Evidence: sibling engine `data/diagnostics/server-crate-split-2026-10-23/unsplit-46c2bf608-parity/opt2-j2/{abort.json,primer-memory.json,primer-host.jsonl,primer-command.json,primer.stderr,run.log}`. No primer timing/summary, test executable or warm measure exists. Source bytes were restored and no owned build processes remained; no automatic retry was started. Dependencies are now warm, but paired before/after attribution remains blocked on a successful baseline. Parent controls the retry/implementation ordering; do not treat this resource abort as evidence that any split has passed.
 
 ## Sources
 
