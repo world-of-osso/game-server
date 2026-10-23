@@ -552,6 +552,9 @@ mod gorek_diagnostic;
 #[path = "gorek_iterative_diagnostic.rs"]
 mod gorek_iterative_diagnostic;
 #[cfg(all(test, feature = "bake"))]
+#[path = "halls_collision_diagnostic.rs"]
+mod halls_collision_diagnostic;
+#[cfg(all(test, feature = "bake"))]
 #[path = "ruby_collision_diagnostic.rs"]
 mod ruby_collision_diagnostic;
 
