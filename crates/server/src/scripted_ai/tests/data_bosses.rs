@@ -160,6 +160,8 @@ mod vyletongue;
 #[path = "wratheye.rs"]
 mod wratheye;
 
+#[path = "prepared_input_concurrency_tests.rs"]
+mod prepared_input_concurrency_tests;
 #[path = "prepared_input_tests.rs"]
 mod prepared_input_tests;
 #[path = "prepared_inputs.rs"]

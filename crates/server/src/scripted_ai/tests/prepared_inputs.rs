@@ -43,12 +43,20 @@ pub(super) fn cached_inputs(
     key: InputKey,
     load: impl FnOnce() -> PreparedInputs,
 ) -> Arc<PreparedInputs> {
-    static INPUTS: OnceLock<Mutex<HashMap<InputKey, Arc<PreparedInputs>>>> = OnceLock::new();
-    let mut inputs = INPUTS.get_or_init(Default::default).lock().unwrap();
-    inputs
-        .entry(key)
-        .or_insert_with(|| Arc::new(load()))
-        .clone()
+    type InputSlot = Arc<Mutex<Option<Arc<PreparedInputs>>>>;
+    static INPUTS: OnceLock<Mutex<HashMap<InputKey, InputSlot>>> = OnceLock::new();
+    let slot = {
+        let mut inputs = INPUTS
+            .get_or_init(Default::default)
+            .lock()
+            .expect("prepared-input registry poisoned");
+        inputs
+            .entry(key)
+            .or_insert_with(|| Arc::new(Mutex::new(None)))
+            .clone()
+    };
+    let mut initialized = slot.lock().expect("prepared-input initializer poisoned");
+    initialized.get_or_insert_with(|| Arc::new(load())).clone()
 }
 
 pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<PreparedInputs> {
