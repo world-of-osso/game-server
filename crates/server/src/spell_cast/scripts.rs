@@ -26,6 +26,8 @@ mod batch8;
 mod batch9;
 mod chrono_flame;
 mod clearcasting;
+mod deadly_poison;
+pub(super) use deadly_poison::{DEADLY_POISON, before_refresh as deadly_poison_before_refresh};
 mod elemental_ascendance;
 mod empower_evoker;
 mod essence_burst;

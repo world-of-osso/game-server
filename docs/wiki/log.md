@@ -1,3 +1,7 @@
+## 2026-10-23 — Deadly Poison owned repeat RED
+
+[Assassination poison](investigations/assassination-dps-parity.md#deadly-poison-repeat-boundary): refreshed current canonical backup avoids pre-publication trait-table schema failure; same native executable then1controlPASS/1genuineRED13.34s, missing own-repeat113780. TC-backed before-refresh child implemented; GREEN pending, parent dummy4/full DPS unqualified.
+
 ## 2026-10-23 — Assassination native Garrote boundaries
 
 [Assassination parity](investigations/assassination-dps-parity.md): pinned ST186209.205/3T265841.453; existing native player controller stops at413/condition12. Native Garrote snapshot1RED/2controlsPASS, earned Stealth-bonus lifecycle1RED/no-talent controlPASS→corrected8-case native GREEN29.67s at3d9b2e3f0 (Envenom/Rupture/Mutilate retained). No DPS-band claim; literal300s baseline still open.

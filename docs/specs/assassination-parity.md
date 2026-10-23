@@ -7,6 +7,7 @@ Qualify native spec259 against pinned SimC76f8118 BiS gear/talents:300s single-t
 - [ ] Consume the literal pinned APL through shared `simc_apl`, `simc_apl_native` and `dps_parity/literal_rotation`; do not substitute AssistedCombat or a local priority list.
 - [x] Selected Improved Garrote makes actual Stealth1784 apply392403; leaving stealth replaces it with392401. No talent means no invented bonus.
 - [x] Native Garrote703 snapshots one native effect1 bonus from392401/392403, preferring the former when both exist. Later removal does not change already-earned ticks; foreign-unit buffs do not contribute.
+- [ ] Deadly Poison2818 casts native113780 once only when the target already has this caster's2818. A first application or only a foreign caster's aura does not qualify; the native DoT still applies.
 - [ ] `ROGUE_ENERGY_REGEN_COMBINED_SIMC_APL_ESTIMATE` is a decision-only SimC fact over native regen/owned poisoned bleed tick state. The sourced90% Dashing Scoundrel estimate never grants Energy or changes real regeneration.
 - [ ] ST and3T receipts expose gear/stat/action/channel differences and actual target damage before claiming the ±10% band.
 
@@ -19,6 +20,7 @@ Qualify native spec259 against pinned SimC76f8118 BiS gear/talents:300s single-t
 
 - `crates/server/src/auras/improved_garrote.rs` — sourced stealth bonus lifecycle and periodic snapshot.
 - `crates/server/src/auras/scripts.rs` — existing native stealth/periodic hook integration.
+- `crates/server/src/spell_cast/scripts/deadly_poison.rs` — sourced owned-poison repeat child, before native aura refresh.
 - `crates/server/src/dungeon_simulator/dps_parity/` — shared native measurement machinery.
 
 ## Tests asserting this spec

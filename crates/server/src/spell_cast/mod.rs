@@ -3008,6 +3008,9 @@ fn resolve_effects(
             continue;
         }
         scripts::bloom_lifebloom_before_refresh(world, caster, target, spell.id, depth);
+        if spell.id == scripts::DEADLY_POISON && effect_mask & 1 != 0 {
+            scripts::deadly_poison_before_refresh(world, caster, target, depth);
+        }
         crate::auras::apply_aura_with_spell(
             world,
             &AuraApplication {

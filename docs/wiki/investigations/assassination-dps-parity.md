@@ -18,13 +18,19 @@ TC `spell_rog_improved_garrote` attaches to1784 (signed TDB script table confirm
 
 Native Garrote AP coefficient0.4515 agrees with the single-spell SimC oracle. Shared259 oracle receipts were regenerated with inherited `optimal_raid=0`; invalid raid-buffed attempts are archived separately and excluded. Compare actual transient buff/stat factors, not unaligned raw hit values.
 
+## Deadly Poison repeat boundary
+
+TC `spell_rog_deadly_poison` (384–404) calls113780 when the same caster already has2818 on its target, before the new aura applies. Native70448 has speed0, so the hook runs once at the existing per-target aura-resolution boundary before refresh; no missile timing is substituted. Do not route this through an after-apply hook, which would treat every first application as a repeat.
+
+The first new probe failed before test logic because its canonical backup preceded publication of `trait_definition_effect_points`; that is schema-only evidence, not RED. A fresh current-canonical `.backup` (dd1de231…) includes the published table. The same compiled source29fc88a then observes1controlPASS/1genuineRED13.34s: first/foreign applications do not deal instant damage, but this caster's repeat also incorrectly has zero113780 hits. The correction adds only the TC-owned repeat child. GREEN pending; native poison-parent dummy4 dispatch and full poison DPS remain unqualified.
+
 ## Shared ownership
 
 Use shared literal APL machinery; player/target/composite execution remains shared-owner work. `apply_poison` must preserve both learned2823 and381664 under selected381801; do not silently replace the composite with one spell. The approved `ROGUE_ENERGY_REGEN_COMBINED_SIMC_APL_ESTIMATE` is decision-only; SimC sc_rogue.cpp9894/9897 explicitly estimates90% Envenom uptime for Dashing Scoundrel. No native regeneration grants follow from that estimate.
 
 ## Sources
 
-- Pinned TC a352b1fa `src/server/scripts/Spells/spell_rogue.cpp:534–618` — bonus lifecycle and snapshot.
+- Pinned TC a352b1fa `src/server/scripts/Spells/spell_rogue.cpp:534–618` — bonus lifecycle and snapshot;384–404 — owned Deadly Poison repeat child.
 - Native70448 SQLite rows392401/392403 effect1=50 and703 AP coefficient0.4515; source snapshot SHA51455391e7d4962589cc66d239bf77b2dbf3f4372ec8daee80c092f1e7989d9b.
 - Pinned SimC76f8118 `profiles/MID2/MID2_Rogue_Assassination.simc`, `engine/class_modules/sc_rogue.cpp:9838–9906`.
 - Diagnostic `assassination-source-census-v1.json`, `native-existing-master-{1,3}.proof.json`, `garrote-snapshot-red` and `garrote-lifecycle-red` logs/proofs.
