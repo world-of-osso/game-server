@@ -14,6 +14,8 @@ const PHALANX_TALENT: u32 = 1_269_311;
 const PHALANX_BUFF: u32 = 1_278_009;
 const PHALANX_DAMAGE: u32 = 1_270_116;
 const SHIELD_SLAM: u32 = 23_922;
+const RAVAGER: u32 = 228_920;
+const RAVAGER_TICK: u32 = 156_287;
 
 fn fixture(rend: bool) -> Harness {
     let ids = [
@@ -105,6 +107,58 @@ fn clap(rend: bool) -> (Harness, Vec<Entity>) {
         }
     }
     panic!("eight native Thunder Clap casts produced no landed damage");
+}
+
+/// Native228920 effect1 provides a2000ms PERIODIC_DUMMY and12s duration.
+/// SimC76f8118 sc_warrior.cpp5967–5977 supplies the missing156287 pulse.
+#[test]
+#[ignore = "RED: native Ravager periodic dummy has no damage producer"]
+fn protection_producers_ravager_native_periodic_damage_waits_for_tick_and_stops_at_expiry() {
+    let mut h = fixture(false);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            RAVAGER,
+        ]));
+    let far = spawn_npc(&mut h.app, 30.0);
+    h.cast_and_deliver(RAVAGER, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.advance(15);
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(RAVAGER_TICK)),
+        "the ground event has no immediate pulse"
+    );
+    h.advance(30);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(RAVAGER_TICK)
+                && event.kind == CombatLogKind::Damage
+                && event.target == Some(h.npc.to_bits())
+                && event.amount > 0),
+        "native PERIODIC_DUMMY must produce real156287 damage after2000ms"
+    );
+    assert!(
+        !h.inbox.log.iter().any(
+            |event| event.spell_id == Some(RAVAGER_TICK) && event.target == Some(far.to_bits())
+        ),
+        "a remote enemy is outside the fixed ground event"
+    );
+    h.advance(220);
+    h.inbox = Inbox::default();
+    h.advance(60);
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(RAVAGER_TICK)),
+        "no pulses survive the native12s lifetime"
+    );
 }
 
 /// SimC76f8118 sc_warrior.cpp4173–4174/6300–6303. Native1269311
