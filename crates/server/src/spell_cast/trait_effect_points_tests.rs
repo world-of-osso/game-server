@@ -1,7 +1,7 @@
 //! Native70448 trait-rank amounts, not spell-name or rank-times-amount rules.
 //! TC a352b1fa Player.cpp29422 and SpellInfo.cpp532–553.
 use super::test_harness::{Harness, harness_with_plugins, world_db};
-use crate::auras::ActiveAuras;
+use crate::auras::{ActiveAuras, AuraInstance};
 use crate::class_progression::{KnownSpells, TraitLoadout, evaluate_player_reference_traits};
 use crate::trait_config::Purchase;
 use bevy::prelude::DetectChangesMut;
@@ -102,7 +102,7 @@ fn native_rank(rank: u32) -> Harness {
     h
 }
 
-fn amounts(h: &Harness, spell: u32) -> Vec<f32> {
+fn passive(h: &Harness, spell: u32) -> &AuraInstance {
     h.app
         .world()
         .get::<ActiveAuras>(h.caster)
@@ -110,6 +110,10 @@ fn amounts(h: &Harness, spell: u32) -> Vec<f32> {
         .iter()
         .find(|aura| aura.spell_id == spell && aura.caster == h.caster)
         .unwrap_or_else(|| panic!("learned native passive {spell} was not applied"))
+}
+
+fn amounts(h: &Harness, spell: u32) -> Vec<f32> {
+    passive(h, spell)
         .effects
         .iter()
         .map(|effect| effect.amount)
@@ -117,7 +121,6 @@ fn amounts(h: &Harness, spell: u32) -> Vec<f32> {
 }
 
 #[test]
-#[ignore = "native TraitDefinitionEffectPoints Multiply, private70448 DB"]
 fn native_trait_points_rank_two_multiply_reaches_actual_passive() {
     let h = native_rank(2);
     // Definition120041 rows22216–22218, curves64686/64685/64684:
@@ -126,7 +129,6 @@ fn native_trait_points_rank_two_multiply_reaches_actual_passive() {
 }
 
 #[test]
-#[ignore = "native TraitDefinitionEffectPoints Set, private70448 DB"]
 fn native_trait_points_rank_two_set_reaches_actual_passive() {
     let h = native_rank(2);
     // Definition107627 rows24203–24205, curves94680/94679/94678:
@@ -135,7 +137,6 @@ fn native_trait_points_rank_two_set_reaches_actual_passive() {
 }
 
 #[test]
-#[ignore = "native rank1 controls for the same two selected traits"]
 fn native_trait_points_rank_one_preserves_both_operations() {
     let h = native_rank(1);
     // CurvePoint180714–180719 and284380–284385 contain rank1 X=1.
@@ -144,9 +145,10 @@ fn native_trait_points_rank_one_preserves_both_operations() {
 }
 
 #[test]
-#[ignore = "same learned spells must update passive amounts when native ranks change"]
 fn native_trait_points_existing_passives_follow_rank_changes() {
     let mut h = native_rank(1);
+    // Native spec70 baseline137027 must not be removed/reapplied with changed talents.
+    let unchanged_instance = passive(&h, 137027).instance_id;
     assert_eq!(amounts(&h, SANCTIFIED_PLATES), [5.0, -3.0, 10.0]);
     // Keep the same early-class spell book: only the two native ranks change.
     let known_before: Vec<_> = h
@@ -165,9 +167,11 @@ fn native_trait_points_existing_passives_follow_rank_changes() {
         .iter()
         .collect();
     assert_eq!(known_before, known_after);
+    assert_eq!(passive(&h, 137027).instance_id, unchanged_instance);
     assert_eq!(amounts(&h, SANCTIFIED_PLATES), [10.0, -6.0, 20.0]);
     assert_eq!(amounts(&h, OBDURACY), [4.0, -4.0, 4.0]);
     install_rank(&mut h, 1, true);
+    assert_eq!(passive(&h, 137027).instance_id, unchanged_instance);
     assert_eq!(amounts(&h, SANCTIFIED_PLATES), [5.0, -3.0, 10.0]);
     assert_eq!(amounts(&h, OBDURACY), [2.0, -2.0, 2.0]);
 }

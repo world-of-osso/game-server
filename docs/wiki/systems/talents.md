@@ -79,7 +79,9 @@ Applied trait spell entries in `TraitLoadout.spells` retain `SpellTrait { defini
 
 `modded_base_points`, rolled values and power-drain values apply the matching definition/effect-index operation after raw CalcBaseValue, before variance/level/point modifiers. Set replaces the value; Multiply multiplies it; None preserves it. As in TC SpellInfo.cpp532–553, variance adds the **original** base contribution, not a second trait-scaled contribution. TC DB2Stores.cpp2296–2458 grounds interpolation, including repeated-X Bezier control points.
 
-Current proof: [source/native ledger](../../handoffs/trait-effect-points-proof-ledger.md). Two fresh rank2 native amount REDs observed; implementation GREEN/control proof pending. Existing-passive rank relearning is not yet implemented; TC Player.cpp29283–29284 explicitly unlearns/relearns changed ranks.
+Aura instances snapshot learned trait identity/rank. Trait-only changes queue passive synchronization even when known IDs stay equal; only stale learned-rank passives are removed/reapplied, preserving unchanged instances. This follows TC Player.cpp29283–29284's changed-rank unlearn/relearn boundary.
+
+Current proof: [source/native ledger](../../handoffs/trait-effect-points-proof-ledger.md). Core fresh rank2 Set/Multiply, rank1 controls and actual Bezier4GREEN; same-book lifecycle genuine RED atdb9. Rank-aware passive replacement is implemented; its GREEN and unchanged-instance control are pending. Importer1GREEN exposed a schema-connection ResourceWarning; explicit close/no-leak proof pending.
 
 ## Starter Build
 

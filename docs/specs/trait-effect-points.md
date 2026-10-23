@@ -21,6 +21,7 @@ Native talent effect amounts follow installed DB2 TraitDefinitionEffectPoints an
 - `crates/server/src/trait_config.rs`, `class_progression.rs`: active learned definition/rank.
 - `crates/server/src/spell_info/trait_effect_points.rs`, `spell_info/load.rs`: modifier/curve loading and evaluation.
 - `crates/server/src/spell_cast/effects.rs`: CalcValue integration; `spell_cast/test_harness.rs` retains catalog metadata in scoped native fixtures.
+- `crates/server/src/auras/mod.rs`: rank-aware learned-passive invalidation, preserving unchanged aura instances.
 
 ## Tests asserting this spec
 
@@ -30,8 +31,8 @@ Native talent effect amounts follow installed DB2 TraitDefinitionEffectPoints an
 
 ## Known gaps (current cycle)
 
-- [ ] Fresh amount implementation committed after two genuine native rank2 REDs; GREEN and rank1 control pending.
-- [ ] Existing-passive rank relearning remains a separate implementation/proof step.
+- [ ] Existing-passive rank replacement implemented after same-book lifetime RED; GREEN and unchanged-instance control pending.
+- [ ] Importer no-leak rerun after closing its schema connection.
 - [ ] Parent-owned canonical data publication and cross-spec integration gate.
 
 ## Out of scope

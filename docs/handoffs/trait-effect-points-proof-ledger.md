@@ -14,7 +14,7 @@ Import native TraitDefinitionEffectPoints through the normal DB2 importer; retai
 ## Implementation slices
 
 1. Core implementationdb9e2b3d6: fresh rank2 Multiply, fresh rank2 Set, rank1 controls and actual82523 Bezier GREEN; unchanged same-book lifecycle genuinely RED. `trait-points-core-green-lifetime-red-v1.{log,proof.json}`:4PASS/1expectedFAIL32.71s,13m04compile, Rust warning-free, stable source scope. Scoped spell fixtures retain native point/curve data; variance retains its original-base contribution.
-2. Existing-aura rank replacement now has genuine RED: same learned IDs, amount5/-3/10 remains after1→2 instead of10/-6/20. Aura lifecycle implementation next.
+2. Existing-aura rank replacement has genuine RED: same learned IDs, amount5/-3/10 remains after1→2 instead of10/-6/20. Aura instances now snapshot learned definition/rank, TraitLoadout changes queue passive sync, and only stale ranked passives are removed/reapplied. Added an unchanged native137027 instance control; all native regression tests are enabled. GREEN pending.
 3. Normal importer1PASS1.482s atdb9 (`trait-points-normal-import-v1`). Its pre-existing `check_csvs` in-memory schema connection emitted ResourceWarning; close it explicitly and make the same integration test assert no leaked SQLite resources. Rerun required only for that changed importer scope.
 
 Publication artifact `trait-points.delta.sql`/`.proof.json` replaces1408 point rows plus1358 referenced curves/4340 points and their build receipts, preserving all other curve IDs/tables. Generated from native CSVs, not applied canonically.
