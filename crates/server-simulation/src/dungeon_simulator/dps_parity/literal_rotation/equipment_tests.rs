@@ -384,9 +384,16 @@ fn literal_equipment_native_fire_tier_long_and_short_aliases_share_threshold_sta
 #[ignore = "native on-use damage effects versus passive and stat-only real trinkets"]
 fn literal_equipment_native_has_use_damage_follows_on_use_effects() {
     let mut world = load_world();
-    // Lightning55039 is direct SCHOOL_DAMAGE; Dragonfire408671 triggers408675.
+    // Lightning55039 is direct SCHOOL_DAMAGE; Caber99915 triggers99938 damage.
+    // Dragonfire408671→408675 ends in aura42/Trigger0, not native damage.
     // Jewel215206 is rating-only, AraKara443541 passive, Guillotine1291728 passive.
-    for (item, expected) in [(41121, 1.0), (202610, 1.0), (137462, 0.0), (219314, 0.0)] {
+    for (item, expected) in [
+        (41121, 1.0),
+        (70141, 1.0),
+        (202610, 0.0),
+        (137462, 0.0),
+        (219314, 0.0),
+    ] {
         let actor = equip(&mut world, item, 270173);
         assert_eq!(
             read_facts(
