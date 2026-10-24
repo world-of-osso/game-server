@@ -1,3 +1,7 @@
+## 2026-10-24 — Unbroken Rhythm SCK snapshot
+
+[Source/proof](../handoffs/ww-sck-snapshot-proof-ledger.md): b288 native earned-buff consumption and60% damage2RED/2controlsPASS14.65s. Parent-hit snapshot/ordinary consumption plus emission-bound native effectiveness implemented, GREEN pending. Native1296624 producer/107270 NOT_A_PROC eligibility and damage data stay unchanged;322729's same-child edge is not globally boosted. Other slices/full gate/numerical parity remain separate.
+
 ## 2026-10-24 — Isolated qualified Ret Sentence/Wake/Toll packet
 
 [Auras](systems/auras.md#ret-sentence-and-toll-relationships--2026-10-24): direct-owner Sentence expiry/cancel/native-percentage/physical/foreign controls, ordinary Wake damage/resource/knowledge and Toll ST/3T/cap/range/mode/percentage total eleven unique native cases with exact revision receipts. Packet starts at masterd7e86cd0f and excludes development-only Expurgation/Rebuke/Aura361/literal work; no whole-rotation or DPS claim. [Scope/source/proof ledger](../handoffs/ret-qualified-sentence-wake-toll-proof-ledger.md); integration check separate.
