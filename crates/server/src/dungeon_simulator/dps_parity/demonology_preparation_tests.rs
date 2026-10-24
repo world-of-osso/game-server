@@ -199,10 +199,7 @@ fn place_guardian_control_in_arena(run: &mut Run, origin: shared::components::Po
     run.app.update();
 }
 
-#[test]
-#[ignore = "full native104316 dispatch on authored ground/LOS; private spec266 inputs required"]
-fn dps_parity_demo_native_call_dreadstalkers_dispatches_both_authored_children() {
-    let _seed = crate::random::seed_scope(70448);
+fn prepare_authored_guardian_control() -> Run {
     let mut run = prepare_manual_guardian_control();
     let origin = load_authored_guardian_arena(&mut run);
     place_guardian_control_in_arena(&mut run, origin);
@@ -210,6 +207,14 @@ fn dps_parity_demo_native_call_dreadstalkers_dispatches_both_authored_children()
         crate::spell_cast::targets::is_alive(run.app.world(), run.actor),
         "authored scene relocation must retain the living admitted caster"
     );
+    run
+}
+
+#[test]
+#[ignore = "full native104316 dispatch on authored ground/LOS; private spec266 inputs required"]
+fn dps_parity_demo_native_call_dreadstalkers_dispatches_both_authored_children() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_authored_guardian_control();
     let actor = run.actor;
     cast_and_finish(&mut run, actor, 104316);
     for _ in 0..40 {
@@ -252,6 +257,48 @@ fn dps_parity_demo_native_call_dreadstalkers_dispatches_both_authored_children()
             .iter()
             .all(|child| child["entry"] == 98035 && child["level"] == owner_level)
     );
+}
+
+#[test]
+#[ignore = "native summon effects override the approved project dispatch; private spec266 inputs required"]
+fn dps_parity_demo_native_dreadstalker_effect_overrides_project_dispatch() {
+    let _seed = crate::random::seed_scope(70448);
+    for native_index in [0, 1] {
+        let mut run = prepare_authored_guardian_control();
+        let mut store = run
+            .app
+            .world_mut()
+            .resource_mut::<crate::spell_info::SpellStore>();
+        // Hypothetical future native data: actual193331 Effect28 supplies all
+        // creature/duration/geometry fields. Index1 also retains original Dummy0.
+        let mut summon_effect = store.get(193331).unwrap().effects[0].clone();
+        assert_eq!(
+            summon_effect.effect,
+            crate::spell_cast::summon::EFFECT_SUMMON
+        );
+        summon_effect.index = native_index;
+        let mut root = store.get(104316).unwrap().clone();
+        root.effects.retain(|effect| effect.index != native_index);
+        root.effects.push(summon_effect);
+        store.replace_fixture_spell(root);
+        let actor = run.actor;
+        cast_and_finish(&mut run, actor, 104316);
+        let world = run.app.world_mut();
+        let roots: Vec<_> = world
+            .query::<(
+                &crate::spell_cast::summon::SummonedCreature,
+                &shared::components::Npc,
+            )>()
+            .iter(world)
+            .filter(|(summon, npc)| summon.owner == actor && npc.template_id == 98035)
+            .map(|(summon, _)| summon.spell_id)
+            .collect();
+        assert_eq!(
+            roots,
+            [104316],
+            "native effect{native_index} must not gain two project actors"
+        );
+    }
 }
 
 fn prepare_manual_guardian_control() -> Run {

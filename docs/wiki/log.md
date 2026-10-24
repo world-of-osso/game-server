@@ -1,3 +1,7 @@
+## 2026-10-23 — Dreadstalker full-root dispatch genuine RED
+
+[Root policy](investigations/demonology-dps-parity.md#approved-root-dispatch-implemented-green-pending): coherent5e admission relocation preserves living caster; ordinary104316 completes on authored2669 ground/LOS but produces0/2 children, genuineRED10.48s/0warnings. Approved shared SIMC_DREADSTALKER_SUMMON_DISPATCH now triggers actual193331/193332; native scripts/summon/trigger effects win. Root and hypothetical-native override GREEN pending; no numerical/DPS qualification.
+
 ## 2026-10-23 — Native guardian melee cadence/retarget GREEN
 
 [Melee boundary](investigations/demonology-dps-parity.md#guardian-melee-runtime-boundary-green-intrinsic-numerical-inputs-open): lead integrates14755 movement2d985 at233ddbfae/masterb679. Own --lib single-j2 cohort5PASS/1setupFAIL32.92s,18m45compile/0warnings qualifies real Dread three-attempt2s clock, retarget progress, target-clear stop, caster exclusion and native Imp/Wolf/NPC controls. Sixth full104316 case reaches CasterDead because fixture map relocation did not move DiagnosticParty admission; correct lifecycle removed the departed member. Test-only coherent relocation fix, root rerun pending; not producer RED or numerical/DPS parity qualification.

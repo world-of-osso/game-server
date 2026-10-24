@@ -399,7 +399,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (SWITCH_FLIGHT_STYLE, 0) => Some(switch_flight_style),
         (SWITCH_TO_SKYRIDING, 0) => Some(switch_to_skyriding),
         (SWITCH_TO_STEADY, 0) => Some(switch_to_steady),
-        _ => None,
+        _ => super::guardian::project_summon_hit_hook(spell_id, effect_index),
     }
 }
 

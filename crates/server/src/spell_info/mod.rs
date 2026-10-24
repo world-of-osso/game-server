@@ -493,6 +493,15 @@ impl SpellStore {
         Some(&self.spells[index])
     }
 
+    #[cfg(test)]
+    pub(crate) fn replace_fixture_spell(&mut self, spell: SpellInfo) {
+        let index = self
+            .spells
+            .binary_search_by_key(&spell.id, |row| row.id)
+            .expect("replace an existing fixture spell");
+        self.spells[index] = spell.into();
+    }
+
     pub fn len(&self) -> usize {
         self.spells.len()
     }
@@ -512,8 +521,10 @@ fn fixture_spell_edits_and_insertions_leave_retained_and_sibling_stores_unchange
     }]);
     let sibling = retained.clone();
     let mut local = retained.clone();
-    local.spells[0].name = "local Fireball".into();
-    local.spells[0].effects[0].effect = 10;
+    let mut fireball = local.get(133).unwrap().clone();
+    fireball.name = "local Fireball".into();
+    fireball.effects[0].effect = 10;
+    local.replace_fixture_spell(fireball);
     local.spells.push(
         SpellInfo {
             id: 585,

@@ -13,6 +13,49 @@ pub(super) mod core;
 #[path = "guardian_tyrant.rs"]
 pub(super) mod tyrant;
 
+const CALL_DREADSTALKERS: u32 = 104316;
+/// SIMC_DREADSTALKER_SUMMON_DISPATCH: approved project policy, not a TC script.
+/// SimC76f8118 actions3392/3399/3412–3431; native193331/193332 Effect28 owns
+/// entry, destination, duration and actor initialization. No synthetic summons.
+const DREADSTALKER_SUMMON_CHILDREN: &[u32] = &[193331, 193332];
+
+pub(super) fn project_summon_hit_hook(
+    spell: u32,
+    index: u8,
+) -> Option<super::scripts::EffectHitHook> {
+    match (spell, index) {
+        (CALL_DREADSTALKERS, 0) => Some(cast_project_dreadstalkers),
+        _ => None,
+    }
+}
+
+fn has_native_summon_dispatch(spell: &crate::spell_info::SpellInfo) -> bool {
+    spell.effects.iter().any(|effect| {
+        effect.trigger_spell != 0
+            || matches!(
+                effect.effect,
+                super::summon::EFFECT_SUMMON | crate::hunter_pet::EFFECT_SUMMON_PET
+            )
+    })
+}
+
+fn cast_project_dreadstalkers(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    let root = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(CALL_DREADSTALKERS)
+        .expect("registered Call Dreadstalkers root");
+    let dummy_root = root
+        .effects
+        .iter()
+        .any(|effect| effect.index == 0 && effect.effect == super::effects::EFFECT_DUMMY);
+    if !dummy_root || has_native_summon_dispatch(root) {
+        return;
+    }
+    for child in DREADSTALKER_SUMMON_CHILDREN {
+        super::cast_triggered(world, caster, *child, Some(target), depth + 1);
+    }
+}
+
 const SUMMON_DEMONIC_TYRANT: u32 = 265187;
 const ANTORAN_ARMAMENTS: u32 = 1250921;
 
