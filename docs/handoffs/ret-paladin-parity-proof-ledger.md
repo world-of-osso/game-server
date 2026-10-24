@@ -16,6 +16,18 @@ Lead reported is1061 for98b37851f full-suite qualification (only known failures,
 
 Split-only adjustments expose existing native fact readers/metadata required by the separate test crate. Optional action normalization moves unchanged into the canonical knowledge helper's test-support API so core tests do not depend back on their simulation consumer. Temporary Guillotine callback observer is retired; archived provenance receipts and explicit real220637/no-self-damage assertions remain. No new mechanic or canonical write. Merge7911b9d3e and visibility-only follow-upd38586b3e precede lead-requested `cargo check -p server -p server-simulation --tests -j2`: PASS39.80s, zero warnings. `cargo fmt -p server -p server-simulation -- --check`: PASS. Receipt `/var/tmp/osso/ret-split-b-proof.json`; both logs and check-log SHA retained. Lead received exactd38586b3e for immediate gating; branch frozen there, no child push. Development continues separately on local `ret-paladin-literal-development-d385` with approved development-only target-contextdc525f641 merged as270de9504. This merged development tree is not the checked gate scope. No precombat merge; its implementation/RED remains owned and pending.
 
+## Literal adapter qualification — local development only
+
+| Capability | Coverage | Proof |
+|---|---|---|
+| HolyPower alias | Real native Judgment20271 must earn one displayed point; no power grant/reset | Genuine RED at0dd2005c6: unknown native operand `holy_power` |
+| Five selected talent aliases / eight buffs / target-owned Expurgation and Execution Sentence | Shared NativeFacts reads actual TraitLoadout and aura state | Genuine RED at0dd2005c6: unknown talent alias `radiant_glory`; remaining assertions not reached |
+| Unknown resource/talent/buff/cooldown/dot aliases | Explicit errors, not fabricated zero facts | Control PASS in the same run |
+| Action bindings,41-row source selection and native dispatch | Not implemented yet | No runtime claim |
+| Precombat execution | Shared API pending lead-approved implementation | Not merged; no local substitute |
+
+RED:2failures/1controlPASS50.59s; compilation13m12s. Log `/var/tmp/osso/ret-literal-bindings-red-0dd2005c6.log`. Sourced binding-only implementation follows; unchanged GREEN pending. Source: engine `data/diagnostics/ret-parity-2026-10-23/ret-literal-bindings-source-v1.json` and pinned76f8118 spell lookups. No gameplay handler changes or DPS measurement.
+
 ## Reference and tolerance
 
 | Case | Existing SimC DPS | Accepted native interval | Native |
