@@ -194,7 +194,26 @@ fn prepare_spent_resource(spec: u32, spell: u32, power: PowerType) -> Run {
         crate::followers::simulator::ParityActor::Follower,
     )
     .unwrap();
+    // The quiet owner lives at X20; cap waits must not carry this controlled caster away.
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .remove::<crate::creature_ai::FollowOwner>()
+        .insert(crate::creature_ai::CreatureState::Idle);
+    let origin = *run
+        .app
+        .world()
+        .get::<shared::components::Position>(run.actor)
+        .unwrap();
     assert_native_cap(&mut run, power);
+    assert_eq!(
+        *run.app
+            .world()
+            .get::<shared::components::Position>(run.actor)
+            .unwrap(),
+        origin,
+        "passive cap wait preserves actual native spawn geometry"
+    );
     let initial = native_power(&run, power);
     cast_native_spender(&mut run, spell, power);
     for _ in 0..200 {
