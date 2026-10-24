@@ -12,12 +12,51 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] Preserve literal action order and conditional `call_action_list` decisions; native castability selects the first usable action. An exhausted child list returns control to its caller.
 - [x] Implement conditional `run_action_list` switches that never resume the caller after child exhaustion; reject unknown lists.
 - [x] Select explicit native targets with `target_if=min/max:<expr>` before the row's `if`; preserve native tie order. Unknown target operands/adapters fail explicitly.
+- [x] Bare/explicit FIRST target_if selects the first native eligible match before row if/readiness; failure after that choice does not become cycle selection. Preserve pinned single-target versus multi-target numeric truth behavior, backed by actual binary probes.
+- [x] cycle_targets=1 iterates action-specific native candidates in source order, accepting the first row-condition/native-ready target. Positive max_cycle_targets caps candidates examined, not successes; zero/negative is unlimited. Disabled/single-global-target modes retain native default context; exhaustion cannot leak a candidate into the next row. Invalid literal iteration options fail explicitly. When target_if is present it takes precedence over cycle_targets/max_cycle_targets; the cycle cap must not trim selector candidates.
 - [x] Scope a run row's selector to that control action. Child actions retain their own targets; run selection must not retarget them.
-- [x] Sample native cast readiness independently for each action/target pair. Harmful precasts use the actor's actual selected enemy when combat candidates have not yet been supplied.
+- [x] Sample native cast readiness independently for each action/target pair. A self-target NativeAction with target_if retains the selected enemy as its scoring context but maps admitted readiness and dispatch to its actual self target; unknown explicit contexts remain unready, never use default admission as fallback. Harmful precasts use the actor's actual selected enemy when combat candidates have not yet been supplied.
+- [x] Permit adapter-declared action target_ready predicates for each selected candidate. A veto leaves the action declared but unavailable to literal selection; it never rewrites the row or changes native cast admission. Ret Rebuke requires actual target casting state, not inferred reaction timing.
 - [x] Deliver Player literal spells through ordinary Player requests with the selected explicit target, rechecking knowledge and rejecting expired identities rather than redirecting. Preserve selected and AA targets; retain native creature dispatch for WW followers.
 - [x] `retarget_auto_attack` changes only the running AA victim, preserving both swing timers and the actor's selection. An already-running AA must not restart onto the primary target.
 - [ ] Expose target-specific readonly resource-limited admission for a chosen power pool. Compare that pool's native maximum locally; never grant or temporarily replace resources. Preserve other pools, health and every other native cast constraint; an unaffordable maximum cannot qualify.
 - [x] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.
+
+## Feral shared expression/control surfaces
+
+- [x] Evaluate floor with pinned unary rounding-down semantics, including negatives/nested grouping, and bind its inner native facts normally. Boolean bare/first target_if uses merged14775 FIRST semantics, not a Feral row rewrite. [Exact reporter RED/GREEN scope](../handoffs/feral-shared-program-proof-ledger.md).
+
+- [ ] Treat pool_resource,for_next=1 as control, never an executable spell. If the next source action is ready, continue; otherwise wait only when the requested resource at maximum admits it. Propagate waiting through called lists without leaking lower-priority actions. Preserve native target/condition/other-resource constraints through readonly adapter maximum admission and a local fact view. Qualify only resource= and for_next=1; unsupported controls/options fail explicitly.
+- [ ] max_energy=1 reads adapter-owned action-bound maximum_energy and current Energy; it must not use actor energy.max or a hardcoded spell cost. Missing threshold, primary resource or maximum-admission metadata errors explicitly. Source-owned native cost/cap/modifier qualification remains separate.
+
+## Equipped use_items
+
+- [x] Select the first native-ready equipped on-use item in Equipment slot order per source decision, not an immediate batch. Preserve slots= ordering/restriction, check_existing=0|1 and explicit use_item source exclusions; named precombat uses must not suppress later proxies. Preserve native/shared cooldowns and original Action.options; unknown options/metadata fail explicitly rather than silently disabling the action. [Native proof scope](../handoffs/use-items-proof-ledger.md).
+
+## Ordered native composites
+
+- [x] Adapters supply a named ordered list of native actions; shared selection returns an ordered pending execution plan without spell IDs or class coating policy in common code.
+- [x] Actual owned active self auras are skipped without reordering pending steps. Empty/all-active plans are unusable. Every pending step requires its own native admission; an unready selected step cannot silently disappear.
+- [x] Precombat execution consumes one normal native cast at a time with real cast/GCD completion. World-only execute rejects a Composite and never recursively dispatches it. Shared selection does not create an instant batch or change native casting times.
+
+[Composite selection proof/boundary](../handoffs/literal-composite-proof-ledger.md). [Native lifecycle consumption RED→GREEN](../handoffs/native-precombat-proof-ledger.md#current-native-qualification--96b572797).
+
+## Resumable native precombat polling
+
+- [x] Shared precombat polling distinguishes Waiting, Selected original Action/Execution and Finished; native cast/GCD waits cannot consume source position or variable assignments.
+- [x] Caller advances real App frames/resamples readiness and facts until finished; no sleeps, cast/GCD skips or invented precombat/travel options. Preserve the existing first-harmful cap.
+- [x] Caller starts its300s fight epoch after real setup; final Pyroblast flight must be read from actual native state, not inferred from Finished or a timer.
+- [x] Literal use_while_casting and use_off_gcd permissions supplement native cast admission; permitted native instants cannot interrupt the existing hardcast. Other source options remain attached to the selected Action.
+
+[Actual native2RED→2GREEN and23 relevant regressions](../handoffs/shared-precombat-poll-proof-ledger.md#current-green-scope--3d32d68bf); full Fire adapter/facts remain separate qualification.
+
+## Literal native row gates
+
+Native controls reached4RED/1GREEN atd49f4951c →5GREEN at96b572797; implementation followed the real failures. [Proof scope](../handoffs/literal-row-gating-proof-ledger.md).
+
+- `moving=0|1` must match the actual native actor movement bit; row options never substitute for native cast admission.
+- While a native GCD is active, only rows permitting `use_off_gcd=1` may be selected. The option never clears, shortens or bypasses native GCD/cast refusal.
+- Configured `movement.distance` without a native fixture movement plan must fail explicitly as `MOVEMENT_DISTANCE_UNAVAILABLE`, naming the operand; never fabricate zero distance.
 
 ## Native action permission
 
@@ -57,6 +96,14 @@ Player execution boundary: seven actual native cases at4f91688e8 give1WW control
 
 Native behavioral tests: `simc_apl_native/tests.rs` (earned Hit Combo and Chi, real Provoke cooldown, real Roll charges, actual Charge Rage display conversion, fixture clock and unavailable dungeon predicates). Six pushed ignored native cases produce genuine6RED at5924496f9 (13.24s test/8m18compile/exit101; three scaffold dead-field warnings). Atdc1ee9781 the same six native cases pass6/6 in17.40s (7m37compile),exit0,zero compiler warnings; tests enabled afterward without body changes ([native proof ledger](../handoffs/shared-native-apl-proof-ledger.md)). Current native fact seam is fixture-only (`cfg(test)`), matching the approved explicit parity Fixture driver boundary; live dungeon APL/TTD is not enabled.
 
+### Native flight observations (pending)
+
+- [ ] `action.<name>.in_flight` observes that actor's genuinely pending native travel/delay state; a hardcast before launch and an ongoing ground burn are not flight.
+- [ ] `in_flight_remains` reports seconds to the nearest pending impact, or zero with no flight. Follow the actual Meteor delay-field→missile lifecycle and native metadata, not SimC's different modeled travel clock or a new timer.
+- [ ] Failed native expiry admission ends Meteor flight immediately; another actor's projectiles cannot affect either fact.
+
+Behavioral source: `followers/native_flight_tests.rs` covers Pyroblast launch/countdown/impact, hardcast exclusion, actor isolation and Meteor handoff/refusal. At3e3cacb6d, current-canonical source-view library tests yield startup1PASS/flight4genuine unknown-property RED in9.65s, compile19m12/zero warnings. Both requested properties are evaluated before failure. The earlier binary-target source-view refusal was not RED. Implementation reads pending native deadlines and the live TC Meteor continuation; targeted GREEN remains pending.
+
 ## Assigned native fact extensions
 
 - [ ] `talent.<name>.rank` reads selected native total ranks, not learned-spell membership.
@@ -82,6 +129,10 @@ TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyC
 - [ ] Positive selected-target casting reaction requires a qualified native snapshot. Actual absence of CastState is known false; active casting stays NATIVE_CASTING_REACTION_UNAVAILABLE rather than inventing a timer.
 
 [Target-context API proof and exact remaining gaps](../handoffs/native-target-context-proof-ledger.md).
+
+## Expected combat length
+
+- [x] `expected_combat_length` returns the existing fixture's configured duration, positive and finite, independently of elapsed/remaining time. No fixed300, default or extra duration field. Dungeon/invalid fixture configuration fails with EXPECTED_COMBAT_LENGTH_UNAVAILABLE. Proposed-action context forwards the same global configured value.
 
 ## Known gaps (current cycle)
 

@@ -61,8 +61,8 @@ mod windwalker;
 mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
 pub(crate) use windwalker::{
-    DANCE_OF_CHIJI, after_dance_cast_event, check_dance_proc, combo_strikes_multiplier,
-    ordinary_combo_cast,
+    DANCE_OF_CHIJI, after_dance_cast_event, apply_mystic_touch_after_hit, check_dance_proc,
+    combo_strikes_multiplier, ordinary_combo_cast,
 };
 
 pub(super) use batch3::consume_phalanx;
@@ -600,6 +600,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         return Some(hook);
     }
     match spell_id {
+        windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
         prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
@@ -1443,6 +1444,7 @@ pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
         elemental_ascendance::ASCENDANCE => Some(elemental_ascendance::cast_entry),
         100780 => Some(windwalker::tiger_palm_hit),
+        100784 => Some(windwalker::blackout_kick_hit),
 
         lava_surge::PROC => Some(lava_surge::restore_on_proc_hit),
         swiftmend::SWIFTMEND => Some(swiftmend::hit),

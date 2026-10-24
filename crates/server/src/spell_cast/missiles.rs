@@ -42,6 +42,14 @@ impl PendingSpellHits {
     pub(super) fn has_caster(&self, caster: Entity) -> bool {
         self.0.iter().any(|hit| hit.caster == caster)
     }
+
+    pub(super) fn earliest_due(&self, caster: Entity, spell_id: u32) -> Option<f64> {
+        self.0
+            .iter()
+            .filter(|hit| hit.caster == caster && hit.spell.id == spell_id)
+            .map(|hit| hit.due)
+            .min_by(f64::total_cmp)
+    }
 }
 
 #[derive(Debug)]
@@ -422,21 +430,10 @@ fn hit_delays(
     let misc = spell.misc.as_ref();
     let speed = misc.map_or(0.0, |misc| misc.speed);
     let launch_delay = misc.map_or(0.0, |misc| misc.launch_delay);
-    let min_duration = misc.map_or(0.0, |misc| misc.min_duration);
     let speed_is_delay = attributes(spell, 9) & SPELL_ATTR9_MISSILE_SPEED_IS_DELAY_IN_SEC != 0;
     if is_channeled(spell) || (speed <= 0.0 && launch_delay <= 0.0 && !speed_is_delay) {
         return (units.into_iter().map(|unit| (unit, 0)).collect(), None);
     }
-    let travel = |distance: f32| -> f32 {
-        if speed_is_delay {
-            speed.max(min_duration)
-        } else if speed > 0.0 {
-            (distance / speed).max(min_duration)
-        } else {
-            0.0
-        }
-    };
-    let to_ms = |secs: f32| (f64::from(secs) * 1000.0).floor() as u64;
     let origin = position(world, caster);
     let dest = plan
         .iter()
@@ -448,8 +445,7 @@ fn hit_delays(
         })
         .find_map(|planned| planned.dest);
     if let Some(dest) = dest {
-        let distance = origin.map_or(0.0, |origin| origin.distance(dest.position));
-        let delay = to_ms(launch_delay + travel(distance));
+        let delay = destination_delay_ms(world, caster, spell, dest.position);
         return (
             // TC Spell.cpp:2486–2521,4096–4138: self hits precede the destination.
             units
@@ -490,10 +486,41 @@ fn hit_delays(
         let distance = source
             .zip(position(world, unit))
             .map_or(0.0, |(from, to)| from.distance(to));
-        let flight = launch + travel(distance.max(MIN_MISSILE_DISTANCE));
-        delays.push((unit, start + to_ms(flight)));
+        let flight = launch + travel_seconds(spell, distance.max(MIN_MISSILE_DISTANCE));
+        delays.push((unit, start + milliseconds(flight)));
     }
     (delays, None)
+}
+
+/// Same native destination delay used by actual missile launch and scripted continuations.
+pub(super) fn destination_delay_ms(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    destination: Vec3,
+) -> u64 {
+    if is_channeled(spell) {
+        return 0;
+    }
+    let distance = position(world, caster).map_or(0.0, |origin| origin.distance(destination));
+    let launch = spell.misc.as_ref().map_or(0.0, |misc| misc.launch_delay);
+    milliseconds(launch + travel_seconds(spell, distance))
+}
+
+fn travel_seconds(spell: &SpellInfo, distance: f32) -> f32 {
+    let speed = spell.misc.as_ref().map_or(0.0, |misc| misc.speed);
+    let minimum = spell.misc.as_ref().map_or(0.0, |misc| misc.min_duration);
+    if attributes(spell, 9) & SPELL_ATTR9_MISSILE_SPEED_IS_DELAY_IN_SEC != 0 {
+        speed.max(minimum)
+    } else if speed > 0.0 {
+        (distance / speed).max(minimum)
+    } else {
+        0.0
+    }
+}
+
+fn milliseconds(seconds: f32) -> u64 {
+    (f64::from(seconds) * 1000.0).floor() as u64
 }
 
 fn position(world: &World, unit: Entity) -> Option<Vec3> {
