@@ -24,7 +24,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 ## Feral shared expression/control surfaces
 
-- [ ] Evaluate floor with pinned unary rounding-down semantics, including negatives/nested grouping, and bind its inner native facts normally. Boolean bare/first target_if uses merged14775 FIRST semantics, not a Feral row rewrite. [Exact reporter RED/GREEN scope](../handoffs/feral-shared-program-proof-ledger.md).
+- [x] Evaluate floor with pinned unary rounding-down semantics, including negatives/nested grouping, and bind its inner native facts normally. Boolean bare/first target_if uses merged14775 FIRST semantics, not a Feral row rewrite. [Exact reporter RED/GREEN scope](../handoffs/feral-shared-program-proof-ledger.md).
 
 ## Equipped use_items
 

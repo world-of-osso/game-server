@@ -1,6 +1,6 @@
 ## 2026-10-24 — Exact Feral Program reporter RED and FIRST integration
 
-[Reporter ledger](../handoffs/feral-shared-program-proof-ledger.md): unchanged36fc harness against production Program yields4genuineRED. Parent-supplied14775 FIRST/cycle2cd5 merged asdee43b; Boolean reporter now PASS, floor/pool/max_energy remainRED. Added shared floor unary semantics with negative/nested/fact-binding controls; GREEN pending. Native action/resource/Feral parity not claimed; numeric min/max45bae not duplicated.
+[Reporter ledger](../handoffs/feral-shared-program-proof-ledger.md): unchanged36fc harness against production Program yields4genuineRED. Parent-supplied14775 FIRST/cycle2cd5 merged asdee43b; Boolean reporter now PASS, floor/pool/max_energy remainRED. Shared floor unary semantics ate79 yields exact Boolean/floor2GREEN plus38/38sharedregressions; pool/max_energy2RED remain. Original max_energy fixture lacks action-specific cost/cap/modifier facts; do not substitute full actor Energy max or hardcoded25+25. Native action/resource/Feral parity not claimed; numeric min/max45bae not duplicated.
 
 ## 2026-10-24 — Equipped use_items native RED
 
