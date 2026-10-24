@@ -106,6 +106,19 @@ class NativeDiffTests(unittest.TestCase):
         damage = next(row for row in result["factors"] if row["factor"] == "actual_amount")
         self.assertEqual(damage["native"], 35208.14)
 
+    def test_observed_native_emission_identity_is_preserved_without_guessing_oracle_origin(self):
+        oracle = parse_log((HERE / "fixtures/fof-same-id-recorded.txt").read_text())
+        native = deepcopy(oracle)
+        origin = {"kind": "periodic_dummy_trigger", "aura_spell_id": 113656,
+                  "effect_index": 2, "triggered_spell_id": 117418}
+        formula = next(event for event in native["events"]
+                       if event["event"] == "direct_amount" and event["action"] == "fists_of_fury_damage")
+        formula["native_emission_origin"] = origin
+        result = diff.diff_receipts(native, oracle, 117418,
+                                    native_action="fists_of_fury_damage", oracle_action="fists_of_fury_damage")
+        self.assertEqual(result.get("native_emission_origin"), origin)
+        self.assertIsNone(result.get("oracle_emission_origin"))
+
     def test_empty_factor_records_are_incomplete_not_matching(self):
         empty = {"events": [{"event": "direct_amount", "spell_id": 12294, "factors": {}}]}
         self.assertEqual(diff.diff_receipts(empty, empty, 12294)["status"], "incomplete")
