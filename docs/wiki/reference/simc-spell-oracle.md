@@ -58,10 +58,14 @@ The original oracle at1.004s has two real117418 hits: tier-extra17604.072313 (ra
 
 `native-spell-diff-2026-10-23/fof-aligned/269.two_tp_then_fof.json` uses the same reference options/profile with an actual `sequence,wait_on_ready=1` TP→TP→FoF once. TP hits occur0/1s, then tier-extra and regular hits at2s. Oracle Momentum451297 is absent before FoF; the native two-TP fixture already has2 stacks and reaches7 after its three captured hits. A fresh current-data snapshot repeats that native2→7 state on4bda4a241 (FoF1GREEN49.11s); it is not just the old missing-item_set snapshot. The priming programs now match, but this state difference must remain visible: do not clear/grant buffs to force agreement. Historical generic117418/depth1 rows did not identify tier-extra versus regular origin. The test-only observer now scopes the actual226 dispatch call and copies its real aura/effect/instance/trigger identity to synchronously resolved child impacts; the diff preserves that metadata. No timestamp/ID inference or new cast is used. Delayed/unscoped origins stay null. At089face19 WW3GREEN31.24s and Arms1GREEN18.53s prove the new metadata path, including direct TP's null-origin control. Each of the three captured117418 hits is observed inside113656/effect2/instance134's periodic dispatch, scheduled17.9/18.9/19.9. These samples therefore align with oracle `fists_of_fury_damage`, not its separate tier-extra action. No claim is made about other unobserved emissions. MS24448, TP39862 and FoF29943/80173/39924 remain exactly unchanged by instrumentation. `origin-089face19/alignment.proof.json` retains context, selection, states and damage-preservation proof; source-product/crit/Momentum differences remain, not a parity claim.
 
+## Simulation crate boundary
+
+After crate split B, native probes live in `server-simulation`; test names are unchanged. Core observation hooks also compile under `test-support`, since dependency crates are not built with `cfg(test)`. The periodic emission scope uses that same gate. Historical089face19 runtime proof remains scoped to its recorded code; split integration checks compilation separately, not a fresh gameplay-parity claim.
+
 ## Sources
 
 - [CLI](../../../scripts/dps_parity/simc_spell_oracle.py), [batch driver map](../../../scripts/dps_parity/simc_spell_oracle_batch.py), [sourced prerequisite plans](../../../scripts/dps_parity/simc_spell_oracle_plans.json), [recorded tests](../../../scripts/dps_parity/test_simc_spell_oracle.py).
-- [Native receipt fields](../../../crates/server/src/dungeon_simulator/dps_parity/report.rs); [factor comparison consumer](../../../scripts/dps_parity/native_spell_diff.py).
+- [Native receipt fields](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/report.rs); [factor comparison consumer](../../../scripts/dps_parity/native_spell_diff.py).
 - [Parity specification](../../specs/dps-parity.md).
 
 ## See Also

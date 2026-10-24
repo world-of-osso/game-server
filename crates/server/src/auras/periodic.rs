@@ -317,7 +317,7 @@ fn run_dummy_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tic
         .filter(|cast| cast.spell_id == spell.id && cast.cast_type == CastType::Channel)
         .and_then(|cast| Entity::try_from_bits(cast.target))
         .unwrap_or(unit);
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     let observed_emission = effects::factor_capture::begin_periodic_observation(
         world,
         effects::factor_capture::PeriodicEmission {
@@ -338,7 +338,7 @@ fn run_dummy_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tic
         Some(target),
         TICK_TRIGGER_DEPTH,
     );
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     effects::factor_capture::end_periodic_observation(world, observed_emission);
 }
 
