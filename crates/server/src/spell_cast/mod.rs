@@ -38,6 +38,8 @@ pub(crate) mod holy_metrics;
 #[cfg(test)]
 mod holy_words_tests;
 #[cfg(test)]
+mod mastery_base_tests;
+#[cfg(test)]
 mod trait_effect_points_tests;
 pub(crate) use aura_spell_restrictions::check_target as check_target_aura_restrictions;
 #[cfg(test)]
