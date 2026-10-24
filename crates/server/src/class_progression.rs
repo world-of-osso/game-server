@@ -161,6 +161,12 @@ impl TraitLoadout {
         (&self.entries, &self.unspent)
     }
 
+    /// Selected native hero subtree, independent of learned spells or live auras.
+    #[cfg(test)]
+    pub(crate) fn selected_sub_tree(&self, tree: &crate::spell_info::TraitTree) -> Option<u32> {
+        crate::trait_config::selected_sub_tree(tree, &self.entries)
+    }
+
     fn purchases(&self) -> Vec<Purchase> {
         self.entries
             .iter()

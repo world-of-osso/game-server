@@ -169,6 +169,46 @@ impl<'a> NativeFacts<'a> {
         Ok(0.0)
     }
 
+    fn read_native_trait_tree(&self) -> Result<&crate::spell_info::TraitTree, String> {
+        let spec = self
+            .world
+            .get::<crate::class_progression::ActiveSpec>(self.actor)
+            .ok_or("native APL ActiveSpec unavailable")?
+            .0;
+        let classes = self
+            .world
+            .get_resource::<crate::spell_info::ClassSpells>()
+            .ok_or("native APL ClassSpells unavailable")?;
+        classes
+            .classes
+            .iter()
+            .find(|class| {
+                class
+                    .specs
+                    .iter()
+                    .any(|candidate| candidate.spec_id == spec)
+            })
+            .map(|class| &class.traits)
+            .ok_or_else(|| format!("native APL trait tree for spec{spec} unavailable"))
+    }
+
+    fn hero_tree(&self, name: &str) -> Result<f64, String> {
+        let traits = self
+            .world
+            .get::<crate::class_progression::TraitLoadout>(self.actor)
+            .ok_or("native APL selected TraitLoadout unavailable")?;
+        let tree = self.read_native_trait_tree()?;
+        let key = hero_tree_key(name);
+        let subtree = tree
+            .sub_trees
+            .iter()
+            .find(|subtree| hero_tree_key(&subtree.name) == key)
+            .ok_or_else(|| format!("unknown native APL hero tree {name}"))?;
+        Ok(bool_value(
+            traits.selected_sub_tree(tree) == Some(subtree.id),
+        ))
+    }
+
     fn cooldown(&self, operand: &str) -> Result<f64, String> {
         let (alias, property) = split_property(operand, "cooldown")?;
         let id = bound_spell(&self.bindings.actions, alias, "action")?;
@@ -324,6 +364,9 @@ impl Facts for NativeFacts<'_> {
                 if let Some(value) = name.strip_prefix("talent.") {
                     return self.talent(value);
                 }
+                if let Some(value) = name.strip_prefix("hero_tree.") {
+                    return self.hero_tree(value);
+                }
                 if let Some(value) = name.strip_prefix("cooldown.") {
                     return self.cooldown(value);
                 }
@@ -349,6 +392,13 @@ impl ActionFacts for NativeFacts<'_> {
             _ => self.value(name),
         }
     }
+}
+
+fn hero_tree_key(name: &str) -> String {
+    name.chars()
+        .filter(|character| character.is_ascii_alphanumeric())
+        .map(|character| character.to_ascii_lowercase())
+        .collect()
 }
 
 fn bound_spell(bindings: &BTreeMap<String, u32>, alias: &str, kind: &str) -> Result<u32, String> {

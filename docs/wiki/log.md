@@ -9,6 +9,11 @@
 [Dummy reference expiry](systems/combat.md#training-dummy-combat-exit--2026-10-23): independentdb17198c4 native Fireball→Ignite retention and harmless-Counterspell timer two genuine RED; LeavingCombat/ordinary Defias evade two controls PASS26.87s. Replace foreign-aura/attack-intent cleanup with TC per-attacker non-DOT timers and PvE-reference-only expiry. Current-canonical backup25995de4 reproduces two RED/two controls PASS24.06s; a3fdbf375 gives five native35.61s +five creature25.09s +ten refs14.14s =20GREEN74.84s,0compiler warnings/fmtPASS. Two real Fire attackers, native LeavingCombat/ordinary evade, attack intent, threat-less-attacker/PvP/pet controls included. No follower policy or DPS claim; independent lead gate separate.
 
 ## 2026-10-23 — Per-spell merge / periodic crit ownership
+## 2026-10-23 — Generic native hero subtree facts
+
+[Hero identity](systems/simc-apl.md#native-hero-subtree-identity--2026-10-23): minimal read-only selected-subtree accessor and shared data-driven name resolution, no new state/per-spec table/learned-passive inference. Actual0409186de unknown-operand RED retained throughda4dc3416 because the entire facts file was unchanged; Havoc/Feral three native controls await GREEN. Missing/unknown data stays explicit; no live-dungeon/DPS claim.
+
+## 2026-10-23 — Havoc Burning Blades child-dispatch RED
 
 Merged current master4a2deb367 into native-spell-diff. Resolution retains owner-aware periodic crit eligibility/order and signed target-crit semantics, while direct and periodic damage capture records the actual rolled chance/result without another RNG draw. Parent rebuilt batch gate pending; prior acceptance scopes are unchanged.
 

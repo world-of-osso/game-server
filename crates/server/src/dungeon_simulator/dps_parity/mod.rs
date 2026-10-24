@@ -4,6 +4,7 @@ mod engagement_tests;
 mod equipment_input_tests;
 mod firestarter_tests;
 mod haste_tests;
+mod hero_tree_tests;
 mod inputs;
 pub(crate) mod literal_rotation;
 mod periodic_crit_tests;

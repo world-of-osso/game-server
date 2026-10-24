@@ -8,6 +8,7 @@
 |---|---|---|
 | OR/AND/NOT, strict comparisons, numeric truth, arithmetic | Frozen precedence; `%` division and `%%` signed remainder; numeric short circuit | Concrete WW/Ret11RED atc0cf6eed6→11GREEN ataff61cbab; enabled afterward |
 | Buff/cooldown/resource/talent/fixture facts | Shared native adapter reads actual earned state, selected allocation, display units and native timer helpers; unknown aliases fail | Six actual native6RED→6GREEN17.40s atdc1ee9781, zero compiler warnings; equipment and spec predicates remain caller-owned |
+| Hero subtree identity | Native ActiveSpec selects class metadata; TraitLoadout's selected native subtree matches normalized TraitSubTree names, no learned-passive inference/state | Genuine Havoc unknown-operand RED at0409186de retained throughda4dc3416 because production facts file was byte-identical; native Havoc/Feral3-case GREEN pending |
 | Variables | First declaration's numeric default (native default0); source `set`, `setif`, `value_else`, `reset`; per-actor `Program::state()` | Ret default/setif/reset decisions GREEN |
 | Conditional call lists | Literal row order, first native-usable action; exhausted/explicit empty child returns to caller; unknown call rejected and recursion errors explicit | WW ST/3T and Ret finisher unit decisions GREEN; recursion control added afterward |
 | Run lists and target selection | Run exhaustion cannot resume caller; min/max selects candidate before if, strict ties preserve native order. A run selector belongs only to its control row; children keep their own targets | Pinned native SimC invalidated old inherited-child oracle; replacement23PASS/1 genuineRED at2d6a66259 →24/24GREEN atad720fc3c,28.61s compile/0compiler warnings/0ignored. [Proof](../../handoffs/shared-run-target-proof-ledger.md) |
@@ -21,6 +22,12 @@
 ## Native binding boundary
 
 `NativeFacts::new(&World, actor, &Bindings, Encounter, active_enemies)` implements both shared traits. Bindings register explicit native action/buff/talent IDs and power types plus the actor's native GCD spell. `Encounter::Fixture` uses one simulation-clock300s deadline for fight and every target; `Encounter::Dungeon` fails TTD/fight-remains explicitly. Native cooldown wall-clock timing stays separate from aura/encounter simulation time. No native-book helper dependency or generic kit-membership-as-knowledge claim. [Native proof ledger/capability limits](../../handoffs/shared-native-apl-proof-ledger.md).
+
+### Native hero subtree identity — 2026-10-23
+
+`hero_tree.<name>` reads the selected `TraitSubTree` via the existing native `trait_config::selected_sub_tree` algorithm and a minimal fixture-only read-only TraitLoadout accessor. ActiveSpec resolves the actor's class tree; native subtree names normalize ASCII punctuation/spaces/underscores and case. The same path covers all classes, including Felscarred/Aldrachi Reaver and Wildstalker/Druid of the Claw. No separate state, per-spec identity table or learned-passive/live-aura inference. Empty selection returns0; missing native state/metadata and unknown names fail explicitly.
+
+Havoc's actual positive unknown-operand RED at0409186de remains valid throughda4dc3416 (entire production facts file byte-identical before implementation). Feral control uses independently pinned `MID2_Druid_Feral_Wildstalker`, SHA9f419caddee5e8cae94856a05b27bd276b390c6ac6c83d4d6449b1eccd093797. Three actual-input tests and retained facts await GREEN; no live-dungeon or DPS parity claim. [Contract](../../specs/simc-apl.md).
 
 ## Shared literal fixture machinery
 
