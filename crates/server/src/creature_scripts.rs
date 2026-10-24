@@ -1,36 +1,39 @@
-//! Creature behaviour selected by `creature_template.ScriptName`, the
-//! AzerothCore CreatureScript names. Only `npc_training_dummy` has one.
+//! Creature behaviour selected by `creature_template.ScriptName`.
+//! Training dummies follow TC a352b1fa `npc_training_dummy` / `NullCreatureAI`.
+
+use std::collections::HashMap;
 
 use bevy::prelude::*;
-use shared::components::CombatStatus;
-
-use crate::auras::{self, RemoveReason};
 
 pub struct CreatureScriptsPlugin;
 
 impl Plugin for CreatureScriptsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(FixedUpdate, training_dummy_evade_system);
+        app.add_systems(
+            FixedUpdate,
+            expire_training_dummy_combat.after(crate::combat_refs::expire_combat_refs_system),
+        );
     }
 }
 
-/// AzerothCore `npc_training_dummy` (scripts/World/npcs_special.cpp).
-/// `DamageTaken` sets the damage to 0, so the dummy never loses health and
-/// never dies, while the combat log still reports the full hit (it is sent
-/// before `DealDamage`). A dummy has no threat list, so each attacker's combat
-/// with it ends 5 s after that attacker's last hit (`combat_refs`; TC
-/// `npc_training_dummy::_combatTimer`, npcs_special.cpp:1382-1415). When the
-/// last one ends the dummy evades like AzerothCore's after its 5 s `resetTimer`:
-/// `_EnterEvadeMode` → `RemoveEvadeAuras` strips the auras others put on it and
-/// `CombatStop` → `RemoveAllAttackers` stops the players still auto-attacking
-/// it (out of range, so no hit refreshes their combat).
+/// TC npcs_special.cpp1382–1421: DamageTaken prevents health loss and restarts
+/// only the non-DOT attacker's timer. Expiry ends its PvE reference, not an evade.
 #[derive(Component, Debug, Default)]
 pub struct TrainingDummy {
-    /// `CombatStatus` seen last tick, to catch the evade.
-    in_combat: bool,
+    combat_timers: HashMap<Entity, f64>,
+}
+
+impl TrainingDummy {
+    fn take_expired_attackers(&mut self, now: f64) -> Vec<Entity> {
+        self.combat_timers
+            .extract_if(|_, deadline| now >= *deadline)
+            .map(|(attacker, _)| attacker)
+            .collect()
+    }
 }
 
 pub(crate) const TRAINING_DUMMY_SCRIPT: &str = "npc_training_dummy";
+const TRAINING_DUMMY_COMBAT_TIMEOUT_SECS: f64 = 5.0;
 
 pub(crate) fn insert_script_components(entity: &mut EntityCommands, script_name: &str) {
     if script_name == TRAINING_DUMMY_SCRIPT {
@@ -43,25 +46,34 @@ pub(crate) fn health_loss(training_dummy: bool, damage: f32) -> f32 {
     if training_dummy { 0.0 } else { damage }
 }
 
-fn training_dummy_evade_system(world: &mut World) {
-    let evading: Vec<Entity> = world
-        .query::<(Entity, &mut TrainingDummy, Option<&CombatStatus>)>()
+/// Called on active combat entry and non-DOT DamageTaken, never on a DoT tick
+/// or merely refreshing an existing reference with a nondamaging spell.
+pub(crate) fn refresh_training_dummy_timer(world: &mut World, dummy: Entity, attacker: Entity) {
+    if world.get::<TrainingDummy>(dummy).is_none() {
+        return;
+    }
+    let deadline = world.resource::<Time>().elapsed_secs_f64() + TRAINING_DUMMY_COMBAT_TIMEOUT_SECS;
+    world
+        .get_mut::<TrainingDummy>(dummy)
+        .expect("training dummy")
+        .combat_timers
+        .insert(attacker, deadline);
+}
+
+fn expire_training_dummy_combat(world: &mut World) {
+    let now = world.resource::<Time>().elapsed_secs_f64();
+    let expired: Vec<(Entity, Entity)> = world
+        .query::<(Entity, &mut TrainingDummy)>()
         .iter_mut(world)
-        .filter_map(|(entity, mut dummy, status)| {
-            let in_combat = status.is_some_and(|status| status.0);
-            let evades = dummy.in_combat && !in_combat;
-            if dummy.in_combat != in_combat {
-                dummy.in_combat = in_combat;
-            }
-            evades.then_some(entity)
+        .flat_map(|(dummy, mut state)| {
+            state
+                .take_expired_attackers(now)
+                .into_iter()
+                .map(move |attacker| (dummy, attacker))
         })
         .collect();
-    for dummy in evading {
-        debug!("Training dummy {dummy} evades");
-        auras::remove_auras(world, dummy, RemoveReason::Evade, |aura| {
-            aura.caster != dummy
-        });
-        crate::combat::combat_stop(world, dummy);
+    for (dummy, attacker) in expired {
+        crate::combat_refs::end_pve_reference(world, dummy, attacker);
     }
 }
 

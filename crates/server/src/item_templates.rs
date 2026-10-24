@@ -79,6 +79,12 @@ const ITEM_CLASS_CONTAINER: u8 = 1;
 const ITEM_SUBCLASS_REAGENT_CONTAINER: u8 = 11;
 /// `ITEM_FLAG2_USED_IN_A_TRADESKILL` (ItemTemplate.h:257), `IsCraftingReagent`.
 const ITEM_FLAG2_USED_IN_A_TRADESKILL: i64 = 0x8000_0000;
+/// TC ItemTemplate.h226–227; these are already loaded in ItemScaling.flags2.
+const ITEM_FLAG2_FACTION_HORDE: i64 = 0x1;
+const ITEM_FLAG2_FACTION_ALLIANCE: i64 = 0x2;
+/// Existing faction_for_race encoding, not the item flag bit values.
+const FACTION_ALLIANCE: u8 = 1;
+const FACTION_HORDE: u8 = 2;
 /// `BAG_FAMILY_MASK_*` a profession container subclass requires (ItemTemplate.h:336-355).
 const CONTAINER_FAMILIES: [(u8, u32); 10] = [
     (1, 0x4),      // soul: soul shards
@@ -95,12 +101,27 @@ const CONTAINER_FAMILIES: [(u8, u32); 10] = [
 
 impl ItemTemplate {
     pub fn allows(&self, class: u8, race: u8) -> bool {
+        if !self.allows_faction(race) {
+            return false;
+        }
         let class_ok = self.allowable_class == -1
             || one_based_bit(class).is_some_and(|bit| self.allowable_class as u64 & bit != 0);
         // TrinityCore `Player::CanUseItem` (Player.cpp:11221): `GetAllowableRace().HasRace(race)`.
         let race_ok = crate::race_class::race_bit(race)
             .is_some_and(|bit| self.allowable_race & (1 << bit) != 0);
         class_ok && race_ok
+    }
+
+    /// Player::CanUseItem11215–11219 checks both source faction flags independently.
+    fn allows_faction(&self, race: u8) -> bool {
+        let faction = crate::faction::faction_for_race(race);
+        match self.scaling.flags2 & (ITEM_FLAG2_FACTION_HORDE | ITEM_FLAG2_FACTION_ALLIANCE) {
+            0 => true,
+            ITEM_FLAG2_FACTION_HORDE => faction == FACTION_HORDE,
+            ITEM_FLAG2_FACTION_ALLIANCE => faction == FACTION_ALLIANCE,
+            // Both flags demand incompatible teams; neither side satisfies both.
+            _ => false,
+        }
     }
 
     pub fn is_cosmetic(&self) -> bool {
@@ -149,7 +170,7 @@ pub struct ItemTemplates {
     pub forever: HashMap<u32, ItemTemplate>,
     pub loot_need: LootNeedMetadata,
     /// Retail ItemEffect TriggerType6 (ON_LEARN), keyed by the owning item.
-    pub(crate) retail_learning_spells: HashMap<u32, Vec<u32>>,
+    pub retail_learning_spells: HashMap<u32, Vec<u32>>,
 }
 
 impl ItemTemplates {

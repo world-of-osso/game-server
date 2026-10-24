@@ -71,6 +71,63 @@ fn read_cooldown(world: &World, caster: Entity, spell: &SpellInfo) -> Cooldown {
     result
 }
 
+/// SimC action.cpp3314–3333: channels occupy their duration plus cast time;
+/// other actions occupy at least their native GCD.
+pub(crate) fn execute_time(world: &World, caster: Entity, spell: &SpellInfo) -> f64 {
+    let cast = f64::from(cast_time_ms(world, caster, spell).max(0)) / 1000.0;
+    if is_channeled(spell) {
+        cast + f64::from(duration_ms(world, caster, spell).max(0)) / 1000.0
+    } else {
+        cast.max(f64::from(gcd_duration_ms(world, caster, spell)) / 1000.0)
+    }
+}
+
+/// Read-only action readiness, independent of the current GCD/executing action
+/// (SimC action.cpp2640–2674). Actual dispatch still uses full native admission.
+pub(crate) fn action_ready(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<f64, String> {
+    match read_action_eligibility(world, caster, spell) {
+        Ok(()) => Ok(1.0),
+        Err(reason @ (CastFailure::UnknownSpell | CastFailure::Unsupported(_))) => Err(format!(
+            "native APL action{} readiness unavailable: {reason:?}",
+            spell.id
+        )),
+        Err(_) => Ok(0.0),
+    }
+}
+
+fn read_action_eligibility(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), CastFailure> {
+    check_ordinary_caster_life(world, caster, spell)?;
+    casting_restriction::check_cast(world, caster, spell)?;
+    shapeshift::check_cast(world, caster, spell)?;
+    aura_spell_restrictions::check_caster(world, caster, spell)?;
+    if let Some(block) = crate::auras::cast_blocker(world, caster, spell) {
+        return Err(CastFailure::CrowdControlled(block));
+    }
+    validate_caster_state(world, caster, spell)?;
+    read_healer_recovery(world, caster, spell)?;
+    let moving_blocks = (cast_time_ms(world, caster, spell) > 0
+        && !cast_allows_moving(world, caster, spell))
+        || (is_channeled(spell) && !channel_allows_moving(world, caster, spell));
+    if moving_blocks && world.get::<Moving>(caster).is_some_and(|moving| moving.0) {
+        return Err(CastFailure::Moving);
+    }
+    let explicit = world
+        .get::<crate::networking::CombatTarget>(caster)
+        .and_then(|target| target.0);
+    let target = validate_target(world, caster, spell, explicit, Sight::Start)?;
+    aura_spell_restrictions::check_target(world, caster, target, spell)?;
+    spell_costs(world, caster, spell)?;
+    Ok(())
+}
+
 pub(crate) fn cooldown_value(
     world: &World,
     caster: Entity,
@@ -93,7 +150,7 @@ pub(crate) fn cooldown_value(
     }
 }
 
-pub(crate) fn gcd_value(
+pub fn gcd_value(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,

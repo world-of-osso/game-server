@@ -96,23 +96,23 @@ impl Plugin for HunterPetPlugin {
 
 /// Imported Retail family defaults and normal (non-override) hunter pet specs.
 #[derive(Resource, Default)]
-pub(crate) struct PetCatalog {
+pub struct PetCatalog {
     pub default_specializations: HashMap<u32, u32>,
     pub families: HashMap<u32, (String, u32)>,
     pub specializations: Vec<shared::protocol::PetSpecializationInfo>,
 }
 
 fn load_pet_catalog(mut commands: Commands) {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     let path = crate::test_data::world_db_path();
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "test-support")))]
     let path = std::path::PathBuf::from(crate::spell_info::WORLD_DB_PATH);
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("Open world pet catalog");
     commands.insert_resource(read_pet_catalog(&conn).expect("Load Retail pet family/spec catalog"));
 }
 
-pub(crate) fn read_pet_catalog(conn: &Connection) -> rusqlite::Result<PetCatalog> {
+pub fn read_pet_catalog(conn: &Connection) -> rusqlite::Result<PetCatalog> {
     // TC a352b1fa ChrSpecializationFlag::PetOverrideSpec=0x20: separate class index.
     let mut families = conn.prepare("SELECT f.ID, s.ID FROM creature_family f JOIN chr_specialization s ON s.ClassID=0 AND s.Flags & 32=0 AND s.PetTalentType=f.PetTalentType")?;
     let default_specializations = families
@@ -212,7 +212,7 @@ impl PetCastFailure {
 }
 
 /// The pet `owner` has out (`Unit::GetPet`).
-pub(crate) fn summoned_pet(world: &World, owner: Entity) -> Option<Entity> {
+pub fn summoned_pet(world: &World, owner: Entity) -> Option<Entity> {
     world
         .get::<PetStable>(owner)
         .and_then(|stable| stable.summoned)
@@ -412,10 +412,7 @@ fn tamed_pet(world: &World, hunter: Entity, creature: Entity, npc: &Npc) -> Opti
 
 /// FOLLOWER_HUNTER_PET_SIMC_DEFAULT: SimC76f8118 sc_hunter.cpp1052 selects duck.
 /// Provision a normal runtime stable record; AI still casts learned Call Pet883.
-pub(crate) fn provision_follower_duck(
-    world: &mut World,
-    owner: Entity,
-) -> Result<(), &'static str> {
+pub fn provision_follower_duck(world: &mut World, owner: Entity) -> Result<(), &'static str> {
     init_pet_stable(world, owner).ok_or("follower stable could not be initialized")?;
     if world.get::<PetStable>(owner).unwrap().stored.active[0].is_some() {
         return Ok(());

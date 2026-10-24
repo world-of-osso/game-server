@@ -63,7 +63,7 @@ impl ScriptPath {
 
 /// `WaypointMgr` paths (`waypoint_path` + `waypoint_path_node`).
 #[derive(Resource, Default)]
-#[cfg_attr(test, derive(Clone))]
+#[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
 pub(crate) struct ScriptPaths(HashMap<u32, Arc<ScriptPath>>);
 
 pub(crate) fn load_script_paths(conn: &Connection) -> rusqlite::Result<ScriptPaths> {
