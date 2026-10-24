@@ -165,6 +165,7 @@ fn read_attacker(world: &World, enemy: Entity) -> Result<Attacker<'_>, String> {
             .get::<crate::zones::TempSummon>(enemy)
             .map(|summon| summon.summoner),
         spirit_wolf: None,
+        hunter_owner_ap: None,
     })
 }
 

@@ -4,6 +4,7 @@ Player and follower empowers use native build70448 stage metadata and release re
 
 ## What it must do
 
+- [x] Run native stage timing, hold, authenticated release, cancellation and finish cleanup even when no completion callback is registered. Completion hooks are optional, as TC Spell.cpp9057–9067; preserve original native effects without inventing spell-specific children. Consumption1263824, Slicing Winds1217413 and Upheaval396286 must not reject solely for absent callbacks.
 - [x] Resolve native Font override spells through the shared follower action resolver before admission and retain the native three/four-stage metadata and TC1000ms maximum-stage hold. Native Tip the Scales370553 must snapshot its one-use duration modifier before consumption: selected-stage1 Font Fire releases rank4 immediately; the next Surge retains its ordinary stage timing and delayed missile impact.
 - [x] Release at an explicitly selected completed stage, on a matching explicit player release after the first-stage minimum, or automatically after maximum hold; pass the completed stage into the release effects/scripts.
 - [ ] Defer the GCD until empower finish and use native359115's500ms clock. Cancellation must remain distinct from release and retain the sourced cancellation/resource lifecycle.
@@ -44,4 +45,4 @@ Player and follower empowers use native build70448 stage metadata and release re
 ## Out of scope
 
 - Empower-stage cast-bar UI: explicitly assigned to a later client slice.
-- Non-owned specialization release scripts: unqualified handlers remain explicitly unsupported rather than receiving synthetic child effects.
+- Non-owned specialization release scripts remain unqualified and receive no synthetic child effects. Missing optional completion hooks do not disable the generic native-stage lifecycle or original effects; lifecycle qualification is not full ability/script parity.
