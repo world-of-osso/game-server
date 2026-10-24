@@ -1,6 +1,19 @@
 # Shared literal precombat lifecycle
 
-2026-10-23; implementation pending. Native Demo first-engagement production RED read and qualified below; local four-case packet runtime pending. [Contract](../specs/dps-parity.md#literal-precombat-execution).
+Verified2026-10-23: current native package27/27 GREEN at96b572797. [Contract](../specs/dps-parity.md#literal-precombat-execution). Earlier entries below are historical milestones, not current pending status.
+
+## Current native qualification —96b572797
+
+Zero-warning --lib build20m42s/20m44s process. BinarySHA15509d9a66ee80c4709bda94c6f6433481c707810ce2ae7c7d992036f27f3f87. Fresh private CURRENT source215d75ec.../copycd7230ac..., full hashes/commands/env/input receipts under engine `ww-parity-2026-10-23/native-integrated-green-96b572797/`.
+
+| Boundary | Actual current proof |
+|---|---|
+| Original precombat8 + uncaptured owner-follow control |9GREEN36.11s: Demo first native damage inside10s, BOK native-ready counterfactual but second harmful row capped, snapshot OOC/time0, early Feral isolation/native kit control, zero declared shards, real pet cast/no-resummon/pet-at-pull; rejected Dungeon capture retains actual owner-follow movement |
+| Composite selection/native clock |7GREEN28.05s + lifecycle1GREEN13.20s + manual native bars1GREEN9.45s; all four selected coatings have real bars/order/elapsed, retained owned auras and drained cast/GCD before next snapshot/pull |
+| Literal native row gates |5GREEN19.50s; [exact scope](literal-row-gating-proof-ledger.md) |
+| Learned Mystic Touch producer |4GREEN10.59s; [first/later numeric and same-Monk item/proc gaps](ww-mystic-touch-proof-ledger.md#open-qualification) remain |
+
+Same binary then completes actual300s WW ST52567.95/3T72757.5867, each on its own fresh CURRENT backup; still−74.5364%/−80.6783% versus requested references, NOT parity. Exact `native-after-lifecycle-96b572797/` receipts and [remaining WW matrix](ww-source-census.md). This packet does not qualify complete per-spec literal adapters, Prowl/item/off-GCD activation across all classes, all configured pets or first/later-hit numerical fidelity.
 
 ## Observed boundary and scope
 

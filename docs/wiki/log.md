@@ -1,3 +1,7 @@
+## 2026-10-23 — Shared native lifecycle/gates/Mystic27GREEN; WW band still open
+
+At96b572797, [native packet27/27](../handoffs/native-precombat-proof-ledger.md#current-native-qualification--96b572797) covers ordered precombat/pet/GCD/controller capture, actual uncaptured owner-follow, composite selection+four real coating bars/effects, native moving/off-GCD row gates and learned Mystic Touch producer. First/later numerical, same-Monk item/proc, all-spec literal and Ele item activation remain outside that proof. Same binary completes fresh-current-backup300s WW ST52567.95/3T72757.5867, still−74.5364%/−80.6783%, NOT parity; [exact current receipt and missing-channel matrix](../handoffs/ww-source-census.md#current-receipt-after-shared-lifecycle-qualification--96b572797). No extra WW-only compile or coefficient tuning.
+
 ## 2026-10-23 — Native WW Stockade receipt
 ## 2026-10-23 — Ordered native composite selection RED
 

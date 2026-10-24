@@ -1,6 +1,6 @@
 # Mystic Touch native producer — RED packet
 
-Verified2026-10-23; real native2RED/2GREEN atd49f4951c, producer implemented afterward; GREEN pending. Parent approved named `MONK_MYSTIC_TOUCH_SIMC_PRODUCER`, pinned SimC76f8118 monk/sc_monk.cpp438–455. Native learned passive8647 is distinct from produced enemy debuff113746. Require the actual damage actor's learned8647; no Monk-class or nearby-party fallback. Native113746 owns Aura87/5%/physical school1, enemy target6. No damage coefficient tuning or flat multiplier is introduced.
+Verified2026-10-23; real native2RED/2GREEN atd49f4951c →4GREEN10.59s at96b572797, producer implemented after the RED. Parent approved named `MONK_MYSTIC_TOUCH_SIMC_PRODUCER`, pinned SimC76f8118 monk/sc_monk.cpp438–455. Native learned passive8647 is distinct from produced enemy debuff113746. Require the actual damage actor's learned8647; no Monk-class or nearby-party fallback. Native113746 owns Aura87/5%/physical school1, enemy target6. No damage coefficient tuning or flat multiplier is introduced.
 
 ## Source and existing differential
 
@@ -13,7 +13,7 @@ Native8647 has passive Attr0=64, SkillLineAbility39570/SkillLine829/ClassMask512
 - Native level48 unlearned book, actual TP damage →no113746.
 - Unrelated native owner damage while learned Monk is present but not attacking →no113746.
 
-The new unengaged level helper separates native initialization from the old helper's owner attack; existing at_level callers keep their prior engagement and three-frame behavior. Tests grant no caster resources or target auras and use actual hit/health changes before producer assertions. All new source-view-dependent cases stay ignored. They will be compiled with the next already-authorized precombat build, never an extra WW-only compile.
+The new unengaged level helper separates native initialization from the old helper's owner attack; existing at_level callers keep their prior engagement and three-frame behavior. Tests grant no caster resources or target auras and use actual hit/health changes before producer assertions. All new source-view-dependent cases stay ignored. They were compiled with the shared precombat RED/GREEN builds, never an extra WW-only compile.
 
 ## Pinned source timing — inference, not runtime qualification
 
@@ -25,7 +25,7 @@ Inference: with the override disabled, the first applying direct hit uses its ea
 
 Atd49f4951c all four actual native cases run9.76s: learned49 TP and white-hit producer assertions fail after real positive native damage; unlearned48 and unrelated-owner controls pass. Exact evidence: engine `ww-parity-2026-10-23/native-integrated-red-d49f4951c/mystic.{proof.json,output.log}` with adjacent source/copy/input/binary receipts. This qualifies the missing producer boundary, not numerical parity.
 
-Implementation handles actual post-damage AuraEvents. It requires the damage actor's KnownSpells8647 and a nonperiodic positive impact: a native melee-swing event or a spell sharing8647's native SpellClassSet. The private current DB has8647/100780/117418/185099/107270/113746 all in set53; no class constant or item ownership fallback is invented. A normal triggered native113746 supplies its own aura effects/physical5%; coefficients, proc flags and Momentum Boost are unchanged. Combined GREEN pending.
+Implementation handles actual post-damage AuraEvents. It requires the damage actor's KnownSpells8647 and a nonperiodic positive impact: a native melee-swing event or a spell sharing8647's native SpellClassSet. The private current DB has8647/100780/117418/185099/107270/113746 all in set53; no class constant or item ownership fallback is invented. A normal triggered native113746 supplies its own aura effects/physical5%; coefficients, proc flags and Momentum Boost are unchanged. At96b572797 all four native cases pass10.59s; exact `native-integrated-green-96b572797/mystic.{proof.json,output.log}` and adjacent receipts qualify this producer boundary. First/later-hit numerical and same-Monk item/proc eligibility remain open.
 
 ## Open qualification
 

@@ -1,32 +1,29 @@
 # Generic ordered native composite selection
 
-## Goal / boundary
+Verified2026-10-23. Selection7GREEN28.05s at96b572797; clock-aware lifecycle1GREEN13.20s and manual four-coating native-bar control1GREEN9.45s. All remain ignored/prepared-view-only. This does not qualify a complete Assassination literal adapter.
 
-Adapter supplies `NativeComposite { name, steps: &[NativeAction] }`. Shared Prepared selection exposes `Execution::Composite(Vec<Execution>)` as an ordered pending plan, not a synchronous cast loop.14766 owns real precombat clock advancement, per-step revalidation/completion and final accounting. Main/14766 explicitly require empty/all-active plans to be unusable and world-only execute never to recurse into Composite.
+## Ownership / contract
 
-At4ad3b8d41 the native six-case cohort produces3controlsPASS/3genuine selectionFAIL26.39s after18m29compile (one scaffold unused-field warning). All four ordinary native admission plans, normal Deadly cast completion and Warrior6673 readiness premises pass; no setup failure is counted. `composite-red.{log,proof.json}` records exact revision/current-backed input. Implemented `with_composites(world,actor,targets,metadata)` now plans ordered pending work; GREEN pending. World-only execute rejects Composite before any step. No completion-scheduler claim. NativeAction is Copy/Clone metadata; composite cannot encode class policy in shared dispatcher.
+Adapter supplies `NativeComposite { name, steps: &[NativeAction] }`; `Prepared::with_composites(world,actor,targets,metadata)` produces `Execution::Composite(Vec<Execution>)` pending work.14775 owns selection;14766 owns native App cast/GCD/effect completion. Shared code has no poison IDs or class coating policy. Actual owned self auras skip without reordering; any unready selected pending step rejects the whole plan. Empty/all-active plans are unusable. World-only execute rejects Composite before dispatch.
 
-Consumer staging: [native precombat ledger](native-precombat-proof-ledger.md#composite-lifecycle-integration-red--staged-unexecuted) records the separate clock/effect integration test. It remains ignored and unexecuted; no-op selection failure does not qualify consumption.
+Clock-aware `preparation::execute_precombat_plan` dispatches one normal child, advances actual App cast/GCD/effects fully, then advances to the next. Errors preserve prior actual effects and stop later steps; no grants, instant completion or recursive world-only execution. [Lifecycle ledger](native-precombat-proof-ledger.md#current-native-qualification--96b572797).
 
-## Integrated runtime atd49f4951c
+## Native evidence
 
-Actual selection packet runs7 cases in24.62s:6PASS/1FAIL. Bare four-step order/no dispatch, all-active, empty, unsupported selected step, non-poison and world-only rejection controls pass. Existing-coating case fails its own native Amplifying admission premise, not the selection assertion. Its helper returned when the aura appeared without requiring GCD completion. Integration now uses the shared real cast/GCD/effect drain before asserting owned aura/return; selection logic is unchanged, GREEN pending. Adjacent manual four-coating full-drain control passes28.20s; it does not alone prove this failure's exact refusal cause.
+At4ad3b8d41 selection cohort3controlsPASS/3genuineFAIL26.39s after18m29compile (one scaffold unused-field warning). Native readiness/cast premises passed. `composite-red.{log,proof.json}` retains that owner-side RED. Implementation7cfc2e4e6 follows it.
 
-## Source / native fixture
+Integratedd49 runs6PASS/1FAIL24.62s: existing-coating case fails Amplifying's native admission premise, not selection. Helper returned at aura appearance without requiring GCD drain.0df4a8cb5 replaces that wait with shared full native completion; selector unchanged.96b runs all7GREEN, zero-warning build. This qualifies the helper correction without inventing its prior exact refusal code.
 
-13120 packet: `/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/assassination-parity-2026-10-23/apply-poison-source-packet-v1.json`; pinned `sc_rogue.cpp3164–3330`. Bare selected259 profile constructs Deadly2823,Crippling3408,DTB Amplifying381664,DTB Atrophic381637 in that order; no Numbing. Native casting-time16 base1500ms for each; shared code must not hardcode those IDs or erase actual cast time. Source profile/trait copy provenance: `arms-parity-2026-10-23/composite-selection-inputs.proof.json`. Fixture native actor is explicitly Human1/class4 (reference race metadata is not asserted to be Human).
+| Case | Observed contract |
+|---|---|
+| Bare apply_poison | Four real native admitted steps, ordered2823/3408/381664/381637; selection does not cast |
+| Existing Deadly | Actual completed native2823/owned aura skipped; pending order3408/381664/381637 |
+| Empty/all-active | Neither is usable; no empty ready plan |
+| Unknown selected step / world-only execution | No partial omission; Composite rejected before first cast/aura |
+| Non-poison | Actual Human1/class1 native6673 admission uses the same generic planner |
 
-## Targeted proof matrix
+Engine `ww-parity-2026-10-23/native-integrated-green-96b572797/{composite-selection,composite-lifecycle,poison-bars}.{proof.json,output.log}` includes full binary/database/input receipts. Lifecycle observer sees every real cast bar, elapsed covers their sum, actual CastSuccess order and retained owned auras match, cast/GCD are empty, no early engagement, then the next snapshot row executes.
 
-| Case | Actual boundary | Expected proof |
-|---|---|---|
-| Bare apply_poison | Four actual native per-step admission plans; no cast/aura during selection | Genuine no-composite RED; implementation GREEN pending |
-| Existing Deadly | Normal native Player cast really completes/applies owned aura before selection | Real normal-cast Deadly premise passes; genuine no-composite RED; GREEN pending |
-| All active | Single-step actual owned Deadly plan | Native all-active controlPASS; remains required GREEN |
-| Empty metadata | Zero selected native steps | Empty controlPASS; remains required GREEN |
-| World-only execute | Valid native coating steps supplied as Composite | World-only rejection controlPASS; no first cast/aura; remains required GREEN |
-| Non-poison | Actual Human1/class1 native6673 Battle Shout admission | Native6673 admission premise passes; genuine no-composite RED; GREEN pending |
+## Source / identities
 
-A seventh control removes one actual selected spell from the real book (no grants), verifies the other three native plans remain admitted, and requires the whole selected composite to remain unavailable instead of silently dropping that step. No unrelated source changed; Moving/GCD snapshot fields and Driver gating belong to14766.
-
-Tests check real native knowledge/readiness premises before calling a selection failure behavioral RED; setup refusals are not RED. Actor is not engaged before precombat. Native durations/resources/knowledge are not patched or granted. No DPS, canonical DB, template or reference edits. API861b655a3 stays frozen for ta1068; selection work lives on separate `arms-literal-composites` branch.
+13120 packet: engine `assassination-parity-2026-10-23/apply-poison-source-packet-v1.json`; SimC76f8118 `sc_rogue.cpp3164–3330`. Selected DTB381801 adds Amplifying381664/Atrophic381637 after Deadly2823/Crippling3408; no Numbing. Native CastingTime16 base/min1500ms remains effective, including actual haste. Selection fixtures explicitly use Human1/class4 (reference race equivalence is not asserted); non-poison control Human1/class1. Owner input provenance: `arms-parity-2026-10-23/composite-selection-inputs.proof.json`. No coefficients, canonical DB, templates or resources changed.
