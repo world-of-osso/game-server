@@ -80,7 +80,19 @@ fn native_group_at(level: u8) -> GroupFixture {
             health.max, stats.max_health,
             "native derived health projection for {member:?}"
         );
-        assert_eq!(health.current, health.max);
+        assert_eq!(
+            health.current,
+            health.max,
+            "native fixture member={member:?}, level={level}, npc={:?}, damage={:?}",
+            h.app.world().get::<shared::components::Npc>(member),
+            h.inbox
+                .log
+                .iter()
+                .filter(|event| {
+                    event.kind == CombatLogKind::Damage && event.target == Some(member.to_bits())
+                })
+                .collect::<Vec<_>>(),
+        );
     }
     GroupFixture { h, priest, members }
 }

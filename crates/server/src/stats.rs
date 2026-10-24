@@ -967,6 +967,12 @@ fn rescaled_current(current: f32, old_max: f32, new_max: f32) -> f32 {
     } else {
         new_max
     };
+    #[cfg(test)]
+    if current == old_max && scaled.min(new_max).trunc() < new_max {
+        eprintln!(
+            "FULL_HEALTH_RESCALE current={current} old_max={old_max} new_max={new_max} scaled={scaled}"
+        );
+    }
     scaled.min(new_max).trunc()
 }
 
