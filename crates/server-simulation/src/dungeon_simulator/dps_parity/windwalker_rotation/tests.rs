@@ -165,16 +165,23 @@ fn log_zenith_priority_probe(run: &mut super::super::Run, rotation: &Rotation, f
         (name.into(), json!(value))
     })
     .collect();
-    let world = run.app.world();
-    let spell = world
+    let spell = run
+        .app
+        .world()
         .resource::<crate::spell_info::SpellStore>()
         .get(ZENITH)
+        .cloned()
         .unwrap();
-    let admission =
-        match crate::spell_cast::read_native_cast_start(world, run.actor, spell, run.actor) {
-            Ok(_) => "ready".to_owned(),
-            Err(reason) => format!("{reason:?}"),
-        };
+    let admission = match crate::spell_cast::read_native_cast_start(
+        run.app.world_mut(),
+        run.actor,
+        &spell,
+        run.actor,
+    ) {
+        Ok(_) => "ready".to_owned(),
+        Err(reason) => format!("{reason:?}"),
+    };
+    let world = run.app.world();
     let known = world
         .get::<crate::class_progression::KnownSpells>(run.actor)
         .unwrap();
