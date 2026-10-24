@@ -165,18 +165,14 @@ fn dps_parity_ret_resonance_native_new_budget_survives_its_own_toll_cast() {
     )
     .unwrap();
     eprintln!(
-        "Resonance after ordinary Toll before update: {:?}; triggered casts: {:?}",
+        "Resonance after ordinary Toll before update: {:?}",
         resonance(&run).map(|aura| (
             aura.stacks,
             aura.max_stacks,
             aura.charges,
             aura.interrupt_flags,
             aura.expires_at
-        )),
-        run.app
-            .world()
-            .get_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
-            .map(|observed| &observed.0)
+        ))
     );
     let aura = resonance(&run).expect("native producer must apply before the proc update");
     assert_eq!(aura.stacks, aura.max_stacks);
