@@ -1,5 +1,6 @@
 //! Equipped native item/enchant spells follow the ordinary aura lifecycle.
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
+use crate::class_progression::ActiveSpec;
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::{EquippedItemModifiers, EquippedItems, NativeItemInstances};
 use bevy::prelude::*;
@@ -19,6 +20,7 @@ type ChangedEquipment = QueryState<
             Changed<EquippedItems>,
             Changed<EquippedItemModifiers>,
             Changed<Level>,
+            Changed<ActiveSpec>,
         )>,
     ),
 >;
@@ -26,21 +28,41 @@ type ChangedEquipment = QueryState<
 pub(crate) fn sync_equipment_effects(world: &mut World, changed: &mut ChangedEquipment) {
     let units: Vec<Entity> = changed.iter(world).collect();
     for unit in units {
-        let desired = equipped_spells(world, unit);
+        let mut desired: Vec<_> = equipped_spells(world, unit)
+            .into_iter()
+            .map(|(slot, spell)| (AuraSource::Equipment(slot), spell))
+            .collect();
+        desired.extend(equipped_set_spells(world, unit));
         crate::auras::remove_auras(world, unit, RemoveReason::Unlearned, |aura| {
-            let AuraSource::Equipment(slot) = aura.source else {
+            if !matches!(
+                aura.source,
+                AuraSource::Equipment(_) | AuraSource::EquipmentSet(_)
+            ) {
                 return false;
-            };
+            }
             !desired.iter().any(|(key, spell)| {
-                *key == slot
+                *key == aura.source
                     && spell.id == aura.spell_id
                     && spell.cast_item_level == aura.cast_item_level
             })
         });
-        for (slot, spell) in desired {
-            apply_missing_equipment_aura(world, unit, slot, &spell);
+        for (source, spell) in desired {
+            apply_missing_equipment_aura(world, unit, source, &spell);
         }
     }
+}
+
+fn equipped_set_spells(world: &World, unit: Entity) -> Vec<(AuraSource, SpellInfo)> {
+    crate::item_proc_data::equipped_set_spells(world, unit)
+        .into_iter()
+        .filter_map(|(set, id)| {
+            let Some(spell) = world.resource::<SpellStore>().get(id).cloned() else {
+                error!("Native equipped set{set} spell{id} absent from SpellStore");
+                return None;
+            };
+            Some((AuraSource::EquipmentSet(set), spell))
+        })
+        .collect()
 }
 
 fn equipped_spells(world: &World, unit: Entity) -> Vec<(EquipmentSlot, SpellInfo)> {
@@ -140,10 +162,9 @@ fn equipped_spell_ids(
 fn apply_missing_equipment_aura(
     world: &mut World,
     unit: Entity,
-    slot: EquipmentSlot,
+    source: AuraSource,
     spell: &SpellInfo,
 ) {
-    let source = AuraSource::Equipment(slot);
     let applied = world.get::<ActiveAuras>(unit).is_some_and(|auras| {
         auras.iter().any(|aura| {
             aura.spell_id == spell.id

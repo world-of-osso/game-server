@@ -1,17 +1,19 @@
 //! Native equipped-set predicates and item-description role multipliers.
-//! Data only: this does not activate unrelated set bonuses or evaluate arbitrary tooltips.
+//! Data selection only; equipment_effects owns activation and removal.
 use bevy::prelude::*;
 use rusqlite::Connection;
 use shared::item_data::ItemDefinitionSource;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
+
+const ITEM_SET_FLAG_LEGACY_INACTIVE: u32 = 0x01;
 
 struct ItemSet {
-    items: Vec<u32>,
     flags: u32,
     required_skill: u32,
     required_skill_rank: u32,
 }
 
+#[derive(Clone, Copy)]
 struct SetBonus {
     set: u32,
     spec: u32,
@@ -23,27 +25,20 @@ struct SetBonus {
 pub struct ItemProcInputs {
     sets: HashMap<u32, ItemSet>,
     bonuses: HashMap<u32, Vec<SetBonus>>,
+    bonuses_by_set: HashMap<u32, Vec<(u32, SetBonus)>>,
+    item_sets: HashMap<u32, u32>,
     variables: HashMap<u32, String>,
     spell_variables: HashMap<u32, u32>,
 }
 
 pub fn load(conn: &Connection) -> rusqlite::Result<ItemProcInputs> {
-    let item_columns = (0..17)
-        .map(|index| format!("ItemID_{index}"))
-        .collect::<Vec<_>>()
-        .join(",");
-    let mut statement = conn.prepare(&format!(
-        "SELECT ID,SetFlags,RequiredSkill,RequiredSkillRank,{item_columns} FROM item_set"
-    ))?;
+    let mut statement =
+        conn.prepare("SELECT ID,SetFlags,RequiredSkill,RequiredSkillRank FROM item_set")?;
     let sets = statement
         .query_map([], |row| {
-            let items = (4..21)
-                .map(|index| row.get::<_, u32>(index))
-                .collect::<rusqlite::Result<Vec<_>>>()?;
             Ok((
                 row.get(0)?,
                 ItemSet {
-                    items: items.into_iter().filter(|&id| id != 0).collect(),
                     flags: row.get(1)?,
                     required_skill: row.get(2)?,
                     required_skill_rank: row.get(3)?,
@@ -51,9 +46,14 @@ pub fn load(conn: &Connection) -> rusqlite::Result<ItemProcInputs> {
             ))
         })?
         .collect::<rusqlite::Result<HashMap<_, _>>>()?;
+    let mut statement = conn.prepare("SELECT ID,ItemSet FROM item_sparse WHERE ItemSet!=0")?;
+    let item_sets = statement
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<rusqlite::Result<HashMap<_, _>>>()?;
     let mut statement = conn.prepare(
         "SELECT SpellID,ItemSetID,ChrSpecID,TraitSubTreeID,Threshold FROM item_set_spell ORDER BY ID")?;
     let mut bonuses: HashMap<u32, Vec<SetBonus>> = HashMap::new();
+    let mut bonuses_by_set: HashMap<u32, Vec<(u32, SetBonus)>> = HashMap::new();
     for row in statement.query_map([], |row| {
         Ok((
             row.get::<_, u32>(0)?,
@@ -66,6 +66,10 @@ pub fn load(conn: &Connection) -> rusqlite::Result<ItemProcInputs> {
         ))
     })? {
         let (spell, bonus) = row?;
+        bonuses_by_set
+            .entry(bonus.set)
+            .or_default()
+            .push((spell, bonus));
         bonuses.entry(spell).or_default().push(bonus);
     }
     let mut statement = conn.prepare("SELECT ID,Variables FROM spell_description_variables")?;
@@ -80,6 +84,8 @@ pub fn load(conn: &Connection) -> rusqlite::Result<ItemProcInputs> {
     Ok(ItemProcInputs {
         sets,
         bonuses,
+        bonuses_by_set,
+        item_sets,
         variables,
         spell_variables,
     })
@@ -102,32 +108,97 @@ impl ItemProcInputs {
             }
             let equipped =
                 equipped.ok_or("native equipped identities missing for matching set bonus")?;
-            let set = self.sets.get(&bonus.set).ok_or_else(|| {
-                format!("native bonus{spell} references missing set{}", bonus.set)
-            })?;
             let count = equipped
                 .items
                 .iter()
                 .filter(|(_, source, item)| {
-                    *source == ItemDefinitionSource::Retail && set.items.contains(item)
+                    *source == ItemDefinitionSource::Retail
+                        && self.item_sets.get(item) == Some(&bonus.set)
                 })
                 .count();
-            if count == 0 || count < bonus.threshold {
-                continue;
+            if self.bonus_applies(bonus, count, spec)? {
+                return Ok(true);
             }
-            if set.flags != 0
-                || set.required_skill != 0
-                || set.required_skill_rank != 0
-                || bonus.subtree != 0
-            {
-                return Err(format!(
-                    "native set{} bonus{spell} has unimplemented flag/skill/subtree predicates",
-                    bonus.set
-                ));
-            }
-            return Ok(true);
         }
         Ok(false)
+    }
+
+    fn bonus_applies(
+        &self,
+        bonus: &SetBonus,
+        count: usize,
+        spec: Option<u32>,
+    ) -> Result<bool, String> {
+        if count == 0 || count < bonus.threshold || (bonus.spec != 0 && spec != Some(bonus.spec)) {
+            return Ok(false);
+        }
+        let set = self
+            .sets
+            .get(&bonus.set)
+            .ok_or_else(|| format!("native equipped set{} has no ItemSet row", bonus.set))?;
+        if set.flags & ITEM_SET_FLAG_LEGACY_INACTIVE != 0 {
+            return Ok(false);
+        }
+        if set.required_skill != 0 {
+            return Err(format!(
+                "EQUIPPED_SET_SKILL_REQUIREMENT_UNSUPPORTED: set{} skill{} rank{}",
+                bonus.set, set.required_skill, set.required_skill_rank
+            ));
+        }
+        if bonus.subtree != 0 {
+            return Err(format!(
+                "EQUIPPED_SET_TRAIT_SUBTREE_UNSUPPORTED: set{} subtree{}",
+                bonus.set, bonus.subtree
+            ));
+        }
+        Ok(true)
+    }
+
+    fn select_set_spells(
+        &self,
+        bonuses: &[(u32, SetBonus)],
+        count: usize,
+        spec: Option<u32>,
+    ) -> (Vec<(u32, u32)>, Vec<String>) {
+        let mut desired = Vec::new();
+        let mut errors = Vec::new();
+        for (spell, bonus) in bonuses {
+            match self.bonus_applies(bonus, count, spec) {
+                Ok(true) => desired.push((bonus.set, *spell)),
+                Ok(false) => {}
+                Err(error) => errors.push(error),
+            }
+        }
+        (desired, errors)
+    }
+
+    fn equipped_set_spells(
+        &self,
+        equipped: &crate::stats::EquippedItems,
+        spec: Option<u32>,
+    ) -> (Vec<(u32, u32)>, Vec<String>) {
+        let mut counts = BTreeMap::<u32, usize>::new();
+        for (_, source, item) in &equipped.items {
+            if *source == ItemDefinitionSource::Retail
+                && let Some(set) = self.item_sets.get(item)
+            {
+                *counts.entry(*set).or_default() += 1;
+            }
+        }
+        let mut desired = Vec::new();
+        let mut errors = Vec::new();
+        for (set, count) in counts {
+            if !self.sets.contains_key(&set) {
+                errors.push(format!("native equipped set{set} has no ItemSet row"));
+                continue;
+            }
+            if let Some(bonuses) = self.bonuses_by_set.get(&set) {
+                let (spells, failures) = self.select_set_spells(bonuses, count, spec);
+                desired.extend(spells);
+                errors.extend(failures);
+            }
+        }
+        (desired, errors)
     }
 
     fn role_multiplier(&self, driver: u32, has_aura: impl Fn(u32) -> bool) -> Result<f32, String> {
@@ -206,6 +277,21 @@ pub fn has_equipped_bonus(world: &World, unit: Entity, spell: u32) -> Result<boo
         .get::<crate::class_progression::ActiveSpec>(unit)
         .map(|spec| spec.0);
     inputs.has_set_bonus(equipped, spec, spell)
+}
+
+pub(crate) fn equipped_set_spells(world: &World, unit: Entity) -> Vec<(u32, u32)> {
+    let inputs = world.resource::<ItemProcInputs>();
+    let equipped = world
+        .get::<crate::stats::EquippedItems>(unit)
+        .expect("equipped set catalog identities");
+    let spec = world
+        .get::<crate::class_progression::ActiveSpec>(unit)
+        .map(|spec| spec.0);
+    let (spells, errors) = inputs.equipped_set_spells(equipped, spec);
+    for error in errors {
+        error!("Native equipped set activation: {error}");
+    }
+    spells
 }
 
 pub(crate) fn role_multiplier(world: &World, unit: Entity, driver: u32) -> Result<f32, String> {

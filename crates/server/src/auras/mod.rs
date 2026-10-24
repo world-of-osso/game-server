@@ -194,6 +194,8 @@ pub enum AuraSource {
     KnownSpell,
     /// Native on-equip/enchant spell owned by this physical equipment slot.
     Equipment(shared::protocol::EquipmentSlot),
+    /// Native equipped-set spell, owned by its ItemSet identity rather than one slot.
+    EquipmentSet(u32),
     /// Authored spell_area autocast; cannot be canceled by the player.
     SpellArea,
 }

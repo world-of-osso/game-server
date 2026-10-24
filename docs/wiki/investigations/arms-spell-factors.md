@@ -65,7 +65,7 @@ At98093ec85 (productiona1af93852), immutable native snapshotcd7230ac1d62bf7d7ea8
 | Result | hit25119 at3.1s | Oracle hit27935.1 at2.285s; not parity certification |
 | Arms2pc runtime predicate / aura | `Ok(true)` / absent | Actual equipped-set activation missing |
 
-The actual equipped list retains2067 members271456/271454/271459/271457, including original chest271459 with allocation donor268222. Native ItemSetSpell7750 specifies spell1296643/spec71/threshold2/subtree0; set flags and skill requirements are0. Native source modifiers actually applied are137049/1258398/383341/382896, not1296643. Thus neither membership nor native metadata is missing; do not retain an input-gap label for this result.
+The actual equipped list retains2067 members271456/271454/271459/271457, including original chest271459 with allocation donor268222. Native ItemSetSpell7750 specifies spell1296643/spec71/threshold2/subtree0; set flags and skill requirements are0. Native source modifiers actually applied are137049/1258398/383341/382896, not1296643. Thus neither membership nor native metadata is missing; do not retain an input-gap label for this result. The [generic activation follow-up](../systems/character-stats.md#native-equipped-set-auras--2026-10-23) reproduces actual Arms/Protection lifecycle failures before the shared production fix; it is not an Arms spell-ID multiplier.
 
 Current AP reconstructs as `(2537×1.05 + 2855×10%×1.05 + 934)×1.03 = 4014.55375` (actual f32 value4014.553467). Remaining oracle4126 follows the recorded food50/augment25, comparator armor3141.16 and its attribute-floor/AP-round rules. No extra correction factor is missing from this decomposition, and no native armor tuning follows.
 

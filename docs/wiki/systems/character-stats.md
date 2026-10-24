@@ -101,6 +101,36 @@ The main-hand result is `CharacterStats.main_hand` (unarmed 1–2 at 2.0 s, Trin
 
 `EquippedItems.items` holds `(EquipmentSlot, ItemDefinitionSource, item_id)` of physically equipped items. Inventory publishes it on world entry and deltas. `EquippedItemModifiers.items` separately carries slot-bound instance properties; changing only those properties also triggers the production recompute.
 
+### Native equipped-set auras — 2026-10-23
+
+`equipment_effects::sync_equipment_effects` reconciles ordinary item/enchant and set-owned auras through the same global AuraPlugin FixedUpdate schedule. `item_proc_data` indexes original Retail identities by native `ItemSparse.ItemSet` and native `ItemSetSpell` rows by set/spell. Selection uses actual equipped counts, threshold and current specialization; TC legacy-inactive bit0x01 disables a set. Allocation donors never replace equipped identities. Set auras use `AuraSource::EquipmentSet(set_id)`, not an arbitrary member slot; losing eligibility removes only the owned aura. Active-spec changes also reconcile. No spell-ID cases or imported stat totals.
+
+Strict native RED atb84957a9e: real Arms2067 two-piece equip has0 instead of1 aura1296643; real Protection own2pc likewise0 instead of1 while Arms exclusion passes (two genuine failures29.67s). Both use exact reference Player gear/selected traits and the real application schedule. Equip/unequip,2/4-piece thresholds and spec-switch GREEN pending.
+
+Production entry registers ItemScaling/Inventory/Aura plugins; startup loads the same metadata and login/inventory deltas publish `EquippedItems`/`EquippedItemModifiers` consumed here. This is not a fixture-only activation path. Read-only Sakuin inspection found activePID61507 starting `/var/lib/game-server/bin/game-server`; its installed ELF rodata did not contain current equipment-effects/producer-catalog markers. No exact deployed revision, new set activation or live equip smoke is inferred; no remote mutation/deployment occurred. Evidence: `native-spell-diff-2026-10-23/mastery-b67952ca4/set-activation/sakuin-*.proof.json`.
+
+Qualified scope is normal sets only. Unsupported matching rows emit explicit errors and remain inactive; they do not invent skill/subtree eligibility. Native70448 active skill-qualified sets retained as `EQUIPPED_SET_SKILL_REQUIREMENT_UNSUPPORTED`:
+
+| Set | Name | Required skill/rank |
+|---|---|---|
+|421|Bloodvine Garb|197/300|
+|441|Primal Batskin|165/300|
+|442|Blood Tiger Harness|165/300|
+|444|The Darksoul|164/300|
+|559|Spellstrike Infusion|2539/50|
+|565|Khorium Ward|2476/50|
+|566|Burning Rage|164/350|
+|569|Faith in Felsteel|164/350|
+|572|Battlecast Garb|2539/50|
+|573|Fel Skin|2531/50|
+|574|Strength of the Clefthoof|2531/50|
+|575|Felstalker Armor|2531/50|
+|576|Fury of the Nether|165/350|
+
+`EQUIPPED_SET_TRAIT_SUBTREE_UNSUPPORTED`: set1964 `LH Test [do not translate]`, ItemSetSpell row7219/spell1240644/subtree21/threshold1. These explicit gaps are approved exclusions, not silent fallbacks. Source list/hash: `set-activation/selector-gaps.proof.json` in the same evidence root.
+
+Sources: TC `Item.cpp76–230` AddItemsSetItem/RemoveItemsSetItem and `DBCEnums.h1527–1529`; [metadata selector](../../../crates/server/src/item_proc_data.rs), [production aura seam](../../../crates/server/src/equipment_effects.rs), [native lifecycle tests](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/equipped_set_tests.rs), [contract](../../specs/dps-parity.md#equipment), [inventory](inventory.md).
+
 ### Instance properties — 2026-10-21
 
 The additive redb `item_modifiers` table stores bonus lists, explicit item-level overrides, permanent enchants, gem item IDs and crafted stat choices by GUID. Existing `item_instances` soulbound bytes and inventory/wire encodings are unchanged. `InventoryRecord.item_modifiers` hydrates only owned GUIDs; the inventory model preserves those properties and projects them alongside equipped catalog identities. Startup creates the new table for existing databases.
