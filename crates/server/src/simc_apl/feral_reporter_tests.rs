@@ -24,6 +24,14 @@ impl ActionFacts for FeralFacts {
         if name == "dot.rake.refreshable" {
             return Ok(if action.target == Some(42) { 1.0 } else { 0.0 });
         }
+        if action.name == "ferocious_bite" && name == "maximum_energy" {
+            // sc_druid.cpp4253–4268; native70448 spell_power22568 Energy25,
+            // spell_effect22568/index1 extra cap25. This concrete fixture has
+            // neither Incarnation nor Apex, so no modifier applies. Not energy.max.
+            const BITE_BASE_ENERGY: f64 = 25.0;
+            const BITE_EXTRA_ENERGY_CAP: f64 = 25.0;
+            return Ok(BITE_BASE_ENERGY + BITE_EXTRA_ENERGY_CAP);
+        }
         self.value(name)
     }
 
