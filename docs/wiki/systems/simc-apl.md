@@ -80,6 +80,12 @@ Clock-aware `preparation::execute_precombat_plan` now consumes selected native p
 
 [Native row-gating packet](../../handoffs/literal-row-gating-proof-ledger.md) reaches4RED/1GREEN atd49f4951c. Prepared now samples actual Moving and active native GCD; Driver honors moving0/1 and explicit off-GCD row permission without changing native cast admission. Configured movement.distance remains a named unavailable gap, never zero. All five gate controls pass at96b572797; Ele item activation remains unqualified.
 
+## Feral fixture consumer — 2026-10-24
+
+Verified:2026-10-24. Spec103 follower measurements now capture before warmup and run the unchanged74-row pinned Program through shared Driver, PrecombatPoll, Prepared and native execution. Nonliteral `prepare` and production kit priorities remain separate. The Feral context delegates equipment facts and readonly maximum-pool admission; configured potion-name matching reads the explicit profile, not inventory or an aura grant. Native Bite's action-bound maximum uses the existing modified-cost producer and shared native extra cap, never actor Energy maximum.
+
+Native precombat ownership, Cat Form/Prowl, settled cast/GCD and the real stats snapshot are qualified. Both actual ST/3T combat attempts currently refuse missing shared buff-duration support; full source execution and numerical parity remain open. [Feral proof ledger](../../handoffs/feral-literal-apl-proof-ledger.md#feral-fixture-lifecycle-integration) owns exact revisions, case scope, receipts and gaps.
+
 ## Feral/action-knowledge qualification
 
 [Feral source census](../../handoffs/feral-source-census.md) records exact reproduced ST/3T references, historical read-only native gaps from a supplied binary now qualified UNKNOWN_PRE_9D13_MISLABELED (not master proof) and the five ignored redirected-stat allocations. [Action-knowledge census](../../handoffs/action-knowledge-census.md) covers all11followers/990starter books: four raw-unknown controller actions are actual selected visible/parent actions, leaving zero missing-book rejections after sourced bridges. Own shared resolver c3934c31d has15/15native GREEN plus four-stage empower control; existing Ret controls stop on their direct Judgment generator's unretried NoCharges and await Ret-owner correction/integration gate. Feral literal adapter remains unqualified; raw KnownSpells membership must not silently disable those actions. Native selected35395→404542 exposes a passive final endpoint: own c51184367 genuine RED returnsSome404542 instead of unavailable. The shared final-endpoint check now reportsNotKnown and literal selection falls through; passive→active bridges and low-level casts are unchanged. Follow-up GREEN remains pending; [ledger](../../handoffs/action-knowledge-census.md#passive-endpoint-correction).
@@ -91,6 +97,8 @@ Seven native regressions at89f985420 reach unknown requested predicates (18.52s)
 [Native haste composition qualification](../../specs/simc-apl.md#native-haste-composition-boundary) is a separate RED-before-fix gate; the seven fact regressions do not prove haste composition.
 
 ## Sources
+
+- [Feral fixture proof](../../handoffs/feral-literal-apl-proof-ledger.md) — native lifecycle, action-bound Bite cost/cap, exact-source and unsupported-fact boundaries; pinned `engine/player/player.cpp:12376–12411` supplies configured potion identity semantics.
 
 - Pinned SimC76f8118 `engine/sim/expressions.cpp:22–154,333–440,1081–1130` — lexer, arithmetic/boolean decisions and precedence.
 - `engine/action/variable.cpp:19–133` — defaults and variable construction; `engine/player/action_variable.cpp:19–26` — initial values.

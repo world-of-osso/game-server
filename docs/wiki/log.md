@@ -1,3 +1,7 @@
+## 2026-10-24 — Feral fixture lifecycle and native Bite reader
+
+[Feral consumer](systems/simc-apl.md#feral-fixture-consumer--2026-10-24): capture-before-setup RED becomes native Cat Form/Prowl/snapshot GREEN atbe281be4a; shared Program/readiness/execution own the unchanged source. Native action-bound Bite reader plus unchanged controls qualified atab6a; no formula copy or pool mutation. Actual ST/3T now refuse missing shared buff-duration support; full source/native mechanics and numerical parity remain open. [Exact proof](../handoffs/feral-literal-apl-proof-ledger.md).
+
 ## 2026-10-24 — Rake native stealth eligibility
 
 [Rake](systems/spell-casting.md#rake-actual-stealth-eligibility--2026-10-24): observer proved ordinary1126 cast interrupt0x4 removed fixtureProwl; approved controller/buff ordering produced genuine selected-profile damageRED. TC2040–2078 actual-stealth predicate replaces legacyrank gate at a5b2fce9f; seven requested native/snapshot controls GREEN, clean both-packagebuild. Shred and persistent multiplier fields unchanged; parent integration/literal300s parity open. [Proof ledger](../handoffs/feral-literal-apl-proof-ledger.md#selected-profile-rake-fixture-blocker).
