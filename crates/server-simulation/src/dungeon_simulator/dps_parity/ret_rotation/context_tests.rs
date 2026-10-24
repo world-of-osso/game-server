@@ -39,7 +39,8 @@ fn dps_parity_ret_literal_native_context_preserves_native_facts_and_pool() {
         options: Default::default(),
     };
     let verdict = action("templars_verdict");
-    assert_eq!(facts.primary_resource().unwrap(), "mana");
+    // Pinned sc_paladin.cpp4402–4408 chooses HolyPower for Ret, not UI pool order.
+    assert_eq!(facts.primary_resource().unwrap(), "holy_power");
     assert_eq!(facts.value("holy_power").unwrap(), 0.0);
     assert!(prepared.execution(&verdict, &equipment).unwrap().is_none());
     assert!(facts.ready_at_resource_max(&verdict, "holy_power").unwrap());
