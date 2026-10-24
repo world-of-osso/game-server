@@ -62,7 +62,11 @@ fn start_native(run: &mut Run, spell: u32, stage: Option<u8>) {
         };
         match result {
             Ok(()) => return,
-            Err(CastFailure::OnGlobalCooldown | CastFailure::InProgress) => run.app.update(),
+            Err(
+                CastFailure::OnGlobalCooldown
+                | CastFailure::InProgress
+                | CastFailure::NotEnoughPower(_),
+            ) => run.app.update(),
             Err(reason) => panic!("ordinary native spell{spell}: {reason:?}"),
         }
     }
