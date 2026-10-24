@@ -2,7 +2,6 @@
 use super::*;
 
 #[test]
-#[ignore = "Elemental-required min operator RED/GREEN pending"]
 fn simc_apl_ele_min_clamps_the_literal_target_formula() {
     let facts = BTreeMap::new();
     for (source, expected) in [
@@ -35,7 +34,6 @@ fn simc_apl_ele_min_clamps_the_literal_target_formula() {
 }
 
 #[test]
-#[ignore = "Elemental-required max operator RED/GREEN pending"]
 fn simc_apl_ele_max_uses_pinned_precedence() {
     let facts = BTreeMap::new();
     for (source, expected) in [
