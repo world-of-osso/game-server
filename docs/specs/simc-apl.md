@@ -73,6 +73,10 @@ TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyC
 
 [Target-context API proof and exact remaining gaps](../handoffs/native-target-context-proof-ledger.md).
 
+## Expected combat length
+
+- [ ] `expected_combat_length` returns the existing fixture's configured duration, positive and finite, independently of elapsed/remaining time. No fixed300, default or extra duration field. Dungeon/invalid fixture configuration fails with EXPECTED_COMBAT_LENGTH_UNAVAILABLE. Proposed-action context forwards the same global configured value.
+
 ## Known gaps (current cycle)
 
 - [ ] Wire native kit adapters; library expression/variable/list decisions have11-case GREEN, not full native rotation proof.

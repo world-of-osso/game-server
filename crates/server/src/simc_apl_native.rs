@@ -734,6 +734,8 @@ fn bool_value(value: bool) -> f64 {
 }
 
 #[cfg(test)]
+mod expected_length_tests;
+#[cfg(test)]
 mod refresh_context_tests;
 #[cfg(test)]
 mod target_context_tests;
