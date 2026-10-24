@@ -1075,6 +1075,19 @@ fn target_armor(
     }
 }
 
+/// Damage plus test-only inputs observed in this same armor operation.
+pub(crate) struct ArmorMitigation {
+    pub damage: f32,
+    #[cfg(test)]
+    pub effective_armor: f32,
+    #[cfg(test)]
+    pub constant: Option<f32>,
+    #[cfg(test)]
+    pub penetration_pct: f32,
+    #[cfg(test)]
+    pub fraction: Option<f32>,
+}
+
 /// Physical `damage` after the target's armor at the attacker's level
 /// against it; without ExpectedStat data there is no mitigation.
 pub(crate) fn armor_mitigated(
@@ -1084,14 +1097,24 @@ pub(crate) fn armor_mitigated(
     target: &UnitScaling,
     constants: Option<&ArmorConstants>,
     attacker_mods: Option<&AuraStatMods>,
-) -> f32 {
+) -> ArmorMitigation {
     let penetration = attacker_mods.map_or(0.0, |mods| mods.armor_penetration_pct);
     let armor = armor_after_penetration(armor, target.level_against(attacker), penetration);
-    constants
-        .and_then(|constants| constants.at(attacker.level_against(target)))
-        .map_or(damage, |constant| {
-            melee::armor_reduced_damage(damage, armor, constant)
-        })
+    let constant = constants.and_then(|constants| constants.at(attacker.level_against(target)));
+    let reduction = constant.map(|constant| melee::armor_reduced_damage(damage, armor, constant));
+    ArmorMitigation {
+        damage: reduction
+            .as_ref()
+            .map_or(damage, |reduction| reduction.damage),
+        #[cfg(test)]
+        effective_armor: armor,
+        #[cfg(test)]
+        constant,
+        #[cfg(test)]
+        penetration_pct: penetration,
+        #[cfg(test)]
+        fraction: reduction.map(|reduction| reduction.fraction),
+    }
 }
 
 /// TC Unit.cpp1731–1742: percentage applies only to the victim-level armor cap.
@@ -1569,7 +1592,8 @@ fn try_swing(
         &target,
         context.armor_constants,
         attacker.mods,
-    );
+    )
+    .damage;
     let sitting = stand_state.is_some_and(|state| !state.0.is_stand());
     let victim = swing_victim(is_npc, armor.1, level_difference, sitting);
     if is_npc && npc_flags.is_none() {
@@ -1960,6 +1984,7 @@ fn commit_melee_loss(
     }
     let before = health.current;
     crate::combat_refs::engage_attacked_target(world, attacker, victim);
+    crate::creature_scripts::refresh_training_dummy_timer(world, victim, attacker);
     let health = world.get::<Health>(victim).expect("living melee victim");
     let scripted_loss = crate::scripted_ai::limit_scripted_loss(
         world.get::<crate::scripted_ai::CreatureScriptName>(victim),
@@ -2021,6 +2046,7 @@ pub(crate) fn deal_health_damage(
     #[cfg(test)]
     crate::dungeon_simulator::healer_intake::note_unrecorded_direct(world, attacker, victim);
     crate::combat_refs::engage_attacked_target(world, attacker, victim);
+    crate::creature_scripts::refresh_training_dummy_timer(world, victim, attacker);
     let (attacker_scaling, victim_scaling) = (
         UnitScaling::of(world, attacker),
         UnitScaling::of(world, victim),
@@ -2160,7 +2186,8 @@ pub(crate) fn replay_healer_hit(
         &target,
         world.get_resource::<ArmorConstants>(),
         mods,
-    );
+    )
+    .damage;
     let victim_kind = swing_victim(
         world.get::<Npc>(victim).is_some(),
         stats,
