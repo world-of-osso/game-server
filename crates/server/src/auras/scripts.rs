@@ -80,6 +80,11 @@ pub(super) fn check_proc(
     aura: &AuraInstance,
     event: &super::procs::AuraEvent,
 ) -> bool {
+    // Howl's KC action owns readiness charges: only an actual native summon or
+    // Boar action consumes one, never the generic successful-cast dummy proc.
+    if crate::spell_cast::howl::owns_ready(aura.spell_id) {
+        return false;
+    }
     // SIMC_RET_TIER_MID2_DIVINE_PURPOSE_RELATIONSHIP owns these charges;
     // only a different-kind actual spender consumes them, not arbitrary casts.
     if crate::spell_cast::scripts::owns_arbiter_charge(aura.spell_id) {
@@ -397,6 +402,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     crate::spell_cast::toy_coyote::register(&mut scripts);
+    crate::spell_cast::howl::register(&mut scripts);
     super::abundance::register(&mut scripts);
     crate::spell_cast::scripts::holy_priest::register(&mut scripts);
     crate::spell_cast::scripts::prayer_of_mending::register(&mut scripts);

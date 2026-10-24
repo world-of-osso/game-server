@@ -2532,6 +2532,9 @@ fn state_interrupts(world: &mut World, unit: Entity) {
         auras.bypass_change_detection().spec = spec;
     }
     interrupt_auras(world, unit, flags, None);
+    if flags[0] & ENTERING_COMBAT != 0 {
+        procs::enter_combat(world, unit);
+    }
     // Proc-derived interrupt flags approximate other TC call sites (triggered casts
     // skip Action there), so only these state changes end matching channels.
     crate::spell_cast::interrupt_channel_with_flags(world, unit, flags);

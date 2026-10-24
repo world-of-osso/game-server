@@ -1,5 +1,9 @@
 # Auras
 
+## Howl native combat-entry policy — 2026-10-24
+
+`state_interrupts` emits native actor proc0x08000000 once on the actual EnteringCombat edge, after matching aura interrupts (TC a352b1fa Unit.cpp9250–9251). The approved Howl policy uses the native471876 proc mask, DB2 cooldown/readiness expiry and ordinary KC's action lifecycle. A private per-owner next-step component holds only Wyvern/Boar/Bear order; no custom clock. Actual owned summon identity gates Wyvern/Bear readiness consumption; the existing summon hook alone earns Cry. Generic successful-cast procs cannot independently spend these named script-owned charges. Bear preserves native aura428→471990; Boar >5-target reduction and Bear AI remain unqualified. [Contract](../../specs/spell-dummy-scripts.md#bm-howl-summon-cycle), [exact RED/proof limits](../../handoffs/bm-howl-proof-ledger.md); candidate GREEN/integration pending.
+
 ## Explicit proc source presence — 2026-10-23
 
 `import_spell_proc_presence.py` publishes only the audited effective TC IDs to `tdb_spell_proc(SpellId PRIMARY KEY)`, verifying every base/update source hash first. One transaction reconciles IDs while preserving retained value columns and unrelated tables. It does not parse SQL again or apply numeric proc overrides. The supplied audit pins1283base rows plus7updates yielding1291IDs. [Contract and source/qualification ledger](../../handoffs/feral-source-census.md#explicit-tdb-provenance-boundary). Runtime provenance/refusal is a separate follow-up, not part of the shared action-knowledge helper.

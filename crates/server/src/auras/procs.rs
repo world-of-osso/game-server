@@ -63,6 +63,8 @@ pub const PROC_DEAL_HELPFUL_PERIODIC: u32 = 0x200000;
 pub const PROC_MAIN_HAND_WEAPON_SWING: u32 = 0x400000;
 pub const PROC_OFF_HAND_WEAPON_SWING: u32 = 0x800000;
 pub const PROC_DEATH: u32 = 0x0100_0000;
+/// TC a352b1fa SpellMgr.h137 / Unit.cpp9250–9251.
+pub const PROC_ENTER_COMBAT: u32 = 0x0800_0000;
 pub const PROC_TAKE_HELPFUL_PERIODIC: u32 = 0x8000_0000;
 /// `ProcTypeMask_1` (TrinityCore `ProcFlags2`).
 pub const PROC2_CAST_SUCCESSFUL: u32 = 0x4;
@@ -160,6 +162,26 @@ pub fn push_event(world: &mut World, event: AuraEvent) {
     if let Some(mut pending) = world.get_resource_mut::<PendingAuraEvents>() {
         pending.0.push(event);
     }
+}
+
+/// TC Unit::OnCombatStart emits this once after entering-combat interrupts.
+pub(super) fn enter_combat(world: &mut World, actor: Entity) {
+    push_event(
+        world,
+        AuraEvent {
+            actor,
+            target: None,
+            actor_mask: [PROC_ENTER_COMBAT, 0],
+            target_mask: [0; 2],
+            spell_id: None,
+            can_proc: true,
+            cast_used_proc_modifier: false,
+            periodic: false,
+            damage: 0.0,
+            heal: None,
+            reflected: false,
+        },
+    );
 }
 
 /// Actor/target masks of a spell landing on a target, by `DefenseType`

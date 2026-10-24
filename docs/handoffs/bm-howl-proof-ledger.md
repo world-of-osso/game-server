@@ -55,6 +55,14 @@ ad61e63c0 records one native diagnostic PASS15.14s: KC34026 and Cobra193455 both
 
 Next pre-implementation controls require the real native-clock/KC sequence Wyvern1222271 summon → Boar471936 native action → Bear471990 summon, and no cycle after removing the root passive. Boar is literally a direct damage action, not an invented creature. SimC4797–4848 supplies that action linkage only; its estimated travel speed50, bug-toggle target cap and ranged-attack wrapper must not replace native data/payload handling. The independent source read confused the missing Howl aura cooldown with KC spell history; rejected that diagnosis because ordinary KC already executes. No generic spell-history change follows from this RED.
 
+## Native cycle runtime candidate, qualification pending
+
+168d5962f cycle contract is genuine1FAIL/1PASS18.69s: actual KC>0, no native action sequence versus Wyvern1222271/Boar471936/Bear471990; removed-root control stays empty. Clean1m22s compile. Prior9dd failure was a fixture API compile error, not gameplay RED; corrected with existing `remove_auras` and never executed a stale ELF.
+
+Native combat-entry proc now follows TC Unit.cpp9250–9251 after entering-combat interrupts. Selected471876 starts native471877; its natural expiry rotates471878→472324→472325. Ready expiry/consumption rearms the native cooldown. No timers, readiness, resources, coefficients or stats are assigned by the native tests. Real KC's existing dummy handler launches the selected native action; readiness uses actual native charge spending only after a new matching owned summon exists (or native Boar impact launches). Generic successful-cast dummy procs cannot independently consume these script-owned ready charges. Cry remains exclusively in the actual Wyvern summon hook. Bear uses authentic471993→aura428→471990; no direct replacement summon or actor invention.
+
+Boar uses actual471936/471938 payloads and native root effect1 pass count; native target selection and coefficients stay untouched. Parent2026-10-24 explicitly excluded Boar damage reduction beyond the native5-target threshold and Bear AI. These are unqualified gaps, not implicit SimC math/travel/bug-toggle implementations. Native Dummy markers remain visible; no no-op handler hides them. Cycle order is not full beast damage/AI or whole-BM parity certification. Candidate GREEN and parent integration remain pending; frozen ownerb9 is untouched.
+
 ## Open
 
 - [x] Actual native child entity/lifetime and selected/removed-passive Cry slice qualified separately.

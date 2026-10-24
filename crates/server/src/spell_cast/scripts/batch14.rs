@@ -80,6 +80,7 @@ pub(super) fn command_pet(world: &mut World, caster: Entity, target: Entity, dep
 pub(super) fn command_beast(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     const BEAST_COMMAND_DAMAGE: u32 = 83381;
     cast_pet_command(world, caster, target, BEAST_COMMAND_DAMAGE, depth);
+    crate::spell_cast::howl::consume_on_kill_command(world, caster, target, depth);
 }
 
 /// HUNTER_WILD_THRASH_PET_CHILD_SIMC, hunter7562–7563/6796–6837.
