@@ -18,6 +18,7 @@ mod immunity;
 mod immunity_tests;
 mod load;
 pub mod positivity;
+mod proc_definition;
 #[cfg(test)]
 pub(crate) mod serverside_tests;
 mod trait_data;
@@ -250,8 +251,17 @@ pub struct SpellPowerCost {
     pub alt_power_bar_id: u32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum ProcDefinitionSource {
+    Generated,
+    ExplicitTdb,
+    Scripted,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct SpellAuraOptions {
+    /// None disables proc generation, not stacking or charge metadata.
+    pub proc_definition_source: Option<ProcDefinitionSource>,
     /// Max stacks (`CumulativeAura`).
     pub cumulative_aura: u32,
     pub proc_category_recovery_ms: i32,

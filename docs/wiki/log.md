@@ -75,7 +75,7 @@ Pinned SimC76f8118 selects timed adds on a run row but its child Mortal Strike s
 
 ## 2026-10-23 — Explicit proc provenance importer
 
-[Proc source presence](systems/auras.md#explicit-proc-source-presence--2026-10-23) consumes the audited1291effective TC IDs, verifies8pinned source files, and transactionally publishes presence only. Later numeric columns remain separately owned; no refusal guard or chance/mask overlay is included. Focused CLI RED recorded before implementation; qualification follows the committed producer.
+[Proc source presence](systems/auras.md#explicit-proc-source-presence--2026-10-23) consumes the audited1291effective TC IDs, verifies8pinned source files, and transactionally publishes presence only. Later numeric columns remain separately owned; no refusal guard or chance/mask overlay is included. Focused CLI RED→5/5GREEN1.31s; exact1291private IDs imported after8source hashes verified. Separate native refusal RED at92d89f8c1 observes unsafe Savage during actor bootstrap; explicit InfectedWounds passes, Frantic's initial-absence control is corrected to preserve its legitimate bootstrap proc. Generated/ExplicitTdb/Scripted runtime provenance and generic TC refusal are implemented pending GREEN; no numeric overlays.
 
 ## 2026-10-23 — Feral baseline and action-knowledge census
 
