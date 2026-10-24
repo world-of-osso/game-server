@@ -513,13 +513,13 @@ fn dps_parity_demo_alternate_imp_identity_matches_native_hog_imp_power() {
 fn dps_parity_demo_alternate_imp_native_cast_list_does_not_inject_policy_energy() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_authored_guardian_control();
-    // Hypothetical future native list uses actual TDB416's3110. This is not a
-    // published143622 row, and the project policy must not substitute104318.
+    // Hypothetical future native list uses actual Mana-cost ShadowBolt686.
+    // This is not a published143622 row; never inject104318/Energy.
     run.app
         .world_mut()
         .resource_mut::<crate::spell_cast::guardian::GuardianSpells>()
         .spells
-        .insert(143622, vec![3110]);
+        .insert(143622, vec![686]);
     let imp = trigger_native_imp(&mut run, 279910);
     assert!(
         crate::spell_cast::powers::power_value(
@@ -553,11 +553,7 @@ fn dps_parity_demo_alternate_imp_native_cast_list_does_not_inject_policy_energy(
     );
 }
 
-#[test]
-#[ignore = "native267216 first+12s periodic association; private native143622 inputs required"]
-fn dps_parity_demo_inner_demons_uses_native_period_without_tick_zero() {
-    let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_authored_guardian_control();
+fn restart_selected_inner_demons(run: &mut Run) -> f64 {
     let actor = run.actor;
     crate::auras::remove_auras(
         run.app.world_mut(),
@@ -565,9 +561,31 @@ fn dps_parity_demo_inner_demons_uses_native_period_without_tick_zero() {
         crate::auras::RemoveReason::Consumed,
         |aura| aura.spell_id == 267216,
     );
-    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 267216, Some(actor), 0);
-    assert!(crate::auras::has_aura(run.app.world(), actor, 267216));
-    let started = crate::spell_cast::now(run.app.world());
+    // Let the real KnownSpell passive reapply. A manual Cast-source aura would
+    // coexist with it, manufacturing two schedulers rather than testing one.
+    run.app.update();
+    let count = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .filter(|aura| aura.spell_id == 267216)
+        .count();
+    assert_eq!(
+        count, 1,
+        "one actual selected passive aura, not two fixture sources"
+    );
+    crate::spell_cast::now(run.app.world())
+}
+
+#[test]
+#[ignore = "native267216 first+12s periodic association; private native143622 inputs required"]
+fn dps_parity_demo_inner_demons_uses_native_period_without_tick_zero() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_authored_guardian_control();
+    let actor = run.actor;
+    let started = restart_selected_inner_demons(&mut run);
     let period_ms = run
         .app
         .world()
@@ -669,12 +687,6 @@ fn dps_parity_demo_inner_demons_native_trigger_or_script_wins() {
     for scripted in [false, true] {
         let mut run = prepare_authored_guardian_control();
         let actor = run.actor;
-        crate::auras::remove_auras(
-            run.app.world_mut(),
-            actor,
-            crate::auras::RemoveReason::Consumed,
-            |aura| aura.spell_id == 267216,
-        );
         if scripted {
             // Hypothetical native registration fixture, not an observed TC hook.
             run.app
@@ -703,7 +715,7 @@ fn dps_parity_demo_inner_demons_native_trigger_or_script_wins() {
                 .trigger_spell = 104317;
             store.replace_fixture_spell(spell);
         }
-        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 267216, Some(actor), 0);
+        restart_selected_inner_demons(&mut run);
         let before = run.app.world().resource::<ObservedCombatEvents>().0.len();
         for _ in 0..500 {
             run.app.update();
