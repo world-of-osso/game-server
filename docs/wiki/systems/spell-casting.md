@@ -1,5 +1,15 @@
 # Spell Casting
 
+## Haste-affected continuous resource regeneration — 2026-10-23
+
+`PowerType.Flags0x400` now selects live native haste for continuous rates, before the existing flat aura85 term. Current native flagged rows are Focus, Energy, Runes and Essence; runes retain their already-hasted separate cooldown producer, and pet Focus retains its discrete native timer. Unflagged Mana keeps its base-mana rate. No class-specific haste list, injected stats or resource grants.
+
+`powers::potential_power_regen(&World, Entity, PowerType)` reads the same pure modified-rate and phase/limit calculations as the gameplay tick, without cap clipping or cached/wire mutation. Missing/unsupported continuous pools return `None`; discrete pet Focus/runes remain explicitly outside this API. Applied/cache/wire rates still become zero at the cap. The NativeFacts one-call adapter is consumer-owned and pending integration; producer code is committed before GREEN, not a completion claim. See [casting contract](../../specs/cast-presentation.md) and [fact packet](../../handoffs/native-resource-facts-packet.md).
+
+Native RED2ad5: Focus8.75 versus11.072727 at26.545% haste and WW Energy11 versus16.84 at53.09%; unflagged Mana2560 passes. Explicit-stat Rogue0/25 controls4efc fail cached facts0 versus10/12.5; those are not native-geared parity. After crate split, real capped BM/WW/Mana packetecaf has three genuine fact REDs22.15s:0 versus11.072727/16.84/2560, with applied/wire0 retained. GREEN and post-fix DPS receipts remain pending.
+
+Sources: native70448 `PowerType`; TC a352b1fa `Unit.cpp11058–11071` inverse `ModHasteRegen`, `StatSystem.cpp874–938` native percentage/flat ordering and its explicit haste TODO; pinned SimC76f8118 `player.cpp4950–4957` haste-affected resource formula. This does not falsely attribute completed haste scaling to TC's TODO path.
+
 ## Protection producer dispatch — 2026-10-22
 
 Native Attr3 `ALWAYS_HIT` bypasses avoidance after school/mechanic immunity; missile launch still evaluates reflection. Source and deterministic native Evasion RED/control evidence live in the [producer contract](../../specs/protection-damage-producers.md#native-always_hit-defense-reader); d1335d807:4PASS17.98s/no warnings, including original charge primary/splash/stun assertions.

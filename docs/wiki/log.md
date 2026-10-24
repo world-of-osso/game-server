@@ -1,3 +1,7 @@
+## 2026-10-23 — Haste-affected resource potential producer
+
+[Resource potential](systems/spell-casting.md#haste-affected-continuous-resource-regeneration--2026-10-23): native0x400 flags and live haste feed one uncapped rate calculation reused by actual regen; cap wire/cache remains0. Focus/Energy native rate RED2ad5, explicit0/25 Rogue cap RED4efc and three capped native fact REDecaf are qualified; producer implemented, NativeFacts consumer/GREEN still pending. Discrete pet Focus and separate rune cooldowns are unchanged; no DPS parity claim.
+
 ## 2026-10-23 — Frenzy ranked-point timing oracle
 
 [Native Frenzy](investigations/follower-data.md#native-frenzy-pet-cadence--2026-10-21): points24184 Multiply curve94381 maps rank2→2, so raw20 becomes effective40. Correct29/40-frame runtime contradicted the raw-point test's33.333 expectation. Oracle now reads the active ranked amount, preserves the one-frame bound and owner/guardian isolation; production unchanged, corrected GREEN pending. Local bwrap Python-spawn failure is not gameplay RED.

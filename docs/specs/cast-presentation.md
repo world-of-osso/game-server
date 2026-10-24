@@ -58,7 +58,7 @@ Existing kit/test conflicts must be reported before GREEN, not weakened to fit t
 - `crates/server/src/spell_cast/mod.rs`: receivers, validation, start/complete/cancel, `SpellHistory`, messages.
 - `crates/server/src/spell_cast/targets.rs`: implicit targets, relations, range.
 - `crates/server/src/spell_cast/effects.rs`: effect registry, damage/heal paths.
-- `crates/server/src/spell_cast/powers.rs`: `PowerTypeTable`, `PowerPools`, regen, `UnitPowers` sync.
+- `crates/server/src/spell_cast/powers.rs`: native0x400 flags, shared uncapped potential/applied regen calculations, `PowerPools` and `UnitPowers` sync.
 - `crates/server/src/spell_cast/runes.rs`: per-rune cooldowns and `UnitRunes` sync.
 - `crates/server/src/networking.rs`: `Moving` input marker.
 - `crates/server/src/combat.rs`: `enter_combat`, `mark_npc_dead_world`.
