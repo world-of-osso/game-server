@@ -1,6 +1,6 @@
-## 2026-10-24 — WDP native enabler RED
+## 2026-10-24 — WDP native enabler RED→GREEN
 
-[WDP enabler policy](../handoffs/ww-wdp-enabler-proof-ledger.md): after installing declared fixture lifetimes, actual selected owner/RSK/FoF/overlapping-CD premises pass and missing196742 fails14.46s. Bounded selected-owner root-OnHit producer uses generic native1000ms aura; native152175 gate/damage unchanged. SimC measured1500ms grace explicitly excluded. Separateww-wdp-enabler branch; ww-monk-parity pinnedc4 during gate. Native GREEN pending.
+[WDP enabler policy](../handoffs/ww-wdp-enabler-proof-ledger.md): after installing declared fixture lifetimes, actual selected owner/RSK/FoF/overlapping-CD premises pass and missing196742 fails14.46s. Bounded selected-owner root-OnHit producer uses generic native1000ms aura; native152175 gate/damage unchanged. SimC measured1500ms grace explicitly excluded. Separateww-wdp-enabler branch; ww-monk-parity pinnedc4 during gate. Owned1000ms/actual one-CD-negative and valid unselected-owner/overlap controls now GREEN across013/e072 (unchanged b275production). Fresh-backup-EACH300s89384.0867ST/106899.63three-target; still no WDPcasts/damage and far outside numerical band.
 
 ## 2026-10-24 — Shared pool-for-next resource contract
 

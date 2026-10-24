@@ -1,3 +1,4 @@
+- [WDP native enabler](../handoffs/ww-wdp-enabler-proof-ledger.md) — strictRED→native1000ms/one-CD/unselected-owner GREEN; enabler-only, current89384ST/106900three-target remains outside band and no WDPcasts/damage.
 - [FIRST / native-order cycle selectors](systems/simc-apl.md#capability--proof-matrix) —14775's bare/explicit FIRST and native-order cycles merged from2cd5fdaa9; original38GREEN proof separate from current Feral reporter recheck.
 - [Selected RWK native lifecycle](../handoffs/ww-rwk-producer-proof-ledger.md) — natural producer, actual RSK reset, child and one-use consumption/unselected owner;7GREEN atf2c, numerical band and sourceAoE open.
 - [Self-cast target_if readiness context](../handoffs/self-target-context-proof-ledger.md) — actual Zenith RED→GREEN, four WW native controls plus25 shared regressions; context/cast-target mapping, no default fallback. Numerical band open.
