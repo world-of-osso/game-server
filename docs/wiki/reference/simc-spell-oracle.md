@@ -61,7 +61,7 @@ The original oracle at1.004s has two real117418 hits: tier-extra17604.072313 (ra
 ## Sources
 
 - [CLI](../../../scripts/dps_parity/simc_spell_oracle.py), [batch driver map](../../../scripts/dps_parity/simc_spell_oracle_batch.py), [sourced prerequisite plans](../../../scripts/dps_parity/simc_spell_oracle_plans.json), [recorded tests](../../../scripts/dps_parity/test_simc_spell_oracle.py).
-- [Native receipt fields](../../../crates/server/src/dungeon_simulator/dps_parity/report.rs); [factor comparison consumer](../../../scripts/dps_parity/native_spell_diff.py).
+- [Native receipt fields](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/report.rs); [factor comparison consumer](../../../scripts/dps_parity/native_spell_diff.py).
 - [Parity specification](../../specs/dps-parity.md).
 
 ## See Also
