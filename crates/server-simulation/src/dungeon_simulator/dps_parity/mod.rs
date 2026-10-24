@@ -19,6 +19,7 @@ mod ret_empyrean_tests;
 mod ret_expurgation_tests;
 mod ret_purpose_tests;
 mod ret_rotation;
+mod ret_sentence_tests;
 mod ret_tier_tests;
 pub(crate) mod single_spell;
 mod windwalker_rotation;
