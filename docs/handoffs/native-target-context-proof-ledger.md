@@ -1,24 +1,37 @@
 # Shared native target context API
 
-Main requested this API for14781's literal Dev adapter. Lifecycle217f38d8f stays frozen in bt1056; tests-only acceptance e3ad46ee6 has6follow-upGREEN/15unique cases with prior14. New branch `arms-native-target-api` includes current master8e7c7a685 via5d9f60fc5; conflict resolution retained both wiki index entries.14781's72f993fdf visibility seam cherry-picked as61b9fc3dd; it changes no native cast behavior.
+Main requested this API for14781's literal Dev adapter. Lifecycle217f38d8f stays frozen in bt1056; tests-only acceptance e3ad46ee6 has6follow-upGREEN/15unique cases with prior14. Branch `arms-native-target-api` includes master8e7c7a685 via5d9f60fc5; merge retained both wiki index entries.14781's72f993fdf visibility seam was cherry-picked as61b9fc3dd; it changes no native cast behavior.
 
-## Active scope / proof matrix
+## Behavioral RED
 
-| Capability | Intended native boundary | Proof |
+At4be688315: `--lib native_target_context_ -- --ignored --nocapture --test-threads=1` reaches8genuine assertion failures in15.86s, exit101. Runtime premises pass, including actual protocol rank1 Fire Breath aura20s. Current target80% instead of explicit25%, stale/None context borrows selection, target candidates/active_dot/movement/casting/refreshable are unavailable. Two scaffold dead-field warnings are removed by implementing field consumers, never suppressed. Diagnostics: `arms-parity-2026-10-23/target-context-lib-red.{log,proof.json}`, same read-onlydd1de231e32c snapshot as earlier native proofs.
+
+At68e24f49c the historical `--bin game-server` command compiled11m44 then executed0tests after the merged catalog/main split. NOT behavioral RED. Count guard rejected it; `target-context-red.*` retained. Current library runner requires all8cases; no stale executable fallback.
+
+## Capability / proof matrix
+
+| Capability | Native representation | Proof |
 |---|---|---|
-| Explicit current target separate from proposed Action.target | Actual entity supplied by controller; invalid/None context cannot redirect to actor selection | RED probe committed; runtime pending |
-| Ordered per-action candidates | Supplied native entity order, ordinary native target checks (range etc), never readiness borrowed from first target | RED probe committed; runtime pending |
-| active_dot alias | Bound native aura ID; actual owned active auras across supplied native universe, excludes foreign caster | RED probe committed; runtime pending |
-| Movement event absent in this fixture | Pinned no-event values, not inferred from unit movement; dungeon timing stays named unavailable | RED probe committed; runtime pending |
-| Casting predicate | Actual selected target has no native CastState: known false, not an invented blanket constant; active reaction policy still requires source qualification | No-cast RED probe committed; runtime pending |
-| Fire Breath refreshable | Adapter must supply native freshly resolved refresh window; raw357209 duration/max are2s but native empower release rewrites them by rank + Blast Furnace | Pending14781 native alias/window data; no fabricated timer |
+| Current versus proposed row target | `with_targets(current: Option<Entity>, ordered: &[Entity])`; explicit Action.target wins, invalid/None context cannot redirect | Genuine RED; implementation GREEN pending |
+| Ordered per-action candidates | Actual universe order plus ordinary native target validator/range/LOS/life/map checks, not power/cooldown readiness | Genuine RED; implementation GREEN pending |
+| active_dot alias | Bound actual aura ID; owned unexpired instances across supplied living targets, excludes foreign caster | Genuine RED; implementation GREEN pending |
+| Movement event absent in dummy fixture | Pinned no-event values; not inferred from unit movement; dungeon timing unavailable | Genuine RED; implementation GREEN pending |
+| casting.react with no native cast | Actual selected target's CastState absence means known false | Genuine RED; implementation GREEN pending; active cast reaction remains NATIVE_CASTING_REACTION_UNAVAILABLE, no invented delay |
+| Refreshable | Explicit native metadata resolver plus Pandemic/final-tick/always/never policy; ordinary native duration modifiers; actual unpaid-tick helper | Rend + real20s Fire Breath reach genuine unsupported-property RED; consumer GREEN pending |
 
-`with_targets(current: Option<Entity>, ordered: &[Entity])` currently exists only as a compile scaffold for real behavioral RED; it does not install context yet. `Bindings.dot_refresh` adds explicit freshly resolved native SpellInfo callbacks and sourced Pandemic/final-tick/always/never policies; fields are scaffolding until the property consumer is implemented. Two further probes assert actual owned Rend policy and real native protocol rank1 Fire Breath20s versus raw3572092s refresh windows. No API completion claim. Existing constructors/actual actor selection remain usable; explicit context will never fall back when invalid.
+## Consumer API
 
-Sources: existing `Action.target`, `ActionFacts::target_ids`; pinned `action.cpp2435–2508,4630–4645,5362–5453`, `dot.cpp458–477`, `raid_event.cpp3068–3141`; native target validator and `scripts/empower_evoker.rs::build_fire_breath_release`. Native `auras::remaining_periodic_ticks` is already on merged master and must be reused rather than reconstructing its phase.
+Construct ordinary facts, then install actual controller context:
 
-## Invalid initial runner / correction
+```rust
+NativeFacts::new(world, actor, bindings, encounter, targets.len())
+    .with_targets(Some(current), targets)
+```
 
-At68e24f49c the old `--bin game-server` command compiled11m44 then executed0tests after the merged catalog/main split. This is NOT behavioral RED. The runner's count guard rejected it; logs/receipt retained as `target-context-red.*`. Correct target is now `--lib native_target_context_ -- --ignored --nocapture --test-threads=1`, expected8cases. No source fix was inferred from the0-test result.
+An explicitly configured `None` or expired current target is not replaced by the actor's CombatTarget. Without explicit context, existing consumers still read actual native selection; candidate/active_dot queries require a real universe. `ActionFacts::target_ids` preserves order and uses target-only admission, leaving ordinary cast readiness in Prepared. Unknown/unsupported native eligibility errors propagate.
 
-The reported first-target dispatch bug was retracted by14781 after source review: c7e118a75 already keys Prepared readiness and execution by `(action,target)`. No redundant patch or Living Flame test was added. No DPS, reference, canonical DB or template changes.
+Aura aliases remain in `Bindings.buffs`. `Bindings.dot_refresh[alias] = DotRefresh { resolve, policy }` supplies `ResolveDotSpell = fn(&World, Entity, u32) -> Result<SpellInfo,String>` and `DotRefreshPolicy::{Pandemic,FinalTick,Always,Never}`. Resolver identity must match the alias. `native_dot_spell` supplies ordinary native metadata; empowered adapters resolve an actually eligible stage with the native release helper. Shared `auras::fresh_duration_ms` applies ordinary caster/target modifiers to that resolved SpellInfo. Raw357209's2s row is not Fire Breath rank1's20s refresh duration. FinalTick reuses `auras::remaining_periodic_ticks`; no reconstructed scheduler phase or snapshot-by-division.
+
+Sources: pinned `action.cpp2435–2508,4630–4645,5362–5453`, `dot.cpp458–477`, `raid_event.cpp3068–3141`; native target validator, aura duration producer and `scripts/empower_evoker.rs::build_fire_breath_release`.
+
+The reported first-target dispatch bug was retracted by14781: c7e118a75 already keys Prepared readiness/execution by `(action,target)`. No redundant dispatch patch or Living Flame test was added. No DPS, reference, canonical DB or template changes. GREEN/integration remains pending; this is not an API-ready claim.
