@@ -171,7 +171,7 @@ fn native_proc_values_generated_reflect_only_hit_mask() {
 #[test]
 #[ignore = "native generated critical-only charge scope"]
 fn native_proc_values_generated_critical_only_hit_mask() {
-    assert_generated_hit(40087, 2);
+    assert_generated_hit(40603, 2);
 }
 
 #[test]
@@ -183,7 +183,7 @@ fn native_proc_values_generated_block_only_hit_mask() {
 #[test]
 #[ignore = "native generated missed-attack-only scope"]
 fn native_proc_values_generated_miss_only_hit_mask() {
-    assert_generated_hit(62052, 4);
+    assert_generated_hit(63767, 4);
 }
 
 #[test]
