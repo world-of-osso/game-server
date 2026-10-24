@@ -209,6 +209,80 @@ mod tests {
         );
     }
 
+    #[test]
+    #[ignore = "requires exact spec103 profile/traits and native private DB"]
+    fn feral_literal_native_maximum_energy_reads_modified_bite_cost_without_spending() {
+        use crate::spell_cast::powers::PowerPools;
+        use server::simc_apl::{Action, ActionFacts};
+        let mut run = prepare(103, 1).unwrap();
+        let actor = run.actor;
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 102543),
+            "Incarnation policy remains a separate gap"
+        );
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 391882));
+        let bindings = super::bindings::build(run.app.world(), actor).unwrap();
+        let encounter = crate::simc_apl_native::Encounter::Fixture {
+            started_at: crate::spell_cast::now(run.app.world()),
+            duration: 300.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        };
+        let action = Action {
+            name: "ferocious_bite".into(),
+            target: None,
+            options: Default::default(),
+        };
+        // Native70448:22568 costs25 Energy and has a25 extra cap; actual391882
+        // effect0 is a -100% Energy-cost modifier. No proc eligibility is asserted.
+        for (modifier, expected) in [(None, 50.0), (Some(391882), 25.0)] {
+            if let Some(spell_id) = modifier {
+                crate::auras::apply_aura(
+                    run.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: actor,
+                        target: actor,
+                        spell_id,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+                assert!(crate::auras::has_aura(run.app.world(), actor, spell_id));
+            }
+            let before = run.app.world().get::<PowerPools>(actor).unwrap().clone();
+            let last_cast = run
+                .app
+                .world()
+                .get::<crate::spell_cast::SpellHistory>(actor)
+                .and_then(|history| history.last_successful_cast());
+            for _ in 0..3 {
+                let facts = super::facts::FeralFacts::read(
+                    run.app.world_mut(),
+                    actor,
+                    &bindings,
+                    encounter,
+                    &run.targets,
+                )
+                .unwrap();
+                assert_eq!(
+                    facts.value_for(&action, "maximum_energy").unwrap(),
+                    expected
+                );
+            }
+            assert_eq!(
+                run.app.world().get::<PowerPools>(actor).unwrap(),
+                &before,
+                "reading a threshold must neither fill nor spend any real pool"
+            );
+            assert_eq!(
+                run.app
+                    .world()
+                    .get::<crate::spell_cast::SpellHistory>(actor)
+                    .and_then(|history| history.last_successful_cast()),
+                last_cast
+            );
+        }
+    }
+
     fn apply_native_dot(run: &mut Run, spell_id: u32) {
         crate::auras::apply_aura(
             run.app.world_mut(),
