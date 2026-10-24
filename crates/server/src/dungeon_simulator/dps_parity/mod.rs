@@ -1,7 +1,10 @@
-//! Native 300s dummy qualification. This measures the existing kit, not a new rotation.
+//! Native 300s dummy qualification with explicit per-spec fixture controllers.
 mod engagement_tests;
 mod inputs;
+pub(crate) mod literal_rotation;
+mod periodic_crit_tests;
 mod pet_child_tests;
+mod pet_melee_tests;
 mod pet_stats_tests;
 mod player_rotation;
 mod power_tests;
@@ -26,6 +29,7 @@ struct Run {
     profile: inputs::Profile,
     gaps: Vec<String>,
     player_rotation: Option<player_rotation::PlayerRotation>,
+    windwalker_rotation: Option<windwalker_rotation::Rotation>,
 }
 
 fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, String> {
@@ -141,6 +145,7 @@ fn prepare_reference(
         profile,
         gaps,
         player_rotation: None,
+        windwalker_rotation: None,
     })
 }
 
@@ -230,6 +235,17 @@ fn advance_combat(run: &mut Run) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>)
             run.profile.spec_id,
             start_time,
         )?);
+    } else if run.profile.spec_id == 269 {
+        let encounter = crate::simc_apl_native::Encounter::Fixture {
+            started_at: start_time,
+            duration: f64::from(TICKS) / 20.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        };
+        run.windwalker_rotation = Some(windwalker_rotation::Rotation::load(
+            run.app.world_mut(),
+            run.actor,
+            encounter,
+        )?);
     }
     let mut buffs = BTreeMap::new();
     let mut samples = vec![report::engagement(run.app.world(), run.actor, &run.targets)];
@@ -267,6 +283,9 @@ fn drive_player(run: &mut Run) -> Result<(), String> {
     if let Some(rotation) = &mut run.player_rotation {
         rotation.drive(run.app.world_mut(), run.actor, run.targets[0])?;
     }
+    if let Some(rotation) = &mut run.windwalker_rotation {
+        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    }
     Ok(())
 }
 
@@ -282,7 +301,8 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     Ok(
         json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "actor_kind": if run.player_rotation.is_some() { "player" } else { "follower" },
-        "driver": if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "driver": if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "windwalker_rotation": run.windwalker_rotation.as_ref().map(|rotation| rotation.report()),
         "assisted_decisions": run.player_rotation.as_ref().map_or(0, |rotation| rotation.decisions),
         "wall_seconds": started.elapsed().as_secs_f64(), "seed": 70448, "combat": combat,
         "target_health_policy": {"name": "SIMC_FIXED_TIME_TARGET_HEALTH", "clock": "global_fight",

@@ -1,6 +1,6 @@
 //! Bounded paths derived from local Mainline 12.1.0.69933 rows.
 use bevy::prelude::*;
-use shared::components::{Health, PowerType};
+use shared::components::Health;
 
 use super::{reduce_cooldown, script_effect_value};
 use crate::spell_cast::{self, PlannedEffect, TargetPlan, targets};
@@ -12,7 +12,6 @@ pub(super) const KILL_SHOT: u32 = 53351;
 pub(super) const MANGLE: u32 = 33917;
 pub(super) const VIVIFY: u32 = 116670;
 pub(super) const RENEWING_MIST_CAST: u32 = 115151;
-pub(super) const CHAIN_LIGHTNING: u32 = 188443;
 pub(super) const HOWLING_BLAST: u32 = 49184;
 pub(super) const SANCTIFY: u32 = 34861;
 pub(super) const ERUPTION: u32 = 395160;
@@ -21,7 +20,6 @@ const MANGLE_RANK: u32 = 231064;
 const VIVIFY_RANK: u32 = 274586;
 const RENEWING_MIST: u32 = 119611;
 const VIVIFY_SPLASH: u32 = 425804;
-const ELEMENTAL_RESOURCE: u32 = 343725;
 const FROST_FEVER: u32 = 55095;
 const ERUPTION_EXTENSION: u32 = 395153;
 const EBON_MIGHT: u32 = 395152;
@@ -165,14 +163,6 @@ fn select_vivify_allies(
             })
     });
     units
-}
-
-/// 188443: 343725s5 Maelstrom for each successful target hit, only with passive.
-pub(super) fn chain_lightning(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
-    if crate::auras::has_aura(world, caster, ELEMENTAL_RESOURCE) {
-        let amount = script_effect_value(world, caster, ELEMENTAL_RESOURCE, 4);
-        spell_cast::powers::change_power(world, caster, PowerType::Maelstrom, amount);
-    }
 }
 
 /// 49184 names 55095 on all hit targets. Only its base periodic disease effect
