@@ -9,6 +9,8 @@ const FROST_BOMB_AURA: u32 = 386881;
 const ICY_DEVASTATOR: u32 = 387151;
 const ICY_DEVASTATOR_DAMAGE: u32 = 387152;
 const VAULT_RUNE: u32 = 197204;
+/// TC UnitDefines.h / Creature.cpp949–955: runtime power-regeneration permission.
+const UNIT_FLAG2_REGENERATE_POWER: u32 = 0x800;
 
 #[test]
 fn azure_telash_native_group_zero_spawns_three_owned_runes_at_authored_positions_once() {
@@ -127,12 +129,12 @@ fn azure_telash_native_flag_stops_regen_without_changing_controlled_pools() {
         Some((60.0, 100.0)),
         "authored unit_flags2=0 prevents unauthored baseline regeneration"
     );
-    // Control the existing companion resource path, not actual Telash gameplay.
+    // Control the existing pools, not actual Telash gameplay. Pet::Create1689–1703
+    // grants this real permission; ownership flag8 does not bypass Creature::Regenerate.
     h.app
         .world_mut()
-        .get_mut::<shared::components::UnitFlags>(telash)
-        .unwrap()
-        .0 |= crate::faction::UNIT_FLAG_PLAYER_CONTROLLED;
+        .entity_mut(telash)
+        .insert(shared::components::UnitFlags2(UNIT_FLAG2_REGENERATE_POWER));
     h.advance(0.2);
     let (current, maximum) = power_value(h.app.world(), telash, PowerType::Energy).unwrap();
     assert!(
