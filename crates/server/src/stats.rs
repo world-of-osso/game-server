@@ -746,6 +746,18 @@ pub(crate) fn knows_effect(
     })
 }
 
+/// TC Player.cpp30545–30550: only a known mastery of the active spec enables mastery.
+fn can_use_mastery(
+    class: Option<&ClassInfo>,
+    spec: Option<u32>,
+    known: Option<&KnownSpells>,
+) -> bool {
+    let Some(spec) = spec.and_then(|id| class?.specs.iter().find(|spec| spec.spec_id == id)) else {
+        return false;
+    };
+    known.is_some_and(|known| spec.mastery_spells.iter().any(|&id| known.contains(id)))
+}
+
 fn class_info(classes: Option<&ClassSpells>, class: u8) -> Option<&ClassInfo> {
     classes?.classes.iter().find(|info| info.class_id == class)
 }
@@ -1148,6 +1160,11 @@ pub(crate) fn update_character_stats(
             );
             continue;
         };
+        // TC UpdateMastery gates aura318 and rating together; no implicit base points.
+        if !can_use_mastery(class, spec_id, known) {
+            stats.mastery_points = 0.0;
+            stats.mastery_pct = 0.0;
+        }
         stats.main_hand = gear.main_hand;
         stats.off_hand = gear.off_hand;
         stats.weapon_attack_power = gear.weapon_attack_power;

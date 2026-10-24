@@ -247,9 +247,9 @@ pub fn has_visage_form(race: u8) -> bool {
 }
 
 /// True when a DB2 `RaceMasks` pair (low, high 32 bits) allows the race.
-/// An all-zero mask allows every race.
+/// Zero and explicit all-races masks also admit the source-neutral follower race0.
 pub fn race_mask_allows(race_masks: [u32; 2], race: u8) -> bool {
-    if race_masks == [0, 0] {
+    if matches!(race_masks, [0, 0] | [u32::MAX, u32::MAX]) {
         return true;
     }
     race_mask_has_race(race_masks, race)

@@ -16,11 +16,11 @@ Players get retail 12.x stats on the server. See [character stats](../wiki/syste
 
 ## Mastery base
 
-Raw mastery points equal diminishing-return-adjusted mastery rating plus active aura318 points. The learned native mastery passive supplies its base once; no additional hardcoded base is granted. Removing/relearning that passive updates sheet mastery without retaining or duplicating its base. The active specialization's native coefficient converts raw points to displayed mastery.
+Mastery requires knowing a mastery spell listed by the active specialization (`Player::CanUseMastery`). When enabled, raw mastery points equal diminishing-return-adjusted mastery rating plus active aura318 points; otherwise both raw and displayed mastery are zero. The learned native mastery passive supplies its base once; no additional hardcoded base is granted. Removing/relearning that passive updates sheet mastery without retaining or duplicating its base. The active specialization's native coefficient converts raw points to displayed mastery.
 
 ## Mastery on approved followers
 
-`MasteryAffectsPoints` effects must use the caster's live raw mastery points for players and approved NPC followers with class-derived stats. Refresh amounts when those points or active auras change, without restarting duration, stacks or periodic phase. Ordinary NPCs must not acquire player mastery scaling. Native70448 coefficients remain authoritative, including76671/76857 AP and168534 damage modifiers.
+`MasteryAffectsPoints` effects must use the caster's live raw mastery points for players and approved NPC followers with class-derived stats. Refresh amounts when those points or active auras change, without restarting duration, stacks or periodic phase. Followers must learn universal default-skill passives, including114585 from skill183, even with source-neutral race0; race-restricted skills remain excluded. Ordinary NPCs must not acquire player mastery scaling. Native70448 coefficients remain authoritative, including76671/76857 AP and168534 damage modifiers.
 
 ## Named Warrior stat policies
 
