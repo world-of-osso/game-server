@@ -20,6 +20,11 @@ Merged current master4a2deb367 into native-spell-diff. Resolution retains owner-
 
 [Armor source ledger](investigations/follower-armor-penetration.md): installed ExpectedStat armor1470/K3430 and native450990/280=12 sourced against TC a352b1fa. Real WW follower receipt RED0.300011vs0.273859; explicit player-equivalent class-follower policy implemented, ordinary player-controlled NPC remains excluded. Native policy fraction/damage now proved ata9a17aa4c (39471, rounded stage0.2738695), controls3GREEN13.55s. Observer RED exposed pre280 metadata1470; actual effective armor/K/mitigation scalar now returned from the same native calculations. Current998083262 native3/controls3/math1/forecast8GREEN, exact checker GREEN; TP39471 and all three FoF hit amounts remain unchanged by observation. Max-level player item-level K curve remains a separate unqualified branch.
 ## 2026-10-23 — Exact fixture add lifetimes / target facts
+## 2026-10-23 — Elemental-required numeric min/max
+
+[Shared APL](systems/simc-apl.md#capability--proof-matrix): valid `3>?5`/`3<?5` expressions produce2 actual library RED at170b82d9c; missing lexer operators also reject the unchanged82-row Elemental source. Add pinned minimum/maximum at precedence5 (SimC76f8118 expressions.cpp132–146,213–229,1104–1106); GREEN pending. No native stats, coefficients or literal source changes.
+
+## 2026-10-23 — Periodic critical ticks
 
 [Shared native facts](systems/simc-apl.md#native-binding-boundary): c88e6749e produces genuine2lifecycle RED19.63s/all20 phase observations and4target RED8.90s against current read-only backupdd1de231e32c. Earlier stale-schema setup failure excluded. Actual boundary substeps, per-add Health/TTD/role, selected/owned-aura facts and explicit add events: d07db700c yields14targetedGREEN (2lifecycle27.20s/10native16.45s/main-clock11.98s/combat-refs18.23s; compile24m14,0warnings). Live add-event expression values beyond absent-event cases still need acceptance coverage. Main300s,31146 templates and references unchanged; all-owner3T remeasurement remains lead-owned. [Proof ledger](../handoffs/add-lifetimes-target-facts-proof-ledger.md).
 ## 2026-10-23 — Frenzy ranked-point timing oracle
