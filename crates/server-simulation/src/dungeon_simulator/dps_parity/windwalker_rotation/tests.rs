@@ -459,6 +459,80 @@ fn literal_ww_native_combo_breaker_blackout_earns_rwk_and_delivers_its_child() {
 }
 
 #[test]
+#[ignore = "native selected WDP earns its DB2 aura from real overlapping RSK and FoF cooldowns"]
+fn literal_ww_native_selected_wdp_earns_its_native_cooldown_window() {
+    let _scope = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(269, 1).unwrap();
+    super::super::engage(&mut run);
+    let mut rotation = run.windwalker_rotation.take().unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(run.actor)
+            .unwrap()
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 152175)
+    );
+    let mut overlapping_native_cooldowns = false;
+    let mut earned_duration = None;
+    for _ in 0..600 {
+        rotation
+            .drive(run.app.world_mut(), run.actor, &run.targets)
+            .unwrap();
+        run.app.update();
+        let rsk = rotation
+            .value_for(
+                run.app.world_mut(),
+                run.actor,
+                &run.targets,
+                &action("rising_sun_kick"),
+                "cooldown.rising_sun_kick.remains",
+            )
+            .unwrap();
+        let fof = rotation
+            .value_for(
+                run.app.world_mut(),
+                run.actor,
+                &run.targets,
+                &action("fists_of_fury"),
+                "cooldown.fists_of_fury.remains",
+            )
+            .unwrap();
+        overlapping_native_cooldowns |= rsk > 0.0 && fof > 0.0;
+        if let Some(aura) = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 196742 && aura.caster == run.actor)
+        {
+            earned_duration = Some(aura.duration_ms);
+        }
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    for spell in [107428, 113656] {
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(spell)
+                    && event.kind == CombatLogKind::CastSuccess),
+            "actual native RSK/FoF source cast {spell} must precede the producer test"
+        );
+    }
+    assert!(
+        overlapping_native_cooldowns,
+        "both actual native cooldowns must overlap"
+    );
+    assert_eq!(
+        earned_duration,
+        Some(1000),
+        "selected owner must earn native196742 with DB2's1000ms, not SimC's measured1500ms grace"
+    );
+}
+
+#[test]
 #[ignore = "native earned RWK reset and override consumption; no aura or power grants"]
 fn literal_ww_native_earned_rwk_resets_rsk_and_consumes_its_override() {
     let _scope = crate::random::seed_scope(70448);
