@@ -4332,3 +4332,7 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 - 2026-10-23: [[server-crates]] records five stable catalog modules extracted with unchanged data/logic, canonical imports and updated generator destinations; no test relocations or measured speedup claim.
 - 2026-10-23: [[server-crates]] moves main module declarations/App assembly into the existing lib and keeps a five-line bin; library-artifact source-view test replaces old binary artifact selection. Full suite/census and paired measurements remain pending.
 - 2026-10-23: [[server-crates]] records test-only simulator consumer, canonical graph/receipt/marker support and explicit test-support mode; 44-file move is content-identical, API/cfg wiring awaits compiler/full-suite proof. Seven graph cases have explicit core-prefix migration.
+
+## 2026-10-24 — Alternate Imp native source packet
+
+[Alternate native Wild Imp](investigations/demonology-dps-parity.md#alternate-native-wild-imp-source-qualification): exact279910→14362220s/template/models qualified from native data; three separate project associations approved with TC/TDB absence ledger. Thirty real head-eye rows read back; main owns publication. Lifecycle and periodic-phase RED queued before implementation;334591 excluded.

@@ -221,6 +221,185 @@ fn cast_native_antoran_tyrant(run: &mut Run) -> Entity {
 }
 
 #[test]
+#[ignore = "actual279910/143622 cast-list and energy-fade boundary; private native143622 inputs required"]
+fn dps_parity_demo_native_alternate_imp_casts_and_exhausts_before_native_ttl() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_authored_guardian_control();
+    let actor = run.actor;
+    cast_and_finish(&mut run, actor, 279910);
+    let world = run.app.world_mut();
+    let imps: Vec<_> = world
+        .query::<(
+            Entity,
+            &crate::spell_cast::summon::SummonedCreature,
+            &shared::components::Npc,
+        )>()
+        .iter(world)
+        .filter(|(_, summon, npc)| {
+            summon.owner == actor && summon.spell_id == 279910 && npc.template_id == 143622
+        })
+        .map(|(entity, summon, _)| (entity, summon.expires_at))
+        .collect();
+    assert_eq!(
+        imps.len(),
+        1,
+        "actual279910 must spawn its own143622, not a55659 clone"
+    );
+    let (imp, expires_at) = imps[0];
+    let display = world
+        .get::<shared::components::ModelDisplay>(imp)
+        .unwrap()
+        .display_id;
+    assert!(
+        [77405, 77406, 77407].contains(&display),
+        "native143622 model choice"
+    );
+    let initial_energy =
+        crate::spell_cast::powers::power_value(world, imp, shared::components::PowerType::Energy)
+            .map(|pool| pool.0);
+    let cost = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(104318)
+        .unwrap()
+        .power_costs
+        .iter()
+        .find(|cost| cost.power_type == shared::components::PowerType::Energy as i32)
+        .unwrap()
+        .mana_cost;
+    let started = crate::spell_cast::now(world);
+    let events_before = world.resource::<ObservedCombatEvents>().0.len();
+    for _ in 0..240 {
+        run.app.update();
+    }
+    let world = run.app.world();
+    let events = &world.resource::<ObservedCombatEvents>().0[events_before..];
+    let casts = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(imp.to_bits())
+                && event.spell_id == Some(104318)
+                && event.kind == CombatLogKind::CastSuccess
+        })
+        .count();
+    let damage: i64 = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(imp.to_bits())
+                && event.spell_id == Some(104318)
+                && event.kind == CombatLogKind::Damage
+        })
+        .map(|event| i64::from(event.amount))
+        .sum();
+    let remaining = world
+        .get::<crate::spell_cast::summon::SummonedCreature>(imp)
+        .is_some();
+    let path = inputs::directory()
+        .unwrap()
+        .join("266.alternate-imp-lifecycle.json");
+    std::fs::write(
+        &path,
+        serde_json::to_vec_pretty(&json!({
+            "root": 279910, "entry": 143622, "display": display, "native_expires_at": expires_at,
+            "started_at": started, "observed_at": crate::spell_cast::now(world),
+            "initial_energy": initial_energy, "native_cost": cost, "casts": casts,
+            "damage": damage, "remaining": remaining
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        initial_energy,
+        Some(100.0),
+        "native143622 needs its source-bound caster pool; {}",
+        path.display()
+    );
+    assert_eq!(cost, 20, "334591 cost policy is excluded");
+    assert_eq!(
+        casts,
+        5,
+        "real native100Energy/20cost must exhaust without regeneration; {}",
+        path.display()
+    );
+    assert!(
+        damage > 0 && !remaining,
+        "real alternate Imp must deal damage and energy-fade before20s; {}",
+        path.display()
+    );
+}
+
+#[test]
+#[ignore = "native267216 first+12s periodic association; private native143622 inputs required"]
+fn dps_parity_demo_inner_demons_uses_native_period_without_tick_zero() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_authored_guardian_control();
+    let actor = run.actor;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 267216,
+    );
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 267216, Some(actor), 0);
+    assert!(crate::auras::has_aura(run.app.world(), actor, 267216));
+    let started = crate::spell_cast::now(run.app.world());
+    let period_ms = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(267216)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .aura_period_ms;
+    assert_eq!(period_ms, 12000, "authored native226 period");
+    let before = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    let mut births = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for _ in 0..500 {
+        run.app.update();
+        let world = run.app.world_mut();
+        let now = crate::spell_cast::now(world) - started;
+        for (entity, summon, npc) in world
+            .query::<(
+                Entity,
+                &crate::spell_cast::summon::SummonedCreature,
+                &shared::components::Npc,
+            )>()
+            .iter(world)
+        {
+            if summon.owner == actor && summon.spell_id == 279910 && seen.insert(entity) {
+                births.push(json!({"at": now, "entry": npc.template_id, "root": summon.spell_id}));
+            }
+        }
+    }
+    let path = inputs::directory()
+        .unwrap()
+        .join("266.inner-demons-periodic.json");
+    std::fs::write(
+        &path,
+        serde_json::to_vec_pretty(&json!({"period_ms": period_ms, "births": births,
+        "events": &run.app.world().resource::<ObservedCombatEvents>().0[before..]}))
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        births.len(),
+        2,
+        "two native ticks in25s; no tick_zero/random phase; {}",
+        path.display()
+    );
+    for (birth, expected) in births.iter().zip([12.0, 24.0]) {
+        assert!(
+            (birth["at"].as_f64().unwrap() - expected).abs() <= 0.051,
+            "native tick phase: {birth}"
+        );
+        assert_eq!(birth["entry"], 143622);
+    }
+}
+
+#[test]
 #[ignore = "native265187 Antoran autoattack replacement on authored ground/LOS; private spec266 inputs required"]
 fn dps_parity_demo_native_antoran_tyrant_uses_burning_cleave_autoattacks() {
     let _seed = crate::random::seed_scope(70448);
