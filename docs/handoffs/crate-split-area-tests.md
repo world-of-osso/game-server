@@ -1,6 +1,6 @@
 # Per-area test pilot and rebuild measurements
 
-Planning only. Source reviewed: B `22aa67892`, based on landed A `8e7c7a685`. No C source changes implemented. Existing behavior and complete case/ignore inventory remain mandatory.
+Approved C pilot implemented atop B `22aa67892`, based on landed A `8e7c7a685`; compiler/full-suite acceptance pending. Table counts describe the reviewed pre-lift files. Existing behavior and complete case/ignore inventory remain mandatory. [Exact 106-case mapping](crate-split-combat-test-mapping.json).
 
 ## C: native melee behavior first
 
@@ -28,9 +28,9 @@ Keep `combat_enemy_dodge_tests.rs`, `combat_npc_general_crit_tests.rs`, `combat_
 
 ### Boundary work
 
-- [ ] Warn path owners, then `git mv` the twelve files in a pure-move commit; preserve names and ignore attributes.
-- [ ] Lift `collect_swings` and `collect_broadcast_swings` unchanged into existing `spell_cast::test_harness`. Retained core cases also call these helpers. Wire both consumers to that canonical implementation, never a reverse dependency or duplicate collector. Their private `attack_stop` call can remain inside core.
-- [ ] Expose only required fixture access: `harness_with`, `world_db`, its existing return struct and `powers_db` path field. Keep other cached payload fields private. Remove imports made unnecessary by lifting the collectors; do not publish `drain` solely for a helper now resident beside it.
+- [x] Warned path owners and used `git mv` for the twelve files in pure-move commit `c765d0279`; names/ignore attributes retained.
+- [x] Lifted `collect_swings` and `collect_broadcast_swings` into existing `spell_cast::test_harness` in a separate pure-body-move commit `94e9357e5`. Wiring changes only visibility and canonical combat paths. Both consumers use those implementations; `attack_stop` stays private.
+- [x] Exposed only `harness_with`, `world_db`, its existing return struct and `powers_db` path field, plus the two canonical collectors. Other cache fields and `drain` remain private. Collector-only imports removed from moved sources.
 - [ ] Add the empty-normal-library/dev-dependency consumer and equivalent opt2/debug1 package profile; compile new consumer and production-no-feature boundary, format, commit, then obtain the parent full-suite/name reconciliation.
 - [ ] Measure one same-source test-only edit before expanding to further areas. No compile-time percentage follows from LOC reduction alone.
 

@@ -6,7 +6,7 @@ use shared::components::{Level, UnitLevel};
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
 use shared::protocol::{CombatEvent, CombatEventType};
 
-use super::npc_expertise_tests::collect_broadcast_swings;
+use crate::spell_cast::test_harness::collect_broadcast_swings;
 use crate::spell_cast::test_harness::{Harness, harness, world_db};
 
 const POSITIVE: u32 = 291_576;

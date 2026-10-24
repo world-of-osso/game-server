@@ -1,0 +1,15 @@
+[package]
+name = "server-combat-tests"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+# Test-only consumer: normal workspace builds never activate fixture support.
+[dev-dependencies]
+server = { path = "../server", features = ["test-support"] }
+bevy = { version = "0.19", default-features = false, features = ["bevy_log", "bevy_state"] }
+# Actual native combat broadcasts and requests; retain canonical protocol identities.
+lightyear = { version = "0.28", features = ["server", "netcode", "replication", "udp"] }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "186134ff880f1a6a7b754e4ce43456d775a44caf" }
+# Read-only installed attack-time rows used by native cadence cases.
+rusqlite = { version = "0.35", features = ["bundled"] }

@@ -12,7 +12,7 @@ Verified: 2026-10-23. Stable catalog code has one implementation in `server-cata
 
 Catalog extraction changes visibility, not values or algorithms: 24 `pub(crate)` declarations become public. Three generators now write to `crates/server-catalog/src/` and emit public constants. Generated numeric tables and faction/provenance logic otherwise remain unchanged. `level_scaling` remains in server because combat/cast tests consume its private fixture helpers.
 
-Test opt2/debug1 overrides apply explicitly to server, server-catalog and server-simulation. No tests move in the catalog-only commit. Library consolidation moves the former `game-server` test target's ownership to `server` lib, retaining existing library tests too; test functions/module paths remain unchanged. The thin bin has zero tests. Select `--lib` / nextest `binary(server)`, not the obsolete `--bin game-server` test filter. This small leaf cut is a crate-wiring proof, not a claimed material parity-iteration speedup.
+Test opt2/debug1 overrides apply explicitly to server, server-catalog, server-simulation and server-combat-tests. No tests move in the catalog-only commit. Library consolidation moves the former `game-server` test target's ownership to `server` lib, retaining existing library tests too; test functions/module paths remain unchanged. The thin bin has zero tests. Select `--lib` / nextest `binary(server)`, not the obsolete `--bin game-server` test filter. This small leaf cut is a crate-wiring proof, not a claimed material parity-iteration speedup.
 
 ## Test workflow and pending proof
 
@@ -36,7 +36,7 @@ Most case names retain `dungeon_simulator::...`. Six graph cases instead map to 
 
 ## Next test-area pilot
 
-[The C pilot and paired-measurement handoff](../../handoffs/crate-split-area-tests.md) identifies 106 public-behavior melee cases and the shared event collectors that must remain below both consumers. Private outcome-formula tests stay in core. The pilot is planned, not implemented.
+`crates/server-combat-tests` follows the simulator's empty normal-library/dev-dependency pattern and owns 106 public-behavior melee cases. Canonical `collect_swings`/`collect_broadcast_swings` now reside in existing `spell_cast::test_harness`, shared with retained core tests; private outcome-formula tests stay in core. Fixture cache payloads remain private except the existing DB path. No new dependency versions or duplicate gameplay/resource types are introduced. [C handoff and measurement controls](../../handoffs/crate-split-area-tests.md), [exact case mapping](../../handoffs/crate-split-combat-test-mapping.json). Compiler/full-suite acceptance is pending.
 
 ## Sources
 
