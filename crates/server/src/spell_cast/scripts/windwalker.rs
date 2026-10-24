@@ -33,8 +33,53 @@ const RUSHING_WIND_KICK_OVERRIDE: u32 = 1250554;
 pub(super) const RUSHING_WIND_KICK: u32 = 467307;
 const RISING_SUN_KICK: u32 = 107428;
 const FISTS_OF_FURY: u32 = 113656;
-const WHIRLING_DRAGON_PUNCH: u32 = 152175;
+pub(super) const WHIRLING_DRAGON_PUNCH: u32 = 152175;
 const WDP_ENABLER: u32 = 196742;
+const WDP_SINGLE_DAMAGE: u32 = 451767;
+const WDP_AREA_DAMAGE: u32 = 158221;
+
+/// SIMC_WW_WDP_DAMAGE_CHILDREN: SimC76f8118 sc_monk.cpp1888–1906/5825–5826.
+/// SIMC_WDP_TICK_SCHEDULE_DIFFERS: actual aura226 ticks, not SimC's manual timer.
+/// Native child geometry, caps/reduced-AoE and damage calculations remain untouched.
+pub(crate) fn register_wdp_relationship(scripts: &mut auras::scripts::AuraScripts) {
+    scripts.0.insert(
+        WHIRLING_DRAGON_PUNCH,
+        auras::scripts::AuraScript {
+            on_periodic: Some(cast_wdp_area_tick),
+            ..Default::default()
+        },
+    );
+}
+
+fn cast_wdp_area_tick(world: &mut World, unit: Entity, aura: &auras::AuraInstance, index: u8) {
+    if index != 0 {
+        return;
+    }
+    crate::spell_cast::cast_triggered(world, aura.caster, WDP_AREA_DAMAGE, Some(unit), 1);
+}
+
+/// The root hits its own aura unit; the single-target child uses the request's
+/// retained primary instead. The ordinary native root has one self hit.
+pub(super) fn cast_wdp_single_hit(
+    world: &mut World,
+    ctx: &crate::spell_cast::effects::EffectCtx,
+    hit: Entity,
+) {
+    if hit != ctx.caster {
+        return;
+    }
+    let Some(primary) = ctx.primary_target() else {
+        warn!(?ctx.caster, "WDP single-target relationship lacks its requested primary");
+        return;
+    };
+    crate::spell_cast::cast_triggered(
+        world,
+        ctx.caster,
+        WDP_SINGLE_DAMAGE,
+        Some(primary),
+        ctx.depth + 1,
+    );
+}
 
 /// MONK_MYSTIC_TOUCH_SIMC_PRODUCER: SimC76f8118 sc_monk.cpp438–455.
 /// Native113746 supplies the physical vulnerability; no multiplier is invented.

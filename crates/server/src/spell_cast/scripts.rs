@@ -61,7 +61,7 @@ mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
 pub(crate) use windwalker::{
     DANCE_OF_CHIJI, after_dance_cast_event, apply_mystic_touch_after_hit, check_dance_proc,
-    combo_strikes_multiplier, ordinary_combo_cast,
+    combo_strikes_multiplier, ordinary_combo_cast, register_wdp_relationship,
 };
 
 pub(super) use batch3::consume_phalanx;
@@ -1431,6 +1431,7 @@ pub(super) type ContextHitHook = fn(&mut World, &super::effects::EffectCtx, Enti
 
 pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
     match spell_id {
+        windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
         voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),
         77_478 => Some(batch9::cast_earthquake_knockdown),
         _ => None,

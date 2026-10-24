@@ -375,6 +375,7 @@ fn check_inundate_proc(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    crate::spell_cast::scripts::register_wdp_relationship(&mut scripts);
     scripts.0.insert(
         INUNDATE,
         AuraScript {
