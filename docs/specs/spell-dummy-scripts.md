@@ -32,7 +32,7 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 - [ ] Ordinary real KC consumes ready state only through its actual summon/action lifecycle; Cry stacks are earned from a real Wyvern summon, not granted directly as a substitute. Strict behavioral RED before runtime implementation.
 - [ ] Ledger native DB2/TDB facts, TC absence and named policy separately. Missing native Boar actor must not be invented: pinned Boar472020 is a dummy/direct-action path, not proof of a creature summon.
 
-Importer RED3842f60a9: native reachability misses both actors; normal private import yields no Bear/Wyvern rows (2FAIL6.273s). This is importer behavior, not gameplay RED.
+Importer RED3842f60a9: native reachability misses both actors; normal private import yields no Bear/Wyvern rows (2FAIL6.273s) →ba3bc5df8 importer2GREEN3.917s. This is importer behavior, not gameplay RED. Native summon admission requires actual ground/LOS; public `test_data::install_native_collision` is fixture-only (`test`/`test-support`), loads real `GAME_SERVER_GROUND_DIR` resources and exposes no private core types. Initial missing-collision/Player-stable/compile failures are explicitly not gameplay RED; actual Austin uses its normal883 pet.
 
 ### Native BM owner cooldown returns
 

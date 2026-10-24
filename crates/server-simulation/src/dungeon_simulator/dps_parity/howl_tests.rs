@@ -10,7 +10,6 @@ const WYVERN_READY: u32 = 471878;
 const WYVERN_SUMMON: u32 = 1222271;
 const WYVERN_CRY: u32 = 471881;
 const WYVERN_ENTRY: u32 = 234170;
-const CALL_PET: u32 = 883;
 const KILL_COMMAND: u32 = 34026;
 
 fn prepare_howl_player() -> Run {
@@ -33,23 +32,8 @@ fn prepare_howl_player() -> Run {
 }
 
 fn load_native_collision(run: &mut Run) {
-    let assets = std::path::PathBuf::from(
-        std::env::var_os("GAME_SERVER_GROUND_DIR").expect("real native ground/LOS asset directory"),
-    );
-    let database = std::path::PathBuf::from(std::env::var_os("DPS_PARITY_WORLD_DB").unwrap());
-    let db =
-        rusqlite::Connection::open_with_flags(database, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
-            .unwrap();
-    let maps = crate::maps::store::load_map_store(&db).unwrap();
-    let wdts = maps
-        .maps
-        .into_iter()
-        .map(|(id, map)| (id, map.wdt_file_data_id))
-        .collect();
-    run.app
-        .insert_resource(server::ground::GroundMap::new(&assets, wdts));
-    run.app
-        .insert_resource(server::line_of_sight::LineOfSight::load(&assets.join("los")).unwrap());
+    crate::test_data::install_native_collision(&mut run.app)
+        .expect("actual source ground and LOS, not synthetic terrain");
 }
 
 fn advance_seconds(run: &mut Run, seconds: f64) {
@@ -173,35 +157,60 @@ fn dps_parity_howl_native_removed_passive_keeps_real_summon_without_cry() {
     assert_eq!(cry_stacks(&run), 0);
 }
 
+fn kill_command_casts(run: &Run) -> usize {
+    run.app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(KILL_COMMAND)
+                && event.kind == shared::protocol::CombatLogKind::CastSuccess
+        })
+        .count()
+}
+
 #[test]
 #[ignore = "native combat clock to ready to ordinary KC and actual summoned Wyvern"]
 fn dps_parity_howl_native_combat_readiness_is_consumed_by_real_kill_command() {
     let _seed = crate::random::seed_scope(70_448);
-    let mut run = prepare_howl_player();
+    let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
+    load_native_collision(&mut run);
     let owner = run.actor;
-    crate::spell_cast::creature_cast(run.app.world_mut(), owner, CALL_PET, Some(owner), false)
-        .expect("actual native Player Call Pet, no fabricated HunterPet");
-    advance_seconds(&mut run, 2.0);
-    assert!(crate::hunter_pet::summoned_pet(run.app.world(), owner).is_some());
-    engage(&mut run);
-    let cooldown = native_duration(&run, HOWL_COOLDOWN);
-    advance_seconds(&mut run, cooldown + 0.2);
-    assert!(
-        crate::auras::has_aura(run.app.world(), owner, WYVERN_READY),
-        "native combat entry and elapsed DB2 cooldown must earn first ready aura"
+    assert_eq!(
+        crate::hunter_pet::summoned_pet(run.app.world(), owner),
+        Some(pet)
     );
-    crate::spell_cast::creature_cast(
-        run.app.world_mut(),
-        owner,
-        KILL_COMMAND,
-        Some(run.targets[0]),
-        false,
-    )
-    .expect("ordinary native KC with actual persistent pet");
-    advance_seconds(&mut run, 0.2);
+    assert!(crate::auras::has_aura(run.app.world(), owner, HOWL));
+    engage(&mut run);
+    let end = crate::spell_cast::now(run.app.world()) + native_duration(&run, HOWL_COOLDOWN) * 2.0;
+    let mut seen_ready = false;
+    let mut consumed_by_kc = false;
+    while crate::spell_cast::now(run.app.world()) < end {
+        let ready = crate::auras::has_aura(run.app.world(), owner, WYVERN_READY);
+        seen_ready |= ready;
+        let casts_before = kill_command_casts(&run);
+        run.app.update();
+        if ready
+            && !crate::auras::has_aura(run.app.world(), owner, WYVERN_READY)
+            && kill_command_casts(&run) > casts_before
+        {
+            consumed_by_kc = !owned_wyverns(&mut run).is_empty();
+            break;
+        }
+    }
     assert!(
-        !crate::auras::has_aura(run.app.world(), owner, WYVERN_READY),
-        "successful real summon consumes readiness exactly once"
+        kill_command_casts(&run) > 0,
+        "actual Austin must execute ordinary KC, not remain idle"
+    );
+    assert!(
+        seen_ready,
+        "native combat entry and DB2 cooldown must earn first ready aura"
+    );
+    assert!(
+        consumed_by_kc,
+        "ordinary KC consumes readiness only with the real Wyvern entity"
     );
     assert_eq!(owned_wyverns(&mut run).len(), 1);
     assert!(cry_stacks(&run) > 0, "Cry follows the real summoned actor");
