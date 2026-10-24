@@ -1,3 +1,7 @@
+## 2026-10-23 — Guardian melee first hit; frozen movement blocks cadence
+
+[Melee coverage](investigations/demonology-dps-parity.md#guardian-melee-native-hit-enabled-frozen-movement-blocks-clock-qualification): genuine native Effect28→AI RED9a0/3attempts plus caster controlPASS. Implementation ab79 reuses existing power_stats/native combat and authored chase speed;4PASS/1FAIL24.91s,20m10compile/0warnings. Dread lands1208 once; GDB shows100active AA ticks/no stop, while frozen simulator route moves the in-reach actor away from its dummy. Cadence/retarget/stop and full numeric damage stay unqualified. Shared movement blocker reported to lead; no local timer/geometry workaround.
+
 ## 2026-10-23 — Demo first-pull transition RED
 
 [Transition proof](investigations/demonology-dps-parity.md#first-pull-transition-confirmed-correction-owned-by-shared-fixture-work): own c8 proof-only/native810 observes identical ST/3T first10s: owner reference disappears+5s during summon,30146 finishes+5.85s, then real pet/no actor target/no more casts through+10s. Genuine assertionRED15.10s;16m59compile/0warnings. Fresh canonical snapshot native300s ST0/3T18514.65 stays unqualified. Shared precombat14766 and per-attacker dummy14116 own correction; no local duplicate fix. Guardian tests separately expose missing target42/43 geometry services, not melee RED.
