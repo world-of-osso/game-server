@@ -30,7 +30,7 @@ use crate::taxi::TaxiFlight;
 pub(crate) const MAX_AGGRO_RADIUS: f32 = 45.0;
 #[path = "creature_aggro_distance.rs"]
 mod attack_distance;
-pub(crate) use attack_distance::AggroDistance;
+pub use attack_distance::AggroDistance;
 #[path = "creature_threat.rs"]
 mod victim;
 pub(crate) use victim::{CurrentVictim, current_victim, refresh_temporary_threat};
@@ -353,7 +353,7 @@ pub(crate) fn within_reach_of_home(
 pub(crate) struct Fixate(pub Entity);
 
 /// Select through the server-owned threat reference, then project active attacks.
-pub(crate) fn update_victim_system(world: &mut World) {
+pub fn update_victim_system(world: &mut World) {
     let creatures: Vec<_> = world
         .query_filtered::<(Entity, &CreatureState), (
             With<ThreatTable>,
@@ -557,7 +557,7 @@ fn can_engage(world: &World, creature: Entity) -> bool {
 /// `target` on its threat list with no threat, starts chasing and
 /// auto-attacking it, and both enter combat. Evading and dead creatures,
 /// and creatures without a threat list, ignore it.
-pub(crate) fn attack_start(world: &mut World, creature: Entity, target: Entity) {
+pub fn attack_start(world: &mut World, creature: Entity, target: Entity) {
     add_threat(world, creature, target, 0.0);
 }
 
@@ -566,7 +566,7 @@ pub(crate) fn attack_start(world: &mut World, creature: Entity, target: Entity) 
 /// → `CombatStart`). An idle creature starts attacking `attacker`
 /// (`Unit::CombatStart` → `AttackStart`); an engaged one picks its target
 /// from threat next tick.
-pub(crate) fn add_threat(world: &mut World, creature: Entity, attacker: Entity, amount: f32) {
+pub fn add_threat(world: &mut World, creature: Entity, attacker: Entity, amount: f32) {
     add_school_threat(world, creature, attacker, amount, 1);
 }
 
@@ -719,7 +719,7 @@ fn stand_up_for_combat(entity: &mut EntityWorldMut) {
 /// reset), run home (`MoveTargetedHome`) with its health untouched, then the script's
 /// `EnterEvadeMode` / `Reset`. An evading creature does not evade again
 /// (`IsInEvadeMode`).
-pub(crate) fn enter_evade_mode(world: &mut World, creature: Entity) {
+pub fn enter_evade_mode(world: &mut World, creature: Entity) {
     if world.get::<DeathState>(creature).is_some()
         || world.get::<CreatureState>(creature) == Some(&CreatureState::Returning)
     {
@@ -806,7 +806,7 @@ pub(crate) fn forget_combat(entity: &mut EntityWorldMut) {
 #[path = "creature_aggro_tests.rs"]
 mod tests;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[test]
 fn idle_threat_full_population_is_bounded() {
     let mut app = App::new();

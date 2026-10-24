@@ -51,28 +51,28 @@ pub struct KnownSpells(Vec<u32>, Vec<(u32, u32)>, Vec<u32>);
 
 impl KnownSpells {
     /// Native baseline book without player-only PvP or guild grants.
-    pub(crate) fn from_baseline(spells: Vec<u32>) -> Self {
+    pub fn from_baseline(spells: Vec<u32>) -> Self {
         Self(spells, Vec::new(), Vec::new())
     }
 
     /// Membership-derived grants are separate from baseline/profession knowledge.
-    pub(crate) fn guild_grants(&self) -> &[u32] {
+    pub fn guild_grants(&self) -> &[u32] {
         &self.2
     }
-    pub(crate) fn set_guild_grants(&mut self, spells: &[u32]) {
+    pub fn set_guild_grants(&mut self, spells: &[u32]) {
         self.2 = spells.to_vec();
     }
-    pub(crate) fn pvp_grants(&self) -> &[(u32, u32)] {
+    pub fn pvp_grants(&self) -> &[(u32, u32)] {
         &self.1
     }
-    pub(crate) fn set_pvp_grants(&mut self, mut grants: Vec<(u32, u32)>) {
+    pub fn set_pvp_grants(&mut self, mut grants: Vec<(u32, u32)>) {
         grants.sort_unstable();
         grants.dedup();
         self.1 = grants;
     }
 
-    #[cfg(test)]
-    pub(crate) fn fixture(spells: Vec<u32>) -> Self {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn fixture(spells: Vec<u32>) -> Self {
         Self(spells, Vec::new(), Vec::new())
     }
 
@@ -156,13 +156,13 @@ impl TraitLoadout {
             .map(|spell| spell.trait_info)
     }
 
-    #[cfg(test)]
-    pub(crate) fn source_config(&self) -> (&[ConfigEntry], &[(u32, i32)]) {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn source_config(&self) -> (&[ConfigEntry], &[(u32, i32)]) {
         (&self.entries, &self.unspent)
     }
 
     /// Selected native hero subtree, independent of learned spells or live auras.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn selected_sub_tree(&self, tree: &crate::spell_info::TraitTree) -> Option<u32> {
         crate::trait_config::selected_sub_tree(tree, &self.entries)
     }
@@ -660,8 +660,8 @@ fn collect_npc_starter_spells(
 
 /// Evaluate allocated reference ranks through native grants, budgets and overrides.
 /// A failed config is an explicit measurement gap, never a default-loadout fallback.
-#[cfg(test)]
-pub(crate) fn evaluate_reference_traits(
+#[cfg(any(test, feature = "test-support"))]
+pub fn evaluate_reference_traits(
     classes: &ClassSpells,
     profile: &crate::followers::Profile,
     level: u8,
@@ -677,8 +677,8 @@ pub(crate) fn evaluate_reference_traits(
     evaluate_player_reference_traits(classes, &identity, profile.spec_id, level, allocated)
 }
 
-#[cfg(test)]
-pub(crate) fn evaluate_player_reference_traits(
+#[cfg(any(test, feature = "test-support"))]
+pub fn evaluate_player_reference_traits(
     classes: &ClassSpells,
     identity: &Player,
     spec_id: u32,
@@ -697,7 +697,7 @@ pub(crate) fn evaluate_player_reference_traits(
     Ok((known, evaluated.traits))
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 fn reference_purchases(
     tree: &crate::spell_info::TraitTree,
     ctx: TraitContext,

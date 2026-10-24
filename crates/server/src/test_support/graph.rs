@@ -4,20 +4,19 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
+#[cfg(test)]
 #[path = "azure_extraction.rs"]
 mod azure_extraction;
-#[path = "corridor_inputs.rs"]
-mod corridor_inputs;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub(super) struct Spawn {
+pub struct Spawn {
     pub guid: u32,
     pub entry: u32,
     pub position: [f32; 2],
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub(super) struct Pack {
+pub struct Pack {
     pub id: u32,
     pub position: [f32; 2],
     pub height: f32,
@@ -25,20 +24,20 @@ pub(super) struct Pack {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub(super) struct Edge {
+pub struct Edge {
     pub from: u32,
     pub to: u32,
     pub yards: f32,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub(super) struct RouteStep {
+pub struct RouteStep {
     pub pack: u32,
     pub anchor: [f32; 3],
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub(super) struct Graph {
+pub struct Graph {
     pub map_id: u32,
     pub entrance: [f32; 2],
     pub entrance_height: f32,
@@ -54,10 +53,10 @@ pub(super) struct Graph {
 mod walk_route;
 
 #[derive(Resource)]
-pub(crate) struct Space(pub(super) Graph);
+pub struct Space(pub Graph);
 
 impl Space {
-    pub(crate) fn route(&self, from: Vec3, to: Vec3) -> Result<Vec<Vec3>, String> {
+    pub fn route(&self, from: Vec3, to: Vec3) -> Result<Vec<Vec3>, String> {
         let mut points: Vec<_> = self
             .walk_legs(from, to)?
             .into_iter()
@@ -69,7 +68,7 @@ impl Space {
         Ok(points)
     }
 
-    pub(super) fn walk_legs(
+    pub fn walk_legs(
         &self,
         from: Vec3,
         to: Vec3,
@@ -77,11 +76,7 @@ impl Space {
         walk_route::read(&self.0, from, to)
     }
 
-    pub(super) fn next_translocation(
-        &self,
-        from: Vec3,
-        to: Vec3,
-    ) -> Result<Option<(u32, u32)>, String> {
+    pub fn next_translocation(&self, from: Vec3, to: Vec3) -> Result<Option<(u32, u32)>, String> {
         let nodes = self.path_nodes(from, to)?;
         Ok(nodes.windows(2).find_map(|pair| {
             self.0
@@ -155,13 +150,13 @@ impl Space {
 }
 
 impl Pack {
-    pub(super) fn point(&self) -> Vec3 {
+    pub fn point(&self) -> Vec3 {
         Vec3::new(self.position[0], self.height, self.position[1])
     }
 }
 
 impl Graph {
-    pub(super) fn difficulty_id(&self) -> u32 {
+    pub fn difficulty_id(&self) -> u32 {
         match self.map_id {
             34 => 1,
             2515 => 205,
@@ -169,7 +164,7 @@ impl Graph {
         }
     }
 
-    pub(super) fn boss_entries(&self) -> &'static [u32] {
+    pub fn boss_entries(&self) -> &'static [u32] {
         match self.map_id {
             34 => &[46383, 46264, 46254],
             2515 => &[186644, 186739, 186737, 186738],
@@ -178,7 +173,7 @@ impl Graph {
     }
 }
 
-pub(super) fn graph_path() -> PathBuf {
+pub fn graph_path() -> PathBuf {
     let map = std::env::var_os("DUNGEON_SIMULATOR_MAP")
         .map(|value| {
             value
@@ -196,13 +191,14 @@ pub(super) fn graph_path() -> PathBuf {
         .join(file)
 }
 
-pub(super) fn read_graph() -> Result<Graph, String> {
+pub fn read_graph() -> Result<Graph, String> {
     let path = graph_path();
     let bytes =
         std::fs::read(&path).map_err(|error| format!("read {}: {error}", path.display()))?;
     serde_json::from_slice(&bytes).map_err(|error| format!("parse {}: {error}", path.display()))
 }
 
+#[cfg(test)]
 fn source_packs(data: &crate::world_data::WorldData, map_id: u16) -> Vec<Pack> {
     let mut packs = BTreeMap::<u32, Vec<Spawn>>::new();
     for &index in &data.spawns_by_map[&map_id] {
@@ -239,6 +235,7 @@ fn source_packs(data: &crate::world_data::WorldData, map_id: u16) -> Vec<Pack> {
         .collect()
 }
 
+#[cfg(test)]
 fn source_point(data: &crate::world_data::WorldData, guid: u32) -> Vec3 {
     if guid == 7116 {
         // Authenticated70448 AreaPOI7116; qualified inside Umbrelskul's component.
@@ -249,6 +246,7 @@ fn source_point(data: &crate::world_data::WorldData, guid: u32) -> Vec3 {
     Vec3::new(spawn.position_x, spawn.position_z, -spawn.position_y)
 }
 
+#[cfg(test)]
 fn query_edges(
     data: &crate::world_data::WorldData,
     packs: &[Pack],
@@ -286,6 +284,7 @@ fn query_edges(
 }
 
 /// Minimum spanning forest plus four closest neighbours keeps the frozen input small.
+#[cfg(test)]
 fn select_edges(packs: &[Pack], candidates: Vec<Edge>) -> Vec<Edge> {
     let mut roots: BTreeMap<_, _> = packs.iter().map(|pack| (pack.id, pack.id)).collect();
     let mut counts = BTreeMap::<u32, usize>::new();
@@ -311,6 +310,7 @@ fn select_edges(packs: &[Pack], candidates: Vec<Edge>) -> Vec<Edge> {
     selected
 }
 
+#[cfg(test)]
 fn unreachable(packs: &[Pack], edges: &[Edge], entrance: u32) -> Vec<u32> {
     let mut reached = BTreeSet::from([entrance]);
     loop {
@@ -334,6 +334,7 @@ fn unreachable(packs: &[Pack], edges: &[Edge], entrance: u32) -> Vec<u32> {
         .collect()
 }
 
+#[cfg(test)]
 fn stacked_fixture() -> Space {
     let pack = |id, x, height| Pack {
         id,
