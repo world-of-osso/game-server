@@ -10,6 +10,7 @@
 //!
 //! `crate::spell_cast` resolves casts from these records.
 
+mod applied_modifiers;
 #[cfg(test)]
 mod aura_restrictions_tests;
 mod class_data;
@@ -31,6 +32,7 @@ use bevy::prelude::*;
 use rusqlite::Connection;
 use serde::Serialize;
 
+pub use applied_modifiers::AppliedSpellModifiers;
 pub(crate) use class_data::MAX_LEVEL;
 #[cfg(any(test, feature = "test-support"))]
 pub(crate) use class_data::load_class_spells;
@@ -50,6 +52,8 @@ pub const WORLD_DB_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data
 /// One already matched charged spell modifier, retained by its launched cast.
 #[derive(Debug, Clone)]
 pub(crate) struct ChargedSpellModifier {
+    pub aura_owner: Entity,
+    pub aura_instance_id: u32,
     /// Actual native source of the already matched modifier, not a live-aura guess.
     pub aura_spell_id: u32,
     pub op: i32,
@@ -107,6 +111,17 @@ pub struct SpellInfo {
     /// None means not yet snapshotted.
     #[serde(skip)]
     pub(crate) cast_charge_mods: Option<Vec<ChargedSpellModifier>>,
+    /// One actual cast's shared identity receipt; templates have no receipt.
+    #[serde(skip)]
+    pub(crate) cast_applied_modifiers: Option<AppliedSpellModifiers>,
+    #[serde(skip)]
+    pub(crate) cast_has_power_cost: Option<bool>,
+    #[serde(skip)]
+    pub(crate) cast_from_item: Option<bool>,
+    #[serde(skip)]
+    pub(crate) cast_proc_chain_length: Option<u32>,
+    #[serde(skip)]
+    pub(crate) cast_is_triggered: Option<bool>,
     /// Script-owned cast-time proc instances that actually modified admission.
     /// Retained through hardcasts/missiles; triggered casts do not acquire markers.
     #[serde(skip)]

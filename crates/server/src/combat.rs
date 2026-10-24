@@ -858,6 +858,16 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
         periodic: false,
         damage: outcome.scaled_loss,
         heal: None,
+        // Unit.cpp2336 supplies real DamageInfo/attack type, TYPE_NONE/PHASE_NONE.
+        context: Some(crate::spell_cast::proc_context::without_spell(
+            1,
+            0,
+            outcome.proc_result,
+            Some(match outcome.hand {
+                Hand::Main => procs::ProcAttackType::MainHand,
+                Hand::Off => procs::ProcAttackType::OffHand,
+            }),
+        )),
         reflected: false,
     }];
     if outcome.npc_died || outcome.player_died {
@@ -872,6 +882,15 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
             periodic: false,
             damage: 0.0,
             heal: None,
+            context: Some(crate::spell_cast::proc_context::without_spell(
+                0,
+                0,
+                crate::spell_cast::proc_context::ResolvedProcHit {
+                    spell_type_mask: 7,
+                    hit_mask: 0,
+                },
+                None,
+            )),
             reflected: false,
         });
     }
@@ -1426,6 +1445,7 @@ fn queue_swing_commit(
 
 #[derive(Debug, Clone, Copy)]
 struct SwingOutcome {
+    proc_result: crate::spell_cast::proc_context::ResolvedProcHit,
     hand: Hand,
     kind: MeleeOutcome,
     immune: bool,
@@ -1675,6 +1695,16 @@ fn try_swing(
         outcome_damage,
     );
     let absorbed = absorption.absorbed;
+    let mut proc_result = crate::spell_cast::proc_context::ResolvedProcHit::damage(
+        kind == MeleeOutcome::Crit,
+        blocked,
+        absorbed,
+    );
+    proc_result.spell_type_mask = 0; // TC melee has TYPE_NONE, not spell DAMAGE.
+    proc_result.mask_nullified_damage(
+        blocked > 0.0 && outcome_damage == 0.0,
+        absorbed > 0.0 && absorption.remaining == 0.0,
+    );
     let mut remaining = absorption.remaining;
     for split in splits {
         let recipient_scaling = context.scaling.get(split.recipient).map_or(
@@ -1715,6 +1745,7 @@ fn try_swing(
         .pet_melee_time_multiplier(attacker.entity);
     reset_swing_timers(auto_attack, hand, attacker.swing_time(&weapon) * pet_time);
     let outcome = SwingOutcome {
+        proc_result,
         hand,
         kind,
         immune,
@@ -2006,6 +2037,11 @@ fn commit_melee_loss(
     }
     let commit = crate::auras::apply_attack_damage(world, victim, loss, 1);
     let prevented = commit.absorbed_damage(outcome.damage, loss);
+    if prevented > 0.0 {
+        outcome
+            .proc_result
+            .record_absorb(prevented == outcome.damage);
+    }
     outcome.absorbed += prevented;
     outcome.damage -= prevented;
     outcome.scaled_loss = (outcome.scaled_loss - commit.absorbed_loss).max(0.0);
@@ -2209,7 +2245,15 @@ pub fn replay_healer_hit(
     } else {
         amount * critical_multiplier
     };
+    let fully_blocked = blocked > 0.0 && amount == 0.0;
     let (amount, absorbed) = crate::auras::absorb_damage(world, victim, 1, amount);
+    let mut proc_result = crate::spell_cast::proc_context::ResolvedProcHit::damage(
+        kind == MeleeOutcome::Crit,
+        blocked,
+        absorbed,
+    );
+    proc_result.spell_type_mask = 0;
+    proc_result.mask_nullified_damage(fully_blocked, absorbed > 0.0 && amount == 0.0);
     let amount = crate::auras::damage_transfer::route(world, attacker, victim, 1, amount);
     let (attacker_scaling, target) = (
         UnitScaling::of(world, attacker),
@@ -2218,6 +2262,7 @@ pub fn replay_healer_hit(
     let damage = crate::level_scaling::damage_dealt(&attacker_scaling, &target, amount);
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
     let mut outcome = SwingOutcome {
+        proc_result,
         hand,
         kind,
         immune,

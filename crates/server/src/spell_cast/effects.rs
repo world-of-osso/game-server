@@ -1773,6 +1773,7 @@ fn deal_source_damage_and_report(
     } else {
         (amount, 0.0)
     };
+    let fully_blocked = blocked > 0.0 && amount == 0.0;
     let amount = if periodic {
         crate::auras::area_avoidance::reduce_damage(world, target, ctx.spell, effect, true, amount)
     } else {
@@ -1781,6 +1782,7 @@ fn deal_source_damage_and_report(
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_mitigated(world, ctx, target, amount);
     let (amount, absorbed) = crate::auras::absorb_damage(world, target, school, amount);
+    let absorbed_entire_hit = absorbed > 0.0 && amount == 0.0;
     let amount = crate::auras::damage_transfer::route(world, ctx.caster, target, school, amount);
     let (caster_scaling, target_scaling) = (
         UnitScaling::of(world, ctx.caster),
@@ -1821,6 +1823,7 @@ fn deal_source_damage_and_report(
     }
     let commit = crate::auras::apply_attack_damage(world, target, loss, school);
     let prevented = commit.absorbed_damage(amount, loss);
+    let fully_absorbed = absorbed_entire_hit || (prevented > 0.0 && prevented == amount);
     let (amount, absorbed) = (amount - prevented, absorbed + prevented);
     let scaled_loss = (scaled_loss - commit.absorbed_loss).max(0.0);
     let loss = (loss - commit.absorbed_loss).max(0.0);
@@ -1871,10 +1874,19 @@ fn deal_source_damage_and_report(
     // breakable crowd control compares with the target's max health.
     // A fully absorbed damage effect still landed. Preserve that target in
     // the hit ledger for per-hit scripts, without inventing damage procs.
-    let recorded_hit =
-        !periodic && super::record_hit_damage(world, ctx.caster, ctx.spell.id, target, scaled_loss);
+    let mut proc_result = super::proc_context::ResolvedProcHit::damage(crit, blocked, absorbed);
+    proc_result.mask_nullified_damage(fully_blocked, fully_absorbed);
+    let recorded_hit = !periodic
+        && super::record_hit_damage(
+            world,
+            ctx.caster,
+            ctx.spell.id,
+            target,
+            scaled_loss,
+            proc_result,
+        );
     if amount > 0.0 && !recorded_hit {
-        push_damage_event(world, ctx, target, periodic, scaled_loss);
+        push_damage_event(world, ctx, target, periodic, scaled_loss, proc_result);
     }
     if commit.lethal {
         kill(world, ctx.caster, target, ctx.depth == 0);
@@ -1894,6 +1906,7 @@ fn push_damage_event(
     target: Entity,
     periodic: bool,
     damage: f32,
+    result: super::proc_context::ResolvedProcHit,
 ) {
     let (actor, taken) = if periodic {
         (
@@ -1916,6 +1929,11 @@ fn push_damage_event(
             periodic,
             damage,
             heal: None,
+            context: if periodic {
+                super::proc_context::periodic(ctx.spell, result)
+            } else {
+                super::proc_context::hit(ctx.spell, result)
+            },
             reflected: false,
         },
     );
@@ -1944,6 +1962,16 @@ fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
             periodic: false,
             damage: 0.0,
             heal: None,
+            // TC Unit.cpp11429–11447: ALL/NONE/NONE, no live Spell or damage info.
+            context: Some(super::proc_context::without_spell(
+                0,
+                0,
+                super::proc_context::ResolvedProcHit {
+                    spell_type_mask: 7,
+                    hit_mask: 0,
+                },
+                None,
+            )),
             reflected: false,
         },
     );
@@ -2075,7 +2103,14 @@ fn apply_resolved_heal(
     event.periodic = periodic;
     log_event(world, event);
     if !periodic {
-        super::record_hit_heal(world, ctx.caster, ctx.spell.id, target, amount);
+        super::record_hit_heal(
+            world,
+            ctx.caster,
+            ctx.spell.id,
+            target,
+            amount,
+            super::proc_context::ResolvedProcHit::healing(crit),
+        );
         super::scripts::heal_beacon(world, ctx, target, effective);
         super::scripts::cast_expel_harm_damage(world, ctx, amount);
     }
@@ -2093,6 +2128,10 @@ fn apply_resolved_heal(
                 periodic: true,
                 damage: 0.0,
                 heal: Some(amount),
+                context: super::proc_context::periodic(
+                    ctx.spell,
+                    super::proc_context::ResolvedProcHit::healing(crit),
+                ),
                 reflected: false,
             },
         );
@@ -2475,7 +2514,12 @@ fn cast_destination_missile_child(
     depth: u8,
 ) -> Result<(), super::CastFailure> {
     // TC uses FULL_MASK except IGNORE_POWER_COST/IGNORE_REAGENT_COST.
-    let costs = super::spell_costs(world, caster, spell)?;
+    let mut recorded = super::spell_mods::clone_for_new_recording(spell);
+    super::proc_context::capture_cast_origin(world, caster, &mut recorded, true);
+    let _recording = super::spell_mods::enter_recording(world, caster, &recorded);
+    let costs = super::spell_costs(world, caster, &recorded)?;
+    recorded.cast_has_power_cost = Some(super::proc_context::has_power_cost(&costs));
+    let spell = &recorded;
     crate::profession::check_cast_items(world, caster, spell)?;
     let plan = super::plan_targets(world, caster, spell, Some(caster), true)?;
     super::spend_costs(world, caster, &costs);

@@ -143,6 +143,16 @@ pub(super) fn proc_reflector(world: &mut World, caster: Entity, reflector: Entit
             periodic: false,
             damage: 0.0,
             heal: None,
+            // ProcReflectDelayed (TC Spell.cpp2423–2429): DAMAGE|NO_DMG, NONE, REFLECT.
+            context: Some(super::proc_context::without_spell(
+                0,
+                0,
+                super::proc_context::ResolvedProcHit {
+                    spell_type_mask: 5,
+                    hit_mask: 0x800,
+                },
+                None,
+            )),
             reflected: true,
         },
     );

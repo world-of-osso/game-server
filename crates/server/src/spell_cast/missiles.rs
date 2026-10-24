@@ -199,6 +199,7 @@ fn land_now(
     landing: Landing,
     launched: f64,
 ) {
+    let _recording = crate::auras::spell_mods::enter_recording(world, caster, spell);
     match landing {
         Landing::Units {
             plan,

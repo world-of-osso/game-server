@@ -44,6 +44,9 @@ pub fn creature_cast(
         return start_cast(world, caster, &spell, explicit);
     }
     spell.cast_dont_reset_periodic_timer = true;
+    spell = super::spell_mods::clone_for_new_recording(&spell);
+    super::proc_context::capture_cast_origin(world, caster, &mut spell, true);
+    let _recording = super::spell_mods::enter_recording(world, caster, &spell);
     // Bool FULL_MASK has no triggering aura: TC CheckCast permits a dead caster.
     super::aura_spell_restrictions::check_caster(world, caster, &spell)?;
     let explicit = validate_target(world, caster, &spell, explicit, Sight::Start)?;

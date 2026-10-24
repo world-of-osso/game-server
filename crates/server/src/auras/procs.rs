@@ -132,10 +132,46 @@ const PROC_TRIGGER_DEPTH: u8 = 1;
 /// RPPM caps the time since the last attempt (TrinityCore: 10 s).
 const PPM_MAX_ATTEMPT_GAP: f64 = 10.0;
 
+/// Actual DamageInfo attack type; never reconstructed from damage totals.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProcAttackType {
+    MainHand,
+    OffHand,
+    Ranged,
+}
+
+/// Captured native facts. Optional values remain unavailable, never inferred defaults.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProcEventContext {
+    pub school_mask: u32,
+    pub spell_type_mask: u32,
+    pub spell_phase_mask: u32,
+    pub hit_mask: u32,
+    pub attack_type: Option<ProcAttackType>,
+    pub has_power_cost: Option<bool>,
+    pub cast_from_item: Option<bool>,
+    pub applied_aura_modifiers: Option<crate::spell_info::AppliedSpellModifiers>,
+    pub proc_chain_length: Option<u32>,
+    pub is_triggered: Option<bool>,
+}
+
+#[cfg(any(test, feature = "test-support"))]
+#[derive(Debug, Clone)]
+pub struct ProcEventObservation {
+    pub event: AuraEvent,
+    /// Values at emission, not a later read of the shared mutable cast receipt.
+    pub applied_modifier_ids: Option<Vec<(Entity, u32)>>,
+}
+
+#[cfg(any(test, feature = "test-support"))]
+#[derive(Resource, Default)]
+pub struct ObservedProcEvents(pub Vec<ProcEventObservation>);
+
 /// One combat event.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AuraEvent {
     pub actor: Entity,
+    pub context: Option<ProcEventContext>,
     pub target: Option<Entity>,
     pub actor_mask: [u32; 2],
     pub target_mask: [u32; 2],
@@ -185,6 +221,18 @@ pub(crate) fn select_proc_trigger_target(
 
 pub fn push_event(world: &mut World, event: AuraEvent) {
     super::ret_sentence::record_damage(world, &event);
+    #[cfg(any(test, feature = "test-support"))]
+    if let Some(mut observed) = world.get_resource_mut::<ObservedProcEvents>() {
+        let applied_modifier_ids = event
+            .context
+            .as_ref()
+            .and_then(|context| context.applied_aura_modifiers.as_ref())
+            .map(crate::spell_info::AppliedSpellModifiers::read);
+        observed.0.push(ProcEventObservation {
+            event: event.clone(),
+            applied_modifier_ids,
+        });
+    }
     if let Some(mut pending) = world.get_resource_mut::<PendingAuraEvents>() {
         pending.0.push(event);
     }
@@ -520,6 +568,11 @@ fn try_proc(world: &mut World, unit: Entity, other: Option<Entity>, id: u32, eve
     let Some(aura) = start_proc_cooldown(world, unit, id, now) else {
         return;
     };
+    let triggering_length = event
+        .context
+        .as_ref()
+        .and_then(|context| context.proc_chain_length);
+    let _chain = super::proc_chain::enter(world, unit, triggering_length);
     for effect in aura.effects.iter().filter(|effect| {
         matches!(
             effect.aura_type,

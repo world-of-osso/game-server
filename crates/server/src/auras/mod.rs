@@ -59,6 +59,7 @@ mod periodic;
 mod point_mod_tests;
 mod point_mods;
 pub(crate) mod power_amount_trigger;
+pub(crate) mod proc_chain;
 #[cfg(test)]
 mod proc_mask_tests;
 pub mod procs;

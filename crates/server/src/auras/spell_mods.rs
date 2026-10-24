@@ -4,6 +4,9 @@
 //! `SpellModOp`; label mods carry the label in `EffectMiscValue_1`.
 //! Combined as TrinityCore `Unit::ApplySpellMod`: `(base + Σflat) × Π(1 + pct/100)`.
 
+mod recording;
+pub(crate) use recording::{clone_for_new_recording, clone_for_recording, enter_recording};
+
 use bevy::prelude::*;
 
 use super::handlers::{
@@ -189,6 +192,8 @@ pub(crate) fn snapshot_charged_modifiers(
                 is_spell_mod(effect.aura_type) && affects(aura, effect, spell)
             });
             effects.map(move |effect| ChargedSpellModifier {
+                aura_owner: caster,
+                aura_instance_id: aura.instance_id,
                 aura_spell_id: aura.spell_id,
                 op: effect.misc_values[0],
                 percent: is_pct(effect.aura_type),
@@ -219,12 +224,33 @@ pub(crate) fn snapshot_periodic_amount(
         .fold((0.0, 1.0), |sum, (aura, effect)| {
             add_modifier(sum, stacked_amount(aura, effect), is_pct(effect.aura_type))
         });
+    record_periodic_snapshot(world, caster, spell, amount + flat);
     (amount + flat) * multiplier
+}
+
+fn record_periodic_snapshot(world: &World, caster: Entity, spell: &SpellInfo, basis: f32) {
+    let Some(applied) = recording::read_active(world, caster) else {
+        return;
+    };
+    let Some(auras) = world.get::<ActiveAuras>(caster) else {
+        return;
+    };
+    let op = SpellModOp::PeriodicHealingAndDamage;
+    for (aura, effect) in
+        matching(auras, spell, op).filter(|(aura, _)| snapshots_periodic_modifier(aura, op))
+    {
+        let used =
+            stacked_amount(aura, effect) != 0.0 && (!is_pct(effect.aura_type) || basis != 0.0);
+        if used {
+            applied.record(caster, aura.instance_id);
+        }
+    }
 }
 
 /// `base` modified by `caster`'s spell modifiers for `op` on `spell`.
 pub fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base: f32) -> f32 {
     let (flat, mult) = modifier_totals(world, caster, spell, op);
+    record_applied_modifiers(world, caster, spell, op, base + flat, true);
     (base + flat) * mult
 }
 
@@ -237,54 +263,118 @@ pub(crate) fn modify_percent(
     base: f32,
 ) -> f32 {
     let (_, mult) = modifier_totals(world, caster, spell, op);
+    record_applied_modifiers(world, caster, spell, op, base, false);
     base * mult
 }
 
-fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp) -> (f32, f32) {
-    let frozen = spell
+struct MatchedModifier {
+    owner: Entity,
+    instance: u32,
+    #[cfg(any(test, feature = "test-support"))]
+    aura_spell_id: u32,
+    #[cfg(any(test, feature = "test-support"))]
+    effect_index: Option<u8>,
+    amount: f32,
+    percent: bool,
+}
+
+fn frozen_modifiers(
+    spell: &SpellInfo,
+    op: SpellModOp,
+) -> impl Iterator<Item = MatchedModifier> + '_ {
+    spell
         .cast_charge_mods
         .iter()
         .flatten()
-        .filter(|modifier| modifier.op == op as i32)
-        .fold((0.0, 1.0), |sum, modifier| {
+        .filter(move |modifier| modifier.op == op as i32)
+        .map(|modifier| MatchedModifier {
+            owner: modifier.aura_owner,
+            instance: modifier.aura_instance_id,
             #[cfg(any(test, feature = "test-support"))]
-            crate::spell_cast::effects::factor_capture::record_modifier(
-                world,
-                caster,
-                spell,
-                crate::spell_cast::effects::factor_capture::ModifierSource {
-                    op: op as u8,
-                    aura_spell_id: modifier.aura_spell_id,
-                    effect_index: None,
-                    amount: modifier.amount,
-                    percent: modifier.percent,
-                },
-            );
-            add_modifier(sum, modifier.amount, modifier.percent)
-        });
-    world.get::<ActiveAuras>(caster).map_or(frozen, |auras| {
-        matching(auras, spell, op)
-            .filter(|(aura, _)| !snapshots_periodic_modifier(aura, op))
-            .filter(|(aura, _)| spell.cast_charge_mods.is_none() || aura.charges == 0)
-            .fold(frozen, |sum, (aura, effect)| {
-                let amount = stacked_amount(aura, effect);
-                let percent = is_pct(effect.aura_type);
-                #[cfg(any(test, feature = "test-support"))]
-                crate::spell_cast::effects::factor_capture::record_modifier(
-                    world,
-                    caster,
-                    spell,
-                    crate::spell_cast::effects::factor_capture::ModifierSource {
-                        op: op as u8,
-                        aura_spell_id: aura.spell_id,
-                        effect_index: Some(effect.index),
-                        amount,
-                        percent,
-                    },
-                );
-                add_modifier(sum, amount, percent)
-            })
+            aura_spell_id: modifier.aura_spell_id,
+            #[cfg(any(test, feature = "test-support"))]
+            effect_index: None,
+            amount: modifier.amount,
+            percent: modifier.percent,
+        })
+}
+
+fn live_modifiers<'a>(
+    world: &'a World,
+    caster: Entity,
+    spell: &'a SpellInfo,
+    op: SpellModOp,
+) -> impl Iterator<Item = MatchedModifier> + 'a {
+    let matching = world
+        .get::<ActiveAuras>(caster)
+        .into_iter()
+        .flat_map(move |auras| matching(auras, spell, op));
+    let live = matching
+        .filter(move |(aura, _)| !snapshots_periodic_modifier(aura, op))
+        .filter(move |(aura, _)| spell.cast_charge_mods.is_none() || aura.charges == 0);
+    live.map(move |(aura, effect)| MatchedModifier {
+        owner: caster,
+        instance: aura.instance_id,
+        #[cfg(any(test, feature = "test-support"))]
+        aura_spell_id: aura.spell_id,
+        #[cfg(any(test, feature = "test-support"))]
+        effect_index: Some(effect.index),
+        amount: stacked_amount(aura, effect),
+        percent: is_pct(effect.aura_type),
     })
+}
+
+fn modifier_candidates<'a>(
+    world: &'a World,
+    caster: Entity,
+    spell: &'a SpellInfo,
+    op: SpellModOp,
+) -> impl Iterator<Item = MatchedModifier> + 'a {
+    frozen_modifiers(spell, op).chain(live_modifiers(world, caster, spell, op))
+}
+
+fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp) -> (f32, f32) {
+    modifier_candidates(world, caster, spell, op).fold((0.0, 1.0), |sum, modifier| {
+        #[cfg(any(test, feature = "test-support"))]
+        crate::spell_cast::effects::factor_capture::record_modifier(
+            world,
+            caster,
+            spell,
+            crate::spell_cast::effects::factor_capture::ModifierSource {
+                op: op as u8,
+                aura_spell_id: modifier.aura_spell_id,
+                effect_index: modifier.effect_index,
+                amount: modifier.amount,
+                percent: modifier.percent,
+            },
+        );
+        add_modifier(sum, modifier.amount, modifier.percent)
+    })
+}
+
+/// TC Player.cpp22781–22856: nonzero flat values, then percent values on base+flat.
+/// Optional costs use only percent operations; matched flat operations stay unused.
+fn record_applied_modifiers(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    op: SpellModOp,
+    basis: f32,
+    include_flat: bool,
+) {
+    let Some(applied) = recording::read_active(world, caster) else {
+        return;
+    };
+    for modifier in modifier_candidates(world, caster, spell, op) {
+        let used_kind = if modifier.percent {
+            basis != 0.0
+        } else {
+            include_flat
+        };
+        if modifier.amount != 0.0 && used_kind {
+            applied.record(modifier.owner, modifier.instance);
+        }
+    }
 }
 
 /// Spell modifiers with charges are spent by the spell they modify: each

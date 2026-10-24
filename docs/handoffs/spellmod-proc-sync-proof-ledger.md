@@ -19,6 +19,24 @@ Fresh RED scope on13d2f9633 plus recorded test/scaffolding hashes:
 
 Artifacts are under engine `data/diagnostics/arms-parity-2026-10-23/`. Native input resolves to private `tdb-proc-values/world.tdb-values-import.db`, freshly rehashed **60132e07ddc5ded0fc73b3de2b26ab866b0e87b9d976af7688792146e4c3be62**,887570432bytes. No canonical DB writes. Native RED source hashes, command, exact base, binary and logs are in its receipt; setup/compilation/zero tests never count as RED. Scope is metadata only: historical BodyAndSoul/Expurgation dispatch failures are not claimed fixed.
 
+## Commit2: captured inputs / applied identities
+
+Current capture implementation is not yet qualified GREEN. Fresh original7 native cases atfdc9f31a4 plus recorded None-scaffolding hashes produced **7actual missing-context assertionRED21.56s**, zero-warning2m12compile/exit101 (`proc-sync-c2-capture-red-v1.*`). Ordinary Shield/Fortitude, actual used/unused operations, real instant crit, actual delayed285452 impact and actual BodyAndSoul65081 gain all reached the intended missing-context boundary; setup failures were not counted.
+
+C2 carries an actual shared cast receipt through scopes and delayed clones; new/nested casts restore the outer receipt instead of recording into it. Frozen modifier candidates retain their actual source IDs, but only evaluation registers nonzero used operations. The legacy consume_charges body remains unchanged. Raw operation outcomes flow separately from damage/heal sums; nullification flags are captured at block/absorb boundaries. Scoped chain counters label children without activating the hard limit or changing the current queued dispatch. Prepared costs and actual item API contexts stay distinct from unavailable triggered/tick receipts. Ret Sentence's existing inline record_damage hook in this13d base is preserved before observation/queueing.
+
+| Captured surface | Proof / current limitation |
+| --- | --- |
+| Ordinary CAST, direct damage/heal and confirmed landed aura-only HIT | Native capture proof pending; actualcrit and rawpre-overheal data, not log-derived metadata. Other unresolved no-damage/immunity outcomes remain unavailable. |
+| Generic/Bool/costed/destination triggered and delayed ownership | Own receipt and invocation chain retained; native parent/child and chain cases pending. |
+| Periodic/melee/KILL-DEATH/knockback/reflect | Known source fields forwarded, no new producers. Null-Spell schoolNONE is explicit TC Unit.cpp292–300; reflect is TYPE5/PHASE0/HIT_REFLECT, knockback TYPE7/PHASE2/HIT_NONE. No blanket NORMAL is substituted. |
+| Emission-time observer | Opt-in existing test-support observation only, not a compatibility dispatch queue; identity values frozen at emission. |
+| Scheduling/charge/masks | Unchanged legacy transport, low CAST flags, charging, target batching and effect timing. Actual atomic cutover remains4; FINISH absent. |
+
+Fixture qualification before GREEN:28815 is still **not** a TC-positive charge oracle; its source is explicitly cancelled before the second cast, so the provenance test does not require legacy wrong consumption. The delayed child case now gains native378269 after actual launch/before impact. Giving it before launch while retaining C2's legacy drain would delete the source before the child evaluates; that is C4's separate charge-retention boundary, not permission to fabricate an application or change C2 math. The existing provenance assertions are unchanged; these setup differences mean the updated cases are not presented as byte-identical to the original7 RED bodies. An eighth actual mid-hardcast77762 capture case tests whether finish-time readiness/facing queries incorrectly register an unused admission modifier; its proof is still pending.
+
+C2 input is a fresh read-only canonical `.backup`: private `world.proc-sync-c2-canonical-backup.db` SHA**7bad5477f2c6da08a24ea95645621ecdf0f0dfc42008393fef922aedaac0bc7f**,1291×18,887570432bytes. `proc-sync-c2-input.proof.json` links it to main's canonical4442d87f publish. Only this worktree's alias changed; no canonical writes. C1 proof remains scoped to its immutable60132e07 input/revision and was not rerun.
+
 ## Charge-policy and data boundaries
 
 191634 has native modifier108 effects and DB2 flags/charge metadata, but no qualifying generated entry, audited TDB row or pinned TC script. Main explicitly assigned **SIMC_SHAMAN_STORMKEEPER_CONSUMPTION** instead: an ordinary post-CAST owner, source SimC76f8118 `sc_shaman.cpp6443–6449,7427–7433` (NORMAL only, protect midcast gain). This is not a TDB row, a generic entry or a fallback. Implementation belongs to atomic4; generic charge draining will be deleted.

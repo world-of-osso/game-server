@@ -80,6 +80,8 @@ pub(crate) fn pyroclasm_damage_modifier(
         .find(|aura| aura.spell_id == PYROCLASM)?;
     let amount = aura.effects.iter().find(|effect| effect.index == 0)?.amount;
     Some(ChargedSpellModifier {
+        aura_owner: caster,
+        aura_instance_id: aura.instance_id,
         aura_spell_id: aura.spell_id,
         op: crate::auras::SpellModOp::HealingAndDamage as i32,
         percent: true,

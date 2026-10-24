@@ -1,3 +1,7 @@
+## 2026-10-24 — Proc input/application capture under qualification
+
+[Capture](systems/auras.md#proc-input--application-capture--2026-10-24) adds actual operation identities, nested/delayed taking scopes, result bits and prepared cost/item/chain metadata. Original seven native cases reach genuine missing-context RED21.56s; two fixture premises are source-qualified before GREEN and the midcast-query case is pending. No charging/mask/queue/timing cutover. [Ledger](../handoffs/spellmod-proc-sync-proof-ledger.md#commit2-captured-inputs--applied-identities).
+
 ## 2026-10-24 — Full shared proc definitions, dispatch unchanged
 
 [Effective definitions](systems/auras.md#effective-proc-definitions--2026-10-24) replace presence-only import with exact18-field atomic publication and one explicit-before-generated reader, retaining raw DB2 fields. Fresh13d importer3RED and native16missing-entry RED qualify the missing boundary; b70076ea3 earns importer8GREEN0.900s/native16GREEN10.72s with zero-warning1m20compile. Exact command/input/binary receipts and lead-only publication plan remain in the [Stage2 ledger](../handoffs/spellmod-proc-sync-proof-ledger.md). No runtime phase/charge switch or whole-dispatch qualification.

@@ -222,6 +222,7 @@ mod open_lock_tests;
 #[cfg(test)]
 mod portal_tests;
 pub mod powers;
+pub(crate) mod proc_context;
 #[cfg(test)]
 mod protective_growth_tests;
 #[cfg(test)]
@@ -1360,6 +1361,8 @@ fn cast_granted_with_item_context(
         .and_then(|mut spell| {
             spell.cast_item_level = item_level;
             spell.cast_retail_item_id = retail_item_id;
+            // Only the actual item-use caller supplies this context (even category0).
+            spell.cast_from_item = Some(item_cooldown.is_some());
             if let Some(cooldown) =
                 item_cooldown.filter(|cd| cd.category != 0 && cd.category_ms > 0)
             {
@@ -1455,6 +1458,7 @@ pub(crate) fn cast_toy_spell(
         .cloned()
         .ok_or(CastFailure::UnknownSpell)?;
     spell.cast_destination = request.destination;
+    spell.cast_from_item = Some(true);
     validate_toy_destination(world, caster, &spell)?;
     spell.cast_item_level = Some(item_level);
     let cooldowns = spell.cooldowns.get_or_insert_with(Default::default);
@@ -2304,8 +2308,11 @@ fn start_cast(
     spell: &SpellInfo,
     explicit: Option<Entity>,
 ) -> Result<(), CastFailure> {
-    let target = validate_start(world, caster, spell, explicit, false)?;
-    begin_validated_cast(world, caster, spell, target)
+    let mut prepared = spell_mods::clone_for_new_recording(spell);
+    proc_context::capture_cast_origin(world, caster, &mut prepared, false);
+    let _recording = spell_mods::enter_recording(world, caster, &prepared);
+    let target = validate_start(world, caster, &prepared, explicit, false)?;
+    begin_validated_cast(world, caster, &prepared, target)
 }
 
 fn begin_validated_cast(
@@ -2500,8 +2507,22 @@ pub(crate) fn execute_cast(
     spell: &SpellInfo,
     explicit: Option<Entity>,
 ) -> Result<(), CastFailure> {
-    let primary_target = explicit;
     check_ordinary_caster_life(world, caster, spell)?;
+    let mut recorded = spell_mods::clone_for_recording(spell);
+    if recorded.cast_proc_chain_length.is_none() {
+        proc_context::capture_cast_origin(world, caster, &mut recorded, false);
+    }
+    let _recording = spell_mods::enter_recording(world, caster, &recorded);
+    execute_recorded_cast(world, caster, &recorded, explicit)
+}
+
+fn execute_recorded_cast(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+) -> Result<(), CastFailure> {
+    let primary_target = explicit;
     mobile_banking::check_cast(world, caster, spell.id)?;
     druid_transform::before_cast(world, caster, spell, 0)?;
     casting_restriction::check_cast(world, caster, spell)?;
@@ -2520,6 +2541,7 @@ pub(crate) fn execute_cast(
     disenchant::check_cast(world, caster, spell)?;
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
     prepared.cast_primary_target = primary_target;
+    prepared.cast_has_power_cost = Some(proc_context::has_power_cost(&costs));
     let mut launch_modifiers = spell_mods::snapshot_charged_modifiers(world, caster, &prepared);
     launch_modifiers.extend(scripts::pyroclasm_damage_modifier(world, caster, &prepared));
     prepared.cast_charge_mods = Some(launch_modifiers);
@@ -2576,6 +2598,7 @@ pub(crate) fn execute_cast(
             periodic: false,
             damage: 0.0,
             heal: None,
+            context: proc_context::cast(spell),
             reflected: false,
         },
     );
@@ -2919,8 +2942,7 @@ fn resolve_effects(
             caster,
             spell_id: spell.id,
             depth,
-            damage: Vec::new(),
-            healing: Vec::new(),
+            results: HitResults::default(),
             blocked: plan
                 .iter()
                 .flat_map(|effect| effect.blocked_units.iter().copied())
@@ -3040,14 +3062,11 @@ fn resolve_effects(
     for unit in hit_units(plan) {
         crate::scripted_ai::spell_hit(world, unit, caster, spell.id);
     }
-    let (damage, healing) = world
+    let results = world
         .get_resource_mut::<ResolvingHits>()
         .and_then(|mut resolving| resolving.0.pop())
-        .map_or_else(
-            || (Vec::new(), Vec::new()),
-            |frame| (frame.damage, frame.healing),
-        );
-    push_hit_events(world, caster, spell, plan, depth, &damage, &healing);
+        .map_or_else(HitResults::default, |frame| frame.results);
+    push_hit_events(world, caster, spell, plan, depth, &results);
 }
 
 /// `Spell::PreprocessSpellLaunch` (Spell.cpp:8538-8541) puts the caster in combat with
@@ -3153,9 +3172,15 @@ struct HitFrame {
     caster: Entity,
     spell_id: u32,
     depth: u8,
+    results: HitResults,
+    blocked: HashSet<Entity>,
+}
+
+#[derive(Debug, Default)]
+struct HitResults {
     damage: Vec<(Entity, f32)>,
     healing: Vec<(Entity, f32)>,
-    blocked: HashSet<Entity>,
+    proc: HashMap<Entity, proc_context::ResolvedProcHit>,
 }
 
 /// Read the innermost matching hit's block result; nested casts own their frame.
@@ -3183,6 +3208,7 @@ pub(crate) fn record_hit_damage(
     spell_id: u32,
     target: Entity,
     amount: f32,
+    result: proc_context::ResolvedProcHit,
 ) -> bool {
     let Some(mut resolving) = world.get_resource_mut::<ResolvingHits>() else {
         return false;
@@ -3194,10 +3220,16 @@ pub(crate) fn record_hit_damage(
     else {
         return false;
     };
-    match frame.damage.iter_mut().find(|(unit, _)| *unit == target) {
+    match frame
+        .results
+        .damage
+        .iter_mut()
+        .find(|(unit, _)| *unit == target)
+    {
         Some((_, total)) => *total += amount,
-        None => frame.damage.push((target, amount)),
+        None => frame.results.damage.push((target, amount)),
     }
+    frame.results.proc.entry(target).or_default().merge(result);
     true
 }
 
@@ -3209,6 +3241,7 @@ pub(crate) fn record_hit_heal(
     spell_id: u32,
     target: Entity,
     amount: f32,
+    result: proc_context::ResolvedProcHit,
 ) -> bool {
     let Some(mut resolving) = world.get_resource_mut::<ResolvingHits>() else {
         return false;
@@ -3220,10 +3253,16 @@ pub(crate) fn record_hit_heal(
     else {
         return false;
     };
-    match frame.healing.iter_mut().find(|(unit, _)| *unit == target) {
+    match frame
+        .results
+        .healing
+        .iter_mut()
+        .find(|(unit, _)| *unit == target)
+    {
         Some((_, total)) => *total += amount,
-        None => frame.healing.push((target, amount)),
+        None => frame.results.healing.push((target, amount)),
     }
+    frame.results.proc.entry(target).or_default().merge(result);
     true
 }
 
@@ -3249,9 +3288,10 @@ fn push_hit_events(
     spell: &SpellInfo,
     plan: &TargetPlan,
     depth: u8,
-    damage: &[(Entity, f32)],
-    healing: &[(Entity, f32)],
+    results: &HitResults,
 ) {
+    let damage = &results.damage;
+    let healing = &results.healing;
     let hit = hit_units(plan);
     let damage_to = |unit: Entity| {
         damage
@@ -3273,6 +3313,10 @@ fn push_hit_events(
                 periodic: false,
                 damage: amount,
                 heal: None,
+                context: results
+                    .proc
+                    .get(&target)
+                    .and_then(|result| proc_context::hit(spell, *result)),
                 reflected: false,
             },
         );
@@ -3318,6 +3362,10 @@ fn push_hit_events(
                 periodic: false,
                 damage,
                 heal,
+                context: match results.proc.get(&target) {
+                    Some(result) => proc_context::hit(spell, *result),
+                    None => proc_context::aura_only_hit(spell, plan, target),
+                },
                 reflected: false,
             },
         );
@@ -3494,8 +3542,10 @@ fn launch_triggered_spell(
     explicit: Option<Entity>,
     depth: u8,
 ) -> bool {
-    let mut prepared = spell.clone();
+    let mut prepared = spell_mods::clone_for_new_recording(spell);
     prepared.cast_primary_target = explicit;
+    proc_context::capture_cast_origin(world, caster, &mut prepared, true);
+    let _recording = spell_mods::enter_recording(world, caster, &prepared);
     let spell = &prepared;
     match plan_triggered_spell(world, caster, spell, explicit, depth) {
         Ok(mut plan) => {
@@ -3552,6 +3602,10 @@ fn execute_costed_trigger(
     depth: u8,
 ) -> Result<(), CastFailure> {
     let primary_target = explicit;
+    let mut recorded = spell_mods::clone_for_new_recording(spell);
+    proc_context::capture_cast_origin(world, caster, &mut recorded, true);
+    let _recording = spell_mods::enter_recording(world, caster, &recorded);
+    let spell = &recorded;
     druid_transform::before_cast(world, caster, spell, depth)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Start)?;
@@ -3560,6 +3614,7 @@ fn execute_costed_trigger(
     crate::profession::check_cast_items(world, caster, spell)?;
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
     prepared.cast_primary_target = primary_target;
+    prepared.cast_has_power_cost = Some(proc_context::has_power_cost(&costs));
     let plan = plan_targets(world, caster, &prepared, explicit, true)?;
     scripts::on_cast(world, caster, prepared.id, depth);
     take_cast_resources(world, caster, &prepared, &costs);

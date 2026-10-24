@@ -156,6 +156,16 @@ fn emit_knockback_proc(world: &mut World, caster: Entity, target: Entity) {
             periodic: false,
             damage: 0.0,
             heal: None,
+            // TC SpellEffects.cpp4073–4074 passes no Spell pointer: ALL/HIT/NONE.
+            context: Some(super::proc_context::without_spell(
+                0,
+                2,
+                super::proc_context::ResolvedProcHit {
+                    spell_type_mask: 7,
+                    hit_mask: 0,
+                },
+                None,
+            )),
             reflected: false,
         },
     );

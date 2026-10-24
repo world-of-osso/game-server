@@ -6,6 +6,12 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on active
 
 Import all18 audited effective public TC `spell_proc` columns into the existing authoritative `tdb_spell_proc` table only after every pinned base/update source matches its SHA-256. Preserve exact values, including zeros; reject incomplete/duplicate/invalid rows before publication. Replace the complete table transactionally without changing unrelated data; failures preserve prior rows. No presence-only fallback or parallel parser. Native and serverside SpellInfo loading must expose explicit-before-generated effective entries with TC defaults/validation while retaining unmodified DB2 fields separately. Missing/full-row schema failures are explicit. Definition loading alone does not activate phase/type dispatch or change runtime charges. [Stage2 source/proof ledger](../handoffs/spellmod-proc-sync-proof-ledger.md).
 
+## Captured proc inputs and applied spellmods
+
+One actual cast owns a shared `(owner Entity, aura instance)` receipt across admission/execution/delayed delivery. Nested/new casts own separate receipts and restore the previous taking spell on every exit. Record only nonzero actually evaluated flat/percent operations; optional percent-only costs do not register ignored flat modifiers, and a zero percent basis does not register an application. Matching/snapshot collection alone never registers application. Readiness-only rechecks must not claim an admission modifier was applied.
+
+Capture real per-operation damage/heal/type/crit/block/absorb outcomes before aggregate health-loss publication; no combat-log, damage-total or matched-candidate inference. Preserve actual prepared cost/item and scoped proc-chain facts; unavailable or inapplicable facts remain explicit rather than invented false/normal data. Test observations freeze identity values at event emission, not a later shared-receipt read. This capture step does not activate new masks, eligibility, scheduling or charge consumption; FINISH/absent-producer gaps remain visible. [Scope/proof](../handoffs/spellmod-proc-sync-proof-ledger.md).
+
 ## Firestarter direct critical strikes
 
 - [ ] Actual caster205026 effect0 makes ordinary Fireball133/Pyroblast11366 critical at recipient health percentage greater than or equal to its native threshold (70448:90).
