@@ -21,6 +21,7 @@ Devastation1467 must execute its DPS rotation natively and measure within10% of 
 - `crates/server/src/spell_cast/effects.rs` — ordinary direct/periodic source-damage integration, excluding already-resolved copies.
 - `crates/server/src/followers/giantkiller_tests.rs` — real level90 Kybel damage and native passive lifetime controls.
 - `crates/server/src/dungeon_simulator/dps_parity/` — exact-gear, strict-trait300s measurement.
+- `dps_parity/devastation_rotation/76f8118.simc` — all89 pinned action rows, unchanged order/options; APL-text SHA25648b025417cf6cd1c94416c247e8fe2c8b995f1a14f300d7d91046a6b94be4af3. This is preserved source data, not execution qualification.
 
 ## Tests asserting this spec
 
