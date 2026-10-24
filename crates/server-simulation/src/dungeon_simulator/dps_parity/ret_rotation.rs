@@ -39,5 +39,16 @@ fn bindings() -> Bindings {
     }
 }
 
+fn execution_actions()
+-> impl Iterator<Item = super::literal_rotation::execution::NativeAction<'static>> {
+    std::iter::empty()
+}
+
+fn read_program() -> Result<server::simc_apl::Program, String> {
+    server::simc_apl::Program::parse(&[])
+}
+
+#[cfg(test)]
+mod dispatch_tests;
 #[cfg(test)]
 mod tests;

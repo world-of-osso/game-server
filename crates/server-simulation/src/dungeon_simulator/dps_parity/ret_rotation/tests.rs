@@ -2,7 +2,7 @@ use super::*;
 use crate::simc_apl_native::{Encounter, FightStyle, NativeFacts};
 use server::simc_apl::Facts;
 
-fn facts<'a>(run: &'a super::super::Run, bindings: &'a Bindings) -> NativeFacts<'a> {
+pub(super) fn facts<'a>(run: &'a super::super::Run, bindings: &'a Bindings) -> NativeFacts<'a> {
     NativeFacts::new(
         run.app.world(),
         run.actor,
