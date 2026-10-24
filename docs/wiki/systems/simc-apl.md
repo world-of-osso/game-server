@@ -36,6 +36,12 @@
 
 [Feral source census](../../handoffs/feral-source-census.md) records exact reproduced ST/3T references, historical read-only native gaps from a supplied binary now qualified UNKNOWN_PRE_9D13_MISLABELED (not master proof) and the five ignored redirected-stat allocations. [Action-knowledge census](../../handoffs/action-knowledge-census.md) covers all11followers/990starter books: four raw-unknown controller actions are actual selected visible/parent actions, leaving zero missing-book rejections after sourced bridges. Own shared resolver c3934c31d has15/15native GREEN plus four-stage empower control; existing Ret controls stop on their direct Judgment generator's unretried NoCharges and await Ret-owner correction/integration gate. Feral literal adapter remains unqualified; raw KnownSpells membership must not silently disable those actions. Native selected35395→404542 exposes a passive final endpoint: own c51184367 genuine RED returnsSome404542 instead of unavailable. The shared final-endpoint check now reportsNotKnown and literal selection falls through; passive→active bridges and low-level casts are unchanged. Follow-up GREEN remains pending; [ledger](../../handoffs/action-knowledge-census.md#passive-endpoint-correction).
 
+## Assigned extension qualification
+
+Seven native regressions at89f985420 reach unknown requested predicates (18.52s): actual selected multi-rank talent, earned Hit Combo cap/loss, native Martial Agility haste, contextual Roll charges/recharge, real Flame/channel execution duration, unpaid Disintegrate ticks and Provoke recovery versus target range. The extension implementation reuses selected source config and the aura refresh scheduler's tick counter; GREEN remains pending. Action readiness reads native recovery, caster restrictions, movement, power and target checks independently of the current GCD/executing action; actual dispatch still uses full native admission. Missing source metadata remains an error. Replacement-spell identity integration awaits the shared actor-action resolver.
+
+[Native haste composition qualification](../../specs/simc-apl.md#native-haste-composition-boundary) is a separate RED-before-fix gate; the seven fact regressions do not prove haste composition.
+
 ## Sources
 
 - Pinned SimC76f8118 `engine/sim/expressions.cpp:22–154,333–440,1081–1130` — lexer, arithmetic/boolean decisions and precedence.

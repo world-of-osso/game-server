@@ -643,6 +643,15 @@ CREATE TABLE trait_definition (
 );
 CREATE INDEX IF NOT EXISTS trait_definition_spell_id ON trait_definition(SpellID);
 
+DROP TABLE IF EXISTS trait_definition_effect_points;
+CREATE TABLE trait_definition_effect_points (
+  ID INTEGER PRIMARY KEY,
+  TraitDefinitionID INTEGER NOT NULL,
+  EffectIndex INTEGER NOT NULL,
+  OperationType INTEGER NOT NULL,
+  CurveID INTEGER NOT NULL
+);
+
 DROP TABLE IF EXISTS trait_edge;
 CREATE TABLE trait_edge (
   ID INTEGER PRIMARY KEY,
