@@ -28,20 +28,23 @@ fn select_actor(h: &mut Harness, actor: Entity) {
         .0 = Some(actor);
 }
 
-fn spawn_hostile_player(h: &mut Harness, x: f32) -> Entity {
-    let player = spawn_player(&mut h.app, 8, x);
+fn npc_caster_fixture(spell: u32) -> (Harness, Entity, Entity) {
+    let mut h = harness(Vec::new(), &[spell], 8).unwrap();
+    // Ordinary player-vs-player attacks require duel/arena authority. Use a
+    // hostile NPC caster, not a PvP bypass, for these source NPC area/chain rows.
+    h.app.world_mut().get_mut::<Position>(h.caster).unwrap().x = 100.0;
+    let caster = h.npc;
+    h.app.world_mut().get_mut::<Position>(caster).unwrap().x = 0.0;
+    let npc = spawn_npc(&mut h.app, 3.0);
+    h.app.world_mut().entity_mut(npc).insert((
+        UnitFactionTemplate(crate::faction::faction_template_for_race(1)),
+        ModelDisplay { display_id: 10913 },
+    ));
     h.app
         .world_mut()
-        .get_mut::<shared::components::Player>(player)
-        .unwrap()
-        .race = 2;
-    h.app
-        .world_mut()
-        .entity_mut(player)
-        .insert(UnitFactionTemplate(
-            crate::faction::faction_template_for_race(2),
-        ));
-    player
+        .entity_mut(caster)
+        .insert(ModelDisplay { display_id: 10913 });
+    (h, caster, npc)
 }
 
 fn prove_player_toy_refuses_npc(toy: PlayerToy) {
@@ -136,12 +139,8 @@ fn toy_coverage_player_only_bbf_refuses_npc_then_uses_player() {
 #[test]
 #[ignore = "player-only source qualification; run explicitly"]
 fn toy_coverage_player_only_native_area_filters_before_authored_cap() {
-    let mut h = harness(Vec::new(), &[7645], 8).unwrap();
-    let player = spawn_hostile_player(&mut h, 6.0);
-    h.app
-        .world_mut()
-        .entity_mut(h.npc)
-        .insert(ModelDisplay { display_id: 10913 });
+    let (mut h, caster, npc) = npc_caster_fixture(7645);
+    let player = spawn_player(&mut h.app, 8, 6.0);
     let spell = world_db().unwrap().store.get(7645).unwrap().clone();
     assert_eq!(spell.misc.as_ref().unwrap().attributes[3] & 0x100, 0x100);
     let cap = spell.target_restrictions.as_ref().unwrap().max_targets;
@@ -151,18 +150,14 @@ fn toy_coverage_player_only_native_area_filters_before_authored_cap() {
         .iter()
         .find(|effect| effect.implicit_targets == [22, 15])
         .unwrap();
-    let npc = h.npc;
-    let caster = h.caster;
-    assert!(crate::spell_cast::targets::is_hostile(
-        h.app.world(),
-        caster,
-        npc
-    ));
-    assert!(crate::spell_cast::targets::is_hostile(
-        h.app.world(),
-        caster,
-        player
-    ));
+    for target in [npc, player] {
+        assert!(crate::spell_cast::targets::relation_matches(
+            h.app.world(),
+            caster,
+            target,
+            crate::spell_cast::targets::Relation::Enemy,
+        ));
+    }
     let recipients = crate::spell_cast::targets::select_targets(
         h.app.world_mut(),
         caster,
@@ -242,11 +237,11 @@ fn toy_coverage_player_only_native_destination_is_not_a_unit_recipient() {
 #[test]
 #[ignore = "player-only source qualification; run explicitly"]
 fn toy_coverage_player_only_native_chain_rejects_closer_npc_before_jumps() {
-    let mut h = harness(Vec::new(), &[31436], 8).unwrap();
-    let initial = spawn_hostile_player(&mut h, 3.0);
-    let second = spawn_hostile_player(&mut h, 6.0);
-    let third = spawn_hostile_player(&mut h, 9.0);
-    h.app.world_mut().get_mut::<Position>(h.npc).unwrap().x = 4.0;
+    let (mut h, caster, npc) = npc_caster_fixture(31436);
+    let initial = spawn_player(&mut h.app, 8, 3.0);
+    let second = spawn_player(&mut h.app, 8, 6.0);
+    let third = spawn_player(&mut h.app, 8, 9.0);
+    h.app.world_mut().get_mut::<Position>(npc).unwrap().x = 4.0;
     let spell = world_db().unwrap().store.get(31436).unwrap().clone();
     assert_eq!(spell.misc.as_ref().unwrap().attributes[3] & 0x100, 0x100);
     let effect = spell
@@ -254,7 +249,14 @@ fn toy_coverage_player_only_native_chain_rejects_closer_npc_before_jumps() {
         .iter()
         .find(|effect| effect.implicit_targets == [6, 0] && effect.chain_targets == 3)
         .unwrap();
-    let caster = h.caster;
+    for target in [npc, initial, second, third] {
+        assert!(crate::spell_cast::targets::relation_matches(
+            h.app.world(),
+            caster,
+            target,
+            crate::spell_cast::targets::Relation::Enemy,
+        ));
+    }
     let jumps = crate::spell_cast::targets::chain_targets(
         h.app.world_mut(),
         caster,
