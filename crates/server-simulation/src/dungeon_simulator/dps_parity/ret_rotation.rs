@@ -167,6 +167,8 @@ mod dispatch_tests;
 #[cfg(test)]
 mod equipment_tests;
 #[cfg(test)]
+mod finisher_tests;
+#[cfg(test)]
 mod lifecycle_tests;
 #[cfg(test)]
 mod readiness_tests;
