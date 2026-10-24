@@ -184,6 +184,96 @@ fn dps_parity_ret_tier_four_piece_same_kind_preserves_cross_kind_emits_child() {
     );
 }
 
+fn cast_literal_storm(run: &mut Run) {
+    use super::literal_rotation::{
+        equipment::Equipment,
+        execution::{self, Prepared},
+    };
+    let mut bindings = super::ret_rotation::bindings();
+    let equipment = Equipment::load(run.app.world(), run.actor, &mut bindings).unwrap();
+    let action = crate::simc_apl::Action {
+        name: "divine_storm".into(),
+        target: None,
+        options: Default::default(),
+    };
+    for _ in 0..200 {
+        let prepared = Prepared::read(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &equipment,
+            super::ret_rotation::execution_actions(),
+            false,
+        )
+        .unwrap();
+        if let Some(execution) = prepared.execution(&action, &equipment).unwrap() {
+            execution::execute(run.app.world_mut(), run.actor, execution).unwrap();
+            return;
+        }
+        run.app.update();
+    }
+    panic!("naturally funded literal Storm did not become ready");
+}
+
+#[test]
+#[ignore = "native literal self-cast must retain hostile primary for forwarded child"]
+fn dps_parity_ret_tier_literal_self_cast_preserves_arbiter_hostile_primary() {
+    use crate::spell_cast::test_harness::ObservedTriggeredCasts;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = native_ret(4);
+    run.app.init_resource::<ObservedTriggeredCasts>();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::AutoAttack(run.targets[0]),
+    )
+    .unwrap();
+    grant_native_purpose(&mut run);
+    cast_finisher(&mut run, FINAL_VERDICT);
+    assert!(has(&run, VERDICT_ARBITER));
+    assert_eq!(child_damage(&run), 0);
+    super::ret_purpose_tests::earn_finisher_power(&mut run, DIVINE_STORM);
+    cast_literal_storm(&mut run);
+    assert!(
+        !has(&run, VERDICT_ARBITER),
+        "real opposite-kind spender consumed pending kind"
+    );
+    let child_targets = run
+        .app
+        .world()
+        .resource::<ObservedTriggeredCasts>()
+        .0
+        .iter()
+        .filter(|(caster, spell, _)| *caster == run.actor && *spell == DIVINE_ARBITER)
+        .map(|(_, _, target)| *target)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        child_targets,
+        vec![Some(run.targets[0])],
+        "literal self-target must not replace forwarded child's hostile primary; caster={:?}",
+        run.actor
+    );
+    for _ in 0..200 {
+        run.app.update();
+        if child_damage(&run) > 0 {
+            break;
+        }
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(DIVINE_ARBITER)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "native child must actually damage hostile primary"
+    );
+}
+
 #[test]
 #[ignore = "native Ret2062 no-set control: actual Purpose consumption is not tier eligibility"]
 fn dps_parity_ret_tier_no_set_does_not_produce_tier_children() {
