@@ -16,7 +16,7 @@ const TARGET_GAMEOBJECT_ITEM: u32 = 26;
 const LOCKTYPE_LOCKPICKING: u32 = 1;
 
 #[derive(Resource)]
-pub(crate) struct ItemLocks {
+pub struct ItemLocks {
     items: HashMap<u32, u32>,
     locks: LockDb,
 }

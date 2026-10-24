@@ -124,7 +124,7 @@ impl PetCharm {
     }
 
     /// The bar slot holding `spell` (`HasSpell`: the bar holds the pet's learned spells).
-    pub(crate) fn spell_slot(&self, spell: u32) -> Option<usize> {
+    pub fn spell_slot(&self, spell: u32) -> Option<usize> {
         PET_SPELL_SLOTS.clone().find(|&slot| {
             let button = self.action_bar[slot];
             button != 0
@@ -646,7 +646,7 @@ fn can_attack(world: &World, pet: Entity, target: Entity) -> bool {
 /// AI target) going after it (`UNIT_FLAG_PET_IN_COMBAT`), chasing it unless held by Stay
 /// without an order.
 /// Server-side orders from an authenticated NPC companion, using the same pet AI.
-pub(crate) fn order_companion_pet(world: &mut World, owner: Entity, target: Option<Entity>) {
+pub fn order_companion_pet(world: &mut World, owner: Entity, target: Option<Entity>) {
     let Some(pet) = summoned_pet(world, owner) else {
         return;
     };

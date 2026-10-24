@@ -16,9 +16,9 @@ NativePlayer63 qualification uses pinnedSimC76f8118 Fire action rows, retaining 
 
 ## Implementation inventory
 
-- `crates/server/src/dungeon_simulator/dps_parity/fire_rotation/76f8118.simc` — pinned literal source data.
-- `crates/server/src/dungeon_simulator/dps_parity/mod.rs` — native qualification boundary; Fire hookup pending.
-- `crates/server/src/dungeon_simulator/dps_parity/literal_rotation/` — shared Driver, Prepared and Equipment; spec-local execution is out of scope.
+- `crates/server-simulation/src/dungeon_simulator/dps_parity/fire_rotation/76f8118.simc` — pinned literal source data.
+- `crates/server-simulation/src/dungeon_simulator/dps_parity/mod.rs` — native qualification boundary; Fire hookup pending.
+- `crates/server-simulation/src/dungeon_simulator/dps_parity/literal_rotation/` — shared Driver, Prepared and Equipment; spec-local execution is out of scope.
 
 ## Tests asserting this spec
 

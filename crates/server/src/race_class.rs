@@ -150,11 +150,11 @@ fn load_playable_races(directory: &Path) -> Result<BTreeMap<u8, PlayableRace>, S
 }
 
 fn installed_db2_directory() -> PathBuf {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active")
     }
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "test-support")))]
     {
         PathBuf::from("data/db2/active")
     }

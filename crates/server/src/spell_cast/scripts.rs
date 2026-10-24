@@ -1039,14 +1039,14 @@ fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f6
         .get(spell_id)
         .and_then(|spell| spell.categories.as_ref())
         .map_or(0, |category| category.charge_category);
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     let before = super::holy_metrics::read_recharge(world, caster, charge_category, now);
     let reduced = world
         .get_mut::<super::SpellHistory>(caster)
         .map(|mut history| {
             reduce_running_timers(&mut history, charge_category, spell_id, now, seconds)
         });
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     {
         let after = super::holy_metrics::read_recharge(world, caster, charge_category, now);
         let applied = (before - after).max(0.0).min(seconds);

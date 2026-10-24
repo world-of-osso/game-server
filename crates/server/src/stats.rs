@@ -160,7 +160,7 @@ pub struct WeaponAttackPower {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum WeaponAttackType {
+pub enum WeaponAttackType {
     MainHand,
     OffHand,
     Ranged,
@@ -214,7 +214,7 @@ pub struct CharacterStats {
 impl CharacterStats {
     /// TC Unit.cpp9973–10000: weapon AP precedes the respective AP percentage.
     /// The sheet AP already includes that percentage; white/weapon hits keep it alone.
-    pub(crate) fn total_attack_power(
+    pub fn total_attack_power(
         &self,
         attack_type: WeaponAttackType,
         modifiers: Option<&StatModifiers>,
@@ -246,7 +246,7 @@ impl CharacterStats {
 
     /// Unit.cpp7036/8229: incoming damage uses half the combined rating and
     /// aura471 percentage; damage cannot fall below zero.
-    pub(crate) fn versatility_damage_taken_multiplier(&self) -> f32 {
+    pub fn versatility_damage_taken_multiplier(&self) -> f32 {
         (1.0 - self.versatility_pct / 200.0).max(0.0)
     }
 

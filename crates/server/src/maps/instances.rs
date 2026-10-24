@@ -175,7 +175,7 @@ impl InstanceManager {
     }
 
     /// A companion group formed after solo admission inherits that owned copy.
-    pub(crate) fn bind_group_instance(
+    pub fn bind_group_instance(
         &mut self,
         group: GroupId,
         owner: u64,
@@ -619,7 +619,7 @@ impl InstanceManager {
     }
 
     /// The allocated copy's admission capacity, not current player occupancy.
-    pub(crate) fn copy_capacity(&self, map: InMap) -> Option<u32> {
+    pub fn copy_capacity(&self, map: InMap) -> Option<u32> {
         self.copies.get(&map).map(|copy| copy.max_players)
     }
 
