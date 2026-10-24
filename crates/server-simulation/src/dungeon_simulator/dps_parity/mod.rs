@@ -6,6 +6,7 @@ mod engagement_tests;
 mod equipment_input_tests;
 mod firestarter_tests;
 mod haste_tests;
+mod howl_tests;
 mod inputs;
 pub(crate) mod literal_rotation;
 mod owner_cooldown_tests;
