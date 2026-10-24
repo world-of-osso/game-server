@@ -117,6 +117,11 @@ impl<'a> NativeFacts<'a> {
                 .map(|aura| f64::from(aura.stacks))
                 .fold(0.0, f64::max)),
             "remains" => Ok(buff_remaining(&active, now)),
+            "at_max_stacks" => Ok(bool_value(
+                active
+                    .iter()
+                    .any(|aura| aura.stacks >= aura.max_stacks.max(1)),
+            )),
             _ => Err(format!("unknown native APL buff property {property}")),
         }
     }
@@ -135,8 +140,33 @@ impl<'a> NativeFacts<'a> {
         match property {
             "enabled" => Ok(bool_value(enabled)),
             "disabled" => Ok(bool_value(!enabled)),
+            "rank" => self.talent_rank(traits, id),
             _ => Err(format!("unknown native APL talent property {property}")),
         }
+    }
+
+    fn talent_rank(
+        &self,
+        traits: &crate::class_progression::TraitLoadout,
+        spell: u32,
+    ) -> Result<f64, String> {
+        let classes = self.world.resource::<crate::spell_info::ClassSpells>();
+        for entry in traits.source_config().0 {
+            let definition = classes
+                .classes
+                .iter()
+                .find_map(|class| class.traits.node(entry.node_id)?.entry(entry.entry_id));
+            let definition = definition.ok_or_else(|| {
+                format!(
+                    "native APL selected trait entry{} definition absent",
+                    entry.entry_id
+                )
+            })?;
+            if definition.spell_id == spell {
+                return Ok(f64::from(entry.total()));
+            }
+        }
+        Ok(0.0)
     }
 
     fn cooldown(&self, operand: &str) -> Result<f64, String> {
@@ -148,6 +178,60 @@ impl<'a> NativeFacts<'a> {
             self.spell(id)?,
             property,
         )
+    }
+
+    fn action_spell(&self, alias: &str) -> Result<&crate::spell_info::SpellInfo, String> {
+        let id = bound_spell(&self.bindings.actions, alias, "action")?;
+        self.spell(id)
+    }
+
+    fn action_property(&self, alias: &str, property: &str) -> Result<f64, String> {
+        let spell = self.action_spell(alias)?;
+        match property {
+            "usable_in" => crate::spell_cast::native_apl::cooldown_value(
+                self.world, self.actor, spell, "remains",
+            ),
+            "ready" => crate::spell_cast::native_apl::action_ready(self.world, self.actor, spell),
+            _ => Err(format!("unknown native APL action property {property}")),
+        }
+    }
+
+    fn spell_haste(&self) -> Result<f64, String> {
+        let stats = self
+            .world
+            .get::<crate::stats::CharacterStats>(self.actor)
+            .ok_or("native APL actor lacks derived CharacterStats")?;
+        Ok(1.0 / (1.0 + f64::from(stats.haste_pct) / 100.0))
+    }
+
+    fn contextual_property(&self, action: &Action, name: &str) -> Result<f64, String> {
+        let spell = self.action_spell(&action.name)?;
+        match name {
+            "charges" | "charges_fractional" | "full_recharge_time" => {
+                crate::spell_cast::native_apl::cooldown_value(self.world, self.actor, spell, name)
+            }
+            "execute_time" => Ok(crate::spell_cast::native_apl::execute_time(
+                self.world, self.actor, spell,
+            )),
+            "ticks_remain" => self.ticks_remaining(spell.id),
+            _ => Err(format!("unknown native APL contextual property {name}")),
+        }
+    }
+
+    fn ticks_remaining(&self, spell: u32) -> Result<f64, String> {
+        let target = self
+            .world
+            .get::<shared::casting::CastState>(self.actor)
+            .and_then(|cast| Entity::try_from_bits(cast.target))
+            .or_else(|| {
+                self.world
+                    .get::<crate::networking::CombatTarget>(self.actor)
+                    .and_then(|target| target.0)
+            });
+        let Some(target) = target else {
+            return Err("native APL ticks_remain requires an actual target".into());
+        };
+        crate::auras::remaining_periodic_ticks(self.world, self.actor, target, spell).map(f64::from)
     }
 
     fn resource(&self, operand: &str) -> Result<f64, String> {
@@ -228,7 +312,9 @@ impl Facts for NativeFacts<'_> {
             "time" => Ok(self.elapsed()),
             "fight_remains" | "target.time_to_die" => self.remaining(name),
             "active_enemies" => Ok(self.active_enemies as f64),
-            "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" => {
+            "spell_haste" => self.spell_haste(),
+            "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "charges_fractional"
+            | "full_recharge_time" | "execute_time" | "ticks_remain" => {
                 Err(format!("native APL {name} requires action context"))
             }
             _ => {
@@ -240,6 +326,10 @@ impl Facts for NativeFacts<'_> {
                 }
                 if let Some(value) = name.strip_prefix("cooldown.") {
                     return self.cooldown(value);
+                }
+                if let Some(value) = name.strip_prefix("action.") {
+                    let (alias, property) = split_property(value, "action")?;
+                    return self.action_property(alias, property);
                 }
                 if let Some(value) = name.strip_prefix("fight_style.") {
                     return self.fight_style(value);
@@ -254,6 +344,8 @@ impl ActionFacts for NativeFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" => self.gcd(action, name),
+            "charges" | "charges_fractional" | "full_recharge_time" | "execute_time"
+            | "ticks_remain" => self.contextual_property(action, name),
             _ => self.value(name),
         }
     }
