@@ -2,6 +2,10 @@
 
 `server::simc_apl` supplies shared expressions, variables and source-ordered call lists. `crate::simc_apl_native` supplies shared native gameplay facts for explicit parity fixtures; spec adapters add only spec predicates plus action/target bindings and castability. Neither layer invents missing combat data.
 
+## Native action flight
+
+`action.<alias>.in_flight` and `.in_flight_remains` read caster/spell-owned pending native missile deadlines. TC Meteor also observes its live delay field and the same native continuation-delay calculation used by launch; an expiry admission failure removes flight immediately. Hardcasts before launch and remaining ground burn are not flight. No synthetic timer/resource or SimC travel-clock replacement. [Contract](../../specs/simc-apl.md#native-flight-observations), [native lifecycle/regression proof](../../handoffs/native-flight-proof-ledger.md).
+
 ## Capability / proof matrix
 
 | Capability | Representation / boundary | Proof |

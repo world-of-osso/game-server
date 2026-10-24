@@ -1,3 +1,4 @@
+- [Native action flight](systems/simc-apl.md#native-action-flight) — actual pending missile/TC Meteor lifecycle facts; scoped native RED/GREEN and unchanged missile regression proof.
 - [Devastation Giantkiller policy](investigations/follower-data.md#devastation-giantkiller-policy--2026-10-22) — actual native mastery4RED→4GREEN25.40s atf50689cfa; health floor, Tyranny and other-family controls pass. Fresh ST/3T and literal APL remain open.
 - [Periodic critical ticks](systems/auras.md#periodic-critical-ticks--2026-10-23) — native flags, live script-aware chance and spell bonuses; named class-actor spell-owner policy; player/follower/pet/HoT genuine RED, controls retained, GREEN pending.
 - [Trait effect points](systems/talents.md#trait-effect-points) — native70448 import/definition+rank/TC curves; fresh/lifetime RED→native5GREEN34.44s, importer/no-leak1GREEN6.825s; unchanged aura control, private data, parent publication/gate pending.

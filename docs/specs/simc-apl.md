@@ -47,13 +47,13 @@ Player execution boundary: seven actual native cases at4f91688e8 give1WW control
 
 Native behavioral tests: `simc_apl_native/tests.rs` (earned Hit Combo and Chi, real Provoke cooldown, real Roll charges, actual Charge Rage display conversion, fixture clock and unavailable dungeon predicates). Six pushed ignored native cases produce genuine6RED at5924496f9 (13.24s test/8m18compile/exit101; three scaffold dead-field warnings). Atdc1ee9781 the same six native cases pass6/6 in17.40s (7m37compile),exit0,zero compiler warnings; tests enabled afterward without body changes ([native proof ledger](../handoffs/shared-native-apl-proof-ledger.md)). Current native fact seam is fixture-only (`cfg(test)`), matching the approved explicit parity Fixture driver boundary; live dungeon APL/TTD is not enabled.
 
-### Native flight observations (pending)
+### Native flight observations
 
-- [ ] `action.<name>.in_flight` observes that actor's genuinely pending native travel/delay state; a hardcast before launch and an ongoing ground burn are not flight.
-- [ ] `in_flight_remains` reports seconds to the nearest pending impact, or zero with no flight. Follow the actual Meteor delay-field→missile lifecycle and native metadata, not SimC's different modeled travel clock or a new timer.
-- [ ] Failed native expiry admission ends Meteor flight immediately; another actor's projectiles cannot affect either fact.
+- [x] `action.<name>.in_flight` observes that actor's genuinely pending native travel/delay state; a hardcast before launch and an ongoing ground burn are not flight.
+- [x] `in_flight_remains` reports seconds to the nearest pending impact, or zero with no flight. Follow the actual Meteor delay-field→missile lifecycle and native metadata, not SimC's different modeled travel clock or a new timer.
+- [x] Failed native expiry admission ends Meteor flight immediately; another actor's projectiles cannot affect either fact.
 
-Behavioral source: `followers/native_flight_tests.rs` covers Pyroblast launch/countdown/impact, hardcast exclusion, actor isolation and Meteor handoff/refusal. At3e3cacb6d, current-canonical source-view library tests yield startup1PASS/flight4genuine unknown-property RED in9.65s, compile19m12/zero warnings. Both requested properties are evaluated before failure. The earlier binary-target source-view refusal was not RED. Implementation reads pending native deadlines and the live TC Meteor continuation; targeted GREEN remains pending.
+Behavioral source: `followers/native_flight_tests.rs` covers Pyroblast launch/countdown/impact, hardcast exclusion, actor isolation and Meteor handoff/refusal. At3e3cacb6d, current-canonical source-view library tests yield startup1PASS/flight4genuine unknown-property RED in9.65s, compile19m12/zero warnings. Both requested properties are evaluated before failure. The earlier binary-target source-view refusal was not RED. Implementation reads pending native deadlines and the live TC Meteor continuation. At7826726dc, all14 targeted native cases pass23.04s (14m21 compile, zero warnings), including nine existing missile regressions; [scoped proof](../handoffs/native-flight-proof-ledger.md). Independent integration/DPS remain separate.
 
 ## Assigned native fact extensions
 

@@ -1,3 +1,7 @@
+## 2026-10-23 — Native action flight facts
+
+[Shared native flight](systems/simc-apl.md#native-action-flight) follows actual caster/spell pending deadlines and TC Meteor delay→missile admission, without synthetic timers. [Scoped proof](../handoffs/native-flight-proof-ledger.md) records genuine lifecycle RED, current-canonical source-view GREEN and native missile regressions. Parent gateff1073/DPS integration remain separate.
+
 ## 2026-10-23 — Periodic critical ticks
 
 [Periodic crit](systems/auras.md#periodic-critical-ticks--2026-10-23): TC-native eligibility/live rolls and critical damage/healing bonuses, with explicit `FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_SPELL_OWNER` policy for class actors and owned pets/totems. Native RED7b924:2controlsPASS/5featureFAIL35.83s, then first7GREEN42.94s. Required real1943+21880 ordering REDcf191c5: native flat +10 raises normal10937→11038, critical73726 versus74307.8125 expected; initial follower259 fixture failure explicitly invalid. Move periodic roll behind numeric source/flat bonuses; final GREEN pending. Clocks, attribution, APL and pet stats unchanged.
