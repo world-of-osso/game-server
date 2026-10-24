@@ -102,6 +102,7 @@ pub(super) fn build() -> Bindings {
     Bindings {
         actions: names(ACTIONS),
         buffs: names(BUFFS),
+        dot_refresh: Default::default(),
         talents: names(TALENTS),
         resources: [
             ("chi".into(), PowerType::Chi),

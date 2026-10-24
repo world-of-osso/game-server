@@ -77,7 +77,7 @@ def generate_source(criteria_path, modifiers_path, output):
         f'// ModifierTree SHA256 {hashlib.sha256(modifiers_path.read_bytes()).hexdigest()}.',
         'use super::MythicRequirements;',
         '',
-        'pub(super) fn mythic_requirements(criteria: u32, modifier: u32) -> Option<MythicRequirements> {',
+        'pub fn mythic_requirements(criteria: u32, modifier: u32) -> Option<MythicRequirements> {',
         '    match (criteria, modifier) {',
     ]
     for row_id, req in sorted(qualified.items()):

@@ -29,13 +29,13 @@ The earlier per-hit capture schema itself passed1/1 and preserved damage38050 ex
 
 ## Separate unqualified TC branch
 
-TC also adjusts K for max-level players/player-owned units using equipped-base item-level delta and `GlobalCurve::ArmorItemLevelDiminishing`18. Installed70448 GlobalCurve19 maps to curve27400, whose points rise above1 after delta17. Native `ArmorConstants` currently has no item-level branch. This is not the observed12% follower difference. The relevant player/owner item-level input and a quantitative native counterexample are not qualified here; no curve or K tuning is included in this policy change.
+TC also adjusts K for max-level players/player-owned units using equipped-base item-level delta and `GlobalCurve::ArmorItemLevelDiminishing`18. Installed70448 GlobalCurve19 maps to curve27400, whose points rise above1 after delta17. Native `ArmorConstants` currently has no item-level branch. This is not the observed12% follower difference. The relevant player/owner item-level input and a quantitative native counterexample are not qualified here; no curve or K tuning is included in this policy change. Follow-up source lookup identifies `gametables/itemlevelbylevel.txt` FDID2012881, but no matching local table was found and the active local install is70575, not pinned native70448. No later-build extraction or fabricated baseline was substituted; `itemlevel-k-source-boundary.proof.json` retains the source boundary.
 
 ## Sources
 
 - [TC pinned Unit.cpp](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa9017138cc2f1dcfc0a51afaa17391ecf/src/server/game/Entities/Unit/Unit.cpp#L1689-L1778) — source boundary and armor calculation.
 - [Native aura recomputation](../../../crates/server/src/auras/mod.rs), [armor pipeline](../../../crates/server/src/combat.rs), [ExpectedStat producer](../../../crates/server/src/level_scaling.rs).
-- [Per-cast regression](../../../crates/server/src/dungeon_simulator/dps_parity/single_spell.rs), [ordinary-NPC control](../../../crates/server/src/spell_cast/aura_stat_spell_tests.rs).
+- [Per-cast regression](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/single_spell.rs), [ordinary-NPC control](../../../crates/server/src/spell_cast/aura_stat_spell_tests.rs).
 - [Follower contract](../../specs/follower-dungeons.md).
 
 ## See Also

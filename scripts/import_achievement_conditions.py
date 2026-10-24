@@ -310,7 +310,7 @@ def generate_source(criteria_path, modifiers_path, difficulty_path, expressions_
         f'// WorldStateExpression SHA256 {hashlib.sha256(expressions_path.read_bytes()).hexdigest()}.',
         'use super::{CompiledConditions, DifficultyRule};',
         '',
-        'pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<CompiledConditions> {',
+        'pub fn criteria_conditions(criteria: u32, modifier: u32) -> Option<CompiledConditions> {',
         '    match (criteria, modifier) {',
     ]
     for criterion, (modifier, rule, facts) in sorted(qualified.items()):

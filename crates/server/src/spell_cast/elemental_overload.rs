@@ -7,6 +7,7 @@ use crate::spell_info::SpellInfo;
 
 const MASTERY: u32 = 168534;
 const STORMKEEPER: u32 = 191634;
+const ASCENDANCE: u32 = 1219480;
 const LIGHTNING_BOLT: u32 = 188196;
 const CHAIN_LIGHTNING: u32 = 188443;
 const LAVA_BURST: u32 = 51505;
@@ -20,11 +21,16 @@ pub(super) const LIGHTNING_OVERLOAD: u32 = 45284;
 pub(super) const CHAIN_OVERLOAD: u32 = 45297;
 const OVERLOAD_DELAY_MS: u32 = 400;
 
-fn mastery_amount(world: &World, caster: Entity, index: u8) -> Option<f32> {
+fn self_aura_amount(world: &World, caster: Entity, aura_spell: u32, index: u8) -> Option<f32> {
+    let now = super::now(world);
     world
         .get::<ActiveAuras>(caster)?
         .iter()
-        .find(|aura| aura.spell_id == MASTERY && aura.caster == caster)?
+        .find(|aura| {
+            aura.spell_id == aura_spell
+                && aura.caster == caster
+                && aura.expires_at.is_none_or(|at| at > now)
+        })?
         .effects
         .iter()
         .find(|effect| effect.index == index)
@@ -41,7 +47,13 @@ fn stormkeeper_modified_cast(spell: &SpellInfo) -> bool {
 
 /// TDB168534 phase2 is HIT: roll once per landed target, then wait400ms.
 /// The retained launch snapshot proves SK matched even after charge consumption.
-pub(super) fn after_hit(world: &mut World, caster: Entity, spell: &SpellInfo, target: Entity) {
+pub(super) fn after_hit(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+    first_harmful_hit: bool,
+) {
     let overload = match spell.id {
         LIGHTNING_BOLT => LIGHTNING_OVERLOAD,
         CHAIN_LIGHTNING => CHAIN_OVERLOAD,
@@ -50,7 +62,7 @@ pub(super) fn after_hit(world: &mut World, caster: Entity, spell: &SpellInfo, ta
         ELEMENTAL_BLAST => ELEMENTAL_BLAST_OVERLOAD,
         _ => return,
     };
-    let Some(chance) = mastery_amount(world, caster, 0) else {
+    let Some(chance) = self_aura_amount(world, caster, MASTERY, 0) else {
         return;
     };
     let chance = if spell.id == CHAIN_LIGHTNING {
@@ -59,9 +71,14 @@ pub(super) fn after_hit(world: &mut World, caster: Entity, spell: &SpellInfo, ta
         chance
     };
     let guaranteed = stormkeeper_modified_cast(spell);
-    if !guaranteed && crate::random::random::<f32>() * 100.0 >= chance {
-        return;
-    }
+    let ordinary = guaranteed || crate::random::random::<f32>() * 100.0 < chance;
+    // Native1219480s9/effect8 adds casts independently of the ordinary roll.
+    // One spell gets this addition once, not once per Chain recipient.
+    let additional = if first_harmful_hit {
+        self_aura_amount(world, caster, ASCENDANCE, 8).unwrap_or(0.0) as u32
+    } else {
+        0
+    };
     let ctx = super::effects::EffectCtx {
         caster,
         spell,
@@ -69,11 +86,19 @@ pub(super) fn after_hit(world: &mut World, caster: Entity, spell: &SpellInfo, ta
         dest: None,
         chain_multiplier: 1.0,
     };
-    super::queued_triggers::schedule_normal_cast(world, &ctx, target, overload, OVERLOAD_DELAY_MS);
+    for _ in 0..u32::from(ordinary) + additional {
+        super::queued_triggers::schedule_normal_cast(
+            world,
+            &ctx,
+            target,
+            overload,
+            OVERLOAD_DELAY_MS,
+        );
+    }
 }
 
 /// TC reads the current native effect1 amount, including its authored modifiers.
 /// Echo Chamber108/PointsIndex1 is already applied by ordinary aura calculation.
 pub(super) fn scale_damage(world: &World, caster: Entity, _target: Entity, amount: f32) -> f32 {
-    mastery_amount(world, caster, 1).map_or(amount, |percent| amount * percent / 100.0)
+    self_aura_amount(world, caster, MASTERY, 1).map_or(amount, |percent| amount * percent / 100.0)
 }
