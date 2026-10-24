@@ -4336,3 +4336,7 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 ## 2026-10-24 — Alternate Imp native source packet
 
 [Alternate native Wild Imp](investigations/demonology-dps-parity.md#alternate-native-wild-imp-source-qualification): exact279910→14362220s/template/models qualified from native data; three separate project associations approved with TC/TDB absence ledger. Thirty real head-eye rows read back; main owns publication. Lifecycle and periodic-phase RED queued before implementation;334591 excluded.
+
+## 2026-10-24 — Alternate native Imp execution GREEN
+
+[Alternate execution](investigations/demonology-dps-parity.md#alternate-execution-qualified-numerical-parity-still-open): d54 eightnative cases GREEN42.18s/0warnings plus six producer cases; actual20s143622 uses existing five-cast fade/Core/SP/Tyrant identity, native12s association, and native-authority controls. Fresh backup/private approved rows, exact5e94 binary/1244eyes measure ST18061.43/3T29560.80; still−90.82%/−92.97% reference. No334591 cost or random-phase/tickzero policy.
