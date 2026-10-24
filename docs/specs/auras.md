@@ -6,6 +6,12 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on active
 
 Import the audited effective public TC `spell_proc` IDs into `tdb_spell_proc(SpellId PRIMARY KEY)` only after every pinned base/update source matches its SHA-256. Reject duplicate/incomplete IDs before publication. Replace presence transactionally without changing retained rows' later value columns or unrelated tables; errors leave prior data intact. Presence alone must not overlay chance, flags, cooldown or charges. The later full proc importer owns those values. Runtime requires the provenance table; absence is a load error, not permission to treat every definition as generated. After complete spell assembly, identify explicit TDB, registered scripted, generated or absent definitions. Only generated definitions use TC a352b1fa SpellMgr1888–1903 refusal: CAN_PROC_FROM_PROCS, no relevant family mask, chance≥100, no positive PPM/cooldown/charges, relevant dealt-event flags and an actual trigger. Refusal must retain raw aura/stack/charge metadata and prevent proc dispatch even during actor bootstrap. Explicit48484, scripted Dance/Inundate and generated391875's authored100ms cooldown remain eligible. See [Feral/source ledger](../handoffs/feral-source-census.md).
 
+## Explicit TDB proc values
+
+- [ ] Extend the same audited tdb_spell_proc import to all18 pinned columns. Verify every source hash and effective-row completeness; publish atomically, preserving unrelated tables and leaving prior data intact on failure. No alternate presence-only importer after replacement.
+- [ ] TC LoadSpellProcs explicit rows precede DB2-derived generation. Apply its zero-field defaults for flags, charges, chance/PPM and cooldown; keep explicit school/family/type/phase/hit/attribute/effect-disable values instead of reconstructing them from DB2 masks.
+- [ ] Native proc eligibility, rate, recovery and charges consume those effective values with TC semantics, including independent BodyAndSoul Shield/FlashHeal scope and later unchanged Ret Expurgation Blade/Judgment cases. No class/spell-ID production filter or coefficient compensation.
+
 ## Firestarter direct critical strikes
 
 - [ ] Actual caster205026 effect0 makes ordinary Fireball133/Pyroblast11366 critical at recipient health percentage greater than or equal to its native threshold (70448:90).

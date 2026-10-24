@@ -31,6 +31,9 @@
 #[cfg(test)]
 #[path = "dance_rppm_tests.rs"]
 mod dance_rppm_tests;
+#[cfg(test)]
+#[path = "tdb_proc_scope_tests.rs"]
+mod tdb_proc_scope_tests;
 
 use crate::random as rand;
 use bevy::prelude::*;
