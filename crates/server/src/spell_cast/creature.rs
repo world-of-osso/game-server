@@ -39,10 +39,11 @@ pub fn creature_cast(
     target: Option<Entity>,
     triggered: bool,
 ) -> Result<(), CastFailure> {
-    let (spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
+    let (mut spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
     if !triggered {
         return start_cast(world, caster, &spell, explicit);
     }
+    spell.cast_dont_reset_periodic_timer = true;
     // Bool FULL_MASK has no triggering aura: TC CheckCast permits a dead caster.
     super::aura_spell_restrictions::check_caster(world, caster, &spell)?;
     let explicit = validate_target(world, caster, &spell, explicit, Sight::Start)?;
@@ -96,6 +97,28 @@ pub(crate) fn creature_cast_ignoring_in_progress(
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
     let (spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
+    let target = super::validate_start(world, caster, &spell, explicit, true)?;
+    super::begin_validated_cast(world, caster, &spell, target)
+}
+
+/// TC partial-trigger casts may override BP0 without bypassing native costs,
+/// cooldowns, aura checks or child proc behavior (Execution Sentence expiry).
+pub(crate) fn creature_cast_with_effect0_ignoring_in_progress(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
+    amount: f32,
+) -> Result<(), CastFailure> {
+    let (mut spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
+    let effect = spell
+        .effects
+        .iter_mut()
+        .find(|effect| effect.index == 0)
+        .ok_or(CastFailure::Unsupported(
+            "partial-trigger BP0 effect missing".into(),
+        ))?;
+    effect.base_points = amount;
     let target = super::validate_start(world, caster, &spell, explicit, true)?;
     super::begin_validated_cast(world, caster, &spell, target)
 }

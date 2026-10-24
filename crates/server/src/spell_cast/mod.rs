@@ -165,6 +165,7 @@ pub mod guardian;
 mod guardian_tests;
 pub(crate) mod history_store;
 mod hit;
+mod howl;
 #[cfg(test)]
 mod impending_victory_tests;
 mod interruptibility;
@@ -2501,6 +2502,7 @@ pub(crate) fn execute_cast(
     spell: &SpellInfo,
     explicit: Option<Entity>,
 ) -> Result<(), CastFailure> {
+    let primary_target = explicit;
     check_ordinary_caster_life(world, caster, spell)?;
     mobile_banking::check_cast(world, caster, spell.id)?;
     druid_transform::before_cast(world, caster, spell, 0)?;
@@ -2519,6 +2521,7 @@ pub(crate) fn execute_cast(
     crate::profession::check_cast_items(world, caster, spell)?;
     disenchant::check_cast(world, caster, spell)?;
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
+    prepared.cast_primary_target = primary_target;
     let mut launch_modifiers = spell_mods::snapshot_charged_modifiers(world, caster, &prepared);
     launch_modifiers.extend(scripts::pyroclasm_damage_modifier(world, caster, &prepared));
     prepared.cast_charge_mods = Some(launch_modifiers);
@@ -3454,7 +3457,11 @@ fn load_triggered_spell(world: &World, spell_id: u32, depth: u8) -> Option<Spell
     let spell = world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(spell_id))
-        .cloned();
+        .cloned()
+        .map(|mut spell| {
+            spell.cast_dont_reset_periodic_timer = true;
+            spell
+        });
     if spell.is_none() {
         warn!("Triggered spell {spell_id} not found");
     }
@@ -3489,6 +3496,9 @@ fn launch_triggered_spell(
     explicit: Option<Entity>,
     depth: u8,
 ) -> bool {
+    let mut prepared = spell.clone();
+    prepared.cast_primary_target = explicit;
+    let spell = &prepared;
     match plan_triggered_spell(world, caster, spell, explicit, depth) {
         Ok(mut plan) => {
             scripts::snapshot_guillotine_health(world, caster, spell, &mut plan);
@@ -3543,13 +3553,15 @@ fn execute_costed_trigger(
     explicit: Option<Entity>,
     depth: u8,
 ) -> Result<(), CastFailure> {
+    let primary_target = explicit;
     druid_transform::before_cast(world, caster, spell, depth)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Start)?;
     aura_spell_restrictions::check_target(world, caster, explicit, spell)?;
     let costs = spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
-    let prepared = resources::snapshot(world, caster, spell, &costs);
+    let mut prepared = resources::snapshot(world, caster, spell, &costs);
+    prepared.cast_primary_target = primary_target;
     let plan = plan_targets(world, caster, &prepared, explicit, true)?;
     scripts::on_cast(world, caster, prepared.id, depth);
     take_cast_resources(world, caster, &prepared, &costs);
