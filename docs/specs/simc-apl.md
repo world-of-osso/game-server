@@ -84,6 +84,12 @@ TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyC
 
 [Target-context API proof and exact remaining gaps](../handoffs/native-target-context-proof-ledger.md).
 
+## Native buff reaction, duration and named execution time
+
+`buff.<alias>.react` must return the reacted native stack count using source/profile reaction settings and real stack-acquisition boundaries, never alias `up` or invent a constant delay. Pinned76f8118 `buff.cpp485–503,2004–2015,2697–2703` assigns deadlines only to newly gained stacks; `player.cpp1017–1020,7763–7766` supplies default distribution/cap. `buff.<alias>.duration` reads full/fresh native duration, not declining remaining time (`buff.cpp355–360`). Named `action.<alias>.execute_time` must use the same native cast/channel/haste helper as bare contextual `execute_time`, without a second formula.
+
+Four ignored `native_apl_shared_*` fixtures precede implementation: real Feral135700 absence and earned Omen16864 white-hit proc/reaction/expiry; ordinary TigerFury5217 full duration versus remains and natural expiry; actual rated Living Flame/Disintegrate cast/channel occupation for the named path. No granted auras, resources or actor stats. Runtime RED qualification is pending; an absent native producer is a setup gap, not RED. Feral's existing generic `prev_gcd` aliases are separate and await their prior frozen-core qualification.
+
 ## Native execution-option boundary
 
 Ignored `literal_execution_native_*` cases select a real `fire_breath,empower_to=1` row and compare its actual DoT duration with native stage1 release metadata, then exercise Disintegrate→Living Flame replacement with actual GCD, hostile-target and insufficient-Essence controls. Readiness must not advance/cancel/spend; successful replacement must use ordinary native costs. Replacement readiness ignores only the current-cast veto; native GCD, power, target, cooldown and caster restrictions remain binding. Dispatch uses the existing native replacement API, which validates before stopping the current cast. No item replacement is implied. Source `empower_to` integer stages reach the existing native empowered-cast API; native stage validation and release timing remain authoritative. Unsupported non-integer or combined replacement/empower options fail explicitly rather than losing the option. Keep these generic changes separate from specialization predicates.

@@ -17,6 +17,7 @@ mod player_rotation;
 mod power_haste_tests;
 mod power_tests;
 mod report;
+mod shared_fact_extension_tests;
 pub(crate) mod single_spell;
 mod trait_rechecks;
 mod windwalker_rotation;
