@@ -1,6 +1,6 @@
 ## 2026-10-24 — Selected RWK producer native RED
 
-[WW source census](../handoffs/ww-source-census.md#missing-historical-reference-channels): actual404 native300s BOK/Combo Breaker controls pass but1250554 never appears,31.63s/exit101. Native selected1250566 supplies60% but no proc metadata/trigger; TC has no binding. Source-qualified landed BOK hook uses the native amount, gameplay RSK/shared-charge recovery reset and native override. GREEN/actual child/consumption qualification pending; no coefficient or fixture resource changes.
+[WW source census](../handoffs/ww-source-census.md#missing-historical-reference-channels): actual404 native300s BOK/Combo Breaker controls pass but1250554 never appears,31.63s/exit101. Native selected1250566 supplies60% but no proc metadata/trigger; TC has no binding. Source-qualified landed BOK hook uses the native amount, gameplay RSK/shared-charge recovery reset and native override. Producer/child/unselected-owner2GREEN at960; exact consumer9.89sRED at8a5 despite actual native reset/child premises passing. Added selected-owner source1199–1203 AfterCast consumption; generic332 proc rules unchanged, GREEN pending. No coefficient or fixture resource changes.
 
 ## 2026-10-24 — Self-cast target_if context native RED→GREEN
 

@@ -581,6 +581,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         return Some(hook);
     }
     match spell_id {
+        windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
         prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {

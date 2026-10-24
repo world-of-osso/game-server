@@ -30,6 +30,7 @@ const MYSTIC_TOUCH_PASSIVE: u32 = 8647;
 const MYSTIC_TOUCH_DEBUFF: u32 = 113746;
 const RUSHING_WIND_KICK_TALENT: u32 = 1250566;
 const RUSHING_WIND_KICK_OVERRIDE: u32 = 1250554;
+pub(super) const RUSHING_WIND_KICK: u32 = 467307;
 const RISING_SUN_KICK: u32 = 107428;
 
 /// MONK_MYSTIC_TOUCH_SIMC_PRODUCER: SimC76f8118 sc_monk.cpp438–455.
@@ -208,15 +209,29 @@ pub(super) fn blackout_kick_hit(world: &mut World, caster: Entity, _target: Enti
     );
 }
 
-fn read_rushing_wind_kick_chance(world: &World, caster: Entity) -> Option<f32> {
-    let selected = world
+fn selected_rushing_wind_kick_owner(world: &World, caster: Entity) -> bool {
+    world
         .get::<crate::class_progression::TraitLoadout>(caster)
         .is_some_and(|traits| {
             traits
                 .active_talent_spells()
                 .any(|spell| spell.spell_id == RUSHING_WIND_KICK_TALENT)
-        });
-    if !selected {
+        })
+}
+
+/// Same named policy, SimC76f8118 sc_monk.cpp1199–1203.
+/// Aura332 is not a native generic trigger type; the source action expires it.
+pub(super) fn consume_rushing_wind_kick(world: &mut World, caster: Entity, _spell: &SpellInfo) {
+    if !selected_rushing_wind_kick_owner(world, caster) {
+        return;
+    }
+    auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+        aura.spell_id == RUSHING_WIND_KICK_OVERRIDE && aura.caster == caster
+    });
+}
+
+fn read_rushing_wind_kick_chance(world: &World, caster: Entity) -> Option<f32> {
+    if !selected_rushing_wind_kick_owner(world, caster) {
         return None;
     }
     let talent = world

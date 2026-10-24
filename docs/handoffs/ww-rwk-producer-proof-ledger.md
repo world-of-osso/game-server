@@ -11,7 +11,7 @@ Policy: `SIMC_WW_RWK_BOK_LANDED_PRODUCER`. Verified2026-10-24. Native GREEN pend
 
 ## Scope
 
-Actual caster TraitLoadout must select1250566; only its owned native passive supplies the amount. Active116768 plus ordinary landed100784 is required. Instant native BOK resolves its OnHit before `spell_mods::consume_charges`, so the real Combo Breaker state remains visible; misses never run the hook. Successful proc triggers native1250554 and the source-earned native RSK/shared-charge reset, never fixture resources/GCD/position changes. Damage coefficients, target arithmetic, other talents, WDP/Flurry/DT and override-consumer changes excluded until independently qualified.
+Actual caster TraitLoadout must select1250566; only its owned native passive supplies the amount. Active116768 plus ordinary landed100784 is required. Instant native BOK resolves its OnHit before `spell_mods::consume_charges`, so the real Combo Breaker state remains visible; misses never run the hook. Successful proc triggers native1250554 and the source-earned native RSK/shared-charge reset, never fixture resources/GCD/position changes. Damage coefficients, target arithmetic, other talents and WDP/Flurry/DT excluded. The separately observed consumer boundary below adds only source1199–1203 one-use expiration.
 
 ## Proof
 
@@ -20,3 +20,9 @@ Existing `literal_ww_native_combo_breaker_blackout_earns_rwk_and_delivers_its_ch
 206a first admission remained HOLD; no build started there. At9604fae2d, normal14754 ADD and -j2 compile409.49s/zero warnings. Actual300s producer case RED→GREEN18.91s proves1250554,467307 and468179 damage; native declared unselected1250566 control GREEN16.59s after natural Combo Breaker/BOK. Exact receipts in `native-ww-rwk-producer-9604fae2d/`.
 
 Same binary fresh CURRENT-backup EACH300s: ST79001.5133/−61.7322%,3T101185.7333/−73.1289%, both exit0. ST RWK21casts/21childhits/1927409damage;3T14/14/970655. Receipts `native-after-rwk-producer-9604fae2d/`. These qualify producer/basic child only; three-target child arithmetic/recipients are not qualified. Actual reset/one-use override restoration test added next; no consumer shim before observing that boundary. Numerical parity, full producer package and ww1081 advancement remain open.
+
+## Actual consumer RED —8a5ff975d
+
+Exact native natural Combo Breaker→RSK spent shared charge→landed BOK earned1250554→actual full-recharge zero→Prepared-admitted467307→468179 damage premises all pass. The actual use leaves1250554 active, failing one-use/RSK-restoration assertion9.89s/exit101; build40.45s/zero warnings. Fresh CURRENT/input/binary/archive receipts at `native-ww-rwk-consumption-8a5ff975d/`.
+
+This is not a generic proc event fix: TC SpellMgr.cpp1660+ leaves OVERRIDE_ACTIONBAR_SPELLS332 outside isTriggerAura; native handlers::can_proc/proc_matches agree. DB2's charge1/cast mask alone cannot make a non-trigger aura consume, and no TDB override exists. SimC sc_monk.cpp1199–1203 explicitly expires the RWK buff after action execution. Add that selected-owner AfterCast consumer and remove only owned1250554 with Consumed reason; leave generic332/proc rules unchanged. GREEN pending.
