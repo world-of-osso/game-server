@@ -351,7 +351,6 @@ fn allocate_peer_copy(h: &mut Harness, difficulty: u32) -> InMap {
 }
 
 #[test]
-#[ignore = "Seeded native Seismic qualification pending targeted GREEN"]
 fn encounter_coverage_edna_ongoing_native_occupancy_damage_and_copy_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map, golems) = source_copy(difficulty);
