@@ -1,6 +1,9 @@
-//! Literal Ret adapter qualification; native facts and execution stay shared.
+//! Literal pinned Ret fixture adapter; native facts and execution stay shared.
+mod context;
+mod driver;
 use super::literal_rotation::equipment::Equipment;
 use crate::simc_apl_native::{Bindings, NativeFacts};
+pub(super) use driver::Rotation;
 use server::simc_apl::{Action, ActionFacts, Facts};
 use shared::components::PowerType;
 
@@ -62,7 +65,11 @@ fn bindings() -> Bindings {
             .collect(),
         buffs: names(BUFFS),
         talents: names(TALENTS),
-        resources: [("holy_power".into(), PowerType::HolyPower)].into(),
+        resources: [
+            ("holy_power".into(), PowerType::HolyPower),
+            ("mana".into(), PowerType::Mana),
+        ]
+        .into(),
         dot_refresh: Default::default(),
         global_cooldown_spell: 20271,
     }

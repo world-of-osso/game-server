@@ -59,6 +59,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Ret literal rotation
 
 - [ ] Spec70 fixture executes the pinned76f8118 Ret41-row/five-list priority through the shared evaluator, native readiness and dispatch. Source action names remain unchanged; selected base replacements use the shared knowledge resolver, not a Ret-local spell map. HolyPower, selected traits, buffs and target-owned dot/debuff facts read actual native state; unknown operands fail explicitly.
+- [ ] Spec70 follower measurements install the literal controller before setup frames; pinned rows naturally select Wake and a HolyPower spender within30s. Ret facts delegate to canonical Equipment, Prepared resource limits, target_ready, NativeFacts and native spell knowledge; unsupported shared facts are explicit errors, not substitutes. Dawnlight consumption and new mechanic policies are excluded.
 - [ ] Precombat preserves source order across native busy/casting states instead of treating temporary unreadiness as source exhaustion. Snapshot-only proof does not qualify the whole precombat lifecycle. Missing potion inventory, external buff providers and unqualified abilities remain named gaps; no fabricated grants, timers or damage. [Scoped qualification](../handoffs/ret-paladin-parity-proof-ledger.md#literal-adapter-qualification--local-development-only).
 
 ### Wild Thrash owned-pet child policy
@@ -142,6 +143,8 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 
 ## Implementation inventory
 
+- `crates/server-simulation/src/dungeon_simulator/dps_parity/ret_rotation/{driver,context}.rs` — pinned Ret Program lifecycle and canonical equipment/native-admission fact delegation for spec70 measurements.
+
 - `scripts/item_instance_data.py` — native-table producer for a supplied existing SQLite copy; canonical application is lead-owned.
 - `scripts/dps_parity.py` — explicit current-tier/prior-tier profile extraction, allocated-trait JSON validation and SimC action/stat normalization.
 - `scripts/simc_selected_traits.cpp` — diagnostic CLI wrapper around unchanged76f8118 engine objects; not the reference DPS executable. It replaces only the CLI entry object to inspect actual `player_traits` after one0.1s metadata iteration. Retire when the official CLI emits lossless allocated-trait metadata.
@@ -159,6 +162,8 @@ Native fixture execution uses `scripts/dps_parity_native.py <compiled-test-binar
 The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native specialization metadata selects class identity, the prepared database resolves the reference race, and ordinary player power/stat/passive systems initialize the actor. Human uses the pinned SimC `util::race_id(RACE_HUMAN)=1` and requires that exact native row:70448 also labels ThinHuman33 "Human", so a display-name match must not choose it or reject a valid Human1 profile. Other absent/ambiguous identities fail explicitly. Strict reference traits use that player's actual race/spec identity. No follower profile or persistent character is fabricated. Player rotation execution uses the test-only `game-engine-core` dependency pinned to9ef2efe2d317b837d352fe8c5227086a4fdcd490, reusing `CooldownAssistCatalog::recommend` and `assisted_combat::evaluate_rule` unchanged. `DPS_PARITY_ASSISTED_DB2` must name the frozen70448 seven-table CSV directory. Native known spells/overrides, powers/runes, auras, target health, pet state, cooldown/charge clocks and ordinary target admission supply facts; the latter is explicitly labelled as the range-fact boundary rather than claiming identical client geometry. The50ms driver submits normal `cast_for_player` requests only inside the existing native queue window. An unknown potentially applicable rule stops the attempt and writes exact facts/rule IDs/native event evidence to `<spec>.player.assisted-gap.json`; missing metadata or cast refusal remains an explicit error. No alternate priority is substituted. Player rotation execution remains pending qualification.
 
 ## Tests asserting this spec
+
+- `crates/server-simulation/src/dungeon_simulator/dps_parity/ret_rotation/lifecycle_tests.rs` — actual measurement must cast native Wake and a HolyPower spender within its first30s; genuine pre-driver RED recorded, GREEN pending.
 
 - `scripts/tests/test_item_instance_data.py` — concrete signed rows, idempotence, unrelated-table retention and duplicate-ID rollback.
 - `scripts/tests/test_dps_parity.py` — exact item identities/modifiers, reference-tier selection, missing-ID rejection, selected-talent metadata, direct/periodic action accounting and finite/missing/zero-reference stat comparisons.

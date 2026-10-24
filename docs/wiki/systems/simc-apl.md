@@ -2,6 +2,10 @@
 
 `server::simc_apl` supplies shared expressions, variables and source-ordered call lists. `crate::simc_apl_native` supplies shared native gameplay facts for explicit parity fixtures; spec adapters add only spec predicates plus action/target bindings and castability. Neither layer invents missing combat data.
 
+## Ret literal measurement driver — 2026-10-24
+
+The spec70 follower measurement installs `ret_rotation::Rotation` before setup frames, polls canonical `PrecombatPoll` with native completion, and feeds the exact41-row pinned Ret source to shared Program. `Context` forwards Ret equipment/native facts and target policy, while pool hooks read actual native pools and sampled Prepared resource-limited admission. Native knowledge resolves replacements; unknown facts fail explicitly. Stockade/ordinary native kit behavior is unchanged. Current native-kit baseline is ST21587.59/3T38495.87; genuine first30s Wake+spender RED at33fdb precedes implementation; GREEN/remeasurement pending. [Contract](../../specs/dps-parity.md#ret-literal-rotation), [source/proof ledger](../../handoffs/ret-paladin-parity-proof-ledger.md#literal-ret-measurement-driver--2026-10-24).
+
 ## Capability / proof matrix
 
 | Capability | Representation / boundary | Proof |

@@ -1,5 +1,5 @@
 //! Exercise the actual measurement lifecycle, not a manually dispatched Ret rotation.
-use super::super::{advance_combat_observed, engage, prepare};
+use super::super::{advance_combat_observed, engage, prepare_measurement};
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use bevy::prelude::*;
 use shared::protocol::CombatLogKind;
@@ -8,7 +8,7 @@ use shared::protocol::CombatLogKind;
 #[ignore = "native Ret measurement must naturally cast Wake and a HolyPower spender within30s"]
 fn dps_parity_ret_literal_native_first_30s_reaches_wake_and_spender() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare(70, 3).unwrap();
+    let mut run = prepare_measurement(70, 3).unwrap();
     engage(&mut run);
     let started = run.app.world().resource::<Time>().elapsed_secs_f64();
     let mut checked = false;
