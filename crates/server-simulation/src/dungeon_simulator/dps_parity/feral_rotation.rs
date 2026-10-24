@@ -456,6 +456,56 @@ mod tests {
         );
     }
 
+    #[test]
+    #[ignore = "requires exact spec103 profile/traits and native private DB"]
+    fn feral_literal_native_cat_form_reconciles_npc_power_type() {
+        use crate::spell_cast::powers::PowerPools;
+        use shared::components::{Player, PowerType};
+        let mut run = prepare_literal(103, 1).unwrap();
+        let actor = run.actor;
+        assert!(
+            run.app.world().get::<Player>(actor).is_none(),
+            "retain real NPC identity"
+        );
+        let owner = run
+            .app
+            .world()
+            .get::<crate::followers::Follower>(actor)
+            .unwrap()
+            .owner;
+        // Native cancellation/reapplication tests the form lifecycle, never pool.order edits.
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 768,
+        );
+        preparation::finish_pending_setup(&mut run).unwrap();
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false)
+            .expect("ordinary native Cat Form on the selected NPC");
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let world = run.app.world();
+        assert!(crate::auras::has_aura(world, actor, 768));
+        assert!(world.get::<Player>(actor).is_none());
+        assert_eq!(
+            world
+                .get::<crate::followers::Follower>(actor)
+                .unwrap()
+                .owner,
+            owner
+        );
+        let pools = world.get::<PowerPools>(actor).unwrap();
+        assert!(pools.get(PowerType::Energy).is_some());
+        assert!(pools.get(PowerType::ComboPoints).is_some());
+        // TC SpellAuraEffects.cpp2049–2056 calls nonplayer UpdateDisplayPower;
+        // Unit.cpp5779–5787 selects Cat Energy before any class/default branch.
+        assert_eq!(
+            pools.order.first(),
+            Some(&PowerType::Energy),
+            "native NPC Cat form must expose real Energy as primary; Bite's native burn also requires this"
+        );
+    }
+
     fn read_native_bite_admission(
         run: &mut Run,
     ) -> (u32, Result<Option<Entity>, crate::spell_cast::CastFailure>) {
