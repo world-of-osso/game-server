@@ -20,6 +20,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [ ] `RET_HAMMER_OF_WRATH_KNOWN_FROM_SELECTED_TALENT_SIMC` permits action24275 only on explicitly prepared spec70 parity/reference actors whose validated active TraitLoadout includes1241288 (including native granted roots). Ordinary native player/follower spellbooks and NeverLearned rules remain unchanged. Removing eligibility must not retain the exception; other specs receive no grant. [Source/proof ledger](../handoffs/ret-paladin-parity-proof-ledger.md#explicit-hammer-of-wrath-knowledge-policy).
 
+### Ret Divine Purpose producer
+
+- [ ] `SIMC_RET_DIVINE_PURPOSE_TRIGGER`: only validated selected408459 may roll its actual native effect0 amount after an ordinary HolyPower-cost cast (including a zero final cost). Trigger native223819 after the old cast's modifier charges are consumed. Aura-only unselected actors, non-HolyPower actions and full-mask background casts do not qualify. TC registers older223817; the selected408459 relationship is explicitly pinned SimC-derived. No chance, resource or coefficient override. [Proof ledger](../handoffs/ret-paladin-parity-proof-ledger.md#ret-mid2-tier-relationship-source-policy).
+
 ### Ret MID2 tier relationship
 
 - [ ] `SIMC_RET_TIER_MID2_DIVINE_PURPOSE_RELATIONSHIP`: consuming actual foreground Divine Purpose223819 with native2062 two-piece grants native Divine Power1305230. Four-piece arms the spender's native Verdict/Storm/Light Arbiter kind only when none is pending; the same kind preserves it, a different kind consumes it and casts native1306923 at the actual cast target. Native gear eligibility, effects, coefficients and durations remain authoritative. No fabricated DB2 trigger edges. Natural Divine Purpose generation, Empyrean Legacy background consumption and Hammer of Light runtime qualification remain separate open cases. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#ret-mid2-tier-relationship-source-policy).

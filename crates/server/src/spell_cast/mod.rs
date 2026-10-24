@@ -2637,6 +2637,7 @@ pub(crate) fn execute_cast(
     if !spell.cast_parent_owns_modifier_charges {
         spell_mods::consume_charges(world, caster, spell);
         scripts::after_foreground_spender(world, caster, spell, explicit);
+        scripts::roll_selected_ret_divine_purpose(world, caster, spell);
     }
     blooming_infusion::after_cast(world, caster, spell);
     druid_transform::after_cast(world, caster, spell);

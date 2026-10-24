@@ -41,6 +41,8 @@ pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 pub(crate) mod prayer_of_mending;
 mod protection_items;
+mod ret_purpose;
+pub(super) use ret_purpose::roll_selected_ret_divine_purpose;
 mod ret_tier;
 pub(super) use ret_tier::after_foreground_spender;
 pub(crate) use ret_tier::owns_arbiter_charge;
