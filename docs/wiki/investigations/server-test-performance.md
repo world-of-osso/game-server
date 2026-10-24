@@ -335,8 +335,8 @@ Use the committed default `test` profile through ordinary `cargo test --locked -
 ## Sources
 
 - [Cargo test/dependency profiles](../../../Cargo.toml).
-- [Simulator manual clock and loaders](../../../crates/server/src/dungeon_simulator/runtime.rs).
-- [Simulator catalog ownership](../../../crates/server/src/dungeon_simulator/catalogs.rs).
+- [Simulator manual clock and loaders](../../../crates/server-simulation/src/dungeon_simulator/runtime.rs).
+- [Simulator catalog ownership](../../../crates/server-simulation/src/dungeon_simulator/catalogs.rs).
 - [Canonical fixture ownership](../../../crates/server/src/test_data.rs).
 - Evidence: `baseline-binary.json`, `baseline-union-census.json`, `baseline-safe.jsonl`, `baseline-safe.time`, `baseline-safe-processes.json`, `frozen-world.json`, `baseline-full-stockade.perf` and `baseline-full-stockade-hotspots.txt` in the directory above.
 - Lead-owned housekeeping: `/home/osso/.worktrees/logs/{prune-target-deps.py,disk-housekeeping.sh,test_prune_target_deps.py}`; the four gate scripts and their recorded heads.

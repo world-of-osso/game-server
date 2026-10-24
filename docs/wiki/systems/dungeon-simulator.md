@@ -300,9 +300,9 @@ Evidence: `/home/osso/.worktrees/logs/stockade-simulator-2026-10-20/sim-batch2/{
 
 - [Simulator spec](../../specs/dungeon-simulator.md)
 - [Follower policy](../../specs/follower-dungeons.md#shared-tank-pull-project-policies)
-- [Runtime](../../../crates/server/src/dungeon_simulator/runtime.rs)
-- [DPS adapter](../../../crates/server/src/dungeon_simulator/dps_parity/mod.rs), [native inputs](../../../crates/server/src/dungeon_simulator/dps_parity/inputs.rs), [pet source delta](../../../scripts/dps_parity_duck_174884.sql)
-- [Route/report](../../../crates/server/src/dungeon_simulator/campaign.rs)
+- [Runtime](../../../crates/server-simulation/src/dungeon_simulator/runtime.rs)
+- [DPS adapter](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/mod.rs), [native inputs](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/inputs.rs), [pet source delta](../../../scripts/dps_parity_duck_174884.sql)
+- [Route/report](../../../crates/server-simulation/src/dungeon_simulator/campaign.rs)
 - [Frozen graph](../../../content/dungeons/stockade-34.json)
 
 ## See Also

@@ -5,9 +5,16 @@
 ## 2026-10-23 — Exact fixture add lifetimes / target facts
 
 [Shared native facts](systems/simc-apl.md#native-binding-boundary): c88e6749e produces genuine2lifecycle RED19.63s/all20 phase observations and4target RED8.90s against current read-only backupdd1de231e32c. Earlier stale-schema setup failure excluded. Actual boundary substeps, per-add Health/TTD/role, selected/owned-aura facts and explicit add events: d07db700c yields14targetedGREEN (2lifecycle27.20s/10native16.45s/main-clock11.98s/combat-refs18.23s; compile24m14,0warnings). Tests-only bf56e1b4b closes live-event/owned-aura property+expiry coverage:5targetGREEN19.06s and1actual-wave eventGREEN20.32s,13m59compile/0warnings;15unique cases total. Explicit target-list API and remaining dot/movement/casting facts are next scope. Main300s,31146 templates and references unchanged; all-owner3T remeasurement remains lead-owned. [Proof ledger](../handoffs/add-lifetimes-target-facts-proof-ledger.md).
+## 2026-10-23 — Incoming native-factor fixture boundary
+
+Merged `eec5b6bcf` into B, preserving its four ignored single-spell cases in the consumer. Existing15factor observation calls and armor observation fields/initializers now use explicit fixture-support gates; only resource constructor/export and public return type visibility widen. Calculations unchanged. Combined core-unit/simulator check at14c74e6fa passes42.83s without diagnostics; production and full-suite gates pending. Expected6322workspace cases/314ignored includes four incoming-master additions.
+
 ## 2026-10-23 — Corridor capture consumer ownership
 
 The retained-core unit check exposed a runtime-only reverse edge: ignored corridor capture imports simulator runtime/diagnostics. Capture returned to the consumer with its original name and a canonical graph re-export; no gameplay/type duplication. Expected117 simulator cases/6retained graph cases; workspace names/ignore statuses unchanged. Compiler and full-suite qualification pending.
+## 2026-10-23 — Public-behavior combat test consumer
+
+[C pilot](../handoffs/crate-split-area-tests.md): twelve pure file moves preserve106 native melee case names; two shared collectors lifted without algorithm changes into existing harness. New consumer has only dev dependencies and the same opt2/debug1 profile; four private-formula files stay core. Exact expected full-workspace inventory remains6318cases/310ignored. Atacecb97d1, combined core-unit/simulator/combat compiler check42.85s and production-no-feature check14.59s pass without diagnostics; full-suite gate pending. Compiler elapsed times are not paired speedup measurements.
 
 ## 2026-10-23 — Simulator compiler boundary and next area pilot
 
