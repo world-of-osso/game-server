@@ -63,6 +63,14 @@ Native combat-entry proc now follows TC Unit.cpp9250–9251 after entering-comba
 
 Boar uses actual471936/471938 payloads and native root effect1 pass count; native target selection and coefficients stay untouched. Parent2026-10-24 explicitly excluded Boar damage reduction beyond the native5-target threshold and Bear AI. These are unqualified gaps, not implicit SimC math/travel/bug-toggle implementations. Native Dummy markers remain visible; no no-op handler hides them. Cycle order is not full beast damage/AI or whole-BM parity certification. Candidate GREEN and parent integration remain pending; frozen ownerb9 is untouched.
 
+## Runtime73a541f82 targeted result and generic triggered-send gap
+
+Native6PASS/1FAIL32.39s, clean16m21s compile (all compiler JSON messages empty; text warnings/errors absent). The natural root readiness→ordinary KC→actual Wyvern/Cry/rearm test passes, alongside actual native child lifetime, selected/removed-passive Cry, removed-root and native admission controls. ELF SHAaf5b167ddde4bd93c90539c301952089f3772a45f76b4ede5e49930dea6477b6; frozen world0297 unchanged.
+
+Cycle observation returned real Wyvern/Bear summons but no Boar `CastSuccess`. The initial suggestion to replace that expectation with Damage/Miss was falsified against TC; the test remains unchanged. TC `Spell.cpp:3574–3575` sends FULL_MASK/CAST_DIRECTLY through `cast(true)`, `3893` calls `SendSpellGo`, and `4779` skips only when `IsNeedSendToClient` is false. That predicate is true at `8348` for Boar's nonzero visual: frozen native471936 visual row454344→152700 has probability1 and no caster conditions; `SpellInfo.cpp:4525–4554` selects the row ID, assigned at `Spell.cpp:567`. FULL_MASK0x7FFFF (`SpellDefines.h:293`) does not suppress successful sends; DONT_REPORT_CAST_ERROR concerns failed casts. Our `launch_triggered_spell:3539–3566` and `missiles::launch` have neither SpellGo nor CastSuccess emission. This is a generic runtime send/logging gap; no runtime edit follows without parent direction. Genuine781 readiness and168 cycle RED remain, and full cycle is not GREEN.
+
+Independent artifact verifier ModeB finds EXIST/SUBSTANTIVE/WIRED/ANTI-PATTERN allPASS at73; this is not native acceptance. Its472020 concern is resolved against literal importer wording:472020 is an imported action definition, while sourced Boar471936/471938 are the actual executed payloads. Required471936 success must follow the generic native send path, not a manufactured472020 dummy event. Read-only native `spell_misc` additionally shows Wyvern1222271/Bear471993/471990 all Speed0/LaunchDelay0, so actual same-call summon identity confirmation is within current native data. Native full-cycle GREEN remains pending.
+
 ## Open
 
 - [x] Actual native child entity/lifetime and selected/removed-passive Cry slice qualified separately.
