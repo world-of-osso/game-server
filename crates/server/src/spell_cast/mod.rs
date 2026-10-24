@@ -1798,6 +1798,17 @@ pub fn read_native_cast_start(
     validate_start(world, caster, spell, Some(target), false)
 }
 
+/// Read replacement eligibility without stopping the current cast. Native GCD,
+/// power, target, cooldown and caster restrictions remain binding.
+pub fn read_native_cast_start_interrupting_self(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+) -> Result<Option<Entity>, CastFailure> {
+    validate_start(world, caster, spell, Some(target), true)
+}
+
 /// Planner capability only: no cast, no spend, and no mutation of native GCD clocks.
 /// All native checks remain except the in-progress veto and a bounded transient GCD.
 pub(crate) fn read_tank_heal_capability(

@@ -14,6 +14,7 @@ pub(crate) enum Execution {
     AutoAttack(Entity),
     RetargetAutoAttack(Entity),
     Spell(u32, Entity),
+    ReplacingSpell(u32, Entity),
     Item(ItemUse, Entity),
 }
 
@@ -40,16 +41,43 @@ impl Prepared {
         actions: impl IntoIterator<Item = NativeAction<'a>>,
         needs_snapshot: bool,
     ) -> Result<Self, String> {
+        Self::read_with_replacement(
+            world,
+            actor,
+            targets,
+            equipment,
+            actions,
+            needs_snapshot,
+            false,
+        )
+    }
+
+    fn read_with_replacement<'a>(
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+        equipment: &Equipment,
+        actions: impl IntoIterator<Item = NativeAction<'a>>,
+        needs_snapshot: bool,
+        replace_current: bool,
+    ) -> Result<Self, String> {
         let targets = native_targets(world, actor, targets);
         let mut ready = BTreeMap::new();
         if needs_snapshot {
             ready.insert(("snapshot_stats".into(), None), Execution::Snapshot);
         }
         read_attacks(world, actor, &targets, &mut ready);
-        read_spells(world, actor, &targets, actions, &mut ready)?;
+        read_spells(world, actor, &targets, actions, &mut ready, replace_current)?;
         for (slot, item) in equipment.uses() {
             for target in std::iter::once(actor).chain(targets.iter().copied()) {
-                if native_ready(world, actor, item.on_use.spell_id, target, Some(item))? {
+                if native_ready(
+                    world,
+                    actor,
+                    item.on_use.spell_id,
+                    target,
+                    Some(item),
+                    false,
+                )? {
                     record_ready(
                         &mut ready,
                         &format!("item:{slot}"),
@@ -63,7 +91,7 @@ impl Prepared {
         Ok(Self { ready })
     }
 
-    /// TDD entry point: preserve existing native admission until replacement selection qualifies.
+    /// Sample replacement admission without mutating or stopping the current cast.
     pub fn read_interrupting_self<'a>(
         world: &mut World,
         actor: Entity,
@@ -72,7 +100,15 @@ impl Prepared {
         actions: impl IntoIterator<Item = NativeAction<'a>>,
         needs_snapshot: bool,
     ) -> Result<Self, String> {
-        Self::read(world, actor, targets, equipment, actions, needs_snapshot)
+        Self::read_with_replacement(
+            world,
+            actor,
+            targets,
+            equipment,
+            actions,
+            needs_snapshot,
+            true,
+        )
     }
 
     pub fn execution(
@@ -157,6 +193,7 @@ fn read_spells<'a>(
     enemies: &[Entity],
     actions: impl IntoIterator<Item = NativeAction<'a>>,
     ready: &mut ReadyActions,
+    replace_current: bool,
 ) -> Result<(), String> {
     for NativeAction {
         name,
@@ -174,14 +211,13 @@ fn read_spells<'a>(
             enemies
         };
         for (index, &target) in targets.iter().enumerate() {
-            if native_ready(world, actor, id, target, None)? {
-                record_ready(
-                    ready,
-                    name,
-                    target,
-                    index == 0,
-                    Execution::Spell(id, target),
-                );
+            if native_ready(world, actor, id, target, None, replace_current)? {
+                let execution = if replace_current {
+                    Execution::ReplacingSpell(id, target)
+                } else {
+                    Execution::Spell(id, target)
+                };
+                record_ready(ready, name, target, index == 0, execution);
             }
         }
     }
@@ -219,6 +255,7 @@ fn native_ready(
     id: u32,
     target: Entity,
     item: Option<ItemUse>,
+    replace_current: bool,
 ) -> Result<bool, String> {
     let mut spell = world
         .resource::<crate::spell_info::SpellStore>()
@@ -229,7 +266,12 @@ fn native_ready(
         spell.cast_item_level = Some(item.item_level);
         spell.cast_retail_item_id = Some(item.item_id);
     }
-    match crate::spell_cast::read_native_cast_start(world, actor, &spell, target) {
+    let admitted = if replace_current {
+        crate::spell_cast::read_native_cast_start_interrupting_self(world, actor, &spell, target)
+    } else {
+        crate::spell_cast::read_native_cast_start(world, actor, &spell, target)
+    };
+    match admitted {
         Ok(_) => Ok(true),
         Err(
             reason @ (crate::spell_cast::CastFailure::UnknownSpell
@@ -280,6 +322,12 @@ pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Re
             };
             result
                 .map_err(|reason| format!("selected native literal spell{id} rejected: {reason:?}"))
+        }
+        Execution::ReplacingSpell(id, target) => {
+            crate::spell_cast::creature_cast_interrupting_self(world, actor, id, Some(target))
+                .map_err(|reason| {
+                    format!("selected native replacement spell{id} rejected: {reason:?}")
+                })
         }
         Execution::Item(item, target) => crate::spell_cast::cast_item_spell(
             world,
