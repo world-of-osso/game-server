@@ -1,6 +1,6 @@
 ## 2026-10-24 — Separate Divine Toll Judgment funding
 
-[Auras](systems/auras.md#divine-toll-child-relationship--2026-10-24):63843f08b actual406957 damage/learned315867 reaches resource0vs1ST/0vs3three-target; native Hammer effect1 funding controlPASS48.51s. Lead approved separate landed-effect/native220637 relationship; generic effect-hit hook reuses existing rank-checked native trigger helper, not direct grants. Ordinary TC Judgment/root/Hammer unchanged; GREEN pending. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#divine-toll-child-funding--sourcered-only).
+[Auras](systems/auras.md#divine-toll-child-relationship--2026-10-24):63843f08b actual406957 damage/learned315867 reaches resource0vs1ST/0vs3three-target; native Hammer effect1 funding controlPASS48.51s. Lead approved separate landed-effect/native220637 relationship; generic effect-hit hook reuses existing rank-checked native trigger helper, not direct grants. Ordinary TC Judgment/root/Hammer unchanged;0359602b7 unchanged3GREEN56.45s/zero warnings. Rank-negative/miss/immune controls remain open, later packet afterrq1092. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#divine-toll-child-funding--sourcered-only).
 
 ## 2026-10-24 — Divine Toll child dispatch qualification
 
