@@ -84,6 +84,12 @@ TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyC
 
 [Target-context API proof and exact remaining gaps](../handoffs/native-target-context-proof-ledger.md).
 
+## Persistent periodic factors
+
+- [ ] `dot.<alias>.pmultiplier` reads the actual owned selected-target periodic application's stored persistent factor, zero when that registered dot is absent. Later caster state/AP changes cannot alter an existing stored value; a fresh application captures its own factor.
+- [ ] Action-context `persistent_multiplier` and explicit `action.<alias>.persistent_multiplier` read the live proposed periodic state, separately from the stored dot. Missing native effect/resolver registration fails with a named unavailable error; unknown aliases fail explicitly.
+- [ ] Capture explicit native products without dividing merged periodic amounts. Preserve existing native eligibility, including named Rake/Soul of the Forest paths; unrelated periodic spells cannot borrow their bonus. Feral eligibility remains its owner's responsibility.
+
 ## Known gaps (current cycle)
 
 - [ ] Wire native kit adapters; library expression/variable/list decisions have11-case GREEN, not full native rotation proof.

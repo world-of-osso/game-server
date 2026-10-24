@@ -45,6 +45,12 @@ pub(crate) struct DotRefresh {
     pub policy: DotRefreshPolicy,
 }
 
+/// Explicit native periodic effect for stored/live persistent-factor facts.
+pub(crate) struct DotPersistent {
+    pub resolve: ResolveDotSpell,
+    pub effect: u8,
+}
+
 pub(crate) fn native_dot_spell(
     world: &World,
     _caster: Entity,
@@ -63,6 +69,7 @@ pub(crate) struct Bindings {
     pub buffs: BTreeMap<String, u32>,
     /// Fresh native metadata resolver and source-qualified refresh rule, by aura alias.
     pub dot_refresh: BTreeMap<String, DotRefresh>,
+    pub dot_persistent: BTreeMap<String, DotPersistent>,
     pub talents: BTreeMap<String, u32>,
     pub resources: BTreeMap<String, PowerType>,
     /// Native spell carrying this actor's global-cooldown category and base duration.
@@ -734,6 +741,8 @@ fn bool_value(value: bool) -> f64 {
     if value { 1.0 } else { 0.0 }
 }
 
+#[cfg(test)]
+mod persistent_context_tests;
 #[cfg(test)]
 mod refresh_context_tests;
 #[cfg(test)]
