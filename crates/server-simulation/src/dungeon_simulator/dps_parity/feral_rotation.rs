@@ -264,6 +264,16 @@ mod tests {
         )
         .with_targets(Some(run.targets[0]), &run.targets);
         assert!(
+            facts.value("dot.primal_wrath.remains").unwrap() > 0.0,
+            "Primal Wrath observes the actual owned Rip aura, not a synthetic aura285381"
+        );
+        assert!(
+            facts
+                .value("dot.primal_wrath.refreshable")
+                .unwrap_err()
+                .contains("NATIVE_DOT_REFRESH_UNAVAILABLE")
+        );
+        assert!(
             facts
                 .value("dot.rip.refreshable")
                 .unwrap_err()
