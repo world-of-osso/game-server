@@ -47,6 +47,7 @@ pub(super) use ret_empyrean::schedule_empyrean_legacy;
 mod ret_purpose;
 pub(super) use ret_purpose::roll_selected_ret_divine_purpose;
 mod ret_tier;
+mod ret_toll;
 pub(super) use ret_tier::after_foreground_spender;
 pub(crate) use ret_tier::owns_arbiter_charge;
 mod scourge_strike;
@@ -687,6 +688,7 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
     match (spell_id, effect_index) {
         (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
         (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::limit_targets),
+        (ret_toll::ROOT, 1) => Some(ret_toll::limit_area),
         (145_110, 0) => Some(pick_yseras_gift_group_target),
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         (30735, 0) => Some(crate::scripted_ai::nethekurse::filter_shadow_sear),
@@ -1451,6 +1453,7 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
     match spell_id {
         windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
         voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),
+        ret_toll::ROOT => Some(ret_toll::cast_child),
         77_478 => Some(batch9::cast_earthquake_knockdown),
         _ => None,
     }

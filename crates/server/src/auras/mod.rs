@@ -63,6 +63,7 @@ pub(crate) mod power_amount_trigger;
 mod proc_mask_tests;
 pub mod procs;
 mod refresh;
+mod ret_sentence;
 pub(crate) mod reward_mods;
 #[cfg(test)]
 mod rolling_periodic_tests;
