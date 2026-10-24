@@ -54,6 +54,10 @@ Genuine timed-swing RED at564caae3b: Cat actual1.85s versus source/haste0.909s, 
 
 The generic form clock and shared weapon terms are now implemented. A source-backed matrix covers all7rows, Player/non-Player selection, normalized/ordinary melee plus the real native73000rifle, zero-time Ghost Wolf and unshifted controls; GREEN pending. No AP coefficient, native damage bonus, item value or fixture verdict band is tuned.
 
+Pre-crateB a7f6f10fa native KIT300s remeasurement is now independently qualified: ST81105.573333, corrected3T90069.816667. Sustained-clock and ten-wave controls pass36.19s/52.59s;324/322actual melee hits. `current-a7f6f10fa/` preserves profile/trait hashes, private-inode proof and exact binaryfe58515b0ddeda9dc7c6ed65c3406f242bc9bc99a7d659c6f0daa0da58357216/data54e9 receipts. This supersedes the historical unknown-revision observation for current-code evidence, not as a causal comparison or literal-APL parity result.
+
+CrateB integration keeps controller policy in public server knowledge SPI and simulation as its consumer. The native form timing type and weapon-range entry point are public server data/SPI so the simulation dependency direction stays valid. Original test names and semantics are retained; new two-package qualification is separate from the pre-split31case evidence.
+
 ## Literal boundary
 
 The exact pinned profile requires target_if Boolean selectors and action-relative dot/snapshot facts, active_dot, hero_tree, previous-GCD facts, pool_resource/for_next, max_energy and use_items/off-GCD options. Shared owners receive these requests through the lead; Feral owns identity bindings, Berserk/Incarnation aliases and snapshot source attribution. Dungeon rotation is unchanged; only explicit parity Fixture encounters may capture native follower decisions.

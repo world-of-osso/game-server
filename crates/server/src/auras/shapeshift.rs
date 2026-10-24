@@ -32,7 +32,7 @@ struct ShapeshiftForm {
 
 /// Separate the authored swing clock from TC's AP-multiplier selection.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct FormAttackTiming {
+pub struct FormAttackTiming {
     pub seconds: f32,
     pub use_form_ap_speed: bool,
 }

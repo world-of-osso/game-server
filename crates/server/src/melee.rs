@@ -44,7 +44,7 @@ pub enum Hand {
 
 /// Swing damage bounds: (weapon + AP / 6 × weapon speed) × versatility, the
 /// off hand at half (Player::CalculateMinMaxDamage).
-pub(crate) fn weapon_damage_range(
+pub fn weapon_damage_range(
     weapon: &WeaponDamage,
     attack_power: f32,
     versatility_pct: f32,
