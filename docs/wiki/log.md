@@ -1,6 +1,6 @@
 ## 2026-10-23 — Native regeneration live-permission RED
 
-[Permission source](investigations/demonology-dps-parity.md#live-permission-regression): TC applies runtime flag2 to every creature; no guardian/ordinary exception. Corrected Azure permission control101523 keeps its name/native baseline/capacity, genuineRED13.04s/0warnings on byte-identical088 gate. Live bit now seeded at NPC projection, forced for actual pets and granted through common follower init; runtime gate implemented, Azure/resource GREEN pending. No rate/stat/canonical-data changes.
+[Permission source](investigations/demonology-dps-parity.md#live-permission-regression): TC applies runtime flag2 to every creature; no guardian/ordinary exception. Corrected Azure permission control101523 keeps its name/native baseline/capacity, genuineRED13.04s/0warnings on byte-identical088 gate. Live bit seeded at NPC projection, forced for actual pets and granted through common follower init; ec92 Azure1GREEN30.08s then samebinary resource5GREEN32.58s. Simulation follower/Felguard/actual90 Imp and post-fix check remain pending. No rate/stat/canonical-data changes.
 
 ## 2026-10-23 — Dreadstalker full-root dispatch GREEN
 
