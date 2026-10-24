@@ -151,6 +151,7 @@ pub(super) fn first_damage_target(
             frame.caster == caster
                 && frame.spell_id == spell_id
                 && frame
+                    .results
                     .damage
                     .first()
                     .is_some_and(|(unit, _)| *unit == target)

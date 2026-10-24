@@ -122,7 +122,7 @@ fn landed_damage(world: &World, caster: Entity, target: Entity, spell_id: u32) -
         .is_some_and(|frame| {
             frame.caster == caster
                 && frame.spell_id == spell_id
-                && frame.damage.iter().any(|(unit, _)| *unit == target)
+                && frame.results.damage.iter().any(|(unit, _)| *unit == target)
         })
 }
 

@@ -51,7 +51,7 @@ pub(super) fn energize_flurry(world: &mut World, caster: Entity, target: Entity,
         .is_some_and(|frame| {
             frame.caster == caster
                 && frame.spell_id == FLURRY_DAMAGE
-                && frame.damage.iter().any(|(unit, _)| *unit == target)
+                && frame.results.damage.iter().any(|(unit, _)| *unit == target)
         });
     if hit && crate::auras::has_aura(world, caster, DEFT_MANEUVERS) {
         let amount = script_effect_value(world, caster, DEFT_MANEUVERS, 1);

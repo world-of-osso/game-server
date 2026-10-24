@@ -66,7 +66,7 @@ fn landed(world: &World, caster: Entity, spell: u32, target: Entity) -> bool {
         .is_some_and(|frame| {
             frame.caster == caster
                 && frame.spell_id == spell
-                && frame.damage.iter().any(|(unit, _)| *unit == target)
+                && frame.results.damage.iter().any(|(unit, _)| *unit == target)
         })
 }
 

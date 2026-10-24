@@ -184,7 +184,13 @@ pub(super) fn butchery(world: &mut World, caster: Entity, target: Entity, _depth
         .0
         .last()
         .filter(|frame| frame.caster == caster && frame.spell_id == BUTCHERY)
-        .and_then(|frame| frame.damage.iter().position(|(unit, _)| *unit == target));
+        .and_then(|frame| {
+            frame
+                .results
+                .damage
+                .iter()
+                .position(|(unit, _)| *unit == target)
+        });
     if position.is_some_and(|position| position < cap) {
         let seconds = f64::from(script_effect_value(world, caster, BUTCHERY, 1)) / 1000.0;
         reduce_cooldown(world, caster, WILDFIRE_BOMB, seconds);

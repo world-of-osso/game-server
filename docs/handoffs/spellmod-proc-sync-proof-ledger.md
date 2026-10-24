@@ -35,6 +35,8 @@ C2 carries an actual shared cast receipt through scopes and delayed clones; new/
 
 Fixture qualification before GREEN:28815 is still **not** a TC-positive charge oracle; its source is explicitly cancelled before the second cast, so the provenance test does not require legacy wrong consumption. The delayed child case now gains native378269 after actual launch/before impact. Giving it before launch while retaining C2's legacy drain would delete the source before the child evaluates; that is C4's separate charge-retention boundary, not permission to fabricate an application or change C2 math. The existing provenance assertions are unchanged; these setup differences mean the updated cases are not presented as byte-identical to the original7 RED bodies. An eighth actual mid-hardcast77762 capture case tests whether finish-time readiness/facing queries incorrectly register an unused admission modifier; its proof is still pending.
 
+First committed integration attempt40b37a94c was **compile-only E0609** at five old `HitFrame.damage` consumer paths (batch6/8/10/14/17); no tests ran and it is not behavioral RED/GREEN. Paths are updated to the same retained damage vector under `results`, without changing their first-target/order logic. Receipt: `proc-sync-c2-capture-integrated-v1.*`.
+
 C2 input is a fresh read-only canonical `.backup`: private `world.proc-sync-c2-canonical-backup.db` SHA**7bad5477f2c6da08a24ea95645621ecdf0f0dfc42008393fef922aedaac0bc7f**,1291×18,887570432bytes. `proc-sync-c2-input.proof.json` links it to main's canonical4442d87f publish. Only this worktree's alias changed; no canonical writes. C1 proof remains scoped to its immutable60132e07 input/revision and was not rerun.
 
 ## Charge-policy and data boundaries
