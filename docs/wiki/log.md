@@ -1,3 +1,7 @@
+## 2026-10-24 — Selected RWK producer native RED
+
+[WW source census](../handoffs/ww-source-census.md#missing-historical-reference-channels): actual404 native300s BOK/Combo Breaker controls pass but1250554 never appears,31.63s/exit101. Native selected1250566 supplies60% but no proc metadata/trigger; TC has no binding. Source-qualified landed BOK hook uses the native amount, gameplay RSK/shared-charge recovery reset and native override. GREEN/actual child/consumption qualification pending; no coefficient or fixture resource changes.
+
 ## 2026-10-24 — Self-cast target_if context native RED→GREEN
 
 [Shared context proof](../handoffs/self-target-context-proof-ledger.md): splitC3e native Zenith known/selected/self-admission controls pass but pinned enemy-target_if never selects it; actual30sSTFoF fails. 14781 independently reports Fire Breath's same boundary. Prepared now records supplied scoring contexts against the admitted self-target Execution, without default-key fallback or native bypass. 404c native WW4+shared25 GREEN; same-binary fresh-backup-EACH300s72147.08ST/91571.0967three-target, still outside band. Exact Fire Breath rerun stays14781-owned.
