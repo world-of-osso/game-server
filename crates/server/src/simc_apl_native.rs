@@ -7,7 +7,7 @@ use std::time::Duration;
 
 /// Explicit fixture lifetime/role; never changes the native creature template.
 #[derive(Component, Clone, Copy)]
-pub(crate) struct FixtureTarget {
+pub struct FixtureTarget {
     pub expires_at: Duration,
     pub lifetime: Duration,
     pub is_boss: bool,
@@ -21,7 +21,7 @@ impl FixtureTarget {
 
 /// Actual recurring-add state, updated when native entities retire/spawn.
 #[derive(Component, Clone, Copy)]
-pub(crate) struct FixtureAdds {
+pub struct FixtureAdds {
     pub next_spawn_at: Duration,
     pub expires_at: Option<Duration>,
     pub interval: Duration,
@@ -29,29 +29,28 @@ pub(crate) struct FixtureAdds {
     pub count: usize,
 }
 
-pub(crate) type ResolveDotSpell =
-    fn(&World, Entity, u32) -> Result<crate::spell_info::SpellInfo, String>;
+pub type ResolveDotSpell = fn(&World, Entity, u32) -> Result<crate::spell_info::SpellInfo, String>;
 
 #[derive(Clone, Copy)]
-pub(crate) enum DotRefreshPolicy {
+pub enum DotRefreshPolicy {
     Pandemic,
     FinalTick,
     Always,
     Never,
 }
 
-pub(crate) struct DotRefresh {
+pub struct DotRefresh {
     pub resolve: ResolveDotSpell,
     pub policy: DotRefreshPolicy,
 }
 
 /// Explicit native periodic effect for stored/live persistent-factor facts.
-pub(crate) struct DotPersistent {
+pub struct DotPersistent {
     pub resolve: ResolveDotSpell,
     pub effect: u8,
 }
 
-pub(crate) fn native_dot_spell(
+pub fn native_dot_spell(
     world: &World,
     _caster: Entity,
     spell: u32,
@@ -64,7 +63,7 @@ pub(crate) fn native_dot_spell(
 }
 
 #[derive(Default)]
-pub(crate) struct Bindings {
+pub struct Bindings {
     pub actions: BTreeMap<String, u32>,
     pub buffs: BTreeMap<String, u32>,
     /// Fresh native metadata resolver and source-qualified refresh rule, by aura alias.
@@ -77,13 +76,13 @@ pub(crate) struct Bindings {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) enum FightStyle {
+pub enum FightStyle {
     Patchwerk,
 }
 
 /// Encounter start timestamps use the simulation clock, not cooldown wall time.
 #[derive(Clone, Copy)]
-pub(crate) enum Encounter {
+pub enum Encounter {
     Fixture {
         started_at: f64,
         duration: f64,
@@ -100,7 +99,7 @@ struct TargetContext<'a> {
     ordered: &'a [Entity],
 }
 
-pub(crate) struct NativeFacts<'a> {
+pub struct NativeFacts<'a> {
     world: &'a World,
     actor: Entity,
     bindings: &'a Bindings,

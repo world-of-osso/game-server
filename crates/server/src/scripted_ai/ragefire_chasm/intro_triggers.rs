@@ -36,7 +36,7 @@ const AUTHORED: [Authored; 2] = [
     },
 ];
 
-#[cfg_attr(test, derive(Clone))]
+#[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
 struct IntroTrigger {
     authored: &'static Authored,
     center: Vec3,
@@ -44,7 +44,7 @@ struct IntroTrigger {
 }
 
 #[derive(Resource)]
-#[cfg_attr(test, derive(Clone))]
+#[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
 pub(crate) struct IntroTriggers(Vec<IntroTrigger>);
 
 /// Every authored trigger's actual DB2 shape, admitted only through its TDB script row.

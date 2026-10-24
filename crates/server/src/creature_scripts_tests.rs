@@ -73,7 +73,7 @@ fn spell_damage_beyond_its_health_is_logged_but_the_dummy_keeps_its_health() {
 }
 
 #[test]
-fn dummy_evades_five_seconds_after_the_last_hit_dropping_its_debuffs() {
+fn dummy_leaves_combat_five_seconds_after_the_last_hit_retaining_its_debuffs() {
     let Some(mut h) = dummy_harness() else {
         return;
     };
@@ -86,18 +86,18 @@ fn dummy_evades_five_seconds_after_the_last_hit_dropping_its_debuffs() {
     assert!(in_combat(&h));
     assert!(has_aura(&h, HAMSTRING));
 
-    // Past the 5 s reset timer.
+    // TC expires the reference, without invoking CreatureAI's evade cleanup.
     h.advance(20);
     assert!(!in_combat(&h));
     assert!(
-        !has_aura(&h, HAMSTRING),
-        "evade removes the attacker's Hamstring"
+        has_aura(&h, HAMSTRING),
+        "combat exit retains native Hamstring"
     );
     assert!(
         h.inbox
             .log
             .iter()
-            .any(|e| e.kind == CombatLogKind::AuraRemoved && e.spell_id == Some(HAMSTRING))
+            .all(|e| e.kind != CombatLogKind::AuraRemoved || e.spell_id != Some(HAMSTRING))
     );
     assert_eq!(h.health(h.npc), DUMMY_HEALTH);
 }
@@ -142,11 +142,10 @@ fn melee_swings_on_the_dummy_reach_the_attackers_combat_log() {
     assert_eq!(h.health(h.npc), DUMMY_HEALTH);
 }
 
-/// Evade → `CombatStop` → `RemoveAllAttackers`: a player still auto-attacking
-/// the dummy from out of range stops, and its combat with the dummy has ended with
-/// the dummy's: auto-attack alone keeps nobody in combat.
+/// TC ends the timed reference without CombatStop/RemoveAllAttackers.
+/// Out-of-range attack intent remains, but alone keeps nobody in combat.
 #[test]
-fn evade_stops_out_of_range_attackers_and_they_leave_combat() {
+fn combat_expiry_retains_out_of_range_attack_intent_but_ends_combat() {
     let Some(mut h) = dummy_harness() else {
         return;
     };
@@ -161,15 +160,15 @@ fn evade_stops_out_of_range_attackers_and_they_leave_combat() {
             y: 0.0,
             z: 0.0,
         });
-    // Past the dummy's 5 s reset timer: it evades.
+    // Past the dummy's 5 s combat timer: only the reference ends.
     h.advance(110);
     assert!(!in_combat(&h));
     assert!(
         h.app
             .world()
             .get::<crate::combat::AutoAttack>(caster)
-            .is_none(),
-        "the evade stops the attacker's auto-attack"
+            .is_some(),
+        "TC NullCreatureAI does not stop the attacker's auto-attack"
     );
     assert_eq!(
         h.app.world().get::<CombatStatus>(caster),

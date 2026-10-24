@@ -193,7 +193,7 @@ pub const GROUP_AI_FLAG_FOLLOW_LEADER: u32 = 0x200;
 pub struct WorldData {
     pub templates: crate::catalog_data::CatalogData<HashMap<u32, CreatureTemplate>>,
     /// Actual zephras_row_source reconstructed template markers select authored fixed stats.
-    pub(crate) authored_templates: HashSet<u32>,
+    pub authored_templates: HashSet<u32>,
     pub(crate) summon_levels: summon_levels::SummonLevels,
     /// Source server SQL jump-charge options, loaded from this world's connection.
     pub(crate) jump_charge_params: crate::spell_cast::jump_charge::JumpChargeParams,
@@ -228,14 +228,14 @@ pub struct WorldData {
     /// `creature_template.VignetteID`'s `Vignette` row, keyed by template entry.
     pub(crate) vignettes: HashMap<u32, crate::vignettes::CreatureVignette>,
     /// TDB `creature_template.StringId` keyed by entry.
-    pub(crate) template_string_ids: HashMap<u32, String>,
+    pub template_string_ids: HashMap<u32, String>,
     /// TDB `creature.StringId` keyed by content spawn guid.
-    pub(crate) spawn_string_ids: HashMap<u32, String>,
+    pub spawn_string_ids: HashMap<u32, String>,
     /// Members of the manual spawn groups ported scripts spawn (`SpawnGroupSpawn`),
     /// keyed by group; copy fill withholds them.
-    pub(crate) script_spawn_groups: HashMap<u32, Vec<u32>>,
+    pub script_spawn_groups: HashMap<u32, Vec<u32>>,
     /// Ordinary groups scripts reset with ignoreRespawn; never withheld at copy fill.
-    pub(crate) reset_spawn_groups: HashMap<u32, Vec<u32>>,
+    pub reset_spawn_groups: HashMap<u32, Vec<u32>>,
 }
 
 impl WorldData {
@@ -270,12 +270,12 @@ impl WorldData {
 }
 
 pub fn load_world_data(path: &Path) -> WorldData {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     return crate::test_data::catalog_cache::load(path, || Ok(read_world_data(path)))
         .expect("load immutable world fixture definitions")
         .as_ref()
         .clone();
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "test-support")))]
     read_world_data(path)
 }
 
