@@ -1,5 +1,5 @@
 //! Native70448 identities; SimC76f8118 shaman.cpp supplies literal aliases.
-use crate::simc_apl_native::Bindings;
+use crate::simc_apl_native::{Bindings, DotRefresh, DotRefreshPolicy, native_dot_spell};
 use shared::components::PowerType;
 
 pub(super) const ACTIONS: &[(&str, u32)] = &[
@@ -48,6 +48,8 @@ const BUFFS: &[(&str, u32)] = &[
     ("stormkeeper", 191634),
     ("tempest", 454015),
     ("wind_gust", 263806),
+    ("flame_shock", 188389),
+    ("lightning_rod", 197209),
 ];
 
 const TALENTS: &[(&str, u32)] = &[
@@ -73,6 +75,14 @@ pub(super) fn build() -> Bindings {
     Bindings {
         actions: names(ACTIONS),
         buffs: names(BUFFS),
+        dot_refresh: [(
+            "flame_shock".into(),
+            DotRefresh {
+                resolve: native_dot_spell,
+                policy: DotRefreshPolicy::Pandemic,
+            },
+        )]
+        .into(),
         talents: names(TALENTS),
         resources: [("maelstrom".into(), PowerType::Maelstrom)].into(),
         global_cooldown_spell: 188196,

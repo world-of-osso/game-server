@@ -1,6 +1,8 @@
 # Elemental source/target-fact qualification
 
-At735a60ac632c9b28b099f1a505ea4867196b1eda:3/3PASS15.92s, no compiler warnings. This proves source/fact components, not the full Elemental fixture driver or DPS parity.
+Current consumer now delegates target candidates/auras/counts/refresh to pending shared861b655a3 (`with_targets`, `Bindings.dot_refresh`). Duplicate own readers were removed; this replacement awaits landing/requalification. No WIP API merged.
+
+Historical own implementation at735a60ac632c9b28b099f1a505ea4867196b1eda:3/3PASS15.92s, no compiler warnings. This proves source/fact components, not the full Elemental fixture driver or DPS parity.
 
 | Boundary | Observable proof |
 |---|---|

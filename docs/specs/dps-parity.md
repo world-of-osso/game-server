@@ -49,7 +49,7 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 ### Literal Elemental fixture
 
 - [ ] Spec262 follower measurements execute the pinned76f8118 Elemental profile's82 action rows, retaining order, conditions, list transitions and options through the shared literal executor. Native70448 spellbook, overrides and selected traits govern availability; no replacement heuristic or fabricated native facts.
-- [x] Flame Shock and Lightning Rod selectors/counts read only the measured caster's live native auras. Explicit selected targets reach real casts; foreign-caster auras cannot change selection. Flame Shock refreshability uses the next native cast's maximum duration.
+- [ ] Flame Shock and Lightning Rod selectors/counts read only the measured caster's live native auras. Explicit selected targets reach real casts; foreign-caster auras cannot change selection. Flame Shock refreshability uses the next native cast's maximum duration.
 - [ ] Unknown actions/operands/options and non-Fixture encounters fail explicitly. Shared precombat executes once with real casts/GCD completion before the measured clock; no clock reset or recreated executor/equipment path.
 
 ### Per-spell oracle diagnostics
@@ -68,7 +68,7 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 
 ## Implementation inventory
 
-- `crates/server/src/dungeon_simulator/dps_parity/elemental_rotation/` — pinned82-row source, native identities, qualified caster-owned target facts and the fixture consumer. Driver hookup is staged against the separately owned precombat/equipment branch APIs; native lifecycle/ST/3T qualification awaits their landing.
+- `crates/server/src/dungeon_simulator/dps_parity/elemental_rotation/` — pinned82-row source, native identities, shared caster-owned target-context bindings and the fixture consumer. Driver hookup is staged against the separately owned precombat/equipment branch APIs; native lifecycle/ST/3T qualification awaits their landing, including the shared target-context API.
 
 - `scripts/item_instance_data.py` — native-table producer for a supplied existing SQLite copy; canonical application is lead-owned.
 - `scripts/dps_parity.py` — explicit current-tier/prior-tier profile extraction, allocated-trait JSON validation and SimC action/stat normalization.
@@ -89,7 +89,7 @@ The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native speci
 ## Tests asserting this spec
 
 - `crates/server/src/dungeon_simulator/dps_parity/elemental_rotation_tests.rs` — actual selected117014 ST and188443 3T native decision RED atf5b00fcbb; controls remain ignored until GREEN.
-- `crates/server/src/dungeon_simulator/dps_parity/elemental_rotation/{tests,source}.rs` — native caster-owned selectors with real selected-target damage, refresh/expiry, unknown source/operand controls;3/3GREEN15.92s at735a60ac6. Native cases remain opt-in because they require an explicit private database; [scoped proof](../handoffs/elemental-target-facts-proof-ledger.md).
+- `crates/server/src/dungeon_simulator/dps_parity/elemental_rotation/{tests,source}.rs` — native caster-owned selectors with real selected-target damage, refresh/expiry, unknown source/operand controls; prior own implementation3/3GREEN15.92s at735a60ac6. Replacement with the qualified shared target API is staged and awaits consumer requalification. Native cases remain opt-in because they require an explicit private database; [scoped proof](../handoffs/elemental-target-facts-proof-ledger.md).
 
 - `scripts/tests/test_item_instance_data.py` — concrete signed rows, idempotence, unrelated-table retention and duplicate-ID rollback.
 - `scripts/tests/test_dps_parity.py` — exact item identities/modifiers, reference-tier selection, missing-ID rejection, selected-talent metadata, direct/periodic action accounting and finite/missing/zero-reference stat comparisons.
