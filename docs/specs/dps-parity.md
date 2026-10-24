@@ -32,6 +32,14 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [ ] `SIMC_RET_DIVINE_RESONANCE_PRODUCER`: validated selected384027/spec70 and an actual ordinary Divine Toll375576 cast grant native1266308 at its native maximum3 stacks, through existing AfterCast after cast-success is raised. SimC76f8118 `sc_paladin.cpp1880–1905,3686–3688` supplies the missing relationship; `action.cpp1971–1985` dispatches cast-success callbacks before that grant. Keep native30s duration; no legacy5s pulse, new hook, per-spell proc suppression or copied timer. Echo, stack spending and500ms ICD remain excluded. [Source/proof](../handoffs/aura-proc-event-candidates-proof-ledger.md#ret-producer-phase).
 
+### Ret Execution Sentence accumulation
+
+- [ ] `SIMC_RET_EXECUTION_SENTENCE_ACCUMULATION`: actual nonphysical outgoing damage contributes only to343527 instances cast by that actor on the actual damaged target. Exclude any Physical school bit, including hybrids; retain native effect1 percentage. TC expiry-only removal casts387113 with accumulated BP0 through partial-trigger admission, never FULL_MASK; cancellation must not discharge. No fabricated proc flags/chance: native343527 has no SpellAuraOptions, effective TDB has no row, and TC skips generation without flags. Exact controlled-pet owner routing remains separately unqualified; arbitrary summon attribution is forbidden. [Source/proof](../handoffs/ret-qualified-sentence-wake-toll-proof-ledger.md).
+
+### Ret Divine Toll relationship
+
+- [ ] `SIMC_RET_DIVINE_TOLL_RELATIONSHIP`: selected spec70 normal375576 hits dispatch native406957, or1279408 while actual1277026 mode is active, once per real hostile target. Native effect0 cap and effect1 area geometry/admission bound recipients; preserve existing combat-only implicit admission and count the explicit primary once. Native child coefficients and parent effect5 percentage remain authoritative; no invented DB2 trigger edge. Child funding, Resonance, Exaction and Divine Hammer remain separate qualifications. [Source/proof](../handoffs/ret-qualified-sentence-wake-toll-proof-ledger.md).
+
 ### Wild Thrash owned-pet child policy
 
 - [ ] `HUNTER_WILD_THRASH_PET_CHILD_SIMC`: native1264359 effect0 commands each actual living owned controlled pet whose native1264355 target plan reaches the selected enemy. Damage is cast from that pet through the existing owned-pet command path, preserving native area/coefficients and copy/ownership/range rules. No pet means no fabricated child caster. TC has no script and parent DB2 Dummy effects have zero triggers; SimC76f8118 hunter7562–7563/6796–6837 supplies only this named dispatch policy. Beast Cleave, conditional300% multiplier/cap semantics and unsupported companion/guardian models remain separate qualification gaps.

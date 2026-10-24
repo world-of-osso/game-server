@@ -185,6 +185,7 @@ pub fn push_event(world: &mut World, event: AuraEvent) {
         .target
         .map(|target| candidate_instances(world, target))
         .unwrap_or_default();
+    super::ret_sentence::record_damage(world, &event);
     if let Some(mut pending) = world.get_resource_mut::<PendingAuraEvents>() {
         pending.events.push(QueuedAuraEvent {
             event,

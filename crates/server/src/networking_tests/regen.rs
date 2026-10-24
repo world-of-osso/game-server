@@ -4,8 +4,8 @@
 
 use super::*;
 use crate::spell_cast::powers::{
-    PlayerHealthRegen, PowerPools, PowerTypeTable, regenerate_player_health, regenerate_powers,
-    sync_unit_powers,
+    PlayerHealthRegen, PowerPools, load_power_type_table, regenerate_player_health,
+    regenerate_powers, sync_unit_powers,
 };
 use lightyear::prelude::client::{ClientPlugins, Connect, NetcodeClient};
 use shared::components::{Level, Mana, Player, PowerType, UnitPowers};
@@ -23,7 +23,12 @@ pub(super) fn network_server(address: std::net::SocketAddr) -> App {
         shared::ProtocolPlugin,
         crate::interest::InterestPlugin,
     ));
-    server.init_resource::<PowerTypeTable>();
+    let native = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .expect("native power metadata for the UDP regeneration fixture");
+    server.insert_resource(load_power_type_table(&native).expect("load native power type rows"));
     server.add_systems(
         FixedUpdate,
         (

@@ -1,4 +1,4 @@
-//! Native rolling-periodic carry and source-backed named reapplication normalizations.
+//! Native rolling-periodic carry and sourced reapplication duration/absorb rules.
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, Health};
 
@@ -6,7 +6,7 @@ use super::{ActiveAuras, AuraInstance, aura_now, periodic};
 use crate::spell_info::SpellInfo;
 
 const ROLLING_PERIODIC: u32 = 0x4000;
-const BARBED_SHOT: u32 = 217200;
+const PERIODIC_REFRESH_EXTENDS_DURATION: u32 = 0x0010_0000;
 const IGNORE_PAIN: u32 = 190456;
 const PROTECTION_WARRIOR: u32 = 73;
 const SHIELD_BLOCK: u32 = 132404;
@@ -34,8 +34,8 @@ pub(super) fn prepare_application(
     if rolling {
         settle_previous_ticks(world, target, new);
     }
+    prepare_periodic_phase(world, target, new, spell);
     match new.spell_id {
-        BARBED_SHOT => normalize_barbed_damage(world, target, new),
         IGNORE_PAIN => accumulate_ignore_pain(world, target, new),
         RIP | RAKE => carry_duration(world, target, new, DurationCarry::Pandemic),
         SHIELD_BLOCK => carry_duration(world, target, new, DurationCarry::Extend),
@@ -98,9 +98,43 @@ fn settle_previous_ticks(world: &mut World, target: Entity, new: &AuraInstance) 
     }
 }
 
-/// TC a352b1fa SpellAuraEffects.cpp832–849: same caster/spell/effect unpaid
-/// amount is distributed over the new total ticks. Use this runtime's retained
-/// phase when counting that future schedule (Barbed has seven initial, six refreshed).
+/// TC a352b1fa Spell.cpp3236 and SpellAuras.cpp976–991: normal nonstacking
+/// recasts reset periodic timers; FULL_MASK's DONT_RESET_PERIODIC_TIMER,
+/// stacking and native Pandemic retain time-to-tick (SpellDefines.h291–293).
+fn prepare_periodic_phase(
+    world: &World,
+    target: Entity,
+    new: &mut AuraInstance,
+    spell: &SpellInfo,
+) {
+    let stacking = spell
+        .aura_options
+        .as_ref()
+        .is_some_and(|options| options.cumulative_aura >= 2);
+    let pandemic = spell
+        .misc
+        .as_ref()
+        .is_some_and(|misc| misc.attributes[13] & PERIODIC_REFRESH_EXTENDS_DURATION != 0);
+    if !spell.cast_dont_reset_periodic_timer && !stacking && !pandemic {
+        return;
+    }
+    let Some(old) = previous(world, target, new) else {
+        return;
+    };
+    for fresh in &mut new.effects {
+        if let Some(prior) = old
+            .effects
+            .iter()
+            .find(|effect| effect.index == fresh.index)
+        {
+            fresh.periodic_started_at = prior.next_tick_at();
+            fresh.next_tick_index = 0;
+        }
+    }
+}
+
+/// TC a352b1fa SpellAuraEffects.cpp832–849: add the same caster/spell/effect's
+/// unpaid amount over the new scheduled ticks; never divide the fresh effect amount.
 fn roll_remaining_periodic(world: &World, target: Entity, new: &mut AuraInstance) {
     let Some(old) = previous(world, target, new) else {
         return;
@@ -117,35 +151,10 @@ fn roll_remaining_periodic(world: &World, target: Entity, new: &mut AuraInstance
             continue;
         };
         let unpaid = remaining_ticks(prior.next_tick_at(), old_expiry, prior.period_ms);
-        let future = remaining_ticks(prior.next_tick_at(), new_expiry, prior.period_ms);
+        let future = remaining_ticks(fresh.next_tick_at(), new_expiry, fresh.period_ms);
         if future > 0 {
             fresh.amount += prior.amount * old.stack_multiplier() * unpaid as f32 / future as f32;
         }
-    }
-}
-
-///217200's description totals five damage amounts. Normalize only the fresh
-/// budget to its native schedule; the shared rolling pass owns all unpaid carry.
-fn normalize_barbed_damage(world: &World, target: Entity, new: &mut AuraInstance) {
-    let old = previous(world, target, new);
-    let count = crate::spell_cast::scripts::script_effect_value(world, new.caster, BARBED_SHOT, 1);
-    let expiry = new.expires_at.expect("Barbed Shot native duration");
-    let fresh = new
-        .effects
-        .iter_mut()
-        .find(|effect| effect.index == 0)
-        .expect("Barbed Shot periodic damage");
-    let next = match old.as_ref().and_then(|aura| {
-        aura.effects
-            .iter()
-            .find(|effect| effect.index == fresh.index)
-    }) {
-        Some(prior) => prior.next_tick_at(),
-        None => fresh.next_tick_at(),
-    };
-    let future = remaining_ticks(next, expiry, fresh.period_ms);
-    if future > 0 {
-        fresh.amount = fresh.amount * count / future as f32;
     }
 }
 

@@ -4,6 +4,12 @@
 
 Lead approved two logical commits from exact master51a28da8a06f3880cbf5852923a8b5080c30826d: generic event-time aura candidates, then Ret Resonance producer at existing AfterCast. The generic commit has no spell-ID branch or metadata override. Echo, stack spending and500ms ICD are excluded. Parent owns full gate, remote push and landing; Ret development must not pick this up before landing.
 
+## Master reconciliation — pe1098-r
+
+Lead reports pe1098@9299edeb8 passed its baseline full gate. Requested isolated branch `pe1098-reconcile` starts at that frozen ref and merges origin/master13d2f9633 (landedrq1092); the original ref is untouched. The only runtime conflict is `push_event`: pin actor/target aura instance identities first, retain master's synchronous `ret_sentence::record_damage` assessor, then enqueue the pinned event. This preserves both event-time eligibility and Sentence accumulation without an ID exemption or metadata change. Both documentation sides are retained.
+
+Required current-merge proof: two-crate check with tests once, native Leydrinker and Resonance AfterCast cases, existing proc/charge filters once. No full gate is claimed here. Native source data links to the canonical checkout read-only; Resonance retains the original private52fa4d0e snapshot. Results pending; receipts will be in engine `data/diagnostics/aura-proc-event-candidates-reconcile-2026-10-24/`. Ret development remains separate pending actual landing; this work does not remove its experimental OnCast producer early.
+
 ## Source and failure boundary
 
 Pinned TC a352b1fa `Unit.cpp10611–10630` gathers the current aura map and10638–10670 collects candidates synchronously before executing procs. `Spell.cpp3843→3918→3950` orders OnCast→cast-success procs→AfterCast. `SpellAuras.cpp1834–1980` has no blanket castId exemption. The previous native queue stored raw events and scanned the later live aura map, incorrectly admitting auras applied after the event.
