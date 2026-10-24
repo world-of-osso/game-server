@@ -51,4 +51,8 @@ Five Fire-local native cases plus startup inode pass after the shared merge; the
 
 Result6PASS/1FAIL35.23s, compile11m52s, zero warnings; log `fire-local-0946-post-rt1086-native.log`. Fresh current backup/receipt20261024T113149Z; canonical/private hashes match the earlier current snapshots. The merged five local-fact behaviors are qualified; long-form tier naming, set mechanics and full caller qualification remain separate.
 
+## Long tier alias development GREEN —fe03e909b
+
+Main-authorized cherry-pick of shared03fa77956 is `fe03e909be7774d871fe185596b4e7a6d6958800`; only pinned alias data plus scoped docs changed. Native Fire tier case and startup inode pass2/2 in10.59s, clean cold compile28m40s, zero warnings/errors. Both exact long2pc/4pc operands return1 for actual four2060 pieces; unknownalias remains an error. Log `fire-local-fe03-tier-green.log`; fresh CURRENT backup/receipt20261024T123650Z, canonical/private SHA256 as above. Shared alias integration gate remains parent-owned. Other five post-rt native cases retain0946 proof; no redundant rerun for alias-only data.
+
 Caller300s ST/3T, generic facts and dependency qualification remain open; no full literal or DPS acceptance claimed.
