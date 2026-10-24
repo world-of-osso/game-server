@@ -48,7 +48,7 @@ fn duration_harness(extra: Vec<SpellInfo>) -> Harness {
 fn apply_modifier(h: &mut Harness, spell: u32) {
     let effect = world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(spell)
         .unwrap()
         .effects
@@ -91,7 +91,7 @@ fn apply_control(h: &mut Harness, spell: u32) -> u32 {
 fn native_percent(spell: u32) -> i32 {
     world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(spell)
         .unwrap()
         .effects
@@ -104,7 +104,7 @@ fn native_percent(spell: u32) -> i32 {
 fn native_duration(spell: u32) -> u32 {
     world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(spell)
         .unwrap()
         .misc
@@ -251,7 +251,7 @@ fn class_completeness_native_mechanic_duration_positive_only_is_not_invented_but
 fn class_completeness_native_mechanic_duration_invalid_imported_selector_remains_a_source_gap() {
     let mut h = duration_harness(Vec::new());
     let data = world_db().unwrap();
-    let native = data.store.get(INVALID_SELECTOR).unwrap();
+    let native = data.spell_store().get(INVALID_SELECTOR).unwrap();
     assert_eq!(native.effects[0].misc_values[0], 1825);
     crate::auras::apply_aura(
         h.app.world_mut(),
@@ -268,7 +268,12 @@ fn class_completeness_native_mechanic_duration_invalid_imported_selector_remains
 
 #[test]
 fn class_completeness_native_mechanic_duration_exempts_the_native_no_target_duration_flag() {
-    let mut control = world_db().unwrap().store.get(CHILLED).unwrap().clone();
+    let mut control = world_db()
+        .unwrap()
+        .spell_store()
+        .get(CHILLED)
+        .unwrap()
+        .clone();
     control.misc.as_mut().unwrap().attributes[7] |= 0x2; // Native NO_TARGET_DURATION_MOD.
     let mut h = duration_harness(vec![control]);
     apply_modifier(&mut h, STRIDE);
@@ -278,7 +283,7 @@ fn class_completeness_native_mechanic_duration_exempts_the_native_no_target_dura
 #[test]
 fn class_completeness_native_mechanic_duration_preserves_permanent_and_positive_auras() {
     let data = world_db().unwrap();
-    let mut permanent = data.store.get(CHILLED).unwrap().clone();
+    let mut permanent = data.spell_store().get(CHILLED).unwrap().clone();
     permanent
         .misc
         .as_mut()
@@ -287,7 +292,7 @@ fn class_completeness_native_mechanic_duration_preserves_permanent_and_positive_
         .as_mut()
         .unwrap()
         .duration_ms = -1;
-    let mut positive = data.store.get(REJUVENATION).unwrap().clone();
+    let mut positive = data.spell_store().get(REJUVENATION).unwrap().clone();
     // Isolate the positive-aura exemption even when category metadata shares the snare mechanic.
     positive.categories.as_mut().unwrap().mechanic = SNARE as u32;
     let mut h = duration_harness(vec![permanent, positive]);
@@ -300,7 +305,9 @@ fn class_completeness_native_mechanic_duration_preserves_permanent_and_positive_
             caster: h.caster,
             target: h.caster,
             spell_id: REJUVENATION,
-            effect_mask: crate::auras::aura_effect_mask(data.store.get(REJUVENATION).unwrap()),
+            effect_mask: crate::auras::aura_effect_mask(
+                data.spell_store().get(REJUVENATION).unwrap(),
+            ),
             source: AuraSource::Cast,
         },
     );
@@ -317,7 +324,12 @@ fn class_completeness_native_mechanic_duration_preserves_permanent_and_positive_
 
 #[test]
 fn class_completeness_native_mechanic_duration_truncates_delta_before_addition() {
-    let mut control = world_db().unwrap().store.get(CHILLED).unwrap().clone();
+    let mut control = world_db()
+        .unwrap()
+        .spell_store()
+        .get(CHILLED)
+        .unwrap()
+        .clone();
     // Explicit duration fixture exposes integer AddPct, independent of a whole-number native clock.
     let duration = 8_333;
     control

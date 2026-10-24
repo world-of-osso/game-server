@@ -46,6 +46,9 @@ At96b572797, [native packet27/27](../handoffs/native-precombat-proof-ledger.md#c
 ## 2026-10-23 — Native profile stat-allocation redirects
 
 [Stat redirects](systems/character-stats.md#profile-stat-allocation-redirects--2026-10-23): actual103 shared equipment input→StatsPlugin independently reproduces five tier errors and ten matching ordinary slots; invalid donor and false-unmodeled diagnostics also RED,3RED11.02s at7aa72bf47. Server-local donor metadata changes calculation-only stat types/allocations, not original item identity/catalog/effects/set membership or the persisted/wire ABI. Atd45fe30e8 three GREEN12.43s, clean25m11build; two native cases remain opt-in and the env-free diagnostic stays enabled. Lead integration/DPS remain open. [Proof](../handoffs/equipment-stat-redirect-proof-ledger.md).
+## 2026-10-24 — Qualified spell-fixture test consumer
+
+[Crate boundaries](systems/server-crates.md#spell-fixture-qualification-d2):29source files/175enabled cases externally compile ataf8f7f5b6 through canonical fixture resources, preserving names/flags. Setup uses a read-only cached-spell accessor and3existing fixture helpers. A separately approved observer retains3dummy7private charge-state assertions without exposing gameplay fields. Pure moves e0aaa1840 precede wiring. Final core/consumer compile, actual runtime/inventory and matched rebuild proof remain pending; no speedup claim.
 ## 2026-10-23 — Kargath native-hit qualification
 
 [Native-hit boundary](systems/boss-scripts.md#kargath-native-hit-qualification): same683code/protocol/DB gives native893damage PASS then actualMiss(Miss) FAIL on the next fresh-process counterexample. Pin the existing native RNG only in the qualification fixture; original damage assertion/runtime/data retained. Seeded Kargath and requested five Irideus cases pending proof.

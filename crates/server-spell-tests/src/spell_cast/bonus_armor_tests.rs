@@ -37,7 +37,7 @@ fn bonus_armor_harness() -> Harness {
 fn apply_native_armor(h: &mut Harness, spell: u32) {
     let effect = world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(spell)
         .unwrap()
         .effects
@@ -59,7 +59,7 @@ fn apply_native_armor(h: &mut Harness, spell: u32) {
 fn native_factor(spell: u32) -> f32 {
     let effect = world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(spell)
         .unwrap()
         .effects
@@ -106,7 +106,11 @@ fn physical_loss(h: &mut Harness, stats: crate::stats::CharacterStats) -> f32 {
     h.app.world_mut().entity_mut(h.caster).insert(stats);
     let ctx = super::effects::EffectCtx {
         caster: h.npc,
-        spell: world_db().unwrap().store.get(MORTAL_STRIKE).unwrap(),
+        spell: world_db()
+            .unwrap()
+            .spell_store()
+            .get(MORTAL_STRIKE)
+            .unwrap(),
         depth: 0,
         dest: None,
         chain_multiplier: 1.0,
@@ -127,7 +131,7 @@ fn class_completeness_native_bonus_armor_multiplies_base_and_stat_armor() {
         * (1.0
             + world_db()
                 .unwrap()
-                .store
+                .spell_store()
                 .get(TEMPERED_SCALES)
                 .unwrap()
                 .effects[0]
@@ -153,7 +157,7 @@ fn class_completeness_native_bonus_armor_rounds_only_after_the_final_multiplier(
     let result = calculate_armor_with_stat_percent(&h, stat_percent);
     let scales = world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(TEMPERED_SCALES)
         .unwrap()
         .effects[0]
@@ -224,7 +228,7 @@ fn class_completeness_native_bonus_armor_negative_factor_expires_at_native_durat
         (loss - expected_damage).abs() <= 1.0,
         "hit{loss} expected{expected_damage}"
     );
-    let native = world_db().unwrap().store.get(ARMOR_DEBUFF).unwrap();
+    let native = world_db().unwrap().spell_store().get(ARMOR_DEBUFF).unwrap();
     let duration = native.misc.as_ref().unwrap().duration.unwrap().duration_ms;
     assert!(duration > 0);
     h.advance(duration as usize / 50 + 4);

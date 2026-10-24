@@ -14,7 +14,8 @@ fn fixture(learn_talent: bool) -> Harness {
         vec![GRASP, DEBUFF]
     };
     let mut h = harness(Vec::new(), &ids, 6).unwrap();
-    h.app.insert_resource(world_db().unwrap().store.clone());
+    h.app
+        .insert_resource(world_db().unwrap().spell_store().clone());
     h.app
         .insert_resource(crate::test_data::world_data().clone());
     h.app.insert_resource(ObservedCombatEvents::default());

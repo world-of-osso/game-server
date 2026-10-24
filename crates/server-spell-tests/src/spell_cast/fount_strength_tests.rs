@@ -26,7 +26,7 @@ fn fount_harness(learned: bool) -> Harness {
 fn native_field(index: u8) -> f32 {
     world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(FOUNT_OF_STRENGTH)
         .unwrap()
         .effects
@@ -50,7 +50,7 @@ fn apply_regeneration(h: &mut Harness, caster: Entity, target: Entity) {
             effect_mask: crate::auras::aura_effect_mask(
                 world_db()
                     .unwrap()
-                    .store
+                    .spell_store()
                     .get(FRENZIED_REGENERATION)
                     .unwrap(),
             ),

@@ -125,9 +125,9 @@ fn class_completeness_native_ignore_form_mask_does_not_bypass_rejuvenation() {
 #[test]
 fn class_completeness_native_ignore_form_requires_the_same_spell_family() {
     let data = world_db().unwrap();
-    let mut spell = data.store.get(REGROWTH).unwrap().clone();
+    let mut spell = data.spell_store().get(REGROWTH).unwrap().clone();
     spell.class_options.as_mut().unwrap().spell_class_set = data
-        .store
+        .spell_store()
         .get(133)
         .unwrap()
         .class_options

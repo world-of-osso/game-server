@@ -56,7 +56,7 @@ fn remove(h: &mut Harness, spell_id: u32) {
 }
 
 fn healed_amount(h: &mut Harness, spell_id: u32, periodic: bool) -> i32 {
-    let spell = world_db().unwrap().store.get(spell_id).unwrap();
+    let spell = world_db().unwrap().spell_store().get(spell_id).unwrap();
     let ctx = super::effects::EffectCtx {
         caster: h.caster,
         spell,

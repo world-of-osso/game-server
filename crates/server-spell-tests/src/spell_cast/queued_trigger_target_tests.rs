@@ -13,7 +13,12 @@ fn queue_child_then_kill_target() -> Harness {
     let data = world_db().unwrap();
     let spells = [FLAME_SHOCK_PARENT, FLAME_SHOCK_CHILD, DEATH_TOUCH]
         .into_iter()
-        .map(|id| data.store.get(id).expect("native cast chain").clone())
+        .map(|id| {
+            data.spell_store()
+                .get(id)
+                .expect("native cast chain")
+                .clone()
+        })
         .collect();
     let mut h = harness(spells, &[], 7).unwrap();
     for spell in [FLAME_SHOCK_PARENT, DEATH_TOUCH] {

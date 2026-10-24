@@ -205,7 +205,12 @@ fn dummy7_radiance_prefers_injured_allies_without_owners_atonement() {
 }
 
 fn raging_blow(chance: f32, rank: bool) {
-    let mut root = world_db().unwrap().store.get(85288).unwrap().clone();
+    let mut root = world_db()
+        .unwrap()
+        .spell_store()
+        .get(85288)
+        .unwrap()
+        .clone();
     // Controlled probability endpoints on the real root, no fabricated spell.
     root.effects
         .iter_mut()
@@ -222,20 +227,15 @@ fn raging_blow(chance: f32, rank: bool) {
     landed(&h);
     let cat = world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(85288)
         .unwrap()
         .categories
         .as_ref()
         .unwrap()
         .charge_category;
-    let used = h
-        .app
-        .world()
-        .get::<super::SpellHistory>(h.caster)
-        .unwrap()
-        .charges[&cat]
-        .used();
+    let history = h.app.world().get::<super::SpellHistory>(h.caster).unwrap();
+    let (used, _) = charge_recovery(history, cat);
     let reset = rank && chance == 100.0;
     assert_eq!(used, if reset { 0 } else { 1 });
     // This real one-charge proc marker can be consumed by the root's damage
@@ -263,7 +263,12 @@ fn dummy7_raging_blow_rank_success_restores_one_charge_and_notifies_owner() {
 #[test]
 fn dummy7_raging_blow_restores_only_latest_charge_preserving_oldest_recharge() {
     let ids = [85288, 96103, 85384, 280270, 383854];
-    let mut root = world_db().unwrap().store.get(85288).unwrap().clone();
+    let mut root = world_db()
+        .unwrap()
+        .spell_store()
+        .get(85288)
+        .unwrap()
+        .clone();
     root.effects
         .iter_mut()
         .find(|e| e.index == 0)
@@ -274,13 +279,9 @@ fn dummy7_raging_blow_restores_only_latest_charge_preserving_oldest_recharge() {
     h.advance(4);
     landed(&h);
     let cat = root.categories.as_ref().unwrap().charge_category;
-    let oldest = h
-        .app
-        .world()
-        .get::<super::SpellHistory>(h.caster)
-        .unwrap()
-        .charges[&cat]
-        .next_ready_at();
+    let history = h.app.world().get::<super::SpellHistory>(h.caster).unwrap();
+    let (_, oldest) = charge_recovery(history, cat);
+    let oldest = oldest.expect("first Raging Blow charge is recovering");
     h.advance(35);
     root.effects
         .iter_mut()
@@ -293,7 +294,7 @@ fn dummy7_raging_blow_restores_only_latest_charge_preserving_oldest_recharge() {
             if id == 85288 {
                 root.clone()
             } else {
-                world_db().unwrap().store.get(id).unwrap().clone()
+                world_db().unwrap().spell_store().get(id).unwrap().clone()
             }
         })
         .collect();
@@ -303,14 +304,10 @@ fn dummy7_raging_blow_restores_only_latest_charge_preserving_oldest_recharge() {
     h.cast_and_deliver(85288, Some(h.npc));
     h.advance(4);
     landed(&h);
-    let charges = &h
-        .app
-        .world()
-        .get::<super::SpellHistory>(h.caster)
-        .unwrap()
-        .charges[&cat];
-    assert_eq!(charges.used(), 1);
-    assert_eq!(charges.next_ready_at(), oldest);
+    let history = h.app.world().get::<super::SpellHistory>(h.caster).unwrap();
+    let (used, next_ready_at) = charge_recovery(history, cat);
+    assert_eq!(used, 1);
+    assert_eq!(next_ready_at, Some(oldest));
 }
 #[test]
 fn dummy7_raging_blow_rank_zero_chance_keeps_recharge() {

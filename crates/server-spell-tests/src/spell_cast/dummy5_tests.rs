@@ -59,7 +59,12 @@ fn dummy5_demons_bite_without_rank_keeps_catalog_fury() {
 }
 
 fn chaos_strike(chance: u32) {
-    let mut proc = world_db().unwrap().store.get(197125).unwrap().clone();
+    let mut proc = world_db()
+        .unwrap()
+        .spell_store()
+        .get(197125)
+        .unwrap()
+        .clone();
     // Explicit chance endpoints on the real catalog, not a frequency assertion.
     proc.aura_options.as_mut().unwrap().proc_chance = chance;
     let mut h = harness_with_native_enemy_dodge_reduction(
