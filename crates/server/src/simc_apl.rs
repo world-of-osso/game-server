@@ -84,6 +84,8 @@ impl Variables {
 #[cfg(test)]
 mod context_tests;
 #[cfg(test)]
+mod minmax_tests;
+#[cfg(test)]
 mod program_tests;
 #[cfg(test)]
 mod run_tests;
