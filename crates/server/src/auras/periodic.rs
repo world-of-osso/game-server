@@ -318,6 +318,20 @@ fn run_dummy_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tic
         .filter(|cast| cast.spell_id == spell.id && cast.cast_type == CastType::Channel)
         .and_then(|cast| Entity::try_from_bits(cast.target))
         .unwrap_or(unit);
+    #[cfg(any(test, feature = "test-support"))]
+    let observed_emission = effects::factor_capture::begin_periodic_observation(
+        world,
+        effects::factor_capture::PeriodicEmission {
+            actor: tick.caster,
+            aura_unit: unit,
+            aura_spell_id: spell.id,
+            aura_instance_id: tick.instance_id,
+            effect_index: tick.effect_index,
+            triggered_spell_id: trigger,
+            depth: TICK_TRIGGER_DEPTH,
+            scheduled_at: tick.scheduled_at,
+        },
+    );
     crate::spell_cast::cast_triggered(
         world,
         tick.caster,
@@ -325,6 +339,8 @@ fn run_dummy_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tic
         Some(target),
         TICK_TRIGGER_DEPTH,
     );
+    #[cfg(any(test, feature = "test-support"))]
+    effects::factor_capture::end_periodic_observation(world, observed_emission);
 }
 
 /// `AuraEffect::HandleObsModPowerAuraTick` (SpellAuraEffects.cpp): the amount percent
