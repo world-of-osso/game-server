@@ -180,6 +180,7 @@ mod excluded_caster_type_tests;
 mod expel_harm_tests;
 #[cfg(test)]
 mod fel_devastation_tests;
+mod ferocious_bite;
 #[cfg(test)]
 mod fount_strength_tests;
 #[cfg(test)]
@@ -2936,6 +2937,8 @@ fn resolve_effects(
     plan: &TargetPlan,
     depth: u8,
 ) {
+    let prepared = ferocious_bite::snapshot(world, caster, spell);
+    let spell = prepared.as_ref();
     // Distinct hit units after missile/defense filtering, before effect dispatch.
     for unit in hit_units(plan) {
         crate::achievement::record_targeted_spell_hit(world, caster, unit, spell.id);

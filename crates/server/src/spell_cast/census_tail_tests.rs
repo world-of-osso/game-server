@@ -106,7 +106,6 @@ fn feral_bite_cast(energy: f32) -> (f32, f32) {
 }
 
 #[test]
-#[ignore = "Feral Bite TC port pending: genuine extra-Energy RED, outside shared knowledge slice"]
 fn feral_bite_native_extra_energy_scales_damage_after_base_cost_before_burn() {
     let (base, remaining) = feral_bite_cast(25.0);
     assert!(base > 0.0, "native Bite must hit before comparing factors");
@@ -146,7 +145,6 @@ fn feral_bite_incarnation_cast(extra_energy: f32) -> (f32, f32) {
 }
 
 #[test]
-#[ignore = "Feral Bite TC port pending: native Incarnation cost and optional-Energy coverage"]
 fn feral_bite_native_incarnation_preserves_actual_extra_energy_cap() {
     let (base, remaining) = feral_bite_incarnation_cast(0.0);
     assert!(base > 0.0);
