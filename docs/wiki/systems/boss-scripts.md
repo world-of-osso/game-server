@@ -8,6 +8,10 @@ Ignored693bfe1e5 contracts preceded AI:9d23d7af0 native cone/periodic damage qua
 
 Producer/SQL only bind2504/5395/106801 and ScriptName. DerivedNormal63527000/class4/flags0/faction16/models/difficulties/native data remain unchanged; fresh-copy twice-replay receipt and conflict/idempotence producer proof accompany the packet. Evidence `game-engine/data/diagnostics/follower-bosses-df-2026-10-22/irideus-*`, including native category rows and admission log. Lead owns final check, landing and canonical publication. No Stage2, indefinitely repeating four-lane combat, authored205population, navigation or loot claim.
 
+### Kargath native-hit qualification
+
+Gateir1038's Kargath30739 damage assertion failed again in isolation, while master controls passed. Exact gate-production683cf6ee5 with observation only then produced native893damage/PASS39.25s; the first fresh-process compiled counterexample produced actual `Miss(Miss)`/FAIL18.67s with CastSuccess, no remaining cast and the same poses. Protocol2abc7fa and the canonical world.db inode matched the gate. This reproduction is a legal native DefenseType2 miss, not a shared boss-clock rejection or evidence of Irideus fixture leakage. Evidence `irideus-kargath-native-diagnostic.log` and `irideus-kargath-unseeded-trial-01.log` under the DF evidence root. The fixture scopes the existing test-only native RNG immediately before the ordinary cast; original positive-damage assertion, native hit chances/damage/data/geometry and runtime code remain unchanged. Seeded qualification and requested Irideus rerun are pending GREEN.
+
 
 ## Candle King native explicit-unit boundary — 2026-10-22
 

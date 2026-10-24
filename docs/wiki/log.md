@@ -1,3 +1,7 @@
+## 2026-10-23 — Kargath native-hit qualification
+
+[Native-hit boundary](systems/boss-scripts.md#kargath-native-hit-qualification): same683code/protocol/DB gives native893damage PASS then actualMiss(Miss) FAIL on the next fresh-process counterexample. Pin the existing native RNG only in the qualification fixture; original damage assertion/runtime/data retained. Seeded Kargath and requested five Irideus cases pending proof.
+
 ## 2026-10-22 — Irideus stage-one partial and native category boundary
 
 [Irideus](systems/boss-scripts.md#watcher-irideus-stage-one-partial-2026-10-22): ignored native RED before AI; four initial/effect/threshold/reset passes retained, exact native category-rejection/credit/copy/corpse case1GREEN22.01s. COMPOSITE5GREEN; source-clock/category1152+133 mismatch, Stage2 and dummy controllers remain explicit gaps.
