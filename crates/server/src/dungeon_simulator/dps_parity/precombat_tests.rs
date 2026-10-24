@@ -216,9 +216,17 @@ fn literal_precombat_stops_after_the_first_ready_harmful_native_action() {
     .map(|_| ());
     let chi = crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::Chi);
     let resolved = crate::auras::overrides::resolve_spell(run.app.world(), run.actor, 100784);
+    let actor_position = run
+        .app
+        .world()
+        .get::<shared::components::Position>(run.actor);
+    let target_position = run
+        .app
+        .world()
+        .get::<shared::components::Position>(run.targets[0]);
     assert!(
         prepared.execution(&blackout, &equipment).unwrap().is_some(),
-        "later BOK must be native-ready after real frame/GCD: readiness={native:?}, chi={chi:?}, resolved={resolved}"
+        "later BOK must be native-ready after real frame/GCD: readiness={native:?}, chi={chi:?}, resolved={resolved}, actor={actor_position:?}, target={target_position:?}"
     );
     assert!(
         driver
