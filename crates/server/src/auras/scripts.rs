@@ -406,6 +406,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     super::spirit_wolf::register(&mut scripts);
     super::natures_guardian::register(&mut scripts);
     super::ret_sentence::register(&mut scripts);
+    super::ret_wrath_mode::register(&mut scripts);
     scripts.0.insert(
         EXPURGATION_TALENT,
         AuraScript {

@@ -1,5 +1,9 @@
 # Auras
 
+## Wrath Hammer-mode producer — 2026-10-24
+
+`SIMC_RET_WRATH_HAMMER_MODE_PRODUCER` applies actual1277026 when31884/454351 is applied to an owner who learned1241288, then removes caster-owned mode on parent removal through existing AuraScript hooks. Native1241288 is Dummy/Trigger0, no native child edge/TC/TDB producer exists; pinned SimC314–315/3634–3641 supplies the relationship. Native permanent mode/20s ordinary/8s background durations remain untouched. No readiness veto or332remap. [Contract](../../specs/dps-parity.md#ret-wrath-hammer-mode-producer), [source/independent producer and lifecycle REDs](../../handoffs/ret-paladin-parity-proof-ledger.md#wrath-hammer-mode-producer), [implementation](../../../crates/server/src/auras/ret_wrath_mode.rs). Five-case GREEN pending; parent overlap/refresh unqualified.
+
 ## Divine Toll child relationship — 2026-10-24
 
 Separate approved `SIMC_RET_DIVINE_TOLL_JUDGMENT_POWER` binds only406957/effect0 landed hits to the existing learned315867/native220637 trigger helper. TC's older Judgment OnCast bindings omit406957; native220637 effect0 remains the value authority. Actual ST/3T damaging-child2RED/Hammer native funding controlPASS48.51s at63843f08b precedes implementation;0359602b7 unchanged3GREEN56.45s/zero warnings. Separate rank-negative/miss/immune controls remain open. Root, Hammer and ordinary TC Judgment funding are not altered. [Source/proof](../../handoffs/ret-paladin-parity-proof-ledger.md#divine-toll-child-funding--sourcered-only).

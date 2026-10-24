@@ -1,3 +1,7 @@
+## 2026-10-24 — Native Wrath Hammer-mode production/lifetime
+
+[Auras](systems/auras.md#wrath-hammer-mode-producer--2026-10-24):cb21f5712 actual ordinary/background Wrath2genuine producerRED/no-Wrath controlPASS52.13s;f4e664fe5 explicit-native-mode/real cancellation and8s-expiry2lifecycleRED55.01s. Lead approved sourced learned1241288→1277026 apply/removal only, through existing AuraScript hooks; native durations and override data unchanged. Five-case GREEN pending; no readiness veto. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#wrath-hammer-mode-producer).
+
 ## 2026-10-24 — Separate Divine Toll Judgment funding
 
 [Auras](systems/auras.md#divine-toll-child-relationship--2026-10-24):63843f08b actual406957 damage/learned315867 reaches resource0vs1ST/0vs3three-target; native Hammer effect1 funding controlPASS48.51s. Lead approved separate landed-effect/native220637 relationship; generic effect-hit hook reuses existing rank-checked native trigger helper, not direct grants. Ordinary TC Judgment/root/Hammer unchanged;0359602b7 unchanged3GREEN56.45s/zero warnings. Rank-negative/miss/immune controls remain open, later packet afterrq1092. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#divine-toll-child-funding--sourcered-only).

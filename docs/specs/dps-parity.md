@@ -32,6 +32,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [ ] `SIMC_RET_DIVINE_TOLL_RELATIONSHIP`: selected spec70 normal375576 hits dispatch native406957, or1279408 while actual1277026 mode is active, once per real hostile target. Native effect0 cap and effect1 area geometry/admission bound recipients; preserve existing combat-only implicit admission and count the explicit primary once. Native child coefficients and parent effect5 percentage remain authoritative; no invented DB2 trigger edge. Child funding, Resonance, Exaction and Divine Hammer remain separate qualifications. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#divine-toll-native-child-relationship--sourcered-only).
 
+### Ret Wrath Hammer-mode producer
+
+- [ ] `SIMC_RET_WRATH_HAMMER_MODE_PRODUCER`: actual31884 or454351 application on an owner who has learned1241288 casts native1277026; parent removal removes only that owner's mode. Native durations remain unchanged: no copied timer, target-state bypass, readiness veto or332override remap. Native1241288 Dummy/Trigger0 and no TC/TDB producer require this explicit pinned SimC relationship. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#wrath-hammer-mode-producer).
+
 ### Ret Divine Toll Judgment power
 
 - [ ] `SIMC_RET_DIVINE_TOLL_JUDGMENT_POWER`: each landed406957 damage effect whose caster has actually learned315867 casts native220637 once, through existing native triggered dispatch and rank eligibility. Native220637 effect0 owns the amount. Do not fund root375576 or add funding to1279408; ordinary TC20271/275779/275773 OnCast behavior remains unchanged. TC omits406957, so this relationship is explicitly pinned SimC-derived. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#divine-toll-child-funding--sourcered-only).

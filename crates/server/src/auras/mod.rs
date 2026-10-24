@@ -64,6 +64,7 @@ mod proc_mask_tests;
 pub mod procs;
 mod refresh;
 mod ret_sentence;
+mod ret_wrath_mode;
 pub(crate) mod reward_mods;
 #[cfg(test)]
 mod rolling_periodic_tests;
