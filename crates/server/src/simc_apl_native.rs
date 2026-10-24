@@ -3,11 +3,65 @@ use bevy::prelude::*;
 use server::simc_apl::{Action, ActionFacts, Facts};
 use shared::components::PowerType;
 use std::collections::BTreeMap;
+use std::time::Duration;
+
+/// Explicit fixture lifetime/role; never changes the native creature template.
+#[derive(Component, Clone, Copy)]
+pub struct FixtureTarget {
+    pub expires_at: Duration,
+    pub lifetime: Duration,
+    pub is_boss: bool,
+}
+
+impl FixtureTarget {
+    pub fn remaining(self, now: Duration) -> Duration {
+        self.expires_at.saturating_sub(now)
+    }
+}
+
+/// Actual recurring-add state, updated when native entities retire/spawn.
+#[derive(Component, Clone, Copy)]
+pub struct FixtureAdds {
+    pub next_spawn_at: Duration,
+    pub expires_at: Option<Duration>,
+    pub interval: Duration,
+    pub lifetime: Duration,
+    pub count: usize,
+}
+
+pub type ResolveDotSpell = fn(&World, Entity, u32) -> Result<crate::spell_info::SpellInfo, String>;
+
+#[derive(Clone, Copy)]
+pub enum DotRefreshPolicy {
+    Pandemic,
+    FinalTick,
+    Always,
+    Never,
+}
+
+pub struct DotRefresh {
+    pub resolve: ResolveDotSpell,
+    pub policy: DotRefreshPolicy,
+}
+
+pub fn native_dot_spell(
+    world: &World,
+    _caster: Entity,
+    spell: u32,
+) -> Result<crate::spell_info::SpellInfo, String> {
+    world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell)
+        .cloned()
+        .ok_or_else(|| format!("native dot spell{spell} absent"))
+}
 
 #[derive(Default)]
 pub struct Bindings {
     pub actions: BTreeMap<String, u32>,
     pub buffs: BTreeMap<String, u32>,
+    /// Fresh native metadata resolver and source-qualified refresh rule, by aura alias.
+    pub dot_refresh: BTreeMap<String, DotRefresh>,
     pub talents: BTreeMap<String, u32>,
     pub resources: BTreeMap<String, PowerType>,
     /// Native spell carrying this actor's global-cooldown category and base duration.
@@ -32,12 +86,19 @@ pub enum Encounter {
     },
 }
 
+#[derive(Clone, Copy)]
+struct TargetContext<'a> {
+    current: Option<Entity>,
+    ordered: &'a [Entity],
+}
+
 pub struct NativeFacts<'a> {
     world: &'a World,
     actor: Entity,
     bindings: &'a Bindings,
     encounter: Encounter,
     active_enemies: usize,
+    targets: Option<TargetContext<'a>>,
 }
 
 impl<'a> NativeFacts<'a> {
@@ -54,6 +115,52 @@ impl<'a> NativeFacts<'a> {
             bindings,
             encounter,
             active_enemies,
+            targets: None,
+        }
+    }
+
+    /// Explicit fixture/controller target context; native entities, never a count oracle.
+    pub fn with_targets(mut self, current: Option<Entity>, ordered: &'a [Entity]) -> Self {
+        self.targets = Some(TargetContext { current, ordered });
+        self.active_enemies = ordered.len();
+        self
+    }
+
+    fn ordered_targets(&self) -> Result<&'a [Entity], String> {
+        self.targets.map(|context| context.ordered).ok_or_else(|| {
+            "NATIVE_APL_TARGETS_UNAVAILABLE: explicit native universe missing".into()
+        })
+    }
+
+    fn read_current_target(&self) -> Option<Entity> {
+        if let Some(context) = self.targets {
+            return context.current;
+        }
+        // Unconfigured controllers still read their actual native selection.
+        let selector = self
+            .world
+            .get::<crate::followers::Follower>(self.actor)
+            .map_or(self.actor, |follower| follower.owner);
+        self.world
+            .get::<crate::networking::CombatTarget>(selector)
+            .and_then(|target| target.0)
+    }
+
+    fn candidate_ready(
+        &self,
+        spell: Option<&crate::spell_info::SpellInfo>,
+        target: Entity,
+    ) -> Result<bool, String> {
+        if !crate::spell_cast::targets::is_alive(self.world, target)
+            || !crate::spell_cast::targets::same_map(self.world, self.actor, target)
+        {
+            return Ok(false);
+        }
+        match spell {
+            Some(spell) => crate::spell_cast::native_apl::target_eligible(
+                self.world, self.actor, spell, target,
+            ),
+            None => Ok(true),
         }
     }
 
@@ -78,6 +185,205 @@ impl<'a> NativeFacts<'a> {
                 Err(format!("DUNGEON_TTD_UNAVAILABLE: {operand} unavailable"))
             }
         }
+    }
+
+    fn selected_target(&self, action: Option<&Action>) -> Result<Entity, String> {
+        let target = match action.and_then(|action| action.target) {
+            Some(bits) => Entity::try_from_bits(bits),
+            None => self.read_current_target(),
+        }
+        .ok_or("NATIVE_APL_TARGET_UNAVAILABLE: no selected entity")?;
+        self.world
+            .get_entity(target)
+            .map_err(|_| "NATIVE_APL_TARGET_UNAVAILABLE: expired entity".to_owned())?;
+        Ok(target)
+    }
+
+    fn target_fact(&self, property: &str, action: Option<&Action>) -> Result<f64, String> {
+        if property == "time_to_die" && matches!(self.encounter, Encounter::Dungeon { .. }) {
+            return Err("DUNGEON_TTD_UNAVAILABLE: target.time_to_die unavailable".into());
+        }
+        let target = self.selected_target(action)?;
+        match property {
+            "health.pct" => self.target_health_pct(target),
+            "debuff.casting.react" => self.casting_reaction(target),
+            "time_to_die" | "is_boss" => {
+                let metadata = self
+                    .world
+                    .get::<FixtureTarget>(target)
+                    .ok_or("NATIVE_FIXTURE_TARGET_UNAVAILABLE: explicit lifetime/role missing")?;
+                if property == "is_boss" {
+                    return Ok(bool_value(metadata.is_boss));
+                }
+                Ok(metadata
+                    .remaining(self.world.resource::<Time>().elapsed())
+                    .as_secs_f64())
+            }
+            _ => Err(format!("unknown native APL target property {property}")),
+        }
+    }
+
+    fn target_health_pct(&self, target: Entity) -> Result<f64, String> {
+        let health = self
+            .world
+            .get::<shared::components::Health>(target)
+            .ok_or("native target lacks Health")?;
+        if health.max <= 0.0 {
+            return Err("native target has invalid maximum Health".into());
+        }
+        Ok(f64::from(health.current) * 100.0 / f64::from(health.max))
+    }
+
+    fn casting_reaction(&self, target: Entity) -> Result<f64, String> {
+        if self
+            .world
+            .get::<shared::casting::CastState>(target)
+            .is_some()
+        {
+            return Err("NATIVE_CASTING_REACTION_UNAVAILABLE: active cast has no qualified reaction snapshot".into());
+        }
+        Ok(0.0)
+    }
+
+    fn read_owned_auras(&self, target: Entity, spell: u32) -> Vec<&crate::auras::AuraInstance> {
+        let now = crate::spell_cast::now(self.world);
+        self.world
+            .get::<crate::auras::ActiveAuras>(target)
+            .into_iter()
+            .flat_map(|auras| auras.iter())
+            .filter(|aura| {
+                aura.spell_id == spell
+                    && aura.caster == self.actor
+                    && aura.expires_at.is_none_or(|at| at > now)
+            })
+            .collect()
+    }
+
+    fn active_dot(&self, alias: &str) -> Result<f64, String> {
+        let spell = bound_spell(&self.bindings.buffs, alias, "dot")?;
+        self.spell(spell)?;
+        Ok(self
+            .ordered_targets()?
+            .iter()
+            .filter(|&&target| {
+                crate::spell_cast::targets::is_alive(self.world, target)
+                    && !self.read_owned_auras(target, spell).is_empty()
+            })
+            .count() as f64)
+    }
+
+    fn dot_value(&self, operand: &str, action: Option<&Action>) -> Result<f64, String> {
+        let (alias, property) = split_property(operand, "dot")?;
+        if property != "refreshable" {
+            return self.target_aura(operand, action);
+        }
+        self.dot_refreshable(alias, self.selected_target(action)?)
+    }
+
+    fn dot_refreshable(&self, alias: &str, target: Entity) -> Result<f64, String> {
+        let spell = bound_spell(&self.bindings.buffs, alias, "dot")?;
+        self.spell(spell)?;
+        let metadata = self.bindings.dot_refresh.get(alias).ok_or_else(|| {
+            format!("NATIVE_DOT_REFRESH_UNAVAILABLE: {alias} has no native resolver/policy")
+        })?;
+        let active = self.read_owned_auras(target, spell);
+        if active.is_empty() {
+            return Ok(1.0);
+        }
+        match metadata.policy {
+            DotRefreshPolicy::Always => Ok(1.0),
+            DotRefreshPolicy::Never => Ok(0.0),
+            DotRefreshPolicy::FinalTick => {
+                crate::auras::remaining_periodic_ticks(self.world, self.actor, target, spell)
+                    .map(|ticks| bool_value(ticks <= 1))
+            }
+            DotRefreshPolicy::Pandemic => self.pandemic_refreshable(
+                metadata.resolve,
+                spell,
+                target,
+                buff_remaining(&active, crate::spell_cast::now(self.world)),
+            ),
+        }
+    }
+
+    fn pandemic_refreshable(
+        &self,
+        resolve: ResolveDotSpell,
+        spell: u32,
+        target: Entity,
+        remains: f64,
+    ) -> Result<f64, String> {
+        const PANDEMIC_FRACTION: f64 = 0.30; // action.cpp4630–4635.
+        let resolved = resolve(self.world, self.actor, spell)?;
+        if resolved.id != spell {
+            return Err("native dot resolver returned a different spell identity".into());
+        }
+        let duration = crate::auras::fresh_duration_ms(self.world, self.actor, target, &resolved);
+        if duration == 0 {
+            return Err("native dot fresh duration unavailable/permanent".into());
+        }
+        Ok(bool_value(
+            remains <= f64::from(duration) / 1000.0 * PANDEMIC_FRACTION,
+        ))
+    }
+
+    fn target_aura(&self, operand: &str, action: Option<&Action>) -> Result<f64, String> {
+        let (alias, property) = split_property(operand, "target aura")?;
+        let id = bound_spell(&self.bindings.buffs, alias, "target aura")?;
+        self.spell(id)?;
+        let target = self.selected_target(action)?;
+        let now = crate::spell_cast::now(self.world);
+        let active = self.read_owned_auras(target, id);
+        match property {
+            "up" | "ticking" => Ok(bool_value(!active.is_empty())),
+            "down" => Ok(bool_value(active.is_empty())),
+            "remains" => Ok(buff_remaining(&active, now)),
+            "stack" => Ok(active
+                .iter()
+                .map(|aura| f64::from(aura.stacks))
+                .fold(0.0, f64::max)),
+            _ => Err(format!("unknown native target-aura property {property}")),
+        }
+    }
+
+    fn adds(&self, property: &str) -> Result<f64, String> {
+        if matches!(self.encounter, Encounter::Dungeon { .. }) {
+            return Err(format!(
+                "DUNGEON_TTD_UNAVAILABLE: raid_event.adds.{property} unavailable"
+            ));
+        }
+        fixture_add_value(
+            self.world.get::<FixtureAdds>(self.actor),
+            property,
+            self.world.resource::<Time>().elapsed(),
+        )
+    }
+
+    fn movement_event(&self, property: &str) -> Result<f64, String> {
+        if matches!(self.encounter, Encounter::Dungeon { .. }) {
+            return Err(format!(
+                "DUNGEON_TTD_UNAVAILABLE: raid_event.movement.{property} unavailable"
+            ));
+        }
+        if !matches!(
+            property,
+            "exists" | "remains" | "in" | "cooldown" | "duration"
+        ) {
+            return Err(format!("unknown native movement-event property {property}"));
+        }
+        // This explicit dummy fixture configures no movement raid event.
+        fixture_add_value(None, property, self.world.resource::<Time>().elapsed())
+    }
+
+    fn targeted_value(&self, name: &str, action: Option<&Action>) -> Option<Result<f64, String>> {
+        if let Some(property) = name.strip_prefix("target.") {
+            return Some(self.target_fact(property, action));
+        }
+        if let Some(operand) = name.strip_prefix("dot.") {
+            return Some(self.dot_value(operand, action));
+        }
+        name.strip_prefix("debuff.")
+            .map(|operand| self.target_aura(operand, action))
     }
 
     fn fight_style(&self, style: &str) -> Result<f64, String> {
@@ -219,17 +525,10 @@ impl<'a> NativeFacts<'a> {
     }
 
     fn ticks_remaining(&self, spell: u32) -> Result<f64, String> {
-        let target = self
-            .world
-            .get::<shared::casting::CastState>(self.actor)
-            .and_then(|cast| Entity::try_from_bits(cast.target))
-            .or_else(|| {
-                self.world
-                    .get::<crate::networking::CombatTarget>(self.actor)
-                    .and_then(|target| target.0)
-            });
-        let Some(target) = target else {
-            return Err("native APL ticks_remain requires an actual target".into());
+        let target = match self.world.get::<shared::casting::CastState>(self.actor) {
+            Some(cast) => Entity::try_from_bits(cast.target)
+                .ok_or("native APL ticks_remain has an invalid actual cast target")?,
+            None => self.selected_target(None)?,
         };
         crate::auras::remaining_periodic_ticks(self.world, self.actor, target, spell).map(f64::from)
     }
@@ -308,9 +607,21 @@ impl<'a> NativeFacts<'a> {
 
 impl Facts for NativeFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
+        if let Some(value) = self.targeted_value(name, None) {
+            return value;
+        }
+        if let Some(property) = name.strip_prefix("raid_event.adds.") {
+            return self.adds(property);
+        }
+        if let Some(property) = name.strip_prefix("raid_event.movement.") {
+            return self.movement_event(property);
+        }
+        if let Some(alias) = name.strip_prefix("active_dot.") {
+            return self.active_dot(alias);
+        }
         match name {
             "time" => Ok(self.elapsed()),
-            "fight_remains" | "target.time_to_die" => self.remaining(name),
+            "fight_remains" => self.remaining(name),
             "active_enemies" => Ok(self.active_enemies as f64),
             "spell_haste" => self.spell_haste(),
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "charges_fractional"
@@ -341,7 +652,25 @@ impl Facts for NativeFacts<'_> {
 }
 
 impl ActionFacts for NativeFacts<'_> {
+    fn target_ids(&self, action: &Action) -> Result<Vec<u64>, String> {
+        let spell = match action.name.as_str() {
+            "run_action_list" | "call_action_list" | "auto_attack" | "retarget_auto_attack" => None,
+            _ => Some(self.action_spell(&action.name)?),
+        };
+        self.ordered_targets()?
+            .iter()
+            .filter_map(|&target| match self.candidate_ready(spell, target) {
+                Ok(true) => Some(Ok(target.to_bits())),
+                Ok(false) => None,
+                Err(error) => Some(Err(error)),
+            })
+            .collect()
+    }
+
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
+        if let Some(value) = self.targeted_value(name, Some(action)) {
+            return value;
+        }
         match name {
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" => self.gcd(action, name),
             "charges" | "charges_fractional" | "full_recharge_time" | "execute_time"
@@ -349,6 +678,29 @@ impl ActionFacts for NativeFacts<'_> {
             _ => self.value(name),
         }
     }
+}
+
+fn fixture_add_value(
+    adds: Option<&FixtureAdds>,
+    property: &str,
+    now: Duration,
+) -> Result<f64, String> {
+    // raid_event.cpp3068–3141: no event / no positive next time uses max timespan.
+    let never = i64::MAX as f64 / 1000.0;
+    Ok(match property {
+        "exists" => bool_value(adds.is_some()),
+        "remains" => adds
+            .and_then(|adds| adds.expires_at)
+            .map_or(0.0, |at| at.saturating_sub(now).as_secs_f64()),
+        "in" => adds
+            .map(|adds| adds.next_spawn_at.saturating_sub(now))
+            .filter(|remaining| !remaining.is_zero())
+            .map_or(never, |remaining| remaining.as_secs_f64()),
+        "cooldown" => adds.map_or(never, |adds| adds.interval.as_secs_f64()),
+        "duration" => adds.map_or(0.0, |adds| adds.lifetime.as_secs_f64()),
+        "count" => adds.map_or(0.0, |adds| adds.count as f64),
+        _ => return Err(format!("unknown native add-event property {property}")),
+    })
 }
 
 fn bound_spell(bindings: &BTreeMap<String, u32>, alias: &str, kind: &str) -> Result<u32, String> {
@@ -381,5 +733,11 @@ fn bool_value(value: bool) -> f64 {
     if value { 1.0 } else { 0.0 }
 }
 
+#[cfg(test)]
+mod refresh_context_tests;
+#[cfg(test)]
+mod target_context_tests;
+#[cfg(test)]
+mod target_tests;
 #[cfg(test)]
 mod tests;
