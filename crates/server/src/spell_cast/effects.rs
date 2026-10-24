@@ -32,6 +32,9 @@ mod bypass_armor_tests;
 #[path = "caster_ability_crit_tests.rs"]
 mod caster_ability_crit_tests;
 #[cfg(test)]
+#[path = "factor_capture.rs"]
+pub(crate) mod factor_capture;
+#[cfg(test)]
 #[path = "windwalker_mastery_tests.rs"]
 mod windwalker_mastery_tests;
 
@@ -669,8 +672,13 @@ pub(crate) fn scaled_amount(
     spell: &SpellInfo,
     effect: &SpellEffect,
 ) -> f32 {
-    modded_base_points(world, caster, spell, effect)
-        + effect_power_bonus(world, caster, spell, effect)
+    #[cfg(test)]
+    factor_capture::begin_formula(world, caster, spell, effect);
+    let base = modded_base_points(world, caster, spell, effect);
+    let amount = base + effect_power_bonus(world, caster, spell, effect);
+    #[cfg(test)]
+    factor_capture::record_formula(world, caster, spell, effect, base, amount);
+    amount
 }
 
 /// Native SP/AP contribution, separate from stored aura base points. Damage
@@ -689,7 +697,24 @@ pub(crate) fn effect_power_bonus(
         SpellModOp::BonusCoefficient,
         effect.bonus_coefficient_from_ap,
     );
-    coefficient * spell_power + ap_coefficient * attack_power
+    let spell_bonus = coefficient * spell_power;
+    let attack_bonus = ap_coefficient * attack_power;
+    #[cfg(test)]
+    factor_capture::record_power(
+        world,
+        caster,
+        spell,
+        effect,
+        factor_capture::Powers {
+            attack_power,
+            spell_power,
+            ap_coefficient,
+            sp_coefficient: coefficient,
+            ap_term: attack_bonus,
+            sp_term: spell_bonus,
+        },
+    );
+    spell_bonus + attack_bonus
 }
 
 /// TC Unit.cpp6880–6890/7400–7409/7674–7683 shares damage/heal/absorb selection.
@@ -826,14 +851,17 @@ fn armor_reduced(
         armor,
     );
     let armor = crate::auras::combat_stats::armor_after_ignore(world, caster, spell, armor);
-    crate::combat::armor_mitigated(
+    let mitigation = crate::combat::armor_mitigated(
         amount,
         armor,
         &caster_scaling,
         &target_scaling,
         world.get_resource::<ArmorConstants>(),
         world.get::<crate::auras::AuraStatMods>(caster),
-    )
+    );
+    #[cfg(test)]
+    factor_capture::record_armor(world, caster, target, spell, amount, &mitigation);
+    mitigation.damage
 }
 
 /// TC SpellInfo::IsRangedWeaponSpell; ItemTemplate.h weapon subclass mask.
@@ -916,6 +944,15 @@ fn crit_chance_from_owner(
     };
     let caster_ability =
         crate::auras::combat_stats::caster_ability_critical_chance(world, caster, target, spell);
+    #[cfg(test)]
+    factor_capture::record_chance(
+        world,
+        caster,
+        target,
+        spell,
+        chance,
+        modifier + caster_ability,
+    );
     (chance + modifier + caster_ability).max(0.0)
 }
 
@@ -970,11 +1007,25 @@ fn with_damage_crit(
     spell: &SpellInfo,
     amount: f32,
 ) -> (f32, bool) {
-    let crit = rand::random::<f32>() * 100.0 < crit_chance(world, caster, target, spell);
+    let roll = rand::random::<f32>() * 100.0;
+    let chance = crit_chance(world, caster, target, spell);
+    let crit = roll < chance;
     if !crit {
+        #[cfg(test)]
+        factor_capture::record_critical(
+            world,
+            caster,
+            target,
+            spell,
+            factor_capture::Critical {
+                chance,
+                before: amount,
+                after: amount,
+            },
+        );
         return (amount, false);
     }
-    let amount = critical_damage_amount(
+    let total = critical_damage_amount(
         world,
         caster,
         caster,
@@ -982,7 +1033,19 @@ fn with_damage_crit(
         amount,
         uses_weapon_crit_bonus_order(spell),
     );
-    (amount, true)
+    #[cfg(test)]
+    factor_capture::record_critical(
+        world,
+        caster,
+        target,
+        spell,
+        factor_capture::Critical {
+            chance,
+            before: amount,
+            after: total,
+        },
+    );
+    (total, true)
 }
 
 fn critical_damage_amount(
@@ -1049,10 +1112,10 @@ fn roll_periodic_crit(
     caster: Entity,
     target: Entity,
     spell: &SpellInfo,
-) -> Option<Entity> {
+) -> Option<(Entity, f32)> {
     let owner = periodic_spell_owner(world, caster, spell)?;
     let chance = crit_chance_from_owner(world, caster, target, spell, owner);
-    (rand::random::<f32>() * 100.0 < chance).then_some(owner)
+    (rand::random::<f32>() * 100.0 < chance).then_some((owner, chance))
 }
 
 fn roll_periodic_damage_crit(
@@ -1062,15 +1125,26 @@ fn roll_periodic_damage_crit(
     spell: &SpellInfo,
     amount: f32,
 ) -> (f32, bool) {
-    let Some(owner) = roll_periodic_crit(world, caster, target, spell) else {
+    let Some(rolled_crit) = roll_periodic_crit(world, caster, target, spell) else {
         return (amount, false);
     };
+    let owner = rolled_crit.0;
     // TC SpellAuraEffects.cpp5680/5764 always uses SpellCriticalDamageBonus,
     // including periodic spells whose defense class normally uses weapon order.
-    (
-        critical_damage_amount(world, caster, owner, spell, amount, false),
-        true,
-    )
+    let total = critical_damage_amount(world, caster, owner, spell, amount, false);
+    #[cfg(test)]
+    factor_capture::record_critical(
+        world,
+        caster,
+        target,
+        spell,
+        factor_capture::Critical {
+            chance: rolled_crit.1,
+            before: amount,
+            after: total,
+        },
+    );
+    (total, true)
 }
 
 fn roll_periodic_heal_crit(
@@ -1080,7 +1154,7 @@ fn roll_periodic_heal_crit(
     spell: &SpellInfo,
     amount: f32,
 ) -> (f32, bool) {
-    let Some(owner) = roll_periodic_crit(world, caster, target, spell) else {
+    let Some((owner, _)) = roll_periodic_crit(world, caster, target, spell) else {
         return (amount, false);
     };
     (
@@ -1434,13 +1508,31 @@ fn damage_source_amount(
     let done = if resolved_source || ignores_caster_damage_modifiers(ctx.spell) {
         1.0
     } else {
-        stat_mods(world, bonus_caster).map_or(1.0, |mods| mods.damage_done(school))
-            * versatility_multiplier(world, bonus_caster)
-            * crate::auras::summon_damage::multiplier(world, bonus_caster)
-            * creature_type_damage_multiplier(world, bonus_caster, target, ctx.spell)
-            * mechanic_damage_multiplier(world, bonus_caster, ctx.spell, effect)
-            * super::scripts::combo_strikes_multiplier(world, bonus_caster, ctx.spell.id)
-            * super::scripts::giantkiller_multiplier(world, ctx.caster, target, ctx.spell)
+        let school_done =
+            stat_mods(world, bonus_caster).map_or(1.0, |mods| mods.damage_done(school));
+        let versatility = versatility_multiplier(world, bonus_caster);
+        let summon = crate::auras::summon_damage::multiplier(world, bonus_caster);
+        let creature = creature_type_damage_multiplier(world, bonus_caster, target, ctx.spell);
+        let mechanic = mechanic_damage_multiplier(world, bonus_caster, ctx.spell, effect);
+        let combo = super::scripts::combo_strikes_multiplier(world, bonus_caster, ctx.spell.id);
+        let giantkiller =
+            super::scripts::giantkiller_multiplier(world, ctx.caster, target, ctx.spell);
+        #[cfg(test)]
+        factor_capture::record_done(
+            world,
+            ctx,
+            target,
+            &[
+                ("school_damage_done", school_done),
+                ("versatility", versatility),
+                ("summon_damage", summon),
+                ("creature_type_damage", creature),
+                ("mechanic_damage", mechanic),
+                ("combo_strikes", combo),
+                ("giantkiller", giantkiller),
+            ],
+        );
+        school_done * versatility * summon * creature * mechanic * combo * giantkiller
     };
     let bonus_ctx = EffectCtx {
         caster: bonus_caster,
@@ -1451,7 +1543,22 @@ fn damage_source_amount(
     } else {
         modded_amount(world, &bonus_ctx, amount, periodic)
     };
-    source * done
+    let after = source * done;
+    #[cfg(test)]
+    factor_capture::record_source(
+        world,
+        ctx,
+        target,
+        factor_capture::Source {
+            input: damage.amount,
+            scripted: amount,
+            modded: source,
+            done,
+            after,
+            skipped_caster_modifiers: resolved_source || ignores_caster_damage_modifiers(ctx.spell),
+        },
+    );
+    after
 }
 
 fn damage_taken(world: &World, ctx: &EffectCtx, target: Entity, damage: &DamageInput) -> f32 {
@@ -1623,11 +1730,22 @@ fn deal_source_damage_and_report(
         log_event(world, event);
         return 0.0;
     }
-    let amount = (source_amount
-        * damage_taken(world, ctx, target, &damage)
-        * ctx.spell.cast_damage_multiplier.unwrap_or(1.0))
-    .max(0.0)
-    .round();
+    let target_multiplier = damage_taken(world, ctx, target, &damage);
+    let cast_multiplier = ctx.spell.cast_damage_multiplier.unwrap_or(1.0);
+    let unrounded = (source_amount * target_multiplier * cast_multiplier).max(0.0);
+    let amount = unrounded.round();
+    #[cfg(test)]
+    factor_capture::record_target(
+        world,
+        ctx,
+        target,
+        factor_capture::Target {
+            multiplier: target_multiplier,
+            cast_multiplier,
+            unrounded,
+            rounded: amount,
+        },
+    );
     let amount = if periodic {
         amount
     } else {
@@ -1653,6 +1771,8 @@ fn deal_source_damage_and_report(
     } else {
         amount
     };
+    #[cfg(test)]
+    factor_capture::record_mitigated(world, ctx, target, amount);
     let (amount, absorbed) = crate::auras::absorb_damage(world, target, school, amount);
     let amount = crate::auras::damage_transfer::route(world, ctx.caster, target, school, amount);
     let (caster_scaling, target_scaling) = (
@@ -1662,6 +1782,9 @@ fn deal_source_damage_and_report(
     let amount = crate::level_scaling::damage_dealt(&caster_scaling, &target_scaling, amount);
     let scaled_loss = crate::level_scaling::health_loss(&caster_scaling, &target_scaling, amount);
     let training_dummy = world.get::<TrainingDummy>(target).is_some();
+    if !periodic {
+        crate::creature_scripts::refresh_training_dummy_timer(world, target, ctx.caster);
+    }
     let duel = world.get::<crate::duel::DuelOpponent>(target).copied();
     let Some(health) = world.get::<Health>(target) else {
         return 0.0;
@@ -1728,6 +1851,8 @@ fn deal_source_damage_and_report(
     event.absorbed = absorbed as i32;
     event.crit = crit;
     event.periodic = periodic;
+    #[cfg(test)]
+    factor_capture::finish(world, ctx, target, &damage, &event);
     log_event(world, event);
     if !periodic && !resolved_source && ctx.depth == 0 {
         super::scripts::record_fire_hit(world, ctx.caster, ctx.spell, crit);
