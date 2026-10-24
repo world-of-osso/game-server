@@ -109,25 +109,77 @@ fn begin_combat(world: &mut World, a: Entity, b: Entity, suppress_b: bool) {
     let existing = world
         .get::<CombatRefs>(a)
         .is_some_and(|refs| refs.0.contains_key(&b));
-    let timed =
-        !holds_fight(world, a) || !holds_fight(world, b) || both_player_controlled(world, a, b);
-    let expires_at =
-        timed.then(|| world.resource::<Time>().elapsed_secs_f64() + PVP_COMBAT_TIMEOUT_SECS);
+    let expires_at = read_reference_deadline(world, a, b);
     for (unit, other, suppressed) in [(a, b, false), (b, a, suppress_b && !existing)] {
-        world
-            .entity_mut(unit)
-            .entry::<CombatRefs>()
-            .or_default()
-            .get_mut()
-            .0
-            .insert(
-                other,
-                CombatRef {
-                    expires_at,
-                    suppressed,
-                },
-            );
-        update_combat_status(world, unit);
+        store_combat_reference(
+            world,
+            unit,
+            other,
+            CombatRef {
+                expires_at,
+                suppressed,
+            },
+        );
+    }
+}
+
+fn read_reference_deadline(world: &World, a: Entity, b: Entity) -> Option<f64> {
+    let pvp = both_player_controlled(world, a, b);
+    let dummy_pair = world
+        .get::<crate::creature_scripts::TrainingDummy>(a)
+        .is_some()
+        || world
+            .get::<crate::creature_scripts::TrainingDummy>(b)
+            .is_some();
+    let both_hold_fight = holds_fight(world, a) && holds_fight(world, b);
+    let timed = if dummy_pair {
+        pvp
+    } else {
+        pvp || !both_hold_fight
+    };
+    timed.then(|| world.resource::<Time>().elapsed_secs_f64() + PVP_COMBAT_TIMEOUT_SECS)
+}
+
+fn store_combat_reference(world: &mut World, unit: Entity, other: Entity, reference: CombatRef) {
+    let was_in_combat = world
+        .get::<CombatStatus>(unit)
+        .is_some_and(|status| status.0);
+    let active = !reference.suppressed;
+    let entering = active && !was_in_combat;
+    world
+        .entity_mut(unit)
+        .entry::<CombatRefs>()
+        .or_default()
+        .get_mut()
+        .0
+        .insert(other, reference);
+    update_combat_status(world, unit);
+    if entering {
+        crate::creature_scripts::refresh_training_dummy_timer(world, unit, other);
+    }
+}
+
+/// TC CombatReference::EndCombat: end only this PvE pair. A dummy's timer
+/// never calls CombatStop, so unrelated references and attack intent survive.
+pub(crate) fn end_pve_reference(world: &mut World, unit: Entity, other: Entity) {
+    let existing = world
+        .get::<CombatRefs>(unit)
+        .is_some_and(|refs| refs.0.contains_key(&other));
+    if !existing || both_player_controlled(world, unit, other) {
+        return;
+    }
+    for (endpoint, opponent) in [(unit, other), (other, unit)] {
+        if let Some(mut threat) = world.get_mut::<ThreatTable>(endpoint) {
+            threat.remove(opponent.to_bits());
+        }
+        if let Some(mut refs) = world.get_mut::<CombatRefs>(endpoint) {
+            refs.0.remove(&opponent);
+        }
+    }
+    for endpoint in [unit, other] {
+        if world.get::<CombatRefs>(endpoint).is_some() {
+            update_combat_status(world, endpoint);
+        }
     }
 }
 
@@ -220,7 +272,8 @@ fn can_begin_combat(world: &World, a: Entity, b: Entity) -> bool {
 }
 
 /// Controlled units have no threat list but retain ordinary PvE references.
-/// Preserve the existing timeout policy for uncontrolled threat-less dummies.
+/// Dummy pairs bypass this generic threat-less policy in begin_combat:
+/// npc_training_dummy owns their PvE timers regardless of the attacker's role.
 fn holds_fight(world: &World, unit: Entity) -> bool {
     player_controlled(world, unit)
         || world.get::<ThreatTable>(unit).is_some()
