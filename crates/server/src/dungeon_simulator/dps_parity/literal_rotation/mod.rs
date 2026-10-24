@@ -1,4 +1,5 @@
 //! Shared native fixture machinery; source rows and spec facts belong to adapters.
+pub(crate) mod default_pet;
 pub(crate) mod equipment;
 pub(crate) mod execution;
 #[cfg(test)]

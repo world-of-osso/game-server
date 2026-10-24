@@ -152,6 +152,7 @@ fn prepare_reference(
     identity: crate::followers::simulator::ParityActor,
 ) -> Result<Run, String> {
     let mut run = spawn_reference(profile, traits, count, identity)?;
+    preparation::start_configured_native_pet(&mut run)?;
     preparation::warm_up_reference(&mut run)?;
     Ok(run)
 }

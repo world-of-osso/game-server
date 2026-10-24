@@ -4,6 +4,25 @@ use super::Run;
 // Bound setup failures; advancing frames must not become an endless cast retry.
 const MAX_SETUP_TICKS: u32 = 600;
 
+pub(super) fn start_configured_native_pet(run: &mut Run) -> Result<(), String> {
+    let configured = super::literal_rotation::default_pet::ConfiguredPet::read(
+        run.app.world(),
+        run.actor,
+        &run.profile,
+    )?;
+    let Some(configured) = configured else {
+        return Ok(());
+    };
+    let Some(action) = configured.read_action(run.app.world(), run.actor)? else {
+        return Ok(());
+    };
+    super::literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        super::literal_rotation::execution::Execution::Spell(action.spell, run.actor),
+    )
+}
+
 pub(super) fn warm_up_reference(run: &mut Run) -> Result<(), String> {
     for _ in 0..4 {
         run.app.update();

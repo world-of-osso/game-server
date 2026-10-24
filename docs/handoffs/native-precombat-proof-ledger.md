@@ -45,6 +45,12 @@ Ordered selector4/4 GREEN at171c8ec5c (`precombat-order-green.*`,29.01s native-h
 
 Driver caps the pass after its first ready native harmful execution using native effect positivity, not hardcoded WW coefficients. New opt-in controls check WW snapshot exists with no owner/actor opponent refs and time0 before pull, plus actual TP→naturally affordable BOK: BOK remains native-ready after real GCD recovery but cannot become a second harmful precombat action. Native cast/GCD drain inspects all actual GCD deadlines, including item-use categories. Native/non-Fixture and dungeon rejection controls remain unchanged. Runtime integration proof is pending; generic configured summon_pet binding/no-op remains OPEN.
 
+## Configured native pet binding — GREEN pending
+
+ConfiguredPet resolves `<class>.default_pet` against the actor's learned native spell names, then requires the actual native SUMMON_PET effect/creature entry. No spell/creature IDs or spec266 fallback are invented. Current raw70448 records confirm Imp688→416, Felguard30146→17252, Sayaad366222→1863; runtime code reads those records rather than matching numeric constants. Missing/ambiguous learned bindings fail explicitly. An existing living matching native pet omits the summon action; a missing/different pet uses the normal cast path.
+
+Native-controller fixtures start this declared summon through existing validated Player/Creature execution before their setup frames, then complete real cast/GCD state before pull. Their native kit and identity remain unchanged; classes without a declaration are unaffected. Explicit literal fixtures instead expose the same configured action to their ordered source pass; no hidden out-of-order summon is inserted. The bounded native266 control executes actual summon_pet/snapshot_stats rows, requires a real positive-duration cast bar and elapsed time, then repeats with the existing pet and checks one total30146 CastSuccess and the same pet entity. It does not claim the later full Demo APL/trinket variables are routed by this branch.
+
 ## Dependencies
 
 pd1035 is landed at2333d924b and merged locally; exact-target Prepared/Player dispatch remains14775-owned. Resource query010f7f761 is GREEN9/9 on arms-literal-resource-hooks; it ignores only the requested PowerType affordability while retaining other native checks. Integrate its shared API after pd, not the old613 scaffold. No unselected legacy kit fallback and no WW-specific tier2pc path.

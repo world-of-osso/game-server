@@ -5,6 +5,99 @@ use crate::auras::ActiveAuras;
 use shared::components::PowerType;
 
 #[test]
+#[ignore = "requires prepared266 profile/current native source view; configured native summon and matching-pet no-op"]
+fn literal_precombat_configured_demo_pet_uses_real_cast_and_does_not_resummon() {
+    use literal_rotation::default_pet::ConfiguredPet;
+    use literal_rotation::execution::Prepared;
+    use server::simc_apl::Program;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    let configured = ConfiguredPet::read(run.app.world(), run.actor, &run.profile)
+        .unwrap()
+        .expect("pinned profile declares its default pet");
+    let mut bindings = crate::simc_apl_native::Bindings::default();
+    configured.bind(&mut bindings).unwrap();
+    let equipment =
+        literal_rotation::equipment::Equipment::load(run.app.world_mut(), run.actor, &mut bindings)
+            .unwrap();
+    let started_at = crate::spell_cast::now(run.app.world());
+    let mut native_cast_duration = None;
+    let mut original_pet = None;
+    for pass in 0..2 {
+        // Bounded shared-mechanism control: actual first two266 precombat actions,
+        // not a claim that this fixture executes the later complete Demo APL.
+        let mut driver = literal_rotation::Driver::new(
+            Program::parse(&[("precombat", "summon_pet"), ("precombat", "snapshot_stats")])
+                .unwrap(),
+        );
+        loop {
+            let action = configured.read_action(run.app.world(), run.actor).unwrap();
+            let prepared = Prepared::read(
+                run.app.world_mut(),
+                run.actor,
+                &[],
+                &equipment,
+                action,
+                driver.snapshot.is_none(),
+            )
+            .unwrap();
+            let facts = BTreeMap::<String, f64>::new();
+            let Some((action, execution)) = driver
+                .select("precombat", &facts, &prepared, &equipment)
+                .unwrap()
+            else {
+                break;
+            };
+            driver
+                .execute(run.app.world_mut(), run.actor, action, execution)
+                .unwrap();
+            if let Some(cast) = run.app.world().get::<shared::casting::CastState>(run.actor) {
+                native_cast_duration = Some(cast.duration);
+            }
+            preparation::finish_pending_setup(&mut run).unwrap();
+        }
+        assert!(driver.snapshot.is_some());
+        let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+        assert_eq!(
+            run.app
+                .world()
+                .get::<shared::components::Npc>(pet)
+                .unwrap()
+                .template_id,
+            17252
+        );
+        if pass == 0 {
+            original_pet = Some(pet);
+        } else {
+            assert_eq!(Some(pet), original_pet, "matching pet must not be replaced");
+        }
+    }
+    let duration = native_cast_duration.expect("native summon must start an actual cast bar");
+    assert!(duration > 0.0);
+    let elapsed = crate::spell_cast::now(run.app.world()) - started_at;
+    assert!(
+        elapsed + 0.001 >= f64::from(duration),
+        "actual native cast time must elapse"
+    );
+    let casts = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(30146)
+                && event.kind == shared::protocol::CombatLogKind::CastSuccess
+        })
+        .count();
+    assert_eq!(
+        casts, 1,
+        "matching configured pet is a once-only no-op, not another summon cast"
+    );
+}
+
+#[test]
 #[ignore = "requires prepared269 profile/current native source view; snapshot before fixture engagement"]
 fn literal_precombat_ww_snapshot_exists_before_engagement_and_fight_time() {
     let _seed = crate::random::seed_scope(70448);
