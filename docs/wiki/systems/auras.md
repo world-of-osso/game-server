@@ -78,16 +78,20 @@ Actual repeated-Word pool integration, PvP scaling and effectiveness stay separa
 `refresh::prepare_application(world,target,new,spell)` reads native Attr10
 `ROLLING_PERIODIC` and owns the single shared carry pass. It settles already-due
 old ticks once, then matches same caster/spell/source/effect index/aura type and
-adds unpaid stored amount over the refreshed scheduled ticks. Native phase stays
-owned by `AuraInstance::refresh_from`; no new timer or partial-tick mechanism.
-TC a352b1fa `SpellAuraEffects.cpp:832–849` supplies the rule. Fractional snapshots
-remain intact; existing damage/heal payment rounding is unchanged.
+adds unpaid stored amount over the refreshed scheduled ticks. Fresh DB2 effect
+amounts remain per tick: tooltip arithmetic cannot normalize them into a fixed
+budget. TC a352b1fa `SpellAuraEffects.cpp:832–849,932–947` supplies these rules.
+Fractional snapshots and existing damage/heal payment rounding remain intact.
 
-Barbed217200 normalizes only its fresh authored five-amount budget to the native
-schedule: seven initial ticks, six refreshed. Its old pool goes through the shared
-pass, never a second spell-local accumulator.335467 periodic leech also uses that
-flag path with no separate carry branch. This preserves its existing fractional
-amount contract. No spell-ID exception gates general carry.
+TC `Spell.cpp3236` and `SpellAuras.cpp976–991` reset normal nonstacking recasts;
+native stacking and Attr13 Pandemic retain time-to-tick. The shared preparation
+sets that schedule and `AuraInstance::refresh_from` installs it before later ticks.
+335467 periodic leech uses the same carry without a separate branch. No spell-ID
+exception gates fresh amounts or general carry.
+
+The former217200 fixed-five normalization/retained-phase inference is withdrawn.
+[Native-source counterexample, implementation and pending integration](../../handoffs/bm-native-periodic-proof-ledger.md)
+record the correction; no whole-BM parity claim follows.
 
 External interface is unchanged: ordinary native aura application, including
 `cast_triggered_with_effect0_amount` with a sourced **per-tick** incoming amount,

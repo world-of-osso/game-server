@@ -1,3 +1,7 @@
+## 2026-10-24 — DB2 periodic amounts override tooltip totals
+
+[Native-source correction](../handoffs/bm-native-periodic-proof-ledger.md): full-lifetime diagnostics first disproved loss of the old fixed-five budget. DB2/TC source comparison then reproduced fresh per-tick and refresh-schedule failures at198697bd9 (2FAIL/2PASS21.52s). Generic9bb480581 removes the sole tooltip-derived refresh normalization and uses native stacking/Pandemic/reset inputs; no Barbed replacement path or coefficient tuning. Native4GREEN27.34s at9bb480581, compile12m17s; broad integration pending. Previous fixed-total inference and dummy closure are withdrawn.
+
 ## 2026-10-23 — Barbed Scales cast-boundary reduction
 
 [Owner return](systems/spell-casting.md#native-owner-cooldown-returns-2026-10-23): actual controlled native Player normal/free Cobra both reproduce missing2s reduction; absence controlsPASS21.30s. Existing shared successful-launch path applies native469880 through pending-cooldown reduction;57786fbd9 owner6GREEN24.39s. Matched single-seed cadence improves while total DPS falls; [proof](../handoffs/bm-owner-cooldown-proof-ledger.md) retains exact channel/cast changes without tuning or a whole-DPS claim. No hit-time shim or movement/range change.
