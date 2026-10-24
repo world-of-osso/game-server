@@ -53,6 +53,7 @@ fn set_health(run: &mut Run, target: Entity, percent: f32) {
 #[test]
 #[ignore = "current native90 Player traits/private DB; native70448 threshold90"]
 fn fire_local_native90_firestarter_uses_selected_recipient_hp_boundary() {
+    let _seed = crate::random::seed_scope(70_448);
     let mut run = native_player();
     let first = run.targets[0];
     let second = run.targets[1];
@@ -76,6 +77,7 @@ fn fire_local_native90_firestarter_uses_selected_recipient_hp_boundary() {
 #[test]
 #[ignore = "current native90 Player selected Scorch/private DB; native70448 threshold30"]
 fn fire_local_native90_scorch_execute_uses_selected_recipient_hp_boundary() {
+    let _seed = crate::random::seed_scope(70_448);
     let mut run = native_player();
     let first = run.targets[0];
     let second = run.targets[1];
@@ -137,6 +139,7 @@ fn distant_target(run: &mut Run) -> Entity {
 #[test]
 #[ignore = "ordinary native Player Pyroblast cast/travel/private DB, no injected pending hits"]
 fn fire_local_native90_hot_streak_count_tracks_real_launch_actor_and_impact() {
+    let _seed = crate::random::seed_scope(70_448);
     let mut run = native_player();
     let target = distant_target(&mut run);
     cast_native(&mut run, PYROBLAST, target);
@@ -171,6 +174,7 @@ fn fire_local_native90_hot_streak_count_tracks_real_launch_actor_and_impact() {
 #[test]
 #[ignore = "ordinary native Player Pyroblast/Fireball overlapping travel/private DB"]
 fn fire_local_native90_hot_streak_count_counts_overlapping_native_events() {
+    let _seed = crate::random::seed_scope(70_448);
     let mut run = native_player();
     let target = distant_target(&mut run);
     cast_native(&mut run, PYROBLAST, target);

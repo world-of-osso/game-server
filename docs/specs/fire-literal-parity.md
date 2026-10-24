@@ -23,6 +23,8 @@ NativePlayer63 qualification uses pinnedSimC76f8118 Fire action rows, retaining 
 
 ## Tests asserting this spec
 
+- `fire_rotation/tests.rs`: native90 recipient Firestarter90%/Scorch30% boundaries, explicit second-recipient selection, ordinary Pyroblast hardcast→launched travel→impact and overlapping native Pyroblast/Fireball travel counts. These RED candidates are not proof until the actual native run; no pending queue injection.
+
 - `dps_parity/fire_literal_tests.rs`: actual native Player cast-order boundary; not yet executed.
 - Existing `dps_parity_native_bis_dummy_records_300s`: prior native Player ST/3T stopped at SBA12616condition11 before combat. The staged caller avoids that SBA path but has not run; native/equipment fact gaps remain explicit, with no DPS proof.
 
