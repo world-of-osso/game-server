@@ -1,3 +1,7 @@
+## 2026-10-24 — Adapter target-ready native Rebuke RED
+
+[Target-ready ledger](../handoffs/target-ready-proof-ledger.md): exact b584 reporter case reproduced22.99s/exit101 after recovering its approved private spec70 surrogate DB; canonical lacks spec70 and that earlier setup failure is not RED. Added generic ActionFacts target-ready veto plus Ret actual casting-state declaration, no row/native-admission rewrite; positive native cast/interrupt controls GREEN pending.
+
 ## 2026-10-24 — Selected RWK producer/consumer native GREEN
 
 [WW source census](../handoffs/ww-source-census.md#missing-historical-reference-channels): actual404 native300s BOK/Combo Breaker controls pass but1250554 never appears,31.63s/exit101. Native selected1250566 supplies60% but no proc metadata/trigger; TC has no binding. Source-qualified landed BOK hook uses the native amount, gameplay RSK/shared-charge recovery reset and native override. Producer/child/unselected-owner2GREEN at960; exact consumer9.89sRED at8a5 despite actual native reset/child premises passing. Selected-owner source1199–1203 AfterCast consumption RED→GREEN11.82s atf2c; full scoped native7GREEN. Generic332 proc rules unchanged. Fresh-backup-EACH300s77850.54ST/92544.2467three-target remains outside band. No coefficient or fixture resource changes.

@@ -13,6 +13,12 @@ pub trait Facts {
 pub trait ActionFacts: Facts {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String>;
 
+    /// Optional adapter-owned action policy for this exact selection context.
+    /// True adds no veto; it never replaces native cast admission.
+    fn target_ready(&self, _action: &Action) -> Result<bool, String> {
+        Ok(true)
+    }
+
     /// Explicit native candidate order; unsupported adapters cannot invent a target.
     fn target_ids(&self, _action: &Action) -> Result<Vec<u64>, String> {
         Err("target_if requires explicit native target candidates".into())

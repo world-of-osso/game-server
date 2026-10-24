@@ -133,6 +133,17 @@ impl Facts for RetFacts<'_> {
 }
 
 impl ActionFacts for RetFacts<'_> {
+    fn target_ready(&self, action: &Action) -> Result<bool, String> {
+        // SimC76f8118 sc_paladin.cpp1956–1962: action policy, not cast permission.
+        if action.name == "rebuke" {
+            return self
+                .native
+                .value_for(action, "target.debuff.casting.up")
+                .map(|casting| casting != 0.0);
+        }
+        Ok(true)
+    }
+
     fn target_ids(&self, action: &Action) -> Result<Vec<u64>, String> {
         self.native.target_ids(action)
     }

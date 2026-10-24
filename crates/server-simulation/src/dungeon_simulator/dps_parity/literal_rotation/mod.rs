@@ -107,7 +107,9 @@ impl Driver {
             return Ok(None);
         }
         let mut usable = |action: &Action| {
-            Ok(prepared.permits_row(action)? && prepared.execution(action, equipment)?.is_some())
+            Ok(prepared.permits_row(action)?
+                && facts.target_ready(action)?
+                && prepared.execution(action, equipment)?.is_some())
         };
         let action = if list == "precombat" {
             self.program.select_next(
