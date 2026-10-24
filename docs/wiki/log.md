@@ -30,6 +30,26 @@ At96b572797, [native packet27/27](../handoffs/native-precombat-proof-ledger.md#c
 ## 2026-10-23 — Native profile stat-allocation redirects
 
 [Stat redirects](systems/character-stats.md#profile-stat-allocation-redirects--2026-10-23): actual103 shared equipment input→StatsPlugin independently reproduces five tier errors and ten matching ordinary slots; invalid donor and false-unmodeled diagnostics also RED,3RED11.02s at7aa72bf47. Server-local donor metadata changes calculation-only stat types/allocations, not original item identity/catalog/effects/set membership or the persisted/wire ABI. Atd45fe30e8 three GREEN12.43s, clean25m11build; two native cases remain opt-in and the env-free diagnostic stays enabled. Lead integration/DPS remain open. [Proof](../handoffs/equipment-stat-redirect-proof-ledger.md).
+## 2026-10-23 — Missed hostile spell combat references
+
+[Combat](systems/combat.md#combat-state): native MISS/IMMUNE missing-reference REDs → selected-target launch/arrival preservation; three boundary controls, nine retained travel/reflection controls and unchanged Ret funding/TV damage GREEN at02090739e. No resource, hit-chance or timer override. WW equipment consumer1GREEN47.55s; combined parent gate awaits master8e7c7a685 integration. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#generic-missed-hostile-launch-combat).
+
+## 2026-10-23 — Judgment cast-time Holy Power correction
+
+[Judgment](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers): pinned TC OnCast/HasSpell315867 contradicts former damage-hit/aura gating. Genuine native cast-before-impact, immune-target and aura-only REDs atde7b6e406; shared20271/275773/275779 ordinary/triggered/costed-trigger correction has native16GREEN and warning-free retained controls at02090739e. No fixture resource grants or DPS claim. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#judgment-cast-time-resource-correction).
+## 2026-10-23 — Readonly native selected-pool admission
+
+[Shared Prepared](systems/simc-apl.md#shared-literal-fixture-machinery) resource hook reproduces2genuineRED at6134141c7 against current-canonical backup05577b33612d (21.25s). Native max comparison now affects only the chosen pool's local affordability, never the world's resources; preserves other costs/constraints and exact target. Energy/Chi and far-target cases use actual learned spells/pools. GREEN pending. Pool control and next-row semantics remain14766-owned; no DPS claim.
+## 2026-10-23 — Per-spell refresh and FoF dispatch identity
+
+[Oracle](reference/simc-spell-oracle.md): fresh canonical backup/eec5b6bcf --lib probes Arms1GREEN24.30s and WW3GREEN20.85s. MS24448/TP39862/firstFoF29943; coefficient/armor agree, AP/source/target-state differences remain. Actual receipt origin check RED exposed missing native dispatch identity. Test-only226 dispatch scopes now preserve real synchronous aura/effect/instance/trigger metadata with no new RNG/cast/formula; At089face19 WW3GREEN31.24s/Arms1GREEN18.53s and consumer14GREEN. All three captured FoF hits carry actual113656/effect2 periodic context; regular-series alignment is now observed rather than inferred. Exact MS/TP/three-FoF damage preserved; state/crit differences remain.
+## 2026-10-23 — Explicit target context and fresh dot metadata RED
+
+[Shared target API](systems/simc-apl.md#native-binding-boundary):4be688315 reaches8genuine native RED15.86s, including real protocol rank1 Fire Breath20s before unsupported refreshable. Earlier post-catalog-split --bin attempt ran0tests and is excluded; current runner requires8library cases. Implemented explicit current/universe, target-only eligibility, owned active_dot, known absent movement/no-cast facts and fresh resolved metadata+source refresh policies. At6b seven valid cases pass35.44s;167105 caster-area range expectation is withdrawn, and native12294 corrected range passes24.84s atf66 (15m42compile/0warnings).11disjoint normal native controls pass20.32s; actual binary source6b is annotated separately from later test-only HEAD. Eight tests enabled; active reaction remains a named gap, no invented timer. [Proof/API](../handoffs/native-target-context-proof-ledger.md).
+
+## 2026-10-23 — Exact fixture add lifetimes / target facts
+
+[Shared native facts](systems/simc-apl.md#native-binding-boundary): c88e6749e produces genuine2lifecycle RED19.63s/all20 phase observations and4target RED8.90s against current read-only backupdd1de231e32c. Earlier stale-schema setup failure excluded. Actual boundary substeps, per-add Health/TTD/role, selected/owned-aura facts and explicit add events: d07db700c yields14targetedGREEN (2lifecycle27.20s/10native16.45s/main-clock11.98s/combat-refs18.23s; compile24m14,0warnings). Tests-only bf56e1b4b closes live-event/owned-aura property+expiry coverage:5targetGREEN19.06s and1actual-wave eventGREEN20.32s,13m59compile/0warnings;15unique cases total. Explicit target-list API and remaining dot/movement/casting facts are next scope. Main300s,31146 templates and references unchanged; all-owner3T remeasurement remains lead-owned. [Proof ledger](../handoffs/add-lifetimes-target-facts-proof-ledger.md).
 ## 2026-10-23 — Incoming native-factor fixture boundary
 
 Merged `eec5b6bcf` into B, preserving its four ignored single-spell cases in the consumer. Existing15factor observation calls and armor observation fields/initializers now use explicit fixture-support gates; only resource constructor/export and public return type visibility widen. Calculations unchanged. Combined core-unit/simulator check at14c74e6fa passes42.83s without diagnostics; production and full-suite gates pending. Expected6322workspace cases/314ignored includes four incoming-master additions.
@@ -136,6 +156,14 @@ Merged current master4a2deb367 into native-spell-diff. Resolution retains owner-
 ## 2026-10-23 — Binary probe withdraws inherited-run-target oracle
 
 Pinned SimC76f8118 selects timed adds on a run row but its child Mortal Strike still waits for main health<80% (first60.056s on main, not6s on adds). `player.cpp2467–2476` only changes active lists. Earlier24/24GREEN included a wrong inherited-child oracle; packet withdrawn before landing per lead. Corrected23PASS/1 genuineRED at2d6a66259 →24/24GREEN atad720fc3c (28.61s compile/0compiler warnings/0ignored): shared target inheritance state deleted; ordinary target min/max and non-returning runs retained. [Proof ledger](../handoffs/shared-run-target-proof-ledger.md).
+
+## 2026-10-23 — Explicit proc provenance importer
+
+[Proc source presence](systems/auras.md#explicit-proc-source-presence--2026-10-23) consumes the audited1291effective TC IDs, verifies8pinned source files, and transactionally publishes presence only. Later numeric columns remain separately owned; no refusal guard or chance/mask overlay is included. Focused CLI RED recorded before implementation; qualification follows the committed producer.
+
+## 2026-10-23 — Feral baseline and action-knowledge census
+
+[Feral census](../handoffs/feral-source-census.md): exact reproduced references, private-source-view historical native ST56378.65/3T62475.26 (supplied binary's9d13label withdrawn: UNKNOWN_PRE_9D13_MISLABELED), five ignored redirected-stat allocations and missing consumable residual separated from channel gaps. [Knowledge census](../handoffs/action-knowledge-census.md):990native starter books/1090kit rows; four sourced visible/parent actions, zero missing-book rejections after bridges. Own shared-helper a95c0df7a10FAIL/5PASS→c3934c31d15/15GREEN38.29s, four-stage empower PASS13.06s. Ret integration awaits its direct Judgment generator-fixture NoCharges correction; literal Feral/native current ST/3T remain pending.
 
 ## 2026-10-22 — Shared Hunter pet total-RAP source RED
 

@@ -52,6 +52,7 @@ fn launch_selected_child(
             units: vec![target],
             dest: None,
             chain_multipliers: Vec::new(),
+            selected_units: Vec::new(),
             blocked_units: Vec::new(),
             prevent_hit_script: false,
         })
@@ -121,6 +122,7 @@ fn plan_primary_damage(
                 units,
                 dest: targets::effect_dest(world, caster, explicit, effect, spell.cast_destination),
                 chain_multipliers,
+                selected_units: Vec::new(),
                 blocked_units: Vec::new(),
                 prevent_hit_script: false,
             }
@@ -216,6 +218,7 @@ pub(super) fn wild_growth_plan(
         units,
         dest: targets::effect_dest(world, caster, explicit, effect, spell.cast_destination),
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }]

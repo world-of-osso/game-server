@@ -209,6 +209,7 @@ pub(crate) fn cast_eye_beam_tick(world: &mut World, caster: Entity) {
         units: vec![target],
         dest: None,
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }];
@@ -273,6 +274,7 @@ fn land_metamorphosis(
             units,
             dest: Some(center),
             chain_multipliers: Vec::new(),
+            selected_units: Vec::new(),
             blocked_units: Vec::new(),
             prevent_hit_script: false,
         },
@@ -281,6 +283,7 @@ fn land_metamorphosis(
             units: npc_units,
             dest: Some(center),
             chain_multipliers: Vec::new(),
+            selected_units: Vec::new(),
             blocked_units: Vec::new(),
             prevent_hit_script: false,
         },

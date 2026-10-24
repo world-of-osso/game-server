@@ -3,6 +3,7 @@ mod composite_precombat_tests;
 mod dummy_reference_tests;
 mod engagement_tests;
 mod equipment_input_tests;
+mod feral_tests;
 mod firestarter_tests;
 mod haste_tests;
 mod inputs;
@@ -18,17 +19,25 @@ mod precombat_tests;
 mod preparation;
 mod profile_initialization;
 mod report;
+mod ret_empyrean_tests;
+mod ret_purpose_tests;
+mod ret_tier_tests;
 pub(crate) mod single_spell;
 mod windwalker_rotation;
+use crate::simc_apl_native::{FixtureAdds, FixtureTarget};
 use bevy::prelude::*;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 const TICKS: u32 = 6_000;
 const ADD_WAVE_TICKS: u32 = 600;
 const LAST_30S_START: u32 = TICKS - ADD_WAVE_TICKS;
 const DUMMY_ENTRY: u32 = 31_146;
+const FIGHT_DURATION: Duration = Duration::from_secs(300);
+const ADD_LIFETIME: Duration = Duration::from_secs(30);
+// SimC76f8118 raid_event.cpp2700–2701: equal cooldown/duration adds10ms.
+const ADD_INTERVAL: Duration = Duration::from_millis(30_010);
 
 struct Run {
     app: App,
@@ -72,22 +81,79 @@ fn spawn_targets(app: &mut App, actor: Entity, count: usize) -> Result<Vec<Entit
         .collect()
 }
 
-fn replace_add_wave(run: &mut Run, at: f64) -> Result<(), String> {
+fn install_fixture_lifetimes(run: &mut Run, started_at: Duration) {
+    for (index, &target) in run.targets.iter().enumerate() {
+        let lifetime = if index == 0 {
+            FIGHT_DURATION
+        } else {
+            ADD_LIFETIME
+        };
+        run.app
+            .world_mut()
+            .entity_mut(target)
+            .insert(FixtureTarget {
+                expires_at: started_at + lifetime,
+                lifetime,
+                is_boss: index == 0,
+            });
+    }
+    if run.targets.len() == 3 {
+        run.app
+            .world_mut()
+            .entity_mut(run.actor)
+            .insert(FixtureAdds {
+                next_spawn_at: started_at + ADD_INTERVAL,
+                expires_at: Some(started_at + ADD_LIFETIME),
+                lifetime: ADD_LIFETIME,
+                interval: ADD_INTERVAL,
+                count: 2,
+            });
+    }
+}
+
+fn retire_add_wave(run: &mut Run) -> Vec<Entity> {
     let retired = run.targets.split_off(1);
     for &unit in &retired {
         crate::zones::unsummon(run.app.world_mut(), unit);
     }
-    for index in 1..3 {
+    run.app
+        .world_mut()
+        .get_mut::<FixtureAdds>(run.actor)
+        .unwrap()
+        .expires_at = None;
+    retired
+}
+
+fn spawn_add_wave(run: &mut Run, retired: &[Entity], started_at: Duration) -> Result<(), String> {
+    let now = run.app.world().resource::<Time>().elapsed();
+    let adds = *run.app.world().get::<FixtureAdds>(run.actor).unwrap();
+    for index in 1..=adds.count {
         let unit = spawn_dummy(&mut run.app, run.actor, index)?;
+        run.app.world_mut().entity_mut(unit).insert(FixtureTarget {
+            expires_at: now + adds.lifetime,
+            lifetime: adds.lifetime,
+            is_boss: false,
+        });
         run.targets.push(unit);
         run.damage_targets.push(unit);
     }
+    {
+        let mut state = run
+            .app
+            .world_mut()
+            .get_mut::<FixtureAdds>(run.actor)
+            .unwrap();
+        state.expires_at = Some(now + adds.lifetime);
+        state.next_spawn_at = now + adds.interval;
+    }
+    apply_fixed_time_target_health(run, now)?;
     engage_fixture_opponents(run);
     let retired_still_present = retired
         .iter()
         .filter(|&&unit| run.app.world().get_entity(unit).is_ok())
         .count();
-    run.target_waves.push(json!({"at": at,
+    run.target_waves
+        .push(json!({"at": (now - started_at).as_secs_f64(),
         "entities": run.targets.iter().map(|unit| unit.to_bits()).collect::<Vec<_>>(),
         "retired_still_present": retired_still_present}));
     Ok(())
@@ -270,11 +336,19 @@ fn target_snapshot(run: &Run) -> Vec<Value> {
         .collect()
 }
 
-/// SimC76f8118 enemy_t::health_percentage uses the global fixed-time clock,
-/// including for newly spawned adds. Production training-dummy damage stays inert.
-fn apply_fixed_time_target_health(run: &mut Run, tick: u32) -> Result<(), String> {
-    let remaining = f64::from(TICKS.saturating_sub(tick)) / f64::from(TICKS);
+/// Main uses the global fight deadline; sc_enemy.cpp1053–1101 timed adds
+/// project their own expiration. Native training-dummy hit handling stays inert.
+fn apply_fixed_time_target_health(run: &mut Run, at: Duration) -> Result<(), String> {
     for &target in &run.targets {
+        let metadata = *run
+            .app
+            .world()
+            .get::<FixtureTarget>(target)
+            .ok_or("native fixture target lifetime missing")?;
+        if metadata.lifetime.is_zero() {
+            return Err("native fixture target has zero lifetime".into());
+        }
+        let remaining = metadata.remaining(at).as_secs_f64() / metadata.lifetime.as_secs_f64();
         let mut health = run
             .app
             .world_mut()
@@ -287,12 +361,84 @@ fn apply_fixed_time_target_health(run: &mut Run, tick: u32) -> Result<(), String
     Ok(())
 }
 
+fn next_fixture_boundary(run: &Run, frame_end: Duration) -> Duration {
+    let Some(adds) = run.app.world().get::<FixtureAdds>(run.actor) else {
+        return frame_end;
+    };
+    let boundary = adds
+        .expires_at
+        .map_or(adds.next_spawn_at, |at| at.min(adds.next_spawn_at));
+    frame_end.min(boundary)
+}
+
+fn advance_fixture_step(run: &mut Run, boundary: Duration) -> Result<(), String> {
+    let now = run.app.world().resource::<Time>().elapsed();
+    let delta = boundary
+        .checked_sub(now)
+        .filter(|delta| !delta.is_zero())
+        .ok_or("native fixture clock did not advance")?;
+    apply_fixed_time_target_health(run, boundary)?;
+    run.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(delta));
+    run.app.update();
+    if run.app.world().resource::<Time>().elapsed() != boundary {
+        return Err("native fixture clock differs from requested boundary".into());
+    }
+    Ok(())
+}
+
+fn apply_fixture_add_events(
+    run: &mut Run,
+    retired: &mut Vec<Entity>,
+    started_at: Duration,
+) -> Result<(), String> {
+    let Some(adds) = run.app.world().get::<FixtureAdds>(run.actor).copied() else {
+        return Ok(());
+    };
+    let now = run.app.world().resource::<Time>().elapsed();
+    if adds.expires_at.is_some_and(|at| at <= now) {
+        *retired = retire_add_wave(run);
+    }
+    if adds.next_spawn_at <= now {
+        spawn_add_wave(run, retired, started_at)?;
+    }
+    Ok(())
+}
+
+fn advance_fixture_frame(
+    run: &mut Run,
+    frame_end: Duration,
+    started_at: Duration,
+    retired: &mut Vec<Entity>,
+    observe: &mut impl FnMut(&Run),
+) -> Result<(), String> {
+    while run.app.world().resource::<Time>().elapsed() < frame_end {
+        let boundary = next_fixture_boundary(run, frame_end);
+        advance_fixture_step(run, boundary)?;
+        apply_fixture_add_events(run, retired, started_at)?;
+        if run.app.world().resource::<Time>().elapsed() < started_at + FIGHT_DURATION {
+            drive_player(run)?;
+        }
+        observe(run);
+    }
+    Ok(())
+}
+
 fn advance_combat(run: &mut Run) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>), String> {
+    advance_combat_observed(run, |_| {})
+}
+
+fn advance_combat_observed(
+    run: &mut Run,
+    mut observe: impl FnMut(&Run),
+) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>), String> {
     let start_time = run
         .app
         .world()
         .resource::<Time<Virtual>>()
         .elapsed_secs_f64();
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(run, started_at);
     if run
         .app
         .world()
@@ -306,18 +452,18 @@ fn advance_combat(run: &mut Run) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>)
     }
     let mut buffs = BTreeMap::new();
     let mut samples = vec![report::engagement(run.app.world(), run.actor, &run.targets)];
+    observe(run);
     drive_player(run)?;
+    let frame = FIGHT_DURATION / TICKS;
+    let mut retired = Vec::new();
     for tick in 1..=TICKS {
-        apply_fixed_time_target_health(run, tick)?;
-        run.app.update();
-        let pack_boundary = tick < TICKS && tick % ADD_WAVE_TICKS == 0;
-        if pack_boundary && run.targets.len() == 3 {
-            replace_add_wave(run, f64::from(tick) / 20.0)?;
-            apply_fixed_time_target_health(run, tick)?;
-        }
-        if tick < TICKS {
-            drive_player(run)?;
-        }
+        advance_fixture_frame(
+            run,
+            started_at + frame * tick,
+            started_at,
+            &mut retired,
+            &mut observe,
+        )?;
         report::sample_buffs(run.app.world(), run.actor, &mut buffs);
         if matches!(tick, 1 | 20 | LAST_30S_START | TICKS) {
             samples.push(report::engagement(run.app.world(), run.actor, &run.targets));
@@ -362,8 +508,9 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
         "windwalker_rotation": run.windwalker_rotation.as_ref().map(|rotation| rotation.report()),
         "assisted_decisions": run.player_rotation.as_ref().map_or(0, |rotation| rotation.decisions),
         "wall_seconds": started.elapsed().as_secs_f64(), "seed": 70448, "combat": combat,
-        "target_health_policy": {"name": "SIMC_FIXED_TIME_TARGET_HEALTH", "clock": "global_fight",
-            "duration_seconds": 300, "initial_pct": 100, "death_pct": 0},
+        "target_health_policy": {"name": "SIMC_FIXED_TIME_TARGET_HEALTH", "clock": "per_target_lifetime",
+            "duration_seconds": FIGHT_DURATION.as_secs_f64(), "add_lifetime_seconds": ADD_LIFETIME.as_secs_f64(),
+            "add_interval_seconds": ADD_INTERVAL.as_secs_f64(), "initial_pct": 100, "death_pct": 0},
         "stats_before": before, "stats_after": report::stats(run.app.world(), run.actor),
         "targets_before": targets, "targets_after": target_snapshot(&run),
         "target_waves": run.target_waves, "pet": report::pet(run.app.world(), run.actor, &run.damage_targets),
@@ -410,7 +557,10 @@ fn dps_parity_native_bis_dummy_records_300s() {
         let main = waves[0]["entities"][0].as_u64().unwrap();
         let mut adds = std::collections::BTreeSet::new();
         for (index, wave) in waves.iter().enumerate() {
-            assert_eq!(wave["at"].as_f64().unwrap(), index as f64 * 30.0);
+            assert!(
+                (wave["at"].as_f64().unwrap() - index as f64 * ADD_INTERVAL.as_secs_f64()).abs()
+                    < 0.0001
+            );
             if index > 0 {
                 assert_eq!(
                     wave["retired_still_present"], 0,
@@ -492,8 +642,183 @@ fn dps_parity_native_bis_dummy_records_300s() {
 }
 
 #[test]
+#[ignore = "opt-in actual300s per-wave health/TTD; requires private parity inputs"]
+fn dps_parity_fixture_add_health_and_ttd_follow_each_summon_lifetime() {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    use server::simc_apl::{Action, ActionFacts, Facts};
+    let _seed_scope = crate::random::seed_scope(70_448);
+    let (profile, traits) = read_reference(66).unwrap();
+    let mut run = prepare_reference(
+        profile,
+        &traits,
+        3,
+        crate::followers::simulator::ParityActor::Follower,
+    )
+    .unwrap();
+    engage(&mut run);
+    let started_at = crate::spell_cast::now(run.app.world());
+    let encounter = Encounter::Fixture {
+        started_at,
+        duration: 300.0,
+        style: FightStyle::Patchwerk,
+    };
+    let bindings = Bindings::default();
+    let mut seen = [[false; 2]; 10];
+    let mut gaps = [false; 9];
+    let mut errors = Vec::new();
+    let (seconds, _, _) = advance_combat_observed(&mut run, |run| {
+        let elapsed = crate::spell_cast::now(run.app.world()) - started_at;
+        let millis = (elapsed * 1000.0).round() as u32;
+        let wave = (millis / 30_010) as usize;
+        if wave >= seen.len() {
+            return;
+        }
+        let age = millis % 30_010;
+        let facts = NativeFacts::new(
+            run.app.world(),
+            run.actor,
+            &bindings,
+            encounter,
+            run.targets.len(),
+        );
+        let remaining = f64::from(30_000_u32.saturating_sub(age)) / 1000.0;
+        let next_spawn = f64::from((wave as u32 + 1) * 30_010 - millis) / 1000.0;
+        // Observe actual installed event state at every native boundary/frame,
+        // including each real absent gap; never infer event presence from count.
+        for (property, expected) in [
+            ("exists", 1.0),
+            ("count", 2.0),
+            ("duration", 30.0),
+            ("cooldown", 30.01),
+            ("remains", remaining),
+            ("in", next_spawn),
+        ] {
+            match facts.value(&format!("raid_event.adds.{property}")) {
+                Ok(value) if (value - expected).abs() < 0.001 => {}
+                other => errors.push(format!(
+                    "{elapsed}s adds.{property}: {other:?}, expected{expected}"
+                )),
+            }
+        }
+        if age >= 30_000 {
+            gaps[wave] = true;
+            if run.targets.len() != 1 {
+                errors.push(format!(
+                    "{elapsed}s: expected absent adds, got{} targets",
+                    run.targets.len()
+                ));
+            }
+            return;
+        }
+        let sample_index = if age >= 27_000 {
+            1 //10% health: both Execute thresholds have been crossed in this wave.
+        } else if age >= 15_000 {
+            0 //50% health: same wave before Execute eligibility.
+        } else {
+            return;
+        };
+        if seen[wave][sample_index] {
+            return;
+        }
+        seen[wave][sample_index] = true;
+        if run.targets.len() != 3 {
+            errors.push(format!(
+                "wave{wave}: expected3 targets, got{}",
+                run.targets.len()
+            ));
+        }
+        for (index, &target) in run.targets.iter().enumerate() {
+            // sc_enemy.cpp1053–1101: timed adds use their own expiration, not300s.
+            let expected_ttd = if index == 0 {
+                300.0 - elapsed
+            } else {
+                f64::from(30_000 - age) / 1000.0
+            };
+            let lifetime = if index == 0 { 300.0 } else { 30.0 };
+            let expected_pct = expected_ttd / lifetime * 100.0;
+            let health = run
+                .app
+                .world()
+                .get::<shared::components::Health>(target)
+                .unwrap();
+            let native_pct = f64::from(health.current) * 100.0 / f64::from(health.max);
+            let action = Action {
+                name: "auto_attack".into(),
+                target: Some(target.to_bits()),
+                options: Default::default(),
+            };
+            let readings = [
+                ("native health", Ok(native_pct), expected_pct),
+                (
+                    "target.health.pct",
+                    facts.value_for(&action, "target.health.pct"),
+                    expected_pct,
+                ),
+                (
+                    "target.time_to_die",
+                    facts.value_for(&action, "target.time_to_die"),
+                    expected_ttd,
+                ),
+                // player.hpp964 and raid_event.cpp77: main boss, timed ENEMY_ADDs not bosses.
+                (
+                    "target.is_boss",
+                    facts.value_for(&action, "target.is_boss"),
+                    if index == 0 { 1.0 } else { 0.0 },
+                ),
+            ];
+            for (label, actual, expected) in readings {
+                match actual {
+                    Ok(value) if (value - expected).abs() < 0.001 => {}
+                    other => errors.push(format!(
+                        "wave{wave}/sample{sample_index}/target{index} {label}: {other:?}, expected{expected}"
+                    )),
+                }
+            }
+        }
+    })
+    .unwrap();
+    assert!((seconds - 300.0).abs() < 0.001);
+    assert!(
+        seen.into_iter().flatten().all(|seen| seen),
+        "all10 waves must be observed before and during their Execute phase"
+    );
+    assert!(errors.is_empty(), "{}", errors.join("\n"));
+    assert!(
+        gaps.into_iter().all(|seen| seen),
+        "all9 actual10ms absent windows must be observed"
+    );
+}
+
+#[test]
+#[ignore = "opt-in actual300s native add lifetimes; requires private parity inputs"]
+fn dps_parity_fixture_add_start_schedule_matches_simc_10ms_cooldown_clamp() {
+    let _seed_scope = crate::random::seed_scope(70_448);
+    let (profile, traits) = read_reference(66).unwrap();
+    let mut run = prepare_reference(
+        profile,
+        &traits,
+        3,
+        crate::followers::simulator::ParityActor::Follower,
+    )
+    .unwrap();
+    engage(&mut run);
+    let (seconds, _, _) = advance_combat(&mut run).unwrap();
+    assert!((seconds - 300.0).abs() < 0.001);
+    assert_eq!(run.target_waves.len(), 10);
+    // Pinned raid_event.cpp2700–2701: cooldown<=duration becomes duration+0.01s.
+    for (index, wave) in run.target_waves.iter().enumerate() {
+        let expected = index as f64 * 30.01;
+        let actual = wave["at"].as_f64().unwrap();
+        assert!(
+            (actual - expected).abs() < 0.0001,
+            "wave{index} started at{actual}s, source requires{expected}s"
+        );
+    }
+}
+
+#[test]
 #[ignore = "opt-in real300s dummy clock and add replacement; requires private parity inputs"]
-fn dps_parity_fixture_fixed_time_target_health_follows_global_clock() {
+fn dps_parity_fixture_fixed_time_main_health_follows_global_clock() {
     let _seed_scope = crate::random::seed_scope(70_448);
     let (profile, traits) = read_reference(66).unwrap();
     let mut run = prepare_reference(
@@ -515,7 +840,8 @@ fn dps_parity_fixture_fixed_time_target_health_follows_global_clock() {
     ];
     assert_eq!(samples.len(), expected.len());
     for (sample, expected_pct) in samples.iter().zip(expected) {
-        for target in sample["targets"].as_array().unwrap() {
+        // Adds' independent phases are checked twice in every wave above.
+        for target in sample["targets"].as_array().unwrap().iter().take(1) {
             let health = target["state"]["health"].as_array().unwrap();
             let observed = health[0].as_f64().unwrap() * 100.0 / health[1].as_f64().unwrap();
             assert!(

@@ -1,6 +1,5 @@
-//! Resolve follower player-kit actions before eligibility/radius/cost checks.
-//! SimC76f8118 sc_druid.cpp4837,10671: Cat Swipe applies source48629's332
-//! override metadata. This is not an invented aura or a learned-spell grant.
+//! Existing native form-source and active-aura action overrides.
+//! SimC76f8118 sc_druid.cpp4837,10671 uses Cat source48629's332 metadata.
 use bevy::prelude::*;
 
 use crate::auras::{ActiveAuras, handlers, overrides, shapeshift, spell_mods};
@@ -29,9 +28,7 @@ fn resolve_from_source(world: &World, base: u32, source: u32) -> Result<u32, Cas
     let store = world.resource::<SpellStore>();
     let spell = store.get(base).ok_or(CastFailure::UnknownSpell)?;
     let source = store.get(source).ok_or_else(|| {
-        CastFailure::Unsupported(format!(
-            "native follower form override source {source} is missing"
-        ))
+        CastFailure::Unsupported(format!("native form override source {source} is missing"))
     })?;
     let Some(replacement) = source_replacement(source, spell) else {
         return Ok(base);

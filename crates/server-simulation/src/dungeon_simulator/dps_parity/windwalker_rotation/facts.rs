@@ -68,6 +68,12 @@ impl ActionFacts for WwFacts<'_> {
         match name {
             "combo_strike" => self.combo_strike(action),
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" => self.native.value_for(action, name),
+            _ if name.starts_with("target.")
+                || name.starts_with("debuff.")
+                || name.starts_with("dot.") =>
+            {
+                self.native.value_for(action, name)
+            }
             _ => self.value(name),
         }
     }
