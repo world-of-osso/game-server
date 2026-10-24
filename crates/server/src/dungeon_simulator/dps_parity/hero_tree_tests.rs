@@ -45,3 +45,24 @@ fn havoc_native_hero_tree_reports_missing_loadout_instead_of_inferring_it() {
         .remove::<TraitLoadout>();
     assert!(hero_tree_value(&run, "hero_tree.felscarred").is_err());
 }
+
+#[test]
+#[ignore = "opt-in native Feral selected hero tree; requires private parity inputs"]
+fn native_hero_tree_feral_reads_wildstalker_and_druid_of_the_claw_names() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare(103, 1).expect("native Feral BiS and active traits must load");
+    assert_eq!(hero_tree_value(&run, "hero_tree.wildstalker").unwrap(), 1.0);
+    assert_eq!(
+        hero_tree_value(&run, "hero_tree.druid_of_the_claw").unwrap(),
+        0.0
+    );
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(TraitLoadout::default());
+    assert_eq!(hero_tree_value(&run, "hero_tree.wildstalker").unwrap(), 0.0);
+    assert_eq!(
+        hero_tree_value(&run, "hero_tree.druid_of_the_claw").unwrap(),
+        0.0
+    );
+}
