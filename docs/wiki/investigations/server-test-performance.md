@@ -16,6 +16,12 @@ The complete fixed295 inventory supplies5880 measured test durations, not just a
 
 Source/proof: `whole-suite-top-tests/{fixed295-ranking.json,ranking-and-attribution.md,at1015-joined.json,query-cost-summary.json,query-build.json,perf-dummy/summary.json}`; native query archive SHA is recorded in the build receipt. Original before/partial/failure artifacts remain unchanged.
 
+## Process-owned fixture directories — 2026-10-23
+
+A `TempDir` retained by a static `OnceLock` is not dropped at process exit. Class-world snapshots therefore accumulated under `target/class-fixtures/`; the same creation pattern also existed in Wild Imp and encounter fixtures. All three now call `test_data::fixture_dir::create_fixture_dir`: reclaim PID-prefixed sibling directories only when `/proc/<pid>` is absent, then create a directory prefixed with the current PID. Live owners and unprefixed directories remain untouched; no age-based ownership inference. Normal `TempDir` cleanup and all snapshot/import operations are unchanged.
+
+The lightweight library filesystem regression seeds a dead-PID directory containing a database and a live own-PID sibling. Its RED fails on the abandoned database remaining; GREEN must remove it, preserve live bytes and create a current-PID directory. Proof receipts: `fixture-dir-cleanup/{red,green}/`; this does not qualify the whole-suite performance budget.
+
 ## Read-only Disenchant definitions — 2026-10-23
 
 `spell_cast::disenchant::load_data` uses the existing path/content catalog cache only under `cfg(test)`. The complete `DisenchantData` contains its original owned eligibility map and loot/reference tables; cache hits clone those resources rather than share a mutable App. Production calls the same original SQL/decode body directly. Writable/in-memory connections retain normal reads through the existing cache policy, including uncommitted edits. No SQL, gameplay, native frame, assertion or ignore changes.

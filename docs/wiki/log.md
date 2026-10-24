@@ -1,3 +1,7 @@
+## 2026-10-23 — Process-owned fixture directories
+
+[Fixture lifecycle](investigations/server-test-performance.md#process-owned-fixture-directories--2026-10-23): one PID-prefixed directory helper for class, Wild Imp and encounter snapshots reclaims only absent `/proc/<pid>` owners. Live owners survive; no age-based deletion. Filesystem dead/live-owner RED observed; GREEN receipt recorded separately under `fixture-dir-cleanup/`.
+
 ## 2026-10-23 — Whole-suite ranked attribution
 
 [Ranked source/phase matrix](investigations/server-test-performance.md#whole-suite-ranked-attribution--2026-10-23): all5880timings/top25=933.474test-s,37censored warnings joined. Required60s real wait distinguished from4h virtual expiry. Partial dummy profile safety-aborted/no retry; separate exactSQLite3.49 read-only attribution finds49.95millionVMsteps/98,948rows per uncached Disenchant Startup. Cache saving remains a model/proposal, not implementation or whole-budget proof.
