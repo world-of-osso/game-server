@@ -116,6 +116,7 @@ pub(super) fn shield_plan(
         units: shield_cone_units(world, caster, spell),
         dest: None,
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }]
