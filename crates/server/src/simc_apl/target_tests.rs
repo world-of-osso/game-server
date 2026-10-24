@@ -144,7 +144,6 @@ fn simc_apl_target_exhausted_nested_run_never_changes_callers_target() {
 }
 
 #[test]
-#[ignore = "queued sourced FIRST selector RED; not implemented yet"]
 fn simc_apl_queued_first_selector_chooses_first_matching_native_target() {
     // SimC76f8118 action.cpp2954–2964,5411–5426: bare target_if is FIRST.
     let program =
@@ -158,7 +157,6 @@ fn simc_apl_queued_first_selector_chooses_first_matching_native_target() {
 }
 
 #[test]
-#[ignore = "queued sourced FIRST selector RED; not implemented yet"]
 fn simc_apl_queued_first_selector_rejects_false_single_candidate() {
     // Unlike min/max's single-target shortcut, FIRST must still match.
     let facts = Targets {
@@ -175,7 +173,6 @@ fn simc_apl_queued_first_selector_rejects_false_single_candidate() {
 }
 
 #[test]
-#[ignore = "queued sourced cycle_targets RED; not implemented yet"]
 fn simc_apl_queued_cycle_selects_first_condition_and_native_ready_target() {
     // action.cpp2472–2496 recursively checks each native target's action_ready.
     let program = Program::parse(&[
@@ -201,7 +198,6 @@ fn simc_apl_queued_cycle_selects_first_condition_and_native_ready_target() {
 }
 
 #[test]
-#[ignore = "source-qualified FIRST/cycle extension RED"]
 fn simc_apl_first_cycle_explicit_first_preserves_native_order() {
     let program = Program::parse(&[(
         "default",
@@ -216,7 +212,6 @@ fn simc_apl_first_cycle_explicit_first_preserves_native_order() {
 }
 
 #[test]
-#[ignore = "source-qualified FIRST/cycle extension RED"]
 fn simc_apl_first_cycle_first_if_failure_does_not_try_second_match() {
     let program = Program::parse(&[
         (
@@ -238,7 +233,6 @@ fn simc_apl_first_cycle_first_if_failure_does_not_try_second_match() {
 }
 
 #[test]
-#[ignore = "source-qualified FIRST/cycle extension RED"]
 fn simc_apl_first_cycle_first_native_refusal_does_not_try_second_match() {
     let program = Program::parse(&[
         (
@@ -261,7 +255,6 @@ fn simc_apl_first_cycle_first_native_refusal_does_not_try_second_match() {
 }
 
 #[test]
-#[ignore = "source-qualified FIRST/cycle extension RED; pinned binary asymmetry probe"]
 fn simc_apl_first_cycle_negative_first_uses_pinned_single_and_multi_rules() {
     let program = Program::parse(&[("default", "mortal_strike,target_if=first:-1")]).unwrap();
     let single = Targets {
@@ -285,7 +278,6 @@ fn simc_apl_first_cycle_negative_first_uses_pinned_single_and_multi_rules() {
 }
 
 #[test]
-#[ignore = "source-qualified FIRST/cycle extension RED"]
 fn simc_apl_first_cycle_positive_cap_counts_native_candidates_not_successes() {
     for (cap, expected) in [
         (1, None),
@@ -312,7 +304,6 @@ fn simc_apl_first_cycle_positive_cap_counts_native_candidates_not_successes() {
 }
 
 #[test]
-#[ignore = "source-qualified FIRST/cycle extension RED"]
 fn simc_apl_first_cycle_zero_flag_keeps_default_target() {
     let program = Program::parse(&[
         (
@@ -331,7 +322,6 @@ fn simc_apl_first_cycle_zero_flag_keeps_default_target() {
 }
 
 #[test]
-#[ignore = "source-qualified FIRST/cycle extension RED"]
 fn simc_apl_first_cycle_exhaustion_restores_callers_default_target() {
     let program = Program::parse(&[
         (
@@ -353,7 +343,6 @@ fn simc_apl_first_cycle_exhaustion_restores_callers_default_target() {
 }
 
 #[test]
-#[ignore = "source-qualified FIRST/cycle extension RED"]
 fn simc_apl_first_cycle_rejects_invalid_literal_iteration_options() {
     for row in [
         "mortal_strike,cycle_targets=2",
@@ -368,7 +357,6 @@ fn simc_apl_first_cycle_rejects_invalid_literal_iteration_options() {
 }
 
 #[test]
-#[ignore = "source-qualified FIRST/cycle extension RED"]
 fn simc_apl_first_cycle_single_enemy_keeps_native_untargeted_context() {
     let facts = Targets {
         units: vec![(41, 30.0, 0.0)],
@@ -391,7 +379,6 @@ fn simc_apl_first_cycle_single_enemy_keeps_native_untargeted_context() {
 }
 
 #[test]
-#[ignore = "source-qualified FIRST/cycle extension RED"]
 fn simc_apl_first_cycle_missing_native_candidate_adapter_is_explicit() {
     let facts = std::collections::BTreeMap::<String, f64>::from([("active_enemies".into(), 3.0)]);
     let program = Program::parse(&[("default", "mortal_strike,cycle_targets=1")]).unwrap();
@@ -403,7 +390,6 @@ fn simc_apl_first_cycle_missing_native_candidate_adapter_is_explicit() {
 }
 
 #[test]
-#[ignore = "source-qualified selector/cycle native-binary precedence control"]
 fn simc_apl_first_cycle_selector_takes_precedence_over_cycle_cap() {
     let program = Program::parse(&[(
         "default",

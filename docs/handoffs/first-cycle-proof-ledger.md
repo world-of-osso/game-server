@@ -25,8 +25,18 @@ Pinned76f8118 engine/simc + immutable MID2 Arms profile, actual native five-seco
 
 Sources: pinned `action.cpp2472–2508,2943–2964,5362–5453`; strict cycle bool0/1 and signed cap from `option.cpp314–370`, `action.cpp559–561`. Candidate order/eligibility is native-adapter supplied. The native cycle branch is conditional on global non-sleeping enemy count>1; only positive cap values limit iteration. Actual binary confirms FIRST single>0 versus multi!=0; preserve this asymmetry. `simc-selector-binary.proof.json` pins clean76f8118cf source, binary SHA6415c116d22e191d436eea7e5e4485fb49ac47c265fa8706f4e7b43b4dbabba4 and profile SHA847080503d43467467dc6102416f61397f9f2a9cbb2160da614b636a7e088afc. All six probes completed successfully; no reference changed.
 
-## Implementation / pending GREEN
+## Implementation / targeted GREEN
 
 Shared Rule stores optional cycle limit; strict0/1 cycle and signed integer cap are parsed once. Ordinary actions check row condition/native admission once per selected candidate; controls retain their prior behavior. target_if binds before readiness and overrides cycling. Cycling snapshots the adapter's candidate order and caps traversal before condition/admission, with no target leakage. FIRST returns its first matching candidate without retrying after a row/native refusal. Existing min/max single shortcut/tie order remains unchanged.
 
-Added native-binary-qualified selector/cap precedence control; targeted cohort becomes38. Source implementation is committed before GREEN; acceptance and automatic enabling of the engine-free probes await actual38case result. Lead still owns broad integration.
+561595514: actual38/38GREEN0.02s,15m20compile/0warnings; same bounded `--lib simc_apl:: -- --include-ignored --nocapture --test-threads=1` scope. Command runs through agent-run/native helper, -j2, one admitted lead_arms_14775 job. `first-cycle-green.{log,proof.json}` and `first-cycle-green-binary.proof.json` pin exact implementation/library SHA84fa2c162e1b263714758eafbfeea1e7aaf1245ca8ee9119be5cfdfea0cf3e23. No native DB input, fixture execution or DPS measured.
+
+| Exact covered behavior | Cases / proof |
+|---|---|
+| FIRST bare match, false sole candidate, explicit native order, chosen-row if failure, chosen native refusal, negative single>0/multi!=0 |6cases GREEN; source plus actual single-positive/single-negative/multi-negative SimC probes |
+| Cycle first condition+native-ready target; caps1/2/3 count examined candidates,0/-1 unlimited |2cases GREEN; actual SimC cap1/cap2 probes |
+| Disabled/default context, exhausted-cycle next-row restoration, single-global-enemy shortcut |3cases GREEN |
+| Strict boolean/integer options; missing candidate adapter explicit error |2cases GREEN |
+| Selector precedes cycle cap |1case GREEN; actual SimC max selector+cap1 probe |
+
+All24 established expression/variable/run/minmax/Ret/WW controls remain GREEN. Fourteen engine-free tests are enabled afterward with only ignore-attribute removal, no body or production change; proof build revision remains561595514, not the later attributes/docs-only tip. No redundant rebuild/suite rerun. Changed-line readability reviewed manually (rust-code-analysis-cli unavailable); new helpers remain short, no new suppression or hidden state. Lead still owns broad integration; no native rotation/DPS qualification.

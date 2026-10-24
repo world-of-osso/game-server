@@ -1,3 +1,7 @@
+## 2026-10-23 — FIRST / native-order cycle interpreter GREEN
+
+[Shared selectors](systems/simc-apl.md#capability--proof-matrix): b2b464cde expanded37 produces27PASS/10genuineRED;561595514 yields38/38GREEN0.02s,15m20compile/0warnings. Six actual pinned76f SimC probes qualify single>0/multi!=0 FIRST, examined-candidate cycle cap and selector precedence. Fourteen engine-free cases enabled afterward without body changes;24prior run/minmax/Ret/WW controls preserved. No native target/data/DPS/reference changes; integration remains lead-owned. [Proof](../handoffs/first-cycle-proof-ledger.md).
+
 ## 2026-10-23 — Ordered native composite selection RED
 
 [Shared literal machinery](systems/simc-apl.md#shared-literal-fixture-machinery):4ad native3controlsPASS/3genuine selectionFAIL26.39s,18m29compile/1scaffold field warning. Actual four selected poison admissions, normal Deadly1500ms-base cast completion and non-poison6673 readiness qualify inputs. Implemented ordered pending plans/owned-self-aura skipping; empty/all-active unusable and world-only execute non-recursive. Added missing-selected-step/no-partial control;7cfc2e4e6 all7GREEN26.72s,16m03compile/0warnings. Private-input opt-in tests retained; no disjoint suite rerun.14766 owns precombat completion/Moving-GCD gating; no synchronous dispatch. [Proof](../handoffs/literal-composite-proof-ledger.md).
