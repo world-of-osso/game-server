@@ -1,0 +1,84 @@
+{
+  "map_id": 2874,
+  "entrance_id": null,
+  "entrance_gap": "FOLLOWER_ENTRANCE_UNSOURCED_2874",
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "duo_placement_policy": "FOLLOWER_PLACEMENT_DUO_INDIVIDUALLY_SOURCED_SAME_MARKER",
+  "guid_base": 61000000,
+  "entries": [
+    {
+      "entry": 247570,
+      "ordinal": 0,
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2810",
+      "journal_encounter_id": 2810,
+      "cache_sha256": "d8eb5b6882df9df13852ba561a8be92c1026a5969027e618e609c4be1377bb21",
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_EXACT_NATIVE_NAME_DISPLAY_TO_JOURNAL_ACTOR",
+        "journal_encounter_id": 2810,
+        "journal_actor_id": 6029
+      }
+    }
+  ],
+  "native_binding_only_entries": [
+    {
+      "entry": 247572,
+      "native_guid": 11000176,
+      "runtime_guid": 31000176,
+      "source_xyz": [
+        -919.337,
+        165.427,
+        99.8452
+      ],
+      "spawn_difficulties": "1,2,8,23,205",
+      "source_verified_build": 66431,
+      "source_url": "tdb:creature#11000176",
+      "journal_encounter_id": 2810,
+      "cache_sha256": "88b021f27aab9fe6ba9adfe8c966b208a09228adc79739984ce46b58c4455509",
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_EXACT_NATIVE_NAME_DISPLAY_TO_JOURNAL_ACTOR",
+        "journal_encounter_id": 2810,
+        "journal_actor_id": 6030
+      },
+      "population_change": "TDB VerifiedBuild66431 native population now published; preserve exact runtime31000176, no duplicate or relocation."
+    }
+  ],
+  "source_gaps": [
+    {
+      "journal_encounter_id": 2811,
+      "name": "FOLLOWER_PLACEMENT_SOURCE_FLOOR_UNRESOLVED_2874_2811",
+      "journal_name": "Vordaza",
+      "baked_candidates": [
+        -39.06722850005883,
+        -34.40638381562452,
+        183.71323754230477,
+        229.4147413807726,
+        264.0411399999999
+      ],
+      "reason": "Multiple baked levels at unchanged journalXY; not selected."
+    },
+    {
+      "journal_encounter_id": 2812,
+      "name": "FOLLOWER_PLACEMENT_SOURCE_FLOOR_UNRESOLVED_2874_2812",
+      "journal_name": "Rak'tul, Vessel of Souls",
+      "baked_candidates": [
+        -25.615443434521474,
+        -13.150104297992456,
+        238.9018874543462,
+        259.37307225131525,
+        285.76993,
+        304.98640986438977,
+        346.53644191535693,
+        352.4315106936048,
+        399.97587085141214,
+        406.1868975055046,
+        532.4829483073172
+      ],
+      "reason": "Multiple baked levels at unchanged journalXY; not selected."
+    }
+  ],
+  "calibration_entries": [
+    188252,
+    189232
+  ]
+}

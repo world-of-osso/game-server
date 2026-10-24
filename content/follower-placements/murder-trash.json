@@ -1,0 +1,635 @@
+{
+  "placement_policy": "FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS",
+  "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+  "guid_base": 61000000,
+  "first_trash_ordinal": 100,
+  "guarded_faction_updates": [],
+  "density_policy": "FOLLOWER_TRASH_DENSITY_FROM_MDT_COUNT",
+  "map_id": 2813,
+  "entrance_id": null,
+  "density_source": {
+    "policy": "FOLLOWER_TRASH_DENSITY_FROM_MDT_COUNT",
+    "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+    "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+    "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961"
+  },
+  "entries": [
+    {
+      "entry": 236085,
+      "map_id": 2813,
+      "cache_sha256": "4e2f1949921e7adcd64e07e5e59ce05cc95b470b1a902962af7984bd3fe1d237",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 143
+      }
+    },
+    {
+      "entry": 236073,
+      "map_id": 2813,
+      "cache_sha256": "b4e1140d9be27c7a37f0d6c4e0ffdf2dd7e8c3b75d6b869dc45a31265e181cf5",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 272
+      }
+    },
+    {
+      "entry": 236084,
+      "map_id": 2813,
+      "cache_sha256": "ab761bc14d61947413b6c873a11e21bfef836c6c35d837cf8d9bc35d7bfcd149",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 363
+      }
+    },
+    {
+      "entry": 236071,
+      "map_id": 2813,
+      "cache_sha256": "4419e24405cb270227bffc3e67099eaaac6d1321f73599b329b31a53cdee33c5",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 441
+      }
+    },
+    {
+      "entry": 252529,
+      "map_id": 2813,
+      "cache_sha256": "4153551ad69956e39efb1eab8bce910b706f60f09b4a56237b353ad1ad0758cf",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 473
+      }
+    },
+    {
+      "entry": 236082,
+      "map_id": 2813,
+      "cache_sha256": "f3f3a7096ef81de3df0123e560f07a1d357017217af6a4892aff0d2d1a6e63c4",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 501
+      }
+    },
+    {
+      "entry": 236902,
+      "map_id": 2813,
+      "cache_sha256": "edeb19ef8978c678b25be3ab319f3ae0f50929b18bd3b4034b904762a8b8f113",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 543
+      }
+    },
+    {
+      "entry": 236091,
+      "map_id": 2813,
+      "cache_sha256": "ea1fa29584dd870d818053d9d0864dd0fcb1803ff4e2a3c6eb14a2768fbb1231",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 575
+      }
+    },
+    {
+      "entry": 236893,
+      "map_id": 2813,
+      "cache_sha256": "5516a040e92cf549fd39eac5f6731392bce84d6800e2ceb3c3c458f0fa57e979",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 634
+      }
+    },
+    {
+      "entry": 236897,
+      "map_id": 2813,
+      "cache_sha256": "3d0c3008bbd58c93531a3907e66deee87daed149aa9fc79737958419fe0d7cd3",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 691
+      }
+    },
+    {
+      "entry": 234849,
+      "map_id": 2813,
+      "cache_sha256": "8e6a6e7ac877bed0405398f9157d35f212709f6c1f93769e87a016979af211e2",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 720
+      }
+    },
+    {
+      "entry": 235261,
+      "map_id": 2813,
+      "cache_sha256": "867621475ee7a48e2ad2a5a82ad57082731f0873e221bdd41e180570570710fa",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 1091
+      }
+    },
+    {
+      "entry": 235268,
+      "map_id": 2813,
+      "cache_sha256": "40272275a94825b899fc56fdf6e52d2f1fe8b56d3f923e05394154fdf99643bf",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 1204
+      }
+    },
+    {
+      "entry": 235267,
+      "map_id": 2813,
+      "cache_sha256": "e7795cd0f399c1c4d65136d40c0b7963e27ef47bbd53eff45d05ba027cfca9b3",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 1295
+      }
+    },
+    {
+      "entry": 235265,
+      "map_id": 2813,
+      "cache_sha256": "d1effef00c65677bba25c74d49ab4b6c9552836e9f3f5f9a97d37534582cd126",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 1385
+      }
+    },
+    {
+      "entry": 235257,
+      "map_id": 2813,
+      "cache_sha256": "0aa098a5bec0139543f212017fe3899189ceffe5f2e7f9e9c9bb3ae48426ee8f",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 1438
+      }
+    },
+    {
+      "entry": 235465,
+      "map_id": 2813,
+      "cache_sha256": "0097450afce632b0bb7bec566a2d05868f7f45e7e189d02053ae221ef4ead8a6",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 1576
+      }
+    },
+    {
+      "entry": 236905,
+      "map_id": 2813,
+      "cache_sha256": "48cb9dcd3f765cf00e8200480c65b233065d21245c6754cf80610593d20176a0",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 1640
+      }
+    },
+    {
+      "entry": 235322,
+      "map_id": 2813,
+      "cache_sha256": "31b97981e3495f1018453a9037b570d1cdce1cb2cfd7f998432eb1e602a399e9",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 1673
+      }
+    },
+    {
+      "entry": 234799,
+      "map_id": 2813,
+      "cache_sha256": "4df0c1827b6c274f7355ecf019ed0b52e8d9b8d68eee35a06da37feb3b29f9dc",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 1981
+      }
+    },
+    {
+      "entry": 234852,
+      "map_id": 2813,
+      "cache_sha256": "8a946a39ec1ca85438dbb541d13b8cb9ee032d4d6831098958073dd1eeab7056",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 2005
+      }
+    },
+    {
+      "entry": 234860,
+      "map_id": 2813,
+      "cache_sha256": "33b85c0b6210bc08be4f05822a964c4b0e959131b11842092ab228e6109f1b9a",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 2058
+      }
+    },
+    {
+      "entry": 234984,
+      "map_id": 2813,
+      "cache_sha256": "7f3f708881377409499be0aba8c645ed4c61dc944660aaaceced287fb04a8edd",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 2082
+      }
+    },
+    {
+      "entry": 235841,
+      "map_id": 2813,
+      "cache_sha256": "a1c5267d6ec4e00a679a7bae320c2c00467cebd70a2864e2c3f3bdd47214af86",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 2131
+      }
+    },
+    {
+      "entry": 236088,
+      "map_id": 2813,
+      "cache_sha256": "5e1b05c83c9b3c1427f0ff02df6790b807b7b5038bf5d18dd61932915a5d69f7",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 2152
+      }
+    },
+    {
+      "entry": 236525,
+      "map_id": 2813,
+      "cache_sha256": "6c72af9a1d86d106920a11f885a50b79a3365acf8853b98d2c4ec52d3c78acf8",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 2173
+      }
+    },
+    {
+      "entry": 237626,
+      "map_id": 2813,
+      "cache_sha256": "5e2f7d423d0f2d614eab71ca75166bf507a883081aa38775aac5e4edf2cc9e73",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 2196
+      }
+    },
+    {
+      "entry": 238414,
+      "map_id": 2813,
+      "cache_sha256": "dd362fd3cff89e25c87d8a7b3ada9ab712b323e00dfc28cc24d1ab804d9f440b",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 2223
+      }
+    },
+    {
+      "entry": 240289,
+      "map_id": 2813,
+      "cache_sha256": "6a9c3b23e0f4b93911a355a2f9bd70c44339cf4fb012d31defe086be78553396",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 2251
+      }
+    },
+    {
+      "entry": 253081,
+      "map_id": 2813,
+      "cache_sha256": "515e5666f75556d43b450b757c1cef8d092df78de2912e99553a99aca15c322c",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 2272
+      }
+    },
+    {
+      "entry": 253324,
+      "map_id": 2813,
+      "cache_sha256": "9dde37a7725d092cc5536f03b5b7d9f31fbc64674d0fc4f3044f232b479d0522",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 2294
+      }
+    },
+    {
+      "entry": 255050,
+      "map_id": 2813,
+      "cache_sha256": "2a20a38ad5c879e6d0ea7458f9cfa3d6f8769fbc825371f5b042db0acee71fd9",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 2337
+      }
+    },
+    {
+      "entry": 255604,
+      "map_id": 2813,
+      "cache_sha256": "f42c8745f29ed9e0a90c8a0b2cae2cfd30abddd0ac5d150bb08a11b657b0c30c",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 2363
+      }
+    },
+    {
+      "entry": 263940,
+      "map_id": 2813,
+      "cache_sha256": "61371a48f139a4a5239a608d3ff1599548b66ef0e983496817aec2ffdd9d4f41",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Murder MDT enemy entry qualifies native0 known-hostile; no same-map native journal boss donor; Melidrussa188252 donates faction16 only. Nonzero native faction retained.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+        "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+        "source_line": 2387
+      }
+    }
+  ],
+  "source_gaps": [
+    {
+      "entry": 235520,
+      "marker_count": null,
+      "status": "FOLLOWER_TRASH_OWN_MAPPER_SOURCE_UNAVAILABLE",
+      "reason": "own NPC entity present but g_mapperData absent; no fabricated empty mapper or coordinates",
+      "url": "https://www.wowhead.com/npc=235520",
+      "entity": {
+        "classification": 1,
+        "displayName": "Legion Axe",
+        "displayNames": [
+          "Legion Axe"
+        ],
+        "id": 235520,
+        "name": "Legion Axe",
+        "names": [
+          "Legion Axe"
+        ],
+        "type": 10
+      },
+      "cache_body": "/home/osso/.cache/wowhead-cache/9d41ee972ba2ae2d7426a39e2fd2f4a29f975e0c657798d36880bcc5314415ef.html",
+      "cache_sha256": "d3eacd1a21157ce71825e1d2e096649ef2429c3dbf19e8c07fac97f0c18f8b3c",
+      "cache_metadata": {
+        "url": "https://www.wowhead.com/npc=235520",
+        "fetched": 1792701386.1660583,
+        "status": 200,
+        "bytes": 309521
+      }
+    },
+    {
+      "entry": 272246,
+      "marker_count": null,
+      "status": "FOLLOWER_TRASH_OWN_MAPPER_SOURCE_UNAVAILABLE",
+      "reason": "own NPC entity present but g_mapperData absent; no fabricated empty mapper or coordinates",
+      "url": "https://www.wowhead.com/npc=272246",
+      "entity": {
+        "classification": 1,
+        "displayName": "Trained Felhunter",
+        "displayNames": [
+          "Trained Felhunter"
+        ],
+        "id": 272246,
+        "name": "Trained Felhunter",
+        "names": [
+          "Trained Felhunter"
+        ],
+        "type": 3
+      },
+      "cache_body": "/home/osso/.cache/wowhead-cache/747e09b015fa434d5bd5a41bad900597512dda6b73abd80bbf939b79573868ff.html",
+      "cache_sha256": "f309ce16af247961788c58468c5bc250beffc26496978574a69da2ec3d909371",
+      "cache_metadata": {
+        "url": "https://www.wowhead.com/npc=272246",
+        "fetched": 1792701579.0923414,
+        "status": 200,
+        "bytes": 303423
+      }
+    }
+  ],
+  "surface_sha256": "b8ae2dbbab1236afbdfbbecfadd44974c9ad3ab464a8eed30f69fb63db62fbd9",
+  "surface_proof": {
+    "path": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/murder-trash-surface-preflight.json",
+    "sha256": "fc669b1f0b32cdd1675131bd0c43c666be24676399f332c23014e594936f7236",
+    "full_stream_sha256": "b5cd59ec7d4b84d97b556f9e261a634a5790ddecb05bd53934d8e5138b4f0394",
+    "full_polygon_count": 705936
+  },
+  "nav_files_sha256": {
+    "41_14.nav": "88c8b332fa98dc785da6fcb65e067ef26403a3a10ff35c0a6c5cec23b52d5998",
+    "41_15.nav": "f52e72a9478f52bab06c8016ad445f22b449c857dd45e5cd1d2a2c47b97dd39b",
+    "41_16.nav": "dc7adeed4bb4047a80c77c86de7c146a1a19fc664a3ba1b69e75cc67bf2983df",
+    "40_14.nav": "9c2e7d2758b7474e50dd46998cfb5649adcdaabfebfb97629a71e07dbb165f91",
+    "40_16.nav": "255579607d1cc2fa13c778726fa7fd3cc04508930d34c1732c3b90015ef3f70d",
+    "40_15.nav": "e5e355ec1113610651c50d4a41ee49a9dc8d3e52cccfbb4c3cf6f55d66b17014"
+  }
+}

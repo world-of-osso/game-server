@@ -1,0 +1,386 @@
+{
+  "map_id": 2859,
+  "entrance_id": null,
+  "placement_policy": "FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS",
+  "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+  "guid_base": 61000000,
+  "first_trash_ordinal": 100,
+  "guarded_faction_updates": [],
+  "entries": [
+    {
+      "entry": 245345,
+      "map_id": 2859,
+      "cache_sha256": "3c0b9e1313297b922e9678bcf5cacdeee02d9739535738586182534613d8ef6a",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 53
+      }
+    },
+    {
+      "entry": 245410,
+      "map_id": 2859,
+      "cache_sha256": "83559d8ea02c873de410774fd69ea59fc2a8e3877fc0d5ab894577077ff8e32c",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 246
+      }
+    },
+    {
+      "entry": 245339,
+      "map_id": 2859,
+      "cache_sha256": "9d902a6fa26f3ba16786ecdb78673aba16bdc50865f7bab512a675357935e17f",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 857
+      }
+    },
+    {
+      "entry": 245346,
+      "map_id": 2859,
+      "cache_sha256": "fa708a965114de0a5db2bb8233a197d77bea0ac78ec86e76366587b68181fca6",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 974
+      }
+    },
+    {
+      "entry": 254850,
+      "map_id": 2859,
+      "cache_sha256": "443fb5a9533d7e8d47886bf7cc21b9a7c917aa7e78613a844c5175f36406a0b7",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 1024
+      }
+    },
+    {
+      "entry": 245336,
+      "map_id": 2859,
+      "cache_sha256": "96d0a34803638a6f0855b64fc70edb5b5c982711aeb449f95514fbbe25d071d6",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 1109
+      }
+    },
+    {
+      "entry": 245484,
+      "map_id": 2859,
+      "cache_sha256": "338ad45e0f7e0d2818b063d92cac6f12271b5171f2a3b480feb001a1e12d817a",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 1218
+      }
+    },
+    {
+      "entry": 245473,
+      "map_id": 2859,
+      "cache_sha256": "2370cfb2d71cc6c645feac032894b6c516b89bf0e2055c048d30def665c47c3d",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 1332
+      }
+    },
+    {
+      "entry": 245527,
+      "map_id": 2859,
+      "cache_sha256": "74968eb10167371405168439981538459e2ae138120b88a4ff64efdeb05a3195",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 1442
+      }
+    },
+    {
+      "entry": 245460,
+      "map_id": 2859,
+      "cache_sha256": "4f2da60e42808b3aae5e6c20fc0e8914d77fd8aac484f58ba4881902bcdc830c",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 1699
+      }
+    },
+    {
+      "entry": 245513,
+      "map_id": 2859,
+      "cache_sha256": "1217eaa715593f0291ff0425eec138fb0aa99f018a2109c404b1d4721561aca1",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 1780
+      }
+    },
+    {
+      "entry": 246871,
+      "map_id": 2859,
+      "cache_sha256": "1c4a147982ab72bfd2f70ab1271452b8bc490eee558a5b54309875c83dff52b1",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 1844
+      }
+    },
+    {
+      "entry": 244528,
+      "map_id": 2859,
+      "cache_sha256": "6441f6f8a59aae891b670a80ba559ae9f8d8741b2a4b7f9e9a091076ab2a2045",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 2150
+      }
+    },
+    {
+      "entry": 246367,
+      "map_id": 2859,
+      "cache_sha256": "6d1a6f6b643b4c0f9735fdf7133a0fe6f23de85ce0de598109ce4fda790ca087",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 2172
+      }
+    },
+    {
+      "entry": 246371,
+      "map_id": 2859,
+      "cache_sha256": "244a905d44cf547bcc37a5ee6540d1766db276517efd7463f85af9696eb139e8",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 2201
+      }
+    },
+    {
+      "entry": 247755,
+      "map_id": 2859,
+      "cache_sha256": "1928b854c4e25bbfd156bc507ce9746075bc5268f489a289b047b1b43eee170b",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 2229
+      }
+    },
+    {
+      "entry": 249756,
+      "map_id": 2859,
+      "cache_sha256": "2f066a715ab0adf9ef6925610d0837c2f7cbbc35e2d7151450fee4c032d05886",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 2256
+      }
+    },
+    {
+      "entry": 249783,
+      "map_id": 2859,
+      "cache_sha256": "07e76a556ed01ee1a835f1ebf8f60202ca3eaface0e2fa6c6a3f1e48deecbd71",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 2287
+      }
+    },
+    {
+      "entry": 250202,
+      "map_id": 2859,
+      "cache_sha256": "e4ea66983969f4b3fc97fbdc43352c3ee8326e1f477bee71618efde307c5f643",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 2309
+      }
+    },
+    {
+      "entry": 253571,
+      "map_id": 2859,
+      "cache_sha256": "b827d2eae20eecf38856f2208758d37641303a9d7820a3ede046452c7156fe96",
+      "projection_policy": "FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Own pinned Blinding MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor, Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+        "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8",
+        "source_line": 2333
+      }
+    }
+  ],
+  "surface_sha256": "3ba59a53acaaa406e95a2f2ab413861fdfc37085a215bc04760f9872651a88ad",
+  "surface_proof": {
+    "path": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/blinding-trash-surface-preflight.json",
+    "sha256": "26007424ef339bb746501ece6ca1846d7fc5bd7e5f1422a9719b6afbf4900556",
+    "full_stream_sha256": "22362126b0281dd8513f1095681f71f5507b2368e53f2456777a5af3594c603e",
+    "full_polygon_count": 662414
+  },
+  "nav_files_sha256": {
+    "31_28.nav": "0622d29c88145627ba1bedefb6fe3ce071a710a0e8181a26d14d0e300e934974",
+    "31_29.nav": "dae5c57d4e455e48993f1a0597d1f6427fc665a5caa076e8952765d43781342e",
+    "27_28.nav": "5929a879972fc771e3c8afc95f0e861c34b57dd6863de6bb2172e4d4d030cb23",
+    "30_30.nav": "a0073a9bd9decd069c1787549b969e323761409fc82f5d9a2d1f961f543fbc6f",
+    "31_30.nav": "f85c3cec3338a2bbaa7f9de7c4c77c0930d319d4684cb167729399baae55cf80",
+    "30_28.nav": "eec1472253298d17564b50d3d5c3bf166f6917fe3ff7b6e840a762a58d91ba07",
+    "29_28.nav": "f29e34470b5eb716cb438fdd5b51c18c30d74ab54b8e022c953ebe761704e794",
+    "28_29.nav": "2c0cbb94c17d37e11b81937555c09d333b17f3f3f1eaacd2b2af6e06018a3915",
+    "28_28.nav": "bc945aa77a83ee47ce4e6e32afc263bcef2562f80d6c46f592cd062a6340f266",
+    "27_29.nav": "da3f294ffe4c412d6c077c9d33f9488189c77b409ba789b47c7e9fa9f1ed57a1",
+    "28_30.nav": "6abb89175c5c1166c34ae3b1ecaa85dc1b34a3f302a6dcd6c343007ee17d6c9c",
+    "29_30.nav": "905ab37b3514d7bc0e722fabed561bbc63a474140fd0b6894c751de784d39278",
+    "27_30.nav": "cb33b7dca7f35de20609811e2846112f0ab4ed2a980497ffbe24a9f5baca032c",
+    "30_29.nav": "a19ee98a043101048c32571fcb3d0cf4d24f516739e92f06b867e331c0b1acbd",
+    "29_29.nav": "59e81376d0a8e05ef8732feb854a312291a49689def4af7a4eaf4efe44b1c28c"
+  },
+  "density_policy": "FOLLOWER_TRASH_DENSITY_FROM_MDT_COUNT",
+  "density_source": {
+    "policy": "FOLLOWER_TRASH_DENSITY_FROM_MDT_COUNT",
+    "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+    "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/TheBlindingVale.lua",
+    "sha256": "02098356207ab885f916298103fa0c6c7f4f284d146f925f2fd2d2a7453a30b8"
+  },
+  "supersedes": {
+    "receipt": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/blinding-trash-packet-2/receipt.json",
+    "receipt_sha256": "467075dd2b06fdbf2244144e9583161f75cb31395ba6a0c1a50c21a032af7767"
+  }
+}

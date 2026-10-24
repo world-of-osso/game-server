@@ -69,6 +69,149 @@
 
 [Hit classification](systems/auras.md#hit-positivity-independent-of-factions--2026-10-23): test-only6d5d7026a genuine1PASS/1FAIL10.43s, native16166 harmful proc absent against attackable neutral faction7 after actual damage; friendly2061→36483 control passes. Spell_cast now uses TC damage/heal/landed-effect positivity, not faction hostility; GREEN pending, no proc import or parity certification.
 
+## 2026-10-23 — Uldaman native corridor inputs and frozen pulls
+
+[Native profile](investigations/follower-data.md#uldaman-frozen-input-assembly--2026-10-23):generic map-data dispatch99cf33f53 passes2tests; unchanged native capture1GREEN/13.67s retains227GUIDs/exact native f32XYZ, seed0/default five70party,140eligible/87ineligible. Native-sphere freezer emits112pulls/74boss-path nodes, preserving all7bosses and5unreachable source poses. Post-master5b30 gates at8239a0e23:dispatch2GREEN/native capture1GREEN10.89s byte-identical/all10data-policy-Azure testsGREEN0.066s; scoped server-bin/nav-examples checks and formattingGREEN/zero warnings. Final source/nav/output receipt closes data gaps only; no healer/canonical edits or gameplay-clear claim.
+
+## 2026-10-23 — Uldaman independent source-code gates
+
+[Staged input assembly](investigations/follower-data.md#uldaman-frozen-input-assembly--2026-10-23):e45b4ced3 parser2GREEN after readability split, scoped nav/examplescheck23.70s/zero warnings and formatGREEN, 74-node progression continuity/encounter-order acceptance1GREEN/0.005s. Existing227pose proof and immutable24,976pair extraction retained at original revisions; no unchanged matrix rerun. Real14305 native eligibility/radius capture still blocks pull selection; no runtime/canonical change.
+
+## 2026-10-23 — Uldaman frozen input assembly
+
+[Partial data packet](investigations/follower-data.md#uldaman-frozen-input-assembly--2026-10-23):missing-artifactRED2/0.001s→227nativeGUID/formation/f32 contractGREEN1/0.049s; offline resident-nav exporter parser2GREEN/build0.94s. All24,976pairs retained,17,663positivewalks→553MSF/four-neighbour edges;74-node predefined boss progression assembled. Five unreachable native nodes not relocated/classified by faction. Empty pull route remains explicitly blocked on14305 real native corridor inputs; no runtime/canonical changes or full-ready claim.
+
+## 2026-10-23 — Uldaman native endpoint qualification
+
+[Read-only source/nav proof](investigations/follower-data.md#uldaman-native-ordered-endpoint-qualification--2026-10-23):5authenticated encounters/7native bosses/4NPCpatrol paths41nodes preserved, actual runtime-addon namespaces observed. Approved capacityADD navigation-only examples build34.14s/exit0/no warnings;9exact source ordered corridors complete0.59s/all9nav hashes unchanged. All3dwarves retained/no invented points. Frozen party profile and simulator2451 support remain named gaps; no runtime/SQL/canonical changes.
+
+## 2026-10-23 — Coverage reconciliation / native Rak'tul
+
+[Reconciled coverage](investigations/follower-data.md#coverage-reconciliation-and-native-raktul-precedence--2026-10-23):preserved exact predecessor pair/10SQL checks, appended seven script/nav/runnable/source artifact checks;27maps/98encounters/878derivedtrash retained. NativeRak'tul11000391/runtime31000391 must not duplicate; Maisara onlyVordaza unplaced. Khajin58ce397a1 landed; CandleKingck985 failed onSkarmorak regression/fixing14745. NextUldaman native route-source qualification is read-only, patrols notparty routes.
+
+## 2026-10-23 — Earlier main-MDT / direct Wowhead source gap
+
+[Bounded source pass](investigations/follower-data.md#earlier-main-mdt-history-and-direct-wowhead-source-gap--2026-10-23):16immutable snapshots/496seconds, no qualified clone. Native texture labels found, but fixed840×555 is not a proved historical art inverse; renderer tile width/4+5 retained as source limitation, no alternate normalization adopted. Followed standing Wowhead path:84body pins unchanged/genuine empty mappers, plus newly fetched own213932also empty. All4maps remain source-blocked/noXY/noSQL/no aliases/tolerance changes/canonical writes.
+
+## 2026-10-23 — Pinned Legacy history / 27-map coverage
+
+[History and coverage](investigations/follower-data.md#pinned-legacy-history-and-27-map-coverage--2026-10-23):27difficulty205 maps/878qualified trash poses independently match publication; per-map runnable gate separates missing components from unproved ones. Official Legacyc6 ancestry14file revisions has byte-identical zone/frame/clone data; prior3map rejection proofs retained, Dawn2anchors1140.671/473.526yd also reject. Four named chain gaps/noSQL; no aliases/tolerance changes/canonical writes. Script baseline6c00e0df1; four owner13106 component gaps and unapproved drops explicit.
+
+## 2026-10-22 — Emberdawn source-selected single Z / no admission
+
+[Emberdawn source-floor](investigations/follower-data.md#windrunner-emberdawn-source-floor-placement--2026-10-22):unique231606/JEC5764/Journal2655, all4assigned groups checked, group74248up90.026/90.229 selects90.35608/rejects87.95608. Lead allows hashed consensus-qualified single candidate without entrance; actual old gateRED→source/raw-single2GREEN0.533s and missingbossRED→actual-copy+SQL2GREEN0.014s at7ce001c68. Fresh-copy fourINSERTs/replay3×, native0CT0/ownmods/model, factiononly; no entrance/route claim, other identities unresolved.
+
+## 2026-10-22 — Legacy source gaps / Gutshot encounter-add exclusion
+
+[Legacy trash audit](investigations/follower-data.md#legacy-trash-source-qualification--2026-10-22):117exact own pages/one observed hyena point. Lead held Bracken packet; authenticated JournalSection24719+native SpellEffect384827/28/Misc194745+LittleWigs2777a9d confirm Gutshot summoned add. Excluded static194745 with retained proof/marker gap: actual-markerRED1→zero static points1GREEN0.837s at8280f2746. Historical four-row packet is NEVER_PUBLISH; geometry/native/replay proof did not establish trash classification. Nokhud34/Nelt19/Halls16/Dawn15 pages all genuine empty mappers; no static trash qualifies. Next Windrunner/Xenas bosses first, then trash, no identity/floor relaxation. Lead also confirmed Murder128spawns/23templates/65models PUBLISHED/replayidentical.
+
+## 2026-10-22 — Murder density packet qualified
+
+[Murder marker population](investigations/follower-data.md#murder-individual-marker-density-packet--2026-10-22):128actual poses/24own native types/92per-type shortfall, fresh-copy216INSERTs/replay3×. ActualmissingRED→whole128/native/density1GREEN0.284s atac5226092; SQLowner/pose control passed separately. Real zone-15 absentAreaTable StopIteration→explicit source gap3GREEN1.909s at74fd; no guessed frame. Native255050 template/boss234648binding preserved; no groups/entrance/routes/canonical writes.
+
+## 2026-10-22 — Altar own-marker trash published
+
+[Altar density packet](investigations/follower-data.md#altar-individual-marker-density-packet--2026-10-22):49 actual observed single-Z spawns/12native templates/12models, per-type clone cap leaves108shortfall from157budget. Actual49missing RED→whole49/native/density/gap plus SQLownership/pose2GREEN0.305s at71ec9669c; fresh canonical-copy replay3× and current artifact hashes verified. Lead confirmed publication/replay identical; no groups/entrance/routes/canonical writes by producer.
+
+## 2026-10-22 — Muro placement / native Nekraxx binding-only packet
+
+[Maisara duo](investigations/follower-data.md#muro-placement-and-native-nekraxx-binding-only--2026-10-22): actual2missing RED0.007s→source2GREEN0.204s/actual-copy2GREEN0.019s atce8bc6ece. Fresh-copy5stable rows/replay3×: only Muro gains spawn/template/model; authored Nekraxx runtime31000176 pose/masks/Verified66431 remain unchanged, binding-only. Both native0CT5071/faction16/class4/health27 retained; independent rounded page markers and precise journalXY recorded separately. Null entrance/named gap/no route query; lead confirmed5inserts published and canonical sqldiff identical to replayed copy.
+
+## 2026-10-22 — Ikuzz packet with explicit entrance gap
+
+[Ikuzz source placement](investigations/follower-data.md#midnight-source-placement-without-admission--2026-10-22): actual missing-four/no-entrance/empty-Lua RED→source2GREEN2.436s ate6da24f06; fresh-copy4rows/replay3× and actual-copy2GREEN0.014s at775c11029. NativeCT0/modifiers/class/model unchanged, mapCT separate, faction-only hostile-react donor. Unique72.491532 support; null entrance/named admission gap/no route query. Lead confirmed4inserts published/integrityOK, no entrance or route; three other single-Z actors lack hostile reaction source, not defaulted.
+
+## 2026-10-22 — Midnight pre-packet identity/placement census
+
+[28-encounter table](../handoffs/midnight-primary-placement-census.md): authenticated journalXY/all53actors/exactTDB matches,33approved-fetcher NPCpages, all8navexports decoded andLOS inventory. Focused32actor joins19unique/3ambiguous/10missing;11single baked candidates/16multilevel/1unsupported. Literal model/name drift, incomplete CDI authentication, shared markers and absent interior admissions retained; no packets/scripts/canonicalwrites.
+
+## 2026-10-22 — Remaining Wowhead entrances and actors audited
+
+[Wowhead source boundaries](investigations/follower-data.md#remaining-wowhead-source-audit--2026-10-22): approved ten-second fetcher caches eight zones/eight linked dungeon guides/two Portal NPCs. No interior entrance coordinates: guide pins resolve outside requested instances, friendly Portal NPC mappers empty, unrelated portal-listview locations rejected. Eight remaining NPC markers retain known individual-source/floor/nav gaps; no new placement or archived TC SQL download.
+
+## 2026-10-22 — Anub-only terrain project floor qualification
+
+[Anub](investigations/follower-data.md#anub-authored-terrain-project-selection--2026-10-22): actual missing-primary/source RED→source6GREEN0.612s/actual-copy2GREEN0.012s atf6f7982c3. Unique non-hole authored125.175820 fan/all345 covering WMO groups select baked124.991899 within1yd; project choice, not TC spawn-Z. Native CT0/modifiers/model retained; fresh-copy4rows/replay3×, staging copies removed. Lead confirmed4inserts published/integrityOK and route relay; other-actor floor gaps retained.
+
+## 2026-10-22 — Historical Ruby MDT source rejected
+
+[Historical calibration](investigations/follower-data.md#ruby-historical-mdt-calibration-rejected--2026-10-22): approved read-only official cb3c6cd source pin/file hash, four unique native upper-floor anchors; every three-training/heldout fit exceeds10.55yd. No extrapolated placement, discarded anchor, invented sublevel or change to current MDT checkouts. Individual-source gaps retained.
+
+## 2026-10-22 — Swampface source room packet
+
+[Swampface](investigations/follower-data.md#swampface-native-room-and-regional-tuning--2026-10-22): actual missing-primary RED→source2GREEN0.078s/actual-copy2GREEN0.017s at33932c243. Fresh-copy4stable rows/replay3×; native CT0/modifiers/runtime model124283 retained, journal115575 separate, map CT provenance only. Approved20yd anchors at13.34/19.02yd plus third corroboration select335.20258. Staging copies deleted; lead confirmed4inserts published/integrityOK and route relay.
+
+## 2026-10-22 — CT0 native map tuning and Gorren source floor
+
+[Native map tuning](investigations/follower-data.md#native-map-difficulty-tuning-for-ct0--2026-10-22): TC map-CT selection preserves native CT0/modifiers, records authenticated MapDifficulty ID/CT separately; seven-actor RED→source3GREEN0.081s. Gorren assigned-group upward consensus qualifies142.126492; actual missing-primary RED→fresh-copy2GREEN0.011s/replay3×. Lead confirmed packet4rows published/integrityOK; route gap relayed. Existing runtime regional scaling already implements this rule; no fresh runtime proof or dungeon completion claimed.
+
+## 2026-10-22 — Initial respawn admission packet qualification
+
+[Project admissions](investigations/follower-data.md#initial-respawn-poi-project-admissions--2026-10-22):db89ce7cc source2GREEN0.193s and actual-copy2GREEN0.042s; fresh-copy safeLoc81002649/81002669 packet replays3× exactly, all unrelated rows preserved. Exact POI coordinates/first-trash facing, uniqueness/unconditional/auth controls, native portal gaps and12.964433..50.685356yd calibration retained. Accepted staging baseline deleted; lead confirmed publication2inserts/integrityOK. No captured native entrance or dungeon-completion claim.
+
+## 2026-10-22 — Initial respawn project-admission policy
+
+[Project admissions](investigations/follower-data.md#initial-respawn-poi-project-admissions--2026-10-22): approved City2669/POI8072 and Priory2649/8073 only, unique/unconditional, exact native POI coordinates plus sourced-trash facing. Native portal provenance gaps and13–51yd calibration finding retained; conditional checkpoints rejected. Actual missing-two RED0.028s; GREEN pending. Lead confirmed Avanoxx/Taah8rows published/integrityOK.
+
+## 2026-10-22 — Avanoxx and Taah'bat packet qualification
+
+[TWW source packets](investigations/follower-data.md#remaining-positive-scaling-tww-placement-sources--2026-10-22):68d67b7dc assignment/journal/anchor5GREEN0.572s;207d6b03e actual-copy Avanoxx2GREEN0.021s and Taah'bat2GREEN0.017s. Each fresh-copy4-row packet replays3× exactly; native0/CT2977 Avanoxx137.09528 has complete entrance route, native1/CT2718 Taah'bat998.269351 remains incomplete. Raw67assignments/native lowestOrderIndex, instance12yd limit and unchanged A'wazj corroboration retained. Soul-Scribe scaling gap remains; publication pending. Lead confirmed Cinderbrew8rows published/integrityOK.
+
+## 2026-10-22 — Avanoxx equivalent bounds and Taah'bat anchors
+
+[TWW source packets](investigations/follower-data.md#remaining-positive-scaling-tww-placement-sources--2026-10-22): actual Avanoxx reader refused submillimeter assignment differences. Approved every-component0.001yd equivalence selects exact native lowestOrderIndex without averaging, retaining raw67rows/spread/ID. Taah'bat alone permits12yd two-native-anchor support for998.269351; A'wazj corroborates, remains unmoved. New proofs pending.
+
+## 2026-10-22 — Cinderbrew packet qualification
+
+[TWW source packets](investigations/follower-data.md#remaining-positive-scaling-tww-placement-sources--2026-10-22):edfb882f1 fresh-copy8row I'pa/Goldie packet/replay3× exact, native0 CT2718 and Goldie faction14 retained; actual-copy stats/models/poses/provenance/SQL owner+collision2GREEN0.023s. Goldie floor group69970 upward consensus excludes roof after90-degree source transform. I'pa route passes, Goldie incomplete; publication pending.
+
+## 2026-10-22 — Remaining positive-scaling TWW sources
+
+[Source manifests](investigations/follower-data.md#remaining-positive-scaling-tww-placement-sources--2026-10-22): Avanoxx0/CT2977, I'pa+Goldie0/CT2718 (native Goldie faction14), Taah'bat1/CT2718; own native stats/models, no donor scaling. Existing A'wazj preserved, Soul-ScribeCT0 remains named gap. Three actual missing-placement REDs0.031s; packet qualification pending. Lead confirmed Darkflame12rows published/integrityOK.
+
+## 2026-10-22 — Darkflame packet qualification
+
+[Darkflame sources](investigations/follower-data.md#darkflame-native-primary-sources--2026-10-22):55d981923 scoped consensus/8yd-native-anchor2GREEN0.268s;8473befb0 actual-copy native stats/models/factions/poses/source1+0 rows/helper exclusion/SQL owner+posecollision2GREEN0.031s. Fresh canonical-copy12-row packet/replay3× exact; sourceDifficulty1/0/0 retained, no synthetic1. Waxbeard route passes, Blazikon and Darkness incomplete. Prepared, publication pending; no dungeon clear.
+
+## 2026-10-22 — Darkflame floor consensus and bounded anchors
+
+[Darkflame sources](investigations/follower-data.md#darkflame-native-primary-sources--2026-10-22): initial packet refused ambiguous floors; source-consensus RED showed old reader returned all levels. Approved all-upward-hit consensus selects Darkness59.8; Blazikon alone uses two native room anchors within8yd for56.683550, not a global limit change. Waxbeard unique reachable86.600006. New proof pending.
+
+## 2026-10-22 — Darkflame source manifests
+
+[Darkflame sources](investigations/follower-data.md#darkflame-native-primary-sources--2026-10-22): actual missing-primary RED; pinned journal/Lua sources for Blazikon1, Darkness0 and Waxbeard0; Massive Candle helper excluded, existing Candle King preserved. Native-chain fixture1GREEN0.010s ataca4f122e proves source0 import/CT0 refusal/no synthetic1. Packet pending.
+
+## 2026-10-22 — Native difficulty-chain source selection
+
+[Source difficulty chain](investigations/follower-data.md#native-source-difficulty-chain--2026-10-22): approved source0 selection through existing TC resolver, explicit source row receipts, no synthetic Normal1 records. Actual Waxbeard native0/CT2718 fixture reproduced strict-Normal1 refusal; CT0 is an explicit scaling gap. GREEN pending. Lead confirmed Nokhud12 + Ruby4 rows published/integrityOK and route relay.
+
+## 2026-10-22 — Erkhart packet proof
+
+[Ruby native faction](investigations/follower-data.md#ruby-erkhart-native-faction--2026-10-22):9b36fb602 fresh-copy4row packet/replay3× exact, native faction16 without donors;6714e0961 actual-copy native stats/model/faction/precise pose/source-finding/SQL owner+collision2GREEN0.022s. Journal-vs-Wowhead30.438463yd finding preserved; Kyrakka unsourced, Erkhart route incomplete. Prepared only, not dungeon completion.
+
+## 2026-10-22 — Erkhart native faction precedes donation
+
+[Ruby native faction](investigations/follower-data.md#ruby-erkhart-native-faction--2026-10-22): actual missing-placement RED, then producer failed requiring a donor for native faction16. Preparation now preserves positive source faction without donor input or receipt; absent-faction path unchanged. Authenticated journal coordinates retain Wowhead disagreement finding; Kyrakka remains unsourced. Packet proof pending.
+
+## 2026-10-22 — Nokhud partial packet and no-co-location boundary
+
+[Nokhud journal identity](investigations/follower-data.md#nokhud-journal-uimap-identity--2026-10-22): source8GREEN0.540s;163522cf4 actual-copy Balakar/Maruuk/Granyth2GREEN0.029s with12stable-key inserts/replay3× exact. Native stats/models retained; all three entrance routes remain incomplete. Tempest has no support at sourceXY; Teera and Kyrakka require individual source points, not fabricated shared-marker co-location. Lead confirmed Halls/Vexamus16inserts published/integrityOK; Nokhud publication pending.
+
+## 2026-10-22 — Nokhud explicit journal UiMap
+
+[Nokhud journal identity](investigations/follower-data.md#nokhud-journal-uimap-identity--2026-10-22): actual Balakar comparison failed because exact journal UiMap2093 lacks UiMapGroupMember; comparison now uses the sourced UiMap bounds with no invented floor. Missing four-primary data RED retained; next packet pending.
+
+## 2026-10-22 — Halls partial and Vexamus placement packets
+
+[Source-floor selection](investigations/follower-data.md#halls-and-vexamus-source-floor-selection--2026-10-22):0067db4a7 source/identity/anchor9GREEN0.598s; fresh `halls-packet-3`12rows/three primaries and `vexamus-packet-3`4rows/one primary replay3× exactly. fc4656d0c actual-copy Halls2GREEN0.045s + Vexamus3GREEN0.035s cover precise journal poses, native stats/models, native room floor, later script owner and conflicting-pose SQL refusal. Primal remains unresolved; Irideus route passes, three other routes fail. Prepared only; no canonical publication or dungeon-completion claim.
+
+## 2026-10-22 — Journal coordinate precedence and explicit Lua primary identity
+
+[Source-floor selection](investigations/follower-data.md#halls-and-vexamus-source-floor-selection--2026-10-22): authenticated JournalEncounter/UiMap XY precedes cached Wowhead, with disagreement findings over5yd. Pinned Lua entry/encounter plus unique journal actor decouples native runtime models from journal displays; no model substitution. Actual old binder refused Goliath/Vexamus; precise-marker RED demonstrated rounded-Wowhead selection. New packet GREEN remains pending.
+
+## 2026-10-22 — Halls and Vexamus source-floor policies
+
+[Source-floor selection](investigations/follower-data.md#halls-and-vexamus-source-floor-selection--2026-10-22): approved unique DB2 floor-group upward triangle matching and Vexamus-only two-native-anchor selection; original ambiguous packet attempts refused SQL, Primal remains unresolved. Source/packet GREEN pending.
 ## 2026-10-23 — Binary probe withdraws inherited-run-target oracle
 
 Pinned SimC76f8118 selects timed adds on a run row but its child Mortal Strike still waits for main health<80% (first60.056s on main, not6s on adds). `player.cpp2467–2476` only changes active lists. Earlier24/24GREEN included a wrong inherited-child oracle; packet withdrawn before landing per lead. Corrected23PASS/1 genuineRED at2d6a66259 →24/24GREEN atad720fc3c (28.61s compile/0compiler warnings/0ignored): shared target inheritance state deleted; ordinary target min/max and non-returning runs retained. [Proof ledger](../handoffs/shared-run-target-proof-ledger.md).
@@ -2731,6 +2874,22 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 
 # Wiki Log
 
+- 2026-10-22: Blinding density correction588guarded own-row DELETEs keeps215 complete old rows/GUIDs; old-packet ownership2GREEN/full correction1GREEN/replay3×, independent whole selection oracle, no template/model/group/Magisters changes. Voidscar196 publication confirmed. [Evidence](investigations/follower-data.md#blinding-stable-guid-density-correction--2026-10-22).
+
+- 2026-10-22: MDT clone-count density policy selects196 Voidscar observed points from5884qualified,13shortfall;254INSERTs/replay3×, full196+SQL2GREEN and count/selection/deletion/faction13GREEN. Magisters exempt; separate Blinding stable-GUID cleanup remains next. [Evidence](investigations/follower-data.md#mdt-count-density-and-voidscar-population--2026-10-22).
+
+- 2026-10-22: Blinding direct-marker packet803spawns/16native types/838INSERTs; exact singleton-frame provenance,3738floor gaps, source2GREEN/whole803+SQL2GREEN/replay3×. All5885point candidate equivalence retained while test time135.100→1.901s with spatial/frame reuse. Magisters publication confirmed. [Evidence](investigations/follower-data.md#blinding-vale-singleton-frame-trash-packet--2026-10-22).
+
+- 2026-10-22: Magisters direct-marker trash packet161spawns/nine own native types,179inserts+one exact guarded Brightscale0→16 UPDATE; source6GREEN/update3GREEN/whole161 acceptance+SQL owner/pose controls, fresh-copy replay3×, no group/admission/route claim. [Evidence](investigations/follower-data.md#magisters-individual-trash-marker-packet--2026-10-22).
+
+- 2026-10-22:27map trash census, five rejected zero-parameter custom-map chains, approved direct individual Wowhead markers plus native0 MDT-enemy hostility; no pack invention, producer/source-floor qualification pending. Trio boss packets lead-confirmed published15rows. [Evidence](investigations/follower-data.md#follower-trash-census-and-rejected-custom-map-chains--2026-10-22).
+
+- 2026-10-22: Remaining eight exact actor source/nav-state recheck; no native spawn/summon positions, six unchanged nav hashes, six pinned TC script blobs yield no new target positions. Header identity differences retained without aliasing. [Evidence](investigations/follower-data.md#remaining-eight-placement-gaps-rechecked--2026-10-22).
+
+- 2026-10-22: Ordered Midnight entrance audit retains all eight unsourced-interior gaps after native teleport/exit rows, authenticated AreaTrigger/UiMapLink/JournalInstance and pinned approved Wowhead caches. No route pairs invented. [Evidence](investigations/follower-data.md#midnight-ordered-entrance-source-audit--2026-10-22).
+
+- 2026-10-22: Journal-bound hostility policy + three exact unique single-Z packets; source3GREEN, fresh-copy replay3× and actual-copy acceptance, native models/stats retained, no admission/route claim. [Evidence](investigations/follower-data.md#journal-bound-hostility-project-admission--2026-10-22).
+
 -2026-10-19: Impending Victory202168→202166 then own32216 removal: five native qualifications4+1 first, pushed ignored69af7bb76→fiveRED/one control14.11s; minimal existing AfterCast/FULL-trigger/remove consumerf041d6b70→fresh ignored sixGREEN13.06s/0warnings before enabling; initial eleven-case composite then masterdfdd71578 merged d1af4b8a7→fresh targeted elevenGREEN14.64s/0warnings; lead gate pending. VICTORIOUS_KILL_PRODUCER_UNIMPLEMENTED/direct-native32216 removal-only boundary preserved. See [spell casting](systems/spell-casting.md#impending-victory-consequence--2026-10-19).
 -2026-10-19: Invigorating Fury184364+383468→385174 qualified native payload/8vs11s/defense/recovery/actual Warrior cast preservation3PASS; pushed ignored788ff0e68→3RED/3controls; existing AfterCast/limited helper consumer4a5aaa555→fresh ignored6GREEN25.43s/0warnings; enabled after GREEN, retained3qualification forms nine-case composite; lead integration pending. See [spell casting](systems/spell-casting.md#invigorating-fury-consequence--2026-10-19).
 
@@ -4199,10 +4358,24 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 
 [Six boss placements](investigations/follower-data.md#brackenhide-source-floors-and-route-gaps--2026-10-22): exact source marker/floor transforms and own TDB stats; authored WMO group bounds disambiguate Wratheye from outdoor roofs without supplying Z. Actual missing-six RED→six-primary GREEN, replay3×; three route gaps remain separate. No unsupported War-band offsets, canonical writes or dungeon-clear claim.
 
+- 2026-10-22: Xenas Nysarra pinned-MDT identity admission, conflicting254227 budget retained, four-row private packet/source6GREEN+actual-copy2GREEN; missing entrance/Kasreth/Lothraxion gaps remain.
+
+- 2026-10-22: Windrunner exact-name preview identity, duo bounds +Kroluk/Heart source floors; three private packets/native-model/SQL proof, preserved published namespace receipts; Nysarra publication confirmed.
+
+- 2026-10-22: Windrunner129 MDT-count trash packet after five published bosses; Flaming Updraft excluded with missing spell edge explicit, source/actual-row proof; Xenas1351 foreign markers rejected/noSQL.
+
+- 2026-10-22: Coil259446/Taz238887 preview identity +single-Z private packets, current post-Windrunner129 base, preserved prior populations and SQL proof; Windrunner129 publication confirmed.
+
+- 2026-10-22: Xenas Kasreth/Loth bounded native controller/summon/target-position recheck0sources, exactChiefname0, pinnedTCpaths0; navhashesunchanged/no redundant geometry run; source gaps retained.
+
+- 2026-10-22: Nine preview-floor source qualifications: Zaen consensus/private packet2GREEN; seven zero WMO assignments, Degentrius1yd consensus failure/bounds decision pending; Coil/Taz publication confirmed.
+
+- 2026-10-22: Four empty-source maps current native/published census and zone-page audit;2579 excluded205set; Teera/Rasha alternate IDs retained conflicts. Approved Legacyc6 zero-parameter3-map chain rejects every frame/noSQL; Zaen publication/Degentrius gap decision recorded.
 - 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22): native child effectiveness/removal/Echo GREEN; real long-flight HIT-timing and three-target Chain RED. Per-hit correction and native45297 mapping committed; GREEN pending.
 
 - 2026-10-22: [Elemental Overload](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22) HIT/Chain correction5GREEN10.43s; actual StatsPlugin70samples2PASS9.38s on same executable. Three qualified tests enabled; fullAPL/resource/other-root gaps retained.
 
+- 2026-10-22: Requested27-map current-canonical source matrix and10 SQL/count checks; nativeRak'tul precedence corrected,878derived trash/19entrances, route semantics explicit; Uldaman route-source qualification chosen, not runtime implementation.
 - 2026-10-23: Native NPC starter-book runtime/exporter helper; Frenzy alias, absent TraitLoadout and Ret requested-spec REDs reproduced. Shared helper implemented; GREEN/990-source equality pending. See [follower data](investigations/follower-data.md#npc-native-starter-knowledge--2026-10-23).
 - 2026-10-23: [Native weapon AP](systems/character-stats.md#native-weapon-attack-power--2026-10-23): actual Tiger Palm91vs358–377 RED precedes generic raw-table weapon AP/attack-type/aura366 implementation; targeted4GREEN13.89s at4b9d2be73, zero compiler warnings; cases enabled afterward. Parent integration gate pending. White-hit AP/6 versus TC3.5 remains deferred and unchanged.
 
