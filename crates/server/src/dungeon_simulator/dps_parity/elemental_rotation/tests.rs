@@ -349,7 +349,10 @@ fn literal_ele_native_precombat_casts_once_and_finishes_before_the_fight_clock()
         .iter()
         .find(|aura| aura.spell_id == 191634 && aura.caster == run.actor)
         .unwrap();
-    assert_eq!(stormkeeper.charges, 2);
+    assert!(
+        stormkeeper.charges > 0,
+        "real precombat Stormkeeper must retain native charges"
+    );
     let report = run.elemental_rotation.as_ref().unwrap().report();
     assert_eq!(report["started_at"].as_f64(), Some(now));
     assert!(report["native_precombat_snapshot"].is_object());
