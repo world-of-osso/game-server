@@ -1,4 +1,4 @@
-//! Source-ordered variables/calls, SimC76f8118 variable.cpp and action.cpp4648–4689.
+//! Literal lists/targets: SimC76f8118 variable.cpp and action.cpp4648–4763,5362–5453.
 use super::{Action, ActionFacts, Expression, Facts, Variables};
 use std::collections::BTreeMap;
 
@@ -21,12 +21,26 @@ enum Body {
         assignment: Assignment,
     },
     Call(String),
+    Run(String),
+}
+
+#[derive(Clone, Copy, Debug)]
+enum TargetMode {
+    Min,
+    Max,
+}
+
+#[derive(Debug)]
+struct TargetSelector {
+    mode: TargetMode,
+    expression: Expression,
 }
 
 #[derive(Debug)]
 struct Rule {
     action: Action,
     condition: Option<Expression>,
+    target: Option<TargetSelector>,
     body: Body,
 }
 
@@ -66,10 +80,10 @@ impl Program {
     fn validate_calls(&self) -> Result<(), String> {
         for rules in self.lists.values() {
             for rule in rules {
-                if let Body::Call(name) = &rule.body
+                if let Body::Call(name) | Body::Run(name) = &rule.body
                     && !self.lists.contains_key(name)
                 {
-                    return Err(format!("unknown APL call_action_list {name}"));
+                    return Err(format!("unknown APL {} {name}", rule.action.name));
                 }
             }
         }
@@ -125,28 +139,26 @@ impl Program {
         selection: &mut Selection<'_>,
     ) -> Result<Option<Action>, String> {
         for rule in rules {
-            let bound = BoundFacts {
-                facts: selection.facts,
-                variables: selection.variables,
-                action: &rule.action,
+            let Some(action) = bind_target(rule, selection)? else {
+                continue;
             };
-            if let Some(condition) = &rule.condition
-                && condition.evaluate(&bound)? == 0.0
-            {
+            if !condition_passes(rule, &action, selection)? {
                 continue;
             }
             match &rule.body {
                 Body::Variable { name, assignment } => {
-                    self.assign(name, assignment, &rule.action, selection)?
+                    self.assign(name, assignment, &action, selection)?
                 }
                 Body::Call(name) => {
                     if let Some(action) = self.select_list(name, selection)? {
                         return Ok(Some(action));
                     }
                 }
-                Body::Action if (selection.usable)(&rule.action)? => {
-                    return Ok(Some(rule.action.clone()));
-                }
+                // action.cpp4749–4763 switches lists without resuming this caller.
+                // player.cpp2467–2476 changes no child targets: the run's selector
+                // belongs only to that control row, not its child actions.
+                Body::Run(name) => return self.select_list(name, selection),
+                Body::Action if (selection.usable)(&action)? => return Ok(Some(action)),
                 Body::Action => {}
             }
         }
@@ -194,6 +206,71 @@ struct Selection<'a> {
     variables: &'a mut Variables,
     usable: &'a mut dyn FnMut(&Action) -> Result<bool, String>,
     stack: Vec<String>,
+}
+
+fn condition_passes(
+    rule: &Rule,
+    action: &Action,
+    selection: &Selection<'_>,
+) -> Result<bool, String> {
+    let Some(condition) = &rule.condition else {
+        return Ok(true);
+    };
+    evaluate_for(condition, action, selection).map(|value| value != 0.0)
+}
+
+fn evaluate_for(
+    expression: &Expression,
+    action: &Action,
+    selection: &Selection<'_>,
+) -> Result<f64, String> {
+    expression.evaluate(&BoundFacts {
+        facts: selection.facts,
+        variables: selection.variables,
+        action,
+    })
+}
+
+/// action.cpp2435–2468,2619: target_if chooses before the ordinary if expression.
+/// Candidate order/eligibility belongs to native adapters, never the interpreter.
+fn bind_target(rule: &Rule, selection: &Selection<'_>) -> Result<Option<Action>, String> {
+    let mut action = rule.action.clone();
+    let Some(selector) = &rule.target else {
+        return Ok(Some(action));
+    };
+    let target = choose_target(selector, &mut action, selection)?;
+    Ok(target.map(|target| {
+        action.target = Some(target);
+        action
+    }))
+}
+
+fn choose_target(
+    selector: &TargetSelector,
+    action: &mut Action,
+    selection: &Selection<'_>,
+) -> Result<Option<u64>, String> {
+    let candidates = selection.facts.target_ids(action)?;
+    let single = candidates.len() == 1;
+    let mut best_value = match selector.mode {
+        TargetMode::Min => f64::INFINITY,
+        TargetMode::Max => f64::NEG_INFINITY,
+    };
+    let mut best_target = None;
+    for target in candidates {
+        action.target = Some(target);
+        let value = evaluate_for(&selector.expression, action, selection)?;
+        let preferred = match selector.mode {
+            TargetMode::Min => value < best_value,
+            TargetMode::Max => value > best_value,
+        };
+        // The single-target shortcut ignores score; binding still rejects unknown facts.
+        if single || preferred {
+            best_value = value;
+            best_target = Some(target);
+        }
+    }
+    Ok(best_target)
 }
 
 struct BoundFacts<'a> {
@@ -254,8 +331,14 @@ fn parse_rule(literal: &str, defaults: &mut BTreeMap<String, f64>) -> Result<Rul
         .transpose()?;
     let action = Action {
         name: name.to_owned(),
+        target: None,
         options,
     };
+    let target = action
+        .options
+        .get("target_if")
+        .map(|literal| parse_target_selector(literal))
+        .transpose()?;
     let body = match name {
         "variable" => parse_variable(&action.options, defaults)?,
         "call_action_list" => {
@@ -264,12 +347,38 @@ fn parse_rule(literal: &str, defaults: &mut BTreeMap<String, f64>) -> Result<Rul
             }
             Body::Call(required_option(&action.options, "name")?)
         }
+        "run_action_list" => {
+            if action
+                .options
+                .keys()
+                .any(|key| !matches!(key.as_str(), "name" | "target_if"))
+            {
+                return Err("unsupported run_action_list option".into());
+            }
+            Body::Run(required_option(&action.options, "name")?)
+        }
         _ => Body::Action,
     };
     Ok(Rule {
         action,
         condition,
+        target,
         body,
+    })
+}
+
+fn parse_target_selector(literal: &str) -> Result<TargetSelector, String> {
+    let (mode, expression) = literal
+        .split_once(':')
+        .ok_or_else(|| format!("target_if requires min/max mode: {literal}"))?;
+    let mode = match mode {
+        "min" => TargetMode::Min,
+        "max" => TargetMode::Max,
+        _ => return Err(format!("unsupported target_if mode {mode}")),
+    };
+    Ok(TargetSelector {
+        mode,
+        expression: Expression::parse(expression)?,
     })
 }
 

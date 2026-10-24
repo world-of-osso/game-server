@@ -48,7 +48,7 @@ mod kokia;
 mod lost_dwarves;
 pub(crate) mod maraudon;
 mod melidrussa;
-pub(crate) mod model_reach;
+pub mod model_reach;
 pub mod movement;
 pub mod murder_row;
 pub(crate) mod nethekurse;

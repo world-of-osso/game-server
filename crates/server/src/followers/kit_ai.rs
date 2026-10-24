@@ -28,6 +28,13 @@ pub(super) fn update(
     party: &[Entity],
     enemy: Option<Entity>,
 ) -> bool {
+    #[cfg(any(test, feature = "test-support"))]
+    if world
+        .get::<crate::test_support::LiteralParityFixture>(unit)
+        .is_some()
+    {
+        return true;
+    }
     let level = world.get::<Level>(unit).map_or(0, |level| level.0);
     let mut entries: Vec<_> = world
         .get_resource::<FollowerCatalog>()

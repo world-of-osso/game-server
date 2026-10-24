@@ -21,6 +21,7 @@ pub mod positivity;
 #[cfg(test)]
 pub(crate) mod serverside_tests;
 mod trait_data;
+mod trait_effect_points;
 
 use std::path::Path;
 use std::time::Instant;
@@ -30,7 +31,7 @@ use rusqlite::Connection;
 use serde::Serialize;
 
 pub(crate) use class_data::MAX_LEVEL;
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) use class_data::load_class_spells;
 pub use class_data::{ClassInfo, ClassSpells, SpecInfo};
 pub use immunity::SpellImmunityDefinition;
@@ -40,10 +41,10 @@ pub use trait_data::{
     TraitNode, TraitNodeEntry, TraitNodeType, TraitTree,
 };
 
-#[cfg(not(test))]
-pub(crate) const WORLD_DB_PATH: &str = "data/world.db";
-#[cfg(test)]
-pub(crate) const WORLD_DB_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/world.db");
+#[cfg(not(any(test, feature = "test-support")))]
+pub const WORLD_DB_PATH: &str = "data/world.db";
+#[cfg(any(test, feature = "test-support"))]
+pub const WORLD_DB_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/world.db");
 
 /// One already matched charged spell modifier, retained by its launched cast.
 #[derive(Debug, Clone)]
@@ -71,7 +72,7 @@ pub struct SpellInfo {
     /// Runtime casting item's effective (squished) level, not a DB2 spell field.
     /// Kept on the per-cast clone through cast bars, missiles, and aura snapshots.
     #[serde(skip)]
-    pub(crate) cast_item_level: Option<u16>,
+    pub cast_item_level: Option<u16>,
     /// Source SPELLVALUE_AURA_STACK on this cast, retained through missile snapshots.
     #[serde(skip)]
     pub(crate) cast_aura_stacks: Option<u8>,
@@ -80,7 +81,7 @@ pub struct SpellInfo {
     pub(crate) cast_original_caster: Option<Entity>,
     /// Retail item actually used by this cast; delayed casts credit only on execution.
     #[serde(skip)]
-    pub(crate) cast_retail_item_id: Option<u32>,
+    pub cast_retail_item_id: Option<u32>,
     /// Per-cast ground point; preserved in queued/cast snapshots, never DB2 metadata.
     #[serde(skip)]
     pub(crate) cast_destination: Option<[f32; 3]>,
@@ -91,6 +92,9 @@ pub struct SpellInfo {
     /// CheckCast skips SpellHistory::IsReady; HandleCooldowns does no writes.
     #[serde(skip)]
     pub(crate) cast_ignore_cooldowns: bool,
+    /// Native Maelstrom launch helpers leave modifier-charge consumption to their parent.
+    #[serde(skip)]
+    pub(crate) cast_parent_owns_modifier_charges: bool,
     /// Successful-launch consumed modifiers (charges or scripted stacks).
     /// None means not yet snapshotted.
     #[serde(skip)]
@@ -379,9 +383,10 @@ pub struct EmpowerStage {
 /// Every spell in world.db, sorted by spell ID (binary-searched; a `HashMap`
 /// of 360-byte values costs ~40% more memory at this load factor).
 #[derive(Resource, Debug, Default)]
-#[cfg_attr(test, derive(Clone))]
+#[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
 pub struct SpellStore {
     spells: crate::catalog_data::CatalogData<Vec<crate::catalog_data::CatalogData<SpellInfo>>>,
+    trait_effect_points: crate::catalog_data::CatalogData<trait_effect_points::TraitEffectPoints>,
 }
 
 impl SpellInfo {
@@ -421,28 +426,51 @@ impl SpellInfo {
 
 impl SpellStore {
     fn from_spells(spells: Vec<SpellInfo>) -> Self {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         return Self {
             spells: spells.into_iter().map(Into::into).collect(),
+            trait_effect_points: Default::default(),
         };
-        #[cfg(not(test))]
-        Self { spells }
+        #[cfg(not(any(test, feature = "test-support")))]
+        Self {
+            spells,
+            trait_effect_points: Default::default(),
+        }
     }
 
-    #[cfg(test)]
-    pub(crate) fn fixture(mut spells: Vec<SpellInfo>) -> Self {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn fixture(mut spells: Vec<SpellInfo>) -> Self {
         spells.sort_by_key(|spell| spell.id);
         Self::from_spells(spells)
     }
 
+    /// Keep native trait curves when a harness scopes the spell records.
+    #[cfg(any(test, feature = "test-support"))]
+    pub(crate) fn fixture_from_catalog(spells: Vec<SpellInfo>, catalog: &Self) -> Self {
+        let mut store = Self::fixture(spells);
+        store.trait_effect_points = catalog.trait_effect_points.clone();
+        store
+    }
+
+    pub(crate) fn trait_base_points(
+        &self,
+        definition_id: u32,
+        rank: u32,
+        effect_index: u8,
+        value: f32,
+    ) -> f32 {
+        self.trait_effect_points
+            .apply(definition_id, rank, effect_index, value)
+    }
+
     /// Production's server-side loader against an independent prepared copy.
-    #[cfg(test)]
-    pub(crate) fn append_serverside(&mut self, conn: &Connection) -> rusqlite::Result<usize> {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn append_serverside(&mut self, conn: &Connection) -> rusqlite::Result<usize> {
         load::append_serverside_spells(conn, self)
     }
 
     /// Resolve an explicit ID or a unique exact name; ambiguous ranks require an ID.
-    pub(crate) fn resolve(&self, id: Option<u32>, name: &str) -> Option<&SpellInfo> {
+    pub fn resolve(&self, id: Option<u32>, name: &str) -> Option<&SpellInfo> {
         if let Some(id) = id {
             return self.get(id);
         }
@@ -506,9 +534,9 @@ fn fixture_spell_edits_and_insertions_leave_retained_and_sibling_stores_unchange
 
 /// Load every spell and the class spell lists from world.db.
 pub fn load_spell_data(conn: &Connection) -> rusqlite::Result<(SpellStore, ClassSpells)> {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     return crate::test_data::catalog_cache::load_connection(conn, || read_spell_data(conn));
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "test-support")))]
     read_spell_data(conn)
 }
 

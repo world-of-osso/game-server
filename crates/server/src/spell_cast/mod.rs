@@ -32,9 +32,13 @@ pub(crate) mod auto_repeat;
 #[cfg(test)]
 mod auto_shot_repeat_tests;
 #[cfg(test)]
-pub(crate) mod holy_metrics;
+mod hit_positivity_tests;
+#[cfg(any(test, feature = "test-support"))]
+pub mod holy_metrics;
 #[cfg(test)]
 mod holy_words_tests;
+#[cfg(test)]
+mod trait_effect_points_tests;
 pub(crate) use aura_spell_restrictions::check_target as check_target_aura_restrictions;
 #[cfg(test)]
 mod autoattack_range_tests;
@@ -104,7 +108,7 @@ mod critical_healing_tests;
 mod dead_cast_progress_tests;
 #[cfg(test)]
 mod dead_caster_channel_tests;
-pub(crate) mod disenchant;
+pub mod disenchant;
 #[cfg(test)]
 mod disenchant_tests;
 mod druid_transform;
@@ -164,6 +168,7 @@ mod dummy9_tests;
 mod dummy_tests;
 pub mod effects;
 pub(crate) mod efflorescence;
+mod elemental_resource;
 mod empower;
 #[cfg(test)]
 mod empower_input_tests;
@@ -179,7 +184,9 @@ mod fel_devastation_tests;
 mod fount_strength_tests;
 #[cfg(test)]
 mod full_trigger_dead_target_tests;
-pub(crate) mod guardian;
+#[cfg(test)]
+mod generic_empower_tests;
+pub mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 pub(crate) mod history_store;
@@ -189,10 +196,12 @@ mod impending_victory_tests;
 mod interruptibility;
 #[cfg(test)]
 mod invigorating_fury_tests;
-#[cfg(test)]
-pub(crate) mod native_apl;
+#[cfg(any(test, feature = "test-support"))]
+pub mod native_apl;
 #[cfg(test)]
 mod periodic_healing_taken_tests;
+#[cfg(test)]
+mod protection_producer_tests;
 mod sanctuary;
 pub(crate) use interruptibility::can_interrupt_cast;
 #[cfg(test)]
@@ -256,7 +265,7 @@ mod minimum_speed_tests;
 mod missiles;
 #[cfg(test)]
 mod npc_dodge_tests;
-pub(crate) mod open_lock;
+pub mod open_lock;
 #[cfg(test)]
 mod open_lock_tests;
 #[cfg(test)]
@@ -284,8 +293,8 @@ mod summon_at_tests;
 #[cfg(test)]
 mod summon_damage_tests;
 pub mod targets;
-#[cfg(test)]
-pub(crate) mod test_harness;
+#[cfg(any(test, feature = "test-support"))]
+pub mod test_harness;
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -308,10 +317,10 @@ use crate::interest::NetworkVisibility;
 use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
+pub use creature::{AiTarget, creature_cast};
 pub(crate) use creature::{
-    AiTarget, ai_spell_target, creature_cast, creature_cast_empowered,
-    creature_cast_ignoring_cooldowns, creature_cast_ignoring_in_progress,
-    creature_cast_interrupting_self,
+    ai_spell_target, creature_cast_empowered, creature_cast_ignoring_cooldowns,
+    creature_cast_ignoring_in_progress, creature_cast_interrupting_self,
 };
 use effects::{EffectCtx, UnhandledEffects};
 use targets::{Dest, Relation};
@@ -353,7 +362,7 @@ mod knockback;
 mod knockback_tests;
 mod school_costs;
 pub(crate) mod teleport;
-pub(crate) mod teleport_positions;
+pub mod teleport_positions;
 mod toy_coin;
 mod toy_foam_sword;
 pub(crate) mod toy_scripts;
@@ -369,7 +378,7 @@ pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         app.insert_resource(toy_requirements::fixture());
         app.add_plugins(crate::knockback::KnockbackPlugin);
         app.init_resource::<crate::group::GroupRegistry>()
@@ -495,7 +504,7 @@ pub enum CastFailure {
 }
 
 impl CastFailure {
-    pub(crate) fn to_contract(
+    pub fn to_contract(
         &self,
     ) -> Result<(CastFailReason, Option<String>), shared::protocol::InventoryError> {
         use CastFailReason as R;
@@ -694,7 +703,7 @@ pub struct SpellHistory {
 
 impl SpellHistory {
     /// Most recent successful action within an explicit policy group.
-    pub(crate) fn last_cast_in(&self, group: &[u32]) -> Option<u32> {
+    pub fn last_cast_in(&self, group: &[u32]) -> Option<u32> {
         group
             .iter()
             .filter_map(|spell| {
@@ -704,6 +713,14 @@ impl SpellHistory {
             })
             .max_by_key(|(_, order)| *order)
             .map(|(spell, _)| spell)
+    }
+
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn last_successful_cast(&self) -> Option<u32> {
+        self.successful_casts
+            .iter()
+            .max_by_key(|(_, order)| *order)
+            .map(|(&spell, _)| spell)
     }
 
     fn record_successful_cast(&mut self, spell: u32) {
@@ -724,7 +741,7 @@ impl SpellHistory {
         }
     }
 
-    pub(crate) fn on_cooldown(&self, spell: &SpellInfo, now: f64) -> bool {
+    pub fn on_cooldown(&self, spell: &SpellInfo, now: f64) -> bool {
         let category = spell.categories.as_ref().map_or(0, |c| c.category);
         self.spell_ready_at
             .get(&spell.id)
@@ -738,7 +755,7 @@ impl SpellHistory {
 
     /// TC a352b1fa SpellHistory.cpp:709–736 GetRemainingCooldown: a live own
     /// entry wins; otherwise consult its category. Expired entries are not live.
-    pub(crate) fn remaining_cooldown_ms(&self, spell: &SpellInfo, now: f64) -> u64 {
+    pub fn remaining_cooldown_ms(&self, spell: &SpellInfo, now: f64) -> u64 {
         let category = spell.categories.as_ref().map_or(0, |c| c.category);
         let own_deadline = self.spell_ready_at.get(&spell.id).filter(|&&at| at > now);
         let deadline = own_deadline.or_else(|| self.category_ready_at.get(&category));
@@ -746,7 +763,7 @@ impl SpellHistory {
         (remaining.max(0.0) * 1000.0) as u64
     }
 
-    pub(crate) fn on_gcd(&self, spell: &SpellInfo, now: f64) -> bool {
+    pub fn on_gcd(&self, spell: &SpellInfo, now: f64) -> bool {
         let category = gcd_category(spell);
         category != 0 && self.gcd_ready_at.get(&category).is_some_and(|&at| at > now)
     }
@@ -893,11 +910,11 @@ fn gcd_category(spell: &SpellInfo) -> u32 {
 /// Bevy virtual/fixed time drops elapsed time when a frame exceeds its 250ms cap.
 /// Keep simulation clocks for casts, auras and missiles; readiness must match the
 /// real milliseconds sent to the owning client's cooldown and charge timers.
-pub(crate) fn history_now(world: &World) -> f64 {
+pub fn history_now(world: &World) -> f64 {
     world.resource::<Time<Real>>().elapsed_secs_f64()
 }
 
-pub(crate) fn now(world: &World) -> f64 {
+pub fn now(world: &World) -> f64 {
     world.resource::<Time>().elapsed_secs_f64()
 }
 
@@ -1017,7 +1034,7 @@ fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base
 
 /// Cast time after ChangeCastTime mods, divided by `1 + CharacterStats.haste_pct`
 /// (haste auras fold in through `StatModifiers`).
-pub(crate) fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
+pub fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
     let base = spell
         .misc
         .as_ref()
@@ -1152,7 +1169,7 @@ fn send_inventory_rejection(
 pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     event.timestamp_unix_ms = unix_millis();
     crate::followers::pull_history::record_event(world, &event);
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     if let Some(mut observed) = world.get_resource_mut::<test_harness::ObservedCombatEvents>() {
         observed.0.push(event.clone());
     }
@@ -1197,7 +1214,7 @@ fn combat_log_recipient(world: &World, unit: Entity) -> Entity {
     }
 }
 
-pub(crate) fn combat_event_owner(world: &World, unit: Entity) -> Entity {
+pub fn combat_event_owner(world: &World, unit: Entity) -> Entity {
     if let Some(follower) = world.get::<crate::followers::Follower>(unit) {
         return follower.owner;
     }
@@ -1329,17 +1346,28 @@ pub(crate) fn receive_cast_requests(world: &mut World) {
 
 /// Cast a spell for a player as its own request would, answering `CastFailed`
 /// on refusal (profession crafts).
-pub(crate) fn cast_for_player(
+pub fn cast_for_player(
     world: &mut World,
     player: Entity,
     spell_id: u32,
+) -> Result<(), CastFailure> {
+    cast_for_player_with_target(world, player, spell_id, None)
+}
+
+/// Use the normal Player request path without changing its selected/AA victim.
+/// None means the request uses the Player's native selected target.
+pub fn cast_for_player_with_target(
+    world: &mut World,
+    player: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
 ) -> Result<(), CastFailure> {
     let request = SpellCastIntent {
         target_item_guid: None,
         destination: None,
         spell_id: Some(spell_id),
         spell: String::new(),
-        target_entity: None,
+        target_entity: target.map(Entity::to_bits),
         witness: None,
     };
     request_cast(world, player, &request).map_err(|(spell_id, failure)| {
@@ -1408,7 +1436,7 @@ struct ItemCooldownSource {
 /// The cooldown an item effect puts on its spell's category (`ItemEffect`
 /// `SpellCategoryID` / `CategoryCoolDownMSec`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct ItemCooldown {
+pub struct ItemCooldown {
     pub category: u32,
     pub category_ms: u32,
 }
@@ -1417,7 +1445,7 @@ pub(crate) struct ItemCooldown {
 /// player, spellbook aside, unless the item effect's category is cooling down
 /// (`SPELL_FAILED_NOT_READY`); a started cast puts the category on that cooldown
 /// (`SpellHistory::StartCooldown` with the item's `CategoryCoolDownMSec`).
-pub(crate) fn cast_item_spell(
+pub fn cast_item_spell(
     world: &mut World,
     caster: Entity,
     spell_id: u32,
@@ -1560,15 +1588,16 @@ fn request_cast(
         };
         return Err((spell.id, failure));
     }
-    let explicit = request
-        .target_entity
-        .and_then(Entity::try_from_bits)
-        .filter(|&target| world.get_entity(target).is_ok())
-        .or_else(|| {
-            world
-                .get::<CombatTarget>(caster)
-                .and_then(|target| target.0)
-        });
+    let explicit = match request.target_entity {
+        Some(bits) => Some(
+            Entity::try_from_bits(bits)
+                .filter(|&target| world.get_entity(target).is_ok())
+                .ok_or((spell.id, CastFailure::NoTarget))?,
+        ),
+        None => world
+            .get::<CombatTarget>(caster)
+            .and_then(|target| target.0),
+    };
     let explicit = if disenchant::is_disenchant(&spell)
         || (request.target_item_guid.is_some()
             && spell.effects.iter().any(open_lock::is_item_effect))
@@ -1750,7 +1779,7 @@ fn validate_start(
 }
 
 /// Read ordinary native cast eligibility without casting, retargeting or spending.
-pub(crate) fn read_native_cast_start(
+pub fn read_native_cast_start(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
@@ -2383,8 +2412,8 @@ fn haste_regen_gcd_ms(world: &World, caster: Entity, spell: &SpellInfo, gcd_ms: 
 }
 
 /// Observation-only benchmark seam; the actual profile heal defines a GCD equivalent.
-#[cfg(test)]
-pub(crate) fn healer_idle_gcd(world: &World, caster: Entity) -> Option<(bool, f64)> {
+#[cfg(any(test, feature = "test-support"))]
+pub fn healer_idle_gcd(world: &World, caster: Entity) -> Option<(bool, f64)> {
     let spell_id = world
         .get::<crate::followers::Follower>(caster)?
         .profile
@@ -2542,13 +2571,17 @@ pub(crate) fn execute_cast(
         },
     );
     let previous_efflo_summons = efflorescence::read_previous_summons(world, caster, spell.id);
+    scripts::spawn_ravager_field(world, caster, spell, explicit, 0);
     missiles::launch(world, caster, spell, plan, 0);
     efflorescence::initialize_new_summons(world, caster, previous_efflo_summons);
     scripts::refund_execute(world, caster, spell, explicit, &costs);
+    scripts::consume_phalanx(world, caster, spell, explicit);
     if let Some(hook) = scripts::after_cast(spell.id) {
         hook(world, caster, spell);
     }
-    spell_mods::consume_charges(world, caster, spell);
+    if !spell.cast_parent_owns_modifier_charges {
+        spell_mods::consume_charges(world, caster, spell);
+    }
     blooming_infusion::after_cast(world, caster, spell);
     druid_transform::after_cast(world, caster, spell);
     // Spell::finish (Spell.cpp:4448-4450): some spells stop the caster's auto-attack.
@@ -2759,12 +2792,12 @@ fn plan_targets(
         } else {
             Vec::new()
         };
-        let sampled_destination = effect
+        let paired_destination = effect
             .implicit_targets
             .iter()
-            .any(|id| matches!(id, 73 | 74));
-        let ordered_destination = sampled_destination || effect.implicit_targets.contains(&148);
-        let dest = if sampled_destination {
+            .any(|id| matches!(id, 41 | 43 | 48 | 73 | 74));
+        let ordered_destination = paired_destination || effect.implicit_targets.contains(&148);
+        let dest = if paired_destination {
             selected_destination
         } else if ordered_destination {
             targets::effect_destination(world, caster, explicit, spell, effect)?
@@ -3164,6 +3197,19 @@ pub(crate) fn record_hit_heal(
     true
 }
 
+/// TC a352b1fa Spell.cpp:2854–2867 checks only effects that landed on this unit.
+fn has_negative_hit_effects(
+    store: &SpellStore,
+    spell: &SpellInfo,
+    plan: &TargetPlan,
+    target: Entity,
+) -> bool {
+    let negative = crate::spell_info::positivity::negative_effects(store, spell);
+    plan.iter()
+        .filter(|planned| planned.units.contains(&target))
+        .any(|planned| negative & (1 << spell.effects[planned.index].index) != 0)
+}
+
 /// One proc event per distinct unit the spell landed on, with the direct damage it
 /// took (TAKE_ANY_DAMAGE when above 0); damage to a unit outside the plan gets a
 /// damage-only event.
@@ -3210,9 +3256,21 @@ fn push_hit_events(
                 crate::stand_state::stand_on_hostile_spell(world, target, attributes(spell, 3));
             }
         }
-        let harmful = targets::is_hostile(world, caster, target);
-        let (actor_mask, mut target_mask) = procs::spell_hit_masks(spell, harmful);
         let damage = damage_to(target);
+        let heal = healing
+            .iter()
+            .find(|(unit, _)| *unit == target)
+            .map(|(_, amount)| *amount);
+        // TC a352b1fa Spell.cpp:2849–2871: damage wins, then healing,
+        // otherwise landed effect positivity. Neutral attackable units are not friendly hits.
+        let harmful = if damage > 0.0 {
+            true
+        } else if heal.is_some_and(|amount| amount > 0.0) {
+            false
+        } else {
+            has_negative_hit_effects(world.resource::<SpellStore>(), spell, plan, target)
+        };
+        let (actor_mask, mut target_mask) = procs::spell_hit_masks(spell, harmful);
         if damage > 0.0 {
             target_mask |= procs::PROC_TAKE_ANY_DAMAGE;
         }
@@ -3228,10 +3286,7 @@ fn push_hit_events(
                 cast_used_proc_modifier: !spell.cast_proc_mods.is_empty(),
                 periodic: false,
                 damage,
-                heal: healing
-                    .iter()
-                    .find(|(unit, _)| *unit == target)
-                    .map(|(_, amount)| *amount),
+                heal,
                 reflected: false,
             },
         );
@@ -3243,7 +3298,7 @@ fn push_hit_events(
 
 /// `TRIGGER_SPELL`: resolve `spell_id` immediately at `explicit`, ignoring
 /// costs, cooldowns, GCD and cast time. Depth is bounded by `MAX_TRIGGER_DEPTH`.
-pub(crate) fn cast_triggered(
+pub fn cast_triggered(
     world: &mut World,
     caster: Entity,
     spell_id: u32,
@@ -3279,12 +3334,14 @@ pub(super) fn cast_triggered_with_item_level(
     launch_triggered_spell(world, caster, &spell, explicit, depth)
 }
 
-/// The sourced CastSpellExtraArgs values carried by a real triggered cast.
+/// Sourced per-cast overrides retained in real triggered spell snapshots.
 #[derive(Default)]
 pub(crate) struct TriggeredSpellOverrides {
     pub effect0_amount: Option<f32>,
     pub aura_stacks: Option<u8>,
     pub original_caster: Option<Entity>,
+    /// Authored background-action lifetime, e.g. native Whirling Blade's amount.
+    pub duration_ms: Option<i32>,
 }
 
 pub(crate) fn cast_triggered_with_overrides(
@@ -3300,6 +3357,13 @@ pub(crate) fn cast_triggered_with_overrides(
     };
     spell.cast_aura_stacks = values.aura_stacks;
     spell.cast_original_caster = values.original_caster;
+    if let Some(milliseconds) = values.duration_ms {
+        let Some(duration) = spell.misc.as_mut().and_then(|misc| misc.duration.as_mut()) else {
+            warn!("Triggered spell {spell_id} skipped: duration override has no native duration");
+            return false;
+        };
+        duration.duration_ms = milliseconds;
+    }
     if let Some(amount) = values.effect0_amount {
         let Some(effect) = spell.effects.iter_mut().find(|effect| effect.index == 0) else {
             warn!("Triggered spell {spell_id} skipped: effect0 override has no effect0");
@@ -3395,14 +3459,16 @@ fn launch_triggered_spell(
     depth: u8,
 ) -> bool {
     match plan_triggered_spell(world, caster, spell, explicit, depth) {
-        Ok(plan) => {
-            #[cfg(test)]
+        Ok(mut plan) => {
+            scripts::snapshot_guillotine_health(world, caster, spell, &mut plan);
+            #[cfg(any(test, feature = "test-support"))]
             if let Some(mut observed) =
                 world.get_resource_mut::<test_harness::ObservedTriggeredCasts>()
             {
                 observed.0.push((caster, spell.id, explicit));
             }
             crate::achievement::record_spell_cast(world, caster, spell.id);
+            scripts::spawn_ravager_field(world, caster, spell, explicit, depth);
             missiles::launch(world, caster, spell, plan, depth);
             druid_transform::after_cast(world, caster, spell);
             true
@@ -3665,7 +3731,7 @@ pub(crate) fn restore_charges(world: &mut World, unit: Entity, charge_category: 
 
 /// Interrupt an active cast (stop, movement, death, crowd control, teleport, evade):
 /// `Spell::cancel` with SPELL_FAILED_INTERRUPTED.
-pub(crate) fn cancel_cast(world: &mut World, caster: Entity) {
+pub fn cancel_cast(world: &mut World, caster: Entity) {
     interrupt_cast(world, caster, CastFailReason::Interrupted, None);
 }
 
@@ -3869,6 +3935,8 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
 
 #[cfg(test)]
 mod additional_optional_power_tests;
+#[cfg(test)]
+mod caster_offset_tests;
 #[cfg(test)]
 mod class_resource_tests;
 #[cfg(test)]

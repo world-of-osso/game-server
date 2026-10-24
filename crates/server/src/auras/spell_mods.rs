@@ -87,7 +87,7 @@ fn is_pct(aura_type: u32) -> bool {
 }
 
 /// Whether a spell-mod effect of `aura` applies to `spell`.
-fn affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> bool {
+pub(super) fn affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> bool {
     match effect.aura_type {
         ADD_FLAT_MODIFIER | ADD_PCT_MODIFIER => class_mask_affects(aura, effect, spell),
         _ => u32::try_from(effect.misc_values[1])
@@ -247,6 +247,19 @@ fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellMo
         .flatten()
         .filter(|modifier| modifier.op == op as i32)
         .fold((0.0, 1.0), |sum, modifier| {
+            #[cfg(any(test, feature = "test-support"))]
+            crate::spell_cast::effects::factor_capture::record_modifier(
+                world,
+                caster,
+                spell,
+                crate::spell_cast::effects::factor_capture::ModifierSource {
+                    op: op as u8,
+                    aura_spell_id: modifier.aura_spell_id,
+                    effect_index: None,
+                    amount: modifier.amount,
+                    percent: modifier.percent,
+                },
+            );
             add_modifier(sum, modifier.amount, modifier.percent)
         });
     world.get::<ActiveAuras>(caster).map_or(frozen, |auras| {
@@ -254,7 +267,22 @@ fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellMo
             .filter(|(aura, _)| !snapshots_periodic_modifier(aura, op))
             .filter(|(aura, _)| spell.cast_charge_mods.is_none() || aura.charges == 0)
             .fold(frozen, |sum, (aura, effect)| {
-                add_modifier(sum, stacked_amount(aura, effect), is_pct(effect.aura_type))
+                let amount = stacked_amount(aura, effect);
+                let percent = is_pct(effect.aura_type);
+                #[cfg(any(test, feature = "test-support"))]
+                crate::spell_cast::effects::factor_capture::record_modifier(
+                    world,
+                    caster,
+                    spell,
+                    crate::spell_cast::effects::factor_capture::ModifierSource {
+                        op: op as u8,
+                        aura_spell_id: aura.spell_id,
+                        effect_index: Some(effect.index),
+                        amount,
+                        percent,
+                    },
+                );
+                add_modifier(sum, amount, percent)
             })
     })
 }
@@ -271,10 +299,12 @@ pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .filter(|aura| {
             aura.charges > 0
                 && !crate::spell_cast::scripts::preserve_unadmitted_proc(spell, aura)
-                && aura
-                    .effects
-                    .iter()
-                    .any(|effect| is_spell_mod(effect.aura_type) && affects(aura, effect, spell))
+                && aura.effects.iter().any(|effect| {
+                    // TC Player.cpp22820: zero-valued mods never enter m_appliedMods.
+                    effect.amount != 0.0
+                        && is_spell_mod(effect.aura_type)
+                        && affects(aura, effect, spell)
+                })
         })
         .map(|aura| aura.instance_id)
         .collect();

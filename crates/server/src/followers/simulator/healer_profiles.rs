@@ -1,10 +1,10 @@
 //! Approved benchmark configurations, never authored roster or canonical DB rows.
 use super::*;
 
-pub(crate) const ALTERNATE_SPEC_BRIDGE: &str = "HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE";
+pub const ALTERNATE_SPEC_BRIDGE: &str = "HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE";
 
 /// Requested healer spec → authentic same-class actor and its authored source spec.
-pub(crate) fn alternate_source(spec: u32) -> Option<(u32, u32)> {
+pub fn alternate_source(spec: u32) -> Option<(u32, u32)> {
     match spec {
         65 => Some((209057, 66)),
         256 => Some((215011, 257)),

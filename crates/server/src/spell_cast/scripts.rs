@@ -31,6 +31,8 @@ mod empower_evoker;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
+mod giantkiller;
+pub(super) use giantkiller::multiplier as giantkiller_multiplier;
 pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
@@ -38,6 +40,7 @@ pub(super) use germination::redirect_rejuvenation;
 pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 pub(crate) mod prayer_of_mending;
+mod protection_items;
 mod scourge_strike;
 mod soul_of_the_forest;
 mod swiftmend;
@@ -53,10 +56,17 @@ pub(crate) use windwalker::{
     ordinary_combo_cast,
 };
 
-pub(super) use batch9::update_ground_pulses;
+pub(super) use batch3::consume_phalanx;
+pub(crate) use batch3::{
+    PHALANX_TALENT, WHIRLING_BLADE, cast_whirling_ravager, check_phalanx_proc,
+    check_whirling_blade_proc,
+};
 pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
+pub(super) use batch9::{spawn_ravager_field, update_ground_pulses};
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(crate) use batch20::proc_charges;
+pub(super) use protection_items::snapshot_guillotine_health;
+pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
 /// OnEffectHit runs once per effect without replacing generic or aura dispatch.
 pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
     match (spell, index) {
@@ -182,7 +192,9 @@ const BACKSTAB: u32 = 53;
 const PYRE_IMPACT: u32 = 393_568;
 const PYRE_DAMAGE: u32 = 357_212;
 const DRAIN_SOUL: u32 = 198_590;
+const FIREBALL: u32 = 133;
 const FIRE_BLAST: u32 = 108_853;
+const FIRESTARTER: u32 = 205_026;
 const DEATH_COIL: u32 = 47_541;
 const DEATH_COIL_DAMAGE: u32 = 47_632;
 const DEATH_COIL_HEAL: u32 = 47_633;
@@ -355,7 +367,6 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch10::FERAL_LUNGE, 0) => Some(batch10::bite_lunge),
         (batch10::PROTECTION_JUDGMENT, 0) => Some(batch10::energize_judgment),
         (batch10::HAND_OF_GULDAN, 0) => Some(batch10::launch_guldan_meteor),
-        (batch10::LIGHTNING_BOLT, 0) => Some(batch10::energize_lightning_bolt),
         (batch9::WINTER_DAMAGE, 0) => Some(batch9::slow_winter_hit),
         (batch9::SCOURGE_STRIKE, 0) => Some(scourge_strike::erupt_and_apply_missing),
         (batch9::RADIANCE, 1) => Some(batch9::apply_radiance_atonement),
@@ -382,10 +393,12 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch5::EPIDEMIC, 0) => Some(batch5::epidemic),
         (batch4::RENEWING_MIST_CAST, 0) => Some(batch4::renewing_mist),
         (batch4::STEADY_SHOT, 0) => Some(batch4::steady_shot),
-        (batch4::CHAIN_LIGHTNING, 0) => Some(batch4::chain_lightning),
         (batch4::HOWLING_BLAST, 0) => Some(batch4::howling_blast),
         (batch3::MOONFIRE, 0) => Some(batch3::moonfire),
-        (batch3::THUNDER_CLAP, 0) => Some(batch3::thunder_clap),
+        (batch3::THUNDER_CLAP | 435222, 0) => Some(batch3::thunder_clap),
+        (6572, 0) => Some(protection_items::revenge_bloody_rebuke),
+        (156287, 0) => Some(protection_items::ravager_bloody_rebuke),
+        (385952, 0) => Some(batch3::shield_charge),
         (batch3::DEVASTATE, 0) => Some(batch3::devastate),
         (SKULL_BASH, 0) => Some(skull_bash),
         (FORTIFYING_BREW, 0) => Some(fortifying_brew),
@@ -417,6 +430,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
 /// to 100%; Retail108853 tooltip explicitly renders `${$s1*2}`.
 pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32) -> Option<f32> {
     match spell_id {
+        FIREBALL | hot_streak::PYROBLAST => firestarter_crit(world, caster, target),
         batch17::REGROWTH => batch17::regrowth_crit(world, caster, target),
         batch14::EYE_BEAM_DAMAGE => batch14::eye_beam_crit(world, caster),
         batch3::SHRED if batch11::shred_stealth_bonus(world, caster) => {
@@ -445,6 +459,18 @@ pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32)
         }
         _ => None,
     }
+}
+
+/// TC a352b1fa spell_mage.cpp762–779: actual205026 effect0 supplies the HP threshold.
+fn firestarter_crit(world: &World, caster: Entity, target: Entity) -> Option<f32> {
+    let aura = world
+        .get::<crate::auras::ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.spell_id == FIRESTARTER)?;
+    let threshold = aura.effects.iter().find(|effect| effect.index == 0)?.amount;
+    let health = world.get::<shared::components::Health>(target)?;
+    let health_percent = health.current / health.max * 100.0;
+    (health_percent >= threshold).then_some(100.0)
 }
 
 pub(crate) fn rake_bleed_snapshot(world: &World, caster: Entity, amount: f32) -> f32 {
@@ -1034,14 +1060,14 @@ fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f6
         .get(spell_id)
         .and_then(|spell| spell.categories.as_ref())
         .map_or(0, |category| category.charge_category);
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     let before = super::holy_metrics::read_recharge(world, caster, charge_category, now);
     let reduced = world
         .get_mut::<super::SpellHistory>(caster)
         .map(|mut history| {
             reduce_running_timers(&mut history, charge_category, spell_id, now, seconds)
         });
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     {
         let after = super::holy_metrics::read_recharge(world, caster, charge_category, now);
         let applied = (before - after).max(0.0).min(seconds);

@@ -1,5 +1,5 @@
 //! Explicit transport-free simulator seam; real initializer and kit controller.
-pub(crate) use super::catalog::load_catalog as load_parity_catalog;
+pub use super::catalog::load_catalog as load_parity_catalog;
 use super::*;
 use bevy::ecs::system::RunSystemOnce;
 use shared::components::{Level, Player, Position, UnitFactionTemplate};
@@ -7,14 +7,14 @@ use shared::components::{Level, Player, Position, UnitFactionTemplate};
 #[derive(Component)]
 struct LeaderProfile(Profile);
 
-pub(crate) struct Party {
+pub struct Party {
     pub owner: Entity,
     pub tank: Entity,
     pub members: Vec<Entity>,
 }
 
-/// NPC followers execute level-gated kit rows; they do not carry Player KnownSpells.
-pub(crate) fn available_kit_spells(world: &World, unit: Entity) -> Vec<u32> {
+/// Controller actions are level-gated kit rows, separate from the native NPC spellbook.
+pub fn available_kit_spells(world: &World, unit: Entity) -> Vec<u32> {
     let follower = world
         .get::<Follower>(unit)
         .expect("initialized native follower");
@@ -31,7 +31,7 @@ pub(crate) fn available_kit_spells(world: &World, unit: Entity) -> Vec<u32> {
         .collect()
 }
 
-pub(crate) mod healer_profiles;
+pub mod healer_profiles;
 
 const DEFAULT_PARTY: [u32; 5] = [209057, 209072, 209053, 209059, 209065];
 
@@ -130,7 +130,7 @@ fn simulator_configuration_rejects_invalid_levels_and_incomplete_rosters() {
     }
 }
 
-pub(crate) fn spawn_party(
+pub fn spawn_party(
     world: &mut World,
     copy: crate::maps::InMap,
     at: Position,
@@ -139,7 +139,7 @@ pub(crate) fn spawn_party(
 }
 
 /// Explicit benchmark actor selection, without process-global environment mutation.
-pub(crate) fn spawn_party_with_healer(
+pub fn spawn_party_with_healer(
     world: &mut World,
     copy: crate::maps::InMap,
     at: Position,
@@ -208,13 +208,13 @@ fn spawn_profiled_party(
     })
 }
 
-pub(crate) enum ParityActor {
+pub enum ParityActor {
     Follower,
     Player { race: u8 },
 }
 
 /// One real attacker, without unrelated party damage or buff sources.
-pub(crate) fn spawn_parity_attacker(
+pub fn spawn_parity_attacker(
     world: &mut World,
     spec_id: u32,
     level: u8,
@@ -392,7 +392,7 @@ fn spawn_player_identity(
         .id()
 }
 
-pub(crate) fn update_leader(world: &mut World) {
+pub fn update_leader(world: &mut World) {
     let leaders: Vec<_> = world
         .query::<(Entity, &LeaderProfile)>()
         .iter(world)
@@ -405,11 +405,11 @@ pub(crate) fn update_leader(world: &mut World) {
     }
 }
 
-pub(crate) fn has_uncleared_fight(world: &World, owner: Entity) -> bool {
+pub fn has_uncleared_fight(world: &World, owner: Entity) -> bool {
     pull_history::has_uncleared_fight(world, owner)
 }
 
-pub(crate) fn pull(
+pub fn pull(
     world: &mut World,
     tank: Entity,
     guids: &std::collections::BTreeSet<u32>,
@@ -420,7 +420,7 @@ pub(crate) fn pull(
     Ok((allowed, format!("{decision:?}")))
 }
 
-pub(crate) fn inspect_follower_decision(world: &mut World, unit: Entity) -> serde_json::Value {
+pub fn inspect_follower_decision(world: &mut World, unit: Entity) -> serde_json::Value {
     let follower = world.get::<Follower>(unit).unwrap().clone();
     let party = ai::party_units(world, follower.owner);
     let enemies = ai::engaged_enemies(world, &follower, unit, &party);
@@ -465,10 +465,7 @@ pub(crate) fn inspect_follower_decision(world: &mut World, unit: Entity) -> serd
         "offense":decisions})
 }
 
-pub(crate) fn inspect_tank_movement(
-    world: &mut World,
-    tank: Entity,
-) -> Result<Option<bool>, String> {
+pub fn inspect_tank_movement(world: &mut World, tank: Entity) -> Result<Option<bool>, String> {
     let target = world
         .get::<crate::networking::CombatTarget>(tank)
         .and_then(|target| target.0)
@@ -477,11 +474,11 @@ pub(crate) fn inspect_tank_movement(
     tank_planner::read_movement_admission(world, tank, target, &follower, None)
 }
 
-pub(crate) fn regroup(world: &mut World, unit: Entity, owner: Entity) {
+pub fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     ai::regroup(world, unit, owner);
 }
 
-pub(crate) fn opening_spell(world: &World, tank: Entity) -> (u32, f32) {
+pub fn opening_spell(world: &World, tank: Entity) -> (u32, f32) {
     let spell_id = world.get::<Follower>(tank).unwrap().profile.attack_spell;
     let spell = world
         .resource::<crate::spell_info::SpellStore>()
@@ -493,7 +490,7 @@ pub(crate) fn opening_spell(world: &World, tank: Entity) -> (u32, f32) {
     )
 }
 
-pub(crate) fn cast_opening(
+pub fn cast_opening(
     world: &mut World,
     tank: Entity,
     target: Entity,

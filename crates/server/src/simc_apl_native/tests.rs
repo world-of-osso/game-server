@@ -2,6 +2,11 @@ use super::*;
 use crate::spell_cast::test_harness::Harness;
 use crate::spell_info::SpellStore;
 
+#[path = "action_extension_tests.rs"]
+mod action_extensions;
+#[path = "extension_tests.rs"]
+mod extensions;
+
 const TIGER_PALM: u32 = 100780;
 const BLACKOUT_KICK: u32 = 100784;
 const HIT_COMBO: u32 = 196740;
@@ -74,6 +79,7 @@ fn cast(h: &mut Harness, actor: Entity, spell: u32, target: Entity) {
 fn action(name: &str) -> Action {
     Action {
         name: name.into(),
+        target: None,
         options: BTreeMap::new(),
     }
 }
