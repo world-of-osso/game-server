@@ -22,11 +22,13 @@ Thriving Growth is not an RPPM producer: native439528 has PPM_ID0, scripted Proc
 
 ## Tests
 
-Pending native prerequisite qualification and meaningful RED. Fixtures must use unmodified native rows, normal casts and real resource transitions, then assert damage/aura/resource receipts, ownership, absence/removal and timing. No source data, chances, flags, clocks, RNG or budgets may be altered to obtain the expected result.
+Six native fixtures in `spell_cast/feral_producer_tests.rs` and its `feral_talent_producer_tests.rs` child await prerequisite qualification and meaningful RED: Frenzy/retarget and catalog absence; Rake/Vines plus learned-driver removal and absent-talent control; earned five-point Bite/Unseen plus absent-talent control. Computed caster stats, ordinary Cat Form, native Energy regeneration and actual Shred gains supply the inputs. No source data, chances, flags, clocks, RNG or budgets are altered.
+
+The first Frenzy-only admission ended after60 capacity polls without starting a compiler or test; it is not a RED receipt. Native root-cost packet `logs/census-tail/feral-root-prerequisites.json` (row SHA256 `0866dadfadacd9ead695c89e697765221242a39e8b5a1aa9291d4120e9faf64b`) authenticates Bite25Energy plus1CP/optional4. `feral-native-timing-controls.json` (row SHA256 `84a5e981822a1a2ca4b02b3411642511e413455474f13c0b61ce7328272deba0`) authenticates Frenzy1000ms, native Energy100/10regen and CPmax5.
 
 ## Known gaps
 
-All checklist entries remain unqualified. Convoke391528 root ownership is pending coordination with the Lunar owner; independent channels can proceed. Item source TODOs or unverified assumptions are not execution proof.
+All checklist entries remain unqualified. Convoke391528 root ownership is pending coordination with the Lunar owner; independent channels can proceed. Omnium's pinned `unique_gear_midnight.cpp6182` explicitly marks its proc same-unit and damage/heal routing assumptions `UNVERIFIED_IMPLEMENTATION`; native1279599 supplies scripted4 and linked285/coefficient1288183, not that mapping. Item source TODOs or unverified assumptions are not execution proof.
 
 ## Out of scope
 

@@ -1,4 +1,6 @@
-//! Native70448, SimC76f8118 sc_druid.cpp4114–4160; no modified rows or resource grants.
+//! Native70448 and pinned SimC76f8118 Druid producers; no modified rows or resource grants.
+#[path = "feral_talent_producer_tests.rs"]
+mod talents;
 use super::test_harness::*;
 use bevy::prelude::*;
 use shared::components::PowerType;
@@ -9,11 +11,9 @@ const SHRED: u32 = 5221;
 const FERAL_FRENZY: u32 = 274837;
 const FERAL_FRENZY_TICK: u32 = 274838;
 
-fn fixture(frenzy_known: bool) -> Harness {
+fn fixture(extra_known: &[u32]) -> Harness {
     let mut ids = vec![CAT_FORM, SHRED];
-    if frenzy_known {
-        ids.push(FERAL_FRENZY);
-    }
+    ids.extend_from_slice(extra_known);
     let mut h = harness_with(Vec::new(), &ids, 11, true).unwrap();
     h.app.insert_resource(world_db().unwrap().store.clone());
     h.app.insert_resource(load_native_creature_world(&[6]));
@@ -35,7 +35,7 @@ fn fixture(frenzy_known: bool) -> Harness {
 fn landed_frenzy() -> Harness {
     // Whole native attempts preserve ordinary avoidance and resource payment.
     for _ in 0..8 {
-        let mut h = fixture(true);
+        let mut h = fixture(&[FERAL_FRENZY]);
         let npc = h.npc;
         let energy = h.power(PowerType::Energy);
         h.cast_and_deliver(FERAL_FRENZY, Some(npc));
@@ -72,7 +72,7 @@ fn frenzy_damage(h: &Harness, periodic: bool) -> usize {
 
 #[test]
 #[ignore = "RED: native Feral Frenzy root must produce its attack/bleed child"]
-fn feral_producers_frenzy_native_root_retains_recipient_and_pays_five_combo_points() {
+fn feral_producers_frenzy_native_root_retains_recipient_and_generates_five_combo_points() {
     let mut h = landed_frenzy();
     let other = spawn_npc(&mut h.app, 4.0);
     let ally = spawn_player(&mut h.app, 11, 4.0);
@@ -150,7 +150,7 @@ fn feral_producers_frenzy_native_root_retains_recipient_and_pays_five_combo_poin
 
 #[test]
 fn feral_producers_frenzy_native_catalog_without_root_cast_grants_no_children() {
-    let mut h = fixture(false);
+    let mut h = fixture(&[]);
     let npc = h.npc;
     h.cast_and_deliver(SHRED, Some(npc));
     h.advance(200);
