@@ -45,9 +45,17 @@ Parent explicitly authorizes qualifying this slice separately while root/KC stay
 
 The narrow production hook runs after real native wild summon metadata/source registration, not at cast launch or in a log formatter. Only actual1222271 metadata owned by the selected471876 caster earns471881 via existing triggered stack override; DB2 owns resulting amount/duration/cap. No direct grant replaces a missing entity. No root timer, KC consume, cycle state, Pack Mentality or creature AI is implemented in this slice. c7c33ace7 passes all three relevant native child/lifetime/absence cases in17.84s; clean12m52s compilation. The root case was explicitly skipped under parent authorization and remains open, not silently waived. Actual selected summon now earns native10Cry stacks; actual entity/native expiry and removed-passive summon/noCry controls pass. This is not combat-ready/KC/cycle or whole-BM qualification.
 
+## Root admission diagnosis on separate branch
+
+Parent froze `dps-parity-bm-owner` atb9c71fba2 for rg1074. Root follow-ups use separate `dps-parity-bm-howl-root`; no owner-ref changes.
+
+ad61e63c0 records one native diagnostic PASS15.14s: KC34026 and Cobra193455 both return LineOfSight before engagement and at5s/35s (brief GCD at first1s masks target checks). Austin stays(16.000002,0,0), the old dummy stays(1.5,0,0), Focus100 and its real pet remain present, KC0. Runtime model IDs113756/27510 match actual standing eye rows in the real bake. Missing pet/resource/standing-eye prerequisites are ruled out; native LOS rejects that fixture input. This is not missing-readiness gameplay RED. Compile20m13s exposed the stale unused `navigation` import from the master test split;151af01ab removes it on this separate branch, without warning suppression. The rg1074 server-lib proof had no such warning.
+
+Next falsifier constructs a new native31146 dummy beside unchanged Austin through ordinary `zones::summon_creature`, retires the previous unengaged fixture target and verifies native KC/Cobra admission. No existing Position is written; geometry and normal spell checks stay enabled. The existing root/KC fixture uses this initial-spawn setup only if that positive control succeeds; no production readiness/cycle patch precedes genuine root RED. Diagnostics/source scripts and exact receipts remain under the same diagnostics root.
+
 ## Open
 
-- Actual native child entity/lifetime positive control.
-- Genuine native RED for combat readiness, actual summon-earned Cry and KC consumption, before production implementation.
-- Native GREEN for cycle/rearm/absence/ownership boundaries and parent broad integration.
-- Bounded same-input cadence/DPS measurement only after qualification; whole-BM parity remains open.
+- [x] Actual native child entity/lifetime and selected/removed-passive Cry slice qualified separately.
+- [ ] Native valid root admission at fixture target birth, then genuine combat-readiness/KC-consumption RED before production implementation.
+- [ ] Native GREEN for cycle/rearm/absence/ownership boundaries and parent broad integration.
+- [ ] Bounded same-input cadence/DPS measurement only after qualification; whole-BM parity remains open.

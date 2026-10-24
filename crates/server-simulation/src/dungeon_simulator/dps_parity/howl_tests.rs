@@ -11,6 +11,7 @@ const WYVERN_SUMMON: u32 = 1222271;
 const WYVERN_CRY: u32 = 471881;
 const WYVERN_ENTRY: u32 = 234170;
 const KILL_COMMAND: u32 = 34026;
+const NEARBY_FIXTURE_TARGET_OFFSET: f32 = 1.5;
 
 fn prepare_howl_player() -> Run {
     let (profile, traits) = read_reference(253).unwrap();
@@ -157,6 +158,70 @@ fn dps_parity_howl_native_removed_passive_keeps_real_summon_without_cry() {
     assert_eq!(cry_stacks(&run), 0);
 }
 
+fn prepare_howl_austin_at_native_spawn() -> (Run, Entity) {
+    let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
+    load_native_collision(&mut run);
+    let at = *run
+        .app
+        .world()
+        .get::<shared::components::Position>(run.actor)
+        .unwrap();
+    // Choose the fixture target's initial spawn beside the existing actor; no
+    // Position component is rewritten and native visibility remains authoritative.
+    let target = crate::zones::summon_creature(
+        run.app.world_mut(),
+        run.actor,
+        DUMMY_ENTRY,
+        [
+            at.x,
+            -(at.z + NEARBY_FIXTURE_TARGET_OFFSET),
+            at.y,
+            std::f32::consts::PI,
+        ],
+    )
+    .unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<crate::creature_scripts::TrainingDummy>(target)
+            .is_some()
+    );
+    for retired in run.targets.drain(..) {
+        crate::zones::unsummon(run.app.world_mut(), retired);
+    }
+    run.targets = vec![target];
+    run.damage_targets = vec![target];
+    run.target_waves = vec![
+        json!({"at": crate::spell_cast::now(run.app.world()), "entities": [target.to_bits()]}),
+    ];
+    let after = run
+        .app
+        .world()
+        .get::<shared::components::Position>(run.actor)
+        .unwrap();
+    assert_eq!(
+        [after.x, after.y, after.z],
+        [at.x, at.y, at.z],
+        "fixture construction must not teleport Austin"
+    );
+    (run, pet)
+}
+
+#[test]
+#[ignore = "native initial-spawn LOS falsifier; no teleport or visibility override"]
+fn dps_parity_howl_native_initial_target_spawn_passes_real_admission() {
+    let _seed = crate::random::seed_scope(70_448);
+    let (mut run, _) = prepare_howl_austin_at_native_spawn();
+    let sample = record_native_admission(&mut run, "native-nearby-initial-spawn");
+    eprintln!("NATIVE_HOWL_NEARBY_SPAWN {sample}");
+    for result in sample["admission"].as_array().unwrap() {
+        assert!(
+            result["admitted"] == true,
+            "same actor must pass native KC/Cobra admission at the new target's initial spawn: {sample}"
+        );
+    }
+}
+
 fn focus(run: &Run) -> f32 {
     run.app
         .world()
@@ -193,7 +258,7 @@ fn record_native_admission(run: &mut Run, label: &str) -> Value {
                 &info,
                 target,
             );
-            json!({"spell": id, "result": format!("{result:?}")})
+            json!({"spell": id, "admitted": result.is_ok(), "result": format!("{result:?}")})
         })
         .collect();
     assert_eq!(
@@ -268,8 +333,7 @@ fn kill_command_casts(run: &Run) -> usize {
 #[ignore = "native combat clock to ready to ordinary KC and actual summoned Wyvern"]
 fn dps_parity_howl_native_combat_readiness_is_consumed_by_real_kill_command() {
     let _seed = crate::random::seed_scope(70_448);
-    let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
-    load_native_collision(&mut run);
+    let (mut run, pet) = prepare_howl_austin_at_native_spawn();
     let owner = run.actor;
     assert_eq!(
         crate::hunter_pet::summoned_pet(run.app.world(), owner),
