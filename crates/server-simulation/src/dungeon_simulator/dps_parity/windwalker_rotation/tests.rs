@@ -133,12 +133,74 @@ fn literal_ww_native_combo_facts_follow_the_proposed_action_and_ignore_utility()
     );
 }
 
+fn log_zenith_priority_probe(run: &mut super::super::Run, rotation: &Rotation, frame: usize) {
+    const ZENITH: u32 = 1249625;
+    let values: serde_json::Map<String, Value> = [
+        "fight_style.patchwerk",
+        "cooldown.zenith.full_recharge_time",
+        "cooldown.zenith.remains",
+        "cooldown.rising_sun_kick.remains",
+        "cooldown.fists_of_fury.remains",
+        "talent.flurry_strikes",
+        "talent.spiritual_focus",
+        "trinket.1.has_use_buff",
+        "trinket.2.has_use_buff",
+        "trinket.1.cooldown.ready",
+        "trinket.2.cooldown.ready",
+        "trinket.1.cooldown.remains",
+        "trinket.2.cooldown.remains",
+        "chi",
+        "energy",
+        "buff.zenith.up",
+    ]
+    .into_iter()
+    .map(|name| {
+        let value = rotation.value_for(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &action("zenith"),
+            name,
+        );
+        (name.into(), json!(value))
+    })
+    .collect();
+    let world = run.app.world();
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(ZENITH)
+        .unwrap();
+    let admission =
+        match crate::spell_cast::read_native_cast_start(world, run.actor, spell, run.actor) {
+            Ok(_) => "ready".to_owned(),
+            Err(reason) => format!("{reason:?}"),
+        };
+    let known = world
+        .get::<crate::class_progression::KnownSpells>(run.actor)
+        .unwrap();
+    let traits = world
+        .get::<crate::class_progression::TraitLoadout>(run.actor)
+        .unwrap();
+    eprintln!(
+        "WW_NATIVE_ZENITH_PROBE {}",
+        json!({
+            "frame": frame, "known": known.contains(ZENITH),
+            "selected": traits.active_talent_spells().any(|spell| spell.spell_id == ZENITH),
+            "resolved": crate::auras::overrides::resolve_spell(world, run.actor, ZENITH),
+            "native_admission": admission, "facts": values,
+        })
+    );
+}
+
 fn run_literal(count: usize) {
     let _scope = crate::random::seed_scope(70448);
     let mut run = super::super::prepare_measurement(269, count).unwrap();
     super::super::engage(&mut run);
     let mut rotation = run.windwalker_rotation.take().unwrap();
-    for _ in 0..600 {
+    for frame in 0..600 {
+        if frame % 20 == 0 {
+            log_zenith_priority_probe(&mut run, &rotation, frame);
+        }
         rotation
             .drive(run.app.world_mut(), run.actor, &run.targets)
             .unwrap();
