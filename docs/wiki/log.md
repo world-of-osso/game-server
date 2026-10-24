@@ -1,6 +1,10 @@
 ## 2026-10-23 — Native profile stat-allocation redirects
 
 [Stat redirects](systems/character-stats.md#profile-stat-allocation-redirects--2026-10-23): actual103 shared equipment input→StatsPlugin independently reproduces five tier errors and ten matching ordinary slots; invalid donor and false-unmodeled diagnostics also RED,3RED11.02s at7aa72bf47. Server-local donor metadata changes calculation-only stat types/allocations, not original item identity/catalog/effects/set membership or the persisted/wire ABI. Atd45fe30e8 three GREEN12.43s, clean25m11build; two native cases remain opt-in and the env-free diagnostic stays enabled. Lead integration/DPS remain open. [Proof](../handoffs/equipment-stat-redirect-proof-ledger.md).
+## 2026-10-23 — TC training dummy combat exit
+
+[Dummy reference expiry](systems/combat.md#training-dummy-combat-exit--2026-10-23): independentdb17198c4 native Fireball→Ignite retention and harmless-Counterspell timer two genuine RED; LeavingCombat/ordinary Defias evade two controls PASS26.87s. Replace foreign-aura/attack-intent cleanup with TC per-attacker non-DOT timers and PvE-reference-only expiry. Current-canonical backup25995de4 reproduces two RED/two controls PASS24.06s; a3fdbf375 gives five native35.61s +five creature25.09s +ten refs14.14s =20GREEN74.84s,0compiler warnings/fmtPASS. Two real Fire attackers, native LeavingCombat/ordinary evade, attack intent, threat-less-attacker/PvP/pet controls included. No follower policy or DPS claim; independent lead gate separate.
+
 ## 2026-10-23 — Per-spell merge / periodic crit ownership
 
 Merged current master4a2deb367 into native-spell-diff. Resolution retains owner-aware periodic crit eligibility/order and signed target-crit semantics, while direct and periodic damage capture records the actual rolled chance/result without another RNG draw. Parent rebuilt batch gate pending; prior acceptance scopes are unchanged.

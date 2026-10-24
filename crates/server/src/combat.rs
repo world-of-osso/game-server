@@ -1984,6 +1984,7 @@ fn commit_melee_loss(
     }
     let before = health.current;
     crate::combat_refs::engage_attacked_target(world, attacker, victim);
+    crate::creature_scripts::refresh_training_dummy_timer(world, victim, attacker);
     let health = world.get::<Health>(victim).expect("living melee victim");
     let scripted_loss = crate::scripted_ai::limit_scripted_loss(
         world.get::<crate::scripted_ai::CreatureScriptName>(victim),
@@ -2045,6 +2046,7 @@ pub(crate) fn deal_health_damage(
     #[cfg(test)]
     crate::dungeon_simulator::healer_intake::note_unrecorded_direct(world, attacker, victim);
     crate::combat_refs::engage_attacked_target(world, attacker, victim);
+    crate::creature_scripts::refresh_training_dummy_timer(world, victim, attacker);
     let (attacker_scaling, victim_scaling) = (
         UnitScaling::of(world, attacker),
         UnitScaling::of(world, victim),
