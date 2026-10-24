@@ -16,7 +16,7 @@ fn prepare_player() -> Run {
         profile,
         &traits,
         1,
-        crate::followers::simulator::ParityActor::Player,
+        crate::followers::simulator::ParityActor::Player { race: 3 },
     )
     .unwrap();
     assert!(crate::auras::has_aura(
