@@ -149,7 +149,20 @@ fn dps_parity_ret_tier_four_piece_same_kind_preserves_cross_kind_emits_child() {
     );
     assert!(
         child_damage(&run) > 0,
-        "cross-kind casts native child1306923 with real damage"
+        "cross-kind casts native child1306923 with real damage; actor={:?}, target={:?}, child events={:?}",
+        run.app
+            .world()
+            .get::<shared::components::Position>(run.actor),
+        run.app
+            .world()
+            .get::<shared::components::Position>(run.targets[0]),
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| event.spell_id == Some(DIVINE_ARBITER))
+            .collect::<Vec<_>>()
     );
 }
 
