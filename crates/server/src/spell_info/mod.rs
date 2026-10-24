@@ -83,6 +83,13 @@ pub struct SpellInfo {
     /// Retail item actually used by this cast; delayed casts credit only on execution.
     #[serde(skip)]
     pub cast_retail_item_id: Option<u32>,
+    /// TC GetPowerCost receipt: the final prepared cost vector holds a positive amount.
+    /// None until a costed execution actually computed it.
+    #[serde(skip)]
+    pub(crate) cast_has_power_cost: Option<bool>,
+    /// Entered through an actual item-cast context (any item source, not only Retail).
+    #[serde(skip)]
+    pub(crate) cast_from_item: bool,
     /// Per-cast ground point; preserved in queued/cast snapshots, never DB2 metadata.
     #[serde(skip)]
     pub(crate) cast_destination: Option<[f32; 3]>,

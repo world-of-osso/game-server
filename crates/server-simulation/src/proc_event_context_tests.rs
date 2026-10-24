@@ -162,7 +162,7 @@ fn native_proc_event_context_positive_cost_and_item_mod_identity_are_captured() 
         .expect("cast's actual prepared cost receipt");
     assert!(context.has_power_cost);
     assert!(!context.cast_from_item);
-    assert!(context.applied_aura_modifiers.is_empty());
+    assert_eq!(context.applied_aura_modifiers, Some(Vec::new()));
     assert_eq!(context.attack_type, None);
 }
 
@@ -228,7 +228,10 @@ fn native_proc_event_context_identity_applied_modifiers_retain_native_aura_insta
         .context
         .as_ref()
         .expect("frozen actual applied-modifier receipt");
-    assert_eq!(context.applied_aura_modifiers, vec![(h.caster, instance)]);
+    assert_eq!(
+        context.applied_aura_modifiers,
+        Some(vec![(h.caster, instance)])
+    );
 }
 
 #[test]

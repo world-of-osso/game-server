@@ -365,6 +365,7 @@ mod knockback_tests;
 pub mod knowledge;
 #[cfg(test)]
 mod launch_combat_tests;
+mod proc_context;
 mod school_costs;
 pub(crate) mod teleport;
 pub mod teleport_positions;
@@ -1389,9 +1390,10 @@ pub(crate) fn cast_granted(
     spell_id: u32,
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
-    cast_granted_with_item_context(world, caster, spell_id, target, None, None, None)
+    cast_granted_prepared(world, caster, spell_id, target, |_| {})
 }
 
+/// Item-cast entry: the cast originates from an item, whatever its definition source.
 fn cast_granted_with_item_context(
     world: &mut World,
     caster: Entity,
@@ -1401,6 +1403,30 @@ fn cast_granted_with_item_context(
     retail_item_id: Option<u32>,
     item_cooldown: Option<ItemCooldown>,
 ) -> Result<(), CastFailure> {
+    cast_granted_prepared(world, caster, spell_id, target, |spell| {
+        spell.cast_from_item = true;
+        spell.cast_item_level = item_level;
+        spell.cast_retail_item_id = retail_item_id;
+        if let Some(cooldown) = item_cooldown.filter(|cd| cd.category != 0 && cd.category_ms > 0) {
+            spell
+                .categories
+                .get_or_insert_with(Default::default)
+                .category = cooldown.category;
+            spell
+                .cooldowns
+                .get_or_insert_with(Default::default)
+                .category_recovery_ms = cooldown.category_ms;
+        }
+    })
+}
+
+fn cast_granted_prepared(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
+    prepare: impl FnOnce(&mut SpellInfo),
+) -> Result<(), CastFailure> {
     debug!(caster = ?caster, spell_id, target = ?target, moving = ?world.get::<Moving>(caster), active_cast = ?world.get::<CastState>(caster), "SpellCastRequest received (granted object/item cast)");
     let result = world
         .get_resource::<SpellStore>()
@@ -1408,20 +1434,7 @@ fn cast_granted_with_item_context(
         .cloned()
         .ok_or(CastFailure::UnknownSpell)
         .and_then(|mut spell| {
-            spell.cast_item_level = item_level;
-            spell.cast_retail_item_id = retail_item_id;
-            if let Some(cooldown) =
-                item_cooldown.filter(|cd| cd.category != 0 && cd.category_ms > 0)
-            {
-                spell
-                    .categories
-                    .get_or_insert_with(Default::default)
-                    .category = cooldown.category;
-                spell
-                    .cooldowns
-                    .get_or_insert_with(Default::default)
-                    .category_recovery_ms = cooldown.category_ms;
-            }
+            prepare(&mut spell);
             start_cast(world, caster, &spell, target)
         });
     debug!(caster = ?caster, spell_id, result = ?result, "Granted cast acceptance result");
@@ -2582,6 +2595,8 @@ pub(crate) fn execute_cast(
     let primary_missed =
         explicit.is_some_and(|target| !plan.iter().any(|effect| effect.units.contains(&target)));
     let costs = discount_missed_rune_costs(costs, discounted_player && primary_missed);
+    prepared.cast_has_power_cost = Some(proc_context::has_power_cost(&costs));
+    let spell = &prepared;
     disenchant::roll_cast_loot(world, caster, spell, &mut rand::thread_rng())?;
     open_lock::unlock_cast(world, spell)?;
     crate::achievement::record_spell_cast(world, caster, spell.id);
@@ -2616,7 +2631,7 @@ pub(crate) fn execute_cast(
         AuraEvent {
             actor: caster,
             target: None,
-            context: None,
+            context: proc_context::cast(spell),
             actor_mask: [0, procs::PROC2_CAST_SUCCESSFUL],
             target_mask: [0; 2],
             spell_id: Some(spell.id),
@@ -3302,6 +3317,8 @@ fn push_hit_events(
     healing: &[(Entity, f32)],
 ) {
     let hit = hit_units(plan);
+    // Any record, even zero or fully absorbed, means this hit took the damage path.
+    let damage_records = damage;
     let damage_to = |unit: Entity| {
         damage
             .iter()
@@ -3354,12 +3371,14 @@ fn push_hit_events(
         if damage > 0.0 {
             target_mask |= procs::PROC_TAKE_ANY_DAMAGE;
         }
+        let damage_recorded = damage_records.iter().any(|(unit, _)| *unit == target);
+        let context = proc_context::aura_only_hit(spell, plan, target, damage_recorded, heal);
         procs::push_event(
             world,
             AuraEvent {
                 actor: caster,
                 target: Some(target),
-                context: None,
+                context,
                 actor_mask: [actor_mask, 0],
                 target_mask: [target_mask, 0],
                 spell_id: Some(spell.id),
@@ -3599,7 +3618,8 @@ fn execute_costed_trigger(
     aura_spell_restrictions::check_target(world, caster, explicit, spell)?;
     let costs = spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
-    let prepared = resources::snapshot(world, caster, spell, &costs);
+    let mut prepared = resources::snapshot(world, caster, spell, &costs);
+    prepared.cast_has_power_cost = Some(proc_context::has_power_cost(&costs));
     let plan = plan_targets(world, caster, &prepared, explicit, true)?;
     scripts::on_cast(world, caster, prepared.id, depth);
     take_cast_resources(world, caster, &prepared, &costs);

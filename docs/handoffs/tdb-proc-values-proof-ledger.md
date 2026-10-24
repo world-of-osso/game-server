@@ -34,6 +34,18 @@ Six opt-in public native queue cases use real ordinary Shield17/Fortitude21562 c
 
 a24b9b615 attempt1 reached six fixture setup failures at Harness::power(Mana), not RED: Mana lives in the native Mana component, while that helper only reads secondary PowerPools. Canonical `powers::power_value` explicitly handles Mana; only fixture sampling now uses it, without grants or changes to production power logic. Original `tdb-proc-event-context-red.{log,proof.json}` remains excluded; At7f4d0d566 v2 actual6 gives1ordinary-controlPASS/5genuineRED35.73s, compile25.29s/zero warnings: cast lowflags missing, finish missing, hit/cost context unavailable. Native own buffs and both positive/inapplicable cost premises passed. `tdb-proc-event-context-v2-red.{log,proof.json}`; no producer behavior has been implemented. An earlier drafting premise that bare-harness Shield spends mana was rejected by read-only native power rows before execution; Fortitude supplies the real positive-cost case instead. Setup/compile/zero tests do not count. Full16 entry/default GREEN remains separate and is not rerun for this unchanged proof scope. Two more identity cases are added before producer implementation: actual ordinary132158 then instant8936 must preserve the original one-charge aura's instance after canonical consumption removes it, and real Retail2457→2374 native on-use metadata enters the public item-cast API with its canonical squished item level. These two actual REDs remain pending. The item case covers native item-cast provenance, not inventory transport/admission; no raw SpellInfo item flag is faked.
 
+## Partial context carriage (unverified slice from f97c3a8bc)
+
+Metadata only: no actor/target mask, event count, consume/queue/drain order, damage/heal/crit math or effective-row gating changed; no FINISH producer. `ProcEventContext.applied_aura_modifiers` is now `Option<Vec<(Entity,u32)>>`; None means provenance not captured, never "none applied". The two identity assertions and Fortitude's empty-set assertion now require Some and stay RED until the canonical applied-set slice lands; no other test body changed.
+
+SpellInfo gains serde-skipped per-cast `cast_has_power_cost: Option<bool>` (None until computed) and `cast_from_item: bool`, retained by existing clones (hardcast PendingCastSpell, missile Arc snapshot). The receipt is the existing final cost vector (any positive amount, health included), captured after `discount_missed_rune_costs` in `execute_cast` and after `spell_costs` in `execute_costed_trigger`; no cost is recomputed. Item origin is set only at the `cast_granted_with_item_context` entry (`cast_item_spell`, any item source); object grants stay false, and nothing is inferred from Retail ID or inherited item level.
+
+| Event | Context |
+|---|---|
+| Ordinary `execute_cast` CAST | Populated: native misc school, phase1/type7/hit1, no attack type, frozen cost/origin, applied set None. Masks stay `[0,4]`. |
+| Planned HIT, aura-only | Populated only when no damage record (even zero/absorbed) and heal None for the unit, every landed effect is a unit aura (not persistent area), the unit is in each effect's original selection (excludes reflected copies) and not blocked, and a frozen cost receipt exists: phase2/type4/hit1. |
+| Other HITs (damage/heal/blocked/reflected/mixed effects), off-plan damage-only, triggered/proc/periodic/reflect/melee/kill/death emitters, toy casts, costed triggers' CAST (no CAST event exists), triggered children without a receipt | Remain None. |
+
 ## Current capability matrix
 
 | Capability | Current proof / missing boundary |
@@ -41,7 +53,7 @@ a24b9b615 attempt1 reached six fixture setup failures at Harness::power(Mana), n
 | Full18-column producer | 8Python contracts GREEN and exact1291×18 private round-trip; canonical publication remains main-owned. |
 | Effective explicit/generated entries | Corrected16native loader contracts GREEN at1c98c106a; exact tested defaults/masks above, raw fields unchanged. |
 | Native effective-row eligibility | Not implemented: BodyAndSoul and unchanged Expurgation pairs remain historical1PASS/1genuineFAIL each; unrelated heal control separately GREEN. School/family/type/phase/hit/attribute/effect-disable consumption remains open. |
-| Event metadata/producers | CAST needs its native low flags plus high-success flag; HIT needs actual school/type/outcome; FINISH needs one aggregate actor-only event. Cost-vector/item/applied-aura-instance provenance still missing. No fabricated metadata or unmodelled-event producer claim. |
+| Event metadata/producers | Partial, unverified: ordinary CAST and proven aura-only HIT carry school/type/phase/hit, cost receipt and item origin (section above). CAST low flags, FINISH and applied-aura-instance provenance remain open; all other emitters stay unavailable. No fabricated metadata or unmodelled-event producer claim. |
 | Runtime rate/recovery/charges | Entry values/defaults proven only. TC legacy PPM/native RPPM precedence, modifiers/level reduction, effective cooldown, per-effect dispatch and charge/stack consumption still require behavioral qualification. |
 
 ## Completion gate

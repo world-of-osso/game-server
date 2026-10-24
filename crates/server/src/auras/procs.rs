@@ -157,7 +157,8 @@ pub struct ProcEventContext {
     pub has_power_cost: bool,
     pub cast_from_item: bool,
     /// Exact (owner, aura-instance) identities actually applied to this cast.
-    pub applied_aura_modifiers: Vec<(Entity, u32)>,
+    /// None means applied-modifier provenance was not captured, never "none applied".
+    pub applied_aura_modifiers: Option<Vec<(Entity, u32)>>,
 }
 
 /// One combat event.
