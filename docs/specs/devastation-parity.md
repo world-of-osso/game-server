@@ -26,6 +26,8 @@ Devastation1467 must execute its DPS rotation natively and measure within10% of 
 
 Four ignored `giantkiller_native_*` cases were pushed at3caafcc03 before implementation. Frozen0d07469b8 execution produced genuine4RED (22.30s): actual Flame2995 versus3354.4, Disintegrate2090 versus2340.8 and Deep Breath DoT2598 versus2909.76 with actual12% native mastery. These failures establish absent mastery consequences. Frozen f50689cfa execution passed all four cases in25.40s: health100/50/10% and30%floor, ordinary Tyranny/Dragonrage controls, other-family exclusion, and all three secondary exceptions. Tests remain opt-in because they require frozen native inputs. Evidence: `game-engine/data/diagnostics/dev-evoker-parity-2026-10-22/giantkiller-green-f50689cfa.log`.
 
+Four ignored `native_causality_*` cases use ordinary native empower casts to start recovery, then actual Disintegrate periodic events and the selected Causality375777 effect0 amount. They cover tick-zero/later ticks, unrelated Dragonrage recovery, passive absence/removal, and TC's application-time `Load` boundary across late restoration and the next channel. No cooldown history writes. RED/GREEN qualification is pending; TC a352b1fa `spell_evoker.cpp215–239` supplies the consequence.
+
 ## Known gaps (current cycle)
 
 - [x] Giantkiller targeted GREEN and full floor/Tyranny/exclusion qualification atf50689cfa (4/4,25.40s).

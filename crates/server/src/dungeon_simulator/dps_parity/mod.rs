@@ -1,4 +1,5 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
+mod causality_tests;
 mod engagement_tests;
 mod haste_tests;
 mod inputs;
