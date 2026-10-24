@@ -15,13 +15,14 @@ const KILL_COMMAND: u32 = 34026;
 
 fn prepare_howl_player() -> Run {
     let (profile, traits) = read_reference(253).unwrap();
-    let run = prepare_reference(
+    let mut run = prepare_reference(
         profile,
         &traits,
         1,
         crate::followers::simulator::ParityActor::Player { race: 3 },
     )
     .unwrap();
+    load_native_collision(&mut run);
     assert!(crate::auras::has_aura(run.app.world(), run.actor, HOWL));
     let data = run.app.world().resource::<crate::world_data::WorldData>();
     assert!(
@@ -29,6 +30,26 @@ fn prepare_howl_player() -> Run {
         "normal authentic summon closure is a prerequisite, not gameplay RED"
     );
     run
+}
+
+fn load_native_collision(run: &mut Run) {
+    let assets = std::path::PathBuf::from(
+        std::env::var_os("GAME_SERVER_GROUND_DIR").expect("real native ground/LOS asset directory"),
+    );
+    let database = std::path::PathBuf::from(std::env::var_os("DPS_PARITY_WORLD_DB").unwrap());
+    let db =
+        rusqlite::Connection::open_with_flags(database, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    let wdts = maps
+        .maps
+        .into_iter()
+        .map(|(id, map)| (id, map.wdt_file_data_id))
+        .collect();
+    run.app
+        .insert_resource(server::ground::GroundMap::new(&assets, wdts));
+    run.app
+        .insert_resource(server::line_of_sight::LineOfSight::load(&assets.join("los")).unwrap());
 }
 
 fn advance_seconds(run: &mut Run, seconds: f64) {
