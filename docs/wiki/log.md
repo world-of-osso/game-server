@@ -1,3 +1,7 @@
+## 2026-10-24 — Native Bite optional-Energy effectiveness
+
+[Spell casting](systems/spell-casting.md#ferocious-bite-extra-energy--2026-10-24): current-code ordinary/actual-Incarnation full casts produce two genuine damage-factor REDs, then twoGREEN plus five retained native power-burn controls at7ea788a8b. Existing cast-only effectiveness carries the sourced factor; no persistent snapshot fields or coefficients change. Both packages compile without warnings; parent integration and300s parity remain open. [Proof/source ledger](../handoffs/feral-source-census.md).
+
 ## 2026-10-23 — Readonly native selected-pool admission
 
 [Shared Prepared](systems/simc-apl.md#shared-literal-fixture-machinery) resource hook reproduces2genuineRED at6134141c7 against current-canonical backup05577b33612d (21.25s). Native max comparison now affects only the chosen pool's local affordability, never the world's resources; preserves other costs/constraints and exact target. Energy/Chi and far-target cases use actual learned spells/pools. GREEN pending. Pool control and next-row semantics remain14766-owned; no DPS claim.

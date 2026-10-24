@@ -1,5 +1,9 @@
 # Spell Casting
 
+## Ferocious Bite extra Energy — 2026-10-24
+
+`spell_cast/ferocious_bite.rs` captures the remaining Energy factor before native22568's immediate effect plan resolves, after ordinary cost payment. It reuses `SpellInfo.cast_damage_multiplier`; no persistent aura fields or coefficient rewrites. Generic PowerBurn retains its primary-pool/alive checks and available-power clamp. Incarnation is read from an actual aura effect, never its same-index trigger metadata. [Contract](../../specs/player-damage.md#what-it-must-do); [native source, RED/GREEN and remaining Feral gaps](../../handoffs/feral-source-census.md). Targeted tests qualify the cast boundary, not300s parity or parent integration.
+
 ## Protection producer dispatch — 2026-10-22
 
 Native Attr3 `ALWAYS_HIT` bypasses avoidance after school/mechanic immunity; missile launch still evaluates reflection. Source and deterministic native Evasion RED/control evidence live in the [producer contract](../../specs/protection-damage-producers.md#native-always_hit-defense-reader); d1335d807:4PASS17.98s/no warnings, including original charge primary/splash/stun assertions.

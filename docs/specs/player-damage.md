@@ -5,7 +5,7 @@ Players deal Retail damage: auto-attacks swing the equipped weapon with attack p
 ## What it must do
 
 Ferocious Bite
-- [ ] Native22568 reads post-payment Energy before its immediate hit effects. Its school damage scales by `1 + min(remaining Energy, authored extra-Energy cap) / cap`; the self burn removes only available Energy up to that cap, with no damage from its native zero amplitude. Native Incarnation aura effect1, when actually present, adjusts the cap by its signed percentage; a trigger effect is not an aura modifier. Preserve ordinary cost modifiers, combo-point payment, coefficients, variance and all other power-burn spells. Source: TC a352b1fa `spell_druid.cpp973–1018`; [source/proof ledger](../handoffs/feral-source-census.md).
+- [x] Native22568 reads post-payment Energy before its immediate hit effects. Its school damage scales by `1 + min(remaining Energy, authored extra-Energy cap) / cap`; the self burn removes only available Energy up to that cap, with no damage from its native zero amplitude. Native Incarnation aura effect1, when actually present, adjusts the cap by its signed percentage; a trigger effect is not an aura modifier. Preserve ordinary cost modifiers, combo-point payment, coefficients, variance and all other power-burn spells. Source: TC a352b1fa `spell_druid.cpp973–1018`; [source/proof ledger](../handoffs/feral-source-census.md).
 
 Auto-attack
 - [ ] Class-stat actors, including native followers, use every nonzero authored `SpellShapeshiftForm.CombatRoundTime` for both melee hands; zero/missing form timing uses regular equipment timing. Form changes do not restart an existing swing. Active timed forms restore ranged base time to TC's2s. Keep signed/native haste and slow modifiers.
