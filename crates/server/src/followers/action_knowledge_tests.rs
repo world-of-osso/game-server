@@ -197,7 +197,7 @@ fn action_knowledge_literal_resolves_base_frenzy_to_selected_frantic_frenzy() {
 
 #[test]
 #[ignore = "native private DB: every published row across all11native starter books/90levels"]
-fn action_knowledge_every_native_starter_kit_row_retains_its_sourced_action() {
+fn action_knowledge_every_native_starter_kit_row_has_expected_action_admission() {
     use crate::class_progression::{KnownSpells, evaluate_npc_starter};
     let native = crate::spell_cast::test_harness::world_db().unwrap();
     let db = rusqlite::Connection::open_with_flags(
@@ -210,6 +210,8 @@ fn action_knowledge_every_native_starter_kit_row_retains_its_sourced_action() {
     world.insert_resource(native.store.clone());
     let actor = world.spawn_empty().id();
     let mut rejected = Vec::new();
+    let mut admitted = 0;
+    let mut unavailable_passive = 0;
     for profile in &catalog.profiles {
         for level in 1..=90 {
             let (spells, traits) =
@@ -225,16 +227,27 @@ fn action_knowledge_every_native_starter_kit_row_retains_its_sourced_action() {
                 .iter()
                 .filter(|row| row.available(profile.spec_id, level))
             {
-                if resolve_action(&world, actor, row.spell_id)
-                    .unwrap()
-                    .is_none()
-                {
-                    rejected.push((profile.entry, profile.spec_id, level, row.spell_id));
+                match resolve_action(&world, actor, row.spell_id).unwrap() {
+                    Some(actual) => {
+                        assert!(
+                            !crate::auras::is_passive(native.store.get(actual).unwrap()),
+                            "native controller endpoint{actual} must be active"
+                        );
+                        admitted += 1;
+                    }
+                    None if crate::auras::is_passive(native.store.get(row.spell_id).unwrap()) => {
+                        unavailable_passive += 1;
+                    }
+                    None => {
+                        rejected.push((profile.entry, profile.spec_id, level, row.spell_id));
+                    }
                 }
             }
         }
     }
     assert_eq!(catalog.profiles.len(), 11);
+    assert!(admitted > 0);
+    assert!(unavailable_passive > 0);
     assert!(
         rejected.is_empty(),
         "native sourced kit actions rejected: {rejected:?}"
