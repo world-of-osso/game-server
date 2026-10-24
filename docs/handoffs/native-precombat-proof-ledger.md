@@ -71,6 +71,12 @@ Parent's13120 packet `assassination-parity-2026-10-23/apply-poison-source-packet
 
 Staged ignored `native_poison_precombat_completes_every_selected_coating_before_pull` uses actual259 profile/selected DTB and the native Player fixture (`DPS_PARITY_ACTOR=player`). It explicitly dispatches the four source-selected self-coatings, requires a real positive-duration CastState and native elapsed completion after EACH, then four ordered CastSuccess receipts and all four retained auras before engagement. This isolates this owner's cast boundary, not14775's composite selection/dispatch. Native permission failures are not bypassed; runtime qualification is pending. Run separately from the eight follower controls with prepared259 inputs, in the same next precombat binary.
 
+## Composite lifecycle integration RED — staged, unexecuted
+
+Forwarded4ad3b8d41 was cherry-picked as9907b66ab, preserving the existing default-pet module. Its `with_composites` is still a no-op selector scaffold, not qualified selection. `literal_precombat_composite_waits_for_native_coatings_and_effects` uses the real259 fixture and verifies individual native admission before selecting the named ordered plan. An App observer must see all four actual cast bars; elapsed time must cover their sum, actual CastSuccess order and retained owned auras must match, cast/GCD must be finished, engagement absent, and the next snapshot row executable. No internal vector-shape assertion substitutes for these effects.
+
+`execute_precombat_plan` currently delegates to the world-only Driver and explicitly rejects unconsumed composites. No consumption implementation or runtime RED claimed. Until14775 supplies selection GREEN, an absent plan is a selection RED, not consumer qualification. Batch with the next admitted shared precombat binary; no extra WW-only compile.
+
 ## Dependencies
 
 pd1035 is landed at2333d924b and merged locally; exact-target Prepared/Player dispatch remains14775-owned. Resource query010f7f761 is GREEN9/9 on arms-literal-resource-hooks; it ignores only the requested PowerType affordability while retaining other native checks. Integrate its shared API after pd, not the old613 scaffold. No unselected legacy kit fallback and no WW-specific tier2pc path.

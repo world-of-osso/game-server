@@ -6,6 +6,8 @@ Adapter supplies `NativeComposite { name, steps: &[NativeAction] }`. Shared Prep
 
 Current `with_composites(world,actor,targets,metadata)` is a compile scaffold until native behavioral RED. World-only execute explicitly rejects Composite. No ready/completion claim yet. NativeAction is Copy/Clone metadata; composite cannot encode class policy in shared dispatcher.
 
+Consumer staging: [native precombat ledger](native-precombat-proof-ledger.md#composite-lifecycle-integration-red--staged-unexecuted) records the separate clock/effect integration test. It remains ignored and unexecuted; no-op selection failure does not qualify consumption.
+
 ## Source / native fixture
 
 13120 packet: `/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/assassination-parity-2026-10-23/apply-poison-source-packet-v1.json`; pinned `sc_rogue.cpp3164–3330`. Bare selected259 profile constructs Deadly2823,Crippling3408,DTB Amplifying381664,DTB Atrophic381637 in that order; no Numbing. Native casting-time16 base1500ms for each; shared code must not hardcode those IDs or erase actual cast time. Source profile/trait copy provenance: `arms-parity-2026-10-23/composite-selection-inputs.proof.json`. Fixture native actor is explicitly Human1/class4 (reference race metadata is not asserted to be Human).

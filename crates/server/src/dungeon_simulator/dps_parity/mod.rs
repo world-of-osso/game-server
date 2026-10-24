@@ -1,4 +1,5 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
+mod composite_precombat_tests;
 mod engagement_tests;
 mod equipment_input_tests;
 mod inputs;

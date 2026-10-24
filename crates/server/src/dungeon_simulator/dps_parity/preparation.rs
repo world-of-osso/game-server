@@ -1,6 +1,16 @@
 //! Native setup advances real cast/GCD state before fixture engagement.
 use super::Run;
 
+/// RED scaffold: a world-only dispatcher cannot yet drain composite cast plans.
+pub(super) fn execute_precombat_plan(
+    run: &mut Run,
+    driver: &mut super::literal_rotation::Driver,
+    action: server::simc_apl::Action,
+    execution: super::literal_rotation::execution::Execution,
+) -> Result<(), String> {
+    driver.execute(run.app.world_mut(), run.actor, action, execution)
+}
+
 // Bound setup failures; advancing frames must not become an endless cast retry.
 const MAX_SETUP_TICKS: u32 = 600;
 

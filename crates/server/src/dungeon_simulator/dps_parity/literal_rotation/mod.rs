@@ -151,6 +151,9 @@ impl Driver {
 
 fn harmful_execution(world: &World, execution: &Execution) -> Result<bool, String> {
     let id = match execution {
+        Execution::Composite(_) => {
+            return Err("composite precombat requires a clock-aware executor".into());
+        }
         Execution::Snapshot => return Ok(false),
         Execution::AutoAttack(_) | Execution::RetargetAutoAttack(_) => return Ok(true),
         Execution::Spell(id, _) => *id,
