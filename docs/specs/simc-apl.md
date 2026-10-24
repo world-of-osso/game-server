@@ -75,7 +75,7 @@ TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyC
 
 ## Expected combat length
 
-- [ ] `expected_combat_length` returns the existing fixture's configured duration, positive and finite, independently of elapsed/remaining time. No fixed300, default or extra duration field. Dungeon/invalid fixture configuration fails with EXPECTED_COMBAT_LENGTH_UNAVAILABLE. Proposed-action context forwards the same global configured value.
+- [x] `expected_combat_length` returns the existing fixture's configured duration, positive and finite, independently of elapsed/remaining time. No fixed300, default or extra duration field. Dungeon/invalid fixture configuration fails with EXPECTED_COMBAT_LENGTH_UNAVAILABLE. Proposed-action context forwards the same global configured value.
 
 ## Known gaps (current cycle)
 

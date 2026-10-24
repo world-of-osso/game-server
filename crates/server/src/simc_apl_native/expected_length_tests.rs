@@ -19,7 +19,6 @@ fn fixture(duration: f64) -> Encounter {
 }
 
 #[test]
-#[ignore = "expected_combat_length strict RED before shared getter"]
 fn native_expected_combat_length_reads_configured_duration_not_elapsed_or_remaining() {
     let (world, actor) = fixture_world();
     let bindings = Bindings::default();
@@ -32,7 +31,6 @@ fn native_expected_combat_length_reads_configured_duration_not_elapsed_or_remain
 }
 
 #[test]
-#[ignore = "expected_combat_length strict RED before shared getter"]
 fn native_expected_combat_length_invalid_fixture_duration_has_no_default() {
     let (world, actor) = fixture_world();
     let bindings = Bindings::default();
@@ -47,7 +45,6 @@ fn native_expected_combat_length_invalid_fixture_duration_has_no_default() {
 }
 
 #[test]
-#[ignore = "expected_combat_length strict RED before shared getter"]
 fn native_expected_combat_length_dungeon_is_explicitly_unavailable() {
     let (world, actor) = fixture_world();
     let bindings = Bindings::default();
@@ -66,7 +63,6 @@ fn native_expected_combat_length_dungeon_is_explicitly_unavailable() {
 }
 
 #[test]
-#[ignore = "expected_combat_length strict RED before shared getter"]
 fn native_expected_combat_length_action_context_uses_same_configured_fixture() {
     let (world, actor) = fixture_world();
     let bindings = Bindings::default();

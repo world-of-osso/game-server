@@ -10,15 +10,15 @@ Branch arms-expected-combat-length starts from target API66a991847 (master d675b
 
 88095009c: actual4genuineRED0.02s after15m38compile/0warnings, all fail on the missing expected_combat_length operand/named contract after elapsed/remaining setup passes. `expected-length-red.{log,proof.json}` and `expected-length-red-binary.proof.json` pin exact source/binary; no DB/profile input.
 
-Merged landed924638aba/crate-split C asfdd191725 before implementation. NativeFacts and the four test bodies are byte-identical across that merge, so RED scope remains valid; no redundant RED rerun. Minimal getter reads existing enum duration, validates positive/finite and returns named errors, without a new field or default. GREEN pending.
+Merged landed924638aba/crate-split C asfdd191725 before implementation. NativeFacts and the four test bodies are byte-identical across that merge, so RED scope remains valid; no redundant RED rerun. Minimal getter reads existing enum duration, validates positive/finite and returns named errors, without a new field or default. 991b7fcde: actual4/4GREEN0.00s,14m24compile/0warnings. `expected-length-green.{log,proof.json}` and `expected-length-green-binary.proof.json` pin exact implementation/library SHAfa149887edb4682ffa7eb83bb3f965fe0bb5b3aa97a89629ae12137ecc82c008. All configured/fractional/invalid/Dungeon/action cases pass; elapsed/remaining retain their own values. Four tests enabled afterward by ignore-attribute removal only; no body/production change or redundant build. Changed-line readability reviewed manually; no new suppression/complexity.
 
 Four test-first cases use NativeFacts with a minimal Bevy World, an actual configured Encounter and advancing native Time. They require no private DB/profile/native cast; getter validation is their exact boundary. No build/setup/zero-test failure may count as RED.
 
 | Case | Concrete input / expected output | Proof |
 |---|---|---|
-| Configured not elapsed/remaining |147.5/300/600.25 with native time83/start11, elapsed72; expected length stays configured | Genuine missing-operand RED |
-| Invalid fixture |0,-1,NaN,+Inf,-Inf; named error, no default | Genuine missing-contract RED |
-| Dungeon |configured start only; named unavailable, no inferred duration | Genuine missing-contract RED |
-| Action forwarding |Fireball proposed context returns configured215.75 without an actor-wide default or spell lookup | Genuine missing-operand RED |
+| Configured not elapsed/remaining |147.5/300/600.25 with native time83/start11, elapsed72; expected length stays configured | Genuine missing-operand RED → GREEN |
+| Invalid fixture |0,-1,NaN,+Inf,-Inf; named error, no default | Genuine missing-contract RED → GREEN |
+| Dungeon |configured start only; named unavailable, no inferred duration | Genuine missing-contract RED → GREEN |
+| Action forwarding |Fireball proposed context returns configured215.75 without an actor-wide default or spell lookup | Genuine missing-operand RED → GREEN |
 
 Getter implemented only after runtime RED. Commit/format precedes targeted GREEN; one admitted job/-j2. No DPS run or broad-suite rerun. Main owns final integration.

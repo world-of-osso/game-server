@@ -1,3 +1,7 @@
+## 2026-10-24 — Shared configured expected combat length GREEN
+
+[Shared expected length](systems/simc-apl.md#expected-combat-length):88095009c4genuineRED0.02s→991b7fcde4/4GREEN0.00s,14m24compile/0warnings after landed924638aba merge. Fixture duration147.5/300/600.25 stays independent of elapsed72/remaining;0/-1/NaN/±Inf and Dungeon are named unavailable, proposed action returns configured215.75. No fixed300/default/extra field/DB input. Tests enabled attribute-only; integration remains main-owned. [Proof](../handoffs/expected-combat-length-proof-ledger.md).
+
 ## 2026-10-23 — Explicit target context and fresh dot metadata RED
 
 [Shared target API](systems/simc-apl.md#native-binding-boundary):4be688315 reaches8genuine native RED15.86s, including real protocol rank1 Fire Breath20s before unsupported refreshable. Earlier post-catalog-split --bin attempt ran0tests and is excluded; current runner requires8library cases. Implemented explicit current/universe, target-only eligibility, owned active_dot, known absent movement/no-cast facts and fresh resolved metadata+source refresh policies. At6b seven valid cases pass35.44s;167105 caster-area range expectation is withdrawn, and native12294 corrected range passes24.84s atf66 (15m42compile/0warnings).11disjoint normal native controls pass20.32s; actual binary source6b is annotated separately from later test-only HEAD. Eight tests enabled; active reaction remains a named gap, no invented timer. [Proof/API](../handoffs/native-target-context-proof-ledger.md).
