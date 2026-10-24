@@ -2,6 +2,9 @@
 //! Unhandled types are still applied and replicated; `apply_aura` logs them
 //! once per spell.
 
+/// TC SpellAuraDefines.h: native autoattack replacement read at swing time.
+pub const OVERRIDE_AUTOATTACK_WITH_MELEE_SPELL: u32 = 361;
+
 /// How a handled aura type takes effect.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AuraKind {
@@ -410,7 +413,10 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
             MechanicDuration
         }
         MOD_DETECTED_RANGE => DetectedRange,
-        ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
+        ANIM_REPLACEMENT_SET
+        | OVERRIDE_ACTIONBAR_SPELLS
+        | OVERRIDE_SPELLS
+        | OVERRIDE_AUTOATTACK_WITH_MELEE_SPELL => Override,
         MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE | MOD_NO_ACTIONS => CastBlock,
         MOD_ROOT
         | MOD_ROOT_2

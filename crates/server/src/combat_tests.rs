@@ -109,6 +109,7 @@ fn run_attack_tick(app: &mut App) {
                 sight: &sight,
                 armor_constants: armor_constants.as_deref(),
                 spells: None,
+                melee_overrides: [0; 2],
                 creature_types: crate::unit_creature_type::CreatureTypes {
                     races: None,
                     forms: None,

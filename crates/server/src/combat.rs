@@ -735,6 +735,7 @@ fn auto_attack_unit(
                 sight: &params.sight,
                 armor_constants: params.armor_constants.as_deref(),
                 spells: params.spells.as_deref(),
+                melee_overrides: snapshot.melee_overrides,
                 creature_types: crate::unit_creature_type::CreatureTypes {
                     races: params.race_types.as_deref(),
                     forms: params.forms.as_deref(),
@@ -761,6 +762,7 @@ fn auto_attack_unit(
 }
 
 struct SwingSnapshot {
+    melee_overrides: [u32; 2],
     auto_attack: AutoAttack,
     position: Position,
     mods: Option<AuraStatMods>,
@@ -795,6 +797,7 @@ fn snapshot_attacker(
         return None;
     }
     Some(SwingSnapshot {
+        melee_overrides: read_melee_overrides(auras),
         auto_attack: auto_attack.clone(),
         position: *position,
         mods: mods.cloned(),
@@ -807,6 +810,24 @@ fn snapshot_attacker(
         creature_flags: flags.copied(),
         temp_summoner: summon.map(|summon| summon.summoner),
     })
+}
+
+/// TC Unit.cpp2288–2310: first main-hand trigger; first nonzero off-hand MiscValue.
+fn read_melee_overrides(auras: Option<&crate::auras::ActiveAuras>) -> [u32; 2] {
+    let effects: Vec<_> = auras
+        .into_iter()
+        .flat_map(|auras| auras.iter())
+        .flat_map(|aura| &aura.effects)
+        .filter(|effect| {
+            effect.aura_type == crate::auras::handlers::OVERRIDE_AUTOATTACK_WITH_MELEE_SPELL
+        })
+        .collect();
+    let main = effects.first().map_or(0, |effect| effect.trigger_spell);
+    let off = effects
+        .iter()
+        .find(|effect| effect.misc_values[0] != 0)
+        .map_or(0, |effect| effect.misc_values[0] as u32);
+    [main, off]
 }
 
 fn record_swing(
@@ -956,6 +977,7 @@ pub(crate) struct SwingContext<'a, 'w, 's> {
     summon_modifiers: &'a crate::auras::summon_damage::SummonDamageModifiers<'w, 's>,
     pub armor_constants: Option<&'a ArmorConstants>,
     spells: Option<&'a crate::spell_info::SpellStore>,
+    melee_overrides: [u32; 2],
     sight: &'a SwingSight<'w, 's>,
     creature_types: crate::unit_creature_type::CreatureTypes<'a>,
 }
@@ -1559,6 +1581,27 @@ fn try_swing(
     }
     if !context.sight.sees(attacker.entity, target_entity) {
         context.sight.send_blocked_swing(commands, attacker.entity);
+        return None;
+    }
+    let override_spell = context.melee_overrides[match hand {
+        Hand::Main => 0,
+        Hand::Off => 1,
+    }];
+    if override_spell != 0 {
+        let attacker_entity = attacker.entity;
+        commands.queue(move |world: &mut World| {
+            crate::spell_cast::cast_triggered(
+                world,
+                attacker_entity,
+                override_spell,
+                Some(target_entity),
+                0,
+            );
+        });
+        let pet_time = context
+            .summon_modifiers
+            .pet_melee_time_multiplier(attacker.entity);
+        reset_swing_timers(auto_attack, hand, attacker.swing_time(&weapon) * pet_time);
         return None;
     }
     let unit = |entity| {

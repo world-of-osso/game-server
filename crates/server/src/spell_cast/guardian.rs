@@ -173,6 +173,7 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
             .entity_mut(actor)
             .insert(crate::hunter_pet::SummonedDemon);
     }
+    apply_project_summon_passive(world, actor, owner, root, entry);
     initialize_melee(world, actor, root, entry);
     if entry == 29264 {
         initialize_spirit_wolf(world, actor, owner);
@@ -210,8 +211,36 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
     ));
 }
 
+/// SIMC_DEMO_ANTORAN_ARMAMENTS_PASSIVE: selected SimC76f8118 pets1513–1540
+/// alternative attacks require native1251000 (DB2 caster restriction/Aura361).
+/// TC a352 has no creature/spell script; TDB1210 has no addon/list/script grant;
+/// DB2 SummonProperties4255 and talent/root effects contain no grant edge.
+fn apply_project_summon_passive(
+    world: &mut World,
+    actor: Entity,
+    owner: Entity,
+    root: u32,
+    entry: u32,
+) {
+    let selected = world
+        .get::<crate::class_progression::KnownSpells>(owner)
+        .is_some_and(|known| known.contains(ANTORAN_ARMAMENTS));
+    if root == SUMMON_DEMONIC_TYRANT
+        && entry == 250289
+        && selected
+        && !crate::auras::has_aura(world, actor, 1251000)
+    {
+        super::cast_triggered(world, actor, 1251000, Some(actor), 0);
+    }
+}
+
 fn initialize_melee(world: &mut World, actor: Entity, root: u32, entry: u32) {
-    if !MELEE_GUARDIAN_SOURCES.contains(&(root, entry)) {
+    let override_melee = world
+        .get::<crate::auras::ActiveAuras>(actor)
+        .is_some_and(|auras| {
+            auras.has_type(crate::auras::handlers::OVERRIDE_AUTOATTACK_WITH_MELEE_SPELL)
+        });
+    if !MELEE_GUARDIAN_SOURCES.contains(&(root, entry)) && !override_melee {
         return;
     }
     let run_speed = world
@@ -376,6 +405,18 @@ fn cast_first_ready(world: &mut World, actor: Entity, target: Entity) {
         let Some(spell) = world.resource::<crate::spell_info::SpellStore>().get(id) else {
             continue;
         };
+        // Aura361's child belongs to the real swing clock, never the cast list.
+        let swing_child = world
+            .get::<crate::auras::ActiveAuras>(actor)
+            .is_some_and(|auras| {
+                auras.iter().flat_map(|aura| &aura.effects).any(|effect| {
+                    effect.aura_type == crate::auras::handlers::OVERRIDE_AUTOATTACK_WITH_MELEE_SPELL
+                        && (effect.trigger_spell == id || effect.misc_values[0] as u32 == id)
+                })
+            });
+        if swing_child {
+            continue;
+        }
         let timed = has_repeat_clock(spell);
         let used = world
             .get::<GuardianActor>(actor)

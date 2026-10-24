@@ -127,3 +127,12 @@ Artifacts under engine `data/diagnostics/demo-parity-2026-10-23/`: `266.referenc
 
 - [[dungeon-simulator]] — fixture measurement.
 - [[simc-apl]] — literal APL execution and native facts.
+
+
+## Antoran passive and native autoattack replacement
+
+`SIMC_DEMO_ANTORAN_ARMAMENTS_PASSIVE` is a selected-owner summon association policy: actual265187→250289 with known1250921 receives actual1251000 if not already present. SimC76f8118 pets1513–1540 selects the alternative entry/Burning Cleave action; SimC does not itself apply1251000. Native70448 requires that caster aura for1264093;1251000 Effect1 Aura361 triggers1264093. Original TDB1210 scans28481 addon/9586 creature spell/4066 spell-script rows find no applicable grant;250289 ScriptName/AIName are empty. TC a352 src has no1251000/1250921/265187 hook. SummonProperties4255 carries no aura field, root/talent effects no grant, full native reverse-effect scan no1251000 edge (`burning-cleave-584/source-absence.json`). This is not claimed as an authored native script.
+
+Real ordinary-root584 RED18.72s creates250289 but omits1251000;1264093 admission is CasterAuraState and6s produces0casts/damage. Independent fe12 consumer RED22.68s uses an actual native melee Dread with real1251000:0Cleave/3white hits. The earlier forced-aura Tyrant produced1list cast but no white hits, so did not independently prove melee replacement.54f compile E0277 was setup-only, never behavioral RED.
+
+Generic TC Unit.cpp2288–2348 Aura361 replaces each eligible mainhand swing with first TriggerSpell; offhand uses first nonzero MiscValue. It consumes the existing swing clock and deals no additional white damage. Source-backed guardian melee chase activates for the native override aura; its child is excluded from the independent cast list. No synthetic spell-repeat timer, damage coefficients or Imp cost change. GREEN and new ST/3T pending; Ret404542→408385 and unselected-white controls must pass alongside Demo.
