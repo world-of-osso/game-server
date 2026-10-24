@@ -9,6 +9,20 @@ const PURPOSE_TALENT: u32 = 408459;
 const PURPOSE: u32 = 223819;
 const FINAL_VERDICT: u32 = 383328;
 const JUDGMENT: u32 = 20271;
+const TEMPLARS_VERDICT: u32 = 85256;
+
+fn native_ret_in_melee() -> Run {
+    let mut run = native_ret(2);
+    // Use the same ordinary startattack/chase path as the literal controller;
+    // a manually casting follower must not keep following its distant owner.
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::AutoAttack(run.targets[0]),
+    )
+    .unwrap();
+    run
+}
 
 fn purpose_applications(run: &Run) -> usize {
     run.app
@@ -30,12 +44,12 @@ fn current_holy_power(run: &Run) -> f32 {
         .0
 }
 
-fn earn_finisher_power(run: &mut Run) {
+fn earn_finisher_power(run: &mut Run, finisher: u32) {
     let spell = run
         .app
         .world()
         .resource::<crate::spell_info::SpellStore>()
-        .get(FINAL_VERDICT)
+        .get(finisher)
         .unwrap();
     let required: f32 = crate::spell_cast::applicable_costs(run.app.world(), run.actor, spell)
         .unwrap()
@@ -75,11 +89,11 @@ fn earn_finisher_power(run: &mut Run) {
 #[ignore = "selected native408459 must produce223819 from naturally funded ordinary spenders"]
 fn dps_parity_ret_purpose_selected_native_holy_power_casts_produce_real_proc() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = native_ret(2);
+    let mut run = native_ret_in_melee();
     assert!(has(&run, PURPOSE_TALENT));
     assert_eq!(purpose_applications(&run), 0);
     for _ in 0..32 {
-        earn_finisher_power(&mut run);
+        earn_finisher_power(&mut run, FINAL_VERDICT);
         cast_finisher(&mut run, FINAL_VERDICT);
     }
     assert!(
@@ -92,10 +106,10 @@ fn dps_parity_ret_purpose_selected_native_holy_power_casts_produce_real_proc() {
 #[ignore = "native408459 aura alone must not impersonate a selected talent"]
 fn dps_parity_ret_purpose_unselected_aura_cannot_produce_the_selected_policy_proc() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = native_ret(2);
-    let (_, mut selected) = read_reference(70).unwrap();
-    selected.retain(|entry| entry.entry_id != 128243);
-    inputs::install_traits(run.app.world_mut(), run.actor, &selected).unwrap();
+    let mut run = native_ret_in_melee();
+    // Removing only DP invalidates a native23-point earlier-row gate. Use
+    // the valid granted-only loadout and its actually learned base spender.
+    inputs::install_traits(run.app.world_mut(), run.actor, &[]).unwrap();
     for _ in 0..4 {
         run.app.update();
     }
@@ -118,8 +132,8 @@ fn dps_parity_ret_purpose_unselected_aura_cannot_produce_the_selected_policy_pro
         "control uses the actual native chance aura"
     );
     for _ in 0..32 {
-        earn_finisher_power(&mut run);
-        cast_finisher(&mut run, FINAL_VERDICT);
+        earn_finisher_power(&mut run, TEMPLARS_VERDICT);
+        cast_finisher(&mut run, TEMPLARS_VERDICT);
     }
     assert_eq!(purpose_applications(&run), 0);
 }
@@ -128,7 +142,7 @@ fn dps_parity_ret_purpose_unselected_aura_cannot_produce_the_selected_policy_pro
 #[ignore = "selected native408459 must not proc from full-mask background spenders"]
 fn dps_parity_ret_purpose_triggered_spenders_cannot_produce_the_foreground_proc() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = native_ret(2);
+    let mut run = native_ret_in_melee();
     for _ in 0..32 {
         crate::spell_cast::cast_triggered(
             run.app.world_mut(),
@@ -146,7 +160,7 @@ fn dps_parity_ret_purpose_triggered_spenders_cannot_produce_the_foreground_proc(
 #[ignore = "selected native408459 must not roll on ordinary non-HolyPower generators"]
 fn dps_parity_ret_purpose_judgment_casts_cannot_produce_the_holy_power_proc() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = native_ret(2);
+    let mut run = native_ret_in_melee();
     let mut casts = 0;
     for _ in 0..2000 {
         match crate::spell_cast::creature_cast(
