@@ -32,6 +32,7 @@ pub(crate) fn capture_fixture(
 pub(crate) struct Driver {
     program: Program,
     variables: Variables,
+    precombat_cursor: usize,
     pub snapshot: Option<Value>,
     cancellation: Option<(Action, Expression, u32)>,
     pub decisions: u64,
@@ -43,6 +44,7 @@ impl Driver {
         Self {
             program,
             variables,
+            precombat_cursor: 0,
             snapshot: None,
             cancellation: None,
             decisions: 0,
@@ -57,11 +59,19 @@ impl Driver {
         prepared: &Prepared,
         equipment: &Equipment,
     ) -> Result<Option<(Action, Execution)>, String> {
-        let action = self
-            .program
-            .select(list, facts, &mut self.variables, |action| {
-                Ok(prepared.execution(action, equipment)?.is_some())
-            })?;
+        let mut usable = |action: &Action| Ok(prepared.execution(action, equipment)?.is_some());
+        let action = if list == "precombat" {
+            self.program.select_next(
+                list,
+                &mut self.precombat_cursor,
+                facts,
+                &mut self.variables,
+                &mut usable,
+            )?
+        } else {
+            self.program
+                .select(list, facts, &mut self.variables, &mut usable)?
+        };
         let Some(action) = action else {
             return Ok(None);
         };

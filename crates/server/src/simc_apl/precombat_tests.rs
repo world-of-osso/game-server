@@ -90,3 +90,20 @@ fn simc_apl_precombat_variables_sample_facts_at_their_single_source_position() {
     assert_eq!(next.name, "prowl");
     assert_eq!(variables.value("opening_targets"), Some(1.0));
 }
+
+#[test]
+fn simc_apl_precombat_rejects_unqualified_nested_control_rows() {
+    for control in ["call_action_list", "run_action_list"] {
+        let row = format!("{control},name=helpers");
+        let program = Program::parse(&[("precombat", &row), ("helpers", "prowl")]).unwrap();
+        let mut variables = program.state();
+        let mut cursor = 0;
+        let facts = BTreeMap::<String, f64>::new();
+        let error = program
+            .select_next("precombat", &mut cursor, &facts, &mut variables, |_| {
+                Ok(true)
+            })
+            .unwrap_err();
+        assert!(error.contains("ordered precombat does not support nested"));
+    }
+}
