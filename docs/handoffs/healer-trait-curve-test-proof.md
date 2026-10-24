@@ -1,15 +1,17 @@
 # Native healer tests after trait-effect-point publication
 
+Status: PARKED by lead priority pause. No builds, tests or extractions until lead RESUME. Owned agents-healer_ai.slice has populated0; no queued/running native job remained to cancel.
+
 Scope: two reported master/current-canonical failures after the trait-point publish. Decide expectations versus production from TC/DB2; no changed amounts, tolerance widening, cancelled passives or canonical writes. Separate from five native-kit publication and frozen-dataset replay diagnosis.
 
 ## Proof status
 
 | Case | Decision / exact scope | Proof |
 |---|---|---|
-| Wild Growth43 normalized falloff | Fixture read unranked SpellStore40 instead of applied talent amount. a3bd225dfe3fdd4b796251364c14c10905d40c93 uses owned aura effect0. Production unchanged. | Reported gate RED actual66 versus expected65.41296; DB2/TC/source confirmed; formatter passed. Native GREEN pending. |
-| Prismatic61 qualification | Fixture fails BEFORE Echo execution at native_group_at:83: current29193 versus max29194. No Echo amount failure is established. | Exact cs1046 footer read at222128–222135. Diagnostic2061fac8f identifies native member/damage receipts and unexpected full-health rescaling; assertions remain unchanged. |
+| Wild Growth43 normalized falloff | Fixture read unranked SpellStore40 instead of applied talent amount. a3bd225dfe3fdd4b796251364c14c10905d40c93 uses owned aura effect0. Production unchanged. | Native GREEN: exact two-case run gives WG PASS/Holy FAIL,10.13s at32790/P2abc/privateDD1. Native factor0.7 confirms learned30. |
+| Prismatic61 qualification | Real production rescaling precision loss BEFORE Echo: fully healthy Garrick18601/18601→new max29194 computes29193.998 then truncates29193. No damage receipts. | Same native run reproduces exact full-health guard. Diagnostic2061fac8f observes real inputs; d3d12ba20 adds an unrun direct regression. Production precision fix NOT implemented. |
 
-Native heavy proof is serialized behind the already-owned cast-divergence probe. No ready/all-pass claim. Lead intends to batch actual test-only corrections with Frenzy e19c33027.
+Native proof artifact: `game-engine/data/diagnostics/healer-ai-2026-10-21/native-kits/trait-regressions/native-two.log`; immutable SQLite backup SHA256 dd1de231e32c26291182dff050a8de5a5132908723ed21454eb128e45e4b05ae. First attempt used incompatible protocol186134 and failed compilation before tests; archived separately. Corrected protocol2abc carries required group portrait metadata. No ready/all-pass claim. Lead can batch WG's actual test-only correction with Frenzy e19c33027; Holy requires a generic production fix.
 
 ## Wild Growth evidence
 
@@ -25,8 +27,8 @@ Production `auras/periodic.rs::unstoppable_growth_reduction` already reads the a
 
 ## Holy fixture boundary: not an Echo amount failure
 
-The completed gate footer identifies the actual panic in `holy_policy_native_tests.rs::native_group_at`, before qualification: full-health assertion current29193/max29194. Thus do not change Echo's formula or attribute handling to fix this failure. The earlier diagnostic55de82b9e was unreachable and is removed by2061fac8f.
+The completed gate footer identifies the actual panic in `holy_policy_native_tests.rs::native_group_at`, before qualification: full-health assertion current29193/max29194. The owned native run confirms Garrick209057, zero damage receipts, and `rescaled_current` dropping a point while projecting fully healthy18601 to29194. Thus do not change Echo's formula or attribute handling. The earlier diagnostic55de82b9e was unreachable and is removed by2061fac8f.
 
-TraitDefinition108749 points19824/22997 use Set curves59083/79270: effect0 rank1→8/rank2→15; effect1 rank1→20/rank2→40. Fixture and producer already read applied effect0. Native cause investigation now separates genuine preparation damage from health projection: unchanged full-health assertion reports member/template and real damage receipts; test-only rescaler logging records full→nonfull truncation inputs if it occurs. No health priming or tolerance changes. A simulated same-max29194→29194 rescale does NOT lose a point, so that assumed input sequence is rejected; actual input ordering must be observed.
+TraitDefinition108749 points19824/22997 use Set curves59083/79270: effect0 rank1→8/rank2→15; effect1 rank1→20/rank2→40. Fixture and producer already read applied effect0. Actual projection inputs are now observed; damage is excluded. `stats.rs::rescaled_current` multiplies whole health values in f32, then truncates: the native product exceeds f32's exact-integer range. The pending generic correction is a wider intermediate, retaining existing ratio preservation, clamping and whole-unit truncation—not a special-case heal. It was NOT implemented before the priority pause. Direct regression d3d12ba20 uses the exact native18601→29194 inputs plus identity re-projection; it has NOT run. Preserve the unchanged native full-health assertion and existing partial-health tests. No health priming or tolerance changes.
 
 Native77489's ignored-healing-modifier flags were a separate source discrepancy, not this failure. No such production change is included or authorized by this diagnosis. Wild Growth's source fix remains separate.
