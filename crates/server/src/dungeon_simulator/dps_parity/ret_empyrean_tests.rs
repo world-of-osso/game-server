@@ -235,6 +235,30 @@ fn dps_parity_ret_empyrean_background_preserves_purpose_and_consumes_opposite_ar
 }
 
 #[test]
+#[ignore = "SimC background Wrath454351 retains the same selected Legacy relationship"]
+fn dps_parity_ret_empyrean_background_wrath_grants_only_to_selected_owner() {
+    let _seed = crate::random::seed_scope(70448);
+    for selected in [true, false] {
+        let mut run = fixture(selected);
+        crate::spell_cast::cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            454351,
+            Some(run.actor),
+            0,
+        );
+        for _ in 0..4 {
+            run.app.update();
+        }
+        assert!(
+            has(&run, 454351),
+            "actual background Wrath applies its native aura"
+        );
+        assert_eq!(has(&run, LEGACY_BUFF), selected);
+    }
+}
+
+#[test]
 #[ignore = "AW cannot grant Legacy or a background spender without selected387170"]
 fn dps_parity_ret_empyrean_unselected_owner_cannot_receive_the_policy_grant() {
     let _seed = crate::random::seed_scope(70448);
