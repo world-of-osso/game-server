@@ -459,6 +459,108 @@ fn literal_ww_native_combo_breaker_blackout_earns_rwk_and_delivers_its_child() {
 }
 
 #[test]
+#[ignore = "native earned RWK reset and override consumption; no aura or power grants"]
+fn literal_ww_native_earned_rwk_resets_rsk_and_consumes_its_override() {
+    let _scope = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(269, 1).unwrap();
+    let clock = fixture(run.app.world());
+    let rotation = Rotation::load(run.app.world_mut(), run.actor, clock).unwrap();
+    let mut earned = false;
+    for _ in 0..64 {
+        cast(&mut run, 100780);
+        if !crate::auras::has_aura(run.app.world(), run.actor, 116768) {
+            continue;
+        }
+        cast(&mut run, 107428);
+        let before = rotation
+            .value_for(
+                run.app.world_mut(),
+                run.actor,
+                &run.targets,
+                &action("rising_sun_kick"),
+                "cooldown.rising_sun_kick.full_recharge_time",
+            )
+            .unwrap();
+        assert!(
+            before > 0.0,
+            "actual RSK must spend its native shared charge first"
+        );
+        if !crate::auras::has_aura(run.app.world(), run.actor, 116768) {
+            continue;
+        }
+        cast(&mut run, 100784);
+        if crate::auras::has_aura(run.app.world(), run.actor, 1250554) {
+            earned = true;
+            assert_eq!(
+                rotation
+                    .value_for(
+                        run.app.world_mut(),
+                        run.actor,
+                        &run.targets,
+                        &action("rising_sun_kick"),
+                        "cooldown.rising_sun_kick.full_recharge_time",
+                    )
+                    .unwrap(),
+                0.0,
+                "earned RWK must reset the actual native RSK charge"
+            );
+            break;
+        }
+    }
+    assert!(
+        earned,
+        "selected owner must naturally earn1250554 from landed BOK"
+    );
+    let rwk = action("rushing_wind_kick");
+    let mut dispatched = false;
+    for _ in 0..1200 {
+        let prepared = Prepared::read(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &rotation.equipment,
+            bindings::execution_actions(),
+            false,
+        )
+        .unwrap();
+        if let Some(execution) = prepared.execution(&rwk, &rotation.equipment).unwrap() {
+            literal_rotation::execution::execute(run.app.world_mut(), run.actor, execution)
+                .unwrap();
+            run.app.update();
+            dispatched = true;
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        dispatched,
+        "earned actual RWK must dispatch through native literal admission"
+    );
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(468179)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+        "actual earned RWK must damage through native468179"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 1250554),
+        "actual RWK use must consume its earned override rather than repeatedly replacing RSK"
+    );
+    assert_eq!(
+        crate::auras::overrides::resolve_spell(run.app.world(), run.actor, 107428),
+        107428
+    );
+}
+
+#[test]
 #[ignore = "native unselected RWK owner control with naturally earned Combo Breaker"]
 fn literal_ww_native_unselected_rwk_owner_does_not_earn_the_override() {
     let _scope = crate::random::seed_scope(70448);
