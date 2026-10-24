@@ -63,6 +63,9 @@ pub struct StatModifiers {
     pub primary_pct: UnitStats,
     /// Aura467: additive percent of gear/flat bonuses, excluding create/base stats.
     pub primary_bonus_pct: UnitStats,
+    /// WARRIOR_ARMORED_TO_THE_TEETH_SIMC_POLICY: native percent of live armor,
+    /// added before total-strength percentages, with armor feedback solved once.
+    pub strength_from_armor_pct: f32,
     /// Added to gear ratings before conversion.
     pub ratings_flat: CombatRatings,
     /// Aura405: ordered rating mask/percent pairs; truncation occurs per effect.
@@ -416,6 +419,44 @@ fn armor_from_stats(primary: &UnitStats, main: Option<PrimaryStat>, mods: &StatM
     (explicit + main_value * mods.armor_from_primary_stat_pct) / 100.0
 }
 
+/// Armor before integer truncation; all existing native factors apply once.
+fn unrounded_armor(
+    primary: &UnitStats,
+    input: &StatInputs,
+    ratings: &CombatRatings,
+    mods: &StatModifiers,
+) -> f32 {
+    (ratings.armor * (1.0 + mods.base_armor_pct / 100.0)
+        + armor_from_stats(primary, input.primary_stat, mods)
+        + mods.total_armor_flat)
+        * (1.0 + mods.total_armor_pct / 100.0)
+        * (1.0 + mods.bonus_armor_pct / 100.0)
+}
+
+/// Solve strength = initial + armor×p and armor = floor(base + strength_bonus×q).
+/// Native Vanguard makes this a real dependency, not a second cached-stat pass.
+fn derive_strength_and_armor(
+    mut primary: UnitStats,
+    input: &StatInputs,
+    ratings: &CombatRatings,
+    mods: &StatModifiers,
+) -> (UnitStats, f32) {
+    let base_armor = unrounded_armor(&primary, input, ratings, mods);
+    let strength_per_armor =
+        mods.strength_from_armor_pct / 100.0 * (1.0 + mods.primary_pct.strength / 100.0);
+    let primary_armor = if input.primary_stat == Some(PrimaryStat::Strength) {
+        mods.armor_from_primary_stat_pct
+    } else {
+        0.0
+    };
+    let armor_per_strength = (mods.armor_from_stat_pct.strength + primary_armor) / 100.0
+        * (1.0 + mods.total_armor_pct / 100.0)
+        * (1.0 + mods.bonus_armor_pct / 100.0);
+    let armor = (base_armor / (1.0 - strength_per_armor * armor_per_strength)).floor();
+    primary.strength += armor * strength_per_armor;
+    (primary, armor)
+}
+
 /// Native unified rating fields cannot represent a destination-only sub-rating.
 pub(crate) fn supports_rating_conversion(source: u32, target: u32) -> bool {
     if source == 0 || target == 0 {
@@ -514,6 +555,7 @@ pub fn compute_character_stats(
     let mut ratings = input.gear_ratings;
     ratings += mods.ratings_flat;
     let ratings = modified_ratings(ratings, mods);
+    let (primary, armor) = derive_strength_and_armor(primary, input, &ratings, mods);
     let base_mana = base_mana(input.class, input.level);
     let base_attack_power = primary.strength * input.attack_power_per_strength
         + primary.agility * input.attack_power_per_agility;
@@ -578,12 +620,7 @@ pub fn compute_character_stats(
         leech_pct: tertiary_rating_value(ratings.leech, LEECH_RATING[level]),
         avoidance_pct: tertiary_rating_value(ratings.avoidance, AVOIDANCE_RATING[level]),
         speed_pct: tertiary_rating_value(ratings.speed, SPEED_RATING[level]),
-        armor: ((ratings.armor * (1.0 + mods.base_armor_pct / 100.0)
-            + armor_from_stats(&primary, input.primary_stat, &mods)
-            + mods.total_armor_flat)
-            * (1.0 + mods.total_armor_pct / 100.0)
-            * (1.0 + mods.bonus_armor_pct / 100.0))
-            .floor(),
+        armor,
         main_hand: WeaponDamage::UNARMED,
         off_hand: None,
         defense: PlayerDefense::default(),

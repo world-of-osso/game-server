@@ -22,6 +22,13 @@ Raw mastery points equal diminishing-return-adjusted mastery rating plus active 
 
 `MasteryAffectsPoints` effects must use the caster's live raw mastery points for players and approved NPC followers with class-derived stats. Refresh amounts when those points or active auras change, without restarting duration, stacks or periodic phase. Ordinary NPCs must not acquire player mastery scaling. Native70448 coefficients remain authoritative, including76671/76857 AP and168534 damage modifiers.
 
+## Named Warrior stat policies
+
+- `WARRIOR_ARMORED_TO_THE_TEETH_SIMC_POLICY`: Warrior players and approved class followers with active384124 gain strength from live native armor using its actual ranked aura226 amount: effect2 for Protection73, effect1 otherwise. Apply ordinary total-strength percentages and preserve the native strength-to-armor relationship, including Vanguard feedback. Native armor factors apply once.
+- `WARRIOR_BATTLEFIELD_COMMANDER_SIMC_POLICY`: active424742 effect5 dummy amount multiplies melee AP, composing with other AP percentages and including weapon AP through the shared total-AP calculation.
+
+These explicitly approved policies use pinned public SimC relationships because TC a352b1fa has no corresponding scripts/handlers. Native DB2 owns all amounts. Removal/relearning, native ranks and equipment changes must remain live; no copied SimC stat totals or double Reinforced Plates armor.
+
 ## How it works
 
 - [Character stats](../wiki/systems/character-stats.md)

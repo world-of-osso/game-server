@@ -74,6 +74,7 @@ pub mod stat_mods;
 pub(crate) mod stealth;
 pub(crate) mod summon_damage;
 mod unit_state;
+mod warrior_stats;
 pub(crate) mod world_state;
 #[cfg(test)]
 pub(crate) mod world_xp_tests;
@@ -1699,6 +1700,7 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
         combat.max_power_mult.clear();
     }
     ebon_might::add_primary_bonus(world, unit, primary_support, &mut stats);
+    warrior_stats::add_policies(world, unit, &mut stats);
     for multiplier in &mut combat.damage_taken_mult {
         *multiplier *= growth;
     }

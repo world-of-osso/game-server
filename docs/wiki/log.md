@@ -1,3 +1,7 @@
+## 2026-10-23 — Named Warrior strength/AP policies
+
+[Warrior policies](systems/character-stats.md#named-warrior-strengthap-policies--2026-10-23): TC a352b1fa lacks the class scripts/core handlers; lead explicitly approves pinned SimC relationships with native384124 ranked amounts10/4 and424742 effect5 amount3. Four actual reference Player REDs23.48s at e5cc1ef32 cover Arms/Protection strength and sheet/weapon AP. One source binding and existing native stat calculation solve Vanguard feedback without copying SimC double armor; no data/coefficients changed. Lifecycle GREEN pending; [source ledger](investigations/arms-spell-factors.md).
+
 ## 2026-10-23 — Generic mastery base and Arms factor ledger
 
 [Generic mastery](systems/character-stats.md#generic-mastery-base--2026-10-23): native zero-rating Arms Player114585 aura3188 produces16 at9215bc7fc, genuine RED10.95s on a fresh canonical snapshot. Remove only the duplicate hardcoded8 per TC UpdateMastery; rating/coefficient handling unchanged. At0576893d7 three-class unlearn/relearn1GREEN14.73s and stats-filter21GREEN8.35s, no compiler warnings; parent gate separate. [Historical Arms ledger](investigations/arms-spell-factors.md) exactly reconstructs AP3597.85vs4126/source1.799109vs1.818182, explicitly distinguishes SimC's double Reinforced Plates armor, and requires fresh post-redirect gear/tier qualification.

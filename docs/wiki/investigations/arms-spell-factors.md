@@ -18,7 +18,9 @@ Verified 2026-10-23. Historical native code089face19 (documentation tipa5ea8d0b9
 
 Native: `2537×1.05 + 934 = 3597.85`.
 Oracle: `floor((2537+50+25+3141.16×0.10)×1.05)=3072`; `round((3072+934)×1.03)=4126`.
-The native dummy/periodic-dummy values being present does not mean their class mechanics reach the sheet. TC script/handler qualification remains required before implementation; no AP correction factor is authorized by this arithmetic.
+The native dummy/periodic-dummy values being present does not mean their class mechanics reach the sheet. TC a352b1fa's Warrior scripts, Unit, StatSystem and SpellAuraEffects contain neither mechanic; core226 explicitly delegates to scripts (1324–1326), and core4 has no Warrior stat handler. Exact-ID SQL search in the retained TC source tree also has no binding. Source hashes/native rows are retained in `mastery-b67952ca4/warrior-tc-source-boundary.proof.json`; the native snapshot has no `spell_script_names` table, so this does not claim complete TDB-binding coverage.
+
+Lead explicitly approved `WARRIOR_ARMORED_TO_THE_TEETH_SIMC_POLICY` and `WARRIOR_BATTLEFIELD_COMMANDER_SIMC_POLICY`. [Contract](../../specs/character-stats.md#named-warrior-stat-policies): active native ranked amounts bind once in `auras/warrior_stats.rs`; no SimC numeric constants. Strength/armor are solved together in the existing stat producer, not iterated through stale CharacterStats. Vanguard's actual native70% strength-to-armor creates feedback for Protection's4%; all existing native armor factors still apply once. Commander composes into the existing AP percentage consumed by both sheet AP and weapon-inclusive cast AP. Revisit these policies when qualified TC implementations become available; do not keep alternate paths.
 
 ## Comparator armor divergence — do not tune native armor
 
@@ -45,7 +47,7 @@ The nearly matching source products hide offsetting differences. Adding a guesse
 |---|---|
 | AP and source-product discrepancy decomposition | Historical actual native/oracle receipts plus exact arithmetic and pinned source inspection |
 | Generic mastery root cause | Actual native114585 aura3188 plus hardcoded8; TC UpdateMastery uses aura318+rating only; native regression/repair tracked in character-stats |
-| Armored to the Teeth / Battlefield Commander behavior | Native amounts and pinned SimC source identified; TC script/handler qualification and native behavioral RED/GREEN pending |
+| Armored to the Teeth / Battlefield Commander behavior | Named policies approved after TC source boundary; actual Arms/Protection four genuine REDs23.48s at e5cc1ef32, lifecycle GREEN pending |
 | Redirected stat inputs / Arms2pc membership | Fresh master-based receipt required afterb67952ca4; no current input-gap claim |
 | Target item-level-K branch | Native70448 GT ItemLevelByLevel FDID2012881 still unavailable;70575 is not a substitute |
 
