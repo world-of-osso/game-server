@@ -32,7 +32,7 @@ fn victim(world: &World, creature: Entity) -> Option<Entity> {
 }
 
 /// `Unit::CastSpell(target, spellId, triggered)` for a creature.
-pub(crate) fn creature_cast(
+pub fn creature_cast(
     world: &mut World,
     caster: Entity,
     spell_id: u32,

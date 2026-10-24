@@ -6,6 +6,13 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on active
 
 Import the audited effective public TC `spell_proc` IDs into `tdb_spell_proc(SpellId PRIMARY KEY)` only after every pinned base/update source matches its SHA-256. Reject duplicate/incomplete IDs before publication. Replace presence transactionally without changing retained rows' later value columns or unrelated tables; errors leave prior data intact. Presence alone must not overlay chance, flags, cooldown or charges. The later full proc importer owns those values. See [Feral/source ledger](../handoffs/feral-source-census.md).
 
+## Firestarter direct critical strikes
+
+- [ ] Actual caster205026 effect0 makes ordinary Fireball133/Pyroblast11366 critical at recipient health percentage greater than or equal to its native threshold (70448:90).
+- [ ] Below that threshold, or without caster205026 effect0, retain ordinary critical chance, not forced critical/noncritical results; no learned spell, aura, stat or chance grants.
+
+TC a352b1fa `spell_mage.cpp:762–779`; native reference90 fixtures: `crates/server/src/dungeon_simulator/dps_parity/firestarter_tests.rs`. Periodic321712 (`spell_mage.cpp:783–800`) is separate pending the shared periodic critical roll; no per-spell tick executor in this direct-only slice.
+
 ## Label point modifiers on existing auras
 
 Native aura218/219 point modifiers must update affected self-owned passive/permanent aura effect amounts on add, change and removal, independent of application order. Use native labels and Points/PointsIndex0–4; charged modifiers must not recalculate passive amounts, and the triggering effect cannot modify itself. Preserve the target aura instance, duration, stacks and periodic phase. TC's authored Overflowing Maelstrom384669 temporary-aura exception remains eligible. Changed point-modifier effects propagate to their dependants while retaining the original triggering-effect exclusion. Native WW1258122 makes Efficient Training450989 effects0/1 equal40 instead of20; native Ret1258011 makes Second Sunrise431474 equal20/50 instead of15/30. Unlearning restores unmodified amounts without reapplying the target. TC a352b1fa `SpellAuraEffects.cpp1194–1249`; [source census/proof](../handoffs/aura-label-points-proof-ledger.md).

@@ -10,25 +10,25 @@ use crate::maps::WorldLocation;
 pub(crate) const FOLLOWER_DIFFICULTY: u32 = 205;
 
 #[derive(Clone)]
-pub(crate) struct Dungeon {
+pub struct Dungeon {
     pub id: u32,
     pub name: String,
     pub entrance: WorldLocation,
 }
 
 #[derive(Resource, Default)]
-#[cfg_attr(test, derive(Clone))]
-pub(crate) struct FollowerCatalog {
+#[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
+pub struct FollowerCatalog {
     pub profiles: crate::catalog_data::CatalogData<Vec<Profile>>,
     pub follower_ids: crate::catalog_data::CatalogData<HashSet<u32>>,
     pub dungeons: crate::catalog_data::CatalogData<HashMap<u32, Dungeon>>,
     pub(super) kits: crate::catalog_data::CatalogData<Vec<super::kit::Entry>>,
 }
 
-pub(crate) fn load_catalog(db: &Connection) -> rusqlite::Result<FollowerCatalog> {
-    #[cfg(test)]
+pub fn load_catalog(db: &Connection) -> rusqlite::Result<FollowerCatalog> {
+    #[cfg(any(test, feature = "test-support"))]
     return crate::test_data::catalog_cache::load_connection(db, || read_catalog(db));
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "test-support")))]
     read_catalog(db)
 }
 

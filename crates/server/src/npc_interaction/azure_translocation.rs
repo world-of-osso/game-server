@@ -62,7 +62,7 @@ pub(crate) fn read_endpoint(world: &World, destination: u32) -> Result<WorldLoca
     })
 }
 
-pub(crate) fn traverse(world: &mut World, player: Entity, book: Entity) -> Result<usize, String> {
+pub fn traverse(world: &mut World, player: Entity, book: Entity) -> Result<usize, String> {
     let copy = *world.get::<InMap>(player).ok_or("Azure reader lacks map")?;
     if copy.map_id != 2515 || world.get::<InMap>(book) != Some(&copy) {
         return Err("Azure book and reader must share the Azure copy".into());

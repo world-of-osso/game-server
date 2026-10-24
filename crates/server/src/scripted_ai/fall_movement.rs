@@ -12,7 +12,7 @@ const TERMINAL_SPEED: f32 = 60.148_003;
 const GRAVITY: f32 = shared::skyriding::GRAVITY;
 
 #[derive(Component)]
-pub(crate) struct FallMovement {
+pub struct FallMovement {
     id: u32,
     from: Position,
     floor: f32,

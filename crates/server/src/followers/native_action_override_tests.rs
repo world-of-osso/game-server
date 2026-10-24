@@ -177,7 +177,7 @@ fn action_knowledge_passive_endpoint_is_not_a_controller_action() {
         .get(404542)
         .unwrap();
     assert!(crate::auras::is_passive(spell));
-    let resolve = crate::dungeon_simulator::dps_parity::literal_rotation::execution::resolve_action;
+    let resolve = crate::spell_cast::knowledge::resolve_action;
     assert_eq!(resolve(world, actor, 35395).unwrap(), None);
     assert_eq!(resolve(world, actor, 404542).unwrap(), None);
     assert!(world.get::<KnownSpells>(actor).unwrap().contains(404542));

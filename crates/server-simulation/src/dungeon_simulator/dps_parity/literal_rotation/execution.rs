@@ -2,6 +2,7 @@
 use super::equipment::{Equipment, ItemUse};
 use bevy::prelude::*;
 use server::simc_apl::Action;
+use server::spell_cast::knowledge::resolve_action;
 use shared::components::PowerType;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -278,16 +279,6 @@ fn talent_permits(world: &World, actor: Entity, talent: Option<u32>) -> Result<b
     Ok(traits
         .active_talent_spells()
         .any(|spell| spell.spell_id == talent))
-}
-
-pub(crate) fn resolve_action(world: &World, actor: Entity, id: u32) -> Result<Option<u32>, String> {
-    match crate::spell_cast::knowledge::resolve_actor_action(world, actor, id) {
-        Ok(resolved) => Ok(Some(resolved)),
-        Err(
-            crate::spell_cast::CastFailure::UnknownSpell | crate::spell_cast::CastFailure::NotKnown,
-        ) => Ok(None),
-        Err(reason) => Err(format!("native literal action knowledge: {reason:?}")),
-    }
 }
 
 fn native_readiness(

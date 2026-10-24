@@ -75,14 +75,14 @@ type UnitGeometry<'w, 's> = Query<
 >;
 
 #[derive(bevy::ecs::system::SystemParam)]
-pub(crate) struct AggroDistance<'w, 's> {
+pub struct AggroDistance<'w, 's> {
     units: UnitGeometry<'w, 's>,
     models: Option<Res<'w, ModelReaches>>,
     data: Option<Res<'w, WorldData>>,
 }
 
 impl AggroDistance<'_, '_> {
-    pub(crate) fn center_radius(
+    pub fn center_radius(
         &self,
         creature: Entity,
         target: Entity,
@@ -125,7 +125,7 @@ impl AggroDistance<'_, '_> {
         Some(expansion_max_level(template.health_scaling_expansion))
     }
 
-    pub(crate) fn combat_reach(&self, unit: Entity) -> Option<f32> {
+    pub fn combat_reach(&self, unit: Entity) -> Option<f32> {
         let (player, _, display, scale, _, _) = self.units.get(unit).ok()?;
         let scale = scale.map_or(1.0, |scale| scale.0);
         if player {
