@@ -55,6 +55,14 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 - [x] Source-backed prerequisite plans may use bounded longer durations and actual enabling casts/earned stacks. Explicit repeated precombat actions replace the stripped setup and are recorded separately in proof; no invented buff values or silent reference-option changes.
 - [x] Select top-five reference damage channels per spec, retain channel shares/provenance and explicit untriggered-channel gaps; diagnostic probes do not certify native±10% parity. Native cast instrumentation remains owned by spec parity harnesses.
 
+### Native per-spell differential harness
+
+- [x] A shared test-side helper reuses reference-profile preparation, native31146 and literal fixture readiness/dispatch for exactly one requested cast or N observed damage ticks; no forked rotation or synthetic follower profile. First native fixture is follower269 Tiger Palm, then Arms12294 after shared Player dispatch supports its real actor.
+- [x] The shared helper accepts distinct cast and observed damage spell IDs. An existing real fixture may be primed through shared native execution before capture; requested hit/tick counts exclude earlier priming events, without granting resources or inventing actor profiles.
+- [x] Capture actual calculation-stage inputs/outputs without rerolling variance/crit or recomputing a second formula. JSON retains base, AP/SP terms, applied multipliers, crit, versatility and armor reduction in oracle-compatible per-hit events. Armor records expose actual post-penetration armor, selected K and the calculation's mitigation scalar; any rounded damage-stage ratio is separately named. Missing attribution is explicitly `unattributed product`, not a guessed aura source.
+- [x] Native fixtures preserve reference gear/talents and exclude raid buffs. Explicit priming casts may earn required resources/state; no production damage tuning belongs to this diagnostic. Separately approved follower mechanics stay in the [follower contract](follower-dungeons.md#player-equivalent-class-combat-policy).
+- [x] A stdlib Python CLI diffs matched formula/result/armor factors, retains both result states and provenance, and distinguishes actual differences from unprinted factors. Identical recorded factors and concrete counterfactual deltas have unittest coverage. Explicit native/oracle action-name selectors distinguish real same-ID tier/proc/regular hits; impact ordinals are within the selected series and absent requested names fail explicitly.
+
 ## How it works
 
 - [Character stats and gear](../wiki/systems/character-stats.md#gear).
