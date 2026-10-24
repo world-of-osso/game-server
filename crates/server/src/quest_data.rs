@@ -561,7 +561,7 @@ struct ContentNames {
     items: HashMap<u32, QuestItemInfo>,
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[test]
 #[ignore = "requires WORLD_POPULATION_DB pointing to a promoted private copy"]
 fn zone_population_real_copy_loads_quests_givers_and_objectives() {

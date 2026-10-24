@@ -10,23 +10,23 @@
 mod area_triggers;
 pub(crate) mod difficulty;
 pub(crate) mod graveyard;
-pub(crate) mod instances;
+pub mod instances;
 pub(crate) mod locks;
 mod login;
 pub(crate) mod persistence;
 pub(crate) mod raid;
-pub(crate) mod store;
+pub mod store;
 pub(crate) mod transfer;
 pub(crate) mod units;
 
 use bevy::prelude::*;
 use shared::components::{Player, Position};
 
-pub(crate) use difficulty::{DungeonDifficulty, ServerClock};
-pub(crate) use instances::{HOSTED_CONTINENTS, InstanceManager};
+pub use difficulty::{DungeonDifficulty, ServerClock};
+pub use instances::{HOSTED_CONTINENTS, InstanceManager};
 pub(crate) use login::LoginMaps;
 pub(crate) use raid::RaidDifficulty;
-pub(crate) use store::MapStore;
+pub use store::MapStore;
 pub(crate) use transfer::{MapTransfer, TeleportOptions, teleport_to};
 
 /// The map copy an entity is in.

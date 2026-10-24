@@ -13,7 +13,7 @@ const NON_PLAYER_UI_FLAGS: u32 = 0x2 | 0x4000 | 0x100000;
 const STATISTIC_FLAG: u32 = 0x1;
 
 #[derive(Debug)]
-#[cfg_attr(test, derive(Clone))]
+#[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
 struct WindowDefinition {
     id: u32,
     category: u32,
@@ -27,7 +27,7 @@ struct WindowDefinition {
 }
 
 #[derive(Debug, Default)]
-#[cfg_attr(test, derive(Clone))]
+#[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
 pub(super) struct WindowData {
     categories: BTreeMap<u32, AchievementCategoryEntry>,
     definitions: BTreeMap<u32, WindowDefinition>,
