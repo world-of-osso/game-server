@@ -1,3 +1,7 @@
+## 2026-10-24 — Source-bound ordinary cone boundary
+
+[Model geometry](systems/model-geometry.md#ordinary-cone-close-boundary):607781b26 genuine native FoF117418/Mage120 close-off-arc2RED plus strict2yd/far/vertical1GREEN8.31s. Shared ordinary cones now use TC's strict3D target bounding radius/min2; existing98609-row loader retains radius alongside unchanged reach. No unknown-radius substitution, line bypass or WW IDs. Native harness uses actual Kobold10913/scale1. GREEN, unchanged cone/frontal controls and two-crate check pending; lead full gate and WW numerical parity separate.
+
 ## 2026-10-24 — Shared configured expected combat length GREEN
 
 [Shared expected length](systems/simc-apl.md#expected-combat-length):88095009c4genuineRED0.02s→991b7fcde4/4GREEN0.00s,14m24compile/0warnings after landed924638aba merge. Fixture duration147.5/300/600.25 stays independent of elapsed72/remaining;0/-1/NaN/±Inf and Dungeon are named unavailable, proposed action returns configured215.75. No fixed300/default/extra field/DB input. Tests enabled attribute-only; integration remains main-owned. [Proof](../handoffs/expected-combat-length-proof-ledger.md).
