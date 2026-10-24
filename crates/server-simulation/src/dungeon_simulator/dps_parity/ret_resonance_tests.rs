@@ -142,3 +142,63 @@ fn dps_parity_ret_resonance_native_other_choice_keeps_budget_absent() {
     cast(&mut run, TOLL, TOLL_JUDGMENT);
     assert!(resonance(&run).is_none());
 }
+
+#[test]
+#[ignore = "observe new native Resonance across actual Toll cast and first native proc update"]
+fn dps_parity_ret_resonance_native_new_budget_survives_its_own_toll_cast() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = native_ret(4);
+    assert!(selected(&run));
+    assert!(resonance(&run).is_none());
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::AutoAttack(run.targets[0]),
+    )
+    .unwrap();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        TOLL,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    eprintln!(
+        "Resonance after ordinary Toll before update: {:?}; triggered casts: {:?}",
+        resonance(&run).map(|aura| (
+            aura.stacks,
+            aura.max_stacks,
+            aura.charges,
+            aura.interrupt_flags,
+            aura.expires_at
+        )),
+        run.app
+            .world()
+            .get_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+            .map(|observed| &observed.0)
+    );
+    let aura = resonance(&run).expect("native producer must apply before the proc update");
+    assert_eq!(aura.stacks, aura.max_stacks);
+    assert_eq!(aura.stacks, 3);
+    for frame in 1..=4 {
+        run.app.update();
+        eprintln!(
+            "Resonance frame{frame} now{}: {:?}",
+            crate::auras::aura_now(run.app.world()),
+            resonance(&run).map(|aura| (aura.stacks, aura.charges, aura.expires_at))
+        );
+    }
+    let events: Vec<_> = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| matches!(event.spell_id, Some(RESONANCE | TOLL | TOLL_JUDGMENT)))
+        .collect();
+    eprintln!("Actual Resonance/Toll combat ordering: {events:?}");
+    let retained =
+        resonance(&run).expect("new native Resonance must not be consumed by its own Toll cast");
+    assert_eq!(retained.stacks, retained.max_stacks);
+}
