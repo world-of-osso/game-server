@@ -188,6 +188,7 @@ pub(crate) mod omor_orbital;
 mod ordinary_dead_caster_tests;
 #[cfg(test)]
 mod prayer_of_mending_tests;
+mod publication;
 #[cfg(test)]
 mod queued_trigger_cost_tests;
 #[cfg(test)]
@@ -2547,19 +2548,7 @@ pub(crate) fn execute_cast(
         .get_mut::<SpellHistory>(caster)
         .expect("ordinary successful cast initialized its history")
         .record_successful_cast(spell.id);
-    log_event(
-        world,
-        cast_event(caster, explicit, spell, CombatLogKind::CastSuccess),
-    );
-    broadcast_spell_go(
-        world,
-        SpellGo {
-            caster: caster.to_bits(),
-            target: explicit.map(Entity::to_bits),
-            hit_targets: hit_targets(&plan),
-            spell_id: spell.id,
-        },
-    );
+    publication::publish(world, caster, spell, explicit, &plan, false);
     procs::push_event(
         world,
         AuraEvent {
@@ -3499,6 +3488,7 @@ fn launch_triggered_spell(
             crate::achievement::record_spell_cast(world, caster, spell.id);
             scripts::on_cast(world, caster, spell.id, depth);
             scripts::spawn_ravager_field(world, caster, spell, explicit, depth);
+            publication::publish(world, caster, spell, explicit, &plan, true);
             missiles::launch(world, caster, spell, plan, depth);
             druid_transform::after_cast(world, caster, spell);
             true
@@ -3552,6 +3542,7 @@ fn execute_costed_trigger(
     scripts::on_cast(world, caster, prepared.id, depth);
     take_cast_resources(world, caster, &prepared, &costs);
     crate::achievement::record_spell_cast(world, caster, prepared.id);
+    publication::publish(world, caster, &prepared, explicit, &plan, true);
     missiles::launch(world, caster, &prepared, plan, depth);
     druid_transform::after_cast(world, caster, &prepared);
     Ok(())

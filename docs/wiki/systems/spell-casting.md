@@ -1,5 +1,11 @@
 # Spell Casting
 
+## Triggered cast publication — 2026-10-24
+
+TC Spell.cpp3893/4779/8346–8353 gates launch publication, not payload execution. One publisher now serves ordinary, scripted, costed and bool FULL_MASK routes before missile launch. Ordinary casts or native channels, AuraPointsOnClient, hit delay, AlwaysCastLog and unconditional nonzero SpellXSpellVisual records qualify; conditional presence is never resolution. Bool FULL_MASK's old unconditional CastSuccess is replaced, preventing duplicates. Proc suppression and explicit target/selected-hit data remain unchanged.
+
+New loader facts distinguish unconditional/conditional RECORD IDs from the older child-visual-presence boolean. Strictly-conditional-only/no-other-term cases log once per spell and publish neither event; they still execute their payload. Parent excludes a general condition evaluator. Native Pass1 counts2,127 conditional-only definitions,487 independently covered,1,640 unresolved including4 missing Misc records. Boar471936 is unconditional;1459/2061 use AuraPointsOnClient;1953 remains unresolved when triggered. [Contract](../../specs/triggered-cast-publication.md), [native RED and exact census/incompatible assertions](../../handoffs/triggered-native-send-proof-ledger.md). Current GREEN/check/full gate pending.
+
 ## Protection producer dispatch — 2026-10-22
 
 Native Attr3 `ALWAYS_HIT` bypasses avoidance after school/mechanic immunity; missile launch still evaluates reflection. Source and deterministic native Evasion RED/control evidence live in the [producer contract](../../specs/protection-damage-producers.md#native-always_hit-defense-reader); d1335d807:4PASS17.98s/no warnings, including original charge primary/splash/stun assertions.

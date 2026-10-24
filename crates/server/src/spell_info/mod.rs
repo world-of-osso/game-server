@@ -66,6 +66,11 @@ pub struct SpellInfo {
     pub subtext: String,
     /// At least one DifficultyID-0 SpellXSpellVisual has a nonzero SpellVisualID.
     pub has_spell_visual: bool,
+    /// A nonzero native SpellXSpellVisual record is available without caster conditions.
+    /// This proves a nonzero resolution for any caster, even beside conditional rows.
+    pub has_unconditional_spell_x_visual: bool,
+    /// Nonzero native records exist that require caster conditions; never assumed met.
+    pub has_conditional_spell_x_visual: bool,
     pub misc: Option<SpellMisc>,
     /// Every `spell_effect` row, sorted by `EffectIndex` (indexes may be sparse).
     pub effects: Vec<SpellEffect>,

@@ -270,9 +270,16 @@ fn load_spell_visuals(conn: &Connection, spells: &mut Spells) -> rusqlite::Resul
     fill(
         conn,
         spells,
-        "SELECT DISTINCT SpellID FROM spell_x_spell_visual WHERE DifficultyID = 0 AND SpellVisualID > 0",
-        |_| Ok(()),
-        |spell, ()| spell.has_spell_visual = true,
+        "SELECT SpellID, MAX(SpellVisualID > 0),
+                MAX(ID > 0 AND CasterUnitConditionID = 0 AND CasterPlayerConditionID = 0),
+                MAX(ID > 0 AND (CasterUnitConditionID != 0 OR CasterPlayerConditionID != 0))
+         FROM spell_x_spell_visual WHERE DifficultyID = 0 GROUP BY SpellID",
+        |row| Ok((row.get(1)?, row.get(2)?, row.get(3)?)),
+        |spell, (presence, unconditional, conditional)| {
+            spell.has_spell_visual = presence;
+            spell.has_unconditional_spell_x_visual = unconditional;
+            spell.has_conditional_spell_x_visual = conditional;
+        },
     )
 }
 

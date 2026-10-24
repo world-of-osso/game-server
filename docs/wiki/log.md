@@ -1,3 +1,7 @@
+## 2026-10-24 — Native triggered-send RED and bounded predicate
+
+[Publication source/boundary](systems/spell-casting.md#triggered-cast-publication--2026-10-24): original Boar CastSuccess expectation survives TC falsification; generic native1429Boar/flight2RED plus actual zero-visual controlPASS13.21s precede runtime. Shared launch publisher and native independent terms now wired, no duplicate bool-path log/proc activation. Parent-approved unconditional proof avoids a condition framework; Pass1 leaves1,640 explicit logged-once gaps. Eight targeted GREEN/check pending, three old conflicting assertions unchanged, separate parent gate.
+
 ## 2026-10-24 — Shared configured expected combat length GREEN
 
 [Shared expected length](systems/simc-apl.md#expected-combat-length):88095009c4genuineRED0.02s→991b7fcde4/4GREEN0.00s,14m24compile/0warnings after landed924638aba merge. Fixture duration147.5/300/600.25 stays independent of elapsed72/remaining;0/-1/NaN/±Inf and Dungeon are named unavailable, proposed action returns configured215.75. No fixed300/default/extra field/DB input. Tests enabled attribute-only; integration remains main-owned. [Proof](../handoffs/expected-combat-length-proof-ledger.md).

@@ -5,6 +5,9 @@ use shared::protocol::CombatLogKind;
 const BOAR_IMPACT: u32 = 471936;
 const FROSTBOLT: u32 = 116;
 const FROSTBOLT_DAMAGE: u32 = 228597;
+const ARCANE_INTELLECT: u32 = 1459;
+const MIND_BLAST: u32 = 8092;
+const LIGHT_IN_THE_DARKNESS: u32 = 196415;
 
 fn successes(h: &Harness, spell: u32) -> usize {
     h.inbox
@@ -69,6 +72,113 @@ fn triggered_send_native_zero_visual_payload_has_no_success_or_spell_go() {
     );
     assert_eq!(successes(&h, FROSTBOLT_DAMAGE), 0);
     assert_eq!(sends(&h, FROSTBOLT_DAMAGE), 0);
+}
+
+#[test]
+fn triggered_send_native_bool_visual_publishes_once() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut h = harness(Vec::new(), &[BOAR_IMPACT], 3).expect("native Boar payload");
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, BOAR_IMPACT, Some(h.npc), true)
+        .expect("actual bool FULL_MASK admission");
+    h.advance(6);
+    assert!(landed(&h, BOAR_IMPACT));
+    assert_eq!(
+        successes(&h, BOAR_IMPACT),
+        1,
+        "existing bool path must not double-log"
+    );
+    assert_eq!(sends(&h, BOAR_IMPACT), 1);
+}
+
+#[test]
+fn triggered_send_native_bool_zero_visual_has_no_success_or_spell_go() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut h = harness(Vec::new(), &[FROSTBOLT_DAMAGE], 8).expect("native zero-visual payload");
+    crate::spell_cast::creature_cast(
+        h.app.world_mut(),
+        h.caster,
+        FROSTBOLT_DAMAGE,
+        Some(h.npc),
+        true,
+    )
+    .expect("actual bool FULL_MASK admission");
+    h.advance(6);
+    assert!(landed(&h, FROSTBOLT_DAMAGE));
+    assert_eq!(successes(&h, FROSTBOLT_DAMAGE), 0);
+    assert_eq!(sends(&h, FROSTBOLT_DAMAGE), 0);
+}
+
+#[test]
+fn triggered_send_native_conditional_visual_points_term_still_publishes() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut h =
+        harness(Vec::new(), &[ARCANE_INTELLECT], 8).expect("native conditional visual spell");
+    crate::spell_cast::cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        ARCANE_INTELLECT,
+        Some(h.caster),
+        1,
+    );
+    h.advance(6);
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        h.caster,
+        ARCANE_INTELLECT
+    ));
+    assert_eq!(
+        successes(&h, ARCANE_INTELLECT),
+        1,
+        "native AuraPointsOnClient is independent of visual resolution"
+    );
+    assert_eq!(sends(&h, ARCANE_INTELLECT), 1);
+}
+
+#[test]
+fn triggered_send_native_conditional_only_gap_does_not_invent_publication() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut h = harness(Vec::new(), &[MIND_BLAST], 5).expect("native strictly conditional visual");
+    for _ in 0..2 {
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, MIND_BLAST, Some(h.npc), 1);
+        h.advance(6);
+    }
+    let impacts = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(MIND_BLAST)
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+        })
+        .count();
+    assert_eq!(
+        impacts, 2,
+        "unresolved publication does not disable the actual payload"
+    );
+    assert_eq!(successes(&h, MIND_BLAST), 0);
+    assert_eq!(sends(&h, MIND_BLAST), 0);
+}
+
+#[test]
+fn triggered_send_native_always_cast_log_overrides_conditional_visual_gap() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut h =
+        harness(Vec::new(), &[LIGHT_IN_THE_DARKNESS], 5).expect("native AlwaysCastLog spell");
+    crate::spell_cast::cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        LIGHT_IN_THE_DARKNESS,
+        Some(h.caster),
+        1,
+    );
+    h.advance(6);
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        h.caster,
+        LIGHT_IN_THE_DARKNESS
+    ));
+    assert_eq!(successes(&h, LIGHT_IN_THE_DARKNESS), 1);
+    assert_eq!(sends(&h, LIGHT_IN_THE_DARKNESS), 1);
 }
 
 #[test]

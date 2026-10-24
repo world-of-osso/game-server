@@ -9,15 +9,12 @@
 //! miss chance (`Unit::MeleeSpellHitResult` miss row; dodge, parry and block are
 //! not modelled), which MOD_HIT_CHANCE lowers.
 
-use bevy::prelude::*;
-use shared::protocol::CombatLogKind;
-
 use super::{
-    CastFailure, Sight, cast_event, handled_effects, log_event, plan_targets, start_cast, targets,
-    validate_target,
+    CastFailure, Sight, handled_effects, plan_targets, start_cast, targets, validate_target,
 };
 use crate::creature_ai::CreatureState;
 use crate::spell_info::{SpellInfo, SpellStore};
+use bevy::prelude::*;
 
 mod explicit_targets;
 
@@ -48,10 +45,7 @@ pub fn creature_cast(
     let explicit = validate_target(world, caster, &spell, explicit, Sight::Start)?;
     super::aura_spell_restrictions::check_target(world, caster, explicit, &spell)?;
     let plan = plan_targets(world, caster, &spell, explicit, false)?;
-    log_event(
-        world,
-        cast_event(caster, explicit, &spell, CombatLogKind::CastSuccess),
-    );
+    super::publication::publish(world, caster, &spell, explicit, &plan, true);
     super::missiles::launch(world, caster, &spell, plan, TRIGGERED_DEPTH);
     Ok(())
 }
