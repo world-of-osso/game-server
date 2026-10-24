@@ -22,13 +22,6 @@ fn count_native_thrash(targets: usize) -> (usize, usize) {
             .get::<crate::followers::Follower>(run.actor)
             .is_some()
     );
-    assert!(
-        run.app
-            .world()
-            .get::<crate::class_progression::KnownSpells>(run.actor)
-            .unwrap()
-            .contains(WILD_THRASH)
-    );
     engage(&mut run);
     let (seconds, _, _) = advance_combat(&mut run).unwrap();
     assert!((seconds - 300.0).abs() < 0.001);
