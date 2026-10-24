@@ -1,6 +1,8 @@
 """Native binding precedence, explicit project policies and atomic import failure."""
 import importlib.util
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -83,6 +85,27 @@ class GuardianImportTest(unittest.TestCase):
                 self.assertEqual(read_bindings(conn), expected)
                 IMPORTER.import_guardian_spells(conn, archive)
                 self.assertEqual(read_bindings(conn), expected)
+
+    def test_cli_publishes_policy_provenance_without_database_lifetime_warnings(self):
+        with tempfile.TemporaryDirectory() as folder:
+            archive = Path(folder) / "archive.sql"
+            archive.write_text(
+                "INSERT INTO `creature_template_spell` VALUES (416,0,3110,41031);\n"
+            )
+            prepared = Path(folder) / "prepared.sqlite"
+            prepared.touch()
+            result = subprocess.run(
+                [sys.executable, "-X", "dev", SPEC.origin,
+                 "--archive", str(archive), "--db", str(prepared)],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stderr, "")
+            self.assertEqual(result.stdout.splitlines(), [
+                "guardian_spells: 1 authentic archive rows + 2 explicit project policies",
+                "guardian_policy: SIMC_DREADSTALKER_ATTACK_BINDING",
+                "guardian_policy: SIMC_ANTORAN_TYRANT_BURNING_CLEAVE_BINDING",
+            ])
 
     def test_missing_archive_table_does_not_publish_policy_rows(self):
         with tempfile.TemporaryDirectory() as folder:
