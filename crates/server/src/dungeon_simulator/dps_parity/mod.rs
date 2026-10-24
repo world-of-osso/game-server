@@ -33,6 +33,7 @@ struct Run {
     gaps: Vec<String>,
     player_rotation: Option<player_rotation::PlayerRotation>,
     windwalker_rotation: Option<windwalker_rotation::Rotation>,
+    elemental_rotation: Option<elemental_rotation::Rotation>,
 }
 
 fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, String> {
@@ -149,6 +150,7 @@ fn prepare_reference(
         gaps,
         player_rotation: None,
         windwalker_rotation: None,
+        elemental_rotation: None,
     })
 }
 
@@ -289,12 +291,19 @@ fn drive_player(run: &mut Run) -> Result<(), String> {
     if let Some(rotation) = &mut run.windwalker_rotation {
         rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
     }
+    if let Some(rotation) = &mut run.elemental_rotation {
+        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    }
     Ok(())
 }
 
 fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     let _seed_scope = crate::random::seed_scope(70_448);
-    let mut run = prepare(spec_id, count)?;
+    let mut run = if spec_id == 262 {
+        elemental_rotation::prepare_measurement(count)?
+    } else {
+        prepare(spec_id, count)?
+    };
     let before = report::stats(run.app.world(), run.actor);
     let targets = target_snapshot(&run);
     engage(&mut run);
@@ -304,7 +313,8 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     Ok(
         json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "actor_kind": if run.player_rotation.is_some() { "player" } else { "follower" },
-        "driver": if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "driver": if run.elemental_rotation.is_some() { "LITERAL_SIMC_ELEMENTAL_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "elemental_rotation": run.elemental_rotation.as_ref().map(|rotation| rotation.report()),
         "windwalker_rotation": run.windwalker_rotation.as_ref().map(|rotation| rotation.report()),
         "assisted_decisions": run.player_rotation.as_ref().map_or(0, |rotation| rotation.decisions),
         "wall_seconds": started.elapsed().as_secs_f64(), "seed": 70448, "combat": combat,

@@ -316,3 +316,99 @@ fn literal_ele_native_refreshability_and_counts_follow_real_aura_time() {
     assert_eq!(facts.value("dot.flame_shock.remains").unwrap(), 0.0);
     assert_eq!(facts.value("dot.flame_shock.refreshable").unwrap(), 1.0);
 }
+
+#[test]
+#[ignore = "opt-in native Elemental precombat qualification pending shared lifecycle"]
+fn literal_ele_native_precombat_casts_once_and_finishes_before_the_fight_clock() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::prepare_measurement(1).unwrap();
+    let now = crate::spell_cast::now(run.app.world());
+    assert!(
+        now > 0.2,
+        "real precombat must advance native cast/GCD time"
+    );
+    assert!(
+        run.app
+            .world()
+            .get::<shared::casting::CastState>(run.actor)
+            .is_none()
+    );
+    assert!(
+        !run.app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .unwrap()
+            .has_active_gcd(crate::spell_cast::history_now(run.app.world()))
+    );
+    let stormkeeper = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 191634 && aura.caster == run.actor)
+        .unwrap();
+    assert_eq!(stormkeeper.charges, 2);
+    let report = run.elemental_rotation.as_ref().unwrap().report();
+    assert_eq!(report["started_at"].as_f64(), Some(now));
+    assert!(report["native_precombat_snapshot"].is_object());
+    assert!(
+        !run.elemental_rotation
+            .as_mut()
+            .unwrap()
+            .precombat_step(run.app.world_mut(), run.actor, &run.targets)
+            .unwrap()
+    );
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let casts = |spell| {
+        events
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(spell)
+                    && event.kind == CombatLogKind::CastSuccess
+            })
+            .count()
+    };
+    assert_eq!(casts(318038), 1);
+    assert_eq!(casts(192106), 1);
+    assert_eq!(casts(191634), 1);
+    assert_eq!(
+        casts(58875),
+        0,
+        "native legacy utility must not precede literal precombat"
+    );
+}
+
+#[test]
+#[ignore = "opt-in native Elemental non-Fixture qualification pending shared lifecycle"]
+fn literal_ele_native_rejects_dungeon_and_preserves_real_kit_combat() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::super::prepare(262, 1).unwrap();
+    let encounter = Encounter::Dungeon {
+        started_at: crate::spell_cast::now(run.app.world()),
+    };
+    let error = super::Rotation::load(run.app.world_mut(), run.actor, encounter)
+        .err()
+        .unwrap();
+    assert!(error.contains("DUNGEON_TTD_UNAVAILABLE"));
+    super::super::engage(&mut run);
+    for _ in 0..400 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+        "rejected dungeon load must leave the ordinary native kit dealing damage"
+    );
+}

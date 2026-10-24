@@ -68,7 +68,7 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 
 ## Implementation inventory
 
-- `crates/server/src/dungeon_simulator/dps_parity/elemental_rotation/` — pinned82-row source, native identities and caster-owned target facts; fixture-driver hookup awaits the shared precombat/equipment APIs.
+- `crates/server/src/dungeon_simulator/dps_parity/elemental_rotation/` — pinned82-row source, native identities, qualified caster-owned target facts and the fixture consumer. Driver hookup is staged against the separately owned precombat/equipment branch APIs; native lifecycle/ST/3T qualification awaits their landing.
 
 - `scripts/item_instance_data.py` — native-table producer for a supplied existing SQLite copy; canonical application is lead-owned.
 - `scripts/dps_parity.py` — explicit current-tier/prior-tier profile extraction, allocated-trait JSON validation and SimC action/stat normalization.
@@ -103,6 +103,8 @@ The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native speci
 - `crates/server/src/dungeon_simulator/dps_parity/power_tests.rs` — opt-in native253/Duck/Cobra/grant owner/pet snapshots and grouped capped gains, plus native66 authoritative Mana serialization. Genuine receipt RED2 precedes implementation; current14e20fbca GREEN3/3 (110.93s), retained six source/parallel controls, all-target check/fmt pass. Snapshot rates/logged integer gains do not certify integrated realized regeneration or resource mechanics parity.
 
 ## Known gaps (current cycle)
+
+- [ ] Elemental full fixture integration consumes the shared one-pass precombat/cast/GCD lifecycle and Equipment facts after those changes land. Native precombat/non-Fixture controls and the existing ST/3T decision RED→GREEN remain pending; source/fact component proof alone is not a completed adapter.
 
 - [ ] Remaining profile bonus options, equip-spell aura/proc lifecycle and complete instance-movement qualification; basic Stats derivation and additive persistence have targeted GREEN proof.
 - [ ] Real300s server dummy execution and equal-gear parity reports.

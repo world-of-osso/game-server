@@ -4,7 +4,8 @@ use crate::class_progression::KnownSpells;
 
 fn measure_native_elemental(count: usize, required_spell: u32) -> Value {
     let _seed_scope = crate::random::seed_scope(70_448);
-    let mut run = prepare(262, count).expect("pinned native Elemental profile and active traits");
+    let mut run = elemental_rotation::prepare_measurement(count)
+        .expect("pinned native Elemental profile, active traits and real precombat");
     assert!(
         run.app
             .world()
