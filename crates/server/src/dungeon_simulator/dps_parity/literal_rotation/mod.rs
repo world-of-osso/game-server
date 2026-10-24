@@ -5,6 +5,8 @@ pub(crate) mod default_pet;
 pub(crate) mod equipment;
 pub(crate) mod execution;
 #[cfg(test)]
+mod gating_tests;
+#[cfg(test)]
 mod tests;
 use crate::simc_apl_native::Encounter;
 use bevy::prelude::*;
