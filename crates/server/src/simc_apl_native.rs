@@ -316,6 +316,9 @@ impl Facts for NativeFacts<'_> {
             "fight_remains" | "target.time_to_die" => self.remaining(name),
             "active_enemies" => Ok(self.active_enemies as f64),
             "spell_haste" => self.spell_haste(),
+            "movement.distance" => Err(
+                "MOVEMENT_DISTANCE_UNAVAILABLE: configured movement.distance has no native fixture movement plan".into(),
+            ),
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "charges_fractional"
             | "full_recharge_time" | "execute_time" | "ticks_remain" => {
                 Err(format!("native APL {name} requires action context"))

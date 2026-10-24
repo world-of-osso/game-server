@@ -17,6 +17,31 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] `retarget_auto_attack` changes only the running AA victim, preserving both swing timers and the actor's selection. An already-running AA must not restart onto the primary target.
 - [x] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.
 
+## Ordered native composites
+
+- [x] Adapters supply a named ordered list of native actions; shared selection returns an ordered pending execution plan without spell IDs or class coating policy in common code.
+- [x] Actual owned active self auras are skipped without reordering pending steps. Empty/all-active plans are unusable. Every pending step requires its own native admission; an unready selected step cannot silently disappear.
+- [x] Precombat execution consumes one normal native cast at a time with real cast/GCD completion. World-only execute rejects a Composite and never recursively dispatches it. Shared selection does not create an instant batch or change native casting times.
+
+[Composite selection proof/boundary](../handoffs/literal-composite-proof-ledger.md). [Native lifecycle consumption RED→GREEN](../handoffs/native-precombat-proof-ledger.md#current-native-qualification--96b572797).
+
+## Resumable native precombat polling
+
+- [ ] Shared precombat polling distinguishes Waiting, Selected original Action/Execution and Finished; native cast/GCD waits cannot consume source position or variable assignments.
+- [ ] Caller advances real App frames/resamples readiness and facts until finished; no sleeps, cast/GCD skips or invented precombat/travel options. Preserve the existing first-harmful cap.
+- [ ] Caller starts its300s fight epoch after real setup; final Pyroblast flight must be read from actual native state, not inferred from Finished or a timer.
+- [ ] Literal use_while_casting and use_off_gcd permissions supplement native cast admission; permitted native instants cannot interrupt the existing hardcast. Other source options remain attached to the selected Action.
+
+[Actual native cursor/while-casting2RED and implementation pending GREEN](../handoffs/shared-precombat-poll-proof-ledger.md#actual-native-red-and-implementation); full Fire adapter/facts remain separate qualification.
+
+## Literal native row gates
+
+Native controls reached4RED/1GREEN atd49f4951c →5GREEN at96b572797; implementation followed the real failures. [Proof scope](../handoffs/literal-row-gating-proof-ledger.md).
+
+- `moving=0|1` must match the actual native actor movement bit; row options never substitute for native cast admission.
+- While a native GCD is active, only rows permitting `use_off_gcd=1` may be selected. The option never clears, shortens or bypasses native GCD/cast refusal.
+- Configured `movement.distance` without a native fixture movement plan must fail explicitly as `MOVEMENT_DISTANCE_UNAVAILABLE`, naming the operand; never fabricate zero distance.
+
 ## How it works
 
 - [Shared APL evaluator](../wiki/systems/simc-apl.md).

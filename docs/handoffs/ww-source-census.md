@@ -2,6 +2,32 @@
 
 Verified2026-10-23. Native DB2/TC precede SimC76f8118; no parity claim. Shared native-book helper belongs to14752. `follower_spec_kit` membership below is **not** proof of native KnownSpells membership; selected reference traits are installed separately by `dps_parity::inputs::install_traits`.
 
+## Current receipt after shared lifecycle qualification —96b572797
+
+The same zero-warning library-test binary first passes [27 native lifecycle/selection/gating/Mystic controls](native-precombat-proof-ledger.md#current-native-qualification--96b572797), then completes actual300s ST52567.95 versus206443.72 (−74.5364%) and3T72757.5867 versus376559.68 (−80.6783%). Both sustained native runs exit0, NOT parity. Each measurement takes its own new CURRENT canonical SQLite backup; source215d75ec02c0311831cf5d98a4432c985500345811471fcce6ed23fee7709557/copycd7230ac1d62bf7d7ea8fef5fbb82faa9f36b61ec78108e591f1204c614a8ed6. BinarySHA15509d9a66ee80c4709bda94c6f6433481c707810ce2ae7c7d992036f27f3f87; exact commands/env/timestamps/reports at engine `ww-parity-2026-10-23/native-after-lifecycle-96b572797/`.
+
+Included source: masterb67952ca4 (er1048 redirected-base-stats, dm1051ba0783c26), mv1071/2d9855a69 and owned lifecycle/gates/learned Mystic producer. No extra WW-only compile. Different integrated source/current DB means no single-change causal DPS claim follows.
+
+Observed current cast coverage: ST TP61/BOK71/RSK44/SCK12/ToD1, with no113656 FoF cast/damage row;3T TP61/BOK43/RSK30/FoF19/SCK7/ToD1, regular117418 damage present. These are actual report rows, not coefficient diagnoses. Base native AP2768.22/vers2.277778 remain. Pool/channel/options work and per-ability/tier/consumable/race/Omnium qualification remain open; [source-owned consumable/AP gap](ww-momentum-boost-source-ledger.md) is not permission for grants/tuning. Native level32 [Stockade kit receipt](ww-stockade-proof-ledger.md) remains separately scoped, not BIS90/literal dungeon proof.
+
+## Native target seam: RED → GREEN — 2026-10-23
+
+With landed label/positivity and native stat redirects, d45fe30e8's same compiled binary failed both actual300s attempts before a DPS report: ST21.92s/3T25.19s, `target_if requires explicit native target candidates`. The interpreter's explicit-candidate API had landed, but WW still supplied only an enemy count through WwFacts. This is not a damage/coefficient failure. Integration supplies the actual fixture entity slice in caller order to ActionFacts::target_ids and uses landed pd1035 target-aware Prepared/Execution; no first-target fallback or shared Player-path duplicate. ff8ba4206's binary now passes both actual300s receipts:47064.44ST/81373.16three-target (−77.20%/−78.39% vs requested reference, NOT parity). ST damages one fixture identity;3T retains exactly three concurrent targets through ten30s waves (one primary plus20 replacement-add identities,21 cumulative). All21 damaged IDs equal the recorded wave-ID union, and every retirement reports zero old entities remaining; this is not20 simultaneous targets. Failed d45 inputs/logs remain immutable. New evidence at `native-after-target-seam-ff8ba4206/269.native.{1,3}.{json,proof.json,output.log}`. Each measurement took its own fresh current canonical backup with the same stable source/copy hashes below. No additional WW-only compile was used.
+
+Both attempts used a new private SQLite .backup of CURRENT canonical, not the historical21ba input: canonical SHA568200017bcb3b5ed6f17931fc0994fff502c5c801f93f96197fc718bcd493bf, private copydd1de231e32c26291182dff050a8de5a5132908723ed21454eb128e45e4b05ae. Immutable failure/log/provenance at engine `data/diagnostics/ww-parity-2026-10-23/native-after-equipment-redirect-d45fe30e8/`. No new DPS/parity claim follows from these failures; prior frozen receipts remain historical.
+
+## FoF alignment and Momentum Boost source — 2026-10-23
+
+[Detailed source/eligibility ledger](ww-momentum-boost-source-ledger.md): the initial first-three-ordinal oracle comparison mixed a MID2 tier2pc extra action with regular channel ticks.14913 owns native tier application; do not fabricate a WW extra hit. The aligned TP→TP→FoF probe exposes a real producer-state divergence: native451297 already has2stacks after TP priming; SimC only triggers it from FoF impacts.451294 is an actually selected ordinary spec talent, with a native unrestricted family mask/ability+periodic proc source and no identified aura/hero gate. It is NOT in TC's default-refusal set; no native restriction change or copied SimC ramp follows from these observations.
+
+## Native WW Stockade receipt —2026-10-23
+
+[Exact native receipt](ww-stockade-proof-ledger.md): same f5 binary, native level32 Bo269/default-kit party, seed11. Opening participation passes; full native Stockade clears all3bosses in1735.5sim seconds/174.02s test runtime. Bo alive,524590actualdamage/1720hits with native TP/BOK/FoF/RSK casts. Fresh canonical source215d75ec.../copycd7230ac... differs from earlier inputs. No BIS90/literal dungeon/DPS-parity claim; remaining dummy/ability qualification stays open.
+
+## Mystic Touch producer control packet
+
+[Ignored native RED packet](ww-mystic-touch-proof-ledger.md) covers learned8647 TP/white hits, actual level48 unlearned damage and unrelated owner damage beside a learned Monk. Runtime RED remains pending; no producer implementation, coefficient change or multiplier grant. First-impact/later-hit ordering and unrelated same-Monk proc eligibility remain open.
+
 ## Missing historical reference channels
 
 | Spell / source | Native data / decision status | Test / gap |

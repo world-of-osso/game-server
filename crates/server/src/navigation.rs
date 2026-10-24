@@ -231,7 +231,7 @@ fn terminal_leg(points: &[Vec3]) -> usize {
 }
 
 /// The existing reach is a3Dsphere; chase admission and route arrival share this test.
-pub(crate) fn within_reach(from: Vec3, target: Vec3, reach: f32) -> bool {
+pub fn within_reach(from: Vec3, target: Vec3, reach: f32) -> bool {
     from.distance_squared(target) <= reach * reach
 }
 

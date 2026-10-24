@@ -1,3 +1,23 @@
+## 2026-10-23 — Shared native lifecycle/gates/Mystic27GREEN; WW band still open
+
+At96b572797, [native packet27/27](../handoffs/native-precombat-proof-ledger.md#current-native-qualification--96b572797) covers ordered precombat/pet/GCD/controller capture, actual uncaptured owner-follow, composite selection+four real coating bars/effects, native moving/off-GCD row gates and learned Mystic Touch producer. First/later numerical, same-Monk item/proc, all-spec literal and Ele item activation remain outside that proof. Same binary completes fresh-current-backup300s WW ST52567.95/3T72757.5867, still−74.5364%/−80.6783%, NOT parity; [exact current receipt and missing-channel matrix](../handoffs/ww-source-census.md#current-receipt-after-shared-lifecycle-qualification--96b572797). No extra WW-only compile or coefficient tuning.
+
+## 2026-10-23 — Native WW Stockade receipt
+## 2026-10-23 — Ordered native composite selection RED
+
+[Shared literal machinery](systems/simc-apl.md#shared-literal-fixture-machinery):4ad native3controlsPASS/3genuine selectionFAIL26.39s,18m29compile/1scaffold field warning. Actual four selected poison admissions, normal Deadly1500ms-base cast completion and non-poison6673 readiness qualify inputs. Implemented ordered pending plans/owned-self-aura skipping; empty/all-active unusable and world-only execute non-recursive. Added one missing-selected-step/no-partial control; GREEN pending.14766 owns precombat completion/Moving-GCD gating. [Proof](../handoffs/literal-composite-proof-ledger.md).
+
+## 2026-10-23 — Explicit target context and fresh dot metadata RED
+
+[Receipt](../handoffs/ww-stockade-proof-ledger.md): same existing f5 binary, fresh current private DB, explicit source-native Bo269/default32 roster. Opening participation PASS13.13s and complete seed11 route PASS174.02s, all3bosses dead; actual WW damage/kit casts and living actor retained in native report. Dungeon Space routing unchanged; no extra compile or gameplay workaround. Scope is not BIS90, literal dungeon APL or ±10% dummy parity.
+
+## 2026-10-23 — Shared precombat native phase qualification
+
+[Lifecycle](systems/simc-apl.md#precombat-lifecycle-2026-10-23-partially-qualified): three actual ordered-selector REDs→four library GREEN; ed76/f5 native6PASS/2FAIL qualifies early capture, native Feral isolation, declared0shards, real configured summon/no-op/pet-at-pull and WW snapshot-OOC/time0. Native OOC regeneration supplies summon cost without grants. Demo damage and first-harmful counterfactual expose copied Stockade graph routing;14755 owns that fix, not a timing/resource workaround. Poison composite14775 seam and overall native acceptance remain open. [Proof](../handoffs/native-precombat-proof-ledger.md). Sameff8target bridge300s47064.44/81373.16 is not DPS parity.
+
+## 2026-10-23 — Native profile stat-allocation redirects
+
+[Stat redirects](systems/character-stats.md#profile-stat-allocation-redirects--2026-10-23): actual103 shared equipment input→StatsPlugin independently reproduces five tier errors and ten matching ordinary slots; invalid donor and false-unmodeled diagnostics also RED,3RED11.02s at7aa72bf47. Server-local donor metadata changes calculation-only stat types/allocations, not original item identity/catalog/effects/set membership or the persisted/wire ABI. Atd45fe30e8 three GREEN12.43s, clean25m11build; two native cases remain opt-in and the env-free diagnostic stays enabled. Lead integration/DPS remain open. [Proof](../handoffs/equipment-stat-redirect-proof-ledger.md).
 ## 2026-10-23 — Corridor capture consumer ownership
 
 The retained-core unit check exposed a runtime-only reverse edge: ignored corridor capture imports simulator runtime/diagnostics. Capture returned to the consumer with its original name and a canonical graph re-export; no gameplay/type duplication. Expected117 simulator cases/6retained graph cases; workspace names/ignore statuses unchanged. Compiler and full-suite qualification pending.

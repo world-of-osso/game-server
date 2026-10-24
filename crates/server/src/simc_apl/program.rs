@@ -112,6 +112,41 @@ impl Program {
         self.select_list(list, &mut selection)
     }
 
+    /// Consume top-level rows once; combat selection remains a priority scan.
+    pub fn select_next(
+        &self,
+        list: &str,
+        cursor: &mut usize,
+        facts: &dyn ActionFacts,
+        variables: &mut Variables,
+        mut usable: impl FnMut(&Action) -> Result<bool, String>,
+    ) -> Result<Option<Action>, String> {
+        let rules = self
+            .lists
+            .get(list)
+            .ok_or_else(|| format!("unknown APL list {list}"))?;
+        let mut selection = Selection {
+            facts,
+            variables,
+            usable: &mut usable,
+            stack: vec![list.to_owned()],
+        };
+        while let Some(rule) = rules.get(*cursor) {
+            if matches!(&rule.body, Body::Call(_) | Body::Run(_)) {
+                return Err(format!(
+                    "ordered precombat does not support nested {}",
+                    rule.action.name
+                ));
+            }
+            *cursor += 1;
+            let action = self.select_rules(std::slice::from_ref(rule), &mut selection)?;
+            if action.is_some() {
+                return Ok(action);
+            }
+        }
+        Ok(None)
+    }
+
     fn select_list(
         &self,
         list: &str,

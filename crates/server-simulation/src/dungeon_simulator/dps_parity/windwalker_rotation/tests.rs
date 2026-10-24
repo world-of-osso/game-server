@@ -135,10 +135,9 @@ fn literal_ww_native_combo_facts_follow_the_proposed_action_and_ignore_utility()
 
 fn run_literal(count: usize) {
     let _scope = crate::random::seed_scope(70448);
-    let mut run = super::super::prepare(269, count).unwrap();
+    let mut run = super::super::prepare_measurement(269, count).unwrap();
     super::super::engage(&mut run);
-    let clock = fixture(run.app.world());
-    let mut rotation = Rotation::load(run.app.world_mut(), run.actor, clock).unwrap();
+    let mut rotation = run.windwalker_rotation.take().unwrap();
     for _ in 0..600 {
         rotation
             .drive(run.app.world_mut(), run.actor, &run.targets)
@@ -220,10 +219,9 @@ fn literal_ww_native_three_target_executes_sck_and_damages_all_native_targets() 
 #[ignore = "native FoF damage RED; exact literal fixture ordering and frozen inputs"]
 fn literal_ww_native_fof_channel_releases_damage_on_the_measured_target() {
     let _scope = crate::random::seed_scope(70448);
-    let mut run = super::super::prepare(269, 1).unwrap();
+    let mut run = super::super::prepare_measurement(269, 1).unwrap();
     super::super::engage(&mut run);
-    let clock = fixture(run.app.world());
-    let mut rotation = Rotation::load(run.app.world_mut(), run.actor, clock).unwrap();
+    let mut rotation = run.windwalker_rotation.take().unwrap();
     let mut observed_channel = false;
     for _ in 0..600 {
         rotation
