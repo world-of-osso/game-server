@@ -33,6 +33,8 @@ Four ignored `native_causality_*` cases use ordinary native empower casts to sta
 
 Two ignored `literal_dev_native_*` cases run the unchanged native300s ST/3T fixture and inspect actual caster CastSuccess ordering: the source's unconditional precombat Living Flame must complete before native Fire Breath/Eternity Surge. They require a real Fire Breath cast too; labels or a lone synthetic precombat receipt cannot satisfy them. At cbbed51bf both reach genuine ordering RED in20.87s: native357208 precedes361469 on ST and3T. Native empower execution and follower identity premises pass. Dev controller implementation is still open.
 
+Focused Dev alias/context leaf: `literal_dev_binding_native_living_flame_uses_actual_target_and_context` passes at e56351eb9 in11.36s (compile39.97s, zero warnings), with actual target candidates/health/cast time,361469 CastSuccess and361500 landed damage. This does not exercise the full precombat list or replace its retained ordering RED. A separate ignored Fire Breath leaf preserves the exact rank1 `fb_sc` row and checks enemy `target_if` context independently from native self-target dispatch; its qualification is pending.
+
 ## Known gaps (current cycle)
 
 - [x] Giantkiller targeted GREEN and full floor/Tyranny/exclusion qualification atf50689cfa (4/4,25.40s).

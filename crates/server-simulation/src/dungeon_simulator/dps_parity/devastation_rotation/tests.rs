@@ -1,6 +1,6 @@
 //! Focused native leaf proof, not89-row controller or300s parity qualification.
 use super::super::literal_rotation::equipment::Equipment;
-use super::super::literal_rotation::execution::{NativeAction, Prepared};
+use super::super::literal_rotation::execution::{Execution, NativeAction, Prepared};
 use super::super::literal_rotation::{Driver, capture_fixture};
 use super::super::{Run, prepare};
 use super::{bindings, facts::DevFacts};
@@ -11,6 +11,7 @@ use shared::protocol::CombatLogKind;
 
 const LIVING_FLAME: u32 = 361469;
 const LIVING_FLAME_DAMAGE: u32 = 361500;
+const FIRE_BREATH_DAMAGE: u32 = 357209;
 
 fn prepared() -> Run {
     let mut run = prepare(1467, 1).unwrap();
@@ -117,6 +118,76 @@ fn literal_dev_binding_native_living_flame_uses_actual_target_and_context() {
     assert!(
         living_flame_hit(&run),
         "native Living Flame must hit the selected target"
+    );
+}
+
+#[test]
+#[ignore = "native Dev source target_if with self-target Fire Breath empower"]
+fn literal_dev_binding_native_fire_breath_preserves_enemy_context_and_self_cast() {
+    let mut run = prepared();
+    super::super::literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        Execution::AutoAttack(run.targets[0]),
+    )
+    .unwrap();
+    run.app.update();
+    let mut bindings = bindings::build();
+    let equipment = Equipment::load(run.app.world(), run.actor, &mut bindings).unwrap();
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        run.actor,
+        &run.targets,
+        &equipment,
+        [NativeAction {
+            name: "fire_breath",
+            spell: bindings.actions["fire_breath"],
+            talent: None,
+            self_target: true,
+        }],
+        false,
+    )
+    .unwrap();
+    let facts = DevFacts::new(
+        run.app.world(),
+        run.actor,
+        &bindings,
+        &equipment,
+        encounter(&run),
+        &run.targets,
+    );
+    // Unmodified rank1 fb_sc source row; this leaf does not run the other88 rows.
+    let source = "fire_breath,empower_to=1,target_if=max:target.health.pct,if=active_enemies=1|active_enemies>4";
+    let mut driver = Driver::new(Program::parse(&[("native_leaf", source)]).unwrap());
+    let (action, execution) = driver
+        .select("native_leaf", &facts, &prepared, &equipment)
+        .unwrap()
+        .expect(
+            "native source Fire Breath must select an enemy context despite its self cast target",
+        );
+    assert_eq!(action.target, Some(run.targets[0].to_bits()));
+    driver
+        .execute(run.app.world_mut(), run.actor, action, execution)
+        .unwrap();
+    for _ in 0..6000 {
+        run.app.update();
+        if run.app.world().get::<CastState>(run.actor).is_none() {
+            break;
+        }
+    }
+    assert!(run.app.world().get::<CastState>(run.actor).is_none());
+    let world = run.app.world();
+    let aura = world
+        .get::<crate::auras::ActiveAuras>(run.targets[0])
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == FIRE_BREATH_DAMAGE && aura.caster == run.actor)
+        .expect("source-selected enemy must receive native Fire Breath");
+    let spell =
+        crate::spell_cast::scripts::empower_evoker::build_fire_breath_release(world, run.actor, 1);
+    assert_eq!(
+        aura.duration_ms,
+        crate::auras::fresh_duration_ms(world, run.actor, run.targets[0], &spell)
     );
 }
 
