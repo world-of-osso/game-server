@@ -23,6 +23,12 @@ Oracle ordinal0 and1 both at1.004s are different REAL actions: `fists_of_fury_da
 
 Native1296621 tier2pc aura is absent before FoF; no extra tier tick provenance follows from the ordinary113656→1174181s/tick0 bridge. Native tier application belongs to14913/is1039; no WW-specific extra hit is implemented here. Mystic Touch's1.0 versus1.05 target multiplier is a separately approved learned8647 producer.
 
+## Regular-channel comparison and input confound
+
+14796's `fof-aligned/current-native-vs-regular.{0,1,2}.diff.json` now select only regular117418/`fists_of_fury_damage` impacts. Native source products4.079827/5.099784/5.439769 versus4.527425/5.432910/5.885652 do not imply a coefficient correction: coefficient2.6082 and armor match. The first native stack is school1.071 × Combo Strikes1.8575876 × native spell modifiers2.050704; target1 versus1.05 is a separate missing Mystic Touch producer. Native AP term uses3702.22 versus3786, and native versatility1.0364815 versus1.022778 also differs.
+
+`native-current-data/native-fof.proof.json` records revision4bda4a241. It does NOT include generic stat-redirect implementationf9a01f71e (ancestry and loader checked). Its actual output still lists unmodeled redirected_base_stats for271519→271875,271517→251223,271518→268225. Requalify those source stats after [equipment redirect integration](equipment-stat-redirect-proof-ledger.md); do not independently tune the84AP gap while this concrete input feature is absent from the measured code. The new ff8ba4206 compile includes the implementation; runtime output is not yet available.
+
 ## Comparator-only divergence
 
 Pinned SimC monk/sc_monk.cpp1699–1704 parses451297 and separately derives a FoF damage multiplier from melee haste and451294effect1. Its1730–1734 triggers451297 after FoF impact;1839–1841 expires it after the final tick and triggers the speed buff. That is narrower than the native generated proc source above. The comparator explains different stack histories; it does not override native masks or authorize copying its haste formula into runtime. No numerical parity claim or native mechanic fix follows until actual action identities, initial state and native eligibility are aligned.
