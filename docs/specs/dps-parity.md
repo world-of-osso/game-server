@@ -100,3 +100,9 @@ The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native speci
 ## Out of scope
 
 Rotation/decision implementation belongs to the lead/rotation agents. No system install, native-table re-export, canonical data mutation or protocol change without demonstrated need. Reference SimC is the official local CLI-only source build at76f8118cf3f7f41dad20708e8328e1f4ab2deebc (embedded70391); server inputs remain70448. Durable evidence lives in `game-engine/data/diagnostics/dps-parity-2026-10-21/`.
+
+### Player-equivalent follower minion ownership
+
+- [ ] `FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_MINION_FLAGS`: controlled minions/guardians spawned by player-affected class followers inherit PLAYER_CONTROLLED8 via the existing faction predicate. This explicitly extends TC Unit.cpp6286–6289 Player-owner behavior; it does not turn an ordinary NPC owner into a player or change wild/non-minion ownership. Companion immunity bits remain intact; controlled Hunter pets/Felguard retain their existing flag8 path. Actual follower Imp104318 must admit neutral31146 and deal damage; ordinary NPC-owned minions retain no8 and ordinary hostile-target casting remains unchanged.
+
+- [ ] Ownership flag8 does not enable player power regeneration. Only actual Player, class Follower and controlled HunterPet subjects use that resource path; other NPCs/temporary guardians honor authored UNIT_FLAG2_REGENERATE_POWER. Native Imp100Energy/20cost exhausts in5casts and despawns, while actual Felguard Energy, class-follower Mana and player Energy regeneration remain unchanged.

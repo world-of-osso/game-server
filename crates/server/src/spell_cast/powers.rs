@@ -19,7 +19,7 @@ use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use rusqlite::Connection;
 use shared::components::{
-    CombatStatus, Health, Mana, Npc, Player, PowerEntry, PowerType, UnitFlags, UnitPowers,
+    CombatStatus, Health, Mana, Npc, Player, PowerEntry, PowerType, UnitPowers,
 };
 
 use crate::grid_activity::GridDormant;
@@ -539,7 +539,9 @@ type RegenQuery<'w, 's> = Query<
         Option<&'static crate::stats::CharacterStats>,
         Option<&'static crate::death::PlayerDeathState>,
         Option<&'static Npc>,
-        Option<&'static UnitFlags>,
+        Option<&'static Player>,
+        Option<&'static crate::followers::Follower>,
+        Option<&'static crate::hunter_pet::HunterPet>,
         Option<&'static mut PetFocusRegen>,
     ),
     Without<GridDormant>,
@@ -565,15 +567,29 @@ pub(crate) fn regenerate_powers(
     };
     let dt = time.delta_secs();
     let now = time.elapsed_secs_f64();
-    for (unit, mut pools, mana, auras, combat, mods, stats, death, npc, flags, pet_focus) in
-        &mut units
+    for (
+        unit,
+        mut pools,
+        mana,
+        auras,
+        combat,
+        mods,
+        stats,
+        death,
+        npc,
+        player,
+        follower,
+        pet,
+        pet_focus,
+    ) in &mut units
     {
         // TC Player::GetPowerRegen: aura94 selects combat rates, not combat state.
         let aura_interrupts_regen = npc.is_none()
             && auras.is_some_and(|auras| auras.has_type(crate::auras::handlers::INTERRUPT_REGEN));
         let auras = auras
             .filter(|auras| auras.has_type(crate::auras::handlers::TRIGGER_SPELL_ON_POWER_AMOUNT));
-        if !read_creature_power_regeneration(npc, flags, world_data.as_deref()) {
+        let player_resource_subject = player.is_some() || follower.is_some() || pet.is_some();
+        if !read_creature_power_regeneration(npc, player_resource_subject, world_data.as_deref()) {
             continue;
         }
         if death.is_some_and(|death| death.state != shared::death::DeathState::Alive) {
@@ -689,19 +705,20 @@ pub(crate) fn regenerate_powers(
     }
 }
 
-/// TC Creature.cpp949-955 gates native regeneration on the authored flag.
-/// Existing player-controlled companion pools retain their player-resource path.
+/// TC Creature.cpp954–955 gates creature/guardian regeneration on the template flag.
+/// Ownership flags do not choose a resource model: class followers and actual
+/// controlled pets retain their player-resource path, not temporary guardians.
 fn read_creature_power_regeneration(
     npc: Option<&Npc>,
-    flags: Option<&UnitFlags>,
+    player_resource_subject: bool,
     data: Option<&WorldData>,
 ) -> bool {
-    let Some(npc) = npc else {
-        return true;
-    };
-    if flags.is_some_and(|flags| flags.0 & crate::faction::UNIT_FLAG_PLAYER_CONTROLLED != 0) {
+    if player_resource_subject {
         return true;
     }
+    let Some(npc) = npc else {
+        return false;
+    };
     let Some(template) = data.and_then(|data| data.templates.get(&npc.template_id)) else {
         warn!(
             entry = npc.template_id,

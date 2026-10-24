@@ -188,6 +188,8 @@ mod full_trigger_dead_target_tests;
 mod generic_empower_tests;
 pub(crate) mod guardian;
 #[cfg(test)]
+mod guardian_npc_flags_tests;
+#[cfg(test)]
 mod guardian_tests;
 pub(crate) mod history_store;
 mod hit;
