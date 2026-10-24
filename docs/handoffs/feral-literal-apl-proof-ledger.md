@@ -50,7 +50,7 @@ The concrete no-Incarnation/no-Apex reporter exposes `maximum_energy=50` only in
 
 ## Native Lunar admission dependency
 
-Exact reference traits select Lunar Inspiration155580/entry103170, not Chomp. At test-onlyfd16c1384 actual prepared actor has155580 but lacks its155627 override: genuine1FAIL15.50s after15m06s clean compiler run; `lunar-native-red/{proof.json,stdout.log,stderr.log}`. TC `spell_druid.cpp1543–1567` casts155627 on apply and removes it on talent removal. The pending port registers those two aura hooks, changing no KnownSpells or damage coefficients. Test retains removal/reapplication and ordinary8921→155625 resolution checks after the bootstrap assertion. GREEN pending.
+Exact reference traits select Lunar Inspiration155580/entry103170, not Chomp. At test-onlyfd16c1384 actual prepared actor has155580 but lacks its155627 override: genuine1FAIL15.50s after15m06s clean compiler run; `lunar-native-red/{proof.json,stdout.log,stderr.log}`. TC `spell_druid.cpp1543–1567` casts155627 on apply and removes it on talent removal. Portf30c7ca20 registers those two aura hooks, changing no KnownSpells or damage coefficients. Test retains removal/reapplication and ordinary8921→155625 resolution checks after the bootstrap assertion. GREEN2PASS13.58s includes the owned Rake/Moonfire binding control; both libraries compile6m10s/zero warnings (`lunar-native-green/{proof.json,stdout.log}` plus compiler output in the synchronous tool receipt). Native controller admission dependency is qualified; literal execution and parent integration remain pending.
 
 ## Behavioral evidence
 

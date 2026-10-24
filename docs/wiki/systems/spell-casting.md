@@ -1,5 +1,9 @@
 # Spell Casting
 
+## Lunar Inspiration override — 2026-10-24
+
+Selected155580 applies native155627 through ordinary triggered casting; removing the talent removes the override. Knowledge resolution then follows actual metadata8921→155625, without inserting a learned spell. [Native source/lifecycle proof](../../handoffs/feral-literal-apl-proof-ledger.md#native-lunar-admission-dependency) and [contract](../../specs/auras.md#lunar-inspiration) own the evidence. This enables admission, not missing literal rotation or300s parity.
+
 ## Ferocious Bite extra Energy — 2026-10-24
 
 `spell_cast/ferocious_bite.rs` captures the remaining Energy factor before native22568's immediate effect plan resolves, after ordinary cost payment. It reuses `SpellInfo.cast_damage_multiplier`; no persistent aura fields or coefficient rewrites. Generic PowerBurn retains its primary-pool/alive checks and available-power clamp. Incarnation is read from an actual aura effect, never its same-index trigger metadata. [Contract](../../specs/player-damage.md#what-it-must-do); [native source, RED/GREEN and remaining Feral gaps](../../handoffs/feral-source-census.md). Targeted tests qualify the cast boundary, not300s parity or parent integration.

@@ -4,7 +4,7 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on active
 
 ## Lunar Inspiration
 
-- [ ] Applying native talent155580 casts self override155627; removing the talent removes that override, preserving learned spellbooks. Ordinary Moonfire8921 then resolves through actual native override metadata to155625 only while the talent aura exists. Use TC a352b1fa `spell_druid.cpp1543–1567`, not a controller alias grant. Exact selected-profile lifecycle test lives in `server-simulation`.
+- [x] Applying native talent155580 casts self override155627; removing the talent removes that override, preserving learned spellbooks. Ordinary Moonfire8921 then resolves through actual native override metadata to155625 only while the talent aura exists. Use TC a352b1fa `spell_druid.cpp1543–1567`, not a controller alias grant. Exact selected-profile lifecycle test lives in `server-simulation`.
 
 ## Explicit proc provenance
 

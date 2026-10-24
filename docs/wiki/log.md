@@ -1,3 +1,7 @@
+## 2026-10-24 — Lunar Inspiration native override
+
+[Spell casting](systems/spell-casting.md#lunar-inspiration-override--2026-10-24): selected155580 lacked155627 at bootstrap (genuineRED15.50s); sourced TC aura apply/remove hooks produce native lifecycle/binding2GREEN13.58s atf30c7ca20, zero-warning6m10build. Learned book and damage coefficients unchanged; literal driver and parent integration remain open.
+
 ## 2026-10-24 — Native Bite optional-Energy effectiveness
 
 [Spell casting](systems/spell-casting.md#ferocious-bite-extra-energy--2026-10-24): current-code ordinary/actual-Incarnation full casts produce two genuine damage-factor REDs, then twoGREEN plus five retained native power-burn controls at7ea788a8b. Existing cast-only effectiveness carries the sourced factor; no persistent snapshot fields or coefficients change. Both packages compile without warnings; parent integration and300s parity remain open. [Proof/source ledger](../handoffs/feral-source-census.md).
