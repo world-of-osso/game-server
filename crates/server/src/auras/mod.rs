@@ -1689,8 +1689,11 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     // NPCs that happen to carry the follower class-stat bridge.
     if world.get::<Player>(unit).is_none() {
         stats.primary_base_pct = UnitStats::default();
-        // TC Unit.cpp1720 excludes even player-controlled NPCs from280.
-        combat.armor_penetration_pct = 0.0;
+        // FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_ARMOR_PENETRATION:
+        // approved class-follower policy; TC Unit.cpp1720 still excludes ordinary NPCs.
+        if !player_controlled_npc || world.get::<crate::followers::Follower>(unit).is_none() {
+            combat.armor_penetration_pct = 0.0;
+        }
         stats.max_mana_pct = 0.0;
         stats.rating_from_rating.clear();
         combat.max_power_mult.clear();
