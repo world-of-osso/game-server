@@ -91,7 +91,7 @@ pub struct Navigation {
     queries: EntityHashMap<PendingQuery>,
     unbaked: HashSet<u32>,
     next_id: u64,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     applied: Vec<(Entity, u64)>,
 }
 
@@ -106,7 +106,7 @@ impl Navigation {
             queries: EntityHashMap::default(),
             unbaked: HashSet::new(),
             next_id: 0,
-            #[cfg(test)]
+            #[cfg(any(test, feature = "test-support"))]
             applied: Vec::new(),
         }
     }
@@ -231,7 +231,7 @@ fn terminal_leg(points: &[Vec3]) -> usize {
 }
 
 /// The existing reach is a3Dsphere; chase admission and route arrival share this test.
-pub(crate) fn within_reach(from: Vec3, target: Vec3, reach: f32) -> bool {
+pub fn within_reach(from: Vec3, target: Vec3, reach: f32) -> bool {
     from.distance_squared(target) <= reach * reach
 }
 
@@ -316,7 +316,7 @@ pub(crate) fn install_fixture(app: &mut App, navigation: Navigation) {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn drain_fixture(app: &mut App) {
     if app.world().contains_resource::<Navigation>() {
         install_publication(app);

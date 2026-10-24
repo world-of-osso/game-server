@@ -89,7 +89,7 @@ struct State {
 }
 
 #[derive(Resource)]
-pub(crate) struct FactorCapture {
+pub struct FactorCapture {
     actor: Entity,
     target: Entity,
     focus_spell: u32,
@@ -99,13 +99,7 @@ pub(crate) struct FactorCapture {
 }
 
 impl FactorCapture {
-    pub(crate) fn new(
-        actor: Entity,
-        target: Entity,
-        spell: u32,
-        action: &str,
-        limit: usize,
-    ) -> Self {
+    pub fn new(actor: Entity, target: Entity, spell: u32, action: &str, limit: usize) -> Self {
         Self {
             actor,
             target,
@@ -116,7 +110,7 @@ impl FactorCapture {
         }
     }
 
-    pub(crate) fn export(&self) -> Value {
+    pub fn export(&self) -> Value {
         let state = self.state.lock().expect("native factor capture poisoned");
         let modifiers = state
             .events

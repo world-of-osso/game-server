@@ -42,6 +42,8 @@ mod group_inheritance;
 mod group_private;
 #[path = "toys_hearthstone_tests.rs"]
 mod hearthstones;
+#[path = "toys_item_faction_tests.rs"]
+mod item_faction;
 #[path = "toys_kvaldir_tests.rs"]
 mod kvaldir;
 #[path = "toys_loa_cosmetic_tests.rs"]
@@ -589,7 +591,7 @@ fn toys_duplicate_learning_keeps_remaining_item_and_favourite_requires_ownership
     );
 }
 
-fn learn_effect_toy(h: &mut Harness, character: u64, item_id: u32) {
+fn save_learning_inventory(h: &mut Harness, character: u64, item_id: u32) {
     let db = &h.app.world().resource::<GameDatabase>().db;
     persistence::save_inventory(
         db,
@@ -608,6 +610,10 @@ fn learn_effect_toy(h: &mut Harness, character: u64, item_id: u32) {
             }],
         },
     );
+}
+
+fn learn_effect_toy(h: &mut Harness, character: u64, item_id: u32) {
+    save_learning_inventory(h, character, item_id);
     let results = learn(h, 0);
     assert!(
         results

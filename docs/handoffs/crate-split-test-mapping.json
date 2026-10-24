@@ -1,0 +1,1073 @@
+{
+  "status": "expected mapping; must be reconciled against actual Cargo test inventories",
+  "from_revision": "8e7c7a685a0cfe15e8413edbdc49455adf853458",
+  "old_package": "server",
+  "old_target": "server",
+  "rules_in_order": [
+    {
+      "old_prefix": "dungeon_simulator::graph::corridor_inputs::",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_prefix": "dungeon_simulator::graph::corridor_inputs::"
+    },
+    {
+      "old_prefix": "dungeon_simulator::graph::",
+      "new_package": "server",
+      "new_target": "server",
+      "new_prefix": "test_support::graph::",
+      "expected_cases": [
+        {
+          "suffix": "stacked_floor_routes_choose_native_height_not_the_lower_xy_alias",
+          "ignored": false
+        },
+        {
+          "suffix": "translocation_edges_are_directed_and_never_ordinary_walking",
+          "ignored": false
+        },
+        {
+          "suffix": "frozen_graph_contains_an_explicit_unique_anchored_pull_order",
+          "ignored": false
+        },
+        {
+          "suffix": "azure_follower_graph_covers_native_normal_population_and_has_an_authored_route",
+          "ignored": false
+        },
+        {
+          "suffix": "extract_stockade_graph",
+          "ignored": true
+        },
+        {
+          "suffix": "azure_extraction::extract_azure_graph",
+          "ignored": true
+        }
+      ]
+    },
+    {
+      "old_prefix": "dungeon_simulator::",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_prefix": "dungeon_simulator::"
+    }
+  ],
+  "unmatched_server_cases": "remain in package server, target server, with unchanged names and ignored status",
+  "other_workspace_cases": "unchanged",
+  "required_proof": "Map the complete pre-split inventory with these rules; compare exact mapped package/target/name/ignored tuples to the complete post-split inventory. Counts alone are insufficient.",
+  "baseline_log": {
+    "path": "/home/osso/.worktrees/logs/gate-cs1046-srv.log",
+    "sha256": "0210ae4392b7c0cfe23f6cac40e41a2c45eb08ecf13e7923f2b5d2172ea8c666",
+    "server": {
+      "passed": 5899,
+      "known_failed": 4,
+      "ignored": 289
+    },
+    "workspace": {
+      "passed": 6004,
+      "known_failed": 4,
+      "ignored": 310
+    }
+  },
+  "baseline_dungeon_cases": [
+    {
+      "old_name": "dungeon_simulator::batch::batch_summary_counts_wipes_per_reached_pack_and_retains_stalls",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::batch::batch_summary_counts_wipes_per_reached_pack_and_retains_stalls",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::batch::run_stockade_batch",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::batch::run_stockade_batch",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::absent_required_boss_without_a_death_is_not_a_clear_or_an_endless_hold",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::absent_required_boss_without_a_death_is_not_a_clear_or_an_endless_hold",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::alternate_roster_attackers_participate_in_the_first_native_fight",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::alternate_roster_attackers_participate_in_the_first_native_fight",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::authored_route_order_does_not_change_when_the_tank_is_nearer_another_pack",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::authored_route_order_does_not_change_when_the_tank_is_nearer_another_pack",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::authored_route_skips_observed_accidental_deaths_without_reordering_the_rest",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::authored_route_skips_observed_accidental_deaths_without_reordering_the_rest",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::azure_book_moves_genuine_native_party_without_resource_or_copy_changes",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::azure_book_moves_genuine_native_party_without_resource_or_copy_changes",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::azure_corridor_advances_to_the_living_gate_member_after_the_first_member_dies",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::azure_corridor_advances_to_the_living_gate_member_after_the_first_member_dies",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::azure_positioning_tests::native_rune_unreachable_chase_after_book_hop_evades_without_crossing_components",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::azure_positioning_tests::native_rune_unreachable_chase_after_book_hop_evades_without_crossing_components",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::azure_positioning_tests::seed_one_keeps_the_native_leader_alive_through_the_sapling_fight",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::azure_positioning_tests::seed_one_keeps_the_native_leader_alive_through_the_sapling_fight",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::azure_remaining_formation_member_reaches_native_admission_after_leader_death",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::azure_remaining_formation_member_reaches_native_admission_after_leader_death",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::azure_simulator_uses_requested_follower_copy_and_native_population",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::azure_simulator_uses_requested_follower_copy_and_native_population",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::azure_stalker_ingress_during_authored_opening_has_native_proximity_receipts",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::azure_stalker_ingress_during_authored_opening_has_native_proximity_receipts",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::azure_throughput_tests::native_bm_leader_summons_and_uses_its_pet_without_transport_identity",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::azure_throughput_tests::native_bm_leader_summons_and_uses_its_pet_without_transport_identity",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::azure_throughput_tests::native_pet_only_enemy_reset_does_not_strand_the_next_authored_pull",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::azure_throughput_tests::native_pet_only_enemy_reset_does_not_strand_the_next_authored_pull",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::azure_throughput_tests::native_pet_samples_retain_health_provenance_and_the_enemy_reset",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::azure_throughput_tests::native_pet_samples_retain_health_provenance_and_the_enemy_reset",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::azure_throughput_tests::native_schedule_abort_preserves_report_and_ordered_combat_events",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::azure_throughput_tests::native_schedule_abort_preserves_report_and_ordered_combat_events",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::azure_throughput_tests::seed_seven_advances_after_the_native_selected_fury_dies",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::azure_throughput_tests::seed_seven_advances_after_the_native_selected_fury_dies",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::cleared_ready_party_pulls_next_single_pack_without_measurements",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::cleared_ready_party_pulls_next_single_pack_without_measurements",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::initialized_simulator_leader_recovers_native_health_after_a_wound",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::initialized_simulator_leader_recovers_native_health_after_a_wound",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::living_unattackable_required_boss_does_not_block_another_pullable_pack",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::living_unattackable_required_boss_does_not_block_another_pullable_pack",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::native_hogger_bleed_after_death_does_not_reopen_a_cleared_fight",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::native_hogger_bleed_after_death_does_not_reopen_a_cleared_fight",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::native_mana_recovery_is_party_progress_without_damage_or_movement",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::native_mana_recovery_is_party_progress_without_damage_or_movement",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::native_pet_last_hit_evade_finishes_frozen_home_travel_and_native_arrival",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::native_pet_last_hit_evade_finishes_frozen_home_travel_and_native_arrival",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::native_scripted_vanish_is_not_a_cleared_party_or_another_pull",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::native_scripted_vanish_is_not_a_cleared_party_or_another_pull",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::non_tank_positioning_does_not_enter_unpulled_rowdy_native_sight_radius",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::non_tank_positioning_does_not_enter_unpulled_rowdy_native_sight_radius",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::non_tank_regroup_crosses_passive_but_not_aggressive_sight",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::non_tank_regroup_crosses_passive_but_not_aggressive_sight",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::opening_accidental_pack_is_killed_and_skipped_in_authored_route",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::opening_accidental_pack_is_killed_and_skipped_in_authored_route",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::positioning_tests::late_healer_follows_the_safe_frozen_path_without_recruiting_idle_sources",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::positioning_tests::late_healer_follows_the_safe_frozen_path_without_recruiting_idle_sources",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::positioning_tests::stockade_seed_fifty_keeps_the_native_tank_alive_through_the_route",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::positioning_tests::stockade_seed_fifty_keeps_the_native_tank_alive_through_the_route",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::sampling_retains_a_member_after_native_dead_summon_despawn",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::sampling_retains_a_member_after_native_dead_summon_despawn",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::scripted_boss_ready_single_pull_does_not_require_a_numeric_forecast",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::scripted_boss_ready_single_pull_does_not_require_a_numeric_forecast",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::simulator_leader_does_not_pursue_through_unpulled_native_sight",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::simulator_leader_does_not_pursue_through_unpulled_native_sight",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::simulator_party_environment_overrides_keep_native_profiles_and_level",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::simulator_party_environment_overrides_keep_native_profiles_and_level",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::single_engaged_boss_never_enters_repeating_breakable_control_hold",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::single_engaged_boss_never_enters_repeating_breakable_control_hold",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::spawned_normal_population_allows_existing_fight_tank_movement",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::spawned_normal_population_allows_existing_fight_tank_movement",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::stationary_full_party_still_stalls_without_any_progress",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::stationary_full_party_still_stalls_without_any_progress",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::stockade_corridor_seed_two_keeps_native_party_with_the_approaching_leader",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::stockade_corridor_seed_two_keeps_native_party_with_the_approaching_leader",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::stockade_holy_healer_leaves_the_entrance_with_the_native_party",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::stockade_holy_healer_leaves_the_entrance_with_the_native_party",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::campaign::stockade_seed_twenty_eight_keeps_the_native_leader_alive_through_the_route",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::campaign::stockade_seed_twenty_eight_keeps_the_native_leader_alive_through_the_route",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::catalogs::native_felguard_learns_axe_toss_across_cached_seeded_worlds",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::catalogs::native_felguard_learns_axe_toss_across_cached_seeded_worlds",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::catalogs::seeded_apps_reuse_catalog_allocations_but_reset_dynamic_state",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::catalogs::seeded_apps_reuse_catalog_allocations_but_reset_dynamic_state",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::dps_parity_fixture_fixed_time_target_health_follows_global_clock",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::dps_parity_fixture_fixed_time_target_health_follows_global_clock",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::dps_parity_fixture_player_uses_authored_decision_or_records_rule_gap",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::dps_parity_fixture_player_uses_authored_decision_or_records_rule_gap",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::dps_parity_native_bis_dummy_records_300s",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::dps_parity_native_bis_dummy_records_300s",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::dps_parity_native_player_profile_spawns_with_pinned_gear",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::dps_parity_native_player_profile_spawns_with_pinned_gear",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::engagement_tests::dps_parity_engagement_all_opponents_have_mutual_combat_refs",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::engagement_tests::dps_parity_engagement_all_opponents_have_mutual_combat_refs",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::engagement_tests::dps_parity_engagement_feral_casts_multi_enemy_aoe",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::engagement_tests::dps_parity_engagement_feral_casts_multi_enemy_aoe",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::engagement_tests::dps_parity_engagement_fire_casts_multi_enemy_aoe",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::engagement_tests::dps_parity_engagement_fire_casts_multi_enemy_aoe",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::engagement_tests::dps_parity_engagement_protection_warrior_casts_multi_enemy_aoe",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::engagement_tests::dps_parity_engagement_protection_warrior_casts_multi_enemy_aoe",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::inputs::dps_parity_input_human_race_uses_the_pinned_source_id",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::inputs::dps_parity_input_human_race_uses_the_pinned_source_id",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::inputs::dps_parity_input_startup_loaders_share_the_prepared_database",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::inputs::dps_parity_input_startup_loaders_share_the_prepared_database",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::literal_rotation::tests::literal_player_change_preserves_ww_creature_spellbook_policy",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::literal_rotation::tests::literal_player_change_preserves_ww_creature_spellbook_policy",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::literal_rotation::tests::literal_player_expired_selected_target_never_redirects_to_primary",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::literal_rotation::tests::literal_player_expired_selected_target_never_redirects_to_primary",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::literal_rotation::tests::literal_player_native_cast_and_request_time_spellbook_rejection",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::literal_rotation::tests::literal_player_native_cast_and_request_time_spellbook_rejection",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::literal_rotation::tests::literal_player_precombat_resolves_the_native_selected_enemy",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::literal_rotation::tests::literal_player_precombat_resolves_the_native_selected_enemy",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::literal_rotation::tests::literal_player_readiness_cannot_reuse_primary_admission_for_far_secondary",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::literal_rotation::tests::literal_player_readiness_cannot_reuse_primary_admission_for_far_secondary",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::literal_rotation::tests::literal_player_retarget_auto_attack_changes_only_victim",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::literal_rotation::tests::literal_player_retarget_auto_attack_changes_only_victim",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::literal_rotation::tests::literal_player_selected_secondary_receives_cast_without_retargeting",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::literal_rotation::tests::literal_player_selected_secondary_receives_cast_without_retargeting",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::periodic_crit_tests::dps_parity_periodic_crit_native_barbed_reads_current_crit_and_spell_critical_bonus",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::periodic_crit_tests::dps_parity_periodic_crit_native_barbed_reads_current_crit_and_spell_critical_bonus",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::periodic_crit_tests::dps_parity_periodic_crit_native_cant_crit_overrides_allow_and_unflagged_stays_normal",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::periodic_crit_tests::dps_parity_periodic_crit_native_cant_crit_overrides_allow_and_unflagged_stays_normal",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::periodic_crit_tests::dps_parity_periodic_crit_native_class_follower_barbed_shot_rolls_each_tick",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::periodic_crit_tests::dps_parity_periodic_crit_native_class_follower_barbed_shot_rolls_each_tick",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::periodic_crit_tests::dps_parity_periodic_crit_native_pet_uses_class_owners_current_chance",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::periodic_crit_tests::dps_parity_periodic_crit_native_pet_uses_class_owners_current_chance",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::periodic_crit_tests::dps_parity_periodic_crit_native_plain_creature_has_no_class_spell_owner",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::periodic_crit_tests::dps_parity_periodic_crit_native_plain_creature_has_no_class_spell_owner",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::periodic_crit_tests::dps_parity_periodic_crit_native_player_barbed_shot_rolls_each_tick",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::periodic_crit_tests::dps_parity_periodic_crit_native_player_barbed_shot_rolls_each_tick",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::periodic_crit_tests::dps_parity_periodic_crit_native_renew_reads_current_crit_after_application",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::periodic_crit_tests::dps_parity_periodic_crit_native_renew_reads_current_crit_after_application",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::periodic_crit_tests::dps_parity_periodic_crit_native_rupture_flat_bonus_precedes_critical_multiplier",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::periodic_crit_tests::dps_parity_periodic_crit_native_rupture_flat_bonus_precedes_critical_multiplier",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::pet_child_tests::dps_parity_wild_thrash_direct_pet_child_has_native_damage_and_geometry",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::pet_child_tests::dps_parity_wild_thrash_direct_pet_child_has_native_damage_and_geometry",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::pet_child_tests::dps_parity_wild_thrash_distant_actual_pet_is_not_commanded",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::pet_child_tests::dps_parity_wild_thrash_distant_actual_pet_is_not_commanded",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::pet_child_tests::dps_parity_wild_thrash_parent_commands_actual_owned_pet_damage",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::pet_child_tests::dps_parity_wild_thrash_parent_commands_actual_owned_pet_damage",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::pet_child_tests::dps_parity_wild_thrash_real_foreign_pet_is_not_commanded",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::pet_child_tests::dps_parity_wild_thrash_real_foreign_pet_is_not_commanded",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::pet_melee_tests::dps_parity_pet_melee_actual_swings_include_source_owner_ranged_ap_contribution",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::pet_melee_tests::dps_parity_pet_melee_actual_swings_include_source_owner_ranged_ap_contribution",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::pet_melee_tests::dps_parity_pet_melee_baseline_records_actual_owner_and_swing_damage",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::pet_melee_tests::dps_parity_pet_melee_baseline_records_actual_owner_and_swing_damage",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::pet_melee_tests::dps_parity_pet_melee_live_owner_equipment_removal_and_restore_changes_swings",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::pet_melee_tests::dps_parity_pet_melee_live_owner_equipment_removal_and_restore_changes_swings",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::pet_melee_tests::dps_parity_pet_melee_owner_only_melee_ap_buff_does_not_change_swings",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::pet_melee_tests::dps_parity_pet_melee_owner_only_melee_ap_buff_does_not_change_swings",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::pet_melee_tests::dps_parity_pet_melee_shared_owner_rap_source_includes_weapon_ap_in_actual_ability",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::pet_melee_tests::dps_parity_pet_melee_shared_owner_rap_source_includes_weapon_ap_in_actual_ability",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::pet_stats_tests::dps_parity_pet_stats_actual_equipment_removal_refreshes_owner_armor",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::pet_stats_tests::dps_parity_pet_stats_actual_equipment_removal_refreshes_owner_armor",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::pet_stats_tests::dps_parity_pet_stats_baseline_records_actual_native_hunter_pet",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::pet_stats_tests::dps_parity_pet_stats_baseline_records_actual_native_hunter_pet",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::pet_stats_tests::dps_parity_pet_stats_foreign_controller_stats_do_not_change_the_pet_or_dummy",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::pet_stats_tests::dps_parity_pet_stats_foreign_controller_stats_do_not_change_the_pet_or_dummy",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::pet_stats_tests::dps_parity_pet_stats_fresh_summon_arrives_full_under_final_owner_stats",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::pet_stats_tests::dps_parity_pet_stats_fresh_summon_arrives_full_under_final_owner_stats",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::pet_stats_tests::dps_parity_pet_stats_native_owner_stamina_change_refreshes_and_removes",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::pet_stats_tests::dps_parity_pet_stats_native_owner_stamina_change_refreshes_and_removes",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::pet_stats_tests::dps_parity_pet_stats_spawn_inherits_native_owner_health_and_armor",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::pet_stats_tests::dps_parity_pet_stats_spawn_inherits_native_owner_health_and_armor",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::power_tests::dps_parity_power_receipt_attributes_native_energize_and_capped_overflow",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::power_tests::dps_parity_power_receipt_attributes_native_energize_and_capped_overflow",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::power_tests::dps_parity_power_receipt_reads_authoritative_mana_in_stat_snapshots",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::power_tests::dps_parity_power_receipt_reads_authoritative_mana_in_stat_snapshots",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::power_tests::dps_parity_power_receipt_reads_owner_pet_pools_and_live_regeneration",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::power_tests::dps_parity_power_receipt_reads_owner_pet_pools_and_live_regeneration",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::report::native_damage_recipient_accounting_preserves_retired_and_zero_output_targets",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::report::native_damage_recipient_accounting_preserves_retired_and_zero_output_targets",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::windwalker_rotation::tests::literal_ww_native_combo_breaker_blackout_earns_rwk_and_delivers_its_child",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::windwalker_rotation::tests::literal_ww_native_combo_breaker_blackout_earns_rwk_and_delivers_its_child",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::windwalker_rotation::tests::literal_ww_native_combo_facts_follow_the_proposed_action_and_ignore_utility",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::windwalker_rotation::tests::literal_ww_native_combo_facts_follow_the_proposed_action_and_ignore_utility",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::windwalker_rotation::tests::literal_ww_native_driver_rejects_dungeon_ttd_without_touching_the_native_kit",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::windwalker_rotation::tests::literal_ww_native_driver_rejects_dungeon_ttd_without_touching_the_native_kit",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::windwalker_rotation::tests::literal_ww_native_fof_channel_releases_damage_on_the_measured_target",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::windwalker_rotation::tests::literal_ww_native_fof_channel_releases_damage_on_the_measured_target",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::windwalker_rotation::tests::literal_ww_native_non_fixture_follower_keeps_its_native_kit",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::windwalker_rotation::tests::literal_ww_native_non_fixture_follower_keeps_its_native_kit",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::windwalker_rotation::tests::literal_ww_native_st_executes_its_real_selected_kit_without_generic_starvation",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::windwalker_rotation::tests::literal_ww_native_st_executes_its_real_selected_kit_without_generic_starvation",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::dps_parity::windwalker_rotation::tests::literal_ww_native_three_target_executes_sck_and_damages_all_native_targets",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::dps_parity::windwalker_rotation::tests::literal_ww_native_three_target_executes_sck_and_damages_all_native_targets",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::frozen_stockade_graph_covers_native_formations",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::frozen_stockade_graph_covers_native_formations",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::full_stockade_clears_all_three_bosses",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::full_stockade_clears_all_three_bosses",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::graph::azure_extraction::extract_azure_graph",
+      "new_package": "server",
+      "new_target": "server",
+      "new_name": "test_support::graph::azure_extraction::extract_azure_graph",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::graph::azure_follower_graph_covers_native_normal_population_and_has_an_authored_route",
+      "new_package": "server",
+      "new_target": "server",
+      "new_name": "test_support::graph::azure_follower_graph_covers_native_normal_population_and_has_an_authored_route",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::graph::corridor_inputs::freeze_native_corridor_inputs",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::graph::corridor_inputs::freeze_native_corridor_inputs",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::graph::extract_stockade_graph",
+      "new_package": "server",
+      "new_target": "server",
+      "new_name": "test_support::graph::extract_stockade_graph",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::graph::frozen_graph_contains_an_explicit_unique_anchored_pull_order",
+      "new_package": "server",
+      "new_target": "server",
+      "new_name": "test_support::graph::frozen_graph_contains_an_explicit_unique_anchored_pull_order",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::graph::stacked_floor_routes_choose_native_height_not_the_lower_xy_alias",
+      "new_package": "server",
+      "new_target": "server",
+      "new_name": "test_support::graph::stacked_floor_routes_choose_native_height_not_the_lower_xy_alias",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::graph::translocation_edges_are_directed_and_never_ordinary_walking",
+      "new_package": "server",
+      "new_target": "server",
+      "new_name": "test_support::graph::translocation_edges_are_directed_and_never_ordinary_walking",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::healer_benchmark_tests::healer_benchmark_extracts_known_small_fight",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::healer_benchmark_tests::healer_benchmark_extracts_known_small_fight",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::healer_benchmark_tests::healer_benchmark_extracts_only_consumed_absorbs",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::healer_benchmark_tests::healer_benchmark_extracts_only_consumed_absorbs",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::healer_benchmark_tests::healer_benchmark_same_fight_has_identical_numbers",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::healer_benchmark_tests::healer_benchmark_same_fight_has_identical_numbers",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::healer_coefficient_tests::healer_benchmark_core_direct_heal_amounts_match_db2_tc_ledger",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::healer_coefficient_tests::healer_benchmark_core_direct_heal_amounts_match_db2_tc_ledger",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::healer_intake_tests::healer_benchmark_raw_melee_replay_applies_native_armor_and_shield",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::healer_intake_tests::healer_benchmark_raw_melee_replay_applies_native_armor_and_shield",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::healer_intake_tests::healer_benchmark_raw_spell_receipt_precedes_native_absorb",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::healer_intake_tests::healer_benchmark_raw_spell_receipt_precedes_native_absorb",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::healer_intake_tests::healer_benchmark_raw_spell_replay_applies_recipient_reduction_and_absorb_once",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::healer_intake_tests::healer_benchmark_raw_spell_replay_applies_recipient_reduction_and_absorb_once",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::healer_intake_tests::healer_benchmark_replays_recorded_stockade_spell_block",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::healer_intake_tests::healer_benchmark_replays_recorded_stockade_spell_block",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::healer_intake_tests::healer_benchmark_reports_frozen_combat_denominator",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::healer_intake_tests::healer_benchmark_reports_frozen_combat_denominator",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::healer_intake_tests::healer_benchmark_restores_recorded_source_scaling_before_native_damage",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::healer_intake_tests::healer_benchmark_restores_recorded_source_scaling_before_native_damage",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::healer_intake_tests::healer_benchmark_same_intake_replays_identical_native_numbers",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::healer_intake_tests::healer_benchmark_same_intake_replays_identical_native_numbers",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::healer_metrics_tests::healer_triage_benchmark_records_native_pull_end_mana_and_hot_uptime",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::healer_metrics_tests::healer_triage_benchmark_records_native_pull_end_mana_and_hot_uptime",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::healer_replay::healer_benchmark_counts_nonunit_hit_absorbed_point_share",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::healer_replay::healer_benchmark_counts_nonunit_hit_absorbed_point_share",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::healer_report::healer_benchmark_capture_stockade_and_report",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::healer_report::healer_benchmark_capture_stockade_and_report",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::healer_report::healer_benchmark_report_recorded_stockade",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::healer_report::healer_benchmark_report_recorded_stockade",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::healer_report::healer_benchmark_writes_standalone_per_spec_markdown",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::healer_report::healer_benchmark_writes_standalone_per_spec_markdown",
+      "ignored": true,
+      "baseline_result": "ignored"
+    },
+    {
+      "old_name": "dungeon_simulator::movement::edge_tests::recorded_mid_edge_follow_does_not_overshoot_into_the_idle_sapling",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::movement::edge_tests::recorded_mid_edge_follow_does_not_overshoot_into_the_idle_sapling",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::movement::edge_tests::recorded_mid_edge_retarget_consumes_only_the_remaining_frozen_walk_time",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::movement::edge_tests::recorded_mid_edge_retarget_consumes_only_the_remaining_frozen_walk_time",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::movement::frozen_edge_time_is_not_straight_line_distance",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::movement::frozen_edge_time_is_not_straight_line_distance",
+      "ignored": false,
+      "baseline_result": "ok"
+    },
+    {
+      "old_name": "dungeon_simulator::one_pack_runs_real_gameplay_without_transport",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::one_pack_runs_real_gameplay_without_transport",
+      "ignored": false,
+      "baseline_result": "ok"
+    }
+  ],
+  "expected_post_split": {
+    "server": {
+      "passed": 5869,
+      "known_failed": 4,
+      "ignored": 202
+    },
+    "server-simulation": {
+      "passed": 30,
+      "known_failed": 0,
+      "ignored": 87
+    },
+    "workspace": {
+      "passed": 6004,
+      "known_failed": 4,
+      "ignored": 310
+    }
+  },
+  "proof_limit": "All123 migrating/subtree baseline names recovered exactly. Whole-workspace actual post-split inventory must be compared by the gate; source mapping and compiler checks do not replace it."
+}

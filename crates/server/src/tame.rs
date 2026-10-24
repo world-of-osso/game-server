@@ -20,7 +20,7 @@ const CREATURE_TYPE_FLAG_TAMEABLE_EXOTIC: u32 = 0x0001_0000;
 
 /// Why Tame Beast fails, with the client error it reports (GlobalStrings).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum TameFailReason {
+pub enum TameFailReason {
     /// `SPELL_FAILED_HIGHLEVEL` "Target is too high level".
     TooHighLevel,
     /// `SPELL_FAILED_BAD_TARGETS` "Invalid target": not tameable, or exotic without
