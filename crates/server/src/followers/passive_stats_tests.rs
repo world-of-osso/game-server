@@ -93,14 +93,26 @@ fn native_mastery_follower_learns_universal_base_without_racial_skill_lines() {
         "SkillLineAbility25920 in universal skill183"
     );
     assert!(crate::auras::has_aura(h.app.world(), unit, 114585));
-    assert_eq!(
-        h.app
-            .world()
-            .get::<CharacterStats>(unit)
-            .unwrap()
-            .mastery_points,
-        8.0
-    );
+    // This native starter actor can have other mastery modifiers; TC sums live aura318.
+    let auras = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(unit)
+        .unwrap();
+    let expected: f32 = auras
+        .iter()
+        .map(|aura| {
+            aura.effects
+                .iter()
+                .filter(|effect| effect.aura == 318)
+                .map(|effect| effect.amount * f32::from(aura.stacks))
+                .sum::<f32>()
+        })
+        .sum();
+    let stats = h.app.world().get::<CharacterStats>(unit).unwrap();
+    assert_eq!(stats.ratings.mastery, 0.0);
+    assert!(expected > 0.0);
+    assert_eq!(stats.mastery_points, expected);
     // Human language98 belongs to race-restricted skill98, not the race0 bridge.
     assert!(!known.contains(668));
 }

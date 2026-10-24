@@ -591,8 +591,23 @@ fn class_completeness_native_mastery_ap_percent_consumes_live_raw_mastery_points
         (12, 581, 321299),
     ] {
         // TC Player.cpp30545 CanUseMastery requires the active spec's known mastery.
-        let mut h = harness_with(Vec::new(), &[spell, 114585], class, true).unwrap();
-        h.app.insert_resource(world_db().unwrap().classes.clone());
+        let data = world_db().unwrap();
+        let native_spec = data
+            .classes
+            .classes
+            .iter()
+            .find(|info| info.class_id == class)
+            .unwrap()
+            .specs
+            .iter()
+            .find(|info| info.spec_id == spec)
+            .unwrap();
+        let mut spells = vec![spell, 114585];
+        spells.extend(native_spec.mastery_spells.iter().copied());
+        spells.sort_unstable();
+        spells.dedup();
+        let mut h = harness_with(Vec::new(), &spells, class, true).unwrap();
+        h.app.insert_resource(data.classes.clone());
         h.app
             .world_mut()
             .entity_mut(h.caster)
@@ -606,7 +621,6 @@ fn class_completeness_native_mastery_ap_percent_consumes_live_raw_mastery_points
         }
         h.advance(6);
         let current = stats(&h);
-        let data = world_db().unwrap();
         let class_info = data
             .classes
             .classes
