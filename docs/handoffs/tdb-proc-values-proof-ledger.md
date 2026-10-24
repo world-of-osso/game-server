@@ -6,15 +6,19 @@ Main authorized the full pinned18-column row, not only the initial illustrative 
 
 Audit: engine data/diagnostics/arms-parity-2026-10-23/tdb-spell-proc-source-audit.json SHA4c7f2019aedc23baab7432fc3b639573ab854da23b433ecb393a9def77f28704;1291effective positive-ID rows,1283base plus7ordered updates, eight pinned source hashes. TC a352b1fa SpellMgr.cpp1497–1653 loads explicit values/defaults before generated entries;524–593 filters event/school/family/type/phase/hit. SpellAuras.cpp1981–2010 applies weapon PPM, DB2 RPPM precedence, chance mods and level reduction. Explicit values must override DB2-derived masks, not union with them.
 
-## Strict independent RED (before Ret dependencies)
+## Importer contract RED
+
+392f9c61d: three actual CLI contract assertion failures0.308s, zero setup errors. Existing import exits0 but persists only SpellId instead of complete BodyAndSoul/Expurgation rows, and accepts a row missing SpellPhaseMask. `tdb-importer-values-red.{log,proof.json}`. These are persisted external DB contract tests, not SQL/source-shape assertions. Value importer implementation remains pending native RED.
+
+## Strict independent RED
 
 Native BodyAndSoul64129 has Aura42→65081,100% native chance, help-spell flag0x4000, and all DB2 effect masks0. Audited TDB row: family6,mask0=1,mask2=0x80000,type4(no-damage/heal),phase2,HitMask3. Native Shield17 family mask0=1 is permitted. Native FlashHeal2061 mask0=0x800/mask3=0x40000000 and healing type must not trigger65081. Real Player casts and200 native frames observe whether the actual speed aura appeared, including before expiry; no injected spell rows/chance or fallback casts.
 
-Two ignored test cases added; runtime RED pending. Existing native friendly-heal proc36488→36483 and generated FranticMomentum391875 are unrelated candidate controls; exact executed controls will be recorded. No production value import/dispatch implementation yet.
+Two ignored test cases added; runtime RED pending. Existing native friendly-heal proc36488→36483 is the first unrelated retained control; generated FranticMomentum391875 may be retained separately without duplicate compilation. Exact executed controls will be recorded. No production value import/dispatch implementation yet.
 
 ## Required later Ret RED
 
-Do not import item_sets/Ret input policy piecemeal: main ownsrt1086/d38586b3e. After it lands merge Ret master+770, then add exactc26921958/cce395359 tests/fixture. NativeGarrick209057/class2/spec70/4setpieces, passive383344/no preexisting383346, single Blade184575 or Judgment20271 cast,200realframes, no grants/overrides/AA. Audited383344 family10/mask3=0x40000000/type1/phase2 must admit Blade and reject Judgment; peer observed7319wrong Judgment proc atc269. Source private DB52fa4d0ebec755f421b5678f0e83aa690a1d2422f33eae5208ff398848d4756c has no TDB table: import only a separate copy and record hashes. This pair is second RED, not waived by independent GREEN.
+rt1086 landed in master5d39f490a; merged into770-based branch asbebf4a918. No piecemeal item_sets/Ret input import. Exact cce395359 tests and c26921958 callback cherry-picked as04d160112/6606891be; callback is peer's TC partial-trigger prerequisite, not a family-filter fix. Test file is byte-identical to c269. Native Ret pair runtime RED remains pending after the independent cohort. NativeGarrick209057/class2/spec70/4setpieces, passive383344/no preexisting383346, single Blade184575 or Judgment20271 cast,200realframes, no grants/overrides/AA. Audited383344 family10/mask3=0x40000000/type1/phase2 must admit Blade and reject Judgment; peer observed7319wrong Judgment proc atc269. Source private DB52fa4d0ebec755f421b5678f0e83aa690a1d2422f33eae5208ff398848d4756c has no TDB table: import only a separate copy and record hashes. This pair is second RED, not waived by independent GREEN.
 
 ## Completion gate
 
