@@ -611,17 +611,9 @@ impl<'a> NativeFacts<'a> {
     }
 
     fn regen(&self, power: PowerType) -> Result<f64, String> {
-        let pools = self
-            .world
-            .get::<crate::spell_cast::powers::PowerPools>(self.actor)
-            .ok_or("native APL actor lacks PowerPools")?;
-        if power == PowerType::Mana {
-            return Ok(f64::from(pools.mana_regen_per_sec));
-        }
-        pools
-            .get(power)
-            .map(|pool| f64::from(pool.regen_per_sec))
-            .ok_or_else(|| format!("native APL actor lacks regen pool {power:?}"))
+        crate::spell_cast::powers::potential_power_regen(self.world, self.actor, power)
+            .map(f64::from)
+            .ok_or_else(|| format!("native APL potential regen unavailable for {power:?}"))
     }
 
     fn gcd(&self, action: &Action, operand: &str) -> Result<f64, String> {

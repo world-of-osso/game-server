@@ -497,6 +497,7 @@ fn initialize_wild_summon(
     drop(entity);
     register_source_summon(world, actor, ctx.caster, properties);
     super::log_summon(world, ctx.caster, actor, ctx.spell);
+    super::howl::on_summoned(world, ctx, actor);
     crate::auras::auras_changed(world, actor);
 }
 

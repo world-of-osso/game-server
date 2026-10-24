@@ -120,6 +120,10 @@ Ignored native regressions in `simc_apl_native/{extension_tests,action_extension
 
 TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyCastTimePercentMod`; `SpellAuraEffects.cpp4531–4551` applies aura193 through the same multiplicative cast/attack speed paths. Regression `dps_parity/haste_tests.rs` uses actual1467 BiS gear plus native Power Infusion10060 and Heroism32182 aura amounts; no injected ratings, stats or coefficients. Feral's separate100%-uptime Frantic Momentum/Savage Fury proc eligibility belongs to its spec owner, not to rating conversion.
 
+## Native continuous-resource potential
+
+- [ ] Read uncapped continuous-resource potential through the one native regeneration producer, not its applied-at-cap zero cache. Preserve current/wire values and explicit unsupported/discrete-pool errors. [Bounded native fixture packet](../handoffs/native-resource-facts-packet.md) extends the producer owner's existing BM/WW/Mana cases; RED/GREEN integration remains pending.
+
 ## Explicit native target context
 
 - [x] Native fact adapters accept an actual current target and ordered native target universe, separate from an explicit proposed `Action.target`. Invalid/absent explicit context fails rather than borrowing another selection. Candidate selection preserves native order and ordinary per-action target eligibility, not just first-target readiness.

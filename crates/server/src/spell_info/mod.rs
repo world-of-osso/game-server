@@ -96,6 +96,9 @@ pub struct SpellInfo {
     /// CheckCast skips SpellHistory::IsReady; HandleCooldowns does no writes.
     #[serde(skip)]
     pub(crate) cast_ignore_cooldowns: bool,
+    /// TC TRIGGERED_DONT_RESET_PERIODIC_TIMER (0x20000), included in FULL_MASK.
+    #[serde(skip)]
+    pub(crate) cast_dont_reset_periodic_timer: bool,
     /// Native Maelstrom launch helpers leave modifier-charge consumption to their parent.
     #[serde(skip)]
     pub(crate) cast_parent_owns_modifier_charges: bool,

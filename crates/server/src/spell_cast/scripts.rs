@@ -50,6 +50,8 @@ mod ret_tier;
 pub(super) use ret_tier::after_foreground_spender;
 pub(crate) use ret_tier::owns_arbiter_charge;
 mod scourge_strike;
+mod snakeskin_quiver;
+pub(super) use snakeskin_quiver::roll_snakeskin_cobra;
 mod soul_of_the_forest;
 mod swiftmend;
 pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direct_multiplier;
@@ -203,6 +205,7 @@ const PENANCE: u32 = 47_540;
 const PENANCE_DAMAGE_CHANNEL: u32 = 47_758;
 const PENANCE_HEAL_CHANNEL: u32 = 47_757;
 const COBRA_SHOT: u32 = 193_455;
+const BARBED_SCALES: u32 = 469_880;
 const KILL_COMMAND: u32 = 34_026;
 const BLACKOUT_KICK: u32 = 100_784;
 const BLACKOUT_KICK_RANK_TWO: u32 = 261_917;
@@ -627,7 +630,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         batch16::HOLY_LIGHT => Some(batch16::energize_holy_light),
         batch16::HOLY_SHOCK | batch16::CRUSADER_STRIKE => Some(batch16::reduce_holy_judgment),
         batch16::RIPTIDE => Some(batch16::grant_tidal_waves),
-        batch13::BESTIAL_WRATH => Some(batch13::strike_with_owned_pet),
+        batch13::BESTIAL_WRATH => Some(batch13::finish_bestial_wrath),
         batch12::SHIELD_RIGHTEOUS => Some(batch12::shield_armor),
         batch10::BLADE_FLURRY => Some(batch10::cast_flurry),
         batch10::VOIDFORM => Some(batch10::apply_voidform),
@@ -1007,6 +1010,21 @@ fn blackout_kick(world: &mut World, caster: Entity, _target: Entity, _depth: u8)
             reduce_cooldown(world, caster, spell, f64::from(milliseconds) / 1000.0);
         }
     }
+}
+
+/// Native469880 names Cobra CAST and its millisecond reduction; SimC76f8118
+/// hunter4963-4964 includes free background Cobra, before missile impact.
+pub(super) fn reduce_barbed_scales(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if spell.id != COBRA_SHOT || !crate::auras::has_aura(world, caster, BARBED_SCALES) {
+        return;
+    }
+    let milliseconds = script_effect_value(world, caster, BARBED_SCALES, 0);
+    reduce_cooldown(
+        world,
+        caster,
+        batch20::BARBED_SHOT,
+        f64::from(milliseconds) / 1000.0,
+    );
 }
 
 /// Retail 193455: "Reduces the cooldown of Kill Command by $s3 sec."
