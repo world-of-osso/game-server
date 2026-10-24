@@ -74,7 +74,7 @@ struct Species {
 
 #[derive(Resource)]
 pub(crate) struct PetCatalog {
-    pub(crate) battle: ::server::pet_battle::Catalog,
+    pub(crate) battle: server_pet_battle::Catalog,
     species: HashMap<u32, Species>,
     spells: HashMap<u32, u32>,
     ability_art: HashMap<u32, (String, u32)>,
@@ -112,7 +112,7 @@ impl PetCatalog {
             .into_iter()
             .map(|entry| (entry.species_id, entry))
             .collect();
-        let battle = ::server::pet_battle::Catalog::load_world_db(conn)
+        let battle = server_pet_battle::Catalog::load_world_db(conn)
             .map_err(rusqlite::Error::InvalidParameterName)?;
         let ability_art = conn
             .prepare("SELECT ID,Name_lang,IconFileDataID FROM battle_pet_ability")?
@@ -737,8 +737,8 @@ mod tests {
         let catalog = load_test_catalog();
         assert_eq!(catalog.species.get(&39).unwrap().creature_id, 2671);
         assert_eq!(
-            ::server::pet_battle::calculate_stats(&catalog.battle, 39, 3, 3, 25).unwrap(),
-            ::server::pet_battle::Stats {
+            server_pet_battle::calculate_stats(&catalog.battle, 39, 3, 3, 25).unwrap(),
+            server_pet_battle::Stats {
                 health: 1563,
                 power: 260,
                 speed: 276

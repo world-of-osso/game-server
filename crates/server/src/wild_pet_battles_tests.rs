@@ -80,7 +80,7 @@ fn wild_pet_battles_mega_discharge_uses_nonowned_enemy_maker_and_named_same_roun
     assert_eq!(npc.abilities, [2365, 0, 0]);
     assert_eq!(
         npc.stats,
-        ::server::pet_battle::Stats {
+        server_pet_battle::Stats {
             health: 491,
             power: 10,
             speed: 7
@@ -114,7 +114,7 @@ fn wild_pet_battles_mega_discharge_uses_nonowned_enemy_maker_and_named_same_roun
     );
     assert_eq!(state.teams[1].pets[0].health, 461);
     assert!(events.contains(&Event::AuraApplied {
-        target: ::server::pet_battle::PetRef { team: 1, slot: 0 },
+        target: server_pet_battle::PetRef { team: 1, slot: 0 },
         ability: 542
     }));
     assert!(state.auras.is_empty());
@@ -172,7 +172,7 @@ fn wild_pet_battles_whirling_gears_uses_only_nonowned_enemy_math_and_swaps_the_p
     assert_eq!(npc.abilities, [2351, 0, 0]);
     assert_eq!(
         npc.stats,
-        ::server::pet_battle::Stats {
+        server_pet_battle::Stats {
             health: 156,
             power: 7,
             speed: 10
@@ -455,7 +455,7 @@ fn wild_pet_battles_sunshell_uses_nonowned_crystalsnap_only_as_enemy_npc() {
     assert_eq!(npc.abilities, [2410, 0, 0]);
     assert_eq!(
         npc.stats,
-        ::server::pet_battle::Stats {
+        server_pet_battle::Stats {
             health: 174,
             power: 12,
             speed: 7
@@ -1051,7 +1051,7 @@ fn wild_pet_battles_lock_on_uses_authored_tonk_target_mark_and_blast() {
     assert_eq!(ready.auras[0].ability, 300);
     assert_eq!(
         ready.auras[0].target,
-        ::server::pet_battle::PetRef { team: 1, slot: 0 }
+        server_pet_battle::PetRef { team: 1, slot: 0 }
     );
     assert_eq!(ready.auras[0].remaining, 1);
     let (launched, _) = ready
@@ -1270,7 +1270,7 @@ fn wild_pet_battles_miss_branch_uses_authored_owned_loadouts_and_persisted_healt
             assert_eq!(state.auras.len(), 1);
             assert_eq!(
                 state.auras[0].target,
-                ::server::pet_battle::PetRef { team: 0, slot: 0 }
+                server_pet_battle::PetRef { team: 0, slot: 0 }
             );
         } else {
             assert!(state.teams[0].pets[0].health > 100);

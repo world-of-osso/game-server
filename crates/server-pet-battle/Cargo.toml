@@ -1,0 +1,9 @@
+[package]
+name = "server-pet-battle"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# Catalog loading uses the same SQLite connection type as server loaders.
+rusqlite = { version = "0.35", features = ["bundled"] }

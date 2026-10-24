@@ -1,3 +1,7 @@
+## 2026-10-24 — Deterministic pet-battle crate extraction (E)
+
+[Crate boundaries](systems/server-crates.md#deterministic-pet-battles-e): all 33 pet-battle sources move byte-for-byte into `server-pet-battle`; 16 caller paths now use the crate directly, with no server compatibility export or visibility widening. [Mapping](../handoffs/crate-split-pet-battle-mapping.json) preserves 235 exact cases (230 enabled, five existing ignored). Compiler/runtime proof is recorded separately from the source move; full integration remains lead-owned.
+
 ## 2026-10-24 — Isolated qualified Ret Sentence/Wake/Toll packet
 
 [Auras](systems/auras.md#ret-sentence-and-toll-relationships--2026-10-24): direct-owner Sentence expiry/cancel/native-percentage/physical/foreign controls, ordinary Wake damage/resource/knowledge and Toll ST/3T/cap/range/mode/percentage total eleven unique native cases with exact revision receipts. Packet starts at masterd7e86cd0f and excludes development-only Expurgation/Rebuke/Aura361/literal work; no whole-rotation or DPS claim. [Scope/source/proof ledger](../handoffs/ret-qualified-sentence-wake-toll-proof-ledger.md); integration check separate.

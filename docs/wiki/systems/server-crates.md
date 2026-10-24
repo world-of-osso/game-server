@@ -54,6 +54,10 @@ The retained private `hit::tests` also used the NPC-dodge test module's setup he
 
 No `execute_cast` seam or gameplay-internal visibility widening is included. Final wired-consumer/core compilation, actual post-build test inventories, runtime qualification and matched comment-rebuild measurements remain required before acceptance. Source size and check elapsed time do not establish edit-build payoff.
 
+## Deterministic pet battles (E)
+
+`server-pet-battle` owns the complete deterministic pet-battle runtime and its 235 tests (230 enabled, five existing ignored). All 33 files move byte-for-byte; existing private implementation and fixture boundaries stay inside the crate. It has only the existing rusqlite dependency, no server/Bevy/transport dependency. Every server caller imports `server_pet_battle::` directly; there is no server compatibility export. The private `pet_battle` module inside its own crate preserves exact libtest names, while the public API is available at the crate root. The opt2/debug1 test profile matches the other split crates. [Behavior and source ownership](pet-battle-engine.md), [exact ownership mapping](../../handoffs/crate-split-pet-battle-mapping.json). Compilation, targeted runtime and parent integration gates are separate proof obligations; the source move alone is not a timing claim.
+
 ## Sources
 
 - `crates/server-catalog/{Cargo.toml,src/lib.rs}`, `crates/server-simulation/{Cargo.toml,src/lib.rs}` — package/dependency ownership.

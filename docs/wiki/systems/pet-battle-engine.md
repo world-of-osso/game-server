@@ -1,6 +1,10 @@
 # Pet battle engine
 
-Standalone `server::pet_battle` library, consumed by the separate [wild runtime](../../specs/wild-pet-battles.md). The library itself owns no Bevy plugin, transport, UI, spawning or account journal. Current capability is bounded; see [full property coverage](../../pet-battle-effect-coverage.md), not a blanket Retail parity claim.
+Standalone `server-pet-battle` crate (`server_pet_battle::`), consumed by the separate [wild runtime](../../specs/wild-pet-battles.md). The library itself owns no Bevy plugin, transport, UI, spawning or account journal. Current capability is bounded; see [full property coverage](../../pet-battle-effect-coverage.md), not a blanket Retail parity claim.
+
+## Crate ownership — 2026-10-24
+
+The complete deterministic module and its tests live in `crates/server-pet-battle/src/pet_battle/`. Server consumers use `server_pet_battle::` directly; no `server::pet_battle` compatibility export remains. The crate depends only on the existing rusqlite version. All 33 source files move byte-for-byte with no visibility or algorithm changes. The private module prefix preserves all 235 case identities (230 enabled, five existing ignored). [Exact case/file mapping](../../handoffs/crate-split-pet-battle-mapping.json); [crate boundaries](server-crates.md). Target tests with `cargo test -p server-pet-battle`, not the former server filter. Compilation and runtime receipts are separate from this ownership contract.
 
 ## Last-hit counter percentages — 2026-10-20
 

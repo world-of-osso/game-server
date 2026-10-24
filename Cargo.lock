@@ -6595,6 +6595,7 @@ dependencies = [
  "serde",
  "serde_json",
  "server-catalog",
+ "server-pet-battle",
  "shared",
  "tempfile",
  "tokio",
@@ -6625,13 +6626,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "server-spell-tests"
+name = "server-pet-battle"
 version = "0.1.0"
 dependencies = [
- "bevy",
- "lightyear",
- "server",
- "shared",
+ "rusqlite",
 ]
 
 [[package]]
@@ -6647,6 +6645,16 @@ dependencies = [
  "server",
  "shared",
  "tempfile",
+]
+
+[[package]]
+name = "server-spell-tests"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "lightyear",
+ "server",
+ "shared",
 ]
 
 [[package]]

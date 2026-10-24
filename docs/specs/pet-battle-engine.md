@@ -1,6 +1,6 @@
 # Pet battle turn engine
 
-Pure deterministic server library in `crates/server/src/pet_battle/`, exported through `server::pet_battle`. [Mechanics, schema and source provenance](../wiki/systems/pet-battle-engine.md); [full property coverage](../pet-battle-effect-coverage.md).
+Pure deterministic `server-pet-battle` crate in `crates/server-pet-battle/src/pet_battle/`, consumed directly through `server_pet_battle::`. [Mechanics, schema and source provenance](../wiki/systems/pet-battle-engine.md); [full property coverage](../pet-battle-effect-coverage.md).
 
 ## What it must do
 
@@ -74,7 +74,7 @@ Pure deterministic server library in `crates/server/src/pet_battle/`, exported t
 
 ## Tests asserting this spec
 
-`crates/server/src/pet_battle/{tests,property_tests}.rs`; native `agent-run pbfx cargo test --locked -p server pet_battle`. Tests copy battle tables from shipped world.db, without CSV environment overrides. Exact revisions, counts, format/check evidence and remaining parity boundaries are in the [coverage report](../pet-battle-effect-coverage.md).
+`crates/server-pet-battle/src/pet_battle/{tests,property_tests}.rs`; native `agent-run pbfx cargo test --locked -p server-pet-battle`. The extraction preserves all 235 case names and flags, without a server re-export or gameplay visibility changes. Tests copy battle tables from shipped world.db, without CSV environment overrides. Exact revisions, counts, format/check evidence and remaining parity boundaries are in the [coverage report](../pet-battle-effect-coverage.md).
 
 ## Known gaps (current cycle)
 
