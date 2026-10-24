@@ -110,7 +110,7 @@ fn lightning_bolt_eligibility(run: &mut super::super::Run, target: Entity) -> St
 }
 
 #[test]
-#[ignore = "Elemental native target-fact qualification pending"]
+#[ignore = "opt-in native Elemental profile: requires private DPS_PARITY_WORLD_DB"]
 fn literal_ele_native_owned_target_facts_select_and_damage_the_foreign_dot_target() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;
@@ -249,7 +249,7 @@ fn literal_ele_native_owned_target_facts_select_and_damage_the_foreign_dot_targe
 }
 
 #[test]
-#[ignore = "Elemental native refresh/expiry qualification pending"]
+#[ignore = "opt-in native Elemental profile: requires private DPS_PARITY_WORLD_DB"]
 fn literal_ele_native_refreshability_and_counts_follow_real_aura_time() {
     let (mut run, bindings, equipment, encounter) = fixture(1);
     apply(run.app.world_mut(), run.actor, run.targets[0], 188389);
