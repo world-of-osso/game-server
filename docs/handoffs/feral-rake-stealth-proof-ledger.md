@@ -21,8 +21,12 @@ Engine diagnostics root: `data/diagnostics/feral-parity-2026-10-23/`.
 
 The relocated test uses the same prepared native profile, controller capture, ordinary casts/GCD, target geometry and damage assertions; diagnostic-only removal recording is omitted. It has no dependency on a Feral literal adapter or new observer API.
 
-- [ ] Run relocated actual-profile case once on this clean branch.
-- [ ] Run one two-crate test-target compiler check (`server`, `server-simulation`).
-- [ ] Send exact local tip/branch to parent; parent owns push and full gate.
+At code1775772177f040f054f4c2edab5fa6b643d3c73f, evidence root `rake-clean-gate/`:
 
-Existing development proof is not a claim that the clean branch, complete suite, periodic profile or300s DPS parity is qualified.
+- [x] Relocated actual-profile case ran once:1PASS31.65s/exit0, `native-case.{proof.json,stdout.log}`;611.03s wrapper includes compilation.
+- [x] Original requested two-crate check finished exit0/374.58s; it had already started before the package-scope expansion and is not represented as spell-test coverage.
+- [x] Expanded check ran once with `-p server -p server-simulation -p server-spell-tests --tests`: exit0/2.27s wrapper, cached server/simulation metadata reused, `three-crate-check.proof.json`.
+- [x] Four relocated `dummy7_rake_` cases ran once in `server-spell-tests`:4PASS16.03s/exit0, `relocated-core-cases.{proof.json,stdout.log}`.
+- [ ] Parent owns push and full `--workspace` gate; no full-suite or300s DPS parity claim.
+
+The native predicate is byte-identical to qualifieda5b2fce9f. Changes from exactbase1fb0230ad are Rake-only; no merge or literal-development ancestor enters this branch. Focused docs updates do not invalidate these code-scoped receipts. The historical spell-test migration mapping retains its original pre-rename inventory; this fix's explicit semantic rename is recorded above.
