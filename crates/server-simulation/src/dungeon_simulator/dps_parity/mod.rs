@@ -1,6 +1,7 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
 mod causality_tests;
 mod devastation_literal_tests;
+mod devastation_rotation;
 mod dummy_reference_tests;
 mod engagement_tests;
 mod equipment_input_tests;
