@@ -115,7 +115,7 @@ pub(crate) fn creature_cast_with_effect0_ignoring_in_progress(
         .iter_mut()
         .find(|effect| effect.index == 0)
         .ok_or(CastFailure::Unsupported(
-            "partial-trigger BP0 effect missing",
+            "partial-trigger BP0 effect missing".into(),
         ))?;
     effect.base_points = amount;
     let target = super::validate_start(world, caster, &spell, explicit, true)?;
