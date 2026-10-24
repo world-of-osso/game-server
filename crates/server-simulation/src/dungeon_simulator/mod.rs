@@ -4,7 +4,7 @@ mod campaign;
 mod catalogs;
 mod diagnostics;
 pub(crate) mod dps_parity;
-use server::test_support::graph;
+mod graph;
 mod healer_benchmark_tests;
 mod healer_coefficient_tests;
 pub(crate) use server::test_support::healer_intake;

@@ -5,6 +5,12 @@
   "old_target": "server",
   "rules_in_order": [
     {
+      "old_prefix": "dungeon_simulator::graph::corridor_inputs::",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_prefix": "dungeon_simulator::graph::corridor_inputs::"
+    },
+    {
       "old_prefix": "dungeon_simulator::graph::",
       "new_package": "server",
       "new_target": "server",
@@ -32,10 +38,6 @@
         },
         {
           "suffix": "azure_extraction::extract_azure_graph",
-          "ignored": true
-        },
-        {
-          "suffix": "corridor_inputs::freeze_native_corridor_inputs",
           "ignored": true
         }
       ]
@@ -851,9 +853,9 @@
     },
     {
       "old_name": "dungeon_simulator::graph::corridor_inputs::freeze_native_corridor_inputs",
-      "new_package": "server",
-      "new_target": "server",
-      "new_name": "test_support::graph::corridor_inputs::freeze_native_corridor_inputs",
+      "new_package": "server-simulation",
+      "new_target": "server_simulation",
+      "new_name": "dungeon_simulator::graph::corridor_inputs::freeze_native_corridor_inputs",
       "ignored": true,
       "baseline_result": "ignored"
     },
@@ -1054,12 +1056,12 @@
     "server": {
       "passed": 5869,
       "known_failed": 4,
-      "ignored": 203
+      "ignored": 202
     },
     "server-simulation": {
       "passed": 30,
       "known_failed": 0,
-      "ignored": 86
+      "ignored": 87
     },
     "workspace": {
       "passed": 6004,

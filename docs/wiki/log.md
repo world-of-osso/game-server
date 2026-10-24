@@ -1,3 +1,7 @@
+## 2026-10-23 — Corridor capture consumer ownership
+
+The retained-core unit check exposed a runtime-only reverse edge: ignored corridor capture imports simulator runtime/diagnostics. Capture returned to the consumer with its original name and a canonical graph re-export; no gameplay/type duplication. Expected117 simulator cases/6retained graph cases; workspace names/ignore statuses unchanged. Compiler and full-suite qualification pending.
+
 ## 2026-10-23 — Simulator compiler boundary and next area pilot
 
 [Crate boundaries](systems/server-crates.md): B22aa67892 passes simulator test-target and ordinary production binary compiler checks without warnings. Exact landed-A mapping retains123 subtree names:116 consumer/7core graph, including ignored status; full post-split gate pending. [C handoff](../handoffs/crate-split-area-tests.md) plans106 native melee behavior cases, canonical shared collectors and controlled paired rebuild measurements; no C implementation or speedup claim.

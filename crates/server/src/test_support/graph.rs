@@ -7,9 +7,6 @@ use std::path::PathBuf;
 #[cfg(test)]
 #[path = "azure_extraction.rs"]
 mod azure_extraction;
-#[cfg(test)]
-#[path = "corridor_inputs.rs"]
-mod corridor_inputs;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Spawn {
