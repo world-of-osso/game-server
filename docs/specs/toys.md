@@ -15,8 +15,8 @@ Do not add these three Toy rows until a real contract is established and approve
 
 ## Authored player-only unit targets
 
-- [ ] Native `SPELL_ATTR3_ONLY_ON_PLAYER` (`SpellMisc.Attributes_3 & 0x100`) excludes nonplayer unit recipients, even friendly or player-controlled NPCs. Player identity is not the PvP/player-affected reaction identity.
-- [ ] Explicit invalid unit use refuses before effects/recovery. Implicit area/chain eligibility filters before authored recipient caps; player positives remain eligible.
+- [x] Native `SPELL_ATTR3_ONLY_ON_PLAYER` (`SpellMisc.Attributes_3 & 0x100`) excludes nonplayer unit recipients, even friendly or player-controlled NPCs. Player identity is not the PvP/player-affected reaction identity.
+- [x] Explicit invalid unit use refuses before effects/recovery. Implicit area/chain eligibility filters before authored recipient caps; player positives remain eligible.
 - [ ] Real physical learning and owned UseToy for The Heartbreaker50471/71909 and B.B.F. Fist205045/408067 prove NPC refusal, retained ownership/state and immediate legitimate player use with native recovery60000/86400000ms.
 - [ ] Nonunit destinations/objects and unflagged source spells retain their own contracts. No extra toy admissions, freshness timers or target93 actions are inferred.
 

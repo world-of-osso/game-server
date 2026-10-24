@@ -2143,6 +2143,7 @@ fn validate_target(
     if invalid_life
         || !targets::same_map(world, caster, target)
         || !targets::creature_type_allowed(world, spell, target)
+        || !targets::player_target_allowed(world, spell, target)
     {
         return Err(CastFailure::InvalidTarget);
     }

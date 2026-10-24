@@ -39,6 +39,8 @@ use crate::spell_info::{SpellEffect, SpellInfo};
 const MELEE_RANGE: f32 = 5.0;
 /// TC a352b1fa SpellInfo::CheckTarget, SharedDefines.h:492.
 const SPELL_ATTR1_EXCLUDE_CASTER: u32 = 0x0008_0000;
+/// TC SharedDefines.h:555; SpellInfo.cpp:2443–2447 uses strict Player identity.
+const SPELL_ATTR3_ONLY_ON_PLAYER: u32 = 0x0000_0100;
 /// TC a352b1fa SharedDefines.h:666; SpellInfo.cpp:2458–2460.
 const SPELL_ATTR6_DO_NOT_CHAIN_TO_CROWD_CONTROLLED_TARGETS: u32 = 0x0000_0100;
 
@@ -49,7 +51,19 @@ const AOE_HITS_ONLY_IN_COMBAT_UNITS: &[u32] = &[
     50286,  // Starfall's periodic area:191034 ->50286 ->191037.
 ];
 
+/// TC CheckTarget applies this to units/corpse owners, not game objects.
+pub(super) fn player_target_allowed(world: &World, spell: &SpellInfo, target: Entity) -> bool {
+    super::attributes(spell, 3) & SPELL_ATTR3_ONLY_ON_PLAYER == 0
+        || world.get::<Player>(target).is_some()
+        || world
+            .get::<shared::protocol::GameObjectInfo>(target)
+            .is_some()
+}
+
 fn implicit_target_allowed(world: &World, caster: Entity, spell: &SpellInfo, unit: Entity) -> bool {
+    if !player_target_allowed(world, spell, unit) {
+        return false;
+    }
     let excludes_cc =
         super::attributes(spell, 6) & SPELL_ATTR6_DO_NOT_CHAIN_TO_CROWD_CONTROLLED_TARGETS != 0;
     if excludes_cc && crate::auras::has_breakable_by_damage_cc(world, unit) {
@@ -728,6 +742,7 @@ pub(super) fn select_targets_and_destination(
     if !selected_any && effect.implicit_targets == [0, 0] {
         units.push(explicit.unwrap_or(caster));
     }
+    units.retain(|&unit| player_target_allowed(world, spell, unit));
     units = limit_spell_targets(spell, caster, units, 0);
     units.dedup();
     Ok((units, destination))

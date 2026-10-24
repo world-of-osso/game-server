@@ -2,6 +2,12 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Player-only unit eligibility (2026-10-23)
+
+[Contract](../../specs/toys.md#authored-player-only-unit-targets). TC a352b1fa SharedDefines555/SpellInfo2443–2454 checks Attr3 ONLY_ON_PLAYER0x100 against actual Player identity (including a resolved player corpse owner), not player-controlled NPC affiliation. The existing target planners now share one predicate: explicit validation rejects invalid units before casting, implicit area/nearby/chain candidates filter before caps/jumps, and self/direct unit selection retains only allowed recipients. Nonunit game objects/destinations retain their distinct source contract. No new fields, per-toy alias or other attribute policy.
+
+Raw70448 has29 direct toy roots/seven currently admitted;247 raw rows/10 tables and TC hashes are pinned. At41258b2bb actual Heartbreaker50471/71909 and B.B.F. Fist205045/408067 wrongly accept NPCs and start60000/86400000ms recovery; native147643 wrongly selects NPC self. Those are three unambiguous genuine REDs. Two additional native area/chain failures selected NPCs, but their expected player recipients also lacked ordinary PvP attack authority: `is_hostile` is not `relation_matches`. Corrected7645/31436 fixtures use an NPC caster with valid PvC recipients and assert actual eligibility, not a PvP/LOS bypass. Native destination91756, unflagged NPC cosmetic and547 census controls passed. Production added after RED, masterbd5f3e000 merged; GREEN pending. Evidence:only-player-source-provenance.json, only-player-proof-ledger.json and only-player-native-fixture-root-cause.json. No native visual playback or target93/dummy-action admission inferred.
+
 ## Item faction flags eligibility (2026-10-23)
 
 [Contract](../../specs/toys.md#authored-item-faction-eligibility). TC a352b1fa ItemTemplate.h226–227 and Player.cpp11215–11219 gate Horde-only0x1/Alliance-only0x2 before source race/class checks; ToyHandler.cpp28–51 calls CanUseItem before learning consumes a physical toy. Existing project ToyLearn/Use share `ItemTemplate::allows`. That predicate now reads the already loaded `ItemScaling.flags2`, preserving raw class/race masks and the existing character base-faction lookup. No per-toy branch, protocol field or PvP identity rewrite.
