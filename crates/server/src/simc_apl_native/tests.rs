@@ -6,6 +6,8 @@ use crate::spell_info::SpellStore;
 mod action_extensions;
 #[path = "extension_tests.rs"]
 mod extensions;
+#[path = "history_extension_tests.rs"]
+mod history_extensions;
 
 const TIGER_PALM: u32 = 100780;
 const BLACKOUT_KICK: u32 = 100784;
