@@ -235,7 +235,10 @@ fn fire_efficiency_native70_ignite_uses_native_share_and_cannot_feed_itself() {
         ticks as usize,
         "one earned9tick bank, no self-proc cascade"
     );
-    assert!(hits.iter().all(|event| event.amount == amount as i32));
+    assert!(
+        hits.iter().all(|event| event.amount == amount as i32),
+        "native tick bank={amount}; resolved ticks={hits:?}"
+    );
     assert!(!crate::auras::has_aura(h.app.world(), target, 12654));
 }
 

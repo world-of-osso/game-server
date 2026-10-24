@@ -476,8 +476,11 @@ fn proc_fidelity_262_native_stormkeeper_chain_lightning_overloads_each_hit_targe
         .filter(|event| event.caster == caster.to_bits() && event.spell_id == 45297)
         .count();
     assert_eq!(
-        child_casts, 3,
-        "TC HIT-phase native SK modifier guarantees one normal45297 cast per root hit, not one per parent cast"
+        child_casts,
+        3,
+        "TC HIT-phase native SK modifier guarantees one normal45297 cast per root hit, not one per parent cast; target HP={:?}; log={:?}",
+        [target, second, third].map(|unit| h.health(unit)),
+        &h.inbox.log[first_log..]
     );
     assert!(h.inbox.log[first_log..].iter().any(|event| {
         event.kind == CombatLogKind::Damage
