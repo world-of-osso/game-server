@@ -55,6 +55,8 @@ mod kit_rotation_fidelity_tests;
 mod kit_rotation_tests;
 #[cfg(test)]
 mod meteor_tests;
+#[cfg(test)]
+mod native_flight_tests;
 mod pack_identity;
 mod party;
 mod positioning;

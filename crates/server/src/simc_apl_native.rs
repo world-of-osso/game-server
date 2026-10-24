@@ -188,6 +188,9 @@ impl<'a> NativeFacts<'a> {
     fn action_property(&self, alias: &str, property: &str) -> Result<f64, String> {
         let spell = self.action_spell(alias)?;
         match property {
+            "in_flight" | "in_flight_remains" => {
+                crate::spell_cast::native_apl::flight_value(self.world, self.actor, spell, property)
+            }
             "usable_in" => crate::spell_cast::native_apl::cooldown_value(
                 self.world, self.actor, spell, "remains",
             ),
