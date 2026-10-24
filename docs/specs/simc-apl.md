@@ -79,7 +79,10 @@ TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyC
 - [x] Patchwerk parity setup explicitly configures zero when no movement event exists, matching `player.cpp1288`; explicitly supplied positive values and subsequent state updates remain distinct from geometry.
 - [x] Missing configuration fails `NATIVE_MOVEMENT_DISTANCE_UNAVAILABLE`; dungeon callers fail `DUNGEON_MOVEMENT_DISTANCE_UNAVAILABLE` rather than borrowing fixture metadata.
 
-This scalar does not implement movement-event scheduling or the separate `movement.remains`/`movement.speed` operands.
+- [ ] `movement.remains` divides positive configured distance by current native run speed; with zero distance and the admitted no-movement-event fixture it is zero. `movement.speed` reports native base run speed times current native run/aura modifiers even while idle, not last movement stride speed.
+- [ ] Missing/dungeon movement state remains an explicit error for remains/speed as for distance; no target range or invented timing.
+
+`MOVEMENT_EVENT_SCHEDULING_UNREFERENCED` remains open: all pinned references are Patchwerk single-target or default-style adds with no movement events. Do not add an unpaired moving-style selector, event scheduler or active movement-buff model until a pinned reference supplies that contract.
 
 ## Known gaps (current cycle)
 

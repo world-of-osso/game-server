@@ -377,6 +377,26 @@ impl<'a> NativeFacts<'a> {
             })
     }
 
+    fn movement_value(&self, property: &str) -> Result<f64, String> {
+        let distance = self.movement_distance()?;
+        let run = self
+            .world
+            .get::<crate::creature_ai::SpawnPoint>(self.actor)
+            .map_or(1.0, |spawn| spawn.speed_run);
+        let modifier = self
+            .world
+            .get::<crate::auras::AuraStatMods>(self.actor)
+            .map_or(1.0, |mods| mods.movement_speed);
+        let speed = f64::from(crate::creature_ai::BASE_RUN_SPEED * run * modifier);
+        match property {
+            "speed" => Ok(speed),
+            "remains" if distance > 0.0 => Ok(distance / speed),
+            // All admitted fixtures configure no movement event/buff.
+            "remains" => Ok(0.0),
+            _ => Err(format!("unknown native movement property {property}")),
+        }
+    }
+
     fn movement_event(&self, property: &str) -> Result<f64, String> {
         if matches!(self.encounter, Encounter::Dungeon { .. }) {
             return Err(format!(
@@ -643,6 +663,8 @@ impl Facts for NativeFacts<'_> {
             "active_enemies" => Ok(self.active_enemies as f64),
             "spell_haste" => self.spell_haste(),
             "movement.distance" => self.movement_distance(),
+            "movement.remains" => self.movement_value("remains"),
+            "movement.speed" => self.movement_value("speed"),
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "charges_fractional"
             | "full_recharge_time" | "execute_time" | "ticks_remain" => {
                 Err(format!("native APL {name} requires action context"))
