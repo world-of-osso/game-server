@@ -116,21 +116,21 @@ fn dps_parity_ret_resonance_native_without_toll_keeps_budget_absent() {
 }
 
 #[test]
-#[ignore = "legal native config without selected Resonance leaf retains Toll but cannot grant budget"]
-fn dps_parity_ret_resonance_native_unselected_leaf_keeps_budget_absent() {
+#[ignore = "legal other native choice at93181 retains Toll but cannot grant Resonance budget"]
+fn dps_parity_ret_resonance_native_other_choice_keeps_budget_absent() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = native_ret(4);
     let (_, mut traits) = read_reference(70).unwrap();
-    let before = traits.len();
-    traits.retain(|entry| entry.entry_id != TALENT_ENTRY);
-    assert_eq!(
-        traits.len() + 1,
-        before,
-        "remove only the actual selected Resonance leaf"
-    );
-    inputs::install_traits(run.app.world_mut(), run.actor, &traits).expect(
-        "native validator must accept this leaf omission without fabricated replacement points",
-    );
+    let choice = traits
+        .iter_mut()
+        .find(|entry| entry.entry_id == TALENT_ENTRY)
+        .unwrap();
+    assert_eq!(choice.node_id, 93181);
+    // Native node93181's other legal entry is115467 (Quickened Invocation379391).
+    // Simply deleting Resonance is invalid: it leaves only22 of23 required earlier-row points.
+    choice.entry_id = 115467;
+    inputs::install_traits(run.app.world_mut(), run.actor, &traits)
+        .expect("native validator must accept the actual alternate choice at the same node");
     for _ in 0..4 {
         run.app.update();
     }
