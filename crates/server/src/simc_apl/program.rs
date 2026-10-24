@@ -1,6 +1,8 @@
 //! Literal lists/targets: SimC76f8118 variable.cpp and action.cpp4648–4763,5362–5453.
 use super::{Action, ActionFacts, Expression, Facts, Variables};
 use std::collections::BTreeMap;
+#[path = "pooling.rs"]
+mod pooling;
 
 #[derive(Debug)]
 enum Assignment {
@@ -22,6 +24,9 @@ enum Body {
     },
     Call(String),
     Run(String),
+    PoolNext {
+        resource: Option<String>,
+    },
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -76,6 +81,7 @@ impl Program {
                 .push(rule);
         }
         program.validate_calls()?;
+        pooling::validate_next_actions(&program.lists)?;
         Ok(program)
     }
 
@@ -117,6 +123,7 @@ impl Program {
             variables,
             usable: &mut usable,
             stack: Vec::new(),
+            pooling: false,
         };
         self.select_list(list, &mut selection)
     }
@@ -139,9 +146,13 @@ impl Program {
             variables,
             usable: &mut usable,
             stack: vec![list.to_owned()],
+            pooling: false,
         };
         while let Some(rule) = rules.get(*cursor) {
-            if matches!(&rule.body, Body::Call(_) | Body::Run(_)) {
+            if matches!(
+                &rule.body,
+                Body::Call(_) | Body::Run(_) | Body::PoolNext { .. }
+            ) {
                 return Err(format!(
                     "ordered precombat does not support nested {}",
                     rule.action.name
@@ -182,7 +193,7 @@ impl Program {
         rules: &[Rule],
         selection: &mut Selection<'_>,
     ) -> Result<Option<Action>, String> {
-        for rule in rules {
+        for (index, rule) in rules.iter().enumerate() {
             let Some(action) = bind_ready_target(rule, selection)? else {
                 continue;
             };
@@ -191,8 +202,18 @@ impl Program {
                     self.assign(name, assignment, &action, selection)?
                 }
                 Body::Call(name) => {
-                    if let Some(action) = self.select_list(name, selection)? {
-                        return Ok(Some(action));
+                    let action = self.select_list(name, selection)?;
+                    if action.is_some() || selection.pooling {
+                        return Ok(action);
+                    }
+                }
+                Body::PoolNext { resource } => {
+                    let next = rules
+                        .get(index + 1)
+                        .expect("pool next action validated at parse");
+                    if pooling::should_wait(next, selection, resource.as_deref())? {
+                        selection.pooling = true;
+                        return Ok(None);
                     }
                 }
                 // action.cpp4749–4763 switches lists without resuming this caller.
@@ -246,6 +267,7 @@ struct Selection<'a> {
     variables: &'a mut Variables,
     usable: &'a mut dyn FnMut(&Action) -> Result<bool, String>,
     stack: Vec<String>,
+    pooling: bool,
 }
 
 fn bind_ready_target(rule: &Rule, selection: &mut Selection<'_>) -> Result<Option<Action>, String> {
@@ -284,7 +306,7 @@ fn rule_ready(rule: &Rule, action: &Action, selection: &mut Selection<'_>) -> Re
         return Ok(false);
     }
     if matches!(&rule.body, Body::Action) {
-        return (selection.usable)(action);
+        return Ok(pooling::options_ready(action, selection)? && (selection.usable)(action)?);
     }
     Ok(true)
 }
@@ -433,6 +455,7 @@ fn parse_rule(literal: &str, defaults: &mut BTreeMap<String, f64>) -> Result<Rul
         .transpose()?;
     let body = match name {
         "variable" => parse_variable(&action.options, defaults)?,
+        "pool_resource" => pooling::parse(&action)?,
         "call_action_list" => {
             if action.options.keys().any(|key| key != "name") {
                 return Err("unsupported call_action_list option".into());
