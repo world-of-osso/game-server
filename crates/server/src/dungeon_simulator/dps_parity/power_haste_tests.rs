@@ -2,7 +2,9 @@
 use super::*;
 use crate::auras::AuraStatMods;
 use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
-use shared::components::{Mana, PowerType};
+use crate::spell_cast::test_harness::{Harness, harness};
+use server::simc_apl::Facts;
+use shared::components::{Mana, PowerType, UnitPowers};
 
 const REGEN_AFFECTED_BY_HASTE: i64 = 0x0400;
 const COBRA_SHOT: u32 = 193455;
@@ -146,4 +148,101 @@ fn dps_parity_power_haste_native_mana_remains_unscaled() {
         + mods.power_regen_flat(PowerType::Mana as i32) / 5.0;
     assert!(world.get::<Mana>(run.actor).unwrap().current < stats.max_mana);
     assert_native_tick(&mut run, PowerType::Mana, expected);
+}
+
+fn rogue_energy(h: &Harness) -> crate::spell_cast::powers::PowerPool {
+    *h.app
+        .world()
+        .get::<PowerPools>(h.caster)
+        .unwrap()
+        .get(PowerType::Energy)
+        .unwrap()
+}
+
+fn assert_read_only_energy_facts(h: &Harness, rate: f64, time_to_max: f64) {
+    let before = rogue_energy(h);
+    let wire = h.app.world().get::<UnitPowers>(h.caster).unwrap().clone();
+    let bindings = crate::simc_apl_native::Bindings {
+        resources: std::collections::BTreeMap::from([("energy".to_owned(), PowerType::Energy)]),
+        ..Default::default()
+    };
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: h.app.world().resource::<Time>().elapsed_secs_f64(),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let facts =
+        crate::simc_apl_native::NativeFacts::new(h.app.world(), h.caster, &bindings, encounter, 1);
+    assert_eq!(facts.value("energy.regen").unwrap(), rate);
+    assert!((facts.value("energy.time_to_max").unwrap() - time_to_max).abs() < 1e-6);
+    assert_eq!(
+        rogue_energy(h),
+        before,
+        "facts cannot grant resource or alter applied rate"
+    );
+    assert_eq!(*h.app.world().get::<UnitPowers>(h.caster).unwrap(), wire);
+}
+
+fn assert_capped_energy(h: &Harness, rate: f64) {
+    let energy = rogue_energy(h);
+    assert_eq!(
+        (energy.current, energy.max, energy.regen_per_sec),
+        (100.0, 100.0, 0.0)
+    );
+    let wire = h
+        .app
+        .world()
+        .get::<UnitPowers>(h.caster)
+        .unwrap()
+        .entries
+        .iter()
+        .find(|entry| entry.power == PowerType::Energy)
+        .unwrap();
+    assert_eq!(
+        wire.regen_per_sec, 0.0,
+        "cap must preserve zero applied/wire rate"
+    );
+    assert_read_only_energy_facts(h, rate, 0.0);
+}
+
+// Requested 13120 counterexamples: native Energy row and Player class4, with
+// explicit0/25% stat inputs. These are unit controls, NOT native-geared parity.
+fn assert_rogue_potential_case(haste: f32, rate: f64, time_to_max: f64, after_tick: f32) {
+    let mut h = harness(Vec::new(), &[], 4).unwrap();
+    h.stop_attack();
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .haste_pct = haste;
+    h.advance(1);
+    assert_capped_energy(&h, rate);
+    crate::spell_cast::powers::change_power(h.app.world_mut(), h.caster, PowerType::Energy, -50.0);
+    assert_eq!(
+        rogue_energy(&h).regen_per_sec,
+        0.0,
+        "spend precedes next regen tick"
+    );
+    assert_read_only_energy_facts(&h, rate, time_to_max);
+    h.advance(1);
+    assert_eq!(rogue_energy(&h).current, after_tick);
+    assert_eq!(f64::from(rogue_energy(&h).regen_per_sec), rate);
+    let dt = h.app.world().resource::<Time>().delta_secs_f64();
+    for _ in 0..(time_to_max / dt).ceil() as usize + 2 {
+        if rogue_energy(&h).current == rogue_energy(&h).max {
+            break;
+        }
+        h.advance(1);
+    }
+    assert_capped_energy(&h, rate);
+}
+
+#[test]
+fn dps_parity_power_haste_rogue_potential_zero_haste_survives_cap_and_spend() {
+    assert_rogue_potential_case(0.0, 10.0, 5.0, 50.5);
+}
+
+#[test]
+fn dps_parity_power_haste_rogue_potential_twenty_five_haste_survives_cap_and_spend() {
+    assert_rogue_potential_case(25.0, 12.5, 4.0, 50.625);
 }
