@@ -32,7 +32,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [ ] Caller starts its300s fight epoch after real setup; final Pyroblast flight must be read from actual native state, not inferred from Finished or a timer.
 - [ ] Literal use_while_casting and use_off_gcd permissions supplement native cast admission; permitted native instants cannot interrupt the existing hardcast. Other source options remain attached to the selected Action.
 
-[RED scaffold and exact caller scope](../handoffs/shared-precombat-poll-proof-ledger.md); full Fire adapter/facts remain separate qualification.
+[Actual native cursor/while-casting2RED and implementation pending GREEN](../handoffs/shared-precombat-poll-proof-ledger.md#actual-native-red-and-implementation); full Fire adapter/facts remain separate qualification.
 
 ## Literal native row gates
 

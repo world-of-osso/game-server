@@ -73,13 +73,16 @@ impl Driver {
         }
     }
 
-    /// RED scaffold: busy state is not yet separated from source exhaustion.
+    /// The caller advances native frames and resamples without consuming busy rows.
     pub fn poll_precombat(
         &mut self,
         facts: &dyn ActionFacts,
         prepared: &Prepared,
         equipment: &Equipment,
     ) -> Result<PrecombatPoll, String> {
+        if prepared.setup_pending() {
+            return Ok(PrecombatPoll::Waiting);
+        }
         Ok(
             match self.select("precombat", facts, prepared, equipment)? {
                 Some((action, execution)) => PrecombatPoll::Selected { action, execution },
@@ -97,6 +100,9 @@ impl Driver {
         equipment: &Equipment,
     ) -> Result<Option<(Action, Execution)>, String> {
         self.selected_precombat = list == "precombat";
+        if self.selected_precombat && prepared.setup_pending() {
+            return Err("PRECOMBAT_WAIT_REQUIRED: advance native frames via poll_precombat".into());
+        }
         if self.selected_precombat && self.precombat_harmful_executed {
             return Ok(None);
         }

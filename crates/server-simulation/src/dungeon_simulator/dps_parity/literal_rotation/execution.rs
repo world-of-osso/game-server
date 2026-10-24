@@ -33,6 +33,7 @@ type ReadyActions = BTreeMap<(String, Option<Entity>), Execution>;
 pub(crate) struct Prepared {
     ready: ReadyActions,
     moving: bool,
+    cast_active: bool,
     gcd_active: bool,
 }
 
@@ -48,6 +49,7 @@ impl Prepared {
         let moving = world
             .get::<crate::networking::Moving>(actor)
             .is_some_and(|moving| moving.0);
+        let cast_active = world.get::<shared::casting::CastState>(actor).is_some();
         let gcd_active = world
             .get::<crate::spell_cast::SpellHistory>(actor)
             .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)));
@@ -62,12 +64,21 @@ impl Prepared {
         Ok(Self {
             ready,
             moving,
+            cast_active,
             gcd_active,
         })
     }
 
+    pub fn setup_pending(&self) -> bool {
+        self.cast_active || self.gcd_active
+    }
+
     pub fn permits_row(&self, action: &Action) -> Result<bool, String> {
         if read_boolean_option(action, "moving")?.is_some_and(|moving| moving != self.moving) {
+            return Ok(false);
+        }
+        let while_casting = read_boolean_option(action, "use_while_casting")?.unwrap_or(false);
+        if self.cast_active && !while_casting {
             return Ok(false);
         }
         let off_gcd = read_boolean_option(action, "use_off_gcd")?.unwrap_or(false);
