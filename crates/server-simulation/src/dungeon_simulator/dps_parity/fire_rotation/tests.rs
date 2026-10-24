@@ -212,6 +212,33 @@ fn fire_local_native90_hot_streak_count_excludes_actual_meteor_missile() {
     assert!(saw_impact(&run, 351140));
 }
 
+#[test]
+#[ignore = "current native90 Fire four-piece ItemSet2060 gear through shared Equipment"]
+fn fire_local_native90_tier_facts_use_actual_equipped_fire_set() {
+    let _seed = crate::random::seed_scope(70_448);
+    let run = native_player();
+    let target = run.targets[0];
+    for name in [
+        "set_bonus.midnight_season_2_2pc",
+        "set_bonus.midnight_season_2_4pc",
+    ] {
+        assert_eq!(
+            value(&run, run.actor, target, name),
+            Ok(1.0),
+            "native four equipped2060 pieces: {name}"
+        );
+    }
+    assert!(
+        value(
+            &run,
+            run.actor,
+            target,
+            "set_bonus.unqualified_fire_alias_2pc"
+        )
+        .is_err()
+    );
+}
+
 fn wait_cast_window(run: &mut Run) {
     for _ in 0..MAX_CAST_FRAMES {
         let world = run.app.world();
