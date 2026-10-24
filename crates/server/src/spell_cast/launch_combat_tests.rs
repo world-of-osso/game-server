@@ -1,7 +1,7 @@
 //! TC a352b1fa Spell.cpp8538: misses other than EVADE still engage the caster.
 use super::test_harness::{Harness, harness};
 use crate::spell_info::SpellStore;
-use shared::components::CombatStatus;
+use shared::components::{CombatStatus, Position};
 use shared::protocol::{CombatLogKind, MissKind};
 
 const JUDGMENT: u32 = 20271;
@@ -17,6 +17,7 @@ fn native_fixture(spell: u32, class: u8) -> Harness {
         .insert(crate::class_progression::KnownSpells::fixture(vec![spell]));
     let mode = crate::test_data::world_data().templates[&6].aggro_mode;
     let target = h.npc;
+    h.app.world_mut().get_mut::<Position>(target).unwrap().x = 30.0;
     crate::creature_aggro::insert_aggro_components(
         &mut h.app.world_mut().commands().entity(target),
         mode,
@@ -71,6 +72,25 @@ fn assert_launch_engages_caster(h: &Harness) {
     ));
 }
 
+fn assert_target_engages_on_arrival(h: &mut Harness) {
+    assert!(
+        !h.app
+            .world()
+            .get::<CombatStatus>(h.npc)
+            .is_some_and(|status| status.0),
+        "target is suppressed before native projectile arrival"
+    );
+    h.advance(40);
+    assert!(
+        h.app
+            .world()
+            .get::<CombatStatus>(h.npc)
+            .is_some_and(|status| status.0),
+        "TC Spell.cpp2763: a missed/immune projectile still engages its target on arrival"
+    );
+    assert_eq!(h.health(h.npc), 5000.0);
+}
+
 #[test]
 fn native_missed_hostile_spell_creates_launch_combat_reference() {
     let mut h = native_fixture(JUDGMENT, 2);
@@ -87,6 +107,7 @@ fn native_missed_hostile_spell_creates_launch_combat_reference() {
     complete_native_cast(&mut h, JUDGMENT);
     assert_miss(&h, JUDGMENT, MissKind::Miss);
     assert_launch_engages_caster(&h);
+    assert_target_engages_on_arrival(&mut h);
 }
 
 #[test]
@@ -105,6 +126,7 @@ fn native_immune_hostile_spell_creates_launch_combat_reference() {
     complete_native_cast(&mut h, FIREBALL);
     assert_miss(&h, FIREBALL, MissKind::Immune);
     assert_launch_engages_caster(&h);
+    assert_target_engages_on_arrival(&mut h);
 }
 
 #[test]
