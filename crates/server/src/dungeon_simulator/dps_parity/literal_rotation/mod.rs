@@ -1,4 +1,6 @@
 //! Shared native fixture machinery; source rows and spec facts belong to adapters.
+#[cfg(test)]
+mod composite_tests;
 pub(crate) mod equipment;
 pub(crate) mod execution;
 #[cfg(test)]

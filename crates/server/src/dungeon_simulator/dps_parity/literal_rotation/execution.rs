@@ -11,13 +11,20 @@ pub(crate) enum Execution {
     RetargetAutoAttack(Entity),
     Spell(u32, Entity),
     Item(ItemUse, Entity),
+    Composite(Vec<Execution>),
 }
 
+#[derive(Clone, Copy)]
 pub(crate) struct NativeAction<'a> {
     pub name: &'a str,
     pub spell: u32,
     pub talent: Option<u32>,
     pub self_target: bool,
+}
+
+pub(crate) struct NativeComposite<'a> {
+    pub name: &'a str,
+    pub steps: &'a [NativeAction<'a>],
 }
 
 // None is the action's native default target, not an explicit-target substitute.
@@ -57,6 +64,17 @@ impl Prepared {
             }
         }
         Ok(Self { ready })
+    }
+
+    /// Plans only; the precombat executor owns clock advancement and each native cast.
+    pub fn with_composites<'a>(
+        self,
+        _world: &mut World,
+        _actor: Entity,
+        _targets: &[Entity],
+        _composites: impl IntoIterator<Item = NativeComposite<'a>>,
+    ) -> Result<Self, String> {
+        Ok(self)
     }
 
     pub fn execution(
@@ -228,6 +246,9 @@ fn native_ready(
 pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<(), String> {
     match action {
         Execution::Snapshot => Err("snapshot execution belongs to the native stat recorder".into()),
+        Execution::Composite(_) => {
+            Err("composite execution requires an ordered precombat executor".into())
+        }
         Execution::AutoAttack(target) => {
             let current = world.get::<crate::combat::AutoAttack>(actor).cloned();
             crate::combat::start_attack(&mut world.commands(), actor, target, current.as_ref());
