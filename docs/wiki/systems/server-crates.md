@@ -65,3 +65,4 @@ No `execute_cast` seam or gameplay-internal visibility widening is included. Fin
 
 - [[dungeon-simulator]] — headless gameplay qualification.
 - [[server-test-performance]] — measured profile/runtime tradeoffs; extraction alone is not a benchmark result.
+- [[server-crate-split-measurements]] — completed B/C paired batches and comment rebuilds, sealed inputs, shared-host no-causal-claim limits.
