@@ -100,6 +100,28 @@ pub(crate) fn creature_cast_ignoring_in_progress(
     super::begin_validated_cast(world, caster, &spell, target)
 }
 
+/// TC partial-trigger casts may override BP0 without bypassing native costs,
+/// cooldowns, aura checks or child proc behavior (Execution Sentence expiry).
+pub(crate) fn creature_cast_with_effect0_ignoring_in_progress(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
+    amount: f32,
+) -> Result<(), CastFailure> {
+    let (mut spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
+    let effect = spell
+        .effects
+        .iter_mut()
+        .find(|effect| effect.index == 0)
+        .ok_or(CastFailure::Unsupported(
+            "partial-trigger BP0 effect missing".into(),
+        ))?;
+    effect.base_points = amount;
+    let target = super::validate_start(world, caster, &spell, explicit, true)?;
+    super::begin_validated_cast(world, caster, &spell, target)
+}
+
 /// Stop the current cast only after the replacement passes ordinary range,
 /// sight, resource, aura, school and cooldown validation. No readiness bypass.
 pub(crate) fn creature_cast_interrupting_self(
