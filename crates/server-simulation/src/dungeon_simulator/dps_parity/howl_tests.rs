@@ -157,6 +157,99 @@ fn dps_parity_howl_native_removed_passive_keeps_real_summon_without_cry() {
     assert_eq!(cry_stacks(&run), 0);
 }
 
+fn focus(run: &Run) -> f32 {
+    run.app
+        .world()
+        .get::<crate::spell_cast::powers::PowerPools>(run.actor)
+        .unwrap()
+        .get(shared::components::PowerType::Focus)
+        .unwrap()
+        .current
+}
+
+fn record_native_admission(run: &mut Run, label: &str) -> Value {
+    let actor = run.actor;
+    let target = run.targets[0];
+    let events_before = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    let focus_before = focus(run);
+    let results: Vec<_> = [KILL_COMMAND, 193455]
+        .into_iter()
+        .map(|id| {
+            let info = run
+                .app
+                .world()
+                .resource::<crate::spell_info::SpellStore>()
+                .get(id)
+                .unwrap()
+                .clone();
+            let result = crate::spell_cast::read_native_cast_start(
+                run.app.world_mut(),
+                actor,
+                &info,
+                target,
+            );
+            json!({"spell": id, "result": format!("{result:?}")})
+        })
+        .collect();
+    assert_eq!(
+        focus(run),
+        focus_before,
+        "eligibility reads must not spend or grant Focus"
+    );
+    assert_eq!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len(),
+        events_before,
+        "eligibility reads must not cast or emit combat events"
+    );
+    let world = run.app.world();
+    json!({"label": label, "time": crate::spell_cast::now(world), "admission": results,
+        "actor": actor.to_bits(), "target": target.to_bits(), "focus": focus_before,
+        "actor_position": world.get::<shared::components::Position>(actor).map(|p| [p.x, p.y, p.z]),
+        "target_position": world.get::<shared::components::Position>(target).map(|p| [p.x, p.y, p.z]),
+        "actor_model": world.get::<shared::components::ModelDisplay>(actor).map(|model| model.display_id),
+        "target_model": world.get::<shared::components::ModelDisplay>(target).map(|model| model.display_id),
+        "pet": crate::hunter_pet::summoned_pet(world, actor).map(Entity::to_bits),
+        "kill_commands": kill_command_casts(run)})
+}
+
+#[test]
+#[ignore = "read-only native KC/Cobra admission geometry diagnostic, not gameplay RED"]
+fn dps_parity_howl_native_root_admission_records_real_geometry() {
+    let _seed = crate::random::seed_scope(70_448);
+    let (mut run, _) = super::power_tests::prepare_hunter_and_pet();
+    load_native_collision(&mut run);
+    let mut samples = vec![record_native_admission(&mut run, "before-engage")];
+    engage(&mut run);
+    samples.push(record_native_admission(&mut run, "engaged-before-update"));
+    for (label, seconds) in [
+        ("first-update", 0.05),
+        ("one-second", 0.95),
+        ("five-seconds", 4.0),
+        ("thirty-five-seconds", 30.0),
+    ] {
+        advance_seconds(&mut run, seconds);
+        samples.push(record_native_admission(&mut run, label));
+    }
+    eprintln!(
+        "NATIVE_HOWL_ADMISSION {}",
+        serde_json::to_string(&samples).unwrap()
+    );
+    let directory =
+        std::path::PathBuf::from(std::env::var_os("DPS_HOWL_OUTPUT").expect("DPS_HOWL_OUTPUT"));
+    let output = directory.join("root-admission.json");
+    assert!(!output.exists(), "do not overwrite diagnostic evidence");
+    std::fs::write(output, serde_json::to_vec_pretty(&json!({"qualification": "read-only eligibility diagnostic, not gameplay RED", "samples": samples})).unwrap()).unwrap();
+}
+
 fn kill_command_casts(run: &Run) -> usize {
     run.app
         .world()
