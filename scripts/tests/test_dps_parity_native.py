@@ -3,13 +3,11 @@ import hashlib
 import os
 from pathlib import Path
 import sqlite3
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from dps_parity_native import build_native_command
 
 
 @unittest.skipUnless(
@@ -19,7 +17,8 @@ class NativeSourceViewTests(unittest.TestCase):
     def test_process_reads_frozen_database_without_mutating_host_source(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            live, frozen = root / "world.db", root / "prepared.db"
+            (root / "data").mkdir()
+            live, frozen = root / "data/world.db", root / "prepared.db"
             for path, value in [(live, "mutable"), (frozen, "frozen")]:
                 with sqlite3.connect(path) as db:
                     db.execute("CREATE TABLE source_marker(value TEXT)")
@@ -39,10 +38,18 @@ with sqlite3.connect(sys.argv[1]) as db:
     else:
         raise SystemExit('startup database was writable')
 """
-            command = build_native_command(
-                live, frozen, [sys.executable, "-c", code, str(live)]
+            script = root / "scripts/dps_parity_native.py"
+            script.parent.mkdir()
+            shutil.copy2(Path(__file__).resolve().parents[1] / script.name, script)
+            executable = root / "target/debug/deps/server-fixture"
+            executable.parent.mkdir(parents=True)
+            executable.write_text(f"#!{sys.executable}\n" + code)
+            executable.chmod(0o755)
+            command = [sys.executable, str(script), str(executable), str(live)]
+            result = subprocess.run(
+                command, capture_output=True, text=True, timeout=30,
+                env=os.environ | {"DPS_PARITY_WORLD_DB": str(frozen)},
             )
-            result = subprocess.run(command, capture_output=True, text=True, timeout=30)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(result.stdout.splitlines(), ["frozen", "readonly"])
             self.assertEqual(hashlib.sha256(live.read_bytes()).hexdigest(), before)

@@ -2,8 +2,7 @@
 use shared::components::ItemStatBlock;
 use std::collections::HashMap;
 
-#[path = "../spell_scaling_data.rs"]
-mod scaling_data;
+use server_catalog::spell_scaling_data as scaling_data;
 
 #[derive(Clone, Copy, Default)]
 pub struct EnchantEffect {

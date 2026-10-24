@@ -259,6 +259,48 @@ impl AuraEffectState {
     }
 }
 
+/// Read the scheduler's unpaid ticks without advancing or reconstructing its phase.
+#[cfg(test)]
+pub(crate) fn remaining_periodic_ticks(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+) -> Result<u32, String> {
+    let Some(auras) = world.get::<ActiveAuras>(target) else {
+        return Ok(0);
+    };
+    let active = auras
+        .iter()
+        .filter(|aura| aura.caster == caster && aura.spell_id == spell);
+    active
+        .map(count_remaining_ticks)
+        .try_fold(0, |maximum, ticks| ticks.map(|ticks| maximum.max(ticks)))
+}
+
+#[cfg(test)]
+fn count_remaining_ticks(aura: &AuraInstance) -> Result<u32, String> {
+    let periodic: Vec<_> = aura
+        .effects
+        .iter()
+        .filter(|effect| effect.period_ms > 0)
+        .collect();
+    if periodic.is_empty() {
+        return Ok(0);
+    }
+    let expiry = aura.expires_at.ok_or_else(|| {
+        format!(
+            "native APL spell{} has an unbounded periodic schedule",
+            aura.spell_id
+        )
+    })?;
+    Ok(periodic
+        .iter()
+        .map(|effect| refresh::remaining_ticks(effect.next_tick_at(), expiry, effect.period_ms))
+        .max()
+        .unwrap_or(0))
+}
+
 /// Proc timers (TrinityCore `Aura` proc fields).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ProcTimers {
