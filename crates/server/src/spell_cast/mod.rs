@@ -179,6 +179,8 @@ mod expel_harm_tests;
 #[cfg(test)]
 mod fel_devastation_tests;
 #[cfg(test)]
+mod feral_producer_tests;
+#[cfg(test)]
 mod fount_strength_tests;
 #[cfg(test)]
 mod full_trigger_dead_target_tests;
