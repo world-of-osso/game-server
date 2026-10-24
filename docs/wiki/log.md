@@ -1,3 +1,7 @@
+## 2026-10-24 — Dawnlight Wake producer source/RED
+
+[Auras](systems/auras.md#dawnlight-wake-producer--2026-10-24): d7812e8ca corrects the invalid raw2-versus-live3 precondition using native137027effect25 Aura219/op3/label6787 +1. Actual selected Wake damage/+3HolyPower then reaches missing431522 genuine RED, noWake/noHero controls PASS57.07s/zero warnings. Approved producer-only AfterCast relationship uses native modified3 instead of pinned SimC raw2, never max6 or metadata overrides; GREEN pending. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#dawnlight-producer-audit--recovered-2026-10-24).
+
 ## 2026-10-24 — Native Wrath Hammer-mode production/lifetime
 
 [Auras](systems/auras.md#wrath-hammer-mode-producer--2026-10-24):cb21f5712 actual ordinary/background Wrath2genuine producerRED/no-Wrath controlPASS52.13s;f4e664fe5 explicit-native-mode/real cancellation and8s-expiry2lifecycleRED55.01s. Lead approved sourced learned1241288→1277026 apply/removal only, through existing AuraScript hooks; native durations and override data unchanged. ec2d9a23c original five-case GREEN46.50s/zero warnings; no readiness veto. Overlap/refresh and learned-root-negative variants remain open. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#wrath-hammer-mode-producer).

@@ -1,5 +1,9 @@
 # Auras
 
+## Dawnlight Wake producer — 2026-10-24
+
+`SIMC_RET_DAWNLIGHT_WAKE_PRODUCER` adds selected431377/spec70 Wake255937→native431522 through existing AfterCast/triggered-aura dispatch. Native count3 is raw431377effect0=2 plus actual specialization137027effect25 Aura219/op3/label6787 +1. The pinned SimC producer reads raw2; the approved policy explicitly prefers native modified3, never maximum6 or metadata overrides. Test-onlyd7812e8ca reaches missing-budget genuine RED after real Wake damage/+3HolyPower, with noWake/noHero controls passing (57.07s/zero warnings). GREEN pending. Consumption, DoT, Avatar, timers and charge behavior remain excluded. [Contract](../../specs/dps-parity.md#ret-dawnlight-wake-producer), [source/proof](../../handoffs/ret-paladin-parity-proof-ledger.md#dawnlight-producer-audit--recovered-2026-10-24), [code](../../../crates/server/src/spell_cast/scripts/ret_dawnlight.rs).
+
 ## Wrath Hammer-mode producer — 2026-10-24
 
 `SIMC_RET_WRATH_HAMMER_MODE_PRODUCER` applies actual1277026 when31884/454351 is applied to an owner who learned1241288, then removes caster-owned mode on parent removal through existing AuraScript hooks. Native1241288 is Dummy/Trigger0, no native child edge/TC/TDB producer exists; pinned SimC314–315/3634–3641 supplies the relationship. Native permanent mode/20s ordinary/8s background durations remain untouched. No readiness veto or332remap. [Contract](../../specs/dps-parity.md#ret-wrath-hammer-mode-producer), [source/independent producer and lifecycle REDs](../../handoffs/ret-paladin-parity-proof-ledger.md#wrath-hammer-mode-producer), [implementation](../../../crates/server/src/auras/ret_wrath_mode.rs). ec2d9a23c unchanged5GREEN46.50s/zero warnings; parent overlap/refresh and independent learned-root-negative variants unqualified.

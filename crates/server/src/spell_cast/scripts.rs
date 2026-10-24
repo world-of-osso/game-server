@@ -41,6 +41,7 @@ pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 pub(crate) mod prayer_of_mending;
 mod protection_items;
+mod ret_dawnlight;
 mod ret_empyrean;
 pub(crate) use ret_empyrean::owns_empyrean_proc;
 pub(super) use ret_empyrean::schedule_empyrean_legacy;
@@ -602,6 +603,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         return Some(hook);
     }
     match spell_id {
+        ret_dawnlight::WAKE => Some(ret_dawnlight::grant_budget),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
         prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
