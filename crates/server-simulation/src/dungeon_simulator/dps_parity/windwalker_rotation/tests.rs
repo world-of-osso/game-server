@@ -589,13 +589,14 @@ fn literal_ww_native_rsk_without_fof_cooldown_does_not_earn_wdp_enabler() {
 fn literal_ww_native_unselected_wdp_owner_does_not_earn_the_enabler() {
     let _scope = crate::random::seed_scope(70448);
     let (profile, mut traits) = super::super::read_reference(269).unwrap();
-    let original = traits.len();
-    traits.retain(|entry| entry.entry_id != 134452);
-    assert_eq!(
-        traits.len() + 1,
-        original,
-        "omit only the declared native WDP entry"
-    );
+    // Native node101207 is a choice:125014/392983 Windlord versus134452/152175 WDP.
+    // Keep the same point spend so later native20-point gates remain valid.
+    let choice = traits
+        .iter_mut()
+        .find(|entry| entry.entry_id == 134452)
+        .unwrap();
+    assert_eq!(choice.node_id, 101207);
+    choice.entry_id = 125014;
     let identity = super::super::inputs::read_actor(&profile).unwrap();
     let mut run = super::super::prepare_literal_reference(profile, &traits, 1, identity).unwrap();
     super::super::preparation::prepare_windwalker_precombat(&mut run).unwrap();
@@ -603,6 +604,14 @@ fn literal_ww_native_unselected_wdp_owner_does_not_earn_the_enabler() {
     super::super::install_fixture_lifetimes(&mut run, started_at);
     super::super::engage(&mut run);
     let mut rotation = run.windwalker_rotation.take().unwrap();
+    assert!(
+        !run.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(run.actor)
+            .unwrap()
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 152175)
+    );
     let mut overlapping_native_cooldowns = false;
     for _ in 0..600 {
         rotation
