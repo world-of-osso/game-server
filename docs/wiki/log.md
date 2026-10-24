@@ -4237,3 +4237,4 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0â
 
 - 2026-10-23: [[server-crates]] records five stable catalog modules extracted with unchanged data/logic, canonical imports and updated generator destinations; no test relocations or measured speedup claim.
 - 2026-10-23: [[server-crates]] moves main module declarations/App assembly into the existing lib and keeps a five-line bin; library-artifact source-view test replaces old binary artifact selection. Full suite/census and paired measurements remain pending.
+- 2026-10-23: [[assassination-dps-parity]] records the pinned four-coating/native1500ms precombat boundary and shared potential-Energy counterexample proposals. Player dispatch is landed; poison GREEN remains unobserved after admission-only failures. No native300s baseline or DPS-band claim.

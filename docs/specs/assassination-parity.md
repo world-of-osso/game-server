@@ -30,7 +30,7 @@ Qualify native spec259 against pinned SimC76f8118 BiS gear/talents:300s single-t
 
 ## Known gaps (current cycle)
 
-- [ ] Assassination adapter, shared player/target/composite support, native ST/3T channel baseline and band qualification.
+- [ ] Assassination adapter, remaining shared target/composite/precombat support, native ST/3T channel baseline and band qualification.
 - [ ] Poison/hero/talent/trinket channels not certified by source inventory alone.
 
 ## Out of scope

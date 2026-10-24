@@ -11,6 +11,8 @@ Spec259 work targets the [ST/3T parity contract](../../specs/assassination-parit
 |Existing native Assisted player baseline|Both ST/3T stop at9.8s/197decisions on rule413/condition12 values[3,10,0]|No300s DPS or channel deltas; literal driver must replace the blocked controller, not bypass it|
 |Improved Garrote snapshot|2native controlsPASS/1RED:45.15 instead of67.725; corrected source3d9b2e3f0 passes all4Garrote cases in the8-case native29.67s composite|No full BiS DPS effect attributed yet|
 |Improved Garrote earned lifecycle|Native Stealth succeeds/missing392403RED; corrected native lifecycle and no-talent controlsGREEN in the same8-case composite; Envenom/Rupture/Mutilate retainersPASS|Vanish/other stealth-like lifecycles not certified by this1784-specific slice|
+|Deadly Poison own repeat|Current-input native1controlPASS/1RED13.34s; first/foreign applications verified; same-caster repeat lacks113780|Correction committed; GREEN unobserved because admission attempts launched no tests|
+|Literal precombat coatings|Pinned default selects2823,3408,381664,381637; native cast-time row16 is1500ms for each|Source inventory only; composite/cast-completion boundary still unqualified|
 
 ## Root cause and implementation
 
@@ -26,13 +28,18 @@ The first new probe failed before test logic because its canonical backup preced
 
 ## Shared ownership
 
-Use shared literal APL machinery; player/target/composite execution remains shared-owner work. `apply_poison` must preserve both learned2823 and381664 under selected381801; do not silently replace the composite with one spell. The approved `ROGUE_ENERGY_REGEN_COMBINED_SIMC_APL_ESTIMATE` is decision-only; SimC sc_rogue.cpp9894/9897 explicitly estimates90% Envenom uptime for Dashing Scoundrel. No native regeneration grants follow from that estimate.
+Native Player dispatch/target-aware Prepared landed as pd1035 and is included by merge29fc88a. Remaining composite/cycle/precombat and target-fact extensions belong to the shared literal machinery; do not fork a259 selector.
+
+Pinned `apply_poison` selects four coatings in constructor order: Deadly2823, Crippling3408, Dragon-Tempered Blades Amplifying381664 and Atrophic381637. The profile selects381801 and381637, not Numbing Poison. SimC's action selects background drivers and its execute method only marks the action executed. Native `SpellMisc.CastingTimeIndex=16` resolves to Base/Minimum1500ms for all four. The current synchronous WW precombat loop does not advance time: shared integration must define native completion before snapshot/combat rather than assume instantaneous casts or omit nonlethal coatings. This records a source boundary, not an implemented precombat policy.
+
+The approved `ROGUE_ENERGY_REGEN_COMBINED_SIMC_APL_ESTIMATE` is decision-only; SimC sc_rogue.cpp9894/9897 explicitly estimates90% Envenom uptime for Dashing Scoundrel. It must consume the shared potential regeneration fact, not the native0-at-cap cache. Exact cap/depleted fixtures have been supplied to the shared owners; no shared regeneration change or resource grant is implemented by this slice.
 
 ## Sources
 
 - Pinned TC a352b1fa `src/server/scripts/Spells/spell_rogue.cpp:534–618` — bonus lifecycle and snapshot;384–404 — owned Deadly Poison repeat child.
 - Native70448 SQLite rows392401/392403 effect1=50 and703 AP coefficient0.4515; source snapshot SHA51455391e7d4962589cc66d239bf77b2dbf3f4372ec8daee80c092f1e7989d9b.
-- Pinned SimC76f8118 `profiles/MID2/MID2_Rogue_Assassination.simc`, `engine/class_modules/sc_rogue.cpp:9838–9906`.
+- Pinned SimC76f8118 `profiles/MID2/MID2_Rogue_Assassination.simc`, `engine/class_modules/sc_rogue.cpp:3164–3330` — default four-coating selection;9838–9906 — combined estimate.
+- Current private snapshot dd1de231… native `spell_misc`/`spell_cast_times` row16; diagnostic `apply-poison-source-packet-v1.json`, `literal-option-footprint-v1.json` and `energy-potential-counterexample-packet.md` — source/fixture proposals, not runtime proof.
 - Diagnostic `assassination-source-census-v1.json`, `native-existing-master-{1,3}.proof.json`, `garrote-snapshot-red` and `garrote-lifecycle-red` logs/proofs.
 
 ## See also
