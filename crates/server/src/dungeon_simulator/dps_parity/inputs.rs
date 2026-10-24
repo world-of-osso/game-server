@@ -259,6 +259,73 @@ pub(super) fn install_traits(
 }
 
 #[test]
+#[ignore = "requires prepared native Ret profile and selected76f8118 allocations"]
+fn dps_parity_ret_hammer_knowledge_is_scoped_to_selected_reference_actors() {
+    use crate::class_progression::KnownSpells;
+    use crate::followers::simulator::ParityActor;
+    let selected: Vec<AllocatedTrait> =
+        read_json(&directory().unwrap().join("70.selected-traits-active.json")).unwrap();
+    for identity in [ParityActor::Follower, ParityActor::Player { race: 3 }] {
+        let profile: Profile = read_json(&directory().unwrap().join("70.profile.json")).unwrap();
+        let mut run = super::prepare_reference(profile, &selected, 1, identity).unwrap();
+        let known = run.app.world().get::<KnownSpells>(run.actor).unwrap();
+        assert!(
+            known.contains(1241288),
+            "native selected class talent is known"
+        );
+        assert!(
+            known.contains(24275),
+            "selected parity actor must know Hammer of Wrath24275"
+        );
+        install_traits(run.app.world_mut(), run.actor, &[]).unwrap();
+        let known = run.app.world().get::<KnownSpells>(run.actor).unwrap();
+        assert!(!known.contains(1241288));
+        assert!(
+            !known.contains(24275),
+            "unselected parity actor must not retain the policy grant"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires native70448 Ret traits; ordinary reference evaluation remains native-only"]
+fn dps_parity_ret_hammer_native_book_does_not_learn_the_reference_exception() {
+    let (profile, selected) = super::read_reference(70).unwrap();
+    let run = super::prepare_reference(
+        profile,
+        &[],
+        1,
+        crate::followers::simulator::ParityActor::Player { race: 3 },
+    )
+    .unwrap();
+    let purchases = selected
+        .iter()
+        .filter(|entry| entry.active_ranks > 0)
+        .map(|entry| crate::trait_config::Purchase {
+            node_id: entry.node_id,
+            entry_id: entry.entry_id,
+            ranks: entry.active_ranks,
+        })
+        .collect::<Vec<_>>();
+    let world = run.app.world();
+    let classes = world.resource::<crate::spell_info::ClassSpells>();
+    let player = world.get::<shared::components::Player>(run.actor).unwrap();
+    let (known, _) = crate::class_progression::evaluate_player_reference_traits(
+        classes,
+        player,
+        70,
+        run.profile.level.parse().unwrap(),
+        &purchases,
+    )
+    .unwrap();
+    assert!(known.contains(1241288));
+    assert!(
+        !known.contains(24275),
+        "ordinary native books must remain unchanged"
+    );
+}
+
+#[test]
 #[ignore = "requires the read-only native parity database with Human1 and ThinHuman33"]
 fn dps_parity_input_human_race_uses_the_pinned_source_id() {
     assert_eq!(read_reference_race("human").unwrap(), 1);
