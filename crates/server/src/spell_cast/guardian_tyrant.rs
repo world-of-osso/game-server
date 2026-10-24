@@ -9,7 +9,7 @@ const DEMONIC_POWER: u32 = 1276788;
 const FELGUARD: u32 = 17252;
 
 fn is_roster_summon(spell: u32, entry: u32) -> bool {
-    super::guardian::is_wild_imp(spell, entry) || matches!((spell, entry), (193331 | 193332, 98035))
+    super::is_wild_imp(spell, entry) || matches!((spell, entry), (193331 | 193332, 98035))
 }
 
 fn is_tyrant(spell: u32, entry: u32) -> bool {
