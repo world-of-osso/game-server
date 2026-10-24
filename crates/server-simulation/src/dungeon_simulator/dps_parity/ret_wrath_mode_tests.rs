@@ -77,6 +77,90 @@ fn dps_parity_ret_wrath_mode_native_background_wrath_grants_real_mode() {
     );
 }
 
+fn explicit_native_mode_fixture(parent: u32) -> Run {
+    let mut run = selected_fixture();
+    if parent == WRATH {
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            parent,
+            Some(run.actor),
+            false,
+        )
+        .unwrap();
+    } else {
+        crate::spell_cast::cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            parent,
+            Some(run.actor),
+            0,
+        );
+    }
+    // Isolate cleanup of a real permanent mode independently of its missing
+    // producer; no timer, amount or aura field is overwritten.
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, MODE, Some(run.actor), 0);
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert!(has(&run, parent));
+    assert!(has(&run, MODE));
+    let mode = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == MODE)
+        .unwrap();
+    assert!(
+        mode.expires_at.is_none(),
+        "native mode is permanent, not retimed to a guessed duration"
+    );
+    run
+}
+
+#[test]
+#[ignore = "actual ordinary Wrath cancellation must remove its caster-owned permanent mode"]
+fn dps_parity_ret_wrath_mode_native_parent_cancellation_removes_owned_mode() {
+    let mut run = explicit_native_mode_fixture(WRATH);
+    let actor = run.actor;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == WRATH && aura.caster == actor,
+    );
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert!(!has(&run, WRATH));
+    assert!(
+        !has(&run, MODE),
+        "real parent cancellation must not leave permanent Hammer mode"
+    );
+}
+
+#[test]
+#[ignore = "actual background Wrath expiry must remove its caster-owned permanent mode"]
+fn dps_parity_ret_wrath_mode_native_background_expiry_removes_owned_mode() {
+    let mut run = explicit_native_mode_fixture(BACKGROUND_WRATH);
+    for _ in 0..300 {
+        run.app.update();
+        if !has(&run, BACKGROUND_WRATH) {
+            break;
+        }
+    }
+    assert!(
+        !has(&run, BACKGROUND_WRATH),
+        "actual native8s parent must expire under ordinary updates"
+    );
+    assert!(
+        !has(&run, MODE),
+        "actual parent expiry must not leave permanent Hammer mode"
+    );
+}
+
 #[test]
 #[ignore = "native selected Hammer talent alone must not manufacture permanent mode"]
 fn dps_parity_ret_wrath_mode_native_without_wrath_keeps_mode_absent() {
