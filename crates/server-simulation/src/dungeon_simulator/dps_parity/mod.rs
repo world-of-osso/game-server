@@ -25,6 +25,7 @@ mod ret_toll_control_tests;
 mod ret_toll_power_tests;
 mod ret_toll_tests;
 mod ret_wake_tests;
+mod ret_wrath_mode_tests;
 pub(crate) mod single_spell;
 mod windwalker_rotation;
 use crate::simc_apl_native::{FixtureAdds, FixtureTarget};
