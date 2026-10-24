@@ -64,6 +64,10 @@ impl SummonProperties {
         self.control == CONTROL_PET
     }
 
+    pub(crate) fn is_totem(self) -> bool {
+        self.title == TITLE_TOTEM
+    }
+
     fn follows_owner(self) -> bool {
         self.control == CONTROL_PET
             || self.joins_summoner_spawn_group()

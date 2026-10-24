@@ -297,6 +297,7 @@ fn armored_damage(world: &World, projection: &SwingProjection, base: f32) -> f32
         world.get_resource::<ArmorConstants>(),
         projection.attacker.mods,
     )
+    .damage
 }
 
 fn outcome_health_loss(projection: &SwingProjection, damage: f32, outcome: MeleeOutcome) -> f64 {

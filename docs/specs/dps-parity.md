@@ -10,6 +10,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [ ] Equipment stats resolve native70448 ItemBonus, ItemSparse, RandPropPoints and Midnight scaling/configuration tables, including stat allocation, sockets and enchant/gem effects. Physical-resistance enchants (type4/school0) contribute scaled, truncated, minimum-one armor, preserving their independent primary effects (TC a352b1fa Player.cpp13509–13531). Other resistance schools remain explicit gaps. Unsupported effects are named gaps, never invented stats.
 - [x] The native-table producer preserves signed values, replaces only the requested table, supports repeated imports and rolls back a duplicate-ID failure without losing the prior table.
 - [x] Shipped profile manifests preserve exact item IDs, bonus lists, item-level overrides, enchants, gems, crafted stats, talents, consumables and action text. Missing item IDs fail explicitly.
+- [x] Native fixture equipment honors `redirected_base_stats`: use the donor item's native ItemSparse stat types/allocations with the original profile's item level and bonuses. Keep original equipped identity, tier/effects, armor and weapon inputs; never mutate catalogs or import reference stat values. Unknown/malformed donors fail explicitly; pinned explicit0 means no redirect. Non-redirected slots remain unchanged. Pinned76f8118 `item.cpp35–57` supplies option semantics; native70448 supplies amounts.
 - [x] Reference selection uses MID2 for the eight available DPS/tank profiles and prior-tier MID1 for Evoker, labelled `SIMC_DEVASTATION_MID2_PROFILE_ABSENT`; it never silently substitutes another tier.
 - [ ] Native base-item, bonus-added and enchant equip spells use the production aura path; unequipping an item or removing a modifier removes only its owned equip aura and linked child. Item-level changes replace stale aura amounts. Native LINKED/LINKED_2 zero amounts preserve child BP0; nonzero parent amounts override child BP0, with matching removal (TrinityCore a352b1fa `SpellAuraEffects.cpp5299–5335`).
 - [ ] Instance-sensitive stack merging must not weaken catalog-based unique-equipped restrictions; different enchants do not permit a duplicate unique item.
@@ -23,6 +24,12 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [ ] Actual controlled Hunter pets use native ExpectedStat CreatureHealth at their own level and template health/tuning metadata, rather than legacy class-level placeholder HP. TC Pet.cpp847–925 supplies base armor of level×50 when pet_levelstats is unavailable; no fake intrinsic primary-stat constants are imported.
 - [ ] TC Guardian stat scaling adds30% owner Stamina (integer native stat)×10 HP and70% owner armor. Before summon snapshots its owner, the existing shared Stats producer resolves current gear/passives; a fresh pet therefore starts full under that resolved maximum. Spawn initializes this maximum before stored current-health hydration; persisted wounds remain wounded. Real owner stat changes refresh inherited deltas without healing, clamp currentHP on maximum reduction, and preserve unrelated pet health bonuses. Demon/Mage pets and ordinary NPCs are outside this slice. SimC stable_pet70%Stamina/1.05armor remains named divergence `HUNTER_PET_SIMC_SURVIVABILITY_DIFF`, never mixed into runtime values.
+
+### Training dummy combat exit
+
+- [ ] Nondamaging spells do not refresh an existing dummy damage timer. Expiry clears only that PvE pair's threat/references; other attackers stay engaged until their own timers expire, and out-of-range attack intent remains intact.
+
+- [ ] Native31146 uses TC a352b1fa `npc_training_dummy`/`NullCreatureAI`: each attacker leaves combat5s after its last non-DoT hit; DoT damage does not refresh that timer. Combat exit removes only LeavingCombat-interrupt auras, not every foreign aura, and does not enter evade. A still-live native DoT must tick beyond5s. Ordinary CreatureAI `_EnterEvadeMode` retains its conditional aura cleanup (`CreatureAI.cpp298–314`). Source: `npcs_special.cpp1382–1421`, `PassiveAI.h55–67`, `Unit.cpp9257`; no harness timer/evade exemption.
 
 ### Hunter pet melee owner RAP
 
@@ -54,6 +61,14 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 - [x] Emit per-spell coefficients, base/weapon terms, itemised passive products, crit/versatility/target factors and explicitly printed armor reduction. Never invent parent-child causality or count duplicate result stages as casts.
 - [x] Source-backed prerequisite plans may use bounded longer durations and actual enabling casts/earned stacks. Explicit repeated precombat actions replace the stripped setup and are recorded separately in proof; no invented buff values or silent reference-option changes.
 - [x] Select top-five reference damage channels per spec, retain channel shares/provenance and explicit untriggered-channel gaps; diagnostic probes do not certify native±10% parity. Native cast instrumentation remains owned by spec parity harnesses.
+
+### Native per-spell differential harness
+
+- [x] A shared test-side helper reuses reference-profile preparation, native31146 and literal fixture readiness/dispatch for exactly one requested cast or N observed damage ticks; no forked rotation or synthetic follower profile. First native fixture is follower269 Tiger Palm, then Arms12294 after shared Player dispatch supports its real actor.
+- [x] The shared helper accepts distinct cast and observed damage spell IDs. An existing real fixture may be primed through shared native execution before capture; requested hit/tick counts exclude earlier priming events, without granting resources or inventing actor profiles.
+- [x] Capture actual calculation-stage inputs/outputs without rerolling variance/crit or recomputing a second formula. JSON retains base, AP/SP terms, applied multipliers, crit, versatility and armor reduction in oracle-compatible per-hit events. Armor records expose actual post-penetration armor, selected K and the calculation's mitigation scalar; any rounded damage-stage ratio is separately named. Missing attribution is explicitly `unattributed product`, not a guessed aura source.
+- [x] Native fixtures preserve reference gear/talents and exclude raid buffs. Explicit priming casts may earn required resources/state; no production damage tuning belongs to this diagnostic. Separately approved follower mechanics stay in the [follower contract](follower-dungeons.md#player-equivalent-class-combat-policy).
+- [x] A stdlib Python CLI diffs matched formula/result/armor factors, retains both result states and provenance, and distinguishes actual differences from unprinted factors. Identical recorded factors and concrete counterfactual deltas have unittest coverage. Explicit native/oracle action-name selectors distinguish real same-ID tier/proc/regular hits; impact ordinals are within the selected series and absent requested names fail explicitly.
 
 ## How it works
 
