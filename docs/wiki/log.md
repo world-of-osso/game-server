@@ -1,6 +1,6 @@
 ## 2026-10-24 — Expurgation Dummy-proc qualification
 
-[Auras](systems/auras.md#expurgation-dummy-proc--2026-10-24): native selected383344/actual184575 hit yields genuine missing383346 RED atcce395359; unrelated Judgment control passes40.15s. TC806–821 supplies a class callback using partial-trigger semantics, not a generic Dummy promotion. Native amounts/cadence and actual recipient retained; unchanged GREEN pending. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#expurgation-native-dummy-proc).
+[Auras](systems/auras.md#expurgation-dummy-proc--2026-10-24): native selected383344/actual184575 hit yields genuine missing383346 RED atcce395359; unrelated Judgment control passes40.15s. TC806–821 supplies a class callback using partial-trigger semantics, not a generic Dummy promotion. Native amounts/cadence and actual recipient retained; callback7/8PASS exposes unwanted Judgment-scenario DoT. Effective source needs numeric family/type/phase overrides; canonical table is presence-only. Lead routed import/runtime semantics to14775; callback remains unqualified, no local filter. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#expurgation-native-dummy-proc).
 
 ## 2026-10-23 — Missed hostile spell combat references
 

@@ -91,6 +91,30 @@ fn dps_parity_ret_expurgation_native_judgment_keeps_unrelated_proc_scope() {
         damage(&run, JUDGMENT) > 0,
         "setup requires an actual native Judgment hit"
     );
+    assert_eq!(
+        damage(&run, BLADE_OF_JUSTICE),
+        0,
+        "no incidental Blade hit may contaminate this control"
+    );
     assert!(!owns_dot(&run));
-    assert_eq!(damage(&run, EXPURGATION), 0);
+    let casts: Vec<_> = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits()) && event.kind == CombatLogKind::CastSuccess
+        })
+        .map(|event| event.spell_id)
+        .collect();
+    assert!(
+        !casts.contains(&Some(BLADE_OF_JUSTICE)),
+        "no incidental Blade cast may contaminate this control: {casts:?}"
+    );
+    assert_eq!(
+        damage(&run, EXPURGATION),
+        0,
+        "actual native casts: {casts:?}"
+    );
 }
