@@ -33,6 +33,8 @@ pub(crate) struct Driver {
     program: Program,
     variables: Variables,
     precombat_cursor: usize,
+    selected_precombat: bool,
+    precombat_harmful_executed: bool,
     pub snapshot: Option<Value>,
     cancellation: Option<(Action, Expression, u32)>,
     pub decisions: u64,
@@ -45,6 +47,8 @@ impl Driver {
             program,
             variables,
             precombat_cursor: 0,
+            selected_precombat: false,
+            precombat_harmful_executed: false,
             snapshot: None,
             cancellation: None,
             decisions: 0,
@@ -59,6 +63,10 @@ impl Driver {
         prepared: &Prepared,
         equipment: &Equipment,
     ) -> Result<Option<(Action, Execution)>, String> {
+        self.selected_precombat = list == "precombat";
+        if self.selected_precombat && self.precombat_harmful_executed {
+            return Ok(None);
+        }
         let mut usable = |action: &Action| Ok(prepared.execution(action, equipment)?.is_some());
         let action = if list == "precombat" {
             self.program.select_next(
@@ -88,6 +96,7 @@ impl Driver {
         action: Action,
         execution: Execution,
     ) -> Result<(), String> {
+        let ends_precombat = self.selected_precombat && harmful_execution(world, &execution)?;
         let cancellation = if let Execution::Spell(id, _) = &execution {
             action
                 .options
@@ -107,6 +116,7 @@ impl Driver {
         if cancellation.is_some() {
             self.cancellation = cancellation;
         }
+        self.precombat_harmful_executed |= ends_precombat;
         self.decisions += 1;
         Ok(())
     }
@@ -134,6 +144,20 @@ impl Driver {
         }
         Ok(cancel)
     }
+}
+
+fn harmful_execution(world: &World, execution: &Execution) -> Result<bool, String> {
+    let id = match execution {
+        Execution::Snapshot => return Ok(false),
+        Execution::AutoAttack(_) | Execution::RetargetAutoAttack(_) => return Ok(true),
+        Execution::Spell(id, _) => *id,
+        Execution::Item(item, _) => item.on_use.spell_id,
+    };
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let spell = store
+        .get(id)
+        .ok_or_else(|| format!("native precombat spell{id} missing"))?;
+    Ok(crate::spell_info::positivity::negative_effects(store, spell) != 0)
 }
 
 struct BoundAction<'a> {

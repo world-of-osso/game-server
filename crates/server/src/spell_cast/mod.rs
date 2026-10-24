@@ -761,6 +761,11 @@ impl SpellHistory {
         (remaining.max(0.0) * 1000.0) as u64
     }
 
+    #[cfg(test)]
+    pub(crate) fn has_active_gcd(&self, now: f64) -> bool {
+        self.gcd_ready_at.values().any(|&deadline| deadline > now)
+    }
+
     pub(crate) fn on_gcd(&self, spell: &SpellInfo, now: f64) -> bool {
         let category = gcd_category(spell);
         category != 0 && self.gcd_ready_at.get(&category).is_some_and(|&at| at > now)

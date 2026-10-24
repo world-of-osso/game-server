@@ -5,6 +5,120 @@ use crate::auras::ActiveAuras;
 use shared::components::PowerType;
 
 #[test]
+#[ignore = "requires prepared269 profile/current native source view; snapshot before fixture engagement"]
+fn literal_precombat_ww_snapshot_exists_before_engagement_and_fight_time() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(269, 1).unwrap();
+    let owner = fixture_player(&run);
+    for &target in &run.targets {
+        assert!(!crate::combat_refs::has_active_reference_to(
+            run.app.world(),
+            owner,
+            target
+        ));
+        assert!(!crate::combat_refs::has_active_reference_to(
+            run.app.world(),
+            run.actor,
+            target
+        ));
+    }
+    let rotation = run.windwalker_rotation.as_ref().unwrap();
+    assert!(rotation.report()["native_precombat_snapshot"].is_object());
+    let action = server::simc_apl::Action {
+        name: "tiger_palm".into(),
+        target: None,
+        options: Default::default(),
+    };
+    assert_eq!(
+        rotation
+            .value_for(
+                run.app.world_mut(),
+                run.actor,
+                &run.targets,
+                &action,
+                "time"
+            )
+            .unwrap(),
+        0.0,
+        "the fight clock begins after native precombat, not at actor spawn"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared269 profile/current native source view; first harmful precombat cap"]
+fn literal_precombat_stops_after_the_first_ready_harmful_native_action() {
+    use literal_rotation::execution::{NativeAction, Prepared};
+    use server::simc_apl::{Action, Program};
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(269, 1).unwrap();
+    let mut bindings = crate::simc_apl_native::Bindings::default();
+    let equipment =
+        literal_rotation::equipment::Equipment::load(run.app.world_mut(), run.actor, &mut bindings)
+            .unwrap();
+    let actions = || {
+        [
+            NativeAction {
+                name: "tiger_palm",
+                spell: 100780,
+                talent: None,
+                self_target: false,
+            },
+            NativeAction {
+                name: "blackout_kick",
+                spell: 100784,
+                talent: None,
+                self_target: false,
+            },
+        ]
+    };
+    let mut driver = literal_rotation::Driver::new(
+        Program::parse(&[("precombat", "tiger_palm"), ("precombat", "blackout_kick")]).unwrap(),
+    );
+    let facts = BTreeMap::<String, f64>::new();
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        run.actor,
+        &run.targets,
+        &equipment,
+        actions(),
+        false,
+    )
+    .unwrap();
+    let (action, execution) = driver
+        .select("precombat", &facts, &prepared, &equipment)
+        .unwrap()
+        .expect("the actual TP precast must be ready");
+    driver
+        .execute(run.app.world_mut(), run.actor, action, execution)
+        .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        run.actor,
+        &run.targets,
+        &equipment,
+        actions(),
+        false,
+    )
+    .unwrap();
+    let blackout = Action {
+        name: "blackout_kick".into(),
+        target: None,
+        options: Default::default(),
+    };
+    assert!(
+        prepared.execution(&blackout, &equipment).unwrap().is_some(),
+        "the later harmful action is genuinely native-ready, not blocked by TP's GCD"
+    );
+    assert!(
+        driver
+            .select("precombat", &facts, &prepared, &equipment)
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[test]
 #[ignore = "requires prepared103 profile/current native source view; literal precombat handoff RED"]
 fn literal_precombat_captures_feral_before_legacy_kit_warmup() {
     let _seed = crate::random::seed_scope(70448);

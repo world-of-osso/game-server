@@ -8,8 +8,12 @@ pub(super) fn warm_up_reference(run: &mut Run) -> Result<(), String> {
     for _ in 0..4 {
         run.app.update();
     }
+    finish_pending_setup(run)
+}
+
+pub(super) fn finish_pending_setup(run: &mut Run) -> Result<(), String> {
     for _ in 0..MAX_SETUP_TICKS {
-        if !setup_cast_or_gcd_active(run)? {
+        if !setup_cast_or_gcd_active(run) {
             return Ok(());
         }
         run.app.update();
@@ -20,20 +24,26 @@ pub(super) fn warm_up_reference(run: &mut Run) -> Result<(), String> {
     ))
 }
 
-fn setup_cast_or_gcd_active(run: &Run) -> Result<bool, String> {
+fn setup_cast_or_gcd_active(run: &Run) -> bool {
     let world = run.app.world();
-    if world.get::<shared::casting::CastState>(run.actor).is_some() {
-        return Ok(true);
+    world.get::<shared::casting::CastState>(run.actor).is_some()
+        || world
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)))
+}
+
+pub(super) fn prepare_windwalker_precombat(run: &mut Run) -> Result<(), String> {
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let mut rotation =
+        super::windwalker_rotation::Rotation::load(run.app.world_mut(), run.actor, encounter)?;
+    while rotation.precombat_step(run.app.world_mut(), run.actor, &run.targets)? {
+        finish_pending_setup(run)?;
     }
-    let Some(history) = world.get::<crate::spell_cast::SpellHistory>(run.actor) else {
-        return Ok(false);
-    };
-    let Some(id) = history.last_successful_cast() else {
-        return Ok(false);
-    };
-    let spell = world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(id)
-        .ok_or_else(|| format!("native setup last cast{id} missing from SpellStore"))?;
-    Ok(history.on_gcd(spell, crate::spell_cast::history_now(world)))
+    rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
+    run.windwalker_rotation = Some(rotation);
+    Ok(())
 }
