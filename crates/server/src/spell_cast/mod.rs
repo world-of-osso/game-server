@@ -77,6 +77,8 @@ mod chrono_flame_tests;
 mod class_completeness_probe;
 #[cfg(test)]
 mod class_completeness_tests;
+#[cfg(test)]
+mod cone_boundary_tests;
 pub(crate) mod control_dream;
 #[cfg(test)]
 mod control_dream_tests;
