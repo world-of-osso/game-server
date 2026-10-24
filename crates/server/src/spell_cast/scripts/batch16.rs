@@ -29,19 +29,15 @@ pub(super) fn energize_holy_light(world: &mut World, caster: Entity, _spell: &Sp
     }
 }
 
-///20271/275773 name220637s1 under315867. Only actual primary damage hits
-///generate power; latent splash effects do not multiply the root's gain.
-pub(super) fn energize_judgment(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    if crate::auras::has_aura(world, caster, JUDGMENT_RANK)
-        && targets_primary_judgment(world, caster, target)
-    {
+/// TC a352b1fa spell_paladin.cpp1062–1091: learned315867 grants220637
+/// once on Judgment's OnCast, independent of damage, miss or immunity.
+pub(super) fn energize_judgment(world: &mut World, caster: Entity, depth: u8) {
+    let knows_rank = world
+        .get::<crate::class_progression::KnownSpells>(caster)
+        .is_some_and(|known| known.contains(JUDGMENT_RANK));
+    if knows_rank {
         spell_cast::cast_triggered(world, caster, JUDGMENT_POWER, Some(caster), depth + 1);
     }
-}
-fn targets_primary_judgment(world: &World, caster: Entity, target: Entity) -> bool {
-    [RET_JUDGMENT, HOLY_JUDGMENT]
-        .into_iter()
-        .any(|root| super::batch8::first_damage_target(world, caster, root, target))
 }
 
 ///196926 names separate millisecond fields for Holy Shock/Crusader Strike.
@@ -72,6 +68,7 @@ pub(super) fn healing_wave_plan(
         units: vec![explicit.expect("Healing Wave requires a validated ally")],
         dest: None,
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }]
