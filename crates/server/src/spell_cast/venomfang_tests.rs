@@ -108,9 +108,52 @@ fn protection_producers_venomfang_equipped_poison_ticks_then_bursts_after_unequi
         "poison burst belongs to stack expiry, not application; log={:?}",
         h.inbox.log
     );
+    let poison = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.npc)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == VENOMFANG)
+        .unwrap();
+    assert_eq!(
+        poison.stacks, 1,
+        "qualify one actual native application for final-tick counting"
+    );
+    let period = poison
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .period_ms;
+    let expected_ticks = (poison.duration_ms / period) as usize;
     unequip_venomfang(&mut h);
+    let ticks_before = poison_damage(&h, VENOMFANG);
     h.inbox = Inbox::default();
     h.advance(140);
+    assert_eq!(
+        ticks_before + poison_damage(&h, VENOMFANG),
+        expected_ticks,
+        "native periodic-before-expiry must retain the final tick without authored extra milliseconds"
+    );
+    let last_tick = h
+        .inbox
+        .log
+        .iter()
+        .rposition(|event| event.spell_id == Some(VENOMFANG) && event.kind == CombatLogKind::Damage)
+        .unwrap();
+    let burst = h
+        .inbox
+        .log
+        .iter()
+        .position(|event| {
+            event.spell_id == Some(VENOMFANG_BURST) && event.kind == CombatLogKind::Damage
+        })
+        .unwrap();
+    assert!(
+        last_tick < burst,
+        "last native tick precedes the expiry burst"
+    );
     assert!(
         poison_damage(&h, VENOMFANG_BURST) > 0,
         "last poison stack must burst with its original item-scaled amount after unequip"

@@ -1,3 +1,7 @@
+## 2026-10-23 — Perfected impact native RED and launch snapshot
+
+[Coverage](../specs/protection-damage-producers.md#venomfang-poison-lifecycle): merged40007856c3PASS/2FAIL13.06s/compile12m26/no warnings. Venom3 remains GREEN; actual7354 perfected damage after midflight unequip lacks a new owned poison application. Numeric fixture failure is INVALID qualification: effect1 is non-aura DUMMY3, corrected to native SpellStore input. Added per-cast native amount pair/recipient impact hook; removed live-driver lookup rather than adding fallback. GREEN pending.
+
 ## 2026-10-23 — Native Venomfang periodic/expiry GREEN
 
 [Coverage](../specs/protection-damage-producers.md#venomfang-poison-lifecycle): ca3a4077b3PASS10.42s/compile11m56/no warnings. Real equipped poison deals owned periodic damage, never bursts early, retains its native burst after unequip, and emits exactly one partial plus one final expiry burst. Catalog absence does not proc. Perfected-impact poison and numerical health-snapshot proof remain open.

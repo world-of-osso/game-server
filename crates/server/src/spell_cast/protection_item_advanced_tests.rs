@@ -82,19 +82,18 @@ fn observe_noncritical_flight(h: &mut Harness, low_at_launch: bool) -> (f32, f32
 #[test]
 fn protection_producers_item_advanced_guillotine_uses_launch_not_impact_health() {
     let mut h = item_fixture(true);
+    // Native driver effect1 is DUMMY3, not an aura effect stored on AuraInstance.
     let percent = h
         .app
         .world()
-        .get::<crate::auras::ActiveAuras>(h.caster)
-        .unwrap()
-        .iter()
-        .find(|aura| aura.spell_id == GUILLOTINE_DRIVER)
+        .resource::<crate::spell_info::SpellStore>()
+        .get(GUILLOTINE_DRIVER)
         .unwrap()
         .effects
         .iter()
         .find(|effect| effect.index == 1)
         .unwrap()
-        .amount
+        .base_points
         / 100.0;
     let (full_missing, full_damage) = observe_noncritical_flight(&mut h, false);
     let (half_missing, half_damage) = observe_noncritical_flight(&mut h, true);
@@ -127,7 +126,6 @@ fn assert_impact_poison_lifetime(h: &Harness, targets: &[bevy::prelude::Entity])
 }
 
 #[test]
-#[ignore = "RED: perfected Guillotine lacks its guaranteed impact poison"]
 fn protection_producers_item_advanced_perfected_impact_applies_owned_poison_to_both_targets() {
     let mut h = item_fixture(true);
     equip_venomfang(&mut h);

@@ -818,9 +818,7 @@ fn build_instance(
             .class_options
             .as_ref()
             .map_or(0, |options| options.spell_class_set),
-        venomfang_burst_amount: crate::spell_cast::scripts::snapshot_venomfang_burst(
-            world, caster, spell.id,
-        ),
+        venomfang_burst_amount: spell.cast_venomfang_amounts.map(|(_, burst)| burst),
         guardian_heal_pct: (spell.id == 47_788)
             .then(|| spell.effects.iter().find(|effect| effect.index == 1))
             .flatten()

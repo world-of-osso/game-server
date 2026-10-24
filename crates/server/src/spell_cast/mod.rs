@@ -3336,6 +3336,7 @@ pub(super) fn cast_triggered_with_item_level(
 #[derive(Default)]
 pub(crate) struct TriggeredSpellOverrides {
     pub effect0_amount: Option<f32>,
+    pub venomfang_amounts: Option<(f32, f32)>,
     pub aura_stacks: Option<u8>,
     pub original_caster: Option<Entity>,
     /// Authored background-action lifetime, e.g. native Whirling Blade's amount.
@@ -3354,6 +3355,7 @@ pub(crate) fn cast_triggered_with_overrides(
         return false;
     };
     spell.cast_aura_stacks = values.aura_stacks;
+    spell.cast_venomfang_amounts = values.venomfang_amounts;
     spell.cast_original_caster = values.original_caster;
     if let Some(milliseconds) = values.duration_ms {
         let Some(duration) = spell.misc.as_mut().and_then(|misc| misc.duration.as_mut()) else {

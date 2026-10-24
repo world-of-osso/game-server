@@ -7,7 +7,7 @@ use bevy::prelude::*;
 
 pub(crate) const GUILLOTINE: u32 = 1291728;
 const GUILLOTINE_DAMAGE: u32 = 1306604;
-const PERFECTED_GUILLOTINE: u32 = 1306624;
+pub(super) const PERFECTED_GUILLOTINE: u32 = 1306624;
 const PERFECTED_SET: u32 = 1291726;
 const PROTECTION_FOUR_PIECE: u32 = 1296648;
 const BLOODY_REBUKE: u32 = 1300690;
@@ -21,14 +21,46 @@ pub(crate) fn check_venomfang_proc(_world: &World, aura: &AuraInstance, event: &
     event.actor == aura.caster && !matches!(event.spell_id, Some(VENOMFANG | VENOMFANG_BURST))
 }
 
-fn venomfang_amount(world: &World, driver: &AuraInstance, index: u8) -> Result<f32, String> {
+fn venomfang_amounts(world: &World, driver: &AuraInstance) -> Result<(f32, f32), String> {
     let role = crate::item_proc_data::role_multiplier(world, driver.caster, VENOMFANG_DRIVER)?;
-    let effect = driver
-        .effects
-        .iter()
-        .find(|effect| effect.index == index)
-        .ok_or_else(|| format!("native Venomfang driver lacks scaled effect{index}"))?;
-    Ok(effect.amount * role)
+    let amount = |index| {
+        driver
+            .effects
+            .iter()
+            .find(|effect| effect.index == index)
+            .map(|effect| effect.amount * role)
+            .ok_or_else(|| format!("native Venomfang driver lacks scaled effect{index}"))
+    };
+    Ok((amount(0)?, amount(1)?))
+}
+
+fn snapshot_equipped_venomfang(world: &World, caster: Entity) -> Result<(f32, f32), String> {
+    let driver = world
+        .get::<crate::auras::ActiveAuras>(caster)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == VENOMFANG_DRIVER))
+        .ok_or_else(|| "perfected Guillotine has no native equipped Venomfang driver".to_owned())?;
+    venomfang_amounts(world, driver)
+}
+
+fn cast_poison_snapshot(
+    world: &mut World,
+    caster: Entity,
+    target: Option<Entity>,
+    depth: u8,
+    amounts: (f32, f32),
+) {
+    spell_cast::cast_triggered_with_overrides(
+        world,
+        caster,
+        VENOMFANG,
+        target,
+        depth,
+        spell_cast::TriggeredSpellOverrides {
+            effect0_amount: Some(amounts.0),
+            venomfang_amounts: Some(amounts),
+            ..Default::default()
+        },
+    );
 }
 
 /// VENOMFANG_EQUIPPED_DRIVER: unique_gear_midnight.cpp6283–6292,6379–6383.
@@ -38,35 +70,24 @@ pub(crate) fn cast_venomfang(
     aura: &AuraInstance,
     event: &AuraEvent,
 ) {
-    let amount = match venomfang_amount(world, aura, 0) {
-        Ok(amount) => amount,
-        Err(error) => {
-            warn!("Venomfang refused: {error}");
-            return;
-        }
-    };
-    spell_cast::cast_triggered_with_effect0_amount(world, unit, VENOMFANG, event.target, 1, amount);
+    match venomfang_amounts(world, aura) {
+        Ok(amounts) => cast_poison_snapshot(world, unit, event.target, 1, amounts),
+        Err(error) => warn!("Venomfang refused: {error}"),
+    }
 }
 
-/// Preserve the independently scaled native burst, not a rounded coefficient ratio
-/// or a live weapon lookup at expiry. Aura refresh retains the new source snapshot.
-pub(crate) fn snapshot_venomfang_burst(world: &World, caster: Entity, spell: u32) -> Option<f32> {
-    if spell != VENOMFANG {
-        return None;
-    }
-    let driver = world
-        .get::<crate::auras::ActiveAuras>(caster)
-        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == VENOMFANG_DRIVER));
-    let amount = driver
-        .ok_or_else(|| "Venomfang has no equipped driver at application".to_owned())
-        .and_then(|driver| venomfang_amount(world, driver, 1));
-    match amount {
-        Ok(amount) => Some(amount),
-        Err(error) => {
-            warn!("Venomfang burst snapshot refused: {error}");
-            None
-        }
-    }
+/// PERFECTED_GUILLOTINE_POISON_IMPACT: unique_gear_midnight.cpp6347–6350;
+/// action.cpp4486–4503 executes the precreated action on every landed recipient.
+pub(super) fn perfected_guillotine_poison(
+    world: &mut World,
+    ctx: &spell_cast::effects::EffectCtx,
+    target: Entity,
+) {
+    let Some(amounts) = ctx.spell.cast_venomfang_amounts else {
+        warn!("Perfected Guillotine poison refused: missing native launch snapshot");
+        return;
+    };
+    cast_poison_snapshot(world, ctx.caster, Some(target), ctx.depth + 1, amounts);
 }
 
 /// VENOMFANG_STACK_EXPIRY: unique_gear_midnight.cpp6307–6315. Native effect64
@@ -124,44 +145,44 @@ pub(crate) fn cast_guillotine(
     aura: &AuraInstance,
     event: &AuraEvent,
 ) {
-    let role = match crate::item_proc_data::role_multiplier(world, unit, GUILLOTINE) {
-        Ok(role) => role,
-        Err(error) => {
-            warn!("Guillotine refused: {error}");
-            return;
+    match snapshot_guillotine_cast(world, unit, aura) {
+        Ok((child, values)) => {
+            spell_cast::cast_triggered_with_overrides(world, unit, child, event.target, 1, values);
         }
-    };
-    let perfected = match crate::item_proc_data::has_equipped_bonus(world, unit, PERFECTED_SET) {
-        Ok(perfected) => perfected,
-        Err(error) => {
-            warn!("Guillotine refused: {error}");
-            return;
-        }
-    };
-    let mut amount = aura
+        Err(error) => warn!("Guillotine refused: {error}"),
+    }
+}
+
+fn snapshot_guillotine_cast(
+    world: &World,
+    unit: Entity,
+    aura: &AuraInstance,
+) -> Result<(u32, spell_cast::TriggeredSpellOverrides), String> {
+    let role = crate::item_proc_data::role_multiplier(world, unit, GUILLOTINE)?;
+    let perfected = crate::item_proc_data::has_equipped_bonus(world, unit, PERFECTED_SET)?;
+    let base_amount = aura
         .effects
         .iter()
         .find(|effect| effect.index == 0)
         .expect("native equipped Guillotine requires item-scaled effect0")
         .amount
         * role;
-    let child = if perfected {
-        amount *= super::script_effect_value(world, unit, PERFECTED_SET, 1) / 100.0;
-        PERFECTED_GUILLOTINE
+    let (child, amount, venomfang_amounts) = if perfected {
+        let multiplier = super::script_effect_value(world, unit, PERFECTED_SET, 1) / 100.0;
+        (
+            PERFECTED_GUILLOTINE,
+            base_amount * multiplier,
+            Some(snapshot_equipped_venomfang(world, unit)?),
+        )
     } else {
-        GUILLOTINE_DAMAGE
+        (GUILLOTINE_DAMAGE, base_amount, None)
     };
-    spell_cast::cast_triggered_with_overrides(
-        world,
-        unit,
-        child,
-        event.target,
-        1,
-        spell_cast::TriggeredSpellOverrides {
-            effect0_amount: Some(amount),
-            ..Default::default()
-        },
-    );
+    let values = spell_cast::TriggeredSpellOverrides {
+        effect0_amount: Some(amount),
+        venomfang_amounts,
+        ..Default::default()
+    };
+    Ok((child, values))
 }
 
 /// GUILLOTINE_TARGET_HEALTH_SNAPSHOT: unique_gear_midnight.cpp6357–6365;

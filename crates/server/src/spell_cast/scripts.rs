@@ -68,7 +68,7 @@ pub(crate) use batch20::proc_charges;
 pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{
     GUILLOTINE, VENOMFANG, VENOMFANG_DRIVER, burst_venomfang, cast_guillotine, cast_venomfang,
-    check_guillotine_proc, check_venomfang_proc, snapshot_venomfang_burst,
+    check_guillotine_proc, check_venomfang_proc,
 };
 /// OnEffectHit runs once per effect without replacing generic or aura dispatch.
 pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
@@ -1400,6 +1400,9 @@ pub(super) type ContextHitHook = fn(&mut World, &super::effects::EffectCtx, Enti
 
 pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
     match spell_id {
+        protection_items::PERFECTED_GUILLOTINE => {
+            Some(protection_items::perfected_guillotine_poison)
+        }
         voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),
         77_478 => Some(batch9::cast_earthquake_knockdown),
         _ => None,

@@ -75,6 +75,9 @@ pub struct SpellInfo {
     /// Source SPELLVALUE_AURA_STACK on this cast, retained through missile snapshots.
     #[serde(skip)]
     pub(crate) cast_aura_stacks: Option<u8>,
+    /// Item-scaled (periodic, expiry) poison amounts captured before native flight.
+    #[serde(skip)]
+    pub(crate) cast_venomfang_amounts: Option<(f32, f32)>,
     /// Source CastSpellExtraArgs::OriginalCaster, not the actual casting unit.
     #[serde(skip)]
     pub(crate) cast_original_caster: Option<Entity>,
