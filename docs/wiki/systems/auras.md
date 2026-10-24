@@ -1,5 +1,9 @@
 # Auras
 
+## Divine Toll child relationship — 2026-10-24
+
+`SIMC_RET_DIVINE_TOLL_RELATIONSHIP` bridges375576 to native406957, or1279408 under actual1277026 mode, only for spec70. TC has no handler and native/TDB have no child edge. Existing generic area-filter/context-hit/triggered-child seams preserve native cap/radius/combat admission and effect5 percentage. Primary counts once; unrelated friendly/caster hits do not dispatch hostile children. [Contract](../../specs/dps-parity.md#ret-divine-toll-relationship), [source/two-stage RED](../../handoffs/ret-paladin-parity-proof-ledger.md#divine-toll-native-child-relationship--sourcered-only), [implementation](../../../crates/server/src/spell_cast/scripts/ret_toll.rs). ST/3T GREEN pending; cap/mode/funding and Resonance/Exaction/DivineHammer remain individually unqualified.
+
 ## Execution Sentence accumulation — 2026-10-24
 
 `SIMC_RET_EXECUTION_SENTENCE_ACCUMULATION` is a lead-approved outgoing-damage policy, not invented proc metadata. Native343527 has no proc options/TDB row and TC skips generation without flags. Only direct owner's nonphysical actual damage to a target carrying its343527 updates that instance's native effect0 counter by native effect1 percentage; Physical hybrids are excluded too. TC expiry-only discharge uses native387113 with BP0 override and partial-trigger validation. Exact native controlled-pet routing remains unqualified. [Contract](../../specs/dps-parity.md#ret-execution-sentence-accumulation), [source/RED ledger](../../handoffs/ret-paladin-parity-proof-ledger.md#execution-sentence-accumulation-policy), [class implementation](../../../crates/server/src/auras/ret_sentence.rs).9239a9092 original expiry/cancel2GREEN45.92s plus test-only37f8763a2 native20%/actual-white/foreign-actor2GREEN47.23s qualify four unique cases on unchanged runtime. Pet routing, hybrid-school positive fixture and full rotation remain open.

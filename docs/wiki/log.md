@@ -1,3 +1,7 @@
+## 2026-10-24 — Divine Toll child dispatch qualification
+
+[Auras](systems/auras.md#divine-toll-child-relationship--2026-10-24): selected ordinary375576 genuinely lacks native406957 on ST/3T; initial2RED/1control48.15s, corrected actual-combat admission2RED/1control69.13s. Lead approved narrow relationship after TC/native trigger-edge absence audit. Existing generic hooks preserve native primary/cap/radius/mode/amount; GREEN pending, secondary class relationships separately unqualified. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#divine-toll-native-child-relationship--sourcered-only).
+
 ## 2026-10-24 — Execution Sentence native expiry qualification
 
 [Auras](systems/auras.md#execution-sentence-accumulation--2026-10-24): d15dae8f0 ordinary funded343527/real Judgment damage/actual expiry reaches missing387113 RED; cancellation controlPASS49.39s. Lead approved narrow own nonphysical damage policy after native/TDB/default-generation absence audit. Native effect1 and TC partial-trigger expiry BP0 remain authoritative;9239a9092 original2GREEN45.92s plus37f8763a2 actual20%/white/foreign controls2GREEN47.23s qualify four cases. Pet owner mapping/hybrid-positive fixture/full rotation remain unqualified. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#execution-sentence-accumulation-policy).
