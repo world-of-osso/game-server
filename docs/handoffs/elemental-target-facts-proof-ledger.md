@@ -1,12 +1,16 @@
 # Elemental source/target-fact qualification
 
-Current consumer delegates target candidates/auras/counts/refresh using the pending shared861b655a3 contract (`with_targets`, `Bindings.dot_refresh`); parent now identifies dc525f641/ta1068 as the queued target tip. Duplicate own readers were removed; replacement awaits confirmed landing/API reconciliation/requalification. No WIP API merged.
+Current consumer delegates target candidates/auras/counts/refresh to the landed dc525f641/ta1068 API (`with_targets`, `Bindings.dot_refresh`). Parent confirmed master924638aba; merged at4178e1f4f. Actual landed signatures match the existing Elemental wrapper and Flame Shock Pandemic registration; no target shim or duplicate own reader required. This is source reconciliation, not post-merge native qualification. No WIP API merged.
 
 ## Split-B staging
 
 `elemental-adapter-split-b` branches from preserved `elemental-parity-shuja@b4a269fd97f6ffad5783ed2d8f38edd1520e9fe3`. Parent-authorized merge of only confirmed masterd675bf8fb is ace6fa9d0: retain all seven added source/fixture files under `crates/server-simulation/src/dungeon_simulator/dps_parity/`, and preserve both dummy-reference and Elemental module registrations. Existing `server::simc_apl` imports and simulation server-module re-exports need no additional rewrite. Native consumer tests now belong to `-p server-simulation --lib`.
 
-ASC `elemental-asc-overload@39214162f` remains frozen for separate lead gateea1085; no ASC changes imported here. No check run: landed d675 lacks the explicitly referenced `DotRefresh`, `native_dot_spell` and `NativeFacts::with_targets` API. Parent permits at most one -j2 check under normal admission; retain that allowance until required APIs land rather than manufacture compiler-only failures. Equipmentis1061, targetta1068 and precombat14766 remain unlanded. Migration is source-layout staging, not full-consumer/native qualification.
+ASC `elemental-asc-overload@39214162f` remains frozen for separate lead gateea1085; no ASC changes imported here. At staging476384e40 no check ran: landed d675 lacked the explicitly referenced `DotRefresh`, `native_dot_spell` and `NativeFacts::with_targets` API. Parent permits at most one -j2 check under normal admission; retain that allowance until required APIs land rather than manufacture compiler-only failures. Equipmentis1061, targetta1068 and precombat14766 remain unlanded. Migration is source-layout staging, not full-consumer/native qualification.
+
+## Landed target API
+
+Parent-confirmed master924638aba merged at4178e1f4f. Existing `NativeFacts::with_targets`, `ActionFacts::{value_for,target_ids}`, `DotRefresh` fields and native resolver signatures match the consumer literally; original82-row source remains unchanged. Equipmentrt1086 and precombat3d32d68bf/ww1081 are still pending. The current precombat fixture references `SpellHistory::has_active_gcd`, absent from landed master; do not spend the single normal-admission -j2 check on this known pending lifecycle boundary. Check allowance remains0/1 used. Historical native component proof below is not qualification of this merged consumer.
 
 ## Historical component proof
 
