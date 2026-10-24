@@ -32,7 +32,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Measurement
 
-- [ ] Native harmful spells retain selected enemies independently of effect-hit outcomes: every non-EVADE miss (including immunity) creates the caster's launch combat reference, while the target engages only at native projectile arrival. Missed effects still deal no damage/apply no hit effects; evade targets create no reference (TC a352b1fa Spell.cpp8538/2763).
+- [x] Native harmful spells retain selected enemies independently of effect-hit outcomes: every non-EVADE miss (including immunity) creates the caster's launch combat reference, while the target engages only at native projectile arrival. Missed effects still deal no damage/apply no hit effects; evade targets create no reference (TC a352b1fa Spell.cpp8538/2763).
 
 Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` clears explicit raid events for Patchwerk after parsing. The opt-in CLI integration test must observe three actual targets and an adds event; argument-string checks alone did not detect this failure.
 

@@ -1,6 +1,10 @@
+## 2026-10-23 — Missed hostile spell combat references
+
+[Combat](systems/combat.md#combat-state): native MISS/IMMUNE missing-reference REDs → selected-target launch/arrival preservation; three boundary controls, nine retained travel/reflection controls and unchanged Ret funding/TV damage GREEN at02090739e. No resource, hit-chance or timer override. WW equipment consumer1GREEN47.55s; combined parent gate awaits master8e7c7a685 integration. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#generic-missed-hostile-launch-combat).
+
 ## 2026-10-23 — Judgment cast-time Holy Power correction
 
-[Judgment](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers): pinned TC OnCast/HasSpell315867 contradicts former damage-hit/aura gating. Genuine native cast-before-impact, immune-target and aura-only REDs atde7b6e406; shared20271/275773/275779 ordinary/triggered/costed-trigger correction implemented, GREEN pending. No fixture resource grants or DPS claim. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#judgment-cast-time-resource-correction).
+[Judgment](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers): pinned TC OnCast/HasSpell315867 contradicts former damage-hit/aura gating. Genuine native cast-before-impact, immune-target and aura-only REDs atde7b6e406; shared20271/275773/275779 ordinary/triggered/costed-trigger correction has native16GREEN and warning-free retained controls at02090739e. No fixture resource grants or DPS claim. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#judgment-cast-time-resource-correction).
 
 ## 2026-10-23 — Native trait effect-point source boundary
 

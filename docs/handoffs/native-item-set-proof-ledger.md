@@ -26,7 +26,7 @@ Masterdd63aec17 includes native ItemProcInputs and item_instance_data.PRODUCER_T
 
 Parent requires ItemProcInputs as the sole set catalog/predicate, with one count helper reading each original ItemTemplate's native ItemSparse.ItemSet. Native source shows241 active members absent from ItemSet.ItemID display arrays. New ignored RED fixtures use real Dark Arctic38591/38592 (set754/2pc51273), inactive Arcanist201 (3pc41657), and Blood Tiger442 (skill165/rank300,2pc41670). Atde7b6e406 all three failed genuinely: Dark Arctic51273 returnedfalse, inactive41657 returnedunsupported-predicate error, and skill41670 returnederrors instead of`false,false,true,false`. Combined native batch9RED/runtime56.50s; `reconcile-primary-judgment-red-v3-full.log` preserves exact assertions.
 
-Reconciliation follows those REDs: ItemProcInputs now owns the only native set catalog and eligibility predicate; a spell→set index references those same catalog rows. One count helper reads original `ItemTemplate.item_set` projected from ItemSparse.ItemSet; never ItemSet display arrays or redirected stat identities. Lifecycle and APL tier facts consume this resource; duplicate ItemSets catalog/count/eligibility code is deleted. Real fixture loaders install the same native proc catalog. Targeted GREEN pending.
+Reconciliation follows those REDs: ItemProcInputs now owns the only native set catalog and eligibility predicate; a spell→set index references those same catalog rows. One count helper reads original `ItemTemplate.item_set` projected from ItemSparse.ItemSet; never ItemSet display arrays or redirected stat identities. Lifecycle and APL tier facts consume this resource; duplicate ItemSets catalog/count/eligibility code is deleted. Real fixture loaders install the same native proc catalog. Atdd0ed8fe5 shared predicate3PASS, lifecycle/equipment6PASS, commerce1PASS, Equipment9PASS and retained Protection7PASS; warning-free native compile6m35s/runtime156.72s. Combined command also included separate launch REDs, failing Ret funding and the pre-existing explicitly ignored Venomfang producer RED, so overall exit101 is not called GREEN. Exact `reconciled-native-launch-red-v2.*` records the subset. Existing WW native consumer subsequently1PASS47.55s at02090739e; `ww-consumer-green-v1.*`. Parent's requested single replacement packet will merge master8e7c7a685 before integration.
 
 ## Input compatibility inventory (read-only audit2026-10-23)
 
@@ -48,7 +48,7 @@ Python normal-import test constructs its own temporary native schema; Forever pr
 
 ## Tier alias policy
 
-Parent-approved `SIMC_TIER_ALIAS_ITEMSET_BINDING`: pinned SimC76f8118 `engine/dbc/generated/item_set_bonus.inc` supplies tier aliases such as mid2→native ItemSet2062(Ret),2065(Elemental). DB2 owns membership and spells; SimC alias is not a native DB2 tier field. Generic set facts must reject unknown aliases, not default to false. Binding implementation pending.
+Parent-approved `SIMC_TIER_ALIAS_ITEMSET_BINDING`: pinned SimC76f8118 `engine/dbc/generated/item_set_bonus.inc` supplies tier aliases such as mid2→native ItemSet2062(Ret),2065(Elemental). DB2 owns membership and spells; SimC alias is not a native DB2 tier field. Generic set facts must reject unknown aliases, not default to false. Generic alias binding is covered by the nine focused Equipment controls; unknown aliases remain errors.
 
 ## Remaining
 
