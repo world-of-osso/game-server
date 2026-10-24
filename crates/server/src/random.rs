@@ -1,41 +1,41 @@
 //! Native rand distributions; only an explicit, test-only scope supplies a seed.
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "test-support")))]
 pub(crate) use ::rand::*;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) use ::rand::{Rng, SeedableRng, distributions, rngs, seq};
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 thread_local! {
     static SEEDED: std::cell::RefCell<Option<rngs::StdRng>> = const { std::cell::RefCell::new(None) };
 }
 
 /// Restores the caller's RNG mode when this explicit simulation scope ends.
-#[cfg(test)]
-pub(crate) struct SeedScope(Option<rngs::StdRng>);
+#[cfg(any(test, feature = "test-support"))]
+pub struct SeedScope(Option<rngs::StdRng>);
 
-#[cfg(test)]
-pub(crate) fn seed_scope(seed: u64) -> SeedScope {
+#[cfg(any(test, feature = "test-support"))]
+pub fn seed_scope(seed: u64) -> SeedScope {
     let rng = rngs::StdRng::seed_from_u64(seed);
     SeedScope(SEEDED.with(|state| state.replace(Some(rng))))
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 impl Drop for SeedScope {
     fn drop(&mut self) {
         SEEDED.with(|state| state.replace(self.0.take()));
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) struct ThreadRng;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn thread_rng() -> ThreadRng {
     ThreadRng
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 fn with_rng<T>(draw: impl FnOnce(&mut dyn ::rand::RngCore) -> T) -> T {
     SEEDED.with(|state| match state.borrow_mut().as_mut() {
         Some(rng) => draw(rng),
@@ -43,7 +43,7 @@ fn with_rng<T>(draw: impl FnOnce(&mut dyn ::rand::RngCore) -> T) -> T {
     })
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 impl ::rand::RngCore for ThreadRng {
     fn next_u32(&mut self) -> u32 {
         with_rng(|rng| rng.next_u32())
@@ -59,7 +59,7 @@ impl ::rand::RngCore for ThreadRng {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn random<T>() -> T
 where
     distributions::Standard: distributions::Distribution<T>,

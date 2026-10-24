@@ -3,6 +3,7 @@ mod composite_precombat_tests;
 mod dummy_reference_tests;
 mod engagement_tests;
 mod equipment_input_tests;
+mod firestarter_tests;
 mod haste_tests;
 mod inputs;
 pub(crate) mod literal_rotation;

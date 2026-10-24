@@ -6,6 +6,10 @@ rust-version.workspace = true
 
 [dependencies]
 server-catalog = { path = "../server-catalog" }
+# Only explicit fixture consumers enable these; ordinary server builds stay unchanged.
+blake3 = { version = "1.8", optional = true }
+tempfile = { version = "3", optional = true }
+game-engine-core = { git = "ssh://git@github.com/world-of-osso/game-engine.git", rev = "9ef2efe2d317b837d352fe8c5227086a4fdcd490", optional = true }
 # Projected runtime ground metadata; renderer-only modules stay disabled.
 wow-chunk = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false }
 wow-adt = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false }
@@ -46,6 +50,7 @@ image = { version = "0.24.9", default-features = false, features = ["png"] }
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 
 [features]
+test-support = ["dep:blake3", "dep:tempfile", "dep:game-engine-core"]
 # Private debug-peer harness; release builds reject it and deploy never enables it.
 native-proof-hold-persistence = []
 # Diagnostic: log per-system wall time every 10 s (enables Bevy system spans).

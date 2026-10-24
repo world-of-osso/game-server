@@ -5,7 +5,7 @@ use shared::components::PowerType;
 use std::collections::BTreeMap;
 
 #[derive(Default)]
-pub(crate) struct Bindings {
+pub struct Bindings {
     pub actions: BTreeMap<String, u32>,
     pub buffs: BTreeMap<String, u32>,
     pub talents: BTreeMap<String, u32>,
@@ -15,13 +15,13 @@ pub(crate) struct Bindings {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) enum FightStyle {
+pub enum FightStyle {
     Patchwerk,
 }
 
 /// Encounter start timestamps use the simulation clock, not cooldown wall time.
 #[derive(Clone, Copy)]
-pub(crate) enum Encounter {
+pub enum Encounter {
     Fixture {
         started_at: f64,
         duration: f64,
@@ -32,7 +32,7 @@ pub(crate) enum Encounter {
     },
 }
 
-pub(crate) struct NativeFacts<'a> {
+pub struct NativeFacts<'a> {
     world: &'a World,
     actor: Entity,
     bindings: &'a Bindings,

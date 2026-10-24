@@ -888,7 +888,7 @@ fn distance_squared(a: &Position, b: &Position) -> f32 {
 #[path = "interest_tests.rs"]
 mod tests;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[test]
 fn idle_detection_full_population_is_bounded() {
     let mut app = App::new();

@@ -174,7 +174,7 @@ pub(crate) fn cooldown_value(
     }
 }
 
-pub(crate) fn gcd_value(
+pub fn gcd_value(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,

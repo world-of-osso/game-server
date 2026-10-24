@@ -6,8 +6,8 @@ use bevy::prelude::*;
 use std::collections::HashMap;
 
 #[derive(Resource, Default)]
-#[cfg_attr(test, derive(Clone))]
-pub(crate) struct SpellTargetPositions(pub HashMap<(u32, u8), WorldLocation>);
+#[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
+pub struct SpellTargetPositions(pub HashMap<(u32, u8), WorldLocation>);
 
 /// Rows whose spell effect exists in DB2 or, once prepared, in `tdb_serverside_spell_effect`
 /// (TC resolves both through SpellInfo).

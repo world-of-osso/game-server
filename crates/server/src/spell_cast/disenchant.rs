@@ -23,7 +23,7 @@ struct Eligibility {
 }
 
 #[derive(Resource, Default)]
-pub(crate) struct DisenchantData {
+pub struct DisenchantData {
     items: HashMap<u32, Eligibility>,
     loot: crate::loot::LootTables,
 }

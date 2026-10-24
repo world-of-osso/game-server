@@ -103,7 +103,7 @@ pub(crate) fn armor_after_ignore(
 }
 
 /// TC a352b1fa Unit.cpp7340: caster-owned50, with no MiscValue school mask.
-pub(crate) fn critical_healing_multiplier(world: &World, caster: Entity) -> f32 {
+pub fn critical_healing_multiplier(world: &World, caster: Entity) -> f32 {
     world.get::<ActiveAuras>(caster).map_or(1.0, |auras| {
         auras
             .iter()

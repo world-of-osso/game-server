@@ -59,7 +59,7 @@ fn ownership(world: &World, unit: Entity) -> Option<(Entity, bool)> {
     ))
 }
 
-pub(crate) fn multiplier(world: &World, unit: Entity) -> f32 {
+pub fn multiplier(world: &World, unit: Entity) -> f32 {
     ownership(world, unit)
         .and_then(|(owner, guardian)| {
             world
