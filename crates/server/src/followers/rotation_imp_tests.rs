@@ -9,8 +9,7 @@ use shared::protocol::CombatLogKind;
 pub(super) fn prepared_world() -> crate::world_data::WorldData {
     let root =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/wild-imp-fixtures");
-    std::fs::create_dir_all(&root).unwrap();
-    let directory = tempfile::tempdir_in(root).unwrap();
+    let directory = crate::test_data::fixture_dir::create_fixture_dir(&root).unwrap();
     let path = directory.path().join("prepared.sqlite");
     std::fs::copy(&world_db().unwrap().powers_db, &path).unwrap();
     let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
