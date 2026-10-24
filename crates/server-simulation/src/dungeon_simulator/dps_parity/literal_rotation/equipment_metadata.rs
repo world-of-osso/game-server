@@ -20,6 +20,15 @@ const MASTERY: u32 = 1 << 25;
 const VERSATILITY: u32 = 0x7000_0000;
 const UTILITY_RATINGS: u32 = (1 << 13) | (1 << 16) | (1 << 20);
 
+// Pinned SimC76f8118 unique_gear_midnight.cpp: Gaze2020, Vaelgor2747,
+// Seastone3533, Vial3567, Heart3748, Font3806. These exact native drivers
+// build stat buffs without setting buff.default_value, or are disabled/damage
+// drivers with no matching stat buff. buff.hpp327's unset default is -DBL_MIN;
+// unique_gear.cpp3776 takes max with0. This is NOT their stat magnitude.
+const SIMC_UNSET_PROC_DEFAULT_DRIVERS: &[u32] = &[
+    1256896, 1259293, 1260459, 1295058, 1293316, 1295179, 1297760, 1297761, 1297911, 1297908,
+];
+
 #[derive(Clone, Default)]
 struct Buffs {
     stats: BTreeSet<&'static str>,
@@ -41,6 +50,7 @@ pub(super) struct Cooldown {
 
 #[derive(Default)]
 pub(super) struct Metadata {
+    drivers: BTreeSet<u32>,
     pub stats: BTreeSet<&'static str>,
     pub duration: f64,
     pub use_buff: bool,
@@ -56,6 +66,7 @@ impl Metadata {
             .iter()
             .filter(|effect| matches!(effect.trigger, ON_USE | ON_EQUIP))
         {
+            metadata.drivers.insert(effect.spell_id);
             let buffs = read_buffs(store, effect.spell_id, &mut active, &mut completed)?;
             metadata.stats.extend(&buffs.stats);
             metadata.duration = metadata.duration.max(buffs.duration);
@@ -66,6 +77,17 @@ impl Metadata {
             }
         }
         Ok(metadata)
+    }
+
+    pub fn proc_default_value(&self) -> Result<f64, String> {
+        for driver in &self.drivers {
+            if !SIMC_UNSET_PROC_DEFAULT_DRIVERS.contains(driver) {
+                return Err(format!(
+                    "NATIVE_ITEM_PROC_DEFAULT_VALUE_UNSOURCED: native driver{driver} lacks a qualified pinned buff.default_value binding"
+                ));
+            }
+        }
+        Ok(0.0)
     }
 }
 

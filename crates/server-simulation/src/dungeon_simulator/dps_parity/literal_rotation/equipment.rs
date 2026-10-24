@@ -35,6 +35,7 @@ pub(crate) struct ItemUse {
 
 struct Slot {
     item_id: u32,
+    item_level: u16,
     native_slot: EquipmentSlot,
     on_use: Option<ItemUse>,
     metadata: Metadata,
@@ -44,6 +45,7 @@ impl Slot {
     fn empty(native_slot: EquipmentSlot) -> Self {
         Self {
             item_id: 0,
+            item_level: 0,
             native_slot,
             on_use: None,
             metadata: Metadata::default(),
@@ -136,6 +138,8 @@ impl Equipment {
         native: &NativeFacts<'_>,
     ) -> Result<f64, String> {
         match field {
+            "ilvl" => Ok(f64::from(item.item_level)),
+            "proc.any_dps.default_value" => item.metadata.proc_default_value(),
             "has_use_buff" => Ok(boolean(item.on_use.is_some_and(|item| item.stat_buff))),
             "has_cooldown" => Ok(boolean(!item.metadata.cooldowns.is_empty())),
             "cooldown.duration" => Ok(item
@@ -254,16 +258,22 @@ fn read_slot_item(
         &native.bonuses,
     )?;
     let metadata = read_slot_metadata(world, item_id, &modified.effect_ids)?;
-    let on_use = read_item_use(
-        world,
-        item_id,
-        template,
+    let item_level = server::item_instance::item_instance_stats(
+        &modified.scaling,
+        template.inventory_type,
         properties,
-        &modified,
-        metadata.use_buff,
-    )?;
+        world.resource::<crate::item_stats::ItemScalingTables>(),
+    )?
+    .item_level;
+    let on_use = template.on_use.map(|on_use| ItemUse {
+        item_id,
+        on_use,
+        item_level,
+        stat_buff: metadata.use_buff,
+    });
     Ok(Slot {
         item_id,
+        item_level,
         native_slot: slot,
         on_use,
         metadata,
@@ -282,32 +292,6 @@ fn read_slot_metadata(
         &native.effects,
     )?;
     Metadata::load(world.resource::<crate::spell_info::SpellStore>(), &effects)
-}
-
-fn read_item_use(
-    world: &World,
-    item_id: u32,
-    template: &crate::item_templates::ItemTemplate,
-    properties: &server::item_instance::ItemInstanceModifiers,
-    modified: &server::item_instance::bonuses::BonusResult,
-    stat_buff: bool,
-) -> Result<Option<ItemUse>, String> {
-    let Some(on_use) = template.on_use else {
-        return Ok(None);
-    };
-    let item_level = server::item_instance::item_instance_stats(
-        &modified.scaling,
-        template.inventory_type,
-        properties,
-        world.resource::<crate::item_stats::ItemScalingTables>(),
-    )?
-    .item_level;
-    Ok(Some(ItemUse {
-        item_id,
-        on_use,
-        item_level,
-        stat_buff,
-    }))
 }
 
 fn read_modifiers(

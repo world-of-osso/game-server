@@ -20,6 +20,16 @@ Native ItemEffect/bonus rows and SpellStore supply metadata. TC a352b1fa SpellHi
 
 Post-master8e7c7a685 library-boundary proof: [combined44-case qualification](ret-paladin-parity-proof-ledger.md#combined-integration-qualification), including all nine Equipment cases and the unchanged WW consumer.
 
+## Native instance ilvl and proc.default_value — 2026-10-24
+
+Replacement set/Warrior packetf36aa1a72 is separate. Native fact RED at278c7feec: three genuine assertion failures12.61s after7m12s compile, no warnings. Exact Dev1467/Fire63/Assassination259 profiles load actual identities/modifiers; ilvl is unknown instead of289/334/344, proc default unknown instead of qualified0, and unqualified Puzzle193701 lacks named UNSOURCED error. All cases load before assertions. Frozen exact inputs/hashes and full commands/logs: engine `data/diagnostics/native-spell-diff-2026-10-23/equipment-facts-f36aa1a72/`.
+
+Pinned76f8118 `unique_gear.cpp3970–3989` reads per-slot item_level; use the existing native item_instance_stats producer for passive and on-use slots alike. Assassin270175 has no explicit override: original219 + native bonus13662/13848 resolves344 (reference gear reports344). No stat redirect or fabricated item level.
+
+`unique_gear.cpp3798–3820` delegates to matching buff.default_value, aggregated max-with-zero at3776–3787; `buff.cpp471–473` returns that field, not stat_buff.stats[].amount. `buff.hpp327` initializes unset default to negative DBL_MIN; `stat_buff_t` constructor3397–3480 and add/set_stat helpers do not set it. Exact native drivers in these profiles are sourced against `unique_gear_midnight.cpp`: Gaze1256896(2020), Vaelgor1259293/1260459(2747,6511), Seastone1295058(3533), Vial1293316/1295179(3567,6543), Heart1297760/1297761(3748), Font1297911/1297908(3806,6545). Their custom/ordinary stat buffs leave default unset, or disabled/damage drivers expose no matching stat buff. Vial's create_all_stat_buffs helper (unique_gear_helper.hpp670–707) changes stat amounts only. Those exact native roots bind aggregate0; other roots remain explicitly UNSOURCED rather than guessed zero. This source policy is not a new native aura/value grant or proc qualification.
+
+Implementation/green proof pending. Qualified source fact semantics do not imply any adapter routes every operand or that DPS parity is established.
+
 ## Explicit gaps
 
 Metadata reachability is not proc execution. Funhouse1213432 is native DUMMY3/Trigger0; Stormbound1295275 has PeriodicTrigger23/Trigger0. Their script-created stat child is not encoded in those native edges; no child ID or stat grant is guessed. Ret/Ele item child mechanics remain unqualified. Native on-use execution's older item override path is a separate boundary from these metadata facts.
