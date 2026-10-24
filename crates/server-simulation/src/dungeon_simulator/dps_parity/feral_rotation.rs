@@ -93,6 +93,21 @@ mod tests {
                 "native Prowl survives the ordinary GCD wait"
             );
         }
+        let actor_position = *run
+            .app
+            .world()
+            .get::<shared::components::Position>(actor)
+            .unwrap();
+        {
+            let mut target_position = run
+                .app
+                .world_mut()
+                .get_mut::<shared::components::Position>(run.targets[0])
+                .unwrap();
+            target_position.x = actor_position.x + 1.5;
+            target_position.y = actor_position.y;
+            target_position.z = actor_position.z;
+        }
         let _seed = crate::random::seed_scope(70448);
         crate::spell_cast::creature_cast(
             run.app.world_mut(),
