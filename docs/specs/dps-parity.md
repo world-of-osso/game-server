@@ -6,6 +6,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Equipment
 
+- Generic `set_bonus.<tier>_<n>pc` accepts both source tier spellings (`set_opt_name` and `Tier`) projected from pinned SimC item-set data, e.g. `midnight_season_2`/`mid2`. Native membership, threshold and spec remain authoritative; unknown aliases error. No hand-authored name-to-set substitutions.
+
 - Shared literal `trinket.N.ilvl` reads the original equipped native item's resolved instance level, including passive items, bonus lists and explicit overrides; it is not average character ilvl or a stat-donor identity.
 - `trinket.N.proc.any_dps.default_value` follows pinned SimC buff.default_value expression semantics, never stat magnitude. Only source-qualified native drivers may bind a numeric default; unqualified scripts return `NATIVE_ITEM_PROC_DEFAULT_VALUE_UNSOURCED`. An empty effect set evaluates to0. The source-qualified unset defaults in Dev/Fire/Assassination gear aggregate to0 by pinned max-with-zero semantics.
 
