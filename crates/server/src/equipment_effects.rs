@@ -222,6 +222,7 @@ mod tests {
             },
             EquippedItemModifiers {
                 items: vec![(slot, modifiers)],
+                ..Default::default()
             },
         ));
         h.advance(2);

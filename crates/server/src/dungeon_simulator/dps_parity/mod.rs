@@ -1,5 +1,7 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
+mod dummy_reference_tests;
 mod engagement_tests;
+mod equipment_input_tests;
 mod feral_tests;
 mod haste_tests;
 mod inputs;
@@ -13,6 +15,7 @@ mod power_tests;
 mod report;
 mod ret_purpose_tests;
 mod ret_tier_tests;
+pub(crate) mod single_spell;
 mod windwalker_rotation;
 use bevy::prelude::*;
 use serde_json::{Value, json};
@@ -115,6 +118,8 @@ fn prepare_reference(
     let mut app = super::runtime::build_app();
     inputs::install_reference_catalogs(&mut app)?;
     let copy = super::runtime::create_copy(&mut app);
+    // Origin-centered parity fixtures have no frozen dungeon geometry.
+    app.world_mut().remove_resource::<super::Space>();
     let level = profile
         .level
         .parse()
