@@ -21,7 +21,7 @@
 ## 2026-10-23 — Exact fixture add lifetimes / target facts
 ## 2026-10-23 — Elemental-required numeric min/max
 
-[Shared APL](systems/simc-apl.md#capability--proof-matrix): valid `3>?5`/`3<?5` expressions produce2 actual library RED at170b82d9c; missing lexer operators also reject the unchanged82-row Elemental source. Add pinned minimum/maximum at precedence5 (SimC76f8118 expressions.cpp132–146,213–229,1104–1106); GREEN pending. No native stats, coefficients or literal source changes.
+[Shared APL](systems/simc-apl.md#capability--proof-matrix): valid `3>?5`/`3<?5` expressions produce2 actual library RED at170b82d9c; missing lexer operators also reject the unchanged82-row Elemental source. Pinned minimum/maximum at precedence5 then26/26 shared-library GREEN at735a60ac6 (15m59s compile,0warnings); cases enabled afterward without body changes. [Scoped proof](../handoffs/elemental-minmax-proof-ledger.md). No native stats, coefficients or literal source changes.
 
 ## 2026-10-23 — Periodic critical ticks
 
