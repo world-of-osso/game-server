@@ -38,7 +38,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Ret Dawnlight Wake producer
 
-- [ ] `SIMC_RET_DAWNLIGHT_WAKE_PRODUCER`: validated selected431377 on spec70 plus actual Wake255937 grants native431522 after ordinary execute/cast-success. Use native modified431377 effect0: raw2 plus specialization137027 effect25 flat+1 through label6787 gives3. Native data wins over pinned SimC76f8118 Ret846–876's raw base_value() read of2; this divergence is explicit policy, not a metadata override. Never initialize to maximum6. Ordinary Judgment/noWake and legal noHero allocations must not grant the budget. Consumption, DoT, Avatar, timers and proc-charge changes are excluded. [Source/RED ledger](../handoffs/ret-paladin-parity-proof-ledger.md#dawnlight-producer-audit--recovered-2026-10-24).
+- [x] `SIMC_RET_DAWNLIGHT_WAKE_PRODUCER`: validated selected431377 on spec70 plus actual Wake255937 grants native431522 after ordinary execute/cast-success. Use native modified431377 effect0: raw2 plus specialization137027 effect25 flat+1 through label6787 gives3. Native data wins over pinned SimC76f8118 Ret846–876's raw base_value() read of2; this divergence is explicit policy, not a metadata override. Never initialize to maximum6. Ordinary Judgment/noWake and legal noHero allocations must not grant the budget. Consumption, DoT, Avatar, timers and proc-charge changes are excluded. [Source/RED ledger](../handoffs/ret-paladin-parity-proof-ledger.md#dawnlight-producer-audit--recovered-2026-10-24).
 
 ### Ret Wrath Hammer-mode producer
 
