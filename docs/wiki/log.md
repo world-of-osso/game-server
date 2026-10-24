@@ -1,3 +1,7 @@
+## 2026-10-23 — Native haste and Dev current-data qualification
+
+[Haste composition](systems/character-stats.md#native-haste-composition-qualification--2026-10-23): real BiS rating plus native two-buff RED→stat/cast/GCD/removal GREEN; TC category133 stage and signed NPC cadence consumers corrected.55targetedPASS126.31s at5c, unchanged-tree master mergee88; parenths1053 gate separate. [Dev measurements](investigations/follower-data.md#devastation-giantkiller-policy--2026-10-22) use a fresh canonical SQLite backup and remain outside both bands; literal APL and missing producers stay open. Trait-point rechecks confirm native selected16% Arcane Intensity and140 Feral Energy. No coefficient/data tuning.
+
 ## 2026-10-23 — Periodic critical ticks
 
 [Periodic crit](systems/auras.md#periodic-critical-ticks--2026-10-23): TC-native eligibility/live rolls and critical damage/healing bonuses, with explicit `FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_SPELL_OWNER` policy for class actors and owned pets/totems. Native RED7b924:2controlsPASS/5featureFAIL35.83s, then first7GREEN42.94s. Required real1943+21880 ordering REDcf191c5: native flat +10 raises normal10937→11038, critical73726 versus74307.8125 expected; initial follower259 fixture failure explicitly invalid. Move periodic roll behind numeric source/flat bonuses; final GREEN pending. Clocks, attribution, APL and pet stats unchanged.
