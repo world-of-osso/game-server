@@ -6,7 +6,7 @@ Generic across native Retail specs: original equipped IDs/names, trinket is.<nam
 
 Native ItemEffect/bonus rows and SpellStore supply metadata. TC a352b1fa SpellHistory.cpp1119–1144 uses spell recovery/category only when BOTH item recovery fields are negative; zero/mixed signs are authoritative. ON_EQUIP ProcCategoryRecovery is distinct. Reachable aura durations are native, never invented when absent. Active-stack/completed-node traversal distinguishes cycles from shared-child DAGs; DUMMY3 TriggerSpell is script input, not a generic cast edge (native AraKara452146→443541 backreference).
 
-`SIMC_TIER_ALIAS_ITEMSET_BINDING`:151 distinct aliases/ItemSet pairs from all1183 pinned76f8118 `item_set_bonus.inc` rows, source SHA3ed02060fb5ddcda37eac3472cc24a9bb1432bc97866792dbfd1b052aaae10e2. Native set eligibility is reused from [item-set lifecycle](native-item-set-proof-ledger.md), not duplicated or inferred from item names. Generic item-name normalization follows pinned util.cpp3234; names load once with the existing native item catalog.
+`SIMC_TIER_ALIAS_ITEMSET_BINDING`:302 distinct aliases/ItemSet pairs projected from BOTH `set_opt_name` and `Tier` columns of all1183 pinned76f8118 `item_set_bonus.inc` rows, source SHA3ed02060fb5ddcda37eac3472cc24a9bb1432bc97866792dbfd1b052aaae10e2. Native set eligibility is reused from [item-set lifecycle](native-item-set-proof-ledger.md), not duplicated or inferred from item names. Generic item-name normalization follows pinned util.cpp3234; names load once with the existing native item catalog.
 
 ## Proof ledger
 
@@ -19,6 +19,10 @@ Native ItemEffect/bonus rows and SpellStore supply metadata. TC a352b1fa SpellHi
 - Primary-stat control atde7b6e406 failed genuinely: Living Flame45148's native64712 intellect aura returned `[0, unknown agility, unknown intellect]` instead of`[0,0,1]`. Combined native batch runtime56.50s; `reconcile-primary-judgment-red-v3-full.log`. Native indexes1/3 now retain agility/intellect names and stat facts accept them; strength61034/84966 and agility61033/84969 controls remain in the unchanged test. Unknown-stat errors retained. All nine Equipment controls PASS atdd0ed8fe5, warning-free compile6m35s/runtime156.72s combined with other slices; `reconciled-native-launch-red-v2.{proof.json,full.log}`. Same production implementation at02090739e consumes real WW269 gear/traits successfully: existing combo/utility consumer1PASS47.55s, `ww-consumer-green-v1.*`; inputs copied into a new diagnostics directory, frozen inputs untouched.
 
 Post-master8e7c7a685 library-boundary proof: [combined44-case qualification](ret-paladin-parity-proof-ledger.md#combined-integration-qualification), including all nine Equipment cases and the unchanged WW consumer.
+
+## Long tier spelling correction —2026-10-24
+
+Fire09469b6b1 reproduces the exact long-tier name failure on actual four-piece2060 gear. Shared03fa77956 projects the distinct union of pinned set_opt_name and Tier columns (set_bonus.cpp620–624), retaining151 short bindings and adding151 long bindings. No runtime eligibility, producer or source-row changes. Development cherry-pick authorized; shared gate and local tier GREEN pending.
 
 ## Explicit gaps
 
