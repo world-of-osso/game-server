@@ -1,6 +1,6 @@
 ## 2026-10-23 — Snakeskin Quiver execute binding
 
-[Named native-chance policy](systems/spell-casting.md#native-snakeskin-quiver-2026-10-23): real Austin300s RED122 Auto Shots/43 paid Cobras/0 free; removed-passive control passes33.20s. Successful Auto Shot now rolls native468695 and launches free native Cobra at the actual shot victim; GREEN pending.
+[Named native-chance policy](systems/spell-casting.md#native-snakeskin-quiver-2026-10-23): real Austin300s RED122Auto/43paid/0free →b77 native2GREEN26.23s (122Auto/29paid/13free versus removed122Auto/43paid/0free). Actual victim/native chance, no timer or damage edits. [Proof](../handoffs/bm-snakeskin-proof-ledger.md); splitB/name-preserving integration31788 and parent gate remain separate; not a DPS-gain claim.
 
 ## 2026-10-23 — Pack Tactics instant Focus bridge
 

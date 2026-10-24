@@ -359,7 +359,7 @@ Completed-root Shred/Rake/Thrash, cap/overflow, expiry, actual periodic clock, u
 
 `BM_SNAKESKIN_QUIVER_SIMC_76F8118` is an explicit execute-time policy, not a claimed TC port: pinned TC scripts have no Snakeskin binding. `auto_repeat::on_cast` passes the actual successful Auto Shot75 victim after installing the unchanged native ranged timer; `scripts/snakeskin_quiver.rs` reads active468695’s native effect1 chance and launches real Cobra193455 through existing free triggered casting. It does not read a guessed selection target, change normal Cobra, or add a proc timer. SimC76f8118 `sc_hunter.cpp3988–4007/5041–5047` supplies timing/background semantics, not numeric damage. [Contract](../../specs/spell-dummy-scripts.md#native-snakeskin-quiver-execution).
 
-Native Austin300s RED8e04d880a has122 Auto Shots/43 paid Cobras/0 free; actual passive-removal control passes (1FAIL/1PASS33.20s). Implementation awaits GREEN; whole-BM parity and other cooldown/pet gaps remain open.
+Native Austin300s RED8e04d880a has122 Auto Shots/43 paid Cobras/0 free; actual passive-removal control passes (1FAIL/1PASS33.20s). Atb77be90e9 bothGREEN26.23s: active122Auto/29paid/13free; removed122Auto/43paid/0free. Fewer paid casts means proc correctness is not a DPS-improvement claim. [Exact proof and splitB boundary](../../handoffs/bm-snakeskin-proof-ledger.md); whole-BM parity and other cooldown/pet gaps remain open.
 
 ## Twentieth batch: authored totals and next-spell uses
 

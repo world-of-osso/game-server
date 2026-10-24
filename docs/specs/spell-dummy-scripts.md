@@ -25,9 +25,9 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 
 ### Native Snakeskin Quiver execution
 
-- [ ] Active468695 rolls its native effect1 chance once per successful Auto Shot75 execution and launches native Cobra193455 at that shot’s actual victim. Existing triggered casting supplies the free Focus/GCD behavior; normal paid Cobra and native ranged timers remain unchanged. Missing/removed passive grants no free action; rejected shots do not reach the policy. Named policy `BM_SNAKESKIN_QUIVER_SIMC_76F8118` follows `sc_hunter.cpp3988–4007/5041–5047`; pinned TC a352b1fa scripts have no Snakeskin binding. Do not claim a TC port or copy SimC numeric spell damage.
+- [x] Active468695 rolls its native effect1 chance once per successful Auto Shot75 execution and launches native Cobra193455 at that shot’s actual victim. Existing triggered casting supplies the free Focus/GCD behavior; normal paid Cobra and native ranged timers remain unchanged. Missing/removed passive grants no free action; rejected shots do not reach the policy. Named policy `BM_SNAKESKIN_QUIVER_SIMC_76F8118` follows `sc_hunter.cpp3988–4007/5041–5047`; pinned TC a352b1fa scripts have no Snakeskin binding. Do not claim a TC port or copy SimC numeric spell damage.
 
-Native Austin300s seed70448 RED at8e04d880a:122 Auto Shots/43 paid Cobras/0 free, with removed-passive controlPASS (1FAIL/1PASS33.20s). Implementation awaits targeted GREEN and parent integration gate; no whole-BM DPS qualification.
+Native Austin300s seed70448 RED at8e04d880a:122 Auto Shots/43 paid Cobras/0 free, with removed-passive controlPASS (1FAIL/1PASS33.20s). Atb77be90e9 bothGREEN26.23s: active122Auto/29paid/13free; removed122Auto/43paid/0free. This establishes proc correctness, not a DPS improvement or whole-BM qualification. [Proof](../handoffs/bm-snakeskin-proof-ledger.md); subsequent splitB integration check and parent broad gate remain separate.
 
 ### Census effect77 source ports (70448)
 
