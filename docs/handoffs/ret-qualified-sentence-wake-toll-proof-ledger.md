@@ -4,7 +4,7 @@
 
 Lead requested this isolated packet from master `d7e86cd0f679338ad32ae2b24b351d1d6454501b`. It contains only the qualified Sentence and Toll relationships, Wake qualification, their native tests and documentation. No literal adapter, Expurgation callback/tests, Rebuke readiness tests or Aura361 consumer tests are included. Those remain open on `ret-paladin-literal-development-d385`; exclusion from this packet does not narrow the full [Ret objective](ret-paladin-parity-proof-ledger.md#goal-and-authority).
 
-Parent owns integration/final acceptance and remote operations. Requested packet integration command: `cargo check -p server -p server-simulation --tests -j2`, once through build-host/agent-run after admission. Pending on this assembled revision. Historical behavioral receipts below retain their exact tested revisions; the packet is not represented as a current full-suite pass.
+Parent owns integration/final acceptance and remote operations. Requested packet integration command: `cargo check -p server -p server-simulation --tests -j2`, once through build-host/agent-run after admission. Ran exactly once on56da03776: exit0,2m04s, one inherited master warning for the now-unused simulator `navigation` import. Follow-up removes that alias only; no gameplay changes. Per lead's once-only instruction the compile command is not repeated after this deletion; parent owns final integration gate. Exact log/receipt: engine diagnostics `ret-qualified-packet-56da03776-check.{log,proof.json}`. Historical behavioral receipts below retain their exact tested revisions; the packet is not represented as a current full-suite pass.
 
 ## Source and behavior matrix
 
