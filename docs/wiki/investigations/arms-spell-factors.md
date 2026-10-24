@@ -48,7 +48,7 @@ The nearly matching source products hide offsetting differences. Adding a guesse
 | AP and source-product discrepancy decomposition | Historical actual native/oracle receipts plus exact arithmetic and pinned source inspection |
 | Generic mastery root cause | Native genuine16vs8 RED→three-class/lifecycle GREEN; current retained1GREEN8.20s and stats-filter21GREEN9.07s at98093ec85; [producer proof](../systems/character-stats.md#generic-mastery-base--2026-10-23) |
 | Armored to the Teeth / Battlefield Commander behavior | Named policies approved after TC boundary; four genuine REDs23.48s at e5cc1ef32→four lifecycle GREEN19.13s at98093ec85 (productiona1af93852) |
-| Redirected stat inputs / Arms2pc membership | Actual fresh master-based Arms MS1GREEN10.79s: mastery605 matches, original four set members retained, runtime eligibility true/aura absent; activation missing, not an input gap |
+| Redirected stat inputs / Arms2pc membership | Redirect/mastery605 match; generic activation8171bf2aa now earns1296643/1296644 from original four members. Native lifecycle2GREEN30.66s and fresh MS1GREEN16.91s at778524924; source product matches oracle |
 | Target item-level-K branch | Native70448 GT ItemLevelByLevel FDID2012881 still unavailable;70575 is not a substitute |
 
 ## Fresh post-redirect/policy Arms receipt
@@ -70,6 +70,14 @@ The actual equipped list retains2067 members271456/271454/271459/271457, includi
 Current AP reconstructs as `(2537×1.05 + 2855×10%×1.05 + 934)×1.03 = 4014.55375` (actual f32 value4014.553467). Remaining oracle4126 follows the recorded food50/augment25, comparator armor3141.16 and its attribute-floor/AP-round rules. No extra correction factor is missing from this decomposition, and no native armor tuning follows.
 
 Evidence under `game-engine/data/diagnostics/native-spell-diff-2026-10-23/mastery-b67952ca4/`: `database.proof.json`, `warrior-policy-{red,green}.{log,proof.json}`, `policy-retained-{mastery,stats}.{log,proof.json}`, `policy-arms-remeasure.{log,proof.json}`, `arms-set-metadata.proof.json`, and `arms-after-policy/{71.mortal_strike.player.json,mortal-strike.diff.json,factor-ledger.proof.json}`. Consumer exit1 correctly records remaining differences; no consumer tests were rerun because its source did not change.
+
+## Generic activation follow-up
+
+At778524924 (production8171bf2aa), the same frozen native data/reference inputs now earn1296643 and1296644 as `EquipmentSet(2067)` auras. Native MS actually applies1296643's10% alongside137049/1258398/383341/382896; source product becomes1.8181816339492798 (oracle model1.818181695), not a fabricated comparison factor. Native damage25119→27631; AP4014.553467, caster armor2855 and mastery605/23.267391% stay unchanged. Remaining AP/input/variance differences still prevent a total-parity claim.
+
+Actual normal-set lifecycle cases pass2/2 (30.66s): original-member equip/unequip,2/4-piece thresholds, same-actor specialization changes, and real Protection wrong-Arms exclusion/own-bonus control. The first Prot follow-up failure was a fixture error: it retained native Legs271455 plus Head while calling that one piece. The correction reads actual ItemSparse membership; production behavior was already correct. Retained Warrior policies pass4/4 (27.23s), fresh MS1/1 (16.91s), and both-package --tests check passes90.70s without warnings.
+
+Evidence: `set-activation/{native-red,native-green,native-green2,retained-warrior-policies,arms-after-activation,final-check}.{log,proof.json}`, `protection-control-fixture.proof.json`, and `arms-after-activation/{71.mortal_strike.player.json,mortal-strike.diff.json,factor-ledger.proof.json}` under the same `mastery-b67952ca4/` root. Current receipt SHA5c786b848137c059f4ef175c46ffd2a304b6dc907e21af7dd4a5834ae36a54fa. [Shared production seam and approved selector gaps](../systems/character-stats.md#native-equipped-set-auras--2026-10-23) retain13 skill-qualified sets/one subtree row as explicit unsupported cases; deployment and broad parent acceptance remain separate.
 
 ## Sources
 
