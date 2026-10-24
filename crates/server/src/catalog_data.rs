@@ -1,12 +1,12 @@
 //! Collection backing: production owns T unchanged; tests share immutable T
 //! until an App explicitly mutates or consumes its independent resource copy.
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "test-support")))]
 pub type CatalogData<T> = T;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub use shared::CatalogData;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 mod shared {
     use std::fmt;
     use std::ops::{Deref, DerefMut};

@@ -227,7 +227,7 @@ pub(super) fn load_spell_store(conn: &Connection) -> rusqlite::Result<SpellStore
 }
 
 /// Add a copy's server-side spells to an already loaded store.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(super) fn append_serverside_spells(
     conn: &Connection,
     store: &mut SpellStore,

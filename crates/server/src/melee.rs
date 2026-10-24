@@ -318,14 +318,28 @@ pub fn outcome_damage(
     }
 }
 
+pub struct ArmorReduction {
+    pub damage: f32,
+    #[cfg(any(test, feature = "test-support"))]
+    pub fraction: f32,
+}
+
 /// Physical damage left after `armor` against an attacker whose level meets
 /// `armor_constant`: × (1 − min(armor / (armor + constant), 85%)), truncated.
-pub fn armor_reduced_damage(damage: f32, armor: f32, armor_constant: f32) -> f32 {
+pub fn armor_reduced_damage(damage: f32, armor: f32, armor_constant: f32) -> ArmorReduction {
     if armor <= 0.0 || armor + armor_constant == 0.0 {
-        return damage;
+        return ArmorReduction {
+            damage,
+            #[cfg(any(test, feature = "test-support"))]
+            fraction: 0.0,
+        };
     }
     let mitigation = (armor / (armor + armor_constant)).min(MAX_ARMOR_MITIGATION);
-    (damage * (1.0 - mitigation)).max(0.0).trunc()
+    ArmorReduction {
+        damage: (damage * (1.0 - mitigation)).max(0.0).trunc(),
+        #[cfg(any(test, feature = "test-support"))]
+        fraction: mitigation,
+    }
 }
 
 #[cfg(test)]

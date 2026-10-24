@@ -242,11 +242,17 @@ fn crit_doubles_block_stops_30_percent_and_avoidance_does_nothing() {
 #[test]
 fn armor_mitigation_is_armor_over_armor_plus_the_attackers_constant() {
     // Hogger at level 10: ExpectedStat CreatureArmor 90 vs ArmorConstant 210 = 30%.
-    assert_eq!(armor_reduced_damage(16.0, 90.0, 210.0), 11.0);
-    assert_eq!(armor_reduced_damage(15.0, 90.0, 210.0), 10.0);
+    let reduction = armor_reduced_damage(16.0, 90.0, 210.0);
+    assert_eq!(reduction.damage, 11.0);
+    assert!((reduction.fraction - 0.3).abs() < f32::EPSILON);
+    assert_eq!(armor_reduced_damage(15.0, 90.0, 210.0).damage, 10.0);
     // Capped at 85%; 1 - 0.85 is 0.14999998 in f32, as in TrinityCore.
-    assert_eq!(armor_reduced_damage(100.0, 100_000.0, 210.0), 14.0);
-    assert_eq!(armor_reduced_damage(16.0, 0.0, 210.0), 16.0);
+    let capped = armor_reduced_damage(100.0, 100_000.0, 210.0);
+    assert_eq!(capped.damage, 14.0);
+    assert_eq!(capped.fraction, 0.85);
+    let unarmored = armor_reduced_damage(16.0, 0.0, 210.0);
+    assert_eq!(unarmored.damage, 16.0);
+    assert_eq!(unarmored.fraction, 0.0);
 }
 
 /// Unit::RollMeleeOutcomeAgainst for a creature swinging at a player: the player's

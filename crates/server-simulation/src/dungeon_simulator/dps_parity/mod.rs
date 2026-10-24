@@ -1,6 +1,9 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
+mod dummy_reference_tests;
 mod engagement_tests;
+mod equipment_input_tests;
 mod feral_tests;
+mod firestarter_tests;
 mod haste_tests;
 mod inputs;
 pub(crate) mod literal_rotation;
@@ -11,6 +14,7 @@ mod pet_stats_tests;
 mod player_rotation;
 mod power_tests;
 mod report;
+pub(crate) mod single_spell;
 mod windwalker_rotation;
 use bevy::prelude::*;
 use serde_json::{Value, json};

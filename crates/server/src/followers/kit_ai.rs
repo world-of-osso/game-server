@@ -28,9 +28,9 @@ pub(super) fn update(
     party: &[Entity],
     enemy: Option<Entity>,
 ) -> bool {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     if world
-        .get::<crate::dungeon_simulator::dps_parity::literal_rotation::LiteralParityFixture>(unit)
+        .get::<crate::test_support::LiteralParityFixture>(unit)
         .is_some()
     {
         return true;
