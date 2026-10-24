@@ -11,8 +11,50 @@ const FINAL_VERDICT: u32 = 383328;
 const JUDGMENT: u32 = 20271;
 const TEMPLARS_VERDICT: u32 = 85256;
 
+#[derive(Resource)]
+struct FixtureAdmission {
+    owner: Entity,
+    copy: crate::maps::InMap,
+}
+
+fn trace_follower_lifetime(run: &Run) -> Value {
+    let world = run.app.world();
+    let Some(admission) = world.get_resource::<FixtureAdmission>() else {
+        return json!({"actor_is_player": true});
+    };
+    let events = world
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.target == Some(run.actor.to_bits())
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Death)
+        })
+        .collect::<Vec<_>>();
+    json!({"actor_exists": world.get_entity(run.actor).is_ok(),
+        "actor_health": world.get::<shared::components::Health>(run.actor),
+        "actor_map": format!("{:?}", world.get::<crate::maps::InMap>(run.actor)),
+        "owner_exists": world.get_entity(admission.owner).is_ok(),
+        "owner_map": format!("{:?}", world.get::<crate::maps::InMap>(admission.owner)),
+        "admitted_copy": format!("{:?}", admission.copy),
+        "target_map": format!("{:?}", world.get::<crate::maps::InMap>(run.targets[0])),
+        "damage_or_death_events": events})
+}
+
 fn native_ret_in_melee() -> Run {
     let mut run = native_ret(2);
+    let owner = run
+        .app
+        .world()
+        .get::<crate::followers::Follower>(run.actor)
+        .unwrap()
+        .owner;
+    let copy = *run
+        .app
+        .world()
+        .get::<crate::maps::InMap>(run.actor)
+        .unwrap();
+    run.app.insert_resource(FixtureAdmission { owner, copy });
     // Use the same ordinary startattack/chase path as the literal controller;
     // a manually casting follower must not keep following its distant owner.
     literal_rotation::execution::execute(
@@ -93,7 +135,10 @@ fn earn_finisher_power(run: &mut Run, finisher: u32) {
                 | CastFailure::NoCharges
                 | CastFailure::InProgress,
             ) => {}
-            Err(reason) => panic!("native Purpose funding Judgment failed: {reason:?}"),
+            Err(reason) => panic!(
+                "native Purpose funding Judgment failed: {reason:?}; lifetime={}",
+                trace_follower_lifetime(run)
+            ),
         }
         run.app.update();
     }
