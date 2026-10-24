@@ -78,6 +78,10 @@ At96b572797, [native packet27/27](../handoffs/native-precombat-proof-ledger.md#c
 ## 2026-10-23 — Judgment cast-time Holy Power correction
 
 [Judgment](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers): pinned TC OnCast/HasSpell315867 contradicts former damage-hit/aura gating. Genuine native cast-before-impact, immune-target and aura-only REDs atde7b6e406; shared20271/275773/275779 ordinary/triggered/costed-trigger correction has native16GREEN and warning-free retained controls at02090739e. No fixture resource grants or DPS claim. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#judgment-cast-time-resource-correction).
+## 2026-10-24 — Isolated Rake actual-stealth predicate
+
+[Rake](systems/spell-casting.md#rake-actual-stealth-eligibility--2026-10-24) ports TC2040–2078 without legacy rank grants; exact-profile native RED and seven development GREEN cases are recorded in the [focused gate ledger](../handoffs/feral-rake-stealth-proof-ledger.md). Clean branch starts exact1fb0230ad with no literal-development ancestry or observer API; relocated native-case and two-crate check pending. Shred/persistent fields unchanged.
+
 ## 2026-10-23 — Readonly native selected-pool admission
 
 [Shared Prepared](systems/simc-apl.md#shared-literal-fixture-machinery) resource hook reproduces2genuineRED at6134141c7 against current-canonical backup05577b33612d (21.25s). Native max comparison now affects only the chosen pool's local affordability, never the world's resources; preserves other costs/constraints and exact target. Energy/Chi and far-target cases use actual learned spells/pools. GREEN pending. Pool control and next-row semantics remain14766-owned; no DPS claim.

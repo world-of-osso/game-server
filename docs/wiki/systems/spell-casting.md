@@ -1,5 +1,9 @@
 # Spell Casting
 
+## Rake actual-stealth eligibility — 2026-10-24
+
+TC `spell_dru_rake2040–2078` checks actual stealth, not legacy231052/405834 aura presence. Rake's shared predicate follows that boundary and native1822 effect3 amounts; Shred's separate predicate and persistent multiplier fields stay unchanged. [Contract](../../specs/player-damage.md#what-it-must-do); [focused source, fixture ordering and gate proof](../../handoffs/feral-rake-stealth-proof-ledger.md). Native Mark of the Wild legitimately interrupts Prowl; isolated comparisons own ordinary buffs before stealth, never bypass interrupt flags or GCD.
+
 ## Protection producer dispatch — 2026-10-22
 
 Native Attr3 `ALWAYS_HIT` bypasses avoidance after school/mechanic immunity; missile launch still evaluates reflection. Source and deterministic native Evasion RED/control evidence live in the [producer contract](../../specs/protection-damage-producers.md#native-always_hit-defense-reader); d1335d807:4PASS17.98s/no warnings, including original charge primary/splash/stun assertions.
