@@ -47,6 +47,15 @@ pub(super) fn prepare_application(
     if rolling {
         roll_remaining_periodic(world, target, new);
     }
+    // TC a352b1fa SpellAuraEffects.cpp832–866: round after unpaid carry,
+    // before the periodic tick's GetAmountAsInt and damage bonuses.
+    for effect in new
+        .effects
+        .iter_mut()
+        .filter(|effect| effect.aura_type == super::handlers::PERIODIC_DAMAGE)
+    {
+        effect.amount = effect.amount.round();
+    }
 }
 
 fn previous(world: &World, target: Entity, new: &AuraInstance) -> Option<AuraInstance> {

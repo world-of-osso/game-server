@@ -219,7 +219,12 @@ fn fire_efficiency_native70_ignite_uses_native_share_and_cannot_feed_itself() {
         .find(|effect| effect.index == 0)
         .unwrap()
         .amount;
-    assert_eq!(amount, damage as f32 * percent / 100.0 / ticks as f32);
+    // TC a352b1fa SpellAuraEffects.cpp832–866 rounds the applied periodic bank,
+    // after the native producer's percentage/tick split and any unpaid carry.
+    assert_eq!(
+        amount,
+        (damage as f32 * percent / 100.0 / ticks as f32).round()
+    );
     h.advance(200);
     let hits: Vec<_> = h.inbox.log[start..]
         .iter()
@@ -319,7 +324,7 @@ fn fire_efficiency_native70_consumed_hot_streak_doubles_ignite_on_impact() {
         .amount;
     assert_eq!(
         amount,
-        damage as f32 * (percent * 2.0) / 100.0 / 9.0,
+        (damage as f32 * (percent * 2.0) / 100.0 / 9.0).round(),
         "native HotStreak share survives its consumed aura and ordinary missile"
     );
 }
@@ -454,7 +459,7 @@ fn fire_efficiency_native70_ordinary_ignite_refresh_keeps_unpaid_native_damage()
     let unpaid = old_amount * (9 - paid) as f32;
     assert_eq!(
         refreshed,
-        new_amount + unpaid / 9.0,
+        (new_amount + unpaid / 9.0).round(),
         "ordinary producer must enter the shared nativeROLLING_PERIODIC carry once"
     );
     assert!(refreshed > new_amount);
