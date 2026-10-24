@@ -102,6 +102,8 @@ pub(super) fn run_periodic(world: &mut World, unit: Entity, aura: &AuraInstance,
 }
 
 pub(super) const INUNDATE: u32 = 378776;
+const EXPURGATION_TALENT: u32 = 383344;
+const EXPURGATION: u32 = 383346;
 const FEEL_THE_BURN: u32 = 383391;
 const FIRE_BLAST: u32 = 108853;
 const ASPECT_OF_THE_TURTLE: u32 = 186_265;
@@ -404,6 +406,13 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     super::spirit_wolf::register(&mut scripts);
     super::natures_guardian::register(&mut scripts);
     scripts.0.insert(
+        EXPURGATION_TALENT,
+        AuraScript {
+            on_damage_proc: Some(cast_expurgation),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         super::fel_devastation::FEL_DEVASTATION,
         AuraScript {
             on_periodic: Some(super::fel_devastation::cast_periodic_heal),
@@ -673,6 +682,39 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
             ..Default::default()
         },
     );
+}
+
+/// TC a352b1fa spell_paladin.cpp806–821: Dummy effect0 casts the native DoT
+/// with IGNORE_CAST_IN_PROGRESS, not FULL_MASK. Proc scope/chance stay native.
+fn cast_expurgation(
+    world: &mut World,
+    _unit: Entity,
+    _aura: &AuraInstance,
+    event: &super::procs::AuraEvent,
+) {
+    let target = match super::procs::select_proc_trigger_target(
+        world,
+        event.actor,
+        EXPURGATION,
+        event.target,
+    ) {
+        Ok(target) => target,
+        Err(reason) => {
+            debug!(
+                ?reason,
+                "Expurgation proc has no admissible native recipient"
+            );
+            return;
+        }
+    };
+    if let Err(reason) = crate::spell_cast::creature_cast_ignoring_in_progress(
+        world,
+        event.actor,
+        EXPURGATION,
+        target,
+    ) {
+        debug!(?reason, "Expurgation native partial-trigger cast refused");
+    }
 }
 
 /// TC spell_rogue.cpp spell_rog_stealth: 1784's own rows carry no MOD_STEALTH;

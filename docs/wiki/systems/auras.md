@@ -3,6 +3,9 @@
 ## Form combat clocks — 2026-10-23
 
 `ShapeshiftForms` imports native CombatRoundTime. `FormAttackTiming` carries seconds and the TC Player/non-Player AP-speed rule, separately from the actual swing period. Class-stat auto-attacks read that period for both hands; ranged autorepeat uses TC's2s form base. White and normalized spell weapon rolls share form min/max rescaling and the sourced0.25s AP-time minimum; normal weapons and the existing RetailAP/DPS6 remain unchanged. No form application resets a running melee timer. All7nonzero rows, including Xuen's actual1ms, are data-driven; no DamageVariance multiplier is invented. [Exact source, native timed RED and qualification](../../handoffs/feral-source-census.md#native-form-combat-timing); [contract](../../specs/player-damage.md). GREEN pending.
+## Expurgation Dummy-proc — 2026-10-24
+
+Native383344 includes TriggerSpell383346, but Aura4 remains script-only: generic proc-trigger dispatch admits42/231, not arbitrary Dummy fields. TC a352b1fa `spell_paladin.cpp806–821` supplies the class callback, preserving actual actor/recipient and partial-trigger semantics through `creature_cast_ignoring_in_progress`. Native chance/family scope and child periodic metadata remain unchanged; no BP20 damage override. Real Blade hit/no-owned-DoT RED and unrelated Judgment control are recorded in the [Ret ledger](../../handoffs/ret-paladin-parity-proof-ledger.md#expurgation-native-dummy-proc); implementation GREEN is pending. [Code](../../../crates/server/src/auras/scripts.rs), [contract](../../specs/dps-parity.md#ret-expurgation).
 
 ## Explicit proc source presence — 2026-10-23
 
