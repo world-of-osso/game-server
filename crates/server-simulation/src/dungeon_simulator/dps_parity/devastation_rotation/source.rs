@@ -68,6 +68,22 @@ mod tests {
     }
 
     #[test]
+    fn literal_dev_source_preserves_first_declaration_default_across_lists() {
+        let program = compile_source(
+            "actions.precombat=variable,name=gate,default=1,value=2\n\
+             actions=variable,name=gate,default=0,value=3\n\
+             actions.inspect=ready,if=variable.gate=1\n",
+        )
+        .unwrap();
+        let facts = BTreeMap::<String, f64>::new();
+        let selected = program
+            .select("inspect", &facts, &mut program.state(), |_| Ok(true))
+            .unwrap()
+            .expect("first source declaration must own the initial variable default");
+        assert_eq!(selected.name, "ready");
+    }
+
+    #[test]
     fn literal_dev_source_assignment_replaces_and_append_preserves_action_order() {
         let program =
             compile_source("actions=azure_strike\nactions=dragonrage\nactions+=/living_flame\n")
