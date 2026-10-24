@@ -1155,11 +1155,22 @@ fn stat_auras_fold_into_character_stats_once() {
         "{before:?} → {after:?}"
     );
     assert_eq!(after.primary.intellect, before.primary.intellect);
-    assert!(
-        (after.haste_pct - before.haste_pct - 30.0).abs() < 1e-3,
-        "{before:?} → {after:?} {:?} {:?}",
-        h.app.world().get::<crate::stats::StatModifiers>(h.caster),
-        auras_of(&h, h.caster, BLOODLUST)
+    assert_eq!(
+        before.haste_pct, 0.0,
+        "native ungeared fixture has no haste"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::stats::StatModifiers>(h.caster)
+            .unwrap()
+            .haste_pct,
+        30.0,
+        "the sole native Bloodlust amount stays exact in the percent representation"
+    );
+    assert_eq!(
+        after.haste_pct, 30.0,
+        "zero rating cannot change the native aura percent"
     );
     h.cast_and_deliver(FLASH_HEAL, None);
     let cast = h.app.world().get::<CastState>(h.caster).unwrap();
