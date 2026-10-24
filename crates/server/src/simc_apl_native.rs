@@ -164,6 +164,22 @@ impl<'a> NativeFacts<'a> {
         }
     }
 
+    pub fn cooldown_for_spell(
+        &self,
+        spell: &crate::spell_info::SpellInfo,
+        property: &str,
+    ) -> Result<f64, String> {
+        crate::spell_cast::native_apl::cooldown_value(self.world, self.actor, spell, property)
+    }
+
+    pub fn equipment_proc_cooldown(
+        &self,
+        spell: u32,
+        slot: shared::protocol::EquipmentSlot,
+    ) -> f64 {
+        crate::auras::equipment_proc_cooldown_remaining(self.world, self.actor, slot, spell)
+    }
+
     fn spell(&self, id: u32) -> Result<&crate::spell_info::SpellInfo, String> {
         self.world
             .resource::<crate::spell_info::SpellStore>()
@@ -478,12 +494,7 @@ impl<'a> NativeFacts<'a> {
     fn cooldown(&self, operand: &str) -> Result<f64, String> {
         let (alias, property) = split_property(operand, "cooldown")?;
         let id = bound_spell(&self.bindings.actions, alias, "action")?;
-        crate::spell_cast::native_apl::cooldown_value(
-            self.world,
-            self.actor,
-            self.spell(id)?,
-            property,
-        )
+        self.cooldown_for_spell(self.spell(id)?, property)
     }
 
     fn action_spell(&self, alias: &str) -> Result<&crate::spell_info::SpellInfo, String> {

@@ -9,6 +9,23 @@
 ## 2026-10-23 — Native haste and Dev current-data qualification
 
 [Haste composition](systems/character-stats.md#native-haste-composition-qualification--2026-10-23): real BiS rating plus native two-buff RED→stat/cast/GCD/removal GREEN; TC category133 stage and signed NPC cadence consumers corrected.55targetedPASS126.31s at5c, unchanged-tree master mergee88; parenths1053 gate separate. [Dev measurements](investigations/follower-data.md#devastation-giantkiller-policy--2026-10-22) use a fresh canonical SQLite backup and remain outside both bands; literal APL and missing producers stay open. Trait-point rechecks confirm native selected16% Arcane Intensity and140 Feral Energy. No coefficient/data tuning.
+## 2026-10-24 — Generated achievement catalog ownership
+
+[Crate boundaries](systems/server-crates.md#generated-achievement-catalog-cut-d1): six generated lookups relocate37,819lines into existing server-catalog with three canonical immutable record types. Credit/ECS/player authority and unchanged matching predicates stay core; test identity and lookup-data census remain required. No elapsed-time speedup claim.
+
+## 2026-10-23 — Elemental Ascendance additional overload
+
+[Source/proof boundary](systems/spell-casting.md#elemental-ascendance-additional-overload--2026-10-23): actualb4a7f46b0 native2RED/1SKcontrolPASS27.40s; missing extra LB/CL casts, native prerequisites passed. Add effect8 casts once per root spell, independently of ordinary proc, retaining HIT+400ms and actual child damage. Same3nativeGREEN20.23s ata001f0541, clean17m03 build; [proof matrix](../handoffs/elemental-ascendance-extra-proof-ledger.md). Other roots/failed-roll/expiry and DPS integration remain unqualified; no coefficient/stat/RNG changes.
+## 2026-10-23 — Missed hostile spell combat references
+
+[Combat](systems/combat.md#combat-state): native MISS/IMMUNE missing-reference REDs → selected-target launch/arrival preservation; three boundary controls, nine retained travel/reflection controls and unchanged Ret funding/TV damage GREEN at02090739e. No resource, hit-chance or timer override. WW equipment consumer1GREEN47.55s; combined parent gate awaits master8e7c7a685 integration. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#generic-missed-hostile-launch-combat).
+
+## 2026-10-23 — Judgment cast-time Holy Power correction
+
+[Judgment](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers): pinned TC OnCast/HasSpell315867 contradicts former damage-hit/aura gating. Genuine native cast-before-impact, immune-target and aura-only REDs atde7b6e406; shared20271/275773/275779 ordinary/triggered/costed-trigger correction has native16GREEN and warning-free retained controls at02090739e. No fixture resource grants or DPS claim. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#judgment-cast-time-resource-correction).
+## 2026-10-23 — Readonly native selected-pool admission
+
+[Shared Prepared](systems/simc-apl.md#shared-literal-fixture-machinery) resource hook reproduces2genuineRED at6134141c7 against current-canonical backup05577b33612d (21.25s). Native max comparison now affects only the chosen pool's local affordability, never the world's resources; preserves other costs/constraints and exact target. Energy/Chi and far-target cases use actual learned spells/pools. GREEN pending. Pool control and next-row semantics remain14766-owned; no DPS claim.
 ## 2026-10-23 — Per-spell refresh and FoF dispatch identity
 
 [Oracle](reference/simc-spell-oracle.md): fresh canonical backup/eec5b6bcf --lib probes Arms1GREEN24.30s and WW3GREEN20.85s. MS24448/TP39862/firstFoF29943; coefficient/armor agree, AP/source/target-state differences remain. Actual receipt origin check RED exposed missing native dispatch identity. Test-only226 dispatch scopes now preserve real synchronous aura/effect/instance/trigger metadata with no new RNG/cast/formula; At089face19 WW3GREEN31.24s/Arms1GREEN18.53s and consumer14GREEN. All three captured FoF hits carry actual113656/effect2 periodic context; regular-series alignment is now observed rather than inferred. Exact MS/TP/three-FoF damage preserved; state/crit differences remain.
@@ -125,6 +142,14 @@ Merged current master4a2deb367 into native-spell-diff. Resolution retains owner-
 ## 2026-10-23 — Binary probe withdraws inherited-run-target oracle
 
 Pinned SimC76f8118 selects timed adds on a run row but its child Mortal Strike still waits for main health<80% (first60.056s on main, not6s on adds). `player.cpp2467–2476` only changes active lists. Earlier24/24GREEN included a wrong inherited-child oracle; packet withdrawn before landing per lead. Corrected23PASS/1 genuineRED at2d6a66259 →24/24GREEN atad720fc3c (28.61s compile/0compiler warnings/0ignored): shared target inheritance state deleted; ordinary target min/max and non-returning runs retained. [Proof ledger](../handoffs/shared-run-target-proof-ledger.md).
+
+## 2026-10-23 — Explicit proc provenance importer
+
+[Proc source presence](systems/auras.md#explicit-proc-source-presence--2026-10-23) consumes the audited1291effective TC IDs, verifies8pinned source files, and transactionally publishes presence only. Later numeric columns remain separately owned; no refusal guard or chance/mask overlay is included. Focused CLI RED recorded before implementation; qualification follows the committed producer.
+
+## 2026-10-23 — Feral baseline and action-knowledge census
+
+[Feral census](../handoffs/feral-source-census.md): exact reproduced references, private-source-view historical native ST56378.65/3T62475.26 (supplied binary's9d13label withdrawn: UNKNOWN_PRE_9D13_MISLABELED), five ignored redirected-stat allocations and missing consumable residual separated from channel gaps. [Knowledge census](../handoffs/action-knowledge-census.md):990native starter books/1090kit rows; four sourced visible/parent actions, zero missing-book rejections after bridges. Own shared-helper a95c0df7a10FAIL/5PASS→c3934c31d15/15GREEN38.29s, four-stage empower PASS13.06s. Ret integration awaits its direct Judgment generator-fixture NoCharges correction; literal Feral/native current ST/3T remain pending.
 
 ## 2026-10-22 — Shared Hunter pet total-RAP source RED
 

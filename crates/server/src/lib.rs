@@ -59,7 +59,7 @@ mod duel;
 mod durability;
 mod economy;
 mod equipment_admin_types;
-mod equipment_effects;
+pub mod equipment_effects;
 mod experience;
 pub mod faction;
 pub mod followers;
@@ -108,7 +108,7 @@ mod messaging;
 mod mirror_timers;
 mod mount_journal;
 mod mythic_plus;
-mod navigation;
+pub mod navigation;
 pub mod networking;
 pub mod npc_interaction;
 #[cfg(test)]

@@ -54,6 +54,7 @@ pub(super) fn moonfire(world: &mut World, caster: Entity, target: Entity, depth:
             units: vec![target],
             dest: None,
             chain_multipliers: Vec::new(),
+            selected_units: Vec::new(),
             blocked_units: Vec::new(),
             prevent_hit_script: false,
         })
@@ -299,6 +300,7 @@ pub(super) fn prayer_plan(
             units: vec![primary],
             dest: None,
             chain_multipliers: Vec::new(),
+            selected_units: Vec::new(),
             blocked_units: Vec::new(),
             prevent_hit_script: false,
         },
@@ -307,6 +309,7 @@ pub(super) fn prayer_plan(
             units,
             dest: None,
             chain_multipliers: Vec::new(),
+            selected_units: Vec::new(),
             blocked_units: Vec::new(),
             prevent_hit_script: false,
         },
