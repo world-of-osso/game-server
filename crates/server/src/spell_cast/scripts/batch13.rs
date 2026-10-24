@@ -1,4 +1,4 @@
-//! Named contracts authored in local Mainline12.1.0.69933 descriptions/rows.
+//! Named contracts authored in local Mainline69933/70448 descriptions and rows.
 use bevy::prelude::*;
 use shared::components::{Health, PowerType};
 
@@ -20,6 +20,8 @@ const RAPID_FIRE_SHOT: u32 = 257045;
 const RAPID_FIRE_FOCUS: u32 = 263585;
 pub(super) const BESTIAL_WRATH: u32 = 19574;
 const BESTIAL_STRIKE: u32 = 344572;
+const SCENT_OF_BLOOD: u32 = 193532;
+const BARBED_SHOT: u32 = 217200;
 pub(super) const ASPECT_WILD: u32 = 193530;
 const COBRA_SHOT: u32 = 193455;
 pub(crate) const HAUNT: u32 = 48181;
@@ -139,9 +141,25 @@ pub(crate) fn cast_rapid_fire_tick(
     spell_cast::cast_triggered(world, aura.caster, RAPID_FIRE_FOCUS, Some(aura.caster), 1);
 }
 
-///19574 explicitly names344572 at the persistent pet's own target.
-///Its owner a108 does not establish a pet a79 binding; buff/CC/charges remain open.
-pub(super) fn strike_with_owned_pet(world: &mut World, caster: Entity, _spell: &SpellInfo) {
+/// Native193532 names its Barbed charge count; SimC76f8118 hunter6741-6742
+/// confirms the successful Bestial Wrath boundary (BM_SCENT_OF_BLOOD_SIMC).
+fn restore_scent_charges(world: &mut World, caster: Entity) {
+    if !crate::auras::has_aura(world, caster, SCENT_OF_BLOOD) {
+        return;
+    }
+    let count = script_effect_value(world, caster, SCENT_OF_BLOOD, 0) as u8;
+    let category = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(BARBED_SHOT)
+        .and_then(|spell| spell.categories.as_ref())
+        .expect("native Scent requires Barbed charge metadata")
+        .charge_category;
+    spell_cast::restore_charges(world, caster, category, count);
+}
+
+/// Owner charge return precedes the independently authored persistent-pet strike.
+pub(super) fn finish_bestial_wrath(world: &mut World, caster: Entity, _spell: &SpellInfo) {
+    restore_scent_charges(world, caster);
     let Some(pet) = crate::hunter_pet::summoned_pet(world, caster) else {
         return;
     };

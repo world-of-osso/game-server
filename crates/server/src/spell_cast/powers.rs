@@ -48,10 +48,13 @@ pub struct PowerTypeInfo {
     pub regen_combat: f32,
     /// `PowerTypeFlags::SetToMaxOnLevelUp` (0x1000): `Player::GiveLevel` fills it.
     pub set_to_max_on_level_up: bool,
+    /// Native0x400: the continuous power rate uses the unit's haste-regen modifier.
+    pub regen_affected_by_haste: bool,
 }
 
 /// `PowerTypeFlags::SetToMaxOnLevelUp` (DBCEnums.h).
 const POWER_TYPE_FLAG_SET_TO_MAX_ON_LEVEL_UP: i64 = 0x1000;
+const POWER_TYPE_FLAG_REGEN_AFFECTED_BY_HASTE: i64 = 0x0400;
 const POWER_TYPE_FLAG_DEFAULT_ON_INIT: i64 = 0x0020;
 const POWER_TYPE_FLAG_USED_BY_NPCS: i64 = 0x0080;
 
@@ -167,6 +170,7 @@ pub fn load_power_type_table(conn: &Connection) -> rusqlite::Result<PowerTypeTab
                 regen_peace: peace,
                 regen_combat: combat,
                 set_to_max_on_level_up: flags & POWER_TYPE_FLAG_SET_TO_MAX_ON_LEVEL_UP != 0,
+                regen_affected_by_haste: flags & POWER_TYPE_FLAG_REGEN_AFFECTED_BY_HASTE != 0,
             },
         );
     }
@@ -625,14 +629,7 @@ pub(crate) fn regenerate_powers(
             // TC StatSystem.cpp901-908: aura85 is units per five seconds,
             // added AFTER percentage modifiers. Select direction/limit using
             // the modified rate, including powers whose base rate is zero.
-            let multiplier = regen_mult(pool.power);
-            let flat_per_sec =
-                mods.map_or(0.0, |mods| mods.power_regen_flat(pool.power as i32) / 5.0);
-            let rates = PowerTypeInfo {
-                regen_combat: info.regen_combat * multiplier + flat_per_sec,
-                regen_peace: info.regen_peace * multiplier + flat_per_sec,
-                ..*info
-            };
+            let rates = modified_regen_rates(info, mods, stats);
             let interrupted = in_combat || aura_interrupts_regen;
             let step = regen_step(
                 pool.current,
@@ -665,27 +662,114 @@ pub(crate) fn regenerate_powers(
             && mana.current < mana.max
             && !mods.is_some_and(|mods| mods.prevents_power_regen(PowerType::Mana))
         {
-            let base_mana = stats.map_or(0.0, |stats| stats.base_mana);
-            // TC StatSystem.cpp874-908: flat aura85 is added after the
-            // base-mana percentage multipliers, in raw units per five seconds.
-            let flat_mana_regen =
-                mods.map_or(0.0, |mods| mods.power_regen_flat(PowerType::Mana as i32));
-            mana_rate = base_mana * MANA_REGEN_BASE_PCT_PER_SEC * regen_mult(PowerType::Mana)
-                + flat_mana_regen / 5.0;
+            let info = table.get(PowerType::Mana).expect("native Mana power row");
+            let rates = modified_regen_rates(info, mods, stats);
+            let interrupted = in_combat || aura_interrupts_regen;
+            let step = regen_step(
+                mana.current,
+                mana.max,
+                &rates,
+                interrupted,
+                out_of_combat_ms,
+            );
+            let (rate, limit) = step.unwrap_or((0.0, mana.current));
+            mana_rate = rate;
             let old = mana.current;
-            mana.current = (mana.current + mana_rate * dt).min(mana.max);
+            mana.current = (mana.current + mana_rate * dt).clamp(0.0, mana.max);
             crate::auras::power_amount_trigger::queue_regenerated(
                 &mut commands,
                 unit,
                 auras,
                 (PowerType::Mana, old, mana.current),
             );
-            if mana.current == mana.max {
+            if mana.current == limit {
                 mana_rate = 0.0;
             }
         }
         pools.bypass_change_detection().mana_regen_per_sec = mana_rate;
     }
+}
+
+/// Native continuous-resource rate source shared by gameplay ticks and APL facts.
+/// TC StatSystem.cpp874-908 keeps flat aura85 after percentage terms; native
+/// PowerType0x400 and SimC76f8118 player4950-4957 supply haste-affected base rates.
+fn modified_regen_rates(
+    info: &PowerTypeInfo,
+    mods: Option<&crate::auras::AuraStatMods>,
+    stats: Option<&crate::stats::CharacterStats>,
+) -> PowerTypeInfo {
+    let base_mana = if info.power == PowerType::Mana {
+        stats.map_or(0.0, |stats| stats.base_mana) * MANA_REGEN_BASE_PCT_PER_SEC
+    } else {
+        0.0
+    };
+    let haste = if info.regen_affected_by_haste {
+        1.0 + stats.map_or(0.0, |stats| stats.haste_pct) / 100.0
+    } else {
+        1.0
+    };
+    let multiplier = mods.map_or(1.0, |mods| mods.power_regen(info.power as i32)) * haste;
+    let flat = mods.map_or(0.0, |mods| mods.power_regen_flat(info.power as i32) / 5.0);
+    PowerTypeInfo {
+        regen_combat: (info.regen_combat + base_mana) * multiplier + flat,
+        regen_peace: (info.regen_peace + base_mana) * multiplier + flat,
+        ..*info
+    }
+}
+
+fn unit_power_regen_enabled(world: &World, unit: Entity) -> bool {
+    read_creature_power_regeneration(
+        world.get::<Npc>(unit),
+        world.get::<shared::components::UnitFlags2>(unit),
+    ) && !world
+        .get::<crate::death::PlayerDeathState>(unit)
+        .is_some_and(|death| death.state != shared::death::DeathState::Alive)
+}
+
+fn read_regen_phase(world: &World, unit: Entity, pools: &PowerPools) -> (bool, u32) {
+    let in_combat = world
+        .get::<CombatStatus>(unit)
+        .is_some_and(|status| status.0);
+    let interrupted = in_combat
+        || (world.get::<Npc>(unit).is_none()
+            && world
+                .get::<crate::auras::ActiveAuras>(unit)
+                .is_some_and(|auras| auras.has_type(crate::auras::handlers::INTERRUPT_REGEN)));
+    let out_of_combat_ms = if in_combat {
+        0
+    } else {
+        ((world.resource::<Time>().elapsed_secs_f64() - pools.out_of_combat_since) * 1000.0) as u32
+    };
+    (interrupted, out_of_combat_ms)
+}
+
+/// Raw potential continuous regen, independent of the pool's cap and applied cache.
+/// Discrete pet Focus and rune cooldowns have separate native producers.
+/// Reading this fact never advances clocks, grants power or updates wire state.
+pub(crate) fn potential_power_regen(world: &World, unit: Entity, power: PowerType) -> Option<f32> {
+    let pools = world.get::<PowerPools>(unit)?;
+    if power == PowerType::Runes
+        || (power == PowerType::Focus && world.get::<PetFocusRegen>(unit).is_some())
+    {
+        return None;
+    }
+    let info = world.get_resource::<PowerTypeTable>()?.get(power)?;
+    let (current, maximum) = power_value(world, unit, power)?;
+    if !unit_power_regen_enabled(world, unit) {
+        return Some(0.0);
+    }
+    let mods = world.get::<crate::auras::AuraStatMods>(unit);
+    if matches!(power, PowerType::Energy | PowerType::Mana)
+        && mods.is_some_and(|mods| mods.prevents_power_regen(power))
+    {
+        return Some(0.0);
+    }
+    let rates = modified_regen_rates(info, mods, world.get::<crate::stats::CharacterStats>(unit));
+    let (interrupted, elapsed) = read_regen_phase(world, unit, pools);
+    Some(
+        potential_regen_step(current, maximum, &rates, interrupted, elapsed)
+            .map_or(0.0, |(rate, _)| rate),
+    )
 }
 
 /// TC Creature.cpp949–955: every creature uses its live flag2 permission.
@@ -716,6 +800,17 @@ fn regen_step(
     in_combat: bool,
     out_of_combat_ms: u32,
 ) -> Option<(f32, f32)> {
+    potential_regen_step(current, max, info, in_combat, out_of_combat_ms)
+        .filter(|(_, limit)| current != *limit)
+}
+
+fn potential_regen_step(
+    current: f32,
+    max: f32,
+    info: &PowerTypeInfo,
+    in_combat: bool,
+    out_of_combat_ms: u32,
+) -> Option<(f32, f32)> {
     let (rate, limit) = if in_combat {
         let rate = info.regen_combat;
         (rate, if rate > 0.0 { max } else { 0.0 })
@@ -729,11 +824,13 @@ fn regen_step(
             (peace, max)
         } else if current > center {
             (peace, center)
-        } else {
+        } else if current < center {
             (-peace, center)
+        } else {
+            return None;
         }
     };
-    (rate != 0.0 && current != limit).then_some((rate, limit))
+    (rate != 0.0).then_some((rate, limit))
 }
 
 /// Mirror pools (and `Mana`) into replicated `UnitPowers`: whole units floored, the

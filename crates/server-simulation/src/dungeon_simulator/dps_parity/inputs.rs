@@ -15,6 +15,8 @@ pub(super) struct Profile {
     pub consumables: BTreeMap<String, String>,
     pub reference_gap: Option<String>,
     pub omnium_talents: Option<String>,
+    #[serde(flatten)]
+    pub options: BTreeMap<String, serde_json::Value>,
 }
 
 #[derive(Deserialize)]

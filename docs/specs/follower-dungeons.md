@@ -1,5 +1,13 @@
 # Follower dungeons
 
+## APL active-enemy admission
+
+- [x] Dungeon follower entries may require `min_active_enemies`, counting current alive engaged hostile enemies in combat with the actor's group, including its pet combat coverage; no radius-based count or historical pull total.
+- [x] Keep this independent from geometric `min_enemies`: a radius-less command root can pass active-enemy admission without fake radius/center metadata.
+- [x] The generator derives conservative per-action minima from pinned APL `active_enemies>N`, boolean guards and called-list reachability; unrestricted alternate uses remain unrestricted. No per-WildThrash threshold branch. Initial source scope is BM253, all applicable actions; no unrequested spec rollout.
+- [x] Actual Austin ST never casts1264359;2+ engaged enemies retain ordinary command and real pet-child damage. Genuine native4da3b88d0 RED: ST29commands/21pet hits versus0, two-target25/9 and three-target29/24 controlsPASS (2PASS/1FAIL23.01s); earlier NPC-KnownSpells assertion failure is not gameplay RED. Serialized producer9ebfc4d5f separately fails missing minimum. Implementation uses the existing current `ai::engaged_enemies` set and vendored pinned76f8118 BM source, not historical pull observations or a new APL runtime. Source revision/SHA/derived minima accompany normal preparation receipts. At a451878e4 native3GREEN24.63s: ST0commands/0hits, two25/9 and three17/4; source/serialized12GREEN1.270s. [Exact proof, private source preparation and matched single-seed limits](../handoffs/bm-active-enemy-proof-ledger.md). Parent broad integration/publication pending. No spell, priority, resource, cooldown or damage tuning. Dispersion is outside this BM scope.
+
+
 Follower party roster portraits carry the spawned NPC's actual template-selected `ModelDisplay.display_id`, independent of replication interest. They remain NPC heads; race0 combat-stat inputs must not become synthetic player portrait customization. Ordinary player roster portraits retain canonical customization and head equipment. [Engine portrait contract](../../../game-engine/docs/specs/group-frames.md).
 
 ## Admin harness party staging
@@ -40,7 +48,7 @@ Kit publication must preserve unrelated specializations. Each scoped delta must 
 
 `FOLLOWER_HUNTER_PET_SIMC_DEFAULT` selects native tameable Waterfowl/Duck174884 for spec253 Austin, following SimC76f8118 `sc_hunter.cpp:1052` (lead-approved2026-10-21). This is a named policy, not an authored Retail Austin-pet claim. Normal content import must include that TDB template/model without adding world spawns or fabricating stats. Runtime must provision a real runtime-only StoredPet/PetStable with no player/character identity, then cast actual learned Call Pet883 through the ordinary controlled-pet path. Native family/default specialization, level scaling and pet abilities remain authoritative; no arbitrary direct pet spawn or historical Barbed Shot Frenzy stacks.
 
-Native1264934 Frenzy's owner Dummy0 amount must shorten controlled-pet melee intervals by `1 / (1 + amount / 100)` (SimC76f8118 hunter2177–2178). It must not speed the owner or guardians, add a synthetic pet aura, or recreate historical Barbed Shot proc stacks.
+Native1264934 Frenzy's effective owner Dummy0 amount, including native trait-rank points rather than raw SpellEffect base points, must shorten controlled-pet melee intervals by `1 / (1 + amount / 100)` (SimC76f8118 hunter2177–2178). It must not speed the owner or guardians, add a synthetic pet aura, or recreate historical Barbed Shot proc stacks.
 
 Failed or unavailable pet preparation must report the failure once per follower and leave other kit actions available; a hunter without a pet still heals and attacks. Successful pet preparation retains ordinary native cast legality.
 

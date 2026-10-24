@@ -294,9 +294,8 @@ fn rotation_fidelity_253_native_frenzy_shortens_pet_melee_interval() {
     const FRENZY: u32 = 1_264_934;
     let (mut h, caster, pet) = prepare_native_duck(90);
     assert!(crate::auras::has_aura(h.app.world(), caster, FRENZY));
-    let amount = h
-        .app
-        .world()
+    let world = h.app.world();
+    let raw_amount = world
         .resource::<crate::spell_info::SpellStore>()
         .get(FRENZY)
         .unwrap()
@@ -305,6 +304,31 @@ fn rotation_fidelity_253_native_frenzy_shortens_pet_melee_interval() {
         .find(|effect| effect.index == 0 && effect.aura == 4)
         .unwrap()
         .base_points;
+    let native_trait = world
+        .get::<crate::class_progression::TraitLoadout>(caster)
+        .unwrap()
+        .spell_trait(FRENZY)
+        .unwrap();
+    assert_eq!(native_trait.definition_id, 131223);
+    assert_eq!(native_trait.rank, 2);
+    let amount = world
+        .get::<ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == FRENZY)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    // Native points24184 Multiply curve94381 maps ranks1/2 to factors1/2.
+    // TC SpellInfo.cpp532-553 applies that curve before the passive is consumed.
+    assert_eq!(amount, raw_amount * native_trait.rank as f32);
+    println!(
+        "NATIVE_FRENZY definition={} rank={} raw={raw_amount} effective={amount}",
+        native_trait.definition_id, native_trait.rank
+    );
     let target = h.npc;
     h.app
         .world_mut()

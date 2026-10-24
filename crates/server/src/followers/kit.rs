@@ -66,6 +66,8 @@ pub(super) struct Conditions {
     pub required_self_aura: Option<u32>,
     pub refreshable_aura: Option<u32>,
     pub target_if_min_aura: Option<u32>,
+    /// Current engaged hostile enemies in the group's combat, without a radius gate.
+    pub min_active_enemies: usize,
     pub min_enemies: usize,
     pub min_injured: usize,
     pub attacked: bool,
