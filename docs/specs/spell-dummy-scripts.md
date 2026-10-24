@@ -23,6 +23,13 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 
 ## What it must do
 
+### Native BM owner cooldown returns
+
+- [ ] Successful Bestial Wrath19574 restores the active selected193532 Scent of Blood native effect1 count to Barbed217200’s actual charge category. Native70448 count is1, not an assumed older two; real charge caps and oldest recharge progress remain governed by existing RestoreCharge. Actual absence/removal restores nothing. The owner return does not depend on whether a persistent pet can perform its separate344572 strike.
+- [ ] Selected469880 Barbed Scales must reduce pending Barbed recovery by its native2000ms at successful normal or free Cobra193455 cast, before the next frame/missile hit; absence/removal must not reduce it. Implementation remains pending normal-cast fixture qualification; no hit-time workaround or invented timer.
+
+Native Austin Scent counterexample at5b7cb789f/e16492ffa reaches genuine missing-return RED: full2→spent1, successful BW after1.25s leaves1 versus expected2; no intervening Barbed casts, removed-aura controlPASS. Free-Cobra Scales also reaches genuine missing2s RED with its controlPASS. Normal Cobra geometry moved outside native40yd range and is explicitly a fixture failure, not gameplay RED. Scent binding implemented, GREEN pending. Native descriptions plus SimC76f8118 `sc_hunter.cpp6741–6742/4963–4964` qualify the boundaries; no cast counts, coefficients, ranks or rotations are tuned.
+
 ### Native Snakeskin Quiver execution
 
 - [x] Active468695 rolls its native effect1 chance once per successful Auto Shot75 execution and launches native Cobra193455 at that shot’s actual victim. Existing triggered casting supplies the free Focus/GCD behavior; normal paid Cobra and native ranged timers remain unchanged. Missing/removed passive grants no free action; rejected shots do not reach the policy. Named policy `BM_SNAKESKIN_QUIVER_SIMC_76F8118` follows `sc_hunter.cpp3988–4007/5041–5047`; pinned TC a352b1fa scripts have no Snakeskin binding. Do not claim a TC port or copy SimC numeric spell damage.

@@ -355,6 +355,12 @@ All28 previously unreviewed roots now carry exact reasons:157/129/28→157/157/0
 
 Completed-root Shred/Rake/Thrash, cap/overflow, expiry, actual periodic clock, unrelated family and rejected-friendly cast prove this numeric contract.405189 over-cap recovery and script-only grants remain uncertified. Seven other reviewed roots retain exact source-field or runtime-prerequisite deferrals, including known Spiritbloom30yd range and both known empower stage tables; these are not absent-data claims.
 
+## Native owner cooldown returns —2026-10-23
+
+The Bestial Wrath after-cast callback first applies selected active193532 Scent’s native charge count through existing `restore_charges`, then retains its independent persistent-pet strike. Native70448 count1/category1675 comes from current data, not copied SimC-era counts. SimC76f8118 hunter6741–6742 establishes the successful-cast boundary. Genuine actual-kit RED leaves1 charge after BW versus2 expected after a real spend, elapsed1.25s; absence control passes. Implementation awaits GREEN. [Contract](../../specs/spell-dummy-scripts.md#native-bm-owner-cooldown-returns).
+
+Selected469880 Scales/free-Cobra also has genuine missing2s RED, but normal-Cobra fixture remains blocked by controller-driven geometry: prepared(22.03,-7.57) becomes(66.72,-22.94), beyond actual40yd range. Removing FollowOwner once is insufficient because native regroup reinstalls it. No runtime movement, range or cast-admission workaround is added; no claim attributes the entire Barbed damage deficit to these returns.
+
 ## Native Snakeskin Quiver —2026-10-23
 
 `BM_SNAKESKIN_QUIVER_SIMC_76F8118` is an explicit execute-time policy, not a claimed TC port: pinned TC scripts have no Snakeskin binding. `auto_repeat::on_cast` passes the actual successful Auto Shot75 victim after installing the unchanged native ranged timer; `scripts/snakeskin_quiver.rs` reads active468695’s native effect1 chance and launches real Cobra193455 through existing free triggered casting. It does not read a guessed selection target, change normal Cobra, or add a proc timer. SimC76f8118 `sc_hunter.cpp3988–4007/5041–5047` supplies timing/background semantics, not numeric damage. [Contract](../../specs/spell-dummy-scripts.md#native-snakeskin-quiver-execution).

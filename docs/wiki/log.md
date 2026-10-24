@@ -1,3 +1,7 @@
+## 2026-10-23 — Native Scent charge return
+
+[Owner cooldown boundary](systems/spell-casting.md#native-owner-cooldown-returns-2026-10-23): actual selected count1/BW after real Barbed spend reproduces missing return; absence control passes. Existing native RestoreCharge now bound before independent pet strike; GREEN pending. Scales free-cast RED retained, normal fixture geometry still under investigation; no range/rotation/stat tuning.
+
 ## 2026-10-23 — Snakeskin Quiver execute binding
 
 [Named native-chance policy](systems/spell-casting.md#native-snakeskin-quiver-2026-10-23): real Austin300s RED122Auto/43paid/0free →b77 native2GREEN26.23s (122Auto/29paid/13free versus removed122Auto/43paid/0free). Actual victim/native chance, no timer or damage edits. [Proof](../handoffs/bm-snakeskin-proof-ledger.md); splitB/name-preserving integration31788 plus public-CombatStop fixture fix2391 passes requested server+server-simulation --tests check2m21s; parent broad gate remains separate, not a DPS-gain claim.

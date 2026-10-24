@@ -610,7 +610,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         batch16::HOLY_LIGHT => Some(batch16::energize_holy_light),
         batch16::HOLY_SHOCK | batch16::CRUSADER_STRIKE => Some(batch16::reduce_holy_judgment),
         batch16::RIPTIDE => Some(batch16::grant_tidal_waves),
-        batch13::BESTIAL_WRATH => Some(batch13::strike_with_owned_pet),
+        batch13::BESTIAL_WRATH => Some(batch13::finish_bestial_wrath),
         batch12::SHIELD_RIGHTEOUS => Some(batch12::shield_armor),
         batch10::BLADE_FLURRY => Some(batch10::cast_flurry),
         batch10::VOIDFORM => Some(batch10::apply_voidform),
