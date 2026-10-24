@@ -41,7 +41,7 @@ Qualified preserved a451 ELF SHA256 `b1fcc8d419d43c7cb07100f1bebd1e091ece6e57a7d
 |1|53884.833→58222.937|29/21→0/0|42/59/63→46/88/68|
 |3|44344.413→43712.837|29/24→17/4|38/45/59→40/59/60|
 
-BW remains10casts in both. ST Barbed DPS26595.920→28400.133, Cobra10092.183→12578.417. Three-target total falls despite more Barbed/Cobra casts: do not tune around this one seed or claim universal improvement. Admission counts actual current group combat, not nominal target_count; evolving target/engagement coverage and random/proc outcomes remain part of the measurement. This qualifies sourced admission behavior, not every 3T lifecycle or whole-DPS parity.
+BW remains10casts in both. ST Barbed DPS26595.920→28400.133, Cobra10092.183→12578.417. Three-target total falls despite more Barbed/Cobra casts: do not tune around this one seed or claim universal improvement. Admission counts actual current group combat, not nominal target_count. Sparse existing3T snapshots show all three alive/unsuppressed-owner references at start/early/270s in both runs, and the fixture re-engages each30s wave. They do not record per-decision counts: fewer engaged enemies is NOT established as the cause of29→17 casts or the total drop. Timing/proc/count attribution remains unknown; no tuning or compensating change is justified. This qualifies sourced admission behavior, not every3T lifecycle or whole-DPS parity.
 
 ## Limits
 
