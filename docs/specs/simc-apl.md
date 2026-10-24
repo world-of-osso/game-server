@@ -22,6 +22,10 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [ ] Expose target-specific readonly resource-limited admission for a chosen power pool. Compare that pool's native maximum locally; never grant or temporarily replace resources. Preserve other pools, health and every other native cast constraint; an unaffordable maximum cannot qualify.
 - [x] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.
 
+## Feral shared expression/control surfaces
+
+- [ ] Evaluate floor with pinned unary rounding-down semantics, including negatives/nested grouping, and bind its inner native facts normally. Boolean bare/first target_if uses merged14775 FIRST semantics, not a Feral row rewrite. [Exact reporter RED/GREEN scope](../handoffs/feral-shared-program-proof-ledger.md).
+
 ## Equipped use_items
 
 - [x] Select the first native-ready equipped on-use item in Equipment slot order per source decision, not an immediate batch. Preserve slots= ordering/restriction, check_existing=0|1 and explicit use_item source exclusions; named precombat uses must not suppress later proxies. Preserve native/shared cooldowns and original Action.options; unknown options/metadata fail explicitly rather than silently disabling the action. [Native proof scope](../handoffs/use-items-proof-ledger.md).

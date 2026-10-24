@@ -1,3 +1,7 @@
+## 2026-10-24 — Exact Feral Program reporter RED and FIRST integration
+
+[Reporter ledger](../handoffs/feral-shared-program-proof-ledger.md): unchanged36fc harness against production Program yields4genuineRED. Parent-supplied14775 FIRST/cycle2cd5 merged asdee43b; Boolean reporter now PASS, floor/pool/max_energy remainRED. Added shared floor unary semantics with negative/nested/fact-binding controls; GREEN pending. Native action/resource/Feral parity not claimed; numeric min/max45bae not duplicated.
+
 ## 2026-10-24 — Equipped use_items native RED
 
 [Shared use_items proof](../handoffs/use-items-proof-ledger.md): actual equipped61034/193701 singular native admissions pass but aggregate source row selectsNone,18.02s/exit101 at9a. Shared source-aware execution now selects one ready native item in slot order with slots/check_existing/explicit-row exclusion semantics; native7/7GREEN28.69s atc0d after fixture waits actual2000msAlgethar cast; warmcompile35.86s/zero warnings. Full all-spec/numerical qualification separate. No instant batch/native cooldown rewrite.
