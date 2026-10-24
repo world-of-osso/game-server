@@ -1,5 +1,9 @@
 # Auras
 
+## Generic health aura states — 2026-10-24
+
+TC a352b1fa `Unit.cpp481–487` computes states2/6/13/21/23/24/25 from current health: strict20/25/35/50% lows,75% high and20–80/35–80 outside bands. `Unit.h804–809` uses integer health counts/truncated percent thresholds. `auras/aura_state.rs` reads these at query time beside unchanged15; every otherNone and Some(false)-only rejection stays unchanged. [Contract](../../specs/auras.md#computed-target-aura-state), [source/seven-state matrix/native RED and gate ledger](../../handoffs/aura-state-health-proof-ledger.md), [implementation](../../../crates/server/src/auras/aura_state.rs). Full-health real31146 erroneously accepts ordinary24275 before this change; below20actual-damage control passes. Targeted GREEN pending.
+
 ## Explicit proc source presence — 2026-10-23
 
 `import_spell_proc_presence.py` publishes only the audited effective TC IDs to `tdb_spell_proc(SpellId PRIMARY KEY)`, verifying every base/update source hash first. One transaction reconciles IDs while preserving retained value columns and unrelated tables. It does not parse SQL again or apply numeric proc overrides. The supplied audit pins1283base rows plus7updates yielding1291IDs. [Contract and source/qualification ledger](../../handoffs/feral-source-census.md#explicit-tdb-provenance-boundary). Runtime provenance/refusal is a separate follow-up, not part of the shared action-knowledge helper.
@@ -150,7 +154,7 @@ Named gaps retained, not falsely registered as consumers:
 
 Sources: receipt-backed engine `data/diagnostics/arena-coverage-2026-10-12/tc-a352b1fa/`; supplemental exact pinned tree `/home/osso/.worktrees/logs/achievements-criteria-2026-10-12/tc-source-a352b1fa/TrinityCore-a352b1fa/` for `Spell.cpp`, `Creature.h`, `PhasingHandler` and `Unit::CombatStop`. Runtime implementation stays inside existing server pipeline; no scripts or protocol changes.
 
-Proof ledger: ignored RED pushed first a010a4310, seven numeric/combat failures; corrected262 native computed15 fixture1cff85bc8 gives genuine warning RED (the pre-existing state exemption already passes). Initial Hammer-of-Wrath oracle was rejected because state2 deliberately remains uncomputed. Logs: engine `data/diagnostics/census-3-2026-10-20/red{,262}.log`. At7309111d4 all12 native cases GREEN31.37s before enabling. After merging master3e1add814 (retaining137/307) as8922af04b, the12 plus retained duration/missile/combat-reference/regeneration/rune/resource cases give67PASS/0FAIL35.88s; `cargo check --locked -p server --bin game-server` and `cargo fmt --all --check` PASS, zero warnings. Readability inspected locally; no delegation; lead owns integration gate.
+Proof ledger: ignored RED pushed first a010a4310, seven numeric/combat failures; corrected262 native computed15 fixture1cff85bc8 gives genuine warning RED (the pre-existing state exemption already passes). Initial Hammer-of-Wrath oracle was rejected because state2 deliberately remained uncomputed at that revision; the separately authorized [generic health-state work](../../handoffs/aura-state-health-proof-ledger.md) now covers that gap. Logs: engine `data/diagnostics/census-3-2026-10-20/red{,262}.log`. At7309111d4 all12 native cases GREEN31.37s before enabling. After merging master3e1add814 (retaining137/307) as8922af04b, the12 plus retained duration/missile/combat-reference/regeneration/rune/resource cases give67PASS/0FAIL35.88s; `cargo check --locked -p server --bin game-server` and `cargo fmt --all --check` PASS, zero warnings. Readability inspected locally; no delegation; lead owns integration gate.
 
 ### Per-spec census delta
 
