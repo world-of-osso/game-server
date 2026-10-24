@@ -2,7 +2,7 @@
 // TC PlayerClass26 (type221) and BattlePetSpecies91 (types155/160/162); only AND4 -> SingleTrue2.
 // Criteria SHA256 5c63e0bcb9b6f77a9bf4d2f562109acf373fa7d1ce97f749a20612a6152e67eb.
 // ModifierTree SHA256 9afe5f7734828630b7088be5c5f1f5c36f954a86ea85305927b298a502bb5b90.
-pub(super) fn single_modifier_asset(criteria: u32, modifier: u32) -> Option<u32> {
+pub fn single_modifier_asset(criteria: u32, modifier: u32) -> Option<u32> {
     match (criteria, modifier) {
         (22468, 7196) => Some(1156),
         (22469, 7198) => Some(1155),

@@ -17,7 +17,7 @@
 // WorldStateExpression SHA256 69416ba7fa70a8ab36945239bafc02661abe1541d3cbc7edd45e4ec0f7415af8.
 use super::{CompiledConditions, DifficultyRule};
 
-pub(super) fn criteria_conditions(criteria: u32, modifier: u32) -> Option<CompiledConditions> {
+pub fn criteria_conditions(criteria: u32, modifier: u32) -> Option<CompiledConditions> {
     match (criteria, modifier) {
         (490, 30518) => Some(CompiledConditions::All {
             difficulty: None,

@@ -7,6 +7,10 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use bevy::prelude::*;
 use rusqlite::{Connection, OptionalExtension};
+use server_catalog::achievement::{
+    CompiledConditions, DifficultyRule, MythicRequirements, conditions, mythic_predicates,
+    node_counts, overlays, single_modifiers,
+};
 use shared::protocol::{
     AchievementProgressSnapshot, AchievementSnapshot, AchievementToastSnapshot,
 };
@@ -381,7 +385,7 @@ impl CriteriaEvent {
             | Self::WinAnyBattleground => criteria.asset == 0,
             Self::CompleteMythicPlus(completion) => criteria
                 .mythic
-                .is_some_and(|requirements| requirements.matches(completion)),
+                .is_some_and(|requirements| matches_mythic_requirements(requirements, completion)),
             Self::SkillRank(asset, _)
             | Self::SkillMaxRank(asset, _)
             | Self::CurrencyGained(asset, _)
@@ -431,66 +435,23 @@ pub(crate) struct MythicCompletion {
     pub in_time: bool,
 }
 
-#[derive(Debug, Clone, Copy)]
-struct MythicRequirements {
-    min_level: u32,
-    challenge_map: Option<u32>,
-    player_level: Option<u32>,
-    in_time: bool,
+fn matches_mythic_requirements(
+    requirements: MythicRequirements,
+    completion: MythicCompletion,
+) -> bool {
+    let level_matches = completion.key_level >= requirements.min_level;
+    let map_matches = requirements
+        .challenge_map
+        .is_none_or(|map| map == completion.challenge_map);
+    let player_matches = requirements
+        .player_level
+        .is_none_or(|level| level == u32::from(completion.player_level));
+    let time_matches = !requirements.in_time || completion.in_time;
+    level_matches && map_matches && player_matches && time_matches
 }
 
-impl MythicRequirements {
-    fn matches(self, completion: MythicCompletion) -> bool {
-        let level_matches = completion.key_level >= self.min_level;
-        let map_matches = self
-            .challenge_map
-            .is_none_or(|map| map == completion.challenge_map);
-        let player_matches = self
-            .player_level
-            .is_none_or(|level| level == u32::from(completion.player_level));
-        let time_matches = !self.in_time || completion.in_time;
-        level_matches && map_matches && player_matches && time_matches
-    }
-}
-
-#[path = "achievement_conditions.rs"]
-mod conditions;
-#[path = "achievement_mythic_predicates.rs"]
-mod mythic_predicates;
-#[path = "achievement_node_counts.rs"]
-mod node_counts;
-#[path = "achievement_overlays.rs"]
-mod overlays;
-#[path = "achievement_single_modifiers.rs"]
-mod single_modifiers;
-
-/// Compiled TC DungeonDifficulty68/LegacyDungeonDifficulty20 tree: the player's current
-/// map difficulty must (`allowed`) or must not be one of `ids`.
-#[derive(Debug, Clone, Copy)]
-struct DifficultyRule {
-    allowed: bool,
-    ids: &'static [u32],
-}
-
-impl DifficultyRule {
-    fn admits(self, difficulty: u32) -> bool {
-        self.ids.contains(&difficulty) == self.allowed
-    }
-}
-
-/// Compiled All facts or a plain Some of complete target-creature/map/area/aura alternatives.
-#[derive(Debug, Clone, Copy)]
-enum CompiledConditions {
-    All {
-        difficulty: Option<DifficultyRule>,
-        // Negative compiled kinds denote bounded SingleFalse leaves, never raw DB2 types.
-        facts: &'static [(i32, u32)],
-    },
-    TargetCreatures(&'static [u32]),
-    PlayerMaps(&'static [u32]),
-    PlayerLocations(&'static [(i32, u32)]),
-    PlayerAuras(&'static [u32]),
-    EventItems(&'static [u32]),
+fn difficulty_admits(rule: DifficultyRule, difficulty: u32) -> bool {
+    rule.ids.contains(&difficulty) == rule.allowed
 }
 
 /// TC ModifierTree facts at a criteria update.
@@ -752,7 +713,7 @@ struct Criteria {
 impl Criteria {
     fn conditions_hold(&self, conditions: &PlayerConditions, event: CriteriaEvent) -> bool {
         self.difficulty
-            .is_none_or(|rule| rule.admits(conditions.difficulty))
+            .is_none_or(|rule| difficulty_admits(rule, conditions.difficulty))
             && (self.facts.is_empty()
                 || conditions.player.as_ref().is_some_and(|player| {
                     self.facts

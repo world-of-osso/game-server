@@ -1,4 +1,5 @@
 //! Stable generated tables, faction reactions, and imported catalog provenance.
+pub mod achievement;
 pub mod character_stats_data;
 pub mod db2_source_build;
 pub mod faction_reaction;

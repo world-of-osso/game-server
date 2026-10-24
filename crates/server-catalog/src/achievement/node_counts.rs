@@ -2,7 +2,7 @@
 // TC a352b1fa ConditionMgr3639–3758: exact occupied-node equality OR for1778/1779,
 // plus enabled signed-literal comparisons with no arithmetic/functions/state reads/logic.
 // WorldStateExpression SHA256 69416ba7fa70a8ab36945239bafc02661abe1541d3cbc7edd45e4ec0f7415af8.
-pub(super) fn required_owned_nodes(expression: u32) -> Option<u8> {
+pub fn required_owned_nodes(expression: u32) -> Option<u8> {
     match expression {
         5717 => Some(5),
         8656 => Some(3),
@@ -10,7 +10,7 @@ pub(super) fn required_owned_nodes(expression: u32) -> Option<u8> {
     }
 }
 
-pub(super) fn constant_expression(expression: u32) -> Option<bool> {
+pub fn constant_expression(expression: u32) -> Option<bool> {
     match expression {
         3730 => Some(true),
         3785 => Some(false),
