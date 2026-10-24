@@ -12,7 +12,7 @@ const FINAL_VERDICT: u32 = 383328;
 const DIVINE_STORM: u32 = 53385;
 const SET_PIECES: &[u32] = &[271465, 271463, 271468, 271466, 271464];
 
-fn native_ret(piece_count: usize) -> Run {
+pub(super) fn native_ret(piece_count: usize) -> Run {
     let (mut profile, traits) = read_reference(70).unwrap();
     profile.equipment.retain(|item| {
         SET_PIECES
@@ -43,7 +43,7 @@ fn native_ret(piece_count: usize) -> Run {
     run
 }
 
-fn has(run: &Run, spell: u32) -> bool {
+pub(super) fn has(run: &Run, spell: u32) -> bool {
     crate::auras::has_aura(run.app.world(), run.actor, spell)
 }
 
@@ -59,7 +59,7 @@ fn grant_native_purpose(run: &mut Run) {
     assert!(has(run, DIVINE_PURPOSE));
 }
 
-fn cast_finisher(run: &mut Run, spell: u32) {
+pub(super) fn cast_finisher(run: &mut Run, spell: u32) {
     for _ in 0..200 {
         match crate::spell_cast::creature_cast(
             run.app.world_mut(),

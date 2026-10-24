@@ -1,0 +1,175 @@
+//! SIMC_RET_DIVINE_PURPOSE_TRIGGER: real Holy Power funding, no proc chance override.
+use super::ret_tier_tests::{cast_finisher, has, native_ret};
+use super::*;
+use crate::spell_cast::{CastFailure, CostPool, test_harness::ObservedCombatEvents};
+use shared::components::PowerType;
+use shared::protocol::CombatLogKind;
+
+const PURPOSE_TALENT: u32 = 408459;
+const PURPOSE: u32 = 223819;
+const FINAL_VERDICT: u32 = 383328;
+const JUDGMENT: u32 = 20271;
+
+fn purpose_applications(run: &Run) -> usize {
+    run.app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(PURPOSE)
+                && event.kind == CombatLogKind::AuraApplied
+        })
+        .count()
+}
+
+fn current_holy_power(run: &Run) -> f32 {
+    crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::HolyPower)
+        .unwrap()
+        .0
+}
+
+fn earn_finisher_power(run: &mut Run) {
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(FINAL_VERDICT)
+        .unwrap();
+    let required: f32 = crate::spell_cast::applicable_costs(run.app.world(), run.actor, spell)
+        .unwrap()
+        .into_iter()
+        .filter(|(pool, _, _)| *pool == CostPool::Power(PowerType::HolyPower))
+        .map(|(_, amount, _)| amount)
+        .sum();
+    for _ in 0..1000 {
+        if current_holy_power(run) >= required {
+            return;
+        }
+        match crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            JUDGMENT,
+            Some(run.targets[0]),
+            false,
+        ) {
+            Ok(()) => {}
+            Err(
+                CastFailure::OnCooldown
+                | CastFailure::OnGlobalCooldown
+                | CastFailure::NoCharges
+                | CastFailure::InProgress,
+            ) => {}
+            Err(reason) => panic!("native Purpose funding Judgment failed: {reason:?}"),
+        }
+        run.app.update();
+    }
+    panic!(
+        "native generators did not earn {required} HolyPower; actual{}",
+        current_holy_power(run)
+    );
+}
+
+#[test]
+#[ignore = "selected native408459 must produce223819 from naturally funded ordinary spenders"]
+fn dps_parity_ret_purpose_selected_native_holy_power_casts_produce_real_proc() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = native_ret(2);
+    assert!(has(&run, PURPOSE_TALENT));
+    assert_eq!(purpose_applications(&run), 0);
+    for _ in 0..32 {
+        earn_finisher_power(&mut run);
+        cast_finisher(&mut run, FINAL_VERDICT);
+    }
+    assert!(
+        purpose_applications(&run) > 0,
+        "32 real ordinary HolyPower spenders must exercise the selected native chance"
+    );
+}
+
+#[test]
+#[ignore = "native408459 aura alone must not impersonate a selected talent"]
+fn dps_parity_ret_purpose_unselected_aura_cannot_produce_the_selected_policy_proc() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = native_ret(2);
+    let (_, mut selected) = read_reference(70).unwrap();
+    selected.retain(|entry| entry.entry_id != 128243);
+    inputs::install_traits(run.app.world_mut(), run.actor, &selected).unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert!(
+        !run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(run.actor)
+            .unwrap()
+            .contains(PURPOSE_TALENT)
+    );
+    crate::spell_cast::cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        PURPOSE_TALENT,
+        Some(run.actor),
+        0,
+    );
+    assert!(
+        has(&run, PURPOSE_TALENT),
+        "control uses the actual native chance aura"
+    );
+    for _ in 0..32 {
+        earn_finisher_power(&mut run);
+        cast_finisher(&mut run, FINAL_VERDICT);
+    }
+    assert_eq!(purpose_applications(&run), 0);
+}
+
+#[test]
+#[ignore = "selected native408459 must not proc from full-mask background spenders"]
+fn dps_parity_ret_purpose_triggered_spenders_cannot_produce_the_foreground_proc() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = native_ret(2);
+    for _ in 0..32 {
+        crate::spell_cast::cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            FINAL_VERDICT,
+            Some(run.targets[0]),
+            0,
+        );
+        run.app.update();
+    }
+    assert_eq!(purpose_applications(&run), 0);
+}
+
+#[test]
+#[ignore = "selected native408459 must not roll on ordinary non-HolyPower generators"]
+fn dps_parity_ret_purpose_judgment_casts_cannot_produce_the_holy_power_proc() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = native_ret(2);
+    let mut casts = 0;
+    for _ in 0..2000 {
+        match crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            JUDGMENT,
+            Some(run.targets[0]),
+            false,
+        ) {
+            Ok(()) => casts += 1,
+            Err(
+                CastFailure::OnCooldown
+                | CastFailure::OnGlobalCooldown
+                | CastFailure::NoCharges
+                | CastFailure::InProgress,
+            ) => {}
+            Err(reason) => panic!("native Judgment control failed: {reason:?}"),
+        }
+        run.app.update();
+        if casts == 8 {
+            break;
+        }
+    }
+    assert_eq!(casts, 8, "control actually casts eight native generators");
+    assert_eq!(purpose_applications(&run), 0);
+}

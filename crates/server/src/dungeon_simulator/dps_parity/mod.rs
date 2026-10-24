@@ -11,6 +11,7 @@ mod pet_stats_tests;
 mod player_rotation;
 mod power_tests;
 mod report;
+mod ret_purpose_tests;
 mod ret_tier_tests;
 mod windwalker_rotation;
 use bevy::prelude::*;
