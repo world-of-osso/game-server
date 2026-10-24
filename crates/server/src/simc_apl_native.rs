@@ -29,6 +29,12 @@ pub struct FixtureAdds {
     pub count: usize,
 }
 
+/// Explicit SimC fixture movement state, independent of native target geometry.
+#[derive(Component, Clone, Copy)]
+pub struct FixtureMovement {
+    pub distance_to_move: f64,
+}
+
 pub type ResolveDotSpell = fn(&World, Entity, u32) -> Result<crate::spell_info::SpellInfo, String>;
 
 #[derive(Clone, Copy)]
@@ -733,6 +739,8 @@ fn bool_value(value: bool) -> f64 {
     if value { 1.0 } else { 0.0 }
 }
 
+#[cfg(test)]
+mod movement_distance_tests;
 #[cfg(test)]
 mod refresh_context_tests;
 #[cfg(test)]
