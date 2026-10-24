@@ -40,7 +40,7 @@ Toys has a larger test-only surface (15,193 LOC at the original graph pin), but 
 
 ## Quiet-window B measurement
 
-A full-suite gate is not a rebuild-speed measurement. Hold A fixed and compare pre-B `8e7c7a685` to the accepted B code tip; do not compare unrelated gameplay revisions or attribute the old a28 measurement to B.
+A full-suite gate is not a rebuild-speed measurement. Hold gameplay fixed and compare incoming-master `eec5b6bcf` to the accepted B code tip; do not compare unrelated gameplay revisions or attribute the old a28 measurement to B.
 
 - [ ] Obtain a parent-owned quiet window; drain existing compilers and use one build at a time. Preserve `CAPACITY_OWNER` in both admission and actual command environments. The existing matrix runner strips it, so inspect/fix the diagnostic copy before use, not the shared runner during other measurements.
 - [ ] Use opt2/debug1 and `-j2` for both variants, the identical frozen protocol revision, and explicit overrides for shared, lightyear_netcode and lightyear_udp. Preserve the min-start14GiB, stop-below6GiB/300GiB safeguards. No automatic retry after a safety abort.
