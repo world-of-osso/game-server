@@ -7,7 +7,7 @@ pub(super) fn load() -> Result<Program, String> {
 }
 
 fn compile_source(source: &str) -> Result<Program, String> {
-    let mut lists = BTreeMap::<String, String>::new();
+    let mut lists = BTreeMap::<String, Vec<String>>::new();
     for (index, line) in source.lines().enumerate() {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
@@ -18,12 +18,12 @@ fn compile_source(source: &str) -> Result<Program, String> {
     }
     let lists: Vec<_> = lists
         .iter()
-        .map(|(name, body)| (name.as_str(), body.as_str()))
+        .flat_map(|(name, rows)| rows.iter().map(move |row| (name.as_str(), row.as_str())))
         .collect();
     Program::parse(&lists)
 }
 
-fn append_source_row(lists: &mut BTreeMap<String, String>, line: &str) -> Result<(), String> {
+fn append_source_row(lists: &mut BTreeMap<String, Vec<String>>, line: &str) -> Result<(), String> {
     let (assignment, row) = line.split_once('=').ok_or("action assignment absent")?;
     let append = assignment.ends_with('+');
     let key = assignment.strip_suffix('+').unwrap_or(assignment);
@@ -37,10 +37,8 @@ fn append_source_row(lists: &mut BTreeMap<String, String>, line: &str) -> Result
     let body = lists.entry(name.into()).or_default();
     if !append {
         body.clear();
-    } else if !body.is_empty() {
-        body.push('/');
     }
-    body.push_str(row.strip_prefix('/').unwrap_or(row));
+    body.push(row.strip_prefix('/').unwrap_or(row).into());
     Ok(())
 }
 
