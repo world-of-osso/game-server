@@ -117,6 +117,157 @@ fn wait_past_expiry(run: &mut Run, expires: f64) {
     panic!("native clock never crossed source-authored Sentence expiry");
 }
 
+fn counter(run: &Run) -> f32 {
+    owned_sentence(run)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount
+}
+
+fn assert_native_accumulation(run: &Run, initial: f32, start: usize) {
+    let percent = owned_sentence(run)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .amount;
+    assert_eq!(
+        percent, 20.0,
+        "native343527 effect1 is the percentage authority"
+    );
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    let eligible: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.kind == CombatLogKind::Damage
+        })
+        .filter(|event| event.school_mask & 1 == 0 && event.amount > 0)
+        .collect();
+    let logged: f32 = eligible.iter().map(|event| event.amount as f32).sum();
+    let expected = logged * percent / 100.0;
+    // CombatLogEvent truncates each native float amount to its wire integer.
+    let truncation_bound = (eligible.len() as f32 + 1.0) * percent / 100.0;
+    let actual = counter(run) - initial;
+    assert!(
+        (actual - expected).abs() <= truncation_bound,
+        "native accumulation={actual}, logged-derived={expected}, events={events:?}"
+    );
+}
+
+#[test]
+#[ignore = "native Sentence native percentage includes own Holy damage, excludes physical whites"]
+fn dps_parity_ret_sentence_native_accumulation_excludes_actual_white_damage() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = funded_sentence();
+    let initial = counter(&run);
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    damage_during_sentence(&mut run);
+    for _ in 0..80 {
+        run.app.update();
+        if run.app.world().resource::<ObservedCombatEvents>().0[start..]
+            .iter()
+            .any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id.is_none()
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+        {
+            break;
+        }
+    }
+    assert!(owned_sentence(&run).is_some());
+    assert!(
+        run.app.world().resource::<ObservedCombatEvents>().0[start..]
+            .iter()
+            .any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id.is_none()
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+        "real physical white damage must exercise the exclusion"
+    );
+    assert_native_accumulation(&run, initial, start);
+}
+
+#[test]
+#[ignore = "native Sentence must not gather an unrelated real actor's Holy damage"]
+fn dps_parity_ret_sentence_native_accumulation_excludes_foreign_actor_damage() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = funded_sentence();
+    let copy = *run
+        .app
+        .world()
+        .get::<crate::maps::InMap>(run.actor)
+        .unwrap();
+    let other = crate::followers::simulator::spawn_parity_attacker(
+        run.app.world_mut(),
+        70,
+        90,
+        copy,
+        crate::followers::simulator::ParityActor::Follower,
+    )
+    .unwrap();
+    inputs::equip(run.app.world_mut(), other, &run.profile).unwrap();
+    inputs::install_traits(run.app.world_mut(), other, &[]).unwrap();
+    literal_rotation::capture_fixture(
+        run.app.world_mut(),
+        other,
+        crate::simc_apl_native::Encounter::Fixture {
+            started_at: 0.0,
+            duration: 300.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        },
+    )
+    .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let initial = counter(&run);
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        other,
+        JUDGMENT,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    for _ in 0..80 {
+        run.app.update();
+        if run.app.world().resource::<ObservedCombatEvents>().0[start..]
+            .iter()
+            .any(|event| {
+                event.source == Some(other.to_bits())
+                    && event.spell_id == Some(JUDGMENT)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+        {
+            break;
+        }
+    }
+    assert!(
+        run.app.world().resource::<ObservedCombatEvents>().0[start..]
+            .iter()
+            .any(|event| {
+                event.source == Some(other.to_bits())
+                    && event.spell_id == Some(JUDGMENT)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+        "foreign native Holy damage must reach the same real target"
+    );
+    assert_native_accumulation(&run, initial, start);
+}
+
 #[test]
 #[ignore = "native Sentence paid cast and real accumulated damage must detonate on expiry"]
 fn dps_parity_ret_sentence_native_expiry_dispatches_real_damage() {
