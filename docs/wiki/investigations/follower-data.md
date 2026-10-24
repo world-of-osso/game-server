@@ -1,5 +1,11 @@
 # Retail follower data and approved spec bridge
 
+## Devastation Causality native hook — 2026-10-23
+
+TC a352b1fa `spell_evoker.cpp215–239` supplies an actual Disintegrate356995 AuraScript: snapshot Causality375777 presence when the aura loads, then read the caster's live effect0 integer amount on each periodic-damage tick and modify Eternity Surge359073/Fire Breath357208 recovery. Native effect0 is−500ms; effect1's−400ms belongs to the separate Pyre hook and is not substituted. `auras/causality.rs` retains the per-instance Load result until removal and reuses the existing native spell/charge recovery helper. Periodic-damage callbacks run before default damage, matching TC's hook boundary. No coefficient, stat or duration tuning.
+
+At61218bfda the real-cast fixtures produce3genuineRED/absence-controlPASS30.33s: first tick misses500ms; the next loaded channel after late passive restoration misses2.5s. Prior InvalidTarget errors were fixture failures, not RED. Implementation is committed separately from shared APL execution/history; targeted GREEN remains pending. [Spec and proof context](../../specs/devastation-parity.md).
+
 ## Devastation Giantkiller policy — 2026-10-22
 
 The legal1467 reference omits native-Augmentation-only98931/122279 from both inputs and SimC (`hero_talents=122279:0`); all other allocated/effective ranks match. Fresh1000-iteration references remain113727.53ST/182444.53three-target. Current-canonical SQLite-backed5c78a3a67 native300s measurements are26295.95ST/28277.82three-target (−76.88%/−84.50%), both outside parity bands. Strict native fixtures2PASS12.52s/16.65s; source56820001/private backupdd1de231 copied at20261024T004621Z. The driver remains`NATIVE_FOLLOWER_KIT`, not literal APL. Disintegrate47/42 casts versus82.71/68.06reference, with38177.46/54652.78missing DPS; Azure Sweep is still absent (12945.28/22732.08missing DPS). Full same-ID-aware attribution:`native-current-5c78a3a67-20261024T004621Z/channel-attribution.json`. Code and native data changed together since historical measurements: these are diagnosis, not isolated haste attribution or parity acceptance. The obsolete pet-only constructor's duplicate-plugin crash was independently replaced on master by478afccc0.

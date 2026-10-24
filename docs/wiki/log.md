@@ -1,3 +1,7 @@
+## 2026-10-23 — Native Causality periodic boundary
+
+[Disintegrate Causality](investigations/follower-data.md#devastation-causality-native-hook--2026-10-23) reached3genuineRED and passive-absence controlPASS30.33s at61218bfda. Port preserves TC Load timing and reads actual native effect0 for spell/charge recovery; periodic-damage hook executes before damage. No coefficients/stats/data changed; GREEN pending.
+
 ## 2026-10-23 — Native haste and Dev current-data qualification
 
 [Haste composition](systems/character-stats.md#native-haste-composition-qualification--2026-10-23): real BiS rating plus native two-buff RED→stat/cast/GCD/removal GREEN; TC category133 stage and signed NPC cadence consumers corrected.55targetedPASS126.31s at5c, unchanged-tree master mergee88; parenths1053 gate separate. [Dev measurements](investigations/follower-data.md#devastation-giantkiller-policy--2026-10-22) use a fresh canonical SQLite backup and remain outside both bands; literal APL and missing producers stay open. Trait-point rechecks confirm native selected16% Arcane Intensity and140 Feral Energy. No coefficient/data tuning.

@@ -172,6 +172,7 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
         .expect("periodic effect belongs to its spell");
     match tick.aura_type {
         PERIODIC_DAMAGE => {
+            run_scripted_tick(world, unit, spell, tick);
             let agony_tick = spell.id == super::agony::AGONY && tick.effect_index == 0;
             let advance_agony = agony_tick && !super::is_immune(world, unit, spell.school_mask());
             effects::deal_effect_damage(world, &ctx, effect, unit, tick.amount, false, true);

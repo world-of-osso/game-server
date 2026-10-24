@@ -388,6 +388,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     );
     crate::spell_cast::toy_coyote::register(&mut scripts);
     super::abundance::register(&mut scripts);
+    super::causality::register(&mut scripts);
     crate::spell_cast::scripts::holy_priest::register(&mut scripts);
     crate::spell_cast::scripts::prayer_of_mending::register(&mut scripts);
     super::earthen_rage::register(&mut scripts);
