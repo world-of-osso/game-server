@@ -9,6 +9,8 @@ mod pet_stats_tests;
 mod player_rotation;
 mod power_tests;
 mod precombat_tests;
+mod preparation;
+mod profile_initialization;
 mod report;
 mod windwalker_rotation;
 use bevy::prelude::*;
@@ -102,20 +104,33 @@ fn prepare(spec_id: u32, count: usize) -> Result<Run, String> {
     prepare_reference(profile, &traits, count, identity)
 }
 
-/// Explicit literal fixture entry. RED scaffold retains the existing late handoff;
-/// the precombat implementation must capture before prepare_reference's warmup.
+/// Capture the explicit literal controller before any native setup frame.
 fn prepare_literal(spec_id: u32, count: usize) -> Result<Run, String> {
-    let mut run = prepare(spec_id, count)?;
+    let (profile, traits) = read_reference(spec_id)?;
+    let identity = inputs::read_actor(&profile)?;
+    let mut run = spawn_reference(profile, &traits, count, identity)?;
     let encounter = crate::simc_apl_native::Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
         duration: f64::from(TICKS) / 20.0,
         style: crate::simc_apl_native::FightStyle::Patchwerk,
     };
     literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter)?;
+    preparation::warm_up_reference(&mut run)?;
     Ok(run)
 }
 
 fn prepare_reference(
+    profile: inputs::Profile,
+    traits: &[inputs::AllocatedTrait],
+    count: usize,
+    identity: crate::followers::simulator::ParityActor,
+) -> Result<Run, String> {
+    let mut run = spawn_reference(profile, traits, count, identity)?;
+    preparation::warm_up_reference(&mut run)?;
+    Ok(run)
+}
+
+fn spawn_reference(
     profile: inputs::Profile,
     traits: &[inputs::AllocatedTrait],
     count: usize,
@@ -138,13 +153,11 @@ fn prepare_reference(
     )?;
     inputs::equip(app.world_mut(), actor, &profile)?;
     inputs::install_traits(app.world_mut(), actor, traits)?;
+    profile_initialization::initialize_declared_powers(app.world_mut(), actor, &profile)?;
     let targets = spawn_targets(&mut app, actor, count)?;
     let target_waves = vec![
         json!({"at": 0.0, "entities": targets.iter().map(|unit| unit.to_bits()).collect::<Vec<_>>()}),
     ];
-    for _ in 0..4 {
-        app.update();
-    }
     let is_player = app
         .world()
         .get::<shared::components::Player>(actor)

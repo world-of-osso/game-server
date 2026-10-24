@@ -112,8 +112,34 @@ fn literal_precombat_initializes_declared_demo_shards_before_warmup() {
         current, 0.0,
         "profile-declared starting state precedes precombat; do not reset/grant after casts"
     );
+}
+
+#[test]
+#[ignore = "requires prepared266 profile/current native source view; native default pet pull boundary"]
+fn literal_precombat_native_demo_default_pet_is_complete_at_pull() {
+    let _seed = crate::random::seed_scope(70448);
+    // Native-controller control, independent of the literal adapter's later precasts.
+    let run = prepare(266, 1).unwrap();
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor)
         .expect("native default pet at pull");
+    assert!(
+        run.app
+            .world()
+            .get::<shared::casting::CastState>(run.actor)
+            .is_none(),
+        "the real summon cast must finish before the pull"
+    );
+    let world = run.app.world();
+    let summon = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(30146)
+        .unwrap();
+    assert!(
+        world
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .is_some_and(|history| !history.on_gcd(summon, crate::spell_cast::history_now(world))),
+        "native summon GCD must also finish before the pull"
+    );
     assert_eq!(
         run.app
             .world()

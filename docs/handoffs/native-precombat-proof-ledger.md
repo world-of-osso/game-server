@@ -27,6 +27,14 @@ The local ff8ba4206 four-case test packet is compiling in worker01a16b35-1801-71
 
 Actual266 precombat ends with power_siphon, conditional demonbolt, shadow_bolt. Initial0 shards must be checked BEFORE those native builders, not forced back to0 afterward. Split the scaffold's combined initial-resource/pet-at-pull assertion into explicit phases when implementing. Nonharmful pre-casts finish OOC before explicit engagement; preserve the first harmful precast's real impact rather than clearing it in engage(). Any later post-engage target/ref loss is a separate gap, not repaired by recurring pulls.
 
+## First implementation slice — runtime GREEN pending
+
+Own ff8ba4206 run now qualifies3RED/1GREEN in32.32s: literal Feral unauthorized1126, Demo initial30raw rather than0, and Demo ST0damage after10s all fail; native Feral kit control passes. Binary SHA12797a5dff29152d58cf99ed04f539997f7d400031b3f2c35a0b3b25d3598ba8. `native-precombat-red-ff8ba4206/runtime.*` records command/revision; its newly taken canonical/copy hashes are568200017bcb3b5ed6f17931fc0994fff502c5c801f93f96197fc718bcd493bf/dd1de231e32c26291182dff050a8de5a5132908723ed21454eb128e45e4b05ae.
+
+Implementation splits spawn from warmup so explicit literal capture precedes all four frames, while native-controller fixtures retain their real kit. Native setup then advances actual pending cast/GCD state before returning for engagement, bounded at30s with explicit state on failure. No cast cancellation, cooldown reset, new combat refs or resource grants are used. Profile now retains raw top-level options; declared class resource tokens resolve through read-only native PowerType NameGlobalStringTag, convert display units using native DisplayModifier, validate actual pool bounds, and initialize once before setup. Undeclared pools remain unchanged.
+
+The initial0-shard assertion is now separate from the native Felguard-at-pull control, which also checks real cast/GCD completion. This is five opt-in cases; the added boundary assertion uses the same already observed native30146 failure, not an easier controller. Shared ordered Driver traversal, generic configured summon_pet selection, WW lifecycle wiring and full literal266 precasts remain OPEN. This slice is not claimed to implement them.
+
 ## Dependencies
 
 pd1035 is landed at2333d924b and merged locally; exact-target Prepared/Player dispatch remains14775-owned. Resource query010f7f761 is GREEN9/9 on arms-literal-resource-hooks; it ignores only the requested PowerType affordability while retaining other native checks. Integrate its shared API after pd, not the old613 scaffold. No unselected legacy kit fallback and no WW-specific tier2pc path.
