@@ -3,6 +3,7 @@ mod dummy_reference_tests;
 mod engagement_tests;
 mod equipment_input_tests;
 mod equipped_set_tests;
+mod feral_tests;
 mod firestarter_tests;
 mod haste_tests;
 mod inputs;
@@ -14,6 +15,9 @@ mod pet_stats_tests;
 mod player_rotation;
 mod power_tests;
 mod report;
+mod ret_empyrean_tests;
+mod ret_purpose_tests;
+mod ret_tier_tests;
 pub(crate) mod single_spell;
 mod warrior_stat_tests;
 mod windwalker_rotation;
@@ -118,6 +122,8 @@ fn prepare_reference(
     let mut app = super::runtime::build_app();
     inputs::install_reference_catalogs(&mut app)?;
     let copy = super::runtime::create_copy(&mut app);
+    // Origin-centered parity fixtures have no frozen dungeon geometry.
+    app.world_mut().remove_resource::<super::Space>();
     let level = profile
         .level
         .parse()

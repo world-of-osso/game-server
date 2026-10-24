@@ -1,5 +1,9 @@
 # Auras
 
+## Explicit proc source presence — 2026-10-23
+
+`import_spell_proc_presence.py` publishes only the audited effective TC IDs to `tdb_spell_proc(SpellId PRIMARY KEY)`, verifying every base/update source hash first. One transaction reconciles IDs while preserving retained value columns and unrelated tables. It does not parse SQL again or apply numeric proc overrides. The supplied audit pins1283base rows plus7updates yielding1291IDs. [Contract and source/qualification ledger](../../handoffs/feral-source-census.md#explicit-tdb-provenance-boundary). Runtime provenance/refusal is a separate follow-up, not part of the shared action-knowledge helper.
+
 ## Periodic critical ticks — 2026-10-23
 
 TC a352b1fa `SpellAuras.cpp524–532` rejects Attr2 `CANT_CRIT` before accepting Attr8 `PERIODIC_CAN_CRIT`. `SpellAuraEffects.cpp5680/5764/5895` rolls damage, leech and healing each tick; percent damage/healing shares those paths. `CalcPeriodicCritChance6103–6113` requires a Player spell-mod owner. `Object.cpp1646–1667` resolves a Player itself or a pet/totem's direct Player owner.

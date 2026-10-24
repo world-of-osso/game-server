@@ -1,6 +1,6 @@
 //! Equipped native item/enchant spells follow the ordinary aura lifecycle.
+pub mod item_sets;
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
-use crate::class_progression::ActiveSpec;
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::{EquippedItemModifiers, EquippedItems, NativeItemInstances};
 use bevy::prelude::*;
@@ -20,7 +20,6 @@ type ChangedEquipment = QueryState<
             Changed<EquippedItems>,
             Changed<EquippedItemModifiers>,
             Changed<Level>,
-            Changed<ActiveSpec>,
         )>,
     ),
 >;
@@ -28,41 +27,21 @@ type ChangedEquipment = QueryState<
 pub(crate) fn sync_equipment_effects(world: &mut World, changed: &mut ChangedEquipment) {
     let units: Vec<Entity> = changed.iter(world).collect();
     for unit in units {
-        let mut desired: Vec<_> = equipped_spells(world, unit)
-            .into_iter()
-            .map(|(slot, spell)| (AuraSource::Equipment(slot), spell))
-            .collect();
-        desired.extend(equipped_set_spells(world, unit));
+        let desired = equipped_spells(world, unit);
         crate::auras::remove_auras(world, unit, RemoveReason::Unlearned, |aura| {
-            if !matches!(
-                aura.source,
-                AuraSource::Equipment(_) | AuraSource::EquipmentSet(_)
-            ) {
+            let AuraSource::Equipment(slot) = aura.source else {
                 return false;
-            }
+            };
             !desired.iter().any(|(key, spell)| {
-                *key == aura.source
+                *key == slot
                     && spell.id == aura.spell_id
                     && spell.cast_item_level == aura.cast_item_level
             })
         });
-        for (source, spell) in desired {
-            apply_missing_equipment_aura(world, unit, source, &spell);
+        for (slot, spell) in desired {
+            apply_missing_equipment_aura(world, unit, AuraSource::Equipment(slot), &spell);
         }
     }
-}
-
-fn equipped_set_spells(world: &World, unit: Entity) -> Vec<(AuraSource, SpellInfo)> {
-    crate::item_proc_data::equipped_set_spells(world, unit)
-        .into_iter()
-        .filter_map(|(set, id)| {
-            let Some(spell) = world.resource::<SpellStore>().get(id).cloned() else {
-                error!("Native equipped set{set} spell{id} absent from SpellStore");
-                return None;
-            };
-            Some((AuraSource::EquipmentSet(set), spell))
-        })
-        .collect()
 }
 
 fn equipped_spells(world: &World, unit: Entity) -> Vec<(EquipmentSlot, SpellInfo)> {
@@ -221,6 +200,8 @@ mod tests {
             .world_mut()
             .entity_mut(h.caster)
             .insert(shared::components::UnitLevel(90));
+        h.app
+            .insert_resource(crate::item_proc_data::load(&conn).unwrap());
         h.app.insert_resource(NativeItemInstances {
             bonuses: load::load_bonus_tables(&conn).unwrap(),
             enchants: load::load_enchantment_tables(&conn).unwrap(),
@@ -245,6 +226,125 @@ mod tests {
             },
         ));
         h.advance(2);
+    }
+
+    #[test]
+    #[ignore = "native Ret ItemSet2062 threshold lifecycle RED; private source DB only"]
+    fn item_set_native_ret_thresholds_remove_and_reapply_without_duplicate_auras() {
+        let mut h = native_harness();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(crate::class_progression::ActiveSpec(70));
+        let pieces = [
+            (EquipmentSlot::Head, 271465),
+            (EquipmentSlot::Shoulder, 271463),
+            (EquipmentSlot::Chest, 271468),
+            (EquipmentSlot::Legs, 271464),
+            (EquipmentSlot::Hands, 271466),
+        ];
+        for (count, expected) in [
+            (1, (false, false)),
+            (2, (true, false)),
+            (5, (true, true)),
+            (3, (true, false)),
+            (1, (false, false)),
+            (4, (true, true)),
+            (0, (false, false)),
+        ] {
+            h.app.world_mut().entity_mut(h.caster).insert((
+                EquippedItems {
+                    items: pieces[..count]
+                        .iter()
+                        .map(|&(slot, id)| (slot, Retail, id))
+                        .collect(),
+                },
+                EquippedItemModifiers {
+                    items: pieces[..count]
+                        .iter()
+                        .map(|&(slot, _)| (slot, ItemInstanceModifiers::default()))
+                        .collect(),
+                    ..Default::default()
+                },
+            ));
+            h.advance(3);
+            let observed = (
+                crate::auras::has_aura(h.app.world(), h.caster, 1296660),
+                crate::auras::has_aura(h.app.world(), h.caster, 1296661),
+            );
+            assert_eq!(observed, expected, "native Ret2062 count{count}");
+            let auras = h.app.world().get::<ActiveAuras>(h.caster).unwrap();
+            for id in [1296660, 1296661] {
+                assert!(auras.iter().filter(|aura| aura.spell_id == id).count() <= 1);
+            }
+        }
+    }
+
+    #[test]
+    #[ignore = "native Ret ItemSet2062 spec change RED; private source DB only"]
+    fn item_set_native_ret_specialization_change_replaces_only_set_owned_auras() {
+        let mut h = native_harness();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(crate::class_progression::ActiveSpec(70));
+        let pieces = [
+            (EquipmentSlot::Head, 271465),
+            (EquipmentSlot::Shoulder, 271463),
+            (EquipmentSlot::Chest, 271468),
+            (EquipmentSlot::Legs, 271464),
+            (EquipmentSlot::MainHand, 268209),
+        ];
+        h.app.world_mut().entity_mut(h.caster).insert((
+            EquippedItems {
+                items: pieces
+                    .iter()
+                    .map(|&(slot, id)| (slot, Retail, id))
+                    .collect(),
+            },
+            EquippedItemModifiers {
+                items: pieces
+                    .iter()
+                    .map(|&(slot, _)| (slot, ItemInstanceModifiers::default()))
+                    .collect(),
+                ..Default::default()
+            },
+        ));
+        h.advance(3);
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296660));
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296661));
+        let ordinary_instance = |h: &Harness| {
+            h.app
+                .world()
+                .get::<ActiveAuras>(h.caster)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 1291718)
+                .expect("unchanged native weapon aura")
+                .instance_id
+        };
+        let weapon_aura = ordinary_instance(&h);
+        // Native ItemSetSpell7715–7720 choose different Ret/Prot/Holy roots.
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(crate::class_progression::ActiveSpec(66));
+        h.advance(3);
+        assert!(!crate::auras::has_aura(h.app.world(), h.caster, 1296660));
+        assert!(!crate::auras::has_aura(h.app.world(), h.caster, 1296661));
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296658));
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296659));
+        assert_eq!(ordinary_instance(&h), weapon_aura);
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(crate::class_progression::ActiveSpec(70));
+        h.advance(3);
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296660));
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, 1296661));
+        assert!(!crate::auras::has_aura(h.app.world(), h.caster, 1296658));
+        assert!(!crate::auras::has_aura(h.app.world(), h.caster, 1296659));
+        assert_eq!(ordinary_instance(&h), weapon_aura);
     }
 
     #[test]

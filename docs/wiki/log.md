@@ -10,6 +10,16 @@
 
 [Generic mastery](systems/character-stats.md#generic-mastery-base--2026-10-23): native zero-rating Arms Player114585 aura3188 produces16 at9215bc7fc, genuine RED10.95s on a fresh canonical snapshot. Remove only the duplicate hardcoded8 per TC UpdateMastery; rating/coefficient handling unchanged. At0576893d7 three-class unlearn/relearn1GREEN14.73s and stats-filter21GREEN8.35s, no compiler warnings; parent gate separate. [Historical Arms ledger](investigations/arms-spell-factors.md) exactly reconstructs AP3597.85vs4126/source1.799109vs1.818182, explicitly distinguishes SimC's double Reinforced Plates armor, and requires fresh post-redirect gear/tier qualification.
 
+## 2026-10-23 — Missed hostile spell combat references
+
+[Combat](systems/combat.md#combat-state): native MISS/IMMUNE missing-reference REDs → selected-target launch/arrival preservation; three boundary controls, nine retained travel/reflection controls and unchanged Ret funding/TV damage GREEN at02090739e. No resource, hit-chance or timer override. WW equipment consumer1GREEN47.55s; combined parent gate awaits master8e7c7a685 integration. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#generic-missed-hostile-launch-combat).
+
+## 2026-10-23 — Judgment cast-time Holy Power correction
+
+[Judgment](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers): pinned TC OnCast/HasSpell315867 contradicts former damage-hit/aura gating. Genuine native cast-before-impact, immune-target and aura-only REDs atde7b6e406; shared20271/275773/275779 ordinary/triggered/costed-trigger correction has native16GREEN and warning-free retained controls at02090739e. No fixture resource grants or DPS claim. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#judgment-cast-time-resource-correction).
+## 2026-10-23 — Readonly native selected-pool admission
+
+[Shared Prepared](systems/simc-apl.md#shared-literal-fixture-machinery) resource hook reproduces2genuineRED at6134141c7 against current-canonical backup05577b33612d (21.25s). Native max comparison now affects only the chosen pool's local affordability, never the world's resources; preserves other costs/constraints and exact target. Energy/Chi and far-target cases use actual learned spells/pools. GREEN pending. Pool control and next-row semantics remain14766-owned; no DPS claim.
 ## 2026-10-23 — Corridor capture consumer ownership
 
 The retained-core unit check exposed a runtime-only reverse edge: ignored corridor capture imports simulator runtime/diagnostics. Capture returned to the consumer with its original name and a canonical graph re-export; no gameplay/type duplication. Expected117 simulator cases/6retained graph cases; workspace names/ignore statuses unchanged. Compiler and full-suite qualification pending.
@@ -109,6 +119,14 @@ Merged current master4a2deb367 into native-spell-diff. Resolution retains owner-
 ## 2026-10-23 — Binary probe withdraws inherited-run-target oracle
 
 Pinned SimC76f8118 selects timed adds on a run row but its child Mortal Strike still waits for main health<80% (first60.056s on main, not6s on adds). `player.cpp2467–2476` only changes active lists. Earlier24/24GREEN included a wrong inherited-child oracle; packet withdrawn before landing per lead. Corrected23PASS/1 genuineRED at2d6a66259 →24/24GREEN atad720fc3c (28.61s compile/0compiler warnings/0ignored): shared target inheritance state deleted; ordinary target min/max and non-returning runs retained. [Proof ledger](../handoffs/shared-run-target-proof-ledger.md).
+
+## 2026-10-23 — Explicit proc provenance importer
+
+[Proc source presence](systems/auras.md#explicit-proc-source-presence--2026-10-23) consumes the audited1291effective TC IDs, verifies8pinned source files, and transactionally publishes presence only. Later numeric columns remain separately owned; no refusal guard or chance/mask overlay is included. Focused CLI RED recorded before implementation; qualification follows the committed producer.
+
+## 2026-10-23 — Feral baseline and action-knowledge census
+
+[Feral census](../handoffs/feral-source-census.md): exact reproduced references, private-source-view historical native ST56378.65/3T62475.26 (supplied binary's9d13label withdrawn: UNKNOWN_PRE_9D13_MISLABELED), five ignored redirected-stat allocations and missing consumable residual separated from channel gaps. [Knowledge census](../handoffs/action-knowledge-census.md):990native starter books/1090kit rows; four sourced visible/parent actions, zero missing-book rejections after bridges. Own shared-helper a95c0df7a10FAIL/5PASS→c3934c31d15/15GREEN38.29s, four-stage empower PASS13.06s. Ret integration awaits its direct Judgment generator-fixture NoCharges correction; literal Feral/native current ST/3T remain pending.
 
 ## 2026-10-22 — Shared Hunter pet total-RAP source RED
 
