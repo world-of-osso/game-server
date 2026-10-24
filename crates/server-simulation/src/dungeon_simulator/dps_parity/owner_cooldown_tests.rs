@@ -156,6 +156,11 @@ fn assert_scent_return(run: &mut Run, expected_return: f64) {
 }
 
 fn assert_scales_reduction(run: &mut Run, seconds: f64, triggered: bool) {
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .remove::<crate::creature_ai::FollowOwner>()
+        .insert(crate::creature_ai::CreatureState::Idle);
     let original_position = *run
         .app
         .world()
@@ -165,6 +170,14 @@ fn assert_scales_reduction(run: &mut Run, seconds: f64, triggered: bool) {
     if !triggered {
         wait_for_gcd(run, COBRA_SHOT);
     }
+    assert_eq!(
+        *run.app
+            .world()
+            .get::<shared::components::Position>(run.actor)
+            .unwrap(),
+        original_position,
+        "controlled GCD wait preserves actual prepared geometry"
+    );
     let before = barbed_fact(run, "full_recharge_time");
     assert!(
         before > 2.0,
