@@ -3,6 +3,7 @@ mod engagement_tests;
 mod haste_tests;
 mod inputs;
 pub(crate) mod literal_rotation;
+mod pack_tactics_tests;
 mod periodic_crit_tests;
 mod pet_child_tests;
 mod pet_melee_tests;
