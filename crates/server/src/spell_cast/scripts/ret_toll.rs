@@ -10,10 +10,17 @@ use crate::spell_cast::targets::{self, Relation};
 use crate::spell_info::{SpellInfo, SpellStore};
 
 pub(super) const ROOT: u32 = 375576;
-const JUDGMENT: u32 = 406957;
+pub(super) const JUDGMENT: u32 = 406957;
 const HAMMER: u32 = 1279408;
 const HAMMER_MODE: u32 = 1277026;
 const RETRIBUTION: u32 = 70;
+
+/// SIMC_RET_DIVINE_TOLL_JUDGMENT_POWER: only the landed damage effect runs
+/// this relationship. The shared native helper checks learned315867 and casts
+/// actual220637; ordinary TC Judgment OnCast and native Hammer funding stay separate.
+pub(super) fn fund_landed_judgment(world: &mut World, caster: Entity, _target: Entity, depth: u8) {
+    super::batch16::energize_judgment(world, caster, depth);
+}
 
 fn native_cap(spell: &SpellInfo) -> Option<usize> {
     spell

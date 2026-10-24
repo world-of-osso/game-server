@@ -301,6 +301,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
             Some(crate::scripted_ai::orator::terrorize_hit)
         }
         (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::cast_damage),
+        (ret_toll::JUDGMENT, 0) => Some(ret_toll::fund_landed_judgment),
         (49_576, 0) => Some(death_grip),
         (108_199, 1) => Some(cast_subduing_grasp),
         (20_538, 0) => Some(hate_to_zero),

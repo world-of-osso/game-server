@@ -1,3 +1,7 @@
+## 2026-10-24 — Separate Divine Toll Judgment funding
+
+[Auras](systems/auras.md#divine-toll-child-relationship--2026-10-24):63843f08b actual406957 damage/learned315867 reaches resource0vs1ST/0vs3three-target; native Hammer effect1 funding controlPASS48.51s. Lead approved separate landed-effect/native220637 relationship; generic effect-hit hook reuses existing rank-checked native trigger helper, not direct grants. Ordinary TC Judgment/root/Hammer unchanged; GREEN pending. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#divine-toll-child-funding--sourcered-only).
+
 ## 2026-10-24 — Divine Toll child dispatch qualification
 
 [Auras](systems/auras.md#divine-toll-child-relationship--2026-10-24): selected ordinary375576 genuinely lacks native406957 on ST/3T; initial2RED/1control48.15s, corrected actual-combat admission2RED/1control69.13s. Lead approved narrow relationship after TC/native trigger-edge absence audit. Existing generic hooks preserve native primary/cap/radius/mode/amount:7361618a9 original3GREEN56.82s plus d0d6d07cf actual-Damage boundedcontrols2GREEN45.41s. Full-mask CastSuccess oracle attempt explicitly excluded as invalid observation. Secondary class relationships remain separately unqualified. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#divine-toll-native-child-relationship--sourcered-only).

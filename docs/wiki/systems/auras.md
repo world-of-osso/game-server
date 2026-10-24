@@ -2,6 +2,8 @@
 
 ## Divine Toll child relationship — 2026-10-24
 
+Separate approved `SIMC_RET_DIVINE_TOLL_JUDGMENT_POWER` binds only406957/effect0 landed hits to the existing learned315867/native220637 trigger helper. TC's older Judgment OnCast bindings omit406957; native220637 effect0 remains the value authority. Actual ST/3T damaging-child2RED/Hammer native funding controlPASS48.51s at63843f08b precedes implementation; GREEN pending. Root, Hammer and ordinary TC Judgment funding are not altered. [Source/proof](../../handoffs/ret-paladin-parity-proof-ledger.md#divine-toll-child-funding--sourcered-only).
+
 `SIMC_RET_DIVINE_TOLL_RELATIONSHIP` bridges375576 to native406957, or1279408 under actual1277026 mode, only for spec70. TC has no handler and native/TDB have no child edge. Existing generic area-filter/context-hit/triggered-child seams preserve native cap/radius/combat admission and effect5 percentage. Primary counts once; unrelated friendly/caster hits do not dispatch hostile children. [Contract](../../specs/dps-parity.md#ret-divine-toll-relationship), [source/two-stage RED](../../handoffs/ret-paladin-parity-proof-ledger.md#divine-toll-native-child-relationship--sourcered-only), [implementation](../../../crates/server/src/spell_cast/scripts/ret_toll.rs). 7361618a9 ST/3T/unselected3GREEN56.82s plus test-onlyd0d6d07cf cap/range/combat-admission/mode/actualpercentage2GREEN45.41s qualify five cases on unchanged runtime. Invalid CastSuccess oracle attempt is retained separately. Mode producer/funding and Resonance/Exaction/DivineHammer remain individually unqualified.
 
 ## Execution Sentence accumulation — 2026-10-24
