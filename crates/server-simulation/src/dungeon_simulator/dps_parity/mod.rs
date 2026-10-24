@@ -2,6 +2,8 @@
 mod dummy_reference_tests;
 mod engagement_tests;
 mod equipment_input_tests;
+#[cfg(test)]
+mod feral_rotation;
 mod feral_tests;
 mod firestarter_tests;
 mod haste_tests;
