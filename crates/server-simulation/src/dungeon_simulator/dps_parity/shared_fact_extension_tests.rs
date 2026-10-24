@@ -42,6 +42,20 @@ fn feral() -> (App, Entity, Bindings) {
     let mut bindings = Bindings::default();
     bindings.buffs.insert("clearcasting".into(), CLEARCASTING);
     bindings.buffs.insert("tigers_fury".into(), TIGERS_FURY);
+    // Actual103.reference.single.json player fields, not sim.options.reaction_time.
+    crate::simc_apl_native::reaction::configure(
+        app.world_mut(),
+        actor,
+        crate::simc_apl_native::reaction::ReactionSettings {
+            mean: 0.25,
+            stddev: 0.05,
+            offset: 0.1,
+            nu: 0.15,
+            maximum: SOURCE_REACTION_MAX_SECONDS,
+        },
+        &[CLEARCASTING],
+    )
+    .unwrap();
     (app, actor, bindings)
 }
 
