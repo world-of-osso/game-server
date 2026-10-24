@@ -22,7 +22,7 @@ Devastation1467 must execute its DPS rotation natively and measure within10% of 
 - `crates/server/src/followers/giantkiller_tests.rs` — real level90 Kybel damage and native passive lifetime controls.
 - `crates/server/src/dungeon_simulator/dps_parity/` — exact-gear, strict-trait300s measurement.
 - `dps_parity/devastation_rotation/76f8118.simc` — all89 pinned action rows, unchanged order/options; APL-text SHA25648b025417cf6cd1c94416c247e8fe2c8b995f1a14f300d7d91046a6b94be4af3. This is preserved source data, not execution qualification.
-- `dps_parity/devastation_rotation/source.rs` — compiles every preserved action row into shared Program lists, retaining assignment/append semantics and explicit missing-fact errors; compilation is not full native execution.
+- `dps_parity/devastation_rotation/source.rs` — compiles every preserved action row into shared Program lists, retaining assignment/append semantics, global declaration order (which owns variable defaults), and explicit missing-fact errors; compilation is not full native execution.
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/devastation_rotation/{bindings,facts,tests}.rs` — native alias registry and shared action/target-context forwarding. The focused Living Flame leaf case checks real native context, CastSuccess and landed damage; it is not the full precombat/controller or89-row proof. Shared trinket/set/ilvl gaps remain explicit errors until their owner supplies the native facts.
 - `auras/causality.rs` — TC's application-time load condition, live caster effect0 and actual empower recovery modification on Disintegrate periodic damage; no invented reduction.
 

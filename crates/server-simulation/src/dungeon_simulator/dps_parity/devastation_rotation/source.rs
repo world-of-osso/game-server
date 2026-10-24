@@ -2,28 +2,36 @@
 use server::simc_apl::Program;
 use std::collections::BTreeMap;
 
+type SourceLists = BTreeMap<String, Vec<(usize, String)>>;
+
 pub(super) fn load() -> Result<Program, String> {
     compile_source(include_str!("76f8118.simc"))
 }
 
 fn compile_source(source: &str) -> Result<Program, String> {
-    let mut lists = BTreeMap::<String, Vec<String>>::new();
+    let mut lists = SourceLists::new();
     for (index, line) in source.lines().enumerate() {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
-        append_source_row(&mut lists, line)
+        append_source_row(&mut lists, line, index)
             .map_err(|error| format!("Dev APL source line{}: {error}", index + 1))?;
     }
-    let lists: Vec<_> = lists
+    let mut rows: Vec<_> = lists
         .iter()
-        .flat_map(|(name, rows)| rows.iter().map(move |row| (name.as_str(), row.as_str())))
+        .flat_map(|(name, rows)| {
+            rows.iter()
+                .map(move |(position, row)| (*position, name.as_str(), row.as_str()))
+        })
         .collect();
-    Program::parse(&lists)
+    // Program's first declaration owns a variable's default, even across lists.
+    rows.sort_by_key(|(position, _, _)| *position);
+    let rows: Vec<_> = rows.into_iter().map(|(_, name, row)| (name, row)).collect();
+    Program::parse(&rows)
 }
 
-fn append_source_row(lists: &mut BTreeMap<String, Vec<String>>, line: &str) -> Result<(), String> {
+fn append_source_row(lists: &mut SourceLists, line: &str, position: usize) -> Result<(), String> {
     let (assignment, row) = line.split_once('=').ok_or("action assignment absent")?;
     let append = assignment.ends_with('+');
     let key = assignment.strip_suffix('+').unwrap_or(assignment);
@@ -38,7 +46,7 @@ fn append_source_row(lists: &mut BTreeMap<String, Vec<String>>, line: &str) -> R
     if !append {
         body.clear();
     }
-    body.push(row.strip_prefix('/').unwrap_or(row).into());
+    body.push((position, row.strip_prefix('/').unwrap_or(row).into()));
     Ok(())
 }
 
