@@ -58,19 +58,7 @@ impl Prepared {
         }
         read_attacks(world, actor, &targets, &mut ready);
         read_spells(world, actor, &targets, actions, &mut ready)?;
-        for (slot, item) in equipment.uses() {
-            for target in std::iter::once(actor).chain(targets.iter().copied()) {
-                if native_ready(world, actor, item.on_use.spell_id, target, Some(item))? {
-                    record_ready(
-                        &mut ready,
-                        &format!("item:{slot}"),
-                        target,
-                        target == actor,
-                        Execution::Item(item, target),
-                    );
-                }
-            }
-        }
+        read_items(world, actor, &targets, equipment, &mut ready)?;
         Ok(Self {
             ready,
             moving,
@@ -171,6 +159,29 @@ fn owns_active_aura(world: &World, actor: Entity, spell: u32) -> bool {
                     && aura.expires_at.is_none_or(|at| at > now)
             })
         })
+}
+
+fn read_items(
+    world: &mut World,
+    actor: Entity,
+    targets: &[Entity],
+    equipment: &Equipment,
+    ready: &mut ReadyActions,
+) -> Result<(), String> {
+    for (slot, item) in equipment.uses() {
+        for target in std::iter::once(actor).chain(targets.iter().copied()) {
+            if native_ready(world, actor, item.on_use.spell_id, target, Some(item))? {
+                record_ready(
+                    ready,
+                    &format!("item:{slot}"),
+                    target,
+                    target == actor,
+                    Execution::Item(item, target),
+                );
+            }
+        }
+    }
+    Ok(())
 }
 
 fn read_boolean_option(action: &Action, name: &str) -> Result<Option<bool>, String> {
