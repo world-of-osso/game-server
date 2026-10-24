@@ -79,6 +79,20 @@ pub(in crate::spell_cast) fn after_foreground_spender(
     }
 }
 
+/// Only the sourced Empyrean Legacy background can use this exception. It
+/// consumes an opposite kind without classifying or consuming Divine Purpose.
+pub(super) fn after_background_storm(world: &mut World, caster: Entity, target: Entity) {
+    if !auras::has_aura(world, caster, FOUR_PIECE) {
+        return;
+    }
+    if let Some(buff) = opposite_kinds(STORM_ARBITER)
+        .into_iter()
+        .find(|&buff| auras::has_aura(world, caster, buff))
+    {
+        consume_opposite(world, caster, Some(target), buff);
+    }
+}
+
 fn consume_opposite(world: &mut World, caster: Entity, target: Option<Entity>, buff: u32) {
     let Some(target) = target else {
         warn!(

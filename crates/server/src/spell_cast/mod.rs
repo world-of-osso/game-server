@@ -2640,6 +2640,7 @@ pub(crate) fn execute_cast(
         spell_mods::consume_charges(world, caster, spell);
         scripts::after_foreground_spender(world, caster, spell, explicit);
         scripts::roll_selected_ret_divine_purpose(world, caster, spell);
+        scripts::schedule_empyrean_legacy(world, caster, spell, explicit);
     }
     blooming_infusion::after_cast(world, caster, spell);
     druid_transform::after_cast(world, caster, spell);

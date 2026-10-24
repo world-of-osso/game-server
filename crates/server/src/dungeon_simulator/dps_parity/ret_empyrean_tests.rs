@@ -203,7 +203,17 @@ fn dps_parity_ret_empyrean_background_preserves_purpose_and_consumes_opposite_ar
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, VERDICT_ARBITER, Some(actor), 0);
     let target = run.targets[0];
     cast_ready(&mut run, verdict, target);
+    assert_eq!(
+        damage(&run, DIVINE_STORM),
+        0,
+        "Legacy callback is scheduled, not inline"
+    );
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, PURPOSE, Some(actor), 0);
+    assert_eq!(
+        damage(&run, DIVINE_STORM),
+        0,
+        "Purpose is present before background execution"
+    );
     let purpose_state = |run: &Run| {
         run.app
             .world()

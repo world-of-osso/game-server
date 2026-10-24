@@ -41,6 +41,9 @@ pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 pub(crate) mod prayer_of_mending;
 mod protection_items;
+mod ret_empyrean;
+pub(crate) use ret_empyrean::owns_empyrean_proc;
+pub(super) use ret_empyrean::schedule_empyrean_legacy;
 mod ret_purpose;
 pub(super) use ret_purpose::roll_selected_ret_divine_purpose;
 mod ret_tier;
@@ -78,6 +81,8 @@ pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u
         batch16::RET_JUDGMENT | batch16::HOLY_JUDGMENT | batch10::PROTECTION_JUDGMENT => {
             batch16::energize_judgment(world, caster, depth);
         }
+        // SimC's ordinary/background Avenging Wrath constructors use these IDs.
+        31884 | 454351 => ret_empyrean::grant_on_wrath(world, caster, depth),
         _ => {}
     }
 }
