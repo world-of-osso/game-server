@@ -75,3 +75,16 @@ fn validate_options(literal: &str) -> Result<(), String> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn literal_ele_source_rejects_unknown_inactive_actions_and_options() {
+        assert!(parse_line("actions=unknown_elemental_action,if=0").is_err());
+        assert!(parse_line("actions=lightning_bolt,unsupported=1").is_err());
+        assert!(parse_line("actions=elemental_blast,target_if=min:dot.unknown.remains").is_err());
+        assert!(load().is_ok());
+    }
+}

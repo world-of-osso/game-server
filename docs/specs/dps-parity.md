@@ -68,6 +68,8 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 
 ## Implementation inventory
 
+- `crates/server/src/dungeon_simulator/dps_parity/elemental_rotation/` — pinned82-row source, native identities and caster-owned target facts; fixture-driver hookup awaits the shared precombat/equipment APIs.
+
 - `scripts/item_instance_data.py` — native-table producer for a supplied existing SQLite copy; canonical application is lead-owned.
 - `scripts/dps_parity.py` — explicit current-tier/prior-tier profile extraction, allocated-trait JSON validation and SimC action/stat normalization.
 - `scripts/simc_selected_traits.cpp` — diagnostic CLI wrapper around unchanged76f8118 engine objects; not the reference DPS executable. It replaces only the CLI entry object to inspect actual `player_traits` after one0.1s metadata iteration. Retire when the official CLI emits lossless allocated-trait metadata.
@@ -85,6 +87,9 @@ Native fixture execution uses `scripts/dps_parity_native.py <compiled-test-binar
 The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native specialization metadata selects class identity, the prepared database resolves the reference race, and ordinary player power/stat/passive systems initialize the actor. Human uses the pinned SimC `util::race_id(RACE_HUMAN)=1` and requires that exact native row:70448 also labels ThinHuman33 "Human", so a display-name match must not choose it or reject a valid Human1 profile. Other absent/ambiguous identities fail explicitly. Strict reference traits use that player's actual race/spec identity. No follower profile or persistent character is fabricated. Player rotation execution uses the test-only `game-engine-core` dependency pinned to9ef2efe2d317b837d352fe8c5227086a4fdcd490, reusing `CooldownAssistCatalog::recommend` and `assisted_combat::evaluate_rule` unchanged. `DPS_PARITY_ASSISTED_DB2` must name the frozen70448 seven-table CSV directory. Native known spells/overrides, powers/runes, auras, target health, pet state, cooldown/charge clocks and ordinary target admission supply facts; the latter is explicitly labelled as the range-fact boundary rather than claiming identical client geometry. The50ms driver submits normal `cast_for_player` requests only inside the existing native queue window. An unknown potentially applicable rule stops the attempt and writes exact facts/rule IDs/native event evidence to `<spec>.player.assisted-gap.json`; missing metadata or cast refusal remains an explicit error. No alternate priority is substituted. Player rotation execution remains pending qualification.
 
 ## Tests asserting this spec
+
+- `crates/server/src/dungeon_simulator/dps_parity/elemental_rotation_tests.rs` — actual selected117014 ST and188443 3T native decision RED atf5b00fcbb; controls remain ignored until GREEN.
+- `crates/server/src/dungeon_simulator/dps_parity/elemental_rotation/{tests,source}.rs` — native caster-owned selectors with real selected-target damage, refresh/expiry, unknown source/operand controls; qualification pending.
 
 - `scripts/tests/test_item_instance_data.py` — concrete signed rows, idempotence, unrelated-table retention and duplicate-ID rollback.
 - `scripts/tests/test_dps_parity.py` — exact item identities/modifiers, reference-tier selection, missing-ID rejection, selected-talent metadata, direct/periodic action accounting and finite/missing/zero-reference stat comparisons.
