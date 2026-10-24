@@ -700,6 +700,11 @@ fn fixture_add_value(
     let never = i64::MAX as f64 / 1000.0;
     Ok(match property {
         "exists" => bool_value(adds.is_some()),
+        // raid_event.cpp3097–3108: configured events are up only during an active wave.
+        "up" => bool_value(
+            adds.and_then(|adds| adds.expires_at)
+                .is_some_and(|at| at > now),
+        ),
         "remains" => adds
             .and_then(|adds| adds.expires_at)
             .map_or(0.0, |at| at.saturating_sub(now).as_secs_f64()),

@@ -1,3 +1,7 @@
+## 2026-10-24 — Add-event activity fact
+
+[Native APL facts](systems/simc-apl.md#native-binding-boundary): `raid_event.adds.up` has4genuine unknown-property REDs plus1retained property control atd7c06c8ee. Pinned SimC activity now reads existing actual-wave deadline, not count/existence; no new event model. GREEN pending; [scoped proof](../handoffs/adds-up-proof-ledger.md).
+
 ## 2026-10-24 — Expurgation Dummy-proc qualification
 
 [Auras](systems/auras.md#expurgation-dummy-proc--2026-10-24): native selected383344/actual184575 hit yields genuine missing383346 RED atcce395359; unrelated Judgment control passes40.15s. TC806–821 supplies a class callback using partial-trigger semantics, not a generic Dummy promotion. Native amounts/cadence and actual recipient retained; unchanged GREEN pending. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#expurgation-native-dummy-proc).
