@@ -16,7 +16,13 @@ SimC76f8118 `engine/class_modules/monk/sc_monk.cpp5824–5827` identifies158221 
 
 `SIMC_WDP_TICK_SCHEDULE_DIFFERS`: do NOT reproduce that source's0/250/500ms schedule. Parent explicitly chooses actual native aura226 ticks from P250/D1000:250/500/750/1000ms, including the native expiry boundary. No invented tick zero or manually scheduled class timer. `AuraScripts.on_periodic` is the existing generic periodic-dummy→class-relationship seam. Existing `scripts::on_hit_with_context` is the approved cast-child route; no new cast hook.
 
-## Native qualification pending
+## Native RED and shared primary context
+
+At41df5c914 native2RED19.03s/zero-warning407.80s -j2build: actual root CastSuccess/primary/self-aura/P250/D1000 prerequisites pass. Immediate child has0 deliveries vs1; periodic child has[] vs[250,500,750,1000]. Full receipts `native-ww-wdp-children-red-41df5c914/`. Root explicit primary4294967223 differs from its actual aura/hit unit4294967224 at8.95s; the current context hook receives the latter and had no retained original primary.
+
+Parent explicitly approves retaining the request primary in the existing context, not a new hook. Per-cast `SpellInfo.cast_primary_target` stores the original request once at ordinary/costed-trigger/FULL_MASK snapshot boundaries; existing `EffectCtx.primary_target()` exposes it read-only through the same on_hit_with_context signature. No CombatTarget read, target substitution, data mutation or admission change. Existing consumers must be qualified unchanged, including Ret Toll on its source branch. WDP relationship implementation/GREEN/fresh ST/3T pending.
+
+## Native qualification cases
 
 Two ignored native tests use real literal269 fixtures and stop on the first actual152175 CastSuccess. Single-target case asserts one immediate positive451767 delivery at the root's actual primary, not the self aura unit, and no repeats during subsequent periodic frames. Three-target case asserts one158221 delivery or legitimate native miss per actual eligible target on every native250ms tick through1000ms, none at tick zero or after expiry. No child/aura/resource/CD setup grants. Native RED not yet run; setup/compile errors will not count as RED.
 

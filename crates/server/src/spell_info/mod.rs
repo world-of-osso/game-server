@@ -82,6 +82,10 @@ pub struct SpellInfo {
     /// Retail item actually used by this cast; delayed casts credit only on execution.
     #[serde(skip)]
     pub cast_retail_item_id: Option<u32>,
+    /// Request's original primary unit, retained through native launch/flight/hit.
+    /// Read-only to hit scripts; never inferred from an effect's self/area recipients.
+    #[serde(skip)]
+    pub(crate) cast_primary_target: Option<Entity>,
     /// Per-cast ground point; preserved in queued/cast snapshots, never DB2 metadata.
     #[serde(skip)]
     pub(crate) cast_destination: Option<[f32; 3]>,
