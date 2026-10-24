@@ -174,7 +174,9 @@ fn native_override_uses_first_main_trigger_and_first_nonzero_offhand_misc() {
     use crate::spell_cast::test_harness::ObservedTriggeredCasts;
     // Native99350 supplies main-only99351; native120287 supplies120286 for both
     // hands. The later main trigger must not replace the first main trigger.
-    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[], 1).unwrap();
+    let mut h =
+        crate::spell_cast::test_harness::harness(Vec::new(), &[99350, 99351, 120287, 120286], 1)
+            .unwrap();
     h.app.init_resource::<ObservedTriggeredCasts>();
     let caster = h.caster;
     for aura in [99350, 120287] {

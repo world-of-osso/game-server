@@ -242,12 +242,15 @@ fn dps_parity_demo_native_antoran_tyrant_uses_burning_cleave_autoattacks() {
         run.app.update();
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0[events_before..];
-    let casts = events
+    // Full-mask triggered swings publish damage, not CastSuccess. One selected
+    // victim proves repeated launches rather than several targets of one AoE.
+    let hits = events
         .iter()
         .filter(|event| {
             event.source == Some(tyrant.to_bits())
                 && event.spell_id == Some(1264093)
-                && event.kind == CombatLogKind::CastSuccess
+                && event.target == Some(run.targets[0].to_bits())
+                && event.kind == CombatLogKind::Damage
         })
         .count();
     let damage: i64 = events
@@ -267,7 +270,7 @@ fn dps_parity_demo_native_antoran_tyrant_uses_burning_cleave_autoattacks() {
         serde_json::to_vec_pretty(&json!({
             "native_root": 265187, "entry": 250289, "actor": tyrant.to_bits(),
             "armaments_aura_at_spawn": armaments, "initial_cast_admission": admission,
-            "window_seconds": 6, "cleave_casts": casts, "cleave_damage": damage
+            "window_seconds": 6, "selected_target_cleave_hits": hits, "cleave_damage": damage
         }))
         .unwrap(),
     )
@@ -278,7 +281,7 @@ fn dps_parity_demo_native_antoran_tyrant_uses_burning_cleave_autoattacks() {
         path.display()
     );
     assert!(
-        casts > 1 && damage > 0,
+        hits > 1 && damage > 0,
         "native autoattack replacement must execute repeatedly with real damage, not once through an untimed spell list; boundary {}",
         path.display()
     );
@@ -310,9 +313,13 @@ fn dps_parity_demo_native_armaments_aura_replaces_guardian_white_swings() {
         .iter()
         .filter(|event| event.source == Some(guardian.to_bits()))
         .collect();
-    let casts = events
+    let hits = events
         .iter()
-        .filter(|event| event.spell_id == Some(1264093) && event.kind == CombatLogKind::CastSuccess)
+        .filter(|event| {
+            event.spell_id == Some(1264093)
+                && event.target == Some(run.targets[0].to_bits())
+                && event.kind == CombatLogKind::Damage
+        })
         .count();
     let white_hits = events
         .iter()
@@ -325,13 +332,13 @@ fn dps_parity_demo_native_armaments_aura_replaces_guardian_white_swings() {
         &path,
         serde_json::to_vec_pretty(&json!({
             "native_aura": 1251000, "aura_type": 361, "entry": 98035,
-            "window_seconds": 6, "cleave_casts": casts, "white_hits": white_hits, "events": events
+            "window_seconds": 6, "selected_target_cleave_hits": hits, "white_hits": white_hits, "events": events
         }))
         .unwrap(),
     )
     .unwrap();
     assert!(
-        casts > 1,
+        hits > 1,
         "native361 must replace each swing, not one untimed list cast; boundary {}",
         path.display()
     );
