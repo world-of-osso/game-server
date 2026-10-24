@@ -213,19 +213,36 @@ fn native_apl_shared_buff_react_overcap_refresh_keeps_deadline_and_reacquisition
     }
     let first = buff(app.world(), actor, CLEARCASTING).expect("actual white hit proc");
     let first_id = first.instance_id;
-    let first_expiry = first.expires_at.unwrap();
-    let mut expiry = first_expiry;
-    let first_seen = crate::spell_cast::now(app.world());
-    let reacted_at_latest = first_seen + SOURCE_REACTION_MAX_SECONDS;
+    let first_stacks = first.stacks;
+    assert!(first_stacks < first.max_stacks, "first proc is not capped");
     for _ in 0..12000 {
         app.update();
-        let Some(aura) = buff(app.world(), actor, CLEARCASTING) else {
-            continue;
-        };
-        if aura.instance_id == first_id
-            && aura.expires_at.unwrap() > expiry
-            && crate::spell_cast::now(app.world()) > reacted_at_latest
-        {
+        let aura = buff(app.world(), actor, CLEARCASTING).expect("first proc remains active");
+        assert_eq!(aura.instance_id, first_id);
+        if aura.stacks == aura.max_stacks {
+            break;
+        }
+    }
+    let capped = buff(app.world(), actor, CLEARCASTING).unwrap();
+    assert_eq!(capped.stacks, capped.max_stacks, "native procs reached cap");
+    assert!(
+        fact(app.world(), actor, &bindings, "buff.clearcasting.react") < f64::from(capped.stacks),
+        "newly gained stack must wait independently of the existing stack"
+    );
+    let reacted_at_latest = crate::spell_cast::now(app.world()) + SOURCE_REACTION_MAX_SECONDS;
+    while crate::spell_cast::now(app.world()) <= reacted_at_latest {
+        app.update();
+    }
+    let capped = buff(app.world(), actor, CLEARCASTING).unwrap();
+    assert_eq!(capped.instance_id, first_id);
+    let before_refresh = capped.expires_at.unwrap();
+    let mut expiry = before_refresh;
+    for _ in 0..12000 {
+        app.update();
+        let aura = buff(app.world(), actor, CLEARCASTING).expect("capped proc remains active");
+        assert_eq!(aura.instance_id, first_id);
+        assert_eq!(aura.stacks, aura.max_stacks);
+        if aura.expires_at.unwrap() > before_refresh {
             expiry = aura.expires_at.unwrap();
             break;
         }
@@ -237,8 +254,8 @@ fn native_apl_shared_buff_react_overcap_refresh_keeps_deadline_and_reacquisition
         "actual same-instance overcap refresh"
     );
     assert!(
-        expiry > first_expiry,
-        "real proc must refresh the existing aura"
+        expiry > before_refresh,
+        "real proc must refresh the already-capped aura"
     );
     assert_eq!(
         fact(app.world(), actor, &bindings, "buff.clearcasting.react"),
