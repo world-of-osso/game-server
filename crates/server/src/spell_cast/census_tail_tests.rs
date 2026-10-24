@@ -92,6 +92,37 @@ fn census_tail_62_native_ferocious_bite_burns_only_remaining_energy_without_dama
     }
 }
 
+/// Actual ordinary launch spends25 Energy first; effect0 sees the remainder,
+/// then effect1 burns at most its native25. TC spell_dru_ferocious_bite.
+fn feral_bite_cast(energy: f32) -> (f32, f32) {
+    let _scope = crate::random::seed_scope(70448);
+    let mut h = burn_fixture(true);
+    h.set_power(PowerType::Energy, energy);
+    h.set_power(PowerType::ComboPoints, 5.0);
+    let before = h.health(h.npc);
+    let spell = world_db().unwrap().store.get(FEROCIOUS_BITE).unwrap();
+    super::execute_cast(h.app.world_mut(), h.caster, spell, Some(h.npc)).unwrap();
+    (before - h.health(h.npc), h.power(PowerType::Energy))
+}
+
+#[test]
+#[ignore = "Feral Bite TC port pending: genuine extra-Energy RED, outside shared knowledge slice"]
+fn feral_bite_native_extra_energy_scales_damage_after_base_cost_before_burn() {
+    let (base, remaining) = feral_bite_cast(25.0);
+    assert!(base > 0.0, "native Bite must hit before comparing factors");
+    assert_eq!(remaining, 0.0);
+    for (energy, multiplier, expected_remaining) in
+        [(37.5, 1.5, 0.0), (50.0, 2.0, 0.0), (75.0, 2.0, 25.0)]
+    {
+        let (damage, remaining) = feral_bite_cast(energy);
+        assert_eq!(remaining, expected_remaining, "initial Energy{energy}");
+        assert!(
+            (damage - base * multiplier).abs() <= 2.0,
+            "Energy{energy}: damage{damage}, base{base}, expected multiplier{multiplier}"
+        );
+    }
+}
+
 #[test]
 fn census_tail_62_native_bite_does_not_burn_a_nonprimary_power_pool() {
     let mut h = burn_fixture(false);

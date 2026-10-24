@@ -136,7 +136,9 @@ pub struct TraitLoadout {
     /// `(TraitDefinition.OverridesSpellID, SpellID)` of the applied talents, then
     /// `(SpecializationSpells.OverridesSpellID, SpellID)` of the spec's learned spells:
     /// the baseline spell is not known and its bar buttons show the replacement.
-    overrides: Vec<(u32, u32)>,
+    pub(crate) overrides: Vec<(u32, u32)>,
+    /// Selected `(TraitDefinition.SpellID, VisibleSpellID)` action links.
+    pub(crate) visible_actions: Vec<(u32, u32)>,
 }
 
 impl TraitLoadout {
@@ -582,6 +584,11 @@ fn build_trait_loadout(
                     rank: *rank,
                 },
             })
+            .collect(),
+        visible_actions: talents
+            .iter()
+            .filter(|(entry, _)| entry.visible_spell_id != 0)
+            .map(|(entry, _)| (entry.spell_id, entry.visible_spell_id))
             .collect(),
         overrides: talents
             .iter()
