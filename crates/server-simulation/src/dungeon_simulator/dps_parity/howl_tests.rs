@@ -65,7 +65,8 @@ fn native_duration(run: &Run, spell: u32) -> f64 {
 
 fn spawn_native_wyvern(run: &mut Run) -> Entity {
     let owner = run.actor;
-    crate::spell_cast::cast_triggered(run.app.world_mut(), owner, WYVERN_SUMMON, Some(owner), 1);
+    crate::spell_cast::creature_cast(run.app.world_mut(), owner, WYVERN_SUMMON, Some(owner), true)
+        .expect("native summon child admission includes authored destination geometry");
     run.app.update();
     let summons = owned_wyverns(run);
     assert_eq!(
