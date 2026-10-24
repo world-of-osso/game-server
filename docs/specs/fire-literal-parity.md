@@ -31,7 +31,8 @@ NativePlayer63 qualification uses pinnedSimC76f8118 Fire action rows, retaining 
 ## Known gaps (current cycle)
 
 - [ ] Qualify staged Fire adapter/hookup after shared ordered-precombat/options and Equipment-facts dependencies land, preserving all literal rows. No native RED/GREEN or compile acceptance is claimed for the staged caller.
-- [ ] Qualify all required native facts, including hot-streak travel count, native HP conditions and delegated generic fields.
+- [x] Qualify Fire-local native HP conditions and actual Hot Streak pending-event count; [scoped native RED/GREEN proof](../handoffs/fire-local-facts-proof-ledger.md).
+- [ ] Consume/qualify delegated generic duration/react/cast/history and equipment fields in the full caller.
 - [ ] Fresh combined runtime measurements and per-spell comparison after source/admission proof.
 
 ## Out of scope

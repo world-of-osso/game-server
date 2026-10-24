@@ -22,6 +22,12 @@
 
 `NativeFacts::new(&World, actor, &Bindings, Encounter, active_enemies)` implements both shared traits. Bindings register explicit native action/buff/talent IDs and power types plus the actor's native GCD spell. `Encounter::Fixture` uses one simulation-clock300s deadline for fight and every target; `Encounter::Dungeon` fails TTD/fight-remains explicitly. Native cooldown wall-clock timing stays separate from aura/encounter simulation time. No native-book helper dependency or generic kit-membership-as-knowledge claim. [Native proof ledger/capability limits](../../handoffs/shared-native-apl-proof-ledger.md).
 
+### Fire-local facts —2026-10-24
+
+The Fire Player Fixture adapter owns recipient-bound `firestarter.active`/`scorch_execute.active`, reading actual selected talents and native SpellStore effect thresholds. `hot_streak_spells_in_flight` counts actual caster-owned PendingSpellHits through the same eligibility predicate as native Hot Streak hit handling, not sums of action booleans, hardcasts or inferred timers. Three genuine current-native predicate REDs precede the implementation; four scoped native cases now qualify recipient boundaries/explicit second recipient, launch/impact/caster isolation and legitimately earned-Hot-Streak overlapping projectiles. [Exact revision/input receipts and test-setup counterexamples](../../handoffs/fire-local-facts-proof-ledger.md).
+
+The full88row Fire caller remains staged/unqualified on shared cursor, generic temporal/react/history and equipment dependencies; these facts are not300s ST/3T or numerical parity proof. [Fire Fixture contract](../../specs/fire-literal-parity.md).
+
 ## Shared literal fixture machinery
 
 After the explicit target-candidate interpreter landed, WW's count-only adapter rejected actual ST/3T runs atd45fe30e8 with `target_if requires explicit native target candidates`. WW now carries the actual supplied entity slice into target_ids; shared pd1035 Prepared/Execution preserves selected identities. This integration is not a first-target fallback, and per-fixture TTD still follows one global fixed-time clock. Same-binary ff8ba4206 actual300s ST/3T now pass the target seam at47064.44/81373.16, still−77.20%/−78.39% versus the requested reference, NOT parity; [exact failures/current receipts](../../handoffs/ww-source-census.md).

@@ -1,3 +1,4 @@
+- [Fire-local native facts](systems/simc-apl.md#fire-local-facts-2026-10-24) — selected-recipient HP gates and actual caster-owned travel counts qualified; full literal caller/DPS still open.
 - [Native WW Stockade receipt](../handoffs/ww-stockade-proof-ledger.md) — source-native level32 Bo269 participates and clears all3bosses in one seed11 run; native kit observation, not BIS90/literal/DPS parity.
 - [Shared precombat lifecycle](systems/simc-apl.md#precombat-lifecycle-2026-10-23-partially-qualified) — 27 native lifecycle/selection/composite-clock/row-gate/Mystic controls GREEN at96b; same-binary300s WW remains−74.5% ST/−80.7%3T, not parity. Full per-spec and numerical qualifications remain open.
 - [Item faction eligibility](systems/toys.md#item-faction-flags-eligibility-2026-10-23) — shared source flags; actual opposite-side learn/use fiveRED→nineGREEN12.47s,54-item metadata matrix,1173pipeline identical547. No mask/protocol/PvP rewrite; check pending.

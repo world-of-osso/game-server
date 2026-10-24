@@ -25,4 +25,10 @@ Revision `d8a30fa61a132c6303afa490d25b903d44acd743`: Firestarter and Scorch reci
 
 Log `game-engine/data/diagnostics/rotation-fidelity-2026-10-21/fire-local-d8a-current-green.log`; fresh current backup20261024T090919Z, canonical/private SHA256 unchanged from RED's logical source but a separate new backup/receipt.
 
-Caller300s ST/3T, generic facts and dependency qualification remain open; no overall-suite or DPS acceptance claimed.
+## Completed overlap proof —2936366fe
+
+The corrected overlap case and startup inode case pass2/2 in9.76s; compile15.98s, zero warnings. Ordinary nearby Firestarter Fireballs earn actual Hot Streak; after a distant Fireball launches, the caller waits its real GCD, observes one pending event, then the ordinary instant Pyro consumes the earned proc and raises the count to two. No cast bypass, injected pending event, grant or synthetic timer.
+
+Log `game-engine/data/diagnostics/rotation-fidelity-2026-10-21/fire-local-293-overlap-green.log`; separate fresh current backup/receipt20261024T092952Z, same canonical/private hashes. The three unchanged native cases retain their d8a proof; test-helper-only changes do not invalidate it. Combined four Fire-local cases plus startup qualification are GREEN, not a claim that the failing d8a invocation passed as a whole. `rustfmt --check` also passed on293's changed Rust files; manual readability audit found no required changes.
+
+Caller300s ST/3T, generic facts and dependency qualification remain open; no full literal or DPS acceptance claimed.
