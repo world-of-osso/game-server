@@ -1,3 +1,7 @@
+## 2026-10-24 — Shared native APL buff facts takeover
+
+[Exact source/proof ledger](../handoffs/shared-buff-facts-proof-ledger.md): isolated shared duration/react/named-time work from dead14781's Evoker branch onto requested1466a4ca7. Real TF5217, Omen16864→135700 proc/stack/refresh/expiry/reacquisition and rated cast/channel controls reach genuine RED before implementation. Native-cap precondition corrects an old fixture's stack-gain-as-overcap assumption; fiveGREEN22.44s atd5b83f217, requested server/simulation/spell-tests check once0/1m45s/no warnings. Explicit source reaction distribution, cfg-only lifecycle hooks, no query-side duration reconstruction or Evoker implementation. Lead full gate remains separate.
+
 ## 2026-10-24 — rg1074 native fixture and FULL_MASK corrections
 
 [Regression source/proof ledger](../handoffs/rg1074-regression-proof-ledger.md): parent gate reproduced missing native Mana metadata in the UDP fixture and Echo's lost original tick phase.101459804 loads real power metadata;395ad19d1 carries native DONT_RESET_PERIODIC_TIMER from both FULL_MASK cast paths into generic refresh, restoring the correct triggered Languish oracle as well. Ordinary Barbed reset/DB2 amounts remain unchanged; no Echo exception or regen fallback. Exactmasterdc3 merged810a2b1e6; exact UDP1GREEN8.52s/Echo1GREEN14.44s plus generic rolling2GREEN10.33s/dummy20nineGREEN15.92s on one qualified ELF (13PASS, clean43m04s build). Parent broad gate remains separate.

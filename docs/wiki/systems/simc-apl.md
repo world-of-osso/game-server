@@ -89,6 +89,12 @@ Seven native regressions at89f985420 reach unknown requested predicates (18.52s)
 
 [Native haste composition qualification](../../specs/simc-apl.md#native-haste-composition-boundary) is a separate RED-before-fix gate; the seven fact regressions do not prove haste composition.
 
+## Native buff duration and reaction —2026-10-24
+
+`buff.<alias>.duration` delegates to native fresh duration, not remaining time. `buff.<alias>.react` reads observed gained-stack deadlines from explicit player reaction settings; capped refresh retains existing deadlines, stack loss truncates them, removal clears the instance, and reacquisition samples new deadlines. Native absence is zero; active unconfigured/unobserved state fails explicitly. Named `action.<alias>.execute_time` delegates to the existing contextual helper.
+
+[Shared buff-facts ledger](../../handoffs/shared-buff-facts-proof-ledger.md) records real5217 duration and Omen16864→135700 earned stack/refresh/expiry/reacquisition RED→fiveGREEN22.44s atd5b83f217, with real hasted Living Flame/Disintegrate execution controls. The refresh fixture first confused a new stack with overcap; corrected fixture proves native cap before refresh. Requested three-package tests-check passes once1m45s/no warnings. Full integration gate and standalone stack-consumption qualification remain separate.
+
 ## Sources
 
 - Pinned SimC76f8118 `engine/sim/expressions.cpp:22–154,333–440,1081–1130` — lexer, arithmetic/boolean decisions and precedence.
