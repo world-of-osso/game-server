@@ -25,6 +25,30 @@ class GuardianImportTest(unittest.TestCase):
             self.assertEqual(conn.execute("SELECT count(*) FROM guardian_spells").fetchone()[0], 2)
             conn.close()
 
+    def test_approved_missing_bindings_are_explicit_policy_rows(self):
+        with tempfile.TemporaryDirectory() as folder:
+            archive = Path(folder) / "archive.sql"
+            archive.write_text("INSERT INTO `creature_template_spell` VALUES (416,0,3110,41031);\n")
+            with sqlite3.connect(":memory:") as conn:
+                IMPORTER.import_guardian_spells(conn, archive)
+                self.assertEqual(
+                    conn.execute("SELECT * FROM guardian_spells WHERE CreatureID IN (98035,250289) ORDER BY CreatureID").fetchall(),
+                    [(98035, 0, 271971, 0), (250289, 0, 1264093, 0)],
+                )
+
+    def test_native_binding_list_wins_over_policy_and_reimport_is_stable(self):
+        with tempfile.TemporaryDirectory() as folder:
+            archive = Path(folder) / "archive.sql"
+            # Hypothetical future native list using the source-qualified pair;
+            # this does not claim that TDB1210 currently contains this row.
+            archive.write_text("INSERT INTO `creature_template_spell` VALUES (98035,4,271971,69497);\n")
+            with sqlite3.connect(":memory:") as conn:
+                IMPORTER.import_guardian_spells(conn, archive)
+                expected = [(98035, 4, 271971, 69497), (250289, 0, 1264093, 0)]
+                self.assertEqual(conn.execute("SELECT * FROM guardian_spells ORDER BY CreatureID,SpellIndex").fetchall(), expected)
+                IMPORTER.import_guardian_spells(conn, archive)
+                self.assertEqual(conn.execute("SELECT * FROM guardian_spells ORDER BY CreatureID,SpellIndex").fetchall(), expected)
+
     def test_no_binding_is_not_synthesized(self):
         with tempfile.TemporaryDirectory() as folder:
             archive = Path(folder) / "archive.sql"
