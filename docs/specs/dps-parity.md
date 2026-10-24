@@ -58,6 +58,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Ret literal rotation
 
+- [x] The pinned finisher child list chooses actual native Final Verdict on one supplied enemy and Divine Storm on three admitted enemies with naturally earned HolyPower; observed own damage follows canonical Program/Prepared/native dispatch. This scoped child-list proof does not replace the default-list measurement lifecycle.
+
 - [ ] Spec70 fixture executes the pinned76f8118 Ret41-row/five-list priority through the shared evaluator, native readiness and dispatch. Source action names remain unchanged; selected base replacements use the shared knowledge resolver, not a Ret-local spell map. HolyPower, selected traits, buffs and target-owned dot/debuff facts read actual native state; unknown operands fail explicitly.
 - [ ] Spec70 follower measurements install the literal controller before setup frames; pinned rows naturally select Wake and a HolyPower spender within30s. Ret facts delegate to canonical Equipment, Prepared resource limits, target_ready, NativeFacts and native spell knowledge; unsupported shared facts are explicit errors, not substitutes. Primary-resource selection uses sourced Ret HolyPower (pinned sc_paladin.cpp4402–4408), validated through its real native binding, not the actor's Mana-first UI pool order. Dawnlight consumption and new mechanic policies are excluded.
 - [ ] Precombat preserves source order across native busy/casting states instead of treating temporary unreadiness as source exhaustion. Snapshot-only proof does not qualify the whole precombat lifecycle. Missing potion inventory, external buff providers and unqualified abilities remain named gaps; no fabricated grants, timers or damage. [Scoped qualification](../handoffs/ret-paladin-parity-proof-ledger.md#literal-adapter-qualification--local-development-only).
@@ -163,6 +165,7 @@ The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native speci
 
 ## Tests asserting this spec
 
+- `crates/server-simulation/src/dungeon_simulator/dps_parity/ret_rotation/finisher_tests.rs` — real one/three-target pinned child-list choice, earned resources and native damage.
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/ret_rotation/lifecycle_tests.rs` — actual measurement must cast native Wake and a HolyPower spender within its first30s; genuine pre-driver RED recorded, GREEN pending.
 
 - `scripts/tests/test_item_instance_data.py` — concrete signed rows, idempotence, unrelated-table retention and duplicate-ID rollback.
