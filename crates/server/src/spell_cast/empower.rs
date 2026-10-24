@@ -72,7 +72,7 @@ pub(super) fn begin(
         .expect("native stages checked")
         + HOLD_AT_MAX_MS;
     let paid_costs = super::spell_costs(world, caster, spell)?;
-    super::execute_cast(world, caster, spell, target)?;
+    super::execute_cast_with_primary(world, caster, spell, target, spell.cast_primary_target)?;
     let mut cast = CastState::channel(
         spell.id,
         target.map_or(0, Entity::to_bits),

@@ -114,7 +114,7 @@ fn start_native_gcd(run: &mut Run) {
     execution::execute(
         run.app.world_mut(),
         run.actor,
-        Execution::Spell(100780, run.targets[0]),
+        Execution::Spell(100780, run.targets[0], Some(run.targets[0])),
     )
     .unwrap();
     let history = run

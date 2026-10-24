@@ -27,7 +27,7 @@ fn native_poison_precombat_completes_every_selected_coating_before_pull() {
         literal_rotation::execution::execute(
             run.app.world_mut(),
             run.actor,
-            literal_rotation::execution::Execution::Spell(spell, run.actor),
+            literal_rotation::execution::Execution::Spell(spell, run.actor, None),
         )
         .unwrap_or_else(|error| panic!("native coating{spell} admission: {error}"));
         let duration = run
