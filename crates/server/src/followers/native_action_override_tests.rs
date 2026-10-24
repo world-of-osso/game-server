@@ -105,11 +105,18 @@ fn earn_finisher_power(h: &mut Harness, actor: Entity, finisher: u32) {
                 .0;
         let charges =
             native_apl::cooldown_value(h.app.world(), actor, &judgment, "charges").unwrap();
-        if previous != Some((current, charges)) {
+        let world = h.app.world();
+        let in_combat = world
+            .get::<shared::components::CombatStatus>(actor)
+            .is_some_and(|status| status.0);
+        let has_target_ref = crate::combat_refs::has_active_reference_to(world, actor, target);
+        let state = (current, charges, in_combat, has_target_ref);
+        if previous != Some(state) {
             eprintln!(
-                "native Ret funding frame{frame}: HolyPower={current}/{required}, Judgment charges={charges}"
+                "native Ret funding frame{frame}: HolyPower={current}/{required}, Judgment charges={charges}, combat={in_combat}, target_ref={has_target_ref}, refs={:?}",
+                world.get::<crate::combat_refs::CombatRefs>(actor)
             );
-            previous = Some((current, charges));
+            previous = Some(state);
         }
         if current >= required {
             return;
@@ -158,6 +165,11 @@ fn cast_controller_verdict(h: &mut Harness, actor: Entity, expected: u32) {
 fn trace_ret_boundary(h: &Harness, actor: Entity, stage: &str) {
     let world = h.app.world();
     let stats = world.get::<crate::stats::CharacterStats>(actor);
+    eprintln!(
+        "native Ret target: {:?}; actor refs: {:?}",
+        world.get::<shared::components::Npc>(h.npc),
+        world.get::<crate::combat_refs::CombatRefs>(actor)
+    );
     let known = world.get::<KnownSpells>(actor).unwrap();
     eprintln!(
         "native Ret known generators: Judgment={}, CrusaderStrike={}, BladeOfJustice={}",
