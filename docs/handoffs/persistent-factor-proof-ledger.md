@@ -16,18 +16,20 @@ Pinned76f8118 `dot.cpp568–573` reads existing dot state factor or0 without sta
 
 Actual fresh SQLite read-only CURRENT canonical backup for this scope: `world.arms-persistent-current-cd7230ac1d62.db`, SHAcd7230ac1d62bf7d7ea8fef5fbb82faa9f36b61ec78108e591f1204c614a8ed6; canonical before/after SHA215d75ec02c0311831cf5d98a4432c985500345811471fcce6ed23fee7709557 unchanged. quick_check ok; private worktree alias points to this snapshot. `persistent-native-snapshot.proof.json`; no canonical write/DPS run.
 
-## Strict native RED plan
+## Strict native RED result
+
+b5fa54c59: actual7genuineRED39.07s after22m25compile/0warnings. Real native Rake/SotF applications/qualifiers/ownership setup reaches each missing-feature assertion: five stored pmultiplier errors, two live/named-gap errors. `persistent-native-lib-red.{log,proof.json}` and `persistent-native-lib-red-binary.proof.json` pin source, snapshot and exact library SHA64e72516b09e4a0bc7c5ad8477b83a7c5a17e6b73f6b3e9362ff13d060b3d094. This is RED only; later-state/reapplication assertions after the initial missing getter are not GREEN proof.
 
 Seven ignored native cases use real SpellStore rows/class11 and actual `apply_aura` applications, not fabricated AuraEffectState amounts. This scope proves the aura application/capture boundary, not full root Player cast ordering. Existing Rake native cast/child/tick regression is a later retained control.
 
 | Case | Required observable behavior | Runtime proof |
 |---|---|---|
-| Rake stored application | Existing native rank+stealth bonus; later qualifier removal/AP change preserves stored product and amount, while live query changes | Pending RED |
-| Rake reapplication | Real updated AP changes new amount; newly applied product reflects current qualifier absence | Pending RED |
-| Live versus absent stored | Live proposed Rake bonus before any dot exists; stored0, explicit action alias equivalent, context-free query errors | Pending RED |
-| Actual ownership/target | Distinct own primary/secondary snapshots, foreign primary and foreign-only target cannot override own selected value | Pending RED |
-| Unrelated HoT | Rake qualifiers cannot empower real Rejuvenation | Pending RED |
-| Non-Feral snapshot | Existing native Soul buff/Rejuvenation snapshot persists after buff removal; live factor drops | Pending RED |
-| Missing metadata | Named unavailable rather than fabricated product; unknown alias errors | Pending RED |
+| Rake stored application | Existing native rank+stealth bonus; later qualifier removal/AP change preserves stored product and amount, while live query changes | Stored fact missing: genuine RED |
+| Rake reapplication | Real updated AP changes new amount; newly applied product reflects current qualifier absence | Stored fact missing: genuine RED |
+| Live versus absent stored | Live proposed Rake bonus before any dot exists; stored0, explicit action alias equivalent, context-free query errors | Live fact missing: genuine RED |
+| Actual ownership/target | Distinct own primary/secondary snapshots, foreign primary and foreign-only target cannot override own selected value | Stored fact missing: genuine RED |
+| Unrelated HoT | Rake qualifiers cannot empower real Rejuvenation | Stored fact missing: genuine RED |
+| Non-Feral snapshot | Existing native Soul buff/Rejuvenation snapshot persists after buff removal; live factor drops | Stored fact missing: genuine RED |
+| Missing metadata | Named unavailable rather than fabricated product; unknown alias errors | Named missing-metadata contract missing: genuine RED |
 
-No production capture/accessor implementation before genuine RED. Setup/compilation/zero-test failures are excluded. New native jobs use ordinary arms-parity admission, one/-j2; FIRST priority grant is not assumed to cover this work. Lead owns full integration.
+Strict RED is now satisfied; production capture/accessors remain unimplemented. Main prioritized separate expected_combat_length RED/GREEN next, then the Arms148 literal route after fc1078/ta1068/ap1079 land. Preserve this RED branch for later implementation; do not relabel it ready. Setup/compilation/zero-test failures are excluded. Native jobs used ordinary arms-parity admission, one/-j2; no FIRST priority grant reuse. Lead owns full integration.
