@@ -11,6 +11,7 @@ mod pet_child_tests;
 mod pet_melee_tests;
 mod pet_stats_tests;
 mod player_rotation;
+mod power_haste_tests;
 mod power_tests;
 mod report;
 pub(crate) mod single_spell;

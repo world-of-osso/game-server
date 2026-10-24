@@ -15,6 +15,7 @@ Server-side spell casting in `crates/server/src/spell_cast/`: validation, cast b
 - [x] Emit `CombatLogEvent` (CastStart, CastSuccess, Damage, Heal, Energize, Interrupt, Death) to source and target owners.
 - [x] Reject player casts of spells not in `KnownSpells` (`NotSupported`, "spell not known"); NPC casters exempt.
 - [x] Maintain class power pools with DB2 regen/decay; replicate `UnitPowers` (player `UnitLevel` belongs to class progression; NPC `UnitLevel` from the template).
+- [ ] Scale continuous regeneration by live native haste whenever `PowerType.Flags & 0x400` is set, for players and class followers; unflagged Mana remains unscaled. Preserve the already-hasted rune cooldown path and discrete pet Focus timing.
 - [x] Replicate raw whole power, fractional thousandths, signed regen rate, and charged combo-point indices. Resend on whole value, max, rate, display order or charged-point changes, not fraction alone; report zero rate on the tick a pool reaches its limit.
 - [x] Replicate indexed rune ready times and full recharge duration, including queued runes' wait. Resend on spend, completion, duration or rune-count changes, not countdown ticks.
 - [x] Use contract `CastFailReason` variants directly; `NotSupported` names the cause in `detail`.
@@ -63,6 +64,8 @@ Existing kit/test conflicts must be reported before GREEN, not weakened to fit t
 - `crates/server/src/spell_info/`: spell data including `spell_category` charges.
 
 ## Tests asserting this spec
+
+- `crates/server/src/dungeon_simulator/dps_parity/power_haste_tests.rs`: real native BM Focus and WW Energy expenditure/regeneration, with a hasted Paladin's unflagged Mana control; current prepared catalogs and pinned gear only.
 
 - `crates/server/src/spell_cast/tests.rs` (real `world.db` spells): instant Mortal Strike cost/GCD/cooldown messages and repeat failures; Fireball cast time and combat log order; movement cancel; Kick interrupt and Fire lockout; OutOfRange `CastFailed`; Flash Heal overheal; Charge energize raw units and charges message; rage decay; bounded trigger chain; unsupported implicit target (`NotSupported`); unknown-spell rejection; warrior `UnitPowers`; Fireball scaling with computed Mage stats; percent mana cost from base mana; Flash Heal at a hostile kobold self-casts.
 - `crates/server/src/spell_cast/queue_tests.rs`: builder effects before real rage spender; GCD-only resource gain; deferred NotEnoughResource; immediate outside-window cast/GCD failure; last request wins; explicit stop; hostile interrupt school lock; death failure/no stale resurrection cast; deferred range validation; inclusive exactly-750ms admission using the active cast's native time precision.
