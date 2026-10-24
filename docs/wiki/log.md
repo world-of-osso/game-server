@@ -4230,3 +4230,6 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0â
 - [Lava crit ownership](investigations/follower-data.md#lava-caster-owned-flame-shock-crit-rule):4GREEN13.43s/zero warnings after2nativeRED; samebinary retained root2GREEN10.03s +actualStatsPlugin70samples2PASS12.42s. Observed285466crits5/5; cases enabled. No other crit edits or causal-DPS/parity claim.
 
 - 2026-10-23: Demonology266 reference reproduction and recursive owner/Felguard/summon census; private canonical-copy missing guardian publications recorded in [[demonology-dps-parity]]. Native baseline and parity remain open.
+
+- 2026-10-23: [[server-crates]] records five stable catalog modules extracted with unchanged data/logic, canonical imports and updated generator destinations; no test relocations or measured speedup claim.
+- 2026-10-23: [[server-crates]] moves main module declarations/App assembly into the existing lib and keeps a five-line bin; library-artifact source-view test replaces old binary artifact selection. Full suite/census and paired measurements remain pending.
