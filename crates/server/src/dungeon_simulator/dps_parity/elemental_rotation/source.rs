@@ -85,6 +85,6 @@ mod tests {
         assert!(parse_line("actions=unknown_elemental_action,if=0").is_err());
         assert!(parse_line("actions=lightning_bolt,unsupported=1").is_err());
         assert!(parse_line("actions=elemental_blast,target_if=min:dot.unknown.remains").is_err());
-        assert!(load().is_ok());
+        load().expect("exact82-row Elemental program must load without literal rewrites");
     }
 }

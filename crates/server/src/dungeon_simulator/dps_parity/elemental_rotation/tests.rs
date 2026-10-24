@@ -31,6 +31,30 @@ fn apply(world: &mut World, caster: Entity, target: Entity, spell: u32) {
     );
 }
 
+fn lightning_bolt_eligibility(run: &mut super::super::Run, target: Entity) -> String {
+    let known = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(run.actor)
+        .unwrap();
+    let book = [403, 188196, 452201].map(|spell| (spell, known.contains(spell)));
+    let resolved = crate::auras::overrides::resolve_spell(run.app.world(), run.actor, 188196);
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(188196)
+        .unwrap()
+        .clone();
+    let refusal =
+        crate::spell_cast::read_native_cast_start(run.app.world_mut(), run.actor, &spell, target)
+            .err();
+    format!(
+        "book={book:?}, resolved={resolved}, refusal={refusal:?}, now={}",
+        crate::spell_cast::now(run.app.world())
+    )
+}
+
 #[test]
 #[ignore = "Elemental native target-fact qualification pending"]
 fn literal_ele_native_owned_target_facts_select_and_damage_the_foreign_dot_target() {
@@ -52,6 +76,8 @@ fn literal_ele_native_owned_target_facts_select_and_damage_the_foreign_dot_targe
         )])
         .unwrap(),
     );
+    let target = run.targets[1];
+    let eligibility = lightning_bolt_eligibility(&mut run, target);
     let prepared = Prepared::read(
         run.app.world_mut(),
         run.actor,
@@ -70,10 +96,14 @@ fn literal_ele_native_owned_target_facts_select_and_damage_the_foreign_dot_targe
         &run.targets,
     );
     assert_eq!(facts.value("active_dot.flame_shock").unwrap(), 1.0);
-    let (action, execution) = driver
+    let selected = driver
         .select("default", &facts, &prepared, &equipment)
-        .unwrap()
         .unwrap();
+    assert!(
+        selected.is_some(),
+        "actual native LB eligibility: {eligibility}"
+    );
+    let (action, execution) = selected.unwrap();
     assert_eq!(action.target, Some(run.targets[1].to_bits()));
     assert_eq!(
         facts.value_for(&action, "dot.flame_shock.remains").unwrap(),
@@ -161,7 +191,7 @@ fn literal_ele_native_owned_target_facts_select_and_damage_the_foreign_dot_targe
             .select("default", &facts, &mut unknown.state(), |_| Ok(true))
             .is_err()
     );
-    assert!(source::load().is_ok());
+    source::load().expect("exact82-row Elemental program must load without literal rewrites");
 }
 
 #[test]
@@ -169,6 +199,19 @@ fn literal_ele_native_owned_target_facts_select_and_damage_the_foreign_dot_targe
 fn literal_ele_native_refreshability_and_counts_follow_real_aura_time() {
     let (mut run, bindings, equipment, encounter) = fixture(1);
     apply(run.app.world_mut(), run.actor, run.targets[0], 188389);
+    let applied = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.targets[0])
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 188389 && aura.caster == run.actor)
+        .unwrap();
+    let initial = (
+        crate::spell_cast::now(run.app.world()),
+        applied.duration_ms,
+        applied.expires_at,
+    );
     let maximum =
         crate::auras::maximum_duration_ms(run.app.world(), run.actor, run.targets[0], 188389)
             .unwrap();
@@ -194,7 +237,12 @@ fn literal_ele_native_refreshability_and_counts_follow_real_aura_time() {
         encounter,
         &run.targets,
     );
-    assert!(facts.value("dot.flame_shock.remains").unwrap() > 0.0);
+    assert!(
+        facts.value("dot.flame_shock.remains").unwrap() > 0.0,
+        "native FS initial(now,duration,expiry)={initial:?}, maximum={maximum}, ticks={ticks}, now={}, caster_present={}",
+        crate::spell_cast::now(run.app.world()),
+        run.app.world().get_entity(run.actor).is_ok()
+    );
     assert_eq!(facts.value("dot.flame_shock.refreshable").unwrap(), 1.0);
     for _ in 0..(maximum as usize / 50 + 2) {
         run.app.update();
