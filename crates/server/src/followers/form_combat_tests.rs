@@ -83,7 +83,7 @@ fn observe_interval(form_spell: Option<u32>) {
     crate::combat::start_attack(&mut world.commands(), actor, target, None);
     world.flush();
     let mut seen = h.inbox.log.len();
-    let mut first = None;
+    let mut first: Option<(f64, f64)> = None;
     for _ in 0..300 {
         h.advance(1);
         let now = h.app.world().resource::<Time>().elapsed_secs_f64();
