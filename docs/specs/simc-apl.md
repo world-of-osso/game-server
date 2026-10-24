@@ -17,6 +17,14 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] `retarget_auto_attack` changes only the running AA victim, preserving both swing timers and the actor's selection. An already-running AA must not restart onto the primary target.
 - [x] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.
 
+## Ordered native composites
+
+- [ ] Adapters supply a named ordered list of native actions; shared selection returns an ordered pending execution plan without spell IDs or class coating policy in common code.
+- [ ] Actual owned active self auras are skipped without reordering pending steps. Empty/all-active plans are unusable. Every pending step requires its own native admission; an unready selected step cannot silently disappear.
+- [ ] Precombat execution consumes one normal native cast at a time with real cast/GCD completion. World-only execute rejects a Composite and never recursively dispatches it. Shared selection does not create an instant batch or change native casting times.
+
+[Composite selection proof/boundary](../handoffs/literal-composite-proof-ledger.md).
+
 ## How it works
 
 - [Shared APL evaluator](../wiki/systems/simc-apl.md).
