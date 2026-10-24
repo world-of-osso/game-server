@@ -106,7 +106,10 @@ impl Facts for FireFacts<'_> {
             "firestarter.active" | "scorch_execute.active" => {
                 Err("Fire recipient health requires action context".into())
             }
-            _ if name.starts_with("trinket.") || name.starts_with("equipped.") => {
+            _ if name.starts_with("trinket.")
+                || name.starts_with("equipped.")
+                || name.starts_with("set_bonus.") =>
+            {
                 self.equipment.fact(name, &self.native)
             }
             _ => self.native.value(name),
@@ -125,7 +128,12 @@ impl ActionFacts for FireFacts<'_> {
             "firestarter.active" => self.health_gate(action, "firestarter", 0, true),
             "scorch_execute.active" => self.health_gate(action, "scorch", 1, false),
             "hot_streak_spells_in_flight" => self.value(name),
-            _ if name.starts_with("trinket.") || name.starts_with("equipped.") => self.value(name),
+            _ if name.starts_with("trinket.")
+                || name.starts_with("equipped.")
+                || name.starts_with("set_bonus.") =>
+            {
+                self.value(name)
+            }
             _ => self.native.value_for(action, name),
         }
     }

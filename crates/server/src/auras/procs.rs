@@ -23,7 +23,7 @@
 //! (`AuraEffect::CheckEffectProc`).
 //!
 //! A proc casts each PROC_TRIGGER_SPELL(_WITH_VALUE) `EffectTriggerSpell`
-//! from the aura's unit at the other party (or itself), takes the event's damage
+//! from the aura's unit at the actual other party (or native implicit selector), takes the event's damage
 //! off each breakable crowd-control effect and removes the aura when one reaches 0
 //! (`HandleBreakableCCAuraProc`), runs the aura's script `on_proc`, then spends
 //! one charge.
@@ -131,6 +131,30 @@ pub struct AuraEvent {
 
 #[derive(Resource, Debug, Default)]
 pub struct PendingAuraEvents(pub Vec<AuraEvent>);
+
+/// TC AuraEffect.cpp6126–6155 uses the nullable action target, never an invented
+/// caster target. A proc child's native enemy selector also excludes its owner;
+/// children selecting their own caster retain native implicit targeting.
+pub(crate) fn select_proc_trigger_target(
+    world: &World,
+    caster: Entity,
+    child: u32,
+    action_target: Option<Entity>,
+) -> Result<Option<Entity>, crate::spell_cast::CastFailure> {
+    use crate::spell_cast::{CastFailure, targets};
+    let spell = world
+        .resource::<SpellStore>()
+        .get(child)
+        .ok_or(CastFailure::UnknownSpell)?;
+    if targets::explicit_requirement(spell.effects.iter()) != Some(targets::Relation::Enemy) {
+        return Ok(action_target);
+    }
+    match action_target {
+        Some(target) if target != caster => Ok(Some(target)),
+        Some(_) => Err(CastFailure::InvalidTarget),
+        None => Err(CastFailure::NoTarget),
+    }
+}
 
 pub fn push_event(world: &mut World, event: AuraEvent) {
     if let Some(mut pending) = world.get_resource_mut::<PendingAuraEvents>() {
@@ -469,11 +493,23 @@ fn try_proc(world: &mut World, unit: Entity, other: Option<Entity>, id: u32, eve
             PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE
         ) && effect.trigger_spell != 0
     }) {
+        let target = match select_proc_trigger_target(world, unit, effect.trigger_spell, other) {
+            Ok(target) => target,
+            Err(reason) => {
+                debug!(
+                    ?unit,
+                    child = effect.trigger_spell,
+                    ?reason,
+                    "Proc child has no admissible event recipient"
+                );
+                continue;
+            }
+        };
         crate::spell_cast::cast_triggered(
             world,
             unit,
             effect.trigger_spell,
-            Some(other.unwrap_or(unit)),
+            target,
             PROC_TRIGGER_DEPTH,
         );
     }

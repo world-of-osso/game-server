@@ -84,6 +84,8 @@ pub struct TraitNodeEntry {
     /// `TraitDefinition.SpellID`; 0 when the entry has no definition spell.
     pub spell_id: u32,
     pub overrides_spell_id: u32,
+    /// `TraitDefinition.VisibleSpellID`; a selected passive can expose a cast action.
+    pub visible_spell_id: u32,
     /// SPELL_ATTR0_PASSIVE of `spell_id`.
     pub passive: bool,
     pub max_ranks: u32,
@@ -408,7 +410,7 @@ fn load_entries(
     let mut stmt = conn.prepare(
         "SELECT x.TraitNodeID, e.ID, e.TraitDefinitionID, COALESCE(d.SpellID, 0),
                 COALESCE(d.OverridesSpellID, 0), e.MaxRanks, e.NodeEntryType, e.TraitSubTreeID,
-                COALESCE(m.Attributes_0, 0)
+                COALESCE(m.Attributes_0, 0), COALESCE(d.VisibleSpellID, 0)
          FROM trait_node_x_trait_node_entry x
          JOIN trait_node n ON n.ID = x.TraitNodeID
          JOIN trait_node_entry e ON e.ID = x.TraitNodeEntryID
@@ -424,6 +426,7 @@ fn load_entries(
                 definition_id: uint(r, 2)?,
                 spell_id: uint(r, 3)?,
                 overrides_spell_id: uint(r, 4)?,
+                visible_spell_id: uint(r, 9)?,
                 passive: uint(r, 8)? & ATTR0_PASSIVE != 0,
                 max_ranks: uint(r, 5)?,
                 entry_type: uint(r, 6)?,

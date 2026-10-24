@@ -1061,13 +1061,47 @@
     "server-simulation": {
       "passed": 30,
       "known_failed": 0,
-      "ignored": 87
+      "ignored": 91
     },
     "workspace": {
       "passed": 6004,
       "known_failed": 4,
-      "ignored": 310
+      "ignored": 314
     }
   },
-  "proof_limit": "All123 migrating/subtree baseline names recovered exactly. Whole-workspace actual post-split inventory must be compared by the gate; source mapping and compiler checks do not replace it."
+  "proof_limit": "All123 migrating/subtree baseline names recovered exactly. Whole-workspace actual post-split inventory must be compared by the gate; source mapping and compiler checks do not replace it.",
+  "incoming_master_cases": {
+    "revision": "eec5b6bcf",
+    "proof": "four source-declared ignored cases added by incoming master; not present in original cs1046 log",
+    "cases": [
+      {
+        "name": "dungeon_simulator::dps_parity::single_spell::dps_parity_single_spell_tiger_palm_records_real_factors",
+        "new_package": "server-simulation",
+        "new_target": "server_simulation",
+        "ignored": true,
+        "should_panic": false
+      },
+      {
+        "name": "dungeon_simulator::dps_parity::single_spell::dps_parity_player_single_spell_mortal_strike_records_real_factors",
+        "new_package": "server-simulation",
+        "new_target": "server_simulation",
+        "ignored": true,
+        "should_panic": false
+      },
+      {
+        "name": "dungeon_simulator::dps_parity::single_spell::dps_parity_single_spell_follower_armor_penetration",
+        "new_package": "server-simulation",
+        "new_target": "server_simulation",
+        "ignored": true,
+        "should_panic": false
+      },
+      {
+        "name": "dungeon_simulator::dps_parity::single_spell::dps_parity_single_spell_fists_of_fury_three_ticks_keep_child_ids",
+        "new_package": "server-simulation",
+        "new_target": "server_simulation",
+        "ignored": true,
+        "should_panic": false
+      }
+    ]
+  }
 }

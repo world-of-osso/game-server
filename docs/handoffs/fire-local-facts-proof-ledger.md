@@ -31,9 +31,9 @@ The corrected overlap case and startup inode case pass2/2 in9.76s; compile15.98s
 
 Log `game-engine/data/diagnostics/rotation-fidelity-2026-10-21/fire-local-293-overlap-green.log`; separate fresh current backup/receipt20261024T092952Z, same canonical/private hashes. The three unchanged native cases retain their d8a proof; test-helper-only changes do not invalidate it. Combined four Fire-local cases plus startup qualification are GREEN, not a claim that the failing d8a invocation passed as a whole. `rustfmt --check` also passed on293's changed Rust files; manual readability audit found no required changes.
 
-## Additional eligibility control (pending)
+## Additional eligibility control —d099ff904 GREEN
 
-A normal native Player Meteor must admit its real153564 missile (CastSuccess, live flight, no351140 impact yet) while Hot Streak pending count stays zero. This distinguishes eligible-event counting from counting every caster missile; no injected queue entry or new gameplay code. Native run pending.
+Normal native Player Meteor admits its real153564 missile (CastSuccess, live flight, no351140 impact yet) while Hot Streak pending count stays zero, then actual351140 impacts. This distinguishes eligible-event counting from counting every caster missile; no injected queue entry or new gameplay code. Case+startup2PASS11.73s, compile7m47s, zero warnings. Log `fire-local-d099-meteor-control.log`, fresh current backup/receipt20261024T104104Z. Five unique Fire-local behavioral cases now have scoped proof; full caller remains separate.
 
 ## Feature-boundary check
 

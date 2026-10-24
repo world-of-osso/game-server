@@ -6,6 +6,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 - [x] Interpret numeric truth, OR/AND/NOT, arithmetic and comparisons with pinned SimC precedence. Single `%` divides; `%%` is modulo.
 - [ ] Read explicit native facts for buff stacks/remains/up, cooldown remains/charges/duration, resources, talents, equipment/trinkets, target count/TTD, fight remains, raid-event adds, dots/debuffs and gcd. Unknown operands fail explicitly, including in otherwise inactive condition branches; never silently become false.
+- [ ] Share native equipment identities/stat-buff metadata, on-use vs proc cooldown sources and native tier facts across spec adapters. Reject unknown item/tier operands; preserve original IDs and trinket1→trinket2→other use order.
 - [x] Bind action-dependent facts (`combo_strike`, plain `gcd`, action minimum GCD) to each source row, including variable/call control actions. An actor-wide value is not equivalent.
 - [x] Execute declared variables using source `value`, `setif`, `value_else`, `reset` and numeric `default` semantics.
 - [x] Preserve literal action order and conditional `call_action_list` decisions; native castability selects the first usable action. An exhausted child list returns control to its caller.
@@ -15,6 +16,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] Sample native cast readiness independently for each action/target pair. Harmful precasts use the actor's actual selected enemy when combat candidates have not yet been supplied.
 - [x] Deliver Player literal spells through ordinary Player requests with the selected explicit target, rechecking knowledge and rejecting expired identities rather than redirecting. Preserve selected and AA targets; retain native creature dispatch for WW followers.
 - [x] `retarget_auto_attack` changes only the running AA victim, preserving both swing timers and the actor's selection. An already-running AA must not restart onto the primary target.
+- [ ] Expose target-specific readonly resource-limited admission for a chosen power pool. Compare that pool's native maximum locally; never grant or temporarily replace resources. Preserve other pools, health and every other native cast constraint; an unaffordable maximum cannot qualify.
 - [x] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.
 
 ## Ordered native composites
@@ -41,11 +43,17 @@ Native controls reached4RED/1GREEN atd49f4951c →5GREEN at96b572797; implementa
 - `moving=0|1` must match the actual native actor movement bit; row options never substitute for native cast admission.
 - While a native GCD is active, only rows permitting `use_off_gcd=1` may be selected. The option never clears, shortens or bypasses native GCD/cast refusal.
 - Configured `movement.distance` without a native fixture movement plan must fail explicitly as `MOVEMENT_DISTANCE_UNAVAILABLE`, naming the operand; never fabricate zero distance.
+## Native action permission
+
+- [ ] Ordinary follower kits and literal fixtures use the same native action admission. A row is allowed only by the actor's actual known spell, selected trait visible/override action, or an explicitly sourced known-parent action policy.
+- [ ] Admission returns the actual cast spell, preserving selected trait replacements and native form/aura overrides. Reject a passive final endpoint as unavailable and continue the APL; a passive intermediate talent may still lead to an active visible action. Keep low-level passive casting unchanged. No controller row grants new KnownSpells membership and NPC identity does not bypass the controller gate.
+- [ ] All11native starter profiles across levels1–90 retain their published active cast actions; passive registry metadata is not a selectable endpoint. Preserve Feral Berserk/Cat Swipe, Demonology Hand of Gul'dan/Demonbolt and Elemental Ascendance. Unselected Incarnation remains rejected. Exact custom reference loadouts retain their own selected books, not the default kit's talents.
 
 ## How it works
 
 - [Shared APL evaluator](../wiki/systems/simc-apl.md).
 - [WW source census](../handoffs/ww-source-census.md).
+- [Shared equipment source and proof](../handoffs/equipment-facts-proof-ledger.md).
 
 ## Implementation inventory
 
@@ -57,6 +65,7 @@ Native controls reached4RED/1GREEN atd49f4951c →5GREEN at96b572797; implementa
 - `crates/server/src/simc_apl/context_tests.rs` — proposed-action combo decisions and Ret call-control GCD.
 - `crates/server/src/simc_apl/run_tests.rs`, `target_tests.rs` — non-returning runs and explicit min/max target decisions.
 - `crates/server/src/lib.rs` — engine-free evaluator export.
+- `crates/server/src/dungeon_simulator/dps_parity/literal_rotation/equipment*.rs`, `set_aliases_76f8118.csv` — shared native item metadata, eligibility and named tier aliases.
 
 ## Tests asserting this spec
 
@@ -68,7 +77,7 @@ Player execution boundary: seven actual native cases at4f91688e8 give1WW control
 
 ## Shared native facts
 
-`crate::simc_apl_native` binds gameplay state to the engine-free traits without moving the interpreter into the server binary. Explicit alias registries identify native actions, buffs, talents and resource types; absent aliases fail, never become false. Buff up/stack/remains, real cooldowns/charges/durations, displayed resources, action-bound GCD and engaged enemy counts come from native state. The fixed-time parity encounter supplies elapsed/fight-remains/target-TTD and fight style; dungeon TTD/fight-remains remain explicit unavailable predicates, not estimates or a fallback. Spec adapters add only spec-specific facts.
+`crate::simc_apl_native` binds gameplay state to the engine-free traits without moving the interpreter into the server binary. Explicit alias registries identify native actions, buffs, talents and resource types; absent aliases fail, never become false. Buff up/stack/remains, real cooldowns/charges/durations, displayed resources, action-bound GCD and engaged enemy counts come from native state. The fixed-time parity encounter supplies elapsed/fight-remains and fight style; main and timed adds expose their explicit individual remaining lifetime/role. Target Health reads the selected native entity; action-explicit targets override selection. Bound dots/debuffs read only the actor's own actual auras on that target. Explicit fixture add-event state supplies timing/count; absent-event operands retain pinned max-timespan semantics. Dungeon TTD/fight-remains/add timing remain explicit unavailable predicates, not estimates or a fallback. [Lifecycle/target14-case GREEN and remaining coverage](../handoffs/add-lifetimes-target-facts-proof-ledger.md). Spec adapters add only spec-specific facts.
 
 Native behavioral tests: `simc_apl_native/tests.rs` (earned Hit Combo and Chi, real Provoke cooldown, real Roll charges, actual Charge Rage display conversion, fixture clock and unavailable dungeon predicates). Six pushed ignored native cases produce genuine6RED at5924496f9 (13.24s test/8m18compile/exit101; three scaffold dead-field warnings). Atdc1ee9781 the same six native cases pass6/6 in17.40s (7m37compile),exit0,zero compiler warnings; tests enabled afterward without body changes ([native proof ledger](../handoffs/shared-native-apl-proof-ledger.md)). Current native fact seam is fixture-only (`cfg(test)`), matching the approved explicit parity Fixture driver boundary; live dungeon APL/TTD is not enabled.
 
@@ -95,6 +104,16 @@ Ignored native regressions in `simc_apl_native/{extension_tests,action_extension
 - [ ] Native haste rating and independent combat-speed aura193 effects compose multiplicatively, including ordinary cast time and GCD consumers. Removing actual buffs restores the original rating-derived speed. Keep existing native rating diminishing returns and data amounts.
 
 TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyCastTimePercentMod`; `SpellAuraEffects.cpp4531–4551` applies aura193 through the same multiplicative cast/attack speed paths. Regression `dps_parity/haste_tests.rs` uses actual1467 BiS gear plus native Power Infusion10060 and Heroism32182 aura amounts; no injected ratings, stats or coefficients. Feral's separate100%-uptime Frantic Momentum/Savage Fury proc eligibility belongs to its spec owner, not to rating conversion.
+
+## Explicit native target context
+
+- [x] Native fact adapters accept an actual current target and ordered native target universe, separate from an explicit proposed `Action.target`. Invalid/absent explicit context fails rather than borrowing another selection. Candidate selection preserves native order and ordinary per-action target eligibility, not just first-target readiness.
+- [x] Owned `active_dot` counts use actual active native aura instances across that universe; foreign caster instances do not count. Unknown aliases fail.
+- [x] Fixture movement-event absence uses pinned no-event values; actual movement never invents a configured raid event. Dungeon timing remains explicitly unavailable.
+- [x] Fire Breath refresh decisions consume freshly resolved native empower-duration data and a sourced refresh policy, not raw child duration or current aura carry. Actual rank1 native20s versus raw3572092s refresh-window case is qualified.
+- [ ] Positive selected-target casting reaction requires a qualified native snapshot. Actual absence of CastState is known false; active casting stays NATIVE_CASTING_REACTION_UNAVAILABLE rather than inventing a timer.
+
+[Target-context API proof and exact remaining gaps](../handoffs/native-target-context-proof-ledger.md).
 
 ## Known gaps (current cycle)
 

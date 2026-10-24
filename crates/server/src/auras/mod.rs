@@ -164,6 +164,7 @@ impl Plugin for AuraPlugin {
                     mount::apply_flight_style,
                     sync_passive_auras,
                     crate::equipment_effects::sync_equipment_effects,
+                    crate::equipment_effects::item_sets::sync_item_sets,
                     update_auras,
                     procs::process_aura_events,
                     health_pct_trigger::trigger_on_health_pct,
@@ -183,6 +184,24 @@ pub fn aura_now(world: &World) -> f64 {
     world.resource::<Time<Virtual>>().elapsed_secs_f64()
 }
 
+/// Actual native equipment proc timer; reading never starts or retimes a proc.
+pub(crate) fn equipment_proc_cooldown_remaining(
+    world: &World,
+    unit: Entity,
+    slot: shared::protocol::EquipmentSlot,
+    spell: u32,
+) -> f64 {
+    let Some(auras) = world.get::<ActiveAuras>(unit) else {
+        return 0.0;
+    };
+    let ready = auras
+        .iter()
+        .filter(|aura| aura.spell_id == spell && aura.source == AuraSource::Equipment(slot))
+        .map(|aura| aura.proc.next_ready_at)
+        .fold(0.0, f64::max);
+    (ready - aura_now(world)).max(0.0)
+}
+
 /// Who put an aura on the unit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AuraSource {
@@ -193,6 +212,8 @@ pub enum AuraSource {
     KnownSpell,
     /// Native on-equip/enchant spell owned by this physical equipment slot.
     Equipment(shared::protocol::EquipmentSlot),
+    /// Native ItemSetSpell owned by the threshold count of this item set.
+    ItemSet(u32),
     /// Authored spell_area autocast; cannot be canceled by the player.
     SpellArea,
 }
@@ -670,6 +691,24 @@ fn duration_ms(world: &World, application: &AuraApplication, spell: &SpellInfo) 
     mechanic_duration::modify_duration(world, application, spell, duration)
 }
 
+/// Fresh resolved-spell duration through the ordinary caster/target modifier path.
+/// The caller supplies native resolved metadata (for example an eligible empower stage).
+pub(crate) fn fresh_duration_ms(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> u32 {
+    let application = AuraApplication {
+        caster,
+        target,
+        spell_id: spell.id,
+        effect_mask: u32::MAX,
+        source: AuraSource::Cast,
+    };
+    duration_ms(world, &application, spell)
+}
+
 /// Fresh maximum duration through the same caster/target modifier path as apply.
 /// A carried refresh duration is not the next cast's Pandemic threshold.
 pub(crate) fn maximum_duration_ms(
@@ -685,14 +724,7 @@ pub(crate) fn maximum_duration_ms(
     }
     duration.duration_ms = duration.max_duration_ms;
     duration.per_resource_ms = 0;
-    let application = AuraApplication {
-        caster,
-        target,
-        spell_id,
-        effect_mask: u32::MAX,
-        source: AuraSource::Cast,
-    };
-    Some(duration_ms(world, &application, &spell))
+    Some(fresh_duration_ms(world, caster, target, &spell))
 }
 
 /// FISTS_OF_FURY_SIMC_TICK_CADENCE: SimC76f8118 monk/sc_monk.cpp1789–1796

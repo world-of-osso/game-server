@@ -123,7 +123,7 @@ pub(super) fn prepare_fire_precombat(run: &mut Run) -> Result<(), String> {
     use super::literal_rotation::PrecombatPoll;
     let encounter = crate::simc_apl_native::Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
-        duration: f64::from(super::TICKS) / 20.0,
+        duration: super::FIGHT_DURATION.as_secs_f64(),
         style: crate::simc_apl_native::FightStyle::Patchwerk,
     };
     let mut rotation =

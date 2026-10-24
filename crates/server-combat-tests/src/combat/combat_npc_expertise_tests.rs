@@ -1,13 +1,13 @@
 //! TC a352b1fa Unit.cpp2777–2782/2817–2822: NPC attacker240/4, not block.
-use bevy::ecs::system::RunSystemOnce;
 use bevy::prelude::*;
 use lightyear::prelude::{MessageReceiver, MessageSender};
 use shared::components::{Level, Position, Rotation, UnitLevel};
 use shared::protocol::{CombatEvent, CombatEventType, CombatLogEvent, CombatLogKind, MissKind};
 
-use super::facing_tests::collect_swings;
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
-use crate::spell_cast::test_harness::{Harness, drain, harness, harness_with, spawn_npc, world_db};
+use crate::spell_cast::test_harness::{
+    Harness, collect_broadcast_swings, collect_swings, harness, harness_with, spawn_npc, world_db,
+};
 
 const NPC_HIT_BUFFS: u32 = 62_627;
 const PET_PASSIVE: u32 = 28_305;
@@ -110,51 +110,6 @@ fn assert_evasion_avoids(events: &[CombatLogEvent]) {
     );
     // Five unseeded native attempts: P(allMiss)=.05^5=3.125e-7.
     assert!(events.iter().any(dodged), "{events:?}");
-}
-
-pub(super) fn collect_broadcast_swings(
-    h: &mut Harness,
-    attacker: Entity,
-    victim: Entity,
-    count: usize,
-) -> Vec<CombatEvent> {
-    h.app
-        .world_mut()
-        .run_system_once(move |mut commands: Commands| {
-            super::start_attack(&mut commands, attacker, victim, None);
-        })
-        .unwrap();
-    let mut events = Vec::new();
-    for _ in 0..count * 60 {
-        h.advance(1);
-        events.extend(
-            drain::<CombatEvent>(&mut h.app, h.connection)
-                .into_iter()
-                .filter(|event| {
-                    event.attacker == attacker.to_bits()
-                        && event.target == victim.to_bits()
-                        && event.spell_id == 0
-                        && matches!(
-                            event.event_type,
-                            CombatEventType::MeleeDamage
-                                | CombatEventType::CriticalHit
-                                | CombatEventType::Miss
-                                | CombatEventType::Dodge
-                                | CombatEventType::Parry
-                                | CombatEventType::Block
-                        )
-                }),
-        );
-        if events.len() == count {
-            super::attack_stop(h.app.world_mut(), attacker);
-            h.advance(3);
-            return events;
-        }
-    }
-    panic!(
-        "only {} of{count} broadcast swings: {events:?}",
-        events.len()
-    );
 }
 
 fn dummy_duel() -> (Harness, Entity) {

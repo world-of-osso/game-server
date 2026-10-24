@@ -1,4 +1,6 @@
 //! User-approved player-spec combat bridge for authenticated Retail followers.
+#[cfg(test)]
+mod action_knowledge_tests;
 mod ai;
 mod catalog;
 #[cfg(test)]
@@ -31,11 +33,12 @@ mod kit_hunter_policy_tests;
 mod kit_interrupt;
 #[cfg(test)]
 mod kit_light_of_titans_tests;
-mod kit_overrides;
 #[cfg(test)]
 mod native_action_override_tests;
 #[cfg(test)]
 mod native_book_tests;
+#[cfg(test)]
+mod proc_definition_tests;
 
 #[cfg(test)]
 mod fire_efficiency_tests;

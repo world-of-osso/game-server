@@ -34,6 +34,22 @@ pub fn hot_streak_spells_in_flight(world: &World, caster: Entity) -> Result<f64,
     Ok(pending.count_matching(caster, scripts::triggers_hot_streak) as f64)
 }
 
+/// Native target-only admission; no cooldown, power, knowledge or cast mutation.
+pub(crate) fn target_eligible(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    candidate: Entity,
+) -> Result<bool, String> {
+    match validate_target(world, caster, spell, Some(candidate), Sight::Start) {
+        Ok(target) => Ok(target == Some(candidate)),
+        Err(CastFailure::Unsupported(reason)) => {
+            Err(format!("native target eligibility unsupported: {reason}"))
+        }
+        Err(_) => Ok(false),
+    }
+}
+
 struct Cooldown {
     remains: f64,
     duration: f64,
