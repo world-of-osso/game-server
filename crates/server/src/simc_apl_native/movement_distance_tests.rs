@@ -4,6 +4,7 @@ use shared::components::Position;
 
 fn fixture() -> (World, Entity, Entity) {
     let mut world = World::new();
+    world.insert_resource(Time::<()>::default());
     let target = world
         .spawn(Position {
             x: 50.0,
@@ -70,6 +71,75 @@ fn native_movement_distance_missing_configuration_remains_a_named_gap() {
         error.contains("NATIVE_MOVEMENT_DISTANCE_UNAVAILABLE"),
         "unconfigured movement must not invent zero: {error}",
     );
+}
+
+#[test]
+fn native_movement_speed_reads_current_native_modifier_even_while_idle() {
+    let (mut world, actor, _) = fixture();
+    world.entity_mut(actor).insert(FixtureMovement {
+        distance_to_move: 0.0,
+    });
+    let bindings = Bindings::default();
+    let read = |world: &World| {
+        NativeFacts::new(world, actor, &bindings, patchwerk(), 1).value("movement.speed")
+    };
+    assert_eq!(read(&world).unwrap(), 7.0);
+    world.entity_mut(actor).insert(crate::auras::AuraStatMods {
+        movement_speed: 1.5,
+        ..Default::default()
+    });
+    assert_eq!(read(&world).unwrap(), 10.5);
+}
+
+#[test]
+fn native_movement_remains_divides_remaining_configured_distance_by_live_speed() {
+    let (mut world, actor, _) = fixture();
+    world.entity_mut(actor).insert(FixtureMovement {
+        distance_to_move: 14.0,
+    });
+    let bindings = Bindings::default();
+    let read = |world: &World| {
+        NativeFacts::new(world, actor, &bindings, patchwerk(), 1).value("movement.remains")
+    };
+    assert_eq!(read(&world).unwrap(), 2.0);
+    world.entity_mut(actor).insert(crate::auras::AuraStatMods {
+        movement_speed: 2.0,
+        ..Default::default()
+    });
+    assert_eq!(read(&world).unwrap(), 1.0);
+    world
+        .get_mut::<FixtureMovement>(actor)
+        .unwrap()
+        .distance_to_move = 0.0;
+    assert_eq!(read(&world).unwrap(), 0.0);
+}
+
+#[test]
+fn native_movement_predicates_keep_missing_and_dungeon_configuration_explicit() {
+    let (world, actor, _) = fixture();
+    let bindings = Bindings::default();
+    for operand in ["movement.remains", "movement.speed"] {
+        let missing = NativeFacts::new(&world, actor, &bindings, patchwerk(), 1)
+            .value(operand)
+            .unwrap_err();
+        assert!(
+            missing.contains("NATIVE_MOVEMENT_DISTANCE_UNAVAILABLE"),
+            "{missing}"
+        );
+        let dungeon = NativeFacts::new(
+            &world,
+            actor,
+            &bindings,
+            Encounter::Dungeon { started_at: 0.0 },
+            1,
+        )
+        .value(operand)
+        .unwrap_err();
+        assert!(
+            dungeon.contains("DUNGEON_MOVEMENT_DISTANCE_UNAVAILABLE"),
+            "{dungeon}"
+        );
+    }
 }
 
 #[test]
