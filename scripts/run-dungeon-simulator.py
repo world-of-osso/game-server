@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run isolated seeded simulator tests concurrently and merge their reports.
 
-Build first with scripts/build-host.py --test -p server --lib --no-run.
+Build first with scripts/build-host.py --test -p server-simulation --lib --no-run.
 Pass the test executable Cargo prints; this never starts game-server or clients.
 Each seed writes run-SEED.json and seed-SEED.log in the shared output directory.
 """

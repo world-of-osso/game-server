@@ -247,7 +247,7 @@ fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellMo
         .flatten()
         .filter(|modifier| modifier.op == op as i32)
         .fold((0.0, 1.0), |sum, modifier| {
-            #[cfg(test)]
+            #[cfg(any(test, feature = "test-support"))]
             crate::spell_cast::effects::factor_capture::record_modifier(
                 world,
                 caster,
@@ -269,7 +269,7 @@ fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellMo
             .fold(frozen, |sum, (aura, effect)| {
                 let amount = stacked_amount(aura, effect);
                 let percent = is_pct(effect.aura_type);
-                #[cfg(test)]
+                #[cfg(any(test, feature = "test-support"))]
                 crate::spell_cast::effects::factor_capture::record_modifier(
                     world,
                     caster,

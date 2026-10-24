@@ -234,7 +234,7 @@ pub(super) fn has_attackable_combat(world: &World, party: &[Entity]) -> bool {
         .any(|enemy| party_can_attack(world, party, enemy))
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(super) fn has_uncleared_fight(world: &World, owner: Entity) -> bool {
     current_history(world, owner).is_some_and(|history| {
         has_attackable_combat(world, &history.members)

@@ -31,7 +31,7 @@ struct EvaluationMemo {
 }
 
 #[derive(Debug, Default)]
-#[cfg_attr(test, derive(Clone))]
+#[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
 pub(super) struct EvaluationIndex {
     identity: Arc<()>,
     criteria_definitions: HashMap<u32, BTreeSet<u32>>,
@@ -233,7 +233,7 @@ impl AchievementCatalog {
         id: u32,
         boundary: CompletionBoundary,
     ) -> Option<AchievementToastSnapshot> {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         EVALUATION_WORK.with(|work| {
             let (definitions, trees) = work.get();
             work.set((definitions + 1, trees));

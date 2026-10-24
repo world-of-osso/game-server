@@ -14,10 +14,9 @@ use crate::networking::PlayerLink;
 use crate::persistence::{self, CharacterData, ClientId, DurabilityEntryData, GameDatabase};
 
 #[cfg(test)]
-use std::sync::{
-    Mutex,
-    atomic::{AtomicUsize, Ordering},
-};
+use std::sync::Mutex;
+#[cfg(any(test, feature = "test-support"))]
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default)]
 pub struct EquippedDurability {
@@ -122,7 +121,7 @@ pub fn load_item_durability(conn: &Connection) -> rusqlite::Result<ItemDurabilit
 
 pub struct DurabilityPlugin;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 static CHANGED_DURABILITY_PLAYERS_VISITED: AtomicUsize = AtomicUsize::new(0);
 #[cfg(test)]
 static CHANGED_DURABILITY_TEST_LOCK: Mutex<()> = Mutex::new(());
@@ -413,7 +412,7 @@ fn send_changed_durability_snapshot(
     rules: Res<ItemDurability>,
 ) {
     for (player_entity, durability) in &players {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         CHANGED_DURABILITY_PLAYERS_VISITED.fetch_add(1, Ordering::SeqCst);
 
         if durability.is_added() {
