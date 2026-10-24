@@ -691,6 +691,24 @@ fn duration_ms(world: &World, application: &AuraApplication, spell: &SpellInfo) 
     mechanic_duration::modify_duration(world, application, spell, duration)
 }
 
+/// Fresh resolved-spell duration through the ordinary caster/target modifier path.
+/// The caller supplies native resolved metadata (for example an eligible empower stage).
+pub(crate) fn fresh_duration_ms(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> u32 {
+    let application = AuraApplication {
+        caster,
+        target,
+        spell_id: spell.id,
+        effect_mask: u32::MAX,
+        source: AuraSource::Cast,
+    };
+    duration_ms(world, &application, spell)
+}
+
 /// Fresh maximum duration through the same caster/target modifier path as apply.
 /// A carried refresh duration is not the next cast's Pandemic threshold.
 pub(crate) fn maximum_duration_ms(
@@ -706,14 +724,7 @@ pub(crate) fn maximum_duration_ms(
     }
     duration.duration_ms = duration.max_duration_ms;
     duration.per_resource_ms = 0;
-    let application = AuraApplication {
-        caster,
-        target,
-        spell_id,
-        effect_mask: u32::MAX,
-        source: AuraSource::Cast,
-    };
-    Some(duration_ms(world, &application, &spell))
+    Some(fresh_duration_ms(world, caster, target, &spell))
 }
 
 /// FISTS_OF_FURY_SIMC_TICK_CADENCE: SimC76f8118 monk/sc_monk.cpp1789–1796

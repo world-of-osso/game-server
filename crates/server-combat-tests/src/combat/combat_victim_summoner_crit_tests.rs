@@ -4,8 +4,8 @@ use lightyear::prelude::{MessageReceiver, MessageSender};
 use shared::components::{Level, UnitLevel};
 use shared::protocol::{CombatEvent, CombatEventType};
 
-use super::npc_expertise_tests::collect_broadcast_swings;
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
+use crate::spell_cast::test_harness::collect_broadcast_swings;
 use crate::spell_cast::test_harness::{Harness, harness, world_db};
 
 const SUMMONER_CRIT: u32 = 344_021;
