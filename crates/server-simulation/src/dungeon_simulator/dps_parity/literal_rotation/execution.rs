@@ -2,7 +2,6 @@
 use super::equipment::{Equipment, ItemUse};
 use bevy::prelude::*;
 use server::simc_apl::Action;
-use server::spell_cast::knowledge::resolve_action;
 use shared::components::PowerType;
 use std::collections::{BTreeMap, BTreeSet};
 
