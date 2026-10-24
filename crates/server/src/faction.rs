@@ -142,7 +142,7 @@ pub fn load_faction_templates(conn: &Connection) -> rusqlite::Result<FactionTemp
 }
 
 /// Real templates from `data/world.db`.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn world_db_faction_templates() -> Option<FactionTemplates> {
     static TEMPLATES: std::sync::OnceLock<Option<FactionTemplates>> = std::sync::OnceLock::new();
     TEMPLATES

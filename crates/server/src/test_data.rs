@@ -8,6 +8,7 @@ pub(crate) mod catalog_cache;
 pub(crate) mod fixture_dir;
 
 /// Advance the real selection/admission path until its player is published.
+#[cfg(test)]
 pub(crate) fn wait_for_selected_player(
     app: &mut bevy::prelude::App,
     connection: bevy::prelude::Entity,
@@ -29,6 +30,7 @@ pub(crate) fn wait_for_selected_player(
 }
 
 /// Wait for a real FIFO fence before asserting durable fixture rows.
+#[cfg(test)]
 pub(crate) fn drain_persistence(db: &crate::persistence::GameDatabase) {
     let receipt = db.writer.enqueue("fixture durability fence", |_| Ok(()));
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
@@ -46,6 +48,7 @@ pub(crate) fn drain_persistence(db: &crate::persistence::GameDatabase) {
 }
 
 /// Consume a committed operation's queued credits, then fence its durable writes.
+#[cfg(test)]
 pub(crate) fn advance_and_drain_persistence(app: &mut bevy::prelude::App) {
     app.update();
     drain_persistence(app.world().resource::<crate::persistence::GameDatabase>());
@@ -53,11 +56,12 @@ pub(crate) fn advance_and_drain_persistence(app: &mut bevy::prelude::App) {
 
 /// Immutable canonical input, parsed once per test process. Apps clone before editing.
 /// Prepared/mutable database copies must use their own loaders, never this cache.
-pub(crate) fn world_data() -> &'static crate::world_data::WorldData {
+pub fn world_data() -> &'static crate::world_data::WorldData {
     static DATA: OnceLock<crate::world_data::WorldData> = OnceLock::new();
     DATA.get_or_init(|| crate::world_data::load_world_data(&world_db_path()))
 }
 
+#[cfg(test)]
 pub(crate) fn achievement_catalog() -> crate::achievement::AchievementCatalog {
     static DATA: OnceLock<crate::achievement::AchievementCatalog> = OnceLock::new();
     DATA.get_or_init(|| {
@@ -156,11 +160,12 @@ fn prepared_class_fixture_remains_read_only_and_app_mutations_are_isolated() {
 }
 
 /// `data/world.db` of this checkout.
-pub(crate) fn world_db_path() -> PathBuf {
+pub fn world_db_path() -> PathBuf {
     require(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"))
 }
 
 /// Independent lazy terrain cache backed by the same read-only source maps as the fixture.
+#[cfg(test)]
 pub(crate) fn ground_map() -> crate::ground::GroundMap {
     let connection = rusqlite::Connection::open_with_flags(
         world_db_path(),
@@ -190,9 +195,11 @@ pub(crate) fn require(path: PathBuf) -> PathBuf {
 }
 
 /// Full idle population across diverse layouts, as in the live world's optional components.
+#[cfg(test)]
 #[derive(bevy::prelude::Component)]
 struct IdleLayout<const BIT: u8>;
 
+#[cfg(test)]
 pub(crate) fn populate_idle_world<B: bevy::prelude::Bundle>(
     world: &mut bevy::prelude::World,
     mut bundle: impl FnMut() -> B,
@@ -208,6 +215,7 @@ pub(crate) fn populate_idle_world<B: bevy::prelude::Bundle>(
     }
 }
 
+#[cfg(test)]
 pub(crate) fn assert_idle_updates_are_bounded(app: &mut bevy::prelude::App, label: &str) {
     app.update();
     let fastest = (0..3)

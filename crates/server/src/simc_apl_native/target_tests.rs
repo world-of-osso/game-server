@@ -92,6 +92,15 @@ fn arms_native_apl_target_aura_remains_requires_this_casters_real_aura() {
             1,
         );
         assert_eq!(before.value(&remaining).unwrap(), 0.0);
+        for (property, expected) in [("up", 0.0), ("down", 1.0), ("stack", 0.0)] {
+            assert_eq!(
+                before.value(&format!("{prefix}.{property}")).unwrap(),
+                expected
+            );
+        }
+        if prefix.starts_with("dot.") {
+            assert_eq!(before.value(&format!("{prefix}.ticking")).unwrap(), 0.0);
+        }
         crate::auras::apply_aura(
             h.app.world_mut(),
             &crate::auras::AuraApplication {
@@ -110,6 +119,86 @@ fn arms_native_apl_target_aura_remains_requires_this_casters_real_aura() {
             1,
         );
         assert!(after.value(&remaining).unwrap() > 0.0);
+        for (property, expected) in [("up", 1.0), ("down", 0.0), ("stack", 1.0)] {
+            assert_eq!(
+                after.value(&format!("{prefix}.{property}")).unwrap(),
+                expected
+            );
+        }
+        if prefix.starts_with("dot.") {
+            assert_eq!(after.value(&format!("{prefix}.ticking")).unwrap(), 1.0);
+        }
+    }
+}
+
+#[test]
+fn arms_native_apl_owned_dot_expires_on_actual_native_clock() {
+    let mut h = warrior();
+    h.app.world_mut().entity_mut(h.npc).insert(Health {
+        current: 100_000_000.0,
+        max: 100_000_000.0,
+    });
+    let bindings = Bindings {
+        buffs: [("rend_dot".into(), REND_DOT)].into(),
+        ..Default::default()
+    };
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.npc,
+            spell_id: REND_DOT,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let expires_at = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.npc)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == REND_DOT && aura.caster == h.caster)
+        .unwrap()
+        .expires_at
+        .unwrap();
+    let now = crate::spell_cast::now(h.app.world());
+    let step = h.app.world().resource::<Time>().delta_secs_f64();
+    assert!(expires_at > now && step > 0.0);
+    let before = NativeFacts::new(
+        h.app.world(),
+        h.caster,
+        &bindings,
+        encounter(h.app.world()),
+        1,
+    );
+    assert_eq!(before.value("dot.rend_dot.ticking").unwrap(), 1.0);
+    h.advance(((expires_at - now) / step).ceil() as usize + 1);
+    assert!(crate::spell_cast::now(h.app.world()) >= expires_at);
+    for unit in [h.caster, h.npc] {
+        assert!(
+            crate::spell_cast::targets::is_alive(h.app.world(), unit),
+            "native expiry, not death cleanup"
+        );
+    }
+    let after = NativeFacts::new(
+        h.app.world(),
+        h.caster,
+        &bindings,
+        encounter(h.app.world()),
+        1,
+    );
+    for (property, expected) in [
+        ("remains", 0.0),
+        ("ticking", 0.0),
+        ("up", 0.0),
+        ("down", 1.0),
+        ("stack", 0.0),
+    ] {
+        assert_eq!(
+            after.value(&format!("dot.rend_dot.{property}")).unwrap(),
+            expected
+        );
     }
 }
 

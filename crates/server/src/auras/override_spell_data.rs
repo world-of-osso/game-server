@@ -5,7 +5,7 @@ use rusqlite::Connection;
 use std::collections::HashMap;
 
 #[derive(Resource, Default)]
-pub(crate) struct OverrideSpellData(pub HashMap<u32, [u32; 10]>);
+pub struct OverrideSpellData(pub HashMap<u32, [u32; 10]>);
 
 pub(crate) fn load(conn: &Connection) -> rusqlite::Result<OverrideSpellData> {
     let exists: bool = conn.query_row(
@@ -28,9 +28,9 @@ pub(crate) fn load(conn: &Connection) -> rusqlite::Result<OverrideSpellData> {
 }
 
 pub(super) fn load_startup(mut commands: Commands) {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     let path = crate::test_data::world_db_path();
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "test-support")))]
     let path = std::path::PathBuf::from(crate::spell_info::WORLD_DB_PATH);
     let conn = Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("open world.db for OverrideSpellData");

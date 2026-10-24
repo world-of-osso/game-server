@@ -1,6 +1,7 @@
 //! Retail item attributes from world.db `content_item` (item + item_sparse).
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::Path;
+use std::sync::Arc;
 
 use bevy::prelude::*;
 use rusqlite::{Connection, OpenFlags, Row};
@@ -21,6 +22,8 @@ pub struct ItemTemplate {
     pub max_stack: u32,
     /// `MaxCount`: maximum owned quantity; non-positive means unlimited.
     pub max_count: i32,
+    /// Native ItemSparse.ItemSet; original identity, unaffected by stat redirects.
+    pub item_set: u32,
     /// `Bonding`: 0 none, 1 on pickup, 2 on equip, 3 on use, 4 quest.
     pub bonding: u8,
     pub required_level: u16,
@@ -170,7 +173,8 @@ pub struct ItemTemplates {
     pub forever: HashMap<u32, ItemTemplate>,
     pub loot_need: LootNeedMetadata,
     /// Retail ItemEffect TriggerType6 (ON_LEARN), keyed by the owning item.
-    pub(crate) retail_learning_spells: HashMap<u32, Vec<u32>>,
+    pub retail_learning_spells: HashMap<u32, Vec<u32>>,
+    pub item_names: Arc<BTreeMap<String, BTreeSet<u32>>>,
 }
 
 impl ItemTemplates {
@@ -203,7 +207,7 @@ const ITEM_QUERY: &str = "SELECT c.ID, c.InventoryType, c.Stackable, c.Bonding, 
      (SELECT m.ItemAppearanceID FROM item_modified_appearance m WHERE m.ItemID = c.ID \
       AND m.ItemAppearanceID != 0 ORDER BY m.ItemAppearanceModifierID, m.OrderIndex LIMIT 1), \
      u.SpellID, u.Charges, u.SpellCategoryID, u.CategoryCoolDownMSec, \
-     s.ContainerSlots, s.BagFamily, s.Flags_0, s.LimitCategory, c.MaxCount \
+     s.ContainerSlots, s.BagFamily, s.Flags_0, s.LimitCategory, c.MaxCount, s.ItemSet \
      FROM content_item c JOIN item_sparse s ON s.ID = c.ID \
      LEFT JOIN (SELECT x.ItemID, e.SpellID, e.Charges, e.SpellCategoryID, e.CategoryCoolDownMSec, \
       ROW_NUMBER() OVER (PARTITION BY x.ItemID ORDER BY CASE WHEN e.TriggerType = 6 THEN 0 ELSE 1 END, e.LegacySlotIndex, e.ID) AS slot \
@@ -269,6 +273,7 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ItemTemplate)> {
         inventory_type: row.get(1)?,
         max_stack: row.get::<_, i64>(2)?.clamp(1, i64::from(u32::MAX)) as u32,
         max_count: row.get(APPEARANCE_COLUMN + 9)?,
+        item_set: row.get(APPEARANCE_COLUMN + 10)?,
         bonding: row.get(3)?,
         required_level: row.get(4)?,
         allowable_class: row.get(5)?,
@@ -292,7 +297,37 @@ pub fn load_item_templates(path: &Path) -> rusqlite::Result<ItemTemplates> {
         forever: HashMap::new(),
         loot_need: loot_need::load(&conn)?,
         retail_learning_spells: load_item_learning_spells(&conn)?,
+        item_names: Arc::new(load_item_names(&conn)?),
     })
+}
+
+/// Pinned SimC util.cpp3234 tokenization; only the operand name, never mechanics.
+fn normalized_item_name(name: &str) -> String {
+    name.trim_start_matches(['_', '+'])
+        .chars()
+        .filter_map(|character| match character {
+            ' ' => Some('_'),
+            '_' | '+' | '.' | '%' | '0'..='9' => Some(character),
+            'a'..='z' | 'A'..='Z' => Some(character.to_ascii_lowercase()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn load_item_names(conn: &Connection) -> rusqlite::Result<BTreeMap<String, BTreeSet<u32>>> {
+    let mut query = conn.prepare("SELECT ID,Name FROM content_item ORDER BY ID")?;
+    let rows = query.query_map([], |row| {
+        Ok((row.get::<_, u32>(0)?, row.get::<_, String>(1)?))
+    })?;
+    let mut names: BTreeMap<String, BTreeSet<u32>> = BTreeMap::new();
+    for row in rows {
+        let (id, name) = row?;
+        let normalized = normalized_item_name(&name);
+        if !normalized.is_empty() {
+            names.entry(normalized).or_default().insert(id);
+        }
+    }
+    Ok(names)
 }
 
 fn load_item_learning_spells(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<u32>>> {

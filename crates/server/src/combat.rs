@@ -35,7 +35,7 @@ const MELEE_RANGE: f32 = 5.0;
 const ATTACK_SPELL_ID: u32 = 6603;
 /// Default unit attack time and existing ExpectedStat damage normalization.
 /// Source-spawned creatures carry CreatureAttackTime; players use their weapons.
-pub(crate) const AUTO_ATTACK_INTERVAL: f32 = 2.0;
+pub const AUTO_ATTACK_INTERVAL: f32 = 2.0;
 /// `Unit::GetUnitMissChance`: every victim's base melee miss chance, percent.
 const UNIT_MISS_CHANCE_PCT: f32 = 5.0;
 /// Signed attacker dodge modifier (`Unit::GetUnitDodgeChance`, Unit.cpp2775).
@@ -155,7 +155,7 @@ pub struct DeathState {
 
 /// TC Creature::SetUnkillable, CREATURE_STATIC_FLAG_UNKILLABLE.
 #[derive(Component, Debug)]
-pub(crate) struct Unkillable;
+pub struct Unkillable;
 
 /// TC Unit.cpp936–945: other units' lethal damage leaves an unkillable creature at1HP.
 pub(crate) fn limit_unkillable_loss(current_health: f32, loss: f32, protected: bool) -> f32 {
@@ -403,7 +403,7 @@ fn process_attack_messages(
 /// `Unit::Attack(victim, true)`: a new victim keeps the running swing timers and
 /// is announced with `SMSG_ATTACK_START` (`SendMeleeAttackStart`, Unit.cpp:2542);
 /// attacking the current victim again changes nothing (Unit.cpp:5906-5924).
-pub(crate) fn start_attack(
+pub fn start_attack(
     commands: &mut Commands,
     attacker: Entity,
     victim: Entity,
@@ -953,7 +953,7 @@ pub(crate) struct SwingContext<'a, 'w, 's> {
 /// multipliers × target physical damage taken (`AuraStatMods`, Unit::MeleeDamageBonusDone/Taken).
 struct SwingDamage {
     amount: f32,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     raw: f32,
 }
 
@@ -985,7 +985,7 @@ fn swing_damage(
     scaling: &UnitScaling,
     taken: f32,
     additional_mult: f32,
-    #[cfg(test)] source_mult: f32,
+    #[cfg(any(test, feature = "test-support"))] source_mult: f32,
 ) -> SwingDamage {
     let base = roll_swing_base(attacker, weapon, hand, scaling);
     // TC Guardian::UpdateDamagePhysical1423: owner-derived AP is additive
@@ -997,7 +997,7 @@ fn swing_damage(
     let base = base + owner_bonus;
     SwingDamage {
         amount: apply_swing_multipliers(base, attacker.mods, taken, additional_mult),
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         raw: base
             * attacker.mods.map_or(1.0, |mods| {
                 mods.damage_done(1) * mods.autoattack_damage_mult
@@ -1076,21 +1076,21 @@ fn target_armor(
 }
 
 /// Damage plus test-only inputs observed in this same armor operation.
-pub(crate) struct ArmorMitigation {
+pub struct ArmorMitigation {
     pub damage: f32,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub effective_armor: f32,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub constant: Option<f32>,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub penetration_pct: f32,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fraction: Option<f32>,
 }
 
 /// Physical `damage` after the target's armor at the attacker's level
 /// against it; without ExpectedStat data there is no mitigation.
-pub(crate) fn armor_mitigated(
+pub fn armor_mitigated(
     damage: f32,
     armor: f32,
     attacker: &UnitScaling,
@@ -1106,13 +1106,13 @@ pub(crate) fn armor_mitigated(
         damage: reduction
             .as_ref()
             .map_or(damage, |reduction| reduction.damage),
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         effective_armor: armor,
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         constant,
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         penetration_pct: penetration,
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         fraction: reduction.map(|reduction| reduction.fraction),
     }
 }
@@ -1569,7 +1569,7 @@ fn try_swing(
         attacker.entity,
         raw_armor,
     );
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     let source_multiplier = context.summon_modifiers.multiplier(attacker.entity) * versus;
     let swing = swing_damage(
         attacker,
@@ -1582,7 +1582,7 @@ fn try_swing(
                 .summon_modifiers
                 .taken_multiplier(attacker.entity, avoidance.1.as_deref())
             * versus,
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         source_multiplier,
     );
     let armored = armor_mitigated(
@@ -1651,11 +1651,11 @@ fn try_swing(
     } else {
         outcome_damage * critical_multiplier
     };
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     {
         let source = attacker.entity;
         let raw = swing.raw;
-        let kind = crate::dungeon_simulator::healer_intake::HitKind::Melee {
+        let kind = crate::test_support::healer_intake::HitKind::Melee {
             hand: u8::from(hand == Hand::Off),
             outcome: format!("{kind:?}"),
             level_difference,
@@ -1663,14 +1663,7 @@ fn try_swing(
             weapon_speed: weapon.speed,
         };
         commands.queue(move |world: &mut World| {
-            crate::dungeon_simulator::healer_intake::record(
-                world,
-                source,
-                target_entity,
-                1,
-                raw,
-                kind,
-            )
+            crate::test_support::healer_intake::record(world, source, target_entity, 1, raw, kind)
         });
     }
     let absorption = crate::auras::consume_absorbs(
@@ -1960,7 +1953,7 @@ pub(crate) fn despawn_creature(world: &mut World, creature: Entity) {
 /// school Normal; the `.damage` command): the victim loses `damage` over its health
 /// multiplier for the attacker, both enter combat, the victim's threat and
 /// `DamageTaken` follow, and a lethal hit kills it.
-pub(crate) fn deal_direct_damage(world: &mut World, attacker: Entity, victim: Entity, damage: f32) {
+pub fn deal_direct_damage(world: &mut World, attacker: Entity, victim: Entity, damage: f32) {
     if !crate::spell_cast::targets::is_alive(world, victim) {
         return;
     }
@@ -2043,8 +2036,8 @@ pub(crate) fn deal_health_damage(
     if !crate::spell_cast::targets::is_alive(world, victim) {
         return;
     }
-    #[cfg(test)]
-    crate::dungeon_simulator::healer_intake::note_unrecorded_direct(world, attacker, victim);
+    #[cfg(any(test, feature = "test-support"))]
+    crate::test_support::healer_intake::note_unrecorded_direct(world, attacker, victim);
     crate::combat_refs::engage_attacked_target(world, attacker, victim);
     crate::creature_scripts::refresh_training_dummy_timer(world, victim, attacker);
     let (attacker_scaling, victim_scaling) = (
@@ -2118,14 +2111,14 @@ pub(crate) fn deal_health_damage(
 }
 
 /// Replay frozen source damage through the same recipient mitigation/commit/publication.
-#[cfg(test)]
-pub(crate) fn replay_healer_hit(
+#[cfg(any(test, feature = "test-support"))]
+pub fn replay_healer_hit(
     world: &mut World,
     attacker: Entity,
     victim: Entity,
-    hit: &crate::dungeon_simulator::healer_intake::Hit,
+    hit: &crate::test_support::healer_intake::Hit,
 ) -> Result<(), String> {
-    use crate::dungeon_simulator::healer_intake::HitKind;
+    use crate::test_support::healer_intake::HitKind;
     let HitKind::Melee {
         hand,
         ref outcome,
@@ -2253,7 +2246,7 @@ pub(crate) fn replay_healer_hit(
 
 /// `Unit::Kill(killer, victim)` outside a damage path (`Unit::KillSelf`): the
 /// victim dies at once.
-pub(crate) fn kill_unit(world: &mut World, killer: Entity, victim: Entity) {
+pub fn kill_unit(world: &mut World, killer: Entity, victim: Entity) {
     let Some(mut health) = world.get_mut::<Health>(victim) else {
         return;
     };
@@ -2311,7 +2304,7 @@ pub(crate) fn corpse_decay_system(
 /// its attackers stop attacking it (`RemoveAllAttackers`), and every combat reference
 /// it holds ends (`EndAllPvECombat`, `EndAllPvPCombat`), so each unit it fought leaves
 /// combat unless it still fights another.
-pub(crate) fn combat_stop(world: &mut World, unit: Entity) {
+pub fn combat_stop(world: &mut World, unit: Entity) {
     let attackers: Vec<Entity> = world
         .query::<(Entity, &AutoAttack)>()
         .iter(world)
@@ -2557,50 +2550,14 @@ pub(crate) mod forecast;
 #[path = "combat_enemy_dodge_tests.rs"]
 mod enemy_dodge_tests;
 #[cfg(test)]
-#[path = "combat_facing_tests.rs"]
-mod facing_tests;
-#[cfg(test)]
-#[path = "combat_npc_cadence_tests.rs"]
-mod npc_cadence_tests;
-#[cfg(test)]
-#[path = "combat_npc_expertise_tests.rs"]
-mod npc_expertise_tests;
-#[cfg(test)]
-#[path = "combat_npc_flags_tests.rs"]
-mod npc_flags_tests;
-#[cfg(test)]
 #[path = "combat_npc_general_crit_tests.rs"]
 mod npc_general_crit_tests;
-#[cfg(test)]
-#[path = "combat_npc_no_crit_tests.rs"]
-mod npc_no_crit_tests;
 #[cfg(test)]
 #[path = "combat_npc_victim_block_tests.rs"]
 mod npc_victim_block_tests;
 #[cfg(test)]
-#[path = "combat_npc_victim_dodge_tests.rs"]
-mod npc_victim_dodge_tests;
-#[cfg(test)]
-#[path = "combat_npc_victim_parry_tests.rs"]
-mod npc_victim_parry_tests;
-#[cfg(test)]
-#[path = "combat_npc_weapon_crit_tests.rs"]
-mod npc_weapon_crit_tests;
-#[cfg(test)]
-#[path = "combat_pet_engagement_tests.rs"]
-mod pet_engagement_tests;
-#[cfg(test)]
 #[path = "combat_tests.rs"]
 mod tests;
 #[cfg(test)]
-#[path = "combat_victim_caster_crit_tests.rs"]
-mod victim_caster_crit_tests;
-#[cfg(test)]
-#[path = "combat_victim_general_crit_tests.rs"]
-mod victim_general_crit_tests;
-#[cfg(test)]
 #[path = "combat_victim_health_crit_tests.rs"]
 mod victim_health_crit_tests;
-#[cfg(test)]
-#[path = "combat_victim_summoner_crit_tests.rs"]
-mod victim_summoner_crit_tests;

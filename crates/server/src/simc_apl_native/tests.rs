@@ -24,6 +24,7 @@ fn bindings() -> Bindings {
         .map(|(name, id)| (name.into(), id))
         .into(),
         buffs: [("hit_combo".into(), HIT_COMBO_BUFF)].into(),
+        dot_refresh: Default::default(),
         talents: [("hit_combo".into(), HIT_COMBO)].into(),
         resources: [
             ("energy".into(), PowerType::Energy),

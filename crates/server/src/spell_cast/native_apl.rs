@@ -1,6 +1,22 @@
 //! Read the same native cooldown, charge and GCD calculations used by casts.
 use super::*;
 
+/// Native target-only admission; no cooldown, power, knowledge or cast mutation.
+pub(crate) fn target_eligible(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    candidate: Entity,
+) -> Result<bool, String> {
+    match validate_target(world, caster, spell, Some(candidate), Sight::Start) {
+        Ok(target) => Ok(target == Some(candidate)),
+        Err(CastFailure::Unsupported(reason)) => {
+            Err(format!("native target eligibility unsupported: {reason}"))
+        }
+        Err(_) => Ok(false),
+    }
+}
+
 struct Cooldown {
     remains: f64,
     duration: f64,
@@ -150,7 +166,7 @@ pub(crate) fn cooldown_value(
     }
 }
 
-pub(crate) fn gcd_value(
+pub fn gcd_value(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,

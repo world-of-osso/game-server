@@ -329,7 +329,9 @@ fn native_empower_tip_scales_snapshots_max_rank_before_consuming_one_use() {
     crate::spell_cast::creature_cast(h.app.world_mut(), caster, tip, Some(caster), false).unwrap();
     h.advance(3);
     assert!(crate::auras::has_aura(h.app.world(), caster, tip));
-    let fire = super::kit_overrides::resolve_action(h.app.world(), caster, FIRE_BREATH).unwrap();
+    let fire =
+        crate::spell_cast::knowledge::resolve_actor_action(h.app.world(), caster, FIRE_BREATH)
+            .unwrap();
     crate::spell_cast::creature_cast_empowered(h.app.world_mut(), caster, fire, Some(caster), 1)
         .unwrap();
     assert!(
@@ -366,7 +368,8 @@ fn native_empower_tip_scales_snapshots_max_rank_before_consuming_one_use() {
     // Let the ordinary finish GCD expire, without restoring any cooldown or aura.
     h.advance(12);
     let surge =
-        super::kit_overrides::resolve_action(h.app.world(), caster, ETERNITY_SURGE).unwrap();
+        crate::spell_cast::knowledge::resolve_actor_action(h.app.world(), caster, ETERNITY_SURGE)
+            .unwrap();
     crate::spell_cast::creature_cast_empowered(h.app.world_mut(), caster, surge, Some(h.npc), 1)
         .unwrap();
     h.advance(3);
@@ -398,7 +401,8 @@ fn native_empower_tip_scales_snapshots_max_rank_before_consuming_one_use() {
 }
 
 fn complete_empower(h: &mut Harness, caster: Entity, base: u32) {
-    let spell = super::kit_overrides::resolve_action(h.app.world(), caster, base).unwrap();
+    let spell =
+        crate::spell_cast::knowledge::resolve_actor_action(h.app.world(), caster, base).unwrap();
     let target = if base == FIRE_BREATH { caster } else { h.npc };
     super::kit_proc_fidelity_tests::complete_cast(h, caster, spell, target);
     for _ in 0..100 {
@@ -612,7 +616,8 @@ fn native_empower_higher_fire_ranks_convert_three_periodic_ticks_per_extra_stage
 fn native_empower_font_rank_four_releases_real_short_dot_and_eight_target_surge() {
     for base in [FIRE_BREATH, ETERNITY_SURGE] {
         let (mut h, caster) = spawn_surge_fixture(65, 9);
-        let spell = super::kit_overrides::resolve_action(h.app.world(), caster, base).unwrap();
+        let spell = crate::spell_cast::knowledge::resolve_actor_action(h.app.world(), caster, base)
+            .unwrap();
         let target = if base == FIRE_BREATH { caster } else { h.npc };
         crate::spell_cast::creature_cast_empowered(
             h.app.world_mut(),
@@ -728,7 +733,9 @@ fn native_empower_font_kit_resolver_dispatches_both_real_four_stage_variants() {
     for (base, variant) in [(FIRE_BREATH, 382266), (ETERNITY_SURGE, 382411)] {
         let (mut h, caster) = prepare(65);
         assert!(crate::auras::has_aura(h.app.world(), caster, 411212));
-        let resolved = super::kit_overrides::resolve_action(h.app.world(), caster, base).unwrap();
+        let resolved =
+            crate::spell_cast::knowledge::resolve_actor_action(h.app.world(), caster, base)
+                .unwrap();
         assert_eq!(
             resolved, variant,
             "native Font must resolve before cast eligibility"

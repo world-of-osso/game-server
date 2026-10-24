@@ -33,8 +33,8 @@ pub(crate) mod auto_repeat;
 mod auto_shot_repeat_tests;
 #[cfg(test)]
 mod hit_positivity_tests;
-#[cfg(test)]
-pub(crate) mod holy_metrics;
+#[cfg(any(test, feature = "test-support"))]
+pub mod holy_metrics;
 #[cfg(test)]
 mod holy_words_tests;
 #[cfg(test)]
@@ -108,7 +108,7 @@ mod critical_healing_tests;
 mod dead_cast_progress_tests;
 #[cfg(test)]
 mod dead_caster_channel_tests;
-pub(crate) mod disenchant;
+pub mod disenchant;
 #[cfg(test)]
 mod disenchant_tests;
 mod druid_transform;
@@ -186,7 +186,7 @@ mod fount_strength_tests;
 mod full_trigger_dead_target_tests;
 #[cfg(test)]
 mod generic_empower_tests;
-pub(crate) mod guardian;
+pub mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 pub(crate) mod history_store;
@@ -196,10 +196,12 @@ mod impending_victory_tests;
 mod interruptibility;
 #[cfg(test)]
 mod invigorating_fury_tests;
-#[cfg(test)]
-pub(crate) mod native_apl;
+#[cfg(any(test, feature = "test-support"))]
+pub mod native_apl;
 #[cfg(test)]
 mod periodic_healing_taken_tests;
+#[cfg(test)]
+mod proc_recipient_tests;
 #[cfg(test)]
 mod protection_producer_tests;
 mod sanctuary;
@@ -265,7 +267,7 @@ mod minimum_speed_tests;
 mod missiles;
 #[cfg(test)]
 mod npc_dodge_tests;
-pub(crate) mod open_lock;
+pub mod open_lock;
 #[cfg(test)]
 mod open_lock_tests;
 #[cfg(test)]
@@ -293,8 +295,8 @@ mod summon_at_tests;
 #[cfg(test)]
 mod summon_damage_tests;
 pub mod targets;
-#[cfg(test)]
-pub(crate) mod test_harness;
+#[cfg(any(test, feature = "test-support"))]
+pub mod test_harness;
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -317,10 +319,10 @@ use crate::interest::NetworkVisibility;
 use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
+pub use creature::{AiTarget, creature_cast};
 pub(crate) use creature::{
-    AiTarget, ai_spell_target, creature_cast, creature_cast_empowered,
-    creature_cast_ignoring_cooldowns, creature_cast_ignoring_in_progress,
-    creature_cast_interrupting_self,
+    ai_spell_target, creature_cast_empowered, creature_cast_ignoring_cooldowns,
+    creature_cast_ignoring_in_progress, creature_cast_interrupting_self,
 };
 use effects::{EffectCtx, UnhandledEffects};
 use targets::{Dest, Relation};
@@ -360,9 +362,12 @@ pub(crate) mod jump_charge;
 mod knockback;
 #[cfg(test)]
 mod knockback_tests;
+pub mod knowledge;
+#[cfg(test)]
+mod launch_combat_tests;
 mod school_costs;
 pub(crate) mod teleport;
-pub(crate) mod teleport_positions;
+pub mod teleport_positions;
 mod toy_coin;
 mod toy_foam_sword;
 pub(crate) mod toy_scripts;
@@ -378,7 +383,7 @@ pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         app.insert_resource(toy_requirements::fixture());
         app.add_plugins(crate::knockback::KnockbackPlugin);
         app.init_resource::<crate::group::GroupRegistry>()
@@ -504,7 +509,7 @@ pub enum CastFailure {
 }
 
 impl CastFailure {
-    pub(crate) fn to_contract(
+    pub fn to_contract(
         &self,
     ) -> Result<(CastFailReason, Option<String>), shared::protocol::InventoryError> {
         use CastFailReason as R;
@@ -703,7 +708,7 @@ pub struct SpellHistory {
 
 impl SpellHistory {
     /// Most recent successful action within an explicit policy group.
-    pub(crate) fn last_cast_in(&self, group: &[u32]) -> Option<u32> {
+    pub fn last_cast_in(&self, group: &[u32]) -> Option<u32> {
         group
             .iter()
             .filter_map(|spell| {
@@ -715,8 +720,8 @@ impl SpellHistory {
             .map(|(spell, _)| spell)
     }
 
-    #[cfg(test)]
-    pub(crate) fn last_successful_cast(&self) -> Option<u32> {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn last_successful_cast(&self) -> Option<u32> {
         self.successful_casts
             .iter()
             .max_by_key(|(_, order)| *order)
@@ -741,7 +746,7 @@ impl SpellHistory {
         }
     }
 
-    pub(crate) fn on_cooldown(&self, spell: &SpellInfo, now: f64) -> bool {
+    pub fn on_cooldown(&self, spell: &SpellInfo, now: f64) -> bool {
         let category = spell.categories.as_ref().map_or(0, |c| c.category);
         self.spell_ready_at
             .get(&spell.id)
@@ -755,7 +760,7 @@ impl SpellHistory {
 
     /// TC a352b1fa SpellHistory.cpp:709–736 GetRemainingCooldown: a live own
     /// entry wins; otherwise consult its category. Expired entries are not live.
-    pub(crate) fn remaining_cooldown_ms(&self, spell: &SpellInfo, now: f64) -> u64 {
+    pub fn remaining_cooldown_ms(&self, spell: &SpellInfo, now: f64) -> u64 {
         let category = spell.categories.as_ref().map_or(0, |c| c.category);
         let own_deadline = self.spell_ready_at.get(&spell.id).filter(|&&at| at > now);
         let deadline = own_deadline.or_else(|| self.category_ready_at.get(&category));
@@ -763,7 +768,7 @@ impl SpellHistory {
         (remaining.max(0.0) * 1000.0) as u64
     }
 
-    pub(crate) fn on_gcd(&self, spell: &SpellInfo, now: f64) -> bool {
+    pub fn on_gcd(&self, spell: &SpellInfo, now: f64) -> bool {
         let category = gcd_category(spell);
         category != 0 && self.gcd_ready_at.get(&category).is_some_and(|&at| at > now)
     }
@@ -910,11 +915,11 @@ fn gcd_category(spell: &SpellInfo) -> u32 {
 /// Bevy virtual/fixed time drops elapsed time when a frame exceeds its 250ms cap.
 /// Keep simulation clocks for casts, auras and missiles; readiness must match the
 /// real milliseconds sent to the owning client's cooldown and charge timers.
-pub(crate) fn history_now(world: &World) -> f64 {
+pub fn history_now(world: &World) -> f64 {
     world.resource::<Time<Real>>().elapsed_secs_f64()
 }
 
-pub(crate) fn now(world: &World) -> f64 {
+pub fn now(world: &World) -> f64 {
     world.resource::<Time>().elapsed_secs_f64()
 }
 
@@ -1034,7 +1039,7 @@ fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base
 
 /// Cast time after ChangeCastTime mods, divided by `1 + CharacterStats.haste_pct`
 /// (haste auras fold in through `StatModifiers`).
-pub(crate) fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
+pub fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
     let base = spell
         .misc
         .as_ref()
@@ -1169,7 +1174,7 @@ fn send_inventory_rejection(
 pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     event.timestamp_unix_ms = unix_millis();
     crate::followers::pull_history::record_event(world, &event);
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     if let Some(mut observed) = world.get_resource_mut::<test_harness::ObservedCombatEvents>() {
         observed.0.push(event.clone());
     }
@@ -1214,7 +1219,7 @@ fn combat_log_recipient(world: &World, unit: Entity) -> Entity {
     }
 }
 
-pub(crate) fn combat_event_owner(world: &World, unit: Entity) -> Entity {
+pub fn combat_event_owner(world: &World, unit: Entity) -> Entity {
     if let Some(follower) = world.get::<crate::followers::Follower>(unit) {
         return follower.owner;
     }
@@ -1346,7 +1351,7 @@ pub(crate) fn receive_cast_requests(world: &mut World) {
 
 /// Cast a spell for a player as its own request would, answering `CastFailed`
 /// on refusal (profession crafts).
-pub(crate) fn cast_for_player(
+pub fn cast_for_player(
     world: &mut World,
     player: Entity,
     spell_id: u32,
@@ -1356,7 +1361,7 @@ pub(crate) fn cast_for_player(
 
 /// Use the normal Player request path without changing its selected/AA victim.
 /// None means the request uses the Player's native selected target.
-pub(crate) fn cast_for_player_with_target(
+pub fn cast_for_player_with_target(
     world: &mut World,
     player: Entity,
     spell_id: u32,
@@ -1436,7 +1441,7 @@ struct ItemCooldownSource {
 /// The cooldown an item effect puts on its spell's category (`ItemEffect`
 /// `SpellCategoryID` / `CategoryCoolDownMSec`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct ItemCooldown {
+pub struct ItemCooldown {
     pub category: u32,
     pub category_ms: u32,
 }
@@ -1445,7 +1450,7 @@ pub(crate) struct ItemCooldown {
 /// player, spellbook aside, unless the item effect's category is cooling down
 /// (`SPELL_FAILED_NOT_READY`); a started cast puts the category on that cooldown
 /// (`SpellHistory::StartCooldown` with the item's `CategoryCoolDownMSec`).
-pub(crate) fn cast_item_spell(
+pub fn cast_item_spell(
     world: &mut World,
     caster: Entity,
     spell_id: u32,
@@ -1758,6 +1763,7 @@ fn check_ordinary_caster_life(
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum StartCheck {
     Native,
+    ResourceMax(PowerType),
     IgnoreCastInProgress,
     TankHealCapability,
     HealerDecision,
@@ -1779,13 +1785,31 @@ fn validate_start(
 }
 
 /// Read ordinary native cast eligibility without casting, retargeting or spending.
-pub(crate) fn read_native_cast_start(
+pub fn read_native_cast_start(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
     target: Entity,
 ) -> Result<Option<Entity>, CastFailure> {
     validate_start(world, caster, spell, Some(target), false)
+}
+
+/// Read ordinary native admission using only the chosen pool's maximum in the
+/// affordability calculation. No pool is written, granted or spent.
+pub fn read_native_cast_at_resource_max(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+    resource: PowerType,
+) -> Result<Option<Entity>, CastFailure> {
+    validate_start_with_policy(
+        world,
+        caster,
+        spell,
+        Some(target),
+        StartCheck::ResourceMax(resource),
+    )
 }
 
 /// Planner capability only: no cast, no spend, and no mutation of native GCD clocks.
@@ -1904,7 +1928,7 @@ fn validate_start_with_policy(
     teleport::check_destination(world, caster, spell)?;
     let casting_blocks_start =
         world.get::<CastState>(caster).is_some() && !allows_cast_while_casting(spell);
-    if check == StartCheck::Native && casting_blocks_start {
+    if matches!(check, StartCheck::Native | StartCheck::ResourceMax(_)) && casting_blocks_start {
         return Err(CastFailure::InProgress);
     }
     validate_history(world, caster, spell, check)?;
@@ -1927,7 +1951,11 @@ fn validate_start_with_policy(
     aura_spell_restrictions::check_target(world, caster, target, spell)?;
     toy_facing::check_cast(world, caster, spell.id, target)?;
     crate::hunter_pet::check_cast(world, caster, spell, target)?;
-    spell_costs(world, caster, spell)?;
+    let at_max = match check {
+        StartCheck::ResourceMax(power) => Some(power),
+        _ => None,
+    };
+    checked_costs(world, caster, spell, at_max)?;
     crate::profession::check_cast_items(world, caster, spell)?;
     disenchant::check_cast(world, caster, spell)?;
     Ok(target)
@@ -2174,7 +2202,7 @@ fn validate_target(
 
 /// What a `SpellPower` row draws from.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub(crate) enum CostPool {
+pub enum CostPool {
     Power(PowerType),
     Health,
 }
@@ -2189,10 +2217,37 @@ pub(crate) fn spell_costs(
     caster: Entity,
     spell: &SpellInfo,
 ) -> Result<Vec<(CostPool, f32)>, CastFailure> {
+    checked_costs(world, caster, spell, None)
+}
+
+fn cost_available(
+    world: &World,
+    caster: Entity,
+    pool: CostPool,
+    current: f32,
+    at_max: Option<PowerType>,
+) -> Result<f32, CastFailure> {
+    match pool {
+        CostPool::Power(power) if at_max == Some(power) => {
+            powers::power_value(world, caster, power)
+                .map(|(_, max)| max)
+                .ok_or(CastFailure::NotEnoughPower(power))
+        }
+        _ => Ok(current),
+    }
+}
+
+fn checked_costs(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    at_max: Option<PowerType>,
+) -> Result<Vec<(CostPool, f32)>, CastFailure> {
     applicable_costs(world, caster, spell)?
         .into_iter()
         .map(|(pool, amount, current)| {
-            if current < amount {
+            let available = cost_available(world, caster, pool, current, at_max)?;
+            if available < amount {
                 Err(match pool {
                     CostPool::Power(power) => CastFailure::NotEnoughPower(power),
                     CostPool::Health => CastFailure::NotEnoughHealth,
@@ -2206,7 +2261,7 @@ pub(crate) fn spell_costs(
 
 /// The costs `spell_costs` checks, with the caster's current value of each pool,
 /// without requiring the caster to afford them.
-pub(crate) fn applicable_costs(
+pub fn applicable_costs(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
@@ -2412,8 +2467,8 @@ fn haste_regen_gcd_ms(world: &World, caster: Entity, spell: &SpellInfo, gcd_ms: 
 }
 
 /// Observation-only benchmark seam; the actual profile heal defines a GCD equivalent.
-#[cfg(test)]
-pub(crate) fn healer_idle_gcd(world: &World, caster: Entity) -> Option<(bool, f64)> {
+#[cfg(any(test, feature = "test-support"))]
+pub fn healer_idle_gcd(world: &World, caster: Entity) -> Option<(bool, f64)> {
     let spell_id = world
         .get::<crate::followers::Follower>(caster)?
         .profile
@@ -2534,6 +2589,8 @@ pub(crate) fn execute_cast(
         // TC Spell.cpp3543-3546: one UseItem credit after successful cast checks.
         crate::achievement::record_item_use(world, caster, item);
     }
+    // TC Spell.cpp3843–3869: OnCast precedes TakePower and SendSpellGo.
+    scripts::on_cast(world, caster, spell.id, 0);
     take_cast_resources(world, caster, spell, &costs);
     start_cooldowns(world, caster, spell);
     scripts::ordinary_combo_cast(world, caster, spell);
@@ -2581,6 +2638,9 @@ pub(crate) fn execute_cast(
     }
     if !spell.cast_parent_owns_modifier_charges {
         spell_mods::consume_charges(world, caster, spell);
+        scripts::after_foreground_spender(world, caster, spell, explicit);
+        scripts::roll_selected_ret_divine_purpose(world, caster, spell);
+        scripts::schedule_empyrean_legacy(world, caster, spell, explicit);
     }
     blooming_infusion::after_cast(world, caster, spell);
     druid_transform::after_cast(world, caster, spell);
@@ -2609,6 +2669,8 @@ fn discount_missed_rune_costs(costs: Vec<(CostPool, f32)>, missed: bool) -> Vec<
 struct PlannedEffect {
     index: usize,
     units: Vec<Entity>,
+    /// Original selection survives MISS/IMMUNE for launch/arrival combat, not effects.
+    selected_units: Vec<Entity>,
     dest: Option<Dest>,
     /// A chained effect's damage and healing multiplier per unit: `EffectChainAmplitude`
     /// to the power of the unit's place in the chain (`m_damageMultipliers`,
@@ -2683,6 +2745,7 @@ fn plan_targets(
                 units: Vec::new(),
                 dest: None,
                 chain_multipliers: Vec::new(),
+                selected_units: Vec::new(),
                 blocked_units: Vec::new(),
                 prevent_hit_script: false,
             })
@@ -2700,6 +2763,7 @@ fn plan_targets(
                 units: vec![target],
                 dest: None,
                 chain_multipliers: Vec::new(),
+                selected_units: Vec::new(),
                 blocked_units: Vec::new(),
                 prevent_hit_script: false,
             })
@@ -2742,6 +2806,7 @@ fn plan_targets(
                 units: Vec::new(),
                 dest: None,
                 chain_multipliers: Vec::new(),
+                selected_units: Vec::new(),
                 blocked_units: Vec::new(),
                 prevent_hit_script: false,
             });
@@ -2829,6 +2894,7 @@ fn plan_targets(
             units,
             dest,
             chain_multipliers,
+            selected_units: Vec::new(),
             blocked_units: Vec::new(),
             prevent_hit_script,
         });
@@ -3078,6 +3144,18 @@ fn hit_units(plan: &TargetPlan) -> Vec<Entity> {
     hit
 }
 
+/// TargetInfo includes misses; named plans that skip defense selection retain their units.
+fn selected_units(plan: &[PlannedEffect]) -> Vec<Entity> {
+    let selected = plan
+        .iter()
+        .flat_map(|effect| effect.selected_units.iter().chain(&effect.units));
+    let mut seen = std::collections::HashSet::new();
+    selected
+        .copied()
+        .filter(|unit| seen.insert(*unit))
+        .collect()
+}
+
 /// The spell's `OnHit` script on every unit it landed on (`Spell::DoSpellHitOnUnit`).
 fn run_hit_scripts(
     world: &mut World,
@@ -3247,6 +3325,7 @@ fn push_hit_events(
             },
         );
     }
+    let mut first_harmful_hit = true;
     for target in hit {
         // Spell::DoSpellHitOnUnit (Spell.cpp:2879-2882): a spell landing on a
         // unit the caster can attack starts combat with it.
@@ -3291,14 +3370,15 @@ fn push_hit_events(
             },
         );
         if harmful {
-            elemental_overload::after_hit(world, caster, spell, target);
+            elemental_overload::after_hit(world, caster, spell, target, first_harmful_hit);
+            first_harmful_hit = false;
         }
     }
 }
 
 /// `TRIGGER_SPELL`: resolve `spell_id` immediately at `explicit`, ignoring
 /// costs, cooldowns, GCD and cast time. Depth is bounded by `MAX_TRIGGER_DEPTH`.
-pub(crate) fn cast_triggered(
+pub fn cast_triggered(
     world: &mut World,
     caster: Entity,
     spell_id: u32,
@@ -3461,13 +3541,14 @@ fn launch_triggered_spell(
     match plan_triggered_spell(world, caster, spell, explicit, depth) {
         Ok(mut plan) => {
             scripts::snapshot_guillotine_health(world, caster, spell, &mut plan);
-            #[cfg(test)]
+            #[cfg(any(test, feature = "test-support"))]
             if let Some(mut observed) =
                 world.get_resource_mut::<test_harness::ObservedTriggeredCasts>()
             {
                 observed.0.push((caster, spell.id, explicit));
             }
             crate::achievement::record_spell_cast(world, caster, spell.id);
+            scripts::on_cast(world, caster, spell.id, depth);
             scripts::spawn_ravager_field(world, caster, spell, explicit, depth);
             missiles::launch(world, caster, spell, plan, depth);
             druid_transform::after_cast(world, caster, spell);
@@ -3519,6 +3600,7 @@ fn execute_costed_trigger(
     crate::profession::check_cast_items(world, caster, spell)?;
     let prepared = resources::snapshot(world, caster, spell, &costs);
     let plan = plan_targets(world, caster, &prepared, explicit, true)?;
+    scripts::on_cast(world, caster, prepared.id, depth);
     take_cast_resources(world, caster, &prepared, &costs);
     crate::achievement::record_spell_cast(world, caster, prepared.id);
     missiles::launch(world, caster, &prepared, plan, depth);
@@ -3731,7 +3813,7 @@ pub(crate) fn restore_charges(world: &mut World, unit: Entity, charge_category: 
 
 /// Interrupt an active cast (stop, movement, death, crowd control, teleport, evade):
 /// `Spell::cancel` with SPELL_FAILED_INTERRUPTED.
-pub(crate) fn cancel_cast(world: &mut World, caster: Entity) {
+pub fn cancel_cast(world: &mut World, caster: Entity) {
     interrupt_cast(world, caster, CastFailReason::Interrupted, None);
 }
 

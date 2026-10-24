@@ -68,6 +68,7 @@ pub(super) fn volley_plan(
             units: vec![primary],
             dest,
             chain_multipliers: Vec::new(),
+            selected_units: Vec::new(),
             blocked_units: Vec::new(),
             prevent_hit_script: false,
         },
@@ -76,6 +77,7 @@ pub(super) fn volley_plan(
             units: vec![caster],
             dest: None,
             chain_multipliers: Vec::new(),
+            selected_units: Vec::new(),
             blocked_units: Vec::new(),
             prevent_hit_script: false,
         },
@@ -131,6 +133,7 @@ fn launch_bolts(
             units: vec![unit],
             dest: None,
             chain_multipliers: Vec::new(),
+            selected_units: Vec::new(),
             blocked_units: Vec::new(),
             prevent_hit_script: false,
         }];
@@ -169,6 +172,7 @@ pub(super) fn hammer_wave(world: &mut World, caster: Entity, target: Entity, dep
             orientation: 0.0,
         }),
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }];

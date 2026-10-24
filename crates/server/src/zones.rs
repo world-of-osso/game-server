@@ -27,7 +27,7 @@ pub(crate) use entry::read_entry_projection;
 
 /// Original ordinary population identity, independent of a temporary entry change.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct CreatureOrigin {
+pub struct CreatureOrigin {
     pub guid: u32,
     pub original_entry: u32,
 }
@@ -82,7 +82,7 @@ pub(crate) fn spawn_continent_creatures(
 /// A map copy to fill: its difficulty (`Map::GetDifficultyID`, 0 on a continent) and
 /// the boss entries its instance lock keeps dead.
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct MapContent {
+pub struct MapContent {
     pub map: crate::maps::InMap,
     pub difficulty_id: u32,
     pub dead_bosses: Vec<u32>,
@@ -258,13 +258,13 @@ pub struct CreatureDifficulty(pub u32);
 
 /// Source template flags resolved at spawn and same-actor entry projection.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct CreatureFlagsExtra(pub u32);
+pub struct CreatureFlagsExtra(pub u32);
 
 /// Spawn every creature of the copy's map spawned at its difficulty,
 /// with the template of that difficulty, except the bosses
 /// kept dead. When `replicate` is true, adds `Replicate` (requires lightyear plugins).
 /// Tests pass `false` to avoid that dependency.
-pub(crate) fn spawn_map_creatures(
+pub fn spawn_map_creatures(
     commands: &mut Commands,
     world_data: &WorldData,
     content: MapContent,
@@ -436,7 +436,7 @@ fn spawn_creatures<'a>(
 }
 
 /// Map difficulty and actual terrain used before selecting a creature's native stats.
-pub(crate) struct CreatureSpawnContext<'a> {
+pub struct CreatureSpawnContext<'a> {
     pub map: crate::maps::InMap,
     pub difficulty_id: u32,
     pub ground: Option<&'a mut crate::ground::GroundMap>,
@@ -445,7 +445,7 @@ pub(crate) struct CreatureSpawnContext<'a> {
 }
 
 /// Spawn one creature with AI/addon/script state, or log and refuse unknown level context.
-pub(crate) fn spawn_creature(
+pub fn spawn_creature(
     commands: &mut Commands,
     world_data: &WorldData,
     template: &CreatureTemplate,
@@ -543,7 +543,7 @@ pub struct TempSummon {
 /// `WorldObject::SummonCreature(entry, pos)`: a creature of template `entry` at the
 /// WoW position `[x, y, z, o]` in the summoner's map copy, replicated when the
 /// summoner is.
-pub(crate) fn summon_creature(
+pub fn summon_creature(
     world: &mut World,
     summoner: Entity,
     entry: u32,
@@ -622,7 +622,7 @@ pub(crate) fn summon_creature(
 
 /// `TempSummon::UnSummon`: the summoner's AI learns of it
 /// (`SummonedCreatureDespawn`) and the summon leaves the world.
-pub(crate) fn unsummon(world: &mut World, summon: Entity) {
+pub fn unsummon(world: &mut World, summon: Entity) {
     let Some(summoner) = world
         .get::<TempSummon>(summon)
         .map(|summon| summon.summoner)

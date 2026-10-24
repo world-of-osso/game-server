@@ -34,10 +34,10 @@ pub(crate) const PVP_COMBAT_TIMEOUT_SECS: f64 = 5.0;
 
 /// A unit's combat references by the other unit.
 #[derive(Component, Debug, Default)]
-pub(crate) struct CombatRefs(HashMap<Entity, CombatRef>);
+pub struct CombatRefs(HashMap<Entity, CombatRef>);
 
 /// The actual, non-suppressed opponents putting this unit in combat.
-pub(crate) fn active_opponents(world: &World, unit: Entity) -> impl Iterator<Item = Entity> + '_ {
+pub fn active_opponents(world: &World, unit: Entity) -> impl Iterator<Item = Entity> + '_ {
     world.get::<CombatRefs>(unit).into_iter().flat_map(|refs| {
         refs.0
             .iter()
@@ -58,7 +58,7 @@ struct CombatRef {
 /// TC a352b1fa Unit.h:1071 / CombatManager.cpp:236-243 identify the pair;
 /// HasPvECombat/GetAnyTarget (:155-187) exclude references suppressed for this unit.
 /// A missile target engages on impact, not launch (Spell.cpp:2763-2764).
-pub(crate) fn has_active_reference_to(world: &World, unit: Entity, other: Entity) -> bool {
+pub fn has_active_reference_to(world: &World, unit: Entity, other: Entity) -> bool {
     world
         .get::<CombatRefs>(unit)
         .and_then(|refs| refs.0.get(&other))
@@ -69,7 +69,7 @@ pub(crate) fn has_active_reference_to(world: &World, unit: Entity, other: Entity
 /// timed reference between them restarts its timeout (`RefreshTimer`). Refused like
 /// `CombatManager::CanBeginCombat` (CombatManager.cpp:24-58) for the same unit twice, a
 /// dead unit or an evading creature.
-pub(crate) fn set_in_combat_with(world: &mut World, a: Entity, b: Entity) {
+pub fn set_in_combat_with(world: &mut World, a: Entity, b: Entity) {
     begin_combat(world, a, b, false);
 }
 
@@ -186,7 +186,7 @@ pub(crate) fn end_pve_reference(world: &mut World, unit: Entity, other: Entity) 
 /// `CombatManager::EndAllCombat` (`Unit::CombatStop` → `EndAllPvECombat` and
 /// `EndAllPvPCombat`): every reference of `unit` ends on both sides, and each side
 /// left without one leaves combat.
-pub(crate) fn end_all_combat(world: &mut World, unit: Entity) {
+pub fn end_all_combat(world: &mut World, unit: Entity) {
     let others: Vec<Entity> = world
         .get_mut::<CombatRefs>(unit)
         .map(|mut refs| refs.0.drain().map(|(other, _)| other).collect())
