@@ -2405,10 +2405,37 @@ fn haste_regen_gcd_ms(world: &World, caster: Entity, spell: &SpellInfo, gcd_ms: 
     {
         return gcd_ms;
     }
+    scale_gcd_by_haste(world, caster, gcd_ms)
+}
+
+fn scale_gcd_by_haste(world: &World, caster: Entity, gcd_ms: u32) -> u32 {
     let haste = world
         .get::<CharacterStats>(caster)
         .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
     ((gcd_ms as f32 / haste.max(0.01)) as u32).clamp(MIN_GCD_MS, MAX_GCD_MS)
+}
+
+/// TC Spell.cpp9207–9218: category133 magic spells take ModSpellHaste before417.
+fn spell_haste_gcd_ms(world: &World, caster: Entity, spell: &SpellInfo, gcd_ms: u32) -> u32 {
+    const SPELL_GCD_CATEGORY: u32 = 133;
+    const USES_RANGED_SLOT: u32 = 0x2;
+    const IS_ABILITY: u32 = 0x10;
+    const DEFENSE_MELEE: u32 = 2;
+    const DEFENSE_RANGED: u32 = 3;
+    let weapon_defense = spell
+        .categories
+        .as_ref()
+        .is_some_and(|category| matches!(category.defense_type, DEFENSE_MELEE | DEFENSE_RANGED));
+    let ability = attributes(spell, 0) & (USES_RANGED_SLOT | IS_ABILITY) != 0;
+    if gcd_ms <= MIN_GCD_MS
+        || gcd_category(spell) != SPELL_GCD_CATEGORY
+        || weapon_defense
+        || ability
+    {
+        gcd_ms
+    } else {
+        scale_gcd_by_haste(world, caster, gcd_ms)
+    }
 }
 
 /// Observation-only benchmark seam; the actual profile heal defines a GCD equivalent.
@@ -2482,6 +2509,7 @@ fn gcd_duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> u32 {
     .round() as u32;
     // Only a 750-1500 ms GCD is modified (Spell.cpp:9195-9198).
     if (MIN_GCD_MS..=MAX_GCD_MS).contains(&base_gcd_ms) {
+        let gcd_ms = spell_haste_gcd_ms(world, caster, spell, gcd_ms);
         haste_regen_gcd_ms(world, caster, spell, gcd_ms)
     } else {
         gcd_ms

@@ -95,7 +95,6 @@ use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use spell_mods::SpellModOp;
 pub use stat_mods::AuraStatMods;
-pub(crate) use stat_mods::time_percent_mod;
 pub use unit_state::{Confused, Feared, is_polymorphed};
 pub(crate) use unit_state::{orb_deception_display, supports_zero_entry_costume};
 

@@ -130,11 +130,18 @@ fn apply_native_haste(h: &mut Harness, npc: Entity, spell_id: u32, amount: f32) 
     assert_eq!(
         h.app
             .world()
-            .get::<crate::stats::StatModifiers>(npc)
+            .get::<crate::auras::ActiveAuras>(npc)
             .unwrap()
-            .haste_pct,
+            .iter()
+            .find(|aura| aura.spell_id == spell_id)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount,
         amount,
-        "native source haste amount must qualify before the cadence assertion"
+        "native raw aura amount must qualify before the cadence assertion"
     );
 }
 

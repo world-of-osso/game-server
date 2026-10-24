@@ -270,7 +270,7 @@ fn pct(amount: f32) -> f32 {
 }
 
 /// `Unit::ApplyAttackTimePercentMod(val, apply)` on the time multiplier.
-pub(crate) fn time_percent_mod(amount: f32) -> f32 {
+fn time_percent_mod(amount: f32) -> f32 {
     if amount > 0.0 {
         100.0 / (100.0 + amount)
     } else {

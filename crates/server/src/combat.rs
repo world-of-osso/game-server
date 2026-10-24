@@ -461,7 +461,8 @@ impl CreatureAttackTime {
         let slow = mods.map_or(1.0, |mods| {
             mods.attack_cast_time_mult * mods.attack_time_mult
         });
-        self.0 * crate::auras::time_percent_mod(haste_pct) * slow
+        // StatModifiers stores the composed speed percentage, not a raw aura amount.
+        self.0 / (1.0 + haste_pct / 100.0) * slow
     }
 }
 

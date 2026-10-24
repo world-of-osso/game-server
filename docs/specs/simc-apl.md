@@ -59,7 +59,7 @@ Ignored native regressions in `simc_apl_native/{extension_tests,action_extension
 
 ## Native haste composition boundary
 
-- [ ] Native haste rating and independent combat-speed aura193 effects compose multiplicatively, including ordinary cast time and GCD consumers. Removing actual buffs restores the original rating-derived speed. Keep existing native rating diminishing returns and data amounts.
+- [ ] Native haste rating and independent combat-speed aura193 effects compose multiplicatively, including ordinary cast time and GCD consumers. Category133 magic GCDs apply native spell haste before the existing aura417 stage; melee/ranged/ability exclusions remain native. Ordinary NPC cadence consumes the same composed speed factor without converting signed aura amounts twice. Removing actual buffs restores the original rating-derived speed. Keep existing native rating diminishing returns and data amounts.
 
 TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyCastTimePercentMod`; `SpellAuraEffects.cpp4531–4551` applies aura193 through the same multiplicative cast/attack speed paths. Regression `dps_parity/haste_tests.rs` uses actual1467 BiS gear plus native Power Infusion10060 and Heroism32182 aura amounts; no injected ratings, stats or coefficients. Feral's separate100%-uptime Frantic Momentum/Savage Fury proc eligibility belongs to its spec owner, not to rating conversion.
 

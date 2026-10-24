@@ -95,7 +95,11 @@ fn native_haste_rating_and_two_real_combat_speed_auras_multiply_cast_and_gcd() {
         let gcd_after =
             crate::spell_cast::native_apl::gcd_value(run.app.world(), run.actor, &flame, "gcd")
                 .unwrap();
-        assert!((gcd_after - (gcd_before / external).max(0.750)).abs() <= 0.002);
+        let expected_gcd = (gcd_before / external).max(0.750);
+        assert!(
+            (gcd_after - expected_gcd).abs() <= 0.002,
+            "native{spell}: GCD before{gcd_before}, after{gcd_after}, expected{expected_gcd}, external{external}"
+        );
     }
     remove_auras(
         run.app.world_mut(),
