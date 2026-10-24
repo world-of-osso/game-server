@@ -77,6 +77,12 @@ Forwarded4ad3b8d41 was cherry-picked as9907b66ab, preserving the existing defaul
 
 `execute_precombat_plan` currently delegates to the world-only Driver and explicitly rejects unconsumed composites. No consumption implementation or runtime RED claimed. Until14775 supplies selection GREEN, an absent plan is a selection RED, not consumer qualification. Batch with the next admitted shared precombat binary; no extra WW-only compile.
 
+## Forwarded integration before combined RED build
+
+Parent forwarded masterb67952ca4 (landed er1048 tier redirected-base-stats and dm1051 dummy timerba0783c26), qualified movementmv1071/2d9855a69 and selection7cfc2e4e6 (its native GREEN still pending). This branch merges master as0b1e639f4, accepts movement test/fix chain asc2a23e43b/91e954749/1cda9e258, and cherry-picks selection asea3addb82. Only module-list/wiki conflicts needed combination; no independent movement behavior was edited. New dependency code is not qualified by old f5 receipts.
+
+Master now puts server modules in `lib.rs` and leaves a minimal `main.rs`: combined native builds must target `--lib`, not old `--bin game-server`. Record the new test executable/hash and nonzero selected test counts. Existing eight precombat controls, composite selection/lifecycle, native moving/off-GCD gates and Mystic Touch controls still need execution on this integrated source. Consumption, row gates and Mystic producer are not implemented before their real native REDs.
+
 ## Dependencies
 
 pd1035 is landed at2333d924b and merged locally; exact-target Prepared/Player dispatch remains14775-owned. Resource query010f7f761 is GREEN9/9 on arms-literal-resource-hooks; it ignores only the requested PowerType affordability while retaining other native checks. Integrate its shared API after pd, not the old613 scaffold. No unselected legacy kit fallback and no WW-specific tier2pc path.
