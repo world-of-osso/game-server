@@ -2,9 +2,15 @@
 
 ## Scope and gate
 
-Lead requested this isolated packet from master `d7e86cd0f679338ad32ae2b24b351d1d6454501b`. It contains only the qualified Sentence and Toll relationships, Wake qualification, their native tests and documentation. No literal adapter, Expurgation callback/tests, Rebuke readiness tests or Aura361 consumer tests are included. Those remain open on `ret-paladin-literal-development-d385`; exclusion from this packet does not narrow the full [Ret objective](ret-paladin-parity-proof-ledger.md#goal-and-authority).
+Lead requested this isolated packet from master `d7e86cd0f679338ad32ae2b24b351d1d6454501b`. It contains only the qualified Sentence and Toll relationships, Wake qualification, their native tests and documentation. This packet's own changes exclude literal adapter, Expurgation callback/tests, Rebuke readiness tests and Aura361 consumer tests; files independently brought by merged master are not qualified by this packet. Those remain open on `ret-paladin-literal-development-d385`; exclusion from this packet does not narrow the full [Ret objective](ret-paladin-parity-proof-ledger.md#goal-and-authority).
 
 Parent owns integration/final acceptance and remote operations. Requested packet integration command: `cargo check -p server -p server-simulation --tests -j2`, once through build-host/agent-run after admission. Ran exactly once on56da03776: exit0,2m04s, one inherited master warning for the now-unused simulator `navigation` import. Follow-up removes that alias only; no gameplay changes. Per lead's once-only instruction the compile command is not repeated after this deletion; parent owns final integration gate. Exact log/receipt: engine diagnostics `ret-qualified-packet-56da03776-check.{log,proof.json}`. Historical behavioral receipts below retain their exact tested revisions; the packet is not represented as a current full-suite pass.
+
+## Master reconciliation for re-gate
+
+Lead reports rq1092's suite on1c7eaf8c1 passed, but landing conflicted with master1fb0230ad. Merge19e49b8eb8779d2c8963f091c9d36536068ffb98 preserves both master `#[cfg(test)] mod ret_rotation` and packet `mod ret_sentence_tests`, plus both wiki index link groups. No gameplay adaptation or development-branch policy was added.
+
+Requested `cargo check -p server -p server-simulation --tests -j2` ran **ONCE on19e49b8eb:PASS0/2m15s/zero warnings** via native helper/agent-run after admission. Evidence engine diagnostics `ret-qualified-reconcile-1fb-check-once-v1.{log,proof.json}`. This ledger follow-up changes docs only; compile evidence remains scoped to the identical source at19e49b8eb. No full-suite rerun or fresh DPS claim; parent owns re-gate and remote push. Generic proc-candidate work remains separate on exact51a28da8a base, its test-only work saved while reconciling this packet.
 
 ## Source and behavior matrix
 
