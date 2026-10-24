@@ -584,7 +584,7 @@ fn dps_parity_native_bis_dummy_records_300s() {
 #[ignore = "opt-in actual300s per-wave health/TTD; requires private parity inputs"]
 fn dps_parity_fixture_add_health_and_ttd_follow_each_summon_lifetime() {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
-    use server::simc_apl::{Action, ActionFacts};
+    use server::simc_apl::{Action, ActionFacts, Facts};
     let _seed_scope = crate::random::seed_scope(70_448);
     let (profile, traits) = read_reference(66).unwrap();
     let mut run = prepare_reference(
@@ -613,6 +613,32 @@ fn dps_parity_fixture_add_health_and_ttd_follow_each_summon_lifetime() {
             return;
         }
         let age = millis % 30_010;
+        let facts = NativeFacts::new(
+            run.app.world(),
+            run.actor,
+            &bindings,
+            encounter,
+            run.targets.len(),
+        );
+        let remaining = f64::from(30_000_u32.saturating_sub(age)) / 1000.0;
+        let next_spawn = f64::from((wave as u32 + 1) * 30_010 - millis) / 1000.0;
+        // Observe actual installed event state at every native boundary/frame,
+        // including each real absent gap; never infer event presence from count.
+        for (property, expected) in [
+            ("exists", 1.0),
+            ("count", 2.0),
+            ("duration", 30.0),
+            ("cooldown", 30.01),
+            ("remains", remaining),
+            ("in", next_spawn),
+        ] {
+            match facts.value(&format!("raid_event.adds.{property}")) {
+                Ok(value) if (value - expected).abs() < 0.001 => {}
+                other => errors.push(format!(
+                    "{elapsed}s adds.{property}: {other:?}, expected{expected}"
+                )),
+            }
+        }
         if age >= 30_000 {
             gaps[wave] = true;
             if run.targets.len() != 1 {
@@ -640,13 +666,6 @@ fn dps_parity_fixture_add_health_and_ttd_follow_each_summon_lifetime() {
                 run.targets.len()
             ));
         }
-        let facts = NativeFacts::new(
-            run.app.world(),
-            run.actor,
-            &bindings,
-            encounter,
-            run.targets.len(),
-        );
         for (index, &target) in run.targets.iter().enumerate() {
             // sc_enemy.cpp1053–1101: timed adds use their own expiration, not300s.
             let expected_ttd = if index == 0 {

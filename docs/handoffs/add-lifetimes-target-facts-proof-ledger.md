@@ -34,4 +34,8 @@ GREEN phases reused the single d07db700c executable SHA256 `3beb862d530a4467033d
 | Fixture `raid_event.adds.exists/remains/in/cooldown/duration/count` | Explicit event state; pinned absent-event max-timespan semantics; dungeon timing fails explicitly | Absent exists/remains/in, unknown-property and named dungeon refusal GREEN; live-event expression values and remaining individual properties need additional acceptance coverage |
 | FIRST/cycle iteration, action-relative dots, refreshable, active_dot, applied persistent multipliers and composites | Not implemented by this slice | Remain open; no inferred snapshot or invented timer |
 
+## Follow-up acceptance (separate branch)
+
+`arms-target-facts-followup` strengthens only tests: reads all six live add-event expressions at every actual native frame/boundary (including20phase samples/nine gaps), checks own/foreign aura up/down/stack/ticking, and advances the actual native Rend expiration while both caster/recipient stay alive. No new timer or production behavior. Targeted acceptance pending; prior disjoint14-case production proof remains unchanged. Planned filters: `arms_native_apl_` (5) and `dps_parity_fixture_add_health_and_ttd_` (1,ignored opt-in). No redundant full/unchanged cohort rerun.
+
 New test receipts must name the exact committed revision, command, binary and snapshot. Later source changes invalidate only intersecting proof scopes. No native DPS qualification claimed.
