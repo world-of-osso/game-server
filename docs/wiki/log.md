@@ -1,3 +1,7 @@
+## 2026-10-23 — Elemental-required numeric min/max
+
+[Shared APL](systems/simc-apl.md#capability--proof-matrix): valid `3>?5`/`3<?5` expressions produce2 actual library RED at170b82d9c; missing lexer operators also reject the unchanged82-row Elemental source. Add pinned minimum/maximum at precedence5 (SimC76f8118 expressions.cpp132–146,213–229,1104–1106); GREEN pending. No native stats, coefficients or literal source changes.
+
 ## 2026-10-23 — Periodic critical ticks
 
 [Periodic crit](systems/auras.md#periodic-critical-ticks--2026-10-23): TC-native eligibility/live rolls and critical damage/healing bonuses, with explicit `FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_SPELL_OWNER` policy for class actors and owned pets/totems. Native RED7b924:2controlsPASS/5featureFAIL35.83s, then first7GREEN42.94s. Required real1943+21880 ordering REDcf191c5: native flat +10 raises normal10937→11038, critical73726 versus74307.8125 expected; initial follower259 fixture failure explicitly invalid. Move periodic roll behind numeric source/flat bonuses; final GREEN pending. Clocks, attribution, APL and pet stats unchanged.
