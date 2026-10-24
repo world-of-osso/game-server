@@ -19,6 +19,12 @@ At68e24f49c the historical `--bin game-server` command compiled11m44 then execut
 | casting.react with no native cast | Actual selected target's CastState absence means known false | Genuine RED; implementation GREEN pending; active cast reaction remains NATIVE_CASTING_REACTION_UNAVAILABLE, no invented delay |
 | Refreshable | Explicit native metadata resolver plus Pandemic/final-tick/always/never policy; ordinary native duration modifiers; actual unpaid-tick helper | Rend + real20s Fire Breath reach genuine unsupported-property RED; consumer GREEN pending |
 
+## First implementation qualification / oracle correction
+
+At6b4a2adb1:7PASS/1candidate-oracle FAIL35.44s after18m49compile/0warnings. Current identity/refusal, owned count, movement/no-cast and both refresh probes pass, including native Fire Breath20s. The167105 far-range expectation is WITHDRAWN, not a production filtering defect: current DB2 gives it caster-area targets47/16 and self RangeIndex1. Native12294 has direct enemy6 and RangeIndex2/five yards; the corrected range case uses that actual native spell without changing any production rule, coefficient or template. Audit: `target-range-oracle-audit.json` in diagnostics. Original missing-candidate API RED remains genuine; its later range expectation was invalid.
+
+Exact compiled6b binary remains pinned by `target-context-green-binary.proof.json`; queued existing-fact controls may complete after a test-only HEAD change. Their binary source is6b, not a new rebuild; proof scope excludes the changed ignored range case. No API-ready claim until that corrected case passes.
+
 ## Consumer API
 
 Construct ordinary facts, then install actual controller context:

@@ -78,7 +78,21 @@ fn native_target_context_current_and_explicit_row_are_distinct() {
 #[test]
 #[ignore = "explicit target context behavioral RED"]
 fn native_target_context_candidates_keep_native_order_and_range() {
-    let (mut h, mut targets, b) = enemies();
+    const MORTAL_STRIKE: u32 = 12294;
+    let (mut h, mut targets, mut b) = enemies();
+    // Native167105 is caster-area47/16 with self range1, not a direct-target
+    // range oracle. Native12294 targets enemy6 with five-yard range2.
+    h.app.insert_resource(
+        crate::spell_cast::test_harness::world_db()
+            .unwrap()
+            .store
+            .clone(),
+    );
+    b.actions.insert("mortal_strike".into(), MORTAL_STRIKE);
+    let proposed = Action {
+        name: "mortal_strike".into(),
+        ..action(None)
+    };
     let far = spawn_npc(&mut h.app, 100.0);
     targets.insert(1, far);
     let facts = NativeFacts::new(
@@ -90,7 +104,7 @@ fn native_target_context_candidates_keep_native_order_and_range() {
     )
     .with_targets(Some(targets[0]), &targets);
     assert_eq!(
-        facts.target_ids(&action(None)).unwrap(),
+        facts.target_ids(&proposed).unwrap(),
         vec![targets[0].to_bits(), h.npc.to_bits()]
     );
 }
