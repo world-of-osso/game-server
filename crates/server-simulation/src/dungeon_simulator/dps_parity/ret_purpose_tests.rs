@@ -13,22 +13,6 @@ const TEMPLARS_VERDICT: u32 = 85256;
 const JUDGMENT_ENERGIZE: u32 = 220637;
 const PERFECTED_GUILLOTINE: u32 = 1306624;
 
-#[derive(Resource, Default)]
-struct GuillotineProcInputs(Vec<crate::auras::procs::AuraEvent>);
-
-fn record_guillotine_input(
-    world: &mut World,
-    unit: Entity,
-    aura: &crate::auras::AuraInstance,
-    event: &crate::auras::procs::AuraEvent,
-) {
-    world
-        .resource_mut::<GuillotineProcInputs>()
-        .0
-        .push(event.clone());
-    crate::spell_cast::scripts::cast_guillotine(world, unit, aura, event);
-}
-
 #[derive(Resource)]
 struct FixtureAdmission {
     owner: Entity,
@@ -56,9 +40,7 @@ fn trace_follower_lifetime(run: &Run) -> Value {
         "owner_map": format!("{:?}", world.get::<crate::maps::InMap>(admission.owner)),
         "admitted_copy": format!("{:?}", admission.copy),
         "target_map": format!("{:?}", world.get::<crate::maps::InMap>(run.targets[0])),
-        "damage_or_death_events": events,
-        "guillotine_proc_inputs": world.resource::<GuillotineProcInputs>().0.iter()
-            .map(|event| format!("{event:?}")).collect::<Vec<_>>()})
+        "damage_or_death_events": events})
 }
 
 fn native_ret_in_melee() -> Run {
@@ -75,14 +57,6 @@ fn native_ret_in_melee() -> Run {
         .get::<crate::maps::InMap>(run.actor)
         .unwrap();
     run.app.insert_resource(FixtureAdmission { owner, copy });
-    run.app.init_resource::<GuillotineProcInputs>();
-    run.app
-        .world_mut()
-        .resource_mut::<crate::auras::scripts::AuraScripts>()
-        .0
-        .get_mut(&crate::spell_cast::scripts::GUILLOTINE)
-        .unwrap()
-        .on_damage_proc = Some(record_guillotine_input);
     // Use the same ordinary startattack/chase path as the literal controller;
     // a manually casting follower must not keep following its distant owner.
     literal_rotation::execution::execute(

@@ -41,7 +41,7 @@ with sqlite3.connect(sys.argv[1]) as db:
             script = root / "scripts/dps_parity_native.py"
             script.parent.mkdir()
             shutil.copy2(Path(__file__).resolve().parents[1] / script.name, script)
-            executable = root / "target/debug/deps/server-fixture"
+            executable = root / "target/debug/deps/server_simulation-fixture"
             executable.parent.mkdir(parents=True)
             executable.write_text(f"#!{sys.executable}\n" + code)
             executable.chmod(0o755)

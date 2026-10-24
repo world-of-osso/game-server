@@ -10,6 +10,12 @@ Spec70: every SimC76f8118 APL action plus selected talent effects through native
 - Native follower catalog has11 profiles and none for70. Lead approved a **private-copy-only** Captain Garrick209057 class2/spec70/DPS profile, retaining actual NPC template/armor.
 - Ordinary initializer derives KnownSpells from controller rows and attaches no TraitLoadout. Shared native-book takeover tests are pushed at ef331486f, production unchanged; genuine RED pending capacity.
 
+## Split-B integration priority
+
+Lead reported is1061 for98b37851f full-suite qualification (only known failures, CHECK0/FMT0), but no landing because masterd675bf8fb split B conflicts. Current Ret descendants65c0a1a8b preserve that packet plus approved proc-recipient/Empyrean work. Merge keeps the sole ItemProcInputs catalog, native ItemSparse.ItemSet membership and item-name index while retaining master's faction eligibility/public test-support boundaries. Ret simulation fixtures now live in `crates/server-simulation/src/dungeon_simulator/dps_parity/`; runtime policies remain in `crates/server/src/spell_cast/scripts/`.
+
+Split-only adjustments expose existing native fact readers/metadata required by the separate test crate. Optional action normalization moves unchanged into the canonical knowledge helper's test-support API so core tests do not depend back on their simulation consumer. Temporary Guillotine callback observer is retired; archived provenance receipts and explicit real220637/no-self-damage assertions remain. No new mechanic or canonical write. Merge commit/push precedes lead-requested `cargo check -p server -p server-simulation --tests`; proof pending. Literal work is paused for this delivery.
+
 ## Reference and tolerance
 
 | Case | Existing SimC DPS | Accepted native interval | Native |

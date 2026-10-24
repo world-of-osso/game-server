@@ -12,7 +12,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 const LEGACY_INACTIVE: u32 = 1;
 
 #[derive(Clone, Debug)]
-pub(crate) struct SetSpell {
+pub struct SetSpell {
     pub spell_id: u32,
     pub spec_id: u32,
     pub sub_tree_id: u32,
@@ -20,7 +20,7 @@ pub(crate) struct SetSpell {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct ItemSet {
+pub struct ItemSet {
     flags: u32,
     skill: u32,
     skill_rank: u16,
@@ -75,7 +75,7 @@ pub(super) fn load_spells(
     Ok(index)
 }
 
-pub(crate) fn equipped_counts(world: &World, unit: Entity) -> Result<BTreeMap<u32, u32>, String> {
+pub fn equipped_counts(world: &World, unit: Entity) -> Result<BTreeMap<u32, u32>, String> {
     let equipped = world
         .get::<EquippedItems>(unit)
         .ok_or("native equipped identities missing for set count")?;

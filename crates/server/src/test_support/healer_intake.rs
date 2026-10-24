@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub(crate) enum HitKind {
+pub enum HitKind {
     Melee {
         hand: u8,
         outcome: String,
@@ -25,7 +25,7 @@ pub(crate) enum HitKind {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub(crate) struct Hit {
+pub struct Hit {
     pub tick: u32,
     pub source_guid: u32,
     pub pack: u32,
@@ -39,13 +39,13 @@ pub(crate) struct Hit {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub(super) struct SourceSnapshot {
+pub struct SourceSnapshot {
     pub entry: u32,
     pub native_level: u8,
     pub scaling: Option<shared::level_scaling::LevelScaling>,
 }
 
-pub(super) fn snapshot_sources(
+pub fn snapshot_sources(
     world: &World,
     actors: &BTreeMap<u32, Entity>,
 ) -> Result<BTreeMap<u32, SourceSnapshot>, String> {
@@ -74,7 +74,7 @@ pub(super) fn snapshot_sources(
         .collect()
 }
 
-pub(super) fn apply_source_snapshots(
+pub fn apply_source_snapshots(
     world: &mut World,
     sources: &BTreeMap<u32, SourceSnapshot>,
     actors: &BTreeMap<u32, Entity>,
@@ -109,14 +109,14 @@ pub(super) fn apply_source_snapshots(
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub(super) struct Frame {
+pub struct Frame {
     pub tick: u32,
     pub positions: Vec<Option<[f32; 3]>>,
     pub in_combat: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub(super) struct Intake {
+pub struct Intake {
     pub schema: u32,
     pub seed: u64,
     pub map_id: u32,
@@ -133,31 +133,31 @@ pub(super) struct Intake {
 }
 
 #[derive(Clone, Copy, Default)]
-pub(super) struct ConsumedAbsorbPoints {
+pub struct ConsumedAbsorbPoints {
     pub total: f64,
     pub non_unit: f64,
     pub unknown_scale: f64,
 }
 
-pub(super) fn non_unit_hits(hits: &[Hit]) -> usize {
+pub fn non_unit_hits(hits: &[Hit]) -> usize {
     hits.iter()
         .filter(|hit| hit.level_scaling_factor != 1.0)
         .count()
 }
 
 #[derive(Resource, Default)]
-pub(crate) struct Capture {
+pub struct Capture {
     pub members: Vec<Entity>,
     pub sources: BTreeMap<Entity, (u32, u32)>,
     pub start_tick: u32,
     pub hits: Vec<Hit>,
-    pub(super) consumed_absorbs: BTreeMap<Entity, ConsumedAbsorbPoints>,
-    pub(super) active_hit_scale: Option<(Entity, f32)>,
-    pub(super) source_snapshots: BTreeMap<u32, SourceSnapshot>,
+    pub consumed_absorbs: BTreeMap<Entity, ConsumedAbsorbPoints>,
+    pub active_hit_scale: Option<(Entity, f32)>,
+    pub source_snapshots: BTreeMap<u32, SourceSnapshot>,
     pub gaps: Vec<String>,
 }
 
-pub(crate) fn record(
+pub fn record(
     world: &mut World,
     source: Entity,
     target: Entity,
@@ -205,7 +205,7 @@ pub(crate) fn record(
     });
 }
 
-pub(crate) fn spell_bonus_source(
+pub fn spell_bonus_source(
     world: &mut World,
     source: Entity,
     bonus_caster: Entity,
@@ -229,7 +229,7 @@ pub(crate) fn spell_bonus_source(
 }
 
 /// Called only for points the native absorb consumer actually removed.
-pub(crate) fn record_absorb(world: &mut World, caster: Entity, target: Entity, amount: f32) {
+pub fn record_absorb(world: &mut World, caster: Entity, target: Entity, amount: f32) {
     let Some(mut capture) = world.get_resource_mut::<Capture>() else {
         return;
     };
@@ -249,7 +249,7 @@ pub(crate) fn record_absorb(world: &mut World, caster: Entity, target: Entity, a
     }
 }
 
-pub(crate) fn note_unrecorded_direct(world: &mut World, source: Entity, target: Entity) {
+pub fn note_unrecorded_direct(world: &mut World, source: Entity, target: Entity) {
     let Some(mut capture) = world.get_resource_mut::<Capture>() else {
         return;
     };
@@ -262,6 +262,6 @@ pub(crate) fn note_unrecorded_direct(world: &mut World, source: Entity, target: 
     }
 }
 
-pub(super) fn tick(world: &World) -> u32 {
+pub fn tick(world: &World) -> u32 {
     (world.resource::<Time<Virtual>>().elapsed_secs_f64() / 0.05).round() as u32
 }

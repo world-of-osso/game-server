@@ -1,5 +1,5 @@
 //! Equipped native item/enchant spells follow the ordinary aura lifecycle.
-pub(crate) mod item_sets;
+pub mod item_sets;
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::{EquippedItemModifiers, EquippedItems, NativeItemInstances};

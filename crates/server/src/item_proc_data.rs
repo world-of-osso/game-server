@@ -1,22 +1,22 @@
 //! Native equipped-set predicates and item-description role multipliers.
 //! Data only: this does not activate unrelated set bonuses or evaluate arbitrary tooltips.
-mod sets;
+pub mod sets;
 #[cfg(test)]
 mod tests;
 use bevy::prelude::*;
 use rusqlite::Connection;
-pub(crate) use sets::equipped_counts;
+pub use sets::equipped_counts;
 use std::collections::{BTreeSet, HashMap};
 
 #[derive(Resource)]
-pub(crate) struct ItemProcInputs {
-    pub(crate) sets: HashMap<u32, sets::ItemSet>,
+pub struct ItemProcInputs {
+    pub sets: HashMap<u32, sets::ItemSet>,
     bonus_sets: HashMap<u32, BTreeSet<u32>>,
     variables: HashMap<u32, String>,
     spell_variables: HashMap<u32, u32>,
 }
 
-pub(crate) fn load(conn: &Connection) -> rusqlite::Result<ItemProcInputs> {
+pub fn load(conn: &Connection) -> rusqlite::Result<ItemProcInputs> {
     let mut sets = sets::load_sets(conn)?;
     let bonus_sets = sets::load_spells(conn, &mut sets)?;
     let mut statement = conn.prepare("SELECT ID,Variables FROM spell_description_variables")?;

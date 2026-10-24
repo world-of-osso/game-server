@@ -11,7 +11,7 @@ use crate::spell_info::SpellStore;
 
 /// Resolve a known spell, selected visible action or sourced parent action.
 /// NPC identity never bypasses this controller-level knowledge check.
-pub(crate) fn resolve_actor_action(
+pub fn resolve_actor_action(
     world: &World,
     actor: Entity,
     requested: u32,
@@ -36,6 +36,20 @@ pub(crate) fn resolve_actor_action(
         }
     }
     Err(CastFailure::UnknownSpell)
+}
+
+/// Fixture consumers normalize unavailable knowledge without hiding other errors.
+#[cfg(any(test, feature = "test-support"))]
+pub fn resolve_optional_actor_action(
+    world: &World,
+    actor: Entity,
+    requested: u32,
+) -> Result<Option<u32>, CastFailure> {
+    match resolve_actor_action(world, actor, requested) {
+        Ok(resolved) => Ok(Some(resolved)),
+        Err(CastFailure::UnknownSpell | CastFailure::NotKnown) => Ok(None),
+        Err(reason) => Err(reason),
+    }
 }
 
 fn resolve_aliases(world: &World, actor: Entity, requested: u32) -> Result<u32, CastFailure> {
