@@ -8,6 +8,10 @@ At4ad3b8d41 the native six-case cohort produces3controlsPASS/3genuine selectionF
 
 Consumer staging: [native precombat ledger](native-precombat-proof-ledger.md#composite-lifecycle-integration-red--staged-unexecuted) records the separate clock/effect integration test. It remains ignored and unexecuted; no-op selection failure does not qualify consumption.
 
+## Integrated runtime atd49f4951c
+
+Actual selection packet runs7 cases in24.62s:6PASS/1FAIL. Bare four-step order/no dispatch, all-active, empty, unsupported selected step, non-poison and world-only rejection controls pass. Existing-coating case fails its own native Amplifying admission premise, not the selection assertion. Its helper returned when the aura appeared without requiring GCD completion. Integration now uses the shared real cast/GCD/effect drain before asserting owned aura/return; selection logic is unchanged, GREEN pending. Adjacent manual four-coating full-drain control passes28.20s; it does not alone prove this failure's exact refusal cause.
+
 ## Source / native fixture
 
 13120 packet: `/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/assassination-parity-2026-10-23/apply-poison-source-packet-v1.json`; pinned `sc_rogue.cpp3164–3330`. Bare selected259 profile constructs Deadly2823,Crippling3408,DTB Amplifying381664,DTB Atrophic381637 in that order; no Numbing. Native casting-time16 base1500ms for each; shared code must not hardcode those IDs or erase actual cast time. Source profile/trait copy provenance: `arms-parity-2026-10-23/composite-selection-inputs.proof.json`. Fixture native actor is explicitly Human1/class4 (reference race metadata is not asserted to be Human).

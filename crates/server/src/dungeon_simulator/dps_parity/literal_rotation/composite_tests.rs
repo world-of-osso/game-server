@@ -92,13 +92,12 @@ fn cast_coating(run: &mut Run, spell: u32) {
                         .is_some_and(|cast| cast.duration > 0.0),
                     "native coating must really cast"
                 );
-                for _ in 0..200 {
-                    run.app.update();
-                    if owned_aura(run, spell) {
-                        return;
-                    }
-                }
-                panic!("native coating{spell} did not finish/apply");
+                super::super::preparation::finish_pending_setup(run).unwrap();
+                assert!(
+                    owned_aura(run, spell),
+                    "native coating{spell} did not finish/apply"
+                );
+                return;
             }
             Err(
                 crate::spell_cast::CastFailure::OnGlobalCooldown
