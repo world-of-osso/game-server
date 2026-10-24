@@ -4,7 +4,7 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on active
 
 ## Explicit proc provenance
 
-Import the audited effective public TC `spell_proc` IDs into `tdb_spell_proc(SpellId PRIMARY KEY)` only after every pinned base/update source matches its SHA-256. Reject duplicate/incomplete IDs before publication. Replace presence transactionally without changing retained rows' later value columns or unrelated tables; errors leave prior data intact. Presence alone must not overlay chance, flags, cooldown or charges. The later full proc importer owns those values. See [Feral/source ledger](../handoffs/feral-source-census.md).
+Import all18 audited effective public TC `spell_proc` columns into the existing authoritative `tdb_spell_proc` table only after every pinned base/update source matches its SHA-256. Preserve exact values, including zeros; reject incomplete/duplicate/invalid rows before publication. Replace the complete table transactionally without changing unrelated data; failures preserve prior rows. No presence-only fallback or parallel parser. Native and serverside SpellInfo loading must expose explicit-before-generated effective entries with TC defaults/validation while retaining unmodified DB2 fields separately. Missing/full-row schema failures are explicit. Definition loading alone does not activate phase/type dispatch or change runtime charges. [Stage2 source/proof ledger](../handoffs/spellmod-proc-sync-proof-ledger.md).
 
 ## Firestarter direct critical strikes
 

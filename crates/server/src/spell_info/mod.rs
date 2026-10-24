@@ -18,6 +18,7 @@ mod immunity;
 mod immunity_tests;
 mod load;
 pub mod positivity;
+mod proc_definition;
 #[cfg(test)]
 pub(crate) mod serverside_tests;
 mod trait_data;
@@ -257,8 +258,36 @@ pub struct SpellPowerCost {
     pub alt_power_bar_id: u32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum ProcDefinitionSource {
+    Generated,
+    ExplicitTdb,
+    Scripted,
+}
+
+/// Effective TC SpellProcEntry; SpellInfo::id is the audited row key.
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct SpellProcEntry {
+    pub school_mask: u32,
+    pub spell_family_name: u32,
+    pub spell_family_mask: [u32; 4],
+    pub proc_flags: [u32; 2],
+    pub spell_type_mask: u32,
+    pub spell_phase_mask: u32,
+    pub hit_mask: u32,
+    pub attributes_mask: u32,
+    pub disable_effects_mask: u32,
+    pub procs_per_minute: f32,
+    pub chance: f32,
+    pub cooldown_ms: u32,
+    pub charges: u8,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct SpellAuraOptions {
+    /// Effective proc provenance is separate from unmodified DB2 options.
+    pub proc_definition_source: Option<ProcDefinitionSource>,
+    pub proc_entry: Option<SpellProcEntry>,
     /// Max stacks (`CumulativeAura`).
     pub cumulative_aura: u32,
     pub proc_category_recovery_ms: i32,

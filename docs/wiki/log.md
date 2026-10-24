@@ -1,3 +1,7 @@
+## 2026-10-24 — Full shared proc definitions, dispatch unchanged
+
+[Effective definitions](systems/auras.md#effective-proc-definitions--2026-10-24) replace presence-only import with exact18-field atomic publication and one explicit-before-generated reader, retaining raw DB2 fields. Fresh13d importer3RED and native16missing-entry RED qualify the missing boundary; committed-implementation GREEN remains separately recorded in the [Stage2 ledger](../handoffs/spellmod-proc-sync-proof-ledger.md). No runtime phase/charge switch or whole-dispatch qualification.
+
 ## 2026-10-24 — Isolated qualified Ret Sentence/Wake/Toll packet
 
 [Auras](systems/auras.md#ret-sentence-and-toll-relationships--2026-10-24): direct-owner Sentence expiry/cancel/native-percentage/physical/foreign controls, ordinary Wake damage/resource/knowledge and Toll ST/3T/cap/range/mode/percentage total eleven unique native cases with exact revision receipts. Packet starts at masterd7e86cd0f and excludes development-only Expurgation/Rebuke/Aura361/literal work; no whole-rotation or DPS claim. [Scope/source/proof ledger](../handoffs/ret-qualified-sentence-wake-toll-proof-ledger.md); integration check separate.

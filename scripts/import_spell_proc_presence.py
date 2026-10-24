@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
-"""Import audited TC spell_proc presence; numeric overlays belong to their producer.
+"""Import complete audited TC spell_proc rows into the existing world database.
 
-The audit supplies effective rows after ordered SQL updates. Verify every pinned
-source, then publish only SpellId into an existing world database transactionally.
-Retained rows keep any value columns added by the later full importer.
+Verify every pinned SQL source, then replace the authoritative table atomically.
+Stored zero values remain zero; native DB2 defaults are resolved by the loader.
 """
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 import sqlite3
+
+
+COLUMNS = (
+    "SpellId", "SchoolMask", "SpellFamilyName", "SpellFamilyMask0", "SpellFamilyMask1",
+    "SpellFamilyMask2", "SpellFamilyMask3", "ProcFlags", "ProcFlags2", "SpellTypeMask",
+    "SpellPhaseMask", "HitMask", "AttributesMask", "DisableEffectsMask", "ProcsPerMinute",
+    "Chance", "Cooldown", "Charges",
+)
+REAL_COLUMNS = {"ProcsPerMinute", "Chance"}
 
 
 def verify_pinned_sources(audit):
@@ -22,24 +31,39 @@ def verify_pinned_sources(audit):
     return [{"path": name, "sha256": digest} for name, digest in sources]
 
 
-def collect_spell_ids(audit):
-    ids = [row["SpellId"] for row in audit["rows"]]
+def collect_proc_rows(audit):
+    rows = audit["rows"]
+    ids = [row["SpellId"] for row in rows]
     if any(type(spell) is not int or spell <= 0 for spell in ids):
         raise ValueError("audited rows require positive SpellId; rank expansion is not inferred")
     if not ids or len(ids) != audit["effective_rows"] or len(set(ids)) != len(ids):
         raise ValueError("audited rows contain duplicates or differ from effective_rows")
-    return set(ids)
+    values = []
+    for row in rows:
+        for column in COLUMNS:
+            value = row[column]
+            if column in REAL_COLUMNS:
+                valid = type(value) in (int, float) and math.isfinite(value)
+            else:
+                valid = type(value) is int
+            if not valid:
+                raise ValueError(f"audited spell_proc {row['SpellId']} has invalid {column}: {value!r}")
+        values.append(tuple(row[column] for column in COLUMNS))
+    return sorted(values)
 
 
-def publish_proc_presence(conn, ids):
+def publish_proc_values(conn, rows):
+    fields = ", ".join(
+        "SpellId INTEGER PRIMARY KEY" if column == "SpellId"
+        else f"{column} {'REAL' if column in REAL_COLUMNS else 'INTEGER'} NOT NULL"
+        for column in COLUMNS
+    )
+    placeholders = ", ".join("?" for _ in COLUMNS)
     with conn:
         conn.execute("BEGIN IMMEDIATE")
-        conn.execute("CREATE TABLE IF NOT EXISTS tdb_spell_proc (SpellId INTEGER PRIMARY KEY)")
-        current = {row[0] for row in conn.execute("SELECT SpellId FROM tdb_spell_proc")}
-        conn.executemany("DELETE FROM tdb_spell_proc WHERE SpellId=?",
-                         [(spell,) for spell in sorted(current - ids)])
-        conn.executemany("INSERT INTO tdb_spell_proc (SpellId) VALUES (?)",
-                         [(spell,) for spell in sorted(ids - current)])
+        conn.execute("DROP TABLE IF EXISTS tdb_spell_proc")
+        conn.execute(f"CREATE TABLE tdb_spell_proc ({fields})")
+        conn.executemany(f"INSERT INTO tdb_spell_proc VALUES ({placeholders})", rows)
 
 
 def main():
@@ -51,16 +75,16 @@ def main():
         raw = args.manifest.read_bytes()
         audit = json.loads(raw)
         sources = verify_pinned_sources(audit)
-        ids = collect_spell_ids(audit)
+        rows = collect_proc_rows(audit)
         database = args.db.resolve(strict=True)
         with sqlite3.connect(database) as conn:
-            publish_proc_presence(conn, ids)
-        print(json.dumps({"mode": "provenance only; no numeric overlay", "rows": len(ids),
+            publish_proc_values(conn, rows)
+        print(json.dumps({"mode": "complete audited spell_proc values", "rows": len(rows),
                           "db": str(database), "manifest": str(args.manifest.resolve()),
                           "manifest_sha256": hashlib.sha256(raw).hexdigest(),
-                          "sources": sources}, indent=2))
+                          "columns": COLUMNS, "sources": sources}, indent=2))
     except (OSError, ValueError, KeyError, TypeError, sqlite3.Error) as error:
-        parser.exit(2, f"spell_proc provenance import failed: {error}\n")
+        parser.exit(2, f"spell_proc value import failed: {error}\n")
 
 
 if __name__ == "__main__":

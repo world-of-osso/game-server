@@ -46,6 +46,8 @@ pub const PROC_DEAL_MELEE_SWING: u32 = 0x4;
 pub const PROC_TAKE_MELEE_SWING: u32 = 0x8;
 pub const PROC_DEAL_MELEE_ABILITY: u32 = 0x10;
 pub const PROC_TAKE_MELEE_ABILITY: u32 = 0x20;
+pub const PROC_DEAL_RANGED_ATTACK: u32 = 0x40;
+pub const PROC_TAKE_RANGED_ATTACK: u32 = 0x80;
 pub const PROC_DEAL_RANGED_ABILITY: u32 = 0x100;
 pub const PROC_TAKE_RANGED_ABILITY: u32 = 0x200;
 pub const PROC_DEAL_HELPFUL_ABILITY: u32 = 0x400;
@@ -86,6 +88,31 @@ const SPELL_PROC_MASK: u32 = PROC_DEAL_MELEE_ABILITY
     | PROC_TAKE_HARMFUL_PERIODIC
     | PROC_DEAL_HELPFUL_PERIODIC
     | PROC_TAKE_HELPFUL_PERIODIC;
+/// TC SpellMgr.h166–182: event-side hit and required spell-phase masks.
+pub(crate) const DONE_HIT_PROC_MASK: u32 = PROC_DEAL_MELEE_SWING
+    | PROC_DEAL_RANGED_ATTACK
+    | PROC_DEAL_MELEE_ABILITY
+    | PROC_DEAL_RANGED_ABILITY
+    | PROC_DEAL_HELPFUL_ABILITY
+    | PROC_DEAL_HARMFUL_ABILITY
+    | PROC_DEAL_HELPFUL_SPELL
+    | PROC_DEAL_HARMFUL_SPELL
+    | PROC_DEAL_HARMFUL_PERIODIC
+    | PROC_DEAL_HELPFUL_PERIODIC
+    | PROC_MAIN_HAND_WEAPON_SWING
+    | PROC_OFF_HAND_WEAPON_SWING;
+pub(crate) const TAKEN_HIT_PROC_MASK: u32 = PROC_TAKE_MELEE_SWING
+    | PROC_TAKE_RANGED_ATTACK
+    | PROC_TAKE_MELEE_ABILITY
+    | PROC_TAKE_RANGED_ABILITY
+    | PROC_TAKE_HELPFUL_ABILITY
+    | PROC_TAKE_HARMFUL_ABILITY
+    | PROC_TAKE_HELPFUL_SPELL
+    | PROC_TAKE_HARMFUL_SPELL
+    | PROC_TAKE_HARMFUL_PERIODIC
+    | PROC_TAKE_HELPFUL_PERIODIC
+    | PROC_TAKE_ANY_DAMAGE;
+pub(crate) const REQ_SPELL_PHASE_MASK: u32 = SPELL_PROC_MASK & DONE_HIT_PROC_MASK;
 const HOSTILE_TAKEN_MASK: u32 = PROC_TAKE_MELEE_SWING
     | PROC_TAKE_MELEE_ABILITY
     | PROC_TAKE_RANGED_ABILITY
@@ -336,15 +363,20 @@ fn effect_checks_proc(aura: &AuraInstance, effect: &AuraEffectState, event: &Aur
     event.damage > 0.0 && event.spell_id != Some(aura.spell_id)
 }
 
-fn proc_mask(world: &World, aura: &AuraInstance) -> [u32; 2] {
-    // SimC76f8118 monk383–392 rolls once on the Chi action, not its hit children.
-    if aura.spell_id == crate::spell_cast::scripts::DANCE_OF_CHIJI {
-        return [0, PROC2_CAST_SUCCESSFUL];
+/// Existing source policies include successful utility casts, not hit children.
+/// Dance: SimC76f8118 sc_monk.cpp383–392; Inundate: its named native utility policy.
+pub(crate) fn scripted_proc_mask(id: u32) -> Option<[u32; 2]> {
+    match id {
+        crate::spell_cast::scripts::DANCE_OF_CHIJI | scripts::INUNDATE => {
+            Some([0, PROC2_CAST_SUCCESSFUL])
+        }
+        _ => None,
     }
-    // INUNDATE_NATIVE_SUCCESSFUL_UTILITY_CASTS: its explicit list includes friendly
-    // utility casts too; native harmful-hit masks do not express successful casts.
-    if aura.spell_id == scripts::INUNDATE {
-        return [0, PROC2_CAST_SUCCESSFUL];
+}
+
+fn proc_mask(world: &World, aura: &AuraInstance) -> [u32; 2] {
+    if let Some(mask) = scripted_proc_mask(aura.spell_id) {
+        return mask;
     }
     world
         .get_resource::<SpellStore>()

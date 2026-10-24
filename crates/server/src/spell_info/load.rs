@@ -220,6 +220,7 @@ pub(super) fn load_spell_store(conn: &Connection) -> rusqlite::Result<SpellStore
     load_spell_visuals(conn, &mut spells)?;
     serverside::load_serverside_spells(conn, &lookups, &mut spells)?;
     finish(&mut spells);
+    super::proc_definition::load(conn, &mut spells)?;
     let mut store = SpellStore::from_spells(spells);
     store.trait_effect_points = super::trait_effect_points::TraitEffectPoints::load(conn)?.into();
     Ok(store)
@@ -235,6 +236,7 @@ pub(super) fn append_serverside_spells(
     let file_ids: Vec<_> = store.spells.iter().map(|spell| spell.id).collect();
     let mut additional = serverside::read_additional_spells(conn, &lookups, &file_ids)?;
     finish(&mut additional);
+    super::proc_definition::load(conn, &mut additional)?;
     let count = additional.len();
     for spell in additional {
         let index = store
@@ -431,6 +433,8 @@ fn load_aura_options(
         |r| {
             let procs_per_minute_id = uint(r, 5)?;
             Ok(SpellAuraOptions {
+                proc_definition_source: None,
+                proc_entry: None,
                 cumulative_aura: uint(r, 1)?,
                 proc_category_recovery_ms: sint(r, 2)?,
                 proc_chance: uint(r, 3)?,
