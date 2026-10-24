@@ -1,6 +1,9 @@
 ## 2026-10-23 — Elemental-required numeric min/max
 
 [Shared APL](systems/simc-apl.md#capability--proof-matrix): valid `3>?5`/`3<?5` expressions produce2 actual library RED at170b82d9c; missing lexer operators also reject the unchanged82-row Elemental source. Pinned minimum/maximum at precedence5 then26/26 shared-library GREEN at735a60ac6 (15m59s compile,0warnings); cases enabled afterward without body changes. [Scoped proof](../handoffs/elemental-minmax-proof-ledger.md). No native stats, coefficients or literal source changes.
+## 2026-10-23 — Elemental Ascendance additional overload
+
+[Source/proof boundary](systems/spell-casting.md#elemental-ascendance-additional-overload--2026-10-23): actualb4a7f46b0 native2RED/1SKcontrolPASS27.40s; missing extra LB/CL casts, native prerequisites passed. Add effect8 casts once per root spell, independently of ordinary proc, retaining HIT+400ms and actual child damage. Same3nativeGREEN20.23s ata001f0541, clean17m03 build; [proof matrix](../handoffs/elemental-ascendance-extra-proof-ledger.md). Other roots/failed-roll/expiry and DPS integration remain unqualified; no coefficient/stat/RNG changes.
 ## 2026-10-23 — Missed hostile spell combat references
 
 [Combat](systems/combat.md#combat-state): native MISS/IMMUNE missing-reference REDs → selected-target launch/arrival preservation; three boundary controls, nine retained travel/reflection controls and unchanged Ret funding/TV damage GREEN at02090739e. No resource, hit-chance or timer override. WW equipment consumer1GREEN47.55s; combined parent gate awaits master8e7c7a685 integration. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#generic-missed-hostile-launch-combat).

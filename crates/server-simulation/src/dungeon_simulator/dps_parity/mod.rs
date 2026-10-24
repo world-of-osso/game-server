@@ -1,5 +1,6 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
 mod dummy_reference_tests;
+mod elemental_ascendance_tests;
 mod elemental_rotation;
 mod elemental_rotation_tests;
 mod engagement_tests;
