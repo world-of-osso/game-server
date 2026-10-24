@@ -195,7 +195,12 @@ fn class_completeness_native_summon_damage_changes_real_guardian_melee() {
 #[test]
 fn class_completeness_native_mastery_summon_bonus_tracks_real_owner_stat_changes() {
     const ELEMENTAL_BLAST_MASTERY: u32 = 173_184;
-    let mut h = damage_harness(&[BEAST_MASTERY, FIREBALL, ELEMENTAL_BLAST_MASTERY], 3, true);
+    // TC Player.cpp30545 CanUseMastery gates the spec; skill183 supplies base aura114585.
+    let mut h = damage_harness(
+        &[BEAST_MASTERY, FIREBALL, ELEMENTAL_BLAST_MASTERY, 114585],
+        3,
+        true,
+    );
     let source = world_db().unwrap();
     let conn = rusqlite::Connection::open_with_flags(
         &source.powers_db,
