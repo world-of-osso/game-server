@@ -33,12 +33,14 @@ const SIMC_UNSET_PROC_DEFAULT_DRIVERS: &[u32] = &[
 struct Buffs {
     stats: BTreeSet<&'static str>,
     duration: f64,
+    damage: bool,
 }
 
 impl Buffs {
     fn merge(&mut self, other: &Self) {
         self.stats.extend(&other.stats);
         self.duration = self.duration.max(other.duration);
+        self.damage |= other.damage;
     }
 }
 
@@ -54,6 +56,7 @@ pub(super) struct Metadata {
     pub stats: BTreeSet<&'static str>,
     pub duration: f64,
     pub use_buff: bool,
+    pub use_damage: bool,
     pub cooldowns: Vec<Cooldown>,
 }
 
@@ -71,6 +74,7 @@ impl Metadata {
             metadata.stats.extend(&buffs.stats);
             metadata.duration = metadata.duration.max(buffs.duration);
             metadata.use_buff |= effect.trigger == ON_USE && !buffs.stats.is_empty();
+            metadata.use_damage |= effect.trigger == ON_USE && buffs.damage;
             let cooldown = read_cooldown(store, effect)?;
             if cooldown.duration > 0.0 {
                 metadata.cooldowns.push(cooldown);
@@ -135,7 +139,19 @@ fn direct_buffs(spell: &SpellInfo) -> Buffs {
             .and_then(|misc| misc.duration)
             .map_or(0.0, |row| f64::from(row.duration_ms.max(0)) / 1000.0)
     };
-    Buffs { stats, duration }
+    Buffs {
+        stats,
+        duration,
+        damage: spell.effects.iter().any(is_damage_effect),
+    }
+}
+
+// SimC76f8118 special_effect.cpp563–653: offensive/attack auto-parsing.
+// Native effect types: SCHOOL_DAMAGE2, HEALTH_LEECH9, WEAPON_PERCENT_DAMAGE31,
+// WEAPON_DAMAGE58; periodic DAMAGE3/LEECH8 count only on an actual aura effect.
+fn is_damage_effect(effect: &SpellEffect) -> bool {
+    matches!(effect.effect, 2 | 9 | 31 | 58)
+        || (crate::auras::is_aura_effect(effect) && matches!(effect.aura, 3 | 8))
 }
 
 fn stat_names(effect: &SpellEffect) -> Vec<&'static str> {

@@ -141,6 +141,8 @@ impl Equipment {
             "ilvl" => Ok(f64::from(item.item_level)),
             "proc.any_dps.default_value" => item.metadata.proc_default_value(),
             "has_use_buff" => Ok(boolean(item.on_use.is_some_and(|item| item.stat_buff))),
+            "has_use_damage" => Ok(boolean(item.on_use.is_some() && item.metadata.use_damage)),
+            "cooldown.charges_fractional" => read_fractional_charges(item, native),
             "has_cooldown" => Ok(boolean(!item.metadata.cooldowns.is_empty())),
             "cooldown.duration" => Ok(item
                 .metadata
@@ -208,6 +210,20 @@ fn read_cooldown(item: &Slot, field: &str, native: &NativeFacts<'_>) -> Result<f
     } else {
         remains
     })
+}
+
+fn read_fractional_charges(item: &Slot, native: &NativeFacts<'_>) -> Result<f64, String> {
+    let mut fractional: f64 = 0.0;
+    for cooldown in &item.metadata.cooldowns {
+        let current = if cooldown.proc {
+            let remains = native.equipment_proc_cooldown(cooldown.spell.id, item.native_slot);
+            (1.0 - remains / cooldown.duration).clamp(0.0, 1.0)
+        } else {
+            native.cooldown_for_spell(&cooldown.spell, "charges_fractional")?
+        };
+        fractional = fractional.max(current);
+    }
+    Ok(fractional)
 }
 
 fn read_equipped_ids(world: &World, actor: Entity) -> Result<BTreeSet<u32>, String> {

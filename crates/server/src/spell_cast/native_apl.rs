@@ -45,11 +45,19 @@ fn ordinary_cooldown(world: &World, caster: Entity, spell: &SpellInfo) -> Cooldo
         0
     });
     let charges = if remains == 0.0 { 1.0 } else { 0.0 };
+    let duration = f64::from(duration_ms) / 1000.0;
+    // SimC76f8118 cooldown.cpp660–680: ordinary cooldowns have one charge
+    // whose fractional value advances between actual consumption and readiness.
+    let fractional = if duration > 0.0 {
+        (1.0 - remains / duration).clamp(0.0, 1.0)
+    } else {
+        charges
+    };
     Cooldown {
         remains,
-        duration: f64::from(duration_ms) / 1000.0,
+        duration,
         charges,
-        fractional: charges,
+        fractional,
         full_recharge: remains,
     }
 }
