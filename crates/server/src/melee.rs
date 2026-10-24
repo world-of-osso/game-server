@@ -289,7 +289,7 @@ pub fn outcome_damage(
 
 pub struct ArmorReduction {
     pub damage: f32,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fraction: f32,
 }
 
@@ -299,14 +299,14 @@ pub fn armor_reduced_damage(damage: f32, armor: f32, armor_constant: f32) -> Arm
     if armor <= 0.0 || armor + armor_constant == 0.0 {
         return ArmorReduction {
             damage,
-            #[cfg(test)]
+            #[cfg(any(test, feature = "test-support"))]
             fraction: 0.0,
         };
     }
     let mitigation = (armor / (armor + armor_constant)).min(MAX_ARMOR_MITIGATION);
     ArmorReduction {
         damage: (damage * (1.0 - mitigation)).max(0.0).trunc(),
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         fraction: mitigation,
     }
 }

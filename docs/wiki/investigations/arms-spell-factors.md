@@ -73,7 +73,7 @@ Evidence under `game-engine/data/diagnostics/native-spell-diff-2026-10-23/master
 
 ## Sources
 
-- Native evidence: `game-engine/data/diagnostics/native-spell-diff-2026-10-23/origin-089face19/arms/71.mortal_strike.player.json`; snapshot proof under `remeasure-eec5b6bcf/`; [capture implementation](../../../crates/server/src/dungeon_simulator/dps_parity/single_spell.rs).
+- Native evidence: `game-engine/data/diagnostics/native-spell-diff-2026-10-23/origin-089face19/arms/71.mortal_strike.player.json`; snapshot proof under `remeasure-eec5b6bcf/`; [capture implementation](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/single_spell.rs).
 - Oracle evidence: `game-engine/data/diagnostics/simc-spell-oracle-2026-10-23/71/mortal_strike.{json,txt,proof.json}`; public SimC76f8118 `engine/class_modules/sc_warrior.cpp:9176–9238,9324–9345` and `engine/player/player.cpp:5093–5100,11219–11222`.
 - Public TC a352b1fa `StatSystem.cpp:255–283,549–559`, retained under `game-engine/data/diagnostics/follower-power-scaling-2026-10-22/`; native70448 SpellEffect IDs1018256/1197981/1200879/1261099/127950/1319314 from the frozen database.
 - [Production stats](../../../crates/server/src/stats.rs), [aura modifiers](../../../crates/server/src/auras/stat_mods.rs), [character-stat contract](../../specs/character-stats.md).

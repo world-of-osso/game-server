@@ -6,6 +6,16 @@
 
 [Generic mastery](systems/character-stats.md#generic-mastery-base--2026-10-23): native zero-rating Arms Player114585 aura3188 produces16 at9215bc7fc, genuine RED10.95s on a fresh canonical snapshot. Remove only the duplicate hardcoded8 per TC UpdateMastery; rating/coefficient handling unchanged. At0576893d7 three-class unlearn/relearn1GREEN14.73s and stats-filter21GREEN8.35s, no compiler warnings; parent gate separate. [Historical Arms ledger](investigations/arms-spell-factors.md) exactly reconstructs AP3597.85vs4126/source1.799109vs1.818182, explicitly distinguishes SimC's double Reinforced Plates armor, and requires fresh post-redirect gear/tier qualification.
 
+## 2026-10-23 — Corridor capture consumer ownership
+
+The retained-core unit check exposed a runtime-only reverse edge: ignored corridor capture imports simulator runtime/diagnostics. Capture returned to the consumer with its original name and a canonical graph re-export; no gameplay/type duplication. Expected117 simulator cases/6retained graph cases; workspace names/ignore statuses unchanged. Compiler and full-suite qualification pending.
+
+## 2026-10-23 — Simulator compiler boundary and next area pilot
+
+[Crate boundaries](systems/server-crates.md): B22aa67892 passes simulator test-target and ordinary production binary compiler checks without warnings. Exact landed-A mapping retains123 subtree names:116 consumer/7core graph, including ignored status; full post-split gate pending. [C handoff](../handoffs/crate-split-area-tests.md) plans106 native melee behavior cases, canonical shared collectors and controlled paired rebuild measurements; no C implementation or speedup claim.
+## 2026-10-23 — Authored item faction eligibility
+
+[Eligibility](systems/toys.md#item-faction-flags-eligibility-2026-10-23): shared ItemTemplate::allows now enforces already-loaded source faction flags. Actual wrong-side learning/owned-use fiveRED→nineGREEN12.47s at039dced6c,54-item metadata matrix and retained controls; complete1173pipeline identical547. No race-mask/protocol/PvP identity changes or new toy admissions. Fmt0/manual readability; required check pending.
 ## 2026-10-23 — Native profile stat-allocation redirects
 
 [Stat redirects](systems/character-stats.md#profile-stat-allocation-redirects--2026-10-23): actual103 shared equipment input→StatsPlugin independently reproduces five tier errors and ten matching ordinary slots; invalid donor and false-unmodeled diagnostics also RED,3RED11.02s at7aa72bf47. Server-local donor metadata changes calculation-only stat types/allocations, not original item identity/catalog/effects/set membership or the persisted/wire ABI. Atd45fe30e8 three GREEN12.43s, clean25m11build; two native cases remain opt-in and the env-free diagnostic stays enabled. Lead integration/DPS remain open. [Proof](../handoffs/equipment-stat-redirect-proof-ledger.md).
@@ -4260,3 +4270,4 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 
 - 2026-10-23: [[server-crates]] records five stable catalog modules extracted with unchanged data/logic, canonical imports and updated generator destinations; no test relocations or measured speedup claim.
 - 2026-10-23: [[server-crates]] moves main module declarations/App assembly into the existing lib and keeps a five-line bin; library-artifact source-view test replaces old binary artifact selection. Full suite/census and paired measurements remain pending.
+- 2026-10-23: [[server-crates]] records test-only simulator consumer, canonical graph/receipt/marker support and explicit test-support mode; 44-file move is content-identical, API/cfg wiring awaits compiler/full-suite proof. Seven graph cases have explicit core-prefix migration.
