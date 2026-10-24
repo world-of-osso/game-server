@@ -10,6 +10,8 @@ mod gating_tests;
 mod precombat_poll_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod use_items_tests;
 use crate::simc_apl_native::Encounter;
 use bevy::prelude::*;
 use equipment::Equipment;
