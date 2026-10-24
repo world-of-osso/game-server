@@ -463,6 +463,8 @@ fn literal_ww_native_combo_breaker_blackout_earns_rwk_and_delivers_its_child() {
 fn literal_ww_native_selected_wdp_earns_its_native_cooldown_window() {
     let _scope = crate::random::seed_scope(70448);
     let mut run = super::super::prepare_measurement(269, 1).unwrap();
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    super::super::install_fixture_lifetimes(&mut run, started_at);
     super::super::engage(&mut run);
     let mut rotation = run.windwalker_rotation.take().unwrap();
     assert!(
