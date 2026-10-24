@@ -164,19 +164,17 @@ fn place_guardian_control_in_arena(run: &mut Run, origin: shared::components::Po
         instance_id: 1,
     };
     let controller = fixture_player(run);
-    run.app.world_mut().entity_mut(controller).insert((
-        Position {
-            x: origin.x + 20.0,
-            ..origin
-        },
-        map,
-    ));
+    crate::followers::simulator::relocate_parity_party(run.app.world_mut(), controller, map)
+        .unwrap();
+    run.app.world_mut().entity_mut(controller).insert(Position {
+        x: origin.x + 20.0,
+        ..origin
+    });
     run.app.world_mut().entity_mut(run.actor).insert((
         Position {
             x: origin.x - 5.0,
             ..origin
         },
-        map,
         Rotation {
             x: 0.0,
             y: std::f32::consts::FRAC_PI_2,
@@ -184,13 +182,10 @@ fn place_guardian_control_in_arena(run: &mut Run, origin: shared::components::Po
         },
     ));
     if let Some(pet) = crate::hunter_pet::summoned_pet(run.app.world(), run.actor) {
-        run.app.world_mut().entity_mut(pet).insert((
-            Position {
-                x: origin.x - 3.0,
-                ..origin
-            },
-            map,
-        ));
+        run.app.world_mut().entity_mut(pet).insert(Position {
+            x: origin.x - 3.0,
+            ..origin
+        });
     }
     for (index, target) in run.targets.iter().enumerate() {
         run.app.world_mut().entity_mut(*target).insert((
@@ -211,6 +206,10 @@ fn dps_parity_demo_native_call_dreadstalkers_dispatches_both_authored_children()
     let mut run = prepare_manual_guardian_control();
     let origin = load_authored_guardian_arena(&mut run);
     place_guardian_control_in_arena(&mut run, origin);
+    assert!(
+        crate::spell_cast::targets::is_alive(run.app.world(), run.actor),
+        "authored scene relocation must retain the living admitted caster"
+    );
     let actor = run.actor;
     cast_and_finish(&mut run, actor, 104316);
     for _ in 0..40 {

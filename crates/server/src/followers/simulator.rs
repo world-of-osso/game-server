@@ -213,6 +213,33 @@ pub(crate) enum ParityActor {
     Player { race: u8 },
 }
 
+/// Move an admitted diagnostic party coherently; do not disable map-departure cleanup.
+pub(crate) fn relocate_parity_party(
+    world: &mut World,
+    owner: Entity,
+    copy: crate::maps::InMap,
+) -> Result<(), String> {
+    let mut units = world
+        .get::<stockade_diagnostic::DiagnosticParty>(owner)
+        .ok_or("parity follower owner lacks diagnostic admission")?
+        .members
+        .clone();
+    units.push(owner);
+    let pets: Vec<_> = units
+        .iter()
+        .filter_map(|&unit| crate::hunter_pet::summoned_pet(world, unit))
+        .collect();
+    units.extend(pets);
+    for unit in units {
+        world.entity_mut(unit).insert(copy);
+    }
+    world
+        .get_mut::<stockade_diagnostic::DiagnosticParty>(owner)
+        .unwrap()
+        .copy = copy;
+    Ok(())
+}
+
 /// One real attacker, without unrelated party damage or buff sources.
 pub(crate) fn spawn_parity_attacker(
     world: &mut World,

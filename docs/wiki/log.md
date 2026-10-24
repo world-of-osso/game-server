@@ -1,3 +1,7 @@
+## 2026-10-23 — Native guardian melee cadence/retarget GREEN
+
+[Melee boundary](investigations/demonology-dps-parity.md#guardian-melee-runtime-boundary-green-intrinsic-numerical-inputs-open): lead integrates14755 movement2d985 at233ddbfae/masterb679. Own --lib single-j2 cohort5PASS/1setupFAIL32.92s,18m45compile/0warnings qualifies real Dread three-attempt2s clock, retarget progress, target-clear stop, caster exclusion and native Imp/Wolf/NPC controls. Sixth full104316 case reaches CasterDead because fixture map relocation did not move DiagnosticParty admission; correct lifecycle removed the departed member. Test-only coherent relocation fix, root rerun pending; not producer RED or numerical/DPS parity qualification.
+
 ## 2026-10-23 — Shared guardian attack-policy producer GREEN
 
 [Producer contract](investigations/demonology-dps-parity.md#shared-attack-binding-producer-portable-and-real-archive-qualified): native lists win over approved missing98035→271971/250289→1264093 policies, explicitly VerifiedBuild0. Portable30fbec3ff:2PASS/2RED→b830f924f:5PASS including actual dev-mode CLI; earlier connection warnings reproduced at CLI exit and fixed by closing, not suppression. Real TDB12109586native rows+2policies1.37s,0warnings/quick_check ok, removed0/other changes0. Separate private prepared SHA d826e103…3939a; measurement dd1de231… unchanged, no canonical mutation. Lead owns publication; full summon dispatch and repeating attacks remain open.
