@@ -11,6 +11,7 @@ pub(super) fn load_world() -> World {
             .unwrap();
     let mut world = World::new();
     world.insert_resource(crate::spell_info::load_spell_data(&db).unwrap().0);
+    world.insert_resource(crate::item_proc_data::load(&db).unwrap());
     world.insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
     world.insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
     world.insert_resource(NativeItemInstances {

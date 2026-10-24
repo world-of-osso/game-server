@@ -1,5 +1,6 @@
 //! Shared native ItemSet predicates: real memberships, flags and skill thresholds.
 use super::*;
+use shared::item_data::ItemDefinitionSource;
 use shared::protocol::EquipmentSlot;
 
 fn native_world() -> World {

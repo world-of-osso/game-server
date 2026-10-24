@@ -18,8 +18,9 @@ Retail equipment set bonuses use native ItemSet/ItemSetSpell data and TC a352b1f
 ## Implementation inventory
 
 - `scripts/db2.py`, `scripts/db2_schema.sql`: normal native table import.
-- `crates/server/src/item_templates.rs`: native item/set catalog load.
-- `crates/server/src/equipment_effects/item_sets.rs`: count/eligibility and aura lifecycle.
+- `crates/server/src/item_templates.rs`: original native ItemSparse.ItemSet membership on each ItemTemplate.
+- `crates/server/src/item_proc_data{,/sets}.rs`: sole native set catalog, shared original-item count and legacy/skill/spec/subtree predicate.
+- `crates/server/src/equipment_effects/item_sets.rs`: aura lifecycle consuming the shared catalog/predicate.
 - `crates/server/src/equipment_effects.rs`, `crates/server/src/auras/mod.rs`: ordinary aura application and fixed-update integration.
 - `crates/server/src/class_progression.rs`: active selected subtree lookup.
 
@@ -27,6 +28,7 @@ Retail equipment set bonuses use native ItemSet/ItemSetSpell data and TC a352b1f
 
 - `scripts/tests/test_db2_item_sets.py`: native Ret and Elemental catalog output.
 - `crates/server/src/equipment_effects.rs`: ignored real Ret2062 threshold and specialization lifecycle tests.
+- `crates/server/src/item_proc_data/tests.rs`: real Dark Arctic membership, legacy Arcanist and Blood Tiger skill/rank boundaries.
 
 ## Known gaps (current cycle)
 

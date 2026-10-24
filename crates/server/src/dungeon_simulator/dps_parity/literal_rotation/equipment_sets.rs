@@ -1,6 +1,6 @@
 //! SIMC_TIER_ALIAS_ITEMSET_BINDING names; eligibility is the native set helper's.
 use crate::equipment_effects::item_sets::read_set_spells;
-use crate::item_templates::ItemTemplates;
+use crate::item_proc_data::ItemProcInputs;
 use bevy::prelude::*;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -12,7 +12,7 @@ pub(super) fn read_set_facts(
         .into_iter()
         .map(|(set, spell)| (set, spell.id))
         .collect();
-    let catalog = &world.resource::<ItemTemplates>().item_sets;
+    let catalog = world.resource::<ItemProcInputs>();
     let mut facts = BTreeMap::new();
     for (tier, id) in parse_tier_aliases()? {
         let set = catalog

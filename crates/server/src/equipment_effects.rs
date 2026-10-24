@@ -200,6 +200,8 @@ mod tests {
             .world_mut()
             .entity_mut(h.caster)
             .insert(shared::components::UnitLevel(90));
+        h.app
+            .insert_resource(crate::item_proc_data::load(&conn).unwrap());
         h.app.insert_resource(NativeItemInstances {
             bonuses: load::load_bonus_tables(&conn).unwrap(),
             enchants: load::load_enchantment_tables(&conn).unwrap(),
