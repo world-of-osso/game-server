@@ -1,3 +1,7 @@
+## 2026-10-23 — Generic native hero subtree facts
+
+[Hero identity](systems/simc-apl.md#native-hero-subtree-identity--2026-10-23): minimal read-only selected-subtree accessor and shared data-driven name resolution, no new state/per-spec table/learned-passive inference. Actual0409186de unknown-operand RED retained throughda4dc3416 because the entire facts file was unchanged; Havoc/Feral three native controls await GREEN. Missing/unknown data stays explicit; no live-dungeon/DPS claim.
+
 ## 2026-10-23 — Havoc Burning Blades child-dispatch RED
 
 [452408→453177](systems/auras.md#havoc-burning-blades-dispatch--2026-10-23): actual selected BiS passive/ordinary swings but zero child ticks at37bf8a666. Named SimC dispatch added; native35% amount/100% chance/masks/rolling unchanged. Targeted GREEN pending; existing-kit ST/3T both blocked by authored AssistedCombatRule21553/type12, not fabricated DPS.

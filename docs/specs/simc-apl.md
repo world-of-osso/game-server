@@ -6,6 +6,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 - [x] Interpret numeric truth, OR/AND/NOT, arithmetic and comparisons with pinned SimC precedence. Single `%` divides; `%%` is modulo.
 - [ ] Read explicit native facts for buff stacks/remains/up, cooldown remains/charges/duration, resources, talents, equipment/trinkets, target count/TTD, fight remains, raid-event adds, dots/debuffs and gcd. Unknown operands fail explicitly, including in otherwise inactive condition branches; never silently become false.
+- [ ] Read `hero_tree.<name>` from the actual selected native TraitSubTree for any class, including Felscarred/Aldrachi Reaver and Wildstalker/Druid of the Claw. Empty selection is false; missing loadout/spec metadata or unknown names fail explicitly. Learned passives/live auras cannot stand in for selection; no separate hero state or per-spec identity table.
 - [x] Bind action-dependent facts (`combo_strike`, plain `gcd`, action minimum GCD) to each source row, including variable/call control actions. An actor-wide value is not equivalent.
 - [x] Execute declared variables using source `value`, `setif`, `value_else`, `reset` and numeric `default` semantics.
 - [x] Preserve literal action order and conditional `call_action_list` decisions; native castability selects the first usable action. An exhausted child list returns control to its caller.
