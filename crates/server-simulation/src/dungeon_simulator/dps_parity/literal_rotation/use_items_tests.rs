@@ -68,7 +68,7 @@ fn run_use_items_case(rows: &[(&str, &str)], expected_slot: Option<usize>) {
     driver
         .execute(run.app.world_mut(), run.actor, action, execution)
         .unwrap();
-    run.app.update();
+    super::super::preparation::finish_pending_setup(&mut run).unwrap();
     let casts: Vec<_> = run
         .app
         .world()
