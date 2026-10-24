@@ -1,3 +1,7 @@
+## 2026-10-24 — Explicit movement.distance fixture state
+
+[Configured movement distance](systems/simc-apl.md#configured-movement-distance): pinned76f8118 current.distance_to_move, not target range/native travel. Four actual unknown-operand REDs→4GREEN0.00s atc8fafe180; existing movement-event absence1GREEN10.01s, server+server-simulation test-target check81s and fmtPASS/zero warnings. Patchwerk explicitly initializes0; missing/dungeon configuration stays named. No scheduler, remains/speed, full native rotation or DPS claim.
+
 ## 2026-10-23 — Per-spell refresh and FoF dispatch identity
 
 [Oracle](reference/simc-spell-oracle.md): fresh canonical backup/eec5b6bcf --lib probes Arms1GREEN24.30s and WW3GREEN20.85s. MS24448/TP39862/firstFoF29943; coefficient/armor agree, AP/source/target-state differences remain. Actual receipt origin check RED exposed missing native dispatch identity. Test-only226 dispatch scopes now preserve real synchronous aura/effect/instance/trigger metadata with no new RNG/cast/formula; At089face19 WW3GREEN31.24s/Arms1GREEN18.53s and consumer14GREEN. All three captured FoF hits carry actual113656/effect2 periodic context; regular-series alignment is now observed rather than inferred. Exact MS/TP/three-FoF damage preserved; state/crit differences remain.

@@ -26,7 +26,7 @@
 
 ### Configured movement distance
 
-Pinned SimC76f8118 `player.cpp12146–12148` reads `current.distance_to_move`, not `current.distance` or target geometry. Shared `FixtureMovement { distance_to_move }` stores that explicit actor fixture state; Patchwerk parity setup inserts zero because no movement event is configured (`player.cpp1288`). NativeFacts exposes the scalar, including later configured updates, with named errors for missing metadata or dungeon callers. Actual actor/target motion never manufactures a value. Four genuine unknown-operand REDs precede implementation; qualification pending. Movement-event scheduling and `movement.remains`/`movement.speed` remain separate gaps.
+Pinned SimC76f8118 `player.cpp12146–12148` reads `current.distance_to_move`, not `current.distance` or target geometry. Shared `FixtureMovement { distance_to_move }` stores that explicit actor fixture state; Patchwerk parity setup inserts zero because no movement event is configured (`player.cpp1288`). NativeFacts exposes the scalar, including later configured updates, with named errors for missing metadata or dungeon callers. Actual actor/target motion never manufactures a value. At07005bbb8 all four concrete configured/zero/missing/dungeon cases reach genuine unknown-operand RED; atc8fafe180 all4GREEN/0.00s plus existing movement-event absence1GREEN/10.01s, two-package test-target check81s and formatting pass with zero warnings. Diagnostics: `follower-placements-2026-10-22/movement-distance-*`; shared scalar/fixture wiring only, not full native rotation or movement-event qualification. Movement-event scheduling and `movement.remains`/`movement.speed` remain separate gaps.
 
 ## Shared literal fixture machinery
 
