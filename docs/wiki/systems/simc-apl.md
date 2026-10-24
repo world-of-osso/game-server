@@ -55,6 +55,8 @@ WW measurement runs its ordered precombat before explicit engagement and the enc
 
 Clock-aware `preparation::execute_precombat_plan` now consumes selected native plans one child at a time with full App cast/GCD/effect completion between dispatches and before returning. The actual259 lifecycle first reached an explicit unconsumed-Composite RED atd49f4951c; implementation GREEN remains pending. World-only execute still rejects Composite. [Exact proof](../../handoffs/native-precombat-proof-ledger.md#composite-lifecycle-integration--genuine-red-green-pending).
 
+[Mystic Touch producer](../../handoffs/ww-mystic-touch-proof-ledger.md) reached real native learned TP/white2RED and unlearned/unrelated2GREEN atd49f4951c. Named producer now reads the actual damage actor's learned8647 and native family/white-hit eligibility, then triggers native113746; its physical vulnerability remains native data. GREEN and first/later-hit numerical ordering remain open.
+
 ## Literal native row eligibility — GREEN pending
 
 [Native row-gating packet](../../handoffs/literal-row-gating-proof-ledger.md) reaches4RED/1GREEN atd49f4951c. Prepared now samples actual Moving and active native GCD; Driver honors moving0/1 and explicit off-GCD row permission without changing native cast admission. Configured movement.distance remains a named unavailable gap, never zero. Runtime GREEN/Ele item activation remain unqualified.

@@ -26,6 +26,41 @@ const COMBO_BREAKER_BUFF: u32 = 116768;
 pub(crate) const DANCE_OF_CHIJI: u32 = 325201;
 const DANCE_BUFF: u32 = 325202;
 const SPINNING_CRANE_KICK: u32 = 101546;
+const MYSTIC_TOUCH_PASSIVE: u32 = 8647;
+const MYSTIC_TOUCH_DEBUFF: u32 = 113746;
+
+/// MONK_MYSTIC_TOUCH_SIMC_PRODUCER: SimC76f8118 sc_monk.cpp438–455.
+/// Native113746 supplies the physical vulnerability; no multiplier is invented.
+pub(crate) fn apply_mystic_touch_after_hit(world: &mut World, event: &auras::procs::AuraEvent) {
+    if event.damage <= 0.0 || event.periodic {
+        return;
+    }
+    let learned = world
+        .get::<crate::class_progression::KnownSpells>(event.actor)
+        .is_some_and(|known| known.contains(MYSTIC_TOUCH_PASSIVE));
+    if !learned || !mystic_touch_action_event(world, event) {
+        return;
+    }
+    if let Some(target) = event.target {
+        crate::spell_cast::cast_triggered(world, event.actor, MYSTIC_TOUCH_DEBUFF, Some(target), 1);
+    }
+}
+
+fn mystic_touch_action_event(world: &World, event: &auras::procs::AuraEvent) -> bool {
+    let Some(id) = event.spell_id else {
+        return event.actor_mask[0] & auras::procs::PROC_DEAL_MELEE_SWING != 0;
+    };
+    // The source hook belongs to monk_action_t, not every item/proc owned by a Monk.
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let family = store
+        .get(MYSTIC_TOUCH_PASSIVE)
+        .and_then(|spell| spell.class_options.as_ref())
+        .map(|options| options.spell_class_set);
+    store
+        .get(id)
+        .and_then(|spell| spell.class_options.as_ref())
+        .is_some_and(|options| Some(options.spell_class_set) == family)
+}
 
 fn ordinary_cast_event(event: &auras::procs::AuraEvent) -> bool {
     event.can_proc && event.actor_mask[1] & auras::procs::PROC2_CAST_SUCCESSFUL != 0

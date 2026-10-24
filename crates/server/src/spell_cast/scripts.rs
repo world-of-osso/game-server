@@ -52,8 +52,8 @@ mod windwalker;
 mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
 pub(crate) use windwalker::{
-    DANCE_OF_CHIJI, after_dance_cast_event, check_dance_proc, combo_strikes_multiplier,
-    ordinary_combo_cast,
+    DANCE_OF_CHIJI, after_dance_cast_event, apply_mystic_touch_after_hit, check_dance_proc,
+    combo_strikes_multiplier, ordinary_combo_cast,
 };
 
 pub(super) use batch3::consume_phalanx;
