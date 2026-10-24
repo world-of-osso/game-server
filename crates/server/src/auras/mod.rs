@@ -2256,6 +2256,8 @@ pub fn interrupt_auras(
     if flags == [0; 2] {
         return;
     }
+    #[cfg(any(test, feature = "test-support"))]
+    observations::observe_interrupt(world, unit, flags, except_spell);
     remove_auras(world, unit, RemoveReason::Interrupted, |aura| {
         (aura.interrupt_flags[0] & flags[0] != 0 || aura.interrupt_flags[1] & flags[1] != 0)
             && Some(aura.spell_id) != except_spell

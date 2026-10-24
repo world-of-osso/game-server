@@ -65,6 +65,7 @@ mod tests {
             assert!(!crate::auras::has_aura(run.app.world(), actor, legacy));
         }
         if prowl {
+            crate::auras::observations::start_removal_probe(run.app.world_mut(), actor, 5215);
             crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5215, Some(actor), false)
                 .expect("ordinary native Prowl cast");
             assert!(crate::auras::has_aura(run.app.world(), actor, 5215));
@@ -81,7 +82,26 @@ mod tests {
             if !waiting {
                 break;
             }
+            let observed_before = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .len();
+            let prowl_before = prowl && crate::auras::has_aura(run.app.world(), actor, 5215);
             run.app.update();
+            if prowl_before && !crate::auras::has_aura(run.app.world(), actor, 5215) {
+                let removal = crate::auras::observations::removal_probe_snapshot(run.app.world());
+                let events = &run
+                    .app
+                    .world()
+                    .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                    .0[observed_before..];
+                eprintln!(
+                    "RAKE_PROWL_REMOVAL {}",
+                    serde_json::json!({"removal": removal, "frame_events": events})
+                );
+            }
         }
         run.app
             .world_mut()

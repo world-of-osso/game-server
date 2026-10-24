@@ -4,6 +4,9 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 
 use super::{ActiveAuras, AuraInstance, RemoveReason};
+mod removals;
+pub(super) use removals::observe_interrupt;
+pub use removals::{removal_probe_snapshot, start_removal_probe};
 
 const TRACKED: &[(u32, u32)] = &[(16870, 113043), (114108, 158478)];
 
@@ -104,6 +107,7 @@ pub(super) fn removed(
     aura: &AuraInstance,
     reason: RemoveReason,
 ) {
+    removals::record_removed(world, target, aura, reason);
     record_loss(
         world,
         target,
