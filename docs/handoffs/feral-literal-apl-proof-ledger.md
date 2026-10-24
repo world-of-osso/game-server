@@ -36,6 +36,12 @@ Fact dependencies:
 - dot/action persistent multipliers:14775 owns the shared snapshot/API (frozen RED2bc981067); Feral eligibility stays separate. No new persistent snapshot fields here.
 - 14781: prev_gcd lands with hs1063 and reads successful GCD root identities through action bindings. Exact consumers are prev_gcd.1.rip, prev_gcd.1.ferocious_bite and prev_gcd.1.primal_wrath. Pending additions: buff.clearcasting.react, buff.tigers_fury.duration and action.convoke_the_spirits.execute_time.
 
+## Feral fixture lifecycle integration
+
+At729543aef, exact-profile `prepare_measurement(103,1)` fails literal ownership before any source-row assertions:1FAIL15.48s (build40.22s), `literal-precombat-capture-red/`. This is missing-controller RED, not gameplay or unsupported-fact RED.
+
+Candidate wires spec103 follower measurements through capture-before-warmup, canonical Driver/PrecombatPoll, native Prepared admission, ordered native setup completion and combat/report hooks. The shared Program consumes unchanged74rows. Native kit measurements via `prepare` and production dungeon priorities are unchanged. Configured potion identity comes from actual `liquid_luster_2` input, matching pinned player.cpp12376–12411 (case-insensitive/exact or single-digit quality suffix); it grants no inventory or aura. Shared Equipment owns trinket facts, Prepared owns readiness-only pool limits; Feral delegates source pooling rather than implementing an interpreter or mutating pools. New native ownership/CatForm/Prowl/snapshot fixture is pending GREEN. Published shared snapshot/history/hero/equipment facts remain dependencies; no full native execution or DPS parity claim.
+
 ## Native Bite maximum-Energy reader
 
 Parent approved exactly one public read-only native reader: actual modified22568 Energy cost plus its existing extra-Energy cap. At test-onlyd987d0c69, the real selected-profile `maximum_energy` request fails with unknown native operand: genuine1FAIL10.69s, clean5m12s build (`bite-maximum-energy-red/`). The case also defines the native391882 cost-modifier control and checks repeated reads preserve all pools/history; no proc generation is inferred.

@@ -61,6 +61,36 @@ const TALENTS: &[(&str, u32)] = &[
     ("wild_slashes", 390864),
 ];
 
+pub(super) fn execution_actions(
+    bindings: &Bindings,
+) -> impl Iterator<Item = super::super::literal_rotation::execution::NativeAction<'static>> + '_ {
+    use super::super::literal_rotation::execution::NativeAction;
+    let actions = ACTIONS
+        .iter()
+        .filter(|(name, _)| *name != "potion")
+        .map(|&(name, spell)| NativeAction {
+            name,
+            spell,
+            talent: None, // Canonical action knowledge owns selected-trait admission.
+            self_target: matches!(
+                name,
+                "cat_form"
+                    | "prowl"
+                    | "tigers_fury"
+                    | "regrowth"
+                    | "shadowmeld"
+                    | "berserking"
+                    | "convoke_the_spirits"
+            ),
+        });
+    actions.chain(std::iter::once(NativeAction {
+        name: "berserk",
+        spell: bindings.actions["berserk"],
+        talent: None,
+        self_target: true,
+    }))
+}
+
 fn names(entries: &[(&str, u32)]) -> std::collections::BTreeMap<String, u32> {
     entries
         .iter()

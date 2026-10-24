@@ -8,9 +8,9 @@ use super::geometry::read_area_recipients;
 use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
 
 pub(super) struct FeralFacts<'a> {
-    native: NativeFacts<'a>,
-    world: &'a World,
-    actor: Entity,
+    pub(super) native: NativeFacts<'a>,
+    pub(super) world: &'a World,
+    pub(super) actor: Entity,
     area_targets: BTreeMap<&'static str, f64>,
 }
 

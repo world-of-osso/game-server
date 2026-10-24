@@ -1,6 +1,9 @@
-//! Native Feral bindings under qualification; literal controller not wired yet.
+//! Fixture-only pinned Feral consumer; missing native capabilities remain explicit.
 mod bindings;
+mod context;
+mod driver;
 mod facts;
+pub(super) use driver::Rotation;
 mod geometry;
 mod source;
 

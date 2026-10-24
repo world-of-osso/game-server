@@ -60,6 +60,16 @@ fn feral_literal_precombat_captures_controller_and_preserves_native_prowl() {
         crate::auras::has_aura(world, run.actor, 5215),
         "native source Prowl must survive setup"
     );
+    let rotation = run
+        .feral_rotation
+        .as_ref()
+        .expect("literal Feral controller")
+        .report();
+    assert_eq!(rotation["driver"], "LITERAL_SIMC_FERAL_76f8118");
+    assert!(
+        rotation["native_precombat_snapshot"].is_object(),
+        "source snapshot_stats reads real native stats"
+    );
     assert!(world.get::<shared::casting::CastState>(run.actor).is_none());
     assert!(
         world
