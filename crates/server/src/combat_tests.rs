@@ -130,6 +130,7 @@ fn run_attack_tick(app: &mut App) {
                     expertise_pct: 0.0,
                     creature: false,
                     authored_attack_time: None,
+                    form_attack_time: None,
                     creature_flags: None,
                     temp_summoner: None,
                     spirit_wolf: None,

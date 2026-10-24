@@ -137,6 +137,7 @@ fn read_native_crit_chance(h: &Harness, attacker: Entity, victim: Entity) -> f32
         expertise_pct: modifier(h, attacker, 240) / 4.0,
         creature: world.get::<shared::components::Npc>(attacker).is_some(),
         authored_attack_time: world.get::<super::CreatureAttackTime>(attacker).copied(),
+        form_attack_time: crate::auras::shapeshift::attack_timing(world, attacker),
         creature_flags: world.get::<crate::zones::CreatureFlagsExtra>(attacker),
         temp_summoner: world
             .get::<crate::zones::TempSummon>(attacker)

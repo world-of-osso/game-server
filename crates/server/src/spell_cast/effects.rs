@@ -747,12 +747,9 @@ fn weapon_hit(world: &World, caster: Entity, normalized: bool) -> f32 {
     let weapon = world
         .get::<CharacterStats>(caster)
         .map_or(WeaponDamage::UNARMED, |stats| stats.main_hand);
-    let speed = if normalized {
-        weapon.kind.normalized_speed()
-    } else {
-        weapon.speed
-    };
-    let roll = weapon.min + rand::random::<f32>() * (weapon.max - weapon.min);
+    let form = crate::auras::shapeshift::attack_timing(world, caster);
+    let (minimum, maximum, speed) = crate::melee::weapon_damage_terms(&weapon, normalized, form);
+    let roll = minimum + rand::random::<f32>() * (maximum - minimum);
     roll + attack_power / crate::melee::ATTACK_POWER_PER_DPS * speed
 }
 

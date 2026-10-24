@@ -129,3 +129,95 @@ fn native_form_bear_uses_authored_combat_round_time() {
 fn native_form_unshifted_retains_equipment_cadence() {
     observe_interval(None);
 }
+
+fn expected_form_ap_speed(
+    weapon: &crate::item_stats::WeaponDamage,
+    row: (i32, u32),
+    player: bool,
+    normalized: bool,
+) -> f32 {
+    let (id, ms) = row;
+    let speed = if normalized {
+        weapon.kind.normalized_speed()
+    } else if !player || matches!(id, 1 | 5 | 8 | 16) {
+        if weapon.kind == shared::components::WeaponType::Ranged {
+            2.0 // TC InitDataForForm RANGED_ATTACK=BASE_ATTACK_TIME.
+        } else {
+            ms as f32 / 1000.0
+        }
+    } else {
+        weapon.speed
+    };
+    speed.max(0.25) // TC StatSystem.cpp453.
+}
+
+fn assert_native_weapon_terms(
+    weapon: &crate::item_stats::WeaponDamage,
+    row: (i32, u32),
+    player: bool,
+    normalized: bool,
+    form: crate::auras::shapeshift::FormAttackTiming,
+) {
+    let ap_speed = expected_form_ap_speed(weapon, row, player, normalized);
+    let scale = row.1 as f32 / 1000.0 / ap_speed;
+    let actual = crate::melee::weapon_damage_terms(weapon, normalized, Some(form));
+    assert!((actual.0 - weapon.min * scale).abs() < 0.001);
+    assert!((actual.1 - weapon.max * scale).abs() < 0.001);
+    assert_eq!(actual.2, ap_speed);
+    let regular = crate::melee::weapon_damage_terms(weapon, normalized, None);
+    let regular_speed = if normalized {
+        weapon.kind.normalized_speed()
+    } else {
+        weapon.speed
+    };
+    assert_eq!(regular, (weapon.min, weapon.max, regular_speed));
+}
+
+#[test]
+#[ignore = "native private DB: every nonzero form uses TC weapon/AP timing, not a damage scalar"]
+fn native_form_weapon_terms_cover_all_authored_forms_and_actor_kinds() {
+    let (h, actor, _) = fixture(None);
+    let melee = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .main_hand;
+    let path = crate::test_data::world_db_path();
+    let templates = crate::item_templates::load_item_templates(&path).unwrap();
+    let tables = crate::item_stats::load_item_scaling_tables(&path).unwrap();
+    // CharacterLoadout158's actual native Hunter rifle, ItemDelay3000.
+    let ranged = crate::item_stats::item_stats(&templates.retail[&73000], &tables)
+        .weapon
+        .unwrap();
+    let db =
+        rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let forms = crate::auras::shapeshift::load_shapeshift_forms(&db).unwrap();
+    let mut stmt = db
+        .prepare("SELECT ID, CombatRoundTime FROM spell_shapeshift_form WHERE CombatRoundTime<>0")
+        .unwrap();
+    let rows = stmt
+        .query_map([], |row| Ok((row.get::<_, i32>(0)?, row.get::<_, u32>(1)?)))
+        .unwrap();
+    let mut checked = Vec::new();
+    for row in rows {
+        let (id, ms) = row.unwrap();
+        checked.push(id);
+        for player in [false, true] {
+            let form = forms.attack_timing(id, player).unwrap();
+            assert_eq!(form.seconds, ms as f32 / 1000.0);
+            for weapon in [&melee, &ranged] {
+                for normalized in [false, true] {
+                    assert_native_weapon_terms(weapon, (id, ms), player, normalized, form);
+                }
+            }
+        }
+    }
+    checked.sort_unstable();
+    assert_eq!(checked, [1, 5, 8, 44, 45, 46, 49]);
+    assert!(
+        forms.attack_timing(16, true).is_none(),
+        "zero-time Ghost Wolf uses regular weapons"
+    );
+}

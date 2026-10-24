@@ -160,6 +160,7 @@ fn read_attacker(world: &World, enemy: Entity) -> Result<Attacker<'_>, String> {
         expertise_pct: crate::auras::combat_stats::expertise_reduction(auras, false),
         creature: true,
         authored_attack_time: world.get::<super::CreatureAttackTime>(enemy).copied(),
+        form_attack_time: None,
         creature_flags: world.get::<crate::zones::CreatureFlagsExtra>(enemy),
         temp_summoner: world
             .get::<crate::zones::TempSummon>(enemy)

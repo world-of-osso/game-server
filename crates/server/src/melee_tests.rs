@@ -105,14 +105,14 @@ fn creature_forecast_weights_preserve_quantization_and_saturated_roll_table() {
 #[test]
 fn swing_damage_is_weapon_plus_attack_power_over_six_times_speed() {
     // Level 10 Human Warrior: 33 Str = 33 AP; 33 / 6 × 2.6 = 14.3.
-    let (min, max) = weapon_damage_range(&WORN_SHORTSWORD, 33.0, 0.0, Hand::Main);
+    let (min, max) = weapon_damage_range(&WORN_SHORTSWORD, 33.0, 0.0, Hand::Main, None);
     assert!((min - 15.3).abs() < 1e-4, "{min}");
     assert!((max - 16.3).abs() < 1e-4, "{max}");
 }
 
 #[test]
 fn off_hand_swings_at_half_and_versatility_scales_both_hands() {
-    let (min, max) = weapon_damage_range(&WORN_SHORTSWORD, 33.0, 10.0, Hand::Off);
+    let (min, max) = weapon_damage_range(&WORN_SHORTSWORD, 33.0, 10.0, Hand::Off, None);
     assert!((min - 15.3 * 0.5 * 1.1).abs() < 1e-4, "{min}");
     assert!((max - 16.3 * 0.5 * 1.1).abs() < 1e-4, "{max}");
 }
