@@ -375,7 +375,13 @@ fn dps_parity_howl_native_removed_root_has_no_combat_cycle() {
     let _seed = crate::random::seed_scope(70_448);
     let (mut run, _) = prepare_howl_austin_at_native_spawn();
     let owner = run.actor;
-    crate::auras::remove_spell(run.app.world_mut(), owner, HOWL, RemoveReason::Cancelled);
+    let removed = crate::auras::remove_auras(
+        run.app.world_mut(),
+        owner,
+        RemoveReason::Cancelled,
+        |aura| aura.spell_id == HOWL,
+    );
+    assert_eq!(removed.len(), 1);
     engage(&mut run);
     let bound = native_duration(&run, HOWL_COOLDOWN) * 2.0;
     advance_seconds(&mut run, bound);
