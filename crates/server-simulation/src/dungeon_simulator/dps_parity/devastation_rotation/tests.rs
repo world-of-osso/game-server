@@ -13,6 +13,7 @@ const LIVING_FLAME: u32 = 361469;
 const LIVING_FLAME_DAMAGE: u32 = 361500;
 const FIRE_BREATH_DAMAGE: u32 = 357209;
 const ETERNITY_SURGE_DAMAGE: u32 = 359077;
+const AZURE_STRIKE: u32 = 362969;
 
 fn prepared() -> Run {
     let mut run = prepare(1467, 1).unwrap();
@@ -258,6 +259,54 @@ fn literal_dev_binding_native_eternity_surge_selects_and_hits_the_real_enemy() {
     assert!(
         landed_damage(&run, ETERNITY_SURGE_DAMAGE),
         "native rank1 release must damage the selected enemy"
+    );
+}
+
+#[test]
+#[ignore = "native unconditional Azure Strike source filler; full controller remains open"]
+fn literal_dev_binding_native_azure_strike_source_filler_hits_the_real_enemy() {
+    let mut run = prepared();
+    let mut bindings = bindings::build();
+    let equipment = Equipment::load(run.app.world(), run.actor, &mut bindings).unwrap();
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        run.actor,
+        &run.targets,
+        &equipment,
+        [NativeAction {
+            name: "azure_strike",
+            spell: bindings.actions["azure_strike"],
+            talent: None,
+            self_target: false,
+        }],
+        false,
+    )
+    .unwrap();
+    let facts = DevFacts::new(
+        run.app.world(),
+        run.actor,
+        &bindings,
+        &equipment,
+        encounter(&run),
+        &run.targets,
+    );
+    let mut driver = Driver::new(Program::parse(&[("native_leaf", "azure_strike")]).unwrap());
+    let (action, execution) = driver
+        .select("native_leaf", &facts, &prepared, &equipment)
+        .unwrap()
+        .expect("native source Azure Strike filler must remain selectable");
+    driver
+        .execute(run.app.world_mut(), run.actor, action, execution)
+        .unwrap();
+    for _ in 0..6000 {
+        run.app.update();
+        if landed_damage(&run, AZURE_STRIKE) {
+            break;
+        }
+    }
+    assert!(
+        landed_damage(&run, AZURE_STRIKE),
+        "native source filler must damage the selected enemy"
     );
 }
 
