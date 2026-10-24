@@ -38,3 +38,13 @@ At7f34b277e82a3b2fa5842fd6c881d8d21015057c, targeted core GREEN is17PASS22.56s:1
 ## Artifacts
 
 Engine `/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/aura-state-health-2026-10-24/` contains `health-aura-state-source-v1.json` (full TC source paths/hashes), `health-aura-state-core-red-v1.log`, and `health-aura-state-native-red-v1.log`. GREEN artifacts: `health-aura-state-core-green-v1.log`, `health-aura-state-native-green-v1.{log,proof.json}`. Compiler/format artifacts: `health-aura-state-check-v1.{log,proof.json}`, `health-aura-state-fmt-v1.log`. `health-aura-state-native-consumers-v1.json` inventories85native target/exclude-target consumers, including Execute/KillShot; this is source coverage, not85runtime qualifications. Logs/proofs retain exact revision and scope; later source changes invalidate only intersecting evidence.
+
+## ah1093 integration correction — 2026-10-24
+
+Worktree `/home/osso/.worktrees/game-server-ah1093-fix` merges branch7782f0ed6 with exact master1466a4ca7 at62889bccee1340fb457aba53566dfcdcf6534103. Merge conflicts only retain both test-module/wiki additions.
+
+At62889bcce, one `cargo test --locked -p server --lib -j2 class_completeness_native80_shadowfrost -- --nocapture` invocation reproduces both Shadowfrost failures (0PASS/2FAIL,7.11s; cold build47m15s). Both return `SPELL_FAILED_TARGET_AURASTATE` before rune spending or immunity resolution. Artifact: `/home/osso/.worktrees/logs/ah1093fix-shadowfrost-red.log`. Capacity ADD preceded the invocation; private target only.
+
+Root cause is fixture admission, not incorrect health-state computation: native343294 row23284 requires TargetAuraState13; harness NPC starts5000/5000. TC a352b1fa `Unit.cpp483` computes WOUNDED_35_PERCENT, `Unit.h804/809` requires current below truncated35%maximum, and `SpellInfo.cpp2499–2500` refuses its false required target state. `SharedDefines.h2848` assigns ID13. TC exemption checks (`SpellInfo.cpp2495–2497`, `Unit.cpp6163–6185`) do not apply: fixture target is neither owner nor vehicle, and active native immunity/dodge/class passives provide no aura-state bypass. TC source root is recorded above.
+
+Lead explicitly authorized correcting only these two fixture setups after this contradiction was reported. Set maximum health20000 while preserving current5000, making current below7000 and keeping every existing assertion unchanged (especially combined-immunity final5000). Added TC citation at each setup. No health-state, immunity, rune, or production spell changes. GREEN and check evidence pending; Talondras remains separately unclassified.
