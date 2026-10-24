@@ -1,4 +1,9 @@
 ## 2026-10-23 — Per-spell merge / periodic crit ownership
+## 2026-10-23 — Generic native hero subtree facts
+
+[Hero identity](systems/simc-apl.md#native-hero-subtree-identity--2026-10-23): minimal read-only selected-subtree accessor and shared data-driven name resolution, no new state/per-spec table/learned-passive inference. Actual0409186de unknown-operand RED retained throughda4dc3416 because the entire facts file was unchanged; Havoc/Feral three native controls await GREEN. Missing/unknown data stays explicit; no live-dungeon/DPS claim.
+
+## 2026-10-23 — Havoc Burning Blades child-dispatch RED
 
 Merged current master4a2deb367 into native-spell-diff. Resolution retains owner-aware periodic crit eligibility/order and signed target-crit semantics, while direct and periodic damage capture records the actual rolled chance/result without another RNG draw. Parent rebuilt batch gate pending; prior acceptance scopes are unchanged.
 
