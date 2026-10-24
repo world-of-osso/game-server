@@ -2,7 +2,10 @@
 //! SimC76f8118 sc_hunter.cpp6741-6742/4963-4964; native70448 amounts remain authoritative.
 use super::*;
 use crate::auras::{ActiveAuras, RemoveReason};
+use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
 use crate::spell_cast::test_harness::ObservedCombatEvents;
+use server::simc_apl::Facts;
+use shared::components::PowerType;
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 
 const BARBED_SHOT: u32 = 217200;
@@ -13,11 +16,18 @@ const BARBED_SCALES: u32 = 469880;
 
 fn barbed_fact(run: &Run, property: &str) -> f64 {
     let world = run.app.world();
-    let spell = world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(BARBED_SHOT)
-        .unwrap();
-    crate::spell_cast::native_apl::cooldown_value(world, run.actor, spell, property).unwrap()
+    let bindings = Bindings {
+        actions: BTreeMap::from([("barbed_shot".to_owned(), BARBED_SHOT)]),
+        ..Default::default()
+    };
+    let encounter = Encounter::Fixture {
+        started_at: world.resource::<Time>().elapsed_secs_f64(),
+        duration: 300.0,
+        style: FightStyle::Patchwerk,
+    };
+    NativeFacts::new(world, run.actor, &bindings, encounter, 1)
+        .value(&format!("cooldown.barbed_shot.{property}"))
+        .unwrap()
 }
 
 fn native_amount(run: &Run, spell: u32) -> f64 {
@@ -145,16 +155,37 @@ fn assert_scent_return(run: &mut Run, expected_return: f64) {
     );
 }
 
-fn assert_scales_reduction(run: &mut Run, seconds: f64) {
+fn assert_scales_reduction(run: &mut Run, seconds: f64, triggered: bool) {
     cast_normal(run, BARBED_SHOT);
-    wait_for_gcd(run, COBRA_SHOT);
+    if !triggered {
+        wait_for_gcd(run, COBRA_SHOT);
+    }
     let before = barbed_fact(run, "full_recharge_time");
     assert!(
         before > 2.0,
         "native pending charge must outlive this sourced reduction"
     );
     let at = crate::spell_cast::history_now(run.app.world());
-    cast_normal(run, COBRA_SHOT);
+    let actor = run.actor;
+    let target = run.targets[0];
+    let focus =
+        crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Focus).unwrap();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        actor,
+        COBRA_SHOT,
+        Some(target),
+        triggered,
+    )
+    .unwrap();
+    if triggered {
+        assert_eq!(
+            crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Focus)
+                .unwrap(),
+            focus,
+            "real FULL_MASK background Cobra does not pay Focus"
+        );
+    }
     assert_eq!(
         crate::spell_cast::history_now(run.app.world()),
         at,
@@ -198,7 +229,7 @@ fn dps_parity_owner_cooldown_native_scales_cobra_cast_reduces_pending_barbed() {
         milliseconds, 2000.0,
         "actual selected native Scales milliseconds"
     );
-    assert_scales_reduction(&mut run, milliseconds / 1000.0);
+    assert_scales_reduction(&mut run, milliseconds / 1000.0, false);
 }
 
 #[test]
@@ -207,5 +238,23 @@ fn dps_parity_owner_cooldown_native_scales_removed_aura_keeps_pending_barbed() {
     let (mut run, _) = super::power_tests::prepare_hunter_and_pet();
     native_amount(&run, BARBED_SCALES);
     remove_native_talent(&mut run, BARBED_SCALES);
-    assert_scales_reduction(&mut run, 0.0);
+    assert_scales_reduction(&mut run, 0.0, false);
+}
+
+#[test]
+#[ignore = "native free Cobra Scales return; requires prepared253 gear/traits/current canonical"]
+fn dps_parity_owner_cooldown_native_scales_free_cobra_reduces_pending_barbed() {
+    let (mut run, _) = super::power_tests::prepare_hunter_and_pet();
+    let milliseconds = native_amount(&run, BARBED_SCALES);
+    assert_eq!(milliseconds, 2000.0);
+    assert_scales_reduction(&mut run, milliseconds / 1000.0, true);
+}
+
+#[test]
+#[ignore = "native inactive free Scales control; requires prepared253 gear/traits/current canonical"]
+fn dps_parity_owner_cooldown_native_scales_removed_aura_keeps_free_cobra_pending_barbed() {
+    let (mut run, _) = super::power_tests::prepare_hunter_and_pet();
+    native_amount(&run, BARBED_SCALES);
+    remove_native_talent(&mut run, BARBED_SCALES);
+    assert_scales_reduction(&mut run, 0.0, true);
 }
