@@ -1,10 +1,51 @@
 //! Native Feral bindings under qualification; literal controller not wired yet.
 mod bindings;
+mod facts;
 
 #[cfg(test)]
 mod tests {
     use super::super::*;
     use server::simc_apl::Facts;
+
+    #[test]
+    #[ignore = "requires exact spec103 profile/traits and native private DB"]
+    fn feral_literal_native_spell_targets_follow_actual_area_recipients() {
+        let mut run = prepare(103, 3).unwrap();
+        engage(&mut run);
+        let bindings = super::bindings::build(run.app.world(), run.actor).unwrap();
+        let encounter = crate::simc_apl_native::Encounter::Fixture {
+            started_at: crate::spell_cast::now(run.app.world()),
+            duration: 300.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        };
+        {
+            let facts = super::facts::FeralFacts::read(
+                run.app.world_mut(),
+                run.actor,
+                &bindings,
+                encounter,
+                &run.targets,
+            )
+            .unwrap();
+            assert_eq!(facts.value("spell_targets.swipe_cat").unwrap(), 3.0);
+            assert_eq!(facts.value("spell_targets.primal_wrath").unwrap(), 3.0);
+        }
+        run.app
+            .world_mut()
+            .get_mut::<shared::components::Position>(run.targets[2])
+            .unwrap()
+            .x = 1000.0;
+        let facts = super::facts::FeralFacts::read(
+            run.app.world_mut(),
+            run.actor,
+            &bindings,
+            encounter,
+            &run.targets,
+        )
+        .unwrap();
+        assert_eq!(facts.value("spell_targets.swipe_cat").unwrap(), 2.0);
+        assert_eq!(facts.value("spell_targets.primal_wrath").unwrap(), 2.0);
+    }
 
     fn apply_native_dot(run: &mut Run, spell_id: u32) {
         crate::auras::apply_aura(
