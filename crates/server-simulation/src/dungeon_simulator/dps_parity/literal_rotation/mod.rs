@@ -111,7 +111,9 @@ impl Driver {
         let mut usable = |action: &Action| {
             Ok(prepared.permits_row(action)?
                 && facts.target_ready(action)?
-                && prepared.execution(action, equipment)?.is_some())
+                && prepared
+                    .execution_in(action, equipment, &self.program)?
+                    .is_some())
         };
         let action = if list == "precombat" {
             self.program.select_next(
@@ -129,7 +131,7 @@ impl Driver {
             return Ok(None);
         };
         let execution = prepared
-            .execution(&action, equipment)?
+            .execution_in(&action, equipment, &self.program)?
             .ok_or("selected literal action lost native readiness")?;
         Ok(Some((action, execution)))
     }

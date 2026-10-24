@@ -90,6 +90,13 @@ impl Program {
         Ok(())
     }
 
+    /// Source declarations for native adapters whose policy depends on other rows.
+    pub fn actions(&self) -> impl Iterator<Item = (&str, &Action)> {
+        self.lists
+            .iter()
+            .flat_map(|(list, rules)| rules.iter().map(move |rule| (list.as_str(), &rule.action)))
+    }
+
     pub fn state(&self) -> Variables {
         Variables {
             values: self.defaults.clone(),

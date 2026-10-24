@@ -154,6 +154,28 @@ impl Prepared {
             .is_some_and(|power| *power == resource))
     }
 
+    pub fn execution_in(
+        &self,
+        action: &Action,
+        equipment: &Equipment,
+        program: &server::simc_apl::Program,
+    ) -> Result<Option<Execution>, String> {
+        if action.name != "use_items" {
+            return self.execution(action, equipment);
+        }
+        for slot in equipment.use_items_slots(action, program)? {
+            let singular = Action {
+                name: "use_item".into(),
+                target: action.target,
+                options: [("slot".into(), slot.into())].into(),
+            };
+            if let Some(execution) = self.execution(&singular, equipment)? {
+                return Ok(Some(execution));
+            }
+        }
+        Ok(None)
+    }
+
     pub fn execution(
         &self,
         action: &Action,
