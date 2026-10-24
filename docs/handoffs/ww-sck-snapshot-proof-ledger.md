@@ -1,6 +1,6 @@
 # Windwalker Unbroken Rhythm SCK snapshot
 
-Approved2026-10-24: `SIMC_WW_UNBROKEN_RHYTHM_SCK_SNAPSHOT_CONSUMPTION`. Separate `ww-sck-snapshot` from current origin/master13d2f9633; local mastera5a5af6d3 was stale and corrected before any code edits. Flurry889cfbf6c and cone8aa2465f2 remain frozen for their own lead gates.
+Approved2026-10-24: `SIMC_WW_UNBROKEN_RHYTHM_SCK_SNAPSHOT_CONSUMPTION`. Created `ww-sck-snapshot` from origin/master13d2f9633 after correcting stale local mastera5a5af6d3 before edits. Requested origin/master4996e5967 merge is b2aeff202; only wiki-index conflict, both entries retained. Cone gatecb1099 is landed in that base; Flurry889cfbf6c remains separate/frozen.
 
 ## Source contract
 
@@ -14,8 +14,8 @@ Machine-readable exact excerpts/rows: `game-engine/data/diagnostics/ww-parity-20
 
 | Boundary | Baseline b288c1abd | Current qualification |
 |---|---|---|
-| Earned1297033 consumed once at parent | Genuine RED: buff remains before the first tick | GREEN at7331708ee; one ordinary removal |
-| Actual damage on every real107270 tick | Genuine RED: native60% earned bonus requires38167 before armor, actual23854 | GREEN at7331708ee; all4 actual ticks retain1.6 effectiveness |
+| Earned1297033 consumed once at parent | Genuine RED: buff remains before the first tick | GREEN atb2aeff202; one ordinary removal |
+| Actual damage on every real107270 tick | Genuine RED: native60% earned bonus requires38167 before armor, actual23854 | GREEN atb2aeff202; all4 actual ticks retain1.6 effectiveness |
 | No-earned parent while native ticks earn new live stacks | PASS, real Chi and native20s expiry | Retained GREEN; all4 ticks stay unboosted |
 | Later parent must not reuse earlier earned amount | PASS, real first channel then native expiry and real second cast | Retained GREEN; all4 later ticks stay unboosted |
 | Producer remains effective after consumption | First case continues to real tick-driven re-earning after the failed consumption assertion | GREEN: new live native stacks return during real ticks |
@@ -23,7 +23,9 @@ Machine-readable exact excerpts/rows: `game-engine/data/diagnostics/ww-parity-20
 
 Baseline native2RED/2controlsPASS takes14.65s; build470.32s/zero warnings. Tests earn resources/stacks from actual Tiger Palm, observe native expiry, and compare resolved damage against observed native inputs/unaffected source/target products. Crit, variance, armor and legal misses are not rerolled. No fixture aura, stack, power, stat or coefficient grants.
 
-At7331708ee all4 unchanged native cases pass in17.43s; compile778.79s/zero warnings. First earned tick now resolves38167 before armor and27714 actual damage, with the requested1.6 scalar. All four earned tick observations are1.6 within native rounding; no-earned/later-parent observations remain1.0 despite native re-earning. Proof summary: `sck-7331708ee-native-proof-summary.json`; binary SHA-256 `4b39f55dc6fb0f1e2c41ba3520fd4ff0832e2f645dcccea088320fd2d2f05bbf`. No production source changes follow this proof; full lead gate remains separate.
+At7331708ee all4 unchanged native cases pass in17.43s; compile778.79s/zero warnings. First earned tick now resolves38167 before armor and27714 actual damage, with the requested1.6 scalar. All four earned tick observations are1.6 within native rounding; no-earned/later-parent observations remain1.0 despite native re-earning. Proof summary: `sck-7331708ee-native-proof-summary.json`; binary SHA-256 `4b39f55dc6fb0f1e2c41ba3520fd4ff0832e2f645dcccea088320fd2d2f05bbf`. This is the pre-merge qualification.
+
+After the requested4996e5967 merge, b2aeff202 retains all4 unchanged native cases GREEN in19.23s; build580.25s/zero warnings, fmt check0. All12 observed tick results retain the same earned1.6/no-earned1.0/later-parent1.0 factors and actual damage as before merge. Current binary SHA-256 `9d2c0d4063fe9a4a4c91a630e1f5d31f0d7f2b512df878c1eaf7b37d64563523`; `sck-b2aeff202-native-proof-summary.json` links exact factors. Only proof documentation follows this qualification; the full lead gate remains separate.
 
 ## Implementation representation
 
@@ -35,4 +37,4 @@ Native producer, flags, periods, coefficients, AP and target counts are unchange
 
 ## Proof artifacts
 
-`game-engine/data/diagnostics/ww-parity-2026-10-23/`: `sck-red-b288c1abd.build*`, `native-ww-sck-red-b288c1abd/`, `sck-green-7331708ee.build*`, `native-ww-sck-green-7331708ee/`, `sck-7331708ee-native-proof-summary.json`, source packet and task-local `sck_native_ops.py`. Each native runtime has its own current read-only SQLite backup, exact inputs/binary hashes, argv/environment and complete combined logs. Initial c69 admission exhausted ten HOLD samples before compilation; no native execution occurred at that revision. Builds/tests use admitted `agent-run ww-sck-snapshot` with-j2. No worker push or spawned agents.
+`game-engine/data/diagnostics/ww-parity-2026-10-23/`: `sck-red-b288c1abd.build*`, `native-ww-sck-red-b288c1abd/`, `sck-green-7331708ee.build*`, `native-ww-sck-green-7331708ee/`, `sck-7331708ee-native-proof-summary.json`, `sck-merged-b2aeff202.build*`, `native-ww-sck-merged-b2aeff202/`, `sck-b2aeff202-native-proof-summary.json`, merged format/readability receipts, source packet and task-local `sck_native_ops.py`. Each native runtime has its own current read-only SQLite backup, exact inputs/binary hashes, argv/environment and complete combined logs. Initial c69 admission exhausted ten HOLD samples before compilation; no native execution occurred at that revision. Builds/tests use admitted `agent-run ww-sck-snapshot` with-j2. No worker push or spawned agents.
