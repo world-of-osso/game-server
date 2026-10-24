@@ -434,6 +434,7 @@ fn load_aura_options(
             let procs_per_minute_id = uint(r, 5)?;
             Ok(SpellAuraOptions {
                 proc_definition_source: None,
+                proc_entry: None,
                 cumulative_aura: uint(r, 1)?,
                 proc_category_recovery_ms: sint(r, 2)?,
                 proc_chance: uint(r, 3)?,

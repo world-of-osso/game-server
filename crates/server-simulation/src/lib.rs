@@ -10,3 +10,4 @@ use server::{
 };
 
 mod dungeon_simulator;
+mod proc_value_tests;
