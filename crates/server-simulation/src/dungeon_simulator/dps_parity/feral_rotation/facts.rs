@@ -9,6 +9,8 @@ use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
 
 pub(super) struct FeralFacts<'a> {
     native: NativeFacts<'a>,
+    world: &'a World,
+    actor: Entity,
     area_targets: BTreeMap<&'static str, f64>,
 }
 
@@ -34,6 +36,8 @@ impl<'a> FeralFacts<'a> {
         Ok(Self {
             native: NativeFacts::new(world, actor, bindings, encounter, targets.len())
                 .with_targets(targets.first().copied(), targets),
+            world,
+            actor,
             area_targets,
         })
     }
@@ -58,6 +62,11 @@ impl Facts for FeralFacts<'_> {
 
 impl ActionFacts for FeralFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
+        if action.name == "ferocious_bite" && name == "maximum_energy" {
+            return server::spell_cast::read_ferocious_bite_maximum_energy(self.world, self.actor)
+                .map(f64::from)
+                .map_err(|error| format!("native Bite maximum Energy: {error:?}"));
+        }
         if name == "spell_targets" || name.starts_with("spell_targets.") {
             return self.value(name);
         }

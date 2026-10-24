@@ -5,7 +5,10 @@ use bevy::prelude::*;
 use shared::components::PowerType;
 
 use super::{effects, powers};
-use crate::{auras::ActiveAuras, spell_info::SpellInfo};
+use crate::{
+    auras::ActiveAuras,
+    spell_info::{SpellInfo, SpellStore},
+};
 
 const FEROCIOUS_BITE: u32 = 22_568;
 const INCARNATION: u32 = 102_543;
@@ -25,16 +28,7 @@ fn incarnation_multiplier(world: &World, caster: Entity) -> f32 {
     1.0 + amount / 100.0
 }
 
-/// Native22568 is immediate: capture after ordinary payment, before any hit effect.
-/// Keep the real coefficients and use the existing cast-only effectiveness field.
-pub(super) fn snapshot<'s>(
-    world: &World,
-    caster: Entity,
-    source: &'s SpellInfo,
-) -> Cow<'s, SpellInfo> {
-    if source.id != FEROCIOUS_BITE {
-        return Cow::Borrowed(source);
-    }
+fn extra_energy_cap(world: &World, caster: Entity, source: &SpellInfo) -> f32 {
     let burn = source
         .effects
         .iter()
@@ -46,6 +40,35 @@ pub(super) fn snapshot<'s>(
         maximum > 0.0,
         "native Ferocious Bite requires a positive extra-Energy cap"
     );
+    maximum
+}
+
+/// Actual modified Energy cost plus native extra cap, independent of affordability.
+/// Reads the same numeric cost producer as spell_costs; never spends or fills a pool.
+pub fn read_maximum_energy(world: &World, caster: Entity) -> Result<f32, super::CastFailure> {
+    let spell = world
+        .resource::<SpellStore>()
+        .get(FEROCIOUS_BITE)
+        .ok_or(super::CastFailure::UnknownSpell)?;
+    let energy = super::applicable_costs(world, caster, spell)?
+        .into_iter()
+        .filter(|(pool, _, _)| *pool == super::CostPool::Power(PowerType::Energy))
+        .map(|(_, amount, _)| amount)
+        .sum::<f32>();
+    Ok(energy + extra_energy_cap(world, caster, spell))
+}
+
+/// Native22568 is immediate: capture after ordinary payment, before any hit effect.
+/// Keep the real coefficients and use the existing cast-only effectiveness field.
+pub(super) fn snapshot<'s>(
+    world: &World,
+    caster: Entity,
+    source: &'s SpellInfo,
+) -> Cow<'s, SpellInfo> {
+    if source.id != FEROCIOUS_BITE {
+        return Cow::Borrowed(source);
+    }
+    let maximum = extra_energy_cap(world, caster, source);
     let energy =
         powers::power_value(world, caster, PowerType::Energy).map_or(0.0, |(current, _)| current);
     let mut spell = source.clone();

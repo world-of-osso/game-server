@@ -36,9 +36,17 @@ Fact dependencies:
 - dot/action persistent multipliers:14775 owns the shared snapshot/API (frozen RED2bc981067); Feral eligibility stays separate. No new persistent snapshot fields here.
 - 14781: prev_gcd lands with hs1063 and reads successful GCD root identities through action bindings. Exact consumers are prev_gcd.1.rip, prev_gcd.1.ferocious_bite and prev_gcd.1.primal_wrath. Pending additions: buff.clearcasting.react, buff.tigers_fury.duration and action.convoke_the_spirits.execute_time.
 
+## Native Bite maximum-Energy reader
+
+Parent approved exactly one public read-only native reader: actual modified22568 Energy cost plus its existing extra-Energy cap. At test-onlyd987d0c69, the real selected-profile `maximum_energy` request fails with unknown native operand: genuine1FAIL10.69s, clean5m12s build (`bite-maximum-energy-red/`). The case also defines the native391882 cost-modifier control and checks repeated reads preserve all pools/history; no proc generation is inferred.
+
+`spell_costs` delegates numeric calculation to `applicable_costs`, then checks affordability. The reader reuses that same numeric producer directly, so low current Energy/CP does not prevent reading the cost. The exact existing cap computation is extracted once and shared with Bite's existing damage snapshot; no new formula or pool mutation. `spell_cast::read_ferocious_bite_maximum_energy` is the single cross-crate public export; the implementation module stays private. Feral action facts delegate to it only for the proposed Bite action.
+
+Existing Bite tests are unchanged. Incarnation native-versus-SimC maximum-Energy semantics stay an explicit gap; this is a native numeric reader, not a reference-policy override. GREEN pending.
+
 ## Full literal source consumer
 
-Development ae6c03e62 merges exact master1fb0230ad, retaining canonical generic FIRST/floor/pool/precombat and readonly-max APIs plus the approved min/max operators. `feral_rotation/source.rs` loads the unchanged74row profile through shared `Program`; it validates only this adapter's declared actions/options, never interprets expressions or rewrites priorities. Native finisher/builder selection tests with concrete facts are pending. The native driver is still unwired; persistent multiplier, CP-prepared refresh and remaining published fact dependencies stay explicit.
+Development ae6c03e62 merges exact master1fb0230ad, retaining canonical generic FIRST/floor/pool/precombat and readonly-max APIs plus the approved min/max operators. `feral_rotation/source.rs` loads the unchanged74row profile through shared `Program`; it validates only this adapter's declared actions/options, never interprets expressions or rewrites priorities. Concrete source-order finisherRip/builderRake decisions pass2cases0.00s at20eb39646; canonical merged generic reporters pass4cases0.00s. Source build wrapper614.49s, `literal-source-consumer/` preserves command/exit/count receipts. No DB fixture is required by these pure decision tests, and they do not certify native action execution. The native driver is still unwired; persistent multiplier, CP-prepared refresh and remaining published fact dependencies stay explicit.
 
 The clean Rake branch394369da5 is frozen and parent-owned (rk1097); it does not depend on this development merge or source consumer.
 
