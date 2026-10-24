@@ -1,3 +1,7 @@
+## 2026-10-23 — Follower budget regression boundaries
+
+[Native amount/passive stages](investigations/follower-data.md#expected-primary-budget-policy--2026-10-22): pb1031 repair preserves primary budgets, coefficients and child/tick counts. TC a352b1fa periodic application rounds after unpaid carry, then tick ingress reads an integer before bonuses; native Wizardry acts after primary budget. Authentic three-target training-dummy lifetime preserves overload legality. Genuine rolling RED7vs8 precedes repair543b6bc06: exact4 plus12affected controls pass18.13s;8opt-in crit cases ignored, full gate pending. No healer decision changes.
+
 ## 2026-10-22 — Approved follower expected-primary budget
 
 [Policy](investigations/follower-data.md#expected-primary-budget-policy--2026-10-22): explicit project interpretation of70448 default ExpectedStat primary, no Retail follower-gear claim. Genuine two-case RED90b7a757d precedes level-driven shared gear-primary delta; HP/resources/secondary/mastery/pets/player refresh unchanged. GREEN and paired Azure70/Stockade32 seed1 controls remain pending.

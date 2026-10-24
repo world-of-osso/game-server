@@ -1,4 +1,4 @@
-- [Follower expected-primary policy](investigations/follower-data.md#expected-primary-budget-policy--2026-10-22) — approved named budget through ordinary primary inputs; real35/70 RED, GREEN/paired simulator gates pending; not Retail gear, HP/secondary unchanged.
+- [Follower expected-primary policy](investigations/follower-data.md#expected-primary-budget-policy--2026-10-22) — approved primary-input budget, native Wizardry and periodic amount stages; genuine RED then16targeted PASS/8ignored, historical Stockade pair complete, full gate pending; not Retail gear, HP/secondary unchanged.
 
 
 - [Devastation Giantkiller policy](investigations/follower-data.md#devastation-giantkiller-policy--2026-10-22) — actual native mastery4RED→4GREEN25.40s atf50689cfa; health floor, Tyranny and other-family controls pass. Fresh ST/3T and literal APL remain open.
