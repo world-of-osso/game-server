@@ -185,6 +185,7 @@ const PENANCE: u32 = 47_540;
 const PENANCE_DAMAGE_CHANNEL: u32 = 47_758;
 const PENANCE_HEAL_CHANNEL: u32 = 47_757;
 const COBRA_SHOT: u32 = 193_455;
+const BARBED_SCALES: u32 = 469_880;
 const KILL_COMMAND: u32 = 34_026;
 const BLACKOUT_KICK: u32 = 100_784;
 const BLACKOUT_KICK_RANK_TWO: u32 = 261_917;
@@ -987,6 +988,21 @@ fn blackout_kick(world: &mut World, caster: Entity, _target: Entity, _depth: u8)
             reduce_cooldown(world, caster, spell, f64::from(milliseconds) / 1000.0);
         }
     }
+}
+
+/// Native469880 names Cobra CAST and its millisecond reduction; SimC76f8118
+/// hunter4963-4964 includes free background Cobra, before missile impact.
+pub(super) fn reduce_barbed_scales(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if spell.id != COBRA_SHOT || !crate::auras::has_aura(world, caster, BARBED_SCALES) {
+        return;
+    }
+    let milliseconds = script_effect_value(world, caster, BARBED_SCALES, 0);
+    reduce_cooldown(
+        world,
+        caster,
+        batch20::BARBED_SHOT,
+        f64::from(milliseconds) / 1000.0,
+    );
 }
 
 /// Retail 193455: "Reduces the cooldown of Kill Command by $s3 sec."

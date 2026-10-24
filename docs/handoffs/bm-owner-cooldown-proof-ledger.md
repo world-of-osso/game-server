@@ -6,9 +6,9 @@
 |---|---|
 | Actual Austin BW restores selected active193532 native count1 after real Barbed spend | RED5b/e164: full2→spent1, after1 vs2 expected, elapsed1.25s, no intervening Barbed; GREEN9a03: after2 |
 | Actual Scent removal suppresses return | PASS before/after; after1, same actual successful BW/clock |
-| FULL_MASK free Cobra +active469880 reduces pending Barbed by native2000ms at cast | Genuine RED5b/e164:14.609 remains14.609 versus12.609 expected, before next frame; real free Focus unchanged; implementation not started |
+| FULL_MASK free Cobra +active469880 reduces pending Barbed by native2000ms at cast | Genuine RED5b/e164:14.609 remains14.609 versus12.609 expected, before next frame; real free Focus unchanged; shared-launch implementation pendingGREEN |
 | Actual Scales removal suppresses free-Cobra reduction | PASS; same native free launch, pending recovery unchanged |
-| Normal Cobra Scales and absence control | BLOCKED fixture geometry/range, not gameplay RED; no cast-admission/range workaround |
+| Normal Cobra Scales and absence control | Earlier NPC geometry failures are not gameplay RED. Actual controlled native Player18505: pending13.359 unchanged vs11.359 expected; inactive controlPASS, geometry(0,0,0) unchanged |
 
 Scent9a03bcd845f219da5454e12fe4e89981858a4c9c:2GREEN19.78s; one `server-simulation --lib` build12m51. Actual native selected amount1, not assumed older2. Existing RestoreCharge owns cap and partial recovery; independent pet strike retained after the owner return. [Contract](../specs/spell-dummy-scripts.md#native-bm-owner-cooldown-returns).
 
@@ -26,6 +26,8 @@ Native runs use `agent-run dps-parity-fix`, one process/thread and the existing 
 
 ## Remaining scope
 
-Normal Scales fixture needs correct controlled-caster orchestration, not disabling native validation or teleporting units. The one-time FollowOwner removal hypothesis was falsified; parent was sent raw observations for independent diagnosis. Scent progress did not wait for that blocked case. No production Scales or movement change has been made.
+The one-time FollowOwner removal hypothesis was falsified; actual native NPC regroup reinstalls it each tick. Tests18505c7e0 instead construct a genuine controlled native Dwarf Player with pinned253 gear/traits/KnownSpells for single-Cobra mechanics, retaining actual Austin+pet/AI for Scent. No NPC-role conversion, controller stripping, teleport or native admission change. Normal/free Scales positives now both reach genuine RED with two absence controlsPASS21.30s. The specific reduction is bound at existing shared `missiles::launch` before flight for both cast kinds, reusing native pending-cooldown handling; GREEN pending. Scent progress did not wait for the earlier blocked fixture.
+
+Additional exact receipt: `owner-cooldown-scales-red-18505c7e0-{native.log,executable.json}`. The original free-cast RED remains valid, but the new four-case receipt replaces normal fixture failures as the Scales qualification boundary.
 
 Native descriptions and SimC76f8118 hunter6741–6742/4963–4964 source the returns. Selected193532/469880 rank1 have no trait effect-point overrides. KillerCobra199532 is not selected; no unearned reset. PackMentality depends on real Beast lifecycle; no fake summon callback. No stats, coefficients, rank points, timers or rotation have been tuned. Broad parent gate and whole-DPS parity remain open.

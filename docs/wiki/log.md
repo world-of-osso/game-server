@@ -1,3 +1,7 @@
+## 2026-10-23 — Barbed Scales cast-boundary reduction
+
+[Owner return](systems/spell-casting.md#native-owner-cooldown-returns-2026-10-23): actual controlled native Player normal/free Cobra both reproduce missing2s reduction; absence controlsPASS21.30s. Existing shared successful-launch path now applies native469880 through pending-cooldown reduction; GREEN pending. No hit-time shim or movement/range change.
+
 ## 2026-10-23 — Native Scent charge return
 
 [Owner cooldown boundary](systems/spell-casting.md#native-owner-cooldown-returns-2026-10-23): actual selected count1/BW after real Barbed spend reproduces missing return; absence control passes. Existing native RestoreCharge bound before independent pet strike;9a03 nativeScent2GREEN19.78s after real1.25s BW (active1→2, absent1). [Proof](../handoffs/bm-owner-cooldown-proof-ledger.md). Scales free-cast RED retained, normal fixture geometry still under investigation; no range/rotation/stat tuning.
