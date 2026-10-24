@@ -86,6 +86,63 @@ impl Equipment {
             .filter_map(move |&(name, _)| self.slots[name].on_use.map(|item| (name, item)))
     }
 
+    pub fn use_items_slots(
+        &self,
+        action: &Action,
+        program: &server::simc_apl::Program,
+    ) -> Result<Vec<&str>, String> {
+        let slots = self.requested_use_items_slots(action)?;
+        let check_existing = match action.options.get("check_existing").map(String::as_str) {
+            None | Some("1") => true,
+            Some("0") => false,
+            Some(value) => return Err(format!("unsupported use_items check_existing={value}")),
+        };
+        let excluded = if check_existing {
+            self.explicit_item_slots(program)?
+        } else {
+            BTreeSet::new()
+        };
+        Ok(slots
+            .into_iter()
+            .filter(|slot| !excluded.contains(slot))
+            .collect())
+    }
+
+    fn requested_use_items_slots(&self, action: &Action) -> Result<Vec<&str>, String> {
+        let Some(slots) = action.options.get("slots") else {
+            return Ok(self.uses().map(|(slot, _)| slot).collect());
+        };
+        slots
+            .split([':', '|'])
+            .map(|slot| {
+                self.slots
+                    .get_key_value(slot)
+                    .map(|(key, _)| key.as_str())
+                    .ok_or_else(|| format!("unknown native use_items slot {slot}"))
+            })
+            .collect()
+    }
+
+    fn explicit_item_slots<'a>(
+        &'a self,
+        program: &server::simc_apl::Program,
+    ) -> Result<BTreeSet<&'a str>, String> {
+        let mut slots = BTreeSet::new();
+        for (list, action) in program
+            .actions()
+            .filter(|(_, action)| action.name == "use_item")
+        {
+            // SimC10397–10432: a named precombat use does not exclude later proxies.
+            if list == "precombat" && action.options.contains_key("name") {
+                continue;
+            }
+            if let Some(slot) = self.slot_for_action(action)? {
+                slots.insert(slot);
+            }
+        }
+        Ok(slots)
+    }
+
     pub fn slot_for_action(&self, action: &Action) -> Result<Option<&str>, String> {
         if let Some(slot) = action.options.get("slot") {
             return self

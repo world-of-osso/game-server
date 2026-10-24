@@ -1,5 +1,7 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
+mod composite_precombat_tests;
 mod dummy_reference_tests;
+mod elemental_ascendance_tests;
 mod engagement_tests;
 mod equipment_input_tests;
 mod equipped_set_tests;
@@ -13,10 +15,16 @@ mod pet_child_tests;
 mod pet_melee_tests;
 mod pet_stats_tests;
 mod player_rotation;
+mod poison_precombat_tests;
 mod power_tests;
+mod precombat_tests;
+mod preparation;
+mod profile_initialization;
 mod report;
 mod ret_empyrean_tests;
 mod ret_purpose_tests;
+#[cfg(test)]
+mod ret_rotation;
 mod ret_tier_tests;
 pub(crate) mod single_spell;
 mod warrior_stat_tests;
@@ -174,7 +182,60 @@ fn prepare(spec_id: u32, count: usize) -> Result<Run, String> {
     prepare_reference(profile, &traits, count, identity)
 }
 
+/// Capture the explicit literal controller before any native setup frame.
+fn prepare_literal(spec_id: u32, count: usize) -> Result<Run, String> {
+    let (profile, traits) = read_reference(spec_id)?;
+    let identity = inputs::read_actor(&profile)?;
+    prepare_literal_reference(profile, &traits, count, identity)
+}
+
+fn prepare_literal_reference(
+    profile: inputs::Profile,
+    traits: &[inputs::AllocatedTrait],
+    count: usize,
+    identity: crate::followers::simulator::ParityActor,
+) -> Result<Run, String> {
+    let mut run = spawn_reference(profile, traits, count, identity)?;
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: f64::from(TICKS) / 20.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter)?;
+    preparation::warm_up_reference(&mut run)?;
+    Ok(run)
+}
+
+fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
+    let (profile, traits) = read_reference(spec_id)?;
+    let identity = inputs::read_actor(&profile)?;
+    if spec_id == 269
+        && matches!(
+            &identity,
+            crate::followers::simulator::ParityActor::Follower
+        )
+    {
+        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
+        preparation::prepare_windwalker_precombat(&mut run)?;
+        Ok(run)
+    } else {
+        prepare_reference(profile, &traits, count, identity)
+    }
+}
+
 fn prepare_reference(
+    profile: inputs::Profile,
+    traits: &[inputs::AllocatedTrait],
+    count: usize,
+    identity: crate::followers::simulator::ParityActor,
+) -> Result<Run, String> {
+    let mut run = spawn_reference(profile, traits, count, identity)?;
+    preparation::start_configured_native_pet(&mut run)?;
+    preparation::warm_up_reference(&mut run)?;
+    Ok(run)
+}
+
+fn spawn_reference(
     profile: inputs::Profile,
     traits: &[inputs::AllocatedTrait],
     count: usize,
@@ -199,13 +260,11 @@ fn prepare_reference(
     )?;
     inputs::equip(app.world_mut(), actor, &profile)?;
     inputs::install_traits(app.world_mut(), actor, traits)?;
+    profile_initialization::initialize_declared_powers(app.world_mut(), actor, &profile)?;
     let targets = spawn_targets(&mut app, actor, count)?;
     let target_waves = vec![
         json!({"at": 0.0, "entities": targets.iter().map(|unit| unit.to_bits()).collect::<Vec<_>>()}),
     ];
-    for _ in 0..4 {
-        app.update();
-    }
     let is_player = app
         .world()
         .get::<shared::components::Player>(actor)
@@ -251,10 +310,15 @@ fn engage(run: &mut Run) {
         crate::networking::CombatTarget(Some(run.targets[0])),
         crate::combat::AutoAttack::new(run.targets[0]),
     ));
-    world
-        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-        .0
-        .clear();
+    if world
+        .get::<literal_rotation::LiteralParityFixture>(run.actor)
+        .is_none()
+    {
+        world
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
+    }
     engage_fixture_opponents(run);
 }
 
@@ -390,17 +454,6 @@ fn advance_combat_observed(
             run.profile.spec_id,
             start_time,
         )?);
-    } else if run.profile.spec_id == 269 {
-        let encounter = crate::simc_apl_native::Encounter::Fixture {
-            started_at: start_time,
-            duration: f64::from(TICKS) / 20.0,
-            style: crate::simc_apl_native::FightStyle::Patchwerk,
-        };
-        run.windwalker_rotation = Some(windwalker_rotation::Rotation::load(
-            run.app.world_mut(),
-            run.actor,
-            encounter,
-        )?);
     }
     let mut buffs = BTreeMap::new();
     let mut samples = vec![report::engagement(run.app.world(), run.actor, &run.targets)];
@@ -446,7 +499,7 @@ fn drive_player(run: &mut Run) -> Result<(), String> {
 
 fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     let _seed_scope = crate::random::seed_scope(70_448);
-    let mut run = prepare(spec_id, count)?;
+    let mut run = prepare_measurement(spec_id, count)?;
     let before = report::stats(run.app.world(), run.actor);
     let targets = target_snapshot(&run);
     engage(&mut run);
