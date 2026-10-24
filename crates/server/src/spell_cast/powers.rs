@@ -71,7 +71,7 @@ impl PowerTypeTable {
         self.powers.get(&power)
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn fixture(infos: impl IntoIterator<Item = PowerTypeInfo>) -> Self {
         Self {
             powers: infos.into_iter().map(|info| (info.power, info)).collect(),
@@ -89,7 +89,7 @@ impl PowerTypeTable {
     }
 
     /// TC Creature::SelectLevel / Unit::SetPowerType(onInit): native class Energy.
-    pub(crate) fn initial_creature_energy(&self, class_id: u8) -> Option<PowerPools> {
+    pub fn initial_creature_energy(&self, class_id: u8) -> Option<PowerPools> {
         let power = self.display_power(class_id)?;
         if power != PowerType::Energy {
             return None;
@@ -1179,7 +1179,7 @@ pub(super) fn regenerate_creature_mana(
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[test]
 fn idle_health_regen_full_population_is_bounded() {
     let mut app = App::new();

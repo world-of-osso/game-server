@@ -29,14 +29,21 @@ fn prepare_austin() -> Run {
         run.actor,
         SNAKESKIN_QUIVER
     ));
+    let native_chance = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == SNAKESKIN_QUIVER)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
     assert_eq!(
-        crate::spell_cast::scripts::script_effect_value(
-            run.app.world(),
-            run.actor,
-            SNAKESKIN_QUIVER,
-            0
-        ),
-        15.0,
+        native_chance, 15.0,
         "native70448 learned Snakeskin chance, not a forced proc"
     );
     run.app.init_resource::<ObservedTriggeredCasts>();

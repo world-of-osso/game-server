@@ -36,7 +36,7 @@ fn own_stacks(world: &World, caster: Entity, spell: u32) -> u8 {
         .map_or(0, |aura| aura.stacks.max(1))
 }
 
-pub(crate) fn start(world: &mut World, caster: Entity) {
+pub fn start(world: &mut World, caster: Entity) {
     let usage = TRACKED
         .iter()
         .map(|&(spell, talent)| {
@@ -118,7 +118,7 @@ pub(super) fn spent_stack(world: &mut World, target: Entity, caster: Entity, spe
     record_loss(world, target, caster, spell, 1, RemoveReason::Consumed);
 }
 
-pub(crate) fn snapshot(world: &World) -> serde_json::Value {
+pub fn snapshot(world: &World) -> serde_json::Value {
     let probe = world.resource::<AuraObservations>();
     let rows: BTreeMap<_, _> = probe
         .usage

@@ -211,9 +211,12 @@ pub(super) fn gaps(profile: &super::inputs::Profile, is_player: bool) -> Vec<Str
     );
     for item in &profile.equipment {
         gaps.extend(
-            item.options.iter().map(|(key, value)| {
-                format!("ITEM_OPTION_UNMODELED:{}:{key}={value}", item.item_id)
-            }),
+            item.options
+                .iter()
+                .filter(|(key, _)| key.as_str() != "redirected_base_stats")
+                .map(|(key, value)| {
+                    format!("ITEM_OPTION_UNMODELED:{}:{key}={value}", item.item_id)
+                }),
         );
     }
     gaps

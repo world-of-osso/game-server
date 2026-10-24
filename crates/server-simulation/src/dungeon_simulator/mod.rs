@@ -7,7 +7,7 @@ pub(crate) mod dps_parity;
 mod graph;
 mod healer_benchmark_tests;
 mod healer_coefficient_tests;
-pub(crate) mod healer_intake;
+pub(crate) use server::test_support::healer_intake;
 mod healer_intake_tests;
 mod healer_metrics;
 mod healer_metrics_tests;

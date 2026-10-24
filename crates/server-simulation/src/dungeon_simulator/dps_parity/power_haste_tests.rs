@@ -418,10 +418,17 @@ fn dps_parity_power_haste_unflagged_rage_at_center_has_no_phantom_gain() {
         .unwrap();
     assert_eq!(pool.current, info.center_power as f32);
     assert_eq!(pool.regen_per_sec, 0.0);
-    assert_eq!(
-        crate::spell_cast::powers::potential_power_regen(world, h.caster, PowerType::Rage),
-        Some(0.0)
-    );
+    let bindings = Bindings {
+        resources: BTreeMap::from([("rage".to_owned(), PowerType::Rage)]),
+        ..Default::default()
+    };
+    let encounter = Encounter::Fixture {
+        started_at: world.resource::<Time>().elapsed_secs_f64(),
+        duration: 300.0,
+        style: FightStyle::Patchwerk,
+    };
+    let facts = NativeFacts::new(world, h.caster, &bindings, encounter, 1);
+    assert_eq!(facts.value("rage.regen").unwrap(), 0.0);
 }
 
 #[test]

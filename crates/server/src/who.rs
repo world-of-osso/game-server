@@ -6,14 +6,13 @@ use shared::protocol::{QueryWho, WhoChannel, WhoCharacterSnapshot, WhoSnapshot, 
 use crate::auth::{Authenticated, InWorld};
 
 #[cfg(test)]
-use std::sync::{
-    Mutex,
-    atomic::{AtomicUsize, Ordering},
-};
+use std::sync::Mutex;
+#[cfg(any(test, feature = "test-support"))]
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub struct WhoPlugin;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 static ONLINE_ROSTER_MATERIALIZATIONS: AtomicUsize = AtomicUsize::new(0);
 #[cfg(test)]
 static ONLINE_ROSTER_TEST_LOCK: Mutex<()> = Mutex::new(());
@@ -74,7 +73,7 @@ fn drain_latest_queries(receivers: &mut WhoQueryReceivers) -> Vec<(Entity, Query
 fn collect_online_entries(
     players: &Query<(&Player, &Level, Option<&Zone>)>,
 ) -> Vec<WhoCharacterSnapshot> {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     ONLINE_ROSTER_MATERIALIZATIONS.fetch_add(1, Ordering::SeqCst);
 
     players

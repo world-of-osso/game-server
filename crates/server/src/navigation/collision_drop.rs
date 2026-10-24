@@ -17,7 +17,7 @@ enum Phase {
 }
 
 #[derive(Component)]
-pub(crate) struct CollisionDropMovement {
+pub struct CollisionDropMovement {
     map: InMap,
     landing: Vec3,
     phase: Phase,

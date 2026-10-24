@@ -64,7 +64,7 @@ pub(crate) struct DeathServerState {
 pub struct DeathPlugin;
 
 /// Per-App death-transition work counters, so parallel tests don't share them.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[derive(Resource, Debug, Default, PartialEq)]
 pub(crate) struct DeathTransitionCounters {
     players_visited: usize,
@@ -75,7 +75,7 @@ impl Plugin for DeathPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<PlayerDeathTransition>();
         app.init_resource::<DeathServerState>();
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         app.init_resource::<DeathTransitionCounters>();
         app.add_systems(PostStartup, load_graveyards_from_world_data);
         // SelectCharacter spawns during Update. Restore legacy corpses and send
