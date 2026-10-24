@@ -4,6 +4,7 @@ mod dummy_reference_tests;
 mod engagement_tests;
 mod equipment_input_tests;
 mod fire_literal_tests;
+mod fire_rotation;
 mod firestarter_tests;
 mod haste_tests;
 mod inputs;
@@ -41,6 +42,7 @@ struct Run {
     gaps: Vec<String>,
     player_rotation: Option<player_rotation::PlayerRotation>,
     windwalker_rotation: Option<windwalker_rotation::Rotation>,
+    fire_rotation: Option<fire_rotation::Rotation>,
 }
 
 fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, String> {
@@ -148,6 +150,13 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
         preparation::prepare_windwalker_precombat(&mut run)?;
         Ok(run)
+    } else if spec_id == 63
+        && matches!(
+            &identity,
+            crate::followers::simulator::ParityActor::Player { .. }
+        )
+    {
+        prepare_literal_reference(profile, &traits, count, identity)
     } else {
         prepare_reference(profile, &traits, count, identity)
     }
@@ -210,6 +219,7 @@ fn spawn_reference(
         gaps,
         player_rotation: None,
         windwalker_rotation: None,
+        fire_rotation: None,
     })
 }
 
@@ -288,17 +298,31 @@ fn apply_fixed_time_target_health(run: &mut Run, tick: u32) -> Result<(), String
     Ok(())
 }
 
+fn is_fire_player(run: &Run) -> bool {
+    run.profile.spec_id == 63
+        && run
+            .app
+            .world()
+            .get::<shared::components::Player>(run.actor)
+            .is_some()
+}
+
 fn advance_combat(run: &mut Run) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>), String> {
+    if is_fire_player(run) {
+        preparation::prepare_fire_precombat(run)?;
+        engage(run);
+    }
     let start_time = run
         .app
         .world()
         .resource::<Time<Virtual>>()
         .elapsed_secs_f64();
-    if run
-        .app
-        .world()
-        .get::<shared::components::Player>(run.actor)
-        .is_some()
+    if run.fire_rotation.is_none()
+        && run
+            .app
+            .world()
+            .get::<shared::components::Player>(run.actor)
+            .is_some()
     {
         run.player_rotation = Some(player_rotation::PlayerRotation::load(
             run.profile.spec_id,
@@ -338,6 +362,9 @@ fn advance_combat(run: &mut Run) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>)
 }
 
 fn drive_player(run: &mut Run) -> Result<(), String> {
+    if let Some(rotation) = &mut run.fire_rotation {
+        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    }
     if let Some(rotation) = &mut run.player_rotation {
         rotation.drive(run.app.world_mut(), run.actor, run.targets[0])?;
     }
@@ -352,15 +379,18 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     let mut run = prepare_measurement(spec_id, count)?;
     let before = report::stats(run.app.world(), run.actor);
     let targets = target_snapshot(&run);
-    engage(&mut run);
+    if !is_fire_player(&run) {
+        engage(&mut run);
+    }
     let started = Instant::now();
     let (seconds, buff_uptimes, engagement_samples) = advance_combat(&mut run)?;
     let combat = report::combat(run.app.world(), &run.damage_targets, seconds);
     Ok(
         json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
-        "actor_kind": if run.player_rotation.is_some() { "player" } else { "follower" },
-        "driver": if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "actor_kind": if run.app.world().get::<shared::components::Player>(run.actor).is_some() { "player" } else { "follower" },
+        "driver": if run.fire_rotation.is_some() { "LITERAL_SIMC_FIRE_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
         "windwalker_rotation": run.windwalker_rotation.as_ref().map(|rotation| rotation.report()),
+        "fire_rotation": run.fire_rotation.as_ref().map(|rotation| rotation.report()),
         "assisted_decisions": run.player_rotation.as_ref().map_or(0, |rotation| rotation.decisions),
         "wall_seconds": started.elapsed().as_secs_f64(), "seed": 70448, "combat": combat,
         "target_health_policy": {"name": "SIMC_FIXED_TIME_TARGET_HEALTH", "clock": "global_fight",

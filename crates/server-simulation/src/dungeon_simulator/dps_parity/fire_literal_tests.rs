@@ -1,5 +1,5 @@
 //! Native Player boundary, not a source-shape or driver-tag assertion.
-use super::{advance_combat, prepare};
+use super::{advance_combat, prepare_literal};
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::components::Player;
 use shared::protocol::CombatLogKind;
@@ -8,7 +8,7 @@ use shared::protocol::CombatLogKind;
 #[ignore = "actual native90 Fire profile/privateDB; pinned literal precombat before300s combat"]
 fn fire_literal_native90_orders_real_precombat_casts() {
     let _seed = crate::random::seed_scope(70_448);
-    let mut run = prepare(63, 1).expect("native90 Fire profile admission");
+    let mut run = prepare_literal(63, 1).expect("native90 Fire profile admission");
     assert!(run.app.world().get::<Player>(run.actor).is_some());
     let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
     let (seconds, _, _) = advance_combat(&mut run)

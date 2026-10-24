@@ -17,17 +17,18 @@ NativePlayer63 qualification uses pinnedSimC76f8118 Fire action rows, retaining 
 ## Implementation inventory
 
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/fire_rotation/76f8118.simc` — pinned literal source data.
-- `crates/server-simulation/src/dungeon_simulator/dps_parity/mod.rs` — native qualification boundary; Fire hookup pending.
+- `crates/server-simulation/src/dungeon_simulator/dps_parity/fire_rotation/` — staged source/bindings adapter using shared Driver, Prepared, Equipment and native facts. Unsupported facts remain errors, not defaults.
+- `crates/server-simulation/src/dungeon_simulator/dps_parity/mod.rs` and `preparation.rs` — staged Player63 Fixture caller; shared poll preserves Waiting/Selected/Finished while actual App frames complete cast/GCD state. Combat clock starts after Finished; no flight-completion claim.
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/literal_rotation/` — shared Driver, Prepared and Equipment; spec-local execution is out of scope.
 
 ## Tests asserting this spec
 
 - `dps_parity/fire_literal_tests.rs`: actual native Player cast-order boundary; not yet executed.
-- Existing `dps_parity_native_bis_dummy_records_300s`: native Player ST/3T currently reach genuine SBA12616condition11 unsupported-policy refusal before combat; no DPS proof.
+- Existing `dps_parity_native_bis_dummy_records_300s`: prior native Player ST/3T stopped at SBA12616condition11 before combat. The staged caller avoids that SBA path but has not run; native/equipment fact gaps remain explicit, with no DPS proof.
 
 ## Known gaps (current cycle)
 
-- [ ] Install Fire adapter/hookup and shared ordered-precombat/options dependency, preserving all literal rows.
+- [ ] Qualify staged Fire adapter/hookup after shared ordered-precombat/options and Equipment-facts dependencies land, preserving all literal rows. No native RED/GREEN or compile acceptance is claimed for the staged caller.
 - [ ] Qualify all required native facts, including hot-streak travel count, native HP conditions and delegated generic fields.
 - [ ] Fresh combined runtime measurements and per-spell comparison after source/admission proof.
 

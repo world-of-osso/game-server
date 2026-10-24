@@ -118,6 +118,33 @@ fn setup_cast_or_gcd_active(run: &Run) -> bool {
             .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)))
 }
 
+/// Fire's caller advances the real App; Finished does not imply projectile impact.
+pub(super) fn prepare_fire_precombat(run: &mut Run) -> Result<(), String> {
+    use super::literal_rotation::PrecombatPoll;
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: f64::from(super::TICKS) / 20.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let mut rotation =
+        super::fire_rotation::Rotation::load(run.app.world_mut(), run.actor, encounter)?;
+    for _ in 0..MAX_SETUP_TICKS {
+        match rotation.poll_precombat(run.app.world_mut(), run.actor, &run.targets)? {
+            PrecombatPoll::Waiting => {}
+            PrecombatPoll::Selected { action, execution } => {
+                rotation.execute_precombat(run.app.world_mut(), run.actor, action, execution)?;
+            }
+            PrecombatPoll::Finished => {
+                rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
+                run.fire_rotation = Some(rotation);
+                return Ok(());
+            }
+        }
+        run.app.update();
+    }
+    Err("literal Fire precombat exceeded30s of native frames".into())
+}
+
 pub(super) fn prepare_windwalker_precombat(run: &mut Run) -> Result<(), String> {
     let encounter = crate::simc_apl_native::Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
