@@ -1,6 +1,14 @@
 # Elemental source/target-fact qualification
 
-Current consumer now delegates target candidates/auras/counts/refresh to pending shared861b655a3 (`with_targets`, `Bindings.dot_refresh`). Duplicate own readers were removed; this replacement awaits landing/requalification. No WIP API merged.
+Current consumer delegates target candidates/auras/counts/refresh using the pending shared861b655a3 contract (`with_targets`, `Bindings.dot_refresh`); parent now identifies dc525f641/ta1068 as the queued target tip. Duplicate own readers were removed; replacement awaits confirmed landing/API reconciliation/requalification. No WIP API merged.
+
+## Split-B staging
+
+`elemental-adapter-split-b` branches from preserved `elemental-parity-shuja@b4a269fd97f6ffad5783ed2d8f38edd1520e9fe3`. Parent-authorized merge of only confirmed masterd675bf8fb is ace6fa9d0: retain all seven added source/fixture files under `crates/server-simulation/src/dungeon_simulator/dps_parity/`, and preserve both dummy-reference and Elemental module registrations. Existing `server::simc_apl` imports and simulation server-module re-exports need no additional rewrite. Native consumer tests now belong to `-p server-simulation --lib`.
+
+ASC `elemental-asc-overload@39214162f` remains frozen for separate lead gateea1085; no ASC changes imported here. No check run: landed d675 lacks the explicitly referenced `DotRefresh`, `native_dot_spell` and `NativeFacts::with_targets` API. Parent permits at most one -j2 check under normal admission; retain that allowance until required APIs land rather than manufacture compiler-only failures. Equipmentis1061, targetta1068 and precombat14766 remain unlanded. Migration is source-layout staging, not full-consumer/native qualification.
+
+## Historical component proof
 
 Historical own implementation at735a60ac632c9b28b099f1a505ea4867196b1eda:3/3PASS15.92s, no compiler warnings. This proves source/fact components, not the full Elemental fixture driver or DPS parity.
 
