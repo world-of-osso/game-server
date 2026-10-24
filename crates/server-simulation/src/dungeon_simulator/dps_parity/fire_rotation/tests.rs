@@ -171,6 +171,47 @@ fn fire_local_native90_hot_streak_count_tracks_real_launch_actor_and_impact() {
     );
 }
 
+#[test]
+#[ignore = "ordinary native Player Meteor AT-to-missile; non-Hot-Streak pending-event control"]
+fn fire_local_native90_hot_streak_count_excludes_actual_meteor_missile() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = native_player();
+    let target = distant_target(&mut run);
+    cast_native(&mut run, 153561, target);
+    for _ in 0..60 {
+        run.app.update();
+    }
+    let admitted_missile = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .any(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(153564)
+                && event.kind == CombatLogKind::CastSuccess
+        });
+    assert!(
+        admitted_missile,
+        "actual native153564 missile must be admitted before this count control"
+    );
+    assert!(!saw_impact(&run, 351140));
+    assert_eq!(
+        value(&run, run.actor, target, "action.meteor.in_flight"),
+        Ok(1.0)
+    );
+    assert_eq!(
+        value(&run, run.actor, target, "hot_streak_spells_in_flight"),
+        Ok(0.0),
+        "a real non-HS missile must not enter the Hot Streak count"
+    );
+    for _ in 0..25 {
+        run.app.update();
+    }
+    assert!(saw_impact(&run, 351140));
+}
+
 fn wait_cast_window(run: &mut Run) {
     for _ in 0..MAX_CAST_FRAMES {
         let world = run.app.world();
