@@ -224,7 +224,7 @@ fn literal_ww_native_sck_snapshot_consumes_earned_unbroken_once() {
     let live = finish_parent(&mut run);
     assert!(
         live.iter().any(|&stacks| stacks > 0),
-        "native aura42/CAN_PROC_FROM_PROCS must still earn a new buff from real ticks"
+        "native aura42 must still earn a new buff from real NOT_A_PROC107270 ticks"
     );
     assert!(crate::auras::has_aura(run.app.world(), run.actor, PRODUCER));
 }
@@ -241,11 +241,11 @@ fn literal_ww_native_sck_snapshot_earned_bonus_is_fixed_across_every_tick() {
     let original_stacks = ((expected - 1.0) / 0.2).round() as u8;
     let live = finish_parent(&mut run);
     assert!(!live.is_empty());
+    let factors = assert_tick_damage(&run, expected, before);
     assert!(
         live.iter().any(|&stacks| stacks != original_stacks),
         "live native producer state must differ from the parent's frozen earned amount"
     );
-    let factors = assert_tick_damage(&run, expected, before);
     write_factor_receipt("sck-earned-snapshot", &factors);
 }
 
