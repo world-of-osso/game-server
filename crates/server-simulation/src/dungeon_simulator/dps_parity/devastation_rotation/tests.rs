@@ -12,6 +12,7 @@ use shared::protocol::CombatLogKind;
 const LIVING_FLAME: u32 = 361469;
 const LIVING_FLAME_DAMAGE: u32 = 361500;
 const FIRE_BREATH_DAMAGE: u32 = 357209;
+const ETERNITY_SURGE_DAMAGE: u32 = 359077;
 
 fn prepared() -> Run {
     let mut run = prepare(1467, 1).unwrap();
@@ -99,7 +100,9 @@ fn literal_dev_binding_native_living_flame_uses_actual_target_and_context() {
         .unwrap();
     for _ in 0..6000 {
         run.app.update();
-        if run.app.world().get::<CastState>(run.actor).is_none() && living_flame_hit(&run) {
+        if run.app.world().get::<CastState>(run.actor).is_none()
+            && landed_damage(&run, LIVING_FLAME_DAMAGE)
+        {
             break;
         }
     }
@@ -116,7 +119,7 @@ fn literal_dev_binding_native_living_flame_uses_actual_target_and_context() {
         && event.spell_id == Some(LIVING_FLAME)
         && event.kind == CombatLogKind::CastSuccess));
     assert!(
-        living_flame_hit(&run),
+        landed_damage(&run, LIVING_FLAME_DAMAGE),
         "native Living Flame must hit the selected target"
     );
 }
@@ -205,17 +208,71 @@ fn literal_dev_binding_native_fire_breath_preserves_enemy_context_and_self_cast(
     );
 }
 
-fn living_flame_hit(run: &Run) -> bool {
+#[test]
+#[ignore = "native exact rank1 Eternity Surge source leaf; full controller remains open"]
+fn literal_dev_binding_native_eternity_surge_selects_and_hits_the_real_enemy() {
+    let mut run = prepared();
+    let mut bindings = bindings::build();
+    let equipment = Equipment::load(run.app.world(), run.actor, &mut bindings).unwrap();
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        run.actor,
+        &run.targets,
+        &equipment,
+        [NativeAction {
+            name: "eternity_surge",
+            spell: bindings.actions["eternity_surge"],
+            talent: None,
+            self_target: false,
+        }],
+        false,
+    )
+    .unwrap();
+    let facts = DevFacts::new(
+        run.app.world(),
+        run.actor,
+        &bindings,
+        &equipment,
+        encounter(&run),
+        &run.targets,
+    );
+    let source = "eternity_surge,empower_to=1,target_if=max:target.health.pct";
+    let mut driver = Driver::new(Program::parse(&[("native_leaf", source)]).unwrap());
+    let (action, execution) = driver
+        .select("native_leaf", &facts, &prepared, &equipment)
+        .unwrap()
+        .expect("native source rank1 Eternity Surge must select its actual enemy");
+    assert_eq!(action.target, Some(run.targets[0].to_bits()));
+    driver
+        .execute(run.app.world_mut(), run.actor, action, execution)
+        .unwrap();
+    for _ in 0..6000 {
+        run.app.update();
+        if run.app.world().get::<CastState>(run.actor).is_none()
+            && landed_damage(&run, ETERNITY_SURGE_DAMAGE)
+        {
+            break;
+        }
+    }
+    assert!(run.app.world().get::<CastState>(run.actor).is_none());
+    assert!(
+        landed_damage(&run, ETERNITY_SURGE_DAMAGE),
+        "native rank1 release must damage the selected enemy"
+    );
+}
+
+fn landed_damage(run: &Run, spell: u32) -> bool {
     run.app
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0
         .iter()
         .any(|event| {
-            event.source == Some(run.actor.to_bits())
-                && event.target == Some(run.targets[0].to_bits())
-                && event.spell_id == Some(LIVING_FLAME_DAMAGE)
+            let actors_spell =
+                event.source == Some(run.actor.to_bits()) && event.spell_id == Some(spell);
+            let target_took_damage = event.target == Some(run.targets[0].to_bits())
                 && event.kind == CombatLogKind::Damage
-                && event.amount > 0
+                && event.amount > 0;
+            actors_spell && target_took_damage
         })
 }
