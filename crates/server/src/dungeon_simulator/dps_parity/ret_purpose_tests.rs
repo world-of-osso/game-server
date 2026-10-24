@@ -10,6 +10,8 @@ const PURPOSE: u32 = 223819;
 const FINAL_VERDICT: u32 = 383328;
 const JUDGMENT: u32 = 20271;
 const TEMPLARS_VERDICT: u32 = 85256;
+const JUDGMENT_ENERGIZE: u32 = 220637;
+const PERFECTED_GUILLOTINE: u32 = 1306624;
 
 #[derive(Resource, Default)]
 struct GuillotineProcInputs(Vec<crate::auras::procs::AuraEvent>);
@@ -267,6 +269,25 @@ fn dps_parity_ret_purpose_unselected_aura_cannot_produce_the_selected_policy_pro
         earn_finisher_power(&mut run, TEMPLARS_VERDICT);
         cast_finisher(&mut run, TEMPLARS_VERDICT);
     }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.spell_id == Some(JUDGMENT_ENERGIZE)
+                && event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.actor.to_bits())
+                && event.kind == CombatLogKind::Energize
+                && event.amount > 0),
+        "native220637 must still grant real self HolyPower"
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.spell_id == Some(PERFECTED_GUILLOTINE)
+                && event.target == Some(run.actor.to_bits())
+                && event.kind == CombatLogKind::Damage),
+        "native self Energize must never route an enemy proc back onto the actor"
+    );
     assert_eq!(purpose_applications(&run), 0);
 }
 
