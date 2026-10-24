@@ -186,6 +186,9 @@ fn encounter_coverage_kargath_native_blade_dance_damage_qualifies() {
     let (mut h, boss, _) = kargath_copy(1);
     stand_near_kargath(&mut h, boss);
     let player = h.player();
+    // Native DefenseType2 can miss. Qualify its real damage on a reproducible
+    // successful-hit branch, without changing hit chances or weapon damage.
+    let _native_hit = crate::random::seed_scope(0);
     crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30739, Some(boss), false)
         .expect("ordinary native Blade Dance");
     h.advance(0.2);

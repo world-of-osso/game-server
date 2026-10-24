@@ -3330,6 +3330,7 @@ fn push_hit_events(
             },
         );
     }
+    let mut first_harmful_hit = true;
     for target in hit {
         // Spell::DoSpellHitOnUnit (Spell.cpp:2879-2882): a spell landing on a
         // unit the caster can attack starts combat with it.
@@ -3374,7 +3375,8 @@ fn push_hit_events(
             },
         );
         if harmful {
-            elemental_overload::after_hit(world, caster, spell, target);
+            elemental_overload::after_hit(world, caster, spell, target, first_harmful_hit);
+            first_harmful_hit = false;
         }
     }
 }
