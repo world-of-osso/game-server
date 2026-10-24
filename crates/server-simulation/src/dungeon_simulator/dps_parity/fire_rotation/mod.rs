@@ -2,6 +2,8 @@
 mod bindings;
 mod facts;
 mod source;
+#[cfg(test)]
+mod tests;
 use super::literal_rotation::{
     self, Driver, PrecombatPoll,
     equipment::Equipment,
