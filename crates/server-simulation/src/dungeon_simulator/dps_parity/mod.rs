@@ -18,6 +18,7 @@ mod ret_crusading_tests;
 mod ret_empyrean_tests;
 mod ret_expurgation_tests;
 mod ret_purpose_tests;
+mod ret_resonance_tests;
 mod ret_rotation;
 mod ret_sentence_tests;
 mod ret_tier_tests;
