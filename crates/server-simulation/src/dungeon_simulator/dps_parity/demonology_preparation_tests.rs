@@ -252,7 +252,7 @@ fn dps_parity_demo_native_antoran_tyrant_uses_burning_cleave_autoattacks() {
                 && event.spell_id == Some(1264093)
                 && event.kind == CombatLogKind::Damage
         })
-        .map(|event| event.amount)
+        .map(|event| i64::from(event.amount))
         .sum();
     let path = inputs::directory()
         .unwrap()
