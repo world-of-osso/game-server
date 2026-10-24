@@ -27,4 +27,6 @@ Named policy `BM_SNAKESKIN_QUIVER_SIMC_76F8118` follows `sc_hunter.cpp3988–400
 
 Parent requested current `origin/master` integration and `cargo check --locked -p server -p server-simulation --tests`. Merge `31788f21e` moves the fixtures under `crates/server-simulation/src/dungeon_simulator/dps_parity/`, preserving all11 Pack/resource/Snakeskin case names. Only the existing test-support triggered-cast observer is exposed; private core formulas remain private. Rage reads public NativeFacts, and the Snakeskin precondition reads its actual active aura amount.
 
-The two-package check is pending in the parent-requested worker. The native GREEN above is explicitly **pre-split**; no post-split runtime or whole-BM/full-suite qualification is implied. Future native builds select `server_simulation-*`, not the old server-lib ELF. Parent owns broad integration gate.
+First two-package check at31788 found one private `end_all_combat` call in the moved Rage fixture, not a gameplay failure. Commit2391f9a7a uses the existing public native `combat::combat_stop` instead; no private API is widened. `cargo check --locked -p server -p server-simulation --tests` then **PASS in2m21s** at2391f9a7a, with no warnings (`crate-split-b-check-2391f9a7a.log` under the same diagnostics root).
+
+The native GREEN above is explicitly **pre-split**; the integration check is not post-split runtime or whole-BM/full-suite qualification. Future native builds select `server_simulation-*`, not the old server-lib ELF. Parent owns broad integration gate.

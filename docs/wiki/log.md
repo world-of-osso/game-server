@@ -1,6 +1,6 @@
 ## 2026-10-23 — Snakeskin Quiver execute binding
 
-[Named native-chance policy](systems/spell-casting.md#native-snakeskin-quiver-2026-10-23): real Austin300s RED122Auto/43paid/0free →b77 native2GREEN26.23s (122Auto/29paid/13free versus removed122Auto/43paid/0free). Actual victim/native chance, no timer or damage edits. [Proof](../handoffs/bm-snakeskin-proof-ledger.md); splitB/name-preserving integration31788 and parent gate remain separate; not a DPS-gain claim.
+[Named native-chance policy](systems/spell-casting.md#native-snakeskin-quiver-2026-10-23): real Austin300s RED122Auto/43paid/0free →b77 native2GREEN26.23s (122Auto/29paid/13free versus removed122Auto/43paid/0free). Actual victim/native chance, no timer or damage edits. [Proof](../handoffs/bm-snakeskin-proof-ledger.md); splitB/name-preserving integration31788 plus public-CombatStop fixture fix2391 passes requested server+server-simulation --tests check2m21s; parent broad gate remains separate, not a DPS-gain claim.
 
 ## 2026-10-23 — Pack Tactics instant Focus bridge
 
