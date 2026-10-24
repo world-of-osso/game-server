@@ -422,6 +422,7 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
             orientation: 0.0,
         }),
         chain_multipliers,
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }];
@@ -433,6 +434,7 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
             units: plan[0].units.clone(),
             dest: plan[0].dest,
             chain_multipliers: Vec::new(),
+            selected_units: Vec::new(),
             blocked_units: Vec::new(),
             prevent_hit_script: false,
         });

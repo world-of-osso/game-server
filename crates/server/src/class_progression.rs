@@ -158,6 +158,14 @@ impl TraitLoadout {
             .map(|spell| spell.trait_info)
     }
 
+    pub(crate) fn selected_sub_tree(&self, classes: &ClassSpells) -> Option<u32> {
+        let class = classes
+            .classes
+            .iter()
+            .find(|class| class.traits.tree_id == self.tree_id)?;
+        crate::trait_config::selected_sub_tree(&class.traits, &self.entries)
+    }
+
     #[cfg(any(test, feature = "test-support"))]
     pub fn source_config(&self) -> (&[ConfigEntry], &[(u32, i32)]) {
         (&self.entries, &self.unspent)

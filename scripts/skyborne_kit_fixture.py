@@ -71,6 +71,8 @@ def fixture_database(source_dir):
         set(retail)
         | {
             "content_item",
+            "item_set",
+            "item_set_spell",
             "content_npc_vendor",
             "tdb_npc_vendor",
             "currency_types",
