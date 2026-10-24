@@ -1,6 +1,7 @@
 """Serialized rotation-policy contract, sourced from SimC76f8118 (not its70391 coefficients)."""
 from contextlib import closing
 import json
+import os
 from pathlib import Path
 import sqlite3
 import unittest
@@ -37,6 +38,20 @@ class HunterSecondaryTargetPolicyTests(unittest.TestCase):
             with self.subTest(level=level):
                 conditions = next(json.loads(row[6]) for row in barbed if row[2] <= level <= row[3])
                 self.assertEqual(conditions, dict(target='enemy', target_if_min_aura=217200))
+
+    def test_native_bm_rows_derive_active_enemy_admission_without_area_gate(self):
+        export = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-kits-2026-10-18/native-source-v2.json')
+        source = json.loads(export.read_text())
+        selected = [row for row in source['loadouts'] if row['spec_id'] == 253 and row['level'] == 90]
+        world = Path(os.environ['DPS_PARITY_WORLD_DB']).resolve()
+        with closing(sqlite3.connect(world.as_uri() + '?mode=ro', uri=True)) as db:
+            rows, _, _ = kit_rows(db, dict(loadouts=selected))
+        conditions = {row[1]: json.loads(row[6]) for row in rows}
+        self.assertEqual(conditions[1264359].get('min_active_enemies'), 2)
+        self.assertNotIn('min_enemies', conditions[1264359], 'active admission is not a radius gate')
+        for spell in (217200, 34026, 193455):
+            with self.subTest(spell=spell):
+                self.assertNotIn('min_active_enemies', conditions[spell], 'unrestricted alternate APL uses remain unrestricted')
 
     def test_hunters_mark_keeps_its_existing_primary_target_contract(self):
         self.assertEqual(combat_policy(253, "Hunter's Mark", 257284, [], [])[2],

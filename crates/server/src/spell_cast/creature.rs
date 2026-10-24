@@ -39,10 +39,11 @@ pub fn creature_cast(
     target: Option<Entity>,
     triggered: bool,
 ) -> Result<(), CastFailure> {
-    let (spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
+    let (mut spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
     if !triggered {
         return start_cast(world, caster, &spell, explicit);
     }
+    spell.cast_dont_reset_periodic_timer = true;
     // Bool FULL_MASK has no triggering aura: TC CheckCast permits a dead caster.
     super::aura_spell_restrictions::check_caster(world, caster, &spell)?;
     let explicit = validate_target(world, caster, &spell, explicit, Sight::Start)?;
