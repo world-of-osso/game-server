@@ -180,7 +180,7 @@ impl Navigation {
         );
     }
 
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(test)]
     pub(crate) fn continue_route(
         &mut self,
         entity: Entity,

@@ -78,7 +78,7 @@ pub(super) fn load_and_prepare_cycle(
     })
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub fn run_cycle(
     db: &redb::Database,
     auctions: &mut AuctionHouseState,

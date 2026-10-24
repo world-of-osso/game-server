@@ -253,7 +253,7 @@ impl PlayerSight<'_, '_> {
 }
 
 /// Read the actual production player-acquisition predicate without adding threat.
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(crate) fn read_player_proximity_acquisition(
     world: &mut World,
     creature: Entity,

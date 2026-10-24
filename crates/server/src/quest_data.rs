@@ -770,7 +770,7 @@ fn startup_load_quest_db(mut commands: Commands) {
 }
 
 /// Quest content from the real `data/world.db`, loaded once; `None` when absent.
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(crate) fn test_quest_db() -> Option<&'static QuestDb> {
     static DB: std::sync::OnceLock<Option<QuestDb>> = std::sync::OnceLock::new();
     DB.get_or_init(|| {

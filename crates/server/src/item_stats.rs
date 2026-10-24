@@ -25,9 +25,9 @@ pub use shared::item_scaling::{
     ItemScaling, ItemScalingTables, ItemStatAllocation, ItemStats, WeaponDamage,
 };
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 const ITEM_CLASS_WEAPON: u8 = 2;
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 const ITEM_CLASS_ARMOR: u8 = 4;
 type QualityRow = [f64; 7];
 

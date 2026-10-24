@@ -110,7 +110,7 @@ fn forecast_health(input: &BudgetInput, damage: f64, healing: f64) -> f64 {
     input.tank_health - damage_debt + prevented
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(super) fn read_forecast_health(input: &BudgetInput) -> Option<(f64, f64)> {
     if !valid_estimates(input) {
         return None;

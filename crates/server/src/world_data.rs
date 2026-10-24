@@ -194,9 +194,9 @@ pub struct WorldData {
     pub templates: crate::catalog_data::CatalogData<HashMap<u32, CreatureTemplate>>,
     /// Actual zephras_row_source reconstructed template markers select authored fixed stats.
     pub authored_templates: HashSet<u32>,
-    pub summon_levels: summon_levels::SummonLevels,
+    pub(crate) summon_levels: summon_levels::SummonLevels,
     /// Source server SQL jump-charge options, loaded from this world's connection.
-    pub jump_charge_params: crate::spell_cast::jump_charge::JumpChargeParams,
+    pub(crate) jump_charge_params: crate::spell_cast::jump_charge::JumpChargeParams,
     /// `content_creature_template_difficulty`: the template of an entry in a dungeon copy
     /// at that difficulty (`CreatureTemplate::GetDifficulty`), keyed (entry, difficulty).
     pub difficulty_templates:
@@ -226,7 +226,7 @@ pub struct WorldData {
     /// TDB `spawn_group` members whose battleground runtime spawns them by condition.
     pub spawn_groups: crate::spawn_groups::SpawnGroups,
     /// `creature_template.VignetteID`'s `Vignette` row, keyed by template entry.
-    pub vignettes: HashMap<u32, crate::vignettes::CreatureVignette>,
+    pub(crate) vignettes: HashMap<u32, crate::vignettes::CreatureVignette>,
     /// TDB `creature_template.StringId` keyed by entry.
     pub template_string_ids: HashMap<u32, String>,
     /// TDB `creature.StringId` keyed by content spawn guid.
@@ -793,7 +793,7 @@ const SPAWN_COLUMNS: &str = "guid, id1, map, zoneId, position_x, position_y, pos
     spawnDifficulties, equipment_id";
 
 /// The `content_creature` row `guid`, whether or not a game event gates it.
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(crate) fn load_spawn(conn: &Connection, guid: u32) -> rusqlite::Result<CreatureSpawn> {
     conn.query_row(
         &format!("SELECT {SPAWN_COLUMNS} FROM content_creature WHERE guid = ?1"),

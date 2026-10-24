@@ -110,12 +110,12 @@ impl GroundMap {
     }
 
     /// A map 0 holding only `terrain` for `tile`, without WMOs or lazy loading.
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(test)]
     pub(crate) fn with_terrain(tile: (u32, u32), terrain: TerrainHeightMap) -> Self {
         Self::with_terrain_on(0, tile, terrain)
     }
 
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(test)]
     pub(crate) fn with_terrain_on(
         map_id: u32,
         tile: (u32, u32),
@@ -168,7 +168,7 @@ impl GroundMap {
         &self.data_dir
     }
 
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(test)]
     pub(crate) fn live_hull_count(&self, map: crate::maps::InMap) -> usize {
         self.live_hulls.get(&map).map_or(0, Vec::len)
     }

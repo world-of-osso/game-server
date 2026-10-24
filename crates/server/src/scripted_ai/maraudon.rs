@@ -260,7 +260,7 @@ impl BossScript for Celebras {
     }
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(super) fn seeded_landslide(seed: u64) -> Box<dyn CreatureAi> {
     let mut boss = BossAi::new(4);
     boss.events = super::EventMap::seeded(seed);

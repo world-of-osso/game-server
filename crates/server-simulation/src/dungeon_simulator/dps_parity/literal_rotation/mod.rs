@@ -10,7 +10,7 @@ use execution::{Execution, Prepared};
 use serde_json::Value;
 use server::simc_apl::{Action, ActionFacts, Expression, Facts, Program, Variables};
 
-use server::test_support::LiteralParityFixture;
+pub(crate) use server::test_support::LiteralParityFixture;
 
 pub(crate) fn capture_fixture(
     world: &mut World,

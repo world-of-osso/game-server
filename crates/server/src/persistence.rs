@@ -250,7 +250,7 @@ pub struct GameDatabase {
 }
 
 impl GameDatabase {
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(test)]
     pub(crate) fn into_database(self) -> Database {
         let Self {
             db,
@@ -799,7 +799,7 @@ pub fn save_currencies(
 }
 
 /// Offline/test migration helper. Runtime readers use the owned account cache.
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub fn load_achievements(
     db: &Database,
     character_id: u64,
@@ -828,7 +828,7 @@ pub fn load_achievements(
     }
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub fn save_achievements(
     db: &Database,
     character_id: u64,
@@ -1064,7 +1064,7 @@ pub fn load_auctions(db: &Database) -> Vec<AuctionData> {
 }
 
 /// Fixture writes use the same atomic market path as runtime operations.
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub fn save_auction(db: &Database, auction: &AuctionData) {
     let changes = crate::economy::store::MarketChanges {
         auctions: vec![auction.clone()],
@@ -1073,7 +1073,7 @@ pub fn save_auction(db: &Database, auction: &AuctionData) {
     crate::economy::store::commit_market(db, None, &changes).expect("save auction fixture");
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub fn delete_auction(db: &Database, auction_id: u64) {
     let changes = crate::economy::store::MarketChanges {
         deleted_auctions: vec![auction_id],
@@ -1137,7 +1137,7 @@ pub fn save_motd(db: &Database, motd: &shared::motd::Motd) {
     txn.commit().expect("Failed to commit motd save");
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(crate) fn temp_database() -> Database {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("test.redb");

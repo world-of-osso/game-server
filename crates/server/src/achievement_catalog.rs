@@ -883,7 +883,7 @@ impl AchievementCatalog {
     }
 
     /// An event outside any instance copy (Difficulty 0).
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(test)]
     pub fn update(
         &self,
         state: &mut PlayerAchievementState,

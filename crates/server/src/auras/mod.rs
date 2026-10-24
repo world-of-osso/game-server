@@ -553,7 +553,7 @@ impl ActiveAuras {
 #[derive(Resource, Debug, Default)]
 pub struct UnhandledAuras(HashSet<(u32, u32)>);
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(crate) fn take_unhandled_auras(world: &mut World) -> Vec<(u32, u32)> {
     let mut types: Vec<_> = world.resource_mut::<UnhandledAuras>().0.drain().collect();
     types.sort_unstable();

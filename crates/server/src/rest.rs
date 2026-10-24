@@ -89,7 +89,7 @@ impl PlayerRestState {
     }
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 impl PlayerRestState {
     /// A player out of any rest area holding `rested_xp` at level `level`.
     pub(crate) fn fixture(level: u8, rested_xp: u32) -> Self {

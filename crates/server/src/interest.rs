@@ -36,7 +36,7 @@ pub(crate) struct NetworkVisibility {
 }
 
 impl NetworkVisibility {
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(test)]
     pub(crate) fn is_visible(&self, sender: Entity) -> bool {
         self.visible_senders.contains(&sender)
     }
@@ -828,7 +828,7 @@ fn interest_bucket(map: InMap, position: &Position) -> InterestBucket {
 }
 
 /// Update visibility of a single entity for all players.
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 fn update_entity_visibility(
     entity_pos: &Position,
     state: &mut NetworkVisibility,
@@ -845,7 +845,7 @@ fn update_entity_visibility(
     }
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 /// Check if two entities share a phase (bitmask overlap).
 ///
 /// WoW phases are bitmasks: entity is visible if `entity_phase & player_phase != 0`.
@@ -854,7 +854,7 @@ fn phases_overlap(entity_phase: u32, player_phase: u32) -> bool {
     entity_phase == 0 || player_phase == 0 || (entity_phase & player_phase) != 0
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 /// Check if entities in different instances should be invisible to each other.
 ///
 /// Entities must share the same instance_id to be visible. Instance 0 = open world.
@@ -862,7 +862,7 @@ fn same_instance(entity_instance: u32, player_instance: u32) -> bool {
     entity_instance == player_instance
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 /// Check if an entity should be visible considering distance and stealth.
 ///
 /// Stealthed entities are hidden unless the observer is within detection range

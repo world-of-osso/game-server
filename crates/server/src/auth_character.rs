@@ -510,7 +510,7 @@ struct SelectedCharacterState {
     reputation: shared::reputation::CharacterReputation,
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 fn load_selected_character_state(
     db: &GameDatabase,
     account_id: u64,

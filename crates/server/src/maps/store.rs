@@ -324,7 +324,7 @@ pub struct MapStore {
     /// Unambiguous CASC journal → TDB map/display joins: (map, creature) → encounter bit.
     pub raid_creature_encounters: HashMap<(u32, u32), u32>,
     pub area_triggers: HashMap<u32, Vec<AreaTriggerTeleport>>,
-    pub world_area_triggers: crate::world_area_triggers::Catalog,
+    pub(crate) world_area_triggers: crate::world_area_triggers::Catalog,
     pub safe_locs: HashMap<u32, WorldLocation>,
     /// Nonzero WorldSafeLocs.TransportSpawnId: location coordinates are ship-relative.
     pub safe_loc_transports: HashMap<u32, u32>,

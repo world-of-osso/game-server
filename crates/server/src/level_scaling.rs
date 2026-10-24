@@ -99,7 +99,7 @@ impl ExpectedStats {
     }
 
     /// Source base health and armor before template modifiers, including tuning/class mods.
-    pub(crate) fn creature_health_armor(
+    pub fn creature_health_armor(
         &self,
         level: u8,
         health_scaling_expansion: i32,

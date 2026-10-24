@@ -17,7 +17,7 @@ pub(super) enum InterruptPhase {
 }
 
 /// Test entry for the complete native kick set; production selects a phase explicitly.
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(super) fn try_interrupt_candidates(
     world: &mut World,
     unit: Entity,

@@ -153,7 +153,7 @@ pub(crate) struct SmartEvent {
 #[derive(Resource, Debug, Default)]
 #[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
 pub struct SmartScripts(
-    pub HashMap<u32, Arc<Vec<SmartEvent>>>,
+    pub(crate) HashMap<u32, Arc<Vec<SmartEvent>>>,
     HashMap<u32, Arc<Vec<SmartEvent>>>,
     HashMap<u32, Arc<paths::WaypointPath>>,
     HashMap<(u32, u32), Vec<summons::GroupMember>>,

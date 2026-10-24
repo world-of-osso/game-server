@@ -1436,7 +1436,7 @@ struct ItemCooldownSource {
 /// The cooldown an item effect puts on its spell's category (`ItemEffect`
 /// `SpellCategoryID` / `CategoryCoolDownMSec`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct ItemCooldown {
+pub struct ItemCooldown {
     pub category: u32,
     pub category_ms: u32,
 }

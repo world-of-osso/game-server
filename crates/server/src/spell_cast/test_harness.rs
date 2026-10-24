@@ -46,6 +46,7 @@ pub(crate) struct WorldData {
     pub(crate) powers_db: PathBuf,
 }
 
+#[cfg(test)]
 pub(crate) fn place_toy_caster_on_source_area(
     h: &mut Harness,
     fdid: u32,
@@ -55,6 +56,7 @@ pub(crate) fn place_toy_caster_on_source_area(
     place_toy_caster_on_source_map_area(h, 0, fdid, point, area);
 }
 
+#[cfg(test)]
 pub(crate) fn place_toy_caster_on_source_map_area(
     h: &mut Harness,
     map: u32,
@@ -92,6 +94,7 @@ pub(crate) fn place_toy_caster_on_source_map_area(
 
 /// What an effect with `Variance` 0.05 and an amount of `base` deals or
 /// heals: `base` ± 2.5%, rounded (SpellEffectInfo::CalcValue).
+#[cfg(test)]
 pub(crate) fn varied(base: f32) -> std::ops::RangeInclusive<f32> {
     (base * 0.975).round()..=(base * 1.025).round()
 }
@@ -370,12 +373,14 @@ pub fn harness(extra: Vec<SpellInfo>, ids: &[u32], class: u8) -> Option<Harness>
     harness_with(extra, ids, class, false)
 }
 
+#[cfg(test)]
 pub(crate) const SUNWELL_RADIANCE: u32 = 45769;
 
 /// Opt-in coefficient/admission fixture, not a legal class loadout. Native
 /// Sunwell Radiance45769 effect1 supplies permanent enemy-dodge reduction20
 /// (published70391 SpellEffect37781, SpellDuration21). Keep ordinary NPC dodge
 /// active in all other fixtures; never change RNG or spell defense attributes.
+#[cfg(test)]
 pub(crate) fn harness_with_native_enemy_dodge_reduction(
     extra: Vec<SpellInfo>,
     ids: &[u32],
@@ -389,11 +394,13 @@ pub(crate) fn harness_with_native_enemy_dodge_reduction(
 }
 
 /// Custom coefficient fixtures load SUNWELL_RADIANCE explicitly before opting in.
+#[cfg(test)]
 pub(crate) fn apply_native_enemy_dodge_reduction(h: &mut Harness) {
     apply_native_enemy_dodge_reduction_to(h, h.caster);
 }
 
 /// Pet and foreign-player damage fixtures must qualify the actual attacker.
+#[cfg(test)]
 pub(crate) fn apply_native_enemy_dodge_reduction_to(h: &mut Harness, attacker: Entity) {
     crate::auras::apply_aura(
         h.app.world_mut(),
@@ -515,6 +522,7 @@ pub(crate) fn harness_with_plugins(
 
 /// Charge's target (its DUMMY effect, `TARGET_UNIT_TARGET_ENEMY`) must stand within
 /// SpellRange 95, 8-25 yards: move the kobold to 10 yards.
+#[cfg(test)]
 pub(crate) fn charge_range(h: &mut Harness) {
     h.app.world_mut().entity_mut(h.npc).insert(Position {
         x: 10.0,
@@ -524,6 +532,7 @@ pub(crate) fn charge_range(h: &mut Harness) {
 }
 
 /// Establish actual raid eligibility through invite/accept, preserving case-supplied IDs.
+#[cfg(test)]
 pub(crate) fn group_fixture_players(app: &mut App, leader: (Entity, u64), member: (Entity, u64)) {
     let (leader, leader_id) = leader;
     let (member, member_id) = member;
@@ -548,6 +557,7 @@ pub(crate) fn group_fixture_players(app: &mut App, leader: (Entity, u64), member
     assert!(groups.is_in_same_group(leader_id, member_id));
 }
 
+#[cfg(test)]
 fn fixture_online_member(world: &World, entity: Entity) -> crate::group::OnlineMember {
     let player = world.get::<Player>(entity).unwrap();
     crate::group::OnlineMember {
@@ -693,6 +703,7 @@ impl Harness {
     }
 }
 
+#[cfg(test)]
 pub(crate) fn assert_combat_log_metadata(
     events: &[shared::protocol::CombatLogEvent],
     before: std::time::SystemTime,

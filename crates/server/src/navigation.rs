@@ -294,16 +294,16 @@ fn install_publication(app: &mut App) {
     );
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 #[derive(Resource)]
 struct NavigationFixtureDrainInstalled;
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 fn drain_fixture_navigation(mut navigation: ResMut<Navigation>) {
     navigation.drain_until_idle();
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(crate) fn install_fixture(app: &mut App, navigation: Navigation) {
     install_publication(app);
     app.insert_resource(navigation);

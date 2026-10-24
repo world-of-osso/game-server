@@ -148,7 +148,7 @@ fn load_catalog(mut commands: Commands) {
     commands.insert_resource(catalog);
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(crate) fn load_test_catalog() -> PetCatalog {
     let conn = Connection::open_with_flags(
         concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/world.db"),

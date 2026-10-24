@@ -20,7 +20,7 @@ pub(crate) struct ActorMetrics {
 
 #[derive(Resource, Debug, Default, Serialize)]
 pub struct HolyMetrics {
-    pub actors: BTreeMap<u64, ActorMetrics>,
+    pub(crate) actors: BTreeMap<u64, ActorMetrics>,
 }
 
 pub(super) fn read_recharge(world: &World, caster: Entity, category: u32, now: f64) -> f64 {

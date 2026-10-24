@@ -163,7 +163,7 @@ fn has_admitted_healer(world: &World, run: &RunBudget) -> bool {
 }
 
 /// Native numeric report uses exactly the input and arithmetic used for overlap admission.
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(super) fn read_forecast_health(
     world: &mut World,
     tank: Entity,

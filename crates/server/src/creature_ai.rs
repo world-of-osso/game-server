@@ -1163,12 +1163,12 @@ struct Leader {
 /// beyond `PET_FOLLOW_DIST`, within 1-1.3. It holds still while it cannot move, casts
 /// a spell movement would interrupt, or is dead. Dungeon followers use baked routes;
 /// other FollowOwner consumers retain their existing straight movement.
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(crate) fn install_follow_fixture(app: &mut App) {
     app.add_systems(Update, follow_owner_system);
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(crate) fn install_follower_follow_fixture(app: &mut App) {
     app.add_systems(
         FixedUpdate,

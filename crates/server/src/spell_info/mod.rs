@@ -44,7 +44,7 @@ pub use trait_data::{
 #[cfg(not(any(test, feature = "test-support")))]
 pub const WORLD_DB_PATH: &str = "data/world.db";
 #[cfg(any(test, feature = "test-support"))]
-pub(crate) const WORLD_DB_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/world.db");
+pub const WORLD_DB_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/world.db");
 
 /// One already matched charged spell modifier, retained by its launched cast.
 #[derive(Debug, Clone)]
@@ -72,7 +72,7 @@ pub struct SpellInfo {
     /// Runtime casting item's effective (squished) level, not a DB2 spell field.
     /// Kept on the per-cast clone through cast bars, missiles, and aura snapshots.
     #[serde(skip)]
-    pub(crate) cast_item_level: Option<u16>,
+    pub cast_item_level: Option<u16>,
     /// Source SPELLVALUE_AURA_STACK on this cast, retained through missile snapshots.
     #[serde(skip)]
     pub(crate) cast_aura_stacks: Option<u8>,
@@ -81,7 +81,7 @@ pub struct SpellInfo {
     pub(crate) cast_original_caster: Option<Entity>,
     /// Retail item actually used by this cast; delayed casts credit only on execution.
     #[serde(skip)]
-    pub(crate) cast_retail_item_id: Option<u32>,
+    pub cast_retail_item_id: Option<u32>,
     /// Per-cast ground point; preserved in queued/cast snapshots, never DB2 metadata.
     #[serde(skip)]
     pub(crate) cast_destination: Option<[f32; 3]>,

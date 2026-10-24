@@ -35,6 +35,7 @@ pub fn spawn(world: &mut World, owner: Entity, entry: u32) -> Result<Entity, Str
 }
 
 /// The fixture spawns without zone visuals, so read the authentic template display.
+#[cfg(test)]
 pub(crate) fn template_display(entry: u32) -> u32 {
     rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
