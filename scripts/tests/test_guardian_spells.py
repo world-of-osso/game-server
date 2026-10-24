@@ -61,11 +61,12 @@ class GuardianImportTest(unittest.TestCase):
                     {
                         "SIMC_DREADSTALKER_ATTACK_BINDING",
                         "SIMC_ANTORAN_TYRANT_BURNING_CLEAVE_BINDING",
+                        "SIMC_DEMO_ALTERNATE_WILD_IMP_ATTACK_BINDING",
                     },
                 )
                 self.assertEqual(
-                    [row for row in read_bindings(conn) if row[0] in (98035, 250289)],
-                    [(98035, 0, 271971, 0), (250289, 0, 1264093, 0)],
+                    [row for row in read_bindings(conn) if row[0] in (98035, 143622, 250289)],
+                    [(98035, 0, 271971, 0), (143622, 0, 104318, 0), (250289, 0, 1264093, 0)],
                 )
 
     def test_native_binding_list_wins_over_policy_and_reimport_is_stable(self):
@@ -80,9 +81,9 @@ class GuardianImportTest(unittest.TestCase):
                 native_count, policies = IMPORTER.import_guardian_spells(conn, archive)
                 self.assertEqual(native_count, 1)
                 self.assertEqual(
-                    policies, ["SIMC_ANTORAN_TYRANT_BURNING_CLEAVE_BINDING"]
+                    policies, ["SIMC_ANTORAN_TYRANT_BURNING_CLEAVE_BINDING", "SIMC_DEMO_ALTERNATE_WILD_IMP_ATTACK_BINDING"]
                 )
-                expected = [(98035, 4, 271971, 69497), (250289, 0, 1264093, 0)]
+                expected = [(98035, 4, 271971, 69497), (143622, 0, 104318, 0), (250289, 0, 1264093, 0)]
                 self.assertEqual(read_bindings(conn), expected)
                 IMPORTER.import_guardian_spells(conn, archive)
                 self.assertEqual(read_bindings(conn), expected)
@@ -108,11 +109,27 @@ class GuardianImportTest(unittest.TestCase):
             self.assertEqual(
                 result.stdout.splitlines(),
                 [
-                    "guardian_spells: 1 authentic archive rows + 2 explicit project policies",
+                    "guardian_spells: 1 authentic archive rows + 3 explicit project policies",
                     "guardian_policy: SIMC_DREADSTALKER_ATTACK_BINDING",
                     "guardian_policy: SIMC_ANTORAN_TYRANT_BURNING_CLEAVE_BINDING",
+                    "guardian_policy: SIMC_DEMO_ALTERNATE_WILD_IMP_ATTACK_BINDING",
                 ],
             )
+
+    def test_alternate_imp_native_list_wins_without_policy_index(self):
+        with tempfile.TemporaryDirectory() as folder:
+            archive = Path(folder) / "archive.sql"
+            # Future native list fixture; not an observed TDB1210 row.
+            archive.write_text(
+                "INSERT INTO `creature_template_spell` VALUES (143622,3,104318,69497);\n"
+            )
+            with closing(sqlite3.connect(":memory:")) as conn:
+                _, policies = IMPORTER.import_guardian_spells(conn, archive)
+                self.assertNotIn("SIMC_DEMO_ALTERNATE_WILD_IMP_ATTACK_BINDING", policies)
+                self.assertEqual(
+                    [row for row in read_bindings(conn) if row[0] == 143622],
+                    [(143622, 3, 104318, 69497)],
+                )
 
     def test_missing_archive_table_does_not_publish_policy_rows(self):
         with tempfile.TemporaryDirectory() as folder:
