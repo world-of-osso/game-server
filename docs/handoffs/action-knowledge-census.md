@@ -51,7 +51,7 @@ Native selected Ret TraitDefinition141572 replaces35395 with404542, but404542 is
 
 ## Crate split B ownership
 
-The controller adapter `server::spell_cast::knowledge::resolve_action(&World, Entity, u32) -> Result<Option<u32>, String>` lives in the server library beside the shared resolver. Unknown/NotKnown endpoints returnNone; unsupported source errors remain explicit. Server follower tests call this library policy directly; `server-simulation` Prepared execution imports it. No server→simulation dependency or test-name change is introduced. The underlying actor-action resolver, selected metadata, actual cast IDs and passive endpoint semantics are unchanged. Post-split targeted checks must cover both crates before the replacement gate.
+The controller adapter `server::spell_cast::knowledge::resolve_action(&World, Entity, u32) -> Result<Option<u32>, String>` lives in the server library beside the shared resolver. Unknown/NotKnown endpoints returnNone; unsupported source errors remain explicit. Server follower tests call this library policy directly; `server-simulation` Prepared execution imports it. No server→simulation dependency or test-name change is introduced. The underlying actor-action resolver, selected metadata, actual cast IDs and passive endpoint semantics are unchanged. The existing resource probe/cost contracts `read_native_cast_at_resource_max`, `applicable_costs` and `CostPool` are public server SPI for the same dependency direction; no new resource semantics are added. First two-crate compile exposed their old crate-only visibility before any tests ran; that is compile evidence, not a behavioral failure. Post-split targeted checks must cover both crates before the replacement gate.
 
 ## Sources
 

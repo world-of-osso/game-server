@@ -1792,7 +1792,7 @@ pub fn read_native_cast_start(
 
 /// Read ordinary native admission using only the chosen pool's maximum in the
 /// affordability calculation. No pool is written, granted or spent.
-pub(crate) fn read_native_cast_at_resource_max(
+pub fn read_native_cast_at_resource_max(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
@@ -2198,7 +2198,7 @@ fn validate_target(
 
 /// What a `SpellPower` row draws from.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub(crate) enum CostPool {
+pub enum CostPool {
     Power(PowerType),
     Health,
 }
@@ -2257,7 +2257,7 @@ fn checked_costs(
 
 /// The costs `spell_costs` checks, with the caster's current value of each pool,
 /// without requiring the caster to afford them.
-pub(crate) fn applicable_costs(
+pub fn applicable_costs(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
