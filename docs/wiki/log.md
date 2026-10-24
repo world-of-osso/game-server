@@ -1,3 +1,7 @@
+## 2026-10-23 — Judgment cast-time Holy Power correction
+
+[Judgment](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers): pinned TC OnCast/HasSpell315867 contradicts former damage-hit/aura gating. Genuine native cast-before-impact, immune-target and aura-only REDs atde7b6e406; shared20271/275773/275779 ordinary/triggered/costed-trigger correction implemented, GREEN pending. No fixture resource grants or DPS claim. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#judgment-cast-time-resource-correction).
+
 ## 2026-10-23 — Native trait effect-point source boundary
 
 [Trait effect points](systems/talents.md#trait-effect-points):1408 native rows/1358 curves, learned definition+total-rank metadata and TC Set/Multiply. Fresh amount REDs atbc5/lifetime RED atdb9→native5GREEN34.44s at867, including rank1/2 and unchanged137027 instance; importer/no-SQLite-leak1GREEN6.825s, warning-free. Private delta prepared, parent publication/integration pending; no DPS parity claim. [Proof ledger](../handoffs/trait-effect-points-proof-ledger.md).
