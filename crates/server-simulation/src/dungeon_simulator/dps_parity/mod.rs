@@ -25,6 +25,7 @@ mod power_tests;
 mod precombat_tests;
 mod preparation;
 mod profile_initialization;
+mod rake_stealth_tests;
 mod report;
 mod ret_crusading_tests;
 mod ret_dawnlight_tests;
