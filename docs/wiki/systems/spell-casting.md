@@ -355,6 +355,12 @@ All28 previously unreviewed roots now carry exact reasons:157/129/28→157/157/0
 
 Completed-root Shred/Rake/Thrash, cap/overflow, expiry, actual periodic clock, unrelated family and rejected-friendly cast prove this numeric contract.405189 over-cap recovery and script-only grants remain uncertified. Seven other reviewed roots retain exact source-field or runtime-prerequisite deferrals, including known Spiritbloom30yd range and both known empower stage tables; these are not absent-data claims.
 
+## Native Snakeskin Quiver —2026-10-23
+
+`BM_SNAKESKIN_QUIVER_SIMC_76F8118` is an explicit execute-time policy, not a claimed TC port: pinned TC scripts have no Snakeskin binding. `auto_repeat::on_cast` passes the actual successful Auto Shot75 victim after installing the unchanged native ranged timer; `scripts/snakeskin_quiver.rs` reads active468695’s native effect1 chance and launches real Cobra193455 through existing free triggered casting. It does not read a guessed selection target, change normal Cobra, or add a proc timer. SimC76f8118 `sc_hunter.cpp3988–4007/5041–5047` supplies timing/background semantics, not numeric damage. [Contract](../../specs/spell-dummy-scripts.md#native-snakeskin-quiver-execution).
+
+Native Austin300s RED8e04d880a has122 Auto Shots/43 paid Cobras/0 free; actual passive-removal control passes (1FAIL/1PASS33.20s). Implementation awaits GREEN; whole-BM parity and other cooldown/pet gaps remain open.
+
 ## Twentieth batch: authored totals and next-spell uses
 
 Native70448 Pack321014 separately names instant child1282660. The existing Barbed after-cast callback retains periodic246152 and conditionally triggers1282660 on the caster, reusing native effect30 amount/cap/overflow handling. SimC76f8118 `sc_hunter.cpp5091–5092` corroborates launch timing. Genuine geared Player launch and Austin300s kit-count RED at fe855f75b:2FAIL/1PASS18.24s; removed-passive control passes. At ccfb44c19 all3GREEN32.01s, including real overflow then Cobra-created deficit. Native unflagged Rage center control also passes14.48s after actual CombatStop; no positive potential is invented at its decay center. [Exact proof](../../handoffs/bm-pack-resource-proof-ledger.md). Broad integration and corrected WW geometry fixture remain parent-gated; this is not whole-BM DPS qualification. [Contract](../../specs/spell-dummy-scripts.md#twentieth-batch-authored-totals-and-next-spell-uses).

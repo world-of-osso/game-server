@@ -23,6 +23,12 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 
 ## What it must do
 
+### Native Snakeskin Quiver execution
+
+- [ ] Active468695 rolls its native effect1 chance once per successful Auto Shot75 execution and launches native Cobra193455 at that shot’s actual victim. Existing triggered casting supplies the free Focus/GCD behavior; normal paid Cobra and native ranged timers remain unchanged. Missing/removed passive grants no free action; rejected shots do not reach the policy. Named policy `BM_SNAKESKIN_QUIVER_SIMC_76F8118` follows `sc_hunter.cpp3988–4007/5041–5047`; pinned TC a352b1fa scripts have no Snakeskin binding. Do not claim a TC port or copy SimC numeric spell damage.
+
+Native Austin300s seed70448 RED at8e04d880a:122 Auto Shots/43 paid Cobras/0 free, with removed-passive controlPASS (1FAIL/1PASS33.20s). Implementation awaits targeted GREEN and parent integration gate; no whole-BM DPS qualification.
+
 ### Census effect77 source ports (70448)
 
 - [x] Gorefiend's Grasp108199E1 applies native454824 only when its caster owns454822, using TC's limited triggered flags; foreign/absent talent does not apply it. Unmatched E0 remains a named gap, not whole-spell support.

@@ -42,6 +42,8 @@ pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 pub(crate) mod prayer_of_mending;
 mod protection_items;
 mod scourge_strike;
+mod snakeskin_quiver;
+pub(super) use snakeskin_quiver::roll_snakeskin_cobra;
 mod soul_of_the_forest;
 mod swiftmend;
 pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direct_multiplier;
