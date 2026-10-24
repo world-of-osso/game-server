@@ -57,9 +57,9 @@ Clock-aware `preparation::execute_precombat_plan` now consumes selected native p
 
 [Mystic Touch producer](../../handoffs/ww-mystic-touch-proof-ledger.md) reached real native learned TP/white2RED and unlearned/unrelated2GREEN atd49f4951c. Named producer now reads the actual damage actor's learned8647 and native family/white-hit eligibility, then triggers native113746; its physical vulnerability remains native data. All four producer controls pass at96b572797; first/later-hit numerical ordering remains open.
 
-## Resumable precombat polling — GREEN pending
+## Resumable precombat polling — qualified shared boundary
 
-`Driver::poll_precombat` returns Waiting/Selected original Action+Execution/Finished. Actual native Player63 Arcane Intellect GCD/cursor and Pyroblast/while-casting row controls first produce2RED at85a3a1c20. Prepared now samples CastState plus native GCD; busy polling cannot consume variables/rows, direct busy precombat select fails explicitly, and use_while_casting supplements native admission. Caller advances real App frames and starts its fight epoch after setup; final flight remains native782 state, not a timer. [Exact proof/exclusions](../../handoffs/shared-precombat-poll-proof-ledger.md); full Fire adapter/facts and native GREEN remain open.
+`Driver::poll_precombat` returns Waiting/Selected original Action+Execution/Finished. Actual native Player63 Arcane Intellect GCD/cursor and Pyroblast/while-casting row controls first produce2RED at85a3a1c20. Prepared now samples CastState plus native GCD; busy polling cannot consume variables/rows, direct busy precombat select fails explicitly, and use_while_casting supplements native admission. Caller advances real App frames and starts its fight epoch after setup; final flight remains native782 state, not a timer. At3d32d68bf actual Fire2GREEN27.11s plus23 relevant simulation regressions pass:1459→55342→real11366/2.337s, setup5.35s, native flight still1/0.142s at Finished. [Exact proof/exclusions](../../handoffs/shared-precombat-poll-proof-ledger.md#current-green-scope--3d32d68bf); full Fire adapter/facts remain open.
 
 ## Literal native row eligibility — qualified controls
 

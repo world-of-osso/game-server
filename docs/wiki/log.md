@@ -1,3 +1,7 @@
+## 2026-10-23 — Shared resumable precombat and while-casting native GREEN
+
+[Shared poll proof](../handoffs/shared-precombat-poll-proof-ledger.md#current-green-scope--3d32d68bf): actual85 cursor/while-casting2RED→3d2GREEN27.11s plus23 relevant simulation regressions. Real Arcane Intellect→Mirror Image→hardcast Pyroblast preserves source position across native GCD/cast waits; caller epoch starts afterward. Native flight remains1/0.142s at Finished, not inferred from a timer. Permitted Fire Blast/Combustion preserve the existing cast. Full Fire adapter/facts/item/provider execution remain separately owned; old Mystic4 are not counted in this new executable's25.
+
 ## 2026-10-23 — Shared native lifecycle/gates/Mystic27GREEN; WW band still open
 
 At96b572797, [native packet27/27](../handoffs/native-precombat-proof-ledger.md#current-native-qualification--96b572797) covers ordered precombat/pet/GCD/controller capture, actual uncaptured owner-follow, composite selection+four real coating bars/effects, native moving/off-GCD row gates and learned Mystic Touch producer. First/later numerical, same-Monk item/proc, all-spec literal and Ele item activation remain outside that proof. Same binary completes fresh-current-backup300s WW ST52567.95/3T72757.5867, still−74.5364%/−80.6783%, NOT parity; [exact current receipt and missing-channel matrix](../handoffs/ww-source-census.md#current-receipt-after-shared-lifecycle-qualification--96b572797). No extra WW-only compile or coefficient tuning.

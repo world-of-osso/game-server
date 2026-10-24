@@ -1,6 +1,6 @@
 # Shared literal precombat lifecycle
 
-Verified2026-10-23: current native package27/27 GREEN at96b572797. [Contract](../specs/dps-parity.md#literal-precombat-execution). Earlier entries below are historical milestones, not current pending status.
+Verified2026-10-23: native package27/27 GREEN at96b572797. Latest split-B [shared polling proof](shared-precombat-poll-proof-ledger.md#current-green-scope--3d32d68bf) has25 current simulation cases (Fire2 + relevant23); core Mystic4 remain separate prior proof, not rerun in that binary. [Contract](../specs/dps-parity.md#literal-precombat-execution). Earlier entries below are historical milestones, not current pending status.
 
 ## Current native qualification —96b572797
 
