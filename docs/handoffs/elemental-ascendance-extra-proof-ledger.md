@@ -29,4 +29,8 @@ Evidence under game-engine `data/diagnostics/elemental-parity-262-2026-10-23/`:
 - `asc-additional-green-a001f0541/`: compile17m03/zero warnings; actual3PASS20.23s. ELF SHA256 `12153369bd51db038c992335d4bd2cf10d033fd4e0546f569c98509d3433a21f`.
 - Each directory preserves input hashes, stable source/dependency revision provenance, command/status logs and native proof JSON. Earlier7a6 compile-onlyE0599 was not feature RED; no native runs occurred there.
 
+## Retained child-effectiveness controls
+
+The shared aura-reader refactor also touches existing mastery damage scaling. On the retained a001f0541 ELF (same SHA before/after; cb82a5ffe changes docs only), run `overload_uses_mastery_effect1_and_removal_restores_child_base --nocapture --test-threads=1` through the same private source view: all5PASS16.88s. Real LB/CL/Lava/EB/Icefury child casts retain native effect1 effectiveness, aura removal restores child base, and Echo Chamber applies through ordinary aura calculation. These existing controlled-SP/zero-crit harness cases qualify effectiveness/removal, not additional-overload acquisition or DPS. No rebuild. Logs/proof: `asc-child-controls-a001f0541/` beside the RED/GREEN artifacts.
+
 Implementation changes only native extra-count scheduling and the first harmful target-plan HIT marker. Ordinary proc RNG consumption, Chain chance division and queued400ms child damage/energize remain. Parent owns final checks/readability/integration. Docs-only follow-ups do not invalidate runtime proof. Full literal adapter remains separately parked at `elemental-parity-shuja@b4a269fd97f6ffad5783ed2d8f38edd1520e9fe3`; do not remove it or merge pending APIs.
