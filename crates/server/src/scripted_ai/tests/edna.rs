@@ -86,7 +86,6 @@ fn immune(h: &Harness, actor: Entity) -> bool {
 }
 
 #[test]
-#[ignore = "EDNA source intro RED must execute before implementation"]
 fn encounter_coverage_edna_five_inherited_stringid_deaths_force_walk_arrival_unlock() {
     for difficulty in [1, 205] {
         let (mut h, boss, map, golems) = source_copy(difficulty);
@@ -188,7 +187,6 @@ fn encounter_coverage_edna_five_inherited_stringid_deaths_force_walk_arrival_unl
 }
 
 #[test]
-#[ignore = "EDNA source intro RED must execute before implementation"]
 fn encounter_coverage_edna_death_counter_is_copy_owned_and_idle_time_does_not_unlock() {
     let (mut h, boss, map, golems) = source_copy(1);
     let other = allocate_peer_copy(&mut h, 1);
@@ -214,7 +212,6 @@ fn encounter_coverage_edna_death_counter_is_copy_owned_and_idle_time_does_not_un
 }
 
 #[test]
-#[ignore = "Native Anchor Here effect RED must execute before implementation"]
 fn encounter_coverage_edna_native_anchor_sets_home_position_without_unlock() {
     let (mut h, boss, map, _) = source_copy(1);
     h.app.world_mut().entity_mut(boss).insert(COMBAT_POSITION);
@@ -238,7 +235,6 @@ fn encounter_coverage_edna_native_anchor_sets_home_position_without_unlock() {
 }
 
 #[test]
-#[ignore = "EDNA source appearance RED must execute before implementation"]
 fn encounter_coverage_edna_appearance_sets_source_energy_four_without_unlock() {
     for difficulty in [1, 205] {
         let (h, boss, _, _) = source_copy(difficulty);
@@ -255,7 +251,6 @@ fn encounter_coverage_edna_appearance_sets_source_energy_four_without_unlock() {
 }
 
 #[test]
-#[ignore = "EDNA native qualification, execute with source intro RED"]
 fn encounter_coverage_edna_native_seismic_smash_damage_and_copy_isolation() {
     for difficulty in [1, 205] {
         let (mut h, boss, _, _) = source_copy(difficulty);
@@ -299,7 +294,6 @@ fn encounter_coverage_edna_native_seismic_smash_damage_and_copy_isolation() {
 }
 
 #[test]
-#[ignore = "EDNA combat RED follows authentic intro GREEN"]
 fn encounter_coverage_edna_first_spike_after_authentic_unlock_normal_projected205() {
     for difficulty in [1, 205] {
         let (mut h, boss, map, golems) = source_copy(difficulty);
@@ -357,7 +351,7 @@ fn allocate_peer_copy(h: &mut Harness, difficulty: u32) -> InMap {
 }
 
 #[test]
-#[ignore = "EDNA ongoing source clocks RED follows authentic intro GREEN"]
+#[ignore = "Seeded native Seismic qualification pending targeted GREEN"]
 fn encounter_coverage_edna_ongoing_native_occupancy_damage_and_copy_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map, golems) = source_copy(difficulty);
@@ -371,6 +365,9 @@ fn encounter_coverage_edna_ongoing_native_occupancy_damage_and_copy_credit() {
                 origin,
                 entries: Vec::new(),
             });
+        // Both required Seismic damage receipts remain genuine native hits;
+        // replay their hit-table draws independently of intro/setup randomness.
+        let _rng = crate::random::seed_scope(0);
         h.engage(boss);
         h.advance(60.0);
         let attempts = &h
@@ -462,7 +459,6 @@ fn encounter_coverage_edna_ongoing_native_occupancy_damage_and_copy_credit() {
 }
 
 #[test]
-#[ignore = "EDNA generic reset proof follows authentic intro/combat GREEN"]
 fn encounter_coverage_edna_generic_evade_keeps_intro_done_and_rearms_parent_clock() {
     for difficulty in [1, 205] {
         let (mut h, boss, map, golems) = source_copy(difficulty);

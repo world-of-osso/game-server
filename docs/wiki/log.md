@@ -1,6 +1,6 @@
 ## 2026-10-23 — Runtime PC-immunity combat projection
 
-[Shared transition](systems/creature-aggro.md#runtime-pc-immunity-clear--2026-10-23): authentic EDNA unlock exposed missing combat ingress after PC flags cleared. Real Leviroth47170/SmartAI144 chain RED ataf3 (PC256 retained), native Seismic scoped-positive control PASS; generic clear/metadata re-projection and source144 implemented afterward. Staticimmune policy and current stats/power/threat/react state preserved; GREEN pending.
+[Shared transition](systems/creature-aggro.md#runtime-pc-immunity-clear--2026-10-23): authentic EDNA unlock exposed missing combat ingress after PC flags cleared. Real Leviroth47170/SmartAI144 chain RED ataf3 (PC256 retained), native Seismic scoped-positive control PASS; generic clear/metadata re-projection and source144 implemented afterward. Staticimmune policy and current stats/power/threat/react state preserved; dc7414f36 native13GREEN41.30s includes allEDNA8/sourceLeviroth/fourGeomancer controls. Proved tests enabled; ongoing positive native-hit RNG follow-up awaits its single-case GREEN, runtime unchanged.
 
 ## 2026-10-23 — EDNA inherited-death intro and native anchor
 

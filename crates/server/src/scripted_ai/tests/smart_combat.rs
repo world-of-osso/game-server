@@ -78,7 +78,6 @@ fn source_smart_actor(entry: u32, map_id: u32, spells: &[u32]) -> (Harness, Enti
 }
 
 #[test]
-#[ignore = "SmartAI immunity-clear RED must execute before shared projection fix"]
 fn smartai_source_leviroth_spellhit_clear_enables_real_linked_attack() {
     // Actual26452/spawn20203126 on571, source47170→144(0)→145(0)→46767→49.
     // This qualifies the SpellHit/action boundary, not the quest-item admission.
