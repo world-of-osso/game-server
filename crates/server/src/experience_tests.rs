@@ -216,6 +216,8 @@ fn level_up_power_table() -> PowerTypeTable {
             regen_peace: 0.0,
             regen_combat: 0.0,
             set_to_max_on_level_up,
+            // Native Energy flags29824 include0x400; Mana/Rage rows do not.
+            regen_affected_by_haste: power == PowerType::Energy,
         };
     PowerTypeTable::fixture([
         info(PowerType::Mana, 0, true),

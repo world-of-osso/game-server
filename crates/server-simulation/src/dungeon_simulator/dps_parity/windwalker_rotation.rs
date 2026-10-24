@@ -185,3 +185,9 @@ impl Rotation {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod wdp_children_tests;
+#[cfg(test)]
+mod wdp_duration_tests;
+#[cfg(test)]
+mod wdp_window_tests;
