@@ -1,0 +1,1 @@
+0.000 Player 'MID2_Death_Knight_Blood_San'layn' direct amount for Action 'heart_strike' (206930): amount=14807.050240 initial_amount=14807.050240 weapon=0 base=0 s_mod=0 s_power=0 a_mod=1.967 a_power=4479 mult=1.680673 w_mult=0 w_slot_mod=1 bonus_da=0

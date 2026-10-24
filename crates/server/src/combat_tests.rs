@@ -133,6 +133,7 @@ fn run_attack_tick(app: &mut App) {
                     creature_flags: None,
                     temp_summoner: None,
                     spirit_wolf: None,
+                    hunter_owner_ap: None,
                 };
                 for hand in [Hand::Main, Hand::Off] {
                     if try_swing(

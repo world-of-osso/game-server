@@ -32,13 +32,21 @@ mod kit_interrupt;
 #[cfg(test)]
 mod kit_light_of_titans_tests;
 mod kit_overrides;
+#[cfg(test)]
+mod native_action_override_tests;
+#[cfg(test)]
+mod native_book_tests;
 
 #[cfg(test)]
 mod fire_efficiency_tests;
 #[cfg(test)]
 mod formation_tests;
 #[cfg(test)]
+mod giantkiller_tests;
+#[cfg(test)]
 mod intensifying_flame_tests;
+#[cfg(test)]
+mod kit_elemental_resource_tests;
 #[cfg(test)]
 mod kit_proc_fidelity_tests;
 #[cfg(test)]
