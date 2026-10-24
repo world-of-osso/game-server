@@ -4347,3 +4347,7 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0â
 - 2026-10-23: [[server-crates]] records five stable catalog modules extracted with unchanged data/logic, canonical imports and updated generator destinations; no test relocations or measured speedup claim.
 - 2026-10-23: [[server-crates]] moves main module declarations/App assembly into the existing lib and keeps a five-line bin; library-artifact source-view test replaces old binary artifact selection. Full suite/census and paired measurements remain pending.
 - 2026-10-23: [[server-crates]] records test-only simulator consumer, canonical graph/receipt/marker support and explicit test-support mode; 44-file move is content-identical, API/cfg wiring awaits compiler/full-suite proof. Seven graph cases have explicit core-prefix migration.
+
+## 2026-10-24 â€” Full-gate native fixture boundaries
+
+[Fixture corrections](investigations/demonology-dps-parity.md#full-gate-fixture-corrections--2026-10-24): two own9a92 REDs distinguish legitimate Dread white melee from forbidden Imp spells, and missing fixture UnitFlags2 from grid scheduling. Shared production/fixture permission projector replaces duplicate logic; original test names and failure intents retained. No361/Antoran or regen-policy tuning.

@@ -408,7 +408,8 @@ fn guardians2_darkglare_retargets_stops_and_expires_without_pet_replacement() {
 
 #[test]
 fn guardians2_unbound_demon_is_not_an_imp_substitution() {
-    let mut h = harness(Vec::new(), &[111859, 3110], 9).unwrap();
+    const PHYSICAL_SCHOOL: u32 = 1;
+    let mut h = harness(Vec::new(), &[111859, 3110, 104318], 9).unwrap();
     let actor = imp(&mut h);
     h.app
         .world_mut()
@@ -434,11 +435,32 @@ fn guardians2_unbound_demon_is_not_an_imp_substitution() {
             event.source == Some(actor.to_bits())
                 && event.kind == shared::protocol::CombatLogKind::Damage
         })
-        .map(|event| (event.spell_id, event.amount))
+        .map(|event| (event.spell_id, event.amount, event.school_mask))
         .collect();
+    // ab79aee5a enables source-qualified193332/98035 melee independently of a
+    // cast list (SimC76f pets1197–1202; TC Unit.cpp2168–2230/Pet.cpp882–884).
+    assert!(
+        h.inbox.go.iter().all(|go| go.caster != actor.to_bits()),
+        "unbound Dreadstalker must not cast a guessed spell"
+    );
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && matches!(event.spell_id, Some(3110 | 104318))),
+        "neither Grimoire nor Wild Imp Firebolt may be substituted"
+    );
+    assert!(
+        source_damage
+            .iter()
+            .all(|(spell, _, school)| { spell.is_none() && *school == PHYSICAL_SCHOOL }),
+        "only native physical white damage is allowed: {source_damage:?}"
+    );
+    let white_damage: i32 = source_damage.iter().map(|(_, amount, _)| *amount).sum();
     assert_eq!(
         h.health(h.npc),
-        5000.0,
-        "unbound Dreadstalker must not substitute Imp Firebolt: {source_damage:?}"
+        5000.0 - white_damage as f32,
+        "target loss must reconcile to actual white melee, never a substituted spell"
     );
 }

@@ -555,6 +555,15 @@ const CREATURE_TYPE_CRITTER: i64 = 8;
 const CREATURE_FLAG_EXTRA_NO_XP: i64 = 0x40;
 const CREATURE_FLAG_EXTRA_TRIGGER: i64 = 0x80;
 pub(crate) const UNIT_FLAG2_REGENERATE_POWER: u32 = 0x800;
+
+/// TC Creature.cpp603–629: project native regen permission, keeping other live bits.
+pub(crate) fn project_creature_unit_flags2(template: &CreatureTemplate, current: u32) -> u32 {
+    if template.regenerates_power {
+        current | UNIT_FLAG2_REGENERATE_POWER
+    } else {
+        current & !UNIT_FLAG2_REGENERATE_POWER
+    }
+}
 /// TrinityCore `ObjectMgr::LoadCreatureModelInfo` `trigggerCreatureModelFileID`: the model files of
 /// invisible trigger displays.
 const TRIGGER_MODEL_FILE_DATA_IDS: &str = "124640, 124641, 124642, 343863, 439302";

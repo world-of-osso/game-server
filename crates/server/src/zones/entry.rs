@@ -259,12 +259,7 @@ impl EntryProjection {
     /// TC Creature.cpp603–629 projects native permission into the live unit flags.
     fn unit_flags2_for(&self, actor: &EntityWorldMut<'_>) -> u32 {
         let flags = actor.get::<UnitFlags2>().map_or(0, |flags| flags.0);
-        let permission = crate::world_data::UNIT_FLAG2_REGENERATE_POWER;
-        if self.template.regenerates_power {
-            flags | permission
-        } else {
-            flags & !permission
-        }
+        crate::world_data::project_creature_unit_flags2(&self.template, flags)
     }
 
     fn unit_flags_for(&self, actor: &EntityWorldMut<'_>, initial_spawn: bool) -> u32 {

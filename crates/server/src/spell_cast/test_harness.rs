@@ -368,15 +368,17 @@ pub fn spawn_player(app: &mut App, class: u8, x: f32) -> Entity {
 }
 
 pub fn spawn_npc(app: &mut App, x: f32) -> Entity {
+    let template = &crate::test_data::world_data().templates[&6];
     app.world_mut()
         .spawn((
             Npc {
                 template_id: 6,
                 name: "Kobold Vermin".into(),
             },
-            crate::zones::CreatureFlagsExtra(
-                crate::test_data::world_data().templates[&6].flags_extra,
-            ),
+            crate::zones::CreatureFlagsExtra(template.flags_extra),
+            shared::components::UnitFlags2(crate::world_data::project_creature_unit_flags2(
+                template, 0,
+            )),
             // Kobold Vermin: hostile to the Human caster.
             UnitFactionTemplate(25),
             Position { x, y: 0.0, z: 0.0 },
