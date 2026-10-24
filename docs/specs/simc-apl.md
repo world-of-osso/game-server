@@ -63,6 +63,15 @@ Ignored native regressions in `simc_apl_native/{extension_tests,action_extension
 
 TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyCastTimePercentMod`; `SpellAuraEffects.cpp4531–4551` applies aura193 through the same multiplicative cast/attack speed paths. Regression `dps_parity/haste_tests.rs` uses actual1467 BiS gear plus native Power Infusion10060 and Heroism32182 aura amounts; no injected ratings, stats or coefficients. Feral's separate100%-uptime Frantic Momentum/Savage Fury proc eligibility belongs to its spec owner, not to rating conversion.
 
+## Explicit native target context
+
+- [ ] Native fact adapters accept an actual current target and ordered native target universe, separate from an explicit proposed `Action.target`. Invalid/absent explicit context fails rather than borrowing another selection. Candidate selection preserves native order and ordinary per-action target eligibility, not just first-target readiness.
+- [ ] Owned `active_dot` counts use actual active native aura instances across that universe; foreign caster instances do not count. Unknown aliases fail.
+- [ ] Fixture movement-event absence uses pinned no-event values; actual movement never invents a configured raid event. Dungeon timing remains explicitly unavailable.
+- [ ] Fire Breath refresh decisions consume freshly resolved native empower-duration data and a sourced refresh policy, not raw child duration or current aura carry. Selected-target casting predicates read actual native state without invented reaction timers.
+
+[Target-context API proof and exact remaining gaps](../handoffs/native-target-context-proof-ledger.md).
+
 ## Known gaps (current cycle)
 
 - [ ] Wire native kit adapters; library expression/variable/list decisions have11-case GREEN, not full native rotation proof.

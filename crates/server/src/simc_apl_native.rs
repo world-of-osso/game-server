@@ -82,6 +82,11 @@ impl<'a> NativeFacts<'a> {
         }
     }
 
+    /// Explicit fixture/controller target context; native entities, never a count oracle.
+    pub fn with_targets(self, _current: Option<Entity>, _ordered: &'a [Entity]) -> Self {
+        self
+    }
+
     fn spell(&self, id: u32) -> Result<&crate::spell_info::SpellInfo, String> {
         self.world
             .resource::<crate::spell_info::SpellStore>()
@@ -544,6 +549,8 @@ fn bool_value(value: bool) -> f64 {
     if value { 1.0 } else { 0.0 }
 }
 
+#[cfg(test)]
+mod target_context_tests;
 #[cfg(test)]
 mod target_tests;
 #[cfg(test)]
