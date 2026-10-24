@@ -1,4 +1,4 @@
-//! Mainline 12.1.0.69933 Barbed Shot totals and Stormkeeper uses.
+//! Native DB2 Barbed per-tick amounts and Stormkeeper uses.
 use super::test_harness::*;
 use bevy::prelude::*;
 use shared::components::PowerType;
@@ -48,7 +48,7 @@ fn damage(h: &Harness, id: u32) -> Vec<i32> {
         .collect()
 }
 #[test]
-fn dummy20_barbed_reapplication_adds_unpaid_damage_to_native_five_tick_total() {
+fn dummy20_barbed_reapplication_adds_unpaid_damage_to_native_per_tick_amount() {
     let mut h = fixture(&[217200], 3);
     let caster = h.caster;
     let npc = h.npc;
@@ -58,8 +58,8 @@ fn dummy20_barbed_reapplication_adds_unpaid_damage_to_native_five_tick_total() {
     assert_eq!(paid.len(), 2, "extra initial and first regular native tick");
     assert_eq!(
         paid,
-        vec![61, 61],
-        "85.7 AP snapshot * five authored ticks / seven native ticks, rounded"
+        vec![86, 86],
+        "native0.857 AP per payment, not the tooltip's dummy5 divided over the clock"
     );
     h.inbox.log.clear();
     apply(&mut h, caster, npc, 217200);
@@ -67,13 +67,13 @@ fn dummy20_barbed_reapplication_adds_unpaid_damage_to_native_five_tick_total() {
     let rolled = damage(&h, 217200);
     assert_eq!(
         rolled.len(),
-        6,
-        "native twelve-second refresh preserves regular tick phase"
+        7,
+        "native twelve-second nonstacking recast resets its extra-initial schedule"
     );
     assert_eq!(
         rolled.iter().sum::<i32>(),
-        732,
-        "fresh 428.5 budget plus five unpaid 61.2143 ticks, six rounded future payments"
+        1029,
+        "fresh85.7 per tick plus five unpaid85.7 ticks over seven fresh payments"
     );
 }
 #[test]
@@ -137,13 +137,13 @@ fn dummy20_stormkeeper_two_instant_chain_lightnings() {
 }
 
 #[test]
-fn dummy20_barbed_native_clock_pays_authored_total_and_expires() {
+fn dummy20_barbed_native_clock_pays_db2_amount_each_tick_and_expires() {
     let mut h = fixture(&[217200], 3);
     let caster = h.caster;
     let npc = h.npc;
     apply(&mut h, caster, npc, 217200);
     h.advance(250);
-    assert_eq!(damage(&h, 217200), vec![61; 7]);
+    assert_eq!(damage(&h, 217200), vec![86; 7]);
     assert!(!crate::auras::has_aura(h.app.world(), npc, 217200));
     h.advance(50);
     assert_eq!(damage(&h, 217200).len(), 7);
@@ -171,10 +171,10 @@ fn dummy20_barbed_foreign_owner_gets_only_its_fresh_budget() {
         })
         .map(|e| e.amount)
         .collect();
-    assert_eq!(owned, vec![61; 7]);
+    assert_eq!(owned, vec![86; 7]);
     // The second player has no authenticated connection; health proves both
     // independent budgets without requiring its private log in our inbox.
-    assert_eq!(h.health(npc), 5000.0 - 14.0 * 61.0);
+    assert_eq!(h.health(npc), 5000.0 - 14.0 * 86.0);
 }
 
 #[test]
@@ -184,7 +184,7 @@ fn dummy20_barbed_refresh_resnapshots_new_power_without_rescaling_unpaid_old_dam
     let npc = h.npc;
     apply(&mut h, caster, npc, 217200);
     h.advance(45);
-    assert_eq!(damage(&h, 217200), vec![61; 2]);
+    assert_eq!(damage(&h, 217200), vec![86; 2]);
     h.app
         .world_mut()
         .get_mut::<crate::stats::CharacterStats>(caster)
@@ -193,7 +193,7 @@ fn dummy20_barbed_refresh_resnapshots_new_power_without_rescaling_unpaid_old_dam
     h.inbox.log.clear();
     apply(&mut h, caster, npc, 217200);
     h.advance(250);
-    assert_eq!(damage(&h, 217200), vec![194; 6]);
+    assert_eq!(damage(&h, 217200), vec![233; 7]);
 }
 
 #[test]
