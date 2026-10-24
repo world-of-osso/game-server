@@ -1,6 +1,6 @@
 {
   "status": "expected mapping; must be reconciled against actual Cargo test inventories",
-  "from_revision": "3b1222df4ae16e712e1ab4b82d74b7986450fcb6",
+  "from_revision": "8e7c7a685",
   "old_package": "server",
   "old_target": "server",
   "rules_in_order": [

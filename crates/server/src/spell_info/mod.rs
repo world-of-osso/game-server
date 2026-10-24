@@ -445,7 +445,7 @@ impl SpellStore {
     }
 
     /// Keep native trait curves when a harness scopes the spell records.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn fixture_from_catalog(spells: Vec<SpellInfo>, catalog: &Self) -> Self {
         let mut store = Self::fixture(spells);
         store.trait_effect_points = catalog.trait_effect_points.clone();
