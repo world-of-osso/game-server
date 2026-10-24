@@ -61,7 +61,10 @@ mod tests {
         let error = program
             .select("precombat", &facts, &mut state, |_| Ok(false))
             .unwrap_err();
-        assert!(error.contains("trinket.1.has_buff.intellect"), "{error}");
+        assert!(
+            error.contains("unknown APL operand trinket.1.has_buff."),
+            "{error}"
+        );
     }
 
     #[test]
