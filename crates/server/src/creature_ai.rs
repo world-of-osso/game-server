@@ -1404,6 +1404,7 @@ type PetMover = (
     Option<&'static InMap>,
     Bearing,
     Option<&'static crate::followers::FollowerReach>,
+    Option<&'static crate::spell_cast::guardian::GuardianMelee>,
 );
 
 /// `PetAI` movement at the base run speed × the aura speed multiplier, on the floor: a
@@ -1434,14 +1435,25 @@ fn pet_motion_system(
             .filter_map(|victim| positions.get(victim).ok().map(|at| (victim, *at)))
             .collect()
     };
-    for (entity, mut pos, mut motion, health, cast, mods, map, bearing, companion_pet) in
-        &mut units.p0()
+    for (
+        entity,
+        mut pos,
+        mut motion,
+        health,
+        cast,
+        mods,
+        map,
+        bearing,
+        companion_pet,
+        guardian_melee,
+    ) in &mut units.p0()
     {
         let speed = mods.map_or(1.0, |mods| mods.movement_speed);
         let held = health.current <= 0.0
             || speed <= 0.0
             || cast.is_some_and(|cast| !cast.cast_while_moving);
-        let run_speed = BASE_RUN_SPEED * speed;
+        let base_run_speed = guardian_melee.map_or(BASE_RUN_SPEED, |guardian| guardian.run_speed);
+        let run_speed = base_run_speed * speed;
         let here = *pos;
         let (next_position, face) = match *motion {
             _ if held => (here, None),

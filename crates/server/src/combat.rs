@@ -655,14 +655,17 @@ pub(crate) fn auto_attack_system(world: &mut World) {
     for attacker in attackers {
         // Apply this attacker's commands before the next attacker reads mitigation.
         // In particular, consuming Ardent also removes its30% damage reduction now.
+        let guardian_melee_ap = world
+            .get::<crate::spell_cast::guardian::GuardianMelee>(attacker)
+            .map(|_| crate::spell_cast::effects::power_stats(world, attacker, false).1);
         world
-            .run_system_cached_with(auto_attack_unit, attacker)
+            .run_system_cached_with(auto_attack_unit, (attacker, guardian_melee_ap))
             .expect("auto-attack unit system must have its registered resources");
     }
 }
 
 fn auto_attack_unit(
-    In(attacker_entity): In<Entity>,
+    In((attacker_entity, guardian_melee_ap)): In<(Entity, Option<f32>)>,
     time: Res<Time>,
     mut params: AutoAttackParams,
 ) {
@@ -702,6 +705,7 @@ fn auto_attack_unit(
         authored_attack_time: snapshot.authored_attack_time,
         creature_flags: snapshot.creature_flags.as_ref(),
         temp_summoner: snapshot.temp_summoner,
+        guardian_melee_ap,
         hunter_owner_ap: params.hunter_pets.get(attacker_entity).ok().map(|pet| {
             let (owner, modifiers) = params
                 .owner_stats
@@ -901,10 +905,19 @@ pub(crate) struct Attacker<'a> {
     pub temp_summoner: Option<Entity>,
     pub spirit_wolf: Option<(&'a crate::spell_cast::guardian::SpiritWolf, f32)>,
     pub hunter_owner_ap: Option<f32>,
+    /// Existing qualified power_stats contribution; intrinsic guardian weapon/AP
+    /// remains unqualified, never replaced by the ordinary-creature flat10.
+    pub guardian_melee_ap: Option<f32>,
 }
 
 impl Attacker<'_> {
     fn weapon(&self, hand: Hand) -> Option<WeaponDamage> {
+        if self.guardian_melee_ap.is_some() {
+            return matches!(hand, Hand::Main).then_some(WeaponDamage {
+                speed: crate::spell_cast::guardian::BASE_GUARDIAN_ATTACK_TIME,
+                ..WeaponDamage::UNARMED
+            });
+        }
         if let Some((wolf, _)) = self.spirit_wolf {
             return matches!(hand, Hand::Main).then_some(wolf.weapon);
         }
@@ -963,6 +976,11 @@ fn roll_swing_base(
     hand: Hand,
     scaling: &UnitScaling,
 ) -> f32 {
+    if let Some(attack_power) = attacker.guardian_melee_ap {
+        // TC Guardian::UpdateDamagePhysical1423. Only the existing qualified
+        // owner contribution is available; do not invent intrinsic/base damage.
+        return attack_power / 3.5 * weapon.speed;
+    }
     let mut rng = rand::thread_rng();
     if let Some((_, attack_power)) = attacker.spirit_wolf {
         // Guardian::UpdateDamagePhysical1423; intrinsic AP is unqualified.

@@ -143,6 +143,7 @@ fn read_native_crit_chance(h: &Harness, attacker: Entity, victim: Entity) -> f32
             .map(|s| s.summoner),
         spirit_wolf: None,
         hunter_owner_ap: None,
+        guardian_melee_ap: None,
     };
     let level_difference = i32::from(world.get::<UnitLevel>(victim).unwrap().0)
         - i32::from(world.get::<UnitLevel>(attacker).unwrap().0);

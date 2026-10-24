@@ -92,6 +92,19 @@ pub(super) fn load_startup(mut commands: Commands) {
     commands.insert_resource(load_guardian_spells(&conn).expect("load guardian spells"));
 }
 
+/// TC Pet.cpp882–884 / UnitDefines.h BASE_ATTACK_TIME: Guardian base seconds.
+pub(crate) const BASE_GUARDIAN_ATTACK_TIME: f32 = 2.0;
+
+/// Source-qualified melee AI, independent of whether its spell list is bound.
+/// SimC76f8118 pets1197–1202 identifies Dreadstalker melee; native roots/entries
+/// come from Effect28, not a replacement spell or fabricated creature template.
+const MELEE_GUARDIAN_SOURCES: &[(u32, u32)] = &[(193331, 98035), (193332, 98035)];
+
+#[derive(Component)]
+pub(crate) struct GuardianMelee {
+    pub run_speed: f32,
+}
+
 #[derive(Component)]
 pub(super) struct GuardianActor {
     spells: Vec<u32>,
@@ -107,6 +120,17 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
     }
     let entry = world.get::<Npc>(actor).unwrap().template_id;
     let owner = summon.owner;
+    let root = summon.spell_id;
+    let demon = world
+        .resource::<crate::world_data::WorldData>()
+        .template_for(entry, 0)
+        .is_some_and(|template| template.creature_type == 3);
+    if demon {
+        world
+            .entity_mut(actor)
+            .insert(crate::hunter_pet::SummonedDemon);
+    }
+    initialize_melee(world, actor, root, entry);
     if entry == 29264 {
         initialize_spirit_wolf(world, actor, owner);
     }
@@ -134,10 +158,6 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
         return;
     }
     let pools = load_actor_powers(world, entry, &spells);
-    let demon = world
-        .resource::<crate::world_data::WorldData>()
-        .template_for(entry, 0)
-        .is_some_and(|template| template.creature_type == 3);
     world.entity_mut(actor).insert((
         GuardianActor {
             spells,
@@ -145,11 +165,26 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
         },
         pools,
     ));
-    if demon {
-        world
-            .entity_mut(actor)
-            .insert(crate::hunter_pet::SummonedDemon);
+}
+
+fn initialize_melee(world: &mut World, actor: Entity, root: u32, entry: u32) {
+    if !MELEE_GUARDIAN_SOURCES.contains(&(root, entry)) {
+        return;
     }
+    let run_speed = world
+        .resource::<crate::world_data::WorldData>()
+        .template_for(entry, 0)
+        .expect("native melee guardian template")
+        .speed_run
+        * crate::creature_ai::BASE_RUN_SPEED;
+    assert!(
+        run_speed > 0.0,
+        "native melee guardian requires positive run speed"
+    );
+    world.entity_mut(actor).insert((
+        GuardianMelee { run_speed },
+        crate::combat::CreatureAttackTime(BASE_GUARDIAN_ATTACK_TIME),
+    ));
 }
 
 fn initialize_spirit_wolf(world: &mut World, actor: Entity, owner: Entity) {
@@ -193,7 +228,7 @@ fn load_actor_powers(world: &World, entry: u32, spells: &[u32]) -> super::powers
 
 pub(super) fn update(world: &mut World) {
     let actors: Vec<_> = world
-        .query_filtered::<Entity, With<GuardianActor>>()
+        .query_filtered::<Entity, Or<(With<GuardianActor>, With<GuardianMelee>)>>()
         .iter(world)
         .collect();
     for actor in actors {
@@ -235,21 +270,49 @@ fn cast_on_owner_target(world: &mut World, actor: Entity) {
     let owner = world.get::<SummonedCreature>(actor).unwrap().owner;
     let target = world
         .get::<crate::networking::CombatTarget>(owner)
-        .and_then(|target| target.0);
+        .and_then(|target| target.0)
+        .filter(|target| {
+            super::targets::is_alive(world, *target)
+                && world.get::<crate::maps::InMap>(*target)
+                    == world.get::<crate::maps::InMap>(actor)
+                && super::targets::relation_matches(
+                    world,
+                    actor,
+                    *target,
+                    super::targets::Relation::Enemy,
+                )
+        });
     world
         .get_mut::<crate::networking::CombatTarget>(actor)
         .unwrap()
         .0 = target;
+    update_melee_motion(world, actor, owner, target);
     if world.get::<CastState>(actor).is_some() || !super::targets::is_alive(world, actor) {
         return;
     }
-    let Some(target) = target.filter(|target| {
-        super::targets::is_alive(world, *target)
-            && world.get::<crate::maps::InMap>(*target) == world.get::<crate::maps::InMap>(actor)
-    }) else {
+    if let Some(target) = target
+        && world.get::<GuardianActor>(actor).is_some()
+    {
+        cast_first_ready(world, actor, target);
+    }
+}
+
+fn update_melee_motion(world: &mut World, actor: Entity, owner: Entity, target: Option<Entity>) {
+    use crate::creature_ai::{FollowOwner, PetMotion};
+    if world.get::<GuardianMelee>(actor).is_none() {
         return;
-    };
-    cast_first_ready(world, actor, target);
+    }
+    if let Some(target) = target {
+        world
+            .entity_mut(actor)
+            .remove::<FollowOwner>()
+            .insert(PetMotion::Chase(target));
+    } else if world.get::<FollowOwner>(actor).is_none() {
+        world
+            .entity_mut(actor)
+            .remove::<PetMotion>()
+            .insert(FollowOwner::new(owner));
+    }
 }
 
 fn has_repeat_clock(spell: &crate::spell_info::SpellInfo) -> bool {

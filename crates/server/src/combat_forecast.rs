@@ -166,6 +166,9 @@ fn read_attacker(world: &World, enemy: Entity) -> Result<Attacker<'_>, String> {
             .map(|summon| summon.summoner),
         spirit_wolf: None,
         hunter_owner_ap: None,
+        guardian_melee_ap: world
+            .get::<crate::spell_cast::guardian::GuardianMelee>(enemy)
+            .map(|_| crate::spell_cast::effects::power_stats(world, enemy, false).1),
     })
 }
 
