@@ -23,6 +23,9 @@ fn native_fixture(spell: u32, class: u8) -> Harness {
         mode,
     );
     h.app.world_mut().flush();
+    // Shared caster fixture starts in combat for rage tests; this boundary starts idle.
+    let caster = h.caster;
+    crate::combat_refs::end_all_combat(h.app.world_mut(), caster);
     h
 }
 
