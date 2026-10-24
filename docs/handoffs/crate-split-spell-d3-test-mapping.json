@@ -8,7 +8,7 @@
     "ignored": 3,
     "should_panic": 0
   },
-  "scope": "Housekeeping only; no body edits/seams/dependency/API changes",
+  "scope": "Housekeeping only; no body edits/seams/new packages or versions/API changes; existing rusqlite dev-dependency and canonical random import wiring approved",
   "cases": [
     {
       "name": "spell_cast::attack_restriction_tests::native_attack_restriction264_turtle_rejects_ranged_cast_before_pacify",

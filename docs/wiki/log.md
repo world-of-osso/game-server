@@ -1,6 +1,6 @@
 ## 2026-10-24 — Byte-identical public spell remainder
 
-[D3](systems/server-crates.md#public-spell-remainder-d3):11pure file moves retain54case names/flags (51enabled/3existing ignored), extending the existing consumer to229cases without body/seam/dependency/API changes. Housekeeping only; exact inventory, combined compiler proof, full gate and matched timing remain distinct.
+[D3](systems/server-crates.md#public-spell-remainder-d3):11pure file moves retain54case names/flags (51enabled/3existing ignored), extending the existing consumer to229cases without body/seam/new-package-or-version/API changes. Existing rusqlite0.35/bundled and canonical random import are dev-only consumer wiring. Housekeeping only; exact inventory, combined compiler proof, full gate and matched timing remain distinct.
 
 ## 2026-10-24 — Qualified spell-fixture test consumer
 

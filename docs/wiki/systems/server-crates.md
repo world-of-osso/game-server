@@ -56,7 +56,7 @@ No `execute_cast` seam or gameplay-internal visibility widening is included. Fin
 
 ## Public spell remainder (D3)
 
-D3 appends11byte-identical public spell test files to the existing consumer, retaining54case identities (51enabled/3existing ignored/0should-panic). The three proc-recipient ignore reasons remain unchanged. No test body, fixture seam, dependency, profile or gameplay API changes. Pure moves `007c3d144` precede declaration-only wiring; [exact mapping](../../handoffs/crate-split-spell-d3-test-mapping.json) records core→consumer ownership. Consumer inventory becomes229cases (226enabled/3ignored). This1,543-line cut is housekeeping, not a claimed material whole-core speedup. Exact post-build inventory, one combined core/consumer compiler check, parent full gate and paired measurement remain acceptance proof.
+D3 appends11byte-identical public spell test files to the existing consumer, retaining54case identities (51enabled/3existing ignored/0should-panic). The three proc-recipient ignore reasons remain unchanged. No test body, fixture seam, new package/version, profile or gameplay API changes. The existing rusqlite0.35/bundled workspace dependency is wired dev-only for the unchanged summon-property fixture; proc-recipient fixtures import canonical server::random at the consumer root. Pure moves `007c3d144` precede declaration-only wiring; [exact mapping](../../handoffs/crate-split-spell-d3-test-mapping.json) records core→consumer ownership. Consumer inventory becomes229cases (226enabled/3ignored). This1,543-line cut is housekeeping, not a claimed material whole-core speedup. Exact post-build inventory, one combined core/consumer compiler check, parent full gate and paired measurement remain acceptance proof.
 
 ## Sources
 
