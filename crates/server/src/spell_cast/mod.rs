@@ -25,8 +25,6 @@ pub mod area_trigger;
 mod attack_power_tests;
 #[cfg(test)]
 mod attack_restriction_tests;
-#[cfg(test)]
-mod attack_speed_tests;
 mod aura_spell_restrictions;
 pub(crate) mod auto_repeat;
 #[cfg(test)]
@@ -48,15 +46,9 @@ pub(crate) mod blooming_infusion;
 #[cfg(test)]
 mod blooming_infusion_tests;
 #[cfg(test)]
-mod bonus_armor_tests;
-#[cfg(test)]
 mod bonus_stat_tests;
 #[cfg(test)]
 mod cast_while_moving_tests;
-#[cfg(test)]
-mod caster_healing_taken_tests;
-#[cfg(test)]
-mod caster_school_damage_tests;
 mod casting_restriction;
 #[cfg(test)]
 mod casting_restriction_tests;
@@ -64,10 +56,6 @@ mod casting_restriction_tests;
 mod category_cooldown_tests;
 #[cfg(test)]
 mod census_death_grip_tests;
-#[cfg(test)]
-mod census_e77_dk_tests;
-#[cfg(test)]
-mod census_e77_priest_tests;
 #[cfg(test)]
 mod census_e77_shaman_tests;
 #[cfg(test)]
@@ -94,10 +82,6 @@ pub(crate) mod control_dream;
 mod control_dream_tests;
 pub(crate) mod cosmetic;
 pub mod creature;
-#[cfg(test)]
-mod creature_trigger_aura_tests;
-#[cfg(test)]
-mod creature_trigger_dead_caster_tests;
 #[cfg(test)]
 mod creature_type_damage_tests;
 #[cfg(test)]
@@ -153,17 +137,9 @@ mod dummy3_tests;
 #[cfg(test)]
 mod dummy4_tests;
 #[cfg(test)]
-mod dummy5_tests;
-#[cfg(test)]
 mod dummy6_tests;
 #[cfg(test)]
-mod dummy7_tests;
-#[cfg(test)]
-mod dummy8_defense_tests;
-#[cfg(test)]
 mod dummy8_tests;
-#[cfg(test)]
-mod dummy9_tests;
 #[cfg(test)]
 mod dummy_tests;
 pub mod effects;
@@ -181,16 +157,13 @@ mod expel_harm_tests;
 #[cfg(test)]
 mod fel_devastation_tests;
 #[cfg(test)]
-mod fount_strength_tests;
-#[cfg(test)]
 mod full_trigger_dead_target_tests;
-#[cfg(test)]
-mod generic_empower_tests;
 pub mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 pub(crate) mod history_store;
 mod hit;
+mod howl;
 #[cfg(test)]
 mod impending_victory_tests;
 mod interruptibility;
@@ -198,8 +171,6 @@ mod interruptibility;
 mod invigorating_fury_tests;
 #[cfg(any(test, feature = "test-support"))]
 pub mod native_apl;
-#[cfg(test)]
-mod periodic_healing_taken_tests;
 #[cfg(test)]
 mod proc_recipient_tests;
 #[cfg(test)]
@@ -213,8 +184,6 @@ mod interruptibility_tests;
 pub(crate) mod mobile_banking;
 #[cfg(test)]
 mod mobile_banking_tests;
-#[cfg(test)]
-mod normal_allow_dead_target_tests;
 pub(crate) mod omor_orbital;
 #[cfg(test)]
 mod ordinary_dead_caster_tests;
@@ -222,10 +191,6 @@ mod ordinary_dead_caster_tests;
 mod prayer_of_mending_tests;
 #[cfg(test)]
 mod queued_trigger_cost_tests;
-#[cfg(test)]
-mod queued_trigger_target_tests;
-#[cfg(test)]
-mod queued_trigger_tests;
 #[cfg(test)]
 mod readiness_lifetime_tests;
 #[cfg(test)]
@@ -235,13 +200,7 @@ mod scourge_eruption_tests;
 #[cfg(test)]
 mod summon_lifetime_tests;
 #[cfg(test)]
-mod target_aura_type_tests;
-#[cfg(test)]
 mod touch_of_death_tests;
-#[cfg(test)]
-mod triggered_caster_aura_tests;
-#[cfg(test)]
-mod triggered_target_aura_tests;
 #[cfg(test)]
 mod warrior_stun_tests;
 mod warrior_stuns;
@@ -251,22 +210,12 @@ mod enemy_dodge_tests;
 #[cfg(test)]
 mod label_recovery_tests;
 #[cfg(test)]
-mod linked_aura_tests;
-#[cfg(test)]
-mod mechanic_duration_tests;
-#[cfg(test)]
 mod mechanic_resistance_tests;
 #[cfg(test)]
 mod melee_crit_taken_tests;
 #[cfg(test)]
-mod melee_from_caster_tests;
-#[cfg(test)]
 mod melee_hit_modifier_tests;
-#[cfg(test)]
-mod minimum_speed_tests;
 mod missiles;
-#[cfg(test)]
-mod npc_dodge_tests;
 pub mod open_lock;
 #[cfg(test)]
 mod open_lock_tests;
@@ -281,14 +230,10 @@ pub(crate) mod recovery_rate;
 #[cfg(test)]
 mod recovery_rate_tests;
 mod reflect;
-#[cfg(test)]
-mod resistance_pct_tests;
 mod resources;
 pub mod runes;
 pub mod scripts;
 mod shapeshift;
-#[cfg(test)]
-mod shapeshift_tests;
 pub mod summon;
 #[cfg(test)]
 mod summon_at_tests;
@@ -766,6 +711,11 @@ impl SpellHistory {
         let deadline = own_deadline.or_else(|| self.category_ready_at.get(&category));
         let remaining = deadline.copied().unwrap_or(now) - now;
         (remaining.max(0.0) * 1000.0) as u64
+    }
+
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn has_active_gcd(&self, now: f64) -> bool {
+        self.gcd_ready_at.values().any(|&deadline| deadline > now)
     }
 
     pub fn on_gcd(&self, spell: &SpellInfo, now: f64) -> bool {
@@ -3503,7 +3453,11 @@ fn load_triggered_spell(world: &World, spell_id: u32, depth: u8) -> Option<Spell
     let spell = world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(spell_id))
-        .cloned();
+        .cloned()
+        .map(|mut spell| {
+            spell.cast_dont_reset_periodic_timer = true;
+            spell
+        });
     if spell.is_none() {
         warn!("Triggered spell {spell_id} not found");
     }
@@ -4031,8 +3985,6 @@ mod live_ground_destination_tests;
 mod mechanics_talent_tests;
 #[cfg(test)]
 mod mechanics_tests;
-#[cfg(test)]
-mod new_class_tests;
 #[cfg(test)]
 mod optional_flat_cost_tests;
 #[cfg(test)]

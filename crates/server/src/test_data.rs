@@ -180,6 +180,30 @@ pub(crate) fn ground_map() -> crate::ground::GroundMap {
     crate::ground::GroundMap::new(&crate::ground::ground_data_dir(), wdts)
 }
 
+/// Install real source geometry for transport-free fixtures without exposing core types.
+#[cfg(any(test, feature = "test-support"))]
+pub fn install_native_collision(app: &mut bevy::prelude::App) -> Result<(), String> {
+    let assets = std::env::var_os("GAME_SERVER_GROUND_DIR")
+        .map(PathBuf::from)
+        .ok_or("native collision fixture requires GAME_SERVER_GROUND_DIR")?;
+    let connection = rusqlite::Connection::open_with_flags(
+        world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .map_err(|error| format!("open native geometry map metadata: {error}"))?;
+    let maps = crate::maps::store::load_map_store(&connection)
+        .map_err(|error| format!("load native geometry map metadata: {error}"))?;
+    let wdts = maps
+        .maps
+        .into_iter()
+        .map(|(id, map)| (id, map.wdt_file_data_id))
+        .collect();
+    let los = crate::line_of_sight::LineOfSight::load(&assets.join("los"))?;
+    app.insert_resource(crate::ground::GroundMap::new(&assets, wdts));
+    app.insert_resource(los);
+    Ok(())
+}
+
 /// `path`, panicking with how to provide it when it does not exist.
 pub(crate) fn require(path: PathBuf) -> PathBuf {
     assert!(

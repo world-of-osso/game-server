@@ -35,35 +35,53 @@ impl Rotation {
         }
         let mut bindings = bindings::build();
         let equipment = Equipment::load(world, actor, &mut bindings)?;
-        let mut rotation = Self {
+        let rotation = Self {
             driver: Driver::new(source::load()?),
             bindings,
             equipment,
             encounter,
         };
-        rotation.precombat(world, actor)?;
         // Rejected dungeon loads cannot capture the controller or mutate identity.
         literal_rotation::capture_fixture(world, actor, encounter)?;
         Ok(rotation)
     }
 
-    fn precombat(&mut self, world: &mut World, actor: Entity) -> Result<(), String> {
-        loop {
-            let prepared = Prepared::read(
-                world,
-                actor,
-                &[],
-                &self.equipment,
-                bindings::execution_actions(),
-                self.driver.snapshot.is_none(),
-            )?;
-            let Some((action, execution)) =
-                self.select(world, actor, &[], "precombat", &prepared)?
-            else {
-                return Ok(());
-            };
-            self.driver.execute(world, actor, action, execution)?;
-        }
+    pub fn precombat_step(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<bool, String> {
+        self.start_combat_at(crate::spell_cast::now(world));
+        let prepared = Prepared::read(
+            world,
+            actor,
+            targets,
+            &self.equipment,
+            bindings::execution_actions(),
+            self.driver.snapshot.is_none(),
+        )?;
+        let Some((action, execution)) =
+            self.select(world, actor, targets, "precombat", &prepared)?
+        else {
+            return Ok(false);
+        };
+        self.driver.execute(world, actor, action, execution)?;
+        Ok(true)
+    }
+
+    pub fn start_combat_at(&mut self, started_at: f64) {
+        let Encounter::Fixture {
+            duration, style, ..
+        } = self.encounter
+        else {
+            unreachable!("literal fixture validated at load");
+        };
+        self.encounter = Encounter::Fixture {
+            started_at,
+            duration,
+            style,
+        };
     }
 
     pub fn drive(
@@ -107,7 +125,7 @@ impl Rotation {
             &self.bindings,
             &self.equipment,
             self.encounter,
-            targets.len(),
+            targets,
             xuen,
         );
         self.driver.select(list, &facts, prepared, &self.equipment)
@@ -126,7 +144,7 @@ impl Rotation {
             &self.bindings,
             &self.equipment,
             self.encounter,
-            targets.len(),
+            targets,
             xuen,
         );
         if self.driver.should_cancel(world, actor, &facts)? {
@@ -150,7 +168,7 @@ impl Rotation {
             &self.bindings,
             &self.equipment,
             self.encounter,
-            targets.len(),
+            targets,
             xuen,
         )
         .value_for(action, name)

@@ -531,7 +531,7 @@ mod tests {
     #[test]
     fn native_npc_dodge_chance_follows_authored_tuning_and_exact_level_bonus() {
         use crate::auras::{RemoveReason, remove_auras};
-        use crate::spell_cast::npc_dodge_tests::spawn_native_dodge_target;
+        use crate::spell_cast::test_harness::spawn_native_dodge_target;
         use shared::components::{Level, UnitLevel};
 
         // Native40 tuning73 clamps1..30; native626 tuning6 clamps5..30.
