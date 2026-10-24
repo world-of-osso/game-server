@@ -229,9 +229,8 @@ pub(crate) fn prepare_encounter_database(
     // Concurrent full-world snapshots must not consume the shared /tmp tmpfs.
     let fixture_root =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/encounter-fixtures");
-    std::fs::create_dir_all(&fixture_root).expect("disk-backed encounter fixture root");
-    let directory =
-        tempfile::tempdir_in(fixture_root).expect("isolated encounter fixture directory");
+    let directory = crate::test_data::fixture_dir::create_fixture_dir(&fixture_root)
+        .expect("isolated encounter fixture directory");
     let path = directory.path().join("encounter-mirror.sqlite");
     let source = Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("read-only encounter source database");
