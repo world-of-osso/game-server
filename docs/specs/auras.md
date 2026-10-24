@@ -47,8 +47,8 @@ TC a352b1fa `SpellAuraEffects.cpp:832–873` supplies the rolling-amount rule.
 This is shared aura execution, not an Echo/Ignite proc or learned-spell grant.
 
 - [x] Native Attr10 `ROLLING_PERIODIC` selects one shared carry path for periodic damage/healing, including335467 leech.
-- [x] Settle old due ticks once, then add the same caster/spell/effect's unpaid stored amount over the refreshed scheduled ticks; retain the existing native phase.
-- [x] Preserve Barbed's authored five-amount normalization and seven-initial/six-refreshed clock; never apply its normalization to other spells or carry its old pool twice.
+- [ ] Settle old due ticks once, then add the same caster/spell/effect's unpaid stored amount over the refreshed scheduled ticks. Normal nonstacking recasts reset the native period; stacking and Attr13 `PERIODIC_REFRESH_EXTENDS_DURATION` preserve time-to-tick (TC `Spell.cpp3236`, `SpellAuras.cpp976–991`).
+- [ ] Every fresh periodic payment retains its DB2 effect amount. Remove tooltip-only fixed-total normalization:217200 dummy5 does not divide its native AP0.857 payment. Native selected14s/2000ms/extra-initial yields8 payments; a legal refresh carries unpaid old damage into its new8-payment schedule. Native-source RED198697bd9: fresh2124.697 versus3399.515, refresh8payments versus9 (one old plus8new);2FAIL/2PASS21.52s. GREEN pending.
 - [x] Unflagged periodic healing and foreign caster pools remain independent; preserve existing fractional snapshots and payment rounding rather than requantizing them during refresh.
 - [x] Ordinary native child aura/cast execution gains this behavior automatically; class producers still own their sourced incoming amount.
 - [ ] Qualify actual12654 producer integration separately; its flag uses the same shared path, but the Ignite producer belongs to another slice.

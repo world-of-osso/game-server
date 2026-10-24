@@ -76,7 +76,7 @@ fn finish_aura(h: &mut Harness, aura: &AuraInstance) {
 }
 
 #[test]
-fn generic_rolling_periodic_native_damage_keeps_unpaid_amount_and_original_tick_phase() {
+fn generic_rolling_periodic_native_damage_keeps_unpaid_amount_and_resets_tick_phase() {
     let mut h = native_fixture();
     let target = h.npc;
     let spell = h
@@ -114,8 +114,8 @@ fn generic_rolling_periodic_native_damage_keeps_unpaid_amount_and_original_tick_
     }
     assert_eq!(
         ticks(&h, target, LANGUISH, start).len(),
-        1,
-        "keep the original native tick phase"
+        0,
+        "ordinary nonstacking recast resets the native periodic timer"
     );
     finish_aura(&mut h, &refreshed);
     let remaining = ticks(&h, target, LANGUISH, start);
