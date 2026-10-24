@@ -1,7 +1,7 @@
 //! Literal Ret adapter qualification; native facts and execution stay shared.
 use super::literal_rotation::equipment::Equipment;
 use crate::simc_apl_native::{Bindings, NativeFacts};
-use server::simc_apl::ActionFacts;
+use server::simc_apl::{Action, ActionFacts, Facts};
 use shared::components::PowerType;
 
 // SimC76f8118 paladin spell lookups, checked against native70448 identities.
@@ -109,8 +109,41 @@ fn parse_row(line: &str) -> Result<(&str, &str), String> {
     Ok((list, literal))
 }
 
-fn with_equipment<'a>(native: NativeFacts<'a>, _equipment: &'a Equipment) -> impl ActionFacts + 'a {
-    native
+struct RetFacts<'a> {
+    native: NativeFacts<'a>,
+    equipment: &'a Equipment,
+}
+
+fn with_equipment<'a>(native: NativeFacts<'a>, equipment: &'a Equipment) -> RetFacts<'a> {
+    RetFacts { native, equipment }
+}
+
+fn is_equipment_operand(name: &str) -> bool {
+    name.starts_with("trinket.") || name.starts_with("equipped.")
+}
+
+impl Facts for RetFacts<'_> {
+    fn value(&self, name: &str) -> Result<f64, String> {
+        if is_equipment_operand(name) {
+            self.equipment.fact(name, &self.native)
+        } else {
+            self.native.value(name)
+        }
+    }
+}
+
+impl ActionFacts for RetFacts<'_> {
+    fn target_ids(&self, action: &Action) -> Result<Vec<u64>, String> {
+        self.native.target_ids(action)
+    }
+
+    fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
+        if is_equipment_operand(name) {
+            self.value(name)
+        } else {
+            self.native.value_for(action, name)
+        }
+    }
 }
 
 #[cfg(test)]
