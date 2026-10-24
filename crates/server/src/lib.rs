@@ -109,6 +109,7 @@ mod mirror_timers;
 mod mount_journal;
 mod mythic_plus;
 mod navigation;
+pub use navigation::within_reach;
 pub mod networking;
 pub mod npc_interaction;
 #[cfg(test)]

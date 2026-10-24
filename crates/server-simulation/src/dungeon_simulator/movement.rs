@@ -181,7 +181,7 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     let Some((to, reach)) = destination(world, unit, from) else {
         return Ok(());
     };
-    let in_reach = crate::navigation::within_reach(from, to, reach);
+    let in_reach = server::within_reach(from, to, reach);
     let mut travel = world
         .entity_mut(unit)
         .take::<Travel>()
