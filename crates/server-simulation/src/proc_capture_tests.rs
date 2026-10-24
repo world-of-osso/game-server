@@ -1,4 +1,5 @@
 //! Real native event inputs; charge ownership is deliberately unchanged in C2.
+use bevy::prelude::Entity;
 use server::auras::procs::{ObservedProcEvents, ProcEventObservation};
 use server::auras::{self, ActiveAuras, AuraApplication, AuraSource};
 use server::spell_cast::{
@@ -36,7 +37,7 @@ fn apply_native(h: &mut Harness, id: u32) -> u32 {
         .instance_id
 }
 
-fn event(h: &Harness, id: u32, cast: bool) -> ProcEventObservation {
+fn event(h: &Harness, id: u32, cast: bool, target: Option<Entity>) -> ProcEventObservation {
     h.app
         .world()
         .resource::<ObservedProcEvents>()
@@ -50,7 +51,7 @@ fn event(h: &Harness, id: u32, cast: bool) -> ProcEventObservation {
                 && !event.periodic
                 && !event.reflected
                 && (event.actor_mask[1] & 4 != 0) == cast
-                && (cast || event.target.is_some())
+                && event.target == target
         })
         .cloned()
         .unwrap_or_else(|| {
@@ -68,8 +69,8 @@ fn native_proc_capture_shield_phase_school_and_actual_empty_cost() {
     let mut h = fixture(&[17], 5);
     creature_cast(h.app.world_mut(), h.caster, 17, Some(h.caster), false).unwrap();
     assert!(auras::has_aura(h.app.world(), h.caster, 17));
-    let cast = event(&h, 17, true);
-    let hit = event(&h, 17, false);
+    let cast = event(&h, 17, true, None);
+    let hit = event(&h, 17, false, Some(h.caster));
     let cast = cast
         .event
         .context
@@ -114,7 +115,7 @@ fn native_proc_capture_fortitude_records_real_prepared_positive_cost() {
             .0
             < before
     );
-    let observed = event(&h, 21562, true);
+    let observed = event(&h, 21562, true, None);
     assert_eq!(
         observed
             .event
@@ -167,7 +168,7 @@ fn native_proc_capture_unused_gloomblade_operation_is_not_recorded() {
             .0
             < energy
     );
-    let observed = event(&h, 200758, false);
+    let observed = event(&h, 200758, false, Some(h.npc));
     assert!(
         observed.event.context.is_some(),
         "landed damage has actual context"
@@ -198,7 +199,7 @@ fn native_proc_capture_swiftness_receipt_survives_into_regrowth_hit() {
     creature_cast(h.app.world_mut(), h.caster, 8936, Some(h.caster), false).unwrap();
     assert!(auras::has_aura(h.app.world(), h.caster, 8936));
     for cast in [true, false] {
-        let observed = event(&h, 8936, cast);
+        let observed = event(&h, 8936, cast, if cast { None } else { Some(h.caster) });
         let context = observed
             .event
             .context
@@ -227,8 +228,8 @@ fn native_proc_capture_actual_critical_source_and_next_cast_are_separate() {
     let mut h = fixture(&[28815, 1752], 4);
     let instance = apply_native(&mut h, 28815);
     creature_cast(h.app.world_mut(), h.caster, 1752, Some(h.npc), false).unwrap();
-    let first_cast = event(&h, 1752, true);
-    let first_hit = event(&h, 1752, false);
+    let first_cast = event(&h, 1752, true, None);
+    let first_hit = event(&h, 1752, false, Some(h.npc));
     h.advance(3);
     assert!(h.inbox.log.iter().any(|entry| entry.spell_id == Some(1752)
         && entry.kind == CombatLogKind::Damage
@@ -269,7 +270,7 @@ fn native_proc_capture_actual_critical_source_and_next_cast_are_separate() {
     assert!(!auras::has_aura(h.app.world(), h.caster, 28815));
     h.advance(40);
     creature_cast(h.app.world_mut(), h.caster, 1752, Some(h.npc), false).unwrap();
-    let next = event(&h, 1752, false);
+    let next = event(&h, 1752, false, Some(h.npc));
     assert_eq!(
         next.applied_modifier_ids,
         Some(Vec::new()),
@@ -341,8 +342,8 @@ fn native_proc_capture_delayed_lava_child_does_not_record_into_parent() {
                 && entry.amount > 0
         })
         .expect("real native missile child285452 landed");
-    let parent = event(&h, 51505, true);
-    let child = event(&h, 285452, false);
+    let parent = event(&h, 51505, true, None);
+    let child = event(&h, 285452, false, Some(h.npc));
     assert!(parent.event.context.is_some());
     let context = child
         .event
@@ -414,7 +415,7 @@ fn native_proc_capture_late_surge_is_not_an_applied_admission_modifier() {
             .get::<shared::casting::CastState>(h.caster)
             .is_none()
     );
-    let observed = event(&h, 51505, true);
+    let observed = event(&h, 51505, true, None);
     let applied = observed
         .applied_modifier_ids
         .expect("actual cast receipt, not unknown");
@@ -441,7 +442,7 @@ fn native_proc_capture_real_aura_proc_child_retains_chain_provenance() {
         auras::has_aura(h.app.world(), h.caster, 65081),
         "actual ordinary Shield triggered native65081"
     );
-    let observed = event(&h, 65081, false);
+    let observed = event(&h, 65081, false, Some(h.caster));
     let context = observed
         .event
         .context

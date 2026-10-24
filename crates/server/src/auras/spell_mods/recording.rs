@@ -66,6 +66,21 @@ pub(crate) fn enter_recording(
     })
 }
 
+/// A finish-time readiness query is not another application to the admitted cast.
+/// This scopes only instrumentation; the query's calculation/output are unchanged.
+pub(crate) fn pause_recording(world: &World, caster: Entity) -> Option<RecordingScope> {
+    let slots = Arc::clone(&world.get_resource::<TakingSpellModifiers>()?.0);
+    let previous = slots
+        .lock()
+        .expect("taking spellmod slots poisoned")
+        .remove(&caster);
+    Some(RecordingScope {
+        slots,
+        caster,
+        previous,
+    })
+}
+
 /// Pure readiness queries outside an actual invocation have no taking-spell slot.
 pub(super) fn read_active(world: &World, caster: Entity) -> Option<AppliedSpellModifiers> {
     world

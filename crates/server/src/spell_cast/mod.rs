@@ -2531,7 +2531,12 @@ fn execute_recorded_cast(
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
     aura_spell_restrictions::check_target(world, caster, explicit, spell)?;
-    if cast_time_ms(world, caster, spell) > 0 {
+    // This recheck decides facing, not the already-admitted cast's duration.
+    let has_cast_time = {
+        let _query = spell_mods::pause_recording(world, caster);
+        cast_time_ms(world, caster, spell) > 0
+    };
+    if has_cast_time {
         toy_facing::check_cast(world, caster, spell.id, explicit)?;
     }
     blooming_infusion::check_children(world, caster, spell)?;

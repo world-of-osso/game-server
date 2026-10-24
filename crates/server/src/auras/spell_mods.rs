@@ -5,7 +5,9 @@
 //! Combined as TrinityCore `Unit::ApplySpellMod`: `(base + Σflat) × Π(1 + pct/100)`.
 
 mod recording;
-pub(crate) use recording::{clone_for_new_recording, clone_for_recording, enter_recording};
+pub(crate) use recording::{
+    clone_for_new_recording, clone_for_recording, enter_recording, pause_recording,
+};
 
 use bevy::prelude::*;
 
