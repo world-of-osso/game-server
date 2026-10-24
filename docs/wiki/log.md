@@ -1,3 +1,7 @@
+## 2026-10-23 — Demo first-pull transition RED
+
+[Transition proof](investigations/demonology-dps-parity.md#first-pull-transition-confirmed-correction-owned-by-shared-fixture-work): own c8 proof-only/native810 observes identical ST/3T first10s: owner reference disappears+5s during summon,30146 finishes+5.85s, then real pet/no actor target/no more casts through+10s. Genuine assertionRED15.10s;16m59compile/0warnings. Fresh canonical snapshot native300s ST0/3T18514.65 stays unqualified. Shared precombat14766 and per-attacker dummy14116 own correction; no local duplicate fix. Guardian tests separately expose missing target42/43 geometry services, not melee RED.
+
 ## 2026-10-23 — Guardian ownership and power-role boundary GREEN
 
 [Demonology investigation](investigations/demonology-dps-parity.md#power-regeneration-interaction-native-boundary-qualified): own0885PASS/1fixtureFAIL49.59s plus fixture-only8102PASS24.96s qualify seven distinct cases: native Imp100/20 five-cast exhaustion/despawn, real90 neutral-dummy Firebolt, hostile binding, ordinary-NPC control, actual-player Energy, follower/Felguard resources and controlled-pet Focus. Explicit Player/Follower/HunterPet roles replace ownership flag8 as regeneration permission; other NPCs honor authored flags. Both builds have0 compiler messages; private DB SHA unchanged. Lead pushed810 as mf1052. Old b5 DPS remains unqualified; conditional Firebolt targeting and native DPS parity remain open.
