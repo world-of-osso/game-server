@@ -28,6 +28,22 @@ fn select_actor(h: &mut Harness, actor: Entity) {
         .0 = Some(actor);
 }
 
+fn spawn_hostile_player(h: &mut Harness, x: f32) -> Entity {
+    let player = spawn_player(&mut h.app, 8, x);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Player>(player)
+        .unwrap()
+        .race = 2;
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(UnitFactionTemplate(
+            crate::faction::faction_template_for_race(2),
+        ));
+    player
+}
+
 fn prove_player_toy_refuses_npc(toy: PlayerToy) {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, character) = setup(&dir.path().join("player-target.redb"));
@@ -37,7 +53,7 @@ fn prove_player_toy_refuses_npc(toy: PlayerToy) {
     h.app
         .world_mut()
         .entity_mut(h.npc)
-        .insert((faction, ModelDisplay(10913)));
+        .insert((faction, ModelDisplay { display_id: 10913 }));
     assert!(
         h.app
             .world()
@@ -68,7 +84,7 @@ fn prove_player_toy_refuses_npc(toy: PlayerToy) {
     assert_eq!(*h.app.world().get::<Health>(npc).unwrap(), health);
     assert_eq!(
         h.app.world().get::<ModelDisplay>(npc),
-        Some(&ModelDisplay(10913))
+        Some(&ModelDisplay { display_id: 10913 })
     );
     assert!(
         toy_store::load(&h.app.world().resource::<GameDatabase>().db, 1).contains_key(&toy.item)
@@ -121,17 +137,11 @@ fn toy_coverage_player_only_bbf_refuses_npc_then_uses_player() {
 #[ignore = "player-only source qualification; run explicitly"]
 fn toy_coverage_player_only_native_area_filters_before_authored_cap() {
     let mut h = harness(Vec::new(), &[7645], 8).unwrap();
-    let player = spawn_player(&mut h.app, 8, 6.0);
-    h.app
-        .world_mut()
-        .entity_mut(player)
-        .insert(UnitFactionTemplate(
-            crate::faction::faction_template_for_race(2),
-        ));
+    let player = spawn_hostile_player(&mut h, 6.0);
     h.app
         .world_mut()
         .entity_mut(h.npc)
-        .insert(ModelDisplay(10913));
+        .insert(ModelDisplay { display_id: 10913 });
     let spell = world_db().unwrap().store.get(7645).unwrap().clone();
     assert_eq!(spell.misc.as_ref().unwrap().attributes[3] & 0x100, 0x100);
     let cap = spell.target_restrictions.as_ref().unwrap().max_targets;
@@ -227,4 +237,35 @@ fn toy_coverage_player_only_native_destination_is_not_a_unit_recipient() {
     )
     .unwrap();
     assert!(recipients.is_empty());
+}
+
+#[test]
+#[ignore = "player-only source qualification; run explicitly"]
+fn toy_coverage_player_only_native_chain_rejects_closer_npc_before_jumps() {
+    let mut h = harness(Vec::new(), &[31436], 8).unwrap();
+    let initial = spawn_hostile_player(&mut h, 3.0);
+    let second = spawn_hostile_player(&mut h, 6.0);
+    let third = spawn_hostile_player(&mut h, 9.0);
+    h.app.world_mut().get_mut::<Position>(h.npc).unwrap().x = 4.0;
+    let spell = world_db().unwrap().store.get(31436).unwrap().clone();
+    assert_eq!(spell.misc.as_ref().unwrap().attributes[3] & 0x100, 0x100);
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.implicit_targets == [6, 0] && effect.chain_targets == 3)
+        .unwrap();
+    let caster = h.caster;
+    let jumps = crate::spell_cast::targets::chain_targets(
+        h.app.world_mut(),
+        caster,
+        &spell,
+        effect,
+        initial,
+        crate::spell_cast::targets::Relation::Enemy,
+    );
+    assert_eq!(
+        jumps,
+        vec![second, third],
+        "NPC must not consume a native chain jump"
+    );
 }
