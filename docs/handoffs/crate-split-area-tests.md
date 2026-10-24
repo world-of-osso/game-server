@@ -1,6 +1,6 @@
 # Per-area test pilot and rebuild measurements
 
-Approved C pilot implemented atop B `22aa67892`, based on landed A `8e7c7a685`; compiler/full-suite acceptance pending. Table counts describe the reviewed pre-lift files. Existing behavior and complete case/ignore inventory remain mandatory. [Exact 106-case mapping](crate-split-combat-test-mapping.json).
+Approved C pilot implemented atop repaired B `7fad4e6d0`, based on landed A `8e7c7a685`; compiler/full-suite acceptance pending. Table counts describe the reviewed pre-lift files. Existing behavior and complete case/ignore inventory remain mandatory. [Exact 106-case mapping](crate-split-combat-test-mapping.json).
 
 ## C: native melee behavior first
 
@@ -27,6 +27,8 @@ These files reference only ten `crate::` roots: auras, combat, combat_refs, maps
 Keep `combat_enemy_dodge_tests.rs`, `combat_npc_general_crit_tests.rs`, `combat_npc_victim_block_tests.rs` and `combat_victim_health_crit_tests.rs` in core: they reach the private `creature_miss_chance`/`read_outcome_chances` implementation surface. Also retain the general `combat_tests.rs` tree. Do not publish private formulas merely to relocate cases.
 
 ### Boundary work
+
+The first consumer check also identified real ordinary-spawn/state boundaries: `CreatureSpawnContext`, `spawn_creature`, `CreatureFlagsExtra` and `end_all_combat` need public visibility, without body changes. The consumer explicitly imports canonical `CombatTarget` and uses the same existing rand0.8.5 dependency as its original cadence fixture. These do not expose the excluded private chance formulas.
 
 - [x] Warned path owners and used `git mv` for the twelve files in pure-move commit `c765d0279`; names/ignore attributes retained.
 - [x] Lifted `collect_swings` and `collect_broadcast_swings` into existing `spell_cast::test_harness` in a separate pure-body-move commit `94e9357e5`. Wiring changes only visibility and canonical combat paths. Both consumers use those implementations; `attack_stop` stays private.

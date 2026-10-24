@@ -1,7 +1,7 @@
 {
   "status": "expected mapping; actual post-split gate inventory pending",
   "baseline_revision": "8e7c7a685",
-  "stacked_on_B_code": "22aa67892",
+  "stacked_on_B_code": "7fad4e6d0",
   "old_target": "server",
   "new_package": "server-combat-tests",
   "new_target": "server_combat_tests",
@@ -552,11 +552,11 @@
   "server_expected": {
     "passed": 5763,
     "known_failed": 4,
-    "ignored": 203
+    "ignored": 202
   },
   "simulator_expected": {
     "passed": 30,
-    "ignored": 86
+    "ignored": 87
   },
   "combat_expected": {
     "passed": 106,
