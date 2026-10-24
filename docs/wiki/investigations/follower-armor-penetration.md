@@ -35,7 +35,7 @@ TC also adjusts K for max-level players/player-owned units using equipped-base i
 
 - [TC pinned Unit.cpp](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa9017138cc2f1dcfc0a51afaa17391ecf/src/server/game/Entities/Unit/Unit.cpp#L1689-L1778) — source boundary and armor calculation.
 - [Native aura recomputation](../../../crates/server/src/auras/mod.rs), [armor pipeline](../../../crates/server/src/combat.rs), [ExpectedStat producer](../../../crates/server/src/level_scaling.rs).
-- [Per-cast regression](../../../crates/server/src/dungeon_simulator/dps_parity/single_spell.rs), [ordinary-NPC control](../../../crates/server/src/spell_cast/aura_stat_spell_tests.rs).
+- [Per-cast regression](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/single_spell.rs), [ordinary-NPC control](../../../crates/server/src/spell_cast/aura_stat_spell_tests.rs).
 - [Follower contract](../../specs/follower-dungeons.md).
 
 ## See Also
