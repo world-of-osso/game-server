@@ -56,6 +56,8 @@ pub(super) fn build() -> Bindings {
     Bindings {
         actions: names(ACTIONS),
         buffs: names(BUFFS),
+        // The pinned Fire source has no dot.* refresh operands to bind.
+        dot_refresh: Default::default(),
         talents: names(TALENTS),
         resources: [("mana".into(), PowerType::Mana)].into(),
         global_cooldown_spell: 133,

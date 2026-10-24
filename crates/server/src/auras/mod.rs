@@ -185,6 +185,7 @@ pub fn aura_now(world: &World) -> f64 {
 }
 
 /// Actual native equipment proc timer; reading never starts or retimes a proc.
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn equipment_proc_cooldown_remaining(
     world: &World,
     unit: Entity,

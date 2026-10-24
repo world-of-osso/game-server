@@ -39,4 +39,10 @@ Normal native Player Meteor admits its real153564 missile (CastSuccess, live fli
 
 Feature-disabled `server --lib` check5969 exited0 in7m09s but found3warnings: reader-only Hot Streak re-export/count and prior flight/Meteor readers compiled without their `native_apl` consumer. These readers now use the consumer's existing `cfg(test|test-support)` boundary; native kernel/reader bodies are unchanged, no warning suppression. At `3927220b30fb71978b68fadad12f3d6579b91105`, feature-disabled server `--lib` check passes9.30s; enabled server+server-simulation `--tests` check passes2m13s. Both exit0 with zero warnings/errors. Logs `fire-local-392-production-lib-check.log` and `fire-local-392-enabled-tests-check.log` in the same diagnostics directory. Existing native behavior proof is unchanged.
 
+## Landed rt1086 integration (compile acceptance pending)
+
+Merged master5d39f490a at ec84a768b; Fire set_bonus.* delegates shared Equipment.fact beside equipped/trinket. Conflict resolution retains both staged precombat/composites and landed target/resource-limited/action-resolution machinery; Fire setup precedes the new shared observed fight epoch/add lifetimes. Configured duration now comes directly from shared FIGHT_DURATION.
+
+First merge check exposed a missing new Bindings.dot_refresh registry plus two availability/import warnings. Fire has no dot.* operands, so its registry is explicitly empty (unknown dot operands still error). Removed unused simulation navigation import; gated the equipment proc-timer reader with its existing NativeFacts consumer. These are compile integration fixes, not native RED or gameplay qualification.
+
 Caller300s ST/3T, generic facts and dependency qualification remain open; no full literal or DPS acceptance claimed.
