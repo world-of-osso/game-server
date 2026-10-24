@@ -26,7 +26,7 @@ spell-ID exception or blanket proc certification.
 
 TC a352b1fa `SpellAuras.cpp:524–532` and `SpellAuraEffects.cpp:5680,5764,5895,6103–6113` define eligibility, per-tick rolls and native damage/healing bonuses.
 
-- [ ] Attr2 `CANT_CRIT` overrides Attr8 `PERIODIC_CAN_CRIT`; unflagged periodic effects never crit.
+- [x] Attr2 `CANT_CRIT` overrides Attr8 `PERIODIC_CAN_CRIT`; unflagged periodic effects never crit.
 - [ ] Eligible damage, leech, percent damage, healing and percent healing roll current crit each tick through the normal script-aware crit calculation, not an application-time snapshot. Flat `PeriodicHealingAndDamage` bonuses belong inside the critical multiplier.
 - [ ] `FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_SPELL_OWNER`: class `CharacterStats` actors qualify as Player spell owners; controlled pets/totems use their direct class owner's current chance. Ordinary creatures without such an owner retain zero periodic crit.
 - [ ] Keep the original caster for target-owned/script modifiers and native critical damage/healing bonuses; use the spell owner for chance stats and spell modifiers. Periodic damage uses spell critical-bonus order even for melee/ranged defense classes.
