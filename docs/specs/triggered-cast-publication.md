@@ -28,7 +28,7 @@ Native successful casts publish CastSuccess and SpellGo at launch, before impact
 
 ## Known gaps (current cycle)
 
-- [ ] One three-package `--tests -j2` check and separate parent full gate.
+- [x] Single three-package `--tests -j2` check PASS162.88s at75dfa0e8b; production code unchanged from native8GREENca66.
 - [ ] Parent gate runs the approved Phalanx exclusions and unchanged Azure/Omor; local Azure/Omor Python launch EACCES is not gameplay RED. No local tracing.
 
 ## Out of scope

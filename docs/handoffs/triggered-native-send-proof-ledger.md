@@ -40,10 +40,12 @@ Read-only inventory across server/simulation/split spell-tests found no addition
 
 Engine `data/diagnostics/dps-parity-fix-2026-10-21/` holds `triggered-merged-proof.pyrun.py`, `triggered-merged-compile.log` (PASS28m33s, zero diagnostics), `triggered-merged-native8.log`, `triggered-merged-existing-server.log`, executable receipts and command/revision/world hashes in `proof-ledger.jsonl`. World snapshot SHA256 remains `0297adfd466e85ce812f7821aa3788823adcf06867a9bd6999207bad3a75d83a`. Shared protocol is clean at2abc7fa844. Native8 evidence covers unchanged production code after the assertion-only edit; it does not certify the parent full gate.
 
+The single requested `cargo check --locked -p server -p server-simulation -p server-spell-tests --tests -j2` passes at75dfa0e8b in162.88s (2m42s, zero warnings). Admission and `agent-run triggered-spellgo env TMPDIR=/var/tmp/osso` are recorded in `triggered-final-check-result.json` and `triggered-final-check-75dfa0e8b.log`. Earlier admission-only continuations were stopped before any check began; this command ran once. Subsequent edits only record this proof. The changed Phalanx assertions have compile proof, not a claimed new runtime GREEN; the parent's full gate owns execution.
+
 ## Open
 
 - [x] Native targeted2RED/zero-control1PASS at1429; no compiler/data prerequisites mislabeled gameplay RED.
 - [x] Generic whole-predicate implementation and eight native immediate/missile/zero-control cases GREEN atca66b03e4.
 - [x] Conflicts/source justification sent parent; only the two Phalanx assertions changed after explicit approval.
-- [ ] One three-package `--tests -j2` check and final committed tip handoff.
+- [x] One three-package `--tests -j2` check PASS at75dfa0e8b; committed evidence accompanies the tip handoff.
 - [ ] Parent full gate, including unchanged Azure/Omor and changed Phalanx assertions.
