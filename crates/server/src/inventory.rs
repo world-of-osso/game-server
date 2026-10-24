@@ -477,7 +477,7 @@ const SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL: u32 = 0x1000_0000;
 /// that, in combat, allows combat (`SpellInfo::CanBeUsedInCombat`,
 /// `EQUIP_ERR_NOT_IN_COMBAT`). Once the spell starts, an expendable item loses one from
 /// its stack (`Spell::TakeCastItem`).
-fn use_item(
+pub(crate) fn use_item(
     world: &mut World,
     character_id: u64,
     player: Entity,
