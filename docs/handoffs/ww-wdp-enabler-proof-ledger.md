@@ -1,5 +1,7 @@
 # Native WDP enabler producer
 
+Current child dispatch and post-rebase300s results are in the [WDP damage-child ledger](ww-wdp-damage-children-proof-ledger.md). Measurements below retain their historical enabler/duration-only revisions; later child execution supersedes the former missing-child observation.
+
 ## Current approved duration override — 2026-10-24
 
 `SIMC_WW_WDP_ENABLER_DURATION` supersedes the initial base-duration-only policy below. DB2196742 DurationIndex36 remains1000ms in the native store. Only the existing selected-owner producer now supplies a per-trigger duration snapshot: minimum actual RSK/FoF remaining cooldown plus1500ms multiplied by native melee-haste time multiplier. SimC integer timespan multiplication truncates the scaled grace before addition (`engine/util/timespan.hpp132–135`); native cooldown seconds are converted back to their millisecond clock. Nonpositive overlap does not produce; an already active owned enabler does not refresh (`NONE`). No152175 admission/gate changes.
