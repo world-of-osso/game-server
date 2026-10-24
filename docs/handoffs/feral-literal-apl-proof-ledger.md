@@ -48,6 +48,12 @@ Fact dependencies:
 
 The concrete no-Incarnation/no-Apex reporter exposes `maximum_energy=50` only in the proposed Bite action context, from native25ordinary+25extra cap (SimC druid4253–4268); `energy.max=100` remains distinct. Numbers are fixture facts, not Program constants. Pool/max currently fail semantics, not nonexistent syntax errors.14766 owns the implementation; no private Program patch here.
 
+## Native Feral area geometry
+
+Atf90635634, actual3T profile plus mutual combat refs reaches `spell_targets.swipe_cat` and fails with unknown-native-operand: genuine1FAIL13.32s, clean1m00compile (`feral-geometry-red/`). The pending consumer reads native school-damage recipients through public `targets::select_targets` for Swipe106785 and Primal Wrath285381, intersects actual supplied fixture targets and uses authored target limits/radii. Moving one real target outside the area must reduce3to2; no cast or power change is involved. Unknown area aliases remain errors. Generic target/dot/resource facts still delegate unchanged.
+
+SimC `action.cpp3817–3900` uses the referenced action's target list when distance targeting is enabled, but falls back to active-enemy count when disabled. This native-geometry fact explicitly models reachable native recipients rather than asserting those two reference modes are identical. Fixture comparison must retain that distinction; bare `spell_targets` routing remains pending.
+
 ## Native Lunar admission dependency
 
 Exact reference traits select Lunar Inspiration155580/entry103170, not Chomp. At test-onlyfd16c1384 actual prepared actor has155580 but lacks its155627 override: genuine1FAIL15.50s after15m06s clean compiler run; `lunar-native-red/{proof.json,stdout.log,stderr.log}`. TC `spell_druid.cpp1543–1567` casts155627 on apply and removes it on talent removal. Portf30c7ca20 registers those two aura hooks, changing no KnownSpells or damage coefficients. Test retains removal/reapplication and ordinary8921→155625 resolution checks after the bootstrap assertion. GREEN2PASS13.58s includes the owned Rake/Moonfire binding control; both libraries compile6m10s/zero warnings (`lunar-native-green/{proof.json,stdout.log}` plus compiler output in the synchronous tool receipt). Native controller admission dependency is qualified; literal execution and parent integration remain pending.

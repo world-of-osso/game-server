@@ -1,6 +1,7 @@
 //! Native Feral bindings under qualification; literal controller not wired yet.
 mod bindings;
 mod facts;
+mod geometry;
 
 #[cfg(test)]
 mod tests {
