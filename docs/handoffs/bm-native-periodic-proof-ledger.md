@@ -40,6 +40,10 @@ ST Cobra casts57→59, KC63→63, BW10→10, Auto120→120. Owner30616.7→51949
 
 This is one matched seed, not a mean-DPS/parity certificate. Generic refresh changes timing and random/proc outcomes; Guillotine ST3959→6586DPS also changes. Do not attribute the complete total gain to an isolated5/8 arithmetic factor. Parent broad controls/integration remain pending.
 
+## Separate suspected division — deliberately unmodified
+
+A wider fresh-snapshot audit found `scripts/batch19.rs::dispersion_tick`, called at `auras/scripts.rs299`. It divides47585/e4's native25/aura20/1000ms amount over a tooltip-derived total schedule, adds dummy288733s2 and scales duration. Pinned TC `SpellAuraEffects.cpp5885–5894` instead reads the aura amount directly before `CountPctFromMaxHealth`; the entire pinned scripts tree has no47585/288733 binding. This is suspected, not a behavioral RED or accepted Priest fix. Parent2026-10-24 explicitly excludes Dispersion from BM scope: evidence ledger only, no code change. Full raw note: diagnostics `dispersion-tooltip-division-suspect.md`.
+
 ## Fix and normalization audit
 
 `refresh.rs` contained exactly one tooltip-derived normalization: `normalize_barbed_damage`, selected only for217200. Deleted function and spell-ID branch; fresh DB2 effect amounts remain untouched. Other named branches accumulate Ignore Pain using its sourced health cap, or carry sourced Rip/Rake/Shield Block/SoTR durations; none divides periodic damage by tooltip counts. Those contracts remain intact.
