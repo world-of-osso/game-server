@@ -201,6 +201,8 @@ pub(crate) mod native_apl;
 #[cfg(test)]
 mod periodic_healing_taken_tests;
 #[cfg(test)]
+mod proc_recipient_tests;
+#[cfg(test)]
 mod protection_producer_tests;
 mod sanctuary;
 pub(crate) use interruptibility::can_interrupt_cast;
