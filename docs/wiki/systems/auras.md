@@ -1,5 +1,9 @@
 # Auras
 
+## Firestarter direct critical chance — 2026-10-23
+
+`spell_cast::scripts::crit_chance` reads actual caster205026 effect0 for direct133/11366. Current recipientHP percentage greater than or equal to its native amount selects100%; absent effect or lower HP preserves ordinary chance. TC a352b1fa `spell_mage.cpp762–779` supplies this condition; no new threshold, aura/stat grants or damage executor. Periodic321712 is outside this direct hook. [Contract](../../specs/auras.md#firestarter-direct-critical-strikes), [qualified-current native proof and input provenance](../../handoffs/firestarter-direct-proof-ledger.md). DPS parity is not implied.
+
 ## Hit positivity independent of factions — 2026-10-23
 
 `spell_cast::push_hit_events` previously used `targets::is_hostile` to classify hit proc masks. Native dummy31146 has faction7, which is attackable but not hostile to the parity player. Native16166 chance101/mask0x10000 therefore never produced260734 from an ordinary Lava Burst51505 and its actual285452 damage child on that faction. Genuine test-only6d5d7026a gives1PASS/1FAIL10.43s: friendly2061 healing still procs native36488→36483, while the neutral harmful case fails only after positive damage. Cold compile41m05, zero warnings. GREEN pending.
