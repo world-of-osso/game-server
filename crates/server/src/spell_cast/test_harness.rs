@@ -459,6 +459,7 @@ pub fn spawn_player(app: &mut App, class: u8, x: f32) -> Entity {
 }
 
 pub fn spawn_npc(app: &mut App, x: f32) -> Entity {
+    let model = &crate::test_data::world_data().templates[&6].models[0];
     app.world_mut()
         .spawn((
             Npc {
@@ -468,6 +469,11 @@ pub fn spawn_npc(app: &mut App, x: f32) -> Entity {
             crate::zones::CreatureFlagsExtra(
                 crate::test_data::world_data().templates[&6].flags_extra,
             ),
+            // Actual Kobold Vermin display identity and native display scale.
+            shared::components::ModelDisplay {
+                display_id: model.display_id,
+            },
+            shared::components::UnitScale(model.display_scale),
             // Kobold Vermin: hostile to the Human caster.
             UnitFactionTemplate(25),
             Position { x, y: 0.0, z: 0.0 },
@@ -658,6 +664,7 @@ pub(crate) fn harness_with_plugins(
     let conn =
         Connection::open_with_flags(&data.powers_db, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     app.insert_resource(crate::unit_creature_type::load_race_types(&conn).unwrap());
+    app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap());
     app.insert_resource(
         crate::maps::store::load_map_store(&conn).expect("Actual passive map eligibility metadata"),
     );

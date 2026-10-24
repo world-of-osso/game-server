@@ -9,4 +9,5 @@ use server::{
     trait_config, unit_creature_type, world_data, zones,
 };
 
+mod add_up_tests;
 mod dungeon_simulator;
