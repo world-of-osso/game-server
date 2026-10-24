@@ -1,5 +1,9 @@
 # Retribution native parity — active (2026-10-23)
 
+## Qualified Sentence/Wake/Toll packet
+
+[Isolated qualification and source ledger](ret-qualified-sentence-wake-toll-proof-ledger.md) records the masterd7e86cd0f packet, strict native RED/GREEN receipts, explicit exclusions and integration proof. Development-only Expurgation, Rebuke, Aura361 and literal-adapter work is not included; the full Ret goal stays open.
+
 ## Goal and authority
 
 Spec70: every SimC76f8118 APL action plus selected talent effects through native NPC casts. DB270448 and TCa352b1fa own mechanics; SimC supplies only cited missing-data policies and rotation decisions. Same-gear/talents DPS acceptance: ±10% single and three targets. Parent owns integration/final gate. No canonical database mutations.
