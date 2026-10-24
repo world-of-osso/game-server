@@ -16,9 +16,8 @@ use shared::components::{
 };
 use shared::protocol::{
     AttackStart, AttackStop, AttackStopped, AttackSwing, CancelAura, CastFailed, CombatChannel,
-    CombatEvent, CombatEventType, CombatLogEvent, CombatLogKind, MissKind, ProtocolPlugin,
-    SetTarget, SpellCastIntent, SpellChargesUpdate, SpellCooldownUpdate, SpellFailure, SpellGo,
-    StopSpellCast,
+    CombatEvent, CombatEventType, CombatLogEvent, CombatLogKind, ProtocolPlugin, SetTarget,
+    SpellCastIntent, SpellChargesUpdate, SpellCooldownUpdate, SpellFailure, SpellGo, StopSpellCast,
 };
 
 use super::powers::{PowerPools, PowerTypeTable, load_power_type_table};

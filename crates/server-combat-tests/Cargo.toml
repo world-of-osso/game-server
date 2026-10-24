@@ -13,3 +13,5 @@ lightyear = { version = "0.28", features = ["server", "netcode", "replication", 
 shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "186134ff880f1a6a7b754e4ce43456d775a44caf" }
 # Read-only installed attack-time rows used by native cadence cases.
 rusqlite = { version = "0.35", features = ["bundled"] }
+# Preserve the existing cadence fixture's ordinary spawn RNG type.
+rand = "0.8"

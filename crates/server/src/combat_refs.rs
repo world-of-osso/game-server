@@ -134,7 +134,7 @@ fn begin_combat(world: &mut World, a: Entity, b: Entity, suppress_b: bool) {
 /// `CombatManager::EndAllCombat` (`Unit::CombatStop` → `EndAllPvECombat` and
 /// `EndAllPvPCombat`): every reference of `unit` ends on both sides, and each side
 /// left without one leaves combat.
-pub(crate) fn end_all_combat(world: &mut World, unit: Entity) {
+pub fn end_all_combat(world: &mut World, unit: Entity) {
     let others: Vec<Entity> = world
         .get_mut::<CombatRefs>(unit)
         .map(|mut refs| refs.0.drain().map(|(other, _)| other).collect())

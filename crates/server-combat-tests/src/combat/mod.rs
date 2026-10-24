@@ -1,5 +1,6 @@
 //! Existing public-behavior melee cases against canonical server resources.
 pub use server::combat::*;
+use server::networking::CombatTarget;
 
 #[path = "combat_facing_tests.rs"]
 mod facing_tests;

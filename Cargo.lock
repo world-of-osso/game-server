@@ -6618,6 +6618,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "lightyear",
+ "rand 0.8.5",
  "rusqlite",
  "server",
  "shared",
