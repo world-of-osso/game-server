@@ -59,6 +59,20 @@ mod tests {
                 .expect("ordinary native Prowl cast");
             assert!(crate::auras::has_aura(run.app.world(), actor, 5215));
         }
+        for _ in 0..100 {
+            let world = run.app.world();
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(1822)
+                .unwrap();
+            let waiting = world
+                .get::<crate::spell_cast::SpellHistory>(actor)
+                .is_some_and(|history| history.on_gcd(spell, crate::spell_cast::now(world)));
+            if !waiting {
+                break;
+            }
+            run.app.update();
+        }
         run.app
             .world_mut()
             .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
@@ -73,6 +87,12 @@ mod tests {
             .find(|effect| effect.index == 3)
             .unwrap()
             .base_points;
+        if prowl {
+            assert!(
+                crate::auras::has_aura(run.app.world(), actor, 5215),
+                "native Prowl survives the ordinary GCD wait"
+            );
+        }
         let _seed = crate::random::seed_scope(70448);
         crate::spell_cast::creature_cast(
             run.app.world_mut(),
