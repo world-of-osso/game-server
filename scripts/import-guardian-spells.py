@@ -2,8 +2,8 @@
 """Import authentic TDB1210 creature_template_spell rows into a prepared DB copy.
 
 python3 scripts/import-guardian-spells.py --archive data/reference/tdb1210/TDB_full_world_1210.26091_2026_09_09.sql --db data/world.db.new
-Native creature lists win. Two approved missing-row policies supply Dreadstalker
-and Antoran Tyrant attacks, not summon dispatch or repeat timers. Policy rows use
+Native creature lists win. Approved missing-row policies supply Dreadstalker,
+Antoran Tyrant and alternate Wild Imp attacks, not summon dispatch or repeat timers. Policy rows use
 VerifiedBuild=0; they are not claimed as verified TDB data.
 """
 import argparse
@@ -17,6 +17,9 @@ from mysql_dump import dump_rows
 PROJECT_BINDINGS = (
     (98035, 271971, "SIMC_DREADSTALKER_ATTACK_BINDING"),
     (250289, 1264093, "SIMC_ANTORAN_TYRANT_BURNING_CLEAVE_BINDING"),
+    # TDB1210 has no143622 list; SimC actions2555–2599 shares WildImp class,
+    # whose pets714–726/861–867 creates actual104318. Native DB2 owns coefficients.
+    (143622, 104318, "SIMC_DEMO_ALTERNATE_WILD_IMP_ATTACK_BINDING"),
 )
 
 

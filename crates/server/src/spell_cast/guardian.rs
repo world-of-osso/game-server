@@ -59,6 +59,41 @@ fn cast_project_dreadstalkers(world: &mut World, caster: Entity, target: Entity,
 const SUMMON_DEMONIC_TYRANT: u32 = 265187;
 const ANTORAN_ARMAMENTS: u32 = 1250921;
 
+/// SIMC_DEMO_ALTERNATE_WILD_IMP_IDENTITY: actions2555–2599 routes both
+/// native roots into the same pets693–983 WildImp class. Actual native143622
+/// keeps its20s/template/models; no334591 cost modifier is granted here.
+pub(crate) fn is_wild_imp(root: u32, entry: u32) -> bool {
+    matches!((root, entry), (104317, 55659) | (279910, 143622))
+}
+
+/// SIMC_DEMO_INNER_DEMONS_PERIODIC_ASSOCIATION: init33/766–773 maps native
+/// Aura226 effect0 to279910. TC/TDB has no script and DB2 has no TriggerSpell.
+/// The generic native scheduler owns the period/first tick; no tick_zero/random
+/// phase (SIMC_INNER_DEMONS_RANDOM_PHASE_UNMODELED, init1722–1726).
+pub(crate) fn cast_project_inner_demons_tick(
+    world: &mut World,
+    unit: Entity,
+    spell: &crate::spell_info::SpellInfo,
+    index: u8,
+) -> bool {
+    let policy_tick = spell.id == 267216
+        && index == 0
+        && spell.effects.iter().any(|effect| {
+            effect.index == index
+                && effect.aura == crate::auras::handlers::PERIODIC_DUMMY
+                && effect.aura_period_ms > 0
+                && effect.trigger_spell == 0
+        });
+    let selected = world
+        .get::<crate::class_progression::KnownSpells>(unit)
+        .is_some_and(|known| known.contains(267216));
+    if !policy_tick || !selected {
+        return false;
+    }
+    super::cast_triggered(world, unit, 279910, Some(unit), 1);
+    true
+}
+
 /// SimC76f8118 pets1513: Antoran Armaments selects the alternative native root effect.
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
     if spell != SUMMON_DEMONIC_TYRANT || !matches!(index, 0 | 3) {
@@ -316,7 +351,7 @@ pub(super) fn update(world: &mut World) {
 fn wild_imp_exhausted(world: &World, actor: Entity) -> bool {
     let summon = world.get::<SummonedCreature>(actor).unwrap();
     let entry = world.get::<Npc>(actor).unwrap().template_id;
-    if (summon.spell_id, entry) != (104317, 55659)
+    if !is_wild_imp(summon.spell_id, entry)
         || world.get::<CastState>(actor).is_some()
         || world
             .resource::<super::missiles::PendingSpellHits>()

@@ -331,7 +331,9 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
                 .get::<shared::components::Npc>(unit)
                 .map(|npc| npc.template_id);
             let spell_share = match (summon.spell_id, entry) {
-                (104317, Some(55659)) => WILD_IMP_OWNER_SPELL_POWER,
+                (root, Some(entry)) if super::guardian::is_wild_imp(root, entry) => {
+                    WILD_IMP_OWNER_SPELL_POWER
+                }
                 (265187, Some(135002)) => TYRANT_OWNER_SPELL_POWER,
                 _ => DEMON_OWNER_SPELL_POWER,
             };

@@ -300,6 +300,14 @@ fn run_dummy_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tic
     if run_scripted_tick(world, unit, spell, tick) {
         return;
     }
+    if crate::spell_cast::guardian::cast_project_inner_demons_tick(
+        world,
+        unit,
+        spell,
+        tick.effect_index,
+    ) {
+        return;
+    }
     let Some(effect) = spell
         .effects
         .iter()

@@ -28,6 +28,13 @@ const RETIREMENT_BINDINGS: &[RetirementBinding] = &[
         chance_effect: 0,
         roll: RetirementRoll::AccumulatedFade,
     },
+    // SIMC_DEMO_ALTERNATE_WILD_IMP_IDENTITY: same sourced WildImp fade PRD.
+    RetirementBinding {
+        root: 279910,
+        creature: 143622,
+        chance_effect: 0,
+        roll: RetirementRoll::AccumulatedFade,
+    },
     // SIMC_DEMONIC_CORE_DREADSTALKER_EXPIRY: no TC/TDB event hook.
     // Pinned pets1248–1253; actual267102 Effect1 owns the chance, not this policy.
     RetirementBinding {
