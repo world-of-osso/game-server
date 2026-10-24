@@ -43,7 +43,7 @@ Player execution boundary: seven actual native cases at4f91688e8 give1WW control
 
 ## Shared native facts
 
-`crate::simc_apl_native` binds gameplay state to the engine-free traits without moving the interpreter into the server binary. Explicit alias registries identify native actions, buffs, talents and resource types; absent aliases fail, never become false. Buff up/stack/remains, real cooldowns/charges/durations, displayed resources, action-bound GCD and engaged enemy counts come from native state. The fixed-time parity encounter supplies elapsed/fight-remains/target-TTD and fight style; dungeon TTD/fight-remains remain explicit unavailable predicates, not estimates or a fallback. Spec adapters add only spec-specific facts.
+`crate::simc_apl_native` binds gameplay state to the engine-free traits without moving the interpreter into the server binary. Explicit alias registries identify native actions, buffs, talents and resource types; absent aliases fail, never become false. Buff up/stack/remains, real cooldowns/charges/durations, displayed resources, action-bound GCD and engaged enemy counts come from native state. The fixed-time parity encounter supplies elapsed/fight-remains and fight style; main and timed adds expose their explicit individual remaining lifetime/role. Target Health reads the selected native entity; action-explicit targets override selection. Bound dots/debuffs read only the actor's own actual auras on that target. Explicit fixture add-event state supplies timing/count; absent-event operands retain pinned max-timespan semantics. Dungeon TTD/fight-remains/add timing remain explicit unavailable predicates, not estimates or a fallback. [Lifecycle/target14-case GREEN and remaining coverage](../handoffs/add-lifetimes-target-facts-proof-ledger.md). Spec adapters add only spec-specific facts.
 
 Native behavioral tests: `simc_apl_native/tests.rs` (earned Hit Combo and Chi, real Provoke cooldown, real Roll charges, actual Charge Rage display conversion, fixture clock and unavailable dungeon predicates). Six pushed ignored native cases produce genuine6RED at5924496f9 (13.24s test/8m18compile/exit101; three scaffold dead-field warnings). Atdc1ee9781 the same six native cases pass6/6 in17.40s (7m37compile),exit0,zero compiler warnings; tests enabled afterward without body changes ([native proof ledger](../handoffs/shared-native-apl-proof-ledger.md)). Current native fact seam is fixture-only (`cfg(test)`), matching the approved explicit parity Fixture driver boundary; live dungeon APL/TTD is not enabled.
 
@@ -70,6 +70,16 @@ TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyC
 - [ ] Under `SIMC_BUFF_REACT_REACTION_TIME`, apply source/profile reaction settings to per-stack buff acquisition and cooldown-reset deadlines; never alias reaction facts to `up`.
 - [ ] Record native successful-cast simulation timestamps and GCD tags for `prev_gcd.N`/`action.*.last_used`; bind native cast time, executing state and execution remains.
 - [ ] Bind fixture `expected_combat_length` from the source encounter contract.
+
+## Explicit native target context
+
+- [x] Native fact adapters accept an actual current target and ordered native target universe, separate from an explicit proposed `Action.target`. Invalid/absent explicit context fails rather than borrowing another selection. Candidate selection preserves native order and ordinary per-action target eligibility, not just first-target readiness.
+- [x] Owned `active_dot` counts use actual active native aura instances across that universe; foreign caster instances do not count. Unknown aliases fail.
+- [x] Fixture movement-event absence uses pinned no-event values; actual movement never invents a configured raid event. Dungeon timing remains explicitly unavailable.
+- [x] Fire Breath refresh decisions consume freshly resolved native empower-duration data and a sourced refresh policy, not raw child duration or current aura carry. Actual rank1 native20s versus raw3572092s refresh-window case is qualified.
+- [ ] Positive selected-target casting reaction requires a qualified native snapshot. Actual absence of CastState is known false; active casting stays NATIVE_CASTING_REACTION_UNAVAILABLE rather than inventing a timer.
+
+[Target-context API proof and exact remaining gaps](../handoffs/native-target-context-proof-ledger.md).
 
 ## Known gaps (current cycle)
 
