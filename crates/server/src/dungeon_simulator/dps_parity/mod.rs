@@ -12,6 +12,7 @@ mod player_rotation;
 mod power_haste_tests;
 mod power_tests;
 mod report;
+mod snakeskin_tests;
 mod windwalker_rotation;
 use bevy::prelude::*;
 use serde_json::{Value, json};
