@@ -1,4 +1,9 @@
 ## 2026-10-23 — Periodic critical ticks
+## 2026-10-23 — Process-owned fixture directories
+
+[Fixture lifecycle](investigations/server-test-performance.md#process-owned-fixture-directories--2026-10-23): one PID-prefixed directory helper for class, Wild Imp and encounter snapshots reclaims only absent `/proc/<pid>` owners. Live owners survive; no age-based deletion. Filesystem dead/live-owner RED observed; GREEN receipt recorded separately under `fixture-dir-cleanup/`.
+
+## 2026-10-23 — Whole-suite ranked attribution
 
 [Periodic crit](systems/auras.md#periodic-critical-ticks--2026-10-23): TC-native eligibility/live rolls and critical damage/healing bonuses, with explicit `FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_SPELL_OWNER` policy for class actors and owned pets/totems. Native RED7b924:2controlsPASS/5featureFAIL35.83s, then first7GREEN42.94s. Required real1943+21880 ordering REDcf191c5: native flat +10 raises normal10937→11038, critical73726 versus74307.8125 expected; initial follower259 fixture failure explicitly invalid. Move periodic roll behind numeric source/flat bonuses; final GREEN pending. Clocks, attribution, APL and pet stats unchanged.
 ## 2026-10-23 — Native trait effect-point source boundary
