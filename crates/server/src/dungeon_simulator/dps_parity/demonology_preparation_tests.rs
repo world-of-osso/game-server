@@ -132,6 +132,125 @@ fn dps_parity_demo_native_first_pull_survives_inflight_precombat_cast() {
     );
 }
 
+fn load_authored_guardian_arena(run: &mut Run) -> shared::components::Position {
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let origin = conn.query_row(
+        "SELECT position_x,position_y,position_z FROM content_creature WHERE map=2669 AND id1=216619 ORDER BY guid LIMIT 1",
+        [], |row| {
+            let (x, y, z) = crate::terrain_height::wow_to_bevy(row.get(0)?, row.get(1)?, row.get(2)?);
+            Ok(shared::components::Position { x, y, z })
+        },
+    ).expect("authored Orator arena, as in native target148 fixtures");
+    run.app.insert_resource(crate::test_data::ground_map());
+    run.app.insert_resource(
+        crate::line_of_sight::LineOfSight::load(&crate::ground::ground_data_dir().join("los"))
+            .unwrap(),
+    );
+    origin
+}
+
+fn place_guardian_control_in_arena(run: &mut Run, origin: shared::components::Position) {
+    use shared::components::{Position, Rotation};
+    let map = crate::maps::InMap {
+        map_id: 2669,
+        instance_id: 1,
+    };
+    let controller = fixture_player(run);
+    run.app.world_mut().entity_mut(controller).insert((
+        Position {
+            x: origin.x + 20.0,
+            ..origin
+        },
+        map,
+    ));
+    run.app.world_mut().entity_mut(run.actor).insert((
+        Position {
+            x: origin.x - 5.0,
+            ..origin
+        },
+        map,
+        Rotation {
+            x: 0.0,
+            y: std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
+    ));
+    if let Some(pet) = crate::hunter_pet::summoned_pet(run.app.world(), run.actor) {
+        run.app.world_mut().entity_mut(pet).insert((
+            Position {
+                x: origin.x - 3.0,
+                ..origin
+            },
+            map,
+        ));
+    }
+    for (index, target) in run.targets.iter().enumerate() {
+        run.app.world_mut().entity_mut(*target).insert((
+            Position {
+                z: origin.z - index as f32,
+                ..origin
+            },
+            map,
+        ));
+    }
+    run.app.update();
+}
+
+#[test]
+#[ignore = "full native104316 dispatch on authored ground/LOS; private spec266 inputs required"]
+fn dps_parity_demo_native_call_dreadstalkers_dispatches_both_authored_children() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_manual_guardian_control();
+    let origin = load_authored_guardian_arena(&mut run);
+    place_guardian_control_in_arena(&mut run, origin);
+    let actor = run.actor;
+    cast_and_finish(&mut run, actor, 104316);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let world = run.app.world_mut();
+    let mut children: Vec<_> = world.query::<(Entity, &crate::spell_cast::summon::SummonedCreature, &shared::components::Npc, &shared::components::UnitLevel)>()
+        .iter(world)
+        .filter(|(_, summon, _, _)| summon.owner == actor && matches!(summon.spell_id, 193331 | 193332))
+        .map(|(entity, summon, npc, level)| json!({"entity": entity.to_bits(), "root": summon.spell_id, "entry": npc.template_id, "level": level.0}))
+        .collect();
+    children.sort_by_key(|child| child["root"].as_u64().unwrap());
+    let path = inputs::directory()
+        .unwrap()
+        .join("266.dreadstalker-root-dispatch.json");
+    std::fs::write(
+        &path,
+        serde_json::to_vec_pretty(
+            &json!({"map": 2669, "authored_spawn": 216619, "children": &children}),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        children.len(),
+        2,
+        "native104316 must dispatch both native Effect28 children; trace {}",
+        path.display()
+    );
+    assert_eq!(
+        children
+            .iter()
+            .map(|child| child["root"].as_u64().unwrap())
+            .collect::<Vec<_>>(),
+        [193331, 193332]
+    );
+    let owner_level = world.get::<shared::components::Level>(actor).unwrap().0;
+    assert!(
+        children
+            .iter()
+            .all(|child| child["entry"] == 98035 && child["level"] == owner_level)
+    );
+}
+
 fn prepare_manual_guardian_control() -> Run {
     let mut run = prepare(266, 3).unwrap();
     for _ in 0..200 {
