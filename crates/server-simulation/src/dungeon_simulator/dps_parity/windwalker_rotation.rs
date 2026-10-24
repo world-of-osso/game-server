@@ -186,6 +186,8 @@ impl Rotation {
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
+mod unbroken_rhythm_tests;
+#[cfg(test)]
 mod wdp_children_tests;
 #[cfg(test)]
 mod wdp_duration_tests;
