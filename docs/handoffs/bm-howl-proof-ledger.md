@@ -37,7 +37,13 @@ Diagnostics root `game-engine/data/diagnostics/dps-parity-fix-2026-10-21/`:
 |111139e7a|Public FULL_MASK child admission result|Actual1222271 refuses `Unsupported("target48 requires collision data")`. Parity App lacks native LOS/ground; no range/target bypass added.|
 |9c94ae19e|Attempt to load real LOS/ground from simulation crate|CompileE0603: core modules private. Not gameplay RED; runner refuses stale artifact execution.|
 
-Next boundary: test-support-only installer for actual ground/LOS, retaining core privacy, then native summon/lifetime positive control before root/Cry failures can qualify. Root/KC must use actual Austin's existing normal883 pet rather than invent a Player stable. Parent boundary decision requested; no synthetic terrain, teleport, fake ready aura or direct Cry grant.
+Parent approved the narrow fixture boundary.519339c08 adds `test_data::install_native_collision(&mut App)->Result<(),String>` gated `test`/`test-support`: actual source GroundMap/LOS from explicit GAME_SERVER_GROUND_DIR, no exposed private types. Root/KC now uses actual Austin's existing normal883 pet, per-frame naturally earned readiness and observed ordinary KC/summon; no invented Player stable. Four native qualification cases building/running; no gameplay RED inferred yet. No synthetic terrain, teleport, fake ready aura or direct Cry grant.
+
+## Actual-summon→Cry slice
+
+Parent explicitly authorizes qualifying this slice separately while root/KC stays open.519339c08 native4 yields2PASS/2FAIL22.68s after clean15m13 compilation: actual1222271 creates authentic entity and expires at native duration; removed passive still permits actual summon without Cry. Selected actual summon produces0Cry stacks versus native471876 effect2=10: genuine gameplay RED. Root case executes0KC under actual LOS and is a separate unresolved fixture/admission boundary, not accepted readiness RED.
+
+The narrow production hook runs after real native wild summon metadata/source registration, not at cast launch or in a log formatter. Only actual1222271 metadata owned by the selected471876 caster earns471881 via existing triggered stack override; DB2 owns resulting amount/duration/cap. No direct grant replaces a missing entity. No root timer, KC consume, cycle state, Pack Mentality or creature AI is implemented in this slice. Three relevant native child/lifetime/absence cases will gate GREEN; the root case remains explicitly open, not silently waived.
 
 ## Open
 

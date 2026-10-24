@@ -191,6 +191,7 @@ pub mod guardian;
 mod guardian_tests;
 pub(crate) mod history_store;
 mod hit;
+mod howl;
 #[cfg(test)]
 mod impending_victory_tests;
 mod interruptibility;
