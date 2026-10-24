@@ -28,6 +28,17 @@ fn fixture() -> (Run, Equipment) {
         .remove::<crate::creature_ai::FollowOwner>()
         .insert(crate::creature_ai::CreatureState::Idle);
     run.app.update();
+    // Profile initialization may start a real GCD; wait without clearing it.
+    for _ in 0..6000 {
+        if native_gcd_remaining(&run) == 0.0
+            && run.app.world().get::<CastState>(run.actor).is_none()
+        {
+            break;
+        }
+        run.app.update();
+    }
+    assert_eq!(native_gcd_remaining(&run), 0.0);
+    assert!(run.app.world().get::<CastState>(run.actor).is_none());
     let mut bindings = Bindings::default();
     let equipment = Equipment::load(run.app.world(), run.actor, &mut bindings).unwrap();
     (run, equipment)
@@ -77,15 +88,17 @@ fn available_power(run: &Run, power: PowerType) -> f32 {
         .0
 }
 
+fn native_gcd_remaining(run: &Run) -> f64 {
+    let world = run.app.world();
+    let spell = world.resource::<SpellStore>().get(DISINTEGRATE).unwrap();
+    crate::spell_cast::native_apl::gcd_value(world, run.actor, spell, "gcd.remains").unwrap()
+}
+
 fn wait_for_native_gcd(run: &mut Run) {
     for _ in 0..6000 {
-        let world = run.app.world();
-        let spell = world.resource::<SpellStore>().get(DISINTEGRATE).unwrap();
-        if crate::spell_cast::native_apl::gcd_value(world, run.actor, spell, "gcd.remains").unwrap()
-            == 0.0
-        {
+        if native_gcd_remaining(run) == 0.0 {
             assert!(
-                world.get::<CastState>(run.actor).is_some(),
+                run.app.world().get::<CastState>(run.actor).is_some(),
                 "real channel must still exist"
             );
             return;

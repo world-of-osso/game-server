@@ -83,7 +83,7 @@ TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyC
 
 ## Native execution-option boundary
 
-Ignored `literal_execution_native_*` cases select a real `fire_breath,empower_to=1` row and compare its actual DoT duration with native stage1 release metadata, then exercise Disintegrate→Living Flame replacement with actual GCD, hostile-target and insufficient-Essence controls. Readiness must not advance/cancel/spend; successful replacement must use ordinary native costs. The new replacement entry point initially retains ordinary native admission for genuine RED; no ignore-current-cast implementation or execution variant exists yet. Keep these generic changes separate from specialization predicates.
+Ignored `literal_execution_native_*` cases select a real `fire_breath,empower_to=1` row and compare its actual DoT duration with native stage1 release metadata, then exercise Disintegrate→Living Flame replacement with actual GCD, hostile-target and insufficient-Essence controls. Readiness must not advance/cancel/spend; successful replacement must use ordinary native costs. The new replacement entry point initially retains ordinary native admission for genuine RED; no ignore-current-cast implementation or execution variant exists yet. The first61218bfda execution run stopped on a real profile-startup GCD before either boundary; fixture setup now waits for the actual native GCD/cast to finish, without clearing history or bypassing checks. Those failures are not RED qualification. Keep these generic changes separate from specialization predicates.
 
 ## Known gaps (current cycle)
 
