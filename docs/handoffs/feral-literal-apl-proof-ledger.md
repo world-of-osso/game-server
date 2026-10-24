@@ -42,7 +42,9 @@ Parent approved exactly one public read-only native reader: actual modified22568
 
 `spell_costs` delegates numeric calculation to `applicable_costs`, then checks affordability. The reader reuses that same numeric producer directly, so low current Energy/CP does not prevent reading the cost. The exact existing cap computation is extracted once and shared with Bite's existing damage snapshot; no new formula or pool mutation. `spell_cast::read_ferocious_bite_maximum_energy` is the single cross-crate public export; the implementation module stays private. Feral action facts delegate to it only for the proposed Bite action.
 
-Existing Bite tests are unchanged. Incarnation native-versus-SimC maximum-Energy semantics stay an explicit gap; this is a native numeric reader, not a reference-policy override. GREEN pending.
+At16fc1d812, the exact-current simulation artifact passes the reader1case14.84s: native50 normal/25 with actual391882 modifier, three repeated reads each, all pools/history unchanged. The combined retained-Bite/simulation build exited101 before tests because our770-era `attack_timing` remained crate-private after D3 moved its caller to server-spell-tests. Parent approved the one-line public visibility merge fix; no existing Bite tests changed. Audit of all41 changedRustfiles versus1fb finds no narrowed preexisting public declaration; the one removed crate-private signature (`resolve_action`) is replaced by an import of the shared public `spell_cast::knowledge::resolve_action`, not a visibility regression. Note1fb itself has no `attack_timing`, so the fix accommodates the merged test layout rather than restoring a nonexistent declaration. Full retained controls pending that fix.
+
+Incarnation native-versus-SimC maximum-Energy semantics stay an explicit gap; this is a native numeric reader, not a reference-policy override.
 
 ## Full literal source consumer
 
