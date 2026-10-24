@@ -33,7 +33,7 @@ Evidence under game-engine `data/diagnostics/elemental-parity-262-2026-10-23/`:
 
 Parent-confirmed `origin/master@d675bf8fb` merged at `c32f187ca85786a88809e1e3a25523380807b0dc`. Resolve the directory-move conflict by retaining `elemental_ascendance_tests.rs` under `crates/server-simulation/src/dungeon_simulator/dps_parity/`; its existing `crate::` paths use the new simulation crate's authoritative server re-exports. Runtime overload code remains in `server`. No pending equipment/target/precombat API merged; parked adapter unchanged.
 
-Requested integration check: `cargo check --locked -j 2 -p server -p server-simulation --tests` (pending). Native acquisition tests now belong to `-p server-simulation --lib`; retained child-effectiveness tests stay in `-p server --lib`. Above native results remain exact pre-split a001f0541 evidence, not post-split execution claims. Parent owns final functional gate; do not rebuild/replay unchanged native proofs merely for this merge.
+Requested integration check: `cargo check --locked -j 2 -p server -p server-simulation --tests` PASS8m42/zero warnings at `1c8a779bb5c4864a5bb2346ab69c6f6fce51cf02`. Durable command/status/proof: `asc-split-b-check-1c8a779bb/` under the evidence root. No Rust reference edits were needed after resolving the directory relocation; split-B's module re-exports already supply the fixture's references. Native acquisition tests now belong to `-p server-simulation --lib`; retained child-effectiveness tests stay in `-p server --lib`. Above native results remain exact pre-split a001f0541 evidence, not post-split execution claims. Parent owns final functional gate; do not rebuild/replay unchanged native proofs merely for this merge.
 
 ## Retained child-effectiveness controls
 
