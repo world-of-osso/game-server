@@ -191,6 +191,12 @@ fn prepare_reference(
         copy,
         identity,
     )?;
+    // Pinned player.cpp1288: this Patchwerk fixture configures no movement event.
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(crate::simc_apl_native::FixtureMovement {
+            distance_to_move: 0.0,
+        });
     inputs::equip(app.world_mut(), actor, &profile)?;
     inputs::install_traits(app.world_mut(), actor, traits)?;
     let targets = spawn_targets(&mut app, actor, count)?;

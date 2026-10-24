@@ -365,6 +365,18 @@ impl<'a> NativeFacts<'a> {
         )
     }
 
+    fn movement_distance(&self) -> Result<f64, String> {
+        if matches!(self.encounter, Encounter::Dungeon { .. }) {
+            return Err("DUNGEON_MOVEMENT_DISTANCE_UNAVAILABLE: movement.distance".into());
+        }
+        self.world
+            .get::<FixtureMovement>(self.actor)
+            .map(|movement| movement.distance_to_move)
+            .ok_or_else(|| {
+                "NATIVE_MOVEMENT_DISTANCE_UNAVAILABLE: configure fixture distance_to_move".into()
+            })
+    }
+
     fn movement_event(&self, property: &str) -> Result<f64, String> {
         if matches!(self.encounter, Encounter::Dungeon { .. }) {
             return Err(format!(
@@ -630,6 +642,7 @@ impl Facts for NativeFacts<'_> {
             "fight_remains" => self.remaining(name),
             "active_enemies" => Ok(self.active_enemies as f64),
             "spell_haste" => self.spell_haste(),
+            "movement.distance" => self.movement_distance(),
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "charges_fractional"
             | "full_recharge_time" | "execute_time" | "ticks_remain" => {
                 Err(format!("native APL {name} requires action context"))
