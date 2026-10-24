@@ -65,6 +65,10 @@
 ## 2026-10-22 — Whole-suite overlap and fixture-cost bounds
 
 [Performance](investigations/server-test-performance.md#fixed-source-whole-suite-overlap-and-costs): fixed295e96b4c whole5880enabled/229ignored,1021.809s/6.72GiBRSS/1.065GiBswap; no missing/extra,900s/no-swap still open. Toys/followers start517s/237s earlier but total work binds;3slot splitting no win, conservative4slot+split model938s before new setup. Meteor isolated frozena2FAIL/canonicalPASS is kit publication drift. Concurrent source-specific drop probe128/128GREEN; target pin retained after pruning incident. No new optimization/quiet proof claimed.
+## 2026-10-23 — TC training dummy combat exit
+
+[Dummy reference expiry](systems/combat.md#training-dummy-combat-exit--2026-10-23): independentdb17198c4 native Fireball→Ignite retention and harmless-Counterspell timer two genuine RED; LeavingCombat/ordinary Defias evade two controls PASS26.87s. Replace foreign-aura/attack-intent cleanup with TC per-attacker non-DOT timers and PvE-reference-only expiry. Current-canonical backup25995de4 reproduces two RED/two controls PASS24.06s; a3fdbf375 gives five native35.61s +five creature25.09s +ten refs14.14s =20GREEN74.84s,0compiler warnings/fmtPASS. Two real Fire attackers, native LeavingCombat/ordinary evade, attack intent, threat-less-attacker/PvP/pet controls included. No follower policy or DPS claim; independent lead gate separate.
+
 ## 2026-10-23 — Hit positivity independent of factions
 
 [Hit classification](systems/auras.md#hit-positivity-independent-of-factions--2026-10-23): test-only6d5d7026a genuine1PASS/1FAIL10.43s, native16166 harmful proc absent against attackable neutral faction7 after actual damage; friendly2061→36483 control passes. Spell_cast now uses TC damage/heal/landed-effect positivity, not faction hostility; GREEN pending, no proc import or parity certification.

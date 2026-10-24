@@ -1662,6 +1662,9 @@ fn deal_source_damage_and_report(
     let amount = crate::level_scaling::damage_dealt(&caster_scaling, &target_scaling, amount);
     let scaled_loss = crate::level_scaling::health_loss(&caster_scaling, &target_scaling, amount);
     let training_dummy = world.get::<TrainingDummy>(target).is_some();
+    if !periodic {
+        crate::creature_scripts::refresh_training_dummy_timer(world, target, ctx.caster);
+    }
     let duel = world.get::<crate::duel::DuelOpponent>(target).copied();
     let Some(health) = world.get::<Health>(target) else {
         return 0.0;
