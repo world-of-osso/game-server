@@ -165,6 +165,8 @@ impl ActionFacts for RetFacts<'_> {
 }
 
 #[cfg(test)]
+mod context_tests;
+#[cfg(test)]
 mod dispatch_tests;
 #[cfg(test)]
 mod equipment_tests;
