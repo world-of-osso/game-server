@@ -1,3 +1,7 @@
+## 2026-10-23 — Elemental Ascendance additional overload
+
+[Source/proof boundary](systems/spell-casting.md#elemental-ascendance-additional-overload--2026-10-23): actualb4a7f46b0 native2RED/1SKcontrolPASS27.40s; missing extra LB/CL casts, native prerequisites passed. Add effect8 casts once per root spell, independently of ordinary proc, retaining HIT+400ms and actual child damage. GREEN/DPS integration pending; no coefficient/stat/RNG changes.
+
 ## 2026-10-23 — Authored item faction eligibility
 
 [Eligibility](systems/toys.md#item-faction-flags-eligibility-2026-10-23): shared ItemTemplate::allows now enforces already-loaded source faction flags. Actual wrong-side learning/owned-use fiveRED→nineGREEN12.47s at039dced6c,54-item metadata matrix and retained controls; complete1173pipeline identical547. No race-mask/protocol/PvP identity changes or new toy admissions. Fmt0/manual readability; required check pending.
