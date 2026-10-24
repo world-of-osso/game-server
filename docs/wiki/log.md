@@ -1,3 +1,7 @@
+## 2026-10-24 — Rake native stealth eligibility
+
+[Rake](systems/spell-casting.md#rake-actual-stealth-eligibility--2026-10-24): observer proved ordinary1126 cast interrupt0x4 removed fixtureProwl; approved controller/buff ordering produced genuine selected-profile damageRED. TC2040–2078 actual-stealth predicate replaces legacyrank gate at a5b2fce9f; seven requested native/snapshot controls GREEN, clean both-packagebuild. Shred and persistent multiplier fields unchanged; parent integration/literal300s parity open. [Proof ledger](../handoffs/feral-literal-apl-proof-ledger.md#selected-profile-rake-fixture-blocker).
+
 ## 2026-10-24 — Lunar Inspiration native override
 
 [Spell casting](systems/spell-casting.md#lunar-inspiration-override--2026-10-24): selected155580 lacked155627 at bootstrap (genuineRED15.50s); sourced TC aura apply/remove hooks produce native lifecycle/binding2GREEN13.58s atf30c7ca20, zero-warning6m10build. Learned book and damage coefficients unchanged; literal driver and parent integration remain open.

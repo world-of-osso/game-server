@@ -1,5 +1,9 @@
 # Spell Casting
 
+## Rake actual-stealth eligibility — 2026-10-24
+
+TC `spell_dru_rake2040–2078` tests actual stealth, not legacy231052/405834 aura presence. Rake's shared predicate now follows that boundary and retains native1822 effect3 amounts; Shred's separate predicate and persistent multiplier fields are untouched. [Contract](../../specs/player-damage.md#what-it-must-do); [fixture root cause, approved ordering and seven-case qualification](../../handoffs/feral-literal-apl-proof-ledger.md#selected-profile-rake-fixture-blocker). Native Mark of the Wild legitimately interrupts Prowl; isolated comparisons must own ordinary buffs before stealth, not bypass interrupt flags or GCD.
+
 ## Lunar Inspiration override — 2026-10-24
 
 Selected155580 applies native155627 through ordinary triggered casting; removing the talent removes the override. Knowledge resolution then follows actual metadata8921→155625, without inserting a learned spell. [Native source/lifecycle proof](../../handoffs/feral-literal-apl-proof-ledger.md#native-lunar-admission-dependency) and [contract](../../specs/auras.md#lunar-inspiration) own the evidence. This enables admission, not missing literal rotation or300s parity.
