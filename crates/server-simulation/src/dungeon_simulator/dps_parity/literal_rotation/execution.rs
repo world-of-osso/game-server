@@ -26,7 +26,8 @@ pub(crate) struct NativeAction<'a> {
     pub self_target: bool,
 }
 
-// None is the action's native default target, not an explicit-target substitute.
+// Keys identify selection contexts; Execution retains the actual native cast target.
+// None is the native default, never a substitute for an unknown explicit context.
 type ReadyActions = BTreeMap<(String, Option<Entity>), Execution>;
 
 pub(crate) struct Prepared {
@@ -179,6 +180,17 @@ fn record_ready(
     }
 }
 
+fn record_target_contexts(
+    ready: &mut ReadyActions,
+    name: &str,
+    contexts: &[Entity],
+    execution: &Execution,
+) {
+    for &candidate in contexts {
+        ready.insert((name.into(), Some(candidate)), execution.clone());
+    }
+}
+
 fn read_attacks(world: &World, actor: Entity, targets: &[Entity], ready: &mut ReadyActions) {
     let current = world.get::<crate::combat::AutoAttack>(actor);
     for (index, &target) in targets.iter().enumerate() {
@@ -235,7 +247,9 @@ fn read_spells<'a>(
                 } else {
                     Execution::Spell(id, target)
                 };
-                record_ready(ready, name, target, index == 0, execution);
+                record_ready(ready, name, target, index == 0, execution.clone());
+                let contexts = if self_target { enemies } else { &[] };
+                record_target_contexts(ready, name, contexts, &execution);
             }
         }
     }

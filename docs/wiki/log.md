@@ -1,4 +1,9 @@
 ## 2026-10-23 — Native GCD-tagged APL history
+## 2026-10-24 — Self-cast target_if context loses native readiness
+
+[Shared context proof](../handoffs/self-target-context-proof-ledger.md): splitC3e native Zenith known/selected/self-admission controls pass but pinned enemy-target_if never selects it; actual30sSTFoF fails. 14781 independently reports Fire Breath's same boundary. Prepared now records supplied scoring contexts against the admitted self-target Execution, without default-key fallback or native bypass. Native GREEN pending; WW300s band remains open.
+
+## 2026-10-23 — Shared resumable precombat and while-casting native GREEN
 
 [Shared prev_gcd](systems/simc-apl.md#gcd-tagged-native-history) reached genuine native unknown-operand RED12.30s; ordinary successful native GCD IDs now drive fixture history without off-GCD/triggered/failed pollution. No live-server state or synthetic cast history. GREEN and resolver normalization remain pending.
 

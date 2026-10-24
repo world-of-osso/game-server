@@ -12,7 +12,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] Implement conditional `run_action_list` switches that never resume the caller after child exhaustion; reject unknown lists.
 - [x] Select explicit native targets with `target_if=min/max:<expr>` before the row's `if`; preserve native tie order. Unknown target operands/adapters fail explicitly.
 - [x] Scope a run row's selector to that control action. Child actions retain their own targets; run selection must not retarget them.
-- [x] Sample native cast readiness independently for each action/target pair. Harmful precasts use the actor's actual selected enemy when combat candidates have not yet been supplied.
+- [x] Sample native cast readiness independently for each action/target pair. A self-target NativeAction with target_if retains the selected enemy as its scoring context but maps admitted readiness and dispatch to its actual self target; unknown explicit contexts remain unready, never use default admission as fallback. Harmful precasts use the actor's actual selected enemy when combat candidates have not yet been supplied.
 - [x] Deliver Player literal spells through ordinary Player requests with the selected explicit target, rechecking knowledge and rejecting expired identities rather than redirecting. Preserve selected and AA targets; retain native creature dispatch for WW followers.
 - [x] `retarget_auto_attack` changes only the running AA victim, preserving both swing timers and the actor's selection. An already-running AA must not restart onto the primary target.
 - [x] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.

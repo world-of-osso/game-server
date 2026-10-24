@@ -2,6 +2,10 @@
 
 Verified2026-10-23. Native DB2/TC precede SimC76f8118; no parity claim. Shared native-book helper belongs to14752. `follower_spec_kit` membership below is **not** proof of native KnownSpells membership; selected reference traits are installed separately by `dps_parity::inputs::install_traits`.
 
+## Shared self-cast selection context
+
+[Owner's native Zenith counterexample and bounded fix](self-target-context-proof-ledger.md) identifies explicit enemy-context lookup loss for self-target actions; the Devastation Fire Breath fixture independently reproduces it. This split-B port retains the production mapping and the local Dev counterexample. The owner's new WW case uses later `prepare_measurement`, target-aware WW facts and `Rotation::select` APIs absent on this branch, so that case remains on its owner branch rather than importing unrelated lifecycle work. No WW GREEN is claimed here.
+
 ## Missing historical reference channels
 
 | Spell / source | Native data / decision status | Test / gap |
