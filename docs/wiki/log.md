@@ -5,6 +5,10 @@
 ## 2026-10-22 — Irideus stage-one partial and native category boundary
 
 [Irideus](systems/boss-scripts.md#watcher-irideus-stage-one-partial-2026-10-22): ignored native RED before AI; four initial/effect/threshold/reset passes retained, exact native category-rejection/credit/copy/corpse case1GREEN22.01s. COMPOSITE5GREEN; source-clock/category1152+133 mismatch, Stage2 and dummy controllers remain explicit gaps.
+## 2026-10-24 — Completed B/C paired measurement record
+
+[Measurements](investigations/server-crate-split-measurements.md): B31/31 and C106/106 pass both native sides with exact case/input/executable identity. C comment wall105.80→6.51s/CPU58.43→12.18s; native154.20→106.26s/145.18→98.37CPU. Concurrent native host CPU74.61%→43.76% and reclaim differ: no causal runtime speedup or whole-workspace no-swap claim. Raw joined ledger/telemetry retained; no reruns. D2 runtime and matched rebuild remain separate.
+
 ## 2026-10-24 — Generated achievement catalog ownership
 
 [Crate boundaries](systems/server-crates.md#generated-achievement-catalog-cut-d1): six generated lookups relocate37,819lines into existing server-catalog with three canonical immutable record types. Credit/ECS/player authority and unchanged matching predicates stay core; test identity and lookup-data census remain required. No elapsed-time speedup claim.

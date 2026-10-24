@@ -55,3 +55,4 @@ All six generators still require an explicit output argument; point it at the co
 
 - [[dungeon-simulator]] — headless gameplay qualification.
 - [[server-test-performance]] — measured profile/runtime tradeoffs; extraction alone is not a benchmark result.
+- [[server-crate-split-measurements]] — completed B/C paired batches and comment rebuilds, sealed inputs, shared-host no-causal-claim limits.
