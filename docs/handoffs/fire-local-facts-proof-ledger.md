@@ -45,6 +45,10 @@ Merged master5d39f490a at ec84a768b; Fire set_bonus.* delegates shared Equipment
 
 First merge check exposed a missing new Bindings.dot_refresh registry plus two availability/import warnings. Fire has no dot.* operands, so its registry is explicitly empty (unknown dot operands still error). Removed unused simulation navigation import; gated the equipment proc-timer reader with its existing NativeFacts consumer. These are compile integration fixes, not native RED or gameplay qualification. At `c0944d841e2a3bbc40d6584bfd929c82fad06b62`, ordinary server `--lib` check passes15.85s and enabled server+server-simulation `--tests` check passes28.85s, both zero warnings/errors. Logs `fire-literal-c094-production-lib-check.log` / `fire-literal-c094-enabled-tests-check.log`. Earlier native fact receipts describe their exact pre-merge revisions; the merged full runtime still awaits ordered-precombat/configured-duration landing and an integration run.
 
-Additional native Fire equipment routing control pending: pinned actual four equipped ItemSet2060 pieces must report shared midnight_season_2 2pc/4pc true; unknown set alias remains an error. This is not set mechanics or full caller qualification.
+## Post-rt1086 native integration —09469b6b1
+
+Five Fire-local native cases plus startup inode pass after the shared merge; the new Fire tier-routing case is genuine RED. Actual four equipped ItemSet2060 pieces reach shared Equipment.fact, but exact pinned `set_bonus.midnight_season_2_2pc` is rejected as unknown. Shared set facts currently generate only `mid2_*pc` from the pinned alias CSV; existing shared tests cover only that short name. Full source spelling is preserved; no Fire-local rewrite/default. Main routed the shared alias fix to14796, with this case as RED.
+
+Result6PASS/1FAIL35.23s, compile11m52s, zero warnings; log `fire-local-0946-post-rt1086-native.log`. Fresh current backup/receipt20261024T113149Z; canonical/private hashes match the earlier current snapshots. The merged five local-fact behaviors are qualified; long-form tier naming, set mechanics and full caller qualification remain separate.
 
 Caller300s ST/3T, generic facts and dependency qualification remain open; no full literal or DPS acceptance claimed.
