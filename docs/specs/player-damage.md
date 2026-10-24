@@ -4,6 +4,9 @@ Players deal Retail damage: auto-attacks swing the equipped weapon with attack p
 
 ## What it must do
 
+Rake
+- [ ] Actual stealth enables native1822 effect3's initial damage bonus and163505 stun without requiring legacy231052/405834 aura grants. Ordinary unstealthed damage stays unchanged. Preserve the existing bleed snapshot path and native coefficients; new persistent multiplier fields are outside this eligibility change. Source: TC a352b1fa `spell_druid.cpp2040–2078`; actual selected-profile precombat buffs precede Prowl and native GCD remains authoritative.
+
 Auto-attack
 - [x] Main-hand, off-hand and ranged autorepeat countdowns use exact durations, with resets truncated to native integer milliseconds (TC Unit.cpp670–673/Unit.h710–713,1541). A2s attack is ready at the40th50ms tick, not41; retain each hand's phase and200ms display delay without epsilon fixes.
 - [x] Attack admission and hostile spell targeting honor authored UNIT_FLAG_NON_ATTACKABLE, NON_ATTACKABLE_2, NOT_SELECTABLE and IMMUNE_TO_PC. PC immunity blocks players/player-controlled sources, not independent creatures. Neutral unflagged creatures remain attackable; faction masks/lists are unchanged.
