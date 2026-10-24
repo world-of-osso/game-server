@@ -14,14 +14,16 @@ Machine-readable exact excerpts/rows: `game-engine/data/diagnostics/ww-parity-20
 
 | Boundary | Baseline b288c1abd | Current qualification |
 |---|---|---|
-| Earned1297033 consumed once at parent | Genuine RED: buff remains before the first tick | Implementation committed; GREEN pending |
-| Actual damage on every real107270 tick | Genuine RED: native60% earned bonus requires38167 before armor, actual23854 | Implementation committed; GREEN pending |
-| No-earned parent while native ticks earn new live stacks | PASS, real Chi and native20s expiry | Retained control; GREEN pending |
-| Later parent must not reuse earlier earned amount | PASS, real first channel then native expiry and real second cast | Retained control; GREEN pending |
-| Producer remains effective after consumption | First case continues to real tick-driven re-earning after the failed consumption assertion | Not yet GREEN |
+| Earned1297033 consumed once at parent | Genuine RED: buff remains before the first tick | GREEN at7331708ee; one ordinary removal |
+| Actual damage on every real107270 tick | Genuine RED: native60% earned bonus requires38167 before armor, actual23854 | GREEN at7331708ee; all4 actual ticks retain1.6 effectiveness |
+| No-earned parent while native ticks earn new live stacks | PASS, real Chi and native20s expiry | Retained GREEN; all4 ticks stay unboosted |
+| Later parent must not reuse earlier earned amount | PASS, real first channel then native expiry and real second cast | Retained GREEN; all4 later ticks stay unboosted |
+| Producer remains effective after consumption | First case continues to real tick-driven re-earning after the failed consumption assertion | GREEN: new live native stacks return during real ticks |
 | Other107270 parent322729 | Native source edge verified | Emission-scoped implementation; no separate runtime certificate claimed |
 
 Baseline native2RED/2controlsPASS takes14.65s; build470.32s/zero warnings. Tests earn resources/stacks from actual Tiger Palm, observe native expiry, and compare resolved damage against observed native inputs/unaffected source/target products. Crit, variance, armor and legal misses are not rerolled. No fixture aura, stack, power, stat or coefficient grants.
+
+At7331708ee all4 unchanged native cases pass in17.43s; compile778.79s/zero warnings. First earned tick now resolves38167 before armor and27714 actual damage, with the requested1.6 scalar. All four earned tick observations are1.6 within native rounding; no-earned/later-parent observations remain1.0 despite native re-earning. Proof summary: `sck-7331708ee-native-proof-summary.json`; binary SHA-256 `4b39f55dc6fb0f1e2c41ba3520fd4ff0832e2f645dcccea088320fd2d2f05bbf`. No production source changes follow this proof; full lead gate remains separate.
 
 ## Implementation representation
 
@@ -33,4 +35,4 @@ Native producer, flags, periods, coefficients, AP and target counts are unchange
 
 ## Proof artifacts
 
-`game-engine/data/diagnostics/ww-parity-2026-10-23/`: `sck-red-b288c1abd.build*`, `native-ww-sck-red-b288c1abd/`, source packet and task-local `sck_native_ops.py`. Each native runtime has its own current read-only SQLite backup, exact inputs/binary hashes, argv/environment and live combined logs. Initial c69 admission exhausted ten HOLD samples before compilation; no native execution occurred at that revision. Builds/tests use admitted `agent-run ww-sck-snapshot` with-j2. No worker push or spawned agents.
+`game-engine/data/diagnostics/ww-parity-2026-10-23/`: `sck-red-b288c1abd.build*`, `native-ww-sck-red-b288c1abd/`, `sck-green-7331708ee.build*`, `native-ww-sck-green-7331708ee/`, `sck-7331708ee-native-proof-summary.json`, source packet and task-local `sck_native_ops.py`. Each native runtime has its own current read-only SQLite backup, exact inputs/binary hashes, argv/environment and complete combined logs. Initial c69 admission exhausted ten HOLD samples before compilation; no native execution occurred at that revision. Builds/tests use admitted `agent-run ww-sck-snapshot` with-j2. No worker push or spawned agents.
