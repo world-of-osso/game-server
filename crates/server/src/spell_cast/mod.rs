@@ -2616,6 +2616,7 @@ pub(crate) fn execute_cast(
         AuraEvent {
             actor: caster,
             target: None,
+            context: None,
             actor_mask: [0, procs::PROC2_CAST_SUCCESSFUL],
             target_mask: [0; 2],
             spell_id: Some(spell.id),
@@ -3313,6 +3314,7 @@ fn push_hit_events(
             AuraEvent {
                 actor: caster,
                 target: Some(target),
+                context: None,
                 actor_mask: [0; 2],
                 target_mask: [procs::PROC_TAKE_ANY_DAMAGE, 0],
                 spell_id: Some(spell.id),
@@ -3357,6 +3359,7 @@ fn push_hit_events(
             AuraEvent {
                 actor: caster,
                 target: Some(target),
+                context: None,
                 actor_mask: [actor_mask, 0],
                 target_mask: [target_mask, 0],
                 spell_id: Some(spell.id),

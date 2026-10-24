@@ -148,6 +148,7 @@ fn emit_knockback_proc(world: &mut World, caster: Entity, target: Entity) {
         crate::auras::procs::AuraEvent {
             actor: caster,
             target: Some(target),
+            context: None,
             actor_mask: [0, 0],
             target_mask: [0, crate::auras::procs::PROC2_KNOCKBACK],
             spell_id: None,

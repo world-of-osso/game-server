@@ -26,6 +26,14 @@ rt1086 landed in master5d39f490a; merged into770-based branch asbebf4a918. No pi
 
 Atc24cc4bc9 actual16 yields1raw-controlPASS/15missing-entry assertionRED8.64s, compile2m16/zero warnings; `tdb-effective-entries-red.{log,proof.json}`. Before reader implementation, source validation withdrew two hit-value oracles: aura74 is school reflect (not crit52), and62052's earlier aura42 stops TC's first-match scan before its miss aura. Correct concrete fixtures are40603 (first recognized52) and63767 (first54=-100); ec3f0e3fe corrected generated5 all reach genuine missing-entry RED7.01s, compile40.08s/zero warnings; `tdb-effective-entries-corrected-generated-red.{log,proof.json}`. The corrected two cases now have real pre-implementation RED receipts. Other14 test bodies/oracles remain unchanged; no hit-value qualification is claimed from missing-entry failures. Compilation/setup/zero tests do not count. Separate full-row60132e07 snapshot was activated only in this worktree atc24cc4bc9 for these loader tests; historical359d55 native RED proofs remain immutable and separately named. No canonical publication.
 
+## Native event-context RED
+
+`AuraEvent.context: Option<ProcEventContext>` is unavailable(None) scaffolding at all existing emitters so far; no event mask, filtering or receipt is invented. The explicit context shape names school/type/phase/hit, actual damage attack type, positive prepared cost, cast-item identity and exact `(owner, aura-instance)` modifier provenance. Existing event/interrupt/proc fields remain unchanged pending actual producer RED.
+
+Six opt-in public native queue cases use real ordinary Shield17/Fortitude21562 casts, actual own aura application and queued AuraEvents before their consumer drains them. Retained ordinary Shield control; CAST low+high flags/phase1/type7/normal/holy2; HIT phase2/no-damage4/normal/holy2; one actor-only FINISH phase4; positive Fortitude cost receipt; absent Shield cost receipt. Native17 has four specialization-aura-gated power rows, all inapplicable in the bare harness, while21562 has an unconditional1% mana row. No aura/resource grants, chance overrides or combat-log correlation are used. These tests do not assert private calls, registration or generated source shape.
+
+Actual6-test RED pending. An earlier drafting premise that bare-harness Shield spends mana was rejected by read-only native power rows before execution; Fortitude supplies the real positive-cost case instead. Setup/compile/zero tests do not count. Full16 entry/default GREEN remains separate and is not rerun for this unchanged proof scope.
+
 ## Current capability matrix
 
 | Capability | Current proof / missing boundary |

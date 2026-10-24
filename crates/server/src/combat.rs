@@ -858,6 +858,7 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
     let mut events = vec![AuraEvent {
         actor: attacker,
         target: Some(target),
+        context: None,
         actor_mask: [procs::PROC_DEAL_MELEE_SWING | hand_swing, 0],
         target_mask: [
             procs::PROC_TAKE_MELEE_SWING | procs::PROC_TAKE_ANY_DAMAGE,
@@ -875,6 +876,7 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
         events.push(AuraEvent {
             actor: attacker,
             target: Some(target),
+            context: None,
             actor_mask: [procs::PROC_KILL, 0],
             target_mask: [procs::PROC_DEATH, 0],
             spell_id: None,

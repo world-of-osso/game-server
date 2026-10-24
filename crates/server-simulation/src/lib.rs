@@ -10,4 +10,5 @@ use server::{
 };
 
 mod dungeon_simulator;
+mod proc_event_context_tests;
 mod proc_value_tests;

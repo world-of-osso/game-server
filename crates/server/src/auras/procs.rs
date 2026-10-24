@@ -137,11 +137,36 @@ const PROC_TRIGGER_DEPTH: u8 = 1;
 /// RPPM caps the time since the last attempt (TrinityCore: 10 s).
 const PPM_MAX_ATTEMPT_GAP: f64 = 10.0;
 
+/// TC DamageInfo attack type used by legacy weapon-speed PPM.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProcAttackType {
+    MainHand,
+    OffHand,
+    Ranged,
+}
+
+/// Actual proc-event inputs; emitters must not infer outcomes from damage totals.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProcEventContext {
+    pub school_mask: u32,
+    pub spell_type_mask: u32,
+    pub spell_phase_mask: u32,
+    pub hit_mask: u32,
+    pub attack_type: Option<ProcAttackType>,
+    /// TC GetPowerCost contains a positive Amount, even when consumption is waived.
+    pub has_power_cost: bool,
+    pub cast_from_item: bool,
+    /// Exact (owner, aura-instance) identities actually applied to this cast.
+    pub applied_aura_modifiers: Vec<(Entity, u32)>,
+}
+
 /// One combat event.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AuraEvent {
     pub actor: Entity,
     pub target: Option<Entity>,
+    /// None means no captured native context, not fabricated normal/zero metadata.
+    pub context: Option<ProcEventContext>,
     pub actor_mask: [u32; 2],
     pub target_mask: [u32; 2],
     pub spell_id: Option<u32>,

@@ -132,6 +132,7 @@ pub(super) fn proc_reflector(world: &mut World, caster: Entity, reflector: Entit
         AuraEvent {
             actor: caster,
             target: Some(reflector),
+            context: None,
             actor_mask: [0; 2],
             target_mask: [
                 procs::PROC_TAKE_HARMFUL_SPELL | procs::PROC_TAKE_HARMFUL_ABILITY,

@@ -1898,6 +1898,7 @@ fn push_damage_event(
         AuraEvent {
             actor: ctx.caster,
             target: Some(target),
+            context: None,
             actor_mask: [actor, 0],
             target_mask: [taken | procs::PROC_TAKE_ANY_DAMAGE, 0],
             spell_id: Some(ctx.spell.id),
@@ -1926,6 +1927,7 @@ fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
         AuraEvent {
             actor: killer,
             target: Some(target),
+            context: None,
             actor_mask: [procs::PROC_KILL, 0],
             target_mask: [procs::PROC_DEATH, 0],
             spell_id: None,
@@ -2075,6 +2077,7 @@ fn apply_resolved_heal(
             AuraEvent {
                 actor: ctx.caster,
                 target: Some(target),
+                context: None,
                 actor_mask: [procs::PROC_DEAL_HELPFUL_PERIODIC, 0],
                 target_mask: [procs::PROC_TAKE_HELPFUL_PERIODIC, 0],
                 spell_id: Some(ctx.spell.id),
