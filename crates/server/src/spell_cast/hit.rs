@@ -35,6 +35,9 @@ pub(super) fn remove_defended_targets(
     spell: &SpellInfo,
     plan: &mut TargetPlan,
 ) {
+    for effect in plan.iter_mut() {
+        effect.selected_units = effect.units.clone();
+    }
     let negative =
         crate::spell_info::positivity::negative_effects(world.resource::<SpellStore>(), spell);
     let misses: Vec<_> = super::hit_units(plan)

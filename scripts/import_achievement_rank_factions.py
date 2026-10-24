@@ -20,7 +20,7 @@ def generate_source(source, output):
         f'// Mainline {source.parent.name} Faction SHA256 {hashlib.sha256(source.read_bytes()).hexdigest()}.',
         '// TC ReputationMgr420-421/543-558: friendship has no rank counters;',
         '// renown/paragon progress is not a traditional standing change.',
-        'pub(super) const TRADITIONAL_RANK_FACTIONS: &[u32] = &[',
+        'pub const TRADITIONAL_RANK_FACTIONS: &[u32] = &[',
     ]
     lines.extend('    ' + ', '.join(map(str, factions[start:start + 12])) + ','
                  for start in range(0, len(factions), 12))

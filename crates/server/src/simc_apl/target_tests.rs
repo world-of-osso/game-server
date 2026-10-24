@@ -141,6 +141,63 @@ fn simc_apl_target_exhausted_nested_run_never_changes_callers_target() {
 }
 
 #[test]
+#[ignore = "queued sourced FIRST selector RED; not implemented yet"]
+fn simc_apl_queued_first_selector_chooses_first_matching_native_target() {
+    // SimC76f8118 action.cpp2954–2964,5411–5426: bare target_if is FIRST.
+    let program =
+        Program::parse(&[("default", "mortal_strike,target_if=target.health.pct<50")]).unwrap();
+    let selected = program
+        .select("default", &targets(), &mut program.state(), |_| Ok(true))
+        .unwrap()
+        .unwrap();
+    assert_eq!(selected.name, "mortal_strike");
+    assert_eq!(selected.target, Some(42));
+}
+
+#[test]
+#[ignore = "queued sourced FIRST selector RED; not implemented yet"]
+fn simc_apl_queued_first_selector_rejects_false_single_candidate() {
+    // Unlike min/max's single-target shortcut, FIRST must still match.
+    let facts = Targets {
+        units: vec![(41, 60.0, 0.0)],
+    };
+    let program =
+        Program::parse(&[("default", "mortal_strike,target_if=target.health.pct<50")]).unwrap();
+    assert_eq!(
+        program
+            .select("default", &facts, &mut program.state(), |_| Ok(true))
+            .unwrap(),
+        None
+    );
+}
+
+#[test]
+#[ignore = "queued sourced cycle_targets RED; not implemented yet"]
+fn simc_apl_queued_cycle_selects_first_condition_and_native_ready_target() {
+    // action.cpp2472–2496 recursively checks each native target's action_ready.
+    let program = Program::parse(&[
+        (
+            "default",
+            "mortal_strike,cycle_targets=1,if=target.health.pct<50",
+        ),
+        ("default", "slam"),
+    ])
+    .unwrap();
+    let selected = program
+        .select("default", &targets(), &mut program.state(), |action| {
+            Ok(action.name == "slam" || action.target == Some(43))
+        })
+        .unwrap()
+        .unwrap();
+    assert_eq!(selected.name, "mortal_strike");
+    assert_eq!(
+        selected.target,
+        Some(43),
+        "41 fails if;42 fails native admission;43 qualifies"
+    );
+}
+
+#[test]
 fn simc_apl_target_unknown_fact_is_an_error_not_an_absent_target() {
     let program = Program::parse(&[("default", "execute,target_if=min:target.missing")]).unwrap();
     assert!(

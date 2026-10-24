@@ -188,18 +188,19 @@ fn try_entry(
     if matches!(entry.slot, Slot::Passive | Slot::Utility | Slot::Interrupt) {
         return false;
     }
-    let spell_id = match super::kit_overrides::resolve_action(world, unit, entry.spell_id) {
-        Ok(spell) => spell,
-        Err(error) => {
-            debug!(
-                ?unit,
-                base = entry.spell_id,
-                ?error,
-                "Follower action unavailable"
-            );
-            return false;
-        }
-    };
+    let spell_id =
+        match crate::spell_cast::knowledge::resolve_actor_action(world, unit, entry.spell_id) {
+            Ok(spell) => spell,
+            Err(error) => {
+                debug!(
+                    ?unit,
+                    base = entry.spell_id,
+                    ?error,
+                    "Follower action unavailable"
+                );
+                return false;
+            }
+        };
     let mut entry = entry.clone();
     entry.spell_id = spell_id;
     let enemy = match (entry.conditions.target, entry.conditions.target_if_min_aura) {

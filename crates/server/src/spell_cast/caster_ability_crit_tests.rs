@@ -148,6 +148,7 @@ fn census_tail_308_native_riptide_marker_guarantees_real_heal_not_other_shaman_h
         units: vec![caster],
         dest: None,
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }];
