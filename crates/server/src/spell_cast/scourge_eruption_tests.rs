@@ -170,28 +170,46 @@ fn unholy_scourge_native_dread_erupt_precedes_missing_virulent_without_first_hit
 
 #[test]
 fn unholy_scourge_native_eruptions_preserve_expiry_phase_and_next_real_tick() {
-    let mut h = fixture(80);
-    let (caster, target) = (h.caster, h.npc);
-    apply(&mut h, caster, target, VIRULENT, 1);
-    let before = plague(&h, caster, VIRULENT);
-    h.advance(20);
-    strike(&mut h);
-    assert_eruption(&h, VIRULENT_ERUPT, VIRULENT_AP, 1.0);
-    let after = plague(&h, caster, VIRULENT);
-    assert_eq!(after.expires_at, before.expires_at);
-    h.advance(35);
-    assert!(damage(&h.inbox.log, caster, VIRULENT).is_empty());
-    h.advance(4);
-    let ticks = damage(&h.inbox.log, caster, VIRULENT);
-    assert_eq!(ticks.len(), 1);
-    assert!(ticks[0].periodic);
-    let ap = h
-        .app
-        .world()
-        .get::<CharacterStats>(caster)
-        .unwrap()
-        .attack_power;
-    assert_eq!(ticks[0].amount as f32, (ap * VIRULENT_AP).round());
+    for crit_pct in [0.0, 100.0] {
+        let mut h = fixture(80);
+        let (caster, target) = (h.caster, h.npc);
+        h.app
+            .world_mut()
+            .get_mut::<CharacterStats>(caster)
+            .unwrap()
+            .crit_pct = crit_pct;
+        apply(&mut h, caster, target, VIRULENT, 1);
+        let before = plague(&h, caster, VIRULENT);
+        h.advance(20);
+        strike(&mut h);
+        assert_eruption(&h, VIRULENT_ERUPT, VIRULENT_AP, 1.0);
+        let after = plague(&h, caster, VIRULENT);
+        assert_eq!(after.expires_at, before.expires_at);
+        assert_eq!(after.effects[0].amount, before.effects[0].amount);
+        h.advance(35);
+        assert!(damage(&h.inbox.log, caster, VIRULENT).is_empty());
+        h.advance(4);
+        let ticks = damage(&h.inbox.log, caster, VIRULENT);
+        assert_eq!(ticks.len(), 1);
+        assert!(ticks[0].periodic);
+        let stats = h.app.world().get::<CharacterStats>(caster).unwrap();
+        assert_eq!(
+            stats.crit_pct, crit_pct,
+            "native crit control remains active"
+        );
+        eprintln!(
+            "scourge periodic: stored_before={} stored_after={} ap={} crit_pct={} event={:?}",
+            before.effects[0].amount,
+            after.effects[0].amount,
+            stats.attack_power,
+            stats.crit_pct,
+            ticks[0]
+        );
+        assert_eq!(
+            ticks[0].amount as f32,
+            (stats.attack_power * VIRULENT_AP).round()
+        );
+    }
 }
 
 #[test]
