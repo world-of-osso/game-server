@@ -48,7 +48,7 @@ fn consumed_purpose(spell: &SpellInfo) -> bool {
         .any(|modifier| modifier.aura_spell_id == DIVINE_PURPOSE && modifier.amount != 0.0)
 }
 
-pub(super) fn after_foreground_spender(
+pub(in crate::spell_cast) fn after_foreground_spender(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
