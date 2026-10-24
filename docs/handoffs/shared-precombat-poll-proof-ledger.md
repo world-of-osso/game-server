@@ -2,6 +2,12 @@
 
 Verified2026-10-23: RED scaffold/tests staged, unexecuted. Parent prioritized14779's blocked Fire caller before the remaining WW gap. Previous package96b27GREEN is separate proof, not qualification of this new API.
 
+## Crate split B integration
+
+Masterd675bf8fb moves the fixture module into `crates/server-simulation/src/dungeon_simulator/`; test function names remain unchanged. Server core has no dungeon_simulator dependency. Shared literal fixture identity remains `server::test_support::LiteralParityFixture`; actual GCD observation is available under test/test-support. Native geometry reach is re-exported through test_support (navigation module stays private), and the actual server-only Moving component is public for native input/state observation.
+
+First requested two-package --tests check atfb0bca6a6 exits101 in8m45 with six migration visibility/import errors (three navigation references, three Moving accesses), not a native behavioral RED. Integration fixes those references/visibility without changing movement behavior; repeat check pending on the changed revision. Fire poll and while-casting controls remain unexecuted scaffolds, not qualified production polling.
+
 ## Caller and proposed contract
 
 Forwarded origin/rotation-b-fire-literal543e7aca4 currently pins88rows/8lists and a native-order test/spec; its Rotation/FireFacts hookup remains14779-owned. Rotation owns Driver; dps_parity::advance_combat owns Run.app. Shared `Driver::poll_precombat(...) -> PrecombatPoll::{Waiting, Selected { action, execution }, Finished}` must distinguish native cast/GCD wait from exhausted source, preserving cursor, variables and original Action.options while waiting. Caller advances real App frames and resamples Prepared/facts, never sleeps or instant-loops casts.
