@@ -44,7 +44,7 @@ fn causal_amount(run: &Run) -> f64 {
 fn start_native(run: &mut Run, spell: u32, stage: Option<u8>) {
     for _ in 0..TICKS {
         let actor = run.actor;
-        let target = if spell == DISINTEGRATE {
+        let target = if matches!(spell, DISINTEGRATE | ETERNITY_SURGE) {
             run.targets[0]
         } else {
             actor
