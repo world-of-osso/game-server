@@ -1,3 +1,7 @@
+## 2026-10-23 — Pack Tactics instant Focus bridge
+
+[Native launch bridge](systems/spell-casting.md#twentieth-batch-authored-totals-and-next-spell-uses): genuine Player launch/Austin kit-count RED2FAIL and removed-passive1PASS; missing1282660 now bound to the existing Barbed callback. Periodic246152 preserved; GREEN pending.
+
 ## 2026-10-23 — Haste-affected resource potential producer
 
 [Resource potential](systems/spell-casting.md#haste-affected-continuous-resource-regeneration--2026-10-23): native0x400 flags and live haste feed one uncapped rate calculation reused by actual regen; cap wire/cache remains0. Focus/Energy native rate RED2ad5, explicit0/25 Rogue cap RED4efc and three capped native fact REDecaf are qualified; producer implemented, NativeFacts consumer/GREEN still pending. Discrete pet Focus and separate rune cooldowns are unchanged; no DPS parity claim.
