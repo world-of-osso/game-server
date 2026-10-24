@@ -81,6 +81,10 @@ TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyC
 
 [Target-context API proof and exact remaining gaps](../handoffs/native-target-context-proof-ledger.md).
 
+## Native execution-option boundary
+
+Ignored `literal_execution_native_*` cases select a real `fire_breath,empower_to=1` row and compare its actual DoT duration with native stage1 release metadata, then exercise Disintegrate→Living Flame replacement with actual GCD, hostile-target and insufficient-Essence controls. Readiness must not advance/cancel/spend; successful replacement must use ordinary native costs. The new replacement entry point initially retains ordinary native admission for genuine RED; no ignore-current-cast implementation or execution variant exists yet. Keep these generic changes separate from specialization predicates.
+
 ## Known gaps (current cycle)
 
 - [ ] Wire native kit adapters; library expression/variable/list decisions have11-case GREEN, not full native rotation proof.

@@ -4,6 +4,10 @@ use bevy::prelude::*;
 use server::simc_apl::Action;
 use std::collections::BTreeMap;
 
+#[cfg(test)]
+#[path = "execution_options_tests.rs"]
+mod options_tests;
+
 #[derive(Clone)]
 pub(crate) enum Execution {
     Snapshot,
@@ -57,6 +61,18 @@ impl Prepared {
             }
         }
         Ok(Self { ready })
+    }
+
+    /// TDD entry point: preserve existing native admission until replacement selection qualifies.
+    pub fn read_interrupting_self<'a>(
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+        equipment: &Equipment,
+        actions: impl IntoIterator<Item = NativeAction<'a>>,
+        needs_snapshot: bool,
+    ) -> Result<Self, String> {
+        Self::read(world, actor, targets, equipment, actions, needs_snapshot)
     }
 
     pub fn execution(
