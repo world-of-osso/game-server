@@ -27,6 +27,19 @@ Qualified9bb ELF SHA256 `3715bbd0feb2b6ecc1c3932ba90edf70d80b2df3e8f6e4626117065
 
 Each phase has separate `barbed-budget-<phase>-<revision>-{compile.log,native.log,executable.json,receipts/}` plus exact command/environment entries in `proof-ledger.jsonl`. Receipt files preserve source factors, actual native damage inputs, legal cast times and full aura timelines through actual expiry. These are mechanics tests, not whole-DPS certification.
 
+## Matched bounded measurement
+
+Qualified preserved577 predecessor versus qualified9bb, identical frozen world/profile/traits, Austin follower/seed70448/300s/driver; no rebuild or new coefficients. Reports and SHA receipts: diagnostics `bm-native-periodic-comparison/{after/,comparison.json}`; baseline reports remain `bm-owner-scales-comparison/after/cases/`.
+
+| Targets | Total DPS before→after | Barbed DPS before→after | Barbed casts/hits before→after |
+|---|---|---|---|
+|1|32589.107→53884.833|8509.677→26595.920|41/149→42/236|
+|3|27341.880→44344.413|10651.970→23461.420|38/337→38/325|
+
+ST Cobra casts57→59, KC63→63, BW10→10, Auto120→120. Owner30616.7→51949.65DPS; pets1972.41→1935.18. ST periodic Focus raw840/effective791→825/779; Pack1025/940→1050/994. 3T periodic750/564→765/674; Pack950/805→950/843. These are observed receipts, not proof that every Focus producer is complete; no rotation tuning was applied.
+
+This is one matched seed, not a mean-DPS/parity certificate. Generic refresh changes timing and random/proc outcomes; Guillotine ST3959→6586DPS also changes. Do not attribute the complete total gain to an isolated5/8 arithmetic factor. Parent broad controls/integration remain pending.
+
 ## Fix and normalization audit
 
 `refresh.rs` contained exactly one tooltip-derived normalization: `normalize_barbed_damage`, selected only for217200. Deleted function and spell-ID branch; fresh DB2 effect amounts remain untouched. Other named branches accumulate Ignore Pain using its sourced health cap, or carry sourced Rip/Rake/Shield Block/SoTR durations; none divides periodic damage by tooltip counts. Those contracts remain intact.
