@@ -19,13 +19,13 @@ Artifacts: engine `data/diagnostics/feral-parity-2026-10-23/literal-source/{inve
 
 | Source surface | Current state | Proof level / owner |
 |---|---|---|
-|15variable,6call and1pool rows|Variables/calls exist; floor and pool/for_next remain blocked|Source inspection;14766 owns extensions|
-|10target_if rows:5min,5boolean|Native target context/min available; boolean refreshable reproduces parser RED|Inherited ta1068;14766 owns boolean selection|
+|15variable,6call and1pool rows|Canonical floor/pool/readonly-max interfaces consumed from master1fb; Feral consumer hook still pending|Source inspection;14766 owns extensions|
+|10target_if rows:5min,5boolean|Canonical FIRST/min/native-target context consumed from master1fb; original parser RED preserved|Inherited ta1068;14766 owns boolean selection|
 |39native spell/racial rows|Aliases and Rake/Moonfire refresh bindings added; native target geometry/consumer not yet wired|Feral-owned; native binding1PASS17.05s, no literal execution claim|
 |11item/potion/external rows|Shared equipped metadata available; no provisioned potion/external provider|Consume shared equipment; report provider gaps explicitly|
 |2autoattack/snapshot rows|Shared execution exists; Feral consumer not wired|Driver integration behavioral RED below|
 
-Numeric `<?`/`>?` are present on development base from bt1082, not a private expression implementation. `max_energy=1` and `pool_resource,for_next=1` remain14766-owned. No unsupported token may disappear behind a false branch or silently become zero.
+Numeric `<?`/`>?` are present on development base from bt1082, not a private expression implementation. `max_energy=1` and `pool_resource,for_next=1` remain14766-owned; master1fb now supplies their canonical implementation plus c4f2e3212's reporter resource hooks. No unsupported token may disappear behind a false branch or silently become zero.
 
 Fact dependencies:
 
@@ -35,6 +35,12 @@ Fact dependencies:
 - hero_tree:14116/hf1080 candidate6e4427191, parent gate pending. No local hero-tree fact.
 - dot/action persistent multipliers:14775 owns the shared snapshot/API (frozen RED2bc981067); Feral eligibility stays separate. No new persistent snapshot fields here.
 - 14781: prev_gcd lands with hs1063 and reads successful GCD root identities through action bindings. Exact consumers are prev_gcd.1.rip, prev_gcd.1.ferocious_bite and prev_gcd.1.primal_wrath. Pending additions: buff.clearcasting.react, buff.tigers_fury.duration and action.convoke_the_spirits.execute_time.
+
+## Full literal source consumer
+
+Development ae6c03e62 merges exact master1fb0230ad, retaining canonical generic FIRST/floor/pool/precombat and readonly-max APIs plus the approved min/max operators. `feral_rotation/source.rs` loads the unchanged74row profile through shared `Program`; it validates only this adapter's declared actions/options, never interprets expressions or rewrites priorities. Native finisher/builder selection tests with concrete facts are pending. The native driver is still unwired; persistent multiplier, CP-prepared refresh and remaining published fact dependencies stay explicit.
+
+The clean Rake branch394369da5 is frozen and parent-owned (rk1097); it does not depend on this development merge or source consumer.
 
 ## Engine-free reporter REDs
 

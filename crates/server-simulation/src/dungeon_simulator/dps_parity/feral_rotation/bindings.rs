@@ -4,7 +4,7 @@ use shared::components::PowerType;
 
 use crate::simc_apl_native::{Bindings, DotRefresh, DotRefreshPolicy, native_dot_spell};
 
-const ACTIONS: &[(&str, u32)] = &[
+pub(super) const ACTIONS: &[(&str, u32)] = &[
     ("cat_form", 768),
     ("prowl", 5215),
     ("tigers_fury", 5217),

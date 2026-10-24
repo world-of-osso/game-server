@@ -2,6 +2,7 @@
 mod bindings;
 mod facts;
 mod geometry;
+mod source;
 
 #[cfg(test)]
 mod tests {
