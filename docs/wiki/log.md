@@ -1,3 +1,7 @@
+## 2026-10-24 — Self-cast target_if context loses native readiness
+
+[Shared context proof](../handoffs/self-target-context-proof-ledger.md): splitC3e native Zenith known/selected/self-admission controls pass but pinned enemy-target_if never selects it; actual30sSTFoF fails. 14781 independently reports Fire Breath's same boundary. Prepared now records supplied scoring contexts against the admitted self-target Execution, without default-key fallback or native bypass. Native GREEN pending; WW300s band remains open.
+
 ## 2026-10-23 — Shared resumable precombat and while-casting native GREEN
 
 [Shared poll proof](../handoffs/shared-precombat-poll-proof-ledger.md#current-green-scope--3d32d68bf): actual85 cursor/while-casting2RED→3d2GREEN27.11s plus23 relevant simulation regressions. Real Arcane Intellect→Mirror Image→hardcast Pyroblast preserves source position across native GCD/cast waits; caller epoch starts afterward. Native flight remains1/0.142s at Finished, not inferred from a timer. Permitted Fire Blast/Combustion preserve the existing cast. Full Fire adapter/facts/item/provider execution remain separately owned; old Mystic4 are not counted in this new executable's25.

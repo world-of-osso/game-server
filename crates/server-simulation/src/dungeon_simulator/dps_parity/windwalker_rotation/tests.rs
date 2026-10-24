@@ -199,6 +199,87 @@ fn log_zenith_priority_probe(run: &mut super::super::Run, rotation: &Rotation, f
     );
 }
 
+#[test]
+#[ignore = "native self-cast readiness under the pinned Zenith target_if source"]
+fn literal_ww_native_zenith_target_if_preserves_enemy_context_and_self_aura() {
+    const ZENITH: u32 = 1249625;
+    let mut run = super::super::prepare_measurement(269, 1).unwrap();
+    let mut rotation = run.windwalker_rotation.take().unwrap();
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        run.actor,
+        &run.targets,
+        &rotation.equipment,
+        bindings::execution_actions(),
+        false,
+    )
+    .unwrap();
+    assert!(
+        prepared
+            .execution(&action("zenith"), &rotation.equipment)
+            .unwrap()
+            .is_some(),
+        "native default self cast must already be ready"
+    );
+    let xuen = facts::read_xuen(run.app.world_mut(), run.actor);
+    let facts = WwFacts::new(
+        run.app.world(),
+        run.actor,
+        &rotation.bindings,
+        &rotation.equipment,
+        rotation.encounter,
+        &run.targets,
+        xuen,
+    );
+    assert_eq!(
+        facts.target_ids(&action("zenith")).unwrap(),
+        vec![run.targets[0].to_bits()]
+    );
+    let (selected, execution) = rotation
+        .select(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            "zenith",
+            &prepared,
+        )
+        .unwrap()
+        .expect("pinned Zenith target_if must select its actual enemy context");
+    assert_eq!(selected.target, Some(run.targets[0].to_bits()));
+    rotation
+        .driver
+        .execute(run.app.world_mut(), run.actor, selected, execution)
+        .unwrap();
+    for _ in 0..20 {
+        run.app.update();
+        if run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .is_some_and(|auras| auras.iter().any(|aura| aura.spell_id == ZENITH))
+        {
+            break;
+        }
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == ZENITH && aura.caster == run.actor),
+        "enemy scoring context must still cast the actual Zenith aura on self"
+    );
+    assert!(
+        !run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.targets[0])
+            .is_some_and(|auras| auras
+                .iter()
+                .any(|aura| aura.spell_id == ZENITH && aura.caster == run.actor))
+    );
+}
+
 fn run_literal(count: usize) {
     let _scope = crate::random::seed_scope(70448);
     let mut run = super::super::prepare_measurement(269, count).unwrap();
