@@ -1,5 +1,7 @@
 //! Literal Ret adapter qualification; native facts and execution stay shared.
-use crate::simc_apl_native::Bindings;
+use super::literal_rotation::equipment::Equipment;
+use crate::simc_apl_native::{Bindings, NativeFacts};
+use server::simc_apl::ActionFacts;
 use shared::components::PowerType;
 
 // SimC76f8118 paladin spell lookups, checked against native70448 identities.
@@ -107,7 +109,13 @@ fn parse_row(line: &str) -> Result<(&str, &str), String> {
     Ok((list, literal))
 }
 
+fn with_equipment<'a>(native: NativeFacts<'a>, _equipment: &'a Equipment) -> impl ActionFacts + 'a {
+    native
+}
+
 #[cfg(test)]
 mod dispatch_tests;
+#[cfg(test)]
+mod equipment_tests;
 #[cfg(test)]
 mod tests;
