@@ -31,4 +31,8 @@ The corrected overlap case and startup inode case pass2/2 in9.76s; compile15.98s
 
 Log `game-engine/data/diagnostics/rotation-fidelity-2026-10-21/fire-local-293-overlap-green.log`; separate fresh current backup/receipt20261024T092952Z, same canonical/private hashes. The three unchanged native cases retain their d8a proof; test-helper-only changes do not invalidate it. Combined four Fire-local cases plus startup qualification are GREEN, not a claim that the failing d8a invocation passed as a whole. `rustfmt --check` also passed on293's changed Rust files; manual readability audit found no required changes.
 
+## Feature-boundary check
+
+Feature-disabled `server --lib` check5969 exited0 in7m09s but found3warnings: reader-only Hot Streak re-export/count and prior flight/Meteor readers compiled without their `native_apl` consumer. These readers now use the consumer's existing `cfg(test|test-support)` boundary; native kernel/reader bodies are unchanged, no warning suppression. Feature-disabled and enabled compile checks pending for this follow-up; existing native behavior proof is unchanged.
+
 Caller300s ST/3T, generic facts and dependency qualification remain open; no full literal or DPS acceptance claimed.

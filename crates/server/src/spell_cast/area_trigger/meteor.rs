@@ -27,6 +27,7 @@ pub(crate) fn cast_meteor(world: &mut World, ctx: &EffectCtx, _effect: &SpellEff
 }
 
 /// Observe existing TC delay fields and admitted missiles; never retain a separate timer.
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn pending_impact_due(world: &World, caster: Entity) -> Result<Option<f64>, String> {
     let mut earliest = world
         .resource::<crate::spell_cast::missiles::PendingSpellHits>()

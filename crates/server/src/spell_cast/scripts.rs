@@ -37,7 +37,9 @@ pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
-pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit, triggers_hot_streak};
+#[cfg(any(test, feature = "test-support"))]
+pub(super) use hot_streak::triggers_hot_streak;
+pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 pub(crate) mod prayer_of_mending;
 mod protection_items;
