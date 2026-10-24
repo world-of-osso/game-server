@@ -1,7 +1,8 @@
 //! WILD_GROWTH_FALLOFF_SIMC_SHAPE_ON_NATIVE_COEFFICIENT; Retail shape uncertified.
+use super::kit_clearcasting_tests::own_aura;
 use super::kit_tests::at_level;
 use crate::auras::spell_mods::SpellModOp;
-use crate::auras::{ActiveAuras, AuraStatMods, aura_now, has_aura, spell_mods};
+use crate::auras::{ActiveAuras, AuraStatMods, aura_now, spell_mods};
 use crate::spell_cast::test_harness::Harness;
 use crate::spell_cast::{creature_cast, effects};
 use crate::spell_info::{SpellInfo, SpellStore};
@@ -71,8 +72,8 @@ fn tick_amounts(h: &Harness, caster: Entity, start: usize, crit_multiplier: f32)
 
 fn observe_native_growth(level: u8) -> GrowthObservation {
     let (mut h, caster) = at_level(CRENNA, level, |_| {});
-    let talented = has_aura(h.app.world(), caster, UNSTOPPABLE_GROWTH);
-    assert_eq!(talented, level == 43);
+    let talent_aura = own_aura(&h, caster, UNSTOPPABLE_GROWTH);
+    assert_eq!(talent_aura.is_some(), level == 43);
     let store = h.app.world().resource::<SpellStore>();
     let spell = store.get(WILD_GROWTH).unwrap().clone();
     let coefficient = spell
@@ -83,14 +84,22 @@ fn observe_native_growth(level: u8) -> GrowthObservation {
         .bonus_coefficient;
     assert!((coefficient - 0.481).abs() <= f32::EPSILON);
     let talent = store.get(UNSTOPPABLE_GROWTH).unwrap();
-    let native_pct = talent
+    let base_pct = talent
         .effects
         .iter()
         .find(|effect| effect.index == 0)
         .unwrap()
         .base_points;
-    assert_eq!(native_pct, 40.0);
-    let less_falloff = if talented { native_pct / 100.0 } else { 0.0 };
+    assert_eq!(base_pct, 40.0);
+    // TraitDefinition108143 sets effect0 from Curve58935 by the learned rank.
+    let less_falloff = talent_aura.map_or(0.0, |aura| {
+        aura.effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .expect("native Unstoppable Growth effect0")
+            .amount
+            / 100.0
+    });
     let flat_native_amount = ordinary_flat_tick(&h, caster, &spell);
     assert!(flat_native_amount > 0.0);
     let crit_multiplier = 1.0
