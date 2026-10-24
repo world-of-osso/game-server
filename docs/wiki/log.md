@@ -7,7 +7,7 @@ Merged `eec5b6bcf` into B, preserving its four ignored single-spell cases in the
 The retained-core unit check exposed a runtime-only reverse edge: ignored corridor capture imports simulator runtime/diagnostics. Capture returned to the consumer with its original name and a canonical graph re-export; no gameplay/type duplication. Expected117 simulator cases/6retained graph cases; workspace names/ignore statuses unchanged. Compiler and full-suite qualification pending.
 ## 2026-10-23 — Public-behavior combat test consumer
 
-[C pilot](../handoffs/crate-split-area-tests.md): twelve pure file moves preserve106 native melee case names; two shared collectors lifted without algorithm changes into existing harness. New consumer has only dev dependencies and the same opt2/debug1 profile; four private-formula files stay core. Exact expected full-workspace inventory remains6318cases/310ignored. Compiler and parent gate pending.
+[C pilot](../handoffs/crate-split-area-tests.md): twelve pure file moves preserve106 native melee case names; two shared collectors lifted without algorithm changes into existing harness. New consumer has only dev dependencies and the same opt2/debug1 profile; four private-formula files stay core. Exact expected full-workspace inventory remains6318cases/310ignored. Atacecb97d1, combined core-unit/simulator/combat compiler check42.85s and production-no-feature check14.59s pass without diagnostics; full-suite gate pending. Compiler elapsed times are not paired speedup measurements.
 
 ## 2026-10-23 — Simulator compiler boundary and next area pilot
 

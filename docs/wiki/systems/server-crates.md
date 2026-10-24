@@ -36,7 +36,7 @@ Most case names retain `dungeon_simulator::...`. Six graph cases instead map to 
 
 ## Next test-area pilot
 
-`crates/server-combat-tests` follows the simulator's empty normal-library/dev-dependency pattern and owns 106 public-behavior melee cases. Canonical `collect_swings`/`collect_broadcast_swings` now reside in existing `spell_cast::test_harness`, shared with retained core tests; private outcome-formula tests stay in core. Fixture cache payloads remain private except the existing DB path. No new dependency versions or duplicate gameplay/resource types are introduced. [C handoff and measurement controls](../../handoffs/crate-split-area-tests.md), [exact case mapping](../../handoffs/crate-split-combat-test-mapping.json). Compiler/full-suite acceptance is pending.
+`crates/server-combat-tests` follows the simulator's empty normal-library/dev-dependency pattern and owns 106 public-behavior melee cases. Canonical `collect_swings`/`collect_broadcast_swings` now reside in existing `spell_cast::test_harness`, shared with retained core tests; private outcome-formula tests stay in core. Fixture cache payloads remain private except the existing DB path. No new dependency versions or duplicate gameplay/resource types are introduced. [C handoff and measurement controls](../../handoffs/crate-split-area-tests.md), [exact case mapping](../../handoffs/crate-split-combat-test-mapping.json). At C code tip `acecb97d1`, the combined core-unit/simulator/combat-target compiler check and the production-no-feature `game-server` check pass without diagnostics. Full-suite/exact post-split census acceptance is pending.
 
 ## Sources
 
