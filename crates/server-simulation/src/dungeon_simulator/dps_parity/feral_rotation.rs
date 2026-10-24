@@ -30,6 +30,11 @@ mod tests {
             .unwrap();
             assert_eq!(facts.value("spell_targets.swipe_cat").unwrap(), 3.0);
             assert_eq!(facts.value("spell_targets.primal_wrath").unwrap(), 3.0);
+            assert_eq!(
+                facts.value("spell_targets").unwrap(),
+                3.0,
+                "pinned distance-disabled bare operand is the actual encounter enemy count"
+            );
         }
         run.app
             .world_mut()
@@ -46,6 +51,11 @@ mod tests {
         .unwrap();
         assert_eq!(facts.value("spell_targets.swipe_cat").unwrap(), 2.0);
         assert_eq!(facts.value("spell_targets.primal_wrath").unwrap(), 2.0);
+        assert_eq!(
+            facts.value("spell_targets").unwrap(),
+            3.0,
+            "distance-disabled encounter count is distinct from native reachable recipients"
+        );
     }
 
     fn rake_initial_damage(prowl: bool) -> (f64, f64) {
