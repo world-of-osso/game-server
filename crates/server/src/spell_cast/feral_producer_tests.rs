@@ -2,7 +2,6 @@
 #[path = "feral_talent_producer_tests.rs"]
 mod talents;
 use super::test_harness::*;
-use bevy::prelude::*;
 use shared::components::PowerType;
 use shared::protocol::CombatLogKind;
 
