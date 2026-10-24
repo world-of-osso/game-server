@@ -237,6 +237,82 @@ fn literal_precombat_stops_after_the_first_ready_harmful_native_action() {
 }
 
 #[test]
+#[ignore = "requires prepared269/current native view; nonliteral owner-follow control"]
+fn literal_precombat_uncaptured_follower_still_follows_its_native_owner() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare(269, 1).unwrap();
+    let encounter = crate::simc_apl_native::Encounter::Dungeon {
+        started_at: crate::spell_cast::now(run.app.world()),
+    };
+    let error =
+        literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter).unwrap_err();
+    assert!(error.contains("DUNGEON_TTD_UNAVAILABLE"));
+    assert!(
+        run.app
+            .world()
+            .get::<literal_rotation::LiteralParityFixture>(run.actor)
+            .is_none()
+    );
+    let owner = run
+        .app
+        .world()
+        .get::<crate::followers::Follower>(run.actor)
+        .unwrap()
+        .owner;
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::creature_ai::FollowOwner>(run.actor)
+            .unwrap()
+            .owner,
+        owner
+    );
+    let owner_position = *run
+        .app
+        .world()
+        .get::<shared::components::Position>(owner)
+        .unwrap();
+    let distance = |position: &shared::components::Position| {
+        Vec3::new(position.x, position.y, position.z).distance(Vec3::new(
+            owner_position.x,
+            owner_position.y,
+            owner_position.z,
+        ))
+    };
+    let before = distance(
+        run.app
+            .world()
+            .get::<shared::components::Position>(run.actor)
+            .unwrap(),
+    );
+    for _ in 0..60 {
+        run.app.update();
+    }
+    let after = distance(
+        run.app
+            .world()
+            .get::<shared::components::Position>(run.actor)
+            .unwrap(),
+    );
+    assert!(
+        after + 1.0 < before,
+        "nonliteral follower must really move toward its owner: {before}->{after}"
+    );
+    assert!(
+        run.app
+            .world()
+            .get::<crate::creature_ai::FollowOwner>(run.actor)
+            .is_some()
+    );
+    assert!(
+        run.app
+            .world()
+            .get::<shared::components::Npc>(run.actor)
+            .is_some()
+    );
+}
+
+#[test]
 #[ignore = "requires prepared103 profile/current native source view; literal precombat handoff RED"]
 fn literal_precombat_captures_feral_before_legacy_kit_warmup() {
     let _seed = crate::random::seed_scope(70448);

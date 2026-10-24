@@ -79,6 +79,12 @@ Atd49f4951c the real259 packet reaches selected Composite after all individual n
 
 `execute_precombat_plan` now unwraps a nonempty selected plan and dispatches one normal child at a time, calling real `finish_pending_setup` App advancement after EACH, including the final child. Native dispatch rechecks admission; errors preserve earlier real effects and stop later steps. Next source row/pull cannot occur until return. Empty plans and world-only Composite execution remain explicit errors; no poison IDs, instant completion or recursive world-only loop. Combined GREEN pending; no extra WW-only compile.
 
+## Integrated native runtime and retained-follow fix — GREEN pending
+
+Atd49f4951c the eight original controls run32.73s:7PASS/1FAIL. Demo now deals damage inside10s after pull. BOK still has Chi3/resolved100784 but is OutOfRange at actorx10/target1.5. `spawn_parity_attacker` keeps a real quiet owner atx20, and the actor retained native FollowOwner during literal setup. This is distinct from the fixed copied-Stockade graph detour.
+
+Parent explicitly approved removing only the captured actor's FollowOwner after Encounter::Fixture admission, leaving Follower/NPC identity, native AA chase and dungeon rejection unchanged. No pose reset/recurring engagement. New ignored control rejects Dungeon capture without mutation, then observes an uncaptured native follower actually move closer to its real owner while retaining FollowOwner/Npc. Combined GREEN pending; neither the new control nor the capture fix is yet runtime-qualified.
+
 ## Forwarded integration before combined RED build
 
 Parent forwarded masterb67952ca4 (landed er1048 tier redirected-base-stats and dm1051 dummy timerba0783c26), qualified movementmv1071/2d9855a69 and selection7cfc2e4e6 (its native GREEN still pending). This branch merges master as0b1e639f4, accepts movement test/fix chain asc2a23e43b/91e954749/1cda9e258, and cherry-picks selection asea3addb82. Only module-list/wiki conflicts needed combination; no independent movement behavior was edited. New dependency code is not qualified by old f5 receipts.

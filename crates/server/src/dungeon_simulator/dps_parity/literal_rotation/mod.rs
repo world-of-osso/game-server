@@ -30,7 +30,11 @@ pub(crate) fn capture_fixture(
                 .into(),
         );
     }
-    world.entity_mut(actor).insert(LiteralParityFixture);
+    // Literal control must not keep the retired kit's owner-follow movement.
+    world
+        .entity_mut(actor)
+        .remove::<crate::creature_ai::FollowOwner>()
+        .insert(LiteralParityFixture);
     Ok(())
 }
 
