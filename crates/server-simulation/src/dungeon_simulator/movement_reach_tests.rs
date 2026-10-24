@@ -49,7 +49,7 @@ fn in_reach_pet_stays_in_reach_for_eighty_native_movement_ticks() {
             tick(&mut world);
             let actual = point(world.get::<Position>(pet).unwrap());
             assert_eq!(actual, from, "an in-reach pet moved on tick{frame}");
-            assert!(crate::navigation::within_reach(
+            assert!(server::test_support::within_reach(
                 actual,
                 Vec3::ZERO,
                 crate::creature_ai::CHASE_REACH,
@@ -116,7 +116,7 @@ fn out_of_reach_pet_on_a_real_dungeon_graph_still_uses_frozen_anchors() {
     };
     let from = pack_point(edge.from) + Vec3::Y * 10.0;
     let to = pack_point(edge.to) + Vec3::Y * 10.0;
-    assert!(!crate::navigation::within_reach(
+    assert!(!server::test_support::within_reach(
         from,
         to,
         crate::creature_ai::CHASE_REACH,

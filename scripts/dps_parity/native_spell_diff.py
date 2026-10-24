@@ -26,6 +26,7 @@ def select_impact(receipt, spell_id, index=0, action=None):
                  if (events[i].get("actor"), events[i].get("action")) == identity), len(events))
     selected = {"formula": dict(first.get("factors", {})), "result": {}, "armor": {},
                 "kind": first["event"], "action": first.get("action"), "derivations": {},
+                "emission_origin": first.get("native_emission_origin"),
                 "attribution": dict(first.get("factor_attribution", {})),
                 "sources": dict(first.get("factor_sources", {})), "time": first.get("time")}
     for event in events[positions[index] + 1:stop]:
@@ -104,6 +105,8 @@ def diff_receipts(native, oracle, spell_id, native_index=0, oracle_index=0, tole
     return {"schema_version": 1, "spell_id": spell_id, "status": status, "factors": rows,
             "native_impact": native_index, "oracle_impact": oracle_index,
             "native_action": left["action"], "oracle_action": right["action"],
+            "native_emission_origin": left["emission_origin"],
+            "oracle_emission_origin": right["emission_origin"],
             "native_time": left["time"], "simc_time": right["time"],
             "native_result": left["result"].get("result"), "simc_result": right["result"].get("result"),
             "limitations": ["Ordinal impact selection does not align buffs, procs or independent crit rolls; inspect both recorded states.",

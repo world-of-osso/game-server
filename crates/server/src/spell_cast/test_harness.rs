@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::time::Duration;
 
+use bevy::ecs::system::RunSystemOnce;
 use bevy::prelude::*;
 use lightyear::connection::host::HostClient;
 use lightyear::prelude::*;
@@ -15,12 +16,9 @@ use shared::components::{
 };
 use shared::protocol::{
     AttackStart, AttackStop, AttackStopped, AttackSwing, CancelAura, CastFailed, CombatChannel,
-    CombatLogEvent, ProtocolPlugin, SetTarget, SpellCastIntent, SpellChargesUpdate,
-    SpellCooldownUpdate, SpellFailure, SpellGo, StopSpellCast,
+    CombatEvent, CombatEventType, CombatLogEvent, CombatLogKind, ProtocolPlugin, SetTarget,
+    SpellCastIntent, SpellChargesUpdate, SpellCooldownUpdate, SpellFailure, SpellGo, StopSpellCast,
 };
-
-#[cfg(test)]
-use shared::protocol::CombatLogKind;
 
 use super::powers::{PowerPools, PowerTypeTable, load_power_type_table};
 use crate::auth::{Authenticated, InWorld};
@@ -43,10 +41,93 @@ pub struct ObservedCombatEvents(pub Vec<CombatLogEvent>);
 #[derive(Resource, Default)]
 pub(crate) struct ObservedTriggeredCasts(pub Vec<(Entity, u32, Option<Entity>)>);
 
-pub(crate) struct WorldData {
+pub fn collect_swings(
+    h: &mut Harness,
+    attacker: Entity,
+    victim: Entity,
+    count: usize,
+) -> Vec<CombatLogEvent> {
+    let mut cursor = h.inbox.log.len();
+    h.app
+        .world_mut()
+        .run_system_once(move |mut commands: Commands| {
+            crate::combat::start_attack(&mut commands, attacker, victim, None);
+        })
+        .unwrap();
+    let mut swings = Vec::new();
+    // Bound ordinary delivery, never rewrite native swing timers or RNG.
+    for _ in 0..count * 60 {
+        h.advance(1);
+        swings.extend(
+            h.inbox.log[cursor..]
+                .iter()
+                .filter(|event| {
+                    event.source == Some(attacker.to_bits())
+                        && event.target == Some(victim.to_bits())
+                        && event.spell_id.is_none()
+                        && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+                })
+                .cloned(),
+        );
+        cursor = h.inbox.log.len();
+        if swings.len() == count {
+            crate::combat::attack_stop(h.app.world_mut(), attacker);
+            h.advance(3);
+            return swings;
+        }
+    }
+    panic!("only {} of{count} ordinary swing attempts", swings.len());
+}
+
+pub fn collect_broadcast_swings(
+    h: &mut Harness,
+    attacker: Entity,
+    victim: Entity,
+    count: usize,
+) -> Vec<CombatEvent> {
+    h.app
+        .world_mut()
+        .run_system_once(move |mut commands: Commands| {
+            crate::combat::start_attack(&mut commands, attacker, victim, None);
+        })
+        .unwrap();
+    let mut events = Vec::new();
+    for _ in 0..count * 60 {
+        h.advance(1);
+        events.extend(
+            drain::<CombatEvent>(&mut h.app, h.connection)
+                .into_iter()
+                .filter(|event| {
+                    event.attacker == attacker.to_bits()
+                        && event.target == victim.to_bits()
+                        && event.spell_id == 0
+                        && matches!(
+                            event.event_type,
+                            CombatEventType::MeleeDamage
+                                | CombatEventType::CriticalHit
+                                | CombatEventType::Miss
+                                | CombatEventType::Dodge
+                                | CombatEventType::Parry
+                                | CombatEventType::Block
+                        )
+                }),
+        );
+        if events.len() == count {
+            crate::combat::attack_stop(h.app.world_mut(), attacker);
+            h.advance(3);
+            return events;
+        }
+    }
+    panic!(
+        "only {} of{count} broadcast swings: {events:?}",
+        events.len()
+    );
+}
+
+pub struct WorldData {
     pub(crate) store: SpellStore,
     pub(crate) classes: ClassSpells,
-    pub(crate) powers_db: PathBuf,
+    pub powers_db: PathBuf,
 }
 
 #[cfg(test)]
@@ -102,7 +183,7 @@ pub(crate) fn varied(base: f32) -> std::ops::RangeInclusive<f32> {
     (base * 0.975).round()..=(base * 1.025).round()
 }
 
-pub(crate) fn world_db() -> Option<&'static WorldData> {
+pub fn world_db() -> Option<&'static WorldData> {
     static DATA: OnceLock<Option<WorldData>> = OnceLock::new();
     DATA.get_or_init(|| {
         let path = crate::test_data::world_db_path();
@@ -427,7 +508,7 @@ pub(crate) fn apply_native_enemy_dodge_reduction_to(h: &mut Harness, attacker: E
 
 /// `computed_stats`: run `StatsPlugin` on a fresh caster (100/100 health,
 /// 0/0 mana, as spawned on world entry) instead of the fixed stats.
-pub(crate) fn harness_with(
+pub fn harness_with(
     extra: Vec<SpellInfo>,
     ids: &[u32],
     class: u8,

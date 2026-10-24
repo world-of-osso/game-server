@@ -273,6 +273,7 @@ fn dps_parity_single_spell_tiger_palm_records_real_factors() {
     assert!(formula["factors"]["a_power"].as_f64().unwrap() > 0.0);
     assert!(formula["factors"]["a_mod"].as_f64().unwrap() > 0.0);
     assert!(formula["factors"]["base"].is_number());
+    assert!(formula["native_emission_origin"].is_null());
     assert!(events.iter().any(|event| {
         event["event"] == "result"
             && event["factors"]["actual_amount"]
@@ -434,6 +435,13 @@ fn dps_parity_single_spell_fists_of_fury_three_ticks_keep_child_ids() {
         .filter(|event| event["event"] == "direct_amount" && event["spell_id"] == 117418)
         .collect::<Vec<_>>();
     assert_eq!(amounts.len(), 3);
+    for amount in &amounts {
+        let origin = &amount["native_emission_origin"];
+        assert_eq!(origin["kind"], "periodic_dummy_trigger");
+        assert_eq!(origin["aura_spell_id"], 113656);
+        assert_eq!(origin["effect_index"], 2);
+        assert_eq!(origin["triggered_spell_id"], 117418);
+    }
     let times = amounts
         .iter()
         .map(|event| event["time"].as_f64().unwrap())

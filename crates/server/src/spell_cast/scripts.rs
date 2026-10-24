@@ -27,7 +27,7 @@ mod batch9;
 mod chrono_flame;
 mod clearcasting;
 mod elemental_ascendance;
-mod empower_evoker;
+pub(crate) mod empower_evoker;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
