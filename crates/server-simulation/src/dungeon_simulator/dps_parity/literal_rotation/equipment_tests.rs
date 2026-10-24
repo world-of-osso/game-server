@@ -67,6 +67,83 @@ fn read_facts(world: &World, actor: Entity, names: &[&str]) -> Vec<Result<f64, S
         .collect()
 }
 
+fn equip_reference_profile(world: &mut World, spec: u32) -> Entity {
+    use crate::dungeon_simulator::dps_parity::inputs;
+    let path = inputs::directory()
+        .unwrap()
+        .join(format!("{spec}.profile.json"));
+    let profile: inputs::Profile = inputs::read_json(&path).unwrap();
+    assert_eq!(profile.spec_id, spec);
+    let actor = world.spawn(crate::class_progression::ActiveSpec(spec)).id();
+    inputs::equip(world, actor, &profile).unwrap();
+    actor
+}
+
+#[test]
+#[ignore = "exact native Dev/Fire/Assassination profile instances; passive and bonus-derived levels"]
+fn literal_equipment_native_profile_item_levels_include_passive_and_bonus_instances() {
+    let mut world = load_world();
+    // Exact reference gear: Dev249343/249346 at289, Fire273796/270167 at334,
+    // Assassin270168 at344 and270175 bonuses13662/13848 resolving344.
+    let observations: Vec<_> = [(1467, 289.0), (63, 334.0), (259, 344.0)]
+        .into_iter()
+        .map(|(spec, level)| {
+            let actor = equip_reference_profile(&mut world, spec);
+            (
+                spec,
+                read_facts(&world, actor, &["trinket.1.ilvl", "trinket.2.ilvl"]),
+                vec![Ok(level), Ok(level)],
+            )
+        })
+        .collect();
+    for (spec, actual, expected) in observations {
+        assert_eq!(actual, expected, "real native profile{spec}");
+    }
+}
+
+#[test]
+#[ignore = "real native profiles; pinned buff.default_value is distinct from stat magnitude"]
+fn literal_equipment_native_profile_proc_default_values_follow_unset_buff_semantics() {
+    let mut world = load_world();
+    // Pinned item custom stat buffs do not set buff.default_value. The item
+    // expression takes max(0, matching defaults), not their native stat amounts.
+    let observations: Vec<_> = [1467, 63, 259]
+        .into_iter()
+        .map(|spec| {
+            let actor = equip_reference_profile(&mut world, spec);
+            (
+                spec,
+                read_facts(
+                    &world,
+                    actor,
+                    &[
+                        "trinket.1.proc.any_dps.default_value",
+                        "trinket.2.proc.any_dps.default_value",
+                    ],
+                ),
+            )
+        })
+        .collect();
+    for (spec, actual) in observations {
+        assert_eq!(actual, vec![Ok(0.0), Ok(0.0)], "real native profile{spec}");
+    }
+}
+
+#[test]
+#[ignore = "unqualified native script default must stay named rather than inventing a value"]
+fn literal_equipment_native_unqualified_proc_default_value_is_explicit() {
+    let mut world = load_world();
+    let actor = equip(&mut world, 193701, 270173);
+    let actual = read_facts(&world, actor, &["trinket.1.proc.any_dps.default_value"]);
+    assert!(
+        actual[0]
+            .as_ref()
+            .unwrap_err()
+            .contains("NATIVE_ITEM_PROC_DEFAULT_VALUE_UNSOURCED"),
+        "unqualified native script must identify its missing default-value source: {actual:?}"
+    );
+}
+
 #[test]
 #[ignore = "requires private native ItemEffect/spell catalog; source facts only"]
 fn literal_equipment_native_stat_and_cooldown_matrix() {
