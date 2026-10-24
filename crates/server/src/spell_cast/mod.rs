@@ -1796,7 +1796,7 @@ pub fn read_native_cast_start(
 
 /// Read ordinary native admission using only the chosen pool's maximum in the
 /// affordability calculation. No pool is written, granted or spent.
-pub(crate) fn read_native_cast_at_resource_max(
+pub fn read_native_cast_at_resource_max(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,

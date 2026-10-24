@@ -57,7 +57,7 @@ impl<'a> NativeFacts<'a> {
         }
     }
 
-    pub(crate) fn cooldown_for_spell(
+    pub fn cooldown_for_spell(
         &self,
         spell: &crate::spell_info::SpellInfo,
         property: &str,
@@ -65,7 +65,7 @@ impl<'a> NativeFacts<'a> {
         crate::spell_cast::native_apl::cooldown_value(self.world, self.actor, spell, property)
     }
 
-    pub(crate) fn equipment_proc_cooldown(
+    pub fn equipment_proc_cooldown(
         &self,
         spell: u32,
         slot: shared::protocol::EquipmentSlot,
