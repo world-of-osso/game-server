@@ -13,7 +13,7 @@ pub(super) fn start_configured_native_pet(run: &mut Run) -> Result<(), String> {
     let Some(configured) = configured else {
         return Ok(());
     };
-    let Some(action) = configured.read_action(run.app.world(), run.actor)? else {
+    let Some(action) = wait_for_configured_pet_action(run, &configured)? else {
         return Ok(());
     };
     super::literal_rotation::execution::execute(
@@ -21,6 +21,50 @@ pub(super) fn start_configured_native_pet(run: &mut Run) -> Result<(), String> {
         run.actor,
         super::literal_rotation::execution::Execution::Spell(action.spell, run.actor),
     )
+}
+
+pub(super) fn wait_for_configured_pet_action(
+    run: &mut Run,
+    configured: &super::literal_rotation::default_pet::ConfiguredPet,
+) -> Result<Option<super::literal_rotation::execution::NativeAction<'static>>, String> {
+    for _ in 0..MAX_SETUP_TICKS {
+        let Some(action) = configured.read_action(run.app.world(), run.actor)? else {
+            return Ok(None);
+        };
+        if read_precast_readiness(run, action.spell)? {
+            return Ok(Some(action));
+        }
+        run.app.update();
+    }
+    Err(format!(
+        "configured native summon not affordable/ready after30s OOC: {}",
+        super::report::engagement(run.app.world(), run.actor, &run.targets)
+    ))
+}
+
+fn read_precast_readiness(run: &mut Run, id: u32) -> Result<bool, String> {
+    use crate::spell_cast::CastFailure;
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(id)
+        .cloned()
+        .ok_or("configured summon missing from native SpellStore")?;
+    match crate::spell_cast::read_native_cast_start(
+        run.app.world_mut(),
+        run.actor,
+        &spell,
+        run.actor,
+    ) {
+        Ok(_) => Ok(true),
+        Err(
+            CastFailure::NotEnoughPower(_)
+            | CastFailure::InProgress
+            | CastFailure::OnGlobalCooldown,
+        ) => Ok(false),
+        Err(error) => Err(format!("configured native summon{id} rejected: {error:?}")),
+    }
 }
 
 pub(super) fn warm_up_reference(run: &mut Run) -> Result<(), String> {
@@ -31,6 +75,8 @@ pub(super) fn warm_up_reference(run: &mut Run) -> Result<(), String> {
 }
 
 pub(super) fn finish_pending_setup(run: &mut Run) -> Result<(), String> {
+    // Instant NPC casts have no GCD, but their queued native effects still need a frame.
+    run.app.update();
     for _ in 0..MAX_SETUP_TICKS {
         if !setup_cast_or_gcd_active(run) {
             return Ok(());

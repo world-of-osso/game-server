@@ -51,6 +51,16 @@ ConfiguredPet resolves `<class>.default_pet` against the actor's learned native 
 
 Native-controller fixtures start this declared summon through existing validated Player/Creature execution before their setup frames, then complete real cast/GCD state before pull. Their native kit and identity remain unchanged; classes without a declaration are unaffected. Explicit literal fixtures instead expose the same configured action to their ordered source pass; no hidden out-of-order summon is inserted. The bounded native266 control executes actual summon_pet/snapshot_stats rows, requires a real positive-duration cast bar and elapsed time, then repeats with the existing pet and checks one total30146 CastSuccess and the same pet entity. It does not claim the later full Demo APL/trinket variables are routed by this branch.
 
+## First native integration attempt —4 PASS/4 FAIL at7e532fc90
+
+Clean18m34 build; eight actual cases finish29.16s on a new current backup (source568200.../copydd1de...). `native-precombat-green-7e532fc90/runtime.*` is a FAILED qualification attempt, not GREEN: early Feral capture, native Feral control, declared0shards and WW snapshot-OOC/time0 pass. Configured pet, native pet-at-pull and Demo first damage fail because native30146 costs10raw SoulShards while the declared initial pool is0. BOK later-readiness counterfactual also fails; do not weaken it without actual readiness/power diagnostics.
+
+Native PowerType7 has center30, RegenPeace−5 and12000ms OOC interrupt; existing regen_step raises a below-center pool naturally after that delay. Fix waits bounded native affordability/cast/GCD readiness before the configured summon, advancing real App frames only; it does not change costs, grant shards or reset at pull. If the native kit completes the same requested pet during the wait, it becomes the existing-pet no-op. Instant NPC casts have no GCD, so cast-completion drain must also settle at least one actual frame for queued native effects before the next row. BOK failure output now includes exact native admission/Chi/override state if it persists. Runtime requalification remains pending.
+
+## Composite poison cast boundary — OPEN
+
+Parent's13120 packet `assassination-parity-2026-10-23/apply-poison-source-packet-v1.json` was read. Bare apply_poison selects native2823 Deadly,3408 Crippling,381664 DTB Amplifying,381637 DTB Atrophic in that order (selected DTB381801). All four have CastingTimeIndex16/Base1500/Minimum1500. Packet is source inventory, not native execution proof.14775 owns composite selection; this agent owns completing each actual cast and final GCD before engagement. Incremental executions or an observable pending plan are required: dispatching four world-only casts without App progression would collide with the first cast. Current7e native GREEN scope does not yet qualify that composite seam; no coatings may be dropped or treated as instant.
+
 ## Dependencies
 
 pd1035 is landed at2333d924b and merged locally; exact-target Prepared/Player dispatch remains14775-owned. Resource query010f7f761 is GREEN9/9 on arms-literal-resource-hooks; it ignores only the requested PowerType affordability while retaining other native checks. Integrate its shared API after pd, not the old613 scaffold. No unselected legacy kit fallback and no WW-specific tier2pc path.

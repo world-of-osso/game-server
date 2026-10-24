@@ -31,7 +31,8 @@ fn literal_precombat_configured_demo_pet_uses_real_cast_and_does_not_resummon() 
                 .unwrap(),
         );
         loop {
-            let action = configured.read_action(run.app.world(), run.actor).unwrap();
+            let action =
+                preparation::wait_for_configured_pet_action(&mut run, &configured).unwrap();
             let prepared = Prepared::read(
                 run.app.world_mut(),
                 run.actor,
@@ -199,9 +200,25 @@ fn literal_precombat_stops_after_the_first_ready_harmful_native_action() {
         target: None,
         options: Default::default(),
     };
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(100784)
+        .unwrap()
+        .clone();
+    let native = crate::spell_cast::read_native_cast_start(
+        run.app.world_mut(),
+        run.actor,
+        &spell,
+        run.targets[0],
+    )
+    .map(|_| ());
+    let chi = crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::Chi);
+    let resolved = crate::auras::overrides::resolve_spell(run.app.world(), run.actor, 100784);
     assert!(
         prepared.execution(&blackout, &equipment).unwrap().is_some(),
-        "the later harmful action is genuinely native-ready, not blocked by TP's GCD"
+        "later BOK must be native-ready after real frame/GCD: readiness={native:?}, chi={chi:?}, resolved={resolved}"
     );
     assert!(
         driver
