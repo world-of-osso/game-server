@@ -830,8 +830,10 @@ fn potential_regen_step(
             (peace, max)
         } else if current > center {
             (peace, center)
-        } else {
+        } else if current < center {
             (-peace, center)
+        } else {
+            return None;
         }
     };
     (rate != 0.0).then_some((rate, limit))

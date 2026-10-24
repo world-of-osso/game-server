@@ -370,6 +370,31 @@ fn assert_rogue_potential_case(haste: f32, rate: f64, time_to_max: f64, after_ti
 }
 
 #[test]
+fn dps_parity_power_haste_unflagged_rage_at_center_has_no_phantom_gain() {
+    let mut h = harness(Vec::new(), &[], 1).unwrap();
+    h.stop_attack();
+    h.advance(1);
+    let world = h.app.world();
+    let info = world
+        .resource::<PowerTypeTable>()
+        .get(PowerType::Rage)
+        .unwrap();
+    assert!(!info.regen_affected_by_haste);
+    assert!(info.regen_peace < 0.0);
+    let pool = world
+        .get::<PowerPools>(h.caster)
+        .unwrap()
+        .get(PowerType::Rage)
+        .unwrap();
+    assert_eq!(pool.current, info.center_power as f32);
+    assert_eq!(pool.regen_per_sec, 0.0);
+    assert_eq!(
+        crate::spell_cast::powers::potential_power_regen(world, h.caster, PowerType::Rage),
+        Some(0.0)
+    );
+}
+
+#[test]
 fn dps_parity_power_haste_rogue_potential_zero_haste_survives_cap_and_spend() {
     assert_rogue_potential_case(0.0, 10.0, 5.0, 50.5);
 }
