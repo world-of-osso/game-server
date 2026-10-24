@@ -615,6 +615,81 @@ fn potionfix_algari_ranks_use_item_level_not_character_level() {
     assert_item_heal(211_880, 431_416, 80, 53_366.0);
 }
 
+/// Positive item provenance comes from a real bag use, not a constructed proc event.
+#[test]
+fn native_proc_capture_item_use_is_not_an_ordinary_spell_origin() {
+    use crate::auras::procs::ObservedProcEvents;
+
+    let mut eater = eater_with_spells(&[211_879], 2, &[431_416, 17], 5)
+        .expect("native Algari item, use spell, and priest Shield");
+    let caster = eater.h.caster;
+    eater.h.app.init_resource::<ObservedProcEvents>();
+    app_world(&mut eater.h).entity_mut(caster).insert((
+        shared::components::Level(71),
+        shared::components::UnitLevel(71),
+        Health {
+            current: 18_444.0,
+            max: 100_000.0,
+        },
+    ));
+    use_slot(&mut eater, 0);
+    assert!(errors(&mut eater).is_empty());
+    assert!(eater.h.inbox.failed.is_empty());
+    assert_eq!(count_of(&eater, 211_879), 1);
+    assert!(eater.h.health(caster) > 18_444.0);
+    let item_events: Vec<_> = eater
+        .h
+        .app
+        .world()
+        .resource::<ObservedProcEvents>()
+        .0
+        .iter()
+        .filter(|observed| {
+            observed.event.actor == caster && observed.event.spell_id == Some(431_416)
+        })
+        .cloned()
+        .collect();
+    assert_eq!(item_events.len(), 2, "real CAST and self-heal HIT");
+    for observed in item_events {
+        let context = observed
+            .event
+            .context
+            .expect("actual native item event inputs");
+        assert_eq!(context.cast_from_item, Some(true));
+        assert_eq!(context.has_power_cost, Some(false));
+        assert_eq!(context.is_triggered, Some(false));
+        assert_eq!(context.proc_chain_length, Some(0));
+        if observed.event.actor_mask[1] & 4 != 0 {
+            assert_eq!(context.spell_phase_mask, 1);
+            assert_eq!(context.spell_type_mask, 7);
+        } else {
+            assert_eq!(observed.event.target, Some(caster));
+            assert_eq!(context.spell_phase_mask, 2);
+            assert_eq!(context.spell_type_mask, 2);
+        }
+    }
+
+    // The item invocation must not write its origin into the shared spell store.
+    crate::spell_cast::creature_cast(eater.h.app.world_mut(), caster, 17, Some(caster), false)
+        .expect("ordinary native Shield after the item");
+    let ordinary_events: Vec<_> = eater
+        .h
+        .app
+        .world()
+        .resource::<ObservedProcEvents>()
+        .0
+        .iter()
+        .filter(|observed| observed.event.actor == caster && observed.event.spell_id == Some(17))
+        .collect();
+    assert_eq!(ordinary_events.len(), 2);
+    for observed in ordinary_events {
+        assert_eq!(
+            observed.event.context.as_ref().unwrap().cast_from_item,
+            Some(false)
+        );
+    }
+}
+
 #[test]
 fn potionfix_minor_and_healing_potions_scale_at_other_levels() {
     assert_item_heal(118, 439, 10, 121.0);
