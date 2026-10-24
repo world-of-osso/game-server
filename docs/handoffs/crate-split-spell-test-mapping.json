@@ -1,0 +1,1241 @@
+{
+  "baseline": "d7e86cd0f679338ad32ae2b24b351d1d6454501b",
+  "fixture_setup_commit": "4b2801a3adeea2bdb052ff7c7a2d9a3e8fdc6453",
+  "charge_observer_commit": "af8f7f5b69892d91c09d28b2388fa077eaa9ba0b",
+  "pure_move_commit": "e0aaa1840d9209a9b2a121c9bf38bf533aaeed51",
+  "external_qualification": "D2-qualified29-check-02/opt2-j2/check-summary.json",
+  "counts": {
+    "source_files": 29,
+    "cases": 175,
+    "enabled": 175,
+    "ignored": 0,
+    "should_panic": 0
+  },
+  "cases": [
+    {
+      "name": "spell_cast::attack_speed_tests::class_completeness_native_attack_speed_shortens_creature_swings",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::attack_speed_tests::class_completeness_native_attack_speed_leaves_cast_time_unchanged",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::bonus_armor_tests::class_completeness_native_bonus_armor_multiplies_base_and_stat_armor",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::bonus_armor_tests::class_completeness_native_bonus_armor_rounds_only_after_the_final_multiplier",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::bonus_armor_tests::class_completeness_native_bonus_armor_independent_factors_multiply",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::bonus_armor_tests::class_completeness_native_bonus_armor_removal_restores_remaining_factor",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::bonus_armor_tests::class_completeness_native_bonus_armor_negative_factor_expires_at_native_duration",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::bonus_armor_tests::class_completeness_native_bonus_armor_zero_class_fields_do_not_invent_a_bonus",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::caster_healing_taken_tests::census_tail_504_native_direct_and_periodic_healing_follow_aura_caster_and_remove",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::caster_healing_taken_tests::census_tail_504_native_independent_signed_modifiers_multiply_not_sum_or_max",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::caster_healing_taken_tests::census_tail_504_native_foreign_caster_and_other_recipient_do_not_apply",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::caster_healing_taken_tests::census_tail_504_native_ignore_healing_flags_keep_only_permitted_negative",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::caster_healing_taken_tests::census_tail_504_native_zero_reversion_does_not_invent_healing_bonus",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::caster_school_damage_tests::caster_school_damage_native_haunt_amplifies_owner_fireball_by_sixteen_percent",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::caster_school_damage_tests::caster_school_damage_native_haunt_amplifies_actual_corruption_ticks",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::caster_school_damage_tests::caster_school_damage_native_baseline_foreign_owner_and_school_exclusion",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::caster_school_damage_tests::caster_school_damage_native_haunt_cancel_and_expiry_restore_baseline",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::census_e77_dk_tests::census_e77_dk_own_native_talent_applies_owned_subduing_grasp",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::census_e77_dk_tests::census_e77_dk_no_talent_does_not_apply_subduing_grasp",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::census_e77_dk_tests::census_e77_dk_foreign_talent_does_not_apply_subduing_grasp",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::census_e77_priest_tests::census_e77_priest_native_execute_consumes_carrier_without_hiding_unmatched_slots",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::creature_trigger_aura_tests::native_creature_trigger_requires_its_own_sheilun_cloud",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::creature_trigger_aura_tests::native_creature_trigger_excludes_caster_stealth_before_shadow_dance",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::creature_trigger_aura_tests::native_creature_trigger_excludes_caster_stun_type_without_generic_cc_check",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::creature_trigger_aura_tests::native_creature_trigger_excludes_actual_target_no_feather_fall",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::creature_trigger_aura_tests::native_creature_trigger_requires_actual_target_immunity_type",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::creature_trigger_aura_tests::native_creature_trigger_excludes_actual_target_divine_shield_type",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::creature_trigger_aura_tests::native_creature_trigger_valid_producers_and_clear_exclusions_admit_all_six_fields",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::creature_trigger_aura_tests::native_creature_trigger_keeps_generic_stun_exemption_for_unrestricted_frostbolt",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::creature_trigger_dead_caster_tests::native_dead_creature_bool_trigger_accepts_non_aura_origin_frostbolt",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::creature_trigger_dead_caster_tests::native_dead_creature_bool_trigger_still_checks_sheilun_caster_requirement",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::creature_trigger_dead_caster_tests::native_dead_creature_ordinary_frostbolt_still_refuses_caster_dead",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::creature_trigger_dead_caster_tests::native_living_creature_bool_trigger_still_accepts_frostbolt",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy5_tests::dummy5_demons_bite_insatiable_hunger_adds_catalog_fury_range",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy5_tests::dummy5_demons_bite_without_rank_keeps_catalog_fury",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy5_tests::dummy5_chaos_strike_refunds_once_at_catalog_chance_endpoint",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy5_tests::dummy5_chaos_strike_zero_chance_does_not_refund",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy5_tests::dummy5_disintegrate_applies_three_second_slow_and_ticks",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy5_tests::dummy5_chaos_bolt_always_crits_with_zero_crit_stats",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy5_tests::dummy5_chaos_bolt_damage_scales_with_critical_strike_chance",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy5_tests::dummy5_rapture_counts_only_owned_damaging_periodic_effects",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy5_tests::dummy5_shuriken_storm_awards_combo_points_per_enemy_hit",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy5_tests::dummy5_deaths_caress_generates_two_bone_shield_stacks",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy5_tests::dummy5_deaths_caress_adds_to_existing_bone_shield_up_to_catalog_cap",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy5_tests::dummy5_epidemic_eruptions_require_owned_virulent_plague",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy5_tests::dummy5_lava_burst_crits_on_flame_shock_and_generates_eight_maelstrom",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy5_tests::dummy5_lava_burst_without_flame_shock_or_rank_keeps_normal_hit",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_colossus_smash_marks_each_hit_enemy_and_only_amplifies_owners_damage",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_survival_instincts_halves_incoming_damage_and_cancellation_removes_child",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_survival_instincts_child_expires_with_parent",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_heartbreaker_energizes_per_native_chain_target",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_heart_strike_without_heartbreaker_has_no_bonus",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_radiance_heals_primary_and_four_injured_allies_inside_catalog_radius",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_radiance_prefers_injured_allies_without_owners_atonement",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_raging_blow_rank_success_restores_one_charge_and_notifies_owner",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_raging_blow_restores_only_latest_charge_preserving_oldest_recharge",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_raging_blow_rank_zero_chance_keeps_recharge",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_raging_blow_without_rank_does_not_reset",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_whirlwind_rank_generates_per_enemy_rage_up_to_five",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_whirlwind_rank_counts_two_enemies_without_using_maximum",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_whirlwind_without_rank_generates_only_base_rage",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_whirlwind_empty_area_keeps_base_rage_without_cleave_buff",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_verdant_embrace_panacea_heals_caster_not_selected_ally",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_verdant_embrace_without_panacea_does_not_self_heal",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_rake_stealth_and_rank_grant_initial_bonus_and_stun",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_rake_pouncing_strikes_also_gates_stealth_bonus",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_rake_stealth_without_rank_keeps_base_initial_damage",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy7_tests::dummy7_rake_rank_without_stealth_keeps_base_initial_damage",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy8_defense_tests::dummy8_breath_burn_reduces_only_damage_to_the_owning_monk_and_expires",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy9_tests::dummy9_healing_rain_ticks_at_ground_caps_six_and_stops_at_expiry",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy9_tests::dummy9_healing_rain_recast_replaces_only_owners_previous_ground_field",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy9_tests::dummy9_earthquake_pulses_six_times_at_requested_ground_and_excludes_allies",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy9_tests::dummy9_emerald_blossom_delays_and_heals_three_injured_at_fixed_ally_location",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy9_tests::dummy9_remorseless_winter_hit_applies_slow_and_native_expiry_removes_it",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy9_tests::dummy9_scourge_strike_applies_base_virulent_plague_without_refreshing_existing_owned_mark",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy9_tests::dummy9_fracture_requires_both_meta_and_rank_for_fifteen_additional_fury",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy9_tests::dummy9_void_step_teleports_to_requested_location_preserving_map",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy9_tests::dummy9_named_ground_spells_reject_missing_or_out_of_range_ground_before_cooldown",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy9_tests::dummy9_radiance_applies_nine_second_atonement_to_selected_allies_preserves_foreign_mark",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy9_tests::dummy9_tranquility_shield_absorbs_sixty_percent_max_health_and_ends_with_channel",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy9_tests::dummy9_earthquake_overlapping_casts_keep_independent_pulse_clocks",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy9_tests::dummy9_healing_rain_created_in_empty_area_heals_ally_walking_in_later",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::dummy9_tests::dummy9_tranquility_cancellation_removes_unspent_shield",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::fount_strength_tests::class_completeness_native_fount_strength_max_health_tracks_own_regeneration",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::fount_strength_tests::class_completeness_native_fount_strength_excludes_foreign_regeneration_and_absent_talent",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::fount_strength_tests::class_completeness_native_fount_strength_preserves_native_max_powers_and_expires",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::generic_empower_tests::census_empower_native_consumption_three_stages_and_early_release",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::generic_empower_tests::census_empower_native_slicing_winds_four_stages_and_early_release",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::generic_empower_tests::census_empower_native_upheaval_three_stages_and_early_release",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::generic_empower_tests::census_empower_native_unhandled_release_waits_all_stages_and_maximum_hold",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::generic_empower_tests::census_empower_native_cancellation_is_not_an_early_release",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::periodic_healing_taken_tests::census_tail_259_native_renew_ticks_use_live_recipient_modifier_then_removal",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::periodic_healing_taken_tests::census_tail_259_native_strongest_positive_is_not_sum_or_product",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::periodic_healing_taken_tests::census_tail_259_native_direct_and_foreign_recipient_are_unmodified",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::periodic_healing_taken_tests::census_tail_259_native_ignore_healing_suppresses_positive_even_allow_negative",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::normal_allow_dead_target_tests::native_normal_creature_freeze_accepts_present_dead_recipient",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::normal_allow_dead_target_tests::native_triggered_creature_freeze_accepts_present_dead_recipient",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::normal_allow_dead_target_tests::native_player_request_freeze_accepts_present_dead_recipient",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::normal_allow_dead_target_tests::native_normal_creature_freeze_still_stuns_living_recipient",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::normal_allow_dead_target_tests::native_normal_resurrection_still_refuses_living_ally",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::normal_allow_dead_target_tests::native_normal_creature_flame_shock_still_refuses_corpse_before_payment",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::queued_trigger_target_tests::native_trigger64_dead_present_recipient_refuses_before_payment",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::queued_trigger_target_tests::native_trigger64_dead_present_recipient_does_not_receive_flame_shock",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::queued_trigger_tests::native_trigger64_one_ms_child_is_not_inline_and_follows_parent_application",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::queued_trigger_tests::native_trigger64_zero_ms_child_is_not_reentrant_and_follows_parent_application",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::queued_trigger_tests::native_trigger64_callbacks_dispatch_by_due_time_not_parent_call_order",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::target_aura_type_tests::native_required_target_aura_types_refuse_both_unshielded_highlights",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::target_aura_type_tests::native_required_target_aura_types_accept_the_matching_actual_shields",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::target_aura_type_tests::native_required_target_aura_types_do_not_accept_an_unrelated_dummy_type",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::target_aura_type_tests::native_required_target_aura_types_do_not_borrow_caster_or_other_unit_shields",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::target_aura_type_tests::native_excluded_target_aura_type_refuses_both_headlock_variants",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::target_aura_type_tests::native_excluded_target_aura_type_on_caster_does_not_refuse_unshielded_target",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::target_aura_type_tests::native_target_aura_type_removal_and_expiry_reverse_both_conditions",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::triggered_caster_aura_tests::native_triggered_caster_required_ref_refuses_lunar_child_without_producer",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::triggered_caster_aura_tests::native_triggered_caster_required_ref_accepts_actual_lunar_producer",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::triggered_caster_aura_tests::native_triggered_caster_required_ref_removal_and_foreign_recipient_do_not_qualify",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::triggered_caster_aura_tests::native_triggered_caster_excluded_ref_refuses_dark_ascendancy_only_on_caster",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::triggered_caster_aura_tests::native_triggered_caster_excluded_ref_removal_and_foreign_recipient_allow_child",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::triggered_target_aura_tests::native_triggered_target_exclusion_does_not_refresh_existing_stack_timer",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::triggered_target_aura_tests::native_triggered_target_exclusion_removal_allows_new_stack_timer",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::triggered_target_aura_tests::native_triggered_target_exclusion_does_not_borrow_another_units_timer",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::linked_aura_tests::class_completeness_native_linked_ironfur_applies_real_mastery_from_the_recipient",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::linked_aura_tests::class_completeness_native_linked_ironfur_reapply_and_expiry_do_not_duplicate_mastery",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::linked_aura_tests::class_completeness_native_linked_explicit_child_uses_original_caster_and_preserves_foreign_replacement",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::linked_aura_tests::class_completeness_native_linked_reapply_synchronizes_native_stacks_without_restarting_child",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::linked_aura_tests::class_completeness_native_linked_channel_with_area_unit_child_uses_original_caster",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::linked_aura_tests::class_completeness_native_linked_child_respects_active_trigger_depth_limit",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::linked_aura_tests::class_completeness_native_linked_nonzero_overrides_child_bp0_and_removes_owned_child",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::mechanic_duration_tests::class_completeness_native_mechanic_duration_shortens_the_receivers_snare",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::mechanic_duration_tests::class_completeness_native_mechanic_duration_232_sums_matching_fields",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::mechanic_duration_tests::class_completeness_native_mechanic_duration_234_selects_strongest_without_stacking",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::mechanic_duration_tests::class_completeness_native_mechanic_duration_mixed_types_use_the_stronger_rule",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::mechanic_duration_tests::class_completeness_native_mechanic_duration_preserves_unselected_root_mechanic",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::mechanic_duration_tests::class_completeness_native_mechanic_duration_removal_only_changes_new_applications",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::mechanic_duration_tests::class_completeness_native_mechanic_duration_replicated_clock_and_expiry_match_shortened_duration",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::mechanic_duration_tests::class_completeness_native_mechanic_duration_positive_only_is_not_invented_but_mixed_sum_is_preserved",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::mechanic_duration_tests::class_completeness_native_mechanic_duration_invalid_imported_selector_remains_a_source_gap",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::mechanic_duration_tests::class_completeness_native_mechanic_duration_exempts_the_native_no_target_duration_flag",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::mechanic_duration_tests::class_completeness_native_mechanic_duration_preserves_permanent_and_positive_auras",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::mechanic_duration_tests::class_completeness_native_mechanic_duration_truncates_delta_before_addition",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::melee_from_caster_tests::class_completeness_native_colossus_smash_applies_owner_melee_vulnerability_343",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::melee_from_caster_tests::class_completeness_native_colossus_smash_amplifies_only_owner_white_swings",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::melee_from_caster_tests::class_completeness_native_foreign_melee_vulnerability_343_ignores_owner_swings",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::minimum_speed_tests::class_completeness_native_minimum_speed_ghost_wolf_restores_base_after_slow",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::minimum_speed_tests::class_completeness_native_minimum_speed_uses_strongest_floor_after_normalization",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::minimum_speed_tests::class_completeness_native_minimum_speed_expiry_restores_weaker_floor",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::minimum_speed_tests::class_completeness_native_minimum_speed_never_lowers_faster_movement",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::minimum_speed_tests::class_completeness_native_minimum_speed_stun_blocks_floor_until_removed",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::minimum_speed_tests::class_completeness_native_minimum_speed_does_not_override_root_or_persist_after_removal",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::npc_dodge_tests::class_completeness_native_npc_dodge_defends_front_and_rear_weapon_spells",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::npc_dodge_tests::class_completeness_native_npc_dodge_removal_restores_possible_weapon_damage",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::npc_dodge_tests::class_completeness_native_npc_dodge_stun_retains_native_exclusion",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::npc_dodge_tests::class_completeness_native_npc_dodge_attributes_and_ranged_retain_exclusions",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::resistance_pct_tests::class_completeness_native_armor_percent_multiplies_final_player_armor",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::resistance_pct_tests::class_completeness_native_armor_percent_removal_restores_remaining_factor",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::resistance_pct_tests::class_completeness_native_armor_percent_applies_to_creature_armor",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::shapeshift_tests::class_completeness_native_shred_requires_cat_before_payment",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::shapeshift_tests::class_completeness_native_cat_rejects_excluded_rejuvenation",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::shapeshift_tests::class_completeness_native_predatory_swiftness_bypasses_regrowth_form_gate",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::shapeshift_tests::class_completeness_native_required_cat_accepts_shred_but_bear_does_not",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::shapeshift_tests::class_completeness_native_ignore_form_mask_does_not_bypass_rejuvenation",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::shapeshift_tests::class_completeness_native_ignore_form_requires_the_same_spell_family",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::shapeshift_tests::class_completeness_native_ignore_form_removal_and_expiry_restore_rejection",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::shapeshift_tests::class_completeness_native_ignore_form_permission_belongs_to_recipient",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::shapeshift_tests::class_completeness_native_stance_flags_and_upper_form_masks",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::shapeshift_tests::class_completeness_native_caster_form_attribute_and_restricted_form_flag",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::new_class_tests::tiger_palm_spends_50_energy_and_hits",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::new_class_tests::windwalker_tiger_palm_generates_2_chi_and_blackout_kick_spends_3",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::new_class_tests::demons_bite_generates_fury",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::new_class_tests::chaos_strike_spends_40_fury_and_hits_twice",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::new_class_tests::chaos_strike_without_40_fury_fails",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::new_class_tests::living_flame_casts_for_2_seconds_spends_mana_and_damages_enemy",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::new_class_tests::living_flame_heals_an_ally_without_damaging_the_enemy",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::new_class_tests::azure_strike_hits_the_target_and_one_other_enemy",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::new_class_tests::energizing_flame_refunds_most_of_living_flames_mana",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    }
+  ]
+}

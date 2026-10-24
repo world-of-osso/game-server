@@ -44,6 +44,16 @@ Six generated files (37,819 lines before relocation) now live under `server-cata
 
 All six generators still require an explicit output argument; point it at the corresponding new catalog file. Generated visibility now permits the core consumer. No lookup values, test bodies, names, ignored flags or should-panic flags change. The pure move commit is separate from wiring. Paired elapsed-time and full-suite acceptance remain separate proof; source-size reduction is not a speedup claim.
 
+## Spell fixture qualification (D2)
+
+`server-spell-tests` is an empty normal library with dev-only fixture dependencies and the existing opt2/debug1 test profile. Its first slice contains 29 spell-cast source files and 175 enabled cases; the exact `spell_cast::...` names and flags are preserved ([mapping](../../handoffs/crate-split-spell-test-mapping.json)). All 175 externally compile through canonical server at fixture tip `af8f7f5b6` before any source move, with no diagnostics. The 29 byte-identical moves form separate commit `e0aaa1840` before consumer wiring. Their their setup reads use `WorldData::spell_store()` to borrow the existing canonical cached `SpellStore`; cache fields remain private and no second resource/cache is introduced. Only existing `varied`, native-enemy-dodge harness and native-creature-world fixture helpers are public for this slice. The dodge helper's existing constant/apply dependencies use the same explicit test-support gate. Ordinary production does not compile the fixture harness.
+
+External qualification exposed three additional `dummy7` charge-state reads after the cache/helper blockers were removed. The separately approved read-only `test_harness::charge_recovery` observer borrows canonical `SpellHistory` and returns consumed count plus oldest pending recharge; charge fields stay private. It retains the original missing-category failure boundary and checks the exact oldest recharge, not a weaker wire notification proxy.
+
+The retained private `hit::tests` also used the NPC-dodge test module's setup helper. `spawn_native_dodge_target` now has one unchanged implementation in canonical `test_harness`; both retained formula tests and consumer cases use it. Its fixture spell IDs/imports move with the helper. No reverse server→consumer dependency exists.
+
+No `execute_cast` seam or gameplay-internal visibility widening is included. Final wired-consumer/core compilation, actual post-build test inventories, runtime qualification and matched comment-rebuild measurements remain required before acceptance. Source size and check elapsed time do not establish edit-build payoff.
+
 ## Sources
 
 - `crates/server-catalog/{Cargo.toml,src/lib.rs}`, `crates/server-simulation/{Cargo.toml,src/lib.rs}` — package/dependency ownership.
@@ -55,3 +65,4 @@ All six generators still require an explicit output argument; point it at the co
 
 - [[dungeon-simulator]] — headless gameplay qualification.
 - [[server-test-performance]] — measured profile/runtime tradeoffs; extraction alone is not a benchmark result.
+- [[server-crate-split-measurements]] — completed B/C paired batches and comment rebuilds, sealed inputs, shared-host no-causal-claim limits.
