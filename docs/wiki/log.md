@@ -1,6 +1,6 @@
 ## 2026-10-24 — Equipped use_items native RED
 
-[Shared use_items proof](../handoffs/use-items-proof-ledger.md): actual equipped61034/193701 singular native admissions pass but aggregate source row selectsNone,18.02s/exit101 at9a. Shared source-aware execution now selects one ready native item in slot order with slots/check_existing/explicit-row exclusion semantics; actual-cast controls added, GREEN pending. No instant batch/native cooldown rewrite.
+[Shared use_items proof](../handoffs/use-items-proof-ledger.md): actual equipped61034/193701 singular native admissions pass but aggregate source row selectsNone,18.02s/exit101 at9a. Shared source-aware execution now selects one ready native item in slot order with slots/check_existing/explicit-row exclusion semantics; native7/7GREEN28.69s atc0d after fixture waits actual2000msAlgethar cast; warmcompile35.86s/zero warnings. Full all-spec/numerical qualification separate. No instant batch/native cooldown rewrite.
 
 ## 2026-10-24 — Adapter target-ready native Rebuke RED
 
