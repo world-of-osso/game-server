@@ -98,7 +98,7 @@ fn literal_ww_native_wdp_children_cast_once_at_primary_not_the_self_aura_unit() 
     );
     assert!(
         deliveries(&run, AREA).is_empty(),
-        "native periodic aura must not borrow SimC's tick zero"
+        "the cast relationship must not manually emit an area tick before native aura processing"
     );
     for _ in 0..24 {
         run.app.update();
@@ -130,7 +130,24 @@ fn literal_ww_native_wdp_children_follow_all_native_aura_ticks_and_three_recipie
         "native aura226 period is authoritative"
     );
     let cast_at = crate::spell_cast::now(run.app.world());
-    assert!(deliveries(&run, AREA).is_empty(), "no unapproved tick zero");
+    assert!(
+        deliveries(&run, AREA).is_empty(),
+        "native aura system has not advanced yet"
+    );
+    let root = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(ROOT)
+        .unwrap();
+    let attributes = &root.misc.as_ref().unwrap().attributes;
+    const EXTRA_INITIAL_PERIOD: u32 = 0x200;
+    let initial_tick = attributes[5] & EXTRA_INITIAL_PERIOD != 0;
+    assert!(
+        initial_tick,
+        "CURRENT DB2 explicitly authors an initial native tick"
+    );
+    let first_frame_ms = run.app.world().resource::<Time>().delta().as_millis() as u32;
     let mut observed = BTreeMap::<u32, Vec<CombatLogEvent>>::new();
     let mut count = 0;
     for _ in 0..24 {
@@ -142,9 +159,12 @@ fn literal_ww_native_wdp_children_follow_all_native_aura_ticks_and_three_recipie
         }
         count = delivered.len();
     }
-    let expected: Vec<u32> = (1..=aura.duration_ms / effect.period_ms)
+    let mut expected: Vec<u32> = (1..=aura.duration_ms / effect.period_ms)
         .map(|tick| tick * effect.period_ms)
         .collect();
+    if initial_tick {
+        expected.insert(0, first_frame_ms);
+    }
     assert_eq!(
         observed.keys().copied().collect::<Vec<_>>(),
         expected,
