@@ -57,6 +57,10 @@ Player execution boundary: seven actual native cases at4f91688e8 give1WW control
 
 Native behavioral tests: `simc_apl_native/tests.rs` (earned Hit Combo and Chi, real Provoke cooldown, real Roll charges, actual Charge Rage display conversion, fixture clock and unavailable dungeon predicates). Six pushed ignored native cases produce genuine6RED at5924496f9 (13.24s test/8m18compile/exit101; three scaffold dead-field warnings). Atdc1ee9781 the same six native cases pass6/6 in17.40s (7m37compile),exit0,zero compiler warnings; tests enabled afterward without body changes ([native proof ledger](../handoffs/shared-native-apl-proof-ledger.md)). Current native fact seam is fixture-only (`cfg(test)`), matching the approved explicit parity Fixture driver boundary; live dungeon APL/TTD is not enabled.
 
+### Add-event activity
+
+- [ ] `raid_event.adds.up` returns1 only while a configured fixture add event is active, otherwise0 (including absent, waiting, exact expiry and retired waves); a later active wave returns1 again. Configured event existence/count and enemy count are not activity substitutes. Pinned SimC76f8118 raid_event.cpp2440–2443/3068–3108; [scoped proof ledger](../handoffs/adds-up-proof-ledger.md).
+
 ## Assigned native fact extensions
 
 - [ ] `talent.<name>.rank` reads selected native total ranks, not learned-spell membership.
