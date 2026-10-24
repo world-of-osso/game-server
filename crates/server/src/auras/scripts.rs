@@ -116,6 +116,8 @@ const SURVIVAL_INSTINCTS_BUFF: u32 = 50322;
 const BREATH_OF_FIRE_BURN: u32 = 123725;
 const LASHING_FLAMES: u32 = 334168;
 const RAKE_BLEED: u32 = 155722;
+const LUNAR_INSPIRATION: u32 = 155580;
+const LUNAR_INSPIRATION_OVERRIDE: u32 = 155627;
 const UNSTABLE_AFFLICTION: u32 = 30108;
 const UNSTABLE_AFFLICTION_BLEED: u32 = 233490;
 const PROTECTIVE_GROWTH: u32 = 433_748;
@@ -489,6 +491,14 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         53563,
         AuraScript {
             on_apply: Some(crate::spell_cast::scripts::replace_beacon),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        LUNAR_INSPIRATION,
+        AuraScript {
+            on_apply: Some(apply_lunar_inspiration),
+            on_remove: Some(remove_lunar_inspiration),
             ..Default::default()
         },
     );
@@ -923,6 +933,22 @@ fn drain_soul_shard_on_death(
             1,
         );
     }
+}
+
+/// TC spell_dru_lunar_inspiration1543–1567: the talent owns a native override aura.
+fn apply_lunar_inspiration(world: &mut World, unit: Entity, _aura: &AuraInstance) {
+    crate::spell_cast::cast_triggered(world, unit, LUNAR_INSPIRATION_OVERRIDE, Some(unit), 1);
+}
+
+fn remove_lunar_inspiration(
+    world: &mut World,
+    unit: Entity,
+    _aura: &AuraInstance,
+    _reason: super::RemoveReason,
+) {
+    super::remove_auras(world, unit, super::RemoveReason::Cancelled, |aura| {
+        aura.spell_id == LUNAR_INSPIRATION_OVERRIDE
+    });
 }
 
 /// TDB/TC spell_dru_survival_instincts:61336 effect0 owns50322's

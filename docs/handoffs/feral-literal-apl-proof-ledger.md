@@ -48,6 +48,10 @@ Fact dependencies:
 
 The concrete no-Incarnation/no-Apex reporter exposes `maximum_energy=50` only in the proposed Bite action context, from native25ordinary+25extra cap (SimC druid4253–4268); `energy.max=100` remains distinct. Numbers are fixture facts, not Program constants. Pool/max currently fail semantics, not nonexistent syntax errors.14766 owns the implementation; no private Program patch here.
 
+## Native Lunar admission dependency
+
+Exact reference traits select Lunar Inspiration155580/entry103170, not Chomp. At test-onlyfd16c1384 actual prepared actor has155580 but lacks its155627 override: genuine1FAIL15.50s after15m06s clean compiler run; `lunar-native-red/{proof.json,stdout.log,stderr.log}`. TC `spell_druid.cpp1543–1567` casts155627 on apply and removes it on talent removal. The pending port registers those two aura hooks, changing no KnownSpells or damage coefficients. Test retains removal/reapplication and ordinary8921→155625 resolution checks after the bootstrap assertion. GREEN pending.
+
 ## Behavioral evidence
 
 At code7ea788a8b/docs121a3b77e, existing `feral_literal_fixture_records_native_bleeds_for_300s` runs300s and fails the external driver contract: actual `NATIVE_FOLLOWER_KIT`, expected `LITERAL_SIMC_FERAL_76f8118`. Genuine1FAIL28.88s/exit101; no compile or fixture error. `literal-driver-red/{proof.json,output.log}` records binary6c20c1d68e8e8f7d99e03ead5bd4d10bb6b6777fc16fe87e52ad4128a4f20e54 and frozen privateDB environment. Its emitted filename `103.feral-literal.1.json` does not make the contents literal; the report correctly identifies the native-kit driver.

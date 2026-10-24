@@ -2,6 +2,10 @@
 
 Server-side aura runtime in `crates/server/src/auras/`: aura instances on active units, periodic effects, procs, spell and stat modifiers, removal and `UnitAuras` replication. See [auras](../wiki/systems/auras.md).
 
+## Lunar Inspiration
+
+- [ ] Applying native talent155580 casts self override155627; removing the talent removes that override, preserving learned spellbooks. Ordinary Moonfire8921 then resolves through actual native override metadata to155625 only while the talent aura exists. Use TC a352b1fa `spell_druid.cpp1543–1567`, not a controller alias grant. Exact selected-profile lifecycle test lives in `server-simulation`.
+
 ## Explicit proc provenance
 
 Import the audited effective public TC `spell_proc` IDs into `tdb_spell_proc(SpellId PRIMARY KEY)` only after every pinned base/update source matches its SHA-256. Reject duplicate/incomplete IDs before publication. Replace presence transactionally without changing retained rows' later value columns or unrelated tables; errors leave prior data intact. Presence alone must not overlay chance, flags, cooldown or charges. The later full proc importer owns those values. Runtime requires the provenance table; absence is a load error, not permission to treat every definition as generated. After complete spell assembly, identify explicit TDB, registered scripted, generated or absent definitions. Only generated definitions use TC a352b1fa SpellMgr1888–1903 refusal: CAN_PROC_FROM_PROCS, no relevant family mask, chance≥100, no positive PPM/cooldown/charges, relevant dealt-event flags and an actual trigger. Refusal must retain raw aura/stack/charge metadata and prevent proc dispatch even during actor bootstrap. Explicit48484, scripted Dance/Inundate and generated391875's authored100ms cooldown remain eligible. See [Feral/source ledger](../handoffs/feral-source-census.md).
