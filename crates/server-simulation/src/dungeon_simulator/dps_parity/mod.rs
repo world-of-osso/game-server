@@ -14,6 +14,7 @@ mod pet_stats_tests;
 mod player_rotation;
 mod power_tests;
 mod report;
+mod ret_crusading_tests;
 mod ret_empyrean_tests;
 mod ret_expurgation_tests;
 mod ret_purpose_tests;
