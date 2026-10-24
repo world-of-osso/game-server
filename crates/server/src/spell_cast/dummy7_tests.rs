@@ -426,7 +426,7 @@ fn rake(stealth: bool, rank: Option<u32>) {
     h.cast_and_deliver(1822, Some(h.npc));
     h.advance(3);
     landed(&h);
-    let bonus = stealth && rank.is_some();
+    let bonus = stealth;
     let amount = if bonus { 46.56 } else { 29.1 };
     assert!(varied(amount).contains(&(logged(&h, 1822, h.npc, CombatLogKind::Damage) as f32)));
     assert_eq!(crate::auras::has_aura(h.app.world(), h.npc, 163505), bonus);
@@ -442,7 +442,8 @@ fn dummy7_rake_pouncing_strikes_also_gates_stealth_bonus() {
     rake(true, Some(405834));
 }
 #[test]
-fn dummy7_rake_stealth_without_rank_keeps_base_initial_damage() {
+fn dummy7_rake_stealth_without_legacy_rank_gets_authored_bonus() {
+    // TC spell_dru_rake2040–2078 checks actual stealth, not a legacy rank aura.
     rake(true, None);
 }
 #[test]

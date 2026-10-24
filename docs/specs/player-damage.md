@@ -4,6 +4,9 @@ Players deal Retail damage: auto-attacks swing the equipped weapon with attack p
 
 ## What it must do
 
+Rake
+- [ ] Actual stealth enables native1822 effect3's initial damage bonus and163505 stun without requiring legacy231052/405834 aura grants. Ordinary unstealthed damage stays unchanged. Preserve the existing bleed snapshot path and native coefficients; new persistent multiplier fields are outside this eligibility change. Source: TC a352b1fa `spell_druid.cpp2040–2078`; actual selected-profile precombat buffs precede Prowl and native GCD remains authoritative.
+
 Ferocious Bite
 - [x] Native22568 reads post-payment Energy before its immediate hit effects. Its school damage scales by `1 + min(remaining Energy, authored extra-Energy cap) / cap`; the self burn removes only available Energy up to that cap, with no damage from its native zero amplitude. Native Incarnation aura effect1, when actually present, adjusts the cap by its signed percentage; a trigger effect is not an aura modifier. Preserve ordinary cost modifiers, combo-point payment, coefficients, variance and all other power-burn spells. Source: TC a352b1fa `spell_druid.cpp973–1018`; [source/proof ledger](../handoffs/feral-source-census.md).
 
