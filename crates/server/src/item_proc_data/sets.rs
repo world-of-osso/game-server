@@ -148,11 +148,12 @@ impl ItemProcInputs {
 
 impl ItemSet {
     fn eligible(&self, world: &World, unit: Entity, bonus: &SetSpell, count: u32) -> bool {
-        if count == 0
-            || count < bonus.threshold
-            || self.flags & LEGACY_INACTIVE != 0
-            || !self.skill_allows(world, unit)
-        {
+        let threshold_met = count > 0 && count >= bonus.threshold;
+        if !threshold_met {
+            return false;
+        }
+        let active = self.flags & LEGACY_INACTIVE == 0 && self.skill_allows(world, unit);
+        if !active {
             return false;
         }
         let spec = world.get::<ActiveSpec>(unit).map(|spec| spec.0);
