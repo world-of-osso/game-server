@@ -327,6 +327,187 @@ fn dps_parity_demo_native_alternate_imp_casts_and_exhausts_before_native_ttl() {
     );
 }
 
+fn prepare_alternate_identity_control() -> Run {
+    let mut run = prepare_authored_guardian_control();
+    // Explicit approved source-binding fixture isolates identity from the
+    // separately tested production list policy. This is not an authored TDB row.
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::guardian::GuardianSpells>()
+        .spells
+        .insert(143622, vec![104318]);
+    run
+}
+
+fn trigger_native_imp(run: &mut Run, root: u32) -> Entity {
+    let previous: std::collections::HashSet<_> = run
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(run.app.world())
+        .filter(|(_, summon)| summon.owner == run.actor)
+        .map(|(entity, _)| entity)
+        .collect();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, root, Some(run.actor), 0);
+    run.app
+        .world_mut()
+        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(run.app.world())
+        .find(|(entity, summon)| {
+            summon.owner == run.actor && summon.spell_id == root && !previous.contains(entity)
+        })
+        .map(|(entity, _)| entity)
+        .expect("native triggered root must produce its own new actor")
+}
+
+#[test]
+#[ignore = "bound actual143622 must energy-fade before native20s; private native143622 inputs required"]
+fn dps_parity_demo_alternate_imp_identity_fades_with_explicit_cast_binding() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_alternate_identity_control();
+    let imp = trigger_native_imp(&mut run, 279910);
+    let initial = crate::spell_cast::powers::power_value(
+        run.app.world(),
+        imp,
+        shared::components::PowerType::Energy,
+    )
+    .unwrap()
+    .0;
+    for _ in 0..240 {
+        run.app.update();
+    }
+    let world = run.app.world();
+    let casts = world
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(imp.to_bits())
+                && event.spell_id == Some(104318)
+                && event.kind == CombatLogKind::CastSuccess
+        })
+        .count();
+    let remaining = world
+        .get::<crate::spell_cast::summon::SummonedCreature>(imp)
+        .is_some();
+    let path = inputs::directory()
+        .unwrap()
+        .join("266.alternate-identity-fade.json");
+    std::fs::write(&path, serde_json::to_vec_pretty(&json!({"initial_energy": initial,
+        "casts": casts, "remaining_before20s": remaining, "fixture_binding": "approved143622→104318"})).unwrap()).unwrap();
+    assert_eq!(
+        casts,
+        5,
+        "existing native100/20 resource path; {}",
+        path.display()
+    );
+    assert!(
+        !remaining,
+        "alternate identity must energy-fade, not idle until20s; {}",
+        path.display()
+    );
+}
+
+#[test]
+#[ignore = "actual alternate WildImps must join native Core and Tyrant roster; private143622 inputs required"]
+fn dps_parity_demo_alternate_imp_identity_earns_core_and_updates_tyrant_roster() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_alternate_identity_control();
+    // Existing sourced Imp fade PRD guarantees a proc by21 natural fades.
+    for _ in 0..21 {
+        trigger_native_imp(&mut run, 279910);
+    }
+    let tyrant = cast_native_antoran_tyrant(&mut run);
+    let stacks = |world: &World, unit: Entity, spell| {
+        world
+            .get::<crate::auras::ActiveAuras>(unit)
+            .and_then(|auras| auras.iter().find(|aura| aura.spell_id == spell))
+            .map_or(0, |aura| aura.stacks)
+    };
+    let before = stacks(run.app.world(), tyrant, 1276788);
+    for _ in 0..240 {
+        run.app.update();
+    }
+    let after = stacks(run.app.world(), tyrant, 1276788);
+    let core = stacks(run.app.world(), run.actor, 264173);
+    let path = inputs::directory()
+        .unwrap()
+        .join("266.alternate-identity-core-roster.json");
+    std::fs::write(
+        &path,
+        serde_json::to_vec_pretty(&json!({"native_alternate_roots": 21,
+        "tyrant_stacks_before": before, "tyrant_stacks_after": after, "natural_core_stacks": core}))
+        .unwrap(),
+    )
+    .unwrap();
+    assert!(
+        before > after,
+        "real alternate fades must reduce actual Tyrant roster; {}",
+        path.display()
+    );
+    assert!(
+        core > 0,
+        "21native alternate fades must earn Core through existing PRD; {}",
+        path.display()
+    );
+}
+
+#[test]
+#[ignore = "native alternate and HoG Imps share qualified SP identity; private143622 inputs required"]
+fn dps_parity_demo_alternate_imp_identity_matches_native_hog_imp_power() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_alternate_identity_control();
+    let primary = trigger_native_imp(&mut run, 104317);
+    let alternate = trigger_native_imp(&mut run, 279910);
+    let variance = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(104318)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .variance;
+    for _ in 0..240 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let first_hit = |source: Entity| {
+        events
+            .iter()
+            .find(|event| {
+                event.source == Some(source.to_bits())
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id == Some(104318)
+                    && event.kind == CombatLogKind::Damage
+                    && !event.crit
+            })
+            .expect("both real Imps must produce noncritical104318 damage")
+            .amount as f32
+    };
+    let primary_hit = first_hit(primary);
+    let alternate_hit = first_hit(alternate);
+    let ratio_bound = (1.0 + variance) / (1.0 - variance);
+    let path = inputs::directory()
+        .unwrap()
+        .join("266.alternate-identity-power.json");
+    std::fs::write(
+        &path,
+        serde_json::to_vec_pretty(&json!({"primary_hit": primary_hit,
+        "alternate_hit": alternate_hit, "native_variance": variance, "ratio_bound": ratio_bound}))
+        .unwrap(),
+    )
+    .unwrap();
+    assert!(
+        alternate_hit >= primary_hit / ratio_bound - 2.0
+            && alternate_hit <= primary_hit * ratio_bound + 2.0,
+        "native same-owner/same-spell actors must share qualified WildImp power within native variance/integer rounding; {}",
+        path.display()
+    );
+}
+
 #[test]
 #[ignore = "native267216 first+12s periodic association; private native143622 inputs required"]
 fn dps_parity_demo_inner_demons_uses_native_period_without_tick_zero() {
