@@ -5,11 +5,19 @@
 ## 2026-10-24 — Explicit movement.distance fixture state
 
 [Configured movement distance](systems/simc-apl.md#configured-movement-distance): pinned76f8118 current.distance_to_move, not target range/native travel. Four actual unknown-operand REDs→4GREEN0.00s atc8fafe180; existing movement-event absence1GREEN10.01s, server+server-simulation test-target check81s and fmtPASS/zero warnings. Patchwerk explicitly initializes0; missing/dungeon configuration stays named. No scheduler, remains/speed, full native rotation or DPS claim.
+## 2026-10-24 — Source-bound ordinary cone boundary
+
+[Model geometry](systems/model-geometry.md#ordinary-cone-close-boundary):607781b26 genuine native FoF117418/Mage120 close-off-arc2RED plus strict2yd/far/vertical1GREEN8.31s. Shared ordinary cones now use TC's strict3D target bounding radius/min2; existing98609-row loader retains radius alongside unchanged reach. No unknown-radius substitution, line bypass or WW IDs. Native harness uses actual Kobold10913/scale1. GREEN, unchanged cone/frontal controls and two-crate check pending; lead full gate and WW numerical parity separate.
 
 ## 2026-10-24 — Isolated qualified Ret Sentence/Wake/Toll packet
 
 [Auras](systems/auras.md#ret-sentence-and-toll-relationships--2026-10-24): direct-owner Sentence expiry/cancel/native-percentage/physical/foreign controls, ordinary Wake damage/resource/knowledge and Toll ST/3T/cap/range/mode/percentage total eleven unique native cases with exact revision receipts. Packet starts at masterd7e86cd0f and excludes development-only Expurgation/Rebuke/Aura361/literal work; no whole-rotation or DPS claim. [Scope/source/proof ledger](../handoffs/ret-qualified-sentence-wake-toll-proof-ledger.md); integration check separate.
 ## 2026-10-24 — WDP child relationships and original-primary context qualified
+## 2026-10-24 — Add-event activity fact
+
+[Native APL facts](systems/simc-apl.md#native-binding-boundary): `raid_event.adds.up` has4genuine unknown-property REDs plus1retained property control atd7c06c8ee. Pinned SimC activity now reads existing actual-wave deadline, not count/existence; no new event model. Unchanged5/5GREEN0.00s atf9252a098 (1m39compile/0warnings); state-reader scope only, parent integration pending. [Scoped proof](../handoffs/adds-up-proof-ledger.md).
+
+## 2026-10-24 — Expurgation Dummy-proc qualification
 
 [Exact source/RED/GREEN/consumer ledger](../handoffs/ww-wdp-damage-children-proof-ledger.md): DB2/TDB/TC have no child edge; approved source relationship emits451767 once at retained primary and158221 at native aura226 ticks. Authored Attributes5=512 adds initial0; fixture corrected to native0/250/500/750/1000, no production clock change. Rebased onto51a28da8a as6f99:7nativeGREEN32.31s; three unchanged Voltaic/Quake consumers eachPASS once, separate unchanged Ret Toll8PASS. Fresh-backup-EACH300s89912.5433ST/113892.0267three-target (−56.4469%/−69.7546%); both native children now damage. Native coefficients/caps/geometry unchanged; full numeric/WDP mastery and broader recipient qualifications remain open.
 

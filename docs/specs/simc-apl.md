@@ -104,6 +104,10 @@ Native behavioral tests: `simc_apl_native/tests.rs` (earned Hit Combo and Chi, r
 
 Behavioral source: `followers/native_flight_tests.rs` covers Pyroblast launch/countdown/impact, hardcast exclusion, actor isolation and Meteor handoff/refusal. At3e3cacb6d, current-canonical source-view library tests yield startup1PASS/flight4genuine unknown-property RED in9.65s, compile19m12/zero warnings. Both requested properties are evaluated before failure. The earlier binary-target source-view refusal was not RED. Implementation reads pending native deadlines and the live TC Meteor continuation; targeted GREEN remains pending.
 
+### Add-event activity
+
+- [x] `raid_event.adds.up` returns1 only while a configured fixture add event is active, otherwise0 (including absent, waiting, exact expiry and retired waves); a later active wave returns1 again. Configured event existence/count and enemy count are not activity substitutes. Pinned SimC76f8118 raid_event.cpp2440–2443/3068–3108; [scoped proof ledger](../handoffs/adds-up-proof-ledger.md).
+
 ## Assigned native fact extensions
 
 - [ ] `talent.<name>.rank` reads selected native total ranks, not learned-spell membership.
