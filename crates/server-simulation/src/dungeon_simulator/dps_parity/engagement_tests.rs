@@ -38,8 +38,10 @@ fn dps_parity_engagement_all_opponents_have_mutual_combat_refs() {
         assert_eq!(run.targets.len(), count);
         assert_mutual_references(&run);
         if count == 3 {
-            let retired = run.targets[1..].to_vec();
-            replace_add_wave(&mut run, 30.0).unwrap();
+            let started_at = run.app.world().resource::<Time>().elapsed();
+            install_fixture_lifetimes(&mut run, started_at);
+            let retired = retire_add_wave(&mut run);
+            spawn_add_wave(&mut run, &retired, started_at).unwrap();
             assert!(
                 retired
                     .iter()
