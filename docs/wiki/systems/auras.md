@@ -1,5 +1,9 @@
 # Auras
 
+## Execution Sentence accumulation — 2026-10-24
+
+`SIMC_RET_EXECUTION_SENTENCE_ACCUMULATION` is a lead-approved outgoing-damage policy, not invented proc metadata. Native343527 has no proc options/TDB row and TC skips generation without flags. Only direct owner's nonphysical actual damage to a target carrying its343527 updates that instance's native effect0 counter by native effect1 percentage; Physical hybrids are excluded too. TC expiry-only discharge uses native387113 with BP0 override and partial-trigger validation. Exact native controlled-pet routing remains unqualified. [Contract](../../specs/dps-parity.md#ret-execution-sentence-accumulation), [source/RED ledger](../../handoffs/ret-paladin-parity-proof-ledger.md#execution-sentence-accumulation-policy), [class implementation](../../../crates/server/src/auras/ret_sentence.rs). GREEN pending.
+
 ## Expurgation Dummy-proc — 2026-10-24
 
 Native383344 includes TriggerSpell383346, but Aura4 remains script-only: generic proc-trigger dispatch admits42/231, not arbitrary Dummy fields. TC a352b1fa `spell_paladin.cpp806–821` supplies the class callback, preserving actual actor/recipient and partial-trigger semantics through `creature_cast_ignoring_in_progress`. Native chance/family scope and child periodic metadata remain unchanged; no BP20 damage override. Real Blade hit/no-owned-DoT RED and unrelated Judgment control are recorded in the [Ret ledger](../../handoffs/ret-paladin-parity-proof-ledger.md#expurgation-native-dummy-proc); callback currently has7/8targeted PASS: unrelated Judgment scenario exposes missing shared TDB numeric proc scope. Canonical data has SpellId presence only; effective source row requires family10/mask3=1073741824, type1/phase2. Lead assigned numeric import/runtime semantics to14775; no local filter and no qualification claim. [Code](../../../crates/server/src/auras/scripts.rs), [contract](../../specs/dps-parity.md#ret-expurgation).

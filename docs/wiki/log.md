@@ -1,3 +1,7 @@
+## 2026-10-24 — Execution Sentence native expiry qualification
+
+[Auras](systems/auras.md#execution-sentence-accumulation--2026-10-24): d15dae8f0 ordinary funded343527/real Judgment damage/actual expiry reaches missing387113 RED; cancellation controlPASS49.39s. Lead approved narrow own nonphysical damage policy after native/TDB/default-generation absence audit. Native effect1 and TC partial-trigger expiry BP0 remain authoritative; pet owner mapping unqualified, GREEN pending. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#execution-sentence-accumulation-policy).
+
 ## 2026-10-24 — Expurgation Dummy-proc qualification
 
 [Auras](systems/auras.md#expurgation-dummy-proc--2026-10-24): native selected383344/actual184575 hit yields genuine missing383346 RED atcce395359; unrelated Judgment control passes40.15s. TC806–821 supplies a class callback using partial-trigger semantics, not a generic Dummy promotion. Native amounts/cadence and actual recipient retained; callback7/8PASS exposes unwanted Judgment-scenario DoT. Effective source needs numeric family/type/phase overrides; canonical table is presence-only. Lead routed import/runtime semantics to14775; callback remains unqualified, no local filter. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#expurgation-native-dummy-proc).
