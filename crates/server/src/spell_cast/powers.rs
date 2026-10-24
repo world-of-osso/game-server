@@ -24,7 +24,7 @@ use shared::components::{
 
 use crate::grid_activity::GridDormant;
 use crate::spell_info::ClassSpells;
-use crate::world_data::WorldData;
+use crate::world_data::UNIT_FLAG2_REGENERATE_POWER;
 
 /// Alternate (encounter/quest/mount) bars are not class resources.
 const ALTERNATE_POWERS: [i32; 4] = [10, 23, 24, 25];
@@ -539,9 +539,7 @@ type RegenQuery<'w, 's> = Query<
         Option<&'static crate::stats::CharacterStats>,
         Option<&'static crate::death::PlayerDeathState>,
         Option<&'static Npc>,
-        Option<&'static Player>,
-        Option<&'static crate::followers::Follower>,
-        Option<&'static crate::hunter_pet::HunterPet>,
+        Option<&'static shared::components::UnitFlags2>,
         Option<&'static mut PetFocusRegen>,
     ),
     Without<GridDormant>,
@@ -559,7 +557,6 @@ pub(crate) fn regenerate_powers(
     mut commands: Commands,
     time: Res<Time>,
     table: Option<Res<PowerTypeTable>>,
-    world_data: Option<Res<WorldData>>,
     mut units: RegenQuery,
 ) {
     let Some(table) = table else {
@@ -567,29 +564,15 @@ pub(crate) fn regenerate_powers(
     };
     let dt = time.delta_secs();
     let now = time.elapsed_secs_f64();
-    for (
-        unit,
-        mut pools,
-        mana,
-        auras,
-        combat,
-        mods,
-        stats,
-        death,
-        npc,
-        player,
-        follower,
-        pet,
-        pet_focus,
-    ) in &mut units
+    for (unit, mut pools, mana, auras, combat, mods, stats, death, npc, flags2, pet_focus) in
+        &mut units
     {
         // TC Player::GetPowerRegen: aura94 selects combat rates, not combat state.
         let aura_interrupts_regen = npc.is_none()
             && auras.is_some_and(|auras| auras.has_type(crate::auras::handlers::INTERRUPT_REGEN));
         let auras = auras
             .filter(|auras| auras.has_type(crate::auras::handlers::TRIGGER_SPELL_ON_POWER_AMOUNT));
-        let player_resource_subject = player.is_some() || follower.is_some() || pet.is_some();
-        if !read_creature_power_regeneration(npc, player_resource_subject, world_data.as_deref()) {
+        if !read_creature_power_regeneration(npc, flags2) {
             continue;
         }
         if death.is_some_and(|death| death.state != shared::death::DeathState::Alive) {
@@ -705,28 +688,23 @@ pub(crate) fn regenerate_powers(
     }
 }
 
-/// TC Creature.cpp954–955 gates creature/guardian regeneration on the template flag.
-/// Ownership flags do not choose a resource model: class followers and actual
-/// controlled pets retain their player-resource path, not temporary guardians.
+/// TC Creature.cpp949–955: every creature uses its live flag2 permission.
+/// Pet::Create1689–1703 grants it at creation; ownership flag8 never bypasses it.
 fn read_creature_power_regeneration(
     npc: Option<&Npc>,
-    player_resource_subject: bool,
-    data: Option<&WorldData>,
+    flags2: Option<&shared::components::UnitFlags2>,
 ) -> bool {
-    if player_resource_subject {
-        return true;
-    }
     let Some(npc) = npc else {
-        return false;
+        return true;
     };
-    let Some(template) = data.and_then(|data| data.templates.get(&npc.template_id)) else {
+    let Some(flags2) = flags2 else {
         warn!(
             entry = npc.template_id,
-            "Native power regeneration requires creature template data"
+            "Native power regeneration requires runtime UnitFlags2"
         );
         return false;
     };
-    template.regenerates_power
+    flags2.0 & UNIT_FLAG2_REGENERATE_POWER != 0
 }
 
 /// Signed rate (raw units per second, before aura multipliers) and the value it
@@ -1077,17 +1055,22 @@ pub(super) fn regenerate_creature_mana(
             &mut Mana,
             Option<&crate::creature_ai::CreatureState>,
             Option<&crate::auras::AuraStatMods>,
+            Option<&Npc>,
+            Option<&shared::components::UnitFlags2>,
         ),
         Without<GridDormant>,
     >,
 ) {
     let dt = time.delta_secs();
-    for (mut timer, mut mana, state, mods) in &mut creatures {
+    for (mut timer, mut mana, state, mods, npc, flags2) in &mut creatures {
         timer.0 -= dt;
         if timer.0 > 0.0 {
             continue;
         }
         timer.0 += CREATURE_REGEN_INTERVAL_SECS;
+        if !read_creature_power_regeneration(npc, flags2) {
+            continue;
+        }
         let evading = state == Some(&crate::creature_ai::CreatureState::Returning);
         if evading || mana.current >= mana.max {
             continue;

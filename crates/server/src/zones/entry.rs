@@ -1,6 +1,6 @@
 //! Shared initial-spawn / same-actor template projection (TC Creature::UpdateEntry).
 use super::*;
-use shared::components::{CombatStatus, Mana, ThreatTable};
+use shared::components::{CombatStatus, Mana, ThreatTable, UnitFlags2};
 
 /// Source addon path data, separate from the active movement generator's cursor.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
@@ -228,6 +228,7 @@ impl EntryProjection {
             self.template.entry
         };
         let flags = self.unit_flags_for(actor, initial_spawn);
+        let flags2 = self.unit_flags2_for(actor);
         actor.insert((
             Npc {
                 template_id: entry,
@@ -249,9 +250,21 @@ impl EntryProjection {
             CreatureClassification::from_rank(self.template.rank).expect("validated template rank"),
             UnitFactionTemplate(u32::from(self.template.faction)),
             UnitFlags(flags),
+            UnitFlags2(flags2),
             NpcFlags(self.template.npc_flags),
             UnitPowers::default(),
         ));
+    }
+
+    /// TC Creature.cpp603–629 projects native permission into the live unit flags.
+    fn unit_flags2_for(&self, actor: &EntityWorldMut<'_>) -> u32 {
+        let flags = actor.get::<UnitFlags2>().map_or(0, |flags| flags.0);
+        let permission = crate::world_data::UNIT_FLAG2_REGENERATE_POWER;
+        if self.template.regenerates_power {
+            flags | permission
+        } else {
+            flags & !permission
+        }
     }
 
     fn unit_flags_for(&self, actor: &EntityWorldMut<'_>, initial_spawn: bool) -> u32 {

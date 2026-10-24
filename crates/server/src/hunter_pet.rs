@@ -19,8 +19,8 @@ use lightyear::prelude::*;
 use rusqlite::{Connection, OpenFlags};
 use shared::components::{
     CreatureClassification, CreatureMotion, Health, Level, ModelDisplay, MovementSpeed, Npc,
-    Player, Position, PowerType, Rotation, UnitFactionTemplate, UnitFlags, UnitLevel, UnitPowers,
-    UnitSummonedBy, Zone,
+    Player, Position, PowerType, Rotation, UnitFactionTemplate, UnitFlags, UnitFlags2, UnitLevel,
+    UnitPowers, UnitSummonedBy, Zone,
 };
 use shared::level_scaling::LevelScaling;
 use shared::protocol::{NpcFlags, REACT_PASSIVE};
@@ -897,6 +897,8 @@ fn spawn_pet(
             UnitPowers::default(),
             faction,
             UnitFlags(crate::faction::UNIT_FLAG_PLAYER_CONTROLLED),
+            // TC Pet::Create1689–1703 forces regeneration permission for actual pets.
+            UnitFlags2(crate::world_data::UNIT_FLAG2_REGENERATE_POWER),
             NpcFlags(0),
             CreatureMotion::Still,
             MovementSpeed(0.0),

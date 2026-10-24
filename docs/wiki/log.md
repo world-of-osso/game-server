@@ -1,3 +1,7 @@
+## 2026-10-23 — Native regeneration live-permission RED
+
+[Permission source](investigations/demonology-dps-parity.md#live-permission-regression): TC applies runtime flag2 to every creature; no guardian/ordinary exception. Corrected Azure permission control101523 keeps its name/native baseline/capacity, genuineRED13.04s/0warnings on byte-identical088 gate. Live bit now seeded at NPC projection, forced for actual pets and granted through common follower init; runtime gate implemented, Azure/resource GREEN pending. No rate/stat/canonical-data changes.
+
 ## 2026-10-23 — Dreadstalker full-root dispatch GREEN
 
 [Root policy](investigations/demonology-dps-parity.md#approved-root-dispatch-native-actor-boundary-green): coherent5e admission relocation produces genuine0/2 RED10.48s;573 shared SIMC_DREADSTALKER_SUMMON_DISPATCH yields native193331/19333298035 level90 actors. Root, native Effect28 override0/1 and retained/sibling catalog isolation3GREEN47.15s,17m42compile/0warnings. Native scripts/summon/trigger effects win; actor readback retained. Runtime Dreadbite/procs and numerical/DPS qualification remain open.
@@ -20,7 +24,7 @@
 
 ## 2026-10-23 — Guardian ownership and power-role boundary GREEN
 
-[Demonology investigation](investigations/demonology-dps-parity.md#power-regeneration-interaction-native-boundary-qualified): own0885PASS/1fixtureFAIL49.59s plus fixture-only8102PASS24.96s qualify seven distinct cases: native Imp100/20 five-cast exhaustion/despawn, real90 neutral-dummy Firebolt, hostile binding, ordinary-NPC control, actual-player Energy, follower/Felguard resources and controlled-pet Focus. Explicit Player/Follower/HunterPet roles replace ownership flag8 as regeneration permission; other NPCs honor authored flags. Both builds have0 compiler messages; private DB SHA unchanged. Lead pushed810 as mf1052. Old b5 DPS remains unqualified; conditional Firebolt targeting and native DPS parity remain open.
+[Demonology investigation](investigations/demonology-dps-parity.md#power-regeneration-interaction): own0885PASS/1fixtureFAIL49.59s plus fixture-only8102PASS24.96s qualify seven distinct cases: native Imp100/20 five-cast exhaustion/despawn, real90 neutral-dummy Firebolt, hostile binding, ordinary-NPC control, actual-player Energy, follower/Felguard resources and controlled-pet Focus. Explicit Player/Follower/HunterPet roles replace ownership flag8 as regeneration permission; other NPCs honor authored flags. Both builds have0 compiler messages; private DB SHA unchanged. Lead pushed810 as mf1052. Old b5 DPS remains unqualified; conditional Firebolt targeting and native DPS parity remain open.
 
 ## 2026-10-23 — Corridor capture consumer ownership
 

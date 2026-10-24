@@ -554,7 +554,7 @@ fn load_class_level_base_hp(conn: &Connection) -> HashMap<(u8, u8), [u32; 3]> {
 const CREATURE_TYPE_CRITTER: i64 = 8;
 const CREATURE_FLAG_EXTRA_NO_XP: i64 = 0x40;
 const CREATURE_FLAG_EXTRA_TRIGGER: i64 = 0x80;
-const UNIT_FLAG2_REGENERATE_POWER: i64 = 0x800;
+pub(crate) const UNIT_FLAG2_REGENERATE_POWER: u32 = 0x800;
 /// TrinityCore `ObjectMgr::LoadCreatureModelInfo` `trigggerCreatureModelFileID`: the model files of
 /// invisible trigger displays.
 const TRIGGER_MODEL_FILE_DATA_IDS: &str = "124640, 124641, 124642, 343863, 439302";
@@ -640,7 +640,7 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         health_scaling_expansion: row.get::<_, i64>(19)? as i32,
         tuning,
         mana_modifier: row.get(25)?,
-        regenerates_power: row.get::<_, i64>(26)? & UNIT_FLAG2_REGENERATE_POWER != 0,
+        regenerates_power: row.get::<_, i64>(26)? & i64::from(UNIT_FLAG2_REGENERATE_POWER) != 0,
         regenerates_health: row.get::<_, i64>(27)? != 0,
     })
 }

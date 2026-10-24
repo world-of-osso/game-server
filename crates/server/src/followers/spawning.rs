@@ -1,5 +1,7 @@
 use bevy::prelude::*;
-use shared::components::{Level, Mana, UnitFactionTemplate, UnitFlags, UnitLevel, UnitSummonedBy};
+use shared::components::{
+    Level, Mana, UnitFactionTemplate, UnitFlags, UnitFlags2, UnitLevel, UnitSummonedBy,
+};
 
 use super::{Follower, Profile};
 use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
@@ -67,6 +69,11 @@ pub(super) fn initialize(
         world.get::<UnitFlags>(unit).map_or(0, |flags| flags.0)
             | crate::faction::UNIT_FLAG_PLAYER_CONTROLLED,
     );
+    // Existing class-follower player-resource capability, granted for every profile.
+    let flags2 = UnitFlags2(
+        world.get::<UnitFlags2>(unit).map_or(0, |flags| flags.0)
+            | crate::world_data::UNIT_FLAG2_REGENERATE_POWER,
+    );
     let (stats, pools, _) = class_stats(world, &profile, level)?;
     let (known, traits) = crate::class_progression::evaluate_npc_starter(
         world.resource::<crate::spell_info::ClassSpells>(),
@@ -108,6 +115,7 @@ pub(super) fn initialize(
             armor,
             faction,
             flags,
+            flags2,
             UnitSummonedBy(owner.to_bits()),
             crate::creature_ai::FollowOwner::new(owner),
         ));
