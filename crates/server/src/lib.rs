@@ -15,3 +15,7 @@ mod native_catalog_cache_tests;
 #[cfg(test)]
 #[path = "test_data/catalog_data_tests.rs"]
 mod native_catalog_data_tests;
+
+#[cfg(test)]
+#[path = "test_data/fixture_dir.rs"]
+mod native_fixture_dir;
