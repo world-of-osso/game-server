@@ -144,7 +144,7 @@ fn read_action_eligibility(
     Ok(())
 }
 
-pub(crate) fn cooldown_value(
+pub fn cooldown_value(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,

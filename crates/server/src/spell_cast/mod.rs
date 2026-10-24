@@ -317,10 +317,11 @@ use crate::interest::NetworkVisibility;
 use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
-pub use creature::{AiTarget, creature_cast};
+pub use creature::{
+    AiTarget, creature_cast, creature_cast_empowered, creature_cast_interrupting_self,
+};
 pub(crate) use creature::{
-    ai_spell_target, creature_cast_empowered, creature_cast_ignoring_cooldowns,
-    creature_cast_ignoring_in_progress, creature_cast_interrupting_self,
+    ai_spell_target, creature_cast_ignoring_cooldowns, creature_cast_ignoring_in_progress,
 };
 use effects::{EffectCtx, UnhandledEffects};
 use targets::{Dest, Relation};

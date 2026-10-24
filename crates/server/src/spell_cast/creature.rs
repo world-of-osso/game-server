@@ -57,7 +57,7 @@ pub fn creature_cast(
 }
 
 /// Ordinary NPC empower admission with an explicitly selected release stage.
-pub(crate) fn creature_cast_empowered(
+pub fn creature_cast_empowered(
     world: &mut World,
     caster: Entity,
     spell_id: u32,
@@ -102,7 +102,7 @@ pub(crate) fn creature_cast_ignoring_in_progress(
 
 /// Stop the current cast only after the replacement passes ordinary range,
 /// sight, resource, aura, school and cooldown validation. No readiness bypass.
-pub(crate) fn creature_cast_interrupting_self(
+pub fn creature_cast_interrupting_self(
     world: &mut World,
     caster: Entity,
     spell_id: u32,
