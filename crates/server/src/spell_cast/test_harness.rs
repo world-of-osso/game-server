@@ -15,9 +15,12 @@ use shared::components::{
 };
 use shared::protocol::{
     AttackStart, AttackStop, AttackStopped, AttackSwing, CancelAura, CastFailed, CombatChannel,
-    CombatLogEvent, CombatLogKind, ProtocolPlugin, SetTarget, SpellCastIntent, SpellChargesUpdate,
+    CombatLogEvent, ProtocolPlugin, SetTarget, SpellCastIntent, SpellChargesUpdate,
     SpellCooldownUpdate, SpellFailure, SpellGo, StopSpellCast,
 };
+
+#[cfg(test)]
+use shared::protocol::CombatLogKind;
 
 use super::powers::{PowerPools, PowerTypeTable, load_power_type_table};
 use crate::auth::{Authenticated, InWorld};
