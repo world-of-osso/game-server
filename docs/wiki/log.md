@@ -46,6 +46,24 @@ At96b572797, [native packet27/27](../handoffs/native-precombat-proof-ledger.md#c
 ## 2026-10-23 — Native profile stat-allocation redirects
 
 [Stat redirects](systems/character-stats.md#profile-stat-allocation-redirects--2026-10-23): actual103 shared equipment input→StatsPlugin independently reproduces five tier errors and ten matching ordinary slots; invalid donor and false-unmodeled diagnostics also RED,3RED11.02s at7aa72bf47. Server-local donor metadata changes calculation-only stat types/allocations, not original item identity/catalog/effects/set membership or the persisted/wire ABI. Atd45fe30e8 three GREEN12.43s, clean25m11build; two native cases remain opt-in and the env-free diagnostic stays enabled. Lead integration/DPS remain open. [Proof](../handoffs/equipment-stat-redirect-proof-ledger.md).
+## 2026-10-23 — Kargath native-hit qualification
+
+[Native-hit boundary](systems/boss-scripts.md#kargath-native-hit-qualification): same683code/protocol/DB gives native893damage PASS then actualMiss(Miss) FAIL on the next fresh-process counterexample. Pin the existing native RNG only in the qualification fixture; original damage assertion/runtime/data retained. Seeded Kargath and requested five Irideus cases pending proof.
+
+## 2026-10-22 — Irideus stage-one partial and native category boundary
+
+[Irideus](systems/boss-scripts.md#watcher-irideus-stage-one-partial-2026-10-22): ignored native RED before AI; four initial/effect/threshold/reset passes retained, exact native category-rejection/credit/copy/corpse case1GREEN22.01s. COMPOSITE5GREEN; source-clock/category1152+133 mismatch, Stage2 and dummy controllers remain explicit gaps.
+## 2026-10-24 — Completed B/C paired measurement record
+
+[Measurements](investigations/server-crate-split-measurements.md): B31/31 and C106/106 pass both native sides with exact case/input/executable identity. C comment wall105.80→6.51s/CPU58.43→12.18s; native154.20→106.26s/145.18→98.37CPU. Concurrent native host CPU74.61%→43.76% and reclaim differ: no causal runtime speedup or whole-workspace no-swap claim. Raw joined ledger/telemetry retained; no reruns. D2 runtime and matched rebuild remain separate.
+
+## 2026-10-24 — Generated achievement catalog ownership
+
+[Crate boundaries](systems/server-crates.md#generated-achievement-catalog-cut-d1): six generated lookups relocate37,819lines into existing server-catalog with three canonical immutable record types. Credit/ECS/player authority and unchanged matching predicates stay core; test identity and lookup-data census remain required. No elapsed-time speedup claim.
+
+## 2026-10-23 — Elemental Ascendance additional overload
+
+[Source/proof boundary](systems/spell-casting.md#elemental-ascendance-additional-overload--2026-10-23): actualb4a7f46b0 native2RED/1SKcontrolPASS27.40s; missing extra LB/CL casts, native prerequisites passed. Add effect8 casts once per root spell, independently of ordinary proc, retaining HIT+400ms and actual child damage. Same3nativeGREEN20.23s ata001f0541, clean17m03 build; [proof matrix](../handoffs/elemental-ascendance-extra-proof-ledger.md). Other roots/failed-roll/expiry and DPS integration remain unqualified; no coefficient/stat/RNG changes.
 ## 2026-10-23 — Missed hostile spell combat references
 
 [Combat](systems/combat.md#combat-state): native MISS/IMMUNE missing-reference REDs → selected-target launch/arrival preservation; three boundary controls, nine retained travel/reflection controls and unchanged Ret funding/TV damage GREEN at02090739e. No resource, hit-chance or timer override. WW equipment consumer1GREEN47.55s; combined parent gate awaits master8e7c7a685 integration. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#generic-missed-hostile-launch-combat).

@@ -4,7 +4,7 @@
 // ModifierTree SHA256 9afe5f7734828630b7088be5c5f1f5c36f954a86ea85305927b298a502bb5b90.
 use super::MythicRequirements;
 
-pub(super) fn mythic_requirements(criteria: u32, modifier: u32) -> Option<MythicRequirements> {
+pub fn mythic_requirements(criteria: u32, modifier: u32) -> Option<MythicRequirements> {
     match (criteria, modifier) {
         (53264, 180293) => Some(MythicRequirements {
             min_level: 10,
