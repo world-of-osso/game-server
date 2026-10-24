@@ -170,6 +170,53 @@ fn tuned_hogger(app: &mut App, entity: Entity) {
 }
 
 #[test]
+fn native_override_uses_first_main_trigger_and_first_nonzero_offhand_misc() {
+    use crate::spell_cast::test_harness::ObservedTriggeredCasts;
+    // Native99350 supplies main-only99351; native120287 supplies120286 for both
+    // hands. The later main trigger must not replace the first main trigger.
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[], 1).unwrap();
+    h.app.init_resource::<ObservedTriggeredCasts>();
+    let caster = h.caster;
+    for aura in [99350, 120287] {
+        crate::spell_cast::cast_triggered(h.app.world_mut(), caster, aura, Some(caster), 0);
+        assert!(crate::auras::has_aura(h.app.world(), caster, aura));
+    }
+    let mut stats = h.app.world_mut().get_mut::<CharacterStats>(caster).unwrap();
+    stats.off_hand = Some(crate::item_stats::WeaponDamage::UNARMED);
+    drop(stats);
+    h.app
+        .world_mut()
+        .resource_mut::<ObservedTriggeredCasts>()
+        .0
+        .clear();
+    h.attack(h.npc);
+    h.advance(8);
+    let casts = &h.app.world().resource::<ObservedTriggeredCasts>().0;
+    let children: Vec<_> = casts
+        .iter()
+        .filter(|(source, _, _)| *source == caster)
+        .map(|(_, spell, _)| *spell)
+        .collect();
+    assert!(
+        children.contains(&99351),
+        "native mainhand TriggerSpell: {children:?}"
+    );
+    assert!(
+        children.contains(&120286),
+        "native offhand MiscValue: {children:?}"
+    );
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.source == Some(caster.to_bits())
+                && event.spell_id.is_none()
+                && event.kind == CombatLogKind::Damage),
+        "neither replacement hand may also deal white damage"
+    );
+}
+
+#[test]
 fn scaled_overkill_melee_uses_logged_damage_units() {
     for (health_before, expected_health, expected_overkill) in
         [(46.0, 0.0, 6), (230.0, 115.0, 0), (115.0, 0.0, 0)]
