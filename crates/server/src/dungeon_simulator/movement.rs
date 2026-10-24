@@ -109,11 +109,14 @@ fn can_move(world: &World, unit: Entity) -> bool {
 }
 
 fn read_legs(
-    space: &Space,
+    space: Option<&Space>,
     from: Vec3,
     destination: Vec3,
 ) -> Result<std::collections::VecDeque<(Vec3, f32)>, String> {
-    space.walk_legs(from, destination)
+    match space {
+        Some(space) => space.walk_legs(from, destination),
+        None => Ok([(destination, from.distance(destination))].into()),
+    }
 }
 
 fn advance(mut from: Vec3, travel: &mut Travel, mut yards: f32, reach: f32) -> Vec3 {
@@ -178,14 +181,19 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     let Some((to, reach)) = destination(world, unit, from) else {
         return Ok(());
     };
+    let in_reach = crate::navigation::within_reach(from, to, reach);
     let mut travel = world
         .entity_mut(unit)
         .take::<Travel>()
-        .filter(|travel| travel.destination == to);
+        .filter(|travel| travel.destination == to && !in_reach);
     if travel.is_none() {
-        let legs = match read_legs(world.resource::<Space>(), from, to) {
-            Ok(legs) => legs,
-            Err(error) => return handle_unreachable_movement(world, unit, from, to, error),
+        let legs = if in_reach {
+            Default::default()
+        } else {
+            match read_legs(world.get_resource::<Space>(), from, to) {
+                Ok(legs) => legs,
+                Err(error) => return handle_unreachable_movement(world, unit, from, to, error),
+            }
         };
         travel = Some(Travel {
             destination: to,
@@ -228,7 +236,7 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
             });
         }
         crate::creature_ai::finish_return_home(world, unit);
-    } else {
+    } else if !in_reach {
         world.entity_mut(unit).insert(travel);
     }
     Ok(())
