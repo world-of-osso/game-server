@@ -232,6 +232,39 @@ fn literal_composite_all_active_native_steps_are_not_ready() {
 
 #[test]
 #[ignore = "native ordered composite control; requires private259 inputs"]
+fn literal_composite_one_unknown_selected_step_cannot_be_silently_omitted() {
+    let (mut run, equipment) = native_player(259);
+    let missing = COATINGS[3];
+    let known = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(run.actor)
+        .unwrap();
+    assert!(
+        known.contains(missing),
+        "start with the real selected native spellbook"
+    );
+    let retained = known.iter().filter(|&spell| spell != missing).collect();
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::class_progression::KnownSpells::fixture(retained));
+    let prepared = prepare(&mut run, &equipment, "apply_poison", &STEPS);
+    assert_native_steps_ready(&prepared, &equipment, &STEPS[..3], run.actor);
+    let absent = Action {
+        name: STEPS[3].name.into(),
+        target: None,
+        options: Default::default(),
+    };
+    assert!(prepared.execution(&absent, &equipment).unwrap().is_none());
+    assert!(
+        select(&prepared, &equipment, "apply_poison").is_none(),
+        "no partial three-of-four plan"
+    );
+}
+
+#[test]
+#[ignore = "native ordered composite control; requires private259 inputs"]
 fn literal_composite_empty_plan_is_not_ready() {
     let (mut run, equipment) = native_player(259);
     let prepared = prepare(&mut run, &equipment, "empty_setup", &[]);

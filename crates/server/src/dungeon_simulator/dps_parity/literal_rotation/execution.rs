@@ -68,12 +68,26 @@ impl Prepared {
 
     /// Plans only; the precombat executor owns clock advancement and each native cast.
     pub fn with_composites<'a>(
-        self,
-        _world: &mut World,
-        _actor: Entity,
-        _targets: &[Entity],
-        _composites: impl IntoIterator<Item = NativeComposite<'a>>,
+        mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+        composites: impl IntoIterator<Item = NativeComposite<'a>>,
     ) -> Result<Self, String> {
+        let enemies = native_targets(world, actor, targets);
+        for composite in composites {
+            let self_only = composite.steps.iter().all(|step| step.self_target);
+            let candidates: &[Entity] = if self_only {
+                std::slice::from_ref(&actor)
+            } else {
+                enemies.as_slice()
+            };
+            for (index, &target) in candidates.iter().enumerate() {
+                if let Some(plan) = read_composite_plan(world, actor, target, composite.steps)? {
+                    record_ready(&mut self.ready, composite.name, target, index == 0, plan);
+                }
+            }
+        }
         Ok(self)
     }
 
@@ -99,6 +113,44 @@ impl Prepared {
             .transpose()?;
         Ok(self.ready.get(&(key, target)).cloned())
     }
+}
+
+fn read_composite_plan(
+    world: &mut World,
+    actor: Entity,
+    candidate: Entity,
+    steps: &[NativeAction<'_>],
+) -> Result<Option<Execution>, String> {
+    let mut pending = Vec::new();
+    for step in steps {
+        let target = if step.self_target { actor } else { candidate };
+        if step.self_target && owns_active_aura(world, actor, step.spell) {
+            continue;
+        }
+        let enabled =
+            talent_permits(world, actor, step.talent)? && knows_action(world, actor, step.spell)?;
+        if !enabled {
+            return Ok(None);
+        }
+        if !native_ready(world, actor, step.spell, target, None)? {
+            return Ok(None);
+        }
+        pending.push(Execution::Spell(step.spell, target));
+    }
+    Ok((!pending.is_empty()).then_some(Execution::Composite(pending)))
+}
+
+fn owns_active_aura(world: &World, actor: Entity, spell: u32) -> bool {
+    let now = crate::spell_cast::now(world);
+    world
+        .get::<crate::auras::ActiveAuras>(actor)
+        .is_some_and(|auras| {
+            auras.iter().any(|aura| {
+                aura.spell_id == spell
+                    && aura.caster == actor
+                    && aura.expires_at.is_none_or(|at| at > now)
+            })
+        })
 }
 
 fn native_targets(world: &World, actor: Entity, supplied: &[Entity]) -> Vec<Entity> {

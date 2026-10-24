@@ -1,4 +1,9 @@
 ## 2026-10-23 — Native WW Stockade receipt
+## 2026-10-23 — Ordered native composite selection RED
+
+[Shared literal machinery](systems/simc-apl.md#shared-literal-fixture-machinery):4ad native3controlsPASS/3genuine selectionFAIL26.39s,18m29compile/1scaffold field warning. Actual four selected poison admissions, normal Deadly1500ms-base cast completion and non-poison6673 readiness qualify inputs. Implemented ordered pending plans/owned-self-aura skipping; empty/all-active unusable and world-only execute non-recursive. Added one missing-selected-step/no-partial control; GREEN pending.14766 owns precombat completion/Moving-GCD gating. [Proof](../handoffs/literal-composite-proof-ledger.md).
+
+## 2026-10-23 — Explicit target context and fresh dot metadata RED
 
 [Receipt](../handoffs/ww-stockade-proof-ledger.md): same existing f5 binary, fresh current private DB, explicit source-native Bo269/default32 roster. Opening participation PASS13.13s and complete seed11 route PASS174.02s, all3bosses dead; actual WW damage/kit casts and living actor retained in native report. Dungeon Space routing unchanged; no extra compile or gameplay workaround. Scope is not BIS90, literal dungeon APL or ±10% dummy parity.
 
