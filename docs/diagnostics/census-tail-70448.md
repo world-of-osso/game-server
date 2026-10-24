@@ -2,6 +2,10 @@
 
 Clean-room reference: TrinityCore a352b1fa. Baseline evidence: engine `data/diagnostics/class-census-70448-2026-10-21/{by-cause,fixture-delta,per-spec-matrix}.md`;7071PASS/756FAIL of7827 memberships. Dispatch certification is not full-ability parity.
 
+## Scoped Protection producer batch
+
+The [producer contract/evidence ledger](../specs/protection-damage-producers.md) owns current73 coverage. New67102cd4e advanced2+Venom3 proof is5PASS11.62s/no warnings, including native HP reversal and bouncy impacts/poison after midflight unequip. Earlier disjoint cases remain separately scoped; this does not promote census memberships or certify legal loadouts, UDP or full DPS parity. Feral103 is a separate subsequent batch.
+
 ## Missing power catalog at optional runtime boundaries
 
 Master regression from178 commit2b0e07c12: unrelated native44521 preparation recomputation reaches `non_mana_percent_changes` through world-port ACK in Apps that have PowerPools but no SpellCastPlugin/PowerTypeTable. A strict resource lookup occurred before comparing old/new capacity factors. Caller audit also found strict catalog lookups in `hunter_pet::spawn_pet`, `followers::spawning::class_stats` and `followers::kit_ai::resource_allows`; none represents missing catalog as a valid empty definition set.

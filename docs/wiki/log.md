@@ -1,3 +1,7 @@
+## 2026-10-23 — Protection producer native batch qualification
+
+[Coverage and limits](../specs/protection-damage-producers.md):67102cd4e5PASS11.62s/compile7m02/no warnings. Real native self-damage/heal reverses HP during Guillotine flight and confirms launch-time scaling; each actual bouncy perfected recipient gains owned poison after weapon removal and later ticks/bursts. Base final tick precedes expiry burst; native partial/last counts and absence remain valid. Prior disjoint/source-owned cases retained, not replayed. Scoped producer implementation/targeted evidence complete; full integration/legal-loadout/UDP/DPS acceptance is not claimed.
+
 ## 2026-10-23 — Perfected impact native RED and launch snapshot
 
 [Coverage](../specs/protection-damage-producers.md#venomfang-poison-lifecycle): merged40007856c3PASS/2FAIL13.06s/compile12m26/no warnings. Venom3 remains GREEN; actual7354 perfected damage after midflight unequip lacks a new owned poison application. Numeric fixture failure is INVALID qualification: effect1 is non-aura DUMMY3, corrected to native SpellStore input. Added per-cast native amount pair/recipient impact hook; removed live-driver lookup rather than adding fallback. GREEN pending.
