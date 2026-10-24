@@ -39,7 +39,7 @@ pub struct ObservedCombatEvents(pub Vec<CombatLogEvent>);
 
 /// Actual successful triggered launch boundary; FULL_MASK casts have no wire SpellGo.
 #[derive(Resource, Default)]
-pub(crate) struct ObservedTriggeredCasts(pub Vec<(Entity, u32, Option<Entity>)>);
+pub struct ObservedTriggeredCasts(pub Vec<(Entity, u32, Option<Entity>)>);
 
 pub fn collect_swings(
     h: &mut Harness,
@@ -130,6 +130,22 @@ pub struct WorldData {
     pub powers_db: PathBuf,
 }
 
+impl WorldData {
+    /// Read the canonical cached spells when preparing a fixture's inputs.
+    pub fn spell_store(&self) -> &SpellStore {
+        &self.store
+    }
+}
+
+/// Observe the canonical category's consumed charges and oldest pending recharge.
+pub fn charge_recovery(history: &super::SpellHistory, category: u32) -> (u8, Option<f64>) {
+    let charges = &history.charges[&category];
+    (
+        charges.used(),
+        charges.pending.front().map(|charge| charge.ready_at),
+    )
+}
+
 #[cfg(test)]
 pub(crate) fn place_toy_caster_on_source_area(
     h: &mut Harness,
@@ -178,8 +194,8 @@ pub(crate) fn place_toy_caster_on_source_map_area(
 
 /// What an effect with `Variance` 0.05 and an amount of `base` deals or
 /// heals: `base` ± 2.5%, rounded (SpellEffectInfo::CalcValue).
-#[cfg(test)]
-pub(crate) fn varied(base: f32) -> std::ops::RangeInclusive<f32> {
+#[cfg(any(test, feature = "test-support"))]
+pub fn varied(base: f32) -> std::ops::RangeInclusive<f32> {
     (base * 0.975).round()..=(base * 1.025).round()
 }
 
@@ -250,7 +266,7 @@ fn import_class_world() -> std::sync::Arc<tempfile::TempDir> {
 }
 
 /// Explicit native template authority for fixtures whose spells restrict creature type.
-pub(crate) fn load_native_creature_world(entries: &[u32]) -> crate::world_data::WorldData {
+pub fn load_native_creature_world(entries: &[u32]) -> crate::world_data::WorldData {
     let source = crate::test_data::world_data();
     let templates: std::collections::HashMap<_, _> = entries
         .iter()
@@ -267,6 +283,81 @@ pub(crate) fn load_native_creature_world(entries: &[u32]) -> crate::world_data::
         expected_stats: source.expected_stats.clone(),
         ..Default::default()
     }
+}
+
+pub fn spawn_native_dodge_target(entry: u32, facing: f32) -> Harness {
+    use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
+    use shared::components::{Rotation, UnitLevel};
+    const STRIKE: u32 = 38598;
+    const CLOAK_OF_DARKNESS: u32 = 70188;
+    let mut h = harness_with(
+        Vec::new(),
+        &[STRIKE, CLOAK_OF_DARKNESS, 853, 7384, 51723, 19434],
+        4,
+        true,
+    )
+    .unwrap();
+    let native = load_native_creature_world(&[entry]);
+    let template = &native.templates[&entry];
+    h.app.world_mut().entity_mut(h.npc).insert((
+        Npc {
+            template_id: entry,
+            name: template.name.clone(),
+        },
+        UnitFactionTemplate(u32::from(template.faction)),
+        UnitLevel(template.max_level),
+        Rotation {
+            x: 0.0,
+            y: facing + std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
+    ));
+    if let Some(tuning) = &template.tuning {
+        assert_eq!(tuning.delta.0, tuning.delta.1);
+        let scaling = shared::level_scaling::LevelScaling {
+            content_tuning_id: tuning.content_tuning_id,
+            min_level: template.min_level,
+            max_level: template.max_level,
+            delta: tuning.delta.0,
+        };
+        let level = scaling.native_level();
+        // Keep native guard damage nonlethal; dodge inputs remain unchanged.
+        const HEALTH_BUFFER_MULTIPLIER: f32 = 16.0;
+        let health = tuning.stats.max_health(level) * HEALTH_BUFFER_MULTIPLIER;
+        h.app.world_mut().entity_mut(h.npc).insert((
+            UnitLevel(level),
+            shared::components::Health {
+                current: health,
+                max: health,
+            },
+            scaling,
+            crate::level_scaling::ScaledStats(tuning.stats.clone()),
+        ));
+    }
+    h.app.insert_resource(native);
+    h.advance(2);
+    assert!(super::targets::is_hostile(h.app.world(), h.caster, h.npc));
+    let target = h.npc;
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: target,
+            target,
+            spell_id: CLOAK_OF_DARKNESS,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    h.advance(2);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<ActiveAuras>(target)
+            .unwrap()
+            .modifier(49),
+        100.0
+    );
+    h
 }
 
 pub(crate) fn power_table(data: &WorldData) -> PowerTypeTable {
@@ -457,15 +548,15 @@ pub fn harness(extra: Vec<SpellInfo>, ids: &[u32], class: u8) -> Option<Harness>
     harness_with(extra, ids, class, false)
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) const SUNWELL_RADIANCE: u32 = 45769;
 
 /// Opt-in coefficient/admission fixture, not a legal class loadout. Native
 /// Sunwell Radiance45769 effect1 supplies permanent enemy-dodge reduction20
 /// (published70391 SpellEffect37781, SpellDuration21). Keep ordinary NPC dodge
 /// active in all other fixtures; never change RNG or spell defense attributes.
-#[cfg(test)]
-pub(crate) fn harness_with_native_enemy_dodge_reduction(
+#[cfg(any(test, feature = "test-support"))]
+pub fn harness_with_native_enemy_dodge_reduction(
     extra: Vec<SpellInfo>,
     ids: &[u32],
     class: u8,
@@ -478,13 +569,13 @@ pub(crate) fn harness_with_native_enemy_dodge_reduction(
 }
 
 /// Custom coefficient fixtures load SUNWELL_RADIANCE explicitly before opting in.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn apply_native_enemy_dodge_reduction(h: &mut Harness) {
     apply_native_enemy_dodge_reduction_to(h, h.caster);
 }
 
 /// Pet and foreign-player damage fixtures must qualify the actual attacker.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn apply_native_enemy_dodge_reduction_to(h: &mut Harness, attacker: Entity) {
     crate::auras::apply_aura(
         h.app.world_mut(),

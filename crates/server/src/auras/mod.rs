@@ -420,10 +420,7 @@ impl AuraInstance {
                 .iter_mut()
                 .find(|effect| effect.index == fresh.index)
             {
-                Some(effect) => {
-                    effect.amount = fresh.amount;
-                    effect.absorb_remaining = fresh.absorb_remaining;
-                }
+                Some(effect) => *effect = fresh,
                 None => self.effects.push(fresh),
             }
         }

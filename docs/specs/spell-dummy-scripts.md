@@ -23,6 +23,39 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 
 ## What it must do
 
+### BM Howl summon cycle
+
+`SIMC_BM_HOWL_OF_THE_PACK_LEADER_CYCLE` is an explicit parent-approved policy (2026-10-24), pinned SimC76f8118 hunter3776–3840/8240–8290. TC a352b1fa has no binding and DB2 has no471876 TriggerSpell links; these are not fabricated native rows.
+
+- [ ] Normal class-summon import follows sourced471876 links to Wyvern1222271, Boar472020 and Bear471993, then actual native triggers (471993→471990) to authentic TDB1210 templates234170/234018 with models/addons. No world spawns or fabricated stats; parent publishes delta after code lands.
+- [ ] Actual selected BM combat naturally earns native cooldown/readiness and cycles Wyvern→Boar→Bear. Native DB2 durations, stack caps and amounts remain authoritative; no forced ready aura or timer assignments in native proof.
+- [ ] Ordinary real KC consumes ready state only through its actual summon/action lifecycle; root/KC/cycle remains open while real-collision Austin fixture executes0KC. No teleport or disabled LOS.
+- [x] Cry stacks are earned from a real Wyvern summon, not granted directly as a substitute.519339c08 genuine gameplay RED: actual1222271 entity/native expiry positive and removed-passive summon/noCry controlPASS; selected actual summon leaves0Cry stacks versus native471876 effect2=10 (native4:2PASS/2FAIL22.68s, other failure is root-fixture0KC and is not accepted gameplay RED). c7c33ace7 actual-summon→Cry3GREEN17.84s (clean12m52s compilation), qualified separately before root/cycle; [proof/limits](../handoffs/bm-howl-proof-ledger.md).
+- [ ] Ledger native DB2/TDB facts, TC absence and named policy separately. Missing native Boar actor must not be invented: pinned Boar472020 is a dummy/direct-action path, not proof of a creature summon.
+
+Importer RED3842f60a9: native reachability misses both actors; normal private import yields no Bear/Wyvern rows (2FAIL6.273s) →ba3bc5df8 importer2GREEN3.917s. This is importer behavior, not gameplay RED. Native summon admission requires actual ground/LOS; public `test_data::install_native_collision` is fixture-only (`test`/`test-support`), loads real `GAME_SERVER_GROUND_DIR` resources and exposes no private core types. Initial missing-collision/Player-stable/compile failures are explicitly not gameplay RED; actual Austin uses its normal883 pet.
+
+### Native BM owner cooldown returns
+
+- [x] Successful Bestial Wrath19574 restores the active selected193532 Scent of Blood native effect1 count to Barbed217200’s actual charge category. Native70448 count is1, not an assumed older two; real charge caps and oldest recharge progress remain governed by existing RestoreCharge. Actual absence/removal restores nothing. The owner return does not depend on whether a persistent pet can perform its separate344572 strike.
+- [x] Selected469880 Barbed Scales must reduce pending Barbed recovery by its native2000ms at successful normal or free Cobra193455 cast, before the next frame/missile hit; absence/removal must not reduce it. Normal/free native Player counterexamples reach2FAIL/2PASS21.30s at18505c7e0, with unchanged real geometry and successful40yd admission. The existing shared launch path binds the native reduction once for either cast kind;57786fbd9 combined owner6GREEN24.39s proves normal13.359→11.359/free14.609→12.609 with absence controls unchanged. No hit-time workaround or invented timer.
+
+Native Austin Scent counterexample at5b7cb789f/e16492ffa reaches genuine missing-return RED: full2→spent1, successful BW after1.25s leaves1 versus expected2; no intervening Barbed casts, removed-aura controlPASS. Free-Cobra Scales also reaches genuine missing2s RED with its controlPASS. Normal Cobra geometry moved outside native40yd range and is explicitly a fixture failure, not gameplay RED. Scent9a03bcd84 reaches2GREEN19.78s: active actual BW restores1→2, absent stays1 after1.25s. [Proof](../handoffs/bm-owner-cooldown-proof-ledger.md); combined owner6GREEN24.39s follows at577, broad integration remains open. Native descriptions plus SimC76f8118 `sc_hunter.cpp6741–6742/4963–4964` qualify the boundaries; no cast counts, coefficients, ranks or rotations are tuned.
+
+### Native Snakeskin Quiver execution
+
+- [x] Active468695 rolls its native effect1 chance once per successful Auto Shot75 execution and launches native Cobra193455 at that shot’s actual victim. Existing triggered casting supplies the free Focus/GCD behavior; normal paid Cobra and native ranged timers remain unchanged. Missing/removed passive grants no free action; rejected shots do not reach the policy. Named policy `BM_SNAKESKIN_QUIVER_SIMC_76F8118` follows `sc_hunter.cpp3988–4007/5041–5047`; pinned TC a352b1fa scripts have no Snakeskin binding. Do not claim a TC port or copy SimC numeric spell damage.
+
+Native Austin300s seed70448 RED at8e04d880a:122 Auto Shots/43 paid Cobras/0 free, with removed-passive controlPASS (1FAIL/1PASS33.20s). Atb77be90e9 bothGREEN26.23s: active122Auto/29paid/13free; removed122Auto/43paid/0free. This establishes proc correctness, not a DPS improvement or whole-BM qualification. [Proof](../handoffs/bm-snakeskin-proof-ledger.md); subsequent splitB integration check and parent broad gate remain separate.
+
+### Elemental Ascendance additional overload
+
+Native70448 supplies1219480s9/effect8; pinned SimC76f8118 `sc_shaman.cpp3318–3348` corroborates the once-per-cast Chain policy. [Implementation and proof boundary](../wiki/systems/spell-casting.md#elemental-ascendance-additional-overload--2026-10-23).
+
+- [ ] While native1219480 is active, affected Mastery casts cause its s9/effect8 additional Elemental Overload independently of the ordinary mastery proc. Chain target procs remain ordinary per-target procs; the additional cast occurs once for the spell, not once per recipient. Retain native HIT+400ms overload timing and actual child damage, without altering coefficients, stats or RNG.
+- [x] Real Stormkeeper alone yields one ordinary45284 after a landed188196; Stormkeeper+Ascendance yields two. A three-target188443 with both buffs yields three ordinary45297 casts plus one additional cast. Native profile/auras/landed hits are prerequisites; no fabricated proc chances or buff amounts. [Exact native3GREEN](../handoffs/elemental-ascendance-extra-proof-ledger.md); other affected roots and failed-ordinary-roll/expiry cases remain unqualified.
+
+
 ### Census effect77 source ports (70448)
 
 - [x] Gorefiend's Grasp108199E1 applies native454824 only when its caster owns454822, using TC's limited triggered flags; foreign/absent talent does not apply it. Unmatched E0 remains a named gap, not whole-spell support.
@@ -40,7 +73,9 @@ Source: local Mainline12.1.0.69933 description “Combo point generating abiliti
 
 ### Twentieth-batch authored totals and next-spell uses
 
-- [x] Barbed Shot217200 distributes its authored s2-tick damage total over its unchanged native initial/regular schedule. Local s2=5 versus native seven ticks is reconciled by equal distribution, an inference from total and clock, not independently observed Retail tick amounts. Same-owner reapplication adds unpaid damage to the new total, pays due ticks before snapshot and preserves foreign owners. Completed casts start named246152 periodic Focus once; rejected casts do not grant it.
+- [x] Native70448 Pack Tactics321014 adds its named1282660 Focus child once at successful Barbed217200 launch, before the next clock/DoT tick, only while the passive aura is active. Read the child’s native amount; ordinary caps/overflow remain authoritative, and periodic246152 remains independent. Real geared Player launch/overflow, removed-passive control and Austin300s kit-count fixtures:2FAIL/1PASS18.24s at fe855f75b →3GREEN32.01s at ccfb44c19. Source: native321014 description/1282660 effect30 and SimC76f8118 `sc_hunter.cpp5091–5092`; no coefficient or timer is introduced. [Proof](../handoffs/bm-pack-resource-proof-ledger.md); broad integration gate and whole-BM parity remain separate.
+
+- [x] Barbed Shot217200 uses the generic DB2/TC per-tick amount and rolling carry, not tooltip-only s2=5 normalization. Native period/duration/extra-initial determine payments; selected70448 traits yield8 over14s. Same-owner recasts reset the normal nonstacking schedule and distribute unpaid old damage over the fresh ticks; foreign owners remain independent. Native-source RED198697bd9:2FAIL/2PASS21.52s →9bb480581 native4GREEN27.34s; [proof](../handoffs/bm-native-periodic-proof-ledger.md), parent broad integration pending. The prior equal-total inference and numeric-dummy closure are withdrawn; no replacement behavior is invented for dummy5. Completed casts still start named246152 periodic Focus once; rejected casts do not grant it.
 - [x] Stormkeeper191634 grants its s5 empowered-spell uses instead of the single options-row charge. Each matching completed Lightning Bolt/Chain Lightning consumes one use; unrelated spells do not. Zero-valued modifier effects never count as used for charge consumption, for any aura/spell; nonzero matched effects still spend normally (TC Player.cpp22820–22823). Native modifiers remain authoritative. Elemental Overload targeting/variants remain uncertified.
 
 Tests: `spell_cast/dummy20_tests.rs`. Local Mainline12.1.0.69933 and TDB1210 only; [coverage](../spell-dummy20-coverage.md), [runtime](../wiki/systems/spell-casting.md#twentieth-batch-authored-totals-and-next-spell-uses). Audited but unidentified Dummy fields are retained, not no-op closures.
