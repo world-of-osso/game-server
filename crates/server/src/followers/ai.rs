@@ -10,7 +10,7 @@ use crate::networking::CombatTarget;
 
 /// Navigation's stopping distance, from the selected player's spell range.
 #[derive(Component, Clone, Copy)]
-pub(crate) struct FollowerReach(pub f32);
+pub struct FollowerReach(pub f32);
 
 pub(super) const MELEE_REACH: f32 = 2.0;
 const AUTO_SHOT: u32 = 75;

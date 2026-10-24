@@ -45,3 +45,7 @@ Aura aliases stay in `Bindings.buffs`. Register `Bindings.dot_refresh[alias] = D
 Sources: pinned `action.cpp2435–2508,4630–4645,5362–5453`, `dot.cpp458–477`, `raid_event.cpp3068–3141`; native target validator, aura duration producer and `scripts/empower_evoker.rs::build_fire_breath_release`.
 
 14781 retracted the first-target dispatch report: c7e118a75 already keys Prepared by(action,target). No redundant patch/Living Flame test. No DPS, reference, canonical DB or template changes. Persistent snapshot metadata, FIRST/cycle and composite selection remain open; this packet qualifies only the matrix above.
+
+## Crate-split B integration correction
+
+Main requires origin/master d675bf8fb before ta1068. Merge retains explicit TargetContext while adopting public NativeFacts, fixture roles/events and refresh metadata needed by the separate server-simulation crate. Simulation files follow master's directory move; no test function renamed. Core server has no executable dungeon_simulator reference after merge. Explicit post-commit `cargo check -p server -p server-simulation --tests` is required; result pending. Historical native runtime receipts retain their exact earlier revisions, not relabeled as post-split proof.

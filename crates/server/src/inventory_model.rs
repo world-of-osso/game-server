@@ -519,7 +519,10 @@ impl InventoryModel {
                 Some((slot, properties.clone()))
             })
             .collect();
-        crate::stats::EquippedItemModifiers { items }
+        crate::stats::EquippedItemModifiers {
+            items,
+            ..Default::default()
+        }
     }
 
     pub(crate) fn definition_source(&self, guid: u64) -> ItemDefinitionSource {

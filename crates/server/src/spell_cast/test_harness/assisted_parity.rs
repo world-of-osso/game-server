@@ -7,7 +7,7 @@ use game_engine_core::assisted_combat::AssistedFacts;
 use shared::components::{Health, Player, Position, ThreatTable};
 use std::collections::BTreeSet;
 
-pub(crate) fn read_facts(
+pub fn read_facts(
     world: &mut World,
     actor: Entity,
     target: Entity,
@@ -32,11 +32,7 @@ pub(crate) fn read_facts(
     Ok(facts)
 }
 
-pub(crate) fn read_request_window(
-    world: &World,
-    actor: Entity,
-    spell_id: u32,
-) -> Result<bool, String> {
+pub fn read_request_window(world: &World, actor: Entity, spell_id: u32) -> Result<bool, String> {
     let spell = world
         .resource::<SpellStore>()
         .get(spell_id)
