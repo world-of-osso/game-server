@@ -13,6 +13,7 @@ mod player_rotation;
 mod power_tests;
 mod report;
 pub(crate) mod single_spell;
+mod warrior_stat_tests;
 mod windwalker_rotation;
 use bevy::prelude::*;
 use serde_json::{Value, json};
