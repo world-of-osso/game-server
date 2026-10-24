@@ -1,4 +1,5 @@
 - [Fire-local native facts](systems/simc-apl.md#fire-local-facts-2026-10-24) — selected-recipient HP gates and actual caster-owned travel counts qualified; full literal caller/DPS still open.
+- [Configured expected combat length](systems/simc-apl.md#expected-combat-length) — existing fixture duration only, positive/finite; explicit Dungeon gap, no300/default.4RED→4GREEN0.00s/0warnings, minimal-world DB-free tests enabled; integration pending.
 - [FIRST / native-order cycle selectors](systems/simc-apl.md#capability--proof-matrix) —14775's bare/explicit FIRST and native-order cycles merged from2cd5fdaa9; original38GREEN proof separate from current Feral reporter recheck.
 - [Selected RWK native lifecycle](../handoffs/ww-rwk-producer-proof-ledger.md) — natural producer, actual RSK reset, child and one-use consumption/unselected owner;7GREEN atf2c, numerical band and sourceAoE open.
 - [Self-cast target_if readiness context](../handoffs/self-target-context-proof-ledger.md) — actual Zenith RED→GREEN, four WW native controls plus25 shared regressions; context/cast-target mapping, no default fallback. Numerical band open.

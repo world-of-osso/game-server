@@ -1,6 +1,10 @@
 ## 2026-10-24 — Fire-local HP and pending-event facts
 
 [Fire-local facts](systems/simc-apl.md#fire-local-facts-2026-10-24): three genuine native unknown-operand REDs precede selected-recipient Firestarter/Scorch gates and actual caster-owned Hot Streak pending-event count. Four scoped current-native cases now pass, including explicit second recipient and overlapping ordinary Fireball/earned-Hot-Streak Pyro. Two observed overlap setup errors corrected with real native state, not timers/grants. [Exact proof ledger](../handoffs/fire-local-facts-proof-ledger.md). Full88row caller and ±10%300s ST/3T remain open.
+## 2026-10-24 — Shared configured expected combat length GREEN
+
+[Shared expected length](systems/simc-apl.md#expected-combat-length):88095009c4genuineRED0.02s→991b7fcde4/4GREEN0.00s,14m24compile/0warnings after landed924638aba merge. Fixture duration147.5/300/600.25 stays independent of elapsed72/remaining;0/-1/NaN/±Inf and Dungeon are named unavailable, proposed action returns configured215.75. No fixed300/default/extra field/DB input. Tests enabled attribute-only; integration remains main-owned. [Proof](../handoffs/expected-combat-length-proof-ledger.md).
+
 ## 2026-10-24 — Shared pool-for-next resource contract
 
 [Contract proof](../handoffs/feral-shared-program-proof-ledger.md#shared-resource-contract-implementation): concrete5RED/1control→6GREEN; entire engine-free shared44GREEN ata63. Pool wait propagates through calls, never dispatches or grants resources; source conditions/native maximum admission remain separate. max_energy requires action-bound maximum_energy; original two reporter cases now error explicitly until14860 supplies missing cost/cap facts. Native Feral adapter and parity remain open.
