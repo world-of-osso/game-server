@@ -132,6 +132,154 @@ fn dps_parity_demo_native_first_pull_survives_inflight_precombat_cast() {
     );
 }
 
+fn prepare_manual_guardian_control() -> Run {
+    let mut run = prepare(266, 3).unwrap();
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter).unwrap();
+    run.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(run.actor)
+        .unwrap()
+        .0 = Some(run.targets[0]);
+    run
+}
+
+fn cast_native_guardian_in_melee_range(run: &mut Run, spell: u32) -> Entity {
+    let actor = run.actor;
+    cast_and_finish(run, actor, spell);
+    let world = run.app.world_mut();
+    let guardian = world
+        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(world)
+        .find(|(_, summon)| summon.owner == actor && summon.spell_id == spell)
+        .map(|(entity, _)| entity)
+        .expect("real native child summon must produce its actual guardian");
+    // Isolate melee startup/cadence from the native summon scatter position.
+    let position = *world
+        .get::<shared::components::Position>(run.targets[0])
+        .unwrap();
+    world.entity_mut(guardian).insert(position);
+    guardian
+}
+
+fn read_guardian_swings(world: &World, actor: Entity) -> Vec<(f64, u64, f32)> {
+    use shared::protocol::CombatEventType;
+    world
+        .resource::<crate::combat::CombatLog>()
+        .range(0.0, f64::MAX)
+        .into_iter()
+        .filter(|entry| entry.event.attacker == actor.to_bits() && entry.event.spell_id == 0)
+        .filter(|entry| {
+            matches!(
+                entry.event.event_type,
+                CombatEventType::MeleeDamage
+                    | CombatEventType::CriticalHit
+                    | CombatEventType::Miss
+                    | CombatEventType::Dodge
+                    | CombatEventType::Parry
+                    | CombatEventType::Block
+            )
+        })
+        .map(|entry| (entry.timestamp, entry.event.target, entry.event.amount))
+        .collect()
+}
+
+#[test]
+#[ignore = "real90 Dreadstalker melee/cadence/retarget/stop boundary; private spec266 inputs required"]
+fn dps_parity_demo_native_dreadstalker_melee_tracks_owner_without_resetting_clock() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_manual_guardian_control();
+    let guardian = cast_native_guardian_in_melee_range(&mut run, 193331);
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let first = read_guardian_swings(run.app.world(), guardian);
+    assert_eq!(
+        first.len(),
+        3,
+        "real Dreadstalker must start native melee and swing every TC2000ms: {first:?}"
+    );
+    assert!(
+        first.iter().any(|(_, _, damage)| *damage > 0.0),
+        "native inherited owner power must produce actual melee damage"
+    );
+    assert!(
+        first
+            .iter()
+            .all(|(_, victim, _)| *victim == run.targets[0].to_bits())
+    );
+    for pair in first.windows(2) {
+        assert!(
+            (pair[1].0 - pair[0].0 - 2.0).abs() <= 0.051,
+            "TC Guardian base swing clock: {first:?}"
+        );
+    }
+    run.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(run.actor)
+        .unwrap()
+        .0 = Some(run.targets[1]);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let retargeted = read_guardian_swings(run.app.world(), guardian);
+    let next = retargeted
+        .get(first.len())
+        .expect("real guardian must pick up the owner's new target");
+    assert_eq!(next.1, run.targets[1].to_bits());
+    assert!(
+        (next.0 - first.last().unwrap().0 - 2.0).abs() <= 0.051,
+        "retarget keeps the running swing clock: {retargeted:?}"
+    );
+    run.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(run.actor)
+        .unwrap()
+        .0 = None;
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert_eq!(
+        read_guardian_swings(run.app.world(), guardian),
+        retargeted,
+        "clearing owner target must stop real guardian swings"
+    );
+}
+
+#[test]
+#[ignore = "real90 caster-Imp melee exclusion control; private spec266 inputs required"]
+fn dps_parity_demo_native_caster_imp_keeps_firebolt_without_guardian_melee() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_manual_guardian_control();
+    let guardian = cast_native_guardian_in_melee_range(&mut run, 104317);
+    for _ in 0..200 {
+        run.app.update();
+    }
+    assert!(
+        read_guardian_swings(run.app.world(), guardian).is_empty(),
+        "caster Imps do not acquire guardian melee"
+    );
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(guardian.to_bits())
+                && event.spell_id == Some(104318)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "excluding caster melee must preserve real native Firebolt damage"
+    );
+}
+
 fn advance_until_cast_finished(run: &mut Run, unit: Entity) {
     for _ in 0..400 {
         if run
