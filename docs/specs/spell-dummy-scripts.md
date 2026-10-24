@@ -23,6 +23,17 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 
 ## What it must do
 
+### BM Howl summon cycle
+
+`SIMC_BM_HOWL_OF_THE_PACK_LEADER_CYCLE` is an explicit parent-approved policy (2026-10-24), pinned SimC76f8118 hunter3776–3840/8240–8290. TC a352b1fa has no binding and DB2 has no471876 TriggerSpell links; these are not fabricated native rows.
+
+- [ ] Normal class-summon import follows sourced471876 links to Wyvern1222271, Boar472020 and Bear471993, then actual native triggers (471993→471990) to authentic TDB1210 templates234170/234018 with models/addons. No world spawns or fabricated stats; parent publishes delta after code lands.
+- [ ] Actual selected BM combat naturally earns native cooldown/readiness and cycles Wyvern→Boar→Bear. Native DB2 durations, stack caps and amounts remain authoritative; no forced ready aura or timer assignments in native proof.
+- [ ] Ordinary real KC consumes ready state only through its actual summon/action lifecycle; Cry stacks are earned from a real Wyvern summon, not granted directly as a substitute. Strict behavioral RED before runtime implementation.
+- [ ] Ledger native DB2/TDB facts, TC absence and named policy separately. Missing native Boar actor must not be invented: pinned Boar472020 is a dummy/direct-action path, not proof of a creature summon.
+
+Importer RED3842f60a9: native reachability misses both actors; normal private import yields no Bear/Wyvern rows (2FAIL6.273s). This is importer behavior, not gameplay RED.
+
 ### Native BM owner cooldown returns
 
 - [x] Successful Bestial Wrath19574 restores the active selected193532 Scent of Blood native effect1 count to Barbed217200’s actual charge category. Native70448 count is1, not an assumed older two; real charge caps and oldest recharge progress remain governed by existing RestoreCharge. Actual absence/removal restores nothing. The owner return does not depend on whether a persistent pet can perform its separate344572 strike.
