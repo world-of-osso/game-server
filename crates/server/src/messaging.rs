@@ -191,7 +191,7 @@ pub fn process_chat_history_requests(
             let Ok(mut sender) = senders.get_mut(conn_entity) else {
                 continue;
             };
-            sender.send::<AuthChannel>(shared::protocol::ChatHistoryResponse {
+            sender.send::<ChatChannel>(shared::protocol::ChatHistoryResponse {
                 messages,
                 error: None,
             });

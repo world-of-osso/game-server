@@ -30,6 +30,7 @@ Wire contract: shared-protocol `docs/guild-ranks.md`.
 - Named exclusions: `GUILD_RANK_ASSIGNMENT_AUTHENTICATOR_GAP`, `GUILD_RANK_ASSIGNMENT_LEADERSHIP_GAP` (direct assignment cannot transfer/disband; voluntary transfer has a [separate contract](guild-leadership-transfer.md)), `GUILD_RANK_ASSIGNMENT_CONFIG_EXCLUDED` (existing creation/reordering unchanged). No authenticator eligibility fields are fabricated. Protocol/server/client land together; native proof is post-landing.
 
 ### Social permissions
+- [ ] Existing recipient-authorized ChatHistoryResponse shares ordered ChatChannel with live ChatMessage. Native typed buffering must preserve their actual message-ID order so a history replacement cannot erase a later live delivery. Client held-worker real UDP RED reproduced this ordering loss; GREEN/native acceptance pending. No new chat service or message schema.
 - [x] Guild/officer chat requires separate listening and speaking rights; history records only authorized recipients.
 - [x] Chat membership decisions use authoritative persisted guild IDs when components are stale.
 - [ ] Invitations, MOTD, guild information and officer-note editing/viewing require their rank flags.
