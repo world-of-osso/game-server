@@ -193,6 +193,93 @@ fn prepare_authored_guardian_control() -> Run {
 }
 
 #[test]
+#[ignore = "native265187 Antoran autoattack replacement on authored ground/LOS; private spec266 inputs required"]
+fn dps_parity_demo_native_antoran_tyrant_uses_burning_cleave_autoattacks() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_authored_guardian_control();
+    let actor = run.actor;
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1250921),
+        "selected Antoran Armaments must be active before the native summon"
+    );
+    cast_and_finish(&mut run, actor, 265187);
+    let world = run.app.world_mut();
+    let tyrants: Vec<_> = world
+        .query::<(
+            Entity,
+            &crate::spell_cast::summon::SummonedCreature,
+            &shared::components::Npc,
+        )>()
+        .iter(world)
+        .filter(|(_, summon, npc)| {
+            summon.owner == actor && summon.spell_id == 265187 && npc.template_id == 250289
+        })
+        .map(|(entity, _, _)| entity)
+        .collect();
+    assert_eq!(
+        tyrants.len(),
+        1,
+        "ordinary native265187 must create one actual250289"
+    );
+    let tyrant = tyrants[0];
+    let armaments = crate::auras::has_aura(world, tyrant, 1251000);
+    let cleave = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1264093)
+        .unwrap()
+        .clone();
+    let admission = format!(
+        "{:?}",
+        crate::spell_cast::read_native_cast_start(world, tyrant, &cleave, run.targets[0])
+    );
+    let events_before = world.resource::<ObservedCombatEvents>().0.len();
+    for _ in 0..120 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[events_before..];
+    let casts = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(tyrant.to_bits())
+                && event.spell_id == Some(1264093)
+                && event.kind == CombatLogKind::CastSuccess
+        })
+        .count();
+    let damage: i64 = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(tyrant.to_bits())
+                && event.spell_id == Some(1264093)
+                && event.kind == CombatLogKind::Damage
+        })
+        .map(|event| event.amount)
+        .sum();
+    let path = inputs::directory()
+        .unwrap()
+        .join("266.antoran-autoattack-boundary.json");
+    std::fs::write(
+        &path,
+        serde_json::to_vec_pretty(&json!({
+            "native_root": 265187, "entry": 250289, "actor": tyrant.to_bits(),
+            "armaments_aura_at_spawn": armaments, "initial_cast_admission": admission,
+            "window_seconds": 6, "cleave_casts": casts, "cleave_damage": damage
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    assert!(
+        armaments,
+        "native Antoran must carry its1251000 passive; boundary {}",
+        path.display()
+    );
+    assert!(
+        casts > 1 && damage > 0,
+        "native autoattack replacement must execute repeatedly with real damage, not once through an untimed spell list; boundary {}",
+        path.display()
+    );
+}
+
+#[test]
 #[ignore = "full native104316 dispatch on authored ground/LOS; private spec266 inputs required"]
 fn dps_parity_demo_native_call_dreadstalkers_dispatches_both_authored_children() {
     let _seed = crate::random::seed_scope(70448);
