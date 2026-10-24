@@ -108,7 +108,7 @@ fn purpose_applications(run: &Run) -> usize {
         .count()
 }
 
-fn current_holy_power(run: &Run) -> f32 {
+pub(super) fn current_holy_power(run: &Run) -> f32 {
     crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::HolyPower)
         .unwrap()
         .0
@@ -138,7 +138,7 @@ fn cast_generator(run: &mut Run) -> Result<(), CastFailure> {
     }
 }
 
-fn earn_finisher_power(run: &mut Run, finisher: u32) {
+pub(super) fn earn_finisher_power(run: &mut Run, finisher: u32) {
     let spell = run
         .app
         .world()
