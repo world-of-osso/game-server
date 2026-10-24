@@ -581,6 +581,113 @@ fn dps_parity_demo_inner_demons_uses_native_period_without_tick_zero() {
 }
 
 #[test]
+#[ignore = "unselected native267216 must not produce alternate Imps; private143622 inputs required"]
+fn dps_parity_demo_inner_demons_unselected_does_not_summon() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_authored_guardian_control();
+    inputs::install_traits(run.app.world_mut(), run.actor, &[]).unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 267216));
+    let before = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    for _ in 0..500 {
+        run.app.update();
+    }
+    assert!(
+        !run.app.world().resource::<ObservedCombatEvents>().0[before..]
+            .iter()
+            .any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(279910)
+                    && event.kind == CombatLogKind::Summon
+            }),
+        "unselected owner must not gain project periodic summons"
+    );
+}
+
+fn cast_native_inner_demons_script_control(
+    world: &mut World,
+    unit: Entity,
+    _aura: &crate::auras::AuraInstance,
+    index: u8,
+) {
+    if index == 0 {
+        crate::spell_cast::cast_triggered(world, unit, 104317, Some(unit), 1);
+    }
+}
+
+#[test]
+#[ignore = "native trigger/script overrides project periodic association; private143622 inputs required"]
+fn dps_parity_demo_inner_demons_native_trigger_or_script_wins() {
+    let _seed = crate::random::seed_scope(70448);
+    for scripted in [false, true] {
+        let mut run = prepare_authored_guardian_control();
+        let actor = run.actor;
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Consumed,
+            |aura| aura.spell_id == 267216,
+        );
+        if scripted {
+            // Hypothetical native registration fixture, not an observed TC hook.
+            run.app
+                .world_mut()
+                .resource_mut::<crate::auras::scripts::AuraScripts>()
+                .0
+                .insert(
+                    267216,
+                    crate::auras::scripts::AuraScript {
+                        on_periodic: Some(cast_native_inner_demons_script_control),
+                        ..Default::default()
+                    },
+                );
+        } else {
+            // Hypothetical future native trigger, retaining the actual aura period.
+            let mut store = run
+                .app
+                .world_mut()
+                .resource_mut::<crate::spell_info::SpellStore>();
+            let mut spell = store.get(267216).unwrap().clone();
+            spell
+                .effects
+                .iter_mut()
+                .find(|effect| effect.index == 0)
+                .unwrap()
+                .trigger_spell = 104317;
+            store.replace_fixture_spell(spell);
+        }
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 267216, Some(actor), 0);
+        let before = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        for _ in 0..500 {
+            run.app.update();
+        }
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0[before..];
+        let summons = |spell| {
+            events
+                .iter()
+                .filter(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.spell_id == Some(spell)
+                        && event.kind == CombatLogKind::Summon
+                })
+                .count()
+        };
+        assert_eq!(
+            summons(104317),
+            2,
+            "native authority runs exactly once per tick; scripted={scripted}"
+        );
+        assert_eq!(
+            summons(279910),
+            0,
+            "project association must not add a second summon; scripted={scripted}"
+        );
+    }
+}
+
+#[test]
 #[ignore = "native265187 Antoran autoattack replacement on authored ground/LOS; private spec266 inputs required"]
 fn dps_parity_demo_native_antoran_tyrant_uses_burning_cleave_autoattacks() {
     let _seed = crate::random::seed_scope(70448);
