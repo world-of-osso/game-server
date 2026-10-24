@@ -48,6 +48,63 @@ mod tests {
         assert_eq!(facts.value("spell_targets.primal_wrath").unwrap(), 2.0);
     }
 
+    fn rake_initial_damage(prowl: bool) -> (f64, f64) {
+        let mut run = prepare(103, 1).unwrap();
+        let actor = run.actor;
+        for legacy in [231052, 405834] {
+            assert!(!crate::auras::has_aura(run.app.world(), actor, legacy));
+        }
+        if prowl {
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5215, Some(actor), false)
+                .expect("ordinary native Prowl cast");
+            assert!(crate::auras::has_aura(run.app.world(), actor, 5215));
+        }
+        run.app
+            .world_mut()
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
+        let source = run.app.world().resource::<crate::spell_info::SpellStore>();
+        let bonus = source
+            .get(1822)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == 3)
+            .unwrap()
+            .base_points;
+        let _seed = crate::random::seed_scope(70448);
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            actor,
+            1822,
+            Some(run.targets[0]),
+            false,
+        )
+        .expect("ordinary native Rake cast");
+        let combat = report::combat(run.app.world(), &run.targets, 1.0);
+        let damage = combat["actions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|action| action["spell_id"] == 1822)
+            .map(|action| action["damage"].as_f64().unwrap())
+            .sum();
+        (damage, 1.0 + f64::from(bonus) / 100.0)
+    }
+
+    #[test]
+    #[ignore = "requires exact spec103 profile/traits and native private DB"]
+    fn feral_literal_native_selected_profile_prowl_rake_uses_authored_stealth_bonus() {
+        let (normal, multiplier) = rake_initial_damage(false);
+        let (stealth, _) = rake_initial_damage(true);
+        assert!(normal > 0.0 && stealth > 0.0, "both real casts must land");
+        assert!(
+            (stealth - normal * multiplier).abs() <= 2.0,
+            "native selected-profile Rake: normal{normal}, Prowl{stealth}, authored factor{multiplier}"
+        );
+    }
+
     fn apply_native_dot(run: &mut Run, spell_id: u32) {
         crate::auras::apply_aura(
             run.app.world_mut(),
