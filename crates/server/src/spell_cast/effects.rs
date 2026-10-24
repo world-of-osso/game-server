@@ -31,9 +31,9 @@ mod bypass_armor_tests;
 #[cfg(test)]
 #[path = "caster_ability_crit_tests.rs"]
 mod caster_ability_crit_tests;
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[path = "factor_capture.rs"]
-pub(crate) mod factor_capture;
+pub mod factor_capture;
 #[cfg(test)]
 #[path = "windwalker_mastery_tests.rs"]
 mod windwalker_mastery_tests;
@@ -672,11 +672,11 @@ pub(crate) fn scaled_amount(
     spell: &SpellInfo,
     effect: &SpellEffect,
 ) -> f32 {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     factor_capture::begin_formula(world, caster, spell, effect);
     let base = modded_base_points(world, caster, spell, effect);
     let amount = base + effect_power_bonus(world, caster, spell, effect);
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_formula(world, caster, spell, effect, base, amount);
     amount
 }
@@ -699,7 +699,7 @@ pub(crate) fn effect_power_bonus(
     );
     let spell_bonus = coefficient * spell_power;
     let attack_bonus = ap_coefficient * attack_power;
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_power(
         world,
         caster,
@@ -859,7 +859,7 @@ fn armor_reduced(
         world.get_resource::<ArmorConstants>(),
         world.get::<crate::auras::AuraStatMods>(caster),
     );
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_armor(world, caster, target, spell, amount, &mitigation);
     mitigation.damage
 }
@@ -944,7 +944,7 @@ fn crit_chance_from_owner(
     };
     let caster_ability =
         crate::auras::combat_stats::caster_ability_critical_chance(world, caster, target, spell);
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_chance(
         world,
         caster,
@@ -1011,7 +1011,7 @@ fn with_damage_crit(
     let chance = crit_chance(world, caster, target, spell);
     let crit = roll < chance;
     if !crit {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         factor_capture::record_critical(
             world,
             caster,
@@ -1033,7 +1033,7 @@ fn with_damage_crit(
         amount,
         uses_weapon_crit_bonus_order(spell),
     );
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_critical(
         world,
         caster,
@@ -1132,7 +1132,7 @@ fn roll_periodic_damage_crit(
     // TC SpellAuraEffects.cpp5680/5764 always uses SpellCriticalDamageBonus,
     // including periodic spells whose defense class normally uses weapon order.
     let total = critical_damage_amount(world, caster, owner, spell, amount, false);
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_critical(
         world,
         caster,
@@ -1517,7 +1517,7 @@ fn damage_source_amount(
         let combo = super::scripts::combo_strikes_multiplier(world, bonus_caster, ctx.spell.id);
         let giantkiller =
             super::scripts::giantkiller_multiplier(world, ctx.caster, target, ctx.spell);
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         factor_capture::record_done(
             world,
             ctx,
@@ -1544,7 +1544,7 @@ fn damage_source_amount(
         modded_amount(world, &bonus_ctx, amount, periodic)
     };
     let after = source * done;
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_source(
         world,
         ctx,
@@ -1734,7 +1734,7 @@ fn deal_source_damage_and_report(
     let cast_multiplier = ctx.spell.cast_damage_multiplier.unwrap_or(1.0);
     let unrounded = (source_amount * target_multiplier * cast_multiplier).max(0.0);
     let amount = unrounded.round();
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_target(
         world,
         ctx,
@@ -1771,7 +1771,7 @@ fn deal_source_damage_and_report(
     } else {
         amount
     };
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_mitigated(world, ctx, target, amount);
     let (amount, absorbed) = crate::auras::absorb_damage(world, target, school, amount);
     let amount = crate::auras::damage_transfer::route(world, ctx.caster, target, school, amount);
@@ -1848,7 +1848,7 @@ fn deal_source_damage_and_report(
     event.absorbed = absorbed as i32;
     event.crit = crit;
     event.periodic = periodic;
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     factor_capture::finish(world, ctx, target, &damage, &event);
     log_event(world, event);
     if !periodic && !resolved_source && ctx.depth == 0 {

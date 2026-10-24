@@ -1076,15 +1076,15 @@ fn target_armor(
 }
 
 /// Damage plus test-only inputs observed in this same armor operation.
-pub(crate) struct ArmorMitigation {
+pub struct ArmorMitigation {
     pub damage: f32,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub effective_armor: f32,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub constant: Option<f32>,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub penetration_pct: f32,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fraction: Option<f32>,
 }
 
@@ -1106,13 +1106,13 @@ pub fn armor_mitigated(
         damage: reduction
             .as_ref()
             .map_or(damage, |reduction| reduction.damage),
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         effective_armor: armor,
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         constant,
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         penetration_pct: penetration,
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         fraction: reduction.map(|reduction| reduction.fraction),
     }
 }
