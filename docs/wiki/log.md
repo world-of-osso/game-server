@@ -1,3 +1,7 @@
+## 2026-10-24 — Event-time aura proc candidates
+
+[Source/proof](../handoffs/aura-proc-event-candidates-proof-ledger.md): TC synchronous candidate collection; native Leydrinker genuineRED22.91s, generic queued identity snapshot and shared melee routing. GREEN/regressions pending; no spell-ID or metadata override.
+
 ## 2026-10-24 — Shared pool-for-next resource contract
 
 [Contract proof](../handoffs/feral-shared-program-proof-ledger.md#shared-resource-contract-implementation): concrete5RED/1control→6GREEN; entire engine-free shared44GREEN ata63. Pool wait propagates through calls, never dispatches or grants resources; source conditions/native maximum admission remain separate. max_energy requires action-bound maximum_energy; original two reporter cases now error explicitly until14860 supplies missing cost/cap facts. Native Feral adapter and parity remain open.

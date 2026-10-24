@@ -32,8 +32,13 @@
 #[path = "dance_rppm_tests.rs"]
 mod dance_rppm_tests;
 
+#[cfg(test)]
+#[path = "proc_event_candidate_tests.rs"]
+mod event_candidate_tests;
+
 use crate::random as rand;
 use bevy::prelude::*;
+use std::collections::HashSet;
 
 use super::handlers::{self, PROC_TRIGGER_SPELL, PROC_TRIGGER_SPELL_WITH_VALUE};
 use super::{
@@ -129,8 +134,17 @@ pub struct AuraEvent {
     pub reflected: bool,
 }
 
+#[derive(Debug)]
+struct QueuedAuraEvent {
+    event: AuraEvent,
+    actor_candidates: HashSet<u32>,
+    target_candidates: HashSet<u32>,
+}
+
 #[derive(Resource, Debug, Default)]
-pub struct PendingAuraEvents(pub Vec<AuraEvent>);
+pub struct PendingAuraEvents {
+    events: Vec<QueuedAuraEvent>,
+}
 
 /// TC AuraEffect.cpp6126–6155 uses the nullable action target, never an invented
 /// caster target. A proc child's native enemy selector also excludes its owner;
@@ -156,9 +170,27 @@ pub(crate) fn select_proc_trigger_target(
     }
 }
 
+fn candidate_instances(world: &World, unit: Entity) -> HashSet<u32> {
+    world
+        .get::<ActiveAuras>(unit)
+        .map(|auras| auras.iter().map(|aura| aura.instance_id).collect())
+        .unwrap_or_default()
+}
+
 pub fn push_event(world: &mut World, event: AuraEvent) {
+    // TC Unit.cpp10611–10670 collects the live aura list synchronously.
+    // Pin identities now: deferred processing must not admit a later application.
+    let actor_candidates = candidate_instances(world, event.actor);
+    let target_candidates = event
+        .target
+        .map(|target| candidate_instances(world, target))
+        .unwrap_or_default();
     if let Some(mut pending) = world.get_resource_mut::<PendingAuraEvents>() {
-        pending.0.push(event);
+        pending.events.push(QueuedAuraEvent {
+            event,
+            actor_candidates,
+            target_candidates,
+        });
     }
 }
 
@@ -220,14 +252,29 @@ fn interrupt_flags(mask: [u32; 2], periodic: bool) -> [u32; 2] {
 }
 
 pub(super) fn process_aura_events(world: &mut World) {
-    let events = std::mem::take(&mut world.resource_mut::<PendingAuraEvents>().0);
-    for event in events {
-        handle_side(world, event.actor, event.target, event.actor_mask, &event);
+    let events = std::mem::take(&mut world.resource_mut::<PendingAuraEvents>().events);
+    for queued in events {
+        let event = queued.event;
+        handle_side(
+            world,
+            event.actor,
+            event.target,
+            event.actor_mask,
+            &event,
+            &queued.actor_candidates,
+        );
         if let Some(target) = event.target {
             if event.damage > 0.0 && !event.periodic {
                 super::reduce_cast_pushback(world, target);
             }
-            handle_side(world, target, Some(event.actor), event.target_mask, &event);
+            handle_side(
+                world,
+                target,
+                Some(event.actor),
+                event.target_mask,
+                &event,
+                &queued.target_candidates,
+            );
         }
         crate::spell_cast::scripts::after_dance_cast_event(world, &event);
         crate::spell_cast::scripts::apply_mystic_touch_after_hit(world, &event);
@@ -240,6 +287,7 @@ fn handle_side(
     other: Option<Entity>,
     mask: [u32; 2],
     event: &AuraEvent,
+    pinned_candidates: &HashSet<u32>,
 ) {
     if mask == [0; 2] || world.get::<ActiveAuras>(unit).is_none() {
         return;
@@ -265,6 +313,7 @@ fn handle_side(
         .map(|auras| {
             auras
                 .iter()
+                .filter(|aura| pinned_candidates.contains(&aura.instance_id))
                 .filter(|aura| standing || procs_while_sitting(world, aura))
                 .filter(|aura| {
                     event.can_proc || triggered_can_proc(world, aura, event, event_not_a_proc)

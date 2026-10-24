@@ -6,6 +6,14 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on active
 
 Import the audited effective public TC `spell_proc` IDs into `tdb_spell_proc(SpellId PRIMARY KEY)` only after every pinned base/update source matches its SHA-256. Reject duplicate/incomplete IDs before publication. Replace presence transactionally without changing retained rows' later value columns or unrelated tables; errors leave prior data intact. Presence alone must not overlay chance, flags, cooldown or charges. The later full proc importer owns those values. See [Feral/source ledger](../handoffs/feral-source-census.md).
 
+## Event-time proc candidates
+
+- [ ] Pin each event's actor/target aura instance identities when the event is raised. Deferred processing must not proc or spend charges on an aura applied after that event, even in the same cast/tick.
+- [ ] An aura already present at a subsequent event remains eligible under unchanged native masks, chance, cooldown and charge rules. Removed/replaced instances cannot be substituted by another application of the same spell.
+- [ ] Every emitter, including real melee swings, uses the shared event entry point; no spell-ID exception, metadata override or invented same-cast/castId rule.
+
+TC a352b1fa `Unit.cpp10611–10670` collects current candidates synchronously. Native453758 Leydrinker self-application and subsequent133 Fireball are the non-Ret boundary/control; this does not qualify Leydrinker talent availability. [Source/proof](../handoffs/aura-proc-event-candidates-proof-ledger.md).
+
 ## Firestarter direct critical strikes
 
 - [ ] Actual caster205026 effect0 makes ordinary Fireball133/Pyroblast11366 critical at recipient health percentage greater than or equal to its native threshold (70448:90).
