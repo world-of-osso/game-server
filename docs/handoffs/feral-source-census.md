@@ -58,6 +58,18 @@ Pre-crateB a7f6f10fa native KIT300s remeasurement is now independently qualified
 
 CrateB integration keeps controller policy in public server knowledge SPI and simulation as its consumer. The native form timing type and weapon-range entry point are public server data/SPI so the simulation dependency direction stays valid. Original test names and semantics are retained; new two-package qualification is separate from the pre-split31case evidence.
 
+Unified7701fc1b3 targeted qualification:33/33PASS, privateDB54e9… unchanged (1291proc IDs/1408trait points), shared-protocol2abc7fa844f6e71d93203ce5421ae853e884854d clean. Evidence root `crate-b-unified/`:
+
+| Package / behavior | Tests | Result / test seconds |
+|---|---:|---|
+| server: resolved action admission and passive endpoints |16|PASS49.88|
+| server: generated refusal, explicit provenance, Frantic retention |3|PASS22.65|
+| server: Cat/Bear/unshifted clocks and all-form weapon terms |4|PASS30.98|
+| server-simulation: target/resource-preserving literal execution |9|PASS49.02|
+| server-simulation: native Feral unselected-talent exclusion |1|PASS7.37|
+
+Core binary SHA1f9a6f5e6ab2fca005eb20623af28f4be56a4a80a455e23ffbc9290804e632b2; simulation SHAab828e815d992172086f560d4ed54ecc281dc7b90cb96c6e325cc59b3b99584f. The original combined command's runner exited without an exit/output receipt after emitting the core test binary; its exit remainsUNKNOWN in `interruption.proof.json`. No heavy core build was repeated. A separately completed simulation-only `--no-run` built both server library and server-simulation with exit0,1193.87s, no warnings/errors; `simulation-build.stderr.log` preserves the full compiler output. Direct core/simulation runs above have individual exit/count/hash receipts. Parent ft1083 pins770; final integration gate remains parent-owned. This qualifies only the named behaviors, not full-suite success or Feral literal/DPS parity.
+
 ## Literal boundary
 
 The exact pinned profile requires target_if Boolean selectors and action-relative dot/snapshot facts, active_dot, hero_tree, previous-GCD facts, pool_resource/for_next, max_energy and use_items/off-GCD options. Shared owners receive these requests through the lead; Feral owns identity bindings, Berserk/Incarnation aliases and snapshot source attribution. Dungeon rotation is unchanged; only explicit parity Fixture encounters may capture native follower decisions.
