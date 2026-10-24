@@ -16,7 +16,7 @@ struct NativeCast {
 fn native_self_cast(spell: u32) -> NativeCast {
     let mut h = harness(Vec::new(), &[spell], 5).unwrap();
     h.advance(3);
-    let before = h.power(PowerType::Mana);
+    let before = current_mana(&h);
     h.app
         .world_mut()
         .resource_mut::<PendingAuraEvents>()
@@ -30,8 +30,14 @@ fn native_self_cast(spell: u32) -> NativeCast {
     );
     NativeCast {
         events: read_spell_events(&h, spell),
-        mana_spent: before - h.power(PowerType::Mana),
+        mana_spent: before - current_mana(&h),
     }
+}
+
+fn current_mana(h: &Harness) -> f32 {
+    server::spell_cast::powers::power_value(h.app.world(), h.caster, PowerType::Mana)
+        .expect("native primary Mana exists")
+        .0
 }
 
 fn read_spell_events(h: &Harness, spell: u32) -> Vec<AuraEvent> {
