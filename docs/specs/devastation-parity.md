@@ -38,6 +38,8 @@ Focused Dev alias/context leaf: `literal_dev_binding_native_living_flame_uses_ac
 
 The focused rank1 `es` leaf preserves its enemy `target_if` and requires actual359077 landed damage after native empower completion. At463b711c8, ES plus the Living Flame regression pass2/2 in18.65s (compile16.21s, zero warnings). The owner-held Fire Breath RED is explicitly excluded, not claimed passing. The unconditional `azure_strike` source filler also lands actual362969 damage at16f13fbcc (1/1,12.31s; compile30.45s, zero warnings). The `fs` Dragonrage source-condition leaf uses existing300s target-lifetime metadata and passes at e3b0897a7 (1/1,28.51s; compile13.70s, zero warnings), including actual self aura and native recovery. These leaf proofs remain distinct from full source dispatch and DPS parity.
 
+Full-source loader: three engine-free cases pass at6756b2271 using the exact production std-only interpreter and loader modules. They compile the entire89-row asset, select its initial snapshot, preserve explicit missing native trinket-fact errors, retain assignment/append action order, and preserve first-declaration variable defaults across lists. The last boundary has genuine behavioral RED at74692e4e8 before retaining global source positions. Existing min/max dependencies06c99c40c/45bae2933/585e2ca42 are consumed unchanged; their two controls pass separately. This does not qualify full native scheduling, which still awaits shared dependencies and the master integration gate.
+
 ## Known gaps (current cycle)
 
 - [x] Giantkiller targeted GREEN and full floor/Tyranny/exclusion qualification atf50689cfa (4/4,25.40s).
