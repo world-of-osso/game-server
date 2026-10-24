@@ -7,7 +7,7 @@
 | Capability | Representation / boundary | Proof |
 |---|---|---|
 | OR/AND/NOT, strict comparisons, numeric truth, arithmetic | Frozen precedence; `%` division and `%%` signed remainder; numeric short circuit | Concrete WW/Ret11RED atc0cf6eed6→11GREEN ataff61cbab; enabled afterward |
-| Numeric min/max | `>?` is minimum, `<?` is maximum; precedence5 between comparisons4 and addition6; C++ comparison/tie behavior, no literal rewriting | Valid-expression2RED at170b82d9c; GREEN pending |
+| Numeric min/max | `>?` is minimum, `<?` is maximum; precedence5 between comparisons4 and addition6; C++ comparison/tie behavior, no literal rewriting | Valid-expression2RED at170b82d9c→26shared-libraryGREEN at735a60ac6 (15m59s compile,0warnings); [proof](../../handoffs/elemental-minmax-proof-ledger.md) |
 | Buff/cooldown/resource/talent/fixture facts | Shared native adapter reads actual earned state, selected allocation, display units and native timer helpers; unknown aliases fail | Six actual native6RED→6GREEN17.40s atdc1ee9781, zero compiler warnings; equipment and spec predicates remain caller-owned |
 | Variables | First declaration's numeric default (native default0); source `set`, `setif`, `value_else`, `reset`; per-actor `Program::state()` | Ret default/setif/reset decisions GREEN |
 | Conditional call lists | Literal row order, first native-usable action; exhausted/explicit empty child returns to caller; unknown call rejected and recursion errors explicit | WW ST/3T and Ret finisher unit decisions GREEN; recursion control added afterward |
