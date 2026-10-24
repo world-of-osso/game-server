@@ -30,6 +30,12 @@ fn qualify_toll(count: usize) {
         let target = spawn_dummy(&mut run.app, run.actor, index).unwrap();
         run.targets.push(target);
     }
+    // Existing Divine Toll implicit-area policy admits actual combat units only.
+    // Extra31146 targets must enter the same native combat relationship too.
+    engage_fixture_opponents(&mut run);
+    for _ in 0..4 {
+        run.app.update();
+    }
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
