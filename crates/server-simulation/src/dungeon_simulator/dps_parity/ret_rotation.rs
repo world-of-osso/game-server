@@ -3,6 +3,28 @@ use crate::simc_apl_native::Bindings;
 use shared::components::PowerType;
 
 // SimC76f8118 paladin spell lookups, checked against native70448 identities.
+// Self targets follow the native caster/aura and caster-centered area effects.
+const ACTIONS: &[(&str, u32, bool)] = &[
+    ("rebuke", 96231, false),
+    ("execution_sentence", 343527, false),
+    ("avenging_wrath", 31884, true),
+    ("wake_of_ashes", 255937, false),
+    ("divine_toll", 375576, false),
+    ("blade_of_justice", 184575, false),
+    ("hammer_of_wrath", 24275, false),
+    ("templars_verdict", 85256, false),
+    ("divine_storm", 53385, true),
+    ("hammer_of_light", 427453, false),
+    ("templar_strike", 407480, false),
+    ("templar_slash", 406647, false),
+    ("crusader_strike", 35395, false),
+    ("arcane_torrent", 155145, true),
+    ("fireblood", 265221, true),
+    ("lights_judgment", 255647, false),
+    ("potion", 1236994, true),
+    ("judgment", 20271, false),
+];
+
 const BUFFS: &[(&str, u32)] = &[
     ("avenging_wrath", 31884),
     ("divine_arbiter_verdict", 1306161),
@@ -32,20 +54,57 @@ fn bindings() -> Bindings {
             .collect()
     };
     Bindings {
+        actions: ACTIONS
+            .iter()
+            .map(|&(name, id, _)| (name.to_owned(), id))
+            .collect(),
         buffs: names(BUFFS),
         talents: names(TALENTS),
         resources: [("holy_power".into(), PowerType::HolyPower)].into(),
-        ..Bindings::default()
+        dot_refresh: Default::default(),
+        global_cooldown_spell: 20271,
     }
 }
 
 fn execution_actions()
 -> impl Iterator<Item = super::literal_rotation::execution::NativeAction<'static>> {
-    std::iter::empty()
+    // Inventory is not provisioned for the native potion; no fictitious admission.
+    ACTIONS
+        .iter()
+        .filter(|(name, _, _)| *name != "potion")
+        .map(
+            |&(name, spell, self_target)| super::literal_rotation::execution::NativeAction {
+                name,
+                spell,
+                self_target,
+                talent: None,
+            },
+        )
 }
 
 fn read_program() -> Result<server::simc_apl::Program, String> {
-    server::simc_apl::Program::parse(&[])
+    let rows = include_str!("ret_rotation/76f8118.simc")
+        .lines()
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(parse_row)
+        .collect::<Result<Vec<_>, _>>()?;
+    server::simc_apl::Program::parse(&rows)
+}
+
+fn parse_row(line: &str) -> Result<(&str, &str), String> {
+    let (head, literal) = line
+        .split_once("+=")
+        .ok_or("Ret source lacks += assignment")?;
+    let list = if head == "actions" {
+        "default"
+    } else {
+        head.strip_prefix("actions.")
+            .ok_or("Ret source is not an action list")?
+    };
+    let literal = literal
+        .strip_prefix('/')
+        .ok_or("Ret source action lacks slash")?;
+    Ok((list, literal))
 }
 
 #[cfg(test)]
