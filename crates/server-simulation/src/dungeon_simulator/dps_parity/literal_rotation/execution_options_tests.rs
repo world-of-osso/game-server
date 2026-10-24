@@ -112,6 +112,14 @@ fn wait_for_native_gcd(run: &mut Run) {
 #[ignore = "native execution option RED: actual selected empower stage"]
 fn literal_execution_native_empower_option_releases_stage_one_not_max_hold() {
     let (mut run, equipment) = fixture();
+    // Native pursuit faces the selected enemy; casting at self alone cannot aim a cone.
+    super::execute(
+        run.app.world_mut(),
+        run.actor,
+        Execution::AutoAttack(run.targets[0]),
+    )
+    .unwrap();
+    run.app.update();
     let mut driver =
         Driver::new(Program::parse(&[("default", "fire_breath,empower_to=1")]).unwrap());
     let prepared = Prepared::read(
@@ -151,7 +159,10 @@ fn literal_execution_native_empower_option_releases_stage_one_not_max_hold() {
                 world.get::<shared::components::Position>(run.targets[0]),
                 world
                     .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-                    .0,
+                    .0
+                    .iter()
+                    .filter(|event| matches!(event.spell_id, Some(FIRE_BREATH | FIRE_DAMAGE)))
+                    .collect::<Vec<_>>(),
             )
         });
     let expected =
