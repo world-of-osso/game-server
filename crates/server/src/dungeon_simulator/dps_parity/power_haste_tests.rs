@@ -374,6 +374,8 @@ fn dps_parity_power_haste_unflagged_rage_at_center_has_no_phantom_gain() {
     let mut h = harness(Vec::new(), &[], 1).unwrap();
     h.stop_attack();
     h.advance(1);
+    let caster = h.caster;
+    crate::combat_refs::end_all_combat(h.app.world_mut(), caster);
     let world = h.app.world();
     let info = world
         .resource::<PowerTypeTable>()
