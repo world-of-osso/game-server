@@ -27,6 +27,8 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 ## Literal native row gates
 
+Native controls reached4RED/1GREEN atd49f4951c; implementation follows those failures, combined GREEN pending. [Proof scope](../handoffs/literal-row-gating-proof-ledger.md).
+
 - `moving=0|1` must match the actual native actor movement bit; row options never substitute for native cast admission.
 - While a native GCD is active, only rows permitting `use_off_gcd=1` may be selected. The option never clears, shortens or bypasses native GCD/cast refusal.
 - Configured `movement.distance` without a native fixture movement plan must fail explicitly as `MOVEMENT_DISTANCE_UNAVAILABLE`, naming the operand; never fabricate zero distance.

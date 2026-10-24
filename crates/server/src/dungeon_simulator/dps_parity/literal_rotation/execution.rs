@@ -32,6 +32,8 @@ type ReadyActions = BTreeMap<(String, Option<Entity>), Execution>;
 
 pub(crate) struct Prepared {
     ready: ReadyActions,
+    moving: bool,
+    gcd_active: bool,
 }
 
 impl Prepared {
@@ -43,6 +45,12 @@ impl Prepared {
         actions: impl IntoIterator<Item = NativeAction<'a>>,
         needs_snapshot: bool,
     ) -> Result<Self, String> {
+        let moving = world
+            .get::<crate::networking::Moving>(actor)
+            .is_some_and(|moving| moving.0);
+        let gcd_active = world
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)));
         let targets = native_targets(world, actor, targets);
         let mut ready = BTreeMap::new();
         if needs_snapshot {
@@ -63,7 +71,19 @@ impl Prepared {
                 }
             }
         }
-        Ok(Self { ready })
+        Ok(Self {
+            ready,
+            moving,
+            gcd_active,
+        })
+    }
+
+    pub fn permits_row(&self, action: &Action) -> Result<bool, String> {
+        if read_boolean_option(action, "moving")?.is_some_and(|moving| moving != self.moving) {
+            return Ok(false);
+        }
+        let off_gcd = read_boolean_option(action, "use_off_gcd")?.unwrap_or(false);
+        Ok(!self.gcd_active || off_gcd)
     }
 
     /// Plans only; the precombat executor owns clock advancement and each native cast.
@@ -151,6 +171,18 @@ fn owns_active_aura(world: &World, actor: Entity, spell: u32) -> bool {
                     && aura.expires_at.is_none_or(|at| at > now)
             })
         })
+}
+
+fn read_boolean_option(action: &Action, name: &str) -> Result<Option<bool>, String> {
+    match action.options.get(name).map(String::as_str) {
+        None => Ok(None),
+        Some("0") => Ok(Some(false)),
+        Some("1") => Ok(Some(true)),
+        Some(value) => Err(format!(
+            "unsupported native literal option {}:{name}={value}; expected0|1",
+            action.name
+        )),
+    }
 }
 
 fn native_targets(world: &World, actor: Entity, supplied: &[Entity]) -> Vec<Entity> {

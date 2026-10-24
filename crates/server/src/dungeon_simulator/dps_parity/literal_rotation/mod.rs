@@ -72,7 +72,9 @@ impl Driver {
         if self.selected_precombat && self.precombat_harmful_executed {
             return Ok(None);
         }
-        let mut usable = |action: &Action| Ok(prepared.execution(action, equipment)?.is_some());
+        let mut usable = |action: &Action| {
+            Ok(prepared.permits_row(action)? && prepared.execution(action, equipment)?.is_some())
+        };
         let action = if list == "precombat" {
             self.program.select_next(
                 list,

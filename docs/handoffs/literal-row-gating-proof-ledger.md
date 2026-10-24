@@ -1,6 +1,6 @@
 # Literal native moving/off-GCD gates
 
-Verified2026-10-23: staged ignored controls only; no runtime RED/GREEN or gating implementation claimed. Parent approved generic Prepared movement/active-GCD snapshots plus shared Driver row gating, separately committed from14775's composite selection. Ele13400 reports82 source rows,7 moving rows and6 off-GCD item rows; no Ele adapter qualification is claimed here.
+Verified2026-10-23: actual native4RED/1GREEN atd49f4951c; gating implemented afterward, GREEN pending. Parent approved generic Prepared movement/active-GCD snapshots plus shared Driver row gating, separately committed from14775's composite selection. Ele13400 reports82 source rows,7 moving rows and6 off-GCD item rows; no Ele adapter qualification is claimed here.
 
 ## Requirements and sources
 
@@ -16,4 +16,6 @@ Verified2026-10-23: staged ignored controls only; no runtime RED/GREEN or gating
 - Explicit use_off_gcd1 executes that actual auto attack without clearing the existing native GCD. This is a scheduling/control proof, not native item activation proof.
 - Ready TP row with `if=movement.distance>6` fails `MOVEMENT_DISTANCE_UNAVAILABLE` and names its operand; no fabricated stationary distance.
 
-All remain ignored and unexecuted. Batch in the next admitted shared precombat binary; no extra WW-only compile. Composite selection and movement routing stay with14775/14755. Native off-GCD item metadata/activation and Ele's full literal remain separate qualification scopes.
+Atd49f4951c the actual packet runs5 tests in28.52s: moving1/stationary, moving0/moving and unpermitted-GCD rows fail exactly at their behavioral assertions; named distance fails with the old generic unknown-operand error; explicit off-GCD native AA succeeds and preserves native GCD. No readiness/setup premise failed. Proof: engine `ww-parity-2026-10-23/native-integrated-red-d49f4951c/gating.{proof.json,output.log}`; database/binary/input receipts are adjacent.
+
+Implementation reads actual native Moving and any active SpellHistory GCD into Prepared, then shared Driver applies literal row permission before selecting a native-ready execution. Native cast admission is unchanged. Invalid configured boolean values fail explicitly; movement.distance has its named unavailable error. Tests remain ignored; combined GREEN pending, no completion claim. No extra WW-only compile. Composite selection and movement routing stay with14775/14755. Native off-GCD item metadata/activation and Ele's full literal remain separate qualification scopes.
