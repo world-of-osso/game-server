@@ -11,8 +11,8 @@ Nine bounded Mainline12.1.0.69933 entries prioritize Arcane, Holy/Ret Paladin an
 |82326 Holy Light|231642 gates named88852's one Holy Power once per completed cast, including overhealing.|Infusion/talents and all healing variants.|
 |20473 Holy Shock|196926s1/-1500ms reduces only running Holy Judgment275773; ready timer untouched and owner update proved.|Offspec Judgment variants, full talent/crit semantics. Existing heal/damage bridge retained.|
 |35395 Crusader Strike|196926s2/-1500ms reduces running275773; rank-absent/ready boundaries and owner update proved.|Other Judgment variants and damage/talent conversions.|
-|20271 Ret Judgment|315867 gates named220637's one Holy Power on actual primary damage, not latent splash; immune primary excluded.|231663/197277 owned next-spender mark, secondary effects and other talents.|
-|275773 Holy Judgment|Same named315867/220637 gain and immune-hit exclusion, through its own native root.|231644 shield, Infusion and other talents. Protection275779's existing script unchanged.|
+|20271 Ret Judgment|TC a352b1fa OnCast grants220637 once when315867 is known; miss/immunity cannot cancel it. Genuine cast-before-impact/immune/aura-only RED2026-10-23; corrected implementation awaits GREEN.|231663/197277 owned next-spender mark, secondary effects and other talents.|
+|275773 Holy Judgment|Shares the known315867/OnCast220637 rule with Ret20271 and Protection275779; ordinary/triggered/costed-trigger controls included, GREEN pending.|231644 shield, Infusion and other talents.|
 |61295 Riptide|51564s1 grants named53390 uses; native cap2; successive Healing Wave/Chain Heal each consume one stack at native20% cast reduction, never40%. No rank gives no buff.|Other talents and full class proc semantics. Native one-charge field remains until final accumulated use.|
 |77472 Healing Wave|Named native45/chainTargets0 plan admits a single validated friendly heal. Real1501 healing at100 healing power; nearby ally/enemy excluded.|Generic selector45 and talent-added jumps. Existing friendly-cast self selection is unchanged, not newly invented.|
 

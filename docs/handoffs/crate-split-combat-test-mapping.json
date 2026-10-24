@@ -1,0 +1,566 @@
+{
+  "status": "expected mapping; actual post-split gate inventory pending",
+  "baseline_revision": "8e7c7a685",
+  "stacked_on_B_code": "14c74e6fa",
+  "old_target": "server",
+  "new_package": "server-combat-tests",
+  "new_target": "server_combat_tests",
+  "names_unchanged": true,
+  "expected_cases": [
+    {
+      "name": "combat::facing_tests::native_melee_facing_npc_288_restores_parry_or_block_from_behind",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::facing_tests::native_melee_facing_npc_behind_rejects_parry_block_but_retains_dodge",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::facing_tests::native_melee_facing_npc_front_retains_parry_or_block",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::facing_tests::native_melee_facing_player_288_restores_evasion_dodge_from_behind",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::facing_tests::native_melee_facing_player_behind_rejects_actual_evasion_dodge",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::facing_tests::native_melee_facing_player_front_retains_actual_evasion_dodge",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_cadence_tests::ordinary_npc_authored_cadence_murloc_warrior_3000ms",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_cadence_tests::ordinary_npc_authored_cadence_native_haste_change_preserves_progress",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_cadence_tests::ordinary_npc_authored_cadence_native_negative_haste",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_cadence_tests::ordinary_npc_authored_cadence_native_positive_haste",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_cadence_tests::ordinary_npc_authored_cadence_native_time_multipliers_combine",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_cadence_tests::ordinary_npc_authored_cadence_prowler_1500ms",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_cadence_tests::ordinary_npc_authored_cadence_source_zero_uses_tc_default",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_expertise_tests::native_melee_npc_expertise_28305_lifetime_is_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_expertise_tests::native_melee_npc_expertise_beats_live_player_evasion",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_expertise_tests::native_melee_npc_expertise_cancelled_before_evasion_restores_dodge",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_expertise_tests::native_melee_npc_expertise_on_foreign_actor_does_not_reduce_dodge",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_expertise_tests::native_melee_npc_expertise_small_native_amount_preserves_remaining_parry",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_expertise_tests::native_melee_npc_expertise_suppresses_npc_dodge_parry_not_block",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_flags_tests::native_autoattack_npc_no_parry_and_no_block_flags_reject_both_outcomes",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_flags_tests::native_autoattack_unflagged_creature_retains_parry_or_block",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_no_crit_tests::native_melee_npc_no_crit_actor_and_unchanged_target_are_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_no_crit_tests::native_melee_npc_no_crit_buff_coexistence_and_lifetime_are_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_no_crit_tests::native_melee_npc_no_crit_flag_excludes_base_source_chance",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_no_crit_tests::native_melee_npc_no_crit_flag_excludes_combined_52_and_290_source",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_no_crit_tests::native_melee_npc_no_crit_flag_excludes_general_290_source_chance",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_no_crit_tests::native_melee_npc_no_crit_flag_excludes_weapon_52_source_chance",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_no_crit_tests::native_melee_npc_no_crit_flag_still_allows_later_attacker_334",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_no_crit_tests::native_melee_npc_no_crit_foreign_flagged_actor_does_not_suppress_attacker",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_no_crit_tests::native_melee_npc_no_crit_unflagged_actor_is_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_no_crit_tests::native_melee_npc_no_crit_unflagged_actor_retains_52_and_290",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_no_crit_tests::native_melee_npc_no_crit_unflagged_actor_retains_base_source_chance",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_victim_dodge_tests::native_melee_npc_victim_dodge_attacker_expertise_still_wins",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_victim_dodge_tests::native_melee_npc_victim_dodge_cancellation_and_expiry_restore_baseline",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_victim_dodge_tests::native_melee_npc_victim_dodge_foreign_evasion_does_not_modify_target",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_victim_dodge_tests::native_melee_npc_victim_dodge_live_behind_evasion_still_dodges",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_victim_dodge_tests::native_melee_npc_victim_dodge_live_front_evasion_fills_the_table",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_victim_dodge_tests::native_melee_npc_victim_dodge_signed_coexistence_is_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_victim_dodge_tests::native_melee_npc_victim_dodge_signed_native_sum_preserves_baseline",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_victim_parry_tests::native_melee_npc_victim_parry_attacker_expertise_still_wins",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_victim_parry_tests::native_melee_npc_victim_parry_cancelled_aura_restores_baseline",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_victim_parry_tests::native_melee_npc_victim_parry_foreign_aura_does_not_modify_target",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_victim_parry_tests::native_melee_npc_victim_parry_front_positive_fills_the_table",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_victim_parry_tests::native_melee_npc_victim_parry_negative_native_amount_clamps_at_zero",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_victim_parry_tests::native_melee_npc_victim_parry_positive_does_not_override_behind_arc",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_victim_parry_tests::native_melee_npc_victim_parry_positive_does_not_override_native_no_parry",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_victim_parry_tests::native_melee_npc_victim_parry_signed_fold_and_lifetime_are_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_victim_parry_tests::native_melee_npc_victim_parry_signed_native_sum_preserves_baseline",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_weapon_crit_tests::native_melee_npc_weapon_crit_cancelled_positive_leaves_negative",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_weapon_crit_tests::native_melee_npc_weapon_crit_clamps_source_before_autoattack_334",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_weapon_crit_tests::native_melee_npc_weapon_crit_foreign_positive_does_not_change_attacker",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_weapon_crit_tests::native_melee_npc_weapon_crit_inputs_are_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_weapon_crit_tests::native_melee_npc_weapon_crit_negative_prevents_crit",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_weapon_crit_tests::native_melee_npc_weapon_crit_player_187_334_inputs_are_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_weapon_crit_tests::native_melee_npc_weapon_crit_player_187_clamps_before_attacker_334",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_weapon_crit_tests::native_melee_npc_weapon_crit_positive_saturates_table",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_weapon_crit_tests::native_melee_npc_weapon_crit_signed_sum_not_last_effect_or_clipped_effects",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::npc_weapon_crit_tests::native_melee_npc_weapon_crit_without_52_keeps_five_percent_baseline",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::pet_engagement_tests::pet_combat_owner_direct_damage_engages_owner_without_damage_threat",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::pet_engagement_tests::pet_combat_owner_lethal_hit_engages_owner_before_pet_combat_ends",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::pet_engagement_tests::pet_combat_owner_native_melee_hit_engages_owner_without_damage_threat",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::pet_engagement_tests::pet_combat_owner_native_missile_engages_owner_only_at_impact",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_caster_crit_tests::native_melee_victim_caster_crit_applies_after_native_source_no_crit",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_caster_crit_tests::native_melee_victim_caster_crit_attacker_only_does_not_modify_actual_victim",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_caster_crit_tests::native_melee_victim_caster_crit_cancelled_matching_aura_restores_baseline",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_caster_crit_tests::native_melee_victim_caster_crit_combines_with_negative_197_before_clamp",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_caster_crit_tests::native_melee_victim_caster_crit_foreign_caster_does_not_change_npc_source",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_caster_crit_tests::native_melee_victim_caster_crit_foreign_caster_does_not_grant_player_crit",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_caster_crit_tests::native_melee_victim_caster_crit_foreign_identity_and_joint_inputs_are_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_caster_crit_tests::native_melee_victim_caster_crit_foreign_target_does_not_modify_actual_victim",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_caster_crit_tests::native_melee_victim_caster_crit_matching_native_identity_is_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_caster_crit_tests::native_melee_victim_caster_crit_matching_npc_saturates_received_chance",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_caster_crit_tests::native_melee_victim_caster_crit_matching_player_uses_victim_aura",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_caster_crit_tests::native_melee_victim_caster_crit_meets_negative_source_before_zero_clamp",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_caster_crit_tests::native_melee_victim_caster_crit_no_crit_source_is_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_caster_crit_tests::native_melee_victim_caster_crit_player_zero_source_is_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_caster_crit_tests::native_melee_victim_caster_crit_received_sum_clamps_before_attacker_334",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_caster_crit_tests::native_melee_victim_caster_crit_summon_owner_caster_is_not_attacker",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_general_crit_tests::native_melee_victim_general_crit_applies_after_native_source_no_crit",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_general_crit_tests::native_melee_victim_general_crit_attacker_positive_does_not_change_received_chance",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_general_crit_tests::native_melee_victim_general_crit_cancelled_positive_restores_baseline",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_general_crit_tests::native_melee_victim_general_crit_foreign_positive_does_not_change_actual_victim",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_general_crit_tests::native_melee_victim_general_crit_meets_source_52_before_zero_clamp",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_general_crit_tests::native_melee_victim_general_crit_meets_victim_187_before_zero_clamp",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_general_crit_tests::native_melee_victim_general_crit_negative_clamps_before_attacker_334",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_general_crit_tests::native_melee_victim_general_crit_negative_prevents_received_crit",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_general_crit_tests::native_melee_victim_general_crit_no_crit_source_pair_is_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_general_crit_tests::native_melee_victim_general_crit_other_modifiers_and_player_are_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_general_crit_tests::native_melee_victim_general_crit_player_attacker_only_does_not_gain_crit",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_general_crit_tests::native_melee_victim_general_crit_player_source_uses_actual_victim",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_general_crit_tests::native_melee_victim_general_crit_positive_saturates_received_chance",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_general_crit_tests::native_melee_victim_general_crit_signed_coexistence_is_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_general_crit_tests::native_melee_victim_general_crit_signed_sum_with_negative_source_stays_zero",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_summoner_crit_tests::native_melee_victim_summoner_crit_actual_owner_grants_received_crit",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_summoner_crit_tests::native_melee_victim_summoner_crit_attacker_caster_is_not_owner",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_summoner_crit_tests::native_melee_victim_summoner_crit_attacker_only_aura_does_not_grant_crit",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_summoner_crit_tests::native_melee_victim_summoner_crit_cancelled_owner_aura_does_not_grant_crit",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_summoner_crit_tests::native_melee_victim_summoner_crit_foreign_caster_does_not_grant_crit",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_summoner_crit_tests::native_melee_victim_summoner_crit_foreign_recipient_does_not_grant_crit",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_summoner_crit_tests::native_melee_victim_summoner_crit_grandparent_caster_does_not_grant_crit",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_summoner_crit_tests::native_melee_victim_summoner_crit_nested_actual_parent_grants_crit",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_summoner_crit_tests::native_melee_victim_summoner_crit_nested_direct_owner_windows_are_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_summoner_crit_tests::native_melee_victim_summoner_crit_nested_matching_parent_windows_are_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_summoner_crit_tests::native_melee_victim_summoner_crit_player_is_not_temp_summon_is_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_summoner_crit_tests::native_melee_victim_summoner_crit_player_source_cannot_use_own_339",
+      "ignored": false,
+      "should_panic": false
+    },
+    {
+      "name": "combat::victim_summoner_crit_tests::native_melee_victim_summoner_crit_ten_short_owner_windows_are_runtime_qualified",
+      "ignored": false,
+      "should_panic": false
+    }
+  ],
+  "excluded_private_formula_files": [
+    "combat_enemy_dodge_tests.rs",
+    "combat_npc_general_crit_tests.rs",
+    "combat_npc_victim_block_tests.rs",
+    "combat_victim_health_crit_tests.rs"
+  ],
+  "workspace_expected": {
+    "passed": 6004,
+    "known_failed": 4,
+    "ignored": 314
+  },
+  "server_expected": {
+    "passed": 5763,
+    "known_failed": 4,
+    "ignored": 202
+  },
+  "simulator_expected": {
+    "passed": 30,
+    "ignored": 91
+  },
+  "combat_expected": {
+    "passed": 106,
+    "ignored": 0
+  },
+  "incoming_master_cases": "Four ignored single_spell cases from eec5b6bcf are recorded in the B mapping; C still moves exactly106 enabled cases."
+}

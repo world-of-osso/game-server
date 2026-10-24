@@ -258,7 +258,7 @@ pub struct CreatureDifficulty(pub u32);
 
 /// Source template flags resolved at spawn and same-actor entry projection.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct CreatureFlagsExtra(pub u32);
+pub struct CreatureFlagsExtra(pub u32);
 
 /// Spawn every creature of the copy's map spawned at its difficulty,
 /// with the template of that difficulty, except the bosses
@@ -436,7 +436,7 @@ fn spawn_creatures<'a>(
 }
 
 /// Map difficulty and actual terrain used before selecting a creature's native stats.
-pub(crate) struct CreatureSpawnContext<'a> {
+pub struct CreatureSpawnContext<'a> {
     pub map: crate::maps::InMap,
     pub difficulty_id: u32,
     pub ground: Option<&'a mut crate::ground::GroundMap>,
@@ -445,7 +445,7 @@ pub(crate) struct CreatureSpawnContext<'a> {
 }
 
 /// Spawn one creature with AI/addon/script state, or log and refuse unknown level context.
-pub(crate) fn spawn_creature(
+pub fn spawn_creature(
     commands: &mut Commands,
     world_data: &WorldData,
     template: &CreatureTemplate,

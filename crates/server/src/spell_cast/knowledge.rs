@@ -12,16 +12,13 @@ use crate::spell_info::SpellStore;
 /// Controller selection treats unknown/unavailable endpoints as ordinary fallthrough.
 /// Kept in the server library so qualification crates never become its dependency.
 pub fn resolve_action(world: &World, actor: Entity, id: u32) -> Result<Option<u32>, String> {
-    match resolve_actor_action(world, actor, id) {
-        Ok(resolved) => Ok(Some(resolved)),
-        Err(CastFailure::UnknownSpell | CastFailure::NotKnown) => Ok(None),
-        Err(reason) => Err(format!("native literal action knowledge: {reason:?}")),
-    }
+    resolve_optional_actor_action(world, actor, id)
+        .map_err(|reason| format!("native literal action knowledge: {reason:?}"))
 }
 
 /// Resolve a known spell, selected visible action or sourced parent action.
 /// NPC identity never bypasses this controller-level knowledge check.
-pub(crate) fn resolve_actor_action(
+pub fn resolve_actor_action(
     world: &World,
     actor: Entity,
     requested: u32,
@@ -46,6 +43,19 @@ pub(crate) fn resolve_actor_action(
         }
     }
     Err(CastFailure::UnknownSpell)
+}
+
+/// Controller consumers normalize unavailable knowledge without hiding other errors.
+pub fn resolve_optional_actor_action(
+    world: &World,
+    actor: Entity,
+    requested: u32,
+) -> Result<Option<u32>, CastFailure> {
+    match resolve_actor_action(world, actor, requested) {
+        Ok(resolved) => Ok(Some(resolved)),
+        Err(CastFailure::UnknownSpell | CastFailure::NotKnown) => Ok(None),
+        Err(reason) => Err(reason),
+    }
 }
 
 fn resolve_aliases(world: &World, actor: Entity, requested: u32) -> Result<u32, CastFailure> {

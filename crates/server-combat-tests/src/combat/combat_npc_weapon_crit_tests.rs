@@ -4,8 +4,8 @@ use lightyear::prelude::{MessageReceiver, MessageSender};
 use shared::components::{Level, Position, UnitLevel};
 use shared::protocol::{CombatEvent, CombatEventType};
 
-use super::npc_expertise_tests::collect_broadcast_swings;
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
+use crate::spell_cast::test_harness::collect_broadcast_swings;
 use crate::spell_cast::test_harness::{Harness, harness, world_db};
 
 const NPC_BUFFS: u32 = 62_627;

@@ -27,7 +27,7 @@ mod batch9;
 mod chrono_flame;
 mod clearcasting;
 mod elemental_ascendance;
-mod empower_evoker;
+pub(crate) mod empower_evoker;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
@@ -41,6 +41,14 @@ pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 pub(crate) mod prayer_of_mending;
 mod protection_items;
+mod ret_empyrean;
+pub(crate) use ret_empyrean::owns_empyrean_proc;
+pub(super) use ret_empyrean::schedule_empyrean_legacy;
+mod ret_purpose;
+pub(super) use ret_purpose::roll_selected_ret_divine_purpose;
+mod ret_tier;
+pub(super) use ret_tier::after_foreground_spender;
+pub(crate) use ret_tier::owns_arbiter_charge;
 mod scourge_strike;
 mod soul_of_the_forest;
 mod swiftmend;
@@ -67,6 +75,18 @@ pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havo
 pub(crate) use batch20::proc_charges;
 pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
+/// TC OnCast runs once after successful checks, before spending and launch.
+pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
+    match spell_id {
+        batch16::RET_JUDGMENT | batch16::HOLY_JUDGMENT | batch10::PROTECTION_JUDGMENT => {
+            batch16::energize_judgment(world, caster, depth);
+        }
+        // SimC's ordinary/background Avenging Wrath constructors use these IDs.
+        31884 | 454351 => ret_empyrean::grant_on_wrath(world, caster, depth),
+        _ => {}
+    }
+}
+
 /// OnEffectHit runs once per effect without replacing generic or aura dispatch.
 pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
     match (spell, index) {
@@ -324,7 +344,6 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch17::SOUL_FIRE, 0) => Some(batch17::apply_soul_fire_dot),
         (batch17::BLOOD_BOIL, 0) => Some(batch17::apply_blood_plague),
         (batch17::MARROWREND, 1) => Some(batch17::grant_bone_shield),
-        (batch16::RET_JUDGMENT | batch16::HOLY_JUDGMENT, 0) => Some(batch16::energize_judgment),
         (batch15::RISING_SUN_DAMAGE, 0) => Some(batch15::wound_rising_sun),
         (batch14::ORB_DAMAGE, 0) => Some(batch14::slow_orb),
         (batch14::BLIZZARD_DAMAGE, 0) => Some(batch14::slow_blizzard),
@@ -344,7 +363,6 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch11::THRASH, 0) => Some(batch11::thrash_bleed),
         (batch10::FLURRY_DAMAGE, 0) => Some(batch10::energize_flurry),
         (batch10::FERAL_LUNGE, 0) => Some(batch10::bite_lunge),
-        (batch10::PROTECTION_JUDGMENT, 0) => Some(batch10::energize_judgment),
         (batch10::HAND_OF_GULDAN, 0) => Some(batch10::launch_guldan_meteor),
         (batch9::WINTER_DAMAGE, 0) => Some(batch9::slow_winter_hit),
         (batch9::SCOURGE_STRIKE, 0) => Some(scourge_strike::erupt_and_apply_missing),
@@ -769,6 +787,7 @@ fn track_switch_plan(
         units: target.into_iter().collect(),
         dest: None,
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }]
@@ -803,6 +822,7 @@ fn chain_heal_plan(
         units,
         dest: None,
         chain_multipliers,
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }]
@@ -971,6 +991,7 @@ fn pyre_explosion_plan(
             orientation: super::targets::orientation(world, caster),
         }),
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }]
@@ -1018,7 +1039,7 @@ pub(super) fn cast_expel_harm_damage(
     );
 }
 
-pub(crate) fn script_effect_value(world: &World, caster: Entity, spell_id: u32, index: u8) -> f32 {
+pub fn script_effect_value(world: &World, caster: Entity, spell_id: u32, index: u8) -> f32 {
     let spell = world
         .resource::<crate::spell_info::SpellStore>()
         .get(spell_id)

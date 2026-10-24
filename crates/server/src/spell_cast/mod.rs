@@ -202,6 +202,8 @@ pub mod native_apl;
 #[cfg(test)]
 mod periodic_healing_taken_tests;
 #[cfg(test)]
+mod proc_recipient_tests;
+#[cfg(test)]
 mod protection_producer_tests;
 mod sanctuary;
 pub(crate) use interruptibility::can_interrupt_cast;
@@ -362,6 +364,8 @@ mod knockback;
 #[cfg(test)]
 mod knockback_tests;
 pub mod knowledge;
+#[cfg(test)]
+mod launch_combat_tests;
 mod school_costs;
 pub(crate) mod teleport;
 pub mod teleport_positions;
@@ -2586,6 +2590,8 @@ pub(crate) fn execute_cast(
         // TC Spell.cpp3543-3546: one UseItem credit after successful cast checks.
         crate::achievement::record_item_use(world, caster, item);
     }
+    // TC Spell.cpp3843–3869: OnCast precedes TakePower and SendSpellGo.
+    scripts::on_cast(world, caster, spell.id, 0);
     take_cast_resources(world, caster, spell, &costs);
     start_cooldowns(world, caster, spell);
     scripts::ordinary_combo_cast(world, caster, spell);
@@ -2633,6 +2639,9 @@ pub(crate) fn execute_cast(
     }
     if !spell.cast_parent_owns_modifier_charges {
         spell_mods::consume_charges(world, caster, spell);
+        scripts::after_foreground_spender(world, caster, spell, explicit);
+        scripts::roll_selected_ret_divine_purpose(world, caster, spell);
+        scripts::schedule_empyrean_legacy(world, caster, spell, explicit);
     }
     blooming_infusion::after_cast(world, caster, spell);
     druid_transform::after_cast(world, caster, spell);
@@ -2661,6 +2670,8 @@ fn discount_missed_rune_costs(costs: Vec<(CostPool, f32)>, missed: bool) -> Vec<
 struct PlannedEffect {
     index: usize,
     units: Vec<Entity>,
+    /// Original selection survives MISS/IMMUNE for launch/arrival combat, not effects.
+    selected_units: Vec<Entity>,
     dest: Option<Dest>,
     /// A chained effect's damage and healing multiplier per unit: `EffectChainAmplitude`
     /// to the power of the unit's place in the chain (`m_damageMultipliers`,
@@ -2735,6 +2746,7 @@ fn plan_targets(
                 units: Vec::new(),
                 dest: None,
                 chain_multipliers: Vec::new(),
+                selected_units: Vec::new(),
                 blocked_units: Vec::new(),
                 prevent_hit_script: false,
             })
@@ -2752,6 +2764,7 @@ fn plan_targets(
                 units: vec![target],
                 dest: None,
                 chain_multipliers: Vec::new(),
+                selected_units: Vec::new(),
                 blocked_units: Vec::new(),
                 prevent_hit_script: false,
             })
@@ -2794,6 +2807,7 @@ fn plan_targets(
                 units: Vec::new(),
                 dest: None,
                 chain_multipliers: Vec::new(),
+                selected_units: Vec::new(),
                 blocked_units: Vec::new(),
                 prevent_hit_script: false,
             });
@@ -2881,6 +2895,7 @@ fn plan_targets(
             units,
             dest,
             chain_multipliers,
+            selected_units: Vec::new(),
             blocked_units: Vec::new(),
             prevent_hit_script,
         });
@@ -3130,6 +3145,18 @@ fn hit_units(plan: &TargetPlan) -> Vec<Entity> {
         }
     }
     hit
+}
+
+/// TargetInfo includes misses; named plans that skip defense selection retain their units.
+fn selected_units(plan: &[PlannedEffect]) -> Vec<Entity> {
+    let selected = plan
+        .iter()
+        .flat_map(|effect| effect.selected_units.iter().chain(&effect.units));
+    let mut seen = std::collections::HashSet::new();
+    selected
+        .copied()
+        .filter(|unit| seen.insert(*unit))
+        .collect()
 }
 
 /// The spell's `OnHit` script on every unit it landed on (`Spell::DoSpellHitOnUnit`).
@@ -3522,6 +3549,7 @@ fn launch_triggered_spell(
                 observed.0.push((caster, spell.id, explicit));
             }
             crate::achievement::record_spell_cast(world, caster, spell.id);
+            scripts::on_cast(world, caster, spell.id, depth);
             scripts::spawn_ravager_field(world, caster, spell, explicit, depth);
             missiles::launch(world, caster, spell, plan, depth);
             druid_transform::after_cast(world, caster, spell);
@@ -3573,6 +3601,7 @@ fn execute_costed_trigger(
     crate::profession::check_cast_items(world, caster, spell)?;
     let prepared = resources::snapshot(world, caster, spell, &costs);
     let plan = plan_targets(world, caster, &prepared, explicit, true)?;
+    scripts::on_cast(world, caster, prepared.id, depth);
     take_cast_resources(world, caster, &prepared, &costs);
     crate::achievement::record_spell_cast(world, caster, prepared.id);
     missiles::launch(world, caster, &prepared, plan, depth);

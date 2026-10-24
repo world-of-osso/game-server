@@ -76,7 +76,7 @@ fn recorded_mid_edge_retarget_consumes_only_the_remaining_frozen_walk_time() {
     let remaining_yards = from.distance(to) / full_chord * edge.yards;
     let mut travel = Travel {
         destination: to,
-        legs: read_legs(&space, from, to).unwrap(),
+        legs: read_legs(Some(&space), from, to).unwrap(),
     };
     let after = advance(from, &mut travel, remaining_yards + ROUNDING_YARDS, 0.0);
     assert!(
