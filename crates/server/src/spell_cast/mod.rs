@@ -29,6 +29,7 @@ mod aura_spell_restrictions;
 pub(crate) mod auto_repeat;
 #[cfg(test)]
 mod auto_shot_repeat_tests;
+pub(crate) mod cooldown_query;
 #[cfg(test)]
 mod hit_positivity_tests;
 #[cfg(any(test, feature = "test-support"))]
