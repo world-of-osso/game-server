@@ -151,4 +151,6 @@ mod dispatch_tests;
 #[cfg(test)]
 mod equipment_tests;
 #[cfg(test)]
+mod readiness_tests;
+#[cfg(test)]
 mod tests;
