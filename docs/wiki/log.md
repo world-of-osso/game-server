@@ -1,3 +1,7 @@
+## 2026-10-24 — Full TDB proc producer and effective entries
+
+[Auras](systems/auras.md#explicit-proc-source-presence--2026-10-23): same importer/table now persists all18 audited columns,8Python contracts GREEN plus exact1291×18 private roundtrip. Separate effective entries bind TC zero defaults and generated type/family/hit/disable/attribute metadata; raw DB2 fields stay intact. Corrected16native loader tests GREEN16.54s at1c98c106a (2m00compile/0warnings). Two bad generated-hit fixture oracles were withdrawn and corrected before binding behavior. Native event/eligibility/rate/recovery/charge dispatch remains open; no canonical publication or DPS claim. [Capability/proof ledger](../handoffs/tdb-proc-values-proof-ledger.md).
+
 ## 2026-10-24 — Expurgation Dummy-proc qualification
 
 [Auras](systems/auras.md#expurgation-dummy-proc--2026-10-24): native selected383344/actual184575 hit yields genuine missing383346 RED atcce395359; unrelated Judgment control passes40.15s. TC806–821 supplies a class callback using partial-trigger semantics, not a generic Dummy promotion. Native amounts/cadence and actual recipient retained; unchanged GREEN pending. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#expurgation-native-dummy-proc).
