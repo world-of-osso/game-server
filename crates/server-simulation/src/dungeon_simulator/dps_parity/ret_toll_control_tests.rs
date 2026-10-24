@@ -36,7 +36,8 @@ fn child_targets(run: &Run, child: u32) -> Vec<u64> {
         .filter(|event| {
             event.source == Some(run.actor.to_bits())
                 && event.spell_id == Some(child)
-                && event.kind == CombatLogKind::CastSuccess
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
         })
         .filter_map(|event| event.target)
         .collect()
