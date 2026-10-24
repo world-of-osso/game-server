@@ -509,6 +509,51 @@ fn dps_parity_demo_alternate_imp_identity_matches_native_hog_imp_power() {
 }
 
 #[test]
+#[ignore = "future native alternate cast list must win at runtime; private143622 inputs required"]
+fn dps_parity_demo_alternate_imp_native_cast_list_does_not_inject_policy_energy() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_authored_guardian_control();
+    // Hypothetical future native list uses actual TDB416's3110. This is not a
+    // published143622 row, and the project policy must not substitute104318.
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::guardian::GuardianSpells>()
+        .spells
+        .insert(143622, vec![3110]);
+    let imp = trigger_native_imp(&mut run, 279910);
+    assert!(
+        crate::spell_cast::powers::power_value(
+            run.app.world(),
+            imp,
+            shared::components::PowerType::Energy
+        )
+        .is_none()
+    );
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<crate::spell_cast::summon::SummonedCreature>(imp)
+            .is_some()
+    );
+    assert!(
+        !run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(imp.to_bits())
+                    && event.spell_id == Some(104318)
+                    && event.kind == CombatLogKind::CastSuccess
+            }),
+        "native list must not acquire a project attack or its Energy pool"
+    );
+}
+
+#[test]
 #[ignore = "native267216 first+12s periodic association; private native143622 inputs required"]
 fn dps_parity_demo_inner_demons_uses_native_period_without_tick_zero() {
     let _seed = crate::random::seed_scope(70448);
