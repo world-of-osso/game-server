@@ -1,3 +1,4 @@
+- [FIRST / native-order cycle selectors](systems/simc-apl.md#capability--proof-matrix) —14775's bare/explicit FIRST and native-order cycles merged from2cd5fdaa9; original38GREEN proof separate from current Feral reporter recheck.
 - [Selected RWK native lifecycle](../handoffs/ww-rwk-producer-proof-ledger.md) — natural producer, actual RSK reset, child and one-use consumption/unselected owner;7GREEN atf2c, numerical band and sourceAoE open.
 - [Self-cast target_if readiness context](../handoffs/self-target-context-proof-ledger.md) — actual Zenith RED→GREEN, four WW native controls plus25 shared regressions; context/cast-target mapping, no default fallback. Numerical band open.
 - [Resumable native precombat poll](../handoffs/shared-precombat-poll-proof-ledger.md#current-green-scope--3d32d68bf) — actual Fire2RED→2GREEN plus23 simulation regressions; real GCD/hardcast waits, native flight at Finished and while-casting row permission. Full Fire adapter/facts separate.
