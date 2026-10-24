@@ -151,22 +151,40 @@ fn prepare_manual_guardian_control() -> Run {
     run
 }
 
-fn cast_native_guardian_in_melee_range(run: &mut Run, spell: u32) -> Entity {
-    let actor = run.actor;
-    cast_and_finish(run, actor, spell);
+fn spawn_native_guardian_in_melee_range(run: &mut Run, spell_id: u32) -> Entity {
     let world = run.app.world_mut();
-    let guardian = world
-        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
-        .iter(world)
-        .find(|(_, summon)| summon.owner == actor && summon.spell_id == spell)
-        .map(|(entity, _)| entity)
-        .expect("real native child summon must produce its actual guardian");
-    // Isolate melee startup/cadence from the native summon scatter position.
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+        .unwrap()
+        .clone();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.effect == 28)
+        .unwrap();
     let position = *world
         .get::<shared::components::Position>(run.targets[0])
         .unwrap();
-    world.entity_mut(guardian).insert(position);
-    guardian
+    // Exercise native Effect28 through actor AI/combat. Destination42/43 planning
+    // requires geometry absent from this fixture; do not invent a collision map.
+    let ctx = crate::spell_cast::effects::EffectCtx {
+        caster: run.actor,
+        spell: &spell,
+        depth: 0,
+        dest: Some(crate::spell_cast::targets::Dest {
+            position: Vec3::new(position.x, position.y, position.z),
+            orientation: 0.0,
+        }),
+        chain_multiplier: 1.0,
+    };
+    crate::spell_cast::effects::cast_handler(effect.effect).unwrap()(world, &ctx, effect);
+    world
+        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(world)
+        .find(|(_, summon)| summon.owner == run.actor && summon.spell_id == spell_id)
+        .map(|(entity, _)| entity)
+        .expect("real native effect28 must produce its actual guardian")
 }
 
 fn read_guardian_swings(world: &World, actor: Entity) -> Vec<(f64, u64, f32)> {
@@ -196,7 +214,7 @@ fn read_guardian_swings(world: &World, actor: Entity) -> Vec<(f64, u64, f32)> {
 fn dps_parity_demo_native_dreadstalker_melee_tracks_owner_without_resetting_clock() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_manual_guardian_control();
-    let guardian = cast_native_guardian_in_melee_range(&mut run, 193331);
+    let guardian = spawn_native_guardian_in_melee_range(&mut run, 193331);
     for _ in 0..100 {
         run.app.update();
     }
@@ -258,7 +276,7 @@ fn dps_parity_demo_native_dreadstalker_melee_tracks_owner_without_resetting_cloc
 fn dps_parity_demo_native_caster_imp_keeps_firebolt_without_guardian_melee() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_manual_guardian_control();
-    let guardian = cast_native_guardian_in_melee_range(&mut run, 104317);
+    let guardian = spawn_native_guardian_in_melee_range(&mut run, 104317);
     for _ in 0..200 {
         run.app.update();
     }
