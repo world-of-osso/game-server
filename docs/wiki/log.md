@@ -22,9 +22,16 @@ At96b572797, [native packet27/27](../handoffs/native-precombat-proof-ledger.md#c
 ## 2026-10-23 — Native profile stat-allocation redirects
 
 [Stat redirects](systems/character-stats.md#profile-stat-allocation-redirects--2026-10-23): actual103 shared equipment input→StatsPlugin independently reproduces five tier errors and ten matching ordinary slots; invalid donor and false-unmodeled diagnostics also RED,3RED11.02s at7aa72bf47. Server-local donor metadata changes calculation-only stat types/allocations, not original item identity/catalog/effects/set membership or the persisted/wire ABI. Atd45fe30e8 three GREEN12.43s, clean25m11build; two native cases remain opt-in and the env-free diagnostic stays enabled. Lead integration/DPS remain open. [Proof](../handoffs/equipment-stat-redirect-proof-ledger.md).
+## 2026-10-23 — Incoming native-factor fixture boundary
+
+Merged `eec5b6bcf` into B, preserving its four ignored single-spell cases in the consumer. Existing15factor observation calls and armor observation fields/initializers now use explicit fixture-support gates; only resource constructor/export and public return type visibility widen. Calculations unchanged. Combined core-unit/simulator check at14c74e6fa passes42.83s without diagnostics; production and full-suite gates pending. Expected6322workspace cases/314ignored includes four incoming-master additions.
+
 ## 2026-10-23 — Corridor capture consumer ownership
 
 The retained-core unit check exposed a runtime-only reverse edge: ignored corridor capture imports simulator runtime/diagnostics. Capture returned to the consumer with its original name and a canonical graph re-export; no gameplay/type duplication. Expected117 simulator cases/6retained graph cases; workspace names/ignore statuses unchanged. Compiler and full-suite qualification pending.
+## 2026-10-23 — Public-behavior combat test consumer
+
+[C pilot](../handoffs/crate-split-area-tests.md): twelve pure file moves preserve106 native melee case names; two shared collectors lifted without algorithm changes into existing harness. New consumer has only dev dependencies and the same opt2/debug1 profile; four private-formula files stay core. Exact expected full-workspace inventory remains6318cases/310ignored. Atacecb97d1, combined core-unit/simulator/combat compiler check42.85s and production-no-feature check14.59s pass without diagnostics; full-suite gate pending. Compiler elapsed times are not paired speedup measurements.
 
 ## 2026-10-23 — Simulator compiler boundary and next area pilot
 
