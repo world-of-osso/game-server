@@ -1,4 +1,5 @@
 //! Gameplay-world bindings for the engine-free pinned SimC APL evaluator.
+pub mod reaction;
 use bevy::prelude::*;
 use server::simc_apl::{Action, ActionFacts, Facts};
 use shared::components::PowerType;
@@ -459,6 +460,13 @@ impl<'a> NativeFacts<'a> {
                 .map(|aura| f64::from(aura.stacks))
                 .fold(0.0, f64::max)),
             "remains" => Ok(buff_remaining(&active, now)),
+            "react" => reaction::reacted_stacks(self.world, self.actor, id, &active),
+            "duration" => Ok(f64::from(crate::auras::fresh_duration_ms(
+                self.world,
+                self.actor,
+                self.actor,
+                self.spell(id)?,
+            )) / 1000.0),
             "at_max_stacks" => Ok(bool_value(
                 active
                     .iter()
@@ -532,6 +540,9 @@ impl<'a> NativeFacts<'a> {
                 self.world, self.actor, spell, "remains",
             ),
             "ready" => crate::spell_cast::native_apl::action_ready(self.world, self.actor, spell),
+            "execute_time" => Ok(crate::spell_cast::native_apl::execute_time(
+                self.world, self.actor, spell,
+            )),
             _ => Err(format!("unknown native APL action property {property}")),
         }
     }
