@@ -7,3 +7,7 @@ rust-version.workspace = true
 [dependencies]
 # Catalog loading uses the same SQLite connection type as server loaders.
 rusqlite = { version = "0.35", features = ["bundled"] }
+
+[dev-dependencies]
+# The existing ignored property-census fixture emits JSON reports.
+serde_json = "1"
