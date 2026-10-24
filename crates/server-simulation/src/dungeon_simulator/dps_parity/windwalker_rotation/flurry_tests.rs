@@ -17,18 +17,39 @@ const ONE_VERSUS_MANY: u32 = 450988;
 fn prepare(selected: bool) -> Run {
     let (profile, mut traits) = super::super::read_reference(269).unwrap();
     if !selected {
-        // Native TraitNodeEntry125069 owns Flurry450615; change the input before progression.
+        // Flurry is a granted Shado-Pan root. Unselect the hero subtree itself,
+        // preserving the frozen profile's class/spec purchases before progression.
+        let path = super::super::inputs::directory()
+            .unwrap()
+            .join("269.selected-traits-active.json");
+        let exported: Vec<Value> = super::super::inputs::read_json(&path).unwrap();
+        let retained: std::collections::BTreeSet<_> = exported
+            .iter()
+            .filter(|entry| entry["tree"] == "class" || entry["tree"] == "spec")
+            .map(|entry| entry["entry_id"].as_u64().unwrap() as u32)
+            .collect();
         let count = traits.len();
-        traits.retain(|entry| entry.entry_id != 125069);
-        assert_eq!(traits.len() + 1, count);
+        traits.retain(|entry| retained.contains(&entry.entry_id));
+        assert!(traits.len() < count);
     }
     let identity = super::super::inputs::read_actor(&profile).unwrap();
     let mut run = super::super::prepare_literal_reference(profile, &traits, 1, identity).unwrap();
     super::super::preparation::prepare_windwalker_precombat(&mut run).unwrap();
+    let applied = run
+        .app
+        .world()
+        .get::<crate::class_progression::TraitLoadout>(run.actor)
+        .unwrap()
+        .active_talent_spells()
+        .any(|spell| spell.spell_id == PASSIVE);
+    assert_eq!(applied, selected, "native declared hero-selection input");
     assert_eq!(
         crate::auras::has_aura(run.app.world(), run.actor, PASSIVE),
-        selected
+        selected,
+        "native progression must apply only the selected hero passive"
     );
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    super::super::install_fixture_lifetimes(&mut run, started_at);
     run
 }
 
