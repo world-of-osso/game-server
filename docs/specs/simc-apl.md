@@ -104,6 +104,10 @@ Native behavioral tests: `simc_apl_native/tests.rs` (earned Hit Combo and Chi, r
 
 Behavioral source: `followers/native_flight_tests.rs` covers Pyroblast launch/countdown/impact, hardcast exclusion, actor isolation and Meteor handoff/refusal. At3e3cacb6d, current-canonical source-view library tests yield startup1PASS/flight4genuine unknown-property RED in9.65s, compile19m12/zero warnings. Both requested properties are evaluated before failure. The earlier binary-target source-view refusal was not RED. Implementation reads pending native deadlines and the live TC Meteor continuation; targeted GREEN remains pending.
 
+### Add-event activity
+
+- [x] `raid_event.adds.up` returns1 only while a configured fixture add event is active, otherwise0 (including absent, waiting, exact expiry and retired waves); a later active wave returns1 again. Configured event existence/count and enemy count are not activity substitutes. Pinned SimC76f8118 raid_event.cpp2440–2443/3068–3108; [scoped proof ledger](../handoffs/adds-up-proof-ledger.md).
+
 ## Assigned native fact extensions
 
 - [ ] `talent.<name>.rank` reads selected native total ranks, not learned-spell membership.
@@ -133,6 +137,17 @@ TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyC
 - [ ] Positive selected-target casting reaction requires a qualified native snapshot. Actual absence of CastState is known false; active casting stays NATIVE_CASTING_REACTION_UNAVAILABLE rather than inventing a timer.
 
 [Target-context API proof and exact remaining gaps](../handoffs/native-target-context-proof-ledger.md).
+
+## Configured movement distance
+
+- [x] `movement.distance` reads the actor's explicit fixture `distance_to_move`, matching pinned SimC76f8118 `player.cpp12146–12148`. Never substitute target range, actor position or native travel distance.
+- [x] Patchwerk parity setup explicitly configures zero when no movement event exists, matching `player.cpp1288`; explicitly supplied positive values and subsequent state updates remain distinct from geometry.
+- [x] Missing configuration fails `NATIVE_MOVEMENT_DISTANCE_UNAVAILABLE`; dungeon callers fail `DUNGEON_MOVEMENT_DISTANCE_UNAVAILABLE` rather than borrowing fixture metadata.
+
+- [x] `movement.remains` divides positive configured distance by current native run speed; with zero distance and the admitted no-movement-event fixture it is zero. `movement.speed` reports native base run speed times current native run/aura modifiers even while idle, not last movement stride speed.
+- [x] Missing/dungeon movement state remains an explicit error for remains/speed as for distance; no target range or invented timing.
+
+`MOVEMENT_EVENT_SCHEDULING_UNREFERENCED` remains open: all pinned references are Patchwerk single-target or default-style adds with no movement events. Do not add an unpaired moving-style selector, event scheduler or active movement-buff model until a pinned reference supplies that contract.
 
 ## Expected combat length
 

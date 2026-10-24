@@ -29,3 +29,15 @@ mod shapeshift_tests;
 mod target_aura_type_tests;
 mod triggered_caster_aura_tests;
 mod triggered_target_aura_tests;
+
+mod additional_optional_power_tests;
+mod attack_restriction_tests;
+mod category_cooldown_tests;
+mod elemental_overload_tests;
+mod hit_positivity_tests;
+mod optional_flat_cost_tests;
+mod proc_recipient_tests;
+mod readiness_lifetime_tests;
+mod recovery_rate_tests;
+mod rogue_stealth_tests;
+mod summon_lifetime_tests;

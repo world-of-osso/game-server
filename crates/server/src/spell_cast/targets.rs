@@ -30,13 +30,15 @@ pub(super) use ordered_destination::{check_destination_support, effect_destinati
 use crate::random as rand;
 use bevy::prelude::*;
 use shared::casting::{CastState, CastType};
-use shared::components::{Health, Player, Position, Rotation, UnitFactionTemplate};
+use shared::components::{Health, Npc, Player, Position, Rotation, UnitFactionTemplate};
 
 use crate::faction::{FactionTemplates, Reaction, UnitFaction};
 
 use crate::spell_info::{SpellEffect, SpellInfo};
 
 const MELEE_RANGE: f32 = 5.0;
+/// TC a352b1fa ObjectDefines.h:43, used by Unit::IsWithinBoundaryRadius.
+const MIN_MELEE_REACH: f32 = 2.0;
 /// TC a352b1fa SpellInfo::CheckTarget, SharedDefines.h:492.
 const SPELL_ATTR1_EXCLUDE_CASTER: u32 = 0x0008_0000;
 /// TC a352b1fa SharedDefines.h:666; SpellInfo.cpp:2458–2460.
@@ -976,7 +978,7 @@ fn raid_corpses(
 ///129: SpellInfo.cpp377; SpellMgr.cpp3244-3245 marks native Width as CONE_LINE.
 ///TC a352b1fa Spell.cpp:1273-1324 selects 24 with native ConeAngle/CalcRadius.
 ///The line uses catalog Width, not a radial explosion or a target-only hit.
-///Unit-center geometry; combat-reach boundary expansion is not modelled.
+///Ordinary cones include TC's close-boundary exception; lines keep their width check.
 fn directed_units(
     world: &mut World,
     caster: Entity,
@@ -994,6 +996,7 @@ fn directed_units(
         .ok_or(effect.implicit_targets[slot])?;
     let half_arc = restrictions.cone_degrees.to_radians() / 2.0;
     let width = restrictions.width;
+    let line = matches!(effect.implicit_targets[slot], 129 | 134);
     let mut units = area_units(
         world,
         caster,
@@ -1004,15 +1007,23 @@ fn directed_units(
     );
     units.retain(|&unit| {
         let offset = position(world, unit).expect("area unit position") - origin;
-        within_directed_shape(
-            offset,
-            forward,
-            matches!(effect.implicit_targets[slot], 129 | 134),
-            width,
-            half_arc,
-        )
+        (!line && within_cone_boundary(world, caster, unit, offset))
+            || within_directed_shape(offset, forward, line, width, half_arc)
     });
     Ok(limit_implicit_targets(world, spell, caster, units, cap))
+}
+
+/// TC Spell.cpp:9476 / Unit.cpp:712–720. Candidates already share the caster's map.
+/// The target's scaled bounding radius is floored at MIN_MELEE_REACH, not added
+/// to either combat reach. Position::IsInDist uses strict exact 3D distance.
+fn within_cone_boundary(world: &World, caster: Entity, target: Entity, offset: Vec3) -> bool {
+    if world.get::<Player>(caster).is_none() && world.get::<Npc>(caster).is_none() {
+        return false;
+    }
+    crate::scripted_ai::model_reach::bounding_radius(world, target).is_some_and(|radius| {
+        let boundary = radius.max(MIN_MELEE_REACH);
+        offset.length_squared() < boundary * boundary
+    })
 }
 
 fn direction_to_destination(origin: Vec3, destination: Option<Vec3>, facing: f32) -> Vec3 {
@@ -1073,8 +1084,8 @@ fn entry_area_units(
 /// (`WorldObjectSpellAreaTargetCheck`) and within `ConeDegrees` of its facing
 /// (`WorldObjectSpellConeTargetCheck`, `HasInArc`), whatever their faction, that meet the
 /// effect's implicit target conditions (`WorldObjectSpellTargetCheck`, Spell.cpp:9309-9397).
-/// `ConeDegrees` 0 leaves only units straight ahead; the boundary-radius exemption and the
-/// cone-back and line variants are not modelled.
+/// Close units inside TC's strict 3D boundary bypass the arc check. `ConeDegrees` 0
+/// otherwise leaves only units straight ahead; cone-back and line variants are not modelled.
 fn cone_entry_units(
     world: &mut World,
     caster: Entity,
@@ -1097,13 +1108,16 @@ fn cone_entry_units(
     let in_cone: Vec<Entity> = query
         .iter(world)
         .filter(|(_, _, health, map)| health.current > 0.0 && Some(**map) == caster_map)
-        .filter(|(_, pos, ..)| {
+        .filter(|(unit, pos, ..)| {
             // WoW (x, y) is Bevy (x, -z); height is Bevy y.
             let (dx, dy) = (pos.x - origin.x, origin.z - pos.z);
             let within = dx.hypot(dy) <= radius && (pos.y - origin.y).abs() <= radius;
             let angle = dy.atan2(dx) - facing;
             let relative = angle.sin().atan2(angle.cos());
-            within && relative.abs() <= half_arc
+            let offset = Vec3::new(pos.x, pos.y, pos.z) - origin;
+            within
+                && (relative.abs() <= half_arc
+                    || within_cone_boundary(world, caster, *unit, offset))
         })
         .map(|(entity, ..)| entity)
         .collect();
