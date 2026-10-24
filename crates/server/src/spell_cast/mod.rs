@@ -197,7 +197,7 @@ mod interruptibility;
 #[cfg(test)]
 mod invigorating_fury_tests;
 #[cfg(any(test, feature = "test-support"))]
-pub(crate) mod native_apl;
+pub mod native_apl;
 #[cfg(test)]
 mod periodic_healing_taken_tests;
 #[cfg(test)]
@@ -1356,7 +1356,7 @@ pub fn cast_for_player(
 
 /// Use the normal Player request path without changing its selected/AA victim.
 /// None means the request uses the Player's native selected target.
-pub(crate) fn cast_for_player_with_target(
+pub fn cast_for_player_with_target(
     world: &mut World,
     player: Entity,
     spell_id: u32,

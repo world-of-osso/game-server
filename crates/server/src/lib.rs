@@ -90,7 +90,7 @@ mod ignore_list;
 mod inspect;
 mod interest;
 mod inventory;
-mod item_proc_data;
+pub mod item_proc_data;
 pub mod item_stats;
 pub mod item_templates;
 mod knockback;

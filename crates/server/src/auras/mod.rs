@@ -25,7 +25,7 @@ pub(crate) mod aura_state;
 pub(crate) mod base_armor;
 mod binding_heals;
 mod charred_warblades;
-pub(crate) mod combat_stats;
+pub mod combat_stats;
 pub(crate) mod damage_shield;
 #[cfg(test)]
 mod damage_shield_tests;
