@@ -1,5 +1,6 @@
-"""Audited public TC rows become explicit provenance, never proc values."""
+"""Pinned-source provenance and atomic refresh survive the complete-row import."""
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import sqlite3
@@ -8,7 +9,16 @@ import sys
 import tempfile
 import unittest
 
+from test_spell_proc_values import COLUMNS
+
 SCRIPT = Path(__file__).resolve().parents[1] / "import_spell_proc_presence.py"
+
+# Exact audited rows4341/48484 and ordered update1259886.
+ROWS = [
+    dict(zip(COLUMNS, (4341, 0, 0, 0, 0, 0, 0, 4096, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0))),
+    dict(zip(COLUMNS, (48484, 1, 7, 4096, 0, 0, 0, 16, 0, 1, 1, 1027, 0, 0, 0, 100, 0, 0))),
+    dict(zip(COLUMNS, (1259886, 0, 5, 0, 272, 0, 0, 0, 0, 4, 1, 0, 0, 0, 0, 0, 0, 0))),
+]
 
 
 class SpellProcPresenceTests(unittest.TestCase):
@@ -21,15 +31,19 @@ class SpellProcPresenceTests(unittest.TestCase):
             conn.execute("CREATE TABLE untouched (Build INTEGER)")
             conn.execute("INSERT INTO untouched VALUES (70448)")
         base = self.root / "base.sql"
-        base.write_text("INSERT INTO spell_proc (SpellId) VALUES (4341),(48484);\n")
+        base.write_text("INSERT INTO spell_proc VALUES " + ",".join(
+            "(" + ",".join(str(row[column]) for column in COLUMNS) + ")" for row in ROWS[:2]
+        ) + ";\n")
         patch = self.root / "patch.sql"
-        patch.write_text("INSERT INTO spell_proc (SpellId) VALUES (1259886);\n")
+        patch.write_text("INSERT INTO spell_proc VALUES (" + ",".join(
+            str(ROWS[2][column]) for column in COLUMNS
+        ) + ");\n")
         self.audit = {
             "base": {"path": str(base), "sha256": self.digest(base), "rows": 2},
             "patches": [{"source": str(patch), "sha256": self.digest(patch),
                          "statements": [patch.read_text().strip()]}],
             "effective_rows": 3,
-            "rows": [{"SpellId": 4341}, {"SpellId": 48484}, {"SpellId": 1259886}],
+            "rows": [dict(row) for row in ROWS],
         }
         self.manifest = self.root / "audit.json"
 
@@ -54,29 +68,39 @@ class SpellProcPresenceTests(unittest.TestCase):
                     [(4341,), (48484,), (1259886,)])
                 self.assertEqual(conn.execute("SELECT * FROM untouched").fetchall(), [(70448,)])
 
-    def test_refresh_preserves_later_value_columns_for_retained_rows(self):
+    def test_refresh_replaces_stale_values_for_retained_rows(self):
         with sqlite3.connect(self.db) as conn:
             conn.execute("CREATE TABLE tdb_spell_proc (SpellId INTEGER PRIMARY KEY, "
                          "Chance REAL DEFAULT 0)")
-            conn.executemany("INSERT INTO tdb_spell_proc VALUES (?, 0)", [(4341,), (14190,)])
+            conn.executemany("INSERT INTO tdb_spell_proc VALUES (?, 99)", [(4341,), (14190,)])
         result = self.import_presence()
         self.assertEqual(result.returncode, 0, result.stderr)
         with sqlite3.connect(self.db) as conn:
             self.assertEqual(conn.execute(
                 "SELECT SpellId, Chance FROM tdb_spell_proc ORDER BY SpellId").fetchall(),
-                [(4341, 0), (48484, 0), (1259886, 0)])
+                [(4341, 0), (48484, 100), (1259886, 0)])
 
-    def test_value_column_constraint_failure_rolls_back_removed_rows(self):
+    def test_database_insert_failure_rolls_back_table_replacement(self):
+        spec = importlib.util.spec_from_file_location("spell_proc_import", SCRIPT)
+        importer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(importer)
         with sqlite3.connect(self.db) as conn:
-            conn.execute("CREATE TABLE tdb_spell_proc (SpellId INTEGER PRIMARY KEY, "
-                         "Chance REAL NOT NULL)")
-            conn.executemany("INSERT INTO tdb_spell_proc VALUES (?, 0)", [(4341,), (14190,)])
-        result = self.import_presence()
-        self.assertNotEqual(result.returncode, 0)
-        with sqlite3.connect(self.db) as conn:
+            conn.execute("CREATE TABLE tdb_spell_proc (SpellId INTEGER PRIMARY KEY, Chance REAL)")
+            conn.executemany("INSERT INTO tdb_spell_proc VALUES (?, 99)", [(4341,), (14190,)])
+            conn.commit()
+
+            def deny_proc_inserts(action, table, *_):
+                if action == sqlite3.SQLITE_INSERT and table == "tdb_spell_proc":
+                    return sqlite3.SQLITE_DENY
+                return sqlite3.SQLITE_OK
+
+            conn.set_authorizer(deny_proc_inserts)
+            with self.assertRaises(sqlite3.DatabaseError):
+                importer.publish_proc_values(conn, importer.collect_proc_rows(self.audit))
+            conn.set_authorizer(None)
             self.assertEqual(conn.execute(
                 "SELECT SpellId, Chance FROM tdb_spell_proc ORDER BY SpellId").fetchall(),
-                [(4341, 0), (14190, 0)])
+                [(4341, 99), (14190, 99)])
 
     def test_changed_pinned_source_rejects_before_database_mutation(self):
         Path(self.audit["patches"][0]["source"]).write_text("-- changed after audit\n")

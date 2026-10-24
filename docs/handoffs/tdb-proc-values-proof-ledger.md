@@ -8,13 +8,13 @@ Audit: engine data/diagnostics/arms-parity-2026-10-23/tdb-spell-proc-source-audi
 
 ## Importer contract RED
 
-392f9c61d: three actual CLI contract assertion failures0.308s, zero setup errors. Existing import exits0 but persists only SpellId instead of complete BodyAndSoul/Expurgation rows, and accepts a row missing SpellPhaseMask. `tdb-importer-values-red.{log,proof.json}`. These are persisted external DB contract tests, not SQL/source-shape assertions. Value importer implementation remains pending native RED.
+392f9c61d: three actual CLI contract assertion failures0.308s, zero setup errors. Existing import exits0 but persists only SpellId instead of complete BodyAndSoul/Expurgation rows, and accepts a row missing SpellPhaseMask. `tdb-importer-values-red.{log,proof.json}`. These are persisted external DB contract tests, not SQL/source-shape assertions. Independent native RED also proven below. Existing importer now replaces the same authoritative table atomically with all18 exact values, leaving zeros unmodified for native loader default resolution. Presence-only fixture expectations replaced with complete pinned rows; source-hash, duplicate/incomplete and transactional rollback controls retained. Targeted Python GREEN pending. Native crates/Cargo and private RED DB remain unchanged for exact Ret secondRED.
 
 ## Strict independent RED
 
 Native BodyAndSoul64129 has Aura42→65081,100% native chance, help-spell flag0x4000, and all DB2 effect masks0. Audited TDB row: family6,mask0=1,mask2=0x80000,type4(no-damage/heal),phase2,HitMask3. Native Shield17 family mask0=1 is permitted. Native FlashHeal2061 mask0=0x800/mask3=0x40000000 and healing type must not trigger65081. Real Player casts and200 native frames observe whether the actual speed aura appeared, including before expiry; no injected spell rows/chance or fallback casts.
 
-Two ignored test cases added; runtime RED pending. Existing native friendly-heal proc36488→36483 is the first unrelated retained control; generated FranticMomentum391875 may be retained separately without duplicate compilation. Exact executed controls will be recorded. No production value import/dispatch implementation yet.
+8c94ceb6883: two ignored native cases executed, Shield positive1PASS / real FlashHeal negative1FAIL13.26s, compile35m40s/zero warnings. Failure is actual unwanted65081 after ordinary FlashHeal heals, not setup. `tdb-scope-native-red.{log,proof.json}`; exact executable `server-3270869ea8fa4b0c` recorded separately. Private1291-ID snapshot359d5529b83b6a9b3687675f500a6f552c7ce6976f8d3a4a1334b36aea42b381; source52fa remains unchanged. Existing native friendly-heal proc36488→36483 is the first unrelated retained control; generated FranticMomentum391875 may be retained separately without duplicate compilation. Exact executed controls will be recorded. No production value import/dispatch implementation yet.
 
 ## Required later Ret RED
 
