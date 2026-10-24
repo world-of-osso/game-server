@@ -137,6 +137,18 @@ fn qualify_prismatic_at(level: u8, learned: bool) {
         .len();
     let direct = complete_flash_hit(&mut group, patient);
     let echo = owned_echo(&group, patient).expect("qualified native Echo producer");
+    println!(
+        "PRISMATIC_NATIVE level={level} mastery_before={raw_mastery} mastery_after={} talent={extra} direct={} echo_effects={:?} caster_done={:?}",
+        native_mastery_percent(&group),
+        direct.amount,
+        echo.effects,
+        group
+            .h
+            .app
+            .world()
+            .get::<crate::auras::AuraStatMods>(group.priest)
+            .map(|mods| mods.healing_done_mult),
+    );
     finish_echo(&mut group, &echo);
     let ticks = echo_ticks(&group, patient, start);
     assert_eq!(ticks.len(), 2);
