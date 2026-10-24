@@ -400,11 +400,15 @@ fn tertiary_rating_value(rating: f32, per_point: f32) -> f32 {
     curve_value(&TERTIARY_DR_CURVE, rating / per_point)
 }
 
+/// Compose speed percentages without a lossy percent → unit factor → percent round-trip.
+/// TC Util.h CalculatePct/AddPct orders multiplication before division.
+pub(crate) fn compose_speed_percent(current: f32, amount: f32) -> f32 {
+    current + (100.0 + current) * amount / 100.0
+}
+
 /// TC Player.cpp5334–5361: rating and aura speed factors share the same product.
 fn effective_haste_pct(rating: f32, per_point: f32, aura_haste: f32) -> f32 {
-    let rating_factor = 1.0 + rating_value(rating, per_point) / 100.0;
-    let aura_factor = 1.0 + aura_haste / 100.0;
-    (rating_factor * aura_factor - 1.0) * 100.0
+    compose_speed_percent(rating_value(rating, per_point), aura_haste)
 }
 
 /// TC a352b1fa StatSystem.cpp:255-276, Player::UpdateArmor: live stat
