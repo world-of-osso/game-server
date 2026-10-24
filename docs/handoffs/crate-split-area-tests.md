@@ -1,6 +1,6 @@
 # Per-area test pilot and rebuild measurements
 
-Approved C pilot implemented atop repaired B `7fad4e6d0`, based on landed A `8e7c7a685`; compiler boundaries qualified at `acecb97d1`; full-suite acceptance pending. Table counts describe the reviewed pre-lift files. Existing behavior and complete case/ignore inventory remain mandatory. [Exact 106-case mapping](crate-split-combat-test-mapping.json).
+Approved C pilot implemented atop repaired B `14c74e6fa`, based on landed A `8e7c7a685`; compiler boundaries qualified at `acecb97d1`; full-suite acceptance pending. Table counts describe the reviewed pre-lift files. Existing behavior and complete case/ignore inventory remain mandatory. [Exact 106-case mapping](crate-split-combat-test-mapping.json).
 
 ## C: native melee behavior first
 
@@ -34,7 +34,7 @@ The first consumer check also identified real ordinary-spawn/state boundaries: `
 - [x] Lifted `collect_swings` and `collect_broadcast_swings` into existing `spell_cast::test_harness` in a separate pure-body-move commit `94e9357e5`. Wiring changes only visibility and canonical combat paths. Both consumers use those implementations; `attack_stop` stays private.
 - [x] Exposed only `harness_with`, `world_db`, its existing return struct and `powers_db` path field, plus the two canonical collectors. Other cache fields and `drain` remain private. Collector-only imports removed from moved sources.
 - [x] Added the empty-normal-library/dev-dependency consumer and equivalent opt2/debug1 profile. Combined core-unit/simulator/combat-target check passed42.85s; production-no-feature `game-server` check passed14.59s, both without diagnostics at `acecb97d1`.
-- [ ] Obtain parent full-suite/exact name reconciliation after B lands; expected core5763passed/4known failures/202ignored, simulator30/87, combat106/0. Workspace6004/4/310 remains unchanged.
+- [ ] Obtain parent full-suite/exact name reconciliation after B lands; expected core5763passed/4known failures/202ignored, simulator30/91, combat106/0. Workspace6004/4/314 remains unchanged.
 - [ ] Measure one same-source test-only edit before expanding to further areas. No compile-time percentage follows from LOC reduction alone.
 
 Excluded scope: gameplay algorithms, timers, RNG, damage assertions, data files, new test ignores, transport substitutions and production module moves. Existing protocol, Bevy components and server resources retain one type identity.
@@ -55,7 +55,7 @@ Use the existing compile-matrix runner and its README under `/home/osso/.worktre
 
 ## Proof references
 
-- [B exact baseline mapping](crate-split-test-mapping.json): 123 old subtree names and their mapped package/target/name/ignore identities; workspace expected totals6004 passed/4 known failures/310 ignored.
+- [B exact baseline mapping](crate-split-test-mapping.json): 123 old subtree names and their mapped package/target/name/ignore identities; workspace expected totals6004 passed/4 known failures/314 ignored after the four eec5b6bcf additions.
 - [Server crate ownership](../wiki/systems/server-crates.md).
 - `crates/server/src/{combat.rs,combat_*_tests.rs}`: module declarations, actual event-boundary assertions and retained private-helper accesses.
 - `crates/server/src/spell_cast/test_harness.rs`: existing cached input/harness and collector destination.
