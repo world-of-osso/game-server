@@ -9,6 +9,9 @@
 ## 2026-10-24 — WDP native enabler RED→GREEN
 
 [WDP enabler policy](../handoffs/ww-wdp-enabler-proof-ledger.md): after installing declared fixture lifetimes, actual selected owner/RSK/FoF/overlapping-CD premises pass and missing196742 fails14.46s. Bounded selected-owner root-OnHit producer uses generic native1000ms aura; native152175 gate/damage unchanged. SimC measured1500ms grace explicitly excluded. Separateww-wdp-enabler branch; ww-monk-parity pinnedc4 during gate. Owned1000ms/actual one-CD-negative and valid unselected-owner/overlap controls now GREEN across013/e072 (unchanged b275production). Fresh-backup-EACH300s89384.0867ST/106899.63three-target; still no WDPcasts/damage and far outside numerical band.
+## 2026-10-24 — Shared configured expected combat length GREEN
+
+[Shared expected length](systems/simc-apl.md#expected-combat-length):88095009c4genuineRED0.02s→991b7fcde4/4GREEN0.00s,14m24compile/0warnings after landed924638aba merge. Fixture duration147.5/300/600.25 stays independent of elapsed72/remaining;0/-1/NaN/±Inf and Dungeon are named unavailable, proposed action returns configured215.75. No fixed300/default/extra field/DB input. Tests enabled attribute-only; integration remains main-owned. [Proof](../handoffs/expected-combat-length-proof-ledger.md).
 
 ## 2026-10-24 — Shared pool-for-next resource contract
 
