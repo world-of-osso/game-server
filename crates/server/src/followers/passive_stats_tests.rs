@@ -80,6 +80,31 @@ fn mastery_follower(entry: u32) -> (Harness, Entity) {
     (h, unit)
 }
 
+#[test]
+fn native_mastery_follower_learns_universal_base_without_racial_skill_lines() {
+    let (h, unit) = mastery_follower(GARRICK);
+    let known = h
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(unit)
+        .unwrap();
+    assert!(
+        known.contains(114585),
+        "SkillLineAbility25920 in universal skill183"
+    );
+    assert!(crate::auras::has_aura(h.app.world(), unit, 114585));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<CharacterStats>(unit)
+            .unwrap()
+            .mastery_points,
+        8.0
+    );
+    // Human language98 belongs to race-restricted skill98, not the race0 bridge.
+    assert!(!known.contains(668));
+}
+
 fn apply_native_aura(h: &mut Harness, unit: Entity, spell_id: u32) {
     let spell = h
         .app
