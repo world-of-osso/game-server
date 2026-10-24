@@ -6,13 +6,20 @@ use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
 fn settle_native_cast(run: &mut Run) {
+    let gcd_spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(188196)
+        .unwrap()
+        .clone();
     for _ in 0..600 {
         let world = run.app.world();
         let active = world.get::<shared::casting::CastState>(run.actor).is_some()
             || world
                 .get::<crate::spell_cast::SpellHistory>(run.actor)
                 .is_some_and(|history| {
-                    history.has_active_gcd(crate::spell_cast::history_now(world))
+                    history.on_gcd(&gcd_spell, crate::spell_cast::history_now(world))
                 });
         if !active {
             return;
