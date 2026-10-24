@@ -380,6 +380,180 @@ fn literal_equipment_native_fire_tier_long_and_short_aliases_share_threshold_sta
     assert!(read_facts(&world, actor, &["set_bonus.unqualified_fire_alias_2pc"])[0].is_err());
 }
 
+#[test]
+#[ignore = "native on-use damage effects versus passive and stat-only real trinkets"]
+fn literal_equipment_native_has_use_damage_follows_on_use_effects() {
+    let mut world = load_world();
+    // Lightning55039 is direct SCHOOL_DAMAGE; Dragonfire408671 triggers408675.
+    // Jewel215206 is rating-only, AraKara443541 passive, Guillotine1291728 passive.
+    for (item, expected) in [(41121, 1.0), (202610, 1.0), (137462, 0.0), (219314, 0.0)] {
+        let actor = equip(&mut world, item, 270173);
+        assert_eq!(
+            read_facts(
+                &world,
+                actor,
+                &["trinket.1.has_use_damage", "trinket.2.has_use_damage"]
+            ),
+            vec![Ok(expected), Ok(0.0)],
+            "native item{item} versus passive270173",
+        );
+    }
+}
+
+fn item_cooldown_harness(item: u32) -> crate::spell_cast::test_harness::Harness {
+    let mut source = load_world();
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[], 1).unwrap();
+    h.app.insert_resource(
+        source
+            .remove_resource::<crate::spell_info::SpellStore>()
+            .unwrap(),
+    );
+    h.app.insert_resource(
+        source
+            .remove_resource::<crate::item_proc_data::ItemProcInputs>()
+            .unwrap(),
+    );
+    h.app
+        .insert_resource(source.remove_resource::<ItemTemplates>().unwrap());
+    h.app.insert_resource(
+        source
+            .remove_resource::<crate::item_stats::ItemScalingTables>()
+            .unwrap(),
+    );
+    h.app
+        .insert_resource(source.remove_resource::<NativeItemInstances>().unwrap());
+    let temporary = equip(h.app.world_mut(), item, 270173);
+    let equipment = h
+        .app
+        .world_mut()
+        .entity_mut(temporary)
+        .take::<EquippedItems>()
+        .unwrap();
+    let modifiers = h
+        .app
+        .world_mut()
+        .entity_mut(temporary)
+        .take::<EquippedItemModifiers>()
+        .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((equipment, modifiers));
+    h.app.world_mut().entity_mut(temporary).despawn();
+    h
+}
+
+fn cast_native_item(h: &mut crate::spell_cast::test_harness::Harness, target: Entity) {
+    let equipment = Equipment::load(h.app.world(), h.caster, &mut Bindings::default()).unwrap();
+    let item = equipment.slots["trinket1"].on_use.unwrap();
+    crate::spell_cast::cast_item_spell(
+        h.app.world_mut(),
+        h.caster,
+        item.on_use.spell_id,
+        Some(target),
+        item.on_use.cooldown,
+        item.item_level,
+        Some(item.item_id),
+    )
+    .expect("actual native item cast, no fabricated history");
+}
+
+#[test]
+#[ignore = "native Jewel137462 three-charge category1631 consumed by real item cast"]
+fn literal_equipment_native_fractional_charges_follow_real_item_category_recharge() {
+    let mut h = item_cooldown_harness(137462);
+    let caster = h.caster;
+    let initial = read_facts(
+        h.app.world(),
+        caster,
+        &["trinket.1.cooldown.charges_fractional"],
+    );
+    cast_native_item(&mut h, caster);
+    assert_eq!(initial, vec![Ok(3.0)]);
+    let after = read_facts(
+        h.app.world(),
+        caster,
+        &["trinket.1.cooldown.charges_fractional"],
+    );
+    assert_eq!(after, vec![Ok(2.0)]);
+    h.advance(200); // Native manual50ms clock: ten seconds of authored20s recharge.
+    let half = read_facts(
+        h.app.world(),
+        caster,
+        &["trinket.1.cooldown.charges_fractional"],
+    )[0]
+    .clone()
+    .unwrap();
+    assert!((half - 2.5).abs() < 0.01, "native partial recharge: {half}");
+    h.advance(200);
+    assert_eq!(
+        read_facts(
+            h.app.world(),
+            caster,
+            &["trinket.1.cooldown.charges_fractional"]
+        ),
+        vec![Ok(3.0)]
+    );
+}
+
+#[test]
+#[ignore = "native Lightning41121 single-charge on-use cooldown consumed by real item cast"]
+fn literal_equipment_native_fractional_single_charge_tracks_elapsed_cooldown() {
+    let mut h = item_cooldown_harness(41121);
+    let caster = h.caster;
+    let target = h.npc;
+    let initial = read_facts(
+        h.app.world(),
+        caster,
+        &["trinket.1.cooldown.charges_fractional"],
+    );
+    cast_native_item(&mut h, target);
+    h.advance(100); // Five seconds elapsed in the native spell/category cooldown.
+    let remains = read_facts(h.app.world(), caster, &["trinket.1.cooldown.remains"])[0]
+        .clone()
+        .unwrap();
+    let duration = read_facts(h.app.world(), caster, &["trinket.1.cooldown.duration"])[0]
+        .clone()
+        .unwrap();
+    assert!(
+        remains > 0.0 && remains < duration,
+        "real running timer{remains}/{duration}"
+    );
+    let bindings = Bindings::default();
+    let native = NativeFacts::new(
+        h.app.world(),
+        caster,
+        &bindings,
+        Encounter::Fixture {
+            started_at: 0.0,
+            duration: 300.0,
+            style: FightStyle::Patchwerk,
+        },
+        1,
+    );
+    let equipment = Equipment::load(h.app.world(), caster, &mut Bindings::default()).unwrap();
+    let spell = &equipment.slots["trinket1"].metadata.cooldowns[0].spell;
+    let native_progress = native
+        .cooldown_for_spell(spell, "charges_fractional")
+        .unwrap();
+    assert!(
+        (native_progress - (1.0 - remains / duration)).abs() < 0.000001,
+        "existing native helper must expose fractional progress{native_progress}"
+    );
+    assert_eq!(initial, vec![Ok(1.0)]);
+    let fraction = read_facts(
+        h.app.world(),
+        caster,
+        &["trinket.1.cooldown.charges_fractional"],
+    )[0]
+    .clone()
+    .unwrap();
+    assert!(
+        (fraction - (1.0 - remains / duration)).abs() < 0.000001,
+        "native single-charge progress{fraction}"
+    );
+}
+
 fn scope_trigger_catalog(world: &mut World, remove_child: bool, cycle: bool) {
     let store = world.resource::<crate::spell_info::SpellStore>();
     let mut spells: Vec<_> = [21992, 27648, 221786, 221796, 1291728]
