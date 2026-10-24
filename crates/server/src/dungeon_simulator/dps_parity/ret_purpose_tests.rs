@@ -44,6 +44,30 @@ fn current_holy_power(run: &Run) -> f32 {
         .0
 }
 
+fn cast_generator(run: &mut Run) -> Result<(), CastFailure> {
+    if run
+        .app
+        .world()
+        .get::<shared::components::Player>(run.actor)
+        .is_some()
+    {
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            run.actor,
+            JUDGMENT,
+            Some(run.targets[0]),
+        )
+    } else {
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            JUDGMENT,
+            Some(run.targets[0]),
+            false,
+        )
+    }
+}
+
 fn earn_finisher_power(run: &mut Run, finisher: u32) {
     let spell = run
         .app
@@ -61,13 +85,7 @@ fn earn_finisher_power(run: &mut Run, finisher: u32) {
         if current_holy_power(run) >= required {
             return;
         }
-        match crate::spell_cast::creature_cast(
-            run.app.world_mut(),
-            run.actor,
-            JUDGMENT,
-            Some(run.targets[0]),
-            false,
-        ) {
+        match cast_generator(run) {
             Ok(()) => {}
             Err(
                 CastFailure::OnCooldown
@@ -99,6 +117,49 @@ fn dps_parity_ret_purpose_selected_native_holy_power_casts_produce_real_proc() {
     assert!(
         purpose_applications(&run) > 0,
         "32 real ordinary HolyPower spenders must exercise the selected native chance"
+    );
+}
+
+#[test]
+#[ignore = "actual Player70 native request path independently qualifies the selected Purpose producer"]
+fn dps_parity_ret_purpose_player_native_holy_power_casts_produce_real_proc() {
+    let _seed = crate::random::seed_scope(70448);
+    let (profile, selected) = read_reference(70).unwrap();
+    let mut run = prepare_reference(
+        profile,
+        &selected,
+        1,
+        crate::followers::simulator::ParityActor::Player { race: 3 },
+    )
+    .unwrap();
+    engage(&mut run);
+    assert!(has(&run, PURPOSE_TALENT));
+    for _ in 0..32 {
+        earn_finisher_power(&mut run, FINAL_VERDICT);
+        let mut cast = false;
+        for _ in 0..200 {
+            match crate::spell_cast::cast_for_player_with_target(
+                run.app.world_mut(),
+                run.actor,
+                FINAL_VERDICT,
+                Some(run.targets[0]),
+            ) {
+                Ok(()) => {
+                    cast = true;
+                    break;
+                }
+                Err(CastFailure::OnGlobalCooldown | CastFailure::InProgress) => run.app.update(),
+                Err(reason) => panic!("native Player Final Verdict failed: {reason:?}"),
+            }
+        }
+        assert!(cast, "native Player spender reaches actual cast admission");
+        for _ in 0..4 {
+            run.app.update();
+        }
+    }
+    assert!(
+        purpose_applications(&run) > 0,
+        "32 native Player HolyPower spenders must exercise the selected native chance"
     );
 }
 
