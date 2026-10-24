@@ -257,7 +257,7 @@ pub(crate) fn remaining_periodic_ticks(
         .try_fold(0, |maximum, ticks| ticks.map(|ticks| maximum.max(ticks)))
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 fn count_remaining_ticks(aura: &AuraInstance) -> Result<u32, String> {
     let periodic: Vec<_> = aura
         .effects
