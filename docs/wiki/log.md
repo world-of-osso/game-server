@@ -4,7 +4,7 @@
 
 ## 2026-10-24 — Shared pool-for-next resource contract
 
-[Contract proof](../handoffs/feral-shared-program-proof-ledger.md#shared-resource-contract-implementation): concrete5RED/1control→6GREEN; entire engine-free shared44GREEN ata63. Pool wait propagates through calls, never dispatches or grants resources; source conditions/native maximum admission remain separate. max_energy requires action-bound maximum_energy; original two reporter cases now error explicitly until14860 supplies missing cost/cap facts. Native Feral adapter and parity remain open.
+[Contract proof](../handoffs/feral-shared-program-proof-ledger.md#shared-resource-contract-implementation): concrete5RED/1control→6GREEN; entire engine-free shared44GREEN ata63. Pool wait propagates through calls, never dispatches or grants resources; source conditions/native maximum admission remain separate. max_energy requires action-bound maximum_energy; original two reporter cases initially error explicitly without cost/cap facts; corrected d101+new-interface fixture hooks yield4reporterGREEN/full53GREEN atc4, with rows/assertions/threshold unchanged. Native Feral adapter and parity remain open.
 
 ## 2026-10-24 — Exact Feral Program reporter RED and FIRST integration
 

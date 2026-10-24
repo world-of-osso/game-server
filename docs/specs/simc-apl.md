@@ -26,8 +26,8 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 - [x] Evaluate floor with pinned unary rounding-down semantics, including negatives/nested grouping, and bind its inner native facts normally. Boolean bare/first target_if uses merged14775 FIRST semantics, not a Feral row rewrite. [Exact reporter RED/GREEN scope](../handoffs/feral-shared-program-proof-ledger.md).
 
-- [ ] Treat pool_resource,for_next=1 as control, never an executable spell. If the next source action is ready, continue; otherwise wait only when the requested resource at maximum admits it. Propagate waiting through called lists without leaking lower-priority actions. Preserve native target/condition/other-resource constraints through readonly adapter maximum admission and a local fact view. Qualify only resource= and for_next=1; unsupported controls/options fail explicitly.
-- [ ] max_energy=1 reads adapter-owned action-bound maximum_energy and current Energy; it must not use actor energy.max or a hardcoded spell cost. Missing threshold, primary resource or maximum-admission metadata errors explicitly. Source-owned native cost/cap/modifier qualification remains separate.
+- [x] Treat pool_resource,for_next=1 as control, never an executable spell. If the next source action is ready, continue; otherwise wait only when the requested resource at maximum admits it. Propagate waiting through called lists without leaking lower-priority actions. Preserve native target/condition/other-resource constraints through readonly adapter maximum admission and a local fact view. Qualify only resource= and for_next=1; unsupported controls/options fail explicitly.
+- [x] max_energy=1 reads adapter-owned action-bound maximum_energy and current Energy; it must not use actor energy.max or a hardcoded spell cost. Missing threshold, primary resource or maximum-admission metadata errors explicitly. Source-owned native cost/cap/modifier qualification remains separate.
 
 ## Equipped use_items
 
