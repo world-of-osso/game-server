@@ -1,14 +1,25 @@
 //! Native setup advances real cast/GCD state before fixture engagement.
 use super::Run;
 
-/// RED scaffold: a world-only dispatcher cannot yet drain composite cast plans.
+/// Complete selected native work before another source row or fixture engagement.
 pub(super) fn execute_precombat_plan(
     run: &mut Run,
     driver: &mut super::literal_rotation::Driver,
     action: server::simc_apl::Action,
     execution: super::literal_rotation::execution::Execution,
 ) -> Result<(), String> {
-    driver.execute(run.app.world_mut(), run.actor, action, execution)
+    use super::literal_rotation::execution::Execution;
+    let steps = match execution {
+        Execution::Composite(steps) if !steps.is_empty() => steps,
+        Execution::Composite(_) => return Err("selected native composite plan is empty".into()),
+        execution => vec![execution],
+    };
+    for step in steps {
+        // Every dispatch revalidates native admission; only the real App completes it.
+        driver.execute(run.app.world_mut(), run.actor, action.clone(), step)?;
+        finish_pending_setup(run)?;
+    }
+    Ok(())
 }
 
 // Bound setup failures; advancing frames must not become an endless cast retry.

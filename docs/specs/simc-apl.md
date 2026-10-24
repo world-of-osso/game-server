@@ -23,7 +23,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [ ] Actual owned active self auras are skipped without reordering pending steps. Empty/all-active plans are unusable. Every pending step requires its own native admission; an unready selected step cannot silently disappear.
 - [ ] Precombat execution consumes one normal native cast at a time with real cast/GCD completion. World-only execute rejects a Composite and never recursively dispatches it. Shared selection does not create an instant batch or change native casting times.
 
-[Composite selection proof/boundary](../handoffs/literal-composite-proof-ledger.md).
+[Composite selection proof/boundary](../handoffs/literal-composite-proof-ledger.md). [Native lifecycle consumption RED and pending GREEN](../handoffs/native-precombat-proof-ledger.md#composite-lifecycle-integration--genuine-red-green-pending).
 
 ## Literal native row gates
 
