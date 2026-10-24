@@ -2,6 +2,9 @@
 
 [Crate boundaries](systems/server-crates.md#generated-achievement-catalog-cut-d1): six generated lookups relocate37,819lines into existing server-catalog with three canonical immutable record types. Credit/ECS/player authority and unchanged matching predicates stay core; test identity and lookup-data census remain required. No elapsed-time speedup claim.
 
+## 2026-10-23 — Elemental Ascendance additional overload
+
+[Source/proof boundary](systems/spell-casting.md#elemental-ascendance-additional-overload--2026-10-23): actualb4a7f46b0 native2RED/1SKcontrolPASS27.40s; missing extra LB/CL casts, native prerequisites passed. Add effect8 casts once per root spell, independently of ordinary proc, retaining HIT+400ms and actual child damage. Same3nativeGREEN20.23s ata001f0541, clean17m03 build; [proof matrix](../handoffs/elemental-ascendance-extra-proof-ledger.md). Other roots/failed-roll/expiry and DPS integration remain unqualified; no coefficient/stat/RNG changes.
 ## 2026-10-23 — Missed hostile spell combat references
 
 [Combat](systems/combat.md#combat-state): native MISS/IMMUNE missing-reference REDs → selected-target launch/arrival preservation; three boundary controls, nine retained travel/reflection controls and unchanged Ret funding/TV damage GREEN at02090739e. No resource, hit-chance or timer override. WW equipment consumer1GREEN47.55s; combined parent gate awaits master8e7c7a685 integration. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#generic-missed-hostile-launch-combat).
