@@ -34,3 +34,9 @@ Tests remain explicitly opt-in because they need private259/71profile files; fin
 ## Integration ownership / remaining work
 
 14766 consumes Composite one real cast at a time and owns scheduler completion/accounting; this selection proof is not four-cast serial execution proof. No Moving/GCD fields or Driver gating were changed here. Lead owns integration gate. FIRST/cycle, applied persistent multipliers and Arms numeric/DPS qualification remain separate open work.
+
+## Integrated test setup follow-up
+
+Main reports d49f4951c consumer integration: six cases PASS; existing-coating case fails its own Amplifying native-admission premise, before selection.14766's full-drain per-cast control passes28.20s. The helper returned when Deadly's owned aura appeared without waiting for remaining native admissions; the prior standalone seven-case proof does not qualify that stronger integrated setup boundary.
+
+Test-only follow-up `arms-composite-ready-drain`: after normal cast/application, poll actual Prepared admission for every still-pending coating while advancing the existing native50ms runtime, bounded by200frames. No fixed extra GCD timer, cooldown mutation, production selection/gating or assertion weakening. Both helper callers retain their original assertions. Format/source review complete; integrated targeted GREEN remains14766/main-owned and pending. No new runtime PASS claimed here.

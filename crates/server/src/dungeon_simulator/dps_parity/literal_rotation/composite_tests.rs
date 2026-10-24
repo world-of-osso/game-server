@@ -76,7 +76,7 @@ fn owned_aura(run: &Run, spell: u32) -> bool {
         })
 }
 
-fn cast_coating(run: &mut Run, spell: u32) {
+fn cast_coating(run: &mut Run, equipment: &Equipment, spell: u32) {
     for _ in 0..200 {
         match crate::spell_cast::cast_for_player_with_target(
             run.app.world_mut(),
@@ -95,6 +95,7 @@ fn cast_coating(run: &mut Run, spell: u32) {
                 for _ in 0..200 {
                     run.app.update();
                     if owned_aura(run, spell) {
+                        wait_for_pending_coatings(run, equipment);
                         return;
                     }
                 }
@@ -108,6 +109,30 @@ fn cast_coating(run: &mut Run, spell: u32) {
         }
     }
     panic!("native coating{spell} never reached readiness");
+}
+
+fn wait_for_pending_coatings(run: &mut Run, equipment: &Equipment) {
+    let pending: Vec<_> = STEPS
+        .iter()
+        .copied()
+        .filter(|step| !owned_aura(run, step.spell))
+        .collect();
+    for _ in 0..200 {
+        let prepared = prepare(run, equipment, "apply_poison", &pending);
+        let all_ready = pending.iter().all(|step| {
+            let action = Action {
+                name: step.name.into(),
+                target: None,
+                options: Default::default(),
+            };
+            prepared.execution(&action, equipment).unwrap().is_some()
+        });
+        if all_ready {
+            return;
+        }
+        run.app.update();
+    }
+    panic!("remaining native coatings never reached readiness after setup cast");
 }
 
 fn prepare(
@@ -211,7 +236,7 @@ fn literal_composite_bare_poison_returns_all_four_native_ready_steps_without_cas
 #[ignore = "opt-in native ordered composite; requires private259 inputs"]
 fn literal_composite_existing_native_coating_is_skipped_without_reordering() {
     let (mut run, equipment) = native_player(259);
-    cast_coating(&mut run, COATINGS[0]);
+    cast_coating(&mut run, &equipment, COATINGS[0]);
     assert!(owned_aura(&run, COATINGS[0]));
     let prepared = prepare(&mut run, &equipment, "apply_poison", &STEPS);
     assert_native_steps_ready(&prepared, &equipment, &STEPS[1..], run.actor);
@@ -225,7 +250,7 @@ fn literal_composite_existing_native_coating_is_skipped_without_reordering() {
 #[ignore = "native ordered composite control; requires private259 inputs"]
 fn literal_composite_all_active_native_steps_are_not_ready() {
     let (mut run, equipment) = native_player(259);
-    cast_coating(&mut run, COATINGS[0]);
+    cast_coating(&mut run, &equipment, COATINGS[0]);
     let prepared = prepare(&mut run, &equipment, "single_coating", &STEPS[..1]);
     assert!(select(&prepared, &equipment, "single_coating").is_none());
 }
