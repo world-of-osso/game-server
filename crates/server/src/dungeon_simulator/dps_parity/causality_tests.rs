@@ -119,6 +119,13 @@ fn prepared() -> Run {
         style: FightStyle::Patchwerk,
     };
     literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter).unwrap();
+    // Capture movement too: the quiet owner is deliberately outside the fight at X20.
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .remove::<crate::creature_ai::FollowOwner>()
+        .insert(crate::creature_ai::CreatureState::Idle);
+    run.app.update();
     for spell in [FIRE_BREATH, ETERNITY_SURGE] {
         start_native(&mut run, spell, Some(1));
         finish_channel(&mut run);
