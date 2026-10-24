@@ -4,7 +4,7 @@
 
 Fixture-only spec103 driver using shared `Program`, native facts, selected action resolution and target/resource readiness. Preserve the exact pinned profile, native follower identity, costs, damage coefficients and production kit. Missing native mechanisms remain named; this ledger does not certify DPS parity.
 
-`feral-literal-apl` is separate from the fixed Bite candidate `feral-druid-parity` (runtime7ea788a8b, docs121a3b77e). Parent requested master→Bite only after ft1083/770 lands. Literal development merged master5d39f490af at5ad76e8de and picked approved min/max06c99c40c/45bae2933/585e2ca42 as96d0f6f0c/8d2a28e0d/c35c1d7ab. That merged development base is not yet locally compiled. The server String adapter delegates the canonical typed optional resolver, preserving one admission policy and the `server-simulation → server` dependency.
+`feral-literal-apl` is separate from the fixed Bite candidate `feral-druid-parity` (runtime7ea788a8b, docs121a3b77e). Parent requested master→Bite only after ft1083/770 lands. Literal development merged master5d39f490af at5ad76e8de and picked approved min/max06c99c40c/45bae2933/585e2ca42 as96d0f6f0c/8d2a28e0d/c35c1d7ab. The merged base and bindings compiled at e3648f4f7; one native binding test passed17.05s. Compiler reported one inherited unused `navigation` import, removed at3c51106ad without suppression; that removal awaits the next compiler run. The server String adapter delegates the canonical typed optional resolver, preserving one admission policy and the `server-simulation → server` dependency.
 
 ## Pinned source
 
@@ -20,8 +20,8 @@ Artifacts: engine `data/diagnostics/feral-parity-2026-10-23/literal-source/{inve
 | Source surface | Current state | Proof level / owner |
 |---|---|---|
 |15variable,6call and1pool rows|Variables/calls exist; floor and pool/for_next remain blocked|Source inspection;14766 owns extensions|
-|10target_if rows:5min,5boolean|Native target context/min available; boolean refreshable blocked|Inherited ta1068;14766 owns boolean selection|
-|39native spell/racial rows|Exact Feral aliases, native geometry and consumer not implemented|Feral-owned; no execution claim|
+|10target_if rows:5min,5boolean|Native target context/min available; boolean refreshable reproduces parser RED|Inherited ta1068;14766 owns boolean selection|
+|39native spell/racial rows|Aliases and Rake/Moonfire refresh bindings added; native target geometry/consumer not yet wired|Feral-owned; native binding1PASS17.05s, no literal execution claim|
 |11item/potion/external rows|Shared equipped metadata available; no provisioned potion/external provider|Consume shared equipment; report provider gaps explicitly|
 |2autoattack/snapshot rows|Shared execution exists; Feral consumer not wired|Driver integration behavioral RED below|
 
@@ -29,10 +29,24 @@ Numeric `<?`/`>?` are present on development base from bt1082, not a private exp
 
 Fact dependencies:
 
+- e3648f4f7 binds Rake155722 and Moonfire155625 through `native_dot_spell`/Pandemic. Exact-profile owned-aura test proves absent→fresh refreshability and active_dot; Rip1079 deliberately lacks a refresh resolver and returns `NATIVE_DOT_REFRESH_UNAVAILABLE`, because native duration669 is4000base/24000max/4000perResource. The canonical CP-prepared reader is14775-owned.
 - Master ta1068 supplies explicit ordered targets, owned dots/refresh policies, active_dot and actual fixture add-event components. Bind Feral aliases and consume these; do not fabricate wave timers or global aura matches.
 - hero_tree:14116/hf1080 candidate6e4427191, parent gate pending. No local hero-tree fact.
 - dot/action persistent multipliers:14775 owns the shared snapshot/API (frozen RED2bc981067); Feral eligibility stays separate. No new persistent snapshot fields here.
 - 14781: prev_gcd lands with hs1063 and reads successful GCD root identities through action bindings. Exact consumers are prev_gcd.1.rip, prev_gcd.1.ferocious_bite and prev_gcd.1.primal_wrath. Pending additions: buff.clearcasting.react, buff.tigers_fury.duration and action.convoke_the_spirits.execute_time.
+
+## Engine-free reporter REDs
+
+`crates/server/src/feral_apl_reporter.rs` compiles the actual shared Program without Bevy/DB; four tests in `simc_apl/feral_reporter_tests.rs` use exact pinned source rows. Reporter36fc81e68 plus action-bound maximum-energy addendd101caf70 are pushed. Compile exit0, four behavioral failures/exit101/0.00s; `literal-reporter-red/{compile.proof.json,compile.output.log,proof.json,output.log}` preserves evidence. Filter `feral_reporter_`.
+
+| Exact surface | Observed failure |
+|---|---|
+|`prowl,target_if=dot.rake.refreshable,if=!buff.shadowmeld.up`|Parser demands min/max mode|
+|`variable,name=convokeCountRemaining,value=floor(...)`|Parser reports unexpected trailing token|
+|`pool_resource,for_next=1` followed by exact max-Energy Bite row|Program wrongly dispatches the control row|
+|`ferocious_bite,max_energy=1,if=combo_points>=5`|Program selects Bite at25Energy instead of waiting|
+
+The concrete no-Incarnation/no-Apex reporter exposes `maximum_energy=50` only in the proposed Bite action context, from native25ordinary+25extra cap (SimC druid4253–4268); `energy.max=100` remains distinct. Numbers are fixture facts, not Program constants. Pool/max currently fail semantics, not nonexistent syntax errors.14766 owns the implementation; no private Program patch here.
 
 ## Behavioral evidence
 
