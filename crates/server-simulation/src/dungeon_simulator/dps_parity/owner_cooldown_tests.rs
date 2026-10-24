@@ -156,6 +156,11 @@ fn assert_scent_return(run: &mut Run, expected_return: f64) {
 }
 
 fn assert_scales_reduction(run: &mut Run, seconds: f64, triggered: bool) {
+    let original_position = *run
+        .app
+        .world()
+        .get::<shared::components::Position>(run.actor)
+        .unwrap();
     cast_normal(run, BARBED_SHOT);
     if !triggered {
         wait_for_gcd(run, COBRA_SHOT);
@@ -170,6 +175,19 @@ fn assert_scales_reduction(run: &mut Run, seconds: f64, triggered: bool) {
     let target = run.targets[0];
     let focus =
         crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Focus).unwrap();
+    eprintln!(
+        "NATIVE_SCALES_GEOMETRY original={original_position:?} actor={:?} target={:?} range={:?}",
+        run.app.world().get::<shared::components::Position>(actor),
+        run.app.world().get::<shared::components::Position>(target),
+        run.app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(COBRA_SHOT)
+            .unwrap()
+            .misc
+            .as_ref()
+            .and_then(|misc| misc.range.as_ref())
+    );
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
         actor,
