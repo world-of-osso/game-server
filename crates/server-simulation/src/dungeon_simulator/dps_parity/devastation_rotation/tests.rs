@@ -5,7 +5,7 @@ use super::super::literal_rotation::{Driver, capture_fixture};
 use super::super::{Run, prepare};
 use super::{bindings, facts::DevFacts};
 use crate::simc_apl_native::{Encounter, FightStyle};
-use server::simc_apl::{Action, ActionFacts, Program};
+use server::simc_apl::{Action, ActionFacts, Facts, Program};
 use shared::casting::CastState;
 use shared::protocol::CombatLogKind;
 
@@ -308,6 +308,62 @@ fn literal_dev_binding_native_azure_strike_source_filler_hits_the_real_enemy() {
         landed_damage(&run, AZURE_STRIKE),
         "native source filler must damage the selected enemy"
     );
+}
+
+#[test]
+#[ignore = "native fs Dragonrage source row and existing fixed-time target metadata"]
+fn literal_dev_binding_native_dragonrage_source_row_applies_actual_aura_and_recovery() {
+    let mut run = prepared();
+    let started = std::time::Duration::from_secs_f64(crate::spell_cast::now(run.app.world()));
+    super::super::install_fixture_lifetimes(&mut run, started);
+    let mut bindings = bindings::build();
+    let equipment = Equipment::load(run.app.world(), run.actor, &mut bindings).unwrap();
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        run.actor,
+        &run.targets,
+        &equipment,
+        [NativeAction {
+            name: "dragonrage",
+            spell: bindings.actions["dragonrage"],
+            talent: None,
+            self_target: true,
+        }],
+        false,
+    )
+    .unwrap();
+    let facts = DevFacts::new(
+        run.app.world(),
+        run.actor,
+        &bindings,
+        &equipment,
+        encounter(&run),
+        &run.targets,
+    );
+    let source = "dragonrage,if=target.time_to_die>=30&raid_event.adds.in>=60|target.time_to_die>=15&active_enemies>4|!raid_event.adds.exists|raid_event.adds.in=0";
+    let mut driver = Driver::new(Program::parse(&[("native_leaf", source)]).unwrap());
+    let (action, execution) = driver
+        .select("native_leaf", &facts, &prepared, &equipment)
+        .unwrap()
+        .expect("native fs Dragonrage source condition must select in its fixed ST fixture");
+    driver
+        .execute(run.app.world_mut(), run.actor, action, execution)
+        .unwrap();
+    assert!(crate::auras::has_aura(
+        run.app.world(),
+        run.actor,
+        bindings.buffs["dragonrage"]
+    ));
+    let facts = DevFacts::new(
+        run.app.world(),
+        run.actor,
+        &bindings,
+        &equipment,
+        encounter(&run),
+        &run.targets,
+    );
+    assert_eq!(facts.value("buff.dragonrage.up").unwrap(), 1.0);
+    assert!(facts.value("cooldown.dragonrage.remains").unwrap() > 0.0);
 }
 
 fn landed_damage(run: &Run, spell: u32) -> bool {
