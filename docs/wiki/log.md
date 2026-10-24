@@ -1,3 +1,7 @@
+## 2026-10-24 — Movement remains/speed scalars
+
+[Native movement predicates](systems/simc-apl.md#configured-movement-distance): three unknown-operand REDs/four distance controls PASS→all7GREEN0.00s atf3c760d3a, two-package test-target check146s/fmtPASS/zero warnings. Speed reads native run/aura modifiers even idle; positive-distance remains divides by live speed, explicit no-event zero stays0. Parent deferred scheduling because no pinned moving reference exists: MOVEMENT_EVENT_SCHEDULING_UNREFERENCED, no unpaired selector/timer added.
+
 ## 2026-10-24 — Explicit movement.distance fixture state
 
 [Configured movement distance](systems/simc-apl.md#configured-movement-distance): pinned76f8118 current.distance_to_move, not target range/native travel. Four actual unknown-operand REDs→4GREEN0.00s atc8fafe180; existing movement-event absence1GREEN10.01s, server+server-simulation test-target check81s and fmtPASS/zero warnings. Patchwerk explicitly initializes0; missing/dungeon configuration stays named. No scheduler, remains/speed, full native rotation or DPS claim.
