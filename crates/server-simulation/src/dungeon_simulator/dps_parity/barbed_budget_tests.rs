@@ -91,6 +91,39 @@ fn observe_lifetime(run: &mut Run, reapply_when_ready: bool) -> (Vec<Value>, Vec
     panic!("native Barbed did not finish its actual lifetime within diagnostic bound");
 }
 
+fn native_source_budget(run: &Run, timeline: &[Value]) -> (f64, usize) {
+    let world = run.app.world();
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(BARBED_SHOT)
+        .unwrap();
+    let extra_initial_period = spell.misc.as_ref().unwrap().attributes[5] & 0x200 != 0;
+    let first = &timeline[0];
+    let duration = first["duration_ms"].as_u64().unwrap();
+    let period = first["effects"][0]["period_ms"].as_u64().unwrap();
+    let ticks = duration / period + u64::from(extra_initial_period);
+    let capture = world.resource::<FactorCapture>().export();
+    let formula = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "periodic_amount" && event["spell_id"] == BARBED_SHOT)
+        .unwrap();
+    let amount = formula["factors"]["native_scaled_amount"].as_f64().unwrap();
+    assert!(amount > 0.0);
+    (amount, ticks as usize)
+}
+
+fn observed_tick_inputs(run: &Run) -> Vec<f64> {
+    run.app.world().resource::<FactorCapture>().export()["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|event| event["event"] == "result" && event["spell_id"] == BARBED_SHOT)
+        .map(|event| event["factors"]["native_input_amount"].as_f64().unwrap())
+        .collect()
+}
+
 fn write_budget_receipt(
     run: &Run,
     name: &str,
@@ -178,4 +211,58 @@ fn dps_parity_barbed_budget_native_legal_reapplication_records_complete_lifetime
     let (casts, timeline) = observe_lifetime(&mut run, true);
     assert_eq!(casts.len(), 2);
     write_budget_receipt(&run, "reapplied", casts, timeline, before);
+}
+
+#[test]
+#[ignore = "native DB2/TC per-tick contract; requires prepared253 and DPS_BARBED_OUTPUT"]
+fn dps_parity_barbed_budget_native_fresh_payments_use_db2_per_tick_amount() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_budget_player();
+    let before = report::stats(run.app.world(), run.actor);
+    let (casts, timeline) = observe_lifetime(&mut run, false);
+    let (native_amount, native_ticks) = native_source_budget(&run, &timeline);
+    let paid = observed_tick_inputs(&run);
+    write_budget_receipt(&run, "fresh-source", casts, timeline, before);
+    assert_eq!(
+        native_ticks, 8,
+        "real selected14s/2000ms/extra-initial schedule"
+    );
+    assert_eq!(paid.len(), native_ticks);
+    for amount in paid {
+        assert!(
+            (amount - native_amount).abs() < 0.01,
+            "DB2/TC periodic amount per payment: actual{amount}, native{native_amount}; tooltip dummy5 cannot divide the effect"
+        );
+    }
+}
+
+#[test]
+#[ignore = "native TC rolling carry contract; requires prepared253 and DPS_BARBED_OUTPUT"]
+fn dps_parity_barbed_budget_native_refresh_pays_fresh_and_unpaid_source_amounts() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_budget_player();
+    let before = report::stats(run.app.world(), run.actor);
+    let (casts, timeline) = observe_lifetime(&mut run, true);
+    let (native_amount, native_ticks) = native_source_budget(&run, &timeline);
+    let paid = observed_tick_inputs(&run);
+    write_budget_receipt(&run, "refresh-source", casts, timeline, before);
+    assert_eq!(native_ticks, 8);
+    assert_eq!(
+        paid.len(),
+        native_ticks + 1,
+        "one paid old tick plus the reset native full schedule"
+    );
+    let rolled = native_amount * (1.0 + (native_ticks - 1) as f64 / native_ticks as f64);
+    assert!((paid[0] - native_amount).abs() < 0.01);
+    for amount in &paid[1..] {
+        assert!(
+            (amount - rolled).abs() < 0.01,
+            "TC fresh plus unpaid/total: actual{amount}, expected{rolled}"
+        );
+    }
+    let expected = native_amount * native_ticks as f64 * 2.0;
+    assert!(
+        (paid.iter().sum::<f64>() - expected).abs() < 0.02,
+        "two full fresh budgets paid once each"
+    );
 }
