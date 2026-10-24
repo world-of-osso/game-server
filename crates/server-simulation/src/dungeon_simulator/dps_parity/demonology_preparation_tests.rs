@@ -192,17 +192,13 @@ fn prepare_authored_guardian_control() -> Run {
     run
 }
 
-#[test]
-#[ignore = "native265187 Antoran autoattack replacement on authored ground/LOS; private spec266 inputs required"]
-fn dps_parity_demo_native_antoran_tyrant_uses_burning_cleave_autoattacks() {
-    let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_authored_guardian_control();
+fn cast_native_antoran_tyrant(run: &mut Run) -> Entity {
     let actor = run.actor;
     assert!(
         crate::auras::has_aura(run.app.world(), actor, 1250921),
         "selected Antoran Armaments must be active before the native summon"
     );
-    cast_and_finish(&mut run, actor, 265187);
+    cast_and_finish(run, actor, 265187);
     let world = run.app.world_mut();
     let tyrants: Vec<_> = world
         .query::<(
@@ -221,7 +217,16 @@ fn dps_parity_demo_native_antoran_tyrant_uses_burning_cleave_autoattacks() {
         1,
         "ordinary native265187 must create one actual250289"
     );
-    let tyrant = tyrants[0];
+    tyrants[0]
+}
+
+#[test]
+#[ignore = "native265187 Antoran autoattack replacement on authored ground/LOS; private spec266 inputs required"]
+fn dps_parity_demo_native_antoran_tyrant_uses_burning_cleave_autoattacks() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_authored_guardian_control();
+    let tyrant = cast_native_antoran_tyrant(&mut run);
+    let world = run.app.world_mut();
     let armaments = crate::auras::has_aura(world, tyrant, 1251000);
     let cleave = world
         .resource::<crate::spell_info::SpellStore>()
@@ -275,6 +280,57 @@ fn dps_parity_demo_native_antoran_tyrant_uses_burning_cleave_autoattacks() {
     assert!(
         casts > 1 && damage > 0,
         "native autoattack replacement must execute repeatedly with real damage, not once through an untimed spell list; boundary {}",
+        path.display()
+    );
+}
+
+#[test]
+#[ignore = "native Aura361 on actual Antoran must replace white swings; private spec266 inputs required"]
+fn dps_parity_demo_native_armaments_aura_replaces_tyrant_white_swings() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_authored_guardian_control();
+    let tyrant = cast_native_antoran_tyrant(&mut run);
+    // Isolate the native melee-consumer boundary independently of the missing
+    // summon-passive grant. Apply the actual DB2 aura, not a synthetic modifier.
+    crate::spell_cast::cast_triggered(run.app.world_mut(), tyrant, 1251000, Some(tyrant), 0);
+    assert!(crate::auras::has_aura(run.app.world(), tyrant, 1251000));
+    let events_before = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    for _ in 0..120 {
+        run.app.update();
+    }
+    let events: Vec<_> = run.app.world().resource::<ObservedCombatEvents>().0[events_before..]
+        .iter()
+        .filter(|event| event.source == Some(tyrant.to_bits()))
+        .collect();
+    let casts = events
+        .iter()
+        .filter(|event| event.spell_id == Some(1264093) && event.kind == CombatLogKind::CastSuccess)
+        .count();
+    let white_hits = events
+        .iter()
+        .filter(|event| event.spell_id.is_none() && event.kind == CombatLogKind::Damage)
+        .count();
+    let path = inputs::directory()
+        .unwrap()
+        .join("266.armaments-melee-consumer.json");
+    std::fs::write(
+        &path,
+        serde_json::to_vec_pretty(&json!({
+            "native_aura": 1251000, "aura_type": 361, "entry": 250289,
+            "window_seconds": 6, "cleave_casts": casts, "white_hits": white_hits, "events": events
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    assert!(
+        casts > 1,
+        "native361 must replace each swing, not one untimed list cast; boundary {}",
+        path.display()
+    );
+    assert_eq!(
+        white_hits,
+        0,
+        "TC override replaces white damage; boundary {}",
         path.display()
     );
 }
