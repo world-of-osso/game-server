@@ -43,11 +43,11 @@ impl ShapeshiftForms {
             .filter(|&display| display != 0)
     }
 
-    pub(crate) fn creature_type(&self, form: i32) -> Option<u32> {
+    pub fn creature_type(&self, form: i32) -> Option<u32> {
         self.0.get(&form).map(|row| row.creature_type)
     }
 
-    pub(crate) fn flags(&self, form: i32) -> Option<u32> {
+    pub fn flags(&self, form: i32) -> Option<u32> {
         self.0.get(&form).map(|row| row.flags)
     }
 }

@@ -40,3 +40,7 @@ Shared Rule stores optional cycle limit; strict0/1 cycle and signed integer cap 
 | Selector precedes cycle cap |1case GREEN; actual SimC max selector+cap1 probe |
 
 All24 established expression/variable/run/minmax/Ret/WW controls remain GREEN. Fourteen engine-free tests are enabled afterward with only ignore-attribute removal, no body or production change; proof build revision remains561595514, not the later attributes/docs-only tip. No redundant rebuild/suite rerun. Changed-line readability reviewed manually (rust-code-analysis-cli unavailable); new helpers remain short, no new suppression or hidden state. Lead still owns broad integration; no native rotation/DPS qualification.
+
+## Crate-split B integration correction
+
+Main requires origin/master d675bf8fb before fc1078. Merge preserves TargetContext while adopting public NativeFacts/fixture/refresh metadata for the server-simulation consumer. Composite test file follows dps_parity into crates/server-simulation; no test function renamed. Server core has no executable dungeon_simulator reference after merge. Explicit post-commit `cargo check -p server -p server-simulation --tests` is required; result pending. Historical38case runtime proof remains tied to561595514, not relabeled as a post-split run.
