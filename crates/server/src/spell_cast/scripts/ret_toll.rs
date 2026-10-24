@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
 use crate::auras;
+use crate::class_progression::TraitLoadout;
 use crate::spell_cast::effects::EffectCtx;
 use crate::spell_cast::targets::{self, Relation};
 use crate::spell_info::{SpellInfo, SpellStore};
@@ -14,6 +15,54 @@ pub(super) const JUDGMENT: u32 = 406957;
 const HAMMER: u32 = 1279408;
 const HAMMER_MODE: u32 = 1277026;
 const RETRIBUTION: u32 = 70;
+const RESONANCE_TALENT: u32 = 384027;
+const RESONANCE: u32 = 1266308;
+
+fn selected_resonance(world: &World, caster: Entity) -> bool {
+    let is_ret = world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == RETRIBUTION);
+    let selected = world.get::<TraitLoadout>(caster).is_some_and(|talents| {
+        talents
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == RESONANCE_TALENT)
+    });
+    is_ret && selected
+}
+
+/// SIMC_RET_DIVINE_RESONANCE_PRODUCER: SimC76f8118 sc_paladin.cpp1880–1905,
+///3686–3688. Cast native1266308 initialized at native max; no consumer policy.
+pub(super) fn grant_resonance(world: &mut World, caster: Entity, depth: u8) {
+    if !selected_resonance(world, caster) {
+        return;
+    }
+    let Some(mut buff) = world.resource::<SpellStore>().get(RESONANCE).cloned() else {
+        warn!(
+            spell_id = RESONANCE,
+            "Divine Resonance native aura unavailable"
+        );
+        return;
+    };
+    let Some(maximum) = buff
+        .aura_options
+        .as_deref()
+        .and_then(|options| u8::try_from(options.cumulative_aura).ok())
+        .filter(|maximum| *maximum > 0)
+    else {
+        warn!(
+            spell_id = RESONANCE,
+            "Divine Resonance native maximum unavailable"
+        );
+        return;
+    };
+    buff.cast_aura_stacks = Some(maximum);
+    if !super::super::launch_triggered_spell(world, caster, &buff, Some(caster), depth + 1) {
+        debug!(
+            spell_id = RESONANCE,
+            "Divine Resonance native aura dispatch refused"
+        );
+    }
+}
 
 /// SIMC_RET_DIVINE_TOLL_JUDGMENT_POWER: only the landed damage effect runs
 /// this relationship. The shared native helper checks learned315867 and casts

@@ -82,6 +82,7 @@ pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u
         batch16::RET_JUDGMENT | batch16::HOLY_JUDGMENT | batch10::PROTECTION_JUDGMENT => {
             batch16::energize_judgment(world, caster, depth);
         }
+        ret_toll::ROOT => ret_toll::grant_resonance(world, caster, depth),
         // SimC's ordinary/background Avenging Wrath constructors use these IDs.
         31884 | 454351 => ret_empyrean::grant_on_wrath(world, caster, depth),
         _ => {}

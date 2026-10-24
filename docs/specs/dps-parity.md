@@ -32,6 +32,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [ ] `SIMC_RET_DIVINE_TOLL_RELATIONSHIP`: selected spec70 normal375576 hits dispatch native406957, or1279408 while actual1277026 mode is active, once per real hostile target. Native effect0 cap and effect1 area geometry/admission bound recipients; preserve existing combat-only implicit admission and count the explicit primary once. Native child coefficients and parent effect5 percentage remain authoritative; no invented DB2 trigger edge. Child funding, Resonance, Exaction and Divine Hammer remain separate qualifications. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#divine-toll-native-child-relationship--sourcered-only).
 
+### Ret Divine Resonance producer
+
+- [ ] `SIMC_RET_DIVINE_RESONANCE_PRODUCER`: validated selected384027 on spec70 plus an actual Divine Toll375576 cast grants native1266308 initialized at native maximum3 stacks. Pinned SimC76f8118 `sc_paladin.cpp1880–1905,3686–3688` supplies the missing producer edge, through the existing cast hook only. Native30s duration remains authoritative; no legacy5s pulse/new hook/copied timer. Echo, stack spending,500ms ICD and charges are excluded and each needs genuine RED plus separate approval. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#divine-resonance-producer).
+
 ### Ret Wrath Hammer-mode producer
 
 - [ ] `SIMC_RET_WRATH_HAMMER_MODE_PRODUCER`: actual31884 or454351 application on an owner who has learned1241288 casts native1277026; parent removal removes only that owner's mode. Native durations remain unchanged: no copied timer, target-state bypass, readiness veto or332override remap. Native1241288 Dummy/Trigger0 and no TC/TDB producer require this explicit pinned SimC relationship. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#wrath-hammer-mode-producer).
