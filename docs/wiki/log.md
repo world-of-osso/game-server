@@ -1,6 +1,6 @@
-## 2026-10-23 — Dreadstalker full-root dispatch genuine RED
+## 2026-10-23 — Dreadstalker full-root dispatch GREEN
 
-[Root policy](investigations/demonology-dps-parity.md#approved-root-dispatch-implemented-green-pending): coherent5e admission relocation preserves living caster; ordinary104316 completes on authored2669 ground/LOS but produces0/2 children, genuineRED10.48s/0warnings. Approved shared SIMC_DREADSTALKER_SUMMON_DISPATCH now triggers actual193331/193332; native scripts/summon/trigger effects win. Root and hypothetical-native override GREEN pending; no numerical/DPS qualification.
+[Root policy](investigations/demonology-dps-parity.md#approved-root-dispatch-native-actor-boundary-green): coherent5e admission relocation produces genuine0/2 RED10.48s;573 shared SIMC_DREADSTALKER_SUMMON_DISPATCH yields native193331/19333298035 level90 actors. Root, native Effect28 override0/1 and retained/sibling catalog isolation3GREEN47.15s,17m42compile/0warnings. Native scripts/summon/trigger effects win; actor readback retained. Runtime Dreadbite/procs and numerical/DPS qualification remain open.
 
 ## 2026-10-23 — Native guardian melee cadence/retarget GREEN
 
