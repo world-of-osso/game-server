@@ -58,12 +58,50 @@ mod tests {
         );
     }
 
+    fn wait_native_gcd(run: &mut Run, actor: Entity, spell_id: u32) {
+        for _ in 0..100 {
+            let world = run.app.world();
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(spell_id)
+                .unwrap();
+            if world
+                .get::<crate::spell_cast::SpellHistory>(actor)
+                .is_none_or(|history| !history.on_gcd(spell, crate::spell_cast::now(world)))
+            {
+                return;
+            }
+            run.app.update();
+        }
+        panic!("native GCD for{spell_id} did not expire in100frames");
+    }
+
     fn rake_initial_damage(prowl: bool) -> (f64, f64) {
         let mut run = prepare(103, 1).unwrap();
         let actor = run.actor;
+        let encounter = crate::simc_apl_native::Encounter::Fixture {
+            started_at: crate::spell_cast::now(run.app.world()),
+            duration: 300.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        };
+        literal_rotation::capture_fixture(run.app.world_mut(), actor, encounter).unwrap();
         for legacy in [231052, 405834] {
             assert!(!crate::auras::has_aura(run.app.world(), actor, legacy));
         }
+        for target in [actor, fixture_player(&run)] {
+            if !crate::auras::has_aura(run.app.world(), target, 1126) {
+                wait_native_gcd(&mut run, actor, 1126);
+                crate::spell_cast::creature_cast(
+                    run.app.world_mut(),
+                    actor,
+                    1126,
+                    Some(target),
+                    false,
+                )
+                .expect("ordinary native Mark of the Wild before Prowl");
+            }
+        }
+        wait_native_gcd(&mut run, actor, 1822);
         if prowl {
             crate::auras::observations::start_removal_probe(run.app.world_mut(), actor, 5215);
             crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5215, Some(actor), false)
