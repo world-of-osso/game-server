@@ -1442,6 +1442,7 @@ pub fn on_hit(spell_id: u32) -> Option<HitHook> {
         elemental_ascendance::ASCENDANCE => Some(elemental_ascendance::cast_entry),
         100780 => Some(windwalker::tiger_palm_hit),
         100784 => Some(windwalker::blackout_kick_hit),
+        107428 | 113656 => Some(windwalker::trigger_wdp_enabler_on_hit),
 
         lava_surge::PROC => Some(lava_surge::restore_on_proc_hit),
         swiftmend::SWIFTMEND => Some(swiftmend::hit),

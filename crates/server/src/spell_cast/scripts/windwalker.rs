@@ -32,6 +32,9 @@ const RUSHING_WIND_KICK_TALENT: u32 = 1250566;
 const RUSHING_WIND_KICK_OVERRIDE: u32 = 1250554;
 pub(super) const RUSHING_WIND_KICK: u32 = 467307;
 const RISING_SUN_KICK: u32 = 107428;
+const FISTS_OF_FURY: u32 = 113656;
+const WHIRLING_DRAGON_PUNCH: u32 = 152175;
+const WDP_ENABLER: u32 = 196742;
 
 /// MONK_MYSTIC_TOUCH_SIMC_PRODUCER: SimC76f8118 sc_monk.cpp438–455.
 /// Native113746 supplies the physical vulnerability; no multiplier is invented.
@@ -184,6 +187,39 @@ fn sunfire_spiral_multiplier(world: &World, caster: Entity, spell: u32) -> f32 {
         .find(|effect| effect.index == 0)
         .expect("native Sunfire Spiral retains its effect0 percentage");
     1.0 + effect.amount / 100.0
+}
+
+/// SIMC_WW_WDP_ENABLER_PRODUCER: SimC76f8118 sc_monk.cpp1138/1826/4552–4572.
+/// TC/TDB have no producer. DB2 owns196742's1000ms; never copy SimC's1500ms grace.
+pub(super) fn trigger_wdp_enabler_on_hit(
+    world: &mut World,
+    caster: Entity,
+    _target: Entity,
+    depth: u8,
+) {
+    let selected = world
+        .get::<crate::class_progression::TraitLoadout>(caster)
+        .is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|spell| spell.spell_id == WHIRLING_DRAGON_PUNCH)
+        });
+    if !selected || !wdp_cooldowns_overlap(world, caster) {
+        return;
+    }
+    crate::spell_cast::cast_triggered(world, caster, WDP_ENABLER, Some(caster), depth + 1);
+}
+
+fn wdp_cooldowns_overlap(world: &World, caster: Entity) -> bool {
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    [RISING_SUN_KICK, FISTS_OF_FURY].into_iter().all(|id| {
+        let spell = store
+            .get(id)
+            .expect("native WDP prerequisite spell retained");
+        crate::spell_cast::native_apl::cooldown_value(world, caster, spell, "remains")
+            .expect("native WDP prerequisite cooldown readable")
+            > 0.0
+    })
 }
 
 /// SIMC_WW_RWK_BOK_LANDED_PRODUCER: SimC76f8118 sc_monk.cpp1408–1414.

@@ -1,3 +1,7 @@
+## 2026-10-24 — WDP native enabler RED
+
+[WDP enabler policy](../handoffs/ww-wdp-enabler-proof-ledger.md): after installing declared fixture lifetimes, actual selected owner/RSK/FoF/overlapping-CD premises pass and missing196742 fails14.46s. Bounded selected-owner root-OnHit producer uses generic native1000ms aura; native152175 gate/damage unchanged. SimC measured1500ms grace explicitly excluded. Separateww-wdp-enabler branch; ww-monk-parity pinnedc4 during gate. Native GREEN pending.
+
 ## 2026-10-24 — Shared pool-for-next resource contract
 
 [Contract proof](../handoffs/feral-shared-program-proof-ledger.md#shared-resource-contract-implementation): concrete5RED/1control→6GREEN; entire engine-free shared44GREEN ata63. Pool wait propagates through calls, never dispatches or grants resources; source conditions/native maximum admission remain separate. max_energy requires action-bound maximum_energy; original two reporter cases now error explicitly until14860 supplies missing cost/cap facts. Native Feral adapter and parity remain open.
