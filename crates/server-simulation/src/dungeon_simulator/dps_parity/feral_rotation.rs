@@ -21,6 +21,64 @@ mod tests {
 
     #[test]
     #[ignore = "requires exact spec103 profile/traits and native private DB"]
+    fn feral_literal_native_lunar_inspiration_applies_and_removes_override() {
+        let mut run = prepare(103, 1).unwrap();
+        let world = run.app.world_mut();
+        let actor = run.actor;
+        assert!(crate::auras::has_aura(world, actor, 155580));
+        assert!(
+            crate::auras::has_aura(world, actor, 155627),
+            "TC Lunar Inspiration bootstrap must apply its native override aura"
+        );
+        assert_eq!(
+            server::spell_cast::knowledge::resolve_action(world, actor, 8921).unwrap(),
+            Some(155625),
+            "ordinary learned Moonfire resolves through native override while selected"
+        );
+        let known: Vec<_> = world
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap()
+            .iter()
+            .collect();
+        crate::auras::remove_auras(
+            world,
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 155580,
+        );
+        assert!(!crate::auras::has_aura(world, actor, 155627));
+        assert_eq!(
+            world
+                .get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap()
+                .iter()
+                .collect::<Vec<_>>(),
+            known,
+            "the script changes an aura, not the learned book"
+        );
+        assert_eq!(
+            server::spell_cast::knowledge::resolve_action(world, actor, 8921).unwrap(),
+            Some(8921)
+        );
+        crate::auras::apply_aura(
+            world,
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id: 155580,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        assert!(crate::auras::has_aura(world, actor, 155627));
+        assert_eq!(
+            server::spell_cast::knowledge::resolve_action(world, actor, 8921).unwrap(),
+            Some(155625)
+        );
+    }
+
+    #[test]
+    #[ignore = "requires exact spec103 profile/traits and native private DB"]
     fn feral_literal_native_bindings_read_owned_rake_and_moonfire_refresh() {
         let mut run = prepare(103, 1).unwrap();
         let bindings = super::bindings::build(run.app.world(), run.actor).unwrap();
