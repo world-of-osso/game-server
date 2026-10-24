@@ -4100,3 +4100,7 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 - [EB cast mechanism](investigations/follower-data.md#unselected-elemental-blast-and-icefury-overload-mechanisms): after86 native-funded root hits/no120588 RED/controlPASS,117014→120588/effect1 scaling added on mergedlv991 base. Scoped postmerge GREEN pending; no selected-kit/cost/cast-time bypass.
 
 - [Overload cast-only tails](investigations/follower-data.md#unselected-elemental-blast-and-icefury-overload-mechanisms): postmerge11nativeGREEN23.93s +fivechild25%/removal/EchoGREEN10.25s; compile34m11/zero warnings. EB2 and four new child qualifiers enabled after proof; selected-kit/resource/APL limits retained.
+
+## 2026-10-23 — Goldie candidate rejected; Academy source association missing
+
+[Goldie static-door source](systems/navigation.md#goldie-static-door-candidate-rejected--2026-10-23): actual5e metadata probe1PASS0.02s/compile3m06/no warnings covers full WDT, finds candidate0/control2 and preserves checked anchors; this rejects the separate candidate M2, not the whole native/body/dynamic-door gap. [Academy source limits](systems/navigation.md#academy-connector-source-limits--2026-10-23): eight flag-zero pads plus bounded Smart/AT/TC/public-source checks establish only199677→397264→AT27435, without a sourced destination. No pairing, connector, bake, profile or door policy changed; both named gaps remain.

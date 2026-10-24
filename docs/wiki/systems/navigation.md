@@ -2,6 +2,22 @@
 
 Contract: [navigation](../../specs/navigation.md). Phase 1 uses the same offline `los::bake::Baker` asset/placement collector as LOS, with collision selection: terrain fans/holes, shared ground MOPY/MPY2 WMO collision faces, M2 bounding hulls instead of render batches. No new geometry extractor or CDN access. Shared MH2O parsing lives in `los::liquid` and is re-exported by server ground. Modern LiquidObject IDs (>=42) resolve LVF from the exact authored vertex block size; real ocean root776382 stores81depth bytes, not81float heights.
 
+## Goldie static-door candidate rejected — 2026-10-23
+
+GO444271/444272 display90923 resolves to model5768795; GO state/name alone did not establish a baked obstruction. Current-source metadata probe at5e76955d2 passes1/1 in0.02s (compile3m06, no warnings): full WDT5319046 covers four obj0 files, zero direct M2 placements, one deduplicated WMO UID44593122/root5244088/set0, and1521 selected doodad definitions. Candidate5768795 occurs zero times; control5334391 occurs twice. The maintained collector's selected static inputs therefore do not contain the candidate's separate M2. This rejects that attribution, not every merged-WMO surface or dynamic door/body obstruction, and does not explain the whole9.8yd native split. Goldie's named gap remains; no connector, bake, profile or door-policy correction follows.
+
+The receipt preserves four nav tiles/WDT/main WMO/display CSV hashes, not every consumed obj0/model input. Native/checkout source anchors match but are same-file aliases, not independent archived copies. Historical canonical-bake observed-open inputs also omit5768795/include5334391; their published outputs match current four nav files. Earlier ELF-pinned upper-door crossing is not independently Git-attested current source, a body gate or lower-to-upper traversal proof.
+
+Sources: `crates/navigation/src/goldie_door_diagnostic.rs`; game-engine `data/diagnostics/follower-nav-gorek-2026-10-22/goldie-investigation/{door-source-conclusion.md,door-source-receipt.json,goldie-door-static-source.txt,door-source-5e76955d2.log,source-tip-proof-5e76955d2.json,canonical-bake-door-input-proof.json}`.
+
+## Academy connector source limits — 2026-10-23
+
+A full placed-source census extends the interaction-flag census: eight flag-zero Jump Pads (192864×2,195564×6), six195569 visuals and Teleporter Stalker199677. Their inspected AI/script/spell/addon rows do not supply a travel contract. Smart source types0/2/9 were checked by actor ID, negative spawn GUID, numeric references and timed-list prefixes; AT/property/action/conditions/target-position and bounded pinned-TC loader/common-script checks recover no authored pad pairing. This is bounded source coverage, not proof that retail traversal is absent.
+
+Five maintained-helper Wowhead snapshots expose one explicit chain:199677 abilities→397264 Teleport Pad→effect6/aura395/AreaTrigger27435. No downstream property/action/spawn, child spell or destination is recovered. Smart source_type0 entry27435 belongs to Wintergarde Mine Bomb, not that area trigger. Unbound same-name Jump Pad spells using effect254/JumpChargeParams682 or708 are not Academy NPC aliases; missing local parameters do not authorize fabricated movement. No bound41/42/252 cast or destination was found. Keep the Academy route gap and do not infer endpoint pairings or add a connector/effect policy here.
+
+Sources: game-engine `data/diagnostics/follower-nav-gorek-2026-10-22/academy-investigation/source-status.md` links the exact source rows, effect/AT chain, query coverage and immutable helper body/metadata hashes. Generic jump-arrival work is separate from this missing source association.
+
 ## Halls wider raw support boundary — 2026-10-23
 
 Halls2527 affects189722/189727. All40 current native files hash-match the prior complete5990/9968 component proof; no repeat BFS/query batch. The known5.422yd coarse gap and4.954492yd corresponding raw rise still exceed unchanged1.6yd climb. Current source census has no placed TDB NPCs or map spell destinations/click bindings; its one GO is the exit portal, not an internal traversal contract.
