@@ -10,9 +10,9 @@ use shared::components::{Npc, Player};
 use std::collections::HashMap;
 
 #[derive(Resource)]
-pub(crate) struct RaceCreatureTypes(HashMap<u8, u32>);
+pub struct RaceCreatureTypes(HashMap<u8, u32>);
 
-pub(crate) fn load_race_types(conn: &rusqlite::Connection) -> rusqlite::Result<RaceCreatureTypes> {
+pub fn load_race_types(conn: &rusqlite::Connection) -> rusqlite::Result<RaceCreatureTypes> {
     let mut rows = conn.prepare("SELECT ID,CreatureType FROM chr_races")?;
     let types = rows
         .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?

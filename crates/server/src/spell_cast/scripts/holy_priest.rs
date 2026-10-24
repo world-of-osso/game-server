@@ -50,17 +50,17 @@ fn roll_surge_from_native_spell(world: &World, aura: &AuraInstance, event: &Aura
 }
 
 fn grant_surge(world: &mut World, priest: Entity, _aura: &AuraInstance, _other: Option<Entity>) {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     let before = read_surge_stacks(world, priest);
     crate::spell_cast::cast_triggered(world, priest, SURGE_BUFF, Some(priest), 1);
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     {
         let after = read_surge_stacks(world, priest);
         crate::spell_cast::holy_metrics::record_surge_gain(world, priest, before, after);
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 fn read_surge_stacks(world: &World, priest: Entity) -> u8 {
     world
         .get::<ActiveAuras>(priest)
@@ -123,7 +123,7 @@ pub(super) fn spend_surge(world: &mut World, priest: Entity) {
         .map(|aura| aura.instance_id);
     if let Some(instance) = instance {
         crate::auras::spend_stack(world, priest, instance);
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         crate::spell_cast::holy_metrics::record_surge_use(world, priest);
     }
 }

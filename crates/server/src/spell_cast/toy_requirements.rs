@@ -61,7 +61,7 @@ pub(crate) fn load(data_dir: &Path) -> Result<ToyCastingRequirements, String> {
     Ok(ToyCastingRequirements { areas, facing })
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(super) fn fixture() -> ToyCastingRequirements {
     ToyCastingRequirements {
         areas: serde_json::from_str(include_str!("../../tests/fixtures/toy_required_areas.json"))

@@ -77,7 +77,7 @@ pub(crate) struct HullCache {
     placed: HashMap<Entity, (Placement, Arc<LosTile>)>,
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[test]
 fn db2_follow_install_collision_uses_the_active_display_csv() {
     let directory = tempfile::tempdir().unwrap();

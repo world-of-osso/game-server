@@ -5,6 +5,23 @@
 ## 2026-10-22 — Approved follower expected-primary budget
 
 [Policy](investigations/follower-data.md#expected-primary-budget-policy--2026-10-22): explicit project interpretation of70448 default ExpectedStat primary, no Retail follower-gear claim. Genuine two-case RED90b7a757d precedes level-driven shared gear-primary delta; HP/resources/secondary/mastery/pets/player refresh unchanged. GREEN and paired Azure70/Stockade32 seed1 controls remain pending.
+## 2026-10-23 — Corridor capture consumer ownership
+
+The retained-core unit check exposed a runtime-only reverse edge: ignored corridor capture imports simulator runtime/diagnostics. Capture returned to the consumer with its original name and a canonical graph re-export; no gameplay/type duplication. Expected117 simulator cases/6retained graph cases; workspace names/ignore statuses unchanged. Compiler and full-suite qualification pending.
+
+## 2026-10-23 — Simulator compiler boundary and next area pilot
+
+[Crate boundaries](systems/server-crates.md): B22aa67892 passes simulator test-target and ordinary production binary compiler checks without warnings. Exact landed-A mapping retains123 subtree names:116 consumer/7core graph, including ignored status; full post-split gate pending. [C handoff](../handoffs/crate-split-area-tests.md) plans106 native melee behavior cases, canonical shared collectors and controlled paired rebuild measurements; no C implementation or speedup claim.
+## 2026-10-23 — Authored item faction eligibility
+
+[Eligibility](systems/toys.md#item-faction-flags-eligibility-2026-10-23): shared ItemTemplate::allows now enforces already-loaded source faction flags. Actual wrong-side learning/owned-use fiveRED→nineGREEN12.47s at039dced6c,54-item metadata matrix and retained controls; complete1173pipeline identical547. No race-mask/protocol/PvP identity changes or new toy admissions. Fmt0/manual readability; required check pending.
+## 2026-10-23 — Native profile stat-allocation redirects
+
+[Stat redirects](systems/character-stats.md#profile-stat-allocation-redirects--2026-10-23): actual103 shared equipment input→StatsPlugin independently reproduces five tier errors and ten matching ordinary slots; invalid donor and false-unmodeled diagnostics also RED,3RED11.02s at7aa72bf47. Server-local donor metadata changes calculation-only stat types/allocations, not original item identity/catalog/effects/set membership or the persisted/wire ABI. Atd45fe30e8 three GREEN12.43s, clean25m11build; two native cases remain opt-in and the env-free diagnostic stays enabled. Lead integration/DPS remain open. [Proof](../handoffs/equipment-stat-redirect-proof-ledger.md).
+## 2026-10-23 — TC training dummy combat exit
+
+[Dummy reference expiry](systems/combat.md#training-dummy-combat-exit--2026-10-23): independentdb17198c4 native Fireball→Ignite retention and harmless-Counterspell timer two genuine RED; LeavingCombat/ordinary Defias evade two controls PASS26.87s. Replace foreign-aura/attack-intent cleanup with TC per-attacker non-DOT timers and PvE-reference-only expiry. Current-canonical backup25995de4 reproduces two RED/two controls PASS24.06s; a3fdbf375 gives five native35.61s +five creature25.09s +ten refs14.14s =20GREEN74.84s,0compiler warnings/fmtPASS. Two real Fire attackers, native LeavingCombat/ordinary evade, attack intent, threat-less-attacker/PvP/pet controls included. No follower policy or DPS claim; independent lead gate separate.
+
 ## 2026-10-23 — Per-spell merge / periodic crit ownership
 
 Merged current master4a2deb367 into native-spell-diff. Resolution retains owner-aware periodic crit eligibility/order and signed target-crit semantics, while direct and periodic damage capture records the actual rolled chance/result without another RNG draw. Parent rebuilt batch gate pending; prior acceptance scopes are unchanged.
@@ -4252,3 +4269,4 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 
 - 2026-10-23: [[server-crates]] records five stable catalog modules extracted with unchanged data/logic, canonical imports and updated generator destinations; no test relocations or measured speedup claim.
 - 2026-10-23: [[server-crates]] moves main module declarations/App assembly into the existing lib and keeps a five-line bin; library-artifact source-view test replaces old binary artifact selection. Full suite/census and paired measurements remain pending.
+- 2026-10-23: [[server-crates]] records test-only simulator consumer, canonical graph/receipt/marker support and explicit test-support mode; 44-file move is content-identical, API/cfg wiring awaits compiler/full-suite proof. Seven graph cases have explicit core-prefix migration.

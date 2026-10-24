@@ -20,14 +20,14 @@ struct SetBonus {
 }
 
 #[derive(Resource)]
-pub(crate) struct ItemProcInputs {
+pub struct ItemProcInputs {
     sets: HashMap<u32, ItemSet>,
     bonuses: HashMap<u32, Vec<SetBonus>>,
     variables: HashMap<u32, String>,
     spell_variables: HashMap<u32, u32>,
 }
 
-pub(crate) fn load(conn: &Connection) -> rusqlite::Result<ItemProcInputs> {
+pub fn load(conn: &Connection) -> rusqlite::Result<ItemProcInputs> {
     let item_columns = (0..17)
         .map(|index| format!("ItemID_{index}"))
         .collect::<Vec<_>>()
