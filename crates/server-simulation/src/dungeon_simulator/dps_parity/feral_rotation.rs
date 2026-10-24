@@ -379,6 +379,203 @@ mod tests {
         );
     }
 
+    #[test]
+    #[ignore = "requires exact spec103 profile/traits and native private DB"]
+    fn feral_literal_native_pool_hooks_preserve_earned_combo_points_and_low_energy() {
+        use shared::components::PowerType;
+        let _rng = crate::random::seed_scope(70448);
+        let mut run = prepare_measurement(103, 1).unwrap();
+        let combo = crate::spell_cast::powers::power_value(
+            run.app.world(),
+            run.actor,
+            PowerType::ComboPoints,
+        )
+        .unwrap();
+        assert_eq!(combo.0, 0.0, "no precombat builder has earned combo points");
+        let (_, initial) = read_native_bite_admission(&mut run);
+        assert!(
+            matches!(
+                initial,
+                Err(crate::spell_cast::CastFailure::NotEnoughPower(
+                    PowerType::ComboPoints
+                ))
+            ),
+            "negative control must reach the real missing-CP admission boundary: {initial:?}"
+        );
+        assert_native_pool_probe(&mut run, false);
+        let mut energy_limited = false;
+        for _ in 0..20 {
+            let combo = crate::spell_cast::powers::power_value(
+                run.app.world(),
+                run.actor,
+                PowerType::ComboPoints,
+            )
+            .unwrap();
+            let (resolved, admission) = read_native_bite_admission(&mut run);
+            let limited = match admission {
+                Err(crate::spell_cast::CastFailure::NotEnoughPower(power)) => Some(power),
+                Ok(_) => None,
+                Err(error) => {
+                    panic!("native Bite{resolved} admission refused before pool checks: {error:?}")
+                }
+            };
+            if combo.0 >= combo.1 && limited == Some(PowerType::Energy) {
+                eprintln!(
+                    "native pool probe: resolved Bite{resolved}, earned CP{combo:?}, Energy{:?}",
+                    crate::spell_cast::powers::power_value(
+                        run.app.world(),
+                        run.actor,
+                        PowerType::Energy
+                    )
+                );
+                energy_limited = true;
+                break;
+            }
+            cast_native_shred_after_regeneration(&mut run);
+        }
+        assert!(
+            energy_limited,
+            "ordinary native builders must produce an observable Energy-only deficit; CP{:?}, Energy{:?}",
+            crate::spell_cast::powers::power_value(
+                run.app.world(),
+                run.actor,
+                PowerType::ComboPoints
+            ),
+            crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::Energy)
+        );
+        assert_native_pool_probe(&mut run, true);
+        let (_, admission) = read_native_bite_admission(&mut run);
+        assert!(
+            matches!(
+                admission,
+                Err(crate::spell_cast::CastFailure::NotEnoughPower(
+                    PowerType::Energy
+                ))
+            ),
+            "maximum-resource query must not make the actual current cast affordable"
+        );
+    }
+
+    fn read_native_bite_admission(
+        run: &mut Run,
+    ) -> (u32, Result<Option<Entity>, crate::spell_cast::CastFailure>) {
+        let id = server::spell_cast::knowledge::resolve_action(run.app.world(), run.actor, 22568)
+            .unwrap()
+            .expect("actual selected native Bite action");
+        let spell = run
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(id)
+            .unwrap()
+            .clone();
+        let result = crate::spell_cast::read_native_cast_start(
+            run.app.world_mut(),
+            run.actor,
+            &spell,
+            run.targets[0],
+        );
+        (id, result)
+    }
+
+    fn cast_native_shred_after_regeneration(run: &mut Run) {
+        for _ in 0..600 {
+            match crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                run.actor,
+                5221,
+                Some(run.targets[0]),
+                false,
+            ) {
+                Ok(()) => {
+                    preparation::finish_pending_setup(run).unwrap();
+                    return;
+                }
+                Err(
+                    crate::spell_cast::CastFailure::NotEnoughPower(_)
+                    | crate::spell_cast::CastFailure::OnGlobalCooldown
+                    | crate::spell_cast::CastFailure::InProgress,
+                ) => run.app.update(),
+                Err(error) => panic!("ordinary native Shred setup refused: {error:?}"),
+            }
+        }
+        panic!("native Shred never became ready within the fixture setup bound");
+    }
+
+    fn assert_native_pool_probe(run: &mut Run, expected: bool) {
+        use super::super::literal_rotation::{equipment::Equipment, execution::Prepared};
+        use crate::spell_cast::powers::PowerPools;
+        use server::simc_apl::{Action, ActionFacts};
+        let actor = run.actor;
+        let mut bindings = super::bindings::build(run.app.world(), actor).unwrap();
+        let equipment = Equipment::load(run.app.world(), actor, &mut bindings).unwrap();
+        let potion = super::context::read_configured_potion(&run.profile).unwrap();
+        let before = run.app.world().get::<PowerPools>(actor).unwrap().clone();
+        let history = run
+            .app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .and_then(|history| history.last_successful_cast());
+        let target = run
+            .app
+            .world()
+            .get::<crate::networking::CombatTarget>(actor)
+            .and_then(|target| target.0);
+        let encounter = crate::simc_apl_native::Encounter::Fixture {
+            started_at: crate::spell_cast::now(run.app.world()),
+            duration: 300.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        };
+        let action = Action {
+            name: "ferocious_bite".into(),
+            target: Some(run.targets[0].to_bits()),
+            options: Default::default(),
+        };
+        for _ in 0..3 {
+            let prepared = Prepared::read(
+                run.app.world_mut(),
+                actor,
+                &run.targets,
+                &equipment,
+                super::bindings::execution_actions(&bindings),
+                false,
+            )
+            .unwrap();
+            let facts = super::context::Context::read(
+                run.app.world_mut(),
+                actor,
+                &bindings,
+                &equipment,
+                &prepared,
+                &potion,
+                encounter,
+                &run.targets,
+            )
+            .unwrap();
+            assert_eq!(facts.primary_resource().unwrap(), "energy");
+            assert_eq!(
+                facts.ready_at_resource_max(&action, "energy").unwrap(),
+                expected,
+                "only the requested Energy pool may be projected to native maximum"
+            );
+        }
+        assert_eq!(run.app.world().get::<PowerPools>(actor).unwrap(), &before);
+        assert_eq!(
+            run.app
+                .world()
+                .get::<crate::spell_cast::SpellHistory>(actor)
+                .and_then(|history| history.last_successful_cast()),
+            history
+        );
+        assert_eq!(
+            run.app
+                .world()
+                .get::<crate::networking::CombatTarget>(actor)
+                .and_then(|selection| selection.0),
+            target
+        );
+    }
+
     fn apply_native_dot(run: &mut Run, spell_id: u32) {
         crate::auras::apply_aura(
             run.app.world_mut(),
