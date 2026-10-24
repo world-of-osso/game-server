@@ -1,6 +1,6 @@
 ## 2026-10-23 — Barbed Scales cast-boundary reduction
 
-[Owner return](systems/spell-casting.md#native-owner-cooldown-returns-2026-10-23): actual controlled native Player normal/free Cobra both reproduce missing2s reduction; absence controlsPASS21.30s. Existing shared successful-launch path now applies native469880 through pending-cooldown reduction; GREEN pending. No hit-time shim or movement/range change.
+[Owner return](systems/spell-casting.md#native-owner-cooldown-returns-2026-10-23): actual controlled native Player normal/free Cobra both reproduce missing2s reduction; absence controlsPASS21.30s. Existing shared successful-launch path applies native469880 through pending-cooldown reduction;57786fbd9 owner6GREEN24.39s. Matched single-seed cadence improves while total DPS falls; [proof](../handoffs/bm-owner-cooldown-proof-ledger.md) retains exact channel/cast changes without tuning or a whole-DPS claim. No hit-time shim or movement/range change.
 
 ## 2026-10-23 — Native Scent charge return
 
