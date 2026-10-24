@@ -12,6 +12,8 @@ Import complete audited effective public TC `spell_proc` rows under the full-val
 - [x] TC LoadSpellProcs explicit rows precede DB2-derived generation. Apply its zero-field defaults for flags, charges, chance/PPM and cooldown; keep explicit school/family/type/phase/hit/attribute/effect-disable values instead of reconstructing them from DB2 masks.
 - [ ] Native proc eligibility, rate, recovery and charges consume those effective values with TC semantics, including independent BodyAndSoul Shield/FlashHeal scope and later unchanged Ret Expurgation Blade/Judgment cases. No class/spell-ID production filter or coefficient compensation.
 
+- [ ] Native proc events preserve actual CAST/HIT/FINISH phases, class flags and actor/recipient identity. Carry native school/type/hit outcomes, positive prepared cost, item-cast origin and exact applied aura-modifier identities; do not invent these from amounts, live-aura guesses or combat logs. FINISH is one aggregate actor-only event per completed spell, not one per effect/target.
+
 ## Firestarter direct critical strikes
 
 - [ ] Actual caster205026 effect0 makes ordinary Fireball133/Pyroblast11366 critical at recipient health percentage greater than or equal to its native threshold (70448:90).

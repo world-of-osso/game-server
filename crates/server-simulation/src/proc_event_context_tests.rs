@@ -178,3 +178,108 @@ fn native_proc_event_context_inapplicable_power_rows_do_not_invent_cost() {
         .expect("cast's actual zero-cost receipt");
     assert!(!context.has_power_cost);
 }
+
+#[test]
+#[ignore = "native charged modifier identity survives actual post-launch consumption"]
+fn native_proc_event_context_identity_applied_modifiers_retain_native_aura_instance() {
+    const SWIFTNESS: u32 = 132158;
+    const REGROWTH: u32 = 8936;
+    let _seed = server::random::seed_scope(70448);
+    let mut h = harness(Vec::new(), &[SWIFTNESS, REGROWTH], 11).unwrap();
+    h.advance(3);
+    server::spell_cast::creature_cast(
+        h.app.world_mut(),
+        h.caster,
+        SWIFTNESS,
+        Some(h.caster),
+        false,
+    )
+    .unwrap();
+    h.advance(40);
+    let instance = h
+        .app
+        .world()
+        .get::<server::auras::ActiveAuras>(h.caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == SWIFTNESS)
+        .map(|aura| {
+            assert_eq!(aura.charges, 1);
+            aura.instance_id
+        })
+        .expect("actual native one-charge Nature's Swiftness aura");
+    h.app
+        .world_mut()
+        .resource_mut::<PendingAuraEvents>()
+        .0
+        .clear();
+    server::spell_cast::creature_cast(h.app.world_mut(), h.caster, REGROWTH, Some(h.caster), false)
+        .unwrap();
+    assert!(
+        server::auras::has_aura(h.app.world(), h.caster, REGROWTH),
+        "actual instant Regrowth landed"
+    );
+    assert!(
+        !server::auras::has_aura(h.app.world(), h.caster, SWIFTNESS),
+        "existing native consumption removed the source before queue inspection"
+    );
+    let events = read_spell_events(&h, REGROWTH);
+    let context = cast_event(&events)
+        .context
+        .as_ref()
+        .expect("frozen actual applied-modifier receipt");
+    assert_eq!(context.applied_aura_modifiers, vec![(h.caster, instance)]);
+}
+
+#[test]
+#[ignore = "real Retail item2457 on-use data enters the native item-cast API"]
+fn native_proc_event_context_identity_retail_item_use_is_recorded() {
+    const ITEM: u32 = 2457;
+    const ELIXIR: u32 = 2374;
+    let _seed = server::random::seed_scope(70448);
+    let templates =
+        server::item_templates::load_item_templates(&server::test_data::world_db_path()).unwrap();
+    let item = *templates
+        .get(shared::item_data::ItemDefinitionSource::Retail, ITEM)
+        .expect("actual native Retail minor agility elixir");
+    let on_use = item.on_use.expect("actual item on-use effect");
+    assert_eq!(on_use.spell_id, ELIXIR);
+    let mut h = harness(Vec::new(), &[ELIXIR], 8).unwrap();
+    h.app.insert_resource(templates);
+    h.advance(3);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::CombatStatus>(h.caster)
+        .unwrap()
+        .0 = false;
+    let level = h
+        .app
+        .world()
+        .resource::<server::item_stats::ItemScalingTables>()
+        .item_level(&item.scaling);
+    h.app
+        .world_mut()
+        .resource_mut::<PendingAuraEvents>()
+        .0
+        .clear();
+    server::spell_cast::cast_item_spell(
+        h.app.world_mut(),
+        h.caster,
+        ELIXIR,
+        Some(h.caster),
+        on_use.cooldown,
+        level,
+        Some(ITEM),
+    )
+    .unwrap();
+    assert!(
+        server::auras::has_aura(h.app.world(), h.caster, ELIXIR),
+        "actual native item buff applied"
+    );
+    let events = read_spell_events(&h, ELIXIR);
+    let context = cast_event(&events)
+        .context
+        .as_ref()
+        .expect("actual native item-cast receipt");
+    assert!(context.cast_from_item);
+}
