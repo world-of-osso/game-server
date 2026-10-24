@@ -1,4 +1,5 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
+mod barbed_budget_tests;
 mod dummy_reference_tests;
 mod engagement_tests;
 mod equipment_input_tests;
