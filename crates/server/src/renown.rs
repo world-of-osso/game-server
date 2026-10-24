@@ -52,13 +52,13 @@ fn read_catalog(path: &std::path::Path) -> Result<Catalog, String> {
     Ok(catalog)
 }
 
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "test-support")))]
 fn default_catalog_path() -> std::path::PathBuf {
     std::path::PathBuf::from("data/db2/active/renown.json")
 }
 
 /// Cargo runs unit tests from the crate directory, not the repo root.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 fn default_catalog_path() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active/renown.json")
 }

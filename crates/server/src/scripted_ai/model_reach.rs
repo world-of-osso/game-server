@@ -16,10 +16,10 @@ pub(crate) const PLAYER_BOUNDING_RADIUS: f32 = 0.389;
 /// `creature_model_info.CombatReach` by display, from the prepared
 /// `encounter_creature_model_info` rows (scripts/encounter_model_geometry.py).
 #[derive(Resource)]
-#[cfg_attr(test, derive(Clone))]
-pub(crate) struct ModelReaches(pub(crate) HashMap<u32, f32>);
+#[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
+pub struct ModelReaches(pub(crate) HashMap<u32, f32>);
 
-pub(crate) fn load_model_reaches(conn: &rusqlite::Connection) -> rusqlite::Result<ModelReaches> {
+pub fn load_model_reaches(conn: &rusqlite::Connection) -> rusqlite::Result<ModelReaches> {
     let mut statement =
         conn.prepare("SELECT DisplayID,CombatReach FROM encounter_creature_model_info")?;
     let rows = statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;

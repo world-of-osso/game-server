@@ -97,8 +97,8 @@ mod pull_stat_provenance_tests;
 mod resto_policy;
 #[cfg(test)]
 mod rotation_dummy_tests;
-#[cfg(test)]
-pub(crate) mod simulator;
+#[cfg(any(test, feature = "test-support"))]
+pub mod simulator;
 mod spawning;
 mod stockade_diagnostic;
 mod tank_defense;
@@ -119,12 +119,12 @@ use shared::group::GroupRole;
 #[cfg(test)]
 mod group_buff_tests;
 
-pub(crate) use ai::FollowerReach;
-pub(crate) use catalog::FollowerCatalog;
+pub use ai::FollowerReach;
+pub use catalog::FollowerCatalog;
 pub(crate) use party::{queue_player, stage_follower_party};
 
 #[derive(Clone, Debug)]
-pub(crate) struct Profile {
+pub struct Profile {
     pub entry: u32,
     pub name: String,
     pub class_id: u8,
@@ -139,7 +139,7 @@ pub(crate) struct Profile {
 }
 
 #[derive(Component, Clone)]
-pub(crate) struct Follower {
+pub struct Follower {
     pub owner: Entity,
     pub profile: Profile,
 }
@@ -147,11 +147,11 @@ pub(crate) struct Follower {
 impl Follower {
     /// Runtime-only companion identities occupy the high half of the group ID space;
     /// they are not persisted characters and never enter auth/character storage.
-    pub(crate) fn member_id(entity: Entity) -> u64 {
+    pub fn member_id(entity: Entity) -> u64 {
         entity.to_bits() | (1 << 63)
     }
 
-    pub(crate) fn online(
+    pub fn online(
         &self,
         entity: Entity,
         level: u8,
@@ -206,11 +206,11 @@ pub(crate) fn population_difficulty(difficulty: u32) -> u32 {
     }
 }
 
-pub(crate) fn update_ai(world: &mut World) {
+pub fn update_ai(world: &mut World) {
     ai::update(world);
 }
 
-pub(crate) struct FollowerPlugin;
+pub struct FollowerPlugin;
 impl Plugin for FollowerPlugin {
     fn build(&self, app: &mut App) {
         crate::maps::units::install(app);
@@ -278,8 +278,8 @@ mod kit_tranquil_mind_tests;
 mod kit_utility_tests;
 #[cfg(test)]
 mod kit_wild_growth_tests;
-#[cfg(test)]
-pub(crate) mod native_fixture;
+#[cfg(any(test, feature = "test-support"))]
+pub mod native_fixture;
 #[cfg(test)]
 mod navigation_tests;
 #[cfg(test)]
