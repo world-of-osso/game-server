@@ -23,7 +23,7 @@ fn has_child_damage(run: &Run, target: Entity) -> bool {
         })
 }
 
-fn qualify_toll(count: usize) {
+pub(super) fn qualify_toll(count: usize) -> Run {
     let _seed = crate::random::seed_scope(70448);
     let mut run = native_ret(4);
     for index in 1..count {
@@ -89,6 +89,7 @@ fn qualify_toll(count: usize) {
             "native Toll must dispatch real406957 damage to each selected31146; casts={casts:?}"
         );
     }
+    run
 }
 
 #[test]

@@ -22,6 +22,7 @@ mod ret_rotation;
 mod ret_sentence_tests;
 mod ret_tier_tests;
 mod ret_toll_control_tests;
+mod ret_toll_power_tests;
 mod ret_toll_tests;
 mod ret_wake_tests;
 pub(crate) mod single_spell;
