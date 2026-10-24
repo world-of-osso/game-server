@@ -104,7 +104,7 @@ fn native_mastery_follower_learns_universal_base_without_racial_skill_lines() {
         .map(|aura| {
             aura.effects
                 .iter()
-                .filter(|effect| effect.aura == 318)
+                .filter(|effect| effect.aura_type == 318)
                 .map(|effect| effect.amount * f32::from(aura.stacks))
                 .sum::<f32>()
         })
