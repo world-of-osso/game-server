@@ -14,7 +14,7 @@ Scope: merge `72252f831` with `1466a4ca7`, preserving native haste/Causality/emp
 | `cargo fmt --all` | PASS; no Rust formatting delta | Pi tool output; Cargo.lock package ordering normalized |
 | Native Causality4, composed haste1, empower/replacement2, Dev trait1 | 8 PASS, 81.98s; original frozen Dev input receipt/hash verified | `hs1063r-dev-valid.log` |
 | Server haste/history controls15, simulation Energy/Rage unit controls3, Feral trait1 | 19 PASS; 29.52s / 15.97s / 18.47s | `hs1063r-tests.log`, `hs1063r-feral-valid.log` |
-| Real-profile Focus/Mana/Energy cap-wait fixtures | 3 FAIL at unchanged-position assertion, 20.49s; master-control classification pending | `hs1063r-power-valid.log` |
+| Real-profile Focus/Mana/Energy cap-wait fixtures | 3 pre-existing FAIL at unchanged-position assertion: merge20.49s, plain master16.15s | `hs1063r-power-valid.log`, `hs1063-master-power-valid.log` |
 
 Initial three-package Cargo test build completed in55m38s without warnings. Its runtime invocation omitted required profile environment variables:12 simulation cases stopped in setup, not behavior. Only those invalid cases were subsequently executed with valid inputs through the existing read-only startup-source wrapper, using the already compiled binary; successful controls and Cargo were not rerun. The spell-test executable, skipped after simulation failure, selected0 matching tests and supplies no runtime proof (`hs1063r-spell-tests.log`). Overall qualified selection:27 passes,3 failures; gate is not GREEN.
 
@@ -28,4 +28,8 @@ Inputs: `game-engine/data/diagnostics/dps-parity-fix-2026-10-21/power-haste-pack
 | Mana66 | 2.142405 | 2.570886 |
 | WW269 | 2.0000052 | 16.0 |
 
-No movement workaround applied. Lead requested exactly these three cases once on plain `origin/master` (`13d2f9633`) with the same inputs after committing this merge. Record that control before deciding whether the integration caused these failures.
+No movement workaround applied. After merge commit `2eda43179`, exactly these three cases ran once on clean, detached `13d2f96338e57e3141f01b7d611e2822e905182b` in `/home/osso/.worktrees/game-server-hs1063-master-control`, using the same frozen input directory/database and read-only startup-source mount. All three FAIL at the same assertion with exactly the same before/after positions, in16.15s. These failures are therefore pre-existing on master, not introduced by the hs1063 merge.
+
+Master control compiled only `server-simulation` with `cargo test --locked -p server-simulation --lib dps_parity_power_haste_native_ --no-run --message-format=json -j2`, after capacity admission, through `agent-run hs1063r env TMPDIR=/var/tmp/osso`, reusing this task's own target. No server-unit rebuild, Cargo check rerun, movement patch, or test-source change. Compiler warnings:0. The master binary and frozen input hashes stayed unchanged during runtime; master checkout stayed clean. Compile receipts and state: `/var/tmp/osso/hs1063-master-build.jsonl`, `hs1063-master-build.stderr`, `hs1063-master-state.json`.
+
+Classification is complete. The native Dev8, Feral1 and retained controls remain qualified on the merge's unchanged Rust source; the resource fixtures still fail and no all-green suite claim is made.
