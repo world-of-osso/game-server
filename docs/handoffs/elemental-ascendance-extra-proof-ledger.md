@@ -29,6 +29,12 @@ Evidence under game-engine `data/diagnostics/elemental-parity-262-2026-10-23/`:
 - `asc-additional-green-a001f0541/`: compile17m03/zero warnings; actual3PASS20.23s. ELF SHA256 `12153369bd51db038c992335d4bd2cf10d033fd4e0546f569c98509d3433a21f`.
 - Each directory preserves input hashes, stable source/dependency revision provenance, command/status logs and native proof JSON. Earlier7a6 compile-onlyE0599 was not feature RED; no native runs occurred there.
 
+## Split-B integration
+
+Parent-confirmed `origin/master@d675bf8fb` merged at `c32f187ca85786a88809e1e3a25523380807b0dc`. Resolve the directory-move conflict by retaining `elemental_ascendance_tests.rs` under `crates/server-simulation/src/dungeon_simulator/dps_parity/`; its existing `crate::` paths use the new simulation crate's authoritative server re-exports. Runtime overload code remains in `server`. No pending equipment/target/precombat API merged; parked adapter unchanged.
+
+Requested integration check: `cargo check --locked -j 2 -p server -p server-simulation --tests` (pending). Native acquisition tests now belong to `-p server-simulation --lib`; retained child-effectiveness tests stay in `-p server --lib`. Above native results remain exact pre-split a001f0541 evidence, not post-split execution claims. Parent owns final functional gate; do not rebuild/replay unchanged native proofs merely for this merge.
+
 ## Retained child-effectiveness controls
 
 The shared aura-reader refactor also touches existing mastery damage scaling. On the retained a001f0541 ELF (same SHA before/after; cb82a5ffe changes docs only), run `overload_uses_mastery_effect1_and_removal_restores_child_base --nocapture --test-threads=1` through the same private source view: all5PASS16.88s. Real LB/CL/Lava/EB/Icefury child casts retain native effect1 effectiveness, aura removal restores child base, and Echo Chamber applies through ordinary aura calculation. These existing controlled-SP/zero-crit harness cases qualify effectiveness/removal, not additional-overload acquisition or DPS. No rebuild. Logs/proof: `asc-child-controls-a001f0541/` beside the RED/GREEN artifacts.
