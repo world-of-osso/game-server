@@ -166,13 +166,12 @@ fn literal_precombat_poll_resumes_native_fire_rows_after_gcd_and_hardcast() {
         "actual Arcane Intellect must start native GCD"
     );
     let prepared = prepare_native(&mut run, &equipment);
-    assert!(
-        matches!(
-            driver
-                .poll_precombat(&facts, &prepared, &equipment)
-                .unwrap(),
-            PrecombatPoll::Waiting
-        ),
+    let busy_poll = driver
+        .poll_precombat(&facts, &prepared, &equipment)
+        .unwrap();
+    assert_eq!(
+        std::mem::discriminant(&busy_poll),
+        std::mem::discriminant(&PrecombatPoll::Waiting),
         "busy native GCD must not consume the remaining source rows or return Finished"
     );
     let before = crate::spell_cast::now(run.app.world());
