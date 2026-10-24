@@ -59,6 +59,28 @@ fn in_reach_pet_stays_in_reach_for_eighty_native_movement_ticks() {
 }
 
 #[test]
+fn in_reach_follow_owner_does_not_walk_the_actor_away_from_the_dummy() {
+    let from = Vec3::new(1.83, 0.0, 0.0);
+    let (mut world, actor) = pet_world(Some(stockade_space()), from, Vec3::ZERO);
+    let owner = match world.get::<PetMotion>(actor).unwrap() {
+        PetMotion::Chase(owner) => *owner,
+        _ => unreachable!(),
+    };
+    world
+        .entity_mut(actor)
+        .remove::<PetMotion>()
+        .insert(crate::creature_ai::FollowOwner::new(owner));
+    for frame in 0..80 {
+        tick(&mut world);
+        assert_eq!(
+            point(world.get::<Position>(actor).unwrap()),
+            from,
+            "actor left its in-reach owner/dummy on tick{frame}",
+        );
+    }
+}
+
+#[test]
 fn open_map_pet_without_a_frozen_graph_chases_directly_then_holds_reach() {
     let from = Vec3::new(1.83, 0.0, 0.0);
     let to = Vec3::new(20.0, 0.0, 0.0);
