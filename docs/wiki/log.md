@@ -1,6 +1,6 @@
 ## 2026-10-23 — Ordered native composite selection RED
 
-[Shared literal machinery](systems/simc-apl.md#shared-literal-fixture-machinery):4ad native3controlsPASS/3genuine selectionFAIL26.39s,18m29compile/1scaffold field warning. Actual four selected poison admissions, normal Deadly1500ms-base cast completion and non-poison6673 readiness qualify inputs. Implemented ordered pending plans/owned-self-aura skipping; empty/all-active unusable and world-only execute non-recursive. Added one missing-selected-step/no-partial control; GREEN pending.14766 owns precombat completion/Moving-GCD gating. [Proof](../handoffs/literal-composite-proof-ledger.md).
+[Shared literal machinery](systems/simc-apl.md#shared-literal-fixture-machinery):4ad native3controlsPASS/3genuine selectionFAIL26.39s,18m29compile/1scaffold field warning. Actual four selected poison admissions, normal Deadly1500ms-base cast completion and non-poison6673 readiness qualify inputs. Implemented ordered pending plans/owned-self-aura skipping; empty/all-active unusable and world-only execute non-recursive. Added missing-selected-step/no-partial control;7cfc2e4e6 all7GREEN26.72s,16m03compile/0warnings. Private-input opt-in tests retained; no disjoint suite rerun.14766 owns precombat completion/Moving-GCD gating; no synchronous dispatch. [Proof](../handoffs/literal-composite-proof-ledger.md).
 
 ## 2026-10-23 — Explicit target context and fresh dot metadata RED
 

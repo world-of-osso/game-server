@@ -185,7 +185,7 @@ fn pending(selected: Option<(Action, Execution)>, actor: Entity) -> Vec<u32> {
 }
 
 #[test]
-#[ignore = "native ordered composite RED; requires private259 inputs"]
+#[ignore = "opt-in native ordered composite; requires private259 inputs"]
 fn literal_composite_bare_poison_returns_all_four_native_ready_steps_without_casting() {
     let (mut run, equipment) = native_player(259);
     assert!(COATINGS.iter().all(|&spell| !owned_aura(&run, spell)));
@@ -208,7 +208,7 @@ fn literal_composite_bare_poison_returns_all_four_native_ready_steps_without_cas
 }
 
 #[test]
-#[ignore = "native ordered composite RED; requires private259 inputs"]
+#[ignore = "opt-in native ordered composite; requires private259 inputs"]
 fn literal_composite_existing_native_coating_is_skipped_without_reordering() {
     let (mut run, equipment) = native_player(259);
     cast_coating(&mut run, COATINGS[0]);

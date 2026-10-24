@@ -19,9 +19,10 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 ## Ordered native composites
 
-- [ ] Adapters supply a named ordered list of native actions; shared selection returns an ordered pending execution plan without spell IDs or class coating policy in common code.
-- [ ] Actual owned active self auras are skipped without reordering pending steps. Empty/all-active plans are unusable. Every pending step requires its own native admission; an unready selected step cannot silently disappear.
-- [ ] Precombat execution consumes one normal native cast at a time with real cast/GCD completion. World-only execute rejects a Composite and never recursively dispatches it. Shared selection does not create an instant batch or change native casting times.
+- [x] Adapters supply a named ordered list of native actions; shared selection returns an ordered pending execution plan without spell IDs or class coating policy in common code.
+- [x] Actual owned active self auras are skipped without reordering pending steps. Empty/all-active plans are unusable. Every pending step requires its own native admission; an unready selected step cannot silently disappear.
+- [x] World-only execute rejects a Composite before its first step and never recursively dispatches it. Shared selection does not create an instant batch or change native casting times.
+- [ ] Precombat execution consumes one normal native cast at a time with real cast/GCD completion (14766-owned integration).
 
 [Composite selection proof/boundary](../handoffs/literal-composite-proof-ledger.md).
 
