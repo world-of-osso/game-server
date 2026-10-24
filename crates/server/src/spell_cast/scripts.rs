@@ -45,6 +45,7 @@ mod ret_empyrean;
 pub(crate) use ret_empyrean::owns_empyrean_proc;
 pub(super) use ret_empyrean::schedule_empyrean_legacy;
 mod ret_purpose;
+mod ret_resonance;
 pub(super) use ret_purpose::roll_selected_ret_divine_purpose;
 mod ret_tier;
 pub(super) use ret_tier::after_foreground_spender;
@@ -599,6 +600,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         return Some(hook);
     }
     match spell_id {
+        ret_resonance::TOLL => Some(ret_resonance::grant_after_toll),
         windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
         prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),

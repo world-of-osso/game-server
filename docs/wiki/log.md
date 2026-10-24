@@ -1,6 +1,6 @@
 ## 2026-10-24 — Event-time aura proc candidates
 
-[Source/proof](../handoffs/aura-proc-event-candidates-proof-ledger.md): TC synchronous candidate collection; native Leydrinker genuineRED22.91s, generic queued identity snapshot and shared melee routing. GREEN/regressions pending; no spell-ID or metadata override.
+[Source/proof](../handoffs/aura-proc-event-candidates-proof-ledger.md): TC synchronous candidate collection; native Leydrinker RED→GREEN, generic identity snapshot and shared melee routing.168PASS/3input-dependent failures,2 reproduced on base; Ret AfterCast producer phase1RED/2controlsPASS→3GREEN46.93s. Parent fullgate pending; no spell-ID or metadata override.
 
 ## 2026-10-24 — Shared pool-for-next resource contract
 

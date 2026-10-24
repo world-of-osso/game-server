@@ -28,6 +28,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [ ] `SIMC_RET_TIER_MID2_DIVINE_PURPOSE_RELATIONSHIP`: consuming actual foreground Divine Purpose223819 with native2062 two-piece grants native Divine Power1305230. Four-piece arms the spender's native Verdict/Storm/Light Arbiter kind only when none is pending; the same kind preserves it, a different kind consumes it and casts native1306923 at the actual cast target. Native gear eligibility, effects, coefficients and durations remain authoritative. No fabricated DB2 trigger edges. Natural Divine Purpose generation, Empyrean Legacy background consumption and Hammer of Light runtime qualification remain separate open cases. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#ret-mid2-tier-relationship-source-policy).
 
+### Ret Divine Resonance producer
+
+- [ ] `SIMC_RET_DIVINE_RESONANCE_PRODUCER`: validated selected384027/spec70 and an actual ordinary Divine Toll375576 cast grant native1266308 at its native maximum3 stacks, through existing AfterCast after cast-success is raised. SimC76f8118 `sc_paladin.cpp1880–1905,3686–3688` supplies the missing relationship; `action.cpp1971–1985` dispatches cast-success callbacks before that grant. Keep native30s duration; no legacy5s pulse, new hook, per-spell proc suppression or copied timer. Echo, stack spending and500ms ICD remain excluded. [Source/proof](../handoffs/aura-proc-event-candidates-proof-ledger.md#ret-producer-phase).
+
 ### Wild Thrash owned-pet child policy
 
 - [ ] `HUNTER_WILD_THRASH_PET_CHILD_SIMC`: native1264359 effect0 commands each actual living owned controlled pet whose native1264355 target plan reaches the selected enemy. Damage is cast from that pet through the existing owned-pet command path, preserving native area/coefficients and copy/ownership/range rules. No pet means no fabricated child caster. TC has no script and parent DB2 Dummy effects have zero triggers; SimC76f8118 hunter7562–7563/6796–6837 supplies only this named dispatch policy. Beast Cleave, conditional300% multiplier/cap semantics and unsupported companion/guardian models remain separate qualification gaps.
