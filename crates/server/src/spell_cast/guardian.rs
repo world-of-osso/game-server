@@ -351,8 +351,15 @@ pub(super) fn update(world: &mut World) {
 fn wild_imp_exhausted(world: &World, actor: Entity) -> bool {
     let summon = world.get::<SummonedCreature>(actor).unwrap();
     let entry = world.get::<Npc>(actor).unwrap().template_id;
-    if !is_wild_imp(summon.spell_id, entry)
-        || world.get::<CastState>(actor).is_some()
+    let uses_firebolt = world
+        .get::<GuardianActor>(actor)
+        .is_some_and(|actor| actor.spells.contains(&104318));
+    // The sourced Energy fade belongs to104318, not an overriding native Mana
+    // list. Never inject an Energy pool/cost merely because the entry is an Imp.
+    if !is_wild_imp(summon.spell_id, entry) || !uses_firebolt {
+        return false;
+    }
+    if world.get::<CastState>(actor).is_some()
         || world
             .resource::<super::missiles::PendingSpellHits>()
             .has_caster(actor)
