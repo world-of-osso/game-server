@@ -1,6 +1,6 @@
 ## 2026-10-24 — WDP duration policy approved after first-window trace
 
-[Exact source/duration ledger](../handoffs/ww-wdp-enabler-proof-ledger.md#current-approved-duration-override--2026-10-24): first native1000ms window expires exactly when producing GCD ends (7.95→8.95s), despite source STrow43 being true. New duration test genuinely RED1000 vs7265ms10.15s. Approved producer-only SimC4552–4572 overlap+hasted1500ms/refresh NONE override retains DB2 base and152175 gates. GREEN/re-trace/fresh numerical receipts pending.
+[Exact source/duration ledger](../handoffs/ww-wdp-enabler-proof-ledger.md#current-approved-duration-override--2026-10-24): first native1000ms window expires exactly when producing GCD ends (7.95→8.95s), despite source STrow43 being true. New duration test genuinely RED1000 vs7265ms10.15s. Approved producer-only SimC4552–4572 overlap+hasted1500ms/refresh NONE override retains DB2 base and152175 gates. At5618c1eea native5GREEN29.45s; first7265ms window admits actual source152175 at8.95s, no post-GCD target/cost refusal. Fresh-backup-EACH300s97359.4833ST/105538.6233three-target (−52.8397%/−71.9729%); root casts8/3 but damage children158221/451767 absent. Numerical/damage qualification remains open.
 
 ## 2026-10-24 — WDP native enabler RED→GREEN
 
