@@ -403,6 +403,27 @@ fn simc_apl_first_cycle_missing_native_candidate_adapter_is_explicit() {
 }
 
 #[test]
+#[ignore = "source-qualified selector/cycle native-binary precedence control"]
+fn simc_apl_first_cycle_selector_takes_precedence_over_cycle_cap() {
+    let program = Program::parse(&[(
+        "default",
+        "mortal_strike,target_if=max:-target.health.pct,cycle_targets=1,max_cycle_targets=1,if=target.health.pct<50",
+    )])
+    .unwrap();
+    let selected = program
+        .select("default", &targets(), &mut program.state(), |action| {
+            Ok(action.target == Some(42))
+        })
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        selected.target,
+        Some(42),
+        "target_if selects42 beyond cycle cap1; cap cannot trim selector candidates"
+    );
+}
+
+#[test]
 fn simc_apl_target_unknown_fact_is_an_error_not_an_absent_target() {
     let program = Program::parse(&[("default", "execute,target_if=min:target.missing")]).unwrap();
     assert!(

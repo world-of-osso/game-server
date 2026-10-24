@@ -26,6 +26,7 @@ enum Body {
 
 #[derive(Clone, Copy, Debug)]
 enum TargetMode {
+    First,
     Min,
     Max,
 }
@@ -41,6 +42,7 @@ struct Rule {
     action: Action,
     condition: Option<Expression>,
     target: Option<TargetSelector>,
+    cycle_limit: Option<usize>,
     body: Body,
 }
 
@@ -139,12 +141,9 @@ impl Program {
         selection: &mut Selection<'_>,
     ) -> Result<Option<Action>, String> {
         for rule in rules {
-            let Some(action) = bind_target(rule, selection)? else {
+            let Some(action) = bind_ready_target(rule, selection)? else {
                 continue;
             };
-            if !condition_passes(rule, &action, selection)? {
-                continue;
-            }
             match &rule.body {
                 Body::Variable { name, assignment } => {
                     self.assign(name, assignment, &action, selection)?
@@ -158,8 +157,7 @@ impl Program {
                 // player.cpp2467–2476 changes no child targets: the run's selector
                 // belongs only to that control row, not its child actions.
                 Body::Run(name) => return self.select_list(name, selection),
-                Body::Action if (selection.usable)(&action)? => return Ok(Some(action)),
-                Body::Action => {}
+                Body::Action => return Ok(Some(action)),
             }
         }
         Ok(None)
@@ -208,6 +206,47 @@ struct Selection<'a> {
     stack: Vec<String>,
 }
 
+fn bind_ready_target(rule: &Rule, selection: &mut Selection<'_>) -> Result<Option<Action>, String> {
+    // action.cpp2435–2508: target_if takes precedence over cycle_targets.
+    if let Some(limit) = rule.cycle_limit
+        && rule.target.is_none()
+        && selection.facts.value_for(&rule.action, "active_enemies")? > 1.0
+    {
+        return bind_cycle_target(rule, selection, limit);
+    }
+    let Some(action) = bind_target(rule, selection)? else {
+        return Ok(None);
+    };
+    Ok(rule_ready(rule, &action, selection)?.then_some(action))
+}
+
+fn bind_cycle_target(
+    rule: &Rule,
+    selection: &mut Selection<'_>,
+    limit: usize,
+) -> Result<Option<Action>, String> {
+    let mut action = rule.action.clone();
+    let candidates = selection.facts.target_ids(&action)?;
+    let limit = if limit > 0 { limit } else { candidates.len() };
+    for target in candidates.into_iter().take(limit) {
+        action.target = Some(target);
+        if rule_ready(rule, &action, selection)? {
+            return Ok(Some(action));
+        }
+    }
+    Ok(None)
+}
+
+fn rule_ready(rule: &Rule, action: &Action, selection: &mut Selection<'_>) -> Result<bool, String> {
+    if !condition_passes(rule, action, selection)? {
+        return Ok(false);
+    }
+    if matches!(&rule.body, Body::Action) {
+        return (selection.usable)(action);
+    }
+    Ok(true)
+}
+
 fn condition_passes(
     rule: &Rule,
     action: &Action,
@@ -253,6 +292,7 @@ fn choose_target(
     let candidates = selection.facts.target_ids(action)?;
     let single = candidates.len() == 1;
     let mut best_value = match selector.mode {
+        TargetMode::First => 0.0,
         TargetMode::Min => f64::INFINITY,
         TargetMode::Max => f64::NEG_INFINITY,
     };
@@ -260,17 +300,27 @@ fn choose_target(
     for target in candidates {
         action.target = Some(target);
         let value = evaluate_for(&selector.expression, action, selection)?;
-        let preferred = match selector.mode {
-            TargetMode::Min => value < best_value,
-            TargetMode::Max => value > best_value,
-        };
-        // The single-target shortcut ignores score; binding still rejects unknown facts.
-        if single || preferred {
-            best_value = value;
-            best_target = Some(target);
+        if !target_preferred(selector.mode, single, value, best_value) {
+            continue;
         }
+        if matches!(selector.mode, TargetMode::First) {
+            return Ok(Some(target));
+        }
+        best_value = value;
+        best_target = Some(target);
     }
     Ok(best_target)
+}
+
+fn target_preferred(mode: TargetMode, single: bool, value: f64, best: f64) -> bool {
+    match mode {
+        // Pinned action.cpp5367–5379 versus5417–5426; actual binary probes agree.
+        TargetMode::First if single => value > 0.0,
+        TargetMode::First => value != 0.0,
+        // Single min/max ignores score; evaluation still rejects unknown facts.
+        TargetMode::Min => single || value < best,
+        TargetMode::Max => single || value > best,
+    }
 }
 
 struct BoundFacts<'a> {
@@ -359,27 +409,47 @@ fn parse_rule(literal: &str, defaults: &mut BTreeMap<String, f64>) -> Result<Rul
         }
         _ => Body::Action,
     };
+    let cycle_limit = parse_cycle_limit(&action.options)?;
     Ok(Rule {
         action,
         condition,
         target,
+        cycle_limit,
         body,
     })
 }
 
 fn parse_target_selector(literal: &str) -> Result<TargetSelector, String> {
-    let (mode, expression) = literal
-        .split_once(':')
-        .ok_or_else(|| format!("target_if requires min/max mode: {literal}"))?;
-    let mode = match mode {
-        "min" => TargetMode::Min,
-        "max" => TargetMode::Max,
-        _ => return Err(format!("unsupported target_if mode {mode}")),
+    let (mode, expression) = match literal.split_once(':') {
+        None => (TargetMode::First, literal),
+        Some(("first", expression)) => (TargetMode::First, expression),
+        Some(("min", expression)) => (TargetMode::Min, expression),
+        Some(("max", expression)) => (TargetMode::Max, expression),
+        Some((mode, _)) => return Err(format!("unsupported target_if mode {mode}")),
     };
     Ok(TargetSelector {
         mode,
         expression: Expression::parse(expression)?,
     })
+}
+
+fn parse_cycle_limit(options: &BTreeMap<String, String>) -> Result<Option<usize>, String> {
+    let enabled = match options.get("cycle_targets").map(String::as_str) {
+        None | Some("0") => false,
+        Some("1") => true,
+        Some(value) => {
+            return Err(format!(
+                "invalid cycle_targets boolean {value:?}; expected0/1"
+            ));
+        }
+    };
+    let limit = options
+        .get("max_cycle_targets")
+        .map(|value| value.parse::<i32>())
+        .transpose()
+        .map_err(|error| format!("invalid max_cycle_targets integer: {error}"))?
+        .unwrap_or(0);
+    Ok(enabled.then_some(limit.max(0) as usize))
 }
 
 fn parse_variable(
