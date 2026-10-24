@@ -2,7 +2,7 @@
 use bevy::prelude::*;
 use shared::components::PowerType;
 
-use super::{batch8, script_effect_value};
+use super::script_effect_value;
 use crate::auras::{AuraApplication, AuraSource};
 use crate::spell_cast;
 use crate::spell_info::{SpellInfo, SpellStore};
@@ -19,8 +19,6 @@ const DEFT_MANEUVERS: u32 = 381878;
 const LUNGE_BITE: u32 = 215802;
 const VOIDFORM_BUFF: u32 = 194249;
 const SURGE_BUFF: u32 = 365362;
-const JUDGMENT_RANK: u32 = 315867;
-const JUDGMENT_ENERGIZE: u32 = 220637;
 const GULDAN_METEOR: u32 = 86040;
 
 ///13877 explicitly names331850s1/i: five base targets, eight with272026.
@@ -89,15 +87,6 @@ pub(super) fn apply_voidform(world: &mut World, caster: Entity, _spell: &SpellIn
 ///mana-spent damage snapshot; this is only the named post-cast buff.
 pub(super) fn apply_surge(world: &mut World, caster: Entity, _spell: &SpellInfo) {
     apply_named_buff(world, caster, SURGE_BUFF, (1 << 0) | (1 << 1) | (1 << 2));
-}
-
-///275779's315867 gate names220637s1 Holy Power, once on actual damage.
-pub(super) fn energize_judgment(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    if crate::auras::has_aura(world, caster, JUDGMENT_RANK)
-        && batch8::first_damage_target(world, caster, PROTECTION_JUDGMENT, target)
-    {
-        spell_cast::cast_triggered(world, caster, JUDGMENT_ENERGIZE, Some(caster), depth + 1);
-    }
 }
 
 ///105174m1*86040m1. The native root costs three whole shards (30 raw),

@@ -73,6 +73,7 @@ fn test_templates() -> ItemTemplates {
         forever: Default::default(),
         loot_need: Default::default(),
         retail_learning_spells: Default::default(),
+        ..Default::default()
     }
 }
 

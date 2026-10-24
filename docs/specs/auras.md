@@ -2,12 +2,16 @@
 
 Server-side aura runtime in `crates/server/src/auras/`: aura instances on active units, periodic effects, procs, spell and stat modifiers, removal and `UnitAuras` replication. See [auras](../wiki/systems/auras.md).
 
+## Explicit proc provenance
+
+Import the audited effective public TC `spell_proc` IDs into `tdb_spell_proc(SpellId PRIMARY KEY)` only after every pinned base/update source matches its SHA-256. Reject duplicate/incomplete IDs before publication. Replace presence transactionally without changing retained rows' later value columns or unrelated tables; errors leave prior data intact. Presence alone must not overlay chance, flags, cooldown or charges. The later full proc importer owns those values. See [Feral/source ledger](../handoffs/feral-source-census.md).
+
 ## Firestarter direct critical strikes
 
 - [ ] Actual caster205026 effect0 makes ordinary Fireball133/Pyroblast11366 critical at recipient health percentage greater than or equal to its native threshold (70448:90).
 - [ ] Below that threshold, or without caster205026 effect0, retain ordinary critical chance, not forced critical/noncritical results; no learned spell, aura, stat or chance grants.
 
-TC a352b1fa `spell_mage.cpp:762–779`; native reference90 fixtures: `crates/server/src/dungeon_simulator/dps_parity/firestarter_tests.rs`. Periodic321712 (`spell_mage.cpp:783–800`) is separate pending the shared periodic critical roll; no per-spell tick executor in this direct-only slice.
+TC a352b1fa `spell_mage.cpp:762–779`; native reference90 fixtures: `crates/server-simulation/src/dungeon_simulator/dps_parity/firestarter_tests.rs`. Periodic321712 (`spell_mage.cpp:783–800`) is separate pending the shared periodic critical roll; no per-spell tick executor in this direct-only slice.
 
 ## Label point modifiers on existing auras
 
@@ -33,7 +37,7 @@ spell-ID exception or blanket proc certification.
 
 TC a352b1fa `SpellAuras.cpp:524–532` and `SpellAuraEffects.cpp:5680,5764,5895,6103–6113` define eligibility, per-tick rolls and native damage/healing bonuses.
 
-- [ ] Attr2 `CANT_CRIT` overrides Attr8 `PERIODIC_CAN_CRIT`; unflagged periodic effects never crit.
+- [x] Attr2 `CANT_CRIT` overrides Attr8 `PERIODIC_CAN_CRIT`; unflagged periodic effects never crit.
 - [ ] Eligible damage, leech, percent damage, healing and percent healing roll current crit each tick through the normal script-aware crit calculation, not an application-time snapshot. Flat `PeriodicHealingAndDamage` bonuses belong inside the critical multiplier.
 - [ ] `FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_SPELL_OWNER`: class `CharacterStats` actors qualify as Player spell owners; controlled pets/totems use their direct class owner's current chance. Ordinary creatures without such an owner retain zero periodic crit.
 - [ ] Keep the original caster for target-owned/script modifiers and native critical damage/healing bonuses; use the spell owner for chance stats and spell modifiers. Periodic damage uses spell critical-bonus order even for melee/ranged defense classes.
@@ -47,8 +51,8 @@ TC a352b1fa `SpellAuraEffects.cpp:832–873` supplies the rolling-amount rule.
 This is shared aura execution, not an Echo/Ignite proc or learned-spell grant.
 
 - [x] Native Attr10 `ROLLING_PERIODIC` selects one shared carry path for periodic damage/healing, including335467 leech.
-- [x] Settle old due ticks once, then add the same caster/spell/effect's unpaid stored amount over the refreshed scheduled ticks; retain the existing native phase.
-- [x] Preserve Barbed's authored five-amount normalization and seven-initial/six-refreshed clock; never apply its normalization to other spells or carry its old pool twice.
+- [x] Settle old due ticks once, then add the same caster/spell/effect's unpaid stored amount over the refreshed scheduled ticks. Normal nonstacking recasts reset the native period only without `TRIGGERED_DONT_RESET_PERIODIC_TIMER` (0x20000, included in boolean `FULL_MASK`0x7FFFF). Triggered, stacking and Attr13 `PERIODIC_REFRESH_EXTENDS_DURATION` applications preserve time-to-tick (TC `SpellDefines.h291–293`, `Spell.cpp3236`, `SpellAuras.cpp976–991`). Echo's original-phase assertion remains authoritative; do not add an Echo-specific exception.
+- [x] Every fresh periodic payment retains its DB2 effect amount. Remove tooltip-only fixed-total normalization:217200 dummy5 does not divide its native AP0.857 payment. Native selected14s/2000ms/extra-initial yields8 payments; a legal refresh carries unpaid old damage into its new8-payment schedule. Native-source RED198697bd9: fresh2124.697 versus3399.515, refresh8payments versus9 (one old plus8new);2FAIL/2PASS21.52s →9bb480581 native4GREEN27.34s. [Exact proof/limits](../handoffs/bm-native-periodic-proof-ledger.md); stacking/Pandemic and broad integration controls remain parent-gated.
 - [x] Unflagged periodic healing and foreign caster pools remain independent; preserve existing fractional snapshots and payment rounding rather than requantizing them during refresh.
 - [x] Ordinary native child aura/cast execution gains this behavior automatically; class producers still own their sourced incoming amount.
 - [ ] Qualify actual12654 producer integration separately; its flag uses the same shared path, but the Ignite producer belongs to another slice.

@@ -15,6 +15,8 @@ pub(super) struct Profile {
     pub consumables: BTreeMap<String, String>,
     pub reference_gap: Option<String>,
     pub omnium_talents: Option<String>,
+    #[serde(flatten)]
+    pub options: BTreeMap<String, serde_json::Value>,
 }
 
 #[derive(Deserialize)]
@@ -270,29 +272,146 @@ pub(super) fn install_traits(
         })
         .collect();
     let classes = world.resource::<crate::spell_info::ClassSpells>();
-    let evaluated = if let Some(player) = world.get::<shared::components::Player>(unit) {
+    let (spec, evaluated) = if let Some(player) = world.get::<shared::components::Player>(unit) {
         let spec = world
             .get::<crate::class_progression::ActiveSpec>(unit)
             .ok_or("reference player lacks native ActiveSpec")?
             .0;
-        crate::class_progression::evaluate_player_reference_traits(
-            classes, player, spec, level, &purchases,
+        (
+            spec,
+            crate::class_progression::evaluate_player_reference_traits(
+                classes, player, spec, level, &purchases,
+            ),
         )
     } else {
         let follower = world
             .get::<crate::followers::Follower>(unit)
             .ok_or("reference actor is neither player nor follower")?;
-        crate::class_progression::evaluate_reference_traits(
-            classes,
-            &follower.profile,
-            level,
-            &purchases,
+        (
+            follower.profile.spec_id,
+            crate::class_progression::evaluate_reference_traits(
+                classes,
+                &follower.profile,
+                level,
+                &purchases,
+            ),
         )
     };
     let (known, traits) =
         evaluated.map_err(|reason| format!("NATIVE_REFERENCE_TRAIT_CONFIG_REJECTED: {reason}"))?;
+    let known = apply_ret_hammer_of_wrath_known_from_selected_talent_simc(spec, known, &traits);
     world.entity_mut(unit).insert((known, traits));
     Ok(())
+}
+
+/// RET_HAMMER_OF_WRATH_KNOWN_FROM_SELECTED_TALENT_SIMC: reference actors only.
+/// SimC76f8118 sc_paladin.cpp3407–3412/4192 links the selected class talent
+///1241288 to action24275. Native70448 has no learn edge; NeverLearned stays native.
+fn apply_ret_hammer_of_wrath_known_from_selected_talent_simc(
+    spec: u32,
+    known: crate::class_progression::KnownSpells,
+    traits: &crate::class_progression::TraitLoadout,
+) -> crate::class_progression::KnownSpells {
+    const RETRIBUTION: u32 = 70;
+    const HAMMER_OF_WRATH_TALENT: u32 = 1241288;
+    const HAMMER_OF_WRATH_ACTION: u32 = 24275;
+    let selected = traits
+        .active_talent_spells()
+        .any(|spell| spell.spell_id == HAMMER_OF_WRATH_TALENT);
+    if spec != RETRIBUTION || !selected || known.contains(HAMMER_OF_WRATH_ACTION) {
+        return known;
+    }
+    crate::class_progression::KnownSpells::from_baseline(
+        known
+            .iter()
+            .chain(std::iter::once(HAMMER_OF_WRATH_ACTION))
+            .collect(),
+    )
+}
+
+#[test]
+#[ignore = "requires prepared native Ret profile and selected76f8118 allocations"]
+fn dps_parity_ret_hammer_knowledge_is_scoped_to_selected_reference_actors() {
+    use crate::class_progression::KnownSpells;
+    use crate::followers::simulator::ParityActor;
+    let selected: Vec<AllocatedTrait> =
+        read_json(&directory().unwrap().join("70.selected-traits-active.json")).unwrap();
+    for identity in [ParityActor::Follower, ParityActor::Player { race: 3 }] {
+        let profile: Profile = read_json(&directory().unwrap().join("70.profile.json")).unwrap();
+        let mut run = super::prepare_reference(profile, &selected, 1, identity).unwrap();
+        let known = run.app.world().get::<KnownSpells>(run.actor).unwrap();
+        assert!(
+            known.contains(1241288),
+            "native selected class talent is known"
+        );
+        assert!(
+            known.contains(24275),
+            "selected parity actor must know Hammer of Wrath24275"
+        );
+        install_traits(run.app.world_mut(), run.actor, &[]).unwrap();
+        let known = run.app.world().get::<KnownSpells>(run.actor).unwrap();
+        // Native Ret grants its root class talent even with no purchases.
+        assert!(known.contains(1241288));
+        assert!(known.contains(24275));
+    }
+}
+
+#[test]
+#[ignore = "requires native70448 class catalogs and a prepared Ret gear profile"]
+fn dps_parity_ret_hammer_policy_does_not_grant_to_other_specializations() {
+    let (mut profile, _) = super::read_reference(70).unwrap();
+    profile.spec_id = 66;
+    let run = super::prepare_reference(
+        profile,
+        &[],
+        1,
+        crate::followers::simulator::ParityActor::Player { race: 3 },
+    )
+    .unwrap();
+    let known = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(run.actor)
+        .unwrap();
+    assert!(!known.contains(24275));
+}
+
+#[test]
+#[ignore = "requires native70448 Ret traits; ordinary reference evaluation remains native-only"]
+fn dps_parity_ret_hammer_native_book_does_not_learn_the_reference_exception() {
+    let (profile, selected) = super::read_reference(70).unwrap();
+    let run = super::prepare_reference(
+        profile,
+        &[],
+        1,
+        crate::followers::simulator::ParityActor::Player { race: 3 },
+    )
+    .unwrap();
+    let purchases = selected
+        .iter()
+        .filter(|entry| entry.active_ranks > 0)
+        .map(|entry| crate::trait_config::Purchase {
+            node_id: entry.node_id,
+            entry_id: entry.entry_id,
+            ranks: entry.active_ranks,
+        })
+        .collect::<Vec<_>>();
+    let world = run.app.world();
+    let classes = world.resource::<crate::spell_info::ClassSpells>();
+    let player = world.get::<shared::components::Player>(run.actor).unwrap();
+    let (known, _) = crate::class_progression::evaluate_player_reference_traits(
+        classes,
+        player,
+        70,
+        run.profile.level.parse().unwrap(),
+        &purchases,
+    )
+    .unwrap();
+    assert!(known.contains(1241288));
+    assert!(
+        !known.contains(24275),
+        "ordinary native books must remain unchanged"
+    );
 }
 
 #[test]

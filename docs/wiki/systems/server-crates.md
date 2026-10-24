@@ -1,10 +1,10 @@
 # Server crate boundaries
 
-Verified: 2026-10-23. Stable catalog code has one implementation in `server-catalog`; gameplay modules and their tests now belong to the existing `server` library, with a thin executable.
+Verified: 2026-10-24. Stable catalog code has one implementation in `server-catalog`; gameplay modules and their tests now belong to the existing `server` library, with a thin executable.
 
 ## Current ownership
 
-- `crates/server-catalog`: generated character/spell/XP tables, pure faction-template reactions, and DB2 source-build validation/reading. Its only dependency is the existing rusqlite version/connection type; no Bevy plugin or runtime initialization.
+- `crates/server-catalog`: generated character/spell/XP tables, six generated achievement lookups and their immutable records, pure faction-template reactions, and DB2 source-build validation/reading. Its only dependency is the existing rusqlite version/connection type; no Bevy plugin or runtime initialization.
 - `crates/server/src/lib.rs`: existing standalone modules plus the former binary's gameplay module declarations and App assembly. `configure_app(&mut App)` preserves runtime→gameplay→resource→system registration order. One `extern crate self as server` keeps existing standalone-library imports canonical without editing hot modules.
 - `crates/server/src/main.rs`: creates App, calls `server::configure_app`, runs it. No gameplay source files move for this consolidation. `item_instance::enchants` imports the canonical catalog spell table instead of compiling a second source copy.
 - `crates/server-simulation`: test-only consumer of the server library; owns `dungeon_simulator` and nested DPS parity, with the original module prefix retained. Its normal library is empty; dependencies enabling `server/test-support` are dev-only.
@@ -38,6 +38,22 @@ Most case names retain `dungeon_simulator::...`. Six graph cases instead map to 
 
 `crates/server-combat-tests` follows the simulator's empty normal-library/dev-dependency pattern and owns 106 public-behavior melee cases. Canonical `collect_swings`/`collect_broadcast_swings` now reside in existing `spell_cast::test_harness`, shared with retained core tests; private outcome-formula tests stay in core. Fixture cache payloads remain private except the existing DB path. No new dependency versions or duplicate gameplay/resource types are introduced. [C handoff and measurement controls](../../handoffs/crate-split-area-tests.md), [exact case mapping](../../handoffs/crate-split-combat-test-mapping.json). At C code tip `acecb97d1`, the combined core-unit/simulator/combat-target compiler check and the production-no-feature `game-server` check pass without diagnostics. Full-suite/exact post-split census acceptance is pending.
 
+## Generated achievement catalog cut (D1)
+
+Six generated files (37,819 lines before relocation) now live under `server-catalog/src/achievement/`: conditions, mythic predicates, node counts, overlays, single modifiers and traditional-rank factions. `CompiledConditions`, `DifficultyRule` and `MythicRequirements` have one owner there; no ECS/resource dependencies move into catalog. Achievement credit, `MythicCompletion`, player/target authority and matching stay in server. The two matching methods become core free functions because inherent implementations cannot remain on externally owned records; predicates are unchanged.
+
+All six generators still require an explicit output argument; point it at the corresponding new catalog file. Generated visibility now permits the core consumer. No lookup values, test bodies, names, ignored flags or should-panic flags change. The pure move commit is separate from wiring. Paired elapsed-time and full-suite acceptance remain separate proof; source-size reduction is not a speedup claim.
+
+## Spell fixture qualification (D2)
+
+`server-spell-tests` is an empty normal library with dev-only fixture dependencies and the existing opt2/debug1 test profile. Its first slice contains 29 spell-cast source files and 175 enabled cases; the exact `spell_cast::...` names and flags are preserved ([mapping](../../handoffs/crate-split-spell-test-mapping.json)). All 175 externally compile through canonical server at fixture tip `af8f7f5b6` before any source move, with no diagnostics. The 29 byte-identical moves form separate commit `e0aaa1840` before consumer wiring. Their their setup reads use `WorldData::spell_store()` to borrow the existing canonical cached `SpellStore`; cache fields remain private and no second resource/cache is introduced. Only existing `varied`, native-enemy-dodge harness and native-creature-world fixture helpers are public for this slice. The dodge helper's existing constant/apply dependencies use the same explicit test-support gate. Ordinary production does not compile the fixture harness.
+
+External qualification exposed three additional `dummy7` charge-state reads after the cache/helper blockers were removed. The separately approved read-only `test_harness::charge_recovery` observer borrows canonical `SpellHistory` and returns consumed count plus oldest pending recharge; charge fields stay private. It retains the original missing-category failure boundary and checks the exact oldest recharge, not a weaker wire notification proxy.
+
+The retained private `hit::tests` also used the NPC-dodge test module's setup helper. `spawn_native_dodge_target` now has one unchanged implementation in canonical `test_harness`; both retained formula tests and consumer cases use it. Its fixture spell IDs/imports move with the helper. No reverse server→consumer dependency exists.
+
+No `execute_cast` seam or gameplay-internal visibility widening is included. Final wired-consumer/core compilation, actual post-build test inventories, runtime qualification and matched comment-rebuild measurements remain required before acceptance. Source size and check elapsed time do not establish edit-build payoff.
+
 ## Sources
 
 - `crates/server-catalog/{Cargo.toml,src/lib.rs}`, `crates/server-simulation/{Cargo.toml,src/lib.rs}` — package/dependency ownership.
@@ -49,3 +65,4 @@ Most case names retain `dungeon_simulator::...`. Six graph cases instead map to 
 
 - [[dungeon-simulator]] — headless gameplay qualification.
 - [[server-test-performance]] — measured profile/runtime tradeoffs; extraction alone is not a benchmark result.
+- [[server-crate-split-measurements]] — completed B/C paired batches and comment rebuilds, sealed inputs, shared-host no-causal-claim limits.

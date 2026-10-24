@@ -188,18 +188,19 @@ fn try_entry(
     if matches!(entry.slot, Slot::Passive | Slot::Utility | Slot::Interrupt) {
         return false;
     }
-    let spell_id = match super::kit_overrides::resolve_action(world, unit, entry.spell_id) {
-        Ok(spell) => spell,
-        Err(error) => {
-            debug!(
-                ?unit,
-                base = entry.spell_id,
-                ?error,
-                "Follower action unavailable"
-            );
-            return false;
-        }
-    };
+    let spell_id =
+        match crate::spell_cast::knowledge::resolve_actor_action(world, unit, entry.spell_id) {
+            Ok(spell) => spell,
+            Err(error) => {
+                debug!(
+                    ?unit,
+                    base = entry.spell_id,
+                    ?error,
+                    "Follower action unavailable"
+                );
+                return false;
+            }
+        };
     let mut entry = entry.clone();
     entry.spell_id = spell_id;
     let enemy = match (entry.conditions.target, entry.conditions.target_if_min_aura) {
@@ -373,6 +374,10 @@ pub(super) fn conditions_met(
     entry: &Entry,
 ) -> bool {
     let condition = &entry.conditions;
+    // This is ai::engaged_enemies, not a selected target, historical pull or area count.
+    if enemies.len() < condition.min_active_enemies {
+        return false;
+    }
     let party_in_combat = party.iter().any(|member| {
         world.get::<InMap>(*member) == world.get::<InMap>(unit)
             && world

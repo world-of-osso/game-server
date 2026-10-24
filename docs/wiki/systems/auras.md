@@ -1,5 +1,9 @@
 # Auras
 
+## Explicit proc source presence — 2026-10-23
+
+`import_spell_proc_presence.py` publishes only the audited effective TC IDs to `tdb_spell_proc(SpellId PRIMARY KEY)`, verifying every base/update source hash first. One transaction reconciles IDs while preserving retained value columns and unrelated tables. It does not parse SQL again or apply numeric proc overrides. The supplied audit pins1283base rows plus7updates yielding1291IDs. [Contract and source/qualification ledger](../../handoffs/feral-source-census.md#explicit-tdb-provenance-boundary). Runtime provenance/refusal is a separate follow-up, not part of the shared action-knowledge helper.
+
 ## Periodic critical ticks — 2026-10-23
 
 TC a352b1fa `SpellAuras.cpp524–532` rejects Attr2 `CANT_CRIT` before accepting Attr8 `PERIODIC_CAN_CRIT`. `SpellAuraEffects.cpp5680/5764/5895` rolls damage, leech and healing each tick; percent damage/healing shares those paths. `CalcPeriodicCritChance6103–6113` requires a Player spell-mod owner. `Object.cpp1646–1667` resolves a Player itself or a pet/totem's direct Player owner.
@@ -8,7 +12,7 @@ TC a352b1fa `SpellAuras.cpp524–532` rejects Attr2 `CANT_CRIT` before accepting
 
 `spell_cast::effects` shares the normal script-aware chance computation. The original caster still owns script/target-specific modifiers and critical damage/healing aura bonuses; the qualified spell owner supplies current chance stats and spell mods. TC periodic damage always takes `SpellCriticalDamageBonus` order, not melee/ranged weapon order. Healing retains native `CritDamageAndHealing` and critical-healing multipliers. `auras::periodic` retains its native base payload. Ordinary numeric source resolution applies flat `PeriodicHealingAndDamage22` before rolling/bonusing periodic damage; healing rolls after its healing bonuses. Resolved damage copies and leech's already-derived healing do not gain another roll. Stored tick amounts, refresh pools and timing remain unchanged. [Contract](../../specs/auras.md#periodic-critical-ticks).
 
-Pushed native RED7b92423a7: seven cases, two controls PASS/five feature failures35.83s. Player and class-follower Barbed217200 each record zero crits over32 seeded positive ticks at22.739% native crit. Same-instance Barbed/Renew139 ignore real post-application crit changes; native pet Burning Blood98957 records zero/four with owner crit≥100. CANT+unflagged controls (341408/71023) and an ordinary creature with native +100 spell crit154611 pass. Real Denounce171884, Critical Focus75060 and Luckydo130165 isolate current chance and native bonuses without invented rows/stats/flags/amounts. The first seven cases pass42.94s at1004f4100, but that intermediate candidate is not acceptance: its per-tick caller applied crit before flat periodic modifiers. Required ordering REDcf191c5 uses actual Player Rogue1943/21880: native +10 raises normal ticks10937→11038, then critical73726 falls below74307.8125 expected (rounding bound4). TC `Unit.cpp6913` applies flat periodic mods before `SpellAuraEffects.cpp5680` rolls critical damage. The earlier39c4 follower259 absence is a fixture failure, not behavioral RED. The numeric-source correction is committed before final GREEN. Controlled aura applications do not qualify root cast admission, APL or DPS parity. Evidence: engine `data/diagnostics/dps-parity-fix-2026-10-21/periodic-crit-{native-source.json,red-7b92423a7-native.log}`.
+Pushed native RED7b92423a7: seven cases, two controls PASS/five feature failures35.83s. Player and class-follower Barbed217200 each record zero crits over32 seeded positive ticks at22.739% native crit. Same-instance Barbed/Renew139 ignore real post-application crit changes; native pet Burning Blood98957 records zero/four with owner crit≥100. CANT+unflagged controls (341408/71023) and an ordinary creature with native +100 spell crit154611 pass. Real Denounce171884, Critical Focus75060 and Luckydo130165 isolate current chance and native bonuses without invented rows/stats/flags/amounts. The first seven cases pass42.94s at1004f4100, but that intermediate candidate is not acceptance: its per-tick caller applied crit before flat periodic modifiers. Required ordering REDcf191c5 uses actual Player Rogue1943/21880: native +10 raises normal ticks10937→11038, then critical73726 falls below74307.8125 expected (rounding bound4). TC `Unit.cpp6913` applies flat periodic mods before `SpellAuraEffects.cpp5680` rolls critical damage. The earlier39c4 follower259 absence is a fixture failure, not behavioral RED. Fix4928e0227 moves the roll behind numeric-source bonuses. Integrated86d457e1c (including hp1026) passes all eight native cases57.80s: Rupture critical74305 versus74307.8125 expected, bound4; player/follower each nine/32 Barbed crits; pet/ordinary/CANT/unflagged/live DoT/HoT controls pass. Independent parent gatepc1037 owns integration/check/fmt. Controlled aura applications do not qualify root cast admission, APL or DPS parity. Evidence: engine `data/diagnostics/dps-parity-fix-2026-10-21/periodic-crit-{native-source.json,red-7b92423a7-native.log}`.
 
 ## Hit positivity independent of factions — 2026-10-23
 
@@ -78,16 +82,23 @@ Actual repeated-Word pool integration, PvP scaling and effectiveness stay separa
 `refresh::prepare_application(world,target,new,spell)` reads native Attr10
 `ROLLING_PERIODIC` and owns the single shared carry pass. It settles already-due
 old ticks once, then matches same caster/spell/source/effect index/aura type and
-adds unpaid stored amount over the refreshed scheduled ticks. Native phase stays
-owned by `AuraInstance::refresh_from`; no new timer or partial-tick mechanism.
-TC a352b1fa `SpellAuraEffects.cpp:832–849` supplies the rule. Fractional snapshots
-remain intact; existing damage/heal payment rounding is unchanged.
+adds unpaid stored amount over the refreshed scheduled ticks. Fresh DB2 effect
+amounts remain per tick: tooltip arithmetic cannot normalize them into a fixed
+budget. TC a352b1fa `SpellAuraEffects.cpp:832–849,932–947` supplies these rules.
+Fractional snapshots and existing damage/heal payment rounding remain intact.
 
-Barbed217200 normalizes only its fresh authored five-amount budget to the native
-schedule: seven initial ticks, six refreshed. Its old pool goes through the shared
-pass, never a second spell-local accumulator.335467 periodic leech also uses that
-flag path with no separate carry branch. This preserves its existing fractional
-amount contract. No spell-ID exception gates general carry.
+TC `Spell.cpp3236` and `SpellAuras.cpp976–991` reset normal nonstacking recasts
+only without `TRIGGERED_DONT_RESET_PERIODIC_TIMER`. `SpellDefines.h291–293`
+includes that flag0x20000 in boolean FULL_MASK0x7FFFF; triggered casts, native
+stacking and Attr13 Pandemic retain time-to-tick. Per-cast provenance travels
+with existing spell snapshots, not a spell-ID exception. The shared preparation
+sets that schedule and `AuraInstance::refresh_from` installs it before later ticks.
+335467 periodic leech uses the same carry without a separate branch. No spell-ID
+exception gates fresh amounts or general carry.
+
+The former217200 fixed-five normalization/retained-phase inference is withdrawn.
+[Native-source counterexample, implementation and pending integration](../../handoffs/bm-native-periodic-proof-ledger.md)
+record the correction; no whole-BM parity claim follows.
 
 External interface is unchanged: ordinary native aura application, including
 `cast_triggered_with_effect0_amount` with a sourced **per-tick** incoming amount,

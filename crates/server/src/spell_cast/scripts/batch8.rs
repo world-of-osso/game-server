@@ -107,6 +107,7 @@ pub(super) fn provoke_plan(
                 units,
                 dest: targets::effect_dest(world, caster, explicit, effect, spell.cast_destination),
                 chain_multipliers: Vec::new(),
+                selected_units: Vec::new(),
                 blocked_units: Vec::new(),
                 prevent_hit_script: false,
             }
@@ -200,6 +201,7 @@ pub(super) fn sanctify_plan(
         units,
         dest: targets::effect_dest(world, caster, explicit, effect, spell.cast_destination),
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }]

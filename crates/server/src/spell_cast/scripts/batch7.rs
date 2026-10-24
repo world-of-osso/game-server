@@ -91,6 +91,7 @@ pub(super) fn radiance_plan(
             spell.cast_destination,
         ),
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }]
@@ -196,6 +197,7 @@ fn cast_whirlwind_energize(world: &mut World, caster: Entity, amount: f32, depth
         units: vec![caster],
         dest: None,
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }];
