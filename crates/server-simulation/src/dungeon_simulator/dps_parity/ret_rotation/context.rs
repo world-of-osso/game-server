@@ -5,12 +5,9 @@ use server::simc_apl::{Action, ActionFacts, Facts};
 use super::super::literal_rotation::{equipment::Equipment, execution::Prepared};
 use super::{Bindings, NativeFacts, RetFacts, with_equipment};
 use crate::simc_apl_native::Encounter;
-use crate::spell_cast::powers::PowerPools;
 
 pub(super) struct Context<'a> {
     ret: RetFacts<'a>,
-    world: &'a World,
-    actor: Entity,
     bindings: &'a Bindings,
     prepared: &'a Prepared,
 }
@@ -29,8 +26,6 @@ impl<'a> Context<'a> {
             .with_targets(targets.first().copied(), targets);
         Self {
             ret: with_equipment(native, equipment),
-            world,
-            actor,
             bindings,
             prepared,
         }
@@ -57,16 +52,11 @@ impl ActionFacts for Context<'_> {
     }
 
     fn primary_resource(&self) -> Result<String, String> {
-        let primary = self
-            .world
-            .get::<PowerPools>(self.actor)
-            .and_then(|pools| pools.order.first())
-            .ok_or("native Ret primary pool is unavailable")?;
-        self.bindings
-            .resources
-            .iter()
-            .find_map(|(alias, power)| (power == primary).then(|| alias.clone()))
-            .ok_or_else(|| format!("native Ret primary pool {primary:?} is not bound"))
+        // Pinned sc_paladin.cpp4402–4408: Ret's APL primary resource is
+        // HolyPower, not the first UI pool. Validate its actual native binding.
+        let alias = "holy_power";
+        self.ret.native.value(alias)?;
+        Ok(alias.into())
     }
 
     fn ready_at_resource_max(&self, action: &Action, resource: &str) -> Result<bool, String> {

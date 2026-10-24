@@ -65,11 +65,7 @@ fn bindings() -> Bindings {
             .collect(),
         buffs: names(BUFFS),
         talents: names(TALENTS),
-        resources: [
-            ("holy_power".into(), PowerType::HolyPower),
-            ("mana".into(), PowerType::Mana),
-        ]
-        .into(),
+        resources: [("holy_power".into(), PowerType::HolyPower)].into(),
         dot_refresh: Default::default(),
         global_cooldown_spell: 20271,
     }
