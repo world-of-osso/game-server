@@ -194,6 +194,21 @@ impl<'a> NativeFacts<'a> {
         (crate::spell_cast::now(self.world) - start).max(0.0)
     }
 
+    fn expected_combat_length(&self) -> Result<f64, String> {
+        match self.encounter {
+            Encounter::Fixture { duration, .. } if duration.is_finite() && duration > 0.0 => {
+                Ok(duration)
+            }
+            Encounter::Fixture { duration, .. } => Err(format!(
+                "EXPECTED_COMBAT_LENGTH_UNAVAILABLE: fixture duration must be positive and finite, got {duration}"
+            )),
+            Encounter::Dungeon { .. } => Err(
+                "EXPECTED_COMBAT_LENGTH_UNAVAILABLE: dungeon has no configured fight duration"
+                    .into(),
+            ),
+        }
+    }
+
     fn remaining(&self, operand: &str) -> Result<f64, String> {
         match self.encounter {
             Encounter::Fixture { duration, .. } => Ok((duration - self.elapsed()).max(0.0)),
@@ -222,6 +237,11 @@ impl<'a> NativeFacts<'a> {
         let target = self.selected_target(action)?;
         match property {
             "health.pct" => self.target_health_pct(target),
+            "debuff.casting.up" => Ok(bool_value(
+                self.world
+                    .get::<shared::casting::CastState>(target)
+                    .is_some(),
+            )),
             "debuff.casting.react" => self.casting_reaction(target),
             "time_to_die" | "is_boss" => {
                 let metadata = self
@@ -505,6 +525,9 @@ impl<'a> NativeFacts<'a> {
     fn action_property(&self, alias: &str, property: &str) -> Result<f64, String> {
         let spell = self.action_spell(alias)?;
         match property {
+            "in_flight" | "in_flight_remains" => {
+                crate::spell_cast::native_apl::flight_value(self.world, self.actor, spell, property)
+            }
             "usable_in" => crate::spell_cast::native_apl::cooldown_value(
                 self.world, self.actor, spell, "remains",
             ),
@@ -632,9 +655,13 @@ impl Facts for NativeFacts<'_> {
         }
         match name {
             "time" => Ok(self.elapsed()),
+            "expected_combat_length" => self.expected_combat_length(),
             "fight_remains" => self.remaining(name),
             "active_enemies" => Ok(self.active_enemies as f64),
             "spell_haste" => self.spell_haste(),
+            "movement.distance" => Err(
+                "MOVEMENT_DISTANCE_UNAVAILABLE: configured movement.distance has no native fixture movement plan".into(),
+            ),
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "charges_fractional"
             | "full_recharge_time" | "execute_time" | "ticks_remain" => {
                 Err(format!("native APL {name} requires action context"))
@@ -744,6 +771,8 @@ fn bool_value(value: bool) -> f64 {
     if value { 1.0 } else { 0.0 }
 }
 
+#[cfg(test)]
+mod expected_length_tests;
 #[cfg(test)]
 mod refresh_context_tests;
 #[cfg(test)]

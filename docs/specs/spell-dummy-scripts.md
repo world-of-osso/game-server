@@ -23,6 +23,14 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 
 ## What it must do
 
+### Elemental Ascendance additional overload
+
+Native70448 supplies1219480s9/effect8; pinned SimC76f8118 `sc_shaman.cpp3318–3348` corroborates the once-per-cast Chain policy. [Implementation and proof boundary](../wiki/systems/spell-casting.md#elemental-ascendance-additional-overload--2026-10-23).
+
+- [ ] While native1219480 is active, affected Mastery casts cause its s9/effect8 additional Elemental Overload independently of the ordinary mastery proc. Chain target procs remain ordinary per-target procs; the additional cast occurs once for the spell, not once per recipient. Retain native HIT+400ms overload timing and actual child damage, without altering coefficients, stats or RNG.
+- [x] Real Stormkeeper alone yields one ordinary45284 after a landed188196; Stormkeeper+Ascendance yields two. A three-target188443 with both buffs yields three ordinary45297 casts plus one additional cast. Native profile/auras/landed hits are prerequisites; no fabricated proc chances or buff amounts. [Exact native3GREEN](../handoffs/elemental-ascendance-extra-proof-ledger.md); other affected roots and failed-ordinary-roll/expiry cases remain unqualified.
+
+
 ### Census effect77 source ports (70448)
 
 - [x] Gorefiend's Grasp108199E1 applies native454824 only when its caster owns454822, using TC's limited triggered flags; foreign/absent talent does not apply it. Unmatched E0 remains a named gap, not whole-spell support.

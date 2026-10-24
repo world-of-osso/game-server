@@ -68,6 +68,7 @@ pub(super) enum Unary {
     Not,
     Positive,
     Negative,
+    Floor,
 }
 
 #[derive(Debug)]
@@ -102,6 +103,7 @@ impl Node {
             Self::Unary(Unary::Not, inner) => truth(inner.evaluate(values) == 0.0),
             Self::Unary(Unary::Positive, inner) => inner.evaluate(values),
             Self::Unary(Unary::Negative, inner) => -inner.evaluate(values),
+            Self::Unary(Unary::Floor, inner) => inner.evaluate(values).floor(),
             Self::Binary(Operator::And, left, right) => {
                 truth(left.evaluate(values) != 0.0 && right.evaluate(values) != 0.0)
             }
@@ -121,6 +123,7 @@ enum Token {
     Fact(String),
     Binary(Operator),
     Not,
+    Floor,
     Open,
     Close,
     End,
@@ -172,7 +175,12 @@ fn scan_fact(source: &str) -> Result<(Token, usize), String> {
     if name.split('.').any(str::is_empty) {
         return Err(format!("empty operand path segment in {name:?}"));
     }
-    Ok((Token::Fact(name.to_owned()), length))
+    let token = if name.eq_ignore_ascii_case("floor") {
+        Token::Floor
+    } else {
+        Token::Fact(name.to_owned())
+    };
+    Ok((token, length))
 }
 
 fn scan_token(source: &str) -> Result<(Token, usize), String> {
@@ -231,6 +239,7 @@ impl Parser {
             Token::Number(value) => Ok(Node::Number(value)),
             Token::Fact(name) => Ok(Node::Fact(name)),
             Token::Not => self.unary(Unary::Not),
+            Token::Floor => self.unary(Unary::Floor),
             Token::Binary(Operator::Add) => self.unary(Unary::Positive),
             Token::Binary(Operator::Subtract) => self.unary(Unary::Negative),
             Token::Open => {

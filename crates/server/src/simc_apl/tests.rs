@@ -15,6 +15,27 @@ fn evaluate(source: &str, rows: &[(&str, f64)]) -> f64 {
 }
 
 #[test]
+fn simc_apl_floor_rounds_down_preserves_grouping_and_binds_inner_facts() {
+    for (literal, expected) in [
+        ("floor(2.95)", 2.0),
+        ("floor(-0.05)", -1.0),
+        ("floor(2.95)+1", 3.0),
+        ("floor(floor(2.95)+0.9)", 2.0),
+    ] {
+        assert_eq!(evaluate(literal, &[]), expected, "{literal}");
+    }
+    assert_eq!(evaluate("floor(energy%20)", &[("energy", 59.0)]), 2.0);
+    assert!(Expression::parse("floor()").is_err());
+    assert!(Expression::parse("floor(energy").is_err());
+    assert!(
+        Expression::parse("floor(unknown.energy)")
+            .unwrap()
+            .evaluate(&facts(&[]))
+            .is_err()
+    );
+}
+
+#[test]
 fn simc_apl_ww_tiger_palm_literal_preserves_grouping_resources_and_stacks() {
     //76f8118 MID2_Monk_Windwalker.simc default_st Tiger Palm line69.
     let source = "combo_strike&!buff.zenith.up&chi<4+talent.ascension&energy.time_to_max<=gcd.max*3&(!buff.bloodlust.up|chi<1)&buff.combo_breaker.stack<2";
