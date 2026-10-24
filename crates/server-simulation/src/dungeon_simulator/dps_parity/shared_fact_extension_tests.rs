@@ -194,6 +194,85 @@ fn native_apl_shared_buff_react_uses_earned_proc_deadline_not_buff_presence() {
 }
 
 #[test]
+#[ignore = "shared buff.react native refresh and reacquisition boundaries"]
+fn native_apl_shared_buff_react_overcap_refresh_keeps_deadline_and_reacquisition_waits_again() {
+    let _seed = crate::random::seed_scope(103135700);
+    let (mut app, actor, bindings) = feral();
+    let target = super::spawn_dummy(&mut app, actor, 0).unwrap();
+    super::literal_rotation::execution::execute(
+        app.world_mut(),
+        actor,
+        super::literal_rotation::execution::Execution::AutoAttack(target),
+    )
+    .unwrap();
+    for _ in 0..12000 {
+        app.update();
+        if buff(app.world(), actor, CLEARCASTING).is_some() {
+            break;
+        }
+    }
+    let first = buff(app.world(), actor, CLEARCASTING).expect("actual white hit proc");
+    let first_id = first.instance_id;
+    let first_expiry = first.expires_at.unwrap();
+    let mut expiry = first_expiry;
+    let first_seen = crate::spell_cast::now(app.world());
+    let reacted_at_latest = first_seen + SOURCE_REACTION_MAX_SECONDS;
+    for _ in 0..12000 {
+        app.update();
+        let Some(aura) = buff(app.world(), actor, CLEARCASTING) else {
+            continue;
+        };
+        if aura.instance_id == first_id
+            && aura.expires_at.unwrap() > expiry
+            && crate::spell_cast::now(app.world()) > reacted_at_latest
+        {
+            expiry = aura.expires_at.unwrap();
+            break;
+        }
+    }
+    let refreshed =
+        buff(app.world(), actor, CLEARCASTING).expect("naturally refreshed Clearcasting");
+    assert_eq!(
+        refreshed.instance_id, first_id,
+        "actual same-instance overcap refresh"
+    );
+    assert!(
+        expiry > first_expiry,
+        "real proc must refresh the existing aura"
+    );
+    assert_eq!(
+        fact(app.world(), actor, &bindings, "buff.clearcasting.react"),
+        f64::from(refreshed.stacks)
+    );
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::combat::AutoAttack>()
+        .insert(crate::creature_ai::CreatureState::Idle);
+    while crate::spell_cast::now(app.world()) <= expiry {
+        app.update();
+    }
+    assert!(buff(app.world(), actor, CLEARCASTING).is_none());
+    super::literal_rotation::execution::execute(
+        app.world_mut(),
+        actor,
+        super::literal_rotation::execution::Execution::AutoAttack(target),
+    )
+    .unwrap();
+    for _ in 0..12000 {
+        app.update();
+        if buff(app.world(), actor, CLEARCASTING).is_some() {
+            break;
+        }
+    }
+    let reacquired = buff(app.world(), actor, CLEARCASTING).expect("second earned native proc");
+    assert_ne!(reacquired.instance_id, first_id);
+    assert_eq!(
+        fact(app.world(), actor, &bindings, "buff.clearcasting.react"),
+        0.0
+    );
+}
+
+#[test]
 #[ignore = "shared named execute_time RED: native rated cast/channel duration, no second formula"]
 fn native_apl_shared_named_execute_time_matches_real_hasted_cast_and_channel() {
     for (name, spell) in [("living_flame", 361469), ("disintegrate", 356995)] {
