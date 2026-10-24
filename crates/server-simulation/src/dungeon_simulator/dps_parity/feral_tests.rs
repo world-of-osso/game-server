@@ -38,6 +38,38 @@ fn feral_native_kit_does_not_cast_an_unselected_talent() {
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec103 exact profile/traits"]
+fn feral_literal_precombat_captures_controller_and_preserves_native_prowl() {
+    let run = prepare_measurement(103, 1).expect("exact selected-profile Feral setup");
+    let world = run.app.world();
+    assert!(
+        world
+            .get::<literal_rotation::LiteralParityFixture>(run.actor)
+            .is_some(),
+        "measurement must capture literal control before native setup, not run the dungeon kit"
+    );
+    assert!(
+        world
+            .get::<crate::creature_ai::FollowOwner>(run.actor)
+            .is_none()
+    );
+    assert!(
+        crate::auras::has_aura(world, run.actor, 768),
+        "native source Cat Form"
+    );
+    assert!(
+        crate::auras::has_aura(world, run.actor, 5215),
+        "native source Prowl must survive setup"
+    );
+    assert!(world.get::<shared::casting::CastState>(run.actor).is_none());
+    assert!(
+        world
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .is_none_or(|history| !history.has_active_gcd(crate::spell_cast::history_now(world)))
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec103 exact profile/traits"]
 fn feral_literal_fixture_records_native_bleeds_for_300s() {
     let count: usize = std::env::var("DPS_PARITY_TARGETS")
         .expect("DPS_PARITY_TARGETS")
