@@ -18,6 +18,8 @@ Native ItemEffect/bonus rows and SpellStore supply metadata. TC a352b1fa SpellHi
 
 - Primary-stat control atde7b6e406 failed genuinely: Living Flame45148's native64712 intellect aura returned `[0, unknown agility, unknown intellect]` instead of`[0,0,1]`. Combined native batch runtime56.50s; `reconcile-primary-judgment-red-v3-full.log`. Native indexes1/3 now retain agility/intellect names and stat facts accept them; strength61034/84966 and agility61033/84969 controls remain in the unchanged test. Unknown-stat errors retained. All nine Equipment controls PASS atdd0ed8fe5, warning-free compile6m35s/runtime156.72s combined with other slices; `reconciled-native-launch-red-v2.{proof.json,full.log}`. Same production implementation at02090739e consumes real WW269 gear/traits successfully: existing combo/utility consumer1PASS47.55s, `ww-consumer-green-v1.*`; inputs copied into a new diagnostics directory, frozen inputs untouched.
 
+Post-master8e7c7a685 library-boundary proof: [combined44-case qualification](ret-paladin-parity-proof-ledger.md#combined-integration-qualification), including all nine Equipment cases and the unchanged WW consumer.
+
 ## Explicit gaps
 
 Metadata reachability is not proc execution. Funhouse1213432 is native DUMMY3/Trigger0; Stormbound1295275 has PeriodicTrigger23/Trigger0. Their script-created stat child is not encoded in those native edges; no child ID or stat grant is guessed. Ret/Ele item child mechanics remain unqualified. Native on-use execution's older item override path is a separate boundary from these metadata facts.

@@ -9,7 +9,7 @@ Retail equipment set bonuses use native ItemSet/ItemSetSpell data and TC a352b1f
 - [x] Apply the eligible native set spell when its piece threshold is reached; remove it below threshold; re-equipping restores it without duplicate auras.
 - [x] Specialization changes replace only set-owned spells; native weapon aura instance is preserved. Ordinary enchant and learned-passive isolation remain unqualified.
 - [ ] Honor native inactive flags, skill requirements and selected hero-subtree restrictions.
-- [ ] APL set facts use native membership/threshold eligibility and the explicit SIMC_TIER_ALIAS_ITEMSET_BINDING policy; unknown tier operands error.
+- [x] APL set facts use native membership/threshold eligibility and the explicit SIMC_TIER_ALIAS_ITEMSET_BINDING policy; unknown tier operands error.
 
 ## How it works
 
@@ -33,7 +33,7 @@ Retail equipment set bonuses use native ItemSet/ItemSetSpell data and TC a352b1f
 ## Known gaps (current cycle)
 
 - [ ] Parent integration gate (targeted native lifecycle and equipment/commerce controls7GREEN53.88s at a8bd77d3b; broader integration pending).
-- [ ] Generic set APL operands and alias binding.
+- [x] Generic set APL operands and alias binding: focused native facts and WW consumer pass in the post-master44-case bundle.
 - [ ] Actual tier child proc/effect qualification and resulting DPS parity.
 
 ## Out of scope
