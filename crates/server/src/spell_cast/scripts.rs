@@ -47,6 +47,7 @@ pub(super) use ret_empyrean::schedule_empyrean_legacy;
 mod ret_purpose;
 pub(super) use ret_purpose::roll_selected_ret_divine_purpose;
 mod ret_tier;
+mod ret_toll;
 pub(super) use ret_tier::after_foreground_spender;
 pub(crate) use ret_tier::owns_arbiter_charge;
 mod scourge_strike;
@@ -63,7 +64,7 @@ mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
 pub(crate) use windwalker::{
     DANCE_OF_CHIJI, after_dance_cast_event, apply_mystic_touch_after_hit, check_dance_proc,
-    combo_strikes_multiplier, ordinary_combo_cast,
+    combo_strikes_multiplier, ordinary_combo_cast, register_wdp_relationship,
 };
 
 pub(super) use batch3::consume_phalanx;
@@ -687,6 +688,7 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
     match (spell_id, effect_index) {
         (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
         (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::limit_targets),
+        (ret_toll::ROOT, 1) => Some(ret_toll::limit_area),
         (145_110, 0) => Some(pick_yseras_gift_group_target),
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         (30735, 0) => Some(crate::scripted_ai::nethekurse::filter_shadow_sear),
@@ -1449,7 +1451,9 @@ pub(super) type ContextHitHook = fn(&mut World, &super::effects::EffectCtx, Enti
 
 pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
     match spell_id {
+        windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
         voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),
+        ret_toll::ROOT => Some(ret_toll::cast_child),
         77_478 => Some(batch9::cast_earthquake_knockdown),
         _ => None,
     }
@@ -1460,6 +1464,7 @@ pub fn on_hit(spell_id: u32) -> Option<HitHook> {
         elemental_ascendance::ASCENDANCE => Some(elemental_ascendance::cast_entry),
         100780 => Some(windwalker::tiger_palm_hit),
         100784 => Some(windwalker::blackout_kick_hit),
+        107428 | 113656 => Some(windwalker::trigger_wdp_enabler_on_hit),
 
         lava_surge::PROC => Some(lava_surge::restore_on_proc_hit),
         swiftmend::SWIFTMEND => Some(swiftmend::hit),
