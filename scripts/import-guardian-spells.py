@@ -2,13 +2,35 @@
 """Import authentic TDB1210 creature_template_spell rows into a prepared DB copy.
 
 python3 scripts/import-guardian-spells.py --archive data/reference/tdb1210/TDB_full_world_1210.26091_2026_09_09.sql --db data/world.db.new
-Bindings establish creature spell lists, not script-defined rotations or summon IDs.
+Native creature lists win. Two approved missing-row policies supply Dreadstalker
+and Antoran Tyrant attacks, not summon dispatch or repeat timers. Policy rows use
+VerifiedBuild=0; they are not claimed as verified TDB data.
 """
 import argparse
 import sqlite3
 from pathlib import Path
 
 from mysql_dump import dump_rows
+
+# Lead-approved SimC76f8118 policies; real archive lists replace these wholesale.
+PROJECT_BINDINGS = (
+    (98035, 271971, "SIMC_DREADSTALKER_ATTACK_BINDING"),
+    (250289, 1264093, "SIMC_ANTORAN_TYRANT_BURNING_CLEAVE_BINDING"),
+)
+
+
+def append_missing_project_bindings(conn):
+    applied = []
+    for creature, spell, policy in PROJECT_BINDINGS:
+        if conn.execute(
+            "SELECT 1 FROM guardian_spells WHERE CreatureID=? LIMIT 1", (creature,)
+        ).fetchone():
+            continue
+        conn.execute(
+            "INSERT INTO guardian_spells VALUES (?,0,?,0)", (creature, spell)
+        )
+        applied.append(policy)
+    return applied
 
 
 def import_guardian_spells(conn, archive):
@@ -31,12 +53,13 @@ def import_guardian_spells(conn, archive):
         conn.execute("CREATE TABLE IF NOT EXISTS guardian_spells (CreatureID INTEGER NOT NULL, SpellIndex INTEGER NOT NULL, Spell INTEGER NOT NULL, VerifiedBuild INTEGER NOT NULL, PRIMARY KEY (CreatureID, SpellIndex))")
         conn.execute("DELETE FROM guardian_spells")
         conn.executemany("INSERT INTO guardian_spells VALUES (?, ?, ?, ?)", rows)
+        applied = append_missing_project_bindings(conn)
         conn.execute("RELEASE guardian_import")
     except BaseException:
         conn.execute("ROLLBACK TO guardian_import")
         conn.execute("RELEASE guardian_import")
         raise
-    return len(rows)
+    return len(rows), applied
 
 
 def main():
@@ -49,8 +72,13 @@ def main():
     if not args.db.is_file():
         parser.error("database copy does not exist")
     with sqlite3.connect(args.db) as conn:
-        count = import_guardian_spells(conn, args.archive)
-    print(f"guardian_spells: {count} authentic archive rows")
+        native_count, policies = import_guardian_spells(conn, args.archive)
+    print(
+        f"guardian_spells: {native_count} authentic archive rows + "
+        f"{len(policies)} explicit project policies"
+    )
+    for policy in policies:
+        print(f"guardian_policy: {policy}")
 
 
 if __name__ == "__main__":
