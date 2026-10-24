@@ -535,6 +535,111 @@ fn literal_ww_native_selected_wdp_earns_its_native_cooldown_window() {
 }
 
 #[test]
+#[ignore = "native landed RSK cannot earn WDP while FoF remains unspent and ready"]
+fn literal_ww_native_rsk_without_fof_cooldown_does_not_earn_wdp_enabler() {
+    let _scope = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(269, 1).unwrap();
+    let encounter = fixture(run.app.world());
+    let rotation = Rotation::load(run.app.world_mut(), run.actor, encounter).unwrap();
+    cast(&mut run, 100780);
+    cast(&mut run, 100780);
+    cast(&mut run, 107428);
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(185099)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "the native RSK child must actually land"
+    );
+    assert_eq!(
+        rotation
+            .value_for(
+                run.app.world_mut(),
+                run.actor,
+                &run.targets,
+                &action("fists_of_fury"),
+                "cooldown.fists_of_fury.remains"
+            )
+            .unwrap(),
+        0.0
+    );
+    assert!(
+        rotation
+            .value_for(
+                run.app.world_mut(),
+                run.actor,
+                &run.targets,
+                &action("rising_sun_kick"),
+                "cooldown.rising_sun_kick.remains"
+            )
+            .unwrap()
+            > 0.0
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 196742),
+        "one actual cooldown is insufficient for the native WDP enabler"
+    );
+}
+
+#[test]
+#[ignore = "native unselected WDP owner has real overlapping cooldowns but cannot earn the enabler"]
+fn literal_ww_native_unselected_wdp_owner_does_not_earn_the_enabler() {
+    let _scope = crate::random::seed_scope(70448);
+    let (profile, mut traits) = super::super::read_reference(269).unwrap();
+    let original = traits.len();
+    traits.retain(|entry| entry.entry_id != 134452);
+    assert_eq!(
+        traits.len() + 1,
+        original,
+        "omit only the declared native WDP entry"
+    );
+    let identity = super::super::inputs::read_actor(&profile).unwrap();
+    let mut run = super::super::prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+    super::super::preparation::prepare_windwalker_precombat(&mut run).unwrap();
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    super::super::install_fixture_lifetimes(&mut run, started_at);
+    super::super::engage(&mut run);
+    let mut rotation = run.windwalker_rotation.take().unwrap();
+    let mut overlapping_native_cooldowns = false;
+    for _ in 0..600 {
+        rotation
+            .drive(run.app.world_mut(), run.actor, &run.targets)
+            .unwrap();
+        run.app.update();
+        let rsk = rotation
+            .value_for(
+                run.app.world_mut(),
+                run.actor,
+                &run.targets,
+                &action("rising_sun_kick"),
+                "cooldown.rising_sun_kick.remains",
+            )
+            .unwrap();
+        let fof = rotation
+            .value_for(
+                run.app.world_mut(),
+                run.actor,
+                &run.targets,
+                &action("fists_of_fury"),
+                "cooldown.fists_of_fury.remains",
+            )
+            .unwrap();
+        overlapping_native_cooldowns |= rsk > 0.0 && fof > 0.0;
+        assert!(
+            !crate::auras::has_aura(run.app.world(), run.actor, 196742),
+            "unselected native WDP owner cannot earn the196742 enabler"
+        );
+    }
+    assert!(
+        overlapping_native_cooldowns,
+        "negative control must reach the real cooldown boundary"
+    );
+}
+
+#[test]
 #[ignore = "native earned RWK reset and override consumption; no aura or power grants"]
 fn literal_ww_native_earned_rwk_resets_rsk_and_consumes_its_override() {
     let _scope = crate::random::seed_scope(70448);
