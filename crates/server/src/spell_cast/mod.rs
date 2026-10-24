@@ -2613,6 +2613,8 @@ fn discount_missed_rune_costs(costs: Vec<(CostPool, f32)>, missed: bool) -> Vec<
 struct PlannedEffect {
     index: usize,
     units: Vec<Entity>,
+    /// Original selection survives MISS/IMMUNE for launch/arrival combat, not effects.
+    selected_units: Vec<Entity>,
     dest: Option<Dest>,
     /// A chained effect's damage and healing multiplier per unit: `EffectChainAmplitude`
     /// to the power of the unit's place in the chain (`m_damageMultipliers`,
@@ -2687,6 +2689,7 @@ fn plan_targets(
                 units: Vec::new(),
                 dest: None,
                 chain_multipliers: Vec::new(),
+                selected_units: Vec::new(),
                 blocked_units: Vec::new(),
                 prevent_hit_script: false,
             })
@@ -2704,6 +2707,7 @@ fn plan_targets(
                 units: vec![target],
                 dest: None,
                 chain_multipliers: Vec::new(),
+                selected_units: Vec::new(),
                 blocked_units: Vec::new(),
                 prevent_hit_script: false,
             })
@@ -2746,6 +2750,7 @@ fn plan_targets(
                 units: Vec::new(),
                 dest: None,
                 chain_multipliers: Vec::new(),
+                selected_units: Vec::new(),
                 blocked_units: Vec::new(),
                 prevent_hit_script: false,
             });
@@ -2833,6 +2838,7 @@ fn plan_targets(
             units,
             dest,
             chain_multipliers,
+            selected_units: Vec::new(),
             blocked_units: Vec::new(),
             prevent_hit_script,
         });
@@ -3080,6 +3086,18 @@ fn hit_units(plan: &TargetPlan) -> Vec<Entity> {
         }
     }
     hit
+}
+
+/// TargetInfo includes misses; named plans that skip defense selection retain their units.
+fn selected_units(plan: &[PlannedEffect]) -> Vec<Entity> {
+    let selected = plan
+        .iter()
+        .flat_map(|effect| effect.selected_units.iter().chain(&effect.units));
+    let mut seen = std::collections::HashSet::new();
+    selected
+        .copied()
+        .filter(|unit| seen.insert(*unit))
+        .collect()
 }
 
 /// The spell's `OnHit` script on every unit it landed on (`Spell::DoSpellHitOnUnit`).
