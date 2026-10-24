@@ -79,6 +79,19 @@ Actual normal-set lifecycle cases pass2/2 (30.66s): original-member equip/unequi
 
 Evidence: `set-activation/{native-red,native-green,native-green2,retained-warrior-policies,arms-after-activation,final-check}.{log,proof.json}`, `protection-control-fixture.proof.json`, and `arms-after-activation/{71.mortal_strike.player.json,mortal-strike.diff.json,factor-ledger.proof.json}` under the same `mastery-b67952ca4/` root. Current receipt SHA5c786b848137c059f4ef175c46ffd2a304b6dc907e21af7dd4a5834ae36a54fa. [Shared production seam and approved selector gaps](../systems/character-stats.md#native-equipped-set-auras--2026-10-23) retain13 skill-qualified sets/one subtree row as explicit unsupported cases; deployment and broad parent acceptance remain separate.
 
+## Arms ST/3T band authority and current landing dependency
+
+After603ca45e3, a fresh canonical online backup and exact71 profile/traits were frozen under `arms-bands-603ca45e3/` (database hash unchangedcd7230ac…). The validated binary is from778524924, SHA94df235c12cde8f1e08baf3b394ad0a85ed5a3fa383e341cb58ae2ec28117fa6. Its current full300s Player entry uses native AssistedCombat, not the literal Arms APL adapter. Both diagnostic attempts stop at native rule1187/condition12/values2,10,0 (step302, spell260708). Conditions11/12 remain named gaps, never guessed.
+
+Those stopped diagnostic attempts are **not parity-authority runs**, and no native DPS/band is inferred from them or from the matching single-spell source product. Parity measurements require the literal pinned SimC Arms APL through shared `literal_rotation`. Compiled test discovery/current dispatch on603 has shared literal execution helpers but no full Arms literal measurement route. 14775 confirms the148-row literal Arms adapter and spec71 Player routing are unimplemented. They follow the owner's persistent RED and expected_combat_length work; therefore no existing landing tip/command can unlock603. Await that adapter/routing and its qualified FIRST/target tips rather than inventing a route.
+
+| Scenario | Pinned reference DPS | Recorded±10% band | Native literal result |
+|---|---:|---:|---|
+|ST|188596.2721|169736.6449–207455.8993|Blocked on qualified literal adapter route|
+|3T|328901.6784|296011.5105–361791.8462|Blocked on qualified literal adapter route|
+
+`band-status.proof.json`, `compiled-test-list.*`, native diagnostic error/gap JSON and separate setup-failure artifacts retain the exact distinction. All seven AssistedCombat CSVs match the independent frozen70448 export; no later-build substitution or alternate priority was introduced. This is a measurement-route dependency, not a reversal of the earned set/armor/AP source proofs.
+
 ## Sources
 
 - Native evidence: `game-engine/data/diagnostics/native-spell-diff-2026-10-23/origin-089face19/arms/71.mortal_strike.player.json`; snapshot proof under `remeasure-eec5b6bcf/`; [capture implementation](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/single_spell.rs).
