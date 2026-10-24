@@ -50,6 +50,8 @@ All six generators still require an explicit output argument; point it at the co
 
 External qualification exposed three additional `dummy7` charge-state reads after the cache/helper blockers were removed. The separately approved read-only `test_harness::charge_recovery` observer borrows canonical `SpellHistory` and returns consumed count plus oldest pending recharge; charge fields stay private. It retains the original missing-category failure boundary and checks the exact oldest recharge, not a weaker wire notification proxy.
 
+The retained private `hit::tests` also used the NPC-dodge test module's setup helper. `spawn_native_dodge_target` now has one unchanged implementation in canonical `test_harness`; both retained formula tests and consumer cases use it. Its fixture spell IDs/imports move with the helper. No reverse server→consumer dependency exists.
+
 No `execute_cast` seam or gameplay-internal visibility widening is included. Final wired-consumer/core compilation, actual post-build test inventories, runtime qualification and matched comment-rebuild measurements remain required before acceptance. Source size and check elapsed time do not establish edit-build payoff.
 
 ## Sources

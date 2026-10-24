@@ -2,82 +2,10 @@
 use super::test_harness::*;
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
 use bevy::prelude::*;
-use shared::components::{Npc, Rotation, UnitFactionTemplate, UnitLevel};
 use shared::protocol::{CombatLogKind, MissKind};
 
 const STRIKE: u32 = 38598;
 const CLOAK_OF_DARKNESS: u32 = 70188;
-
-pub(super) fn spawn_native_dodge_target(entry: u32, facing: f32) -> Harness {
-    let mut h = harness_with(
-        Vec::new(),
-        &[STRIKE, CLOAK_OF_DARKNESS, 853, 7384, 51723, 19434],
-        4,
-        true,
-    )
-    .unwrap();
-    let native = load_native_creature_world(&[entry]);
-    let template = &native.templates[&entry];
-    h.app.world_mut().entity_mut(h.npc).insert((
-        Npc {
-            template_id: entry,
-            name: template.name.clone(),
-        },
-        UnitFactionTemplate(u32::from(template.faction)),
-        UnitLevel(template.max_level),
-        Rotation {
-            x: 0.0,
-            y: facing + std::f32::consts::FRAC_PI_2,
-            z: 0.0,
-        },
-    ));
-    if let Some(tuning) = &template.tuning {
-        assert_eq!(tuning.delta.0, tuning.delta.1);
-        let scaling = shared::level_scaling::LevelScaling {
-            content_tuning_id: tuning.content_tuning_id,
-            min_level: template.min_level,
-            max_level: template.max_level,
-            delta: tuning.delta.0,
-        };
-        let level = scaling.native_level();
-        // Keep native guard damage nonlethal; dodge inputs remain unchanged.
-        const HEALTH_BUFFER_MULTIPLIER: f32 = 16.0;
-        let health = tuning.stats.max_health(level) * HEALTH_BUFFER_MULTIPLIER;
-        h.app.world_mut().entity_mut(h.npc).insert((
-            UnitLevel(level),
-            shared::components::Health {
-                current: health,
-                max: health,
-            },
-            scaling,
-            crate::level_scaling::ScaledStats(tuning.stats.clone()),
-        ));
-    }
-    h.app.insert_resource(native);
-    h.advance(2);
-    assert!(super::targets::is_hostile(h.app.world(), h.caster, h.npc));
-    let target = h.npc;
-    crate::auras::apply_aura(
-        h.app.world_mut(),
-        &AuraApplication {
-            caster: target,
-            target,
-            spell_id: CLOAK_OF_DARKNESS,
-            effect_mask: 1,
-            source: AuraSource::Cast,
-        },
-    );
-    h.advance(2);
-    assert_eq!(
-        h.app
-            .world()
-            .get::<ActiveAuras>(target)
-            .unwrap()
-            .modifier(49),
-        100.0
-    );
-    h
-}
 
 #[test]
 fn class_completeness_native_npc_dodge_defends_front_and_rear_weapon_spells() {
