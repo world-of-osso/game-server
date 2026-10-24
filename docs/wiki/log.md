@@ -1,6 +1,6 @@
 ## 2026-10-24 — Full shared proc definitions, dispatch unchanged
 
-[Effective definitions](systems/auras.md#effective-proc-definitions--2026-10-24) replace presence-only import with exact18-field atomic publication and one explicit-before-generated reader, retaining raw DB2 fields. Fresh13d importer3RED and native16missing-entry RED qualify the missing boundary; committed-implementation GREEN remains separately recorded in the [Stage2 ledger](../handoffs/spellmod-proc-sync-proof-ledger.md). No runtime phase/charge switch or whole-dispatch qualification.
+[Effective definitions](systems/auras.md#effective-proc-definitions--2026-10-24) replace presence-only import with exact18-field atomic publication and one explicit-before-generated reader, retaining raw DB2 fields. Fresh13d importer3RED and native16missing-entry RED qualify the missing boundary; b70076ea3 earns importer8GREEN0.900s/native16GREEN10.72s with zero-warning1m20compile. Exact command/input/binary receipts and lead-only publication plan remain in the [Stage2 ledger](../handoffs/spellmod-proc-sync-proof-ledger.md). No runtime phase/charge switch or whole-dispatch qualification.
 
 ## 2026-10-24 — Isolated qualified Ret Sentence/Wake/Toll packet
 

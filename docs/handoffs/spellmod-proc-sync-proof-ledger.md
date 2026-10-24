@@ -14,7 +14,8 @@ Fresh RED scope on13d2f9633 plus recorded test/scaffolding hashes:
 | --- | --- | --- |
 | Real CLI complete BodyAndSoul/Expurgation persistence, idempotence and missing-phase rejection |3assertionFAIL/0setup errors0.339s; only IDs persisted and missing phase accepted | `proc-sync-c1-importer-red-v1.proof.json` |
 | Public native loader16cases with typed None scaffolding |16actual missing-entry/provenance assertionFAIL5.41s; compile4m33s/zero warnings/exit101 | `proc-sync-c1-definitions-red-v1.proof.json` |
-| Importer/definition GREEN | Pending on committed implementation; no result claimed yet | New separately named receipts required |
+| Importer GREEN atb70076ea3 |8/8PASS0.900s/exit0, full persisted values and all hash/idempotence/rollback controls | `proc-sync-c1-importer-green-v1.proof.json` |
+| Native definition GREEN atb70076ea3 |Unchanged16/16PASS10.72s, compile1m20s/zero warnings/exit0 | `proc-sync-c1-definitions-green-v1.proof.json` |
 
 Artifacts are under engine `data/diagnostics/arms-parity-2026-10-23/`. Native input resolves to private `tdb-proc-values/world.tdb-values-import.db`, freshly rehashed **60132e07ddc5ded0fc73b3de2b26ab866b0e87b9d976af7688792146e4c3be62**,887570432bytes. No canonical DB writes. Native RED source hashes, command, exact base, binary and logs are in its receipt; setup/compilation/zero tests never count as RED. Scope is metadata only: historical BodyAndSoul/Expurgation dispatch failures are not claimed fixed.
 
@@ -26,7 +27,7 @@ Artifacts are under engine `data/diagnostics/arms-parity-2026-10-23/`. Native in
 
 ## Remaining gates
 
-- [ ] Commit1 focused importer and definition GREEN; report tip, full gate main-owned.
+- [x] Commit1 b70076ea3 focused importer/definition GREEN; tip and exact lead-only publication plan sent. Canonical publication and full gate remain main-owned. `proc-sync-c1-publication-plan.json` records verified eight sources/audit SHA, absolute C1 importer command and expected1291×18 schema; no canonical writes by worker.
 - [ ] Commit2 real context/shared receipts with behavioral proof; no inferred modifiers/hit data.
 - [ ] Landed pe1098 integration before dependent commit3; qualify53390 before4.
 - [ ] Commit3 touched native DPS specs once with prior-value deltas, no retuning.
