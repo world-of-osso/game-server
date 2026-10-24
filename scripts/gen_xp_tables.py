@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate crates/server/src/xp_data.rs.
+"""Generate crates/server-catalog/src/xp_data.rs.
 
 Sources (Retail 12.1.0.69933):
 - Local CASC game table gametables/xp.txt (FDID 1391661), saved as
@@ -17,7 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 GAMETABLES = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "data/gametables")
 DB2 = Path(sys.argv[2] if len(sys.argv) > 2 else ROOT / "../game-engine/data/db2/12.1.0.69933")
-OUT = ROOT / "crates/server/src/xp_data.rs"
+OUT = ROOT / "crates/server-catalog/src/xp_data.rs"
 
 
 def xp_rows():
@@ -47,19 +47,19 @@ def main():
         "",
         "/// XP from `level` to `level + 1`, `[level - 1]` (gtXp Total).",
         "#[rustfmt::skip]",
-        f"pub(crate) const XP_TO_NEXT_LEVEL: [u32; {len(xp)}] = [{', '.join(r['Total'] for r in xp)}];",
+        f"pub const XP_TO_NEXT_LEVEL: [u32; {len(xp)}] = [{', '.join(r['Total'] for r in xp)}];",
         "",
         "/// Base kill XP, `[level - 1]` (gtXp PerKill).",
         "#[rustfmt::skip]",
-        f"pub(crate) const XP_PER_KILL: [f32; {len(xp)}] = [{', '.join(repr(float(r['PerKill'])) for r in xp)}];",
+        f"pub const XP_PER_KILL: [f32; {len(xp)}] = [{', '.join(repr(float(r['PerKill'])) for r in xp)}];",
         "",
         "/// Kill XP divisor, `[level - 1]` (gtXp Divisor).",
         "#[rustfmt::skip]",
-        f"pub(crate) const XP_DIVISOR: [f32; {len(xp)}] = [{', '.join(repr(float(r['Divisor'])) for r in xp)}];",
+        f"pub const XP_DIVISOR: [f32; {len(xp)}] = [{', '.join(repr(float(r['Divisor'])) for r in xp)}];",
         "",
         "/// Quest XP `[quest level - 1][RewardXPDifficulty]` (QuestXP.Difficulty).",
         "#[rustfmt::skip]",
-        f"pub(crate) const QUEST_XP: [[u32; 10]; {len(quest)}] = [",
+        f"pub const QUEST_XP: [[u32; 10]; {len(quest)}] = [",
     ]
     out += ["    [" + ", ".join(map(str, row)) + "]," for row in quest]
     out.append("];")

@@ -1,0 +1,9 @@
+[package]
+name = "server-catalog"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# Read source provenance using the same SQLite connection type as server loaders.
+rusqlite = { version = "0.35", features = ["bundled"] }

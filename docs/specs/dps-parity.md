@@ -24,6 +24,12 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [ ] Actual controlled Hunter pets use native ExpectedStat CreatureHealth at their own level and template health/tuning metadata, rather than legacy class-level placeholder HP. TC Pet.cpp847–925 supplies base armor of level×50 when pet_levelstats is unavailable; no fake intrinsic primary-stat constants are imported.
 - [ ] TC Guardian stat scaling adds30% owner Stamina (integer native stat)×10 HP and70% owner armor. Before summon snapshots its owner, the existing shared Stats producer resolves current gear/passives; a fresh pet therefore starts full under that resolved maximum. Spawn initializes this maximum before stored current-health hydration; persisted wounds remain wounded. Real owner stat changes refresh inherited deltas without healing, clamp currentHP on maximum reduction, and preserve unrelated pet health bonuses. Demon/Mage pets and ordinary NPCs are outside this slice. SimC stable_pet70%Stamina/1.05armor remains named divergence `HUNTER_PET_SIMC_SURVIVABILITY_DIFF`, never mixed into runtime values.
 
+### Training dummy combat exit
+
+- [ ] Nondamaging spells do not refresh an existing dummy damage timer. Expiry clears only that PvE pair's threat/references; other attackers stay engaged until their own timers expire, and out-of-range attack intent remains intact.
+
+- [ ] Native31146 uses TC a352b1fa `npc_training_dummy`/`NullCreatureAI`: each attacker leaves combat5s after its last non-DoT hit; DoT damage does not refresh that timer. Combat exit removes only LeavingCombat-interrupt auras, not every foreign aura, and does not enter evade. A still-live native DoT must tick beyond5s. Ordinary CreatureAI `_EnterEvadeMode` retains its conditional aura cleanup (`CreatureAI.cpp298–314`). Source: `npcs_special.cpp1382–1421`, `PassiveAI.h55–67`, `Unit.cpp9257`; no harness timer/evade exemption.
+
 ### Hunter pet melee owner RAP
 
 - [ ] Actual controlled Hunter pet auto-attacks include the TC StatSystem.cpp1344/1389/1423 owner contribution: integer22% owner total ranged AP (including equipped weapon AP through the ordinary producer), divided by3.5 and multiplied by the source two-second pet base attack time, additive before existing damage modifiers, armor and hit outcomes. Real later owner stat changes are read live; a caster-only melee-AP buff must not change pet swings when owner RAP is unchanged. Spell-command AP coefficients, Spirit Wolf, Demon/Mage pets and ordinary NPCs retain their existing behavior.
@@ -54,6 +60,14 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 - [x] Emit per-spell coefficients, base/weapon terms, itemised passive products, crit/versatility/target factors and explicitly printed armor reduction. Never invent parent-child causality or count duplicate result stages as casts.
 - [x] Source-backed prerequisite plans may use bounded longer durations and actual enabling casts/earned stacks. Explicit repeated precombat actions replace the stripped setup and are recorded separately in proof; no invented buff values or silent reference-option changes.
 - [x] Select top-five reference damage channels per spec, retain channel shares/provenance and explicit untriggered-channel gaps; diagnostic probes do not certify native±10% parity. Native cast instrumentation remains owned by spec parity harnesses.
+
+### Native per-spell differential harness
+
+- [x] A shared test-side helper reuses reference-profile preparation, native31146 and literal fixture readiness/dispatch for exactly one requested cast or N observed damage ticks; no forked rotation or synthetic follower profile. First native fixture is follower269 Tiger Palm, then Arms12294 after shared Player dispatch supports its real actor.
+- [x] The shared helper accepts distinct cast and observed damage spell IDs. An existing real fixture may be primed through shared native execution before capture; requested hit/tick counts exclude earlier priming events, without granting resources or inventing actor profiles.
+- [x] Capture actual calculation-stage inputs/outputs without rerolling variance/crit or recomputing a second formula. JSON retains base, AP/SP terms, applied multipliers, crit, versatility and armor reduction in oracle-compatible per-hit events. Armor records expose actual post-penetration armor, selected K and the calculation's mitigation scalar; any rounded damage-stage ratio is separately named. Missing attribution is explicitly `unattributed product`, not a guessed aura source.
+- [x] Native fixtures preserve reference gear/talents and exclude raid buffs. Explicit priming casts may earn required resources/state; no production damage tuning belongs to this diagnostic. Separately approved follower mechanics stay in the [follower contract](follower-dungeons.md#player-equivalent-class-combat-policy).
+- [x] A stdlib Python CLI diffs matched formula/result/armor factors, retains both result states and provenance, and distinguishes actual differences from unprinted factors. Identical recorded factors and concrete counterfactual deltas have unittest coverage. Explicit native/oracle action-name selectors distinguish real same-ID tier/proc/regular hits; impact ordinals are within the selected series and absent requested names fail explicitly.
 
 ## How it works
 
