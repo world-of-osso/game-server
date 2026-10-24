@@ -450,9 +450,38 @@ fn proc_fidelity_262_native_stormkeeper_lightning_bolt_triggers_overload_damage(
 #[test]
 fn proc_fidelity_262_native_stormkeeper_chain_lightning_overloads_each_hit_target() {
     let (mut h, caster) = prepare(209053);
-    let target = h.npc;
-    let second = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 10.0);
-    let third = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 12.0);
+    // TDB31146/CT328/HealthModifier100/npc_training_dummy: all root hits
+    // must leave their targets alive for the normal child cast legality check.
+    let native = crate::spell_cast::test_harness::load_native_creature_world(&[31146]);
+    h.app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>()
+        .templates
+        .extend(native.templates);
+    let position = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(h.npc)
+        .unwrap();
+    let (x, y, z) = crate::terrain_height::bevy_to_wow(position.x, position.y, position.z);
+    let [target, second, third] = std::array::from_fn(|index| {
+        let dummy = crate::zones::summon_creature(
+            h.app.world_mut(),
+            caster,
+            31146,
+            [x + index as f32 * 2.0, y, z, 0.0],
+        )
+        .expect("sourced Heroic Training Dummy");
+        assert!(
+            h.app
+                .world()
+                .get::<crate::creature_scripts::TrainingDummy>(dummy)
+                .is_some()
+        );
+        dummy
+    });
+    h.app.world_mut().despawn(h.npc);
+    h.npc = target;
     complete_cast(&mut h, caster, 191634, caster);
     assert!(has_aura(h.app.world(), caster, 168534));
     assert!(has_aura(h.app.world(), caster, 191634));
@@ -471,6 +500,12 @@ fn proc_fidelity_262_native_stormkeeper_chain_lightning_overloads_each_hit_targe
             "actual native Chain Lightning must hit each of three hostile targets"
         );
     }
+    assert!(
+        [target, second, third]
+            .iter()
+            .all(|&unit| h.health(unit) > 0.0),
+        "all native targets must survive root and child casts"
+    );
     let child_casts = h.inbox.go[first_go..]
         .iter()
         .filter(|event| event.caster == caster.to_bits() && event.spell_id == 45297)

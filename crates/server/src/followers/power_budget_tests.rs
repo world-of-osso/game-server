@@ -72,7 +72,21 @@ fn follower_power_budget_survives_passive_refresh_and_recomputes_on_level_change
             .intellect,
         375.046387_f32
     );
+    // 70448 Wizardry89744 e0: aura137, Intellect mask8, +5% after the budget.
+    let wizardry = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(89744)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    assert_eq!((wizardry.aura, wizardry.misc_values[1]), (137, 8));
+    let passive_factor = 1.0 + wizardry.base_points / 100.0;
     h.advance(3);
+    assert!(crate::auras::has_aura(h.app.world(), unit, 89744));
     assert_eq!(
         h.app
             .world()
@@ -80,8 +94,8 @@ fn follower_power_budget_survives_passive_refresh_and_recomputes_on_level_change
             .unwrap()
             .primary
             .intellect,
-        375.046387_f32,
-        "ordinary passive refresh must not revert to naked class Intellect"
+        375.046387_f32 * passive_factor,
+        "ordinary refresh preserves the budget before native Wizardry"
     );
     assert_eq!(
         h.app
@@ -102,7 +116,7 @@ fn follower_power_budget_survives_passive_refresh_and_recomputes_on_level_change
             .unwrap()
             .primary
             .intellect,
-        180.685135_f32,
-        "level changes must read the corresponding ExpectedStat budget"
+        180.685135_f32 * passive_factor,
+        "level changes must read the corresponding budget before native Wizardry"
     );
 }
