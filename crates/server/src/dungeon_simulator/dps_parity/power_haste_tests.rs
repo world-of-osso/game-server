@@ -1,13 +1,144 @@
 //! Native PowerType0x400 resource regeneration, not fabricated haste or pools.
 use super::*;
 use crate::auras::AuraStatMods;
+use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
 use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
-use shared::components::{Mana, PowerType};
+use server::simc_apl::Facts;
+use shared::components::{Mana, PowerEntry, PowerType, UnitPowers};
 
 const REGEN_AFFECTED_BY_HASTE: i64 = 0x0400;
 const COBRA_SHOT: u32 = 193455;
 const TIGER_PALM: u32 = 100780;
 const FLASH_OF_LIGHT: u32 = 19750;
+
+#[derive(Debug, PartialEq)]
+struct ResourceSnapshot {
+    current: f32,
+    maximum: f32,
+    cached_rate: f32,
+    wire: PowerEntry,
+}
+
+fn resource_name(power: PowerType) -> &'static str {
+    match power {
+        PowerType::Focus => "focus",
+        PowerType::Energy => "energy",
+        PowerType::Mana => "mana",
+        _ => panic!("fixture does not model {power:?}"),
+    }
+}
+
+fn cached_rate(run: &Run, power: PowerType) -> f32 {
+    let pools = run.app.world().get::<PowerPools>(run.actor).unwrap();
+    if power == PowerType::Mana {
+        pools.mana_regen_per_sec
+    } else {
+        pools.get(power).unwrap().regen_per_sec
+    }
+}
+
+fn resource_snapshot(run: &Run, power: PowerType) -> ResourceSnapshot {
+    let world = run.app.world();
+    let (current, maximum) =
+        crate::spell_cast::powers::power_value(world, run.actor, power).unwrap();
+    let wire = world
+        .get::<UnitPowers>(run.actor)
+        .unwrap()
+        .entries
+        .iter()
+        .find(|entry| entry.power == power)
+        .unwrap()
+        .clone();
+    ResourceSnapshot {
+        current,
+        maximum,
+        cached_rate: cached_rate(run, power),
+        wire,
+    }
+}
+
+fn read_expected_native_regen(run: &Run, power: PowerType) -> f32 {
+    let world = run.app.world();
+    let stats = world
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap();
+    let mods = world.get::<AuraStatMods>(run.actor).unwrap();
+    let (base, haste_factor) = if power == PowerType::Mana {
+        (stats.base_mana * 0.01, 1.0)
+    } else {
+        let info = world.resource::<PowerTypeTable>().get(power).unwrap();
+        (info.regen_combat, 1.0 + stats.haste_pct / 100.0)
+    };
+    let multiplier = mods.power_regen(power as i32);
+    let flat = mods.power_regen_flat(power as i32) / 5.0;
+    println!(
+        "NATIVE_REGEN_INPUT spec={} power={power:?} haste_pct={} base={base} multiplier={multiplier} haste_factor={haste_factor} flat={flat}",
+        run.profile.spec_id, stats.haste_pct
+    );
+    base * multiplier * haste_factor + flat
+}
+
+fn read_resource_facts(run: &Run, power: PowerType) -> (f64, f64) {
+    let name = resource_name(power);
+    let bindings = Bindings {
+        resources: [(name.into(), power)].into(),
+        ..Default::default()
+    };
+    let world = run.app.world();
+    let encounter = Encounter::Fixture {
+        started_at: crate::spell_cast::now(world),
+        duration: 300.0,
+        style: FightStyle::Patchwerk,
+    };
+    let facts = NativeFacts::new(world, run.actor, &bindings, encounter, 1);
+    (
+        facts.value(&format!("{name}.regen")).unwrap(),
+        facts.value(&format!("{name}.time_to_max")).unwrap(),
+    )
+}
+
+fn assert_read_only_potential_facts(run: &Run, power: PowerType, expected: f32) {
+    assert!(
+        expected > 0.0,
+        "real fixture has positive native potential regen"
+    );
+    let before = resource_snapshot(run, power);
+    let table = run.app.world().resource::<PowerTypeTable>();
+    let display = f64::from(table.get(power).unwrap().display_modifier);
+    let expected_displayed = f64::from(expected) / display;
+    let expected_time = f64::from(before.maximum - before.current) / f64::from(expected);
+    let tolerance = f64::from(f32::EPSILON * expected.abs().max(1.0) * 8.0);
+    for _ in 0..2 {
+        let (actual_rate, actual_time) = read_resource_facts(run, power);
+        assert!(
+            (actual_rate - expected_displayed).abs() <= tolerance,
+            "native {power:?} potential fact{actual_rate}, expected{expected_displayed}, current{}, max{}, cached{}",
+            before.current,
+            before.maximum,
+            before.cached_rate
+        );
+        assert!((actual_time - expected_time).abs() <= 0.00001);
+    }
+    assert_eq!(
+        resource_snapshot(run, power),
+        before,
+        "fact reads cannot grant power or change cached/wire values"
+    );
+}
+
+fn assert_native_cap(run: &mut Run, power: PowerType) {
+    for _ in 0..2000 {
+        run.app.update();
+        let snapshot = resource_snapshot(run, power);
+        if snapshot.current == snapshot.maximum {
+            assert_eq!(snapshot.cached_rate, 0.0);
+            assert_eq!(snapshot.wire.regen_per_sec, 0.0);
+            assert_read_only_potential_facts(run, power, read_expected_native_regen(run, power));
+            return;
+        }
+    }
+    panic!("native {power:?} did not refill through actual regeneration");
+}
 
 fn assert_native_regen_flag(power: PowerType, expected: bool) {
     let path = std::env::var("DPS_PARITY_WORLD_DB").unwrap();
@@ -62,10 +193,19 @@ fn prepare_spent_resource(spec: u32, spell: u32, power: PowerType) -> Run {
         crate::followers::simulator::ParityActor::Follower,
     )
     .unwrap();
+    assert_native_cap(&mut run, power);
     let initial = native_power(&run, power);
     cast_native_spender(&mut run, spell, power);
     for _ in 0..200 {
         if native_power(&run, power) < initial {
+            if power != PowerType::Mana {
+                assert_eq!(
+                    cached_rate(&run, power),
+                    0.0,
+                    "instant native spend retains the pre-tick zero cache"
+                );
+            }
+            assert_read_only_potential_facts(&run, power, read_expected_native_regen(&run, power));
             return run;
         }
         run.app.update();
@@ -94,6 +234,7 @@ fn assert_native_tick(run: &mut Run, power: PowerType, expected_rate: f32) {
     );
     assert!((actual_rate - expected_rate).abs() <= rounding);
     assert!((after - before - expected_rate * dt).abs() <= rounding);
+    assert_read_only_potential_facts(run, power, expected_rate);
 }
 
 fn assert_hasted_native_pool(spec: u32, spell: u32, power: PowerType) {
@@ -107,16 +248,9 @@ fn assert_hasted_native_pool(spec: u32, spell: u32, power: PowerType) {
         stats.haste_pct > 0.0,
         "native reference gear must have haste"
     );
-    let info = world.resource::<PowerTypeTable>().get(power).unwrap();
-    let mods = world.get::<AuraStatMods>(run.actor).unwrap();
-    let multiplier = mods.power_regen(power as i32);
-    let flat = mods.power_regen_flat(power as i32) / 5.0;
-    let expected = info.regen_combat * multiplier * (1.0 + stats.haste_pct / 100.0) + flat;
-    println!(
-        "NATIVE_REGEN_INPUT spec={spec} haste_pct={} base={} multiplier={multiplier} flat={flat}",
-        stats.haste_pct, info.regen_combat
-    );
+    let expected = read_expected_native_regen(&run, power);
     assert_native_tick(&mut run, power, expected);
+    assert_native_cap(&mut run, power);
 }
 
 #[test]
@@ -141,9 +275,8 @@ fn dps_parity_power_haste_native_mana_remains_unscaled() {
         .get::<crate::stats::CharacterStats>(run.actor)
         .unwrap();
     assert!(stats.haste_pct > 0.0);
-    let mods = world.get::<AuraStatMods>(run.actor).unwrap();
-    let expected = stats.base_mana * 0.01 * mods.power_regen(PowerType::Mana as i32)
-        + mods.power_regen_flat(PowerType::Mana as i32) / 5.0;
+    let expected = read_expected_native_regen(&run, PowerType::Mana);
     assert!(world.get::<Mana>(run.actor).unwrap().current < stats.max_mana);
     assert_native_tick(&mut run, PowerType::Mana, expected);
+    assert_native_cap(&mut run, PowerType::Mana);
 }
