@@ -469,7 +469,7 @@ pub(crate) fn harness_with_plugins(
         .collect();
     spells.extend(extra);
     let known = KnownSpells::fixture(spells.iter().map(|spell| spell.id).collect());
-    app.insert_resource(SpellStore::fixture(spells));
+    app.insert_resource(SpellStore::fixture_from_catalog(spells, &data.store));
     app.insert_resource(power_table(data));
     app.insert_resource(crate::item_stats::load_item_scaling_tables(&data.powers_db).unwrap());
     app.insert_resource(shapeshift_forms(data));

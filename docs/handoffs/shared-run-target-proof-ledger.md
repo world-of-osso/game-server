@@ -4,10 +4,10 @@ Scope: engine-free `server::simc_apl`; no native rotation/DPS qualification.
 
 ## Corrected isolated packet
 
-- `arms-apl-gate-implementation`: one scoped squashed replacement on master23a0ec04c, covering run/control tests, `Action.target`/candidate API and constructors, min/max selection, corrected child oracle and verified `ad720fc3c` implementation plus proof-only docs.
-- Resolve that local gate ref for the single cherry-pick. It replaces original `42ed29079`/`e8940cbb7`/`e7fdc4dd1`; do not cherry-pick the old stack.
+- `6e009c41b`: scoped squashed replacement on master23a0ec04c; run/control tests, `Action.target`/candidate API and constructors, min/max, corrected child oracle and verified `ad720fc3c` implementation plus proof-only docs.
+- It is an ancestor of published master9d13ac19c; all three core Rust blobs match. Temporary merged gate ref `arms-apl-gate-implementation` was removed. It replaces original `42ed29079`/`e8940cbb7`/`e7fdc4dd1`; never apply the old stack.
 
-Do not merge the whole Arms branch: independent enabled native REDs and opt-in schedule REDs are not this packet. Lead reports original ar1024 pulled before landing; corrected packet still requires its independent integration gate after ww1025.
+Do not merge the whole Arms branch: independent enabled native REDs and opt-in schedule REDs are not this packet. Lead reports original ar1024 pulled before landing; ar1028 owns independent integration evidence after ww1025. Published ancestry alone is not a full-suite result.
 
 ## Binary authority and rejected oracle
 

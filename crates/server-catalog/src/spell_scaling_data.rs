@@ -3,7 +3,7 @@
 
 /// `[level - 1]` = Item (-1 and -7), Consumable (-2), Gem1 (-3), Gem2 (-4), Gem3 (-5), Health (-6), DamageReplaceStat (-8), DamageSecondary (-9), Mana Consumable (-10). The class columns are all 0.
 #[rustfmt::skip]
-pub(crate) const SPELL_SCALING: [[f32; 9]; 123] = [
+pub const SPELL_SCALING: [[f32; 9]; 123] = [
     [1.417985594, 400.0, 1.152328562, 2.0, 3.0, 292.2471295, 0.096680836, 0.096680836, 400.0],
     [1.654316526, 400.0, 1.152328562, 2.0, 3.0, 321.4718424, 0.112794309, 0.112794309, 400.0],
     [1.890647459, 400.0, 1.152328562, 2.0, 3.0, 350.6965554, 0.128907781, 0.128907781, 400.0],
