@@ -13,6 +13,14 @@ const CRENNA: u32 = 209072;
 
 fn native_npc(entry: u32) -> (Harness, Entity) {
     let mut h = harness(Vec::new(), &[CAT, MOONKIN, BITE], 11).unwrap();
+    h.app.insert_resource(load_native_creature_world(&[entry]));
+    let source = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&source).unwrap());
     let actor = crate::followers::native_fixture::spawn(h.app.world_mut(), h.caster, entry)
         .expect("authentic NPC profile/template and production initializer");
     assert!(h.app.world().get::<Player>(actor).is_none());
@@ -101,26 +109,29 @@ fn native_player_cat_form_keeps_energy_selection() {
 
 #[test]
 fn native_npc_moonkin_caster_form_keeps_mana() {
-    let (mut h, actor) = native_npc(CRENNA);
-    crate::auras::apply_aura(
-        h.app.world_mut(),
-        &crate::auras::AuraApplication {
-            caster: actor,
-            target: actor,
-            spell_id: MOONKIN,
-            effect_mask: 1 << 1,
-            source: crate::auras::AuraSource::Cast,
-        },
-    );
-    assert!(crate::auras::has_aura(h.app.world(), actor, MOONKIN));
-    assert!(h.app.world().get::<Player>(actor).is_none());
-    assert_eq!(
-        h.app
-            .world()
-            .get::<PowerPools>(actor)
-            .unwrap()
-            .order
-            .first(),
-        Some(&PowerType::Mana)
-    );
+    // Crenna starts in caster form; Ralia transitions out of her native Cat form.
+    for entry in [CRENNA, RALIA] {
+        let (mut h, actor) = native_npc(entry);
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id: MOONKIN,
+                effect_mask: 1 << 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        assert!(crate::auras::has_aura(h.app.world(), actor, MOONKIN));
+        assert!(h.app.world().get::<Player>(actor).is_none());
+        assert_eq!(
+            h.app
+                .world()
+                .get::<PowerPools>(actor)
+                .unwrap()
+                .order
+                .first(),
+            Some(&PowerType::Mana)
+        );
+    }
 }
