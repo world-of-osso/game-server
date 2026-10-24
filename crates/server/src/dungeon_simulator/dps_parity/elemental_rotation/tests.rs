@@ -15,6 +15,7 @@ fn fixture(count: usize) -> (super::super::Run, Bindings, Equipment, Encounter) 
     super::super::engage_fixture_opponents(&mut run);
     let mut bindings = bindings::build();
     let equipment = Equipment::load(run.app.world(), run.actor, &mut bindings).unwrap();
+    wait_for_native_lightning_bolt(&mut run);
     (run, bindings, equipment, encounter)
 }
 
@@ -29,6 +30,59 @@ fn apply(world: &mut World, caster: Entity, target: Entity, spell: u32) {
             source: crate::auras::AuraSource::Cast,
         },
     );
+}
+
+fn wait_for_native_lightning_bolt(run: &mut super::super::Run) {
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(188196)
+        .unwrap()
+        .clone();
+    for _ in 0..120 {
+        match crate::spell_cast::read_native_cast_start(
+            run.app.world_mut(),
+            run.actor,
+            &spell,
+            run.targets[0],
+        ) {
+            Ok(_) => return,
+            Err(
+                crate::spell_cast::CastFailure::OnGlobalCooldown
+                | crate::spell_cast::CastFailure::InProgress,
+            ) => run.app.update(),
+            Err(reason) => panic!("native LB prerequisite rejected: {reason:?}"),
+        }
+    }
+    panic!("native LB prerequisite did not become ready");
+}
+
+fn advance_with_native_hits(run: &mut super::super::Run, seconds: f64) {
+    let until = crate::spell_cast::now(run.app.world()) + seconds;
+    // npc_training_dummy evades and strips foreign auras after its last
+    // attacker leaves combat. Real native hits retain combat, not fake timers.
+    for _ in 0..(seconds * 20.0).ceil() as usize + 2 {
+        if crate::spell_cast::now(run.app.world()) >= until {
+            return;
+        }
+        match crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            188196,
+            Some(run.targets[0]),
+            false,
+        ) {
+            Ok(())
+            | Err(
+                crate::spell_cast::CastFailure::OnGlobalCooldown
+                | crate::spell_cast::CastFailure::InProgress,
+            ) => {}
+            Err(reason) => panic!("native maintenance hit rejected: {reason:?}"),
+        }
+        run.app.update();
+    }
+    panic!("native fixture clock did not reach {until}");
 }
 
 fn lightning_bolt_eligibility(run: &mut super::super::Run, target: Entity) -> String {
@@ -226,9 +280,14 @@ fn literal_ele_native_refreshability_and_counts_follow_real_aura_time() {
     assert_eq!(facts.value("active_dot.flame_shock").unwrap(), 1.0);
     assert_eq!(facts.value("dot.flame_shock.refreshable").unwrap(), 0.0);
     let ticks = (f64::from(maximum) * 0.7 / 50.0).ceil() as usize + 2;
-    for _ in 0..ticks {
-        run.app.update();
-    }
+    advance_with_native_hits(&mut run, ticks as f64 / 20.0);
+    assert!(
+        run.app
+            .world()
+            .get::<shared::components::CombatStatus>(run.targets[0])
+            .is_some_and(|status| status.0),
+        "real native maintenance hits must retain dummy combat, not bypass its evade script"
+    );
     let facts = EleFacts::new(
         run.app.world(),
         run.actor,
@@ -244,9 +303,7 @@ fn literal_ele_native_refreshability_and_counts_follow_real_aura_time() {
         run.app.world().get_entity(run.actor).is_ok()
     );
     assert_eq!(facts.value("dot.flame_shock.refreshable").unwrap(), 1.0);
-    for _ in 0..(maximum as usize / 50 + 2) {
-        run.app.update();
-    }
+    advance_with_native_hits(&mut run, f64::from(maximum) / 1000.0 + 0.1);
     let facts = EleFacts::new(
         run.app.world(),
         run.actor,
