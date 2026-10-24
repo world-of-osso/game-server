@@ -9,6 +9,8 @@ use shared::components::Health;
 use std::collections::HashSet;
 
 pub(super) const HEALING_RAIN: u32 = 73920;
+const RAVAGER: u32 = 228920;
+const RAVAGER_DAMAGE: u32 = 156287;
 const SIGIL_OF_FLAME: u32 = 204596;
 const SIGIL_FLAME_DAMAGE: u32 = 204598;
 pub(super) const RAIN_OF_FIRE: u32 = 5740;
@@ -101,6 +103,22 @@ fn read_ground_pulses(world: &World, ctx: &EffectCtx) -> GroundPulses {
             targets::Relation::Enemy,
             f64::from(ctx.spell.effects[2].aura_period_ms) / 1000.0,
         ),
+        // RAVAGER_NATIVE_PULSES: SimC76f8118 sc_warrior.cpp5967–5977.
+        // Native156287 targetB radius14=8yd; native228920 effect1 period=2000ms.
+        RAVAGER => (
+            RAVAGER_DAMAGE,
+            targets::radius(
+                &world
+                    .resource::<SpellStore>()
+                    .get(RAVAGER_DAMAGE)
+                    .expect("Ravager requires156287")
+                    .effects[0],
+                1,
+            ),
+            0,
+            targets::Relation::Enemy,
+            f64::from(ctx.spell.effects[1].aura_period_ms) / 1000.0,
+        ),
         CONSECRATION => (
             CONSECRATION_DAMAGE,
             targets::radius(
@@ -165,6 +183,33 @@ fn read_ground_pulses(world: &World, ctx: &EffectCtx) -> GroundPulses {
     }
 }
 
+/// Named SimC ground-event policy: capture this admitted cast's target position
+/// before direct damage can remove it. Ordinary and Whirling casts share native pulses.
+pub(in crate::spell_cast) fn spawn_ravager_field(
+    world: &mut World,
+    caster: Entity,
+    spell: &crate::spell_info::SpellInfo,
+    explicit: Option<Entity>,
+    depth: u8,
+) {
+    if spell.id != RAVAGER {
+        return;
+    }
+    let target = explicit.expect("admitted Ravager requires its enemy target");
+    let position = targets::position(world, target).expect("admitted Ravager target position");
+    let ctx = EffectCtx {
+        caster,
+        spell,
+        depth,
+        dest: Some(targets::Dest {
+            position,
+            orientation: 0.0,
+        }),
+        chain_multiplier: 1.0,
+    };
+    spawn_ground_pulses(world, &ctx, &spell.effects[1]);
+}
+
 ///26573's local description variable names81297; period=t1, limit=s2=1.
 ///The field remains at the original caster position, not the moving caster.
 pub(super) fn spawn_consecration(
@@ -213,6 +258,7 @@ pub(crate) fn ground_pulse_radius(world: &World, caster: Entity, spell_id: u32) 
     if !matches!(
         spell_id,
         CONSECRATION
+            | RAVAGER
             | EARTHQUAKE
             | EARTHQUAKE_TARGET
             | HEALING_RAIN
