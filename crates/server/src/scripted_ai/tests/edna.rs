@@ -2,6 +2,9 @@
 //! Normal source placements;205 explicitly projects identical authored actors.
 use super::*;
 
+#[path = "edna_seismic_shield.rs"]
+mod seismic_shield;
+
 const EDNA: u32 = 210108;
 const GOLEM: u32 = 210109;
 const MAP: u32 = 2652;
