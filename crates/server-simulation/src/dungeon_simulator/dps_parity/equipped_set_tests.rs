@@ -9,12 +9,6 @@ const ARMS_TWO_PIECE: u32 = 1296643;
 const ARMS_FOUR_PIECE: u32 = 1296644;
 const PROTECTION_TWO_PIECE: u32 = 1296647;
 const PROTECTION_FOUR_PIECE: u32 = 1296648;
-const SET_SLOTS: &[EquipmentSlot] = &[
-    EquipmentSlot::Head,
-    EquipmentSlot::Shoulder,
-    EquipmentSlot::Chest,
-    EquipmentSlot::Hands,
-];
 
 fn advance(run: &mut Run) {
     for _ in 0..6 {
@@ -32,11 +26,28 @@ fn aura_count(run: &Run, spell: u32) -> usize {
         .count()
 }
 
+fn native_set_members() -> Vec<u32> {
+    let path = std::env::var_os("DPS_PARITY_WORLD_DB").expect("frozen native set metadata");
+    let db =
+        rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let mut statement = db
+        .prepare("SELECT ID FROM item_sparse WHERE ItemSet=2067")
+        .unwrap();
+    let members = statement
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .unwrap();
+    members
+}
+
 fn equip_set_slots(run: &mut Run, original: &EquippedItems, keep: &[EquipmentSlot]) {
+    let members = native_set_members();
     let mut equipped = original.clone();
     equipped
         .items
-        .retain(|(slot, _, _)| !SET_SLOTS.contains(slot) || keep.contains(slot));
+        .retain(|(slot, _, item)| !members.contains(item) || keep.contains(slot));
     run.app.world_mut().entity_mut(run.actor).insert(equipped);
     advance(run);
 }
@@ -101,7 +112,11 @@ fn dps_parity_equipped_set_arms_equip_unequip_and_spec_change() {
         0,
         "removed below native threshold2"
     );
-    equip_set_slots(&mut run, &original, SET_SLOTS);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(original.clone());
+    advance(&mut run);
     assert_eq!(aura_count(&run, ARMS_TWO_PIECE), 1);
     assert_eq!(aura_count(&run, ARMS_FOUR_PIECE), 1);
     eprintln!(
