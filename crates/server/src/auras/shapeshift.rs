@@ -125,7 +125,7 @@ pub(crate) fn current_form(auras: &ActiveAuras) -> Option<(&AuraInstance, i32)> 
         .find_map(|aura| aura_form(aura).map(|form| (aura, form)))
 }
 
-pub(crate) fn attack_timing(world: &World, unit: Entity) -> Option<FormAttackTiming> {
+pub fn attack_timing(world: &World, unit: Entity) -> Option<FormAttackTiming> {
     let (_, form) = current_form(world.get::<ActiveAuras>(unit)?)?;
     world
         .get_resource::<ShapeshiftForms>()?

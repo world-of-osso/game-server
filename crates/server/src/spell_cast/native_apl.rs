@@ -1,6 +1,46 @@
 //! Read the same native cooldown, charge and GCD calculations used by casts.
 use super::*;
 
+/// Caster-owned actual travel; scripted Meteor contributes its live native continuation.
+pub(crate) fn flight_value(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    property: &str,
+) -> Result<f64, String> {
+    let pending = world
+        .get_resource::<missiles::PendingSpellHits>()
+        .ok_or("native APL pending missile state unavailable")?;
+    let direct = pending.earliest_due(caster, spell.id);
+    let scripted = if spell.id == area_trigger::meteor::METEOR {
+        area_trigger::meteor::pending_impact_due(world, caster)?
+    } else {
+        None
+    };
+    let due = direct.into_iter().chain(scripted).min_by(f64::total_cmp);
+    match property {
+        "in_flight" => Ok(if due.is_some() { 1.0 } else { 0.0 }),
+        "in_flight_remains" => Ok(due.map_or(0.0, |at| (at - now(world)).max(0.0))),
+        _ => Err(format!("unknown native APL flight property {property}")),
+    }
+}
+
+/// Native target-only admission; no cooldown, power, knowledge or cast mutation.
+pub(crate) fn target_eligible(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    candidate: Entity,
+) -> Result<bool, String> {
+    match validate_target(world, caster, spell, Some(candidate), Sight::Start) {
+        Ok(target) => Ok(target == Some(candidate)),
+        Err(CastFailure::Unsupported(reason)) => {
+            Err(format!("native target eligibility unsupported: {reason}"))
+        }
+        Err(_) => Ok(false),
+    }
+}
+
 struct Cooldown {
     remains: f64,
     duration: f64,

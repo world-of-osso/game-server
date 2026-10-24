@@ -116,6 +116,13 @@ pub struct EffectCtx<'a> {
     pub chain_multiplier: f32,
 }
 
+impl EffectCtx<'_> {
+    /// Original cast request's unit, not the current hit or mutable combat target.
+    pub fn primary_target(&self) -> Option<Entity> {
+        self.spell.cast_primary_target
+    }
+}
+
 pub type EffectHandler = fn(&mut World, &EffectCtx, &SpellEffect, Entity);
 
 /// The effect registry. Aura effects (`crate::auras::AURA_EFFECTS`, e.g. 6

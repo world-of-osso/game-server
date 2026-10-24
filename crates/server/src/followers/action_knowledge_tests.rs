@@ -2,7 +2,7 @@
 use super::kit::{Conditions, Entry, Slot, Target};
 use super::kit_tests::at_level;
 use super::{FollowerCatalog, update_ai};
-use crate::spell_cast::knowledge::resolve_action;
+use crate::spell_cast::knowledge::resolve_optional_actor_action as resolve_action;
 use crate::spell_cast::test_harness::Harness;
 use bevy::prelude::*;
 use shared::components::{Health, PowerType};

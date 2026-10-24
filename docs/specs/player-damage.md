@@ -4,6 +4,9 @@ Players deal Retail damage: auto-attacks swing the equipped weapon with attack p
 
 ## What it must do
 
+Rake
+- [x] Actual stealth enables native1822 effect3's initial damage bonus and163505 stun without requiring legacy231052/405834 aura grants. Ordinary unstealthed damage stays unchanged. Preserve the existing bleed snapshot path and native coefficients; new persistent multiplier fields are outside this eligibility change. Source: TC a352b1fa `spell_druid.cpp2040–2078`; actual selected-profile precombat buffs precede Prowl and native GCD remains authoritative.
+
 Auto-attack
 - [ ] Class-stat actors, including native followers, use every nonzero authored `SpellShapeshiftForm.CombatRoundTime` for both melee hands; zero/missing form timing uses regular equipment timing. Form changes do not restart an existing swing. Active timed forms restore ranged base time to TC's2s. Keep signed/native haste and slow modifiers.
 - [ ] Form weapon min/max scale by authored form time over TC's AP multiplier (minimum0.25s), independent of the swing clock. Ordinary and normalized weapon hits use the same terms. Preserve TC Player/non-Player AP-time selection and the existing Retail AP/DPS6 coefficient. Do not manufacture a `DamageVariance` scalar: pinned TC has no runtime consumer. See [form source/proof](../handoffs/feral-source-census.md#native-form-combat-timing).

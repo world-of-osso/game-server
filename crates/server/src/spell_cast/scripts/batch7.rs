@@ -27,8 +27,6 @@ const WHIRLWIND_ENERGIZE: u32 = 280715;
 const WHIRLWIND_CLEAVE: u32 = 85739;
 const PANACEA: u32 = 387761;
 const PANACEA_HEAL: u32 = 387763;
-const RAKE_RANK: u32 = 231052;
-const POUNCING_STRIKES: u32 = 405834;
 const RAKE_STUN: u32 = 163505;
 const STEALTH_AURA: u32 = 16;
 const RAW_RAGE_PER_POINT: f32 = 10.0;
@@ -91,6 +89,7 @@ pub(super) fn radiance_plan(
             spell.cast_destination,
         ),
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }]
@@ -196,6 +195,7 @@ fn cast_whirlwind_energize(world: &mut World, caster: Entity, amount: f32, depth
         units: vec![caster],
         dest: None,
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }];
@@ -240,20 +240,12 @@ pub(super) fn heal_panacea(world: &mut World, caster: Entity, _spell: &SpellInfo
     }
 }
 
-/// TC spell_dru_rake supplies stealth/stun mechanics. Current Mainline tooltip
-/// additionally gates them on231052 or405834. This hook certifies initial
-/// damage only, not child155722's full periodic snapshot contract.
+/// TC spell_dru_rake2040–2078 checks actual stealth, not legacy rank auras.
+/// Native1822 effect3 owns the amount; selected390772 is not an aura grant.
 fn has_rake_stealth_bonus(world: &World, caster: Entity) -> bool {
-    let rank = crate::auras::has_aura(world, caster, RAKE_RANK)
-        || crate::auras::has_aura(world, caster, POUNCING_STRIKES);
-    let stealth = world.get::<ActiveAuras>(caster).is_some_and(|auras| {
-        auras.iter().any(|aura| {
-            aura.effects
-                .iter()
-                .any(|effect| effect.aura_type == STEALTH_AURA)
-        })
-    });
-    rank && stealth
+    world
+        .get::<ActiveAuras>(caster)
+        .is_some_and(|auras| auras.has_type(STEALTH_AURA))
 }
 
 pub(super) fn rake_initial_damage(

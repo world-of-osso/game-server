@@ -101,6 +101,8 @@ mod herald_min1;
 mod herald_pair;
 #[path = "herald_reset.rs"]
 mod herald_reset;
+#[path = "irideus.rs"]
+mod irideus;
 #[path = "kargath.rs"]
 mod kargath;
 #[path = "kelidan.rs"]

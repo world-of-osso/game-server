@@ -1,6 +1,6 @@
 # Per-area test pilot and rebuild measurements
 
-Planning only. Source reviewed: B `22aa67892`, based on landed A `8e7c7a685`. No C source changes implemented. Existing behavior and complete case/ignore inventory remain mandatory.
+Approved C pilot implemented atop repaired B `14c74e6fa`, based on landed A `8e7c7a685`; compiler boundaries qualified at `acecb97d1`; full-suite acceptance pending. Table counts describe the reviewed pre-lift files. Existing behavior and complete case/ignore inventory remain mandatory. [Exact 106-case mapping](crate-split-combat-test-mapping.json).
 
 ## C: native melee behavior first
 
@@ -28,10 +28,13 @@ Keep `combat_enemy_dodge_tests.rs`, `combat_npc_general_crit_tests.rs`, `combat_
 
 ### Boundary work
 
-- [ ] Warn path owners, then `git mv` the twelve files in a pure-move commit; preserve names and ignore attributes.
-- [ ] Lift `collect_swings` and `collect_broadcast_swings` unchanged into existing `spell_cast::test_harness`. Retained core cases also call these helpers. Wire both consumers to that canonical implementation, never a reverse dependency or duplicate collector. Their private `attack_stop` call can remain inside core.
-- [ ] Expose only required fixture access: `harness_with`, `world_db`, its existing return struct and `powers_db` path field. Keep other cached payload fields private. Remove imports made unnecessary by lifting the collectors; do not publish `drain` solely for a helper now resident beside it.
-- [ ] Add the empty-normal-library/dev-dependency consumer and equivalent opt2/debug1 package profile; compile new consumer and production-no-feature boundary, format, commit, then obtain the parent full-suite/name reconciliation.
+The first consumer check also identified real ordinary-spawn/state boundaries: `CreatureSpawnContext`, `spawn_creature`, `CreatureFlagsExtra` and `end_all_combat` need public visibility, without body changes. The consumer explicitly imports canonical `CombatTarget` and uses the same existing rand0.8.5 dependency as its original cadence fixture. These do not expose the excluded private chance formulas.
+
+- [x] Warned path owners and used `git mv` for the twelve files in pure-move commit `c765d0279`; names/ignore attributes retained.
+- [x] Lifted `collect_swings` and `collect_broadcast_swings` into existing `spell_cast::test_harness` in a separate pure-body-move commit `94e9357e5`. Wiring changes only visibility and canonical combat paths. Both consumers use those implementations; `attack_stop` stays private.
+- [x] Exposed only `harness_with`, `world_db`, its existing return struct and `powers_db` path field, plus the two canonical collectors. Other cache fields and `drain` remain private. Collector-only imports removed from moved sources.
+- [x] Added the empty-normal-library/dev-dependency consumer and equivalent opt2/debug1 profile. Combined core-unit/simulator/combat-target check passed42.85s; production-no-feature `game-server` check passed14.59s, both without diagnostics at `acecb97d1`.
+- [ ] Obtain parent full-suite/exact name reconciliation after B lands; expected core5763passed/4known failures/202ignored, simulator30/91, combat106/0. Workspace6004/4/314 remains unchanged.
 - [ ] Measure one same-source test-only edit before expanding to further areas. No compile-time percentage follows from LOC reduction alone.
 
 Excluded scope: gameplay algorithms, timers, RNG, damage assertions, data files, new test ignores, transport substitutions and production module moves. Existing protocol, Bevy components and server resources retain one type identity.
@@ -40,7 +43,7 @@ Toys has a larger test-only surface (15,193 LOC at the original graph pin), but 
 
 ## Quiet-window B measurement
 
-A full-suite gate is not a rebuild-speed measurement. Hold A fixed and compare pre-B `8e7c7a685` to the accepted B code tip; do not compare unrelated gameplay revisions or attribute the old a28 measurement to B.
+A full-suite gate is not a rebuild-speed measurement. Hold gameplay fixed and compare incoming-master `eec5b6bcf` to the accepted B code tip; do not compare unrelated gameplay revisions or attribute the old a28 measurement to B.
 
 - [ ] Obtain a parent-owned quiet window; drain existing compilers and use one build at a time. Preserve `CAPACITY_OWNER` in both admission and actual command environments. The existing matrix runner strips it, so inspect/fix the diagnostic copy before use, not the shared runner during other measurements.
 - [ ] Use opt2/debug1 and `-j2` for both variants, the identical frozen protocol revision, and explicit overrides for shared, lightyear_netcode and lightyear_udp. Preserve the min-start14GiB, stop-below6GiB/300GiB safeguards. No automatic retry after a safety abort.
@@ -52,7 +55,7 @@ Use the existing compile-matrix runner and its README under `/home/osso/.worktre
 
 ## Proof references
 
-- [B exact baseline mapping](crate-split-test-mapping.json): 123 old subtree names and their mapped package/target/name/ignore identities; workspace expected totals6004 passed/4 known failures/310 ignored.
+- [B exact baseline mapping](crate-split-test-mapping.json): 123 old subtree names and their mapped package/target/name/ignore identities; workspace expected totals6004 passed/4 known failures/314 ignored after the four eec5b6bcf additions.
 - [Server crate ownership](../wiki/systems/server-crates.md).
 - `crates/server/src/{combat.rs,combat_*_tests.rs}`: module declarations, actual event-boundary assertions and retained private-helper accesses.
 - `crates/server/src/spell_cast/test_harness.rs`: existing cached input/harness and collector destination.

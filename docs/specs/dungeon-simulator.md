@@ -54,6 +54,8 @@ Stockade's committed `route` lists a unique59-pull boss-path corridor and full3D
 
 Moving or following a target partway along a frozen walk edge must use only the remaining native walk distance. Neither the movement path nor its sight/admission qualification may overshoot the target through its original pack anchor, or send a mid-edge mover back to a newly nearest pack node. Qualification and movement must describe the same walked legs and retain native3D heights. Existing disconnected components and directed book hops remain disconnected for ordinary walking; never invent inter-component walk links.
 
+A mover already inside its target's native chase/follow reach holds position and discards cached travel before requesting a path, while retaining native facing and movement-stop updates. Open parity fixtures explicitly omit unrelated frozen dungeon geometry; only absence of a frozen graph admits direct travel. Existing dungeon graphs retain their anchor routes and unreachable-component failures even when endpoints lie off-graph.
+
 ## Native evade movement
 
 An NPC chase without a walking path must hold its actual position and use the existing server cannot-reach/evade/home-arrival lifecycle, not abort the process or cross a disconnected component. Preserve the native timeout and map/state conditions; do not invent a Rune-specific exception or a new clock.

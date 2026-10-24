@@ -44,6 +44,7 @@ pub(super) fn light_of_dawn_plan(
         units,
         dest: None,
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }]
@@ -136,6 +137,7 @@ pub(super) fn vivify(world: &mut World, caster: Entity, _spell: &SpellInfo) {
         units,
         dest: None,
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }];

@@ -27,7 +27,7 @@ mod batch9;
 mod chrono_flame;
 mod clearcasting;
 mod elemental_ascendance;
-mod empower_evoker;
+pub(crate) mod empower_evoker;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
@@ -41,7 +41,18 @@ pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 pub(crate) mod prayer_of_mending;
 mod protection_items;
+mod ret_empyrean;
+pub(crate) use ret_empyrean::owns_empyrean_proc;
+pub(super) use ret_empyrean::schedule_empyrean_legacy;
+mod ret_purpose;
+pub(super) use ret_purpose::roll_selected_ret_divine_purpose;
+mod ret_tier;
+mod ret_toll;
+pub(super) use ret_tier::after_foreground_spender;
+pub(crate) use ret_tier::owns_arbiter_charge;
 mod scourge_strike;
+mod snakeskin_quiver;
+pub(super) use snakeskin_quiver::roll_snakeskin_cobra;
 mod soul_of_the_forest;
 mod swiftmend;
 pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direct_multiplier;
@@ -52,8 +63,8 @@ mod windwalker;
 mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
 pub(crate) use windwalker::{
-    DANCE_OF_CHIJI, after_dance_cast_event, check_dance_proc, combo_strikes_multiplier,
-    ordinary_combo_cast,
+    DANCE_OF_CHIJI, after_dance_cast_event, apply_mystic_touch_after_hit, check_dance_proc,
+    combo_strikes_multiplier, ordinary_combo_cast, register_wdp_relationship,
 };
 
 pub(super) use batch3::consume_phalanx;
@@ -67,6 +78,18 @@ pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havo
 pub(crate) use batch20::proc_charges;
 pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
+/// TC OnCast runs once after successful checks, before spending and launch.
+pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
+    match spell_id {
+        batch16::RET_JUDGMENT | batch16::HOLY_JUDGMENT | batch10::PROTECTION_JUDGMENT => {
+            batch16::energize_judgment(world, caster, depth);
+        }
+        // SimC's ordinary/background Avenging Wrath constructors use these IDs.
+        31884 | 454351 => ret_empyrean::grant_on_wrath(world, caster, depth),
+        _ => {}
+    }
+}
+
 /// OnEffectHit runs once per effect without replacing generic or aura dispatch.
 pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
     match (spell, index) {
@@ -183,6 +206,7 @@ const PENANCE: u32 = 47_540;
 const PENANCE_DAMAGE_CHANNEL: u32 = 47_758;
 const PENANCE_HEAL_CHANNEL: u32 = 47_757;
 const COBRA_SHOT: u32 = 193_455;
+const BARBED_SCALES: u32 = 469_880;
 const KILL_COMMAND: u32 = 34_026;
 const BLACKOUT_KICK: u32 = 100_784;
 const BLACKOUT_KICK_RANK_TWO: u32 = 261_917;
@@ -324,7 +348,6 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch17::SOUL_FIRE, 0) => Some(batch17::apply_soul_fire_dot),
         (batch17::BLOOD_BOIL, 0) => Some(batch17::apply_blood_plague),
         (batch17::MARROWREND, 1) => Some(batch17::grant_bone_shield),
-        (batch16::RET_JUDGMENT | batch16::HOLY_JUDGMENT, 0) => Some(batch16::energize_judgment),
         (batch15::RISING_SUN_DAMAGE, 0) => Some(batch15::wound_rising_sun),
         (batch14::ORB_DAMAGE, 0) => Some(batch14::slow_orb),
         (batch14::BLIZZARD_DAMAGE, 0) => Some(batch14::slow_blizzard),
@@ -344,7 +367,6 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch11::THRASH, 0) => Some(batch11::thrash_bleed),
         (batch10::FLURRY_DAMAGE, 0) => Some(batch10::energize_flurry),
         (batch10::FERAL_LUNGE, 0) => Some(batch10::bite_lunge),
-        (batch10::PROTECTION_JUDGMENT, 0) => Some(batch10::energize_judgment),
         (batch10::HAND_OF_GULDAN, 0) => Some(batch10::launch_guldan_meteor),
         (batch9::WINTER_DAMAGE, 0) => Some(batch9::slow_winter_hit),
         (batch9::SCOURGE_STRIKE, 0) => Some(scourge_strike::erupt_and_apply_missing),
@@ -581,6 +603,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         return Some(hook);
     }
     match spell_id {
+        windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
         prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
@@ -608,7 +631,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         batch16::HOLY_LIGHT => Some(batch16::energize_holy_light),
         batch16::HOLY_SHOCK | batch16::CRUSADER_STRIKE => Some(batch16::reduce_holy_judgment),
         batch16::RIPTIDE => Some(batch16::grant_tidal_waves),
-        batch13::BESTIAL_WRATH => Some(batch13::strike_with_owned_pet),
+        batch13::BESTIAL_WRATH => Some(batch13::finish_bestial_wrath),
         batch12::SHIELD_RIGHTEOUS => Some(batch12::shield_armor),
         batch10::BLADE_FLURRY => Some(batch10::cast_flurry),
         batch10::VOIDFORM => Some(batch10::apply_voidform),
@@ -665,6 +688,7 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
     match (spell_id, effect_index) {
         (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
         (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::limit_targets),
+        (ret_toll::ROOT, 1) => Some(ret_toll::limit_area),
         (145_110, 0) => Some(pick_yseras_gift_group_target),
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         (30735, 0) => Some(crate::scripted_ai::nethekurse::filter_shadow_sear),
@@ -769,6 +793,7 @@ fn track_switch_plan(
         units: target.into_iter().collect(),
         dest: None,
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }]
@@ -803,6 +828,7 @@ fn chain_heal_plan(
         units,
         dest: None,
         chain_multipliers,
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }]
@@ -971,6 +997,7 @@ fn pyre_explosion_plan(
             orientation: super::targets::orientation(world, caster),
         }),
         chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }]
@@ -985,6 +1012,21 @@ fn blackout_kick(world: &mut World, caster: Entity, _target: Entity, _depth: u8)
             reduce_cooldown(world, caster, spell, f64::from(milliseconds) / 1000.0);
         }
     }
+}
+
+/// Native469880 names Cobra CAST and its millisecond reduction; SimC76f8118
+/// hunter4963-4964 includes free background Cobra, before missile impact.
+pub(super) fn reduce_barbed_scales(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if spell.id != COBRA_SHOT || !crate::auras::has_aura(world, caster, BARBED_SCALES) {
+        return;
+    }
+    let milliseconds = script_effect_value(world, caster, BARBED_SCALES, 0);
+    reduce_cooldown(
+        world,
+        caster,
+        batch20::BARBED_SHOT,
+        f64::from(milliseconds) / 1000.0,
+    );
 }
 
 /// Retail 193455: "Reduces the cooldown of Kill Command by $s3 sec."
@@ -1018,7 +1060,7 @@ pub(super) fn cast_expel_harm_damage(
     );
 }
 
-pub(crate) fn script_effect_value(world: &World, caster: Entity, spell_id: u32, index: u8) -> f32 {
+pub fn script_effect_value(world: &World, caster: Entity, spell_id: u32, index: u8) -> f32 {
     let spell = world
         .resource::<crate::spell_info::SpellStore>()
         .get(spell_id)
@@ -1409,7 +1451,9 @@ pub(super) type ContextHitHook = fn(&mut World, &super::effects::EffectCtx, Enti
 
 pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
     match spell_id {
+        windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
         voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),
+        ret_toll::ROOT => Some(ret_toll::cast_child),
         77_478 => Some(batch9::cast_earthquake_knockdown),
         _ => None,
     }
@@ -1419,6 +1463,8 @@ pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
         elemental_ascendance::ASCENDANCE => Some(elemental_ascendance::cast_entry),
         100780 => Some(windwalker::tiger_palm_hit),
+        100784 => Some(windwalker::blackout_kick_hit),
+        107428 | 113656 => Some(windwalker::trigger_wdp_enabler_on_hit),
 
         lava_surge::PROC => Some(lava_surge::restore_on_proc_hit),
         swiftmend::SWIFTMEND => Some(swiftmend::hit),

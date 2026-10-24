@@ -56,6 +56,9 @@ pub(super) fn on_cast(
         target,
         ready_in,
     });
+    if spell.id == AUTO_SHOT {
+        super::scripts::roll_snakeskin_cobra(world, caster, target);
+    }
 }
 
 /// Player::GetAttackBySlot (Player.cpp9666–9674): a ranged main hand sets the
