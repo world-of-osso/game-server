@@ -7,6 +7,7 @@ mod pet_child_tests;
 mod pet_melee_tests;
 mod pet_stats_tests;
 mod player_rotation;
+mod poison_precombat_tests;
 mod power_tests;
 mod precombat_tests;
 mod preparation;
