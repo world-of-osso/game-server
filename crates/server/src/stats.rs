@@ -42,6 +42,8 @@ pub struct EquippedItems {
 #[derive(Component, Debug, Clone, Default, PartialEq)]
 pub struct EquippedItemModifiers {
     pub items: Vec<(EquipmentSlot, server::item_instance::ItemInstanceModifiers)>,
+    /// Profile-declared allocation donors; equipped identities/effects remain original.
+    pub base_stat_redirects: Vec<(EquipmentSlot, u32)>,
 }
 
 #[derive(Resource, Default)]
@@ -778,28 +780,67 @@ impl ItemData<'_> {
         let Some(equipped) = equipped else {
             return gear;
         };
-        if equipped.items.is_empty() {
-            return gear;
-        }
-        let templates = self
-            .templates
-            .as_deref()
-            .expect("equipped items require definition catalogs");
-        for &(slot, source, item_id) in &equipped.items {
-            let template = templates
-                .get(source, item_id)
-                .unwrap_or_else(|| panic!("equipped item {item_id} has no {source:?} definition"));
-            let properties = modifiers.and_then(|modifiers| {
-                modifiers
-                    .items
-                    .iter()
-                    .find(|(key, _)| *key == slot)
-                    .map(|(_, state)| state)
-            });
-            let (stats, weapon_ap) = self.equipped_stats(template, source, properties, level);
-            gear.apply_item(slot, template, stats, weapon_ap);
+        for &item in &equipped.items {
+            self.apply_equipped_item(&mut gear, item, modifiers, level);
         }
         gear
+    }
+
+    fn apply_equipped_item(
+        &self,
+        gear: &mut Gear,
+        item: (EquipmentSlot, shared::item_data::ItemDefinitionSource, u32),
+        modifiers: Option<&EquippedItemModifiers>,
+        level: u8,
+    ) {
+        let (slot, source, item_id) = item;
+        let templates = self.templates.as_deref().expect("equipped item catalogs");
+        let template = templates
+            .get(source, item_id)
+            .unwrap_or_else(|| panic!("equipped item {item_id} has no {source:?} definition"));
+        let properties = modifiers.and_then(|modifiers| {
+            modifiers
+                .items
+                .iter()
+                .find(|(key, _)| *key == slot)
+                .map(|(_, state)| state)
+        });
+        let stats_template = self.read_stat_template(template, source, modifiers, slot);
+        let (stats, weapon_ap) = self.equipped_stats(&stats_template, source, properties, level);
+        gear.apply_item(slot, template, stats, weapon_ap);
+    }
+
+    fn read_stat_template(
+        &self,
+        original: &crate::item_templates::ItemTemplate,
+        source: shared::item_data::ItemDefinitionSource,
+        modifiers: Option<&EquippedItemModifiers>,
+        slot: EquipmentSlot,
+    ) -> crate::item_templates::ItemTemplate {
+        let mut item = *original;
+        let redirect = modifiers.and_then(|modifiers| {
+            modifiers
+                .base_stat_redirects
+                .iter()
+                .find(|(key, _)| *key == slot)
+                .map(|(_, id)| *id)
+        });
+        let Some(id) = redirect else {
+            return item;
+        };
+        let donor = self
+            .templates
+            .as_deref()
+            .expect("stat donor catalogs")
+            .get(source, id)
+            .unwrap_or_else(|| panic!("native stat donor item{id} has no {source:?} definition"));
+        // SimC76f8118 item.cpp35–57 redirects only types/allocations, before
+        // instance bonuses; retain original budgets, socket multipliers and identity.
+        for (stat, donor) in item.scaling.stats.iter_mut().zip(&donor.scaling.stats) {
+            stat.stat = donor.stat;
+            stat.allocation = donor.allocation;
+        }
+        item
     }
 
     fn equipped_stats(
