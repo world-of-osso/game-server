@@ -31,6 +31,12 @@
 - `Driver::new(Program)` owns variable state, snapshot, decisions and channel cancellation. `select(list, &dyn ActionFacts, &Prepared, &Equipment)` returns the source-selected `(Action, Execution)`; release immutable facts, then `execute(world, actor, action, execution)`. `should_cancel(world, actor, facts)` evaluates an active native channel's saved `cancel_if`; caller then cancels the actual cast.
 - `capture_fixture(world, actor, Encounter)` rejects dungeon clocks before inserting `LiteralParityFixture`; the native kit yields while this marker exists, preserving Follower/NPC identity. Adapters retain explicit precombat/default ordering and spec actor checks.
 
+## Assigned extension qualification
+
+Seven native regressions at89f985420 reach unknown requested predicates (18.52s): actual selected multi-rank talent, earned Hit Combo cap/loss, native Martial Agility haste, contextual Roll charges/recharge, real Flame/channel execution duration, unpaid Disintegrate ticks and Provoke recovery versus target range. The extension implementation reuses selected source config and the aura refresh scheduler's tick counter; GREEN remains pending. Action readiness reads native recovery, caster restrictions, movement, power and target checks independently of the current GCD/executing action; actual dispatch still uses full native admission. Missing source metadata remains an error. Replacement-spell identity integration awaits the shared actor-action resolver.
+
+[Native haste composition qualification](../../specs/simc-apl.md#native-haste-composition-boundary) is a separate RED-before-fix gate; the seven fact regressions do not prove haste composition.
+
 ## Sources
 
 - Pinned SimC76f8118 `engine/sim/expressions.cpp:22–154,333–440,1081–1130` — lexer, arithmetic/boolean decisions and precedence.

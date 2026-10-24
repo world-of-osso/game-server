@@ -118,7 +118,7 @@ Players no longer use the HP/mana/rating functions below: [[character-stats]] co
   - Below 70: WotLK model (first 20 stam = 1 HP, rest = 10 HP each)
   - Level 70+: retail model (flat 20 HP per stamina)
 - **Max mana**: same dual-model approach with intellect
-- **Armor mitigation**: `armor / (armor + K(attacker_level))`; `K` from SimC `armor_constant` table
+- **Armor mitigation**: `armor / (armor + K(attacker_level))`, capped at85% before damage truncation; native `K` comes from installed ExpectedStat, not a SimC table. [Aura280 follower policy and source-qualified inputs](../investigations/follower-armor-penetration.md).
 - **Secondary stat DR**: piecewise-linear curve (SimC DBC curve 21024); affects Crit, Haste, Mastery, Versatility
 
 ## Sources

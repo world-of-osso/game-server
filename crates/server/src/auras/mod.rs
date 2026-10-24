@@ -238,6 +238,48 @@ impl AuraEffectState {
     }
 }
 
+/// Read the scheduler's unpaid ticks without advancing or reconstructing its phase.
+#[cfg(test)]
+pub(crate) fn remaining_periodic_ticks(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+) -> Result<u32, String> {
+    let Some(auras) = world.get::<ActiveAuras>(target) else {
+        return Ok(0);
+    };
+    let active = auras
+        .iter()
+        .filter(|aura| aura.caster == caster && aura.spell_id == spell);
+    active
+        .map(count_remaining_ticks)
+        .try_fold(0, |maximum, ticks| ticks.map(|ticks| maximum.max(ticks)))
+}
+
+#[cfg(test)]
+fn count_remaining_ticks(aura: &AuraInstance) -> Result<u32, String> {
+    let periodic: Vec<_> = aura
+        .effects
+        .iter()
+        .filter(|effect| effect.period_ms > 0)
+        .collect();
+    if periodic.is_empty() {
+        return Ok(0);
+    }
+    let expiry = aura.expires_at.ok_or_else(|| {
+        format!(
+            "native APL spell{} has an unbounded periodic schedule",
+            aura.spell_id
+        )
+    })?;
+    Ok(periodic
+        .iter()
+        .map(|effect| refresh::remaining_ticks(effect.next_tick_at(), expiry, effect.period_ms))
+        .max()
+        .unwrap_or(0))
+}
+
 /// Proc timers (TrinityCore `Aura` proc fields).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ProcTimers {
@@ -1647,8 +1689,11 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     // NPCs that happen to carry the follower class-stat bridge.
     if world.get::<Player>(unit).is_none() {
         stats.primary_base_pct = UnitStats::default();
-        // TC Unit.cpp1720 excludes even player-controlled NPCs from280.
-        combat.armor_penetration_pct = 0.0;
+        // FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_ARMOR_PENETRATION:
+        // approved class-follower policy; TC Unit.cpp1720 still excludes ordinary NPCs.
+        if !player_controlled_npc || world.get::<crate::followers::Follower>(unit).is_none() {
+            combat.armor_penetration_pct = 0.0;
+        }
         stats.max_mana_pct = 0.0;
         stats.rating_from_rating.clear();
         combat.max_power_mult.clear();

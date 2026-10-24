@@ -84,7 +84,7 @@ fn carry_duration(world: &World, target: Entity, new: &mut AuraInstance, rule: D
 }
 
 /// Count scheduled ticks, including a tick exactly at expiry, without altering phase.
-fn remaining_ticks(next: f64, expiry: f64, period_ms: u32) -> u32 {
+pub(super) fn remaining_ticks(next: f64, expiry: f64, period_ms: u32) -> u32 {
     if period_ms == 0 || next > expiry + 1e-6 {
         return 0;
     }
