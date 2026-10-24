@@ -93,12 +93,12 @@ def write_source(expressions_path, output):
         '// TC a352b1fa ConditionMgr3639–3758: exact occupied-node equality OR for1778/1779,',
         '// plus enabled signed-literal comparisons with no arithmetic/functions/state reads/logic.',
         f'// WorldStateExpression SHA256 {hashlib.sha256(expressions_path.read_bytes()).hexdigest()}.',
-        'pub(super) fn required_owned_nodes(expression: u32) -> Option<u8> {',
+        'pub fn required_owned_nodes(expression: u32) -> Option<u8> {',
         '    match expression {',
     ]
     lines.extend(f'        {expression} => Some({count}),' for expression, count in sorted(qualified.items()))
     lines += ['        _ => None,', '    }', '}', '',
-              'pub(super) fn constant_expression(expression: u32) -> Option<bool> {',
+              'pub fn constant_expression(expression: u32) -> Option<bool> {',
               '    match expression {']
     lines.extend(f'        {expression} => Some({str(value).lower()}),'
                  for expression, value in sorted(constants.items()))

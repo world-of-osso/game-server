@@ -1,3 +1,7 @@
+## 2026-10-24 — Generated achievement catalog ownership
+
+[Crate boundaries](systems/server-crates.md#generated-achievement-catalog-cut-d1): six generated lookups relocate37,819lines into existing server-catalog with three canonical immutable record types. Credit/ECS/player authority and unchanged matching predicates stay core; test identity and lookup-data census remain required. No elapsed-time speedup claim.
+
 ## 2026-10-23 — Incoming native-factor fixture boundary
 
 Merged `eec5b6bcf` into B, preserving its four ignored single-spell cases in the consumer. Existing15factor observation calls and armor observation fields/initializers now use explicit fixture-support gates; only resource constructor/export and public return type visibility widen. Calculations unchanged. Combined core-unit/simulator check at14c74e6fa passes42.83s without diagnostics; production and full-suite gates pending. Expected6322workspace cases/314ignored includes four incoming-master additions.
