@@ -30,6 +30,8 @@ pub(crate) mod auto_repeat;
 #[cfg(test)]
 mod auto_shot_repeat_tests;
 #[cfg(test)]
+mod form_display_power_tests;
+#[cfg(test)]
 mod hit_positivity_tests;
 #[cfg(any(test, feature = "test-support"))]
 pub mod holy_metrics;
