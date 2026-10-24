@@ -84,7 +84,7 @@ fn filter_scouring_effect(world: &World, caster: Entity, child: &mut SpellInfo) 
 
 /// Fresh release metadata for an actual eligible native empower stage.
 /// Refresh-window callers must still apply ordinary caster/target duration modifiers.
-pub(crate) fn build_fire_breath_release(world: &World, caster: Entity, rank: u8) -> SpellInfo {
+pub fn build_fire_breath_release(world: &World, caster: Entity, rank: u8) -> SpellInfo {
     let mut child = world
         .resource::<SpellStore>()
         .get(FIRE_DAMAGE)

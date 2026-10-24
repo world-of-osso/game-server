@@ -27,7 +27,7 @@ mod batch9;
 mod chrono_flame;
 mod clearcasting;
 mod elemental_ascendance;
-pub(crate) mod empower_evoker;
+pub mod empower_evoker;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
@@ -192,7 +192,9 @@ const BACKSTAB: u32 = 53;
 const PYRE_IMPACT: u32 = 393_568;
 const PYRE_DAMAGE: u32 = 357_212;
 const DRAIN_SOUL: u32 = 198_590;
+const FIREBALL: u32 = 133;
 const FIRE_BLAST: u32 = 108_853;
+const FIRESTARTER: u32 = 205_026;
 const DEATH_COIL: u32 = 47_541;
 const DEATH_COIL_DAMAGE: u32 = 47_632;
 const DEATH_COIL_HEAL: u32 = 47_633;
@@ -407,6 +409,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
 /// to 100%; Retail108853 tooltip explicitly renders `${$s1*2}`.
 pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32) -> Option<f32> {
     match spell_id {
+        FIREBALL | hot_streak::PYROBLAST => firestarter_crit(world, caster, target),
         batch17::REGROWTH => batch17::regrowth_crit(world, caster, target),
         batch14::EYE_BEAM_DAMAGE => batch14::eye_beam_crit(world, caster),
         batch3::SHRED if batch11::shred_stealth_bonus(world, caster) => {
@@ -435,6 +438,18 @@ pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32)
         }
         _ => None,
     }
+}
+
+/// TC a352b1fa spell_mage.cpp762–779: actual205026 effect0 supplies the HP threshold.
+fn firestarter_crit(world: &World, caster: Entity, target: Entity) -> Option<f32> {
+    let aura = world
+        .get::<crate::auras::ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.spell_id == FIRESTARTER)?;
+    let threshold = aura.effects.iter().find(|effect| effect.index == 0)?.amount;
+    let health = world.get::<shared::components::Health>(target)?;
+    let health_percent = health.current / health.max * 100.0;
+    (health_percent >= threshold).then_some(100.0)
 }
 
 pub(crate) fn rake_bleed_snapshot(world: &World, caster: Entity, amount: f32) -> f32 {
@@ -1024,14 +1039,14 @@ pub(crate) fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, 
         .get(spell_id)
         .and_then(|spell| spell.categories.as_ref())
         .map_or(0, |category| category.charge_category);
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     let before = super::holy_metrics::read_recharge(world, caster, charge_category, now);
     let reduced = world
         .get_mut::<super::SpellHistory>(caster)
         .map(|mut history| {
             reduce_running_timers(&mut history, charge_category, spell_id, now, seconds)
         });
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     {
         let after = super::holy_metrics::read_recharge(world, caster, charge_category, now);
         let applied = (before - after).max(0.0).min(seconds);
