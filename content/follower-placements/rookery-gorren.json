@@ -1,0 +1,155 @@
+{
+  "map_id": 2648,
+  "entrance_id": 100067,
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "entries": [
+    {
+      "entry": 207205,
+      "ordinal": 1,
+      "map_id": 2648,
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2567",
+      "journal_encounter_id": 2567,
+      "cache_sha256": "0fecd44c4bd6e8319174b53f64e5ed2f4ec5fada30833b33e8a96de8e1237c02",
+      "source_floor": 4,
+      "faction_donor": 209230,
+      "donor_reason": "Same-dungeon native faction16 Kyrioss with matching hostile Alliance/Horde reaction; faction only, no CT/stat donation.",
+      "source_floor_evidence": {
+        "policy": "FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_UPWARD_CONSENSUS",
+        "wmo_group_id": 69610,
+        "placement_unique_id": 44116513,
+        "maximum_height_difference_yards": 1,
+        "source_files": [
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/5199802.wdt",
+            "sha256": "4cf09ab7c6c1afc4fe2b659b7a1cc810d5a3f3fca228c2016ec192f579de2625"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/5200408.adt",
+            "sha256": "3dca51219b6d8933eacceb1d2ebf7e7e35db4f355c01da18a8ad595c13f71846"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5014520.wmo",
+            "sha256": "92e589416d1bff7219e8f15d4d9d6a9a2bb95adc227cd19a80e4f44c08b053a9"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5165074.wmo",
+            "sha256": "2bfaf7b7cedf5446b151edeb4e2a92349294823e0780198267d0f63a0b0db499"
+          }
+        ],
+        "rotation_degrees": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "placement_position_z": 167.2766876220703,
+        "scale": 1.0,
+        "triangles": [
+          {
+            "world_vertices": [
+              [
+                2804.4610494772605,
+                -1646.1229718526192,
+                141.3482894897461
+              ],
+              [
+                2808.8262364069633,
+                -1640.4577229817696,
+                141.3564682006836
+              ],
+              [
+                2800.3782891134433,
+                -1642.1766026814767,
+                141.3474884033203
+              ]
+            ],
+            "triangle_index": 22020
+          },
+          {
+            "world_vertices": [
+              [
+                2803.368325153988,
+                -1649.3434651692696,
+                173.19873094558716
+              ],
+              [
+                2803.368325153988,
+                -1631.4753068288155,
+                172.51508283615112
+              ],
+              [
+                2808.2515565554313,
+                -1635.6647599538155,
+                170.90478563308716
+              ]
+            ],
+            "triangle_index": 41003
+          },
+          {
+            "world_vertices": [
+              [
+                2818.9021345774345,
+                -1664.3520253499337,
+                169.17671036720276
+              ],
+              [
+                2805.0455662409477,
+                -1664.3520253499337,
+                169.17671036720276
+              ],
+              [
+                2805.0455662409477,
+                -1637.8805650075265,
+                169.17671036720276
+              ]
+            ],
+            "triangle_index": 42296
+          },
+          {
+            "world_vertices": [
+              [
+                2804.3157619635276,
+                -1645.787934621174,
+                141.39580154418945
+              ],
+              [
+                2808.422661940258,
+                -1640.312056859333,
+                141.39588928222656
+              ],
+              [
+                2804.3254088560752,
+                -1638.8323357899972,
+                141.3959617614746
+              ]
+            ],
+            "triangle_index": 43686
+          }
+        ],
+        "method": "Both upward assigned-group hits141.3509/141.3958 agree within1yd only with baked142.126492; downward172.3279/169.1767 rejected. Higher native nearby actors occupy a separate level, not used as floor anchors."
+      },
+      "navigation_gap": "FOLLOWER_ROUTE_INCOMPLETE_2648_207205",
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/WarWithin/TheRookery/StormguardGorren.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "0e3a6d1e938aff6b1fdd5e21dc59e91b17e00928c92ef725158065b3815ef293",
+        "journal_actor_id": 5587
+      }
+    }
+  ],
+  "source_gaps": [
+    {
+      "entry": 207207,
+      "reserved_ordinal": 0,
+      "name": "FOLLOWER_PLACEMENT_SOURCE_FLOOR_UNSUPPORTED_2648_207207",
+      "reason": "Exact journal XY has no triangle in assigned UiMap source group69453; multiple baked levels unresolved. Native nearby329yd anchors do not match any baked candidate within1yd. No relocation or level selection."
+    }
+  ],
+  "calibration_entries": [
+    188252,
+    189232
+  ]
+}

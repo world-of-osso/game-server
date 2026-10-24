@@ -1,0 +1,44 @@
+{
+  "map_id": 2830,
+  "entrance_id": 81002830,
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "entries": [
+    {
+      "entry": 234933,
+      "ordinal": 0,
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2676",
+      "journal_encounter_id": 2676,
+      "cache_sha256": "056a7a1322259345d8bd19b3e0dd83831d1aef5dfe20a47bdcb0ad6e733525dc",
+      "source_floor": null,
+      "source_floor_reference_height": 998.2693509718046,
+      "source_floor_evidence": {
+        "policy": "FOLLOWER_PLACEMENT_Z_FROM_SAME_ROOM_NATIVE_ANCHORS",
+        "approval": "Lead approved Taah'bat-only12yd maximum; Vexamus5yd and Blazikon8yd are unchanged.",
+        "marker_wow_xy": [860.9113228374999, -671.9940244898503],
+        "maximum_horizontal_distance_yards": 12,
+        "maximum_vertical_difference_yards": 1,
+        "anchors": [
+          {"guid": 10006744, "entry": 210931, "name": "Path Helper", "map_id": 2830, "wow_xyz": [859.165, -675.708, 998.758]},
+          {"guid": 10006742, "entry": 234960, "name": "Tamed Ruinstalker", "map_id": 2830, "wow_xyz": [850.34, -674.806, 997.903]}
+        ],
+        "corroboration": {"source_table": "tdb_creature", "guid": 10006707, "entry": 237514, "name": "A'wazj", "map_id": 2830, "wow_xyz": [878.045, -614.084, 999.058], "runtime_guid": 30006707, "scope": "Existing same-encounter actor corroborates height; not counted as a within12yd anchor, not moved or co-located."},
+        "rejected_surface_heights": [786.7704881557396, 1132.0489046045122],
+        "method": "Both nearby exact native anchors agree within1yd only on baked998.269351. UiMap2449 has no assigned WMO group and no group-floor index; no invented group0/floor0 or source coordinate shift."
+      },
+      "navigation_gap": "FOLLOWER_ROUTE_INCOMPLETE_2830_234933",
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/WarWithin/EcoDomeAldani/TaahbatAndAwazj.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "30496e3fa26ef6dae2bb5b35a0fcd9474a17799cbceca96843fc3dfc40bbcef0",
+        "journal_actor_id": 5894
+      }
+    }
+  ],
+  "source_gaps": [
+    {"entry": 234935, "reserved_ordinal": 1, "name": "FOLLOWER_PLACEMENT_SCALING_SOURCE_MISSING_234935", "source_difficulty_id": 0, "ContentTuningID": 0, "HealthModifier": 42.0, "reason": "Soul-Scribe has only native0 with CT0. Keep the scaling gap; do not invent or donate scaling. Existing A'wazj237514 authored spawn is preserved, never co-located from a shared marker."}
+  ],
+  "calibration_entries": [188252, 189232]
+}

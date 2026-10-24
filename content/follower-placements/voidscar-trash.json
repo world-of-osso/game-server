@@ -1,0 +1,553 @@
+{
+  "map_id": 2923,
+  "entrance_id": null,
+  "placement_policy": "FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS",
+  "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+  "guid_base": 61000000,
+  "first_trash_ordinal": 100,
+  "guarded_faction_updates": [],
+  "density_policy": "FOLLOWER_TRASH_DENSITY_FROM_MDT_COUNT",
+  "density_source": {
+    "policy": "FOLLOWER_TRASH_DENSITY_FROM_MDT_COUNT",
+    "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+    "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+    "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961"
+  },
+  "entries": [
+    {
+      "entry": 243996,
+      "map_id": 2923,
+      "cache_sha256": "16b284cee0ed41966cc84c93dec72cae89e3ccf7c9690d164e2d793557712311",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 63
+      }
+    },
+    {
+      "entry": 243988,
+      "map_id": 2923,
+      "cache_sha256": "622f9392c69ffd45e530a716037713c3eb61211beeb47edc03300d47e5a21a37",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 165
+      }
+    },
+    {
+      "entry": 243983,
+      "map_id": 2923,
+      "cache_sha256": "e81f1cf5cb19d97f7070d12611e164e14e9c6a919ef8eae3b897cbee0ad94479",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 264
+      }
+    },
+    {
+      "entry": 243985,
+      "map_id": 2923,
+      "cache_sha256": "ee48bd47f396c09fd8233f96213ce69c5552423ae7096fe5657d4dba54eeb33b",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 332
+      }
+    },
+    {
+      "entry": 238883,
+      "map_id": 2923,
+      "cache_sha256": "3890bb377209fd4630759c876e2fed5e59eedaf1c8e855add7eae2f8e33e04e6",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 394
+      }
+    },
+    {
+      "entry": 241496,
+      "map_id": 2923,
+      "cache_sha256": "129a29d79e5764e3d7c61db3c89d5319a63e0a56099967cda350201cc9145029",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 456
+      }
+    },
+    {
+      "entry": 252072,
+      "map_id": 2923,
+      "cache_sha256": "527868720c950c237e5338d10079d515c8e1bdabb4e21b3e6d4617f69ee28455",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 535
+      }
+    },
+    {
+      "entry": 252053,
+      "map_id": 2923,
+      "cache_sha256": "726239b294d53bdcec96bc9145841fbf89ec9897899a7f1bb7ba4030402104a5",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 572
+      }
+    },
+    {
+      "entry": 267545,
+      "map_id": 2923,
+      "cache_sha256": "199d8df5fc503c91182b018e2285095269ce71713beedea1819f5fd470b31163",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 646
+      }
+    },
+    {
+      "entry": 267546,
+      "map_id": 2923,
+      "cache_sha256": "5445c158b4a021cf6e3af709edce5c1ae56c7feaab03ac50989bb25c80322f42",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 684
+      }
+    },
+    {
+      "entry": 244260,
+      "map_id": 2923,
+      "cache_sha256": "c870cb3c1da5fb8856138bb3e2ee45016a0d28df1d78a92eb830f36f5c284a92",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 722
+      }
+    },
+    {
+      "entry": 249608,
+      "map_id": 2923,
+      "cache_sha256": "f3085c26e1e76231d80836e30fe20f8c465d29c191e8ac119517275f601b587f",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 753
+      }
+    },
+    {
+      "entry": 249603,
+      "map_id": 2923,
+      "cache_sha256": "d17127b9e7c0aa61e70ae491e1a55d08838954261bda4254e44915ff228da20d",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 776
+      }
+    },
+    {
+      "entry": 244309,
+      "map_id": 2923,
+      "cache_sha256": "76f6ed6a3094fcea06726056640f9928785281238b979a5a686da939360b9bd5",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 805
+      }
+    },
+    {
+      "entry": 249461,
+      "map_id": 2923,
+      "cache_sha256": "1db88781b0ee00ccb40c2228200426a56f0225cc20556cbf83a440a0cfc34ebd",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 838
+      }
+    },
+    {
+      "entry": 249590,
+      "map_id": 2923,
+      "cache_sha256": "0f2a8840bd56b9881ae309bb96d77fda8e3a6311470e02376d107a7fc3d91983",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 866
+      }
+    },
+    {
+      "entry": 243835,
+      "map_id": 2923,
+      "cache_sha256": "e9c91442ffc75f38da11b5f6e32cf655cd61ad2f55c68ab1a6b8c94bf23733ae",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 889
+      }
+    },
+    {
+      "entry": 243766,
+      "map_id": 2923,
+      "cache_sha256": "ffe87c45483778417e0eb2c2575bdd0b7ca6eb8ff273cf75467373f66b5ad910",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 1019
+      }
+    },
+    {
+      "entry": 263228,
+      "map_id": 2923,
+      "cache_sha256": "d4cd4874a4458a516759249090a09da564e5b5f54c957efa527fb63791e0c1a1",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 1126
+      }
+    },
+    {
+      "entry": 243736,
+      "map_id": 2923,
+      "cache_sha256": "03e44eb0a7d69930ce9221ba273245b2b49ead98cb604f30419e615968bdcdad",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 1193
+      }
+    },
+    {
+      "entry": 245950,
+      "map_id": 2923,
+      "cache_sha256": "e2475eceb146b28a14a0dae0f819bc7a0462229ec6d065b4e90ee994436fa2a8",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 1281
+      }
+    },
+    {
+      "entry": 268184,
+      "map_id": 2923,
+      "cache_sha256": "928f4c1835afde78be3b743f06d6393c16240198f89823b5831492520e6181ec",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 1330
+      }
+    },
+    {
+      "entry": 252508,
+      "map_id": 2923,
+      "cache_sha256": "77a9986406fa478ef6edee39484a3e5e9668fcdbaaae1ca91f4749dbb2c6558a",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 1379
+      }
+    },
+    {
+      "entry": 244708,
+      "map_id": 2923,
+      "cache_sha256": "6dea670c3f36bf67abe4b29f1b7fd5dc633475874b503b7b8ad4f6903d5cebeb",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 1757
+      }
+    },
+    {
+      "entry": 239070,
+      "map_id": 2923,
+      "cache_sha256": "8e8994991f30c8aac128aa790640dc20a012e1a21283d527f4e293c6622d168c",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 1933
+      }
+    },
+    {
+      "entry": 248666,
+      "map_id": 2923,
+      "cache_sha256": "52a074435114d8cca3e21140998766eb46c366fcadf2a55443b8465fe0bd0712",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 1965
+      }
+    },
+    {
+      "entry": 254677,
+      "map_id": 2923,
+      "cache_sha256": "08e009fac3afdda837d5e8e0fad5b4711a53cc513ff40ec901b26b8677bd6ee9",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 1983
+      }
+    },
+    {
+      "entry": 255001,
+      "map_id": 2923,
+      "cache_sha256": "a5eb4e3bc1517da41e7cd2fa35e7e4aabd3b6b092662ff0c6688c9f5d5917661",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Voidscar MDT enemy entry qualifies native0 known-hostile; no same-map positive native donor; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/VoidscarArena.lua",
+        "sha256": "6fb9dc441db6b8e2c9521d685004147a179123ee28847439fcee0607cb2f616b",
+        "source_line": 2035
+      }
+    }
+  ],
+  "source_gaps": [
+    {
+      "entry": 255000,
+      "status": "FOLLOWER_TRASH_OWN_MAPPER_VARIABLE_MISSING",
+      "marker_count": null,
+      "cache_body": "/home/osso/.cache/wowhead-cache/da3868ad336acd20177ec18c88f7b5f4ef6b147e5b9555e4f1010aaab98e04ec.html",
+      "cache_sha256": "0ba8cd016bc68798aad6e9d1f7760c43f52d4803fdb6f65e493670e1707d2d0b",
+      "cache_metadata": {
+        "url": "https://www.wowhead.com/npc=255000",
+        "fetched": 1792696046.0745256,
+        "status": 200,
+        "bytes": 291394
+      },
+      "entity": {
+        "classification": 0,
+        "displayName": "Targeting Stalker",
+        "displayNames": [
+          "Targeting Stalker"
+        ],
+        "id": 255000,
+        "name": "Targeting Stalker",
+        "names": [
+          "Targeting Stalker"
+        ],
+        "type": 10
+      },
+      "title": [
+        "Targeting Stalker - NPC - World of Warcraft"
+      ],
+      "g_mapperData_present": false,
+      "other_map_terms": {
+        "new Mapper": 0,
+        "coords": 0,
+        "Show on map": 0
+      },
+      "reason": "Own NPC identity present, but required own mapper variable absent; no invented empty mapper or marker positions."
+    }
+  ],
+  "surface_sha256": "68f426c7969cb4376d1aa3b615dcf8fe7b61d957cfae09c6ac7117511fdd3038",
+  "surface_proof": {
+    "path": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/voidscar-trash-surface-preflight.json",
+    "sha256": "34826cf3e42f72dbed520e621e1b67c1f773ec18e9dce17248615480a0d9dffa",
+    "full_stream_sha256": "4fd48c4b017c5d8a43ab8e19c45e111dd8c0d53081f43332768c966421bd8b46",
+    "full_polygon_count": 1305690
+  },
+  "nav_files_sha256": {
+    "29_25.nav": "a10817900f405104c614d56f636b36cf68a8a5ef4c2746c575f9b8194ab87643",
+    "32_23.nav": "652cc293e62f15367e5119c9a65406f1e625bc366aa7fff3651ff90d6e38c9e2",
+    "32_24.nav": "6c1d70ab13fc7a1f491607d334b93d747c195efebd45ecfbc3b7bba313f5f3ef",
+    "33_22.nav": "dc8db19040a9cbe0276433f9cb1b97107a1c0a387e1f7817ffee5c71177e563f",
+    "34_26.nav": "d0547af94c24a35ce8d0e7c6eddcd49d1943f9df96cbf6a498262d03e1d4d32f",
+    "32_21.nav": "c93de3e9f9c75b40c00d8db33aee0cfa18c6a2a772f875d7a0275058b91af090",
+    "33_25.nav": "f8fc5b4de4ecb8a9a224eb5e4a46637a6e42561a948f4389c07d57ac87410c3d",
+    "32_22.nav": "1292b0bbdb17c72f215a492356b90e4a3d2968312d2af7c6bab4f74688a05b5b",
+    "34_21.nav": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "30_23.nav": "9151f3b52b1860fcc5da98ae781466cd4accdd6d98ad5b9d1c6e4a67578f68b4",
+    "31_21.nav": "5bca40b56d7e29ad45135ddf3a6c8111ea5b0bec00d2088bcec8eb4d88b75b2e",
+    "29_24.nav": "ab4301b5779f5e351087eecc66708d3843e62dff40783976bd31887de6e897b9",
+    "29_21.nav": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "33_23.nav": "4d79db8a874e1676b1374ff079fa9231290d76dc68857bf6328b7aa5d02ccfb3",
+    "34_23.nav": "0b412e8caa253f2471051f4b97bc21f34ebbd308531a28200e793be1467b2f96",
+    "31_26.nav": "83c9b9a961240045608be5dce3f78b5339f2fb16dfb1b8078979c5328f43a913",
+    "29_22.nav": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "30_26.nav": "49b22a04a0c83f8107fbac9a831b093376e480f24829280a50c9f628061c9379",
+    "32_28.nav": "ec0cfbfa4753e6346bff399f14794d6397d59b4a70b960fe77fbea319bf2474a",
+    "32_27.nav": "b51b9498a65df095f50355d5e99466b5a6b40da45e210f8c1c67317008cfe475",
+    "31_22.nav": "f3069ef8141e35c740eeb1d15c4ad903b32a3cd31be785279abf4544d37e5958",
+    "30_24.nav": "907c3533b3a9ad651ee988d997cf53715a8bcd26869d248c82eb5f6fbb2b8415",
+    "31_24.nav": "b4b33f17b85841c502b5775d66f0d6423f3b732051350769266d617387870fe7",
+    "33_21.nav": "87eea28382c006ed0674e690f31b94ac607f688f551d68f5fc78fed2e14357d8",
+    "31_25.nav": "fd121b49b3d0cb9d39dc398cfbeef6c62f0b527cac9951966640312804b550d3",
+    "32_25.nav": "13bce112f420d23b3f5a4d5c7125d2ef0bb7592f7934dec2f8adfd4d89e84981",
+    "33_26.nav": "79e112ed31d48b4e0de296c4075ecdc8f91a9ef2463a601cd2204b910ccc3bb5",
+    "33_24.nav": "652876d30beb56ad0acf34c84d8800704d1b7d200eb0f74d64abc8b6b53a69c5",
+    "29_23.nav": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "33_28.nav": "557f9565b0a6e4535254d8da2c3da9f768e57827ad8ba3d9ce09ce4dd2cad504",
+    "30_25.nav": "596c2e4f4e748a84323c26a4c44e21b1f18de2c12d8a0344ad07d7d0e2e67721",
+    "34_24.nav": "f8147fa74c1fc6bb2c6f708226585fe7112a9508f6c5f81e5b95a93a9605b5cd",
+    "33_27.nav": "e0571c952e1789b2c2498ea6589e7a28620d1f59f7da83269037d740d1276ff3",
+    "34_25.nav": "59d5f983a3fa2475ebfaee270b505945fa675a3891f8b3bf127d59633597abde",
+    "34_22.nav": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "29_26.nav": "78c178e06dbaccfddc40eb1382f29422b83a9789195d739f7e90c0438164d1ee",
+    "31_23.nav": "c217c8a666a71c4d28a30b5eb834f9193bff73cfe8db4faaa9a793beffb78c44",
+    "30_22.nav": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "32_26.nav": "9eb4d5ca4950bc526a4ac6093afdc9e17bca33a36e4e0d20807ebcdb7d190493",
+    "30_21.nav": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

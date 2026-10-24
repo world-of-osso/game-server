@@ -8,6 +8,8 @@ use std::path::PathBuf;
 mod azure_extraction;
 #[path = "corridor_inputs.rs"]
 mod corridor_inputs;
+#[path = "graph_selection.rs"]
+mod graph_selection;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(super) struct Spawn {
@@ -162,45 +164,39 @@ impl Pack {
 
 impl Graph {
     pub(super) fn difficulty_id(&self) -> u32 {
-        match self.map_id {
-            34 => 1,
-            2515 => 205,
-            other => panic!("unsupported simulator map{other}"),
-        }
+        graph_selection::requirements(self.map_id)
+            .expect("frozen graph requires source difficulty metadata")
+            .difficulty_id
     }
 
     pub(super) fn boss_entries(&self) -> &'static [u32] {
-        match self.map_id {
-            34 => &[46383, 46264, 46254],
-            2515 => &[186644, 186739, 186737, 186738],
-            other => panic!("unsupported simulator map{other}"),
-        }
+        &graph_selection::requirements(self.map_id)
+            .expect("frozen graph requires source boss metadata")
+            .boss_order
     }
 }
 
 pub(super) fn graph_path() -> PathBuf {
-    let map = std::env::var_os("DUNGEON_SIMULATOR_MAP")
-        .map(|value| {
-            value
-                .into_string()
-                .expect("DUNGEON_SIMULATOR_MAP must be UTF-8")
-        })
-        .unwrap_or_else(|| "34".into());
-    let file = match map.as_str() {
-        "34" => "stockade-34.json",
-        "2515" => "azure-vault-2515.json",
-        _ => panic!("unsupported DUNGEON_SIMULATOR_MAP={map}"),
-    };
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../content/dungeons")
-        .join(file)
+    graph_selection::read_selected_graph()
+        .expect("select explicit frozen simulator graph")
+        .1
 }
 
 pub(super) fn read_graph() -> Result<Graph, String> {
-    let path = graph_path();
+    let (selected, path) = graph_selection::read_selected_graph()?;
     let bytes =
         std::fs::read(&path).map_err(|error| format!("read {}: {error}", path.display()))?;
-    serde_json::from_slice(&bytes).map_err(|error| format!("parse {}: {error}", path.display()))
+    let graph: Graph = serde_json::from_slice(&bytes)
+        .map_err(|error| format!("parse {}: {error}", path.display()))?;
+    if graph.map_id != selected {
+        return Err(format!(
+            "selected map{selected} but {} declares map{}",
+            path.display(),
+            graph.map_id
+        ));
+    }
+    graph_selection::requirements(graph.map_id)?;
+    Ok(graph)
 }
 
 fn source_packs(data: &crate::world_data::WorldData, map_id: u16) -> Vec<Pack> {

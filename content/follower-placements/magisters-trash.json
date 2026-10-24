@@ -1,0 +1,342 @@
+{
+  "map_id": 2811,
+  "entrance_id": null,
+  "placement_policy": "FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS",
+  "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+  "guid_base": 61000000,
+  "first_trash_ordinal": 100,
+  "guarded_faction_updates": [
+    232106
+  ],
+  "entries": [
+    {
+      "entry": 232369,
+      "map_id": 2811,
+      "cache_sha256": "cd1b404e770cb09beef1f374a5164b49ce8c64ca8b0aefc9f975c1f959ba361e",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 60
+      }
+    },
+    {
+      "entry": 234089,
+      "map_id": 2811,
+      "cache_sha256": "6568a9efb47caddef8a30b977eded40a51d41820d2fe81665e93bcfe2b606334",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 149
+      }
+    },
+    {
+      "entry": 251861,
+      "map_id": 2811,
+      "cache_sha256": "4d8c7afb1ca688c33484ac79f29c318f80fa5b0c97433734efd5d8eca9ea7459",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 251
+      }
+    },
+    {
+      "entry": 240973,
+      "map_id": 2811,
+      "cache_sha256": "66b31237a23ff9526841aa69a22e27060a9d022b49f7d36a0a9e3fa01fce46d5",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 304
+      }
+    },
+    {
+      "entry": 234069,
+      "map_id": 2811,
+      "cache_sha256": "04638c62e06072e19c6573bf7b6e49f16fc025626df1eb5c2047143324f4dc9d",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 348
+      }
+    },
+    {
+      "entry": 234065,
+      "map_id": 2811,
+      "cache_sha256": "44eebe30c63476b3c40ac37ba771ef69c7eb3c47ae8aa40153c512d80ff7b658",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 739
+      }
+    },
+    {
+      "entry": 234064,
+      "map_id": 2811,
+      "cache_sha256": "bda5d545dff46e9ecb3728209567247d8993e535712d9c225984bcefad3dc2cd",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 889
+      }
+    },
+    {
+      "entry": 234068,
+      "map_id": 2811,
+      "cache_sha256": "9850abff5d5a1bb2548f44913f0ee52353c9b713e28bf0b2cd7519146eb9e783",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 992
+      }
+    },
+    {
+      "entry": 234066,
+      "map_id": 2811,
+      "cache_sha256": "b7c106260032dd7a97ed7cd9361bdf0e816527ed098b74e9c0d7ecee2e2581d9",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 1036
+      }
+    },
+    {
+      "entry": 249086,
+      "map_id": 2811,
+      "cache_sha256": "dfe1729f44e34bfd3c3dfcac2eecd349f19bb60beaafbee97d21eb24fe20bd8e",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 1088
+      }
+    },
+    {
+      "entry": 232106,
+      "map_id": 2811,
+      "cache_sha256": "ce9165d6983740c0f79c1fbf8140554f4052d3294f13e2e214a85535cdab2cc8",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 1370
+      }
+    },
+    {
+      "entry": 234062,
+      "map_id": 2811,
+      "cache_sha256": "197f6accb0f19e4bac5c62bf62e388f1b2682d88e458b7ecc05e1095d3d710bc",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 1676
+      }
+    },
+    {
+      "entry": 234067,
+      "map_id": 2811,
+      "cache_sha256": "bead87a6a9453ab4b4bdceb9ca8080fdcb1fa80d6ba4a282a368ce3491f58b2c",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 1719
+      }
+    },
+    {
+      "entry": 234124,
+      "map_id": 2811,
+      "cache_sha256": "c2d1724a13a0d0383437a2004d6b6c3c6c6faae6f2bdfcd95593e265f2325563",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 1736
+      }
+    },
+    {
+      "entry": 234486,
+      "map_id": 2811,
+      "cache_sha256": "7418c3e21559325a9b968fd9026228f6ece62f9182963305d71c33e9da5148b7",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 1859
+      }
+    },
+    {
+      "entry": 241354,
+      "map_id": 2811,
+      "cache_sha256": "59d46a74b538e90cf1968477a8815c90b2a3151533407c11ab0fbc0983a23698",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 1991
+      }
+    },
+    {
+      "entry": 255376,
+      "map_id": 2811,
+      "cache_sha256": "3a16dc3fd85b7fe802d45913d77967b9e29f39dd50094d7dabd127b0d2bbecab",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 2088
+      }
+    },
+    {
+      "entry": 257447,
+      "map_id": 2811,
+      "cache_sha256": "dda3627015932254f99691f6fd926cf5ec6c019f1ee7c4e9d67d60ffffa35bd8",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 2142
+      }
+    },
+    {
+      "entry": 259387,
+      "map_id": 2811,
+      "cache_sha256": "64c98c58e82ce58bd52a47162907fc2089478a07c586c3c0304348fb4ef6ebf7",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned Magisters MDT enemy table qualifies native0 known-hostile; no same-map positive-native faction16 donor; sourced Melidrussa188252 donates faction only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+        "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua",
+        "sha256": "e54a34a123aa54aca36d4bc8535e2a6e78596c2c50c5bcc5f4c5da94e7c92e3d",
+        "source_line": 2172
+      }
+    }
+  ],
+  "surface_sha256": "453cc03221db8c3f26c8b556fcf0d79dfa82e42ca757299e2941c6a7983c2a5f",
+  "surface_proof": {
+    "path": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/magisters-all-trash-surface-preflight.json",
+    "sha256": "869368cb5a69dace4473553b6614952eb9e97f38e7bc6be5b83536e210b265c4",
+    "full_stream_sha256": "f051953503470ac224ef23760313f98908ec5c143d8a3feaa128e526d14f1166",
+    "full_polygon_count": 735256
+  },
+  "nav_files_sha256": {
+    "39_9.nav": "232857d4663f78801562508d3ffe4f5ea51f4bf2f1358b283479e2c3c436f8d1",
+    "40_11.nav": "0bee746eb83e1527da69bc4b75cad480fc0a48d8a47aca152a52c9a1759f240a",
+    "41_12.nav": "174e0931862cdd5d189b2b039a99bd329c9a1eb1c7d35b623417006d3904e89e",
+    "39_12.nav": "0b1860fd2ff7215bff1b95ac1c40aa160e8a010a090ab93f12ebf5fce07c811f",
+    "40_10.nav": "ffd43ab3858c6812c1015c4d7e68936ecd185fb5a5e7ac97465f2fb2f042c49a",
+    "39_11.nav": "e5175bc5fea0f148e0a96074dd7ff13637a37ba3e51b613620540ec4cf518bc2",
+    "42_11.nav": "d90a18ee1bf230eb9023b3459195c2c99d6c8c78ffb2b4d7642e829cc9b67fdb",
+    "42_12.nav": "78d6b6903ff23a51d40d6a3cb134e6d91c2d151f7e03ae6b7dcdcc41d53d7bc8",
+    "39_10.nav": "c0f5a5e75f4915daf896a2d91fac786ad16a7dcca1bb7e76d06899ae87c8de75",
+    "40_9.nav": "010cfa109e463892cb8f37259a07592e25cb473fea999dea6596c6348aac26ff",
+    "42_9.nav": "9ae03a925f0fb561defb04f91e15d10c1950d4625781f5c5bab1d9e5ebdba760",
+    "42_10.nav": "70982d40ed19c0d0ddc8706861cfdd0184d125edaad7f8644457b472552bd1cb",
+    "41_11.nav": "fcdbd8d066942cfbac20bc89a3f51bcf28bced27c5aa282fcbf8ab55e966ca12",
+    "41_10.nav": "5af7e999e4b52698dd2ac32be8f47591358219a8fc021e75541cd4d6bcf245a1",
+    "41_9.nav": "a9e800322179c1003e437048569d01e9ea5d122fd829df5d8c543652f1a4c2b8",
+    "40_12.nav": "17700fdea3ce4cf894816fca3281a197b895dad22d251df57de5e1893b667653"
+  }
+}

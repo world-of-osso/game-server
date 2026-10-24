@@ -1,0 +1,58 @@
+{
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "calibration_entries": [
+    188252,
+    189232
+  ],
+  "map_id": 2915,
+  "entrance_id": null,
+  "entrance_gap": "FOLLOWER_ENTRANCE_UNSOURCED_2915",
+  "entries": [
+    {
+      "entry": 241542,
+      "ordinal": 0,
+      "map_id": 2915,
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2814",
+      "journal_encounter_id": 2814,
+      "faction_policy": "FOLLOWER_BOSS_HOSTILE_FROM_JOURNAL_ENCOUNTER",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned MDT boss entry241542 plus exact native/JEC name and display qualifies journal-hostility on follower205. Preserve own health100 and native CT0; conflicting254227 health240 is not a donor.",
+      "journal_actor_source": {
+        "policy": "BOSS_IDENTITY_FROM_PINNED_MDT_BOSS_ENTRY",
+        "journal_encounter_id": 2814,
+        "journal_actor_id": 6001,
+        "mdt_boss_source": {
+          "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/NexusPointXenas.lua",
+          "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961",
+          "sha256": "6ac0c7f134cbc7e7a4e0c3d27e8e64a21db19f66f075c11a2f5e2ed49cbd9e01",
+          "source_line": 1253
+        }
+      }
+    }
+  ],
+  "source_gaps": [
+    {
+      "name": "FOLLOWER_BOSS_IDENTITY_SOURCE_GAP_2915_2813",
+      "journal_encounter_id": 2813,
+      "journal_name": "Chief Corewright Kasreth",
+      "reason": "Native241539 name differs from exact JEC identity; no alias policy.",
+      "baked_candidates": [
+        152.62206179153677
+      ]
+    },
+    {
+      "name": "FOLLOWER_PLACEMENT_NO_BAKED_SUPPORT_2915_241546",
+      "journal_encounter_id": 2815,
+      "journal_name": "Lothraxion",
+      "reason": "No baked support at unchanged authenticated journal XY.",
+      "baked_candidates": []
+    }
+  ],
+  "surface_proof": {
+    "path": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/midnight-2915-2814-covering-surfaces.json",
+    "sha256": "81ca01db20a2841c62b7d14e2c186554e235d301fa91954c89fc874af1142ccb"
+  }
+}

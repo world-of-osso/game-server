@@ -1,0 +1,73 @@
+{
+  "map_id": 2859,
+  "entrance_id": null,
+  "entrance_gap": "FOLLOWER_ENTRANCE_UNSOURCED_2859",
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "entries": [
+    {
+      "entry": 244887,
+      "ordinal": 0,
+      "map_id": 2859,
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2770",
+      "journal_encounter_id": 2770,
+      "cache_sha256": "10749924f112035f26c37677ea9aa6b952812e5e067485f8b11334717b2881a7",
+      "faction_donor": 188252,
+      "donor_reason": "No same-dungeon native positive faction16 donor; sourced DF boss Melidrussa188252 matches hostile A/H[-1,-1]. Faction only, no stat/CT donation.",
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_EXACT_NATIVE_NAME_DISPLAY_TO_JOURNAL_ACTOR",
+        "journal_encounter_id": 2770,
+        "journal_actor_id": 6102
+      }
+    }
+  ],
+  "source_gaps": [
+    {
+      "journal_encounter_id": 2769,
+      "name": "FOLLOWER_PLACEMENT_SOURCE_FLOOR_UNRESOLVED_2859_2769",
+      "journal_name": "Lightblossom Trinity",
+      "reason": "Multiple baked levels remain at exact journalXY; no source-floor or multi-actor position selected.",
+      "baked_candidates": [
+        101.1860335421775,
+        179.43775257247717,
+        222.3602373993025,
+        236.49207006150436,
+        247.82749381556573,
+        263.89817347693725,
+        269.6791632573693,
+        284.10093054248404
+      ]
+    },
+    {
+      "journal_encounter_id": 2771,
+      "name": "FOLLOWER_PLACEMENT_SOURCE_FLOOR_UNRESOLVED_2859_2771",
+      "journal_name": "Lightwarden Ruia",
+      "reason": "Multiple baked levels remain at exact journalXY; no source-floor or multi-actor position selected.",
+      "baked_candidates": [
+        -23.863469122949994,
+        -16.112244128746788,
+        -12.806736998627517,
+        258.30173276823547,
+        311.98421140229044
+      ]
+    },
+    {
+      "journal_encounter_id": 2772,
+      "name": "FOLLOWER_PLACEMENT_SOURCE_FLOOR_UNRESOLVED_2859_2772",
+      "journal_name": "Ziekket",
+      "reason": "Multiple baked levels remain at exact journalXY; no source-floor or multi-actor position selected.",
+      "baked_candidates": [
+        -13.3959885229559,
+        174.2659816436319,
+        245.25187999999997,
+        1615.4519
+      ]
+    }
+  ],
+  "calibration_entries": [
+    188252,
+    189232
+  ]
+}

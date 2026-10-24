@@ -1,0 +1,1861 @@
+{
+  "map_id": 2662,
+  "entrance_id": 81002662,
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "entries": [
+    {
+      "entry": 211089,
+      "ordinal": 1,
+      "map_id": 2662,
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2581",
+      "journal_encounter_id": 2581,
+      "cache_sha256": "be49d7c3d1b9c0ce99a15474783c1c63dc8befea218fd40d308649657e9a8f48",
+      "source_floor": null,
+      "source_floor_evidence": {
+        "policy": "FOLLOWER_PLACEMENT_Z_FROM_AUTHORED_TERRAIN_TRIANGLE",
+        "selection_scope": "PROJECT_SELECTION_NOT_TC_SPAWN_Z",
+        "approval": "Lead approved Anub211089-only ground selection; no change to other floors/tolerance/runtime.",
+        "terrain_file": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/5321338.adt",
+        "covering_wmo_report": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/dawn-covering-wmo-source-triangle-research.json",
+        "covering_wmo_roots": [
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5333052.wmo",
+            "checked_group_file_ids": [
+              5335194,
+              5335195,
+              5335196,
+              5335197,
+              5335198,
+              5335199,
+              5335200,
+              5335201,
+              5335202,
+              5335203,
+              5335204,
+              5335205,
+              5335206,
+              5335207,
+              5335208,
+              5335209,
+              5335210,
+              5335211,
+              5335212,
+              5335213,
+              5335214,
+              5340940,
+              5340941,
+              5340942,
+              5389676,
+              5393266,
+              5393267,
+              5393268,
+              5393269,
+              5418646,
+              5418647,
+              5418648,
+              5418649,
+              5423145,
+              5423146,
+              5423147,
+              5426580,
+              5426581,
+              5426582,
+              5426583,
+              5426584,
+              5426585,
+              5426586,
+              5426587,
+              5426588,
+              5426589,
+              5426590,
+              5426591,
+              5427779,
+              5427780,
+              5427781,
+              5427782,
+              5450576,
+              5450577,
+              5450578,
+              5450579,
+              5450580,
+              5450581,
+              5450637,
+              5451012,
+              5451014,
+              5451091,
+              5451114,
+              5451193,
+              5451194,
+              5451195,
+              5451197,
+              5451198,
+              5451199,
+              5451200,
+              5451201,
+              5451202,
+              5551080,
+              5551081,
+              5551082,
+              5551083,
+              5551084,
+              5551085,
+              5551086,
+              5551087,
+              5551088,
+              5551089,
+              5551090,
+              5551091,
+              5551092,
+              5551093,
+              5551094,
+              5551095,
+              5551096,
+              5551097,
+              5551098,
+              5551099,
+              5551100,
+              5551101,
+              5551102,
+              5551103,
+              5551104,
+              5551105,
+              5551106,
+              5551107,
+              5551108,
+              5551109,
+              5551110,
+              5551111,
+              5551112,
+              5551113,
+              5551114,
+              5551115,
+              5551116,
+              5551117,
+              5551118,
+              5551119,
+              5551120,
+              5551121,
+              5551122,
+              5551123,
+              5551124,
+              5551125,
+              5551126,
+              5551127,
+              5551128,
+              5551129,
+              5551130,
+              5551131,
+              5551132,
+              5551133,
+              5551134,
+              5551135,
+              5551136,
+              5551137,
+              5551138,
+              5551139,
+              5551140,
+              5551141,
+              5551142,
+              5551143,
+              5552321,
+              5552322,
+              5552323,
+              5552324,
+              5552325,
+              5552326,
+              5552327,
+              5552328,
+              5552329,
+              5552330,
+              5552331,
+              5552332,
+              5555065,
+              5555066,
+              5555067,
+              5555068,
+              5555069,
+              5555070,
+              5555071,
+              5555072,
+              5555073,
+              5555074,
+              5555075,
+              5555076,
+              5555077,
+              5555078,
+              5555079,
+              5555080,
+              5555081,
+              5555082,
+              5555083,
+              5555084,
+              5555085,
+              5555086,
+              5555087,
+              5555088,
+              5555089,
+              5555090,
+              5555091,
+              5555092,
+              5556376,
+              5556377,
+              5556378,
+              5556379,
+              5556380,
+              5556381,
+              5556382,
+              5556383,
+              5556384,
+              5556385,
+              5556386,
+              5556387,
+              5556388,
+              5556389,
+              5556390,
+              5556391,
+              5556392,
+              5556393,
+              5556394,
+              5556395,
+              5556396,
+              5556397,
+              5556398,
+              5556399,
+              5556400,
+              5556401,
+              5556402,
+              5556403,
+              5556404,
+              5556405,
+              5556406,
+              5556407,
+              5556408,
+              5556409,
+              5556410,
+              5556411,
+              5556412,
+              5556413,
+              5556414,
+              5556415,
+              5556416,
+              5556417,
+              5556418,
+              5556419,
+              5556420,
+              5556421,
+              5556422,
+              5556423,
+              5556424,
+              5556425,
+              5556426,
+              5556427,
+              5556428,
+              5556429,
+              5556430,
+              5556431,
+              5556432,
+              5556433,
+              5556434,
+              5556435,
+              5556436,
+              5556437,
+              5556438,
+              5556439,
+              5556440,
+              5556441,
+              5556442,
+              5556443,
+              5556444,
+              5556445,
+              5556446,
+              5556447,
+              5556448,
+              5556449,
+              5556450,
+              5556451,
+              5556452,
+              5556453,
+              5556454,
+              5556455,
+              5556456,
+              5556457,
+              5556458,
+              5556459,
+              5556460,
+              5556461,
+              5556462,
+              5556463,
+              5556464,
+              5556465,
+              5556466,
+              5556467,
+              5556468,
+              5556469,
+              5556470,
+              5556471,
+              5556472,
+              5556473,
+              5556474,
+              5556475,
+              5556476,
+              5556477,
+              5556478,
+              5556479,
+              5556480,
+              5556481,
+              5556482,
+              5556483,
+              5770647,
+              5770648,
+              5770649,
+              5770650,
+              5770651,
+              5770652,
+              5770653,
+              5770654,
+              5770655,
+              5770656,
+              5770657,
+              5770658,
+              5912116,
+              5912117,
+              5912118,
+              5912119,
+              5912120,
+              5912121,
+              5912122,
+              5912123,
+              5912124,
+              5912125,
+              5912126,
+              5912127,
+              5912128,
+              5912129,
+              5912130,
+              5912131,
+              5912132,
+              5912133,
+              5912134,
+              5912135,
+              5912136,
+              5912137,
+              5912138,
+              5912139,
+              5912140,
+              5912141,
+              5912142,
+              5912143,
+              5912144,
+              5912145,
+              5912146,
+              5912147,
+              5912148,
+              5912149,
+              5912150,
+              5912151,
+              5912152,
+              5912153,
+              5912154,
+              5912155,
+              5912156,
+              5912157,
+              5912158,
+              5912159,
+              5915979,
+              5915980,
+              5915981,
+              5915982
+            ]
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5752119.wmo",
+            "checked_group_file_ids": [
+              5752192
+            ]
+          }
+        ],
+        "source_files": [
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/dawn-covering-wmo-source-triangle-research.json",
+            "sha256": "3a6773fc3e2c233e7649ad5313a64c048afb9d4ae0d4c141d7fdaa9bb61f3ff6"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5333052.wmo",
+            "sha256": "e0f0979df286975ab0c43a8239be3ee473d0b1291871934d4045fa2ab443e8ce"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335194.wmo",
+            "sha256": "2afe8486a0cc889055819d8ed2848ed9f990d7841f7abfb734b912db1a8b5211"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335195.wmo",
+            "sha256": "4a43a4169cd5507429272b90a410f4702165489cd0817783daf43abf532ea1d3"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335196.wmo",
+            "sha256": "b7101178a800ef050a82255eca72743be2359c8f95b05a12fc92d1a3f90e4bc2"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335197.wmo",
+            "sha256": "57ac142192b31d4040f707a7a46022190f0d1e318f97ad1cea741ed1b9494824"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335198.wmo",
+            "sha256": "49f2279d2a3e22d0c74534fcbf519df16809af86c6dc15bc57494365797ba35d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335199.wmo",
+            "sha256": "6f197cd54ca41ec078dcb7c7333d3541154466dcd3efdd674cdba752c6c8ead8"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335200.wmo",
+            "sha256": "235d36949a5bbb81846d8090bd35dfab5b7c73d5d020616b7002d27a19fce7b6"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335201.wmo",
+            "sha256": "3127c331a5cd3261ca48f964ee7fd85e712e4631f039a2cef51c5a38d067e880"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335202.wmo",
+            "sha256": "d30f318c57a57a15ae8dbcf90c11e2a196c453c0ac49090777f8f38fbcc24538"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335203.wmo",
+            "sha256": "0d163679a9ba0a99a8ee6676fd30ff98032ee908ac2c8521fc75f36c69eee0f9"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335204.wmo",
+            "sha256": "3bad4e7cc79e5434fa6b2f38770622745ed48db89b0538ff6c87ecb772083094"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335205.wmo",
+            "sha256": "169defe4e8caae8f7d01da88f919e1cdfb4597e82016ebd9bc6ae42ba77f299f"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335206.wmo",
+            "sha256": "b80c57eef937a43b9bd3e886ea60e9e37c78f5aab474c1836ca1d9928e0e8331"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335207.wmo",
+            "sha256": "7dae2a9bc2667f2c4b677351a793903b389ed5559a61da452b9fbc118ef7da8b"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335208.wmo",
+            "sha256": "95573c909f5bca5de51ef203667ab31575fcdf0519b4b940f69a17fe6c45e0c1"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335209.wmo",
+            "sha256": "429f46421ba864f1665c092f4829db36faa74769664ad58939d080b8f70a52f2"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335210.wmo",
+            "sha256": "fabab3c7a26bcb17c77d35d06b72aeb569d554079d8ff26a43fef45a3c719a79"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335211.wmo",
+            "sha256": "cc49ac77ec00122d601f95181979a1559351b90a320b2688216a766d36fdc44c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335212.wmo",
+            "sha256": "7a8e1bd5fc9a1e31c6945518ba912bb5ca26c22611892e092f85f8d0efee2945"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335213.wmo",
+            "sha256": "4918c485c09ff7b27a94b9de99f659a368e0bf517a04ce85b8a91790d95876b4"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5335214.wmo",
+            "sha256": "aa4161bccec0b8b57adfb4a484997100da439387bd1f5ebdc97cff75fbe60a6d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5340940.wmo",
+            "sha256": "367fda1fcea6009549cf89744c169dcc1e50bbd3ca301b04117ad31743f22540"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5340941.wmo",
+            "sha256": "bfcebe22ad4232925e16cc3212db2b246468400b4143715b8c9f3a5c31d569e7"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5340942.wmo",
+            "sha256": "4951ffe359909c88741c9024f33ebcf535c35ee73b174e14121cb9f3209b36b6"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5389676.wmo",
+            "sha256": "0113e9421bb649c6ac81dc9054012e7659f45002bfce3649671b57f1f9318a2f"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5393266.wmo",
+            "sha256": "68153de642d62a9f6f130469887169ef2b6f081f31b5e0af532da5fce45b110a"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5393267.wmo",
+            "sha256": "42327e468749d2d1a695a187a654b07204617b691de2ff092b418006fa432a6c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5393268.wmo",
+            "sha256": "cf53dd675fe5ea7cbdcfe1ce2c4ff6957360464b88d1c541da584dd20c2e269b"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5393269.wmo",
+            "sha256": "938a4ed420d28e998a2e74047ae13578f96e3eceff9296355ee2ccb80dc1f7c8"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5418646.wmo",
+            "sha256": "05b9b9b0de909892ea9f4528031c90d8e3e6b6d926098f4019c3c0fd04146684"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5418647.wmo",
+            "sha256": "31eebfdb01f5d9f6be646716fc406eb0ee0237ad3ec3196a65730ce37a1dfd77"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5418648.wmo",
+            "sha256": "d85d8ad34c35b08e13297f5f3ecf1194159fb0129c3e89c65a602ac55f28f1d8"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5418649.wmo",
+            "sha256": "c022d2021110692d156dca4bdb1e1033d21711d7203143b6961a57cb925cc4e1"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5423145.wmo",
+            "sha256": "ed1655138aa08c29b3b15f3ba10ec218ec08160a47f220a4a45cfdc55f745a5a"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5423146.wmo",
+            "sha256": "b9935ef72c37148229333c96db3de91ee29bf54c1b508aeb38f1f237ee2d4a11"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5423147.wmo",
+            "sha256": "1bf103afbd1cf84a9367e4f142c182b946255dbf5c9488b03f7080bf5c211a0e"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5426580.wmo",
+            "sha256": "ea8f4b7c378849876a2f2dcace5b27d73085ecb657a4aad196af1032489fc899"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5426581.wmo",
+            "sha256": "cd433e1355b1e6aa317b867e04969d3b8b79f155f54f3e26398f10f7e578079e"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5426582.wmo",
+            "sha256": "64b6e499d4b2233535b41c8af85856cb2cbd3d54ac07549bb0c36ad299010769"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5426583.wmo",
+            "sha256": "651a3981a222642c5ee31ece4ab9bbd94d2219f204108533c88c84ad2d1d1754"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5426584.wmo",
+            "sha256": "ac2dee658afdec6724a84db4b98e1cc929b935e7298f4b80117a940ae0013f25"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5426585.wmo",
+            "sha256": "c7a27e7f8a5c53c24df3a56e083f9398275de75d835c6fb0a7c08282f2f81d93"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5426586.wmo",
+            "sha256": "3ac740bb13702eccc003cda373c49d81683e4679d2c09176fcec94833bbde684"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5426587.wmo",
+            "sha256": "f4a76bf5f3bf35431a06bfdd2254e3fbe74f517e4d2bf04ecfc286e4d93e38a0"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5426588.wmo",
+            "sha256": "dda785771be78f9ff44c616e97c134d1beed1c11b2807b3d099fb3e9aa18e681"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5426589.wmo",
+            "sha256": "5ec6cceddc4a4e9c589090141bddef0d040c469cb2470d517d2db88cd5f1425e"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5426590.wmo",
+            "sha256": "3eeee74973dc41d1751366b945da1c827456d328fed9859df2a82f07aec33a05"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5426591.wmo",
+            "sha256": "80ea4341d0c14d1f9c384bfd553d89cc3520cf9350a1451415ab086f2d678574"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5427779.wmo",
+            "sha256": "ae0f15e98f3709c4e2f2837018bbab8bb5cac3197b93d27bf843b329797c88c4"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5427780.wmo",
+            "sha256": "46500a583d29c35a1a7fd0646e7521f1703090b03f966495ed1a14206ebee16d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5427781.wmo",
+            "sha256": "66eab67b1dfb1b273b4363b12ef671a364b6ab51dc7406a63de0c6557316bc5f"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5427782.wmo",
+            "sha256": "5b8f269d646046a1c56a6e7258292719ecd2111d6f5f9dcd93f43fc3a54c98f1"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5450576.wmo",
+            "sha256": "d008b0f3d818a3fce1333b12940bdd602bccc42fd99d3664482facb3ea3a8352"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5450577.wmo",
+            "sha256": "8e1c47fcb28c8b5a9d538a058e53b541a71a5c0793a4181f8928593321eaee41"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5450578.wmo",
+            "sha256": "6f0c0379c8e81ad7d641c5048a5f358f1f4327e471686464b6760c723ddf47dd"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5450579.wmo",
+            "sha256": "eb2e9d8fd4246ec54752d1547ca24f9fda871c2e060cb57ed1e98151d8caf6ef"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5450580.wmo",
+            "sha256": "4a0c3907d83ba77ec7545d1f40bfe302ddb0537af57aef5ab6f9d6e72333ac8c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5450581.wmo",
+            "sha256": "2ec720344498984877777ee69284dfd41e75176a58e244fe2b8d470aa7e37ab0"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5450637.wmo",
+            "sha256": "d8d297515b085aa169ddd9d832d0a46ee9b918e0bc384357ddde796429eae7bc"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5451012.wmo",
+            "sha256": "10a48e1284100ec0a9a94d6fcc2526f4c5a430db533def064f4dee89aec16e18"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5451014.wmo",
+            "sha256": "057107ca68d1b6b6a7d209ae1bad9badb6b7876eef6312bcc3798479b87cd4d4"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5451091.wmo",
+            "sha256": "8395e2a18d6004bfceb3c2fc5f50654d370b32d252e778a6fa2189fc715a8e6a"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5451114.wmo",
+            "sha256": "304090708129a980ce1f0c03f190ed5bf5ccb483843bdd8067f38755df01999a"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5451193.wmo",
+            "sha256": "251ef2bb39451e5c530268efbe91c27065948578a7835c68f77132431e1298c0"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5451194.wmo",
+            "sha256": "c7a971bf23453b14b567670cf26baa73e3d6fa593603dd6c52dbb2a83283f264"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5451195.wmo",
+            "sha256": "3f6fb7ea70b891a0a4e677827330b8e16856faae72210fe9e101ba6bc58287f5"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5451197.wmo",
+            "sha256": "b3693482375e886695e85adf873c42f26ff92ab011cd1b7f1dcecaa7dbad43ef"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5451198.wmo",
+            "sha256": "2c289ba029a562435402e37cc73d6bed1d034bfdb928d12942ae3fd568f970ab"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5451199.wmo",
+            "sha256": "27c42585bd8a63f7c3ce47c950ba39058aab86850fa4e6be5708f467d3dbf2a1"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5451200.wmo",
+            "sha256": "49558733eb9893ef5e04e13677af70408d727bb084a98f12ff2dfde425350cdc"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5451201.wmo",
+            "sha256": "bbf465e8230e4ed0e6a0cd3c02c2034a3c04cf60d7ca33c7b11c7b23a96b058c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5451202.wmo",
+            "sha256": "239493df1cc6850f450fa5b31fb7977a5f6849d797fdd7611e78aab51d28a46f"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551080.wmo",
+            "sha256": "ffc71a92dc35240e5de0d67763da7060b2e6320e70485197977b280fdda91c3f"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551081.wmo",
+            "sha256": "3944f9bba97a70e2d6bac50e6d5022d135940e1848b140e2ad2416672d0372be"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551082.wmo",
+            "sha256": "4ba149198f00718346777319fc40d81a91db0701f26f4aade78c8bb8141c66b1"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551083.wmo",
+            "sha256": "e02ab2bdbf81e4cdb9a1dbaa38d077fd4cb7ed01bd5d594ee61f150c084b4cb4"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551084.wmo",
+            "sha256": "c5f1b7cfcbd71886b1df84a5cf7452fcbcd4fade7d2215a7afbea064baf01f54"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551085.wmo",
+            "sha256": "7c8aea0bd2804ad45ab0b69475622eb0e9b14997ddd6626ef0120c6a96dee029"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551086.wmo",
+            "sha256": "511dd83b3fa99034329fc5d85e9332ae00c9e7042356c68d9fca38fa570429d0"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551087.wmo",
+            "sha256": "3dc14cee952e4de20e661ee9e9b29e4c30ab6ea42385777c4a3aeb78d45dc3cc"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551088.wmo",
+            "sha256": "e8108d1689beead8eaf6c48a1281983029ecdff48c4454a67e7a3e3910295c36"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551089.wmo",
+            "sha256": "3b3533ccb7d2d719638872261995455f91f58b05c84034f7b4aa8504a1cab461"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551090.wmo",
+            "sha256": "57a21812083b4dd77040db358bf896d9a5abf5be474e258f192af032b2d82357"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551091.wmo",
+            "sha256": "fc55e2c6b60a64a3dcfa137cb4402c26208e0a2c07f962c070932c86d1064491"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551092.wmo",
+            "sha256": "928ad518ac3d6ab7f23b1ecff196d4a4fbd851763010cb3a347fb9ca25ed74c3"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551093.wmo",
+            "sha256": "1121bffec641ea6b747601e4c2db2df8474e0b66fbe07d48e0e4e713481c2601"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551094.wmo",
+            "sha256": "bd158a56aaffef014f51d3e55576a84fdb9b792df70592b9a0dbc39fefa12fc8"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551095.wmo",
+            "sha256": "016b00ed2d9a5ebdfe169f92b71bccc7d31bf47becb19a50842c9f59930de991"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551096.wmo",
+            "sha256": "42d2ac89dcda62ad657795fa5df00cc9183103140d3329b5736ec2b7bbca9b0a"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551097.wmo",
+            "sha256": "9dadfbc0bba72bdf626aec4d34711569318e965e47215abe2383866b9444db3c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551098.wmo",
+            "sha256": "7c7bea294b4462f38fba0e346d479f7e97dc807b32cc65b52325c1d25d18676f"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551099.wmo",
+            "sha256": "2c822aa51a94308a89a088563b8f87f38cad2e4ad33621808b40021e5bf9c90d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551100.wmo",
+            "sha256": "d34403cf7b07ddccf4c154448d14e58d34ee9bcbcf66a1fd6edf2c0147dd2641"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551101.wmo",
+            "sha256": "021a92132e2aa560c1704e2acc754a8b81e45d87fbfefec9ea222afcd4512d7f"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551102.wmo",
+            "sha256": "3343875c1277bcf17f99d9515c6afaac4d76714524448dd09d15ed4702037195"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551103.wmo",
+            "sha256": "dcd5a91e4a7687f817fd183544f98f2b3498ce6050f81a4f979157a2ce3c1bf7"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551104.wmo",
+            "sha256": "dd50169c600e0644ae5d165f7dda465d812f33571b979f360897fed221352ef9"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551105.wmo",
+            "sha256": "24404e6f39ca934ffd69b43241f756012e1cb1d36dac35f1bc0a7c53108ee7eb"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551106.wmo",
+            "sha256": "f996647f8292b2143b7ffb1643e498ca5637c4a737c0c1c0c3cec7126f68e52d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551107.wmo",
+            "sha256": "e4e753b23d46a4d8511224c3f529cbf93a16c58cc9292da3a1577fee3d061adf"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551108.wmo",
+            "sha256": "54564fe821646f92d0ac740d61e3844302b5a2b3bd939abbd1d3bceac1a0646d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551109.wmo",
+            "sha256": "6a7ac8bfadd9b3403a504965f5753893c23c924e327a4108d1755a1bb95fe690"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551110.wmo",
+            "sha256": "644f0350930a30489157447d670319d867cf1865f273a81ff13f27e6b2217f1c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551111.wmo",
+            "sha256": "ba5549f2541d3f5620fcae0773091e486cf332f86dc90fc0cf0f39b0d2652d94"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551112.wmo",
+            "sha256": "36c830a4396637bd5ef658e696ee60c6c816da430e87bc5e473988a6ab3c3313"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551113.wmo",
+            "sha256": "223867ce92625d7b27a4327183450127bd2e6392aa80637d582821380191c63a"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551114.wmo",
+            "sha256": "82c8fb2c70198fe153a2fa084baba59bfda151d720f9310a0100781400af1fc0"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551115.wmo",
+            "sha256": "b9a13e715e577334a210a9a9b62504658b6f3ec474da713b67a71dabb63ebc3e"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551116.wmo",
+            "sha256": "9aae4d5550f6cbdeebf61848966fbc0dcb24a15b1277afb326e210a1a2403a6d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551117.wmo",
+            "sha256": "af19505525da8d8abe8307d6fdc50277b060970ebef9d6ca56b3d4ed26222170"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551118.wmo",
+            "sha256": "55b5c9217a38289ce14c1f2f2b2fa75a8c1568b3d5a52baaaa10f51ff5e1e819"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551119.wmo",
+            "sha256": "d745457807a85fae512c5b8daf9fd9011106f5bd1dc36c27b40fe15650e3a1a8"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551120.wmo",
+            "sha256": "ce86cca1790685b50e62d62861dafba13c8fc230d5da204d489cb45d20d47ac4"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551121.wmo",
+            "sha256": "8396e0378e6396d594bf9d32c58f9c1c54b7d6b0fd691cd5e1de4ef7be17c07c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551122.wmo",
+            "sha256": "73eca7c75329d598ceb7cd930a52655e82f646090a28b245bc938c48836d99a0"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551123.wmo",
+            "sha256": "42bb3ddd2ca18d64c224b7091217896080607dd967f1ea4428e4eb574ea9d17d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551124.wmo",
+            "sha256": "99d069477f91b506f9b44642b8e8e150aed0044c69647e1645a35b85be698c84"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551125.wmo",
+            "sha256": "5ca4be80734f621c90e6a46d66b6af62df8c730d6968f5fd5dea91531f6684f5"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551126.wmo",
+            "sha256": "7eb2d1bd1af2bc230572f7df5fcb8df81685e7dccdb6c24c71d4a7a7aa05bc6d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551127.wmo",
+            "sha256": "58836e7fc3139f75773e0a1c1508e30afaae883c57f021c571af0eb15d04e402"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551128.wmo",
+            "sha256": "26fd58267cf236c85f908fc2534e13adcbf388270acaf47c251369a585631a6d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551129.wmo",
+            "sha256": "27f8f850b651ab07f3c331749836aee85e12fc2fc6f156f4716bf4f2d5d1cdf6"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551130.wmo",
+            "sha256": "2fbc2471cacb0082d4519f30e4ec795cdf674f4296abf148af765ab70fd3dbd6"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551131.wmo",
+            "sha256": "d3992626e2b360c798df912831f1367879799e059384d89ac1cedb5172e59850"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551132.wmo",
+            "sha256": "71f698bee1e8eb81a2d56fb7e770f70f1c1ecbfc60fe413af9407979a8861a47"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551133.wmo",
+            "sha256": "89fd56d034a1d9500798d7735e2fd30027d3adf25a15498f5b7c7dc044d0e5c5"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551134.wmo",
+            "sha256": "856e8907ef7cb70198bb2651fa04ae3b3e12cd5f099c03e36f69d3da987689da"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551135.wmo",
+            "sha256": "2b2fc17d8a9be5a1890440444a6c6d06a629ce41956b9f9887994519a2f37471"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551136.wmo",
+            "sha256": "f6f74c8bc354ea0bb4e139c9aa5419ff4ac90308c70f46d23b359b6e9d382409"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551137.wmo",
+            "sha256": "9309fd6f93091f8a273c5a30410c3d12413bc52f4146dad3aba8db20acde890e"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551138.wmo",
+            "sha256": "ae6e394161bf60af7bed999096d2c10c97d71035d8a8f3206eb743fe415acfd2"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551139.wmo",
+            "sha256": "0739e50d1dfa07a830839592a4e09bb1bbc48436717c976c14166ae5cf8fae0f"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551140.wmo",
+            "sha256": "33cc169ee6251d695747e760dc4ab60021836b4b10c6a320b6ccdbced0ce28dd"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551141.wmo",
+            "sha256": "b7c0775e1ce73b57284381b52c3175fccb26acf8d2b5fa785947a85c1076ff63"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551142.wmo",
+            "sha256": "ee8e90167c10c55d79c19f97fbcf59baba4aa480e6ed12507ae3bae3ccbdb273"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5551143.wmo",
+            "sha256": "c036337072e693de42ae1cd2368e795dd5235d31213a548453ac1d212abfb859"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5552321.wmo",
+            "sha256": "15a66e0201bb2b185abd97c9ff960dd236b09317a06b0e9eb40170af449b173b"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5552322.wmo",
+            "sha256": "f1d92073cfe9f2784b7fb905239135da87d222f14c8c0f343d7b953cabcedce7"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5552323.wmo",
+            "sha256": "5c96a9870937362a62e647bdd029db49b7a3ba95fd9c658f8176866fc9573f17"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5552324.wmo",
+            "sha256": "13b11686b6c5bfc957788b1f51ce67e8a8253601ed520217fa2814c58f5792cf"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5552325.wmo",
+            "sha256": "b9000651a894fb07225a26015b3458d74e572c2292996b0a20e84fa77879dfae"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5552326.wmo",
+            "sha256": "6794364cf18b4447aca3a6ac639f00aa505e9738876107c5535630962b768c03"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5552327.wmo",
+            "sha256": "b57a40570abff1d65024471abb927e042b51058eeb098dbc0ef8a236a8cdb854"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5552328.wmo",
+            "sha256": "13bebbcd3407ee62b44d0c3fe65344ae6e54dfe7963987e6b878ada91c309625"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5552329.wmo",
+            "sha256": "257ad7217f7c78d0479250680f69b99ee0c4d29c827acefefb256893b4a81068"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5552330.wmo",
+            "sha256": "9734b5195e20f027dc8ad15884893313217b38458545fb85cb9504ef752a5d87"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5552331.wmo",
+            "sha256": "adbadd6dc147df8b8c5014ce149fe4cfce42e16e23b7a509b08edbfb70c3ceb4"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5552332.wmo",
+            "sha256": "9b19b4c13dcb748575064f710d34144d5866eed9a576a83f967bba4cb1c8aef6"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555065.wmo",
+            "sha256": "bb44c699c50d127f896a58ecd47288c420c121968f300134f47e94d9a143fcf7"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555066.wmo",
+            "sha256": "95ad75fbf3de723b705d87b0c7361c5c7450a3b7daa809bfdfe80fcfe430e2fb"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555067.wmo",
+            "sha256": "801557e366c877fba5ffc52a29434a76030192504e10c1291fc0a99ac13b2c2d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555068.wmo",
+            "sha256": "36ea037909466040756315a29d85372cddb00629579c667f48cb3b7be3ec4019"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555069.wmo",
+            "sha256": "65b64ee690adfa4a5bc11bd186f2497100661b2f3be0214f78ea59faf0550dff"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555070.wmo",
+            "sha256": "6f3bcac6556daaa5437b782e4971d18115e9d900c5280dcef9e28c39746c1723"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555071.wmo",
+            "sha256": "9853dacdf0bdf92e00a1366aa3d2f63dd6df48a76d6d5f7943d0442a29beeb39"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555072.wmo",
+            "sha256": "b94595213da92fa12b28fd5180251780ecab50b1e66cf31d4bfc560950595d3d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555073.wmo",
+            "sha256": "24270cd79dc89f8ea8aca9c29df67ec5af927a9cb8282abf0c6a2d8bc1060e41"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555074.wmo",
+            "sha256": "515a151988db6ee797262f42543052122b7bc2eba7028fecb8dc45d943ae9257"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555075.wmo",
+            "sha256": "73aebc652aa5f71c5e310b1bdaea3060f42a9637cde6fe93566200acf9fe711b"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555076.wmo",
+            "sha256": "d15f6a852c0321adf8286b9ba1741a1bbc6194cc2132edb3ccb4dc049cc99e37"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555077.wmo",
+            "sha256": "b88ed982d28cf553ba289603e9d38927032c28e958650ec7074913ed2ea37245"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555078.wmo",
+            "sha256": "e5ed5d51347156479317f61db3a867d2caa57aad0cecc44d5fb0a75a72bead2e"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555079.wmo",
+            "sha256": "14eabe8dfd5205ae76f4a2866ea5ee93e4a3da52fdf79f78516aac012233e9ee"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555080.wmo",
+            "sha256": "16c5bd49f3a2d4f116062cecf9c58a7b5cf349376ec080358d186e2316d78f8a"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555081.wmo",
+            "sha256": "f7bf0c9c930f0de5b410cc3ba950079a31d431bc0796a0494d3b1e797784f67a"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555082.wmo",
+            "sha256": "1ef90668edb9f233c75a3ea2eabd4185f42a34d2bc80dc474fbc3f4a5448f127"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555083.wmo",
+            "sha256": "7738f94fd338e30f3f4e3fafa0de344f5205d7f1d565f22934ff713a801508f4"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555084.wmo",
+            "sha256": "b8c19aa1c22b11d55fa4a9ba1975da5d0516d3599f80b38cc1dc6ffbd605f66b"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555085.wmo",
+            "sha256": "2546a93aecafb602d457843ef1923d3cbb520c50f40dcdafb8b35e7cc3c0a230"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555086.wmo",
+            "sha256": "083c32883965e679a9033068b08e430914768228502eb26b95d3fda8bf821164"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555087.wmo",
+            "sha256": "c708813fedccadb3c25e7ba505ffad524a41bb845665e0fc6179c4a8f34199bd"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555088.wmo",
+            "sha256": "b09067531140b43533d62fb19c1ec40cc193f15dd9be78db281ac8f34f5ad5b8"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555089.wmo",
+            "sha256": "b5e2d625c8f2c347695327b3837d75a0cbb3485c7035d1e8659a197a974ed7c8"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555090.wmo",
+            "sha256": "e348b6d7214018cb550693a3053b1fbee8bce767ea63aa20f85d5b5773089d66"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555091.wmo",
+            "sha256": "ed50b9c57a4380531a010255eab94e44902bd8f4027276584b04e144b3bd6de7"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5555092.wmo",
+            "sha256": "1dc90d98775d6cbea1760eebaebf5636dc0b72df0c2b6380be4df8c078af53b1"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556376.wmo",
+            "sha256": "b4e133e7647d303b731a4d2a8da1973a3ab9abbebc14a607bce510bce86e0e2a"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556377.wmo",
+            "sha256": "1e18bca07846c5ee5d70150dd18bd298b7c0eefd7b4f5ab220288a6cc140fc94"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556378.wmo",
+            "sha256": "4637fb39f14df56711f2bb4b86f22c115a059d118a0f00948071288fec13f0e7"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556379.wmo",
+            "sha256": "6b60f2d26b97cf272b5bac466d79d4f16d85af73f188f4e216e2d012c7af6c94"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556380.wmo",
+            "sha256": "79dc46743bbd8f6a39ba8f13aad5d1c4b8d8d5d21578e8f5f7bb35daacc8c00d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556381.wmo",
+            "sha256": "c7d34fa4cf842745f19a3219a3d53d6f157c1ac128116a7b0189a5e0510f58a8"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556382.wmo",
+            "sha256": "6b39bbc7db4d8cc51dbad750b8e0c2128e986e80ec9829eceb125d20268e340d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556383.wmo",
+            "sha256": "91beeeedf9d83fc057c922a9fbefc70cca683a87918bfdfb1790233df7964ab0"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556384.wmo",
+            "sha256": "c94f3610ebbf952019a6fd4e0dd2a09f7e6a4c90e43cdbf33e908033ead13721"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556385.wmo",
+            "sha256": "c4e91af5c43e0bda3879903e5b3f8312dea464f4e63e590592764359f36f83a9"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556386.wmo",
+            "sha256": "49825e378565234e48c18dd8e82dd546464cd5de445150ca4408628f680f44ae"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556387.wmo",
+            "sha256": "d0ef80a883d40770a03a5d78fa5fda153fbc16d80f969dcdf457e27605b8e5fc"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556388.wmo",
+            "sha256": "b6acf62445e31c7c48193b6caa239d3c2b19755d1c419c07ffe864053d852d5c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556389.wmo",
+            "sha256": "b06c7afb777c09d30bfa538576bfb1088dbe98698d48c8f1e5433313d7e110a8"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556390.wmo",
+            "sha256": "e6cdb9c7e239dbc617581fe27d1a00889f2af45698650d8ef608061180acf8d9"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556391.wmo",
+            "sha256": "04503f25fe93bdaf9c3992ef9b74cacbd9978d771c8aa7b8295c7867a850df18"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556392.wmo",
+            "sha256": "c5af9297c47af8b2a71586586b28115c18fcbe5403cafe97705950c4266a695d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556393.wmo",
+            "sha256": "c010a6effbc364b326907adaa9b05a2af413eff767bea263a7a23b35a79cd339"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556394.wmo",
+            "sha256": "89083c211d3dc61d4e5cf4cecbaa967cd791e730d3bc978d865ef4432545068b"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556395.wmo",
+            "sha256": "054ff12724a86af45e0323011feba4d8a993318fcdb2e7c438b25ffd2b5f8384"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556396.wmo",
+            "sha256": "dcf1b8c7b93c0050b00adba9b2cd0f4d1d4f3d2d08403d28b96e3c6b826b8dcd"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556397.wmo",
+            "sha256": "a0361b1f9209a4a9321b778aa05315bbb84af5ca1186a6233eaa3efa6969215a"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556398.wmo",
+            "sha256": "0411a706643e7fac6563910f85d156f762b85f1377101b8c8ac95fbcde42bc7c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556399.wmo",
+            "sha256": "8b9db9336472330bff197e714b01a9347fa2fa4754758e8f81b89bf823c314aa"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556400.wmo",
+            "sha256": "131d4575530363254ede2e611e9be418b427e1d0f5c902f9a30f89dabb427d2a"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556401.wmo",
+            "sha256": "d15aea3bb4fd8f9fa9de9e703901b3792c917a182376b2535e60faa2c54f16b7"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556402.wmo",
+            "sha256": "27436715fc5ff1279709aabb2b549cb0ca605aae60c9b7fc1593f90aa196b937"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556403.wmo",
+            "sha256": "4ebb6b554d1f82676ea9239f3762683e3722055fb1bffbc71e2055350c792305"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556404.wmo",
+            "sha256": "9e378f7fd437cc3f343ad2b39dc0ed810106f732bc21d8e3d21d7ac327b51471"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556405.wmo",
+            "sha256": "4ce40cbe6161568a5bed31cac7e5a4e4c502351a2b3d5fd15baa485c3e3920b3"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556406.wmo",
+            "sha256": "ab177314bc4a40d7f9fc92676600db798a78fd483a7809699cbd71e928f3d4b5"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556407.wmo",
+            "sha256": "4fd48d5577871091ade4124b7df4987edd187d6fbf4905d810499b7247ba0cc9"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556408.wmo",
+            "sha256": "b71a41ff6fdea53be10ea098ff2def53241d35360f91bc05e677c424dca0e2c2"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556409.wmo",
+            "sha256": "21b10b0601589730f7cbfc6d903df00a74297033a50600e8472049c8c8de0e67"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556410.wmo",
+            "sha256": "c03614d3eebbe6f556282d275cdf3c80d2496de0d4519f3fffaeb15f0b33f216"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556411.wmo",
+            "sha256": "372a761b9bdf31073f3a8c5e3189c33c765656f5755fc0e79888a68a7808ead1"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556412.wmo",
+            "sha256": "e254cc91ec5d6a10abe8bbcd64ca473599766feff5eee60d0d2abf414228eeba"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556413.wmo",
+            "sha256": "4e9642ea599344eb7f6e6177f9f54f7491341e4596f57e96fd75fcdb42364870"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556414.wmo",
+            "sha256": "cc6c722a261eca46e083c83591ffa697b1878d34d515f6e018ecd220fe8357fd"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556415.wmo",
+            "sha256": "67932106f8cdb3a7cc3030e5a102e16cce3a81f814745ab9378d3114553c40ed"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556416.wmo",
+            "sha256": "aa744f8a84ac58ef8f6b2aef72146a855d557191456700d280c311b7d5de8961"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556417.wmo",
+            "sha256": "f5bb963c92e793ad1c51550084bf740855fa0a47d7c9a3e18f6e80a392947e0c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556418.wmo",
+            "sha256": "7c9f33e793cc2ed0673096b547020c40c73a7d84ff3f9246db7971435557153f"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556419.wmo",
+            "sha256": "196bba2989f950f8e6c8a0ebc60b79dba10b80fc4c30c2f52be0ab66558da5ed"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556420.wmo",
+            "sha256": "ed5aceafc6ed7f9a5ed2b38c11c19b8547f267ff92f1c0d5c004d424395ea5bd"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556421.wmo",
+            "sha256": "5ff455f63febe92d667d48771dece624e748cd2c05d655e88822cea9c81120c2"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556422.wmo",
+            "sha256": "a8e2f7600a09fcb60754a6fb8be39a0e6b8e62676603e2d59b7d4db1ce39532e"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556423.wmo",
+            "sha256": "a21d84977942ca06d28b57616d55845880986de21182d332555c0cff9fa9ce7c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556424.wmo",
+            "sha256": "0197d1fb2dbf367bb9c7e4840b3ae3b7d3ee046a64e761e87e9bd785e031eb79"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556425.wmo",
+            "sha256": "c1da59f2d07509925aa6d0e4a4dc7743f70cbda2070530ec5e5d5c9122ea1747"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556426.wmo",
+            "sha256": "aa7f0df79cb5daf76d448317c0c59a1ef6d58f3a722d5f640918e7e31b80c45e"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556427.wmo",
+            "sha256": "ce4e6ff0b8513f4450fb75f63444479ab06d164919275a578da6c84aaf50201c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556428.wmo",
+            "sha256": "4ce15a64912586da336f2aef37d95e5c21a472708d4edc7ca62d3aeadcfd6319"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556429.wmo",
+            "sha256": "7963d7c6af7f8449564ec9ace46748a356861bbccc5ee9fe162597f095462419"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556430.wmo",
+            "sha256": "f7d3e8c91b1d6bf711610249368e189540bf921cf7bbebb519396b5472b45778"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556431.wmo",
+            "sha256": "a3407627c87e822573228e19d3508191a992e6e5e69d90afe11a464aac47f2af"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556432.wmo",
+            "sha256": "8bf2ace22726eee11ba560ef946fbb3b7c852ea5ce0061f4ecf78833b7b1ee71"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556433.wmo",
+            "sha256": "028af1c782488dc0bb2fa1660be171d7c56e71d5b4084e1ec89ab29cc2b21482"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556434.wmo",
+            "sha256": "444200552fb88e4a7cd7cc131e0065d194eba82c86edc755d19fdb3787642979"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556435.wmo",
+            "sha256": "639c006fab5b01798b7040ce82fbe7b4b75988be57a1ba5f356afeffc056770f"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556436.wmo",
+            "sha256": "ab44b9b096a45d2b69046ed7555cae5d48d33a2b6261ad614ef8aa7952145756"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556437.wmo",
+            "sha256": "f34ddb1e3229c5a559b423fee2255af36a08cc6ed68886762ef812a70b388bac"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556438.wmo",
+            "sha256": "2ee3dcc273eeebbe9a68d7d206478432ade11d83529ff108c4e78213510187a5"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556439.wmo",
+            "sha256": "f5b9bd3cf55f38e1ba27eb81dca4c6680d9debcb3d87beb53f83fbb719250c9c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556440.wmo",
+            "sha256": "8cb9459b9c645dcf7d084cb0e32eed85046298c7c6dbd38d7743b626f20d63cf"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556441.wmo",
+            "sha256": "d048fee0e5f04cb0f19788c774f281836189433f55043a52dfe83b5c5d8c5996"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556442.wmo",
+            "sha256": "0fa68a9c23840906459b5eabcaf33805ee14cfdd2814e1fe0dbce73e4b06b526"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556443.wmo",
+            "sha256": "ffef4213c33fd5e73160717c6b8c627a3197d6548e45835af6c984a7a1ee893a"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556444.wmo",
+            "sha256": "fac3257362c2b55b8f9e08e1afd5a12f00a5d17e32c059b661f3959eea4dc646"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556445.wmo",
+            "sha256": "dd80a3d2d433b949e483793d2ed59e2440e82a0fe0ee176244371d4824be7988"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556446.wmo",
+            "sha256": "5a680d67ee5d9482b220916d8a6b089aed397c9343a4868baeb79522628d4d57"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556447.wmo",
+            "sha256": "b0c48fa0763af9db4843560d92a2f4ee334e49de36771fd4834305e57e4e5f75"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556448.wmo",
+            "sha256": "fc22cb5c76e9eb785c1e85f2652974b0c9afa107b3f546e2f62a3d9ba214f154"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556449.wmo",
+            "sha256": "5be8c24473f6d2f914b5de94f23db1ff4b9b1da26675611eb68cad84d8309317"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556450.wmo",
+            "sha256": "8061c07d86543f1e1a1bddaec9e6bf93af96705352ece0f5cb567df9a9a9f9ff"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556451.wmo",
+            "sha256": "58e40c2f72b02501d43f082c0bc6a78e2c7d173f526a93f745db0089fba924cf"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556452.wmo",
+            "sha256": "5b77ee701f5a8d7d5f3dbae99ad758817fa049c47005d8315f2ea84297cd3dc6"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556453.wmo",
+            "sha256": "badae71f039c5f18fbca3bb77c1aa10ea0823aaf44344ef0b71d7438d84ce376"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556454.wmo",
+            "sha256": "51e5725e663db4d191c8d54bd1bec5cd05dbb4696b8611f536f844e7ae45445f"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556455.wmo",
+            "sha256": "d036c06df7ac201b0b087c61c4b9f09e8c2fe518f94e268ead3d212262303c1d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556456.wmo",
+            "sha256": "3adbe3169d89c6c88fcb1eb9c0e4b97f2318268597cc3cc0a929848e89b6243e"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556457.wmo",
+            "sha256": "a95058650ec2802ba3e533f2c117ea492195fd713a19b412d0fa572fafab4f5d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556458.wmo",
+            "sha256": "2232b81d19a8e34aed36c5f9f7a7aedc1031488f0a40bd66c2b7b17cfe384274"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556459.wmo",
+            "sha256": "6a51a4d34bc250a1604ba2d07cfedab0223737f8d7c6c3dc70961d91b2bf5a9b"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556460.wmo",
+            "sha256": "e20257e578f3edf5f406d7056d3fbafe1308e6f1f6469642b04dc50c3b409e9c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556461.wmo",
+            "sha256": "9c437c700b6c0608cc5d117f5c8ed0079443714078b2ae11b1f3f0563f4246a7"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556462.wmo",
+            "sha256": "e357d68716eb3c488ce1172130e3b70c31bfb7a447fdddaa529e7811f70487ee"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556463.wmo",
+            "sha256": "6d7e4ea297f7e2b27b5ea94a38b6a86077fc5a16c310a45ed2a2c545b455a7c9"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556464.wmo",
+            "sha256": "d770c2608c51048acd210a548ba8a539b827e43ad645195d06fe331e9c27b636"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556465.wmo",
+            "sha256": "c309f0fcb13b4c1f84799b81726678cef4e4b341092c93e6f705f82fae9286b0"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556466.wmo",
+            "sha256": "60b329e3446c5dba98777c0e76b6281afeda64175012d062e91752562a7000a3"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556467.wmo",
+            "sha256": "7566d6343622e483ee7d2be417cba969fc31d6648f8b1f60f442f6c162a44da4"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556468.wmo",
+            "sha256": "545527790ed220e29f7a1be546fe0e786f765c5871e3c60413e0c045794c847f"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556469.wmo",
+            "sha256": "ca88960d5e2a113861ff1f30af68ce5bffaeb0a9b9949ab9c313656bf8f9b4e4"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556470.wmo",
+            "sha256": "7e14d8b572df964eb4adb246e4e73f66f37607f135215875312375edfbc4101c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556471.wmo",
+            "sha256": "aba3f8edce3e40609b8e7dc55fc86ca304274c87061265da2ede5e4c4e345ec8"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556472.wmo",
+            "sha256": "f93eed20219d91760481eeadf017e8ef06d30e7a09deed882c4ae2b61bb80495"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556473.wmo",
+            "sha256": "7f49ec21d6d292b063d68abb6a28a3c60c05815e1085d356221b83e814c7bc46"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556474.wmo",
+            "sha256": "cba2c0a0ac372628259fcac3d20b8618ce750622451e8007e13259956f25fe32"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556475.wmo",
+            "sha256": "fcbb99ccaf5844fc494800032428c701bc6ea429ed2ada780ffa9716a8ace7dd"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556476.wmo",
+            "sha256": "90953757dbaf6a03ab758bec63b091222dc37c273e256f52e603be898aa9c9ad"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556477.wmo",
+            "sha256": "dc637fd9042e6787b1f55d5b3961cd9aec99458f40a9137085cacb6b2ec75e82"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556478.wmo",
+            "sha256": "4def2f46ee65f26180ed574e7e67da7a305f7f8a1781eddc4e48b92368ec40b9"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556479.wmo",
+            "sha256": "915343638a985f330be1afe13ba0ea78da3895a2ac76cbca4826419750d99d82"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556480.wmo",
+            "sha256": "8d4d40c6a642e1dd146d3160a84b0886765496ced0f51cdca92116518de08ff8"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556481.wmo",
+            "sha256": "521f1a5d9ba294299495b9c97a35a41c8d4444e61c81eddb858997559b0df99e"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556482.wmo",
+            "sha256": "b235639eabe1b2ce980d6d174804cf4ff49e61bc583002596615efb73141e179"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5556483.wmo",
+            "sha256": "4f02f960e3ca5cdb730f6cc652bd6ae1880ed6ea13dbe17ed71f63b9a8a1270b"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5752119.wmo",
+            "sha256": "d7afe3f877cdc74af6697eba1d755439bc28c0e33e57d0b4d49c184a043f5fc6"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5752192.wmo",
+            "sha256": "75c1a6779ced30fe29fe313972282fdce071f2f10381ab16b4d8ed53a71df6e9"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5770647.wmo",
+            "sha256": "f6e809a493724f43252d5d15789818687ad720c4785985212f38cac420674888"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5770648.wmo",
+            "sha256": "37b8eaee4d6d51da6e288c8c68210c2c9b159b18bfa7330a68d262fc1e09359a"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5770649.wmo",
+            "sha256": "84698b39c1a94f9050aac278647fbaff5b66e5f1b270c8f7038d634254d1586e"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5770650.wmo",
+            "sha256": "ba514dd8536f1b94e813057840a69eab2e5fa75724230f5d72f963b2cac1bf83"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5770651.wmo",
+            "sha256": "92c3ba7a38123b0141c5ddc5008281871a5ad0a7282a256b4950f859d2b29e19"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5770652.wmo",
+            "sha256": "aed1c761212620af28378850b03d95786fc1afa933564303ad14632a986cfaad"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5770653.wmo",
+            "sha256": "31a91104ba4a958cae6e948079e13d2b4bec482d88459657cfa105d8a4754bf1"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5770654.wmo",
+            "sha256": "00ea23f4d8f1a62699853d2d102e57d409a6101dc345c8ddeb39254574ebe3fe"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5770655.wmo",
+            "sha256": "2a55d5bfeaac83ebc6034b923e55e041ca40d33fcdc50a14ea48688a02703c97"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5770656.wmo",
+            "sha256": "c9bca192f2851209d612a157d85a7e6cd3013d211648d206b8cbaf54224a5716"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5770657.wmo",
+            "sha256": "a35402c730b7a3763217857151cddacddb6b14f1ef1efb895c712da7d89b95c4"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5770658.wmo",
+            "sha256": "f3116de4e804a1f12edcbb7f8bd1ca6647c31aef39f9eeb60b41a040c6b726de"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912116.wmo",
+            "sha256": "e0d5cfd49535e844a8d06fe0b47944951f02c56e3f0c98edf5dbfcd01a0866bc"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912117.wmo",
+            "sha256": "acf8a4a8c37621922c97581516cdea9c360fe56a5d012191135d05bb80a43a2b"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912118.wmo",
+            "sha256": "8aee6d9cc206e28d88b79e1ad3f8e3bf03971efd1b20b460ffc775bc37effd80"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912119.wmo",
+            "sha256": "d050bfb5c712f8ed5697653d31ffeaecbbe472bd018d8dcdf486ca747568eb1c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912120.wmo",
+            "sha256": "fea04394af1dc00fa0242b7e116c9d0faa82d38c6738caef3e3d0d275208b357"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912121.wmo",
+            "sha256": "51d8cb00796dd92fcbe03325a51a212e78c39a927b8aeaa5ea3c4e5fd3ed8abe"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912122.wmo",
+            "sha256": "9e156f26102919579a7f4ff06c69098cfdd06844df63bfee1f5d5ff04c880f3f"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912123.wmo",
+            "sha256": "4ea5ff0fc82056ad8cc94038e7a7480e50abaf053299407ee2a47e7a6c3c2c13"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912124.wmo",
+            "sha256": "a7bb6367b7b84f0c1cea6151d19e90f753a9e51370bd76679bab5095c4238e37"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912125.wmo",
+            "sha256": "b9fbafe3fef62e14c87824a3359c8433973d2cb525e5f8e6e37b4cb2e6a89c38"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912126.wmo",
+            "sha256": "d8e61b440bd937ca5411f644e01ad2b3dc65f42e0160abdfa8a3fd8b8284ee97"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912127.wmo",
+            "sha256": "668d40a059c96739ac15541fb4727666c5393e544647a0c706c9a6d66df30488"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912128.wmo",
+            "sha256": "4f4441f67d56faf6491623a1cbc9ec8bbef73da33046411f0306fd547e344f78"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912129.wmo",
+            "sha256": "31deb8ee07c62af05bd5c3b188db18f869c35eb37c297ee6a5348ae8baf4c69e"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912130.wmo",
+            "sha256": "16eef82e21f5445df37cbc88f5c84efea3f53fb6ba7aeda72286d3da770aad56"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912131.wmo",
+            "sha256": "f7aa1c69ac3590dab3bd6366e722ee29b58723a81083932327108e84e6a4de43"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912132.wmo",
+            "sha256": "837e2b0098446da8e6f7acceb696a63cc146e687e4452699f984de871b4f7d4c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912133.wmo",
+            "sha256": "a5c82c04c349b8d59117505b07c4e5acfd21a998d6c675008e00a1f125de98e1"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912134.wmo",
+            "sha256": "5c0cae90323780359b6d671dbc2e05b3500ff1f01e1fa46ad7762b8312515d6b"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912135.wmo",
+            "sha256": "a2d6658effb98651bddefe8be79247c90b44f68aaff1fc212e05758733af1231"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912136.wmo",
+            "sha256": "3d099af5f7b4b0d56c1d766e75a9d204f73bde86b550daad65c577c2a286012e"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912137.wmo",
+            "sha256": "59ac7b73830fc7edc425aacefb15009d951d90bd1e1306e7a95802577af83dc4"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912138.wmo",
+            "sha256": "aa51b0aaefe909602730e4bf53b88789a3a8350537b1b6a5e702f3da9ba7c186"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912139.wmo",
+            "sha256": "acbc250be0506639604d6e82873bd61947c57f9dd746676e2b6249f6496572e9"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912140.wmo",
+            "sha256": "42dc8b243178fddd71dd29d14829c3942dacd48ae08496ca0e99c0bcc7092399"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912141.wmo",
+            "sha256": "0c6faa4bae5950f92943b14b54f8dc8779403ef2ccbca11c5f87b91027611a5c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912142.wmo",
+            "sha256": "0018d3c67b5f276eeccb9dba8cbd0d4c480e8e23abf10da0897cd97e153a94f9"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912143.wmo",
+            "sha256": "adc99ea670c006b548dee8f3b451fb375b230f5076a7c6a2b6b887800b70b1a0"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912144.wmo",
+            "sha256": "0240ef22b370308dd3dc35b3dad75029b598a12258b69ab251e2f46451598403"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912145.wmo",
+            "sha256": "6061a7cf2f17ff36f986caf3f090492a555e398a8868865e95d49a8a7721e9d7"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912146.wmo",
+            "sha256": "b3b7590b16f0f357ba2fbc7c871ba50fc3a37d2ec309b9a0afc52e3b365b2e54"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912147.wmo",
+            "sha256": "a8bed8590c0f8412883be98c4f985299583b36ec9d2d98aa6a397339feb12f2b"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912148.wmo",
+            "sha256": "a8809068e65b12cdc5b8b9625b5b4477159f76ddb1a5530ff978664d5c26f68b"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912149.wmo",
+            "sha256": "3047e9a6d3c13ab2a2fcf336ed01a1facbfb0a3a1787a9f02f4b5dea3725d280"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912150.wmo",
+            "sha256": "0383531635881389e7a4150c3a66f665dd5946bb8f66f66f3b4a044ab916229d"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912151.wmo",
+            "sha256": "654e88fbb1370cab73fc2e1c443ac11820d5b1a84bb930922b5128e6741eab82"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912152.wmo",
+            "sha256": "79bfe7613bebc81846c0d4e9d0669659fb76af9a776191cb12bb090da7985605"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912153.wmo",
+            "sha256": "957177ac08ca2009952b77b17efe6228e40f9d9864ffdb8f0572705db87d92ed"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912154.wmo",
+            "sha256": "e537d67704081c8c1cc727b9e84432a346e613e91f436b5e77f65d003872faf4"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912155.wmo",
+            "sha256": "7c606b5c9ad8a797fec422e11e742f552fa15b2b5c774f34b40a94da6b544999"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912156.wmo",
+            "sha256": "c02451f83d1b770adf90b408ad40e3139db01575390feb242b1b2576b99d78b6"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912157.wmo",
+            "sha256": "10a0e510c20f9cbd3bf2d93dcf0dc06b1985f3172f0379fa2d3f127764e2002b"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912158.wmo",
+            "sha256": "3c429a5dac4a59313575040b983590535e82c87e38ec093243838af732644a7c"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5912159.wmo",
+            "sha256": "e3b80d041eef998a8f271a1afd4b9e87a76210fcafa69e11f265f00fca2f010b"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5915979.wmo",
+            "sha256": "8b2b17d6ec57a5759f4b619a9f660ee99706a1c506b5433886c0a80859109ccb"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5915980.wmo",
+            "sha256": "c6e13f290ccf9a6cf26e29b30744f0bcc48a53b72cfbd5755376c6c0761f7635"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5915981.wmo",
+            "sha256": "ec4f12ab030fb3bde21e6d3073db6999a6747081ea0ef62fbcbb2d34ef79f97f"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5915982.wmo",
+            "sha256": "5e9ab8ef0d7653ea4f45e3a0e018368ed3b7eb93ddae7f00e5e5fcc0d3c06ca0"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/5320716.wdt",
+            "sha256": "a86c305e4465c4c6c93e5a503aa47a79f16714dec3ae9632e40c233aee1c5013"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/5321338.adt",
+            "sha256": "52058d1a9b8c51de45f918ce6cca58f44a57fb3d3c772019cee754080a983c80"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/5321359.adt",
+            "sha256": "e851707c1656f53d7e6160e4104094b1e513a62ac3a9771e2300d58d057ecfd6"
+          }
+        ],
+        "maximum_height_difference_yards": 1,
+        "source_terrain_research": {
+          "entry": 211089,
+          "map_id": 2662,
+          "xy": [
+            1896.8120528718662,
+            987.4777805024102
+          ],
+          "source_terrain_hits": [
+            {
+              "fdid": 5321338,
+              "source_sha256": "52058d1a9b8c51de45f918ce6cca58f44a57fb3d3c772019cee754080a983c80",
+              "chunk_origin": [
+                1900.0,
+                1000.0,
+                122.29493713378906
+              ],
+              "cell": [
+                0,
+                3
+              ],
+              "hole": false,
+              "height": 125.17582000462178,
+              "world_vertices": [
+                [
+                  1895.8333333333333,
+                  987.5,
+                  125.36811065673828
+                ],
+                [
+                  1900.0,
+                  987.5,
+                  124.54216766357422
+                ],
+                [
+                  1897.9166666666667,
+                  985.4166666666666,
+                  125.11615753173828
+                ]
+              ]
+            }
+          ]
+        },
+        "method": "Unique authored non-hole ADT fan triangle at unchanged journalXY, all covering native WMO groups checked; no upward WMO floor near any candidate; exactly one baked candidate within1yd. Project ground choice, not TC spawnZ behaviour."
+      },
+      "navigation_gap": "FOLLOWER_ROUTE_INCOMPLETE_2662_211089",
+      "faction_donor": 188252,
+      "donor_reason": "No same-dungeon native positive faction16 donor; sourced DF boss Melidrussa188252 has native faction16 and matching cached hostile A/H reaction. Faction only, no CT/stat budget donation.",
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/WarWithin/TheDawnbreaker/Anubikkaj.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "7cc5eb66cec69c64770a33273564f2882aa061d1b24f4c99bf8e7a53840c84f9",
+        "journal_actor_id": 5733
+      }
+    }
+  ],
+  "source_gaps": [
+    {
+      "entry": 211087,
+      "reserved_ordinal": 0,
+      "name": "FOLLOWER_PLACEMENT_SOURCE_FLOOR_UNSUPPORTED_2662_211087",
+      "reason": "Authored terrain -215.523594 differs from nearest baked -216.876588 by1.353yd; no floor chosen or tolerance widened."
+    },
+    {
+      "entry": 213937,
+      "reserved_ordinal": 2,
+      "name": "FOLLOWER_PLACEMENT_SOURCE_FLOOR_UNSUPPORTED_2662_213937",
+      "reason": "Authored terrain137.101852 differs from nearest baked138.131696 by1.030yd; no floor chosen or tolerance widened."
+    }
+  ],
+  "calibration_entries": [
+    188252,
+    189232
+  ]
+}
