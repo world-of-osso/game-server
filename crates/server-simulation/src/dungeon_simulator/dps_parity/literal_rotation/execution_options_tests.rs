@@ -144,7 +144,16 @@ fn literal_execution_native_empower_option_releases_stage_one_not_max_hold() {
         .unwrap()
         .iter()
         .find(|aura| aura.spell_id == FIRE_DAMAGE && aura.caster == run.actor)
-        .unwrap();
+        .unwrap_or_else(|| {
+            panic!(
+                "empower released without target DoT: actor={:?}, target={:?}, events={:?}",
+                world.get::<shared::components::Position>(run.actor),
+                world.get::<shared::components::Position>(run.targets[0]),
+                world
+                    .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                    .0,
+            )
+        });
     let expected =
         crate::spell_cast::scripts::empower_evoker::build_fire_breath_release(world, run.actor, 1);
     let expected = crate::auras::fresh_duration_ms(world, run.actor, run.targets[0], &expected);
