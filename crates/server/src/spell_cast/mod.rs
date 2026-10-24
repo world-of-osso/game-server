@@ -2905,6 +2905,15 @@ fn resolve_effects(
     plan: &TargetPlan,
     depth: u8,
 ) {
+    #[cfg(any(test, feature = "test-support"))]
+    {
+        let selected = selected_units(plan);
+        if let Some(mut observed) =
+            world.get_resource_mut::<test_harness::ObservedSelectedTargets>()
+        {
+            observed.0.push((caster, spell.id, selected));
+        }
+    }
     // Distinct hit units after missile/defense filtering, before effect dispatch.
     for unit in hit_units(plan) {
         crate::achievement::record_targeted_spell_hit(world, caster, unit, spell.id);
