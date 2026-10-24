@@ -31,7 +31,7 @@ use crate::faction::{FactionTemplates, Reaction};
 use crate::game_objects::{GAME_OBJECT_INTERACT_DISTANCE, GameObjectBounds, wow_position};
 use crate::networking::PlayerLink;
 
-pub(crate) mod azure_translocation;
+pub mod azure_translocation;
 mod gossip;
 mod spellclick;
 pub(crate) use spellclick::{SpellClickCatalog, load_spellclick_catalog};

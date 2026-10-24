@@ -20,23 +20,23 @@ use std::time::Duration;
 /// Walk speed in world-units per second (base WoW walk speed).
 const BASE_WALK_SPEED: f32 = 2.5;
 /// Run speed in world-units per second (AzerothCore `baseMoveSpeed[MOVE_RUN]`).
-pub(crate) const BASE_RUN_SPEED: f32 = 7.0;
+pub const BASE_RUN_SPEED: f32 = 7.0;
 /// Maximum chase distance from spawn before evading (yards).
 const LEASH_DISTANCE: f32 = 40.0;
 /// Horizontal distance a chaser closes to (yards), inside the 5 yard
 /// melee range (`ATTACK_DISTANCE`) so auto-attacks land.
-pub(crate) const CHASE_REACH: f32 = 2.0;
+pub const CHASE_REACH: f32 = 2.0;
 /// TrinityCore a352b1fa `CREATURE_NOPATH_EVADE_TIME` (CreatureData.h).
 const NO_PATH_EVADE_TIME: Duration = Duration::from_secs(5);
 
 /// `Creature::SetCannotReachTarget`: continuous failed reachability for one chase.
 #[derive(Component)]
-pub(crate) struct CannotReachTarget {
+pub struct CannotReachTarget {
     target: u64,
     elapsed: Duration,
 }
 /// Record a continuously blocked chase without restarting its native evade clock.
-pub(crate) fn mark_chase_blocked(world: &mut World, entity: Entity, target: u64) {
+pub fn mark_chase_blocked(world: &mut World, entity: Entity, target: u64) {
     if world
         .get::<CannotReachTarget>(entity)
         .is_none_or(|blocked| blocked.target != target)
@@ -134,7 +134,7 @@ pub(crate) struct HomeOrientation(pub f32);
 /// Explicit TC `Creature::m_homePosition`, independent of original respawn data.
 /// Position and orientation use server/Bevy coordinates.
 #[derive(Component, Debug, Clone, Copy)]
-pub(crate) struct HomePosition {
+pub struct HomePosition {
     pub position: Position,
     pub orientation: f32,
 }
@@ -345,7 +345,7 @@ fn sample_movement_ground(
 
 /// `Rotation.y` of a creature facing along Bevy `(dx, dz)`: WoW orientation + π/2, as spawns
 /// are placed (`creature_bundle`). `None` without a direction.
-pub(crate) fn facing_along(dx: f32, dz: f32) -> Option<f32> {
+pub fn facing_along(dx: f32, dz: f32) -> Option<f32> {
     (dx.hypot(dz) > 1e-4).then(|| (-dz).atan2(dx) + std::f32::consts::FRAC_PI_2)
 }
 
@@ -966,7 +966,7 @@ type Chaser = (
 
 /// `Creature::Update`: no-path evade after five seconds, never on raid maps.
 /// Reachable paths remove the flag; a new chase records a fresh timeout.
-pub(crate) fn no_path_evade_system(
+pub fn no_path_evade_system(
     time: Res<Time>,
     maps: Res<MapStore>,
     nav: Option<Res<Navigation>>,
@@ -1317,7 +1317,7 @@ fn advance_companion_route(
 }
 
 /// Planned follower movement and hazard escape share the native movement/interest/replication writer.
-pub(crate) fn move_follower(world: &mut World, entity: Entity, to: Position, speed: f32) {
+pub fn move_follower(world: &mut World, entity: Entity, to: Position, speed: f32) {
     let mut state = bevy::ecs::system::SystemState::<(
         MoveQueues,
         Query<
@@ -1776,7 +1776,7 @@ pub(crate) fn return_to_spawn_system(
     }
 }
 
-pub(crate) fn return_home_position(
+pub fn return_home_position(
     spawn: &SpawnPoint,
     home: Option<&HomePosition>,
     escort: Option<&crate::scripted_ai::movement::ScriptedPath>,
@@ -1831,7 +1831,7 @@ fn restore_home_pose(world: &mut World, entity: Entity) -> bool {
 }
 
 /// Shared native home arrival; physical and frozen-edge movers call this only at home.
-pub(crate) fn finish_return_home(world: &mut World, entity: Entity) {
+pub fn finish_return_home(world: &mut World, entity: Entity) {
     world.entity_mut(entity).insert(CreatureState::Idle);
     let resources_changed = restore_home_resources(world, entity);
     let pose_changed = restore_home_pose(world, entity);

@@ -45,6 +45,7 @@ fn item_instance_native_equipped_enchant_change_recomputes_character_stats() {
                         ..Default::default()
                     },
                 )],
+                ..Default::default()
             },
             UnitStats::default(),
             CombatRatings::default(),

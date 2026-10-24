@@ -6613,6 +6613,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "server-simulation"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "blake3",
+ "game-engine-core",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "server",
+ "shared",
+ "tempfile",
+]
+
+[[package]]
 name = "sha1"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"

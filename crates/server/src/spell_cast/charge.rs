@@ -10,7 +10,7 @@ const SPEED_IS_DELAY: u32 = 0x10;
 const DEFAULT_CHARGE_SPEED: f32 = 42.0;
 
 #[derive(Component)]
-pub(crate) struct ChargeMovement {
+pub struct ChargeMovement {
     from: Vec3,
     to: Vec3,
     started: f64,

@@ -249,7 +249,7 @@ impl GroundMap {
     /// (`terrain/<fdid>.wdt|adt`, `models/<fdid>.wmo`, with why when one does not parse):
     /// its WDT, then each MAID tile's root and `_obj0` ADT and the WMO roots and groups
     /// the WDT or the `_obj0` MODF place. `NO_WDT` for a map without one.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn missing_files(&self, map_id: u32) -> Vec<String> {
         missing_ground_files(&self.data_dir, self.wdts.get(&map_id).copied())
     }
