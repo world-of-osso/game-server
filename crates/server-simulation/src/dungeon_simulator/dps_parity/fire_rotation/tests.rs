@@ -171,22 +171,71 @@ fn fire_local_native90_hot_streak_count_tracks_real_launch_actor_and_impact() {
     );
 }
 
+fn wait_cast_window(run: &mut Run) {
+    for _ in 0..MAX_CAST_FRAMES {
+        let world = run.app.world();
+        let busy = world.get::<CastState>(run.actor).is_some()
+            || world
+                .get::<crate::spell_cast::SpellHistory>(run.actor)
+                .is_some_and(|history| {
+                    history.has_active_gcd(crate::spell_cast::history_now(world))
+                });
+        if !busy {
+            return;
+        }
+        run.app.update();
+    }
+    panic!("ordinary native cast window did not open");
+}
+
+fn has_hot_streak(run: &Run) -> bool {
+    run.app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .any(|aura| aura.spell_id == 48108)
+}
+
+fn earn_hot_streak(run: &mut Run) {
+    // The nearby recipient remains100% HP; actual Firestarter crits feed the
+    // ordinary native Hot Streak driver. No aura, crit or charge grant.
+    let nearby = run.targets[1];
+    for _ in 0..16 {
+        wait_cast_window(run);
+        cast_native(run, FIREBALL, nearby);
+        finish_cast(run);
+        for _ in 0..40 {
+            run.app.update();
+            if has_hot_streak(run) {
+                return;
+            }
+        }
+    }
+    panic!("ordinary native Fireballs did not earn Hot Streak");
+}
+
 #[test]
-#[ignore = "ordinary native Player Pyroblast/Fireball overlapping travel/private DB"]
+#[ignore = "ordinary native Player Fireball/earned Hot Streak Pyro overlapping travel/private DB"]
 fn fire_local_native90_hot_streak_count_counts_overlapping_native_events() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = native_player();
     let target = distant_target(&mut run);
-    cast_native(&mut run, PYROBLAST, target);
-    finish_cast(&mut run);
-    assert!(!saw_impact(&run, PYROBLAST));
+    earn_hot_streak(&mut run);
+    wait_cast_window(&mut run);
     cast_native(&mut run, FIREBALL, target);
     finish_cast(&mut run);
+    assert!(has_hot_streak(&run));
+    cast_native(&mut run, PYROBLAST, target);
     assert!(
-        !saw_impact(&run, PYROBLAST),
-        "native Pyro must still travel when the Fireball launches"
+        run.app.world().get::<CastState>(run.actor).is_none(),
+        "earned Hot Streak makes the ordinary Pyro instant"
     );
-    assert!(!saw_impact(&run, FIREBALL));
+    assert!(
+        !has_hot_streak(&run),
+        "ordinary Pyro consumes its real native proc"
+    );
+    assert!(!saw_impact(&run, PYROBLAST));
     assert_eq!(
         value(&run, run.actor, target, "hot_streak_spells_in_flight"),
         Ok(2.0),
