@@ -1,3 +1,7 @@
+## 2026-10-24 — Shared pool-for-next resource contract
+
+[Contract proof](../handoffs/feral-shared-program-proof-ledger.md#shared-resource-contract-implementation): concrete5RED/1control→6GREEN; entire engine-free shared44GREEN ata63. Pool wait propagates through calls, never dispatches or grants resources; source conditions/native maximum admission remain separate. max_energy requires action-bound maximum_energy; original two reporter cases now error explicitly until14860 supplies missing cost/cap facts. Native Feral adapter and parity remain open.
+
 ## 2026-10-24 — Exact Feral Program reporter RED and FIRST integration
 
 [Reporter ledger](../handoffs/feral-shared-program-proof-ledger.md): unchanged36fc harness against production Program yields4genuineRED. Parent-supplied14775 FIRST/cycle2cd5 merged asdee43b; Boolean reporter now PASS, floor/pool/max_energy remainRED. Shared floor unary semantics ate79 yields exact Boolean/floor2GREEN plus38/38sharedregressions; pool/max_energy2RED remain. Original max_energy fixture lacks action-specific cost/cap/modifier facts; do not substitute full actor Energy max or hardcoded25+25. Native action/resource/Feral parity not claimed; numeric min/max45bae not duplicated.
