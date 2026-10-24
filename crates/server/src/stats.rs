@@ -28,8 +28,6 @@ use crate::spell_info::{ClassInfo, ClassSpells, SpellStore};
 
 /// Every player has 5% base crit (SimC `dbc_t::all_crit_base`).
 const BASE_CRIT_PCT: f32 = 5.0;
-/// Every player has 8 base mastery points (SimC `player_t::init_base_stats`).
-const BASE_MASTERY_POINTS: f32 = 8.0;
 
 /// Item ids physically equipped, by slot. The inventory sets it on world
 /// entry and after every item change.
@@ -550,9 +548,8 @@ pub fn compute_character_stats(
     } else {
         (attack_power, ranged_attack_power)
     };
-    let mastery_points = BASE_MASTERY_POINTS
-        + rating_value(ratings.mastery, MASTERY_RATING[level])
-        + mods.mastery_points;
+    // TC StatSystem.cpp549–559: aura318 supplies the base; rating adds points.
+    let mastery_points = rating_value(ratings.mastery, MASTERY_RATING[level]) + mods.mastery_points;
     Some(CharacterStats {
         primary,
         ratings,

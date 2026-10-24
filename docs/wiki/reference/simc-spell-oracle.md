@@ -68,4 +68,5 @@ The original oracle at1.004s has two real117418 hits: tier-extra17604.072313 (ra
 
 - [[simc-apl]] — native rotation binding is separate.
 - [[character-stats]] — native stat production.
+- [[arms-spell-factors]] — historical MS AP/source-product reconstruction and SimC double-armor divergence; current-master remeasurement remains separate.
 - [[follower-armor-penetration]] — actual actor-policy difference and ExpectedStat/TC provenance.

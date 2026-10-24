@@ -14,6 +14,10 @@ Ordinary NPCs without `CharacterStats` still have no class-derived spell power, 
 
 Ignored actual Tiger Palm RED:91 vs TC358–377 from base98+weapon291, native coefficient0.9 and Battle Shout1.05. Generic implementation committed after that RED; four targeted native cases pass13.89s at4b9d2be73 (zero compiler warnings), including offhand/ranged percentages and SP/unequip. Tests are now enabled; parent-owned integration gates remain pending. Autoattack AP/6 versus TC3.5 remains an explicit deferred discrepancy, unchanged. [Proof/source ledger](../../handoffs/ww-weapon-ap-proof-ledger.md).
 
+## Generic mastery base — 2026-10-23
+
+TC a352b1fa `Player::UpdateMastery` (`StatSystem.cpp549–559`) sums aura318 and mastery rating only. The old producer added hardcoded8 to native114585's actual aura3188. An unequipped level90 Arms Player with real passive/StatsPlugin reproduced16 instead of8 at9215bc7fc (genuine native RED10.95s, frozen canonical SHAcd7230ac1d62bf7d7ea8fef5fbb82faa9f36b61ec78108e591f1204c614a8ed6). Removing the constant fixes the generic source rather than adding a per-class correction. Rating DR and specialization coefficients are unchanged. Native regression covers zero-rating Warrior/Monk/Mage and actual unlearn/relearn; GREEN pending. Stats-only unit worlds without aura318 now correctly report no implicit base. [Historical Arms decomposition](../investigations/arms-spell-factors.md) separates this from gear, tier and comparator differences.
+
 ## Follower mastery amount refresh — 2026-10-21
 
 `auras/mastery.rs` originally admitted only `Player`, although approved followers already had `CharacterStats.mastery_points`. This left native76671/76857 aura166 AP bonuses and168534 aura108 damage modifiers at zero on the NPC bridge. The same attribute-driven calculation and amount refresh now admit `Player` or `Follower`; an arbitrary NPC carrying `CharacterStats` remains excluded. Source: TC a352b1fa `SpellInfo.cpp600` / `StatSystem.cpp549`, extended only by the existing [follower class-stat policy](../investigations/follower-data.md).70448 coefficients are unchanged. Native ignored RED reproduced AP620 vs669.6 and Lightning Bolt modifier157.5 vs166.118; enabled mastery/NPC controls pass in the13-case2ba4ec43a GREEN (22.04s). Tests: `followers/passive_stats_tests.rs` (`dps_parity_follower_native_*`).
@@ -63,7 +67,7 @@ Native Duck174884/level90 baseline6eeb06d59 dealt four attributed14-damage swing
 5. **Crit %** = 5 + DR(crit rating / rating-per-1%) + `crit_pct`.
 6. **Haste %** = DR(haste rating / rating-per-1%) + `haste_pct`.
 7. **Versatility %** = DR(versatility rating / rating-per-1%) + `versatility_pct`.
-8. **Mastery %** = (8 + DR(mastery rating / rating-per-point) + `mastery_points`) × mastery coefficient.
+8. **Mastery %** = (DR(mastery rating / rating-per-point) + aura318 `mastery_points`) × mastery coefficient. Native114585 supplies8 base points; no second hardcoded base.
 9. **Armor** = gear armor rating.
 
 DR is curve 21024 from SimC `item_scaling.inc` (12.0.1.66709), applied as in `player_t::apply_combat_rating_dr`. It is the identity up to 30%. Tertiary ratings (gear `ITEM_MOD_CR_SPEED` 61, `CR_LIFESTEAL` 62, `CR_AVOIDANCE` 63) convert with gtCombatRatings Speed/Lifesteal/Avoidance and diminish on curve 21025 (`DIMINISHING_RETURN_TERTIARY_CR_CURVE`, identity up to 10%); no content item carries one today. Rating conversion and DR exist only in `stats.rs`; the server does not use `shared::formulas` rating functions.
