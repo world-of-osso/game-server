@@ -890,7 +890,12 @@ fn dormant_creature_holds_its_mana_until_its_grid_is_active_again() {
         .entity_mut(npc)
         .remove::<crate::grid_activity::GridDormant>();
     h.advance(41);
-    assert_eq!(h.app.world().get::<Mana>(npc).unwrap().current, 22.0);
+    assert_eq!(
+        h.app.world().get::<Mana>(npc).unwrap().current,
+        22.0,
+        "native NPC runtime permission: {:?}",
+        h.app.world().get::<shared::components::UnitFlags2>(npc)
+    );
     let entries = &h.app.world().get::<UnitPowers>(npc).unwrap().entries;
     assert_eq!(entries.len(), 1);
     assert_eq!(

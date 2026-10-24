@@ -426,9 +426,19 @@ fn guardians2_unbound_demon_is_not_an_imp_substitution() {
         .spell_id = 193332;
     super::guardian::initialize(h.app.world_mut(), actor);
     h.advance(45);
+    let source_damage: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        })
+        .map(|event| (event.spell_id, event.amount))
+        .collect();
     assert_eq!(
         h.health(h.npc),
         5000.0,
-        "unbound Dreadstalker must not substitute Imp Firebolt"
+        "unbound Dreadstalker must not substitute Imp Firebolt: {source_damage:?}"
     );
 }
