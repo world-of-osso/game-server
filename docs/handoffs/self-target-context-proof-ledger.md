@@ -13,4 +13,10 @@ Verified2026-10-24; generic NativeAction readiness, not full spec parity.
 
 Prepared recorded admitted self-target NativeActions only under actor/default keys. target_if supplies an explicit enemy scoring context, so lookup misses before dispatch. Record those supplied context keys against the same admitted self-target Execution. No None-key fallback, foreign-target alias, enemy cast, native-permission bypass or Dev-specific shim. Ordinary hostile actions and composite planning unchanged.
 
-Native GREEN pending: pinned Zenith source selection plus actual actor-only aura, existing30sST FoF, relevant shared regressions and fresh300sST/3T. 14781 must rerun its exact Fire Breath leaf on the shared fix; full Dev/WW parity remains open.
+## Native GREEN —404c053b4
+
+Zero-warning targeted -j2 build39.58s; native4/4: pinned Zenith source selection/actual actor-only aura18.16s, prior30sSTFoF RED→GREEN13.84s,3T SCK/all3actualrecipients12.13s, actual FoF channel/117418damage23.83s. Same binary relevant25/25: native lifecycle9, composite selection7, composite lifecycle1, real coating bars1, row gates5 and Fire poll2. These29 current simulation cases exclude prior core Mystic4. Exact commands/env/current DB/input/binary receipts: `native-ww-self-context-green-404c053b4/`.
+
+Fresh CURRENT-backup EACH actual300s: ST72147.08/−65.0524%,3T91571.0967/−75.6822%, both exit0. Source215d75ec02c0311831cf5d98a4432c985500345811471fcce6ed23fee7709557/copycd7230ac1d62bf7d7ea8fef5fbb82faa9f36b61ec78108e591f1204c614a8ed6; `native-after-self-context-404c053b4/`. Native Zen5casts/33.3333% uptime; ST FoF21casts/6791086 regular-child damage,3T FoF16/6121702. No numerical parity claim or isolated single-change DPS claim across integration.
+
+14781 must still rerun its exact Fire Breath leaf on the shared fix; no local empower-stack/full Dev qualification. WW missing selected RWK/WDP/Flurry/DT and item/consumable/race qualification remain open.

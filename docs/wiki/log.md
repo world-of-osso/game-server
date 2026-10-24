@@ -1,6 +1,6 @@
-## 2026-10-24 — Self-cast target_if context loses native readiness
+## 2026-10-24 — Self-cast target_if context native RED→GREEN
 
-[Shared context proof](../handoffs/self-target-context-proof-ledger.md): splitC3e native Zenith known/selected/self-admission controls pass but pinned enemy-target_if never selects it; actual30sSTFoF fails. 14781 independently reports Fire Breath's same boundary. Prepared now records supplied scoring contexts against the admitted self-target Execution, without default-key fallback or native bypass. Native GREEN pending; WW300s band remains open.
+[Shared context proof](../handoffs/self-target-context-proof-ledger.md): splitC3e native Zenith known/selected/self-admission controls pass but pinned enemy-target_if never selects it; actual30sSTFoF fails. 14781 independently reports Fire Breath's same boundary. Prepared now records supplied scoring contexts against the admitted self-target Execution, without default-key fallback or native bypass. 404c native WW4+shared25 GREEN; same-binary fresh-backup-EACH300s72147.08ST/91571.0967three-target, still outside band. Exact Fire Breath rerun stays14781-owned.
 
 ## 2026-10-23 — Shared resumable precombat and while-casting native GREEN
 
