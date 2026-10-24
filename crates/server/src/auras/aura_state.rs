@@ -2,6 +2,9 @@
 //! TARGET_AURA_STATE_UNCOMPUTED: all states except15 are deliberately unknown.
 use bevy::prelude::*;
 
+#[cfg(test)]
+mod tests;
+
 use super::ActiveAuras;
 use crate::spell_info::SpellStore;
 

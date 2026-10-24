@@ -6,6 +6,7 @@ mod equipment_input_tests;
 mod feral_tests;
 mod firestarter_tests;
 mod haste_tests;
+mod health_aura_state_tests;
 mod inputs;
 pub(crate) mod literal_rotation;
 mod periodic_crit_tests;
