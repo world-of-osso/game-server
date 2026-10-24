@@ -1,3 +1,7 @@
+## 2026-10-24 — Native Unit form display power
+
+[Unit display power](systems/auras.md#native-unit-form-display-power--2026-10-24): a Player-only return left actual NPC Cat on Mana and native22568 burn unchanged100→100. The Unit metadata fix preserves resource contents/identity and player synchronization. NPC Cat/burn plus player Cat/caster-NPC controls are qualified within the once-only retained power/shapeshift scope; missing real fixture sidecar failures were corrected and retried alone. [Proof](../handoffs/form-display-power-proof-ledger.md) records203 unique passes, separate check and private input identity; parent gate and numerical Feral parity remain separate.
+
 ## 2026-10-24 — WDP child relationships and original-primary context qualified
 
 [Exact source/RED/GREEN/consumer ledger](../handoffs/ww-wdp-damage-children-proof-ledger.md): DB2/TDB/TC have no child edge; approved source relationship emits451767 once at retained primary and158221 at native aura226 ticks. Authored Attributes5=512 adds initial0; fixture corrected to native0/250/500/750/1000, no production clock change. Rebased onto51a28da8a as6f99:7nativeGREEN32.31s; three unchanged Voltaic/Quake consumers eachPASS once, separate unchanged Ret Toll8PASS. Fresh-backup-EACH300s89912.5433ST/113892.0267three-target (−56.4469%/−69.7546%); both native children now damage. Native coefficients/caps/geometry unchanged; full numeric/WDP mastery and broader recipient qualifications remain open.
