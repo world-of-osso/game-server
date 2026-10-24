@@ -5,6 +5,17 @@ The retained-core unit check exposed a runtime-only reverse edge: ignored corrid
 ## 2026-10-23 — Simulator compiler boundary and next area pilot
 
 [Crate boundaries](systems/server-crates.md): B22aa67892 passes simulator test-target and ordinary production binary compiler checks without warnings. Exact landed-A mapping retains123 subtree names:116 consumer/7core graph, including ignored status; full post-split gate pending. [C handoff](../handoffs/crate-split-area-tests.md) plans106 native melee behavior cases, canonical shared collectors and controlled paired rebuild measurements; no C implementation or speedup claim.
+## 2026-10-23 — Per-spell merge / periodic crit ownership
+
+Merged current master4a2deb367 into native-spell-diff. Resolution retains owner-aware periodic crit eligibility/order and signed target-crit semantics, while direct and periodic damage capture records the actual rolled chance/result without another RNG draw. Parent rebuilt batch gate pending; prior acceptance scopes are unchanged.
+
+## 2026-10-23 — Arms per-spell and FoF identity boundary
+
+[Per-spell oracle](reference/simc-spell-oracle.md): real Arms Player MS1GREEN20.60s at4bda4a241 after consistent current-native snapshot fixed stale missing-item_set input; coefficient/armor match, AP/source product differ. Explicit action-series selectors separate two real FoF117418 hits at one timestamp. New actual two-TP→FoF oracle retains0 Momentum before FoF versus native2; state is not forged to align damage.
+
+## 2026-10-23 — Follower armor penetration policy
+
+[Armor source ledger](investigations/follower-armor-penetration.md): installed ExpectedStat armor1470/K3430 and native450990/280=12 sourced against TC a352b1fa. Real WW follower receipt RED0.300011vs0.273859; explicit player-equivalent class-follower policy implemented, ordinary player-controlled NPC remains excluded. Native policy fraction/damage now proved ata9a17aa4c (39471, rounded stage0.2738695), controls3GREEN13.55s. Observer RED exposed pre280 metadata1470; actual effective armor/K/mitigation scalar now returned from the same native calculations. Current998083262 native3/controls3/math1/forecast8GREEN, exact checker GREEN; TP39471 and all three FoF hit amounts remain unchanged by observation. Max-level player item-level K curve remains a separate unqualified branch.
 
 ## 2026-10-23 — Periodic critical ticks
 
@@ -107,6 +118,10 @@ Pinned SimC76f8118 selects timed adds on a run row but its child Mortal Strike s
 ## 2026-10-23 — Caster offsets and source balloon qualification
 
 [Offsets](systems/toys.md#caster-offsets414348-source-boundary-2026-10-23): generic41/43/48 use source73 radius/reach/motion and direct geometry, preserving existing32. Genuine9RED plus correctedB43RED;37GREEN29.07s atc0b includes actual two balloons, native direction1GREEN at e71 and area1GREEN13.27s at909 complete39 covered cases without production changes. Native fixture fixes select279366 effect1 and source NPC6/display10913 rather than weakening LOS; legitimate native misses retain receipts. Check0/67.07s/no warnings/fmt0. Exact545→547 only75042/245946,17 blocker-list/15 unavailable strings; Arena battle/action gaps and native-facing/presentation/modifier/Detour boundaries retained. No canonical/protocol writes or invented UseToy toggle.
+## 2026-10-23 — Native factor-diff consumer
+
+[Oracle comparison consumer](reference/simc-spell-oracle.md#native-factor-comparison-consumer): stdlib ordinal-impact comparison, final pre/post-result selection, numeric deltas, missing-factor and unattributed-source labels, input hashes; six recorded/counterfactual tests and43-factor WW oracle self-control pass. Native per-hit producer/WW cast acceptance remains pending; Arms awaits shared Player dispatch.
+
 ## 2026-10-23 — Oracle conditional multiplier classification
 
 [Oracle](reference/simc-spell-oracle.md): recorded Elemental Weapons408390 value-function/condition row reproduced passive misclassification. Such action-effects now retain printed values/raw text as `conditional_or_dynamic` and are excluded from passive products; no runtime multiplier is inferred from startup placeholders. Existing raw logs are reparsed without new simulations.
