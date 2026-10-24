@@ -5,7 +5,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 ## What it must do
 
 - [x] Interpret numeric truth, OR/AND/NOT, arithmetic and comparisons with pinned SimC precedence. Single `%` divides; `%%` is modulo.
-- [ ] Interpret `<?` as maximum and `>?` as minimum at precedence5, between comparisons and addition, preserving the pinned Elemental target-count clamp without source rewriting.
+- [x] Interpret `<?` as maximum and `>?` as minimum at precedence5, between comparisons and addition, preserving the pinned Elemental target-count clamp without source rewriting.
 - [ ] Read explicit native facts for buff stacks/remains/up, cooldown remains/charges/duration, resources, talents, equipment/trinkets, target count/TTD, fight remains, raid-event adds, dots/debuffs and gcd. Unknown operands fail explicitly, including in otherwise inactive condition branches; never silently become false.
 - [ ] Share native equipment identities/stat-buff metadata, on-use vs proc cooldown sources and native tier facts across spec adapters. Reject unknown item/tier operands; preserve original IDs and trinket1→trinket2→other use order.
 - [x] Bind action-dependent facts (`combo_strike`, plain `gcd`, action minimum GCD) to each source row, including variable/call control actions. An actor-wide value is not equivalent.
@@ -45,6 +45,8 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - `crates/server/src/dungeon_simulator/dps_parity/literal_rotation/equipment*.rs`, `set_aliases_76f8118.csv` — shared native item metadata, eligibility and named tier aliases.
 
 ## Tests asserting this spec
+
+`simc_apl/minmax_tests.rs`: valid `3<?5`/`3>?5` produce2 actual parse RED at170b82d9c; generic minimum/maximum then26/26 shared-library GREEN at735a60ac6 (15m59s compile,0warnings), including unchanged24 controls. Cases enabled afterward without body changes; [scoped proof](../handoffs/elemental-minmax-proof-ledger.md).
 
 `crates/server/src/simc_apl/tests.rs`; eleven expression/program cases pushed ignored before implementation: genuine11RED atc0cf6eed6→11GREEN ataff61cbab (exit0, zero compiler warnings,1m03 compile). Cases enabled afterward; invalid-control case additionally checks sourced call recursion. Two action-context REDs at2e6f242ce→all13GREEN atcd3c7e427, zero compiler warnings; context cases enabled afterward.
 
