@@ -2,7 +2,7 @@
 
 ## Wrath Hammer-mode producer — 2026-10-24
 
-`SIMC_RET_WRATH_HAMMER_MODE_PRODUCER` applies actual1277026 when31884/454351 is applied to an owner who learned1241288, then removes caster-owned mode on parent removal through existing AuraScript hooks. Native1241288 is Dummy/Trigger0, no native child edge/TC/TDB producer exists; pinned SimC314–315/3634–3641 supplies the relationship. Native permanent mode/20s ordinary/8s background durations remain untouched. No readiness veto or332remap. [Contract](../../specs/dps-parity.md#ret-wrath-hammer-mode-producer), [source/independent producer and lifecycle REDs](../../handoffs/ret-paladin-parity-proof-ledger.md#wrath-hammer-mode-producer), [implementation](../../../crates/server/src/auras/ret_wrath_mode.rs). Five-case GREEN pending; parent overlap/refresh unqualified.
+`SIMC_RET_WRATH_HAMMER_MODE_PRODUCER` applies actual1277026 when31884/454351 is applied to an owner who learned1241288, then removes caster-owned mode on parent removal through existing AuraScript hooks. Native1241288 is Dummy/Trigger0, no native child edge/TC/TDB producer exists; pinned SimC314–315/3634–3641 supplies the relationship. Native permanent mode/20s ordinary/8s background durations remain untouched. No readiness veto or332remap. [Contract](../../specs/dps-parity.md#ret-wrath-hammer-mode-producer), [source/independent producer and lifecycle REDs](../../handoffs/ret-paladin-parity-proof-ledger.md#wrath-hammer-mode-producer), [implementation](../../../crates/server/src/auras/ret_wrath_mode.rs). ec2d9a23c unchanged5GREEN46.50s/zero warnings; parent overlap/refresh and independent learned-root-negative variants unqualified.
 
 ## Divine Toll child relationship — 2026-10-24
 

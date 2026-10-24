@@ -1,6 +1,6 @@
 ## 2026-10-24 — Native Wrath Hammer-mode production/lifetime
 
-[Auras](systems/auras.md#wrath-hammer-mode-producer--2026-10-24):cb21f5712 actual ordinary/background Wrath2genuine producerRED/no-Wrath controlPASS52.13s;f4e664fe5 explicit-native-mode/real cancellation and8s-expiry2lifecycleRED55.01s. Lead approved sourced learned1241288→1277026 apply/removal only, through existing AuraScript hooks; native durations and override data unchanged. Five-case GREEN pending; no readiness veto. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#wrath-hammer-mode-producer).
+[Auras](systems/auras.md#wrath-hammer-mode-producer--2026-10-24):cb21f5712 actual ordinary/background Wrath2genuine producerRED/no-Wrath controlPASS52.13s;f4e664fe5 explicit-native-mode/real cancellation and8s-expiry2lifecycleRED55.01s. Lead approved sourced learned1241288→1277026 apply/removal only, through existing AuraScript hooks; native durations and override data unchanged. ec2d9a23c original five-case GREEN46.50s/zero warnings; no readiness veto. Overlap/refresh and learned-root-negative variants remain open. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#wrath-hammer-mode-producer).
 
 ## 2026-10-24 — Separate Divine Toll Judgment funding
 
