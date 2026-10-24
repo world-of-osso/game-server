@@ -112,51 +112,6 @@ fn assert_evasion_avoids(events: &[CombatLogEvent]) {
     assert!(events.iter().any(dodged), "{events:?}");
 }
 
-pub(super) fn collect_broadcast_swings(
-    h: &mut Harness,
-    attacker: Entity,
-    victim: Entity,
-    count: usize,
-) -> Vec<CombatEvent> {
-    h.app
-        .world_mut()
-        .run_system_once(move |mut commands: Commands| {
-            super::start_attack(&mut commands, attacker, victim, None);
-        })
-        .unwrap();
-    let mut events = Vec::new();
-    for _ in 0..count * 60 {
-        h.advance(1);
-        events.extend(
-            drain::<CombatEvent>(&mut h.app, h.connection)
-                .into_iter()
-                .filter(|event| {
-                    event.attacker == attacker.to_bits()
-                        && event.target == victim.to_bits()
-                        && event.spell_id == 0
-                        && matches!(
-                            event.event_type,
-                            CombatEventType::MeleeDamage
-                                | CombatEventType::CriticalHit
-                                | CombatEventType::Miss
-                                | CombatEventType::Dodge
-                                | CombatEventType::Parry
-                                | CombatEventType::Block
-                        )
-                }),
-        );
-        if events.len() == count {
-            super::attack_stop(h.app.world_mut(), attacker);
-            h.advance(3);
-            return events;
-        }
-    }
-    panic!(
-        "only {} of{count} broadcast swings: {events:?}",
-        events.len()
-    );
-}
-
 fn dummy_duel() -> (Harness, Entity) {
     let mut h = harness(Vec::new(), &[NPC_HIT_BUFFS, PET_PASSIVE], 1).unwrap();
     // Neither NPC has a player owner: subscribe the real all-client broadcast,

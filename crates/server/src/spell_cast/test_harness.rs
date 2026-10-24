@@ -43,6 +43,89 @@ pub struct ObservedCombatEvents(pub Vec<CombatLogEvent>);
 #[derive(Resource, Default)]
 pub(crate) struct ObservedTriggeredCasts(pub Vec<(Entity, u32, Option<Entity>)>);
 
+pub(super) fn collect_swings(
+    h: &mut Harness,
+    attacker: Entity,
+    victim: Entity,
+    count: usize,
+) -> Vec<CombatLogEvent> {
+    let mut cursor = h.inbox.log.len();
+    h.app
+        .world_mut()
+        .run_system_once(move |mut commands: Commands| {
+            super::start_attack(&mut commands, attacker, victim, None);
+        })
+        .unwrap();
+    let mut swings = Vec::new();
+    // Bound ordinary delivery, never rewrite native swing timers or RNG.
+    for _ in 0..count * 60 {
+        h.advance(1);
+        swings.extend(
+            h.inbox.log[cursor..]
+                .iter()
+                .filter(|event| {
+                    event.source == Some(attacker.to_bits())
+                        && event.target == Some(victim.to_bits())
+                        && event.spell_id.is_none()
+                        && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+                })
+                .cloned(),
+        );
+        cursor = h.inbox.log.len();
+        if swings.len() == count {
+            super::attack_stop(h.app.world_mut(), attacker);
+            h.advance(3);
+            return swings;
+        }
+    }
+    panic!("only {} of{count} ordinary swing attempts", swings.len());
+}
+
+pub(super) fn collect_broadcast_swings(
+    h: &mut Harness,
+    attacker: Entity,
+    victim: Entity,
+    count: usize,
+) -> Vec<CombatEvent> {
+    h.app
+        .world_mut()
+        .run_system_once(move |mut commands: Commands| {
+            super::start_attack(&mut commands, attacker, victim, None);
+        })
+        .unwrap();
+    let mut events = Vec::new();
+    for _ in 0..count * 60 {
+        h.advance(1);
+        events.extend(
+            drain::<CombatEvent>(&mut h.app, h.connection)
+                .into_iter()
+                .filter(|event| {
+                    event.attacker == attacker.to_bits()
+                        && event.target == victim.to_bits()
+                        && event.spell_id == 0
+                        && matches!(
+                            event.event_type,
+                            CombatEventType::MeleeDamage
+                                | CombatEventType::CriticalHit
+                                | CombatEventType::Miss
+                                | CombatEventType::Dodge
+                                | CombatEventType::Parry
+                                | CombatEventType::Block
+                        )
+                }),
+        );
+        if events.len() == count {
+            super::attack_stop(h.app.world_mut(), attacker);
+            h.advance(3);
+            return events;
+        }
+    }
+    panic!(
+        "only {} of{count} broadcast swings: {events:?}",
+        events.len()
+    );
+}
+
 pub(crate) struct WorldData {
     pub(crate) store: SpellStore,
     pub(crate) classes: ClassSpells,
