@@ -179,7 +179,7 @@ fn boolean(value: bool) -> f64 {
 fn stat_fact(metadata: &Metadata, name: &str) -> Result<f64, String> {
     if !matches!(
         name,
-        "strength" | "mastery" | "versatility" | "haste" | "crit"
+        "strength" | "agility" | "intellect" | "mastery" | "versatility" | "haste" | "crit"
     ) {
         return Err(format!("unknown native item buff stat {name}"));
     }

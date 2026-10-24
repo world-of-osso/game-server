@@ -7,7 +7,12 @@ use std::collections::{BTreeMap, BTreeSet};
 const ON_USE: u8 = 0;
 const ON_EQUIP: u8 = 1;
 const DUMMY_EFFECT: u32 = 3;
-const PRIMARY_STATS: &[(i32, &str)] = &[(0, "strength"), (1, "other"), (2, "other"), (3, "other")];
+const PRIMARY_STATS: &[(i32, &str)] = &[
+    (0, "strength"),
+    (1, "agility"),
+    (2, "other"),
+    (3, "intellect"),
+];
 // TC Unit.h combat-rating masks; utility-only ratings do not qualify as any_dps.
 const CRIT: u32 = 0x700;
 const HASTE: u32 = 0xe0000;
