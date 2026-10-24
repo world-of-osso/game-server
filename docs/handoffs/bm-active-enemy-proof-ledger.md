@@ -20,7 +20,7 @@ Diagnostics root: `game-engine/data/diagnostics/dps-parity-fix-2026-10-21/`.
 |4da3b88d0|Actual Austin ordinary ST/2/3 engaged combat|Genuine1FAIL/2PASS23.01s: ST29commands/21pet hits versus0;2targets25/9,3targets29/24 controlsPASS. Cobra positive avoids idle false pass. Compile25.67s.|
 |9ebfc4d5f|Serialized real native BM kit output|Producer RED: missing minimum (`None !=2`),0.267s. Independent from gameplay RED.|
 |a451878e4|Generic source projection9 + native BM serialized kit3|12GREEN1.270s; includes boolean/call reachability, unrestricted alternate uses, no geometric condition, generic unrelated action names, explicit unsupported cases.|
-|a451878e4|Native runtime against normally prepared private input|Three-case GREEN build/run pending; no pass claimed.|
+|a451878e4|Native runtime against normally prepared private input|3GREEN24.63s; clean16m12s compilation (all compiler JSON messages empty). ST0commands/0child/Cobra88;2engaged25/9/Cobra38,3engaged17/4/Cobra59.|
 
 Each native phase retains compiler JSON, exact selected artifact/SHA, logs and command/environment entries in `proof-ledger.jsonl`; no filename-only source inference. Only targeted development tests run here; broad integration/publication remains parent-owned.
 
@@ -32,6 +32,17 @@ Canonical runtime215d75ec was opened read-only with `sqlite3 .backup` into new `
 
 Normal copy-only `follower_spec_kits.py --spec-ids253` runs under the same read-only view.107BM intervals regenerate; `active-enemy-inputs/kit.sql` changes exactly one row:1264359/minlevel23 gains `min_active_enemies:2`. All other rows match. New private world SHA256 `f10a75e62c4f252c26d8e8443031a865319efaf1688dae5a069a2a34c456d40a`; canonical and old frozen world remain unchanged. Export receipt, producer receipt, exact commands and input manifest are retained separately. Publication not performed.
 
+## Matched bounded cadence and DPS
+
+Qualified preserved a451 ELF SHA256 `b1fcc8d419d43c7cb07100f1bebd1e091ece6e57a7d0e5c550a69b385d0861d7`; worldf10a75e6 above. The9bb baseline uses prior qualified reports, not a rerun. Same profile/traits, seed70448/300s/Austin driver; changed inputs are generic runtime admission plus exactly one normally generated kit field. Diagnostics `bm-active-enemy-comparison/comparison.json` retains report SHA/paths and complete actions/Focus receipts; `after/` retains manifest, commands, ELF/source proof and reports.
+
+| Nominal targets | Total DPS before→after | Thrash owner casts/pet hits before→after | Barbed/Cobra/KC casts before→after |
+|---|---|---|---|
+|1|53884.833→58222.937|29/21→0/0|42/59/63→46/88/68|
+|3|44344.413→43712.837|29/24→17/4|38/45/59→40/59/60|
+
+BW remains10casts in both. ST Barbed DPS26595.920→28400.133, Cobra10092.183→12578.417. Three-target total falls despite more Barbed/Cobra casts: do not tune around this one seed or claim universal improvement. Admission counts actual current group combat, not nominal target_count; evolving target/engagement coverage and random/proc outcomes remain part of the measurement. This qualifies sourced admission behavior, not every 3T lifecycle or whole-DPS parity.
+
 ## Limits
 
-No spell/priority/range/radius/position/clock/resource/stat/trait/chance/damage tuning. Native source output/rank accounting comes from normal starter validator, not rewritten old source exports. Geometry remains independent; no fake radius is assigned to the dummy command root. Current native positives qualify2/3 engaged enemies, not every dungeon pull/CC/ownership variant. Matched cadence/DPS measurement waits for native GREEN and is not whole-DPS certification.
+No spell/priority/range/radius/position/clock/resource/stat/trait/chance/damage tuning. Native source output/rank accounting comes from normal starter validator, not rewritten old source exports. Geometry remains independent; no fake radius is assigned to the dummy command root. Current native positives qualify2/3 engaged enemies, not every dungeon pull/CC/ownership variant. Matched cadence/DPS is a bounded single-seed contrast, not whole-DPS certification. Parent broad integration and canonical publication remain pending.

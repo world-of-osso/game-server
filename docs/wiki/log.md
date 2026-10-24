@@ -1,6 +1,6 @@
 ## 2026-10-24 — BM dungeon active-enemy admission
 
-[Source and proof](../handoffs/bm-active-enemy-proof-ledger.md): actual Austin ST29WildThrash commands reproduces forbidden admission;2/3-engaged controls retain native pet hits. Generic `min_active_enemies` reads current group combat coverage separately from geometric `min_enemies`. Generator projects every reachable pinned BM APL use; one native row changes, derived minimum2, no per-spell threshold or fake radius. Source/export/producer12GREEN; native GREEN pending, no publication or whole-DPS claim.
+[Source and proof](../handoffs/bm-active-enemy-proof-ledger.md): actual Austin ST29WildThrash commands reproduces forbidden admission;2/3-engaged controls retain native pet hits. Generic `min_active_enemies` reads current group combat coverage separately from geometric `min_enemies`. Generator projects every reachable pinned BM APL use; one native row changes, derived minimum2, no per-spell threshold or fake radius. Source/producer12GREEN plus fresh native990-loadout exporter1GREEN16.20s; a451 native3GREEN24.63s (ST0,2/3-target positives). Matched single-seed ST53884.8→58222.9 and3T44344.4→43712.8 retain both outcomes; parent integration/publication pending, no whole-DPS claim.
 
 ## 2026-10-24 — DB2 periodic amounts override tooltip totals
 
