@@ -2,7 +2,7 @@
 
 ## Generic health aura states — 2026-10-24
 
-TC a352b1fa `Unit.cpp481–487` computes states2/6/13/21/23/24/25 from current health: strict20/25/35/50% lows,75% high and20–80/35–80 outside bands. `Unit.h804–809` uses integer health counts/truncated percent thresholds. `auras/aura_state.rs` reads these at query time beside unchanged15; every otherNone and Some(false)-only rejection stays unchanged. [Contract](../../specs/auras.md#computed-target-aura-state), [source/seven-state matrix/native RED and gate ledger](../../handoffs/aura-state-health-proof-ledger.md), [implementation](../../../crates/server/src/auras/aura_state.rs). Full-health real31146 erroneously accepts ordinary24275 before this change; below20actual-damage control passes. Targeted GREEN pending.
+TC a352b1fa `Unit.cpp481–487` computes states2/6/13/21/23/24/25 from current health: strict20/25/35/50% lows,75% high and20–80/35–80 outside bands. `Unit.h804–809` uses integer health counts/truncated percent thresholds. `auras/aura_state.rs` reads these at query time beside unchanged15; every otherNone and Some(false)-only rejection stays unchanged. [Contract](../../specs/auras.md#computed-target-aura-state), [source/seven-state matrix/native RED and gate ledger](../../handoffs/aura-state-health-proof-ledger.md), [implementation](../../../crates/server/src/auras/aura_state.rs). Full-health real31146 erroneously accepts ordinary24275 before this change; below20actual-damage control passes. 7f34b277e targeted core17GREEN22.56s (10new+7retained state15/native controls), native full-health refusal/below20real-damage2GREEN41.62s; zero warnings. Requested independent compiler gate pending.
 
 ## Explicit proc source presence — 2026-10-23
 

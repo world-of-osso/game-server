@@ -10,13 +10,13 @@ TC a352b1fa actually sets the health-state siblings in `Unit::Update`, `Unit.cpp
 
 | ID / TC state | Predicate | Proof status |
 |---|---|---|
-|2 WOUNDED_20_PERCENT|current < count20%max|genuine core RED; native full-health24275 RED/below20controlPASS|
-|6 WOUNDED_25_PERCENT|current < count25%max|genuine core RED|
-|13 WOUNDED_35_PERCENT|current < count35%max|genuine core RED|
-|21 WOUND_HEALTH_20_80|current < count20%max or current > count80%max|genuine core RED|
-|23 HEALTHY_75_PERCENT|current > count75%max|genuine core RED|
-|24 WOUND_HEALTH_35_80|current < count35%max or current > count80%max|genuine core RED|
-|25 WOUNDED_50_PERCENT|current < count50%max|genuine core RED|
+|2 WOUNDED_20_PERCENT|current < count20%max|genuine core/native RED →core/native GREEN|
+|6 WOUNDED_25_PERCENT|current < count25%max|genuine core RED →GREEN|
+|13 WOUNDED_35_PERCENT|current < count35%max|genuine core RED →GREEN|
+|21 WOUND_HEALTH_20_80|current < count20%max or current > count80%max|genuine core RED →GREEN|
+|23 HEALTHY_75_PERCENT|current > count75%max|genuine core RED →GREEN|
+|24 WOUND_HEALTH_35_80|current < count35%max or current > count80%max|genuine core RED →GREEN|
+|25 WOUNDED_50_PERCENT|current < count50%max|genuine core RED →GREEN|
 
 Tests include equality and neighboring values at every threshold, non-round maximums101/119, all other unknown state IDs and missing Health. Existing unknown-state Swiftmend control previously used state2; intentional new support requires using still-uncomputed state4/Frozen instead. Its contract remains unknown≠false. Existing state15 behaviors remain separate retained controls.
 
@@ -33,8 +33,8 @@ The native lower-threshold fixture changes only `Health.current` to19% of the re
 
 `auras/aura_state.rs` computes only these seven IDs, retaining exact15 logic and all otherNone results. Health reads are source-equivalent integer counts; thresholds truncate before strict comparisons. The actual cast pipeline consumes these values without a Ret exception. Existing Swiftmend unknown-state oracle uses4 after2 becomes computed; source15/exemption behavior remains unchanged. Remove the inherited unused simulator navigation alias rather than suppressing its warning.
 
-Targeted GREEN and requested `cargo check -p server -p server-simulation --tests -j2` (once) are pending after implementation commit. Parent owns broad/final gate. Native Ret Hammer consumer stays separate until this shared feature lands; no whole-rotation/DPS claim.
+At7f34b277e82a3b2fa5842fd6c881d8d21015057c, targeted core GREEN is17PASS22.56s:10new state/threshold/equality/integer/unknown cases plus7retained native Swiftmend/state15/owner/other-caster cases; zero warnings,3m12compile. Native original two cases are2PASS41.62s, zero warnings/1m39compile: full-health real31146 rejects24275; the below20threshold fixture accepts and receives actual24275 damage. Nineteen unique cases; no production changes after this revision. Requested `cargo check -p server -p server-simulation --tests -j2` (once) is pending. Parent owns broad/final gate. Native Ret Hammer consumer stays separate until this shared feature lands; no whole-rotation/DPS claim.
 
 ## Artifacts
 
-Engine `/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/aura-state-health-2026-10-24/` contains `health-aura-state-source-v1.json` (full TC source paths/hashes), `health-aura-state-core-red-v1.log`, and `health-aura-state-native-red-v1.log`. Logs/proofs retain exact revision and scope; later source changes invalidate only intersecting evidence.
+Engine `/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/aura-state-health-2026-10-24/` contains `health-aura-state-source-v1.json` (full TC source paths/hashes), `health-aura-state-core-red-v1.log`, and `health-aura-state-native-red-v1.log`. GREEN artifacts: `health-aura-state-core-green-v1.log`, `health-aura-state-native-green-v1.{log,proof.json}`. `health-aura-state-native-consumers-v1.json` inventories85native target/exclude-target consumers, including Execute/KillShot; this is source coverage, not85runtime qualifications. Logs/proofs retain exact revision and scope; later source changes invalidate only intersecting evidence.

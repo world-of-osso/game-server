@@ -1,6 +1,6 @@
 ## 2026-10-24 — Generic health aura-state qualification
 
-[Auras](systems/auras.md#generic-health-aura-states--2026-10-24): independent branch from461aa8102; TC Unit::Update481–487 health siblings2/6/13/21/23/24/25 use Unit.h804–809 integer strict comparisons. fbdc5ee0d core8genuineRED/2controls and actual31146 full-health24275 RED/below20damagePASS32.34s precede implementation.15, otherNone states and rejection semantics preserved; targeted GREEN/check pending. [Source/proof ledger](../handoffs/aura-state-health-proof-ledger.md).
+[Auras](systems/auras.md#generic-health-aura-states--2026-10-24): independent branch from461aa8102; TC Unit::Update481–487 health siblings2/6/13/21/23/24/25 use Unit.h804–809 integer strict comparisons. fbdc5ee0d core8genuineRED/2controls and actual31146 full-health24275 RED/below20damagePASS32.34s precede implementation.15, otherNone states and rejection semantics preserved;7f34b277e core17GREEN22.56s/native2GREEN41.62s, zero warnings. Requested independent check pending. [Source/proof ledger](../handoffs/aura-state-health-proof-ledger.md).
 
 ## 2026-10-23 — Kargath native-hit qualification
 
