@@ -173,6 +173,8 @@ fn spawn_reference(
     let mut app = super::runtime::build_app();
     inputs::install_reference_catalogs(&mut app)?;
     let copy = super::runtime::create_copy(&mut app);
+    // Origin-centered parity fixtures have no frozen dungeon geometry.
+    app.world_mut().remove_resource::<super::Space>();
     let level = profile
         .level
         .parse()
