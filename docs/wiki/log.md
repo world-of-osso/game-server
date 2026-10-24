@@ -25,10 +25,16 @@
 ## 2026-10-23 — Guardian ownership and power-role boundary GREEN
 
 [Demonology investigation](investigations/demonology-dps-parity.md#power-regeneration-interaction): own0885PASS/1fixtureFAIL49.59s plus fixture-only8102PASS24.96s qualify seven distinct cases: native Imp100/20 five-cast exhaustion/despawn, real90 neutral-dummy Firebolt, hostile binding, ordinary-NPC control, actual-player Energy, follower/Felguard resources and controlled-pet Focus. Explicit Player/Follower/HunterPet roles replace ownership flag8 as regeneration permission; other NPCs honor authored flags. Both builds have0 compiler messages; private DB SHA unchanged. Lead pushed810 as mf1052. Old b5 DPS remains unqualified; conditional Firebolt targeting and native DPS parity remain open.
+## 2026-10-23 — Incoming native-factor fixture boundary
+
+Merged `eec5b6bcf` into B, preserving its four ignored single-spell cases in the consumer. Existing15factor observation calls and armor observation fields/initializers now use explicit fixture-support gates; only resource constructor/export and public return type visibility widen. Calculations unchanged. Combined core-unit/simulator check at14c74e6fa passes42.83s without diagnostics; production and full-suite gates pending. Expected6322workspace cases/314ignored includes four incoming-master additions.
 
 ## 2026-10-23 — Corridor capture consumer ownership
 
 The retained-core unit check exposed a runtime-only reverse edge: ignored corridor capture imports simulator runtime/diagnostics. Capture returned to the consumer with its original name and a canonical graph re-export; no gameplay/type duplication. Expected117 simulator cases/6retained graph cases; workspace names/ignore statuses unchanged. Compiler and full-suite qualification pending.
+## 2026-10-23 — Public-behavior combat test consumer
+
+[C pilot](../handoffs/crate-split-area-tests.md): twelve pure file moves preserve106 native melee case names; two shared collectors lifted without algorithm changes into existing harness. New consumer has only dev dependencies and the same opt2/debug1 profile; four private-formula files stay core. Exact expected full-workspace inventory remains6318cases/310ignored. Atacecb97d1, combined core-unit/simulator/combat compiler check42.85s and production-no-feature check14.59s pass without diagnostics; full-suite gate pending. Compiler elapsed times are not paired speedup measurements.
 
 ## 2026-10-23 — Simulator compiler boundary and next area pilot
 

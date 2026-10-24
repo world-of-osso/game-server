@@ -2568,50 +2568,14 @@ pub(crate) mod forecast;
 #[path = "combat_enemy_dodge_tests.rs"]
 mod enemy_dodge_tests;
 #[cfg(test)]
-#[path = "combat_facing_tests.rs"]
-mod facing_tests;
-#[cfg(test)]
-#[path = "combat_npc_cadence_tests.rs"]
-mod npc_cadence_tests;
-#[cfg(test)]
-#[path = "combat_npc_expertise_tests.rs"]
-mod npc_expertise_tests;
-#[cfg(test)]
-#[path = "combat_npc_flags_tests.rs"]
-mod npc_flags_tests;
-#[cfg(test)]
 #[path = "combat_npc_general_crit_tests.rs"]
 mod npc_general_crit_tests;
-#[cfg(test)]
-#[path = "combat_npc_no_crit_tests.rs"]
-mod npc_no_crit_tests;
 #[cfg(test)]
 #[path = "combat_npc_victim_block_tests.rs"]
 mod npc_victim_block_tests;
 #[cfg(test)]
-#[path = "combat_npc_victim_dodge_tests.rs"]
-mod npc_victim_dodge_tests;
-#[cfg(test)]
-#[path = "combat_npc_victim_parry_tests.rs"]
-mod npc_victim_parry_tests;
-#[cfg(test)]
-#[path = "combat_npc_weapon_crit_tests.rs"]
-mod npc_weapon_crit_tests;
-#[cfg(test)]
-#[path = "combat_pet_engagement_tests.rs"]
-mod pet_engagement_tests;
-#[cfg(test)]
 #[path = "combat_tests.rs"]
 mod tests;
 #[cfg(test)]
-#[path = "combat_victim_caster_crit_tests.rs"]
-mod victim_caster_crit_tests;
-#[cfg(test)]
-#[path = "combat_victim_general_crit_tests.rs"]
-mod victim_general_crit_tests;
-#[cfg(test)]
 #[path = "combat_victim_health_crit_tests.rs"]
 mod victim_health_crit_tests;
-#[cfg(test)]
-#[path = "combat_victim_summoner_crit_tests.rs"]
-mod victim_summoner_crit_tests;
