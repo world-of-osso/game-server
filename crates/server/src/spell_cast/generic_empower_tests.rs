@@ -12,7 +12,8 @@ const UPHEAVAL: u32 = 396_286;
 
 fn fixture(spell_id: u32, class: u8) -> Harness {
     let mut h = harness(Vec::new(), &[spell_id], class).unwrap();
-    h.app.insert_resource(world_db().unwrap().store.clone());
+    h.app
+        .insert_resource(world_db().unwrap().spell_store().clone());
     h.app.world_mut().entity_mut(h.connection).insert((
         MessageSender::<ReleaseEmpowerSpell>::default(),
         MessageReceiver::<ReleaseEmpowerSpell>::default(),

@@ -20,7 +20,12 @@ fn native_fixture() -> Harness {
         181449,
     ]
     .into_iter()
-    .map(|id| data.store.get(id).expect("native trigger closure").clone())
+    .map(|id| {
+        data.spell_store()
+            .get(id)
+            .expect("native trigger closure")
+            .clone()
+    })
     .collect();
     harness(spells, &[], 5).unwrap()
 }

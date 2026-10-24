@@ -30,7 +30,7 @@ fn native_fixture() -> Harness {
         NO_FEATHER_FALL,
     ]
     .into_iter()
-    .map(|id| data.store.get(id).expect("native spell").clone())
+    .map(|id| data.spell_store().get(id).expect("native spell").clone())
     .collect();
     harness(internal, &[POWER_WORD_SHIELD, PRIEST, DISCIPLINE_PRIEST], 5).unwrap()
 }

@@ -25,7 +25,12 @@ fn native_fixture() -> Harness {
         EXCLUDED_TRANSFORM,
     ]
     .into_iter()
-    .map(|id| data.store.get(id).expect("native child closure").clone())
+    .map(|id| {
+        data.spell_store()
+            .get(id)
+            .expect("native child closure")
+            .clone()
+    })
     .collect();
     harness(spells, &[], 5).unwrap()
 }

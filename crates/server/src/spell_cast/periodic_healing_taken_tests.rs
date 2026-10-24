@@ -50,7 +50,7 @@ fn remove(h: &mut Harness, spell_id: u32, target: Entity) {
 }
 
 fn heal_receipt(h: &mut Harness, spell_id: u32, periodic: bool) -> i32 {
-    let spell = world_db().unwrap().store.get(spell_id).unwrap();
+    let spell = world_db().unwrap().spell_store().get(spell_id).unwrap();
     let ctx = super::effects::EffectCtx {
         caster: h.caster,
         spell,
@@ -140,7 +140,7 @@ fn census_tail_259_native_ignore_healing_suppresses_positive_even_allow_negative
     for spell_id in [COPIED_REJUVENATION, DARK_REGENERATION] {
         let misc = world_db()
             .unwrap()
-            .store
+            .spell_store()
             .get(spell_id)
             .unwrap()
             .misc
@@ -152,7 +152,7 @@ fn census_tail_259_native_ignore_healing_suppresses_positive_even_allow_negative
     assert_ne!(
         world_db()
             .unwrap()
-            .store
+            .spell_store()
             .get(DARK_REGENERATION)
             .unwrap()
             .misc

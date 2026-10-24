@@ -45,7 +45,7 @@ fn armor_harness_with(armor_constant: f32) -> Harness {
 fn native_effect(spell: u32, aura: u32) -> crate::spell_info::SpellEffect {
     world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(spell)
         .unwrap()
         .effects
@@ -110,7 +110,11 @@ fn armor_with(mods: StatModifiers) -> crate::stats::CharacterStats {
 fn physical_loss(h: &mut Harness, source: Entity, target: Entity) -> f32 {
     let ctx = super::effects::EffectCtx {
         caster: source,
-        spell: world_db().unwrap().store.get(MORTAL_STRIKE).unwrap(),
+        spell: world_db()
+            .unwrap()
+            .spell_store()
+            .get(MORTAL_STRIKE)
+            .unwrap(),
         depth: 0,
         dest: None,
         chain_multiplier: 1.0,

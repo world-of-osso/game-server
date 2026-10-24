@@ -14,7 +14,7 @@ const FRAME_SECS: f32 = 0.05;
 fn native_amount(spell: u32) -> f32 {
     world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(spell)
         .unwrap()
         .effects
@@ -27,7 +27,7 @@ fn native_amount(spell: u32) -> f32 {
 fn apply_attack_speed(h: &mut Harness, unit: Entity, spell: u32) {
     let index = world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(spell)
         .unwrap()
         .effects

@@ -7,14 +7,15 @@ const FLASH_HEAL: u32 = 2061;
 #[test]
 fn census_e77_priest_native_execute_consumes_carrier_without_hiding_unmatched_slots() {
     let mut h = harness(Vec::new(), &[DEATH, FLASH_HEAL, 46968], 5).unwrap();
-    h.app.insert_resource(world_db().unwrap().store.clone());
+    h.app
+        .insert_resource(world_db().unwrap().spell_store().clone());
     h.app
         .insert_resource(crate::test_data::world_data().clone());
     let caster = h.caster;
     let victim = h.npc;
     let threshold = world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(DEATH)
         .unwrap()
         .effects

@@ -15,7 +15,12 @@ fn native_fixture() -> Harness {
     let data = world_db().unwrap();
     let spells = [DEATH_TOUCH, FREEZE, FLAME_SHOCK]
         .into_iter()
-        .map(|id| data.store.get(id).expect("native recipient spells").clone())
+        .map(|id| {
+            data.spell_store()
+                .get(id)
+                .expect("native recipient spells")
+                .clone()
+        })
         .collect();
     harness(spells, &[], 7).unwrap()
 }

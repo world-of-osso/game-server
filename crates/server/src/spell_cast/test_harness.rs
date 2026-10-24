@@ -130,6 +130,13 @@ pub struct WorldData {
     pub powers_db: PathBuf,
 }
 
+impl WorldData {
+    /// Read the canonical cached spells when preparing a fixture's inputs.
+    pub fn spell_store(&self) -> &SpellStore {
+        &self.store
+    }
+}
+
 #[cfg(test)]
 pub(crate) fn place_toy_caster_on_source_area(
     h: &mut Harness,
@@ -178,8 +185,8 @@ pub(crate) fn place_toy_caster_on_source_map_area(
 
 /// What an effect with `Variance` 0.05 and an amount of `base` deals or
 /// heals: `base` ± 2.5%, rounded (SpellEffectInfo::CalcValue).
-#[cfg(test)]
-pub(crate) fn varied(base: f32) -> std::ops::RangeInclusive<f32> {
+#[cfg(any(test, feature = "test-support"))]
+pub fn varied(base: f32) -> std::ops::RangeInclusive<f32> {
     (base * 0.975).round()..=(base * 1.025).round()
 }
 
@@ -250,7 +257,7 @@ fn import_class_world() -> std::sync::Arc<tempfile::TempDir> {
 }
 
 /// Explicit native template authority for fixtures whose spells restrict creature type.
-pub(crate) fn load_native_creature_world(entries: &[u32]) -> crate::world_data::WorldData {
+pub fn load_native_creature_world(entries: &[u32]) -> crate::world_data::WorldData {
     let source = crate::test_data::world_data();
     let templates: std::collections::HashMap<_, _> = entries
         .iter()
@@ -457,15 +464,15 @@ pub fn harness(extra: Vec<SpellInfo>, ids: &[u32], class: u8) -> Option<Harness>
     harness_with(extra, ids, class, false)
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) const SUNWELL_RADIANCE: u32 = 45769;
 
 /// Opt-in coefficient/admission fixture, not a legal class loadout. Native
 /// Sunwell Radiance45769 effect1 supplies permanent enemy-dodge reduction20
 /// (published70391 SpellEffect37781, SpellDuration21). Keep ordinary NPC dodge
 /// active in all other fixtures; never change RNG or spell defense attributes.
-#[cfg(test)]
-pub(crate) fn harness_with_native_enemy_dodge_reduction(
+#[cfg(any(test, feature = "test-support"))]
+pub fn harness_with_native_enemy_dodge_reduction(
     extra: Vec<SpellInfo>,
     ids: &[u32],
     class: u8,
@@ -478,13 +485,13 @@ pub(crate) fn harness_with_native_enemy_dodge_reduction(
 }
 
 /// Custom coefficient fixtures load SUNWELL_RADIANCE explicitly before opting in.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn apply_native_enemy_dodge_reduction(h: &mut Harness) {
     apply_native_enemy_dodge_reduction_to(h, h.caster);
 }
 
 /// Pet and foreign-player damage fixtures must qualify the actual attacker.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn apply_native_enemy_dodge_reduction_to(h: &mut Harness, attacker: Entity) {
     crate::auras::apply_aura(
         h.app.world_mut(),

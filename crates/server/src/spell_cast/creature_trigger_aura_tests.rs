@@ -39,7 +39,7 @@ fn native_fixture() -> Harness {
     ]
     .into_iter()
     .map(|id| {
-        data.store
+        data.spell_store()
             .get(id)
             .expect("native producer/consumer closure")
             .clone()

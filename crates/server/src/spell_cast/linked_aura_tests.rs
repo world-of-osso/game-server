@@ -42,7 +42,7 @@ fn linked_harness() -> Harness {
 fn apply_link(h: &mut Harness, spell_id: u32, caster: Entity, target: Entity) {
     let effect = world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(spell_id)
         .unwrap()
         .effects
@@ -90,7 +90,7 @@ fn class_completeness_native_linked_ironfur_applies_real_mastery_from_the_recipi
     h.advance(3);
     let native = world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(IRONFUR_MASTERY)
         .unwrap()
         .effects[0]
@@ -117,7 +117,7 @@ fn class_completeness_native_linked_ironfur_reapply_and_expiry_do_not_duplicate_
     assert_eq!(mastery(&h), boosted);
     let duration = world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(IRONFUR)
         .unwrap()
         .misc
@@ -149,7 +149,11 @@ fn class_completeness_native_linked_explicit_child_uses_original_caster_and_pres
             target: npc,
             spell_id: SPELLSHIELD_CHILD,
             effect_mask: crate::auras::aura_effect_mask(
-                world_db().unwrap().store.get(SPELLSHIELD_CHILD).unwrap(),
+                world_db()
+                    .unwrap()
+                    .spell_store()
+                    .get(SPELLSHIELD_CHILD)
+                    .unwrap(),
             ),
             source: AuraSource::Cast,
         },
@@ -172,7 +176,7 @@ fn class_completeness_native_linked_reapply_synchronizes_native_stacks_without_r
     assert_eq!(child.expires_at, first.expires_at);
     let native = world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(STACKING_CHILD)
         .unwrap()
         .effects

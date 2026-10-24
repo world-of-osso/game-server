@@ -344,7 +344,7 @@ fn dummy9_tranquility_shield_absorbs_sixty_percent_max_health_and_ends_with_chan
     h.cast_and_deliver(740, None);
     h.advance(3);
     landed(&h);
-    let fire = world_db().unwrap().store.get(133).unwrap().clone();
+    let fire = world_db().unwrap().spell_store().get(133).unwrap().clone();
     let ctx = super::effects::EffectCtx {
         caster: h.npc,
         spell: &fire,
@@ -421,7 +421,7 @@ fn dummy9_tranquility_cancellation_removes_unspent_shield() {
     h.cast_and_deliver(740, None);
     h.advance(3);
     landed(&h);
-    let fire = world_db().unwrap().store.get(133).unwrap().clone();
+    let fire = world_db().unwrap().spell_store().get(133).unwrap().clone();
     let ctx = super::effects::EffectCtx {
         caster: h.npc,
         spell: &fire,

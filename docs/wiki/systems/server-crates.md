@@ -44,6 +44,12 @@ Six generated files (37,819 lines before relocation) now live under `server-cata
 
 All six generators still require an explicit output argument; point it at the corresponding new catalog file. Generated visibility now permits the core consumer. No lookup values, test bodies, names, ignored flags or should-panic flags change. The pure move commit is separate from wiring. Paired elapsed-time and full-suite acceptance remain separate proof; source-size reduction is not a speedup claim.
 
+## Spell fixture qualification (D2)
+
+The approved first slice contains 29 spell-cast source files and 175 enabled cases. Before any source move, their setup reads use `WorldData::spell_store()` to borrow the existing canonical cached `SpellStore`; cache fields remain private and no second resource/cache is introduced. Only existing `varied`, native-enemy-dodge harness and native-creature-world fixture helpers are public for this slice. The dodge helper's existing constant/apply dependencies use the same explicit test-support gate. Ordinary production does not compile the fixture harness.
+
+No `execute_cast` seam or gameplay-internal visibility widening is included. Actual external-consumer compilation, exact test inventories, runtime qualification and matched comment-rebuild measurements remain required before acceptance. Source size and check elapsed time do not establish edit-build payoff.
+
 ## Sources
 
 - `crates/server-catalog/{Cargo.toml,src/lib.rs}`, `crates/server-simulation/{Cargo.toml,src/lib.rs}` — package/dependency ownership.

@@ -50,7 +50,7 @@ fn class_completeness_native_minimum_speed_ghost_wolf_restores_base_after_slow()
     let h = speed_harness();
     let effect = world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(GHOST_WOLF)
         .unwrap()
         .effects
@@ -67,7 +67,7 @@ fn class_completeness_native_minimum_speed_uses_strongest_floor_after_normalizat
     apply_torpedo_speed(&mut h, caster);
     let native = world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(CHI_TORPEDO)
         .unwrap()
         .effects
@@ -86,7 +86,7 @@ fn class_completeness_native_minimum_speed_expiry_restores_weaker_floor() {
     assert_eq!(speeds(&h), [3.0; 3]);
     let duration = world_db()
         .unwrap()
-        .store
+        .spell_store()
         .get(CHI_TORPEDO)
         .unwrap()
         .misc
@@ -148,6 +148,12 @@ fn class_completeness_native_minimum_speed_does_not_override_root_or_persist_aft
         crate::auras::RemoveReason::Cancelled,
         |aura| aura.spell_id == ROOTS || aura.spell_id == GHOST_WOLF,
     );
-    let slow = world_db().unwrap().store.get(CHILLED).unwrap().effects[0].base_points;
+    let slow = world_db()
+        .unwrap()
+        .spell_store()
+        .get(CHILLED)
+        .unwrap()
+        .effects[0]
+        .base_points;
     assert_eq!(speeds(&h), [1.0 + slow / 100.0; 3]);
 }
