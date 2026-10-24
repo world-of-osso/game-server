@@ -145,6 +145,10 @@ fn load_authored_guardian_arena(run: &mut Run) -> shared::components::Position {
             Ok(shared::components::Position { x, y, z })
         },
     ).expect("authored Orator arena, as in native target148 fixtures");
+    // This authored2669 scene has no frozen Stockade34 route graph.
+    run.app
+        .world_mut()
+        .remove_resource::<crate::dungeon_simulator::Space>();
     run.app.insert_resource(crate::test_data::ground_map());
     run.app.insert_resource(
         crate::line_of_sight::LineOfSight::load(&crate::ground::ground_data_dir().join("los"))
