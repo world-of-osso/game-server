@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate crates/server/src/character_stats_data.rs.
+"""Generate crates/server-catalog/src/character_stats_data.rs.
 
 Sources:
 - SimC engine/dbc/sc_extra_data.inc: __gt_class_stats_by_level (class base
@@ -20,7 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SIMC = Path(sys.argv[1] if len(sys.argv) > 1 else Path.home() / "Repos/simc")
 GAMETABLES = Path(sys.argv[2] if len(sys.argv) > 2 else ROOT / "data/gametables")
-OUT = ROOT / "crates/server/src/character_stats_data.rs"
+OUT = ROOT / "crates/server-catalog/src/character_stats_data.rs"
 LEVELS = 90
 CLASSES = 13
 
@@ -98,7 +98,7 @@ def ilvl_multipliers(const, name, doc):
         "",
         f"/// {doc} `[item level - 1]` = (armor, weapon, trinket, jewelry).",
         "#[rustfmt::skip]",
-        f"pub(crate) const {const}: [[f32; 4]; {len(rows)}] = [{body}];",
+        f"pub const {const}: [[f32; 4]; {len(rows)}] = [{body}];",
     ]
 
 
@@ -126,7 +126,7 @@ def main():
         "",
         "/// `[class][level - 1]` = base (Str, Agi, Sta, Int); class 0 is unused.",
         "#[rustfmt::skip]",
-        f"pub(crate) const CLASS_BASE_STATS: [[[u16; 4]; {LEVELS}]; {CLASSES + 1}] = [",
+        f"pub const CLASS_BASE_STATS: [[[u16; 4]; {LEVELS}]; {CLASSES + 1}] = [",
     ]
     for rows in stats:
         out.append("    [" + ", ".join(f"[{s}, {a}, {t}, {i}]" for s, a, t, i in rows) + "],")
@@ -135,7 +135,7 @@ def main():
         "",
         "/// `(ChrRaces ID, (Str, Agi, Sta, Int))` racial modifiers, sorted by ID.",
         "#[rustfmt::skip]",
-        "pub(crate) const RACE_STAT_MODS: &[(u8, [i16; 4])] = &[",
+        "pub const RACE_STAT_MODS: &[(u8, [i16; 4])] = &[",
     ]
     out += [f"    ({race}, [{s}, {a}, {t}, {i}])," for race, (s, a, t, i) in races]
     out += [
@@ -143,11 +143,11 @@ def main():
         "",
         "/// Health per stamina, `[level - 1]` (gtHpPerSta).",
         "#[rustfmt::skip]",
-        f"pub(crate) const HP_PER_STAMINA: [f32; {LEVELS}] = [{fmt_floats(r['Health'] for r in hp)}];",
+        f"pub const HP_PER_STAMINA: [f32; {LEVELS}] = [{fmt_floats(r['Health'] for r in hp)}];",
         "",
         "/// Base mana `[class][level - 1]` (gtBaseMP); 0 = no mana.",
         "#[rustfmt::skip]",
-        f"pub(crate) const BASE_MANA: [[u32; {LEVELS}]; {CLASSES + 1}] = [",
+        f"pub const BASE_MANA: [[u32; {LEVELS}]; {CLASSES + 1}] = [",
         f"    [0; {LEVELS}],",
     ]
     by_id = {class_id: column for column, class_id in CLASS_COLUMNS.items()}
@@ -159,7 +159,7 @@ def main():
             "",
             f"/// Rating per 1% (mastery: per point), {column}, `[level - 1]` (gtCombatRatings).",
             "#[rustfmt::skip]",
-            f"pub(crate) const {const}_RATING: [f32; {LEVELS}] = [{fmt_floats(r[column] for r in cr)}];",
+            f"pub const {const}_RATING: [f32; {LEVELS}] = [{fmt_floats(r[column] for r in cr)}];",
         ]
     out += ilvl_multipliers(
         "COMBAT_RATING_MULT_BY_ILVL", "combatratingsmultbyilvl.txt", "Item rating multiplier (gtCombatRatingsMultByILvl)"
@@ -172,7 +172,7 @@ def main():
         "",
         "/// Stat budget one socket costs, `[item level - 1]` (gtItemSocketCostPerLevel).",
         "#[rustfmt::skip]",
-        f"pub(crate) const SOCKET_COST_BY_ILVL: [f32; {len(socket)}] = [{fmt_floats(r['Socket Cost'] for r in socket)}];",
+        f"pub const SOCKET_COST_BY_ILVL: [f32; {len(socket)}] = [{fmt_floats(r['Socket Cost'] for r in socket)}];",
     ]
     OUT.write_text("\n".join(out) + "\n")
     print(f"wrote {OUT}")
