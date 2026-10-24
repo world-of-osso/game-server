@@ -48,6 +48,8 @@ All six generators still require an explicit output argument; point it at the co
 
 The approved first slice contains 29 spell-cast source files and 175 enabled cases. Before any source move, their setup reads use `WorldData::spell_store()` to borrow the existing canonical cached `SpellStore`; cache fields remain private and no second resource/cache is introduced. Only existing `varied`, native-enemy-dodge harness and native-creature-world fixture helpers are public for this slice. The dodge helper's existing constant/apply dependencies use the same explicit test-support gate. Ordinary production does not compile the fixture harness.
 
+External qualification exposed three additional `dummy7` charge-state reads after the cache/helper blockers were removed. The separately approved read-only `test_harness::charge_recovery` observer borrows canonical `SpellHistory` and returns consumed count plus oldest pending recharge; charge fields stay private. It retains the original missing-category failure boundary and checks the exact oldest recharge, not a weaker wire notification proxy.
+
 No `execute_cast` seam or gameplay-internal visibility widening is included. Actual external-consumer compilation, exact test inventories, runtime qualification and matched comment-rebuild measurements remain required before acceptance. Source size and check elapsed time do not establish edit-build payoff.
 
 ## Sources

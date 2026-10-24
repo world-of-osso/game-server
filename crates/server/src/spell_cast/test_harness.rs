@@ -137,6 +137,15 @@ impl WorldData {
     }
 }
 
+/// Observe the canonical category's consumed charges and oldest pending recharge.
+pub fn charge_recovery(history: &super::SpellHistory, category: u32) -> (u8, Option<f64>) {
+    let charges = &history.charges[&category];
+    (
+        charges.used(),
+        charges.pending.front().map(|charge| charge.ready_at),
+    )
+}
+
 #[cfg(test)]
 pub(crate) fn place_toy_caster_on_source_area(
     h: &mut Harness,

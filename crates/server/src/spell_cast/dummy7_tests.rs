@@ -234,13 +234,8 @@ fn raging_blow(chance: f32, rank: bool) {
         .as_ref()
         .unwrap()
         .charge_category;
-    let used = h
-        .app
-        .world()
-        .get::<super::SpellHistory>(h.caster)
-        .unwrap()
-        .charges[&cat]
-        .used();
+    let history = h.app.world().get::<super::SpellHistory>(h.caster).unwrap();
+    let (used, _) = charge_recovery(history, cat);
     let reset = rank && chance == 100.0;
     assert_eq!(used, if reset { 0 } else { 1 });
     // This real one-charge proc marker can be consumed by the root's damage
@@ -284,13 +279,9 @@ fn dummy7_raging_blow_restores_only_latest_charge_preserving_oldest_recharge() {
     h.advance(4);
     landed(&h);
     let cat = root.categories.as_ref().unwrap().charge_category;
-    let oldest = h
-        .app
-        .world()
-        .get::<super::SpellHistory>(h.caster)
-        .unwrap()
-        .charges[&cat]
-        .next_ready_at();
+    let history = h.app.world().get::<super::SpellHistory>(h.caster).unwrap();
+    let (_, oldest) = charge_recovery(history, cat);
+    let oldest = oldest.expect("first Raging Blow charge is recovering");
     h.advance(35);
     root.effects
         .iter_mut()
@@ -313,14 +304,10 @@ fn dummy7_raging_blow_restores_only_latest_charge_preserving_oldest_recharge() {
     h.cast_and_deliver(85288, Some(h.npc));
     h.advance(4);
     landed(&h);
-    let charges = &h
-        .app
-        .world()
-        .get::<super::SpellHistory>(h.caster)
-        .unwrap()
-        .charges[&cat];
-    assert_eq!(charges.used(), 1);
-    assert_eq!(charges.next_ready_at(), oldest);
+    let history = h.app.world().get::<super::SpellHistory>(h.caster).unwrap();
+    let (used, next_ready_at) = charge_recovery(history, cat);
+    assert_eq!(used, 1);
+    assert_eq!(next_ready_at, Some(oldest));
 }
 #[test]
 fn dummy7_raging_blow_rank_zero_chance_keeps_recharge() {
