@@ -10,6 +10,8 @@ const WYVERN_READY: u32 = 471878;
 const WYVERN_SUMMON: u32 = 1222271;
 const WYVERN_CRY: u32 = 471881;
 const WYVERN_ENTRY: u32 = 234170;
+const BOAR_IMPACT: u32 = 471936;
+const BEAR_SUMMON: u32 = 471990;
 const KILL_COMMAND: u32 = 34026;
 const NEARBY_FIXTURE_TARGET_OFFSET: f32 = 1.5;
 
@@ -327,6 +329,67 @@ fn kill_command_casts(run: &Run) -> usize {
                 && event.kind == shared::protocol::CombatLogKind::CastSuccess
         })
         .count()
+}
+
+fn observed_howl_actions(run: &Run) -> Vec<u32> {
+    use shared::protocol::CombatLogKind;
+    run.app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| event.source == Some(run.actor.to_bits()))
+        .filter_map(|event| match event.spell_id {
+            Some(WYVERN_SUMMON | BEAR_SUMMON) if event.kind == CombatLogKind::Summon => {
+                event.spell_id
+            }
+            Some(BOAR_IMPACT) if event.kind == CombatLogKind::CastSuccess => event.spell_id,
+            _ => None,
+        })
+        .take(3)
+        .collect()
+}
+
+#[test]
+#[ignore = "native clock/KC, real Wyvern and Bear summons, literal Boar action"]
+fn dps_parity_howl_native_first_cycle_preserves_sourced_action_order() {
+    let _seed = crate::random::seed_scope(70_448);
+    let (mut run, _) = prepare_howl_austin_at_native_spawn();
+    engage(&mut run);
+    let bound = native_duration(&run, HOWL_COOLDOWN) * 4.0;
+    advance_seconds(&mut run, bound);
+    assert!(
+        kill_command_casts(&run) > 0,
+        "actual ordinary KC prerequisite"
+    );
+    assert_eq!(
+        observed_howl_actions(&run),
+        vec![WYVERN_SUMMON, BOAR_IMPACT, BEAR_SUMMON],
+        "actual summon logs and native Boar action must follow Wyvern/Boar/Bear"
+    );
+}
+
+#[test]
+#[ignore = "native ordinary combat without selected Howl cannot start its cycle"]
+fn dps_parity_howl_native_removed_root_has_no_combat_cycle() {
+    let _seed = crate::random::seed_scope(70_448);
+    let (mut run, _) = prepare_howl_austin_at_native_spawn();
+    let owner = run.actor;
+    crate::auras::remove_spell(run.app.world_mut(), owner, HOWL, RemoveReason::Cancelled);
+    engage(&mut run);
+    let bound = native_duration(&run, HOWL_COOLDOWN) * 2.0;
+    advance_seconds(&mut run, bound);
+    assert!(
+        kill_command_casts(&run) > 0,
+        "actual ordinary KC prerequisite"
+    );
+    assert!(!crate::auras::has_aura(
+        run.app.world(),
+        owner,
+        HOWL_COOLDOWN
+    ));
+    assert_eq!(cry_stacks(&run), 0);
+    assert!(observed_howl_actions(&run).is_empty());
 }
 
 #[test]
