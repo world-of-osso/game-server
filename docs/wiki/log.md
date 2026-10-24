@@ -1,6 +1,9 @@
 ## 2026-10-24 — Deterministic pet-battle crate extraction (E)
 
 [Crate boundaries](systems/server-crates.md#deterministic-pet-battles-e): all 33 pet-battle sources move byte-for-byte into `server-pet-battle`; 16 caller paths now use the crate directly, with no server compatibility export or visibility widening. [Mapping](../handoffs/crate-split-pet-battle-mapping.json) preserves 235 exact cases (230 enabled, five existing ignored). Compiler/runtime proof is recorded separately from the source move; full integration remains lead-owned.
+## 2026-10-24 — Source-bound ordinary cone boundary
+
+[Model geometry](systems/model-geometry.md#ordinary-cone-close-boundary):607781b26 genuine native FoF117418/Mage120 close-off-arc2RED plus strict2yd/far/vertical1GREEN8.31s. Shared ordinary cones now use TC's strict3D target bounding radius/min2; existing98609-row loader retains radius alongside unchanged reach. No unknown-radius substitution, line bypass or WW IDs. Native harness uses actual Kobold10913/scale1. GREEN, unchanged cone/frontal controls and two-crate check pending; lead full gate and WW numerical parity separate.
 
 ## 2026-10-24 — Isolated qualified Ret Sentence/Wake/Toll packet
 
