@@ -28,6 +28,10 @@ const DANCE_BUFF: u32 = 325202;
 const SPINNING_CRANE_KICK: u32 = 101546;
 const MYSTIC_TOUCH_PASSIVE: u32 = 8647;
 const MYSTIC_TOUCH_DEBUFF: u32 = 113746;
+const RUSHING_WIND_KICK_TALENT: u32 = 1250566;
+const RUSHING_WIND_KICK_OVERRIDE: u32 = 1250554;
+pub(super) const RUSHING_WIND_KICK: u32 = 467307;
+const RISING_SUN_KICK: u32 = 107428;
 
 /// MONK_MYSTIC_TOUCH_SIMC_PRODUCER: SimC76f8118 sc_monk.cpp438–455.
 /// Native113746 supplies the physical vulnerability; no multiplier is invented.
@@ -180,6 +184,81 @@ fn sunfire_spiral_multiplier(world: &World, caster: Entity, spell: u32) -> f32 {
         .find(|effect| effect.index == 0)
         .expect("native Sunfire Spiral retains its effect0 percentage");
     1.0 + effect.amount / 100.0
+}
+
+/// SIMC_WW_RWK_BOK_LANDED_PRODUCER: SimC76f8118 sc_monk.cpp1408–1414.
+/// TC a352b1fa has no binding. DB2 owns the selected talent's chance and override.
+/// Native instant BOK hits before modifier-use consumption; misses never run OnHit.
+pub(super) fn blackout_kick_hit(world: &mut World, caster: Entity, _target: Entity, depth: u8) {
+    if !auras::has_aura(world, caster, COMBO_BREAKER_BUFF) {
+        return;
+    }
+    let Some(chance) = read_rushing_wind_kick_chance(world, caster) else {
+        return;
+    };
+    if rand::random::<f32>() * 100.0 >= chance {
+        return;
+    }
+    reset_rising_sun_kick(world, caster);
+    crate::spell_cast::cast_triggered(
+        world,
+        caster,
+        RUSHING_WIND_KICK_OVERRIDE,
+        Some(caster),
+        depth + 1,
+    );
+}
+
+fn selected_rushing_wind_kick_owner(world: &World, caster: Entity) -> bool {
+    world
+        .get::<crate::class_progression::TraitLoadout>(caster)
+        .is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|spell| spell.spell_id == RUSHING_WIND_KICK_TALENT)
+        })
+}
+
+/// Same named policy, SimC76f8118 sc_monk.cpp1199–1203.
+/// Aura332 is not a native generic trigger type; the source action expires it.
+pub(super) fn consume_rushing_wind_kick(world: &mut World, caster: Entity, _spell: &SpellInfo) {
+    if !selected_rushing_wind_kick_owner(world, caster) {
+        return;
+    }
+    auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+        aura.spell_id == RUSHING_WIND_KICK_OVERRIDE && aura.caster == caster
+    });
+}
+
+fn read_rushing_wind_kick_chance(world: &World, caster: Entity) -> Option<f32> {
+    if !selected_rushing_wind_kick_owner(world, caster) {
+        return None;
+    }
+    let talent = world
+        .get::<ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.spell_id == RUSHING_WIND_KICK_TALENT && aura.caster == caster)?;
+    Some(
+        talent
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .expect("native selected Rushing Wind Kick retains effect0 chance")
+            .amount,
+    )
+}
+
+fn reset_rising_sun_kick(world: &mut World, caster: Entity) {
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(RISING_SUN_KICK)
+        .expect("native selected RWK retains Rising Sun Kick");
+    let remaining =
+        crate::spell_cast::native_apl::cooldown_value(world, caster, spell, "full_recharge_time")
+            .expect("native Rising Sun Kick full recharge is readable");
+    // Reduce the actual complete native timer, including its shared charge category.
+    // The existing gameplay helper notifies the owner and never changes the GCD.
+    super::reduce_cooldown(world, caster, RISING_SUN_KICK, remaining);
 }
 
 /// Tiger Palm rolls its learned passive's native effect0 chance on a landed hit.

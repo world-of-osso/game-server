@@ -1,6 +1,7 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
 mod composite_precombat_tests;
 mod dummy_reference_tests;
+mod elemental_ascendance_tests;
 mod engagement_tests;
 mod equipment_input_tests;
 mod feral_tests;
@@ -23,6 +24,8 @@ mod profile_initialization;
 mod report;
 mod ret_empyrean_tests;
 mod ret_purpose_tests;
+#[cfg(test)]
+mod ret_rotation;
 mod ret_tier_tests;
 pub(crate) mod single_spell;
 mod windwalker_rotation;

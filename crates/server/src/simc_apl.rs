@@ -13,6 +13,26 @@ pub trait Facts {
 pub trait ActionFacts: Facts {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String>;
 
+    /// Optional adapter-owned action policy for this exact selection context.
+    /// True adds no veto; it never replaces native cast admission.
+    fn target_ready(&self, _action: &Action) -> Result<bool, String> {
+        Ok(true)
+    }
+
+    /// Adapter-owned primary resource for a source pool row without resource=.
+    fn primary_resource(&self) -> Result<String, String> {
+        Err("native primary resource is unavailable for pool_resource".into())
+    }
+
+    /// Read native admission with only this pool at its maximum; never mutate it.
+    /// Source conditions and action options are still evaluated by Program.
+    fn ready_at_resource_max(&self, action: &Action, resource: &str) -> Result<bool, String> {
+        Err(format!(
+            "native maximum-{resource} admission unavailable for {}",
+            action.name
+        ))
+    }
+
     /// Explicit native candidate order; unsupported adapters cannot invent a target.
     fn target_ids(&self, _action: &Action) -> Result<Vec<u64>, String> {
         Err("target_if requires explicit native target candidates".into())
@@ -83,6 +103,8 @@ impl Variables {
 
 #[cfg(test)]
 mod context_tests;
+#[cfg(test)]
+mod pool_tests;
 #[cfg(test)]
 mod precombat_tests;
 #[cfg(test)]

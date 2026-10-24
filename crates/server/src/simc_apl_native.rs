@@ -222,6 +222,11 @@ impl<'a> NativeFacts<'a> {
         let target = self.selected_target(action)?;
         match property {
             "health.pct" => self.target_health_pct(target),
+            "debuff.casting.up" => Ok(bool_value(
+                self.world
+                    .get::<shared::casting::CastState>(target)
+                    .is_some(),
+            )),
             "debuff.casting.react" => self.casting_reaction(target),
             "time_to_die" | "is_boss" => {
                 let metadata = self

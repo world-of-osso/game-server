@@ -38,6 +38,7 @@ mod gulping_goliath;
 mod gutshot;
 pub(crate) mod hellfire_ramparts;
 pub mod instance_script;
+mod irideus;
 pub(crate) mod jump_movement;
 pub(crate) mod kargath;
 mod khajin;
@@ -413,6 +414,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == wratheye::SCRIPT {
         return wratheye::creature_ai(world, creature);
     }
+    if script_name == irideus::SCRIPT {
+        return irideus::creature_ai(world, creature);
+    }
     if script_name == anubzekt::SCRIPT {
         return anubzekt::creature_ai(world, creature);
     }
@@ -501,6 +505,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || script_name == anubzekt::SCRIPT
         || script_name == gutshot::SCRIPT
         || script_name == wratheye::SCRIPT
+        || script_name == irideus::SCRIPT
         || script_name == gorek::SCRIPT
         || script_name == khajin::SCRIPT
         || script_name == gulping_goliath::SCRIPT

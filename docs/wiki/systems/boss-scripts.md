@@ -1,5 +1,18 @@
 # Boss scripts
 
+## Watcher Irideus stage-one partial —2026-10-22
+
+[Contract](../../specs/boss-scripts.md#watcher-irideus-stage-one-partial). LittleWigs2777a9d stage-one Fist384524/Surge384014/Overload389179/Volley384351 retain native targets, casts and channels. Future events stop at<=15% health; no invented transition position, Barrier, Pulse, removal/resume or scripted dummy children. Generic lethal credit is not full-fight proof.
+
+Ignored693bfe1e5 contracts preceded AI:9d23d7af0 native cone/periodic damage qualification PASS with four genuine missing-clock failures27.50s. Post-master88bc9b8ff passes native Fist/Surge damage, all four initial clocks/actual Overload aura,15% stop and native-home reset; the repeat oracle fails. Diagnostic887aa9114 proves source requests are correct but native category1152/12s rejects Surge38.45s after Overload, and category133/2s rejects Volley60.65s after Fist. Victim stays alive;90s completions are[5,1,3,1]. `IRIDEUS_SOURCE_CLOCK_CATEGORY_COOLDOWN_GAP` preserves this incompatibility without cooldown bypass, retry or manufactured rearm. The unsupported all-lanes-repeat assertion was replaced with actual rejection/deadline/no-retry assertions, retaining credit/copy/corpse checks. Exact corrected case1f12f317e passes22.01s in Normal1/projected205. Coverage is COMPOSITE5GREEN (retained four plus this one), not a fresh five-case run; production unchanged since88bc9b8ff.
+
+Producer/SQL only bind2504/5395/106801 and ScriptName. DerivedNormal63527000/class4/flags0/faction16/models/difficulties/native data remain unchanged; fresh-copy twice-replay receipt and conflict/idempotence producer proof accompany the packet. Evidence `game-engine/data/diagnostics/follower-bosses-df-2026-10-22/irideus-*`, including native category rows and admission log. Lead owns final check, landing and canonical publication. No Stage2, indefinitely repeating four-lane combat, authored205population, navigation or loot claim.
+
+### Kargath native-hit qualification
+
+Gateir1038's Kargath30739 damage assertion failed again in isolation, while master controls passed. Exact gate-production683cf6ee5 with observation only then produced native893damage/PASS39.25s; the first fresh-process compiled counterexample produced actual `Miss(Miss)`/FAIL18.67s with CastSuccess, no remaining cast and the same poses. Protocol2abc7fa and the canonical world.db inode matched the gate. This reproduction is a legal native DefenseType2 miss, not a shared boss-clock rejection or evidence of Irideus fixture leakage. Evidence `irideus-kargath-native-diagnostic.log` and `irideus-kargath-unseeded-trial-01.log` under the DF evidence root. The fixture scopes the existing test-only native RNG immediately before the ordinary cast; original positive-damage assertion, native hit chances/damage/data/geometry and runtime code remain unchanged. Seeded qualification and requested Irideus rerun are pending GREEN.
+
+
 ## Candle King native explicit-unit boundary — 2026-10-22
 
 Actual source208745/map2651/ScriptName`boss_the_candle_king` requests Molds420659 via `DoCastSelf` at6s. Native70448 Molds carries EXCLUDE_CASTER but selects implicit22/7, not an explicit unit. Native gate atf2370bef4 proves the request reaches ordinary admission and fails InvalidTarget; Mind426145 already applies native fear. This is not permission to retarget Molds at the victim or bypass its attributes.

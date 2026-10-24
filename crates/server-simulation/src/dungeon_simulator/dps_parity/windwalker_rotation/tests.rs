@@ -133,12 +133,162 @@ fn literal_ww_native_combo_facts_follow_the_proposed_action_and_ignore_utility()
     );
 }
 
+fn log_zenith_priority_probe(run: &mut super::super::Run, rotation: &Rotation, frame: usize) {
+    const ZENITH: u32 = 1249625;
+    let values: serde_json::Map<String, Value> = [
+        "fight_style.patchwerk",
+        "cooldown.zenith.full_recharge_time",
+        "cooldown.zenith.remains",
+        "cooldown.rising_sun_kick.remains",
+        "cooldown.fists_of_fury.remains",
+        "talent.flurry_strikes",
+        "talent.spiritual_focus",
+        "trinket.1.has_use_buff",
+        "trinket.2.has_use_buff",
+        "trinket.1.cooldown.ready",
+        "trinket.2.cooldown.ready",
+        "trinket.1.cooldown.remains",
+        "trinket.2.cooldown.remains",
+        "chi",
+        "energy",
+        "buff.zenith.up",
+    ]
+    .into_iter()
+    .map(|name| {
+        let value = rotation.value_for(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &action("zenith"),
+            name,
+        );
+        (name.into(), json!(value))
+    })
+    .collect();
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(ZENITH)
+        .cloned()
+        .unwrap();
+    let admission = match crate::spell_cast::read_native_cast_start(
+        run.app.world_mut(),
+        run.actor,
+        &spell,
+        run.actor,
+    ) {
+        Ok(_) => "ready".to_owned(),
+        Err(reason) => format!("{reason:?}"),
+    };
+    let world = run.app.world();
+    let known = world
+        .get::<crate::class_progression::KnownSpells>(run.actor)
+        .unwrap();
+    let traits = world
+        .get::<crate::class_progression::TraitLoadout>(run.actor)
+        .unwrap();
+    eprintln!(
+        "WW_NATIVE_ZENITH_PROBE {}",
+        json!({
+            "frame": frame, "known": known.contains(ZENITH),
+            "selected": traits.active_talent_spells().any(|spell| spell.spell_id == ZENITH),
+            "resolved": crate::auras::overrides::resolve_spell(world, run.actor, ZENITH),
+            "native_admission": admission, "facts": values,
+        })
+    );
+}
+
+#[test]
+#[ignore = "native self-cast readiness under the pinned Zenith target_if source"]
+fn literal_ww_native_zenith_target_if_preserves_enemy_context_and_self_aura() {
+    const ZENITH: u32 = 1249625;
+    let mut run = super::super::prepare_measurement(269, 1).unwrap();
+    let mut rotation = run.windwalker_rotation.take().unwrap();
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        run.actor,
+        &run.targets,
+        &rotation.equipment,
+        bindings::execution_actions(),
+        false,
+    )
+    .unwrap();
+    assert!(
+        prepared
+            .execution(&action("zenith"), &rotation.equipment)
+            .unwrap()
+            .is_some(),
+        "native default self cast must already be ready"
+    );
+    let xuen = facts::read_xuen(run.app.world_mut(), run.actor);
+    let facts = WwFacts::new(
+        run.app.world(),
+        run.actor,
+        &rotation.bindings,
+        &rotation.equipment,
+        rotation.encounter,
+        &run.targets,
+        xuen,
+    );
+    assert_eq!(
+        facts.target_ids(&action("zenith")).unwrap(),
+        vec![run.targets[0].to_bits()]
+    );
+    let (selected, execution) = rotation
+        .select(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            "zenith",
+            &prepared,
+        )
+        .unwrap()
+        .expect("pinned Zenith target_if must select its actual enemy context");
+    assert_eq!(selected.target, Some(run.targets[0].to_bits()));
+    rotation
+        .driver
+        .execute(run.app.world_mut(), run.actor, selected, execution)
+        .unwrap();
+    for _ in 0..20 {
+        run.app.update();
+        if run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .is_some_and(|auras| auras.iter().any(|aura| aura.spell_id == ZENITH))
+        {
+            break;
+        }
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == ZENITH && aura.caster == run.actor),
+        "enemy scoring context must still cast the actual Zenith aura on self"
+    );
+    assert!(
+        !run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.targets[0])
+            .is_some_and(|auras| auras
+                .iter()
+                .any(|aura| aura.spell_id == ZENITH && aura.caster == run.actor))
+    );
+}
+
 fn run_literal(count: usize) {
     let _scope = crate::random::seed_scope(70448);
     let mut run = super::super::prepare_measurement(269, count).unwrap();
     super::super::engage(&mut run);
     let mut rotation = run.windwalker_rotation.take().unwrap();
-    for _ in 0..600 {
+    for frame in 0..600 {
+        if frame % 20 == 0 {
+            log_zenith_priority_probe(&mut run, &rotation, frame);
+        }
         rotation
             .drive(run.app.world_mut(), run.actor, &run.targets)
             .unwrap();
@@ -305,6 +455,244 @@ fn literal_ww_native_combo_breaker_blackout_earns_rwk_and_delivers_its_child() {
         actions.iter().any(|action| action["spell_id"] == 468179
             && action["damage"].as_u64().is_some_and(|damage| damage > 0)),
         "actual RWK must deliver native468179 damage, not just a root cast"
+    );
+}
+
+#[test]
+#[ignore = "native selected WDP earns its DB2 aura from real overlapping RSK and FoF cooldowns"]
+fn literal_ww_native_selected_wdp_earns_its_native_cooldown_window() {
+    let _scope = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(269, 1).unwrap();
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    super::super::install_fixture_lifetimes(&mut run, started_at);
+    super::super::engage(&mut run);
+    let mut rotation = run.windwalker_rotation.take().unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(run.actor)
+            .unwrap()
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 152175)
+    );
+    let mut overlapping_native_cooldowns = false;
+    let mut earned_duration = None;
+    for _ in 0..600 {
+        rotation
+            .drive(run.app.world_mut(), run.actor, &run.targets)
+            .unwrap();
+        run.app.update();
+        let rsk = rotation
+            .value_for(
+                run.app.world_mut(),
+                run.actor,
+                &run.targets,
+                &action("rising_sun_kick"),
+                "cooldown.rising_sun_kick.remains",
+            )
+            .unwrap();
+        let fof = rotation
+            .value_for(
+                run.app.world_mut(),
+                run.actor,
+                &run.targets,
+                &action("fists_of_fury"),
+                "cooldown.fists_of_fury.remains",
+            )
+            .unwrap();
+        overlapping_native_cooldowns |= rsk > 0.0 && fof > 0.0;
+        if let Some(aura) = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 196742 && aura.caster == run.actor)
+        {
+            earned_duration = Some(aura.duration_ms);
+        }
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    for spell in [107428, 113656] {
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(spell)
+                    && event.kind == CombatLogKind::CastSuccess),
+            "actual native RSK/FoF source cast {spell} must precede the producer test"
+        );
+    }
+    assert!(
+        overlapping_native_cooldowns,
+        "both actual native cooldowns must overlap"
+    );
+    assert_eq!(
+        earned_duration,
+        Some(1000),
+        "selected owner must earn native196742 with DB2's1000ms, not SimC's measured1500ms grace"
+    );
+}
+
+#[test]
+#[ignore = "native earned RWK reset and override consumption; no aura or power grants"]
+fn literal_ww_native_earned_rwk_resets_rsk_and_consumes_its_override() {
+    let _scope = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(269, 1).unwrap();
+    let clock = fixture(run.app.world());
+    let rotation = Rotation::load(run.app.world_mut(), run.actor, clock).unwrap();
+    let mut earned = false;
+    for _ in 0..64 {
+        cast(&mut run, 100780);
+        if !crate::auras::has_aura(run.app.world(), run.actor, 116768) {
+            continue;
+        }
+        cast(&mut run, 107428);
+        let before = rotation
+            .value_for(
+                run.app.world_mut(),
+                run.actor,
+                &run.targets,
+                &action("rising_sun_kick"),
+                "cooldown.rising_sun_kick.full_recharge_time",
+            )
+            .unwrap();
+        assert!(
+            before > 0.0,
+            "actual RSK must spend its native shared charge first"
+        );
+        if !crate::auras::has_aura(run.app.world(), run.actor, 116768) {
+            continue;
+        }
+        cast(&mut run, 100784);
+        if crate::auras::has_aura(run.app.world(), run.actor, 1250554) {
+            earned = true;
+            assert_eq!(
+                rotation
+                    .value_for(
+                        run.app.world_mut(),
+                        run.actor,
+                        &run.targets,
+                        &action("rising_sun_kick"),
+                        "cooldown.rising_sun_kick.full_recharge_time",
+                    )
+                    .unwrap(),
+                0.0,
+                "earned RWK must reset the actual native RSK charge"
+            );
+            break;
+        }
+    }
+    assert!(
+        earned,
+        "selected owner must naturally earn1250554 from landed BOK"
+    );
+    let rwk = action("rushing_wind_kick");
+    let mut dispatched = false;
+    for _ in 0..1200 {
+        let prepared = Prepared::read(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &rotation.equipment,
+            bindings::execution_actions(),
+            false,
+        )
+        .unwrap();
+        if let Some(execution) = prepared.execution(&rwk, &rotation.equipment).unwrap() {
+            literal_rotation::execution::execute(run.app.world_mut(), run.actor, execution)
+                .unwrap();
+            run.app.update();
+            dispatched = true;
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        dispatched,
+        "earned actual RWK must dispatch through native literal admission"
+    );
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(468179)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+        "actual earned RWK must damage through native468179"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 1250554),
+        "actual RWK use must consume its earned override rather than repeatedly replacing RSK"
+    );
+    assert_eq!(
+        crate::auras::overrides::resolve_spell(run.app.world(), run.actor, 107428),
+        107428
+    );
+}
+
+#[test]
+#[ignore = "native unselected RWK owner control with naturally earned Combo Breaker"]
+fn literal_ww_native_unselected_rwk_owner_does_not_earn_the_override() {
+    let _scope = crate::random::seed_scope(70448);
+    let (profile, mut traits) = super::super::read_reference(269).unwrap();
+    // Pinned native entry134543 is selected1250566; declare the unselected input
+    // before native progression, never remove a live aura/grant or reset powers.
+    let original = traits.len();
+    traits.retain(|entry| entry.entry_id != 134543);
+    assert_eq!(traits.len() + 1, original);
+    let identity = super::super::inputs::read_actor(&profile).unwrap();
+    let mut run = super::super::spawn_reference(profile, &traits, 1, identity).unwrap();
+    let clock = fixture(run.app.world());
+    literal_rotation::capture_fixture(run.app.world_mut(), run.actor, clock).unwrap();
+    super::super::preparation::warm_up_reference(&mut run).unwrap();
+    assert!(
+        !run.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(run.actor)
+            .unwrap()
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 1250566)
+    );
+    let bok_hits = |run: &super::super::Run| {
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(100784)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .count()
+    };
+    let mut eligible_hit = false;
+    for _ in 0..64 {
+        cast(&mut run, 100780);
+        if !crate::auras::has_aura(run.app.world(), run.actor, 116768) {
+            continue;
+        }
+        let before = bok_hits(&run);
+        cast(&mut run, 100784);
+        if bok_hits(&run) > before {
+            eligible_hit = true;
+            break;
+        }
+    }
+    assert!(
+        eligible_hit,
+        "actual BOK must land after naturally earned Combo Breaker"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 1250554),
+        "unselected native1250566 owner must not earn the RWK override"
     );
 }
 

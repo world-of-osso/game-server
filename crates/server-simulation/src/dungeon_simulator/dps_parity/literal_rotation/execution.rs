@@ -28,10 +28,12 @@ pub(crate) struct NativeComposite<'a> {
     pub steps: &'a [NativeAction<'a>],
 }
 
-// None is the action's native default target, not an explicit-target substitute.
+// Keys identify selection contexts; Execution retains the actual native cast target.
+// None is the native default, never a substitute for an unknown explicit context.
 type ActionKey = (String, Option<Entity>);
 type ReadyActions = BTreeMap<ActionKey, Execution>;
 
+#[derive(Clone, Copy)]
 struct NativeReadiness {
     ready: bool,
     limited: Option<PowerType>,
@@ -39,11 +41,11 @@ struct NativeReadiness {
 
 pub(crate) struct Prepared {
     ready: ReadyActions,
+    limits: BTreeMap<ActionKey, PowerType>,
+    declared: BTreeSet<String>,
     moving: bool,
     cast_active: bool,
     gcd_active: bool,
-    limits: BTreeMap<ActionKey, PowerType>,
-    declared: BTreeSet<String>,
 }
 
 impl Prepared {
@@ -64,10 +66,10 @@ impl Prepared {
             .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)));
         let targets = native_targets(world, actor, targets);
         let mut prepared = Self {
-            ready: BTreeMap::new(),
             moving,
             cast_active,
             gcd_active,
+            ready: BTreeMap::new(),
             limits: BTreeMap::new(),
             declared: ["snapshot_stats", "auto_attack", "retarget_auto_attack"]
                 .into_iter()
@@ -85,29 +87,6 @@ impl Prepared {
             read_item(world, actor, &targets, item, &mut prepared)?;
         }
         Ok(prepared)
-    }
-
-    /// True only when this selected pool at its native maximum would admit the
-    /// action. Other pools/health and every other native check remain unchanged.
-    pub fn resource_limited(
-        &self,
-        action: &Action,
-        equipment: &Equipment,
-        resource: PowerType,
-    ) -> Result<bool, String> {
-        let Some(key) = action_key(action, equipment)? else {
-            return Ok(false);
-        };
-        if !self.declared.contains(&key.0) {
-            return Err(format!(
-                "unknown native resource-query action {}",
-                action.name
-            ));
-        }
-        Ok(self
-            .limits
-            .get(&key)
-            .is_some_and(|power| *power == resource))
     }
 
     pub fn setup_pending(&self) -> bool {
@@ -150,6 +129,51 @@ impl Prepared {
             }
         }
         Ok(self)
+    }
+
+    /// True only when this selected pool at its native maximum would admit the
+    /// action. Other pools/health and every other native check remain unchanged.
+    pub fn resource_limited(
+        &self,
+        action: &Action,
+        equipment: &Equipment,
+        resource: PowerType,
+    ) -> Result<bool, String> {
+        let Some(key) = action_key(action, equipment)? else {
+            return Ok(false);
+        };
+        if !self.declared.contains(&key.0) {
+            return Err(format!(
+                "unknown native resource-query action {}",
+                action.name
+            ));
+        }
+        Ok(self
+            .limits
+            .get(&key)
+            .is_some_and(|power| *power == resource))
+    }
+
+    pub fn execution_in(
+        &self,
+        action: &Action,
+        equipment: &Equipment,
+        program: &server::simc_apl::Program,
+    ) -> Result<Option<Execution>, String> {
+        if action.name != "use_items" {
+            return self.execution(action, equipment);
+        }
+        for slot in equipment.use_items_slots(action, program)? {
+            let singular = Action {
+                name: "use_item".into(),
+                target: action.target,
+                options: [("slot".into(), slot.into())].into(),
+            };
+            if let Some(execution) = self.execution(&singular, equipment)? {
+                return Ok(Some(execution));
+            }
+        }
+        Ok(None)
     }
 
     pub fn execution(
@@ -260,6 +284,24 @@ fn record_ready(
     }
 }
 
+fn record_target_contexts(
+    prepared: &mut Prepared,
+    name: &str,
+    contexts: &[Entity],
+    state: NativeReadiness,
+    execution: &Execution,
+) {
+    for &candidate in contexts {
+        record_probe(
+            prepared,
+            (name.into(), Some(candidate)),
+            false,
+            state,
+            execution.clone(),
+        );
+    }
+}
+
 fn read_attacks(world: &World, actor: Entity, targets: &[Entity], ready: &mut ReadyActions) {
     let current = world.get::<crate::combat::AutoAttack>(actor);
     for (index, &target) in targets.iter().enumerate() {
@@ -347,13 +389,16 @@ fn read_spell(
     };
     for (index, &target) in targets.iter().enumerate() {
         let state = native_readiness(world, actor, id, target, None)?;
+        let execution = Execution::Spell(id, target);
         record_probe(
             prepared,
             (name.into(), Some(target)),
             index == 0,
             state,
-            Execution::Spell(id, target),
+            execution.clone(),
         );
+        let contexts = if self_target { enemies } else { &[] };
+        record_target_contexts(prepared, name, contexts, state, &execution);
     }
     Ok(())
 }
