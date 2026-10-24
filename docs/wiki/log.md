@@ -1,3 +1,7 @@
+## 2026-10-23 — Shared guardian attack-policy producer GREEN
+
+[Producer contract](investigations/demonology-dps-parity.md#shared-attack-binding-producer-portable-and-real-archive-qualified): native lists win over approved missing98035→271971/250289→1264093 policies, explicitly VerifiedBuild0. Portable30fbec3ff:2PASS/2RED→b830f924f:5PASS including actual dev-mode CLI; earlier connection warnings reproduced at CLI exit and fixed by closing, not suppression. Real TDB12109586native rows+2policies1.37s,0warnings/quick_check ok, removed0/other changes0. Separate private prepared SHA d826e103…3939a; measurement dd1de231… unchanged, no canonical mutation. Lead owns publication; full summon dispatch and repeating attacks remain open.
+
 ## 2026-10-23 — Guardian melee first hit; frozen movement blocks cadence
 
 [Melee coverage](investigations/demonology-dps-parity.md#guardian-melee-native-hit-enabled-frozen-movement-blocks-clock-qualification): genuine native Effect28→AI RED9a0/3attempts plus caster controlPASS. Implementation ab79 reuses existing power_stats/native combat and authored chase speed;4PASS/1FAIL24.91s,20m10compile/0warnings. Dread lands1208 once; GDB shows100active AA ticks/no stop, while frozen simulator route moves the in-reach actor away from its dummy. Cadence/retarget/stop and full numeric damage stay unqualified. Shared movement blocker reported to lead; no local timer/geometry workaround.
