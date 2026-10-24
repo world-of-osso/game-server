@@ -239,7 +239,7 @@ impl AuraEffectState {
 }
 
 /// Read the scheduler's unpaid ticks without advancing or reconstructing its phase.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn remaining_periodic_ticks(
     world: &World,
     caster: Entity,
