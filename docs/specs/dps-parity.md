@@ -57,7 +57,7 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 
 ### Native per-spell differential harness
 
-- [ ] FoF child impacts record observed synchronous periodic-dummy dispatch identity (aura/effect/instance/trigger), without guessing from spell ID/timestamp or changing casts. Unscoped/delayed origins remain null; the diff preserves observed provenance independently of oracle action-name selection.
+- [x] FoF child impacts record observed synchronous periodic-dummy dispatch identity (aura/effect/instance/trigger), without guessing from spell ID/timestamp or changing casts. Unscoped/delayed origins remain null; the diff preserves observed provenance independently of oracle action-name selection.
 
 - [x] A shared test-side helper reuses reference-profile preparation, native31146 and literal fixture readiness/dispatch for exactly one requested cast or N observed damage ticks; no forked rotation or synthetic follower profile. First native fixture is follower269 Tiger Palm, then Arms12294 after shared Player dispatch supports its real actor.
 - [x] The shared helper accepts distinct cast and observed damage spell IDs. An existing real fixture may be primed through shared native execution before capture; requested hit/tick counts exclude earlier priming events, without granting resources or inventing actor profiles.
