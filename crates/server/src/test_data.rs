@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 pub(crate) mod catalog_cache;
+pub(crate) mod fixture_dir;
 
 /// Advance the real selection/admission path until its player is published.
 pub(crate) fn wait_for_selected_player(
