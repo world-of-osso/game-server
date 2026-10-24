@@ -17,6 +17,17 @@ pub(crate) fn at_level(
     level: u8,
     configure: impl FnOnce(&mut App),
 ) -> (Harness, Entity) {
+    let (mut h, unit) = at_level_unengaged(entry, level, configure);
+    h.attack(h.npc);
+    h.advance(3);
+    (h, unit)
+}
+
+pub(crate) fn at_level_unengaged(
+    entry: u32,
+    level: u8,
+    configure: impl FnOnce(&mut App),
+) -> (Harness, Entity) {
     let (mut h, unit, profile) = spawn_profile_fixture_with_plugins(entry, configure);
     h.app.world_mut().get_mut::<Level>(h.caster).unwrap().0 = level;
     let kit_db = std::env::var_os("FOLLOWER_KIT_DB")
@@ -32,8 +43,6 @@ pub(crate) fn at_level(
     );
     h.app.insert_resource(catalog);
     spawning::initialize(h.app.world_mut(), h.caster, unit, profile).unwrap();
-    h.attack(h.npc);
-    h.advance(3);
     (h, unit)
 }
 

@@ -157,6 +157,7 @@ pub(crate) fn select_proc_trigger_target(
 }
 
 pub fn push_event(world: &mut World, event: AuraEvent) {
+    super::ret_sentence::record_damage(world, &event);
     if let Some(mut pending) = world.get_resource_mut::<PendingAuraEvents>() {
         pending.0.push(event);
     }
@@ -230,6 +231,7 @@ pub(super) fn process_aura_events(world: &mut World) {
             handle_side(world, target, Some(event.actor), event.target_mask, &event);
         }
         crate::spell_cast::scripts::after_dance_cast_event(world, &event);
+        crate::spell_cast::scripts::apply_mystic_touch_after_hit(world, &event);
     }
 }
 
