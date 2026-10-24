@@ -1,5 +1,5 @@
-//! SimC76f8118 warlock init1261–1265/pets963–983: natural Imp fade PRD.
-//! Native267102 effect0 supplies nominal chance;21-attempt cap is pinned behavior.
+//! Data-bound natural summon retirement: existing Imp fade PRD and named Dread expiry policy.
+//! SimC76f8118 init1261–1265/pets963–983,1248–1253; native267102 supplies both chances.
 use crate::random::Rng;
 use bevy::prelude::*;
 
@@ -8,29 +8,88 @@ const CORE_CHANCE: u32 = 267102;
 const CORE_BUFF: u32 = 264173;
 const FADE_CAP: u32 = 21;
 
+#[derive(Clone, Copy)]
+enum RetirementRoll {
+    AccumulatedFade,
+    Independent,
+}
+
+struct RetirementBinding {
+    root: u32,
+    creature: u32,
+    chance_effect: u8,
+    roll: RetirementRoll,
+}
+
+const RETIREMENT_BINDINGS: &[RetirementBinding] = &[
+    RetirementBinding {
+        root: 104317,
+        creature: 55659,
+        chance_effect: 0,
+        roll: RetirementRoll::AccumulatedFade,
+    },
+    // SIMC_DEMONIC_CORE_DREADSTALKER_EXPIRY: no TC/TDB event hook.
+    // Pinned pets1248–1253; actual267102 Effect1 owns the chance, not this policy.
+    RetirementBinding {
+        root: 193331,
+        creature: 98035,
+        chance_effect: 1,
+        roll: RetirementRoll::Independent,
+    },
+    RetirementBinding {
+        root: 193332,
+        creature: 98035,
+        chance_effect: 1,
+        roll: RetirementRoll::Independent,
+    },
+];
+
 #[derive(Component, Default)]
 struct FadeAttempts(u32);
 
-pub(crate) fn on_natural_fade(world: &mut World, owner: Entity) {
+pub(crate) fn on_natural_retirement(world: &mut World, actor: Entity) {
+    let Some((owner, binding)) = read_retirement_binding(world, actor) else {
+        return;
+    };
     if !world
         .get::<crate::class_progression::KnownSpells>(owner)
         .is_some_and(|known| known.contains(DEMONIAC))
     {
         return;
     }
-    let chance = world
+    let chance = read_core_chance(world, binding.chance_effect);
+    let earned = match binding.roll {
+        RetirementRoll::AccumulatedFade => roll_energy_fade(world, owner, chance),
+        RetirementRoll::Independent => crate::random::thread_rng().gen_bool(chance),
+    };
+    if earned {
+        crate::spell_cast::cast_triggered(world, owner, CORE_BUFF, Some(owner), 0);
+    }
+}
+
+fn read_retirement_binding(
+    world: &World,
+    actor: Entity,
+) -> Option<(Entity, &'static RetirementBinding)> {
+    let summon = world.get::<super::super::summon::SummonedCreature>(actor)?;
+    let creature = world.get::<shared::components::Npc>(actor)?.template_id;
+    RETIREMENT_BINDINGS
+        .iter()
+        .find(|binding| binding.root == summon.spell_id && binding.creature == creature)
+        .map(|binding| (summon.owner, binding))
+}
+
+fn read_core_chance(world: &World, index: u8) -> f64 {
+    world
         .resource::<crate::spell_info::SpellStore>()
         .get(CORE_CHANCE)
         .expect("Demoniac requires native Core chance metadata")
         .effects
         .iter()
-        .find(|effect| effect.index == 0)
-        .unwrap()
+        .find(|effect| effect.index == index)
+        .expect("selected retirement source requires native267102 chance effect")
         .base_points as f64
-        / 100.0;
-    if roll_energy_fade(world, owner, chance) {
-        crate::spell_cast::cast_triggered(world, owner, CORE_BUFF, Some(owner), 0);
-    }
+        / 100.0
 }
 
 fn roll_energy_fade(world: &mut World, owner: Entity, chance: f64) -> bool {

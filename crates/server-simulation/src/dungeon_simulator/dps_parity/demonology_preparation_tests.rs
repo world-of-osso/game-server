@@ -337,6 +337,65 @@ fn dps_parity_demo_native_dreadstalker_retirement_earns_both_core_stacks() {
         "each native Dread retirement earns one Core; trace {}",
         path.display()
     );
+    for _ in 0..5 {
+        run.app.update();
+    }
+    assert_eq!(
+        core_stacks(run.app.world()),
+        earned,
+        "retired actors cannot grant duplicate Core"
+    );
+}
+
+#[test]
+#[ignore = "map cleanup before native TTL must not notify natural retirement; private spec266 inputs required"]
+fn dps_parity_demo_dreadstalker_map_cleanup_does_not_earn_expiry_core() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_authored_guardian_control();
+    let actor = run.actor;
+    cast_and_finish(&mut run, actor, 104316);
+    let world = run.app.world_mut();
+    let dogs: Vec<_> = world
+        .query::<(
+            Entity,
+            &crate::spell_cast::summon::SummonedCreature,
+            &shared::components::Npc,
+        )>()
+        .iter(world)
+        .filter(|(_, summon, npc)| {
+            summon.owner == actor
+                && npc.template_id == 98035
+                && matches!(summon.spell_id, 193331 | 193332)
+        })
+        .map(|(entity, summon, _)| (entity, summon.expires_at.unwrap()))
+        .collect();
+    assert_eq!(dogs.len(), 2, "actual root/children prerequisite");
+    assert!(dogs.iter().all(|dog| crate::spell_cast::now(world) < dog.1));
+    for dog in &dogs {
+        world.entity_mut(dog.0).insert(crate::maps::InMap {
+            map_id: 34,
+            instance_id: 1,
+        });
+    }
+    run.app.update();
+    run.app.update();
+    let world = run.app.world();
+    assert!(
+        crate::spell_cast::targets::is_alive(world, actor),
+        "retain the selected living owner"
+    );
+    assert!(
+        dogs.iter().all(|dog| world.get_entity(dog.0).is_err()),
+        "observe actual map cleanup"
+    );
+    assert!(
+        dogs.iter().all(|dog| crate::spell_cast::now(world) < dog.1),
+        "cleanup occurred before authored expiry"
+    );
+    assert!(
+        !crate::auras::has_aura(world, actor, 264173),
+        "map cleanup is not natural expiry"
+    );
 }
 
 #[test]
