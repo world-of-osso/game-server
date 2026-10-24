@@ -1,3 +1,7 @@
+## 2026-10-23 — Exact fixture add lifetimes / target facts
+
+[Shared native facts](systems/simc-apl.md#native-binding-boundary): c88e6749e produces genuine2lifecycle RED19.63s/all20 phase observations and4target RED8.90s against current read-only backupdd1de231e32c. Earlier stale-schema setup failure excluded. Actual boundary substeps, per-add Health/TTD/role, selected/owned-aura facts and explicit add events: d07db700c yields14targetedGREEN (2lifecycle27.20s/10native16.45s/main-clock11.98s/combat-refs18.23s; compile24m14,0warnings). Live add-event expression values beyond absent-event cases still need acceptance coverage. Main300s,31146 templates and references unchanged; all-owner3T remeasurement remains lead-owned. [Proof ledger](../handoffs/add-lifetimes-target-facts-proof-ledger.md).
+
 ## 2026-10-23 — Periodic critical ticks
 
 [Periodic crit](systems/auras.md#periodic-critical-ticks--2026-10-23): TC-native eligibility/live rolls and critical damage/healing bonuses, with explicit `FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_SPELL_OWNER` policy for class actors and owned pets/totems. Native RED7b924:2controlsPASS/5featureFAIL35.83s, then first7GREEN42.94s. Required real1943+21880 ordering REDcf191c5: native flat +10 raises normal10937→11038, critical73726 versus74307.8125 expected; initial follower259 fixture failure explicitly invalid. Move periodic roll behind numeric source/flat bonuses; final GREEN pending. Clocks, attribution, APL and pet stats unchanged.
