@@ -14,6 +14,7 @@ pub(crate) enum Execution {
     AutoAttack(Entity),
     RetargetAutoAttack(Entity),
     Spell(u32, Entity),
+    EmpoweredSpell(u32, Entity, u8),
     ReplacingSpell(u32, Entity),
     Item(ItemUse, Entity),
 }
@@ -131,8 +132,25 @@ impl Prepared {
                     .ok_or_else(|| format!("invalid explicit literal target {bits}"))
             })
             .transpose()?;
-        Ok(self.ready.get(&(key, target)).cloned())
+        self.ready
+            .get(&(key, target))
+            .cloned()
+            .map(|execution| select_empower_stage(action, execution))
+            .transpose()
     }
+}
+
+fn select_empower_stage(action: &Action, execution: Execution) -> Result<Execution, String> {
+    let Some(source) = action.options.get("empower_to") else {
+        return Ok(execution);
+    };
+    let Execution::Spell(id, target) = execution else {
+        return Err("empower_to requires an ordinary native spell selection".into());
+    };
+    let stage = source
+        .parse::<u8>()
+        .map_err(|error| format!("invalid literal empower_to={source}: {error}"))?;
+    Ok(Execution::EmpoweredSpell(id, target, stage))
 }
 
 fn native_targets(world: &World, actor: Entity, supplied: &[Entity]) -> Vec<Entity> {
@@ -322,6 +340,10 @@ pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Re
             };
             result
                 .map_err(|reason| format!("selected native literal spell{id} rejected: {reason:?}"))
+        }
+        Execution::EmpoweredSpell(id, target, stage) => {
+            crate::spell_cast::creature_cast_empowered(world, actor, id, Some(target), stage)
+                .map_err(|reason| format!("selected native empower spell{id} rejected: {reason:?}"))
         }
         Execution::ReplacingSpell(id, target) => {
             crate::spell_cast::creature_cast_interrupting_self(world, actor, id, Some(target))
