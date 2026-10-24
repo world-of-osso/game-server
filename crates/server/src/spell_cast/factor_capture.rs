@@ -66,8 +66,21 @@ struct Armor {
     fraction: Option<f32>,
 }
 
+#[derive(Clone, Copy)]
+pub(crate) struct PeriodicEmission {
+    pub actor: Entity,
+    pub aura_unit: Entity,
+    pub aura_spell_id: u32,
+    pub aura_instance_id: u32,
+    pub effect_index: u8,
+    pub triggered_spell_id: u32,
+    pub depth: u8,
+    pub scheduled_at: f64,
+}
+
 #[derive(Default)]
 struct Hit {
+    emission_origin: Option<Value>,
     formula: Formula,
     sources: Vec<Value>,
     chance: Option<(f32, f32)>,
@@ -85,6 +98,7 @@ struct State {
     modifiers: BTreeMap<u32, Vec<Value>>,
     hits: BTreeMap<HitKey, Hit>,
     events: Vec<Value>,
+    emissions: Vec<PeriodicEmission>,
     completed: usize,
 }
 
@@ -131,7 +145,8 @@ impl FactorCapture {
             "summary": {}, "unparsed_relevant_lines": [], "captured_hits": state.completed,
             "limitations": ["Effective products are observed stage ratios, not a second damage formula.",
                 "Crit is applied before source/target modifiers in the native pipeline; amount/raw_amount are explicitly crit-normalized observations.",
-                "Aggregated native aura-stat/script products without source IDs are labelled unattributed product."]})
+                "Aggregated native aura-stat/script products without source IDs are labelled unattributed product.",
+                "Emission identity is an observed synchronous dispatch context; delayed or unscoped origins remain null."]})
     }
 }
 
@@ -149,6 +164,52 @@ fn observe(world: &World, actor: Entity, update: impl FnOnce(&FactorCapture, &mu
     if state.completed < capture.limit {
         update(capture, &mut state);
     }
+}
+
+/// Scope only the actual synchronous dispatch; delayed or unrelated hits stay unknown.
+pub(crate) fn begin_periodic_observation(world: &World, emission: PeriodicEmission) -> bool {
+    let Some(capture) = world.get_resource::<FactorCapture>() else {
+        return false;
+    };
+    if emission.actor != capture.actor || emission.triggered_spell_id != capture.focus_spell {
+        return false;
+    }
+    let mut state = capture
+        .state
+        .lock()
+        .expect("native factor capture poisoned");
+    if state.completed >= capture.limit {
+        return false;
+    }
+    state.emissions.push(emission);
+    true
+}
+
+pub(crate) fn end_periodic_observation(world: &World, began: bool) {
+    if !began {
+        return;
+    }
+    // Always unwind, including when the last observed hit reached the capture limit.
+    world
+        .resource::<FactorCapture>()
+        .state
+        .lock()
+        .expect("native factor capture poisoned")
+        .emissions
+        .pop()
+        .expect("native periodic dispatch scope absent");
+}
+
+fn describe_emission_origin(state: &State, ctx: &EffectCtx) -> Option<Value> {
+    state.emissions.last().filter(|emission| {
+        emission.triggered_spell_id == ctx.spell.id && emission.depth == ctx.depth
+    }).map(|emission| json!({
+        "kind": "periodic_dummy_trigger", "observation": "synchronous dispatch context",
+        "aura_unit": emission.aura_unit.to_bits(), "aura_spell_id": emission.aura_spell_id,
+        "aura_instance_id": emission.aura_instance_id, "effect_index": emission.effect_index,
+        "index_convention": "zero-based aura effect index",
+        "triggered_spell_id": emission.triggered_spell_id, "scheduled_at": emission.scheduled_at
+    }))
 }
 
 fn number(value: f32) -> Value {
@@ -493,6 +554,7 @@ fn event_row(
     kind: &str,
     factors: Value,
     time: f64,
+    origin: Option<&Value>,
 ) -> Value {
     let action = if ctx.spell.id == capture.focus_spell {
         capture.action.clone()
@@ -502,6 +564,7 @@ fn event_row(
     json!({"event": kind, "time": time, "actor": ctx.caster.to_bits().to_string(),
         "target": capture.target.to_bits().to_string(), "action": action,
         "spell_id": ctx.spell.id, "native_spell_name": ctx.spell.name, "native_depth": ctx.depth,
+        "native_emission_origin": origin,
         "factors": factors, "factor_attribution": {"armor_fraction": "unattributed product",
             "native_armor_penetration_pct": "unattributed product", "armor_coefficient": "selected native ExpectedStat input",
             "mult": "unattributed product",
@@ -522,7 +585,14 @@ fn amount_event(
         "direct_amount"
     };
     let factors = formula_factors(&hit.formula, hit, crit_multiplier(hit, event.crit));
-    let mut amount = event_row(capture, ctx, kind, factors, time);
+    let mut amount = event_row(
+        capture,
+        ctx,
+        kind,
+        factors,
+        time,
+        hit.emission_origin.as_ref(),
+    );
     amount["factor_sources"] = factor_sources(&hit.sources);
     amount["applied_modifiers"] = json!(&hit.sources);
     amount["applied_multipliers"] = json!(applied_multipliers(hit, event.crit));
@@ -535,7 +605,7 @@ fn armor_event(capture: &FactorCapture, ctx: &EffectCtx, hit: &Hit, time: f64) -
             "native_observed_armor_fraction": ratio(armor.after, armor.before).map(|value| 1.0 - value),
             "armor": armor.value, "armor_coefficient": armor.constant,
             "native_armor_penetration_pct": armor.penetration_pct});
-        event_row(capture, ctx, "armor", factors, time)
+        event_row(capture, ctx, "armor", factors, time, hit.emission_origin.as_ref())
     })
 }
 
@@ -546,7 +616,14 @@ fn result_event(
     event: &shared::protocol::CombatLogEvent,
     time: f64,
 ) -> Value {
-    let mut result = event_row(capture, ctx, "result", result_factors(hit, event), time);
+    let mut result = event_row(
+        capture,
+        ctx,
+        "result",
+        result_factors(hit, event),
+        time,
+        hit.emission_origin.as_ref(),
+    );
     result["factor_sources"] = factor_sources(&hit.sources);
     result
 }
@@ -567,6 +644,7 @@ pub(super) fn finish(
             .hits
             .remove(&(ctx.spell.id, target.to_bits()))
             .expect("native factor impact stages absent");
+        hit.emission_origin = describe_emission_origin(state, ctx);
         hit.formula = damage
             .effect
             .and_then(|effect| state.formulas.get(&(ctx.spell.id, effect.index)))

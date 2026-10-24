@@ -1,3 +1,7 @@
+## 2026-10-23 — Per-spell refresh and FoF dispatch identity
+
+[Oracle](reference/simc-spell-oracle.md): fresh canonical backup/eec5b6bcf --lib probes Arms1GREEN24.30s and WW3GREEN20.85s. MS24448/TP39862/firstFoF29943; coefficient/armor agree, AP/source/target-state differences remain. Actual receipt origin check RED exposed missing native dispatch identity. Test-only226 dispatch scopes now preserve real synchronous aura/effect/instance/trigger metadata with no new RNG/cast/formula; origin GREEN pending.
+
 ## 2026-10-23 — Per-spell merge / periodic crit ownership
 
 Merged current master4a2deb367 into native-spell-diff. Resolution retains owner-aware periodic crit eligibility/order and signed target-crit semantics, while direct and periodic damage capture records the actual rolled chance/result without another RNG draw. Parent rebuilt batch gate pending; prior acceptance scopes are unchanged.
