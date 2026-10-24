@@ -1,6 +1,6 @@
 ## 2026-10-24 — Execution Sentence native expiry qualification
 
-[Auras](systems/auras.md#execution-sentence-accumulation--2026-10-24): d15dae8f0 ordinary funded343527/real Judgment damage/actual expiry reaches missing387113 RED; cancellation controlPASS49.39s. Lead approved narrow own nonphysical damage policy after native/TDB/default-generation absence audit. Native effect1 and TC partial-trigger expiry BP0 remain authoritative; pet owner mapping unqualified, GREEN pending. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#execution-sentence-accumulation-policy).
+[Auras](systems/auras.md#execution-sentence-accumulation--2026-10-24): d15dae8f0 ordinary funded343527/real Judgment damage/actual expiry reaches missing387113 RED; cancellation controlPASS49.39s. Lead approved narrow own nonphysical damage policy after native/TDB/default-generation absence audit. Native effect1 and TC partial-trigger expiry BP0 remain authoritative;9239a9092 original2GREEN45.92s plus37f8763a2 actual20%/white/foreign controls2GREEN47.23s qualify four cases. Pet owner mapping/hybrid-positive fixture/full rotation remain unqualified. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#execution-sentence-accumulation-policy).
 
 ## 2026-10-24 — Expurgation Dummy-proc qualification
 
