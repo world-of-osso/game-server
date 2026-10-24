@@ -381,6 +381,15 @@ fn dps_parity_power_haste_unflagged_rage_at_center_has_no_phantom_gain() {
         .unwrap();
     assert!(!info.regen_affected_by_haste);
     assert!(info.regen_peace < 0.0);
+    assert!(
+        !world
+            .get::<shared::components::CombatStatus>(h.caster)
+            .is_some_and(|status| status.0)
+    );
+    assert_eq!(
+        info.regen_interrupt_ms, 0,
+        "native Rage uses peace decay immediately"
+    );
     let pool = world
         .get::<PowerPools>(h.caster)
         .unwrap()
