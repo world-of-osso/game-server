@@ -1,6 +1,6 @@
 ## 2026-10-23 — Elemental Ascendance additional overload
 
-[Source/proof boundary](systems/spell-casting.md#elemental-ascendance-additional-overload--2026-10-23): actualb4a7f46b0 native2RED/1SKcontrolPASS27.40s; missing extra LB/CL casts, native prerequisites passed. Add effect8 casts once per root spell, independently of ordinary proc, retaining HIT+400ms and actual child damage. GREEN/DPS integration pending; no coefficient/stat/RNG changes.
+[Source/proof boundary](systems/spell-casting.md#elemental-ascendance-additional-overload--2026-10-23): actualb4a7f46b0 native2RED/1SKcontrolPASS27.40s; missing extra LB/CL casts, native prerequisites passed. Add effect8 casts once per root spell, independently of ordinary proc, retaining HIT+400ms and actual child damage. Same3nativeGREEN20.23s ata001f0541, clean17m03 build; [proof matrix](../handoffs/elemental-ascendance-extra-proof-ledger.md). Other roots/failed-roll/expiry and DPS integration remain unqualified; no coefficient/stat/RNG changes.
 
 ## 2026-10-23 — Authored item faction eligibility
 
