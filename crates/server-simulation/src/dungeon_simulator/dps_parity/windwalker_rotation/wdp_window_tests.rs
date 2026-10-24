@@ -80,6 +80,7 @@ fn read_window_gates(run: &mut Run, rotation: &Rotation, prepared: &Prepared) ->
     let source = read_source_conditions(&facts);
     let values: serde_json::Map<String, Value> = [
         "cooldown.whirling_dragon_punch.remains",
+        "action.whirling_dragon_punch.ready",
         "cooldown.rising_sun_kick.remains",
         "cooldown.fists_of_fury.remains",
         "cooldown.zenith.full_recharge_time",
