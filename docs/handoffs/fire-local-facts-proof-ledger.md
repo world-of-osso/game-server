@@ -33,6 +33,6 @@ Log `game-engine/data/diagnostics/rotation-fidelity-2026-10-21/fire-local-293-ov
 
 ## Feature-boundary check
 
-Feature-disabled `server --lib` check5969 exited0 in7m09s but found3warnings: reader-only Hot Streak re-export/count and prior flight/Meteor readers compiled without their `native_apl` consumer. These readers now use the consumer's existing `cfg(test|test-support)` boundary; native kernel/reader bodies are unchanged, no warning suppression. Feature-disabled and enabled compile checks pending for this follow-up; existing native behavior proof is unchanged.
+Feature-disabled `server --lib` check5969 exited0 in7m09s but found3warnings: reader-only Hot Streak re-export/count and prior flight/Meteor readers compiled without their `native_apl` consumer. These readers now use the consumer's existing `cfg(test|test-support)` boundary; native kernel/reader bodies are unchanged, no warning suppression. At `3927220b30fb71978b68fadad12f3d6579b91105`, feature-disabled server `--lib` check passes9.30s; enabled server+server-simulation `--tests` check passes2m13s. Both exit0 with zero warnings/errors. Logs `fire-local-392-production-lib-check.log` and `fire-local-392-enabled-tests-check.log` in the same diagnostics directory. Existing native behavior proof is unchanged.
 
 Caller300s ST/3T, generic facts and dependency qualification remain open; no full literal or DPS acceptance claimed.
