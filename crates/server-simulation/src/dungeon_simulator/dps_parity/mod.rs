@@ -16,6 +16,7 @@ mod power_tests;
 mod report;
 mod ret_empyrean_tests;
 mod ret_purpose_tests;
+mod ret_rotation;
 mod ret_tier_tests;
 pub(crate) mod single_spell;
 mod windwalker_rotation;
