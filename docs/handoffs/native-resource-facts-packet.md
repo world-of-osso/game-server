@@ -1,6 +1,6 @@
 # Native resource fact integration packet
 
-Status: test-only packet extending13843's2ad5b4b31 fixtures; not yet compiled or executed here. No `powers.rs` change and no new grant build.14781 owns the `NativeFacts::regen` adapter;13843 owns the uncapped native rate producer;13120 owns the Energy counterexample contract.
+Status: capped native Focus/Energy/Mana facts reached genuine3RED at ecaf83d7b (22.15s):0 versus11.072727/16.84/2560. Receipt: `game-engine/data/diagnostics/dps-parity-fix-2026-10-21/power-haste-packet-red-ecaf83d7b-native.log`. Producer985afd5eb exposes the uncapped native rate;14781's adapter delegates once, converts to f64 and errors on None. DisplayModifier remains applied once by `resource()`. No adapter-side `powers.rs` change, grants or cached-rate fallback. Combined native fixtures and the explicitly requested0/25% Energy unit controls await GREEN qualification.
 
 ## Integration
 
