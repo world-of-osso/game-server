@@ -7,7 +7,7 @@ Restore missing spec103 producer channels from `game-engine/data/diagnostics/dps
 - [ ] Native Feral Frenzy274837 produces274838 direct attacks, actual combo-point gains and owned periodic damage at native timing, retaining the original recipient rather than following later selection changes. Catalog presence alone grants nothing.
 - [ ] Thriving Growth439528 produces owned Bloodseeker Vines439531 from eligible native Rip/Rake ticks; Bursting Growth/Rampancy preserve their learned prerequisites, recipients, amounts, stack and lifetime behavior.
 - [ ] Unseen Predator uses actual spent combo points and energy, native talent chance/range and source-qualified Slash/Swipe/bleed dispatch; no forced RNG or manufactured resources.
-- [ ] Applicable equipped Guillotine, Morsel and Omnium channels preserve native equipment/activation predicates, scaled inputs, role and ownership. Unsupported source assumptions remain explicit gaps.
+- [ ] Applicable Guillotine/Morsel equipment and Omnium Folio expansion-trait activation preserve their actual source predicates, scaled inputs, role and ownership. Do not invent equipped-rune ownership. Unsupported source assumptions remain explicit gaps.
 - [ ] Non-Lunar Convoke outputs preserve the shared root's source-qualified selection and dispatch without duplicating the Lunar owner's work.
 
 ## How it works
@@ -24,11 +24,13 @@ Thriving Growth is not an RPPM producer: native439528 has PPM_ID0, scripted Proc
 
 Six native fixtures in `spell_cast/feral_producer_tests.rs` and its `feral_talent_producer_tests.rs` child await prerequisite qualification and meaningful RED: Frenzy/retarget and catalog absence; Rake/Vines plus learned-driver removal and absent-talent control; earned five-point Bite/Unseen plus absent-talent control. Computed caster stats, ordinary Cat Form, native Energy regeneration and actual Shred gains supply the inputs. No source data, chances, flags, clocks, RNG or budgets are altered.
 
-The first Frenzy-only admission ended after60 capacity polls without starting a compiler or test; it is not a RED receipt. Native root-cost packet `logs/census-tail/feral-root-prerequisites.json` (row SHA256 `0866dadfadacd9ead695c89e697765221242a39e8b5a1aa9291d4120e9faf64b`) authenticates Bite25Energy plus1CP/optional4. `feral-native-timing-controls.json` (row SHA256 `84a5e981822a1a2ca4b02b3411642511e413455474f13c0b61ce7328272deba0`) authenticates Frenzy1000ms, native Energy100/10regen and CPmax5.
+The first Frenzy-only and subsequent six-case admissions each ended after60 capacity polls without starting a compiler or test; neither is a RED receipt. Native root-cost packet `logs/census-tail/feral-root-prerequisites.json` (row SHA256 `0866dadfadacd9ead695c89e697765221242a39e8b5a1aa9291d4120e9faf64b`) authenticates Bite25Energy plus1CP/optional4. `feral-native-timing-controls.json` (row SHA256 `84a5e981822a1a2ca4b02b3411642511e413455474f13c0b61ce7328272deba0`) authenticates Frenzy1000ms, native Energy100/10regen and CPmax5.
 
 ## Known gaps
 
-All checklist entries remain unqualified. Convoke391528 root ownership is pending coordination with the Lunar owner; independent channels can proceed. Omnium's pinned `unique_gear_midnight.cpp6182` explicitly marks its proc same-unit and damage/heal routing assumptions `UNVERIFIED_IMPLEMENTATION`; native1279599 supplies scripted4 and linked285/coefficient1288183, not that mapping. Item source TODOs or unverified assumptions are not execution proof.
+All checklist entries remain unqualified. Convoke391528 root ownership is pending coordination with the Lunar owner; independent channels can proceed.
+
+Omnium is an expansion-trait input: SimC `player.cpp2221–2222` initializes `omnium_talents_str` through `initialize_expansion_trait_effects`; `unique_gear_midnight.cpp6618` names Omnium Folio12.0.7. Native TraitDefinition contains1279599/1287555; no ItemEffect or SpellItemEnchantment link for these drivers was found. Its fixed289 coefficient level (`unique_gear_midnight.cpp5980–5981`) is a SimC model constant, not an authenticated equipped item level. The same file6182 explicitly marks its proc same-unit and damage/heal routing assumptions `UNVERIFIED_IMPLEMENTATION`; native1279599 supplies scripted4 and linked285/coefficient1288183, not that mapping. Item source TODOs or unverified assumptions are not execution proof.
 
 ## Out of scope
 
