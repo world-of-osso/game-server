@@ -35,6 +35,20 @@ impl ActionFacts for FeralFacts {
         self.value(name)
     }
 
+    fn primary_resource(&self) -> Result<String, String> {
+        // Pinned sc_druid.cpp13716–13727: Feral's primary resource is Energy.
+        Ok("energy".into())
+    }
+
+    fn ready_at_resource_max(&self, action: &Action, resource: &str) -> Result<bool, String> {
+        if action.name != "ferocious_bite" || resource != "energy" {
+            return Err("unsupported Feral reporter maximum-admission query".into());
+        }
+        // This exact reporter declares ordinary castability true and no other
+        // native refusal. Reuse d101's sourced action threshold, never a pool write.
+        Ok(self.value("energy.max")? >= self.value_for(action, "maximum_energy")?)
+    }
+
     fn target_ids(&self, _action: &Action) -> Result<Vec<u64>, String> {
         Ok(vec![41, 42])
     }
