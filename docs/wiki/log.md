@@ -1,7 +1,7 @@
 ## 2026-10-24 — WDP child relationships and original-primary context qualified
 ## 2026-10-24 — Add-event activity fact
 
-[Native APL facts](systems/simc-apl.md#native-binding-boundary): `raid_event.adds.up` has4genuine unknown-property REDs plus1retained property control atd7c06c8ee. Pinned SimC activity now reads existing actual-wave deadline, not count/existence; no new event model. GREEN pending; [scoped proof](../handoffs/adds-up-proof-ledger.md).
+[Native APL facts](systems/simc-apl.md#native-binding-boundary): `raid_event.adds.up` has4genuine unknown-property REDs plus1retained property control atd7c06c8ee. Pinned SimC activity now reads existing actual-wave deadline, not count/existence; no new event model. Unchanged5/5GREEN0.00s atf9252a098 (1m39compile/0warnings); state-reader scope only, parent integration pending. [Scoped proof](../handoffs/adds-up-proof-ledger.md).
 
 ## 2026-10-24 — Expurgation Dummy-proc qualification
 
