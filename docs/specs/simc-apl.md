@@ -25,6 +25,15 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 [Composite selection proof/boundary](../handoffs/literal-composite-proof-ledger.md). [Native lifecycle consumption RED→GREEN](../handoffs/native-precombat-proof-ledger.md#current-native-qualification--96b572797).
 
+## Resumable native precombat polling
+
+- [ ] Shared precombat polling distinguishes Waiting, Selected original Action/Execution and Finished; native cast/GCD waits cannot consume source position or variable assignments.
+- [ ] Caller advances real App frames/resamples readiness and facts until finished; no sleeps, cast/GCD skips or invented precombat/travel options. Preserve the existing first-harmful cap.
+- [ ] Caller starts its300s fight epoch after real setup; final Pyroblast flight must be read from actual native state, not inferred from Finished or a timer.
+- [ ] Literal use_while_casting and use_off_gcd permissions supplement native cast admission; permitted native instants cannot interrupt the existing hardcast. Other source options remain attached to the selected Action.
+
+[RED scaffold and exact caller scope](../handoffs/shared-precombat-poll-proof-ledger.md); full Fire adapter/facts remain separate qualification.
+
 ## Literal native row gates
 
 Native controls reached4RED/1GREEN atd49f4951c →5GREEN at96b572797; implementation followed the real failures. [Proof scope](../handoffs/literal-row-gating-proof-ledger.md).

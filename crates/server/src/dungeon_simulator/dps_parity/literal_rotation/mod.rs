@@ -7,6 +7,8 @@ pub(crate) mod execution;
 #[cfg(test)]
 mod gating_tests;
 #[cfg(test)]
+mod precombat_poll_tests;
+#[cfg(test)]
 mod tests;
 use crate::simc_apl_native::Encounter;
 use bevy::prelude::*;
@@ -38,6 +40,15 @@ pub(crate) fn capture_fixture(
     Ok(())
 }
 
+pub(crate) enum PrecombatPoll {
+    Waiting,
+    Selected {
+        action: Action,
+        execution: Execution,
+    },
+    Finished,
+}
+
 pub(crate) struct Driver {
     program: Program,
     variables: Variables,
@@ -62,6 +73,21 @@ impl Driver {
             cancellation: None,
             decisions: 0,
         }
+    }
+
+    /// RED scaffold: busy state is not yet separated from source exhaustion.
+    pub fn poll_precombat(
+        &mut self,
+        facts: &dyn ActionFacts,
+        prepared: &Prepared,
+        equipment: &Equipment,
+    ) -> Result<PrecombatPoll, String> {
+        Ok(
+            match self.select("precombat", facts, prepared, equipment)? {
+                Some((action, execution)) => PrecombatPoll::Selected { action, execution },
+                None => PrecombatPoll::Finished,
+            },
+        )
     }
 
     /// Evaluate only after native readiness has been sampled with mutable World.
