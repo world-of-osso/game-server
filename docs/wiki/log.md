@@ -1,3 +1,7 @@
+## 2026-10-23 — Shared precombat native phase qualification
+
+[Lifecycle](systems/simc-apl.md#precombat-lifecycle-2026-10-23-partially-qualified): three actual ordered-selector REDs→four library GREEN; ed76/f5 native6PASS/2FAIL qualifies early capture, native Feral isolation, declared0shards, real configured summon/no-op/pet-at-pull and WW snapshot-OOC/time0. Native OOC regeneration supplies summon cost without grants. Demo damage and first-harmful counterfactual expose copied Stockade graph routing;14755 owns that fix, not a timing/resource workaround. Poison composite14775 seam and overall native acceptance remain open. [Proof](../handoffs/native-precombat-proof-ledger.md). Sameff8target bridge300s47064.44/81373.16 is not DPS parity.
+
 ## 2026-10-23 — Native profile stat-allocation redirects
 
 [Stat redirects](systems/character-stats.md#profile-stat-allocation-redirects--2026-10-23): actual103 shared equipment input→StatsPlugin independently reproduces five tier errors and ten matching ordinary slots; invalid donor and false-unmodeled diagnostics also RED,3RED11.02s at7aa72bf47. Server-local donor metadata changes calculation-only stat types/allocations, not original item identity/catalog/effects/set membership or the persisted/wire ABI. Atd45fe30e8 three GREEN12.43s, clean25m11build; two native cases remain opt-in and the env-free diagnostic stays enabled. Lead integration/DPS remain open. [Proof](../handoffs/equipment-stat-redirect-proof-ledger.md).

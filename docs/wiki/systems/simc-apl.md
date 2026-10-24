@@ -24,7 +24,7 @@
 
 ## Shared literal fixture machinery
 
-After the explicit target-candidate interpreter landed, WW's count-only adapter rejected actual ST/3T runs atd45fe30e8 with `target_if requires explicit native target candidates`. WW now carries the actual supplied entity slice into target_ids; shared pd1035 Prepared/Execution preserves selected identities. This integration is not a first-target fallback, and per-fixture TTD still follows one global fixed-time clock. Targeted GREEN remains pending; [exact failures/current input](../../handoffs/ww-source-census.md#current-native-target-seam-blocker--2026-10-23).
+After the explicit target-candidate interpreter landed, WW's count-only adapter rejected actual ST/3T runs atd45fe30e8 with `target_if requires explicit native target candidates`. WW now carries the actual supplied entity slice into target_ids; shared pd1035 Prepared/Execution preserves selected identities. This integration is not a first-target fallback, and per-fixture TTD still follows one global fixed-time clock. Same-binary ff8ba4206 actual300s ST/3T now pass the target seam at47064.44/81373.16, still−77.20%/−78.39% versus the requested reference, NOT parity; [exact failures/current receipts](../../handoffs/ww-source-census.md).
 
 `dungeon_simulator::dps_parity::literal_rotation` owns reusable native item/readiness/execution state; WW source/bindings/facts remain spec-local. Post-extraction original5GREEN at3e71b8aa2; FoF facing reproduction then5GREEN/1RED19.49s→6GREEN39.89s at0e34d8666. Native auto-attack must also put an existing CreatureState into Pursuing: native chase supplies facing, otherwise117418's native cone misses despite valid periodic metadata. No synthetic facing or FoF effect change; [proof and300s gaps](../../handoffs/ww-source-census.md#fof-literal-controller-root-cause). Player spells use the ordinary `SpellCastIntent`/`request_cast` path with an explicit target; NPC/follower spells retain `creature_cast`. A stale explicit Player target fails `NoTarget`, never becomes the primary target. Seven real native Human/WW cases at4f91688e8 produce1WW controlPASS/6genuine assertionRED →7GREEN27.17s at e99b879e8 after hp1026 (18m08 compile/0compiler warnings). [Scoped proof](../../handoffs/literal-player-dispatch-proof-ledger.md). The profile's Troll race is not asserted to be Human: the native actor is explicitly created/asserted as Human1. Readiness cannot authorize a later no-longer-known Player cast.
 
@@ -32,6 +32,23 @@ After the explicit target-candidate interpreter landed, WW's count-only adapter 
 - `execution::Prepared::read(world, actor, targets, &Equipment, actions, needs_snapshot)` samples actual native readiness per `(action, target)` before immutable facts borrowing; explicit target lookup never substitutes primary admission. Untargeted actions retain their own native default, and harmful precasts without supplied candidates read the actor's real `CombatTarget`. `retarget_auto_attack` changes only `AutoAttack.victim`; an active AA is not restarted back onto primary. Each `NativeAction { name, spell, talent: Option<u32>, self_target }` comes from the spec adapter; inventory/provider gaps remain adapter-owned. Actual selected talents, KnownSpells and overrides gate casts.
 - `Driver::new(Program)` owns variable state, snapshot, decisions and channel cancellation. `select(list, &dyn ActionFacts, &Prepared, &Equipment)` returns the source-selected `(Action, Execution)`; release immutable facts, then `execute(world, actor, action, execution)`. `should_cancel(world, actor, facts)` evaluates an active native channel's saved `cancel_if`; caller then cancels the actual cast.
 - `capture_fixture(world, actor, Encounter)` rejects dungeon clocks before inserting `LiteralParityFixture`; the native kit yields while this marker exists, preserving Follower/NPC identity. Adapters retain explicit precombat/default ordering and spec actor checks.
+
+## Precombat lifecycle —2026-10-23, partially qualified
+
+`Program::select_next` consumes direct top-level precombat rows once, retaining source variable assignment and selected-target logic. `Driver` keeps a precombat cursor separate from combat priority scanning. Nested precombat call/run controls fail explicitly; pinned MID2 source has none. Three actual library REDs→four GREEN at171c8ec5c qualify this evaluator boundary, not native cast timing.
+
+Fixture preparation now separates spawn from warmup: explicit literal capture precedes every setup frame, never deletes unauthorized kit auras afterward, and preserves Follower/NPC identity. Native nonliteral Feral still casts its class buff. Raw profile class options survive deserialization; declared resources resolve native PowerType names/display units and initialize before setup. Configured pets resolve learned native summon names and SUMMON_PET entries. Missing/different pets use normal cast permission; a living matching pet is a no-op. Native affordability waits advance actual OOC regeneration, not grants or cost waivers.
+
+WW measurement runs its ordered precombat before explicit engagement and the encounter clock; each native execution settles queued effects and real cast/all-GCD state. Literal engagement retains native precast impacts. Player dispatch and explicit target validation stay on their existing paths.
+
+| Boundary | Exact proof / remaining gap |
+|---|---|
+| Early handoff, native-kit isolation, declared0shards | Native pass ated76/f5; prior real REDs retained |
+| Configured pet real cast/no resummon/pet at pull | Native pass after waiting existing OOC shard regeneration; no pool reset |
+| WW snapshot while OOC and fight time0 | Native pass before opponent refs are established |
+| Full acceptance / composites | Overall6PASS/2FAIL: Demo damage and first-harmful counterfactual blocked by copied dungeon-graph movement;14755 owns fixture geometry. Four native poison casts/composite14775 seam still unqualified |
+
+[Precombat ledger](../../handoffs/native-precombat-proof-ledger.md) owns exact commands, hashes and current blockers. The bounded native pet control does not claim full literal Demonology APL integration; first-harmful eligibility and poison selection/timing require their separate end-to-end controls.
 
 ## Sources
 
