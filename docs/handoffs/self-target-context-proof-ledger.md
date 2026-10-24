@@ -13,4 +13,10 @@ Verified2026-10-24; generic NativeAction readiness, not full spec parity.
 
 Prepared recorded admitted self-target NativeActions only under actor/default keys. target_if supplies an explicit enemy scoring context, so lookup misses before dispatch. Record those supplied context keys against the same admitted self-target Execution. No None-key fallback, foreign-target alias, enemy cast, native-permission bypass or Dev-specific shim. Ordinary hostile actions and composite planning unchanged.
 
-Native GREEN pending: pinned Zenith source selection plus actual actor-only aura, existing30sST FoF, relevant shared regressions and fresh300sST/3T. 14781 must rerun its exact Fire Breath leaf on the shared fix; full Dev/WW parity remains open.
+## Dev Fire Breath compatible-port GREEN
+
+404c053b4 is compatibly cherry-picked as2605da9c0 on the Dev empower/replacement stack. Native `replace_current` admission and empowered/replacement Execution variants remain intact; only admitted self-target executions gain supplied enemy-context keys. The new WW case depends on later owner lifecycle APIs absent on this split-B base and remains owner-held, rather than importing unrelated code.
+
+The unchanged bf82 Fire Breath counterexample executes exactly once under `--ignored --exact`:1/1PASS16.38s, compile22.11s, zero warnings. Default native self readiness and actual enemy candidate controls pass; the source-selected enemy receives the native stage1 DoT while actual dispatch remains self-targeted. Evidence root `game-engine/data/diagnostics/dev-evoker-parity-2026-10-22/`: `dev-fire-target-green-2605da9c0-state.json` records command/environment, paired inputs, binary and runtime log. BinarySHA2569a4b82cd6fcfc6128aa1cf3eb23d9c6fb065d72ed219e45136ca9ea7e1302be2; binary/input hashes unchanged.
+
+WW GREEN remains owner-pending: pinned Zenith source selection plus actual actor-only aura, existing30sST FoF, relevant shared regressions and fresh300sST/3T. Full Dev/WW parity remains open.
