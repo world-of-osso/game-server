@@ -11,6 +11,8 @@ pub(super) enum Operator {
     LessEqual,
     Greater,
     GreaterEqual,
+    Minimum,
+    Maximum,
     Add,
     Subtract,
     Multiply,
@@ -29,6 +31,7 @@ impl Operator {
             | Self::LessEqual
             | Self::Greater
             | Self::GreaterEqual => 4,
+            Self::Minimum | Self::Maximum => 5,
             Self::Add | Self::Subtract => 6,
             Self::Multiply | Self::Divide | Self::Modulo => 7,
         }
@@ -42,6 +45,10 @@ impl Operator {
             Self::LessEqual => truth(left <= right),
             Self::Greater => truth(left > right),
             Self::GreaterEqual => truth(left >= right),
+            // Match C++ std::min/max comparisons, including left-operand ties.
+            Self::Minimum if right < left => right,
+            Self::Maximum if left < right => right,
+            Self::Minimum | Self::Maximum => left,
             Self::Add => left + right,
             Self::Subtract => left - right,
             Self::Multiply => left * right,
@@ -125,6 +132,8 @@ const OPERATORS: &[(&str, Token)] = &[
     ("==", Token::Binary(Operator::Equal)),
     ("<=", Token::Binary(Operator::LessEqual)),
     (">=", Token::Binary(Operator::GreaterEqual)),
+    ("<?", Token::Binary(Operator::Maximum)),
+    (">?", Token::Binary(Operator::Minimum)),
     ("&&", Token::Binary(Operator::And)),
     ("||", Token::Binary(Operator::Or)),
     ("%", Token::Binary(Operator::Divide)),
