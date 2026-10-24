@@ -10,6 +10,8 @@ const BUDGET: u32 = 431522;
 const OTHER_PASSIVE: u32 = 431460;
 const WAKE: u32 = 255937;
 const JUDGMENT: u32 = 20271;
+const RETRIBUTION: u32 = 137027;
+const DAWNLIGHT_LABEL: u32 = 6787;
 
 fn budget(run: &Run) -> Option<&crate::auras::AuraInstance> {
     run.app
@@ -93,9 +95,39 @@ fn dps_parity_ret_dawnlight_producer_native_wake_arms_native_talent_count() {
         known.contains(OTHER_PASSIVE),
         crate::auras::has_aura(run.app.world(), run.actor, OTHER_PASSIVE)
     );
+    let talent = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(TALENT)
+        .unwrap();
+    let base_count = talent
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .base_points;
+    assert_eq!(base_count, 2.0, "unchanged native431377 effect0");
+    assert!(talent.labels.contains(&DAWNLIGHT_LABEL));
+    let modifier = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == RETRIBUTION)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 25)
+        .unwrap();
+    assert_eq!(modifier.aura_type, 219, "native flat spell-label modifier");
+    assert_eq!(modifier.misc_values, [3, DAWNLIGHT_LABEL as i32]);
+    assert_eq!(modifier.amount, 1.0, "native specialization adds one use");
     assert_eq!(
-        count, 2.0,
-        "actual native selected talent count, not the buff max6"
+        count,
+        base_count + modifier.amount,
+        "native modified count, not max6"
     );
     assert_eq!(current_holy_power(&run), 0.0);
     cast_and_damage(&mut run, WAKE);
