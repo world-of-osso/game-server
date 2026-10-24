@@ -23,6 +23,14 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 
 ## What it must do
 
+### Elemental Ascendance additional overload
+
+Native70448 supplies1219480s9/effect8; pinned SimC76f8118 `sc_shaman.cpp3318–3348` corroborates the once-per-cast Chain policy. [Implementation and proof boundary](../wiki/systems/spell-casting.md#elemental-ascendance-additional-overload--2026-10-23).
+
+- [ ] While native1219480 is active, affected Mastery casts cause its s9/effect8 additional Elemental Overload independently of the ordinary mastery proc. Chain target procs remain ordinary per-target procs; the additional cast occurs once for the spell, not once per recipient. Retain native HIT+400ms overload timing and actual child damage, without altering coefficients, stats or RNG.
+- [x] Real Stormkeeper alone yields one ordinary45284 after a landed188196; Stormkeeper+Ascendance yields two. A three-target188443 with both buffs yields three ordinary45297 casts plus one additional cast. Native profile/auras/landed hits are prerequisites; no fabricated proc chances or buff amounts. [Exact native3GREEN](../handoffs/elemental-ascendance-extra-proof-ledger.md); other affected roots and failed-ordinary-roll/expiry cases remain unqualified.
+
+
 ### Census effect77 source ports (70448)
 
 - [x] Gorefiend's Grasp108199E1 applies native454824 only when its caster owns454822, using TC's limited triggered flags; foreign/absent talent does not apply it. Unmatched E0 remains a named gap, not whole-spell support.
@@ -88,7 +96,7 @@ Sources only local Mainline12.1.0.69933 DB2/read-only world.db and TDB1210. Test
 - [x] Arcane Power12042's native s2 school/power-mask aura72 discounts mana exactly once, with or without343208; expiry removes the discount.
 - [x] Holy Light82326 with231642 casts named88852 once, including overhealing; absent rank gives no Holy Power.
 - [x] Holy Shock20473 and Crusader Strike35395 with196926 reduce only a running Holy Judgment275773 cooldown by their separate native millisecond fields; ready cooldowns remain ready.
-- [x] Holy Judgment275773 and Retribution Judgment20271 with315867 cast named220637 once on actual primary damage; no rank or immune hit gives no gain.
+- [x] Holy Judgment275773 and Retribution Judgment20271 cast named220637 once on cast when315867 is known, before projectile impact and regardless of miss/immunity; aura presence alone does not authorize the gain (TC a352b1fa spell_paladin.cpp1062–1091).
 - [x] Healing Wave77472 applies one native heal to its validated living ally; native selector45/zero chain targets never invents jumps or heals enemies. Existing friendly-cast self selection is unchanged.
 - [x] Riptide61295 with51564 grants native53390 uses up to its native stack cap; Healing Wave77472/Chain Heal1064 consume one use with the same20% cast reduction, not stacked magnitude.
 
@@ -273,7 +281,7 @@ These nine paths do not certify whole abilities. Rain tooltip total-healing expr
 - [x] Feral Lunge196884 launches215802 at the selected enemy and preserves existing generic254 endpoint movement; traversal/visual parity is not certified.
 - [x] Voidform228260 applies the named194249 damage effects for their native duration after cast; no guessed Volley/replacement charge behavior.
 - [x] Arcane Surge365350 applies named365362 damage/regeneration effects after cast. Mana-spent damage, soft-cap and Clearcasting remain open.
-- [x] Protection Judgment275779 with active315867 launches220637 Holy Power once on its damage hit; no rank means no resource award.
+- [x] Protection Judgment275779 shares the TC OnCast315867-known→220637 resource rule with Holy/Ret Judgment; no learned rank means no award, independent of aura or hit result.
 - [x] Hand of Gul'dan105174 launches86040 at the target's native8yd area, multiplying damage by root s1=3 with the unchanged30-raw shard cost. Imps, Doom and variable-shard casting remain unsupported.
 - [x] Lightning Bolt188196 and Overload45284 launch native energize children214815/214816 with active343725 effect0/1 amounts before missile impact. Children retain ordinary checks/procs except in-progress veto and leave modifier-charge spending to the triggering parent. Maelstrom Weapon consumption/variants remain open. Source: pinned TC a352b1fa spell_shaman.cpp459–522/1871–1921, Player.cpp22659–22661; native70448 amounts, not placeholder child BP0.
 

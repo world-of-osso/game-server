@@ -14,16 +14,32 @@ const BLOODY_REBUKE: u32 = 1300690;
 const FREE_REVENGE: u32 = 5302;
 
 /// SimC dbc_proc_callback.cpp186–190: exclude the callback's own action, not unrelated procs.
-pub(crate) fn check_guillotine_proc(
-    _world: &World,
-    aura: &AuraInstance,
-    event: &AuraEvent,
-) -> bool {
-    event.actor == aura.caster
-        && !matches!(
+pub(crate) fn check_guillotine_proc(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
+    if event.actor != aura.caster
+        || matches!(
             event.spell_id,
             Some(GUILLOTINE_DAMAGE | PERFECTED_GUILLOTINE)
         )
+    {
+        return false;
+    }
+    // Qualify the actual event recipient before consuming an RPPM attempt.
+    match crate::auras::procs::select_proc_trigger_target(
+        world,
+        aura.caster,
+        GUILLOTINE_DAMAGE,
+        event.target,
+    ) {
+        Ok(_) => true,
+        Err(spell_cast::CastFailure::NoTarget | spell_cast::CastFailure::InvalidTarget) => false,
+        Err(reason) => {
+            warn!(
+                ?reason,
+                "Guillotine native child recipient metadata unavailable"
+            );
+            false
+        }
+    }
 }
 
 /// GUILLOTINE_EQUIPPED_DRIVER: unique_gear_midnight.cpp6334–6378.
@@ -60,11 +76,24 @@ pub(crate) fn cast_guillotine(
     } else {
         GUILLOTINE_DAMAGE
     };
+    let target =
+        match crate::auras::procs::select_proc_trigger_target(world, unit, child, event.target) {
+            Ok(target) => target,
+            Err(reason) => {
+                warn!(
+                    ?unit,
+                    child,
+                    ?reason,
+                    "Guillotine has no admissible event recipient"
+                );
+                return;
+            }
+        };
     spell_cast::cast_triggered_with_overrides(
         world,
         unit,
         child,
-        event.target,
+        target,
         1,
         spell_cast::TriggeredSpellOverrides {
             effect0_amount: Some(amount),
