@@ -156,6 +156,20 @@ fn literal_dev_binding_native_fire_breath_preserves_enemy_context_and_self_cast(
         encounter(&run),
         &run.targets,
     );
+    let probe = Action {
+        name: "fire_breath".into(),
+        target: None,
+        options: [("empower_to".into(), "1".into())].into(),
+    };
+    assert!(
+        prepared.execution(&probe, &equipment).unwrap().is_some(),
+        "ordinary native self-target Fire Breath must already be ready"
+    );
+    assert_eq!(
+        facts.target_ids(&probe).unwrap(),
+        vec![run.targets[0].to_bits()],
+        "native enemy target eligibility must precede shared selection"
+    );
     // Unmodified rank1 fb_sc source row; this leaf does not run the other88 rows.
     let source = "fire_breath,empower_to=1,target_if=max:target.health.pct,if=active_enemies=1|active_enemies>4";
     let mut driver = Driver::new(Program::parse(&[("native_leaf", source)]).unwrap());
