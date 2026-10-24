@@ -6,7 +6,7 @@ Parent gate at661a89dec (`gate-rg1074-srv.log`, integrated header1c2973180) pass
 
 Retained actual gate RED: `networking::tests::regen::client_sees_a_damaged_players_health_and_mana_regenerate_to_exactly_full` panics at `powers.rs666`, `native Mana power row`, inside the real UDP process/tick boundary. The minimal networking server initialized an empty PowerTypeTable even though its player already has base_mana1000. The shared native regeneration source now requires the real Mana row.
 
-101459804 loads the complete real PowerTypeTable through the normal read-only native DB loader in that fixture, before registering the same tick systems. No synthetic power row, guessed regen amount, production fallback or panic suppression. The existing test still must observe replicated health/Mana progressing and exact final fullness. GREEN pending targeted execution.
+101459804 loads the complete real PowerTypeTable through the normal read-only native DB loader in that fixture, before registering the same tick systems. No synthetic power row, guessed regen amount, production fallback or panic suppression. The existing test still must observe replicated health/Mana progressing and exact final fullness. Exact original UDP regression passes at395ad19d1 in8.52s; native Mana progress/replication and exact health fullness remain asserted.
 
 ## Echo triggered refresh provenance
 
@@ -24,6 +24,8 @@ The fix carries `cast_dont_reset_periodic_timer` only on existing per-cast Spell
 
 ## Proof status and limits
 
-Targeted verification pending: exact UDP and Echo cases, native generic rolling controls and ordinary Barbed/dummy20 controls. No rerun of the broad parent gate here. Parent owns final integration. Other gate failures outside these two are not claimed fixed.
+395ad19d1 targeted verification **13PASS** on one compiler-JSON-selected `server-3270869ea8fa4b0c` ELF: exact UDP1/8.52s, exact Echo1/14.44s, generic rolling2/10.33s (scripted and bool FULL_MASK paths in the first case), ordinary Barbed/dummy20 controls9/15.92s. Compilation43m04s after the master/split merge, all compiler JSON messages empty; no warnings hidden. Source/ELF SHA256 `13134f09638cb47c4a8ddab107368aa29a663c7798376674f3c969e52849ea0e`; read-only private world SHA256 `0297adfd466e85ce812f7821aa3788823adcf06867a9bd6999207bad3a75d83a` unchanged before/after.
+
+Diagnostics retain `rg1074-fix-395ad19d1-{compile,udp-regen,echo-refresh,generic-rolling,barbed-dummy20}.log`, executable receipt and summary JSON plus command/environment/revision entries in `proof-ledger.jsonl`. Docs-only follow-ups do not invalidate that code scope. No rerun of the broad parent gate here. Parent owns final integration. Other gate failures outside these two are not claimed fixed.
 
 Howl actual-summon→Cry is separately qualified atc7c33ace7: native3GREEN17.84s (clean12m52s), qualified ELF SHA256c41d6c344b34b51a6f4e05bb8d14fc57cd00be2a2b085532cf2dd38f35c4f428, frozen private world0297. Its root/KC/cycle0-KC geometry/admission boundary remains open, with no teleport or disabled LOS. Cry result preserved before master merge; no claim that pre-merge proof automatically covers later source changes.
