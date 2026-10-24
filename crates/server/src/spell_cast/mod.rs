@@ -360,6 +360,8 @@ pub(crate) mod jump_charge;
 mod knockback;
 #[cfg(test)]
 mod knockback_tests;
+#[cfg(test)]
+mod launch_combat_tests;
 mod school_costs;
 pub(crate) mod teleport;
 pub(crate) mod teleport_positions;
