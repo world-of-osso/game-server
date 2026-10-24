@@ -1,3 +1,7 @@
+## 2026-10-23 — Simulator compiler boundary and next area pilot
+
+[Crate boundaries](systems/server-crates.md): B22aa67892 passes simulator test-target and ordinary production binary compiler checks without warnings. Exact landed-A mapping retains123 subtree names:116 consumer/7core graph, including ignored status; full post-split gate pending. [C handoff](../handoffs/crate-split-area-tests.md) plans106 native melee behavior cases, canonical shared collectors and controlled paired rebuild measurements; no C implementation or speedup claim.
+
 ## 2026-10-23 — Periodic critical ticks
 
 [Periodic crit](systems/auras.md#periodic-critical-ticks--2026-10-23): TC-native eligibility/live rolls and critical damage/healing bonuses, with explicit `FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_SPELL_OWNER` policy for class actors and owned pets/totems. Native RED7b924:2controlsPASS/5featureFAIL35.83s, then first7GREEN42.94s. Required real1943+21880 ordering REDcf191c5: native flat +10 raises normal10937→11038, critical73726 versus74307.8125 expected; initial follower259 fixture failure explicitly invalid. Move periodic roll behind numeric source/flat bonuses; final GREEN pending. Clocks, attribution, APL and pet stats unchanged.
