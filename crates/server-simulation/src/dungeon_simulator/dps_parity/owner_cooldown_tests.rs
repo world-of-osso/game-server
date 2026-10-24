@@ -48,6 +48,27 @@ fn native_amount(run: &Run, spell: u32) -> f64 {
     )
 }
 
+fn prepare_controlled_hunter() -> Run {
+    let (profile, traits) = read_reference(253).unwrap();
+    let run = prepare_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race: 3 },
+    )
+    .unwrap();
+    let known = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(run.actor)
+        .unwrap();
+    assert!(
+        known.contains(BARBED_SHOT) && known.contains(COBRA_SHOT),
+        "real native Player must know both controlled source abilities"
+    );
+    run
+}
+
 fn remove_native_talent(run: &mut Run, spell: u32) {
     let actor = run.actor;
     let removed = crate::auras::remove_auras(
@@ -156,11 +177,6 @@ fn assert_scent_return(run: &mut Run, expected_return: f64) {
 }
 
 fn assert_scales_reduction(run: &mut Run, seconds: f64, triggered: bool) {
-    run.app
-        .world_mut()
-        .entity_mut(run.actor)
-        .remove::<crate::creature_ai::FollowOwner>()
-        .insert(crate::creature_ai::CreatureState::Idle);
     let original_position = *run
         .app
         .world()
@@ -254,7 +270,7 @@ fn dps_parity_owner_cooldown_native_scent_removed_aura_does_not_return_barbed() 
 #[test]
 #[ignore = "native Cobra cast-time Scales return; requires prepared253 gear/traits/current canonical"]
 fn dps_parity_owner_cooldown_native_scales_cobra_cast_reduces_pending_barbed() {
-    let (mut run, _) = super::power_tests::prepare_hunter_and_pet();
+    let mut run = prepare_controlled_hunter();
     let milliseconds = native_amount(&run, BARBED_SCALES);
     assert_eq!(
         milliseconds, 2000.0,
@@ -266,7 +282,7 @@ fn dps_parity_owner_cooldown_native_scales_cobra_cast_reduces_pending_barbed() {
 #[test]
 #[ignore = "native inactive Scales control; requires prepared253 gear/traits/current canonical"]
 fn dps_parity_owner_cooldown_native_scales_removed_aura_keeps_pending_barbed() {
-    let (mut run, _) = super::power_tests::prepare_hunter_and_pet();
+    let mut run = prepare_controlled_hunter();
     native_amount(&run, BARBED_SCALES);
     remove_native_talent(&mut run, BARBED_SCALES);
     assert_scales_reduction(&mut run, 0.0, false);
@@ -275,7 +291,7 @@ fn dps_parity_owner_cooldown_native_scales_removed_aura_keeps_pending_barbed() {
 #[test]
 #[ignore = "native free Cobra Scales return; requires prepared253 gear/traits/current canonical"]
 fn dps_parity_owner_cooldown_native_scales_free_cobra_reduces_pending_barbed() {
-    let (mut run, _) = super::power_tests::prepare_hunter_and_pet();
+    let mut run = prepare_controlled_hunter();
     let milliseconds = native_amount(&run, BARBED_SCALES);
     assert_eq!(milliseconds, 2000.0);
     assert_scales_reduction(&mut run, milliseconds / 1000.0, true);
@@ -284,7 +300,7 @@ fn dps_parity_owner_cooldown_native_scales_free_cobra_reduces_pending_barbed() {
 #[test]
 #[ignore = "native inactive free Scales control; requires prepared253 gear/traits/current canonical"]
 fn dps_parity_owner_cooldown_native_scales_removed_aura_keeps_free_cobra_pending_barbed() {
-    let (mut run, _) = super::power_tests::prepare_hunter_and_pet();
+    let mut run = prepare_controlled_hunter();
     native_amount(&run, BARBED_SCALES);
     remove_native_talent(&mut run, BARBED_SCALES);
     assert_scales_reduction(&mut run, 0.0, true);
