@@ -16,7 +16,6 @@ fn fixture(world: &World) -> Encounter {
 }
 
 #[test]
-#[ignore = "native refresh context behavioral RED"]
 fn native_target_context_refresh_policy_is_explicit_for_actual_owned_rend() {
     let mut h = harness(Vec::new(), &[REND], 1).unwrap();
     h.app
@@ -118,7 +117,6 @@ fn release_native_fire_breath() -> Harness {
 }
 
 #[test]
-#[ignore = "native refresh context behavioral RED"]
 fn native_target_context_refresh_fire_breath_uses_resolved_stage_one_not_raw_two_seconds() {
     let mut h = release_native_fire_breath();
     let targets = [h.npc];

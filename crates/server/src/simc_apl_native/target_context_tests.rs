@@ -47,7 +47,6 @@ fn action(target: Option<Entity>) -> Action {
 }
 
 #[test]
-#[ignore = "explicit target context behavioral RED"]
 fn native_target_context_current_and_explicit_row_are_distinct() {
     let (h, targets, b) = enemies();
     let facts = NativeFacts::new(
@@ -76,7 +75,6 @@ fn native_target_context_current_and_explicit_row_are_distinct() {
 }
 
 #[test]
-#[ignore = "explicit target context behavioral RED"]
 fn native_target_context_candidates_keep_native_order_and_range() {
     const MORTAL_STRIKE: u32 = 12294;
     let (mut h, mut targets, mut b) = enemies();
@@ -110,7 +108,6 @@ fn native_target_context_candidates_keep_native_order_and_range() {
 }
 
 #[test]
-#[ignore = "explicit target context behavioral RED"]
 fn native_target_context_expired_or_absent_current_never_redirects() {
     let (mut h, targets, b) = enemies();
     let stale = targets[0];
@@ -126,7 +123,6 @@ fn native_target_context_expired_or_absent_current_never_redirects() {
 }
 
 #[test]
-#[ignore = "explicit target context behavioral RED"]
 fn native_target_context_active_dot_counts_only_real_owned_instances() {
     let (mut h, mut targets, b) = enemies();
     let third = spawn_npc(&mut h.app, 3.0);
@@ -171,7 +167,6 @@ fn native_target_context_active_dot_counts_only_real_owned_instances() {
 }
 
 #[test]
-#[ignore = "explicit target context behavioral RED"]
 fn native_target_context_movement_event_is_explicitly_absent() {
     let (h, targets, b) = enemies();
     let facts = NativeFacts::new(
@@ -206,7 +201,6 @@ fn native_target_context_movement_event_is_explicitly_absent() {
 }
 
 #[test]
-#[ignore = "explicit target context behavioral RED"]
 fn native_target_context_no_actual_cast_is_not_a_casting_debuff() {
     let (h, targets, b) = enemies();
     assert!(

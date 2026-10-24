@@ -65,10 +65,11 @@ TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyC
 
 ## Explicit native target context
 
-- [ ] Native fact adapters accept an actual current target and ordered native target universe, separate from an explicit proposed `Action.target`. Invalid/absent explicit context fails rather than borrowing another selection. Candidate selection preserves native order and ordinary per-action target eligibility, not just first-target readiness.
-- [ ] Owned `active_dot` counts use actual active native aura instances across that universe; foreign caster instances do not count. Unknown aliases fail.
-- [ ] Fixture movement-event absence uses pinned no-event values; actual movement never invents a configured raid event. Dungeon timing remains explicitly unavailable.
-- [ ] Fire Breath refresh decisions consume freshly resolved native empower-duration data and a sourced refresh policy, not raw child duration or current aura carry. Selected-target casting predicates read actual native state without invented reaction timers.
+- [x] Native fact adapters accept an actual current target and ordered native target universe, separate from an explicit proposed `Action.target`. Invalid/absent explicit context fails rather than borrowing another selection. Candidate selection preserves native order and ordinary per-action target eligibility, not just first-target readiness.
+- [x] Owned `active_dot` counts use actual active native aura instances across that universe; foreign caster instances do not count. Unknown aliases fail.
+- [x] Fixture movement-event absence uses pinned no-event values; actual movement never invents a configured raid event. Dungeon timing remains explicitly unavailable.
+- [x] Fire Breath refresh decisions consume freshly resolved native empower-duration data and a sourced refresh policy, not raw child duration or current aura carry. Actual rank1 native20s versus raw3572092s refresh-window case is qualified.
+- [ ] Positive selected-target casting reaction requires a qualified native snapshot. Actual absence of CastState is known false; active casting stays NATIVE_CASTING_REACTION_UNAVAILABLE rather than inventing a timer.
 
 [Target-context API proof and exact remaining gaps](../handoffs/native-target-context-proof-ledger.md).
 
