@@ -33,6 +33,8 @@ After the explicit target-candidate interpreter landed, WW's count-only adapter 
 - `Driver::new(Program)` owns variable state, snapshot, decisions and channel cancellation. `select(list, &dyn ActionFacts, &Prepared, &Equipment)` returns the source-selected `(Action, Execution)`; release immutable facts, then `execute(world, actor, action, execution)`. `should_cancel(world, actor, facts)` evaluates an active native channel's saved `cancel_if`; caller then cancels the actual cast.
 - `capture_fixture(world, actor, Encounter)` rejects dungeon clocks before inserting `LiteralParityFixture`; the native kit yields while this marker exists, preserving Follower/NPC identity. Adapters retain explicit precombat/default ordering and spec actor checks.
 
+Native dungeon execution remains separate: a [level32 Bo269 Stockade receipt](../../handoffs/ww-stockade-proof-ledger.md) now records one complete seed11 clear with actual WW damage and native kit casts. It is not a BIS90/literal dungeon APL or dummy-parity qualification.
+
 ## Precombat lifecycle —2026-10-23, partially qualified
 
 `Program::select_next` consumes direct top-level precombat rows once, retaining source variable assignment and selected-target logic. `Driver` keeps a precombat cursor separate from combat priority scanning. Nested precombat call/run controls fail explicitly; pinned MID2 source has none. Three actual library REDs→four GREEN at171c8ec5c qualify this evaluator boundary, not native cast timing.

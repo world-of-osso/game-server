@@ -1,3 +1,7 @@
+## 2026-10-23 — Native WW Stockade receipt
+
+[Receipt](../handoffs/ww-stockade-proof-ledger.md): same existing f5 binary, fresh current private DB, explicit source-native Bo269/default32 roster. Opening participation PASS13.13s and complete seed11 route PASS174.02s, all3bosses dead; actual WW damage/kit casts and living actor retained in native report. Dungeon Space routing unchanged; no extra compile or gameplay workaround. Scope is not BIS90, literal dungeon APL or ±10% dummy parity.
+
 ## 2026-10-23 — Shared precombat native phase qualification
 
 [Lifecycle](systems/simc-apl.md#precombat-lifecycle-2026-10-23-partially-qualified): three actual ordered-selector REDs→four library GREEN; ed76/f5 native6PASS/2FAIL qualifies early capture, native Feral isolation, declared0shards, real configured summon/no-op/pet-at-pull and WW snapshot-OOC/time0. Native OOC regeneration supplies summon cost without grants. Demo damage and first-harmful counterfactual expose copied Stockade graph routing;14755 owns that fix, not a timing/resource workaround. Poison composite14775 seam and overall native acceptance remain open. [Proof](../handoffs/native-precombat-proof-ledger.md). Sameff8target bridge300s47064.44/81373.16 is not DPS parity.

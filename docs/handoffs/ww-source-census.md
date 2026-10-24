@@ -12,6 +12,10 @@ Both attempts used a new private SQLite .backup of CURRENT canonical, not the hi
 
 [Detailed source/eligibility ledger](ww-momentum-boost-source-ledger.md): the initial first-three-ordinal oracle comparison mixed a MID2 tier2pc extra action with regular channel ticks.14913 owns native tier application; do not fabricate a WW extra hit. The aligned TP→TP→FoF probe exposes a real producer-state divergence: native451297 already has2stacks after TP priming; SimC only triggers it from FoF impacts.451294 is an actually selected ordinary spec talent, with a native unrestricted family mask/ability+periodic proc source and no identified aura/hero gate. It is NOT in TC's default-refusal set; no native restriction change or copied SimC ramp follows from these observations.
 
+## Native WW Stockade receipt —2026-10-23
+
+[Exact native receipt](ww-stockade-proof-ledger.md): same f5 binary, native level32 Bo269/default-kit party, seed11. Opening participation passes; full native Stockade clears all3bosses in1735.5sim seconds/174.02s test runtime. Bo alive,524590actualdamage/1720hits with native TP/BOK/FoF/RSK casts. Fresh canonical source215d75ec.../copycd7230ac... differs from earlier inputs. No BIS90/literal dungeon/DPS-parity claim; remaining dummy/ability qualification stays open.
+
 ## Mystic Touch producer control packet
 
 [Ignored native RED packet](ww-mystic-touch-proof-ledger.md) covers learned8647 TP/white hits, actual level48 unlearned damage and unrelated owner damage beside a learned Monk. Runtime RED remains pending; no producer implementation, coefficient change or multiplier grant. First-impact/later-hit ordering and unrelated same-Monk proc eligibility remain open.
