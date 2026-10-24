@@ -336,6 +336,50 @@ fn literal_equipment_native_set_facts_follow_original_piece_counts_and_spec() {
     assert!(read_facts(&world, actor, &["set_bonus.unknown_tier_4pc"])[0].is_err());
 }
 
+#[test]
+#[ignore = "actual Fire2060 four-piece profile; pinned long and short tier spellings"]
+fn literal_equipment_native_fire_tier_long_and_short_aliases_share_threshold_state() {
+    let mut world = load_world();
+    let actor = equip_reference_profile(&mut world, 63);
+    let original = world.get::<EquippedItems>(actor).unwrap().clone();
+    let pieces = [271562, 271567, 271565, 271563];
+    for (count, expected) in [(4, [1.0, 1.0]), (1, [0.0, 0.0]), (2, [1.0, 0.0])] {
+        let mut equipped = original.clone();
+        equipped
+            .items
+            .retain(|(_, _, id)| !pieces.contains(id) || pieces[..count].contains(id));
+        world.entity_mut(actor).insert(equipped);
+        assert_eq!(
+            read_facts(
+                &world,
+                actor,
+                &[
+                    "set_bonus.midnight_season_2_2pc",
+                    "set_bonus.midnight_season_2_4pc",
+                    "set_bonus.mid2_2pc",
+                    "set_bonus.mid2_4pc",
+                ],
+            ),
+            expected
+                .into_iter()
+                .chain(expected)
+                .map(Ok)
+                .collect::<Vec<_>>(),
+            "actual Fire2060 original pieces{count} select1296583/1296584",
+        );
+    }
+    world.entity_mut(actor).insert(original);
+    world
+        .entity_mut(actor)
+        .insert(crate::class_progression::ActiveSpec(71));
+    assert_eq!(
+        read_facts(&world, actor, &["set_bonus.midnight_season_2_2pc"]),
+        vec![Ok(0.0)],
+        "native spec selection remains authoritative",
+    );
+    assert!(read_facts(&world, actor, &["set_bonus.unqualified_fire_alias_2pc"])[0].is_err());
+}
+
 fn scope_trigger_catalog(world: &mut World, remove_child: bool, cycle: bool) {
     let store = world.resource::<crate::spell_info::SpellStore>();
     let mut spells: Vec<_> = [21992, 27648, 221786, 221796, 1291728]
