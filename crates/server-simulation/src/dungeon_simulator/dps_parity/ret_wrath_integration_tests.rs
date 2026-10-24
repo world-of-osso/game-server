@@ -75,7 +75,7 @@ fn wait_for_damage(run: &mut Run, spell: u32) {
 }
 
 #[test]
-#[ignore = "native Hammer full-health restriction changes through actual Wrath aura metadata"]
+#[ignore = "ordinary native Hammer after actual Wrath must deal damage and grant native resource"]
 fn dps_parity_ret_wrath_integration_native_hammer_damage_and_resource() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = native_ret(4);
@@ -93,14 +93,6 @@ fn dps_parity_ret_wrath_integration_native_hammer_damage_and_resource() {
         "real target must be outside native execute state"
     );
     assert!(!has(&run, WRATH));
-    let result = crate::spell_cast::creature_cast(
-        run.app.world_mut(),
-        run.actor,
-        HAMMER,
-        Some(run.targets[0]),
-        false,
-    );
-    assert_eq!(result, Err(CastFailure::TargetAuraState));
     cast_wrath(&mut run);
     let before = current_holy_power(&run);
     let amount = run
@@ -117,6 +109,42 @@ fn dps_parity_ret_wrath_integration_native_hammer_damage_and_resource() {
     cast_ready(&mut run, HAMMER);
     wait_for_damage(&mut run, HAMMER);
     assert_eq!(current_holy_power(&run) - before, amount);
+}
+
+#[test]
+#[ignore = "shared native target state2 is uncomputed: actual full-health Hammer must be rejected"]
+fn dps_parity_ret_wrath_integration_native_uncomputed_target_state_two() {
+    let mut run = native_ret(4);
+    assert_eq!(
+        literal_rotation::execution::resolve_action(run.app.world(), run.actor, HAMMER).unwrap(),
+        Some(HAMMER)
+    );
+    let health = run
+        .app
+        .world()
+        .get::<shared::components::Health>(run.targets[0])
+        .unwrap();
+    assert_eq!(health.current, health.max);
+    assert!(!has(&run, WRATH));
+    let state = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(HAMMER)
+        .unwrap()
+        .aura_restrictions
+        .as_ref()
+        .unwrap()
+        .target_aura_state;
+    assert_eq!(state, 2, "native2 is TC WOUNDED_20_PERCENT");
+    let result = crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        HAMMER,
+        Some(run.targets[0]),
+        false,
+    );
+    assert_eq!(result, Err(CastFailure::TargetAuraState));
 }
 
 #[test]
