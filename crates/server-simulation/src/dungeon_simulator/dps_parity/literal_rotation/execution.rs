@@ -18,8 +18,10 @@ pub(crate) enum Execution {
     EmpoweredSpell(u32, Entity, u8),
     ReplacingSpell(u32, Entity),
     Item(ItemUse, Entity),
+    Composite(Vec<Execution>),
 }
 
+#[derive(Clone, Copy)]
 pub(crate) struct NativeAction<'a> {
     pub name: &'a str,
     pub spell: u32,
@@ -27,10 +29,17 @@ pub(crate) struct NativeAction<'a> {
     pub self_target: bool,
 }
 
-// None is the action's native default target, not an explicit-target substitute.
+pub(crate) struct NativeComposite<'a> {
+    pub name: &'a str,
+    pub steps: &'a [NativeAction<'a>],
+}
+
+// Keys identify selection contexts; Execution retains the actual native cast target.
+// None is the native default, never a substitute for an unknown explicit context.
 type ActionKey = (String, Option<Entity>);
 type ReadyActions = BTreeMap<ActionKey, Execution>;
 
+#[derive(Clone, Copy)]
 struct NativeReadiness {
     ready: bool,
     limited: Option<PowerType>,
@@ -40,6 +49,9 @@ pub(crate) struct Prepared {
     ready: ReadyActions,
     limits: BTreeMap<ActionKey, PowerType>,
     declared: BTreeSet<String>,
+    moving: bool,
+    cast_active: bool,
+    gcd_active: bool,
 }
 
 impl Prepared {
@@ -71,8 +83,18 @@ impl Prepared {
         needs_snapshot: bool,
         replace_current: bool,
     ) -> Result<Self, String> {
+        let moving = world
+            .get::<crate::networking::Moving>(actor)
+            .is_some_and(|moving| moving.0);
+        let cast_active = world.get::<shared::casting::CastState>(actor).is_some();
+        let gcd_active = world
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)));
         let targets = native_targets(world, actor, targets);
         let mut prepared = Self {
+            moving,
+            cast_active,
+            gcd_active,
             ready: BTreeMap::new(),
             limits: BTreeMap::new(),
             declared: ["snapshot_stats", "auto_attack", "retarget_auto_attack"]
@@ -120,6 +142,48 @@ impl Prepared {
         )
     }
 
+    pub fn setup_pending(&self) -> bool {
+        self.cast_active || self.gcd_active
+    }
+
+    pub fn permits_row(&self, action: &Action) -> Result<bool, String> {
+        if read_boolean_option(action, "moving")?.is_some_and(|moving| moving != self.moving) {
+            return Ok(false);
+        }
+        let while_casting = read_boolean_option(action, "use_while_casting")?.unwrap_or(false);
+        if self.cast_active && !while_casting {
+            return Ok(false);
+        }
+        let off_gcd = read_boolean_option(action, "use_off_gcd")?.unwrap_or(false);
+        Ok(!self.gcd_active || off_gcd)
+    }
+
+    /// Plans only; the precombat executor owns clock advancement and each native cast.
+    pub fn with_composites<'a>(
+        mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+        composites: impl IntoIterator<Item = NativeComposite<'a>>,
+    ) -> Result<Self, String> {
+        let enemies = native_targets(world, actor, targets);
+        for composite in composites {
+            self.declared.insert(composite.name.into());
+            let self_only = composite.steps.iter().all(|step| step.self_target);
+            let candidates: &[Entity] = if self_only {
+                std::slice::from_ref(&actor)
+            } else {
+                enemies.as_slice()
+            };
+            for (index, &target) in candidates.iter().enumerate() {
+                if let Some(plan) = read_composite_plan(world, actor, target, composite.steps)? {
+                    record_ready(&mut self.ready, composite.name, target, index == 0, plan);
+                }
+            }
+        }
+        Ok(self)
+    }
+
     /// True only when this selected pool at its native maximum would admit the
     /// action. Other pools/health and every other native check remain unchanged.
     pub fn resource_limited(
@@ -141,6 +205,28 @@ impl Prepared {
             .limits
             .get(&key)
             .is_some_and(|power| *power == resource))
+    }
+
+    pub fn execution_in(
+        &self,
+        action: &Action,
+        equipment: &Equipment,
+        program: &server::simc_apl::Program,
+    ) -> Result<Option<Execution>, String> {
+        if action.name != "use_items" {
+            return self.execution(action, equipment);
+        }
+        for slot in equipment.use_items_slots(action, program)? {
+            let singular = Action {
+                name: "use_item".into(),
+                target: action.target,
+                options: [("slot".into(), slot.into())].into(),
+            };
+            if let Some(execution) = self.execution(&singular, equipment)? {
+                return Ok(Some(execution));
+            }
+        }
+        Ok(None)
     }
 
     pub fn execution(
@@ -170,6 +256,57 @@ fn select_empower_stage(action: &Action, execution: Execution) -> Result<Executi
         .parse::<u8>()
         .map_err(|error| format!("invalid literal empower_to={source}: {error}"))?;
     Ok(Execution::EmpoweredSpell(id, target, stage))
+}
+
+fn read_composite_plan(
+    world: &mut World,
+    actor: Entity,
+    candidate: Entity,
+    steps: &[NativeAction<'_>],
+) -> Result<Option<Execution>, String> {
+    let mut pending = Vec::new();
+    for step in steps {
+        let target = if step.self_target { actor } else { candidate };
+        if step.self_target && owns_active_aura(world, actor, step.spell) {
+            continue;
+        }
+        if !talent_permits(world, actor, step.talent)? {
+            return Ok(None);
+        }
+        let Some(spell) = resolve_action(world, actor, step.spell)? else {
+            return Ok(None);
+        };
+        if !native_readiness(world, actor, spell, target, None, false)?.ready {
+            return Ok(None);
+        }
+        pending.push(Execution::Spell(spell, target));
+    }
+    Ok((!pending.is_empty()).then_some(Execution::Composite(pending)))
+}
+
+fn owns_active_aura(world: &World, actor: Entity, spell: u32) -> bool {
+    let now = crate::spell_cast::now(world);
+    world
+        .get::<crate::auras::ActiveAuras>(actor)
+        .is_some_and(|auras| {
+            auras.iter().any(|aura| {
+                aura.spell_id == spell
+                    && aura.caster == actor
+                    && aura.expires_at.is_none_or(|at| at > now)
+            })
+        })
+}
+
+fn read_boolean_option(action: &Action, name: &str) -> Result<Option<bool>, String> {
+    match action.options.get(name).map(String::as_str) {
+        None => Ok(None),
+        Some("0") => Ok(Some(false)),
+        Some("1") => Ok(Some(true)),
+        Some(value) => Err(format!(
+            "unsupported native literal option {}:{name}={value}; expected0|1",
+            action.name
+        )),
+    }
 }
 
 fn action_key(action: &Action, equipment: &Equipment) -> Result<Option<ActionKey>, String> {
@@ -214,6 +351,24 @@ fn record_ready(
     ready.insert((name.into(), Some(target)), execution.clone());
     if default {
         ready.insert((name.into(), None), execution);
+    }
+}
+
+fn record_target_contexts(
+    prepared: &mut Prepared,
+    name: &str,
+    contexts: &[Entity],
+    state: NativeReadiness,
+    execution: &Execution,
+) {
+    for &candidate in contexts {
+        record_probe(
+            prepared,
+            (name.into(), Some(candidate)),
+            false,
+            state,
+            execution.clone(),
+        );
     }
 }
 
@@ -316,8 +471,10 @@ fn read_spell(
             (name.into(), Some(target)),
             index == 0,
             state,
-            execution,
+            execution.clone(),
         );
+        let contexts = if self_target { enemies } else { &[] };
+        record_target_contexts(prepared, name, contexts, state, &execution);
     }
     Ok(())
 }
@@ -430,6 +587,9 @@ fn refused_admission(
 pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<(), String> {
     match action {
         Execution::Snapshot => Err("snapshot execution belongs to the native stat recorder".into()),
+        Execution::Composite(_) => {
+            Err("composite execution requires an ordered precombat executor".into())
+        }
         Execution::AutoAttack(target) => {
             let current = world.get::<crate::combat::AutoAttack>(actor).cloned();
             crate::combat::start_attack(&mut world.commands(), actor, target, current.as_ref());

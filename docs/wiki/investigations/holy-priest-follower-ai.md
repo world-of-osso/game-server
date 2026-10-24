@@ -301,9 +301,10 @@ Languish boundary independently reproduced5damage versus8expected at968399598;
 unflagged139 and two-real-priest ownership controls passed.
 
 [Shared flag-driven carry](../systems/auras.md#native-rolling-periodic-refresh--2026-10-22)
-now settles due ticks once, preserves same-caster/spell/effect unpaid amounts and
-retains existing phase. Barbed keeps its fresh five-amount normalization;335467
-no longer owns a duplicate carry path. Initial unnecessary storage rounding broke
+settles due ticks once and preserves same-caster/spell/effect unpaid amounts.
+Its historical retained-phase/fixed-five Barbed assumptions are superseded by the
+[DB2/TC periodic correction](../../handoffs/bm-native-periodic-proof-ledger.md);
+335467 still has no duplicate carry path. Initial unnecessary storage rounding broke
 335467's fractional snapshot assertion;29e0d8a61 removed that layer globally,
 retaining existing payment rounding without a spell exception or weakened test.
 

@@ -212,3 +212,133 @@ fn dps_parity_windwalker_sunfire_spiral_empowers_actual_combo_rsk_only() {
         "native Sunfire effect must empower actual combo RSK by {sunfire}% only; combo={combo}, repeated={repeated}, expected={expected}"
     );
 }
+
+const MYSTIC_TOUCH_PASSIVE: u32 = 8647;
+const MYSTIC_TOUCH_DEBUFF: u32 = 113746;
+
+fn native_mystic_fixture(level: u8) -> (Harness, Entity) {
+    let (mut h, caster) = crate::followers::kit_tests::at_level_unengaged(227734, level, |app| {
+        app.add_plugins(crate::stats::StatsPlugin);
+    });
+    h.advance(6);
+    let known = h
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(caster)
+        .unwrap();
+    assert_eq!(
+        known.contains(MYSTIC_TOUCH_PASSIVE),
+        level >= 49,
+        "native8647 level49 learning boundary must supply this control"
+    );
+    assert!(
+        !crate::auras::has_aura(h.app.world(), h.npc, MYSTIC_TOUCH_DEBUFF),
+        "fixture must not start with an earlier actor's target debuff"
+    );
+    (h, caster)
+}
+
+fn land_native_palm(h: &mut Harness, caster: Entity) {
+    let target = h.npc;
+    let before = h.health(target);
+    for _ in 0..8 {
+        cast_native(h, caster, TIGER_PALM, target);
+        if h.health(target) < before {
+            assert!(
+                h.health(target) > 0.0,
+                "producer control needs a surviving native target"
+            );
+            return;
+        }
+    }
+    panic!("native TP must actually deal damage before testing its target-debuff producer");
+}
+
+#[test]
+#[ignore = "requires native70448 class book/spells; learned Mystic Touch real-impact RED"]
+fn dps_parity_windwalker_mystic_touch_learned_palm_applies_native_target_debuff() {
+    let _scope = crate::random::seed_scope(70448);
+    let (mut h, caster) = native_mystic_fixture(49);
+    land_native_palm(&mut h, caster);
+    assert!(
+        crate::auras::has_aura(h.app.world(), h.npc, MYSTIC_TOUCH_DEBUFF),
+        "learned8647 must produce native113746 after an actual landed TP"
+    );
+}
+
+#[test]
+#[ignore = "requires native70448 class book/spells; unlearned Mystic Touch control"]
+fn dps_parity_windwalker_mystic_touch_unlearned_palm_does_not_grant_debuff() {
+    let _scope = crate::random::seed_scope(70448);
+    let (mut h, caster) = native_mystic_fixture(48);
+    land_native_palm(&mut h, caster);
+    assert!(
+        !crate::auras::has_aura(h.app.world(), h.npc, MYSTIC_TOUCH_DEBUFF),
+        "Monk identity without learned8647 is not permission to grant113746"
+    );
+}
+
+#[test]
+#[ignore = "requires native70448 class book/spells; learned Mystic Touch native white-hit RED"]
+fn dps_parity_windwalker_mystic_touch_learned_auto_applies_native_target_debuff() {
+    let _scope = crate::random::seed_scope(70448);
+    let (mut h, caster) = native_mystic_fixture(49);
+    let target = h.npc;
+    let before = h.health(target);
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(crate::combat::AutoAttack::new(target));
+    for _ in 0..120 {
+        h.advance(1);
+        if h.health(target) < before {
+            break;
+        }
+    }
+    assert!(
+        h.health(target) < before,
+        "actual native white hit required"
+    );
+    assert!(h.health(target) > 0.0, "native target must survive the hit");
+    assert!(
+        crate::auras::has_aura(h.app.world(), target, MYSTIC_TOUCH_DEBUFF),
+        "learned8647 producer includes the actual Monk white-hit path"
+    );
+}
+
+#[test]
+#[ignore = "requires native70448 class book/spells; unrelated actor damage control"]
+fn dps_parity_windwalker_mystic_touch_nearby_learned_monk_does_not_brand_other_actor_damage() {
+    let _scope = crate::random::seed_scope(70448);
+    let (mut h, monk) = native_mystic_fixture(49);
+    assert!(
+        !h.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(h.caster)
+            .unwrap()
+            .contains(MYSTIC_TOUCH_PASSIVE)
+    );
+    let target = h.npc;
+    let before = h.health(target);
+    h.attack(target);
+    for _ in 0..120 {
+        h.advance(1);
+        if h.health(target) < before {
+            break;
+        }
+    }
+    assert!(
+        h.health(target) < before,
+        "unrelated actor must actually deal native damage"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::AutoAttack>(monk)
+            .is_none()
+    );
+    assert!(
+        !crate::auras::has_aura(h.app.world(), target, MYSTIC_TOUCH_DEBUFF),
+        "a nearby learned Monk cannot lend its passive to unrelated actor damage"
+    );
+}

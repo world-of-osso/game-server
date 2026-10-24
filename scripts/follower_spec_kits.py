@@ -10,6 +10,7 @@ import argparse
 from collections import defaultdict
 from contextlib import closing
 import csv
+from graphlib import TopologicalSorter
 import hashlib
 import json
 from pathlib import Path
@@ -322,12 +323,126 @@ def project_loadout_actions(loadout):
     return known
 
 
+# Literal pinned policy sources, as with the native WW APL; no numeric spell data.
+SIMC_APL_REVISION = '76f8118cf3f7f41dad20708e8328e1f4ab2deebc'
+SIMC_ACTIVE_ENEMY_APLS = {
+    253: Path(__file__).with_name('policy_sources') / 'hunter_beast_mastery.76f8118.simc',
+}
+
+
+def split_predicate(expression, operator):
+    depth, start, parts = 0, 0, []
+    for index, character in enumerate(expression):
+        if character == '(':
+            depth += 1
+        elif character == ')':
+            depth -= 1
+        elif character == operator and depth == 0:
+            parts.append(expression[start:index])
+            start = index + 1
+        if depth < 0:
+            raise ValueError(f'unbalanced APL predicate: {expression}')
+    if depth:
+        raise ValueError(f'unbalanced APL predicate: {expression}')
+    parts.append(expression[start:])
+    return parts
+
+
+def strip_predicate_parentheses(expression):
+    while expression.startswith('('):
+        depth = 0
+        for index, character in enumerate(expression):
+            depth += (character == '(') - (character == ')')
+            if depth == 0:
+                break
+        if depth != 0:
+            raise ValueError(f'unbalanced APL predicate: {expression}')
+        if index != len(expression) - 1:
+            break
+        expression = expression[1:-1].strip()
+    return expression
+
+
+def active_enemy_lower_bound(expression):
+    """Conservative projection: unknown non-count facts admit one; AND=max, OR=min."""
+    if 'variable.' in expression:
+        raise ValueError('indirect APL variables need an explicit active-enemy projection')
+    if 'active_enemies' not in expression:
+        return 1
+    expression = strip_predicate_parentheses(expression.strip())
+    for operator, combine in (('|', min), ('&', max)):
+        parts = split_predicate(expression, operator)
+        if len(parts) > 1:
+            return combine(active_enemy_lower_bound(part) for part in parts)
+    match = re.fullmatch(r'active_enemies\s*(>=|<=|>|<|=)\s*(\d+)', expression)
+    if not match:
+        raise ValueError(f'unsupported active-enemy predicate: {expression}')
+    operator, literal = match.groups()
+    count = int(literal)
+    required = {'>': count + 1, '>=': count, '=': count, '<': 1, '<=': 1}[operator]
+    return max(1, required)
+
+
+def read_apl_lists(text):
+    lists = defaultdict(list)
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        match = re.fullmatch(r'actions(?:\.([a-z0-9_]+))?\+?=/?(.+)', line)
+        if not match:
+            raise ValueError(f'unsupported pinned APL row: {line}')
+        name, literal = match.groups()
+        action, *options = literal.split(',')
+        options = dict(option.split('=', 1) for option in options if option)
+        if action in {'variable', 'run_action_list'}:
+            raise ValueError(f'unsupported APL admission action: {action}')
+        lists[name or 'default'].append((action, options))
+    return lists
+
+
+def derive_active_enemy_minima(text):
+    """Project every reachable action use; an unrestricted alternate use wins."""
+    lists = read_apl_lists(text)
+    dependencies = {name: set() for name in lists}
+    if 'default' not in lists:
+        raise ValueError('pinned APL has no default list')
+    for name, rows in lists.items():
+        for action, options in rows:
+            if action == 'call_action_list':
+                called = options['name']
+                if called not in lists:
+                    raise ValueError(f'unknown called APL list: {called}')
+                dependencies[called].add(name)
+    entry_bounds, minima = {'default': 1}, {}
+    for name in TopologicalSorter(dependencies).static_order():
+        if name not in entry_bounds:
+            continue
+        for action, options in lists[name]:
+            bound = max(entry_bounds[name], active_enemy_lower_bound(options.get('if', '')))
+            destination = entry_bounds if action == 'call_action_list' else minima
+            key = options['name'] if action == 'call_action_list' else action
+            destination[key] = min(destination.get(key, bound), bound)
+    return {action: bound for action, bound in minima.items() if bound > 1}
+
+
+def read_active_enemy_sources(spec_ids):
+    admissions, evidence = {}, {}
+    for spec in sorted(set(spec_ids) & SIMC_ACTIVE_ENEMY_APLS.keys()):
+        path = SIMC_ACTIVE_ENEMY_APLS[spec]
+        admissions[spec] = derive_active_enemy_minima(path.read_text())
+        evidence[spec] = dict(path=str(path.resolve()), sha256=digest(path),
+                              revision=SIMC_APL_REVISION, minima=admissions[spec])
+    return admissions, evidence
+
+
 def kit_rows(db, source):
     availability = defaultdict(list)
     description_links = {}
     reference_rows = {}
     slots = {}
     inventory = []
+    active_minima, _ = read_active_enemy_sources(row['spec_id'] for row in source['loadouts'])
     dispels = defaultdict(list)
     for spell, dispel_type, target in db.execute('SELECT SpellID,EffectMiscValue_0,ImplicitTarget_0 FROM spell_effect WHERE DifficultyID=0 AND Effect=38'):
         dispels[spell].append((dispel_type, target))
@@ -345,6 +460,10 @@ def kit_rows(db, source):
             if level < required:
                 continue
             rule = policy('passive', 0, 'self') if passive else combat_policy(spec, name, spell, dispels[spell], controls[spell])
+            token = re.sub(r'[^a-z0-9]+', '_', name.lower().replace("'", '')).strip('_')
+            minimum = active_minima.get(spec, {}).get(token)
+            if not passive and minimum is not None:
+                rule[2]['min_active_enemies'] = minimum
             if rule[0] == 'dispel':
                 effects = dispels[spell]
                 rule[2]['dispel_types'] = sorted({row[0] for row in effects})
@@ -432,6 +551,7 @@ def prepare(args):
                    spec_ids=scope, key_columns=['spec_id', 'spell_id', 'min_level'], sources=evidence,
                    chosen_loadouts=source['loadouts'], trait_source_trees=source['trees'], level32_inventory=inventory,
                    aura_reference_rows=references, description_reference_sources=reference_sources,
+                   active_enemy_apl_sources=read_active_enemy_sources(row['spec_id'] for row in source['loadouts'])[1],
                    selected_source_rows=selected_source_rows(args.db2_root, source),
                    sqldiff=str(args.sqldiff.resolve()), sqldiff_sha256=digest(args.sqldiff))
     args.receipt.write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n')

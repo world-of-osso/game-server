@@ -1,8 +1,17 @@
 //! Shared native fixture machinery; source rows and spec facts belong to adapters.
+#[cfg(test)]
+mod composite_tests;
+pub(crate) mod default_pet;
 pub(crate) mod equipment;
 pub(crate) mod execution;
 #[cfg(test)]
+mod gating_tests;
+#[cfg(test)]
+mod precombat_poll_tests;
+#[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod use_items_tests;
 use crate::simc_apl_native::Encounter;
 use bevy::prelude::*;
 use equipment::Equipment;
@@ -23,13 +32,29 @@ pub(crate) fn capture_fixture(
                 .into(),
         );
     }
-    world.entity_mut(actor).insert(LiteralParityFixture);
+    // Literal control must not keep the retired kit's owner-follow movement.
+    world
+        .entity_mut(actor)
+        .remove::<crate::creature_ai::FollowOwner>()
+        .insert(LiteralParityFixture);
     Ok(())
+}
+
+pub(crate) enum PrecombatPoll {
+    Waiting,
+    Selected {
+        action: Action,
+        execution: Execution,
+    },
+    Finished,
 }
 
 pub(crate) struct Driver {
     program: Program,
     variables: Variables,
+    precombat_cursor: usize,
+    selected_precombat: bool,
+    precombat_harmful_executed: bool,
     pub snapshot: Option<Value>,
     cancellation: Option<(Action, Expression, u32)>,
     pub decisions: u64,
@@ -41,10 +66,31 @@ impl Driver {
         Self {
             program,
             variables,
+            precombat_cursor: 0,
+            selected_precombat: false,
+            precombat_harmful_executed: false,
             snapshot: None,
             cancellation: None,
             decisions: 0,
         }
+    }
+
+    /// The caller advances native frames and resamples without consuming busy rows.
+    pub fn poll_precombat(
+        &mut self,
+        facts: &dyn ActionFacts,
+        prepared: &Prepared,
+        equipment: &Equipment,
+    ) -> Result<PrecombatPoll, String> {
+        if prepared.setup_pending() {
+            return Ok(PrecombatPoll::Waiting);
+        }
+        Ok(
+            match self.select("precombat", facts, prepared, equipment)? {
+                Some((action, execution)) => PrecombatPoll::Selected { action, execution },
+                None => PrecombatPoll::Finished,
+            },
+        )
     }
 
     /// Evaluate only after native readiness has been sampled with mutable World.
@@ -55,16 +101,37 @@ impl Driver {
         prepared: &Prepared,
         equipment: &Equipment,
     ) -> Result<Option<(Action, Execution)>, String> {
-        let action = self
-            .program
-            .select(list, facts, &mut self.variables, |action| {
-                Ok(prepared.execution(action, equipment)?.is_some())
-            })?;
+        self.selected_precombat = list == "precombat";
+        if self.selected_precombat && prepared.setup_pending() {
+            return Err("PRECOMBAT_WAIT_REQUIRED: advance native frames via poll_precombat".into());
+        }
+        if self.selected_precombat && self.precombat_harmful_executed {
+            return Ok(None);
+        }
+        let mut usable = |action: &Action| {
+            Ok(prepared.permits_row(action)?
+                && facts.target_ready(action)?
+                && prepared
+                    .execution_in(action, equipment, &self.program)?
+                    .is_some())
+        };
+        let action = if list == "precombat" {
+            self.program.select_next(
+                list,
+                &mut self.precombat_cursor,
+                facts,
+                &mut self.variables,
+                &mut usable,
+            )?
+        } else {
+            self.program
+                .select(list, facts, &mut self.variables, &mut usable)?
+        };
         let Some(action) = action else {
             return Ok(None);
         };
         let execution = prepared
-            .execution(&action, equipment)?
+            .execution_in(&action, equipment, &self.program)?
             .ok_or("selected literal action lost native readiness")?;
         Ok(Some((action, execution)))
     }
@@ -76,6 +143,7 @@ impl Driver {
         action: Action,
         execution: Execution,
     ) -> Result<(), String> {
+        let ends_precombat = self.selected_precombat && harmful_execution(world, &execution)?;
         let cancellation = if let Execution::Spell(id, _) = &execution {
             action
                 .options
@@ -95,6 +163,7 @@ impl Driver {
         if cancellation.is_some() {
             self.cancellation = cancellation;
         }
+        self.precombat_harmful_executed |= ends_precombat;
         self.decisions += 1;
         Ok(())
     }
@@ -122,6 +191,25 @@ impl Driver {
         }
         Ok(cancel)
     }
+}
+
+fn harmful_execution(world: &World, execution: &Execution) -> Result<bool, String> {
+    let id = match execution {
+        Execution::Composite(_) => {
+            return Err("composite precombat requires a clock-aware executor".into());
+        }
+        Execution::Snapshot => return Ok(false),
+        Execution::AutoAttack(_) | Execution::RetargetAutoAttack(_) => return Ok(true),
+        Execution::Spell(id, _)
+        | Execution::EmpoweredSpell(id, _, _)
+        | Execution::ReplacingSpell(id, _) => *id,
+        Execution::Item(item, _) => item.on_use.spell_id,
+    };
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let spell = store
+        .get(id)
+        .ok_or_else(|| format!("native precombat spell{id} missing"))?;
+    Ok(crate::spell_info::positivity::negative_effects(store, spell) != 0)
 }
 
 struct BoundAction<'a> {

@@ -16,6 +16,8 @@ Server-side spell casting in `crates/server/src/spell_cast/`: validation, cast b
 - [x] Reject player casts of spells not in `KnownSpells` (`NotSupported`, "spell not known"); NPC casters exempt.
 - [x] Maintain class power pools with DB2 regen/decay; replicate `UnitPowers` (player `UnitLevel` belongs to class progression; NPC `UnitLevel` from the template).
 - [ ] Scale continuous regeneration by live native haste whenever `PowerType.Flags & 0x400` is set, for players and class followers; unflagged Mana remains unscaled. Preserve the already-hasted rune cooldown path and discrete pet Focus timing.
+
+- [ ] Use one uncapped native potential-rate calculation for regen ticks and APL regen/time-to-max facts. At resource cap, applied/wire rate stays zero while potential regen remains positive; fact queries cannot grant resource or alter cached/applied state.
 - [x] Replicate raw whole power, fractional thousandths, signed regen rate, and charged combo-point indices. Resend on whole value, max, rate, display order or charged-point changes, not fraction alone; report zero rate on the tick a pool reaches its limit.
 - [x] Replicate indexed rune ready times and full recharge duration, including queued runes' wait. Resend on spend, completion, duration or rune-count changes, not countdown ticks.
 - [x] Use contract `CastFailReason` variants directly; `NotSupported` names the cause in `detail`.
@@ -57,7 +59,7 @@ Existing kit/test conflicts must be reported before GREEN, not weakened to fit t
 - `crates/server/src/spell_cast/mod.rs`: receivers, validation, start/complete/cancel, `SpellHistory`, messages.
 - `crates/server/src/spell_cast/targets.rs`: implicit targets, relations, range.
 - `crates/server/src/spell_cast/effects.rs`: effect registry, damage/heal paths.
-- `crates/server/src/spell_cast/powers.rs`: `PowerTypeTable`, `PowerPools`, regen, `UnitPowers` sync.
+- `crates/server/src/spell_cast/powers.rs`: native0x400 flags, shared uncapped potential/applied regen calculations, `PowerPools` and `UnitPowers` sync.
 - `crates/server/src/spell_cast/runes.rs`: per-rune cooldowns and `UnitRunes` sync.
 - `crates/server/src/networking.rs`: `Moving` input marker.
 - `crates/server/src/combat.rs`: `enter_combat`, `mark_npc_dead_world`.
