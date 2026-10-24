@@ -25,6 +25,7 @@ fn bindings() -> Bindings {
         .into(),
         buffs: [("hit_combo".into(), HIT_COMBO_BUFF)].into(),
         dot_refresh: Default::default(),
+        dot_persistent: Default::default(),
         talents: [("hit_combo".into(), HIT_COMBO)].into(),
         resources: [
             ("energy".into(), PowerType::Energy),
