@@ -5,7 +5,7 @@ use crate::simc_apl_native::Bindings;
 use bevy::prelude::*;
 use shared::components::{Health, Npc};
 
-pub(crate) struct ConfiguredPet {
+pub(in super::super) struct ConfiguredPet {
     spell: u32,
     entry: u32,
 }
