@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+server-catalog = { path = "../server-catalog" }
 # Projected runtime ground metadata; renderer-only modules stay disabled.
 wow-chunk = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false }
 wow-adt = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false }
