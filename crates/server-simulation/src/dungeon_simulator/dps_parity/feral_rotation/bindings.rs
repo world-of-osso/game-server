@@ -41,6 +41,8 @@ const BUFFS: &[(&str, u32)] = &[
     ("rake", 155722),
     ("moonfire_cat", 155625),
     ("rip", 1079),
+    // sc_druid.cpp4745: Primal Wrath's dot_name is the actual Rip aura.
+    ("primal_wrath", 1079),
     ("bloodseeker_vines", 439531),
 ];
 

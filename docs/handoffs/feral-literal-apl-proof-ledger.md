@@ -29,6 +29,7 @@ Numeric `<?`/`>?` are present on development base from bt1082, not a private exp
 
 Fact dependencies:
 
+- `dot.primal_wrath` aliases actual owned Rip1079 per SimC druid4745; test-onlyffa74a027 reproduces missing alias1FAIL17.37s before this one-entry binding. Parent285381 is not a separate dot aura. Rip/Primal fresh refresh policies remain explicit gaps until shared CP-prepared readers/source policy land; no half-duration constant or fake aura.
 - e3648f4f7 binds Rake155722 and Moonfire155625 through `native_dot_spell`/Pandemic. Exact-profile owned-aura test proves absent→fresh refreshability and active_dot; Rip1079 deliberately lacks a refresh resolver and returns `NATIVE_DOT_REFRESH_UNAVAILABLE`, because native duration669 is4000base/24000max/4000perResource. The canonical CP-prepared reader is14775-owned.
 - Master ta1068 supplies explicit ordered targets, owned dots/refresh policies, active_dot and actual fixture add-event components. Bind Feral aliases and consume these; do not fabricate wave timers or global aura matches.
 - hero_tree:14116/hf1080 candidate6e4427191, parent gate pending. No local hero-tree fact.
