@@ -124,6 +124,7 @@ pub(super) fn launch(
     if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
         debug!(caster = ?caster, misc = ?spell.misc, delays = ?delays, "Azerite launch delays");
     }
+    super::elemental_resource::energize_launch(world, caster, spell, &plan, depth);
     let launched = now(world);
     let (plan, reflected) = split_reflected(plan, &reflections, caster);
     super::resolve_launch_effects(world, caster, spell, &plan, depth);

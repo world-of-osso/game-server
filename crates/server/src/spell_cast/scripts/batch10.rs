@@ -14,7 +14,6 @@ pub(super) const VOIDFORM: u32 = 228260;
 pub(super) const ARCANE_SURGE: u32 = 365350;
 pub(super) const PROTECTION_JUDGMENT: u32 = 275779;
 pub(super) const HAND_OF_GULDAN: u32 = 105174;
-pub(super) const LIGHTNING_BOLT: u32 = 188196;
 const IMPROVED_FLURRY: u32 = 272026;
 const DEFT_MANEUVERS: u32 = 381878;
 const LUNGE_BITE: u32 = 215802;
@@ -23,7 +22,6 @@ const SURGE_BUFF: u32 = 365362;
 const JUDGMENT_RANK: u32 = 315867;
 const JUDGMENT_ENERGIZE: u32 = 220637;
 const GULDAN_METEOR: u32 = 86040;
-const ELEMENTAL_RESOURCE: u32 = 343725;
 
 ///13877 explicitly names331850s1/i: five base targets, eight with272026.
 ///Only the initial strike is bridged; subsequent single-target transfer is open.
@@ -154,20 +152,5 @@ fn schedule_guldan_imps(world: &mut World, caster: Entity, depth: u8) {
     for _ in 0..count {
         delay_ms += crate::random::thread_rng().gen_range(1..=2);
         spell_cast::queued_triggers::schedule_full_trigger(world, &ctx, caster, 104317, delay_ms);
-    }
-}
-
-///188196's343725s1 awards six Maelstrom once, after the actual bolt hits.
-pub(super) fn energize_lightning_bolt(
-    world: &mut World,
-    caster: Entity,
-    target: Entity,
-    _depth: u8,
-) {
-    if crate::auras::has_aura(world, caster, ELEMENTAL_RESOURCE)
-        && batch8::first_damage_target(world, caster, LIGHTNING_BOLT, target)
-    {
-        let amount = script_effect_value(world, caster, ELEMENTAL_RESOURCE, 0);
-        spell_cast::powers::change_power(world, caster, PowerType::Maelstrom, amount);
     }
 }

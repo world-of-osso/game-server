@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate crates/server/src/spell_scaling_data.rs.
+"""Generate crates/server-catalog/src/spell_scaling_data.rs.
 
 Source (Retail 12.1.0.69933): local CASC game table gametables/spellscaling.txt
 (FDID 1391660), saved as data/gametables/spellscaling.txt. Its class columns are all 0
@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 GAMETABLES = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "data/gametables")
-OUT = ROOT / "crates/server/src/spell_scaling_data.rs"
+OUT = ROOT / "crates/server-catalog/src/spell_scaling_data.rs"
 
 CLASS_COLUMNS = [
     "Rogue", "Druid", "Hunter", "Mage", "Paladin", "Priest", "Shaman", "Warlock", "Warrior",
@@ -56,7 +56,7 @@ def main():
         "",
         f"/// `[level - 1]` = {columns}. The class columns are all 0.",
         "#[rustfmt::skip]",
-        f"pub(crate) const SPELL_SCALING: [[f32; {len(ITEM_COLUMNS)}]; {len(table)}] = [",
+        f"pub const SPELL_SCALING: [[f32; {len(ITEM_COLUMNS)}]; {len(table)}] = [",
         f"    {body},",
         "];",
         "",

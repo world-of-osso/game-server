@@ -165,6 +165,7 @@ fn read_attacker(world: &World, enemy: Entity) -> Result<Attacker<'_>, String> {
             .get::<crate::zones::TempSummon>(enemy)
             .map(|summon| summon.summoner),
         spirit_wolf: None,
+        hunter_owner_ap: None,
     })
 }
 
@@ -293,6 +294,7 @@ fn armored_damage(world: &World, projection: &SwingProjection, base: f32) -> f32
         world.get_resource::<ArmorConstants>(),
         projection.attacker.mods,
     )
+    .damage
 }
 
 fn outcome_health_loss(projection: &SwingProjection, damage: f32, outcome: MeleeOutcome) -> f64 {

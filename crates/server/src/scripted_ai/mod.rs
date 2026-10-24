@@ -25,6 +25,7 @@ pub mod boss_ai;
 pub mod bossmod;
 mod broggok;
 mod bromach;
+mod candle_king;
 pub(crate) mod caster_chase;
 pub mod creature_text;
 mod dailcry;
@@ -387,6 +388,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if azure_vault::is_creature_script(script_name) {
         return azure_vault::creature_ai(world, creature, script_name);
     }
+    if script_name == candle_king::SCRIPT {
+        return candle_king::creature_ai(world, creature);
+    }
     if script_name == emberon::SCRIPT {
         return emberon::creature_ai(world, creature);
     }
@@ -504,6 +508,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || script_name == bromach::SCRIPT
         || script_name == talondras::SCRIPT
         || script_name == emberon::SCRIPT
+        || script_name == candle_king::SCRIPT
         || script_name == anubzekt::SCRIPT
         || script_name == gutshot::SCRIPT
         || script_name == wratheye::SCRIPT

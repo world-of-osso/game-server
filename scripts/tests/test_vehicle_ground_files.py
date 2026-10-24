@@ -9,6 +9,8 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+import ground_files
 
 
 class VehicleGroundFilesTest(unittest.TestCase):
@@ -104,6 +106,46 @@ class VehicleGroundFilesTest(unittest.TestCase):
             expected.update((f"terrain/{wdt}.wdt", f"terrain/{root}.adt", f"terrain/{obj0}.adt"))
         self.assertEqual(set(self.list_files()), expected)
         self.assertFalse(any(self.list_files("--missing")))
+
+    def test_discovery_lists_large_payloads_without_reading_their_contents(self):
+        def chunk(tag, payload):
+            return tag[::-1] + struct.pack("<I", len(payload)) + payload
+
+        def read_chars():
+            counters = dict(
+                line.split(": ", 1)
+                for line in Path("/proc/self/io").read_text().splitlines()
+            )
+            return int(counters["rchar"])
+
+        (self.cache / "terrain").mkdir()
+        maid = struct.pack("<II", 11, 12) + bytes(24)
+        (self.cache / "terrain/10.wdt").write_bytes(chunk(b"MAID", maid))
+        modf = bytearray(64)
+        struct.pack_into("<I", modf, 0, 20)
+        struct.pack_into("<H", modf, 56, 8)
+        (self.cache / "terrain/12.adt").write_bytes(chunk(b"MODF", modf))
+        (self.cache / "models/20.wmo").write_bytes(
+            chunk(b"MOHD", struct.pack("<II", 0, 2))
+            + chunk(b"GFID", struct.pack("<II", 21, 22))
+        )
+        for relative in ("terrain/11.adt", "models/21.wmo", "models/234720.m2"):
+            with (self.cache / relative).open("wb") as payload:
+                payload.truncate(16 * 1024 * 1024)
+
+        files = ground_files.GroundFiles(self.cache)
+        files.start_map(7)
+        before = read_chars()
+        files.add_map(10)
+        ground_files.add_vehicle_models(files, self.world)
+        bytes_read = read_chars() - before
+        self.assertEqual(
+            list(files.present),
+            ["terrain/10.wdt", "terrain/11.adt", "terrain/12.adt",
+             "models/20.wmo", "models/21.wmo", "models/234720.m2"],
+        )
+        self.assertEqual(files.missing, [(7, "models/22.wmo")])
+        self.assertLess(bytes_read, 1024 * 1024, "discovery read unused 48MiB payloads")
 
     def test_missing_passenger_model_is_reported_with_vehicle_id(self):
         self.assertEqual(self.list_files("--missing"), ["vehicle 312\tmodels/234720.m2"])
