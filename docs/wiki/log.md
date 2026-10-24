@@ -1,6 +1,6 @@
 ## 2026-10-23 — Generic native hero subtree facts
 
-[Hero identity](systems/simc-apl.md#native-hero-subtree-identity--2026-10-23): minimal read-only selected-subtree accessor and shared data-driven name resolution, no new state/per-spec table/learned-passive inference. Actual0409186de unknown-operand RED retained throughda4dc3416 because the entire facts file was unchanged; Havoc/Feral three native controls await GREEN. Missing/unknown data stays explicit; no live-dungeon/DPS claim.
+[Hero identity](systems/simc-apl.md#native-hero-subtree-identity--2026-10-23): minimal read-only selected-subtree accessor and shared data-driven name resolution, no new state/per-spec table/learned-passive inference. Actual0409186de unknown-operand RED retained throughda4dc3416 because the entire facts file was unchanged; Current7f5520e56 Havoc/Feral3PASS23.26s plus six retained native factsPASS12.22s =9GREEN35.48s,0compiler warnings/fmtPASS, fresh canonical backupdd1de231/source56820001. Missing/unknown data stays explicit; no live-dungeon/DPS claim.
 
 ## 2026-10-23 — Havoc Burning Blades child-dispatch RED
 
