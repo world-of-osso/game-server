@@ -51,6 +51,11 @@ WW measurement runs its ordered precombat before explicit engagement and the enc
 | Full acceptance / composites | Overall6PASS/2FAIL: Demo damage and first-harmful counterfactual blocked by copied dungeon-graph movement;14755 owns fixture geometry. Four native poison casts/composite14775 seam still unqualified |
 
 [Precombat ledger](../../handoffs/native-precombat-proof-ledger.md) owns exact commands, hashes and current blockers. The bounded native pet control does not claim full literal Demonology APL integration; first-harmful eligibility and poison selection/timing require their separate end-to-end controls.
+## Assigned extension qualification
+
+Seven native regressions at89f985420 reach unknown requested predicates (18.52s): actual selected multi-rank talent, earned Hit Combo cap/loss, native Martial Agility haste, contextual Roll charges/recharge, real Flame/channel execution duration, unpaid Disintegrate ticks and Provoke recovery versus target range. The extension implementation reuses selected source config and the aura refresh scheduler's tick counter; GREEN remains pending. Action readiness reads native recovery, caster restrictions, movement, power and target checks independently of the current GCD/executing action; actual dispatch still uses full native admission. Missing source metadata remains an error. Replacement-spell identity integration awaits the shared actor-action resolver.
+
+[Native haste composition qualification](../../specs/simc-apl.md#native-haste-composition-boundary) is a separate RED-before-fix gate; the seven fact regressions do not prove haste composition.
 
 ## Sources
 
