@@ -1,3 +1,7 @@
+## 2026-10-23 — Frenzy ranked-point timing oracle
+
+[Native Frenzy](investigations/follower-data.md#native-frenzy-pet-cadence--2026-10-21): points24184 Multiply curve94381 maps rank2→2, so raw20 becomes effective40. Correct29/40-frame runtime contradicted the raw-point test's33.333 expectation. Oracle now reads the active ranked amount, preserves the one-frame bound and owner/guardian isolation; production unchanged, corrected GREEN pending. Local bwrap Python-spawn failure is not gameplay RED.
+
 ## 2026-10-23 — Periodic critical ticks
 
 [Periodic crit](systems/auras.md#periodic-critical-ticks--2026-10-23): TC-native eligibility/live rolls and critical damage/healing bonuses, with explicit `FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_SPELL_OWNER` policy for class actors and owned pets/totems. Native RED7b924:2controlsPASS/5featureFAIL35.83s, then first7GREEN42.94s. Required real1943+21880 ordering REDcf191c5: native flat +10 raises normal10937→11038, critical73726 versus74307.8125 expected; initial follower259 fixture failure explicitly invalid. Fix4928e0227 moves periodic roll behind numeric source/flat bonuses; hp1026-integrated86d457e1c all8GREEN57.80s, Rupture74305 within source74307.8125±4; parentpc1037 integration/check/fmt pending. Clocks, attribution, APL and pet stats unchanged.
