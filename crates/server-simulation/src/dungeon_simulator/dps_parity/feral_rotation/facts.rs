@@ -41,6 +41,10 @@ impl<'a> FeralFacts<'a> {
 
 impl Facts for FeralFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
+        if name == "spell_targets" {
+            // Pinned action.cpp3886–3896: distance-disabled encounter count.
+            return self.native.value("active_enemies");
+        }
         if let Some(alias) = name.strip_prefix("spell_targets.") {
             return self
                 .area_targets
@@ -54,7 +58,7 @@ impl Facts for FeralFacts<'_> {
 
 impl ActionFacts for FeralFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
-        if name.starts_with("spell_targets.") {
+        if name == "spell_targets" || name.starts_with("spell_targets.") {
             return self.value(name);
         }
         self.native.value_for(action, name)
