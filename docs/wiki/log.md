@@ -1,6 +1,34 @@
 ## 2026-10-23 — Elemental-required numeric min/max
 
 [Shared APL](systems/simc-apl.md#capability--proof-matrix): valid `3>?5`/`3<?5` expressions produce2 actual library RED at170b82d9c; missing lexer operators also reject the unchanged82-row Elemental source. Pinned minimum/maximum at precedence5 then26/26 shared-library GREEN at735a60ac6 (15m59s compile,0warnings); cases enabled afterward without body changes. [Scoped proof](../handoffs/elemental-minmax-proof-ledger.md). No native stats, coefficients or literal source changes.
+## 2026-10-23 — Corridor capture consumer ownership
+
+The retained-core unit check exposed a runtime-only reverse edge: ignored corridor capture imports simulator runtime/diagnostics. Capture returned to the consumer with its original name and a canonical graph re-export; no gameplay/type duplication. Expected117 simulator cases/6retained graph cases; workspace names/ignore statuses unchanged. Compiler and full-suite qualification pending.
+
+## 2026-10-23 — Simulator compiler boundary and next area pilot
+
+[Crate boundaries](systems/server-crates.md): B22aa67892 passes simulator test-target and ordinary production binary compiler checks without warnings. Exact landed-A mapping retains123 subtree names:116 consumer/7core graph, including ignored status; full post-split gate pending. [C handoff](../handoffs/crate-split-area-tests.md) plans106 native melee behavior cases, canonical shared collectors and controlled paired rebuild measurements; no C implementation or speedup claim.
+## 2026-10-23 — Authored item faction eligibility
+
+[Eligibility](systems/toys.md#item-faction-flags-eligibility-2026-10-23): shared ItemTemplate::allows now enforces already-loaded source faction flags. Actual wrong-side learning/owned-use fiveRED→nineGREEN12.47s at039dced6c,54-item metadata matrix and retained controls; complete1173pipeline identical547. No race-mask/protocol/PvP identity changes or new toy admissions. Fmt0/manual readability; required check pending.
+## 2026-10-23 — Native profile stat-allocation redirects
+
+[Stat redirects](systems/character-stats.md#profile-stat-allocation-redirects--2026-10-23): actual103 shared equipment input→StatsPlugin independently reproduces five tier errors and ten matching ordinary slots; invalid donor and false-unmodeled diagnostics also RED,3RED11.02s at7aa72bf47. Server-local donor metadata changes calculation-only stat types/allocations, not original item identity/catalog/effects/set membership or the persisted/wire ABI. Atd45fe30e8 three GREEN12.43s, clean25m11build; two native cases remain opt-in and the env-free diagnostic stays enabled. Lead integration/DPS remain open. [Proof](../handoffs/equipment-stat-redirect-proof-ledger.md).
+## 2026-10-23 — TC training dummy combat exit
+
+[Dummy reference expiry](systems/combat.md#training-dummy-combat-exit--2026-10-23): independentdb17198c4 native Fireball→Ignite retention and harmless-Counterspell timer two genuine RED; LeavingCombat/ordinary Defias evade two controls PASS26.87s. Replace foreign-aura/attack-intent cleanup with TC per-attacker non-DOT timers and PvE-reference-only expiry. Current-canonical backup25995de4 reproduces two RED/two controls PASS24.06s; a3fdbf375 gives five native35.61s +five creature25.09s +ten refs14.14s =20GREEN74.84s,0compiler warnings/fmtPASS. Two real Fire attackers, native LeavingCombat/ordinary evade, attack intent, threat-less-attacker/PvP/pet controls included. No follower policy or DPS claim; independent lead gate separate.
+
+## 2026-10-23 — Per-spell merge / periodic crit ownership
+
+Merged current master4a2deb367 into native-spell-diff. Resolution retains owner-aware periodic crit eligibility/order and signed target-crit semantics, while direct and periodic damage capture records the actual rolled chance/result without another RNG draw. Parent rebuilt batch gate pending; prior acceptance scopes are unchanged.
+
+## 2026-10-23 — Arms per-spell and FoF identity boundary
+
+[Per-spell oracle](reference/simc-spell-oracle.md): real Arms Player MS1GREEN20.60s at4bda4a241 after consistent current-native snapshot fixed stale missing-item_set input; coefficient/armor match, AP/source product differ. Explicit action-series selectors separate two real FoF117418 hits at one timestamp. New actual two-TP→FoF oracle retains0 Momentum before FoF versus native2; state is not forged to align damage.
+
+## 2026-10-23 — Follower armor penetration policy
+
+[Armor source ledger](investigations/follower-armor-penetration.md): installed ExpectedStat armor1470/K3430 and native450990/280=12 sourced against TC a352b1fa. Real WW follower receipt RED0.300011vs0.273859; explicit player-equivalent class-follower policy implemented, ordinary player-controlled NPC remains excluded. Native policy fraction/damage now proved ata9a17aa4c (39471, rounded stage0.2738695), controls3GREEN13.55s. Observer RED exposed pre280 metadata1470; actual effective armor/K/mitigation scalar now returned from the same native calculations. Current998083262 native3/controls3/math1/forecast8GREEN, exact checker GREEN; TP39471 and all three FoF hit amounts remain unchanged by observation. Max-level player item-level K curve remains a separate unqualified branch.
 
 ## 2026-10-23 — Periodic critical ticks
 
@@ -103,6 +131,10 @@ Pinned SimC76f8118 selects timed adds on a run row but its child Mortal Strike s
 ## 2026-10-23 — Caster offsets and source balloon qualification
 
 [Offsets](systems/toys.md#caster-offsets414348-source-boundary-2026-10-23): generic41/43/48 use source73 radius/reach/motion and direct geometry, preserving existing32. Genuine9RED plus correctedB43RED;37GREEN29.07s atc0b includes actual two balloons, native direction1GREEN at e71 and area1GREEN13.27s at909 complete39 covered cases without production changes. Native fixture fixes select279366 effect1 and source NPC6/display10913 rather than weakening LOS; legitimate native misses retain receipts. Check0/67.07s/no warnings/fmt0. Exact545→547 only75042/245946,17 blocker-list/15 unavailable strings; Arena battle/action gaps and native-facing/presentation/modifier/Detour boundaries retained. No canonical/protocol writes or invented UseToy toggle.
+## 2026-10-23 — Native factor-diff consumer
+
+[Oracle comparison consumer](reference/simc-spell-oracle.md#native-factor-comparison-consumer): stdlib ordinal-impact comparison, final pre/post-result selection, numeric deltas, missing-factor and unattributed-source labels, input hashes; six recorded/counterfactual tests and43-factor WW oracle self-control pass. Native per-hit producer/WW cast acceptance remains pending; Arms awaits shared Player dispatch.
+
 ## 2026-10-23 — Oracle conditional multiplier classification
 
 [Oracle](reference/simc-spell-oracle.md): recorded Elemental Weapons408390 value-function/condition row reproduced passive misclassification. Such action-effects now retain printed values/raw text as `conditional_or_dynamic` and are excluded from passive products; no runtime multiplier is inferred from startup placeholders. Existing raw logs are reparsed without new simulations.
@@ -4233,3 +4265,4 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 
 - 2026-10-23: [[server-crates]] records five stable catalog modules extracted with unchanged data/logic, canonical imports and updated generator destinations; no test relocations or measured speedup claim.
 - 2026-10-23: [[server-crates]] moves main module declarations/App assembly into the existing lib and keeps a five-line bin; library-artifact source-view test replaces old binary artifact selection. Full suite/census and paired measurements remain pending.
+- 2026-10-23: [[server-crates]] records test-only simulator consumer, canonical graph/receipt/marker support and explicit test-support mode; 44-file move is content-identical, API/cfg wiring awaits compiler/full-suite proof. Seven graph cases have explicit core-prefix migration.

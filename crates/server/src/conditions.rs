@@ -57,12 +57,12 @@ struct Condition {
 
 /// Implicit target conditions: (spell, effect index) -> conditions.
 #[derive(Resource, Debug, Default)]
-#[cfg_attr(test, derive(Clone))]
-pub(crate) struct SpellTargetConditions(HashMap<(u32, u8), Vec<Condition>>);
+#[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
+pub struct SpellTargetConditions(HashMap<(u32, u8), Vec<Condition>>);
 
 impl SpellTargetConditions {
     /// Exact owned-entry conjunction required by source Coyote removal52173.
-    pub(crate) fn has_owned_entry_filter(&self, spell: u32, effect: u8, entry: u32) -> bool {
+    pub fn has_owned_entry_filter(&self, spell: u32, effect: u8, entry: u32) -> bool {
         let Some(conditions) = self.0.get(&(spell, effect)) else {
             return false;
         };
@@ -87,13 +87,13 @@ impl SpellTargetConditions {
         has_entry && has_owner
     }
 
-    pub(crate) fn share_targets(&self, spell: u32, first: u8, second: u8) -> bool {
+    pub fn share_targets(&self, spell: u32, first: u8, second: u8) -> bool {
         self.0.get(&(spell, first)) == self.0.get(&(spell, second))
     }
 
     /// `ConditionMgr::IsObjectMeetToConditions` for `unit` as the target of effect
     /// `effect_index` of `spell_id`.
-    pub(crate) fn target_meets(
+    pub fn target_meets(
         &self,
         world: &World,
         spell_id: u32,
@@ -155,7 +155,7 @@ const CONDITION_QUERY: &str = "SELECT SourceEntry, SourceGroup, ElseGroup, Condi
      FROM tdb_conditions WHERE SourceTypeOrReferenceId = ?1 \
      ORDER BY SourceEntry, SourceGroup, ElseGroup";
 
-pub(crate) fn load_spell_target_conditions(path: &Path) -> rusqlite::Result<SpellTargetConditions> {
+pub fn load_spell_target_conditions(path: &Path) -> rusqlite::Result<SpellTargetConditions> {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let mut statement = conn.prepare(CONDITION_QUERY)?;
     let rows = statement.query_map([SOURCE_SPELL_IMPLICIT_TARGET], |row| {

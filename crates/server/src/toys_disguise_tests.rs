@@ -214,7 +214,12 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
             .unwrap();
     let spells = crate::spell_info::load_spell_data(&conn).unwrap().0;
     for &(item, spell, entry, displays, recovery_ms, duration_ms, cast_ms) in SOURCE_DISGUISES {
-        let (mut h, character) = setup(&directory.path().join(format!("disguise-{item}.redb")));
+        // Source170154 Flags_1=90177 is Horde-only;170155's90178 is Alliance-only.
+        let race = if item == 170154 { 2 } else { 1 };
+        let (mut h, character) = setup_for_race(
+            &directory.path().join(format!("disguise-{item}.redb")),
+            race,
+        );
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
         h.app.insert_resource(shared_item_templates(&path));
         h.app.insert_resource(shared_world_data(&path));

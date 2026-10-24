@@ -20,7 +20,7 @@ pub struct Walking;
 
 /// An escort owns idle movement even while its point generator is paused.
 #[derive(Component, Debug, Clone, Copy)]
-pub(crate) struct ScriptedPath {
+pub struct ScriptedPath {
     pub home: Position,
 }
 

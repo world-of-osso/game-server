@@ -80,7 +80,7 @@ pub(crate) fn grants_spell(world: &World, caster: Entity, spell_id: u32) -> bool
         .is_some_and(|spells| spell_id != 0 && spells.contains(&spell_id))
 }
 
-pub(crate) fn resolve_spell(world: &World, caster: Entity, spell_id: u32) -> u32 {
+pub fn resolve_spell(world: &World, caster: Entity, spell_id: u32) -> u32 {
     let Some(auras) = world.get::<ActiveAuras>(caster) else {
         return spell_id;
     };

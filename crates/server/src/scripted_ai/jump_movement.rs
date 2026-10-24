@@ -26,7 +26,7 @@ pub(crate) struct JumpOptions {
 }
 
 #[derive(Component, Debug, Clone, Copy)]
-pub(crate) struct JumpMovement {
+pub struct JumpMovement {
     id: u32,
     from: Vec3,
     to: Vec3,
