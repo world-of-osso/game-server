@@ -5,6 +5,8 @@ use shared::components::{Health, Position, Rotation};
 
 #[path = "movement_edge_tests.rs"]
 mod edge_tests;
+#[path = "movement_reach_tests.rs"]
+mod reach_tests;
 
 #[derive(Component)]
 struct Travel {
