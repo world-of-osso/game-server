@@ -1,4 +1,5 @@
 """Native binding precedence, explicit project policies and atomic import failure."""
+from contextlib import closing
 import importlib.util
 import sqlite3
 import subprocess
@@ -25,6 +26,7 @@ class GuardianImportTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             archive = Path(folder) / "archive.sql"
             conn = sqlite3.connect(":memory:")
+            self.addCleanup(conn.close)
             # Real TDB1210 rows: one spell at two distinct native indices.
             archive.write_text(
                 "INSERT INTO `creature_template_spell` VALUES "
@@ -44,7 +46,6 @@ class GuardianImportTest(unittest.TestCase):
             with self.assertRaises(sqlite3.IntegrityError):
                 IMPORTER.import_guardian_spells(conn, archive)
             self.assertEqual(read_bindings(conn), before)
-            conn.close()
 
     def test_approved_missing_bindings_are_explicit_policy_rows(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -52,7 +53,7 @@ class GuardianImportTest(unittest.TestCase):
             archive.write_text(
                 "INSERT INTO `creature_template_spell` VALUES (416,0,3110,41031);\n"
             )
-            with sqlite3.connect(":memory:") as conn:
+            with closing(sqlite3.connect(":memory:")) as conn:
                 native_count, policies = IMPORTER.import_guardian_spells(conn, archive)
                 self.assertEqual(native_count, 1)
                 self.assertEqual(
@@ -75,7 +76,7 @@ class GuardianImportTest(unittest.TestCase):
             archive.write_text(
                 "INSERT INTO `creature_template_spell` VALUES (98035,4,271971,69497);\n"
             )
-            with sqlite3.connect(":memory:") as conn:
+            with closing(sqlite3.connect(":memory:")) as conn:
                 native_count, policies = IMPORTER.import_guardian_spells(conn, archive)
                 self.assertEqual(native_count, 1)
                 self.assertEqual(
@@ -95,23 +96,29 @@ class GuardianImportTest(unittest.TestCase):
             prepared = Path(folder) / "prepared.sqlite"
             prepared.touch()
             result = subprocess.run(
-                [sys.executable, "-X", "dev", SPEC.origin,
-                 "--archive", str(archive), "--db", str(prepared)],
-                capture_output=True, text=True,
+                [
+                    sys.executable, "-X", "dev", SPEC.origin,
+                    "--archive", str(archive), "--db", str(prepared),
+                ],
+                capture_output=True,
+                text=True,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stderr, "")
-            self.assertEqual(result.stdout.splitlines(), [
-                "guardian_spells: 1 authentic archive rows + 2 explicit project policies",
-                "guardian_policy: SIMC_DREADSTALKER_ATTACK_BINDING",
-                "guardian_policy: SIMC_ANTORAN_TYRANT_BURNING_CLEAVE_BINDING",
-            ])
+            self.assertEqual(
+                result.stdout.splitlines(),
+                [
+                    "guardian_spells: 1 authentic archive rows + 2 explicit project policies",
+                    "guardian_policy: SIMC_DREADSTALKER_ATTACK_BINDING",
+                    "guardian_policy: SIMC_ANTORAN_TYRANT_BURNING_CLEAVE_BINDING",
+                ],
+            )
 
     def test_missing_archive_table_does_not_publish_policy_rows(self):
         with tempfile.TemporaryDirectory() as folder:
             archive = Path(folder) / "archive.sql"
             archive.write_text("-- no creature spell table\n")
-            with sqlite3.connect(":memory:") as conn:
+            with closing(sqlite3.connect(":memory:")) as conn:
                 with self.assertRaises(ValueError):
                     IMPORTER.import_guardian_spells(conn, archive)
                 self.assertEqual(conn.execute("SELECT name FROM sqlite_master").fetchall(), [])

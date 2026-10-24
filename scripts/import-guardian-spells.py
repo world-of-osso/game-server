@@ -7,6 +7,7 @@ and Antoran Tyrant attacks, not summon dispatch or repeat timers. Policy rows us
 VerifiedBuild=0; they are not claimed as verified TDB data.
 """
 import argparse
+from contextlib import closing
 import sqlite3
 from pathlib import Path
 
@@ -71,7 +72,7 @@ def main():
         parser.error("prepare a database copy, not the live world.db")
     if not args.db.is_file():
         parser.error("database copy does not exist")
-    with sqlite3.connect(args.db) as conn:
+    with closing(sqlite3.connect(args.db)) as conn:
         native_count, policies = import_guardian_spells(conn, args.archive)
     print(
         f"guardian_spells: {native_count} authentic archive rows + "
