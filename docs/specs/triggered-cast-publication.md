@@ -4,11 +4,11 @@ Native successful casts publish CastSuccess and SpellGo at launch, before impact
 
 ## What it must do
 
-- [ ] Send for non-triggered casts, channels, AuraPointsOnClient, positive native missile speed/launch delay, AlwaysCastLog, or a nonzero unconditional Difficulty0 SpellXSpellVisual record. Never use spell-ID exceptions.
-- [ ] Conditional rows are never assumed satisfied. An unconditional nonzero record proves nonzero resolution regardless of conditional alternatives.
-- [ ] Strictly-conditional-only casts with no independent send term emit neither publication event and log the unresolved gap once per spell. Actual payload execution remains unchanged.
-- [ ] Ordinary, scripted, costed and bool FULL_MASK paths publish exactly once, before missile impact. Preserve explicit targets and FULL_MASK proc suppression; no duplicate creature CastSuccess.
-- [ ] Preserve genuine zero-visual/no-other-term silence and existing conflicting assertions for parent decisions.
+- [x] Send for non-triggered casts, channels, AuraPointsOnClient, positive native missile speed/launch delay, AlwaysCastLog, or a nonzero unconditional Difficulty0 SpellXSpellVisual record. Never use spell-ID exceptions.
+- [x] Conditional rows are never assumed satisfied. An unconditional nonzero record proves nonzero resolution regardless of conditional alternatives.
+- [x] Strictly-conditional-only casts with no independent send term emit neither publication event and log the unresolved gap once per spell. Actual payload execution remains unchanged.
+- [x] Ordinary, scripted, costed and bool FULL_MASK paths publish exactly once, before missile impact. Preserve explicit targets and FULL_MASK proc suppression; no duplicate creature CastSuccess.
+- [x] Preserve genuine zero-visual/no-other-term silence. Change existing conflicting assertions only after the parent's explicit decision; only the two Phalanx exclusions are approved.
 
 ## How it works
 
@@ -24,12 +24,12 @@ Native successful casts publish CastSuccess and SpellGo at launch, before impact
 
 ## Tests asserting this spec
 
-`crates/server-simulation/src/triggered_send_tests.rs`; qualified RED1429bef59, current GREEN pending.
+`crates/server-simulation/src/triggered_send_tests.rs`: qualified RED1429bef59; eight native cases GREEN12.41s at mergedca66b03e4. Predicate source review covers all six terms; isolated channel/hit-delay-only and log-capture tests are not claimed.
 
 ## Known gaps (current cycle)
 
-- [ ] Native GREEN, one two-crate check and independent proof; separate parent full gate.
-- [ ] Parent decisions for the three documented existing conflicting assertions; do not rewrite here.
+- [ ] One three-package `--tests -j2` check and separate parent full gate.
+- [ ] Parent gate runs the approved Phalanx exclusions and unchanged Azure/Omor; local Azure/Omor Python launch EACCES is not gameplay RED. No local tracing.
 
 ## Out of scope
 

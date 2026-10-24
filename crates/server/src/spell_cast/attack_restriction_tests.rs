@@ -55,7 +55,11 @@ fn native_attack_restriction264_rejects_native_attack_predicates() {
             CastFailReason::CantDoThatRightNow,
             "spell{spell_id}"
         );
-        assert!(h.inbox.go.is_empty(), "spell{spell_id}");
+        // TC Spell.cpp8346–8353: unconditional visual record265038 requires Phalanx launch publication.
+        assert!(
+            h.inbox.go.iter().all(|go| go.spell_id == PHALANX),
+            "spell{spell_id}"
+        );
     }
 }
 
@@ -108,7 +112,8 @@ fn native_attack_restriction264_gained_mid_steady_shot_rejects_completion() {
     h.advance(45);
     assert_eq!(h.inbox.failed.len(), 1, "{:?}", h.inbox.failed);
     assert_eq!(h.inbox.failed[0].reason, CastFailReason::CantDoThatRightNow);
-    assert!(h.inbox.go.is_empty());
+    // TC Spell.cpp8346–8353: unconditional visual record265038 requires Phalanx launch publication.
+    assert!(h.inbox.go.iter().all(|go| go.spell_id == PHALANX));
     assert!(!h.inbox.log.iter().any(|event| event.spell_id == Some(STEADY_SHOT)
         && event.kind == CombatLogKind::Damage));
 }
