@@ -1,5 +1,41 @@
 # Native WDP enabler producer
 
+## Current approved duration override — 2026-10-24
+
+`SIMC_WW_WDP_ENABLER_DURATION` supersedes the initial base-duration-only policy below. DB2196742 DurationIndex36 remains1000ms in the native store. Only the existing selected-owner producer now supplies a per-trigger duration snapshot: minimum actual RSK/FoF remaining cooldown plus1500ms multiplied by native melee-haste time multiplier. SimC integer timespan multiplication truncates the scaled grace before addition (`engine/util/timespan.hpp132–135`); native cooldown seconds are converted back to their millisecond clock. Nonpositive overlap does not produce; an already active owned enabler does not refresh (`NONE`). No152175 admission/gate changes.
+
+Pinned SimC76f8118 `engine/class_modules/monk/sc_monk.cpp4552–4572`, verbatim:
+
+```cpp
+struct whirling_dragon_punch_buff_t : monk_buff_t<>
+{
+  whirling_dragon_punch_buff_t( monk_t *player )
+    : monk_buff_t( player, "whirling_dragon_punch", player->talent.windwalker.whirling_dragon_punch_buff )
+  {
+    // current measured value for grace period
+    // partial testing as of 01/08/2024 dd/mm/yy
+    base_buff_duration = 1500_ms;
+    set_refresh_behavior( buff_refresh_behavior::NONE );
+  }
+
+  bool trigger( int, double, double, timespan_t ) override
+  {
+    timespan_t buff_duration =
+        std::min( p().cooldown.rising_sun_kick->remains(), p().cooldown.fists_of_fury->remains() );
+
+    if ( buff_duration > 0_ms )
+      return monk_buff_t::trigger( -1, DEFAULT_VALUE(), -1.0,
+                                   ( base_buff_duration * p().composite_melee_haste() ) + buff_duration );
+
+    return false;
+```
+
+Before override, first real window at88732aa80 implies7.95s creation/8.95s expiry. All active samples8.00–8.90 have native GCD remaining equal to enabler remaining (.95→.05), WDP known/resolved/CD0, no active CastState and pinned STrow43 condition true; both enemy/self raw admissions return OnGlobalCooldown. At8.95 GCD0 but aura expired, raw native CasterAuraState; actual chosen action is BOK. Post-GCD target/cost checks were masked, not claimed passed. Exact trace and compact timeline: `native-ww-wdp-first-window-88732aa80/`.
+
+Native duration test dd50178b1 genuinely fails10.15s: actual1000 vs source-derived7265ms, after actual native overlapping cooldowns/derived haste. Artifact `native-ww-wdp-duration-red-dd50178b1/`. Existing positive producer test retains native cast/overlap assertions but now captures first duration>1000 and asserts native store base remains1000; the new test owns exact source arithmetic. This is an explicit assertion adaptation to the newly approved requirement, not unchanged old1000ms qualification. GREEN/re-trace/fresh ST/3T pending.
+
+## Initial base-duration-only qualification (historical)
+
 Approved2026-10-24 policy: `SIMC_WW_WDP_ENABLER_PRODUCER`. Scope: actual RSK107428 or FoF113656 root landing while both native cooldowns remain>0 applies native196742 via generic aura path. Selected WDP owner's source buff eligibility only. Duration comes from CURRENT DB2 (1000ms); no152175 special case or native CasterAuraSpell gate change.
 
 ## Authority / absence

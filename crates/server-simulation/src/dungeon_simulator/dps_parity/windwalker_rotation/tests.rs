@@ -509,7 +509,7 @@ fn literal_ww_native_selected_wdp_earns_its_native_cooldown_window() {
             .iter()
             .find(|aura| aura.spell_id == 196742 && aura.caster == run.actor)
         {
-            earned_duration = Some(aura.duration_ms);
+            earned_duration.get_or_insert(aura.duration_ms);
         }
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
@@ -527,10 +527,26 @@ fn literal_ww_native_selected_wdp_earns_its_native_cooldown_window() {
         overlapping_native_cooldowns,
         "both actual native cooldowns must overlap"
     );
+    assert!(
+        earned_duration.is_some_and(|duration| duration > 1000),
+        "selected owner must earn the approved cooldown-overlap plus hasted-grace window"
+    );
+    let base_duration = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(196742)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
+        .duration
+        .as_ref()
+        .unwrap()
+        .duration_ms;
     assert_eq!(
-        earned_duration,
-        Some(1000),
-        "selected owner must earn native196742 with DB2's1000ms, not SimC's measured1500ms grace"
+        base_duration, 1000,
+        "the scripted override must not mutate DB2's base duration"
     );
 }
 

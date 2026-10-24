@@ -190,7 +190,8 @@ fn sunfire_spiral_multiplier(world: &World, caster: Entity, spell: u32) -> f32 {
 }
 
 /// SIMC_WW_WDP_ENABLER_PRODUCER: SimC76f8118 sc_monk.cpp1138/1826/4552–4572.
-/// TC/TDB have no producer. DB2 owns196742's1000ms; never copy SimC's1500ms grace.
+/// TC/TDB have no producer. SIMC_WW_WDP_ENABLER_DURATION overrides DB2's1000ms
+/// with the source's minimum remaining cooldown plus hasted1500ms; refresh NONE.
 pub(super) fn trigger_wdp_enabler_on_hit(
     world: &mut World,
     caster: Entity,
@@ -204,22 +205,60 @@ pub(super) fn trigger_wdp_enabler_on_hit(
                 .active_talent_spells()
                 .any(|spell| spell.spell_id == WHIRLING_DRAGON_PUNCH)
         });
-    if !selected || !wdp_cooldowns_overlap(world, caster) {
+    if !selected || wdp_enabler_is_active(world, caster) {
         return;
     }
-    crate::spell_cast::cast_triggered(world, caster, WDP_ENABLER, Some(caster), depth + 1);
+    let Some(duration_ms) = read_wdp_duration_ms(world, caster) else {
+        return;
+    };
+    crate::spell_cast::cast_triggered_with_overrides(
+        world,
+        caster,
+        WDP_ENABLER,
+        Some(caster),
+        depth + 1,
+        crate::spell_cast::TriggeredSpellOverrides {
+            duration_ms: Some(duration_ms),
+            ..Default::default()
+        },
+    );
 }
 
-fn wdp_cooldowns_overlap(world: &World, caster: Entity) -> bool {
-    let store = world.resource::<crate::spell_info::SpellStore>();
-    [RISING_SUN_KICK, FISTS_OF_FURY].into_iter().all(|id| {
-        let spell = store
-            .get(id)
-            .expect("native WDP prerequisite spell retained");
-        crate::spell_cast::native_apl::cooldown_value(world, caster, spell, "remains")
-            .expect("native WDP prerequisite cooldown readable")
-            > 0.0
+fn wdp_enabler_is_active(world: &World, caster: Entity) -> bool {
+    let now = crate::spell_cast::now(world);
+    world.get::<ActiveAuras>(caster).is_some_and(|auras| {
+        auras.iter().any(|aura| {
+            let owned = aura.spell_id == WDP_ENABLER && aura.caster == caster;
+            let active = aura.expires_at.is_none_or(|expiry| expiry > now);
+            owned && active
+        })
     })
+}
+
+fn read_wdp_duration_ms(world: &World, caster: Entity) -> Option<i32> {
+    const GRACE_MS: f64 = 1500.0;
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let overlap = [RISING_SUN_KICK, FISTS_OF_FURY]
+        .into_iter()
+        .map(|id| {
+            let spell = store
+                .get(id)
+                .expect("native WDP prerequisite spell retained");
+            crate::spell_cast::native_apl::cooldown_value(world, caster, spell, "remains")
+                .expect("native WDP prerequisite cooldown readable")
+        })
+        .reduce(f64::min)
+        .expect("two native WDP cooldowns");
+    let overlap_ms = (overlap * 1000.0).round() as i32;
+    if overlap_ms <= 0 {
+        return None;
+    }
+    let stats = world
+        .get::<crate::stats::CharacterStats>(caster)
+        .expect("native WDP owner retains derived haste");
+    // SimC timespan.hpp132–135 truncates the scaled grace before adding cooldowns.
+    let grace_ms = (GRACE_MS / (1.0 + f64::from(stats.haste_pct) / 100.0)) as i32;
+    Some(overlap_ms + grace_ms)
 }
 
 /// SIMC_WW_RWK_BOK_LANDED_PRODUCER: SimC76f8118 sc_monk.cpp1408–1414.
