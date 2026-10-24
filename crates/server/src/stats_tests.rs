@@ -362,6 +362,14 @@ fn max_health_change_keeps_whole_health_points() {
 }
 
 #[test]
+fn full_health_rescaling_preserves_native_garrick_maximum() {
+    // Native level61 Garrick lost one point while rebuilding 18601 -> 29194.
+    let current = rescaled_current(18_601.0, 18_601.0, 29_194.0);
+    assert_eq!(current, 29_194.0);
+    assert_eq!(rescaled_current(current, 29_194.0, 29_194.0), current);
+}
+
+#[test]
 fn secondary_dr_follows_curve_21024() {
     assert_eq!(curve_value(&SECONDARY_DR_CURVE, 10.0), 10.0);
     assert_eq!(curve_value(&SECONDARY_DR_CURVE, 30.0), 30.0);
