@@ -459,6 +459,66 @@ fn literal_ww_native_combo_breaker_blackout_earns_rwk_and_delivers_its_child() {
 }
 
 #[test]
+#[ignore = "native unselected RWK owner control with naturally earned Combo Breaker"]
+fn literal_ww_native_unselected_rwk_owner_does_not_earn_the_override() {
+    let _scope = crate::random::seed_scope(70448);
+    let (profile, mut traits) = super::super::read_reference(269).unwrap();
+    // Pinned native entry134543 is selected1250566; declare the unselected input
+    // before native progression, never remove a live aura/grant or reset powers.
+    let original = traits.len();
+    traits.retain(|entry| entry.entry_id != 134543);
+    assert_eq!(traits.len() + 1, original);
+    let identity = super::super::inputs::read_actor(&profile).unwrap();
+    let mut run = super::super::spawn_reference(profile, &traits, 1, identity).unwrap();
+    let clock = fixture(run.app.world());
+    literal_rotation::capture_fixture(run.app.world_mut(), run.actor, clock).unwrap();
+    super::super::preparation::warm_up_reference(&mut run).unwrap();
+    assert!(
+        !run.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(run.actor)
+            .unwrap()
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 1250566)
+    );
+    let bok_hits = |run: &super::super::Run| {
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(100784)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .count()
+    };
+    let mut eligible_hit = false;
+    for _ in 0..64 {
+        cast(&mut run, 100780);
+        if !crate::auras::has_aura(run.app.world(), run.actor, 116768) {
+            continue;
+        }
+        let before = bok_hits(&run);
+        cast(&mut run, 100784);
+        if bok_hits(&run) > before {
+            eligible_hit = true;
+            break;
+        }
+    }
+    assert!(
+        eligible_hit,
+        "actual BOK must land after naturally earned Combo Breaker"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 1250554),
+        "unselected native1250566 owner must not earn the RWK override"
+    );
+}
+
+#[test]
 #[ignore = "explicit native non-Fixture control; requires the prepared parity inputs"]
 fn literal_ww_native_non_fixture_follower_keeps_its_native_kit() {
     let mut run = super::super::prepare(269, 1).unwrap();
