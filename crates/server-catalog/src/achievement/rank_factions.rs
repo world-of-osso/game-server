@@ -2,7 +2,7 @@
 // Mainline active Faction SHA256 822bafc2f83a926bcc41f695e27e63340d1346d7b381a8d095fa0904871d4d64.
 // TC ReputationMgr420-421/543-558: friendship has no rank counters;
 // renown/paragon progress is not a traditional standing change.
-pub(super) const TRADITIONAL_RANK_FACTIONS: &[u32] = &[
+pub const TRADITIONAL_RANK_FACTIONS: &[u32] = &[
     21, 46, 47, 54, 59, 67, 68, 69, 70, 72, 76, 81, 83, 86, 87, 92, 93, 169, 270, 289, 349, 369,
     469, 470, 509, 510, 529, 530, 549, 550, 551, 569, 570, 571, 574, 576, 577, 589, 609, 729, 730,
     749, 809, 889, 890, 891, 892, 909, 910, 911, 922, 930, 932, 933, 934, 935, 936, 941, 942, 946,

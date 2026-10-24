@@ -29,6 +29,21 @@
 ## 2026-10-23 — Guardian ownership and power-role boundary GREEN
 
 [Demonology investigation](investigations/demonology-dps-parity.md#power-regeneration-interaction): own0885PASS/1fixtureFAIL49.59s plus fixture-only8102PASS24.96s qualify seven distinct cases: native Imp100/20 five-cast exhaustion/despawn, real90 neutral-dummy Firebolt, hostile binding, ordinary-NPC control, actual-player Energy, follower/Felguard resources and controlled-pet Focus. Explicit Player/Follower/HunterPet roles replace ownership flag8 as regeneration permission; other NPCs honor authored flags. Both builds have0 compiler messages; private DB SHA unchanged. Lead pushed810 as mf1052. Old b5 DPS remains unqualified; conditional Firebolt targeting and native DPS parity remain open.
+## 2026-10-23 — Kargath native-hit qualification
+
+[Native-hit boundary](systems/boss-scripts.md#kargath-native-hit-qualification): same683code/protocol/DB gives native893damage PASS then actualMiss(Miss) FAIL on the next fresh-process counterexample. Pin the existing native RNG only in the qualification fixture; original damage assertion/runtime/data retained. Seeded Kargath and requested five Irideus cases pending proof.
+
+## 2026-10-22 — Irideus stage-one partial and native category boundary
+
+[Irideus](systems/boss-scripts.md#watcher-irideus-stage-one-partial-2026-10-22): ignored native RED before AI; four initial/effect/threshold/reset passes retained, exact native category-rejection/credit/copy/corpse case1GREEN22.01s. COMPOSITE5GREEN; source-clock/category1152+133 mismatch, Stage2 and dummy controllers remain explicit gaps.
+## 2026-10-24 — Completed B/C paired measurement record
+
+[Measurements](investigations/server-crate-split-measurements.md): B31/31 and C106/106 pass both native sides with exact case/input/executable identity. C comment wall105.80→6.51s/CPU58.43→12.18s; native154.20→106.26s/145.18→98.37CPU. Concurrent native host CPU74.61%→43.76% and reclaim differ: no causal runtime speedup or whole-workspace no-swap claim. Raw joined ledger/telemetry retained; no reruns. D2 runtime and matched rebuild remain separate.
+
+## 2026-10-24 — Generated achievement catalog ownership
+
+[Crate boundaries](systems/server-crates.md#generated-achievement-catalog-cut-d1): six generated lookups relocate37,819lines into existing server-catalog with three canonical immutable record types. Credit/ECS/player authority and unchanged matching predicates stay core; test identity and lookup-data census remain required. No elapsed-time speedup claim.
+
 ## 2026-10-23 — Elemental Ascendance additional overload
 
 [Source/proof boundary](systems/spell-casting.md#elemental-ascendance-additional-overload--2026-10-23): actualb4a7f46b0 native2RED/1SKcontrolPASS27.40s; missing extra LB/CL casts, native prerequisites passed. Add effect8 casts once per root spell, independently of ordinary proc, retaining HIT+400ms and actual child damage. Same3nativeGREEN20.23s ata001f0541, clean17m03 build; [proof matrix](../handoffs/elemental-ascendance-extra-proof-ledger.md). Other roots/failed-roll/expiry and DPS integration remain unqualified; no coefficient/stat/RNG changes.

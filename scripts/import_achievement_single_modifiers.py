@@ -64,7 +64,7 @@ def generate_source(criteria_path, modifiers_path, output):
         '// TC PlayerClass26 (type221) and BattlePetSpecies91 (types155/160/162); only AND4 -> SingleTrue2.',
         f'// Criteria SHA256 {hashlib.sha256(criteria_path.read_bytes()).hexdigest()}.',
         f'// ModifierTree SHA256 {hashlib.sha256(modifiers_path.read_bytes()).hexdigest()}.',
-        'pub(super) fn single_modifier_asset(criteria: u32, modifier: u32) -> Option<u32> {',
+        'pub fn single_modifier_asset(criteria: u32, modifier: u32) -> Option<u32> {',
         '    match (criteria, modifier) {',
     ]
     for criterion, (modifier, asset) in sorted(qualified.items()):
