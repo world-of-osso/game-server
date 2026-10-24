@@ -687,6 +687,9 @@ pub struct SpellHistory {
     /// Ordinary successful casts only; triggered children and failed requests do not advance it.
     successful_casts: HashMap<u32, u64>,
     cast_sequence: u64,
+    /// Fixture APL history follows actual ordinary successful GCD casts only.
+    #[cfg(test)]
+    gcd_casts: Vec<u32>,
     spell_ready_at: HashMap<u32, f64>,
     category_ready_at: HashMap<u32, f64>,
     /// Native spell that last started each category timer, for masked rate changes.
@@ -726,6 +729,12 @@ impl SpellHistory {
     fn record_successful_cast(&mut self, spell: u32) {
         self.cast_sequence += 1;
         self.successful_casts.insert(spell, self.cast_sequence);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn previous_gcd_cast(&self, index: usize) -> Option<u32> {
+        let offset = self.gcd_casts.len().checked_sub(index)?;
+        self.gcd_casts.get(offset).copied()
     }
 
     fn school_locked(&self, school_mask: u32, now: f64) -> bool {
@@ -2516,6 +2525,17 @@ fn gcd_duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> u32 {
     }
 }
 
+#[cfg(test)]
+fn record_apl_gcd_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if gcd_category(spell) != 0 && gcd_duration_ms(world, caster, spell) > 0 {
+        world
+            .get_mut::<SpellHistory>(caster)
+            .expect("ordinary successful cast initialized its history")
+            .gcd_casts
+            .push(spell.id);
+    }
+}
+
 /// Recheck, plan targets, spend, start cooldowns, log CastSuccess, resolve.
 pub(crate) fn execute_cast(
     world: &mut World,
@@ -2569,6 +2589,8 @@ pub(crate) fn execute_cast(
         .get_mut::<SpellHistory>(caster)
         .expect("ordinary successful cast initialized its history")
         .record_successful_cast(spell.id);
+    #[cfg(test)]
+    record_apl_gcd_cast(world, caster, spell);
     log_event(
         world,
         cast_event(caster, explicit, spell, CombatLogKind::CastSuccess),

@@ -1,3 +1,7 @@
+## 2026-10-23 — Native GCD-tagged APL history
+
+[Shared prev_gcd](systems/simc-apl.md#gcd-tagged-native-history) reached genuine native unknown-operand RED12.30s; ordinary successful native GCD IDs now drive fixture history without off-GCD/triggered/failed pollution. No live-server state or synthetic cast history. GREEN and resolver normalization remain pending.
+
 ## 2026-10-23 — Native Causality periodic boundary
 
 [Disintegrate Causality](investigations/follower-data.md#devastation-causality-native-hook--2026-10-23) reached3genuineRED and passive-absence controlPASS30.33s at61218bfda. Port preserves TC Load timing and reads actual native effect0 for spell/charge recovery; periodic-damage hook executes before damage. No coefficients/stats/data changed; GREEN pending.

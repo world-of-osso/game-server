@@ -1,3 +1,4 @@
+- [GCD-tagged native history](systems/simc-apl.md#gcd-tagged-native-history) — real ordinary GCD/utility/triggered/failed ordering RED; fixture history implementation and identity normalization await GREEN.
 - [Devastation Causality](investigations/follower-data.md#devastation-causality-native-hook--2026-10-23) — native TC Load/tick boundary3RED+absencePASS; actual caster effect0 and spell/charge recovery ported, GREEN pending.
 - [Native haste composition](systems/character-stats.md#native-haste-composition-qualification--2026-10-23) — genuine real-gear RED→two-buff stat/cast/GCD/removal GREEN; NPC signed-cadence/progress retained,55targetedPASS. Parent full gate and overall parity remain separate.
 - [Devastation Giantkiller policy](investigations/follower-data.md#devastation-giantkiller-policy--2026-10-22) — native mastery4RED→4GREEN; current-canonical legacy ST/3T remain below band, with Disintegrate the largest deficit. Literal APL remains open.

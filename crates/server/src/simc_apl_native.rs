@@ -591,6 +591,24 @@ impl<'a> NativeFacts<'a> {
             .ok_or_else(|| format!("native APL actor lacks regen pool {power:?}"))
     }
 
+    fn previous_gcd(&self, value: &str) -> Result<f64, String> {
+        let (index, alias) = value
+            .split_once('.')
+            .ok_or("native APL prev_gcd requires positive index and action")?;
+        let index = index
+            .parse::<usize>()
+            .map_err(|error| format!("native APL invalid prev_gcd index {index}: {error}"))?;
+        if index == 0 {
+            return Err("native APL prev_gcd index must be positive".into());
+        }
+        let spell = self.action_spell(alias)?;
+        let previous = self
+            .world
+            .get::<crate::spell_cast::SpellHistory>(self.actor)
+            .and_then(|history| history.previous_gcd_cast(index));
+        Ok(bool_value(previous == Some(spell.id)))
+    }
+
     fn gcd(&self, action: &Action, operand: &str) -> Result<f64, String> {
         let control = matches!(action.name.as_str(), "variable" | "call_action_list");
         if control && matches!(operand, "gcd" | "gcd.min" | "gcd.remains") {
@@ -610,6 +628,9 @@ impl Facts for NativeFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
         if let Some(value) = self.targeted_value(name, None) {
             return value;
+        }
+        if let Some(value) = name.strip_prefix("prev_gcd.") {
+            return self.previous_gcd(value);
         }
         if let Some(property) = name.strip_prefix("raid_event.adds.") {
             return self.adds(property);
