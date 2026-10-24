@@ -3504,7 +3504,11 @@ fn load_triggered_spell(world: &World, spell_id: u32, depth: u8) -> Option<Spell
     let spell = world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(spell_id))
-        .cloned();
+        .cloned()
+        .map(|mut spell| {
+            spell.cast_dont_reset_periodic_timer = true;
+            spell
+        });
     if spell.is_none() {
         warn!("Triggered spell {spell_id} not found");
     }

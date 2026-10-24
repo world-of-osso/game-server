@@ -76,7 +76,19 @@ fn finish_aura(h: &mut Harness, aura: &AuraInstance) {
 }
 
 #[test]
-fn generic_rolling_periodic_native_damage_keeps_unpaid_amount_and_resets_tick_phase() {
+fn generic_rolling_periodic_native_damage_keeps_unpaid_amount_and_original_tick_phase() {
+    assert_native_full_mask_rolling(cast_native_child);
+    assert_native_full_mask_rolling(cast_native_creature_child);
+}
+
+fn cast_native_creature_child(h: &mut Harness, target: Entity, spell: u32) {
+    let caster = h.caster;
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, spell, Some(target), true)
+        .expect("native bool FULL_MASK admission");
+    h.advance(1);
+}
+
+fn assert_native_full_mask_rolling(cast_child: fn(&mut Harness, Entity, u32)) {
     let mut h = native_fixture();
     let target = h.npc;
     let spell = h
@@ -89,7 +101,7 @@ fn generic_rolling_periodic_native_damage_keeps_unpaid_amount_and_resets_tick_ph
         spell.misc.as_ref().unwrap().attributes[10] & ROLLING_PERIODIC,
         0
     );
-    cast_native_child(&mut h, target, LANGUISH);
+    cast_child(&mut h, target, LANGUISH);
     let initial = native_aura(&h, target, LANGUISH);
     let paid = first_tick(&mut h, target, LANGUISH);
     assert_eq!(paid.kind, CombatLogKind::Damage);
@@ -107,15 +119,15 @@ fn generic_rolling_periodic_native_damage_keeps_unpaid_amount_and_resets_tick_ph
     }
     assert!(aura_now(h.app.world()) < initial.expires_at.unwrap());
     let start = h.app.world().resource::<ObservedCombatEvents>().0.len();
-    cast_native_child(&mut h, target, LANGUISH);
+    cast_child(&mut h, target, LANGUISH);
     let refreshed = native_aura(&h, target, LANGUISH);
     while aura_now(h.app.world()) <= initial.expires_at.unwrap() + 0.1 {
         h.advance(1);
     }
     assert_eq!(
         ticks(&h, target, LANGUISH, start).len(),
-        0,
-        "ordinary nonstacking recast resets the native periodic timer"
+        1,
+        "TC FULL_MASK includes DONT_RESET_PERIODIC_TIMER: keep original phase"
     );
     finish_aura(&mut h, &refreshed);
     let remaining = ticks(&h, target, LANGUISH, start);

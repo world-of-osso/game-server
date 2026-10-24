@@ -99,7 +99,8 @@ fn settle_previous_ticks(world: &mut World, target: Entity, new: &AuraInstance) 
 }
 
 /// TC a352b1fa Spell.cpp3236 and SpellAuras.cpp976–991: normal nonstacking
-/// recasts reset periodic timers; stacking and native Pandemic retain time-to-tick.
+/// recasts reset periodic timers; FULL_MASK's DONT_RESET_PERIODIC_TIMER,
+/// stacking and native Pandemic retain time-to-tick (SpellDefines.h291–293).
 fn prepare_periodic_phase(
     world: &World,
     target: Entity,
@@ -114,7 +115,7 @@ fn prepare_periodic_phase(
         .misc
         .as_ref()
         .is_some_and(|misc| misc.attributes[13] & PERIODIC_REFRESH_EXTENDS_DURATION != 0);
-    if !stacking && !pandemic {
+    if !spell.cast_dont_reset_periodic_timer && !stacking && !pandemic {
         return;
     }
     let Some(old) = previous(world, target, new) else {

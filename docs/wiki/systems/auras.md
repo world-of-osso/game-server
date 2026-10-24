@@ -87,8 +87,11 @@ amounts remain per tick: tooltip arithmetic cannot normalize them into a fixed
 budget. TC a352b1fa `SpellAuraEffects.cpp:832–849,932–947` supplies these rules.
 Fractional snapshots and existing damage/heal payment rounding remain intact.
 
-TC `Spell.cpp3236` and `SpellAuras.cpp976–991` reset normal nonstacking recasts;
-native stacking and Attr13 Pandemic retain time-to-tick. The shared preparation
+TC `Spell.cpp3236` and `SpellAuras.cpp976–991` reset normal nonstacking recasts
+only without `TRIGGERED_DONT_RESET_PERIODIC_TIMER`. `SpellDefines.h291–293`
+includes that flag0x20000 in boolean FULL_MASK0x7FFFF; triggered casts, native
+stacking and Attr13 Pandemic retain time-to-tick. Per-cast provenance travels
+with existing spell snapshots, not a spell-ID exception. The shared preparation
 sets that schedule and `AuraInstance::refresh_from` installs it before later ticks.
 335467 periodic leech uses the same carry without a separate branch. No spell-ID
 exception gates fresh amounts or general carry.
