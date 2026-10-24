@@ -285,22 +285,30 @@ fn dps_parity_demo_native_antoran_tyrant_uses_burning_cleave_autoattacks() {
 }
 
 #[test]
-#[ignore = "native Aura361 on actual Antoran must replace white swings; private spec266 inputs required"]
-fn dps_parity_demo_native_armaments_aura_replaces_tyrant_white_swings() {
+#[ignore = "native Aura361 on an actual melee guardian must replace white swings; private spec266 inputs required"]
+fn dps_parity_demo_native_armaments_aura_replaces_guardian_white_swings() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_authored_guardian_control();
-    let tyrant = cast_native_antoran_tyrant(&mut run);
+    let actor = run.actor;
+    cast_and_finish(&mut run, actor, 104316);
+    let world = run.app.world_mut();
+    let guardian = world
+        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(world)
+        .find(|(_, summon)| summon.owner == actor && summon.spell_id == 193331)
+        .map(|(entity, _)| entity)
+        .expect("ordinary104316 must produce its native melee guardian");
     // Isolate the native melee-consumer boundary independently of the missing
     // summon-passive grant. Apply the actual DB2 aura, not a synthetic modifier.
-    crate::spell_cast::cast_triggered(run.app.world_mut(), tyrant, 1251000, Some(tyrant), 0);
-    assert!(crate::auras::has_aura(run.app.world(), tyrant, 1251000));
+    crate::spell_cast::cast_triggered(run.app.world_mut(), guardian, 1251000, Some(guardian), 0);
+    assert!(crate::auras::has_aura(run.app.world(), guardian, 1251000));
     let events_before = run.app.world().resource::<ObservedCombatEvents>().0.len();
     for _ in 0..120 {
         run.app.update();
     }
     let events: Vec<_> = run.app.world().resource::<ObservedCombatEvents>().0[events_before..]
         .iter()
-        .filter(|event| event.source == Some(tyrant.to_bits()))
+        .filter(|event| event.source == Some(guardian.to_bits()))
         .collect();
     let casts = events
         .iter()
@@ -316,7 +324,7 @@ fn dps_parity_demo_native_armaments_aura_replaces_tyrant_white_swings() {
     std::fs::write(
         &path,
         serde_json::to_vec_pretty(&json!({
-            "native_aura": 1251000, "aura_type": 361, "entry": 250289,
+            "native_aura": 1251000, "aura_type": 361, "entry": 98035,
             "window_seconds": 6, "cleave_casts": casts, "white_hits": white_hits, "events": events
         }))
         .unwrap(),
