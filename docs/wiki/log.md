@@ -1,3 +1,7 @@
+## 2026-10-24 — Byte-identical public spell remainder
+
+[D3](systems/server-crates.md#public-spell-remainder-d3):11pure file moves retain54case names/flags (51enabled/3existing ignored), extending the existing consumer to229cases without body/seam/dependency/API changes. Housekeeping only; exact inventory, combined compiler proof, full gate and matched timing remain distinct.
+
 ## 2026-10-24 — Qualified spell-fixture test consumer
 
 [Crate boundaries](systems/server-crates.md#spell-fixture-qualification-d2):29source files/175enabled cases externally compile ataf8f7f5b6 through canonical fixture resources, preserving names/flags. Setup uses a read-only cached-spell accessor and3existing fixture helpers. A separately approved observer retains3dummy7private charge-state assertions without exposing gameplay fields. Pure moves e0aaa1840 precede wiring. Final core/consumer compile, actual runtime/inventory and matched rebuild proof remain pending; no speedup claim.

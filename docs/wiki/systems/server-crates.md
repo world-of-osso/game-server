@@ -54,6 +54,10 @@ The retained private `hit::tests` also used the NPC-dodge test module's setup he
 
 No `execute_cast` seam or gameplay-internal visibility widening is included. Final wired-consumer/core compilation, actual post-build test inventories, runtime qualification and matched comment-rebuild measurements remain required before acceptance. Source size and check elapsed time do not establish edit-build payoff.
 
+## Public spell remainder (D3)
+
+D3 appends11byte-identical public spell test files to the existing consumer, retaining54case identities (51enabled/3existing ignored/0should-panic). The three proc-recipient ignore reasons remain unchanged. No test body, fixture seam, dependency, profile or gameplay API changes. Pure moves `007c3d144` precede declaration-only wiring; [exact mapping](../../handoffs/crate-split-spell-d3-test-mapping.json) records core→consumer ownership. Consumer inventory becomes229cases (226enabled/3ignored). This1,543-line cut is housekeeping, not a claimed material whole-core speedup. Exact post-build inventory, one combined core/consumer compiler check, parent full gate and paired measurement remain acceptance proof.
+
 ## Sources
 
 - `crates/server-catalog/{Cargo.toml,src/lib.rs}`, `crates/server-simulation/{Cargo.toml,src/lib.rs}` — package/dependency ownership.

@@ -1,0 +1,392 @@
+{
+  "baseline": "d7fb89e510dcd92b9923d93d7d8e2978ca2f3b7d",
+  "move_commit": "007c3d144b500ef8086104fe55b993ea518ff460",
+  "counts": {
+    "files": 11,
+    "cases": 54,
+    "enabled": 51,
+    "ignored": 3,
+    "should_panic": 0
+  },
+  "scope": "Housekeeping only; no body edits/seams/dependency/API changes",
+  "cases": [
+    {
+      "name": "spell_cast::attack_restriction_tests::native_attack_restriction264_turtle_rejects_ranged_cast_before_pacify",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::attack_restriction_tests::native_attack_restriction264_rejects_native_attack_predicates",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::attack_restriction_tests::native_attack_restriction264_allows_fireball_without_attack_flags",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::attack_restriction_tests::native_attack_restriction264_turtle_allows_real_cheetah_utility",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::attack_restriction_tests::native_attack_restriction264_gained_mid_steady_shot_rejects_completion",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::attack_restriction_tests::native_attack_restriction264_expiry_restores_real_steady_shot",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::attack_restriction_tests::native_attack_restriction264_full_trigger_still_lands_real_steady_shot",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::attack_restriction_tests::native_attack_restriction264_phalanx_stops_npc_swings_until_removed",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::hit_positivity_tests::hit_positivity_native_harmful_proc_on_neutral_attackable_target",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::hit_positivity_tests::hit_positivity_native_friendly_heal_proc_control",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::category_cooldown_tests::class_completeness_native_category_cooldown_excludes_other_categories_and_absent_talent",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::category_cooldown_tests::class_completeness_native_category_cooldown_reduces_both_native_recovery_fields",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::category_cooldown_tests::class_completeness_native_category_cooldown_unlearning_restores_new_lockout",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::category_cooldown_tests::class_completeness_native_category_cooldown_learning_does_not_retime_running_cooldown",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::category_cooldown_tests::class_completeness_native_category_cooldown_angels_mercy_reduces_prayer_category",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::category_cooldown_tests::class_completeness_native_category_cooldown_native_healer_modifier_clamps_at_zero",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::category_cooldown_tests::class_completeness_native_category_cooldown_changes_actual_counterspell_receipt",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::category_cooldown_tests::class_completeness_native_category_cooldown_allows_real_recast_after_twenty_seconds",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::proc_recipient_tests::native_proc_recipient_absent_cast_action_target_does_not_apply_enemy_child_to_self",
+      "ignored": true,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::proc_recipient_tests::native_proc_recipient_absent_action_target_keeps_native_implicit_self_buff",
+      "ignored": true,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::proc_recipient_tests::native_proc_recipient_actual_hit_target_receives_native_child_damage",
+      "ignored": true,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::readiness_lifetime_tests::native_readiness_real_sixty_second_owner_lifetime_survives_slow_frames",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::readiness_lifetime_tests::native_fury_slam_gcd_recovers_during_slow_real_frames",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::summon_lifetime_tests::encounter_coverage_wild_summon_outlives_owner_but_keeps_authored_expiry",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::recovery_rate_tests::class_completeness_native_recovery_rate_scales_native_category_only_cooldown",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::recovery_rate_tests::class_completeness_native_recovery_rate_category_owner_allows_real_accelerated_recast",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::recovery_rate_tests::class_completeness_native_recovery_rate_refresh_does_not_apply_the_same_factor_twice",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::recovery_rate_tests::class_completeness_native_recovery_rate_expiry_restores_remaining_time",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::recovery_rate_tests::class_completeness_native_recovery_rate_buff_on_another_player_does_not_change_caster_timer",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::recovery_rate_tests::class_completeness_native_recovery_rate_class_mask_excludes_trueshots_own_cooldown",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::recovery_rate_tests::class_completeness_native_recovery_rate_native_hot_hand_modifier_refreshes_live_amount",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::recovery_rate_tests::class_completeness_native_recovery_rate_trueshot_starts_real_ten_second_rapid_fire_cooldown",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::recovery_rate_tests::class_completeness_native_recovery_rate_application_accelerates_an_existing_real_lockout",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::recovery_rate_tests::class_completeness_native_recovery_rate_removal_slows_only_remaining_lockout",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::elemental_overload_tests::native_lava_crit_root_own_flame_shock_guarantees_crit",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::elemental_overload_tests::native_lava_crit_root_foreign_flame_shock_does_not_guarantee_crit",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::elemental_overload_tests::native_lava_crit_overload_own_flame_shock_guarantees_crit",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::elemental_overload_tests::native_lava_crit_overload_foreign_flame_shock_does_not_guarantee_crit",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::elemental_overload_tests::native_lightning_overload_uses_mastery_effect1_and_removal_restores_child_base",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::elemental_overload_tests::native_chain_overload_uses_mastery_effect1_and_removal_restores_child_base",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::elemental_overload_tests::native_lava_overload_uses_mastery_effect1_and_removal_restores_child_base",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::elemental_overload_tests::native_eb_overload_uses_mastery_effect1_and_removal_restores_child_base",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::elemental_overload_tests::native_icefury_overload_uses_mastery_effect1_and_removal_restores_child_base",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::additional_optional_power_tests::additional_optional_native_stratagem_spends_six_and_seven_combo_points",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::additional_optional_power_tests::additional_optional_native_stratagem_does_not_require_the_extra_points",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::additional_optional_power_tests::additional_optional_native_unlearning_keeps_only_the_remaining_stratagem",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::additional_optional_power_tests::additional_optional_native_foreign_stratagem_does_not_increase_spend",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::additional_optional_power_tests::additional_optional_native_same_power_wrong_spell_mask_does_not_change_spend",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::optional_flat_cost_tests::optional_flat_native_practiced_strikes_discounts_only_base_protection_execute_cost",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::optional_flat_cost_tests::optional_flat_native_practiced_strikes_preserves_available_rage_and_base_admission",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::optional_flat_cost_tests::optional_flat_native_practiced_strikes_does_not_modify_arms_execute_cost_order",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::optional_flat_cost_tests::optional_flat_native_sudden_death_percentage_keeps_protection_optional_spend_free",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::optional_flat_cost_tests::optional_flat_native_cost_one_percentage_does_not_modify_arms_cost_zero",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    },
+    {
+      "name": "spell_cast::rogue_stealth_tests::arena_rogue_stealth_applies_source_children_and_removes_them_with_parent",
+      "ignored": false,
+      "should_panic": false,
+      "before_target": "lib:server",
+      "after_target": "lib:server_spell_tests"
+    }
+  ]
+}
