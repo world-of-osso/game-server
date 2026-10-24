@@ -579,8 +579,8 @@ fn build_trait_loadout(
             .collect(),
         visible_actions: talents
             .iter()
-            .filter(|entry| entry.visible_spell_id != 0)
-            .map(|entry| (entry.spell_id, entry.visible_spell_id))
+            .filter(|(entry, _)| entry.visible_spell_id != 0)
+            .map(|(entry, _)| (entry.spell_id, entry.visible_spell_id))
             .collect(),
         overrides: talents
             .iter()
