@@ -29,6 +29,12 @@ pub struct FixtureAdds {
     pub count: usize,
 }
 
+/// Explicit SimC fixture movement state, independent of native target geometry.
+#[derive(Component, Clone, Copy)]
+pub struct FixtureMovement {
+    pub distance_to_move: f64,
+}
+
 pub type ResolveDotSpell = fn(&World, Entity, u32) -> Result<crate::spell_info::SpellInfo, String>;
 
 #[derive(Clone, Copy)]
@@ -395,6 +401,38 @@ impl<'a> NativeFacts<'a> {
         )
     }
 
+    fn movement_distance(&self) -> Result<f64, String> {
+        if matches!(self.encounter, Encounter::Dungeon { .. }) {
+            return Err("DUNGEON_MOVEMENT_DISTANCE_UNAVAILABLE: movement.distance".into());
+        }
+        self.world
+            .get::<FixtureMovement>(self.actor)
+            .map(|movement| movement.distance_to_move)
+            .ok_or_else(|| {
+                "NATIVE_MOVEMENT_DISTANCE_UNAVAILABLE: configure fixture distance_to_move".into()
+            })
+    }
+
+    fn movement_value(&self, property: &str) -> Result<f64, String> {
+        let distance = self.movement_distance()?;
+        let run = self
+            .world
+            .get::<crate::creature_ai::SpawnPoint>(self.actor)
+            .map_or(1.0, |spawn| spawn.speed_run);
+        let modifier = self
+            .world
+            .get::<crate::auras::AuraStatMods>(self.actor)
+            .map_or(1.0, |mods| mods.movement_speed);
+        let speed = f64::from(crate::creature_ai::BASE_RUN_SPEED * run * modifier);
+        match property {
+            "speed" => Ok(speed),
+            "remains" if distance > 0.0 => Ok(distance / speed),
+            // All admitted fixtures configure no movement event/buff.
+            "remains" => Ok(0.0),
+            _ => Err(format!("unknown native movement property {property}")),
+        }
+    }
+
     fn movement_event(&self, property: &str) -> Result<f64, String> {
         if matches!(self.encounter, Encounter::Dungeon { .. }) {
             return Err(format!(
@@ -651,9 +689,9 @@ impl Facts for NativeFacts<'_> {
             "fight_remains" => self.remaining(name),
             "active_enemies" => Ok(self.active_enemies as f64),
             "spell_haste" => self.spell_haste(),
-            "movement.distance" => Err(
-                "MOVEMENT_DISTANCE_UNAVAILABLE: configured movement.distance has no native fixture movement plan".into(),
-            ),
+            "movement.distance" => self.movement_distance(),
+            "movement.remains" => self.movement_value("remains"),
+            "movement.speed" => self.movement_value("speed"),
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "charges_fractional"
             | "full_recharge_time" | "execute_time" | "ticks_remain" => {
                 Err(format!("native APL {name} requires action context"))
@@ -770,6 +808,8 @@ fn bool_value(value: bool) -> f64 {
 
 #[cfg(test)]
 mod expected_length_tests;
+#[cfg(test)]
+mod movement_distance_tests;
 #[cfg(test)]
 mod refresh_context_tests;
 #[cfg(test)]

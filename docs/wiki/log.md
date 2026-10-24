@@ -2,6 +2,13 @@
 
 [D3](systems/server-crates.md#public-spell-remainder-d3):11pure file moves retain54case names/flags (51enabled/3existing ignored), extending the existing consumer to229cases without body/seam/new-package-or-version/API changes. Existing rusqlite0.35/bundled and canonical random import are dev-only consumer wiring. Housekeeping only; exact inventory, combined compiler proof, full gate and matched timing remain distinct.
 
+## 2026-10-24 — Movement remains/speed scalars
+
+[Native movement predicates](systems/simc-apl.md#configured-movement-distance): three unknown-operand REDs/four distance controls PASS→all7GREEN0.00s atf3c760d3a, two-package test-target check146s/fmtPASS/zero warnings. Speed reads native run/aura modifiers even idle; positive-distance remains divides by live speed, explicit no-event zero stays0. Parent deferred scheduling because no pinned moving reference exists: MOVEMENT_EVENT_SCHEDULING_UNREFERENCED, no unpaired selector/timer added.
+
+## 2026-10-24 — Explicit movement.distance fixture state
+
+[Configured movement distance](systems/simc-apl.md#configured-movement-distance): pinned76f8118 current.distance_to_move, not target range/native travel. Four actual unknown-operand REDs→4GREEN0.00s atc8fafe180; existing movement-event absence1GREEN10.01s, server+server-simulation test-target check81s and fmtPASS/zero warnings. Patchwerk explicitly initializes0; missing/dungeon configuration stays named. No scheduler, remains/speed, full native rotation or DPS claim.
 ## 2026-10-24 — Source-bound ordinary cone boundary
 
 [Model geometry](systems/model-geometry.md#ordinary-cone-close-boundary):607781b26 genuine native FoF117418/Mage120 close-off-arc2RED plus strict2yd/far/vertical1GREEN8.31s. Shared ordinary cones now use TC's strict3D target bounding radius/min2; existing98609-row loader retains radius alongside unchanged reach. No unknown-radius substitution, line bypass or WW IDs. Native harness uses actual Kobold10913/scale1. GREEN, unchanged cone/frontal controls and two-crate check pending; lead full gate and WW numerical parity separate.
