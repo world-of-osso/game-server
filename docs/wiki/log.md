@@ -1,6 +1,6 @@
 ## 2026-10-24 — Native Flurry core earning/release
 
-[Bounded ledger](../handoffs/ww-flurry-proof-ledger.md): ec4b89338 actual white/ordinary451839 earning and natural FoF children3 genuine RED/3controlsPASS41.86s. Selected native counts/critical multiplier/cap and class-owned release are implemented;150ms child spacing explicitly cites SimC76f8118 sc_monk.cpp779–781. Generic impact callbacks carry actual native provenance without class IDs. GREEN/freshST/3T pending; natural Dual Threat producer, other releases, SCK snapshot and recovery stay outside this slice.
+[Bounded ledger](../handoffs/ww-flurry-proof-ledger.md): ec4b89338 actual white/ordinary451839 earning and natural FoF children3 genuine RED/3controlsPASS41.86s. Selected native counts/critical multiplier/cap and class-owned release are implemented;150ms child spacing explicitly cites SimC76f8118 sc_monk.cpp779–781. Generic impact callbacks carry actual native provenance without class IDs. At172da6nativeGREEN25.97s/compile0warnings. Same tested binary/fresh CURRENT backup EACH300s100439.5467ST/134000.8433three-target (−51.3477%/−64.4144%);450617 and451250 both really damage. Native1H/offhand and natural Dual Threat producer remain unqualified; other releases/SCK/recovery stay outside this slice, full lead gate and broader parity remain open.
 
 ## 2026-10-24 — WDP child relationships and original-primary context qualified
 

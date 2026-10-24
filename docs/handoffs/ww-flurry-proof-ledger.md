@@ -13,15 +13,29 @@ Approved2026-10-24: `SIMC_WW_FLURRY_CHARGE_RELEASE`, core earning/release only, 
 
 | Boundary | Proof before implementation | Current status |
 |---|---|---|
-| Actual selected white impact → real451021 | bf7551dd7 andec4b89338: actual0 versus native2 | Genuine RED; GREEN pending |
-| Actual ordinary451839 impact → real451021 | bf7551dd7 andec4b89338: actual0 versus native2 | Genuine RED; GREEN pending |
-| Natural literal FoF →450617/451250 | ec4b89338: actual root executes after real whites, children absent | Genuine RED; GREEN pending |
-| Actual avoided white, unselected no-hero input, selected no-charge FoF | ec4b89338:3PASS | Retained controls; no aura/stack/power/stat grants |
-| Critical count, native cap and150ms child timing | Native tests continue to these assertions after initial failures | Not yet GREEN |
-| Fresh300s ST/3T | Not run for this slice yet | Pending after final GREEN |
+| Actual selected white impact → real451021 | bf7551dd7 andec4b89338: actual0 versus native2 | GREEN at172da36e0 |
+| Actual ordinary451839 impact → real451021 | bf7551dd7 andec4b89338: actual0 versus native2 | GREEN at172da36e0 |
+| Natural literal FoF →450617/451250 | ec4b89338: actual root executes after real whites, children absent | GREEN at172da36e0 |
+| Actual avoided white, unselected no-hero input, selected no-charge FoF | ec4b89338:3PASS | All3 retained GREEN at172da36e0; no aura/stack/power/stat grants |
+| Critical count, native cap and150ms child timing | Native tests continue to these assertions after initial failures | GREEN: real2H/critical/native cap and frame-quantized150ms sequence |
+| Fresh300s ST/3T | Separate current SQLite backup for each; same tested binary |100439.5467ST/134000.8433three-target; outside band |
+| Native1H/offhand execution | Implementation reads native hand/kind/effect0 | Not exercised by this frozen2H-only reference; no runtime qualification claim |
 | Natural Dual Threat generation | Native451823 DUMMY30%/451835 aura361 lacks a producer consumer | Explicitly unqualified/excluded; the impact test is an ordinary native451839 cast, not proof of automatic DT generation |
 
 Initial bf7551dd7 native batch has2 genuine earning RED, the selected no-charge controlPASS and3 setup failures, **not five feature failures**. Existing FixtureTarget lifetime/role metadata was missing from the literal release/miss cases. Dropping only a granted hero-root purchase also did not unselect its active subtree. ec4b89338 initializes the existing lifetime model and declares the frozen class/spec-only input before native progression. Its actual3RED/3controlsPASS takes41.86s; compile43.98s/zero warnings. No fixture aura, stack, power or stat mutation makes those prerequisites pass.
+
+At172da36e0, the unchanged six cases all pass in25.97s; compile486.57s/zero warnings. One ten-HOLD admission loop exhausted before any runtime started; only admission was retried, not compilation or tests. NativeGREEN binary SHA-256 is `19e58de86c390d1dee49c96205ae9ba885e98fc1ea5def3f87bca23de063eeb7`.
+
+## Fresh300s measurements
+
+Same172da binary, actual level90 spec269 follower, seed70448, server data70448 versus pinned SimC data70391. Each run independently backs up CURRENT source; both prepared copies hash `cd7230ac1d62bf7d7ea8fef5fbb82faa9f36b61ec78108e591f1204c614a8ed6` and inputs are hash-receipted.
+
+| Targets | Native DPS | Frozen reference | Gap |450617 hits/damage |451250 hits/damage |
+|---|---:|---:|---:|---:|---:|
+|1|100439.5467|206443.72|−51.3477%|142/413788|142/479079|
+|3|134000.8433|376559.68|−64.4144%|148/419770|444/1532208|
+
+451021 uptime is49.8%/55.7%. Actual FoF casts23/19 retain115/95 native117418 hits, five per channel; native children do not replace FoF delivery. These measurements compare against the frozen reference, not a paired same-code causal attribution of every changed action. No coefficient, AP, target-count or APL tuning follows from the remaining gaps. Slice behavior is qualified; full lead integration and broader±10% parity are not complete.
 
 ## Implementation boundary
 
@@ -31,4 +45,4 @@ Stand Ready, Wisdom, High Impact, energy heuristics, APL rows, natural Dual Thre
 
 ## Evidence
 
-All artifacts live in `game-engine/data/diagnostics/ww-parity-2026-10-23/`: `flurry-red-{bf7551dd7,ec4b89338}.build*`, `native-ww-flurry-red-{bf7551dd7,ec4b89338}/`, pinned source packet and task-local `flurry_native_ops.py`. Each runtime has its own current read-only SQLite backup, exact input hashes, binary SHA-256, argv/environment and full output. Builds/tests use admitted `agent-run ww-flurry` with-j2; no worker push or spawned agents.
+All artifacts live in `game-engine/data/diagnostics/ww-parity-2026-10-23/`: `flurry-red-{bf7551dd7,ec4b89338}.build*`, `native-ww-flurry-red-{bf7551dd7,ec4b89338}/`, `flurry-green-172da36e0.build*`, `native-ww-flurry-green-172da36e0/`, `native-after-flurry-172da36e0-{1,3}/`, `flurry-172da36e0-comparison-summary.json`, pinned source packet and task-local `flurry_native_ops.py`. Each runtime has its own current read-only SQLite backup, exact input hashes, binary SHA-256, argv/environment and full output. Builds/tests use admitted `agent-run ww-flurry` with-j2; no worker push or spawned agents.
