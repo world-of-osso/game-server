@@ -1,3 +1,7 @@
+## 2026-10-24 — Expurgation Dummy-proc qualification
+
+[Auras](systems/auras.md#expurgation-dummy-proc--2026-10-24): native selected383344/actual184575 hit yields genuine missing383346 RED atcce395359; unrelated Judgment control passes40.15s. TC806–821 supplies a class callback using partial-trigger semantics, not a generic Dummy promotion. Native amounts/cadence and actual recipient retained; unchanged GREEN pending. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#expurgation-native-dummy-proc).
+
 ## 2026-10-23 — Missed hostile spell combat references
 
 [Combat](systems/combat.md#combat-state): native MISS/IMMUNE missing-reference REDs → selected-target launch/arrival preservation; three boundary controls, nine retained travel/reflection controls and unchanged Ret funding/TV damage GREEN at02090739e. No resource, hit-chance or timer override. WW equipment consumer1GREEN47.55s; combined parent gate awaits master8e7c7a685 integration. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#generic-missed-hostile-launch-combat).

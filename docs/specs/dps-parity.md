@@ -28,6 +28,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [ ] `SIMC_RET_TIER_MID2_DIVINE_PURPOSE_RELATIONSHIP`: consuming actual foreground Divine Purpose223819 with native2062 two-piece grants native Divine Power1305230. Four-piece arms the spender's native Verdict/Storm/Light Arbiter kind only when none is pending; the same kind preserves it, a different kind consumes it and casts native1306923 at the actual cast target. Native gear eligibility, effects, coefficients and durations remain authoritative. No fabricated DB2 trigger edges. Natural Divine Purpose generation, Empyrean Legacy background consumption and Hammer of Light runtime qualification remain separate open cases. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#ret-mid2-tier-relationship-source-policy).
 
+### Ret Expurgation
+
+- [ ] Active native383344 admitted procs cast native383346 at the actual action recipient through TC's partial-trigger semantics: ignore an in-progress cast, retain ordinary costs/cooldowns/aura checks and normal proc behavior. Native chance/family masks and periodic amounts/cadence stay authoritative; unrelated Judgment must not acquire the DoT. Do not promote all Dummy auras into generic trigger dispatch or substitute parent BP20 for the native child amount. [Source/qualification](../handoffs/ret-paladin-parity-proof-ledger.md#expurgation-native-dummy-proc).
+
 ### Ret literal rotation
 
 - [ ] Spec70 fixture executes the pinned76f8118 Ret41-row/five-list priority through the shared evaluator, native readiness and dispatch. Source action names remain unchanged; selected base replacements use the shared knowledge resolver, not a Ret-local spell map. HolyPower, selected traits, buffs and target-owned dot/debuff facts read actual native state; unknown operands fail explicitly.
