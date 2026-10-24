@@ -46,6 +46,12 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 - [ ] Native DB2 trait legality takes precedence over SimC selections. Under `SIMC_PROFILE_TRAIT_EDGE_DIVERGENCE`, derive native-only inputs by repeatedly dropping selected nodes whose native required-parent alternatives are all unfilled; never add parents or edit official profiles/exports. Record each dropped node, edge IDs, closure iteration and SimC affected-channel DPS. Preserve strict validation and report independent unverified-rule boundaries; neither missing-parent closure nor channel attribution permits a predicate bypass. Stop at other native legality constraints rather than rebuilding a profile:251 is `SIMC_PROFILE_NOT_NATIVE_LEGAL`, a reference gap excluded from scoring after three orphan omissions expose the node76076/condition19531 row-spend gate;1480 retains only its108144 omission and independent rule80974/type54 boundary.
 - [ ] Cover every non-initial native70448 player specialization (40 rows with ClassID1–13/OrderIndex<4), not merely the first follower cohort66/73/105/257/262/63/253/1467/269/266/103. Current pinned sources have29 baseMID2 profiles and11 native follower-harness profiles; absent harness profiles do not imply absent server class support. Missing shipped healer references remain explicit HPS/BiS gaps, never synthetic profiles. Report first-three and all-spec summaries to the lead.
 
+### Literal Elemental fixture
+
+- [ ] Spec262 follower measurements execute the pinned76f8118 Elemental profile's82 action rows, retaining order, conditions, list transitions and options through the shared literal executor. Native70448 spellbook, overrides and selected traits govern availability; no replacement heuristic or fabricated native facts.
+- [ ] Flame Shock and Lightning Rod selectors/counts read only the measured caster's live native auras. Explicit selected targets reach real casts; foreign-caster auras cannot change selection. Flame Shock refreshability uses the next native cast's maximum duration.
+- [ ] Unknown actions/operands/options and non-Fixture encounters fail explicitly. Shared precombat executes once with real casts/GCD completion before the measured clock; no clock reset or recreated executor/equipment path.
+
 ### Per-spell oracle diagnostics
 
 - [x] A Python3 stdlib CLI accepts a pinned profile path/spec name, repeated action names, target count and duration; removes original action lists and runs deterministic pinned SimC through `agent-run simc-oracle` with `TMPDIR=/var/tmp/osso`.
