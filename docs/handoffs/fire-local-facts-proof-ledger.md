@@ -19,6 +19,10 @@ Revision `3014664cf92d1ff7edd98ebf9a3384fd649240c9`, maintained build-host `--te
 - Fresh CURRENT canonical SQLite.backup20261024T084253Z; canonical SHA256 `215d75ec02c0311831cf5d98a4432c985500345811471fcce6ed23fee7709557` unchanged across backup. Private SHA256 `cd7230ac1d62bf7d7ea8fef5fbb82faa9f36b61ec78108e591f1204c614a8ed6`.
 - Private path/receipt `game-engine/data/diagnostics/rotation-fidelity-2026-10-21/world-fire-local-current-20261024T084253Z.db` / `.receipt.json`.
 
-## Open proof
+## Scoped GREEN, overlap still open
 
-Implementation GREEN pending. Repair overlap setup with legitimately earned native Hot Streak, never a grant or injected pending event. Caller300s ST/3T, generic facts and dependency qualification remain open; no DPS acceptance claimed.
+Revision `d8a30fa61a132c6303afa490d25b903d44acd743`: Firestarter and Scorch recipient boundary/explicit-second-target cases passed; hardcast→one pending projectile→impact zero plus caster isolation passed; startup inode passed. Compile8m21s, zero warnings; cases22.51s. Overlap alone failed native Pyro admission with OnGlobalCooldown: cast completion did not imply GCD completion. No count failure was observed. Test repair waits the actual native cast window and verifies one pending event before the earned-Hot-Streak Pyro.
+
+Log `game-engine/data/diagnostics/rotation-fidelity-2026-10-21/fire-local-d8a-current-green.log`; fresh current backup20261024T090919Z, canonical/private SHA256 unchanged from RED's logical source but a separate new backup/receipt.
+
+Caller300s ST/3T, generic facts and dependency qualification remain open; no overall-suite or DPS acceptance claimed.

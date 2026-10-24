@@ -225,7 +225,13 @@ fn fire_local_native90_hot_streak_count_counts_overlapping_native_events() {
     wait_cast_window(&mut run);
     cast_native(&mut run, FIREBALL, target);
     finish_cast(&mut run);
+    wait_cast_window(&mut run);
     assert!(has_hot_streak(&run));
+    assert_eq!(
+        value(&run, run.actor, target, "hot_streak_spells_in_flight"),
+        Ok(1.0),
+        "native Fireball remains in flight when the real GCD opens"
+    );
     cast_native(&mut run, PYROBLAST, target);
     assert!(
         run.app.world().get::<CastState>(run.actor).is_none(),
