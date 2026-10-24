@@ -185,7 +185,7 @@ fn sunfire_spiral_multiplier(world: &World, caster: Entity, spell: u32) -> f32 {
     1.0 + effect.amount / 100.0
 }
 
-/// WW_RUSHING_WIND_KICK_SIMC_PRODUCER: SimC76f8118 sc_monk.cpp1408–1414.
+/// SIMC_WW_RWK_BOK_LANDED_PRODUCER: SimC76f8118 sc_monk.cpp1408–1414.
 /// TC a352b1fa has no binding. DB2 owns the selected talent's chance and override.
 /// Native instant BOK hits before modifier-use consumption; misses never run OnHit.
 pub(super) fn blackout_kick_hit(world: &mut World, caster: Entity, _target: Entity, depth: u8) {
@@ -209,6 +209,16 @@ pub(super) fn blackout_kick_hit(world: &mut World, caster: Entity, _target: Enti
 }
 
 fn read_rushing_wind_kick_chance(world: &World, caster: Entity) -> Option<f32> {
+    let selected = world
+        .get::<crate::class_progression::TraitLoadout>(caster)
+        .is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|spell| spell.spell_id == RUSHING_WIND_KICK_TALENT)
+        });
+    if !selected {
+        return None;
+    }
     let talent = world
         .get::<ActiveAuras>(caster)?
         .iter()
