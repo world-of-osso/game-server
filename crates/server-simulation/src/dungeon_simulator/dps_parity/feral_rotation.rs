@@ -286,6 +286,99 @@ mod tests {
         }
     }
 
+    #[test]
+    #[ignore = "requires exact spec103 profile/traits and native private DB"]
+    fn feral_literal_native_prowl_first_uses_enemy_context_but_casts_on_actor() {
+        use super::super::literal_rotation::{Driver, equipment::Equipment, execution::Prepared};
+        use server::simc_apl::{Action, ActionFacts};
+        let mut run = prepare_literal(103, 3).unwrap();
+        let actor = run.actor;
+        if !crate::auras::has_aura(run.app.world(), actor, 768) {
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false)
+                .expect("ordinary native Cat Form setup");
+            preparation::finish_pending_setup(&mut run).unwrap();
+        }
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 5215));
+        // Observe a native owned Rake aura, not a synthetic refreshable number.
+        // This fixture qualifies context/dispatch, not Rake's producer or OOC exit.
+        apply_native_dot(&mut run, 155722);
+        let encounter = crate::simc_apl_native::Encounter::Fixture {
+            started_at: crate::spell_cast::now(run.app.world()),
+            duration: 300.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        };
+        let mut bindings = super::bindings::build(run.app.world(), actor).unwrap();
+        let equipment = Equipment::load(run.app.world(), actor, &mut bindings).unwrap();
+        let potion = super::context::read_configured_potion(&run.profile).unwrap();
+        let mut driver = Driver::new(super::source::load().unwrap());
+        let before_target = run
+            .app
+            .world()
+            .get::<crate::networking::CombatTarget>(actor)
+            .and_then(|target| target.0);
+        let selected = {
+            let prepared = Prepared::read(
+                run.app.world_mut(),
+                actor,
+                &run.targets,
+                &equipment,
+                super::bindings::execution_actions(&bindings),
+                false,
+            )
+            .unwrap();
+            let facts = super::context::Context::read(
+                run.app.world_mut(),
+                actor,
+                &bindings,
+                &equipment,
+                &prepared,
+                &potion,
+                encounter,
+                &run.targets,
+            )
+            .unwrap();
+            let prowl = Action {
+                name: "prowl".into(),
+                target: None,
+                options: Default::default(),
+            };
+            assert_eq!(
+                facts.target_ids(&prowl).unwrap(),
+                run.targets
+                    .iter()
+                    .map(|target| target.to_bits())
+                    .collect::<Vec<_>>(),
+                "self-cast source target_if observes the ordered live enemies, not its cast recipient"
+            );
+            driver
+                .select("aoe_builder", &facts, &prepared, &equipment)
+                .unwrap()
+                .expect("actual source's first refreshable Prowl context")
+        };
+        assert_eq!(selected.0.name, "prowl");
+        assert_eq!(
+            selected.0.target,
+            Some(run.targets[1].to_bits()),
+            "first target's fresh native Rake must lose FIRST to the second target"
+        );
+        driver
+            .execute(run.app.world_mut(), actor, selected.0, selected.1)
+            .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        assert!(crate::auras::has_aura(run.app.world(), actor, 5215));
+        for target in &run.targets {
+            assert!(!crate::auras::has_aura(run.app.world(), *target, 5215));
+        }
+        assert_eq!(
+            run.app
+                .world()
+                .get::<crate::networking::CombatTarget>(actor)
+                .and_then(|target| target.0),
+            before_target,
+            "observing an enemy context must not retarget a real self-cast"
+        );
+    }
+
     fn apply_native_dot(run: &mut Run, spell_id: u32) {
         crate::auras::apply_aura(
             run.app.world_mut(),
