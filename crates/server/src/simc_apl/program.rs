@@ -112,6 +112,18 @@ impl Program {
         self.select_list(list, &mut selection)
     }
 
+    /// RED scaffold: the prior priority selector does not consume ordered rows.
+    pub fn select_next(
+        &self,
+        list: &str,
+        _cursor: &mut usize,
+        facts: &dyn ActionFacts,
+        variables: &mut Variables,
+        usable: impl FnMut(&Action) -> Result<bool, String>,
+    ) -> Result<Option<Action>, String> {
+        self.select(list, facts, variables, usable)
+    }
+
     fn select_list(
         &self,
         list: &str,

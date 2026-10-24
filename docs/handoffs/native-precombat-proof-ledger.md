@@ -35,6 +35,10 @@ Implementation splits spawn from warmup so explicit literal capture precedes all
 
 The initial0-shard assertion is now separate from the native Felguard-at-pull control, which also checks real cast/GCD completion. This is five opt-in cases; the added boundary assertion uses the same already observed native30146 failure, not an easier controller. Shared ordered Driver traversal, generic configured summon_pet selection, WW lifecycle wiring and full literal266 precasts remain OPEN. This slice is not claimed to implement them.
 
+## Ordered selector RED scaffold
+
+Three env-free library cases exercise source action order/exhaustion, skipped unready rows remaining consumed after native state changes, and variables sampling facts only at their own source position. Program::select_next currently delegates the old priority scan and intentionally does not consume its cursor; it is a RED scaffold, not an implementation. Run only the lightweight native-helper `--lib simc_apl_precombat` target to establish this boundary, then replace it using the existing target/condition/assignment machinery. Do not integrate the scaffold alone.
+
 ## Dependencies
 
 pd1035 is landed at2333d924b and merged locally; exact-target Prepared/Player dispatch remains14775-owned. Resource query010f7f761 is GREEN9/9 on arms-literal-resource-hooks; it ignores only the requested PowerType affordability while retaining other native checks. Integrate its shared API after pd, not the old613 scaffold. No unselected legacy kit fallback and no WW-specific tier2pc path.
