@@ -142,6 +142,24 @@ fn dps_parity_ret_tier_four_piece_same_kind_preserves_cross_kind_emits_child() {
     assert_eq!(child_damage(&run), 0);
     grant_native_purpose(&mut run);
     cast_finisher(&mut run, DIVINE_STORM);
+    // Native1306923 has Speed50. The actual follower can move while waiting
+    // on its GCD; wait for the real projectile outcome, not a guessed flight.
+    for _ in 0..200 {
+        let outcome = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.spell_id == Some(DIVINE_ARBITER)
+                    && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+            });
+        if outcome {
+            break;
+        }
+        run.app.update();
+    }
     assert!(!has(&run, VERDICT_ARBITER));
     assert!(
         !has(&run, STORM_ARBITER),
