@@ -502,25 +502,36 @@ mod tests {
         panic!("native Shred never became ready within the fixture setup bound");
     }
 
+    fn read_native_pool_probe_state(
+        run: &Run,
+    ) -> (
+        crate::spell_cast::powers::PowerPools,
+        Option<u32>,
+        Option<Entity>,
+    ) {
+        let world = run.app.world();
+        (
+            world
+                .get::<crate::spell_cast::powers::PowerPools>(run.actor)
+                .unwrap()
+                .clone(),
+            world
+                .get::<crate::spell_cast::SpellHistory>(run.actor)
+                .and_then(|history| history.last_successful_cast()),
+            world
+                .get::<crate::networking::CombatTarget>(run.actor)
+                .and_then(|selection| selection.0),
+        )
+    }
+
     fn assert_native_pool_probe(run: &mut Run, expected: bool) {
         use super::super::literal_rotation::{equipment::Equipment, execution::Prepared};
-        use crate::spell_cast::powers::PowerPools;
         use server::simc_apl::{Action, ActionFacts};
         let actor = run.actor;
         let mut bindings = super::bindings::build(run.app.world(), actor).unwrap();
         let equipment = Equipment::load(run.app.world(), actor, &mut bindings).unwrap();
         let potion = super::context::read_configured_potion(&run.profile).unwrap();
-        let before = run.app.world().get::<PowerPools>(actor).unwrap().clone();
-        let history = run
-            .app
-            .world()
-            .get::<crate::spell_cast::SpellHistory>(actor)
-            .and_then(|history| history.last_successful_cast());
-        let target = run
-            .app
-            .world()
-            .get::<crate::networking::CombatTarget>(actor)
-            .and_then(|target| target.0);
+        let before = read_native_pool_probe_state(run);
         let encounter = crate::simc_apl_native::Encounter::Fixture {
             started_at: crate::spell_cast::now(run.app.world()),
             duration: 300.0,
@@ -559,20 +570,10 @@ mod tests {
                 "only the requested Energy pool may be projected to native maximum"
             );
         }
-        assert_eq!(run.app.world().get::<PowerPools>(actor).unwrap(), &before);
         assert_eq!(
-            run.app
-                .world()
-                .get::<crate::spell_cast::SpellHistory>(actor)
-                .and_then(|history| history.last_successful_cast()),
-            history
-        );
-        assert_eq!(
-            run.app
-                .world()
-                .get::<crate::networking::CombatTarget>(actor)
-                .and_then(|selection| selection.0),
-            target
+            read_native_pool_probe_state(run),
+            before,
+            "sampled native projection must preserve all pools, cast history and target selection"
         );
     }
 
