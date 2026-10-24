@@ -29,10 +29,40 @@ pub(crate) struct FixtureAdds {
     pub count: usize,
 }
 
+pub(crate) type ResolveDotSpell =
+    fn(&World, Entity, u32) -> Result<crate::spell_info::SpellInfo, String>;
+
+#[derive(Clone, Copy)]
+pub(crate) enum DotRefreshPolicy {
+    Pandemic,
+    FinalTick,
+    Always,
+    Never,
+}
+
+pub(crate) struct DotRefresh {
+    pub resolve: ResolveDotSpell,
+    pub policy: DotRefreshPolicy,
+}
+
+pub(crate) fn native_dot_spell(
+    world: &World,
+    _caster: Entity,
+    spell: u32,
+) -> Result<crate::spell_info::SpellInfo, String> {
+    world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell)
+        .cloned()
+        .ok_or_else(|| format!("native dot spell{spell} absent"))
+}
+
 #[derive(Default)]
 pub(crate) struct Bindings {
     pub actions: BTreeMap<String, u32>,
     pub buffs: BTreeMap<String, u32>,
+    /// Fresh native metadata resolver and source-qualified refresh rule, by aura alias.
+    pub dot_refresh: BTreeMap<String, DotRefresh>,
     pub talents: BTreeMap<String, u32>,
     pub resources: BTreeMap<String, PowerType>,
     /// Native spell carrying this actor's global-cooldown category and base duration.
@@ -549,6 +579,8 @@ fn bool_value(value: bool) -> f64 {
     if value { 1.0 } else { 0.0 }
 }
 
+#[cfg(test)]
+mod refresh_context_tests;
 #[cfg(test)]
 mod target_context_tests;
 #[cfg(test)]
