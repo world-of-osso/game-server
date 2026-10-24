@@ -242,6 +242,104 @@ fn dps_parity_demo_native_call_dreadstalkers_dispatches_both_authored_children()
 }
 
 #[test]
+#[ignore = "selected Demoniac owner earns Core from native Dread retirement; private spec266 inputs required"]
+fn dps_parity_demo_native_dreadstalker_retirement_earns_both_core_stacks() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_authored_guardian_control();
+    let actor = run.actor;
+    let core_stacks = |world: &World| {
+        world
+            .get::<crate::auras::ActiveAuras>(actor)
+            .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 264173))
+            .map_or(0, |aura| aura.stacks)
+    };
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap()
+            .contains(426115),
+        "actual selected Demoniac owner, not a globally enabled guardian proc"
+    );
+    let chance = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(267102)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .base_points;
+    assert_eq!(
+        chance, 100.0,
+        "native267102 Effect1 Dread chance prerequisite"
+    );
+    assert_eq!(
+        core_stacks(run.app.world()),
+        0,
+        "no injected or pre-earned Core"
+    );
+    cast_and_finish(&mut run, actor, 104316);
+    let world = run.app.world_mut();
+    let dogs: Vec<_> = world
+        .query::<(
+            Entity,
+            &crate::spell_cast::summon::SummonedCreature,
+            &shared::components::Npc,
+        )>()
+        .iter(world)
+        .filter(|(_, summon, npc)| {
+            summon.owner == actor
+                && npc.template_id == 98035
+                && matches!(summon.spell_id, 193331 | 193332)
+        })
+        .map(|(entity, summon, _)| {
+            (
+                entity,
+                summon.spell_id,
+                summon.expires_at.expect("native Dread lifetime"),
+            )
+        })
+        .collect();
+    assert_eq!(
+        dogs.len(),
+        2,
+        "ordinary104316 must first produce both authored children"
+    );
+    let expiry = dogs.iter().map(|dog| dog.2).max_by(f64::total_cmp).unwrap();
+    while crate::spell_cast::now(run.app.world()) <= expiry {
+        run.app.update();
+    }
+    run.app.update();
+    let remaining = dogs
+        .iter()
+        .filter(|dog| run.app.world().get_entity(dog.0).is_ok())
+        .count();
+    let earned = core_stacks(run.app.world());
+    let path = inputs::directory()
+        .unwrap()
+        .join("266.dreadstalker-retirement-core.json");
+    std::fs::write(&path, serde_json::to_vec_pretty(&json!({
+        "policy": "SIMC_DEMONIC_CORE_DREADSTALKER_EXPIRY", "native_driver": 267102,
+        "native_effect": 1, "native_chance": chance,
+        "dogs": dogs.iter().map(|dog| json!({"entity": dog.0.to_bits(), "root": dog.1, "expiry": dog.2})).collect::<Vec<_>>(),
+        "remaining": remaining, "earned_core_stacks": earned,
+    })).unwrap()).unwrap();
+    assert_eq!(
+        remaining, 0,
+        "observe actual retirement, not a pending timer"
+    );
+    assert_eq!(
+        earned as usize,
+        dogs.len(),
+        "each native Dread retirement earns one Core; trace {}",
+        path.display()
+    );
+}
+
+#[test]
 #[ignore = "native summon effects override the approved project dispatch; private spec266 inputs required"]
 fn dps_parity_demo_native_dreadstalker_effect_overrides_project_dispatch() {
     let _seed = crate::random::seed_scope(70448);
