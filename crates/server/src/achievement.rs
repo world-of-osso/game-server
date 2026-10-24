@@ -341,8 +341,7 @@ fn process_owned_pet_achievement_updates(world: &mut World) {
     }
 }
 
-#[path = "achievement_rank_factions.rs"]
-mod rank_factions;
+use server_catalog::achievement::rank_factions;
 
 /// Current traditional ranks, not visible/tracked factions or historical maxima.
 fn reputation_rank_events(

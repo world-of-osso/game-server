@@ -1,10 +1,10 @@
 # Server crate boundaries
 
-Verified: 2026-10-23. Stable catalog code has one implementation in `server-catalog`; gameplay modules and their tests now belong to the existing `server` library, with a thin executable.
+Verified: 2026-10-24. Stable catalog code has one implementation in `server-catalog`; gameplay modules and their tests now belong to the existing `server` library, with a thin executable.
 
 ## Current ownership
 
-- `crates/server-catalog`: generated character/spell/XP tables, pure faction-template reactions, and DB2 source-build validation/reading. Its only dependency is the existing rusqlite version/connection type; no Bevy plugin or runtime initialization.
+- `crates/server-catalog`: generated character/spell/XP tables, six generated achievement lookups and their immutable records, pure faction-template reactions, and DB2 source-build validation/reading. Its only dependency is the existing rusqlite version/connection type; no Bevy plugin or runtime initialization.
 - `crates/server/src/lib.rs`: existing standalone modules plus the former binary's gameplay module declarations and App assembly. `configure_app(&mut App)` preserves runtime→gameplay→resource→system registration order. One `extern crate self as server` keeps existing standalone-library imports canonical without editing hot modules.
 - `crates/server/src/main.rs`: creates App, calls `server::configure_app`, runs it. No gameplay source files move for this consolidation. `item_instance::enchants` imports the canonical catalog spell table instead of compiling a second source copy.
 - `crates/server-simulation`: test-only consumer of the server library; owns `dungeon_simulator` and nested DPS parity, with the original module prefix retained. Its normal library is empty; dependencies enabling `server/test-support` are dev-only.
@@ -37,6 +37,12 @@ Most case names retain `dungeon_simulator::...`. Six graph cases instead map to 
 ## Next test-area pilot
 
 `crates/server-combat-tests` follows the simulator's empty normal-library/dev-dependency pattern and owns 106 public-behavior melee cases. Canonical `collect_swings`/`collect_broadcast_swings` now reside in existing `spell_cast::test_harness`, shared with retained core tests; private outcome-formula tests stay in core. Fixture cache payloads remain private except the existing DB path. No new dependency versions or duplicate gameplay/resource types are introduced. [C handoff and measurement controls](../../handoffs/crate-split-area-tests.md), [exact case mapping](../../handoffs/crate-split-combat-test-mapping.json). At C code tip `acecb97d1`, the combined core-unit/simulator/combat-target compiler check and the production-no-feature `game-server` check pass without diagnostics. Full-suite/exact post-split census acceptance is pending.
+
+## Generated achievement catalog cut (D1)
+
+Six generated files (37,819 lines before relocation) now live under `server-catalog/src/achievement/`: conditions, mythic predicates, node counts, overlays, single modifiers and traditional-rank factions. `CompiledConditions`, `DifficultyRule` and `MythicRequirements` have one owner there; no ECS/resource dependencies move into catalog. Achievement credit, `MythicCompletion`, player/target authority and matching stay in server. The two matching methods become core free functions because inherent implementations cannot remain on externally owned records; predicates are unchanged.
+
+All six generators still require an explicit output argument; point it at the corresponding new catalog file. Generated visibility now permits the core consumer. No lookup values, test bodies, names, ignored flags or should-panic flags change. The pure move commit is separate from wiring. Paired elapsed-time and full-suite acceptance remain separate proof; source-size reduction is not a speedup claim.
 
 ## Sources
 
