@@ -46,10 +46,30 @@ The nearly matching source products hide offsetting differences. Adding a guesse
 | Capability | Proof level |
 |---|---|
 | AP and source-product discrepancy decomposition | Historical actual native/oracle receipts plus exact arithmetic and pinned source inspection |
-| Generic mastery root cause | Actual native114585 aura3188 plus hardcoded8; TC UpdateMastery uses aura318+rating only; native regression/repair tracked in character-stats |
-| Armored to the Teeth / Battlefield Commander behavior | Named policies approved after TC source boundary; actual Arms/Protection four genuine REDs23.48s at e5cc1ef32, lifecycle GREEN pending |
-| Redirected stat inputs / Arms2pc membership | Fresh master-based receipt required afterb67952ca4; no current input-gap claim |
+| Generic mastery root cause | Native genuine16vs8 RED→three-class/lifecycle GREEN; current retained1GREEN8.20s and stats-filter21GREEN9.07s at98093ec85; [producer proof](../systems/character-stats.md#generic-mastery-base--2026-10-23) |
+| Armored to the Teeth / Battlefield Commander behavior | Named policies approved after TC boundary; four genuine REDs23.48s at e5cc1ef32→four lifecycle GREEN19.13s at98093ec85 (productiona1af93852) |
+| Redirected stat inputs / Arms2pc membership | Actual fresh master-based Arms MS1GREEN10.79s: mastery605 matches, original four set members retained, runtime eligibility true/aura absent; activation missing, not an input gap |
 | Target item-level-K branch | Native70448 GT ItemLevelByLevel FDID2012881 still unavailable;70575 is not a substitute |
+
+## Fresh post-redirect/policy Arms receipt
+
+At98093ec85 (productiona1af93852), immutable native snapshotcd7230ac1d62bf7d7ea8fef5fbb82faa9f36b61ec78108e591f1204c614a8ed6, exact original71 reference gear/active traits:
+
+| Observation | Actual native | Oracle / interpretation |
+|---|---:|---|
+| Mastery rating | 605 | 605; old693 was allocation mismatch, now resolved |
+| Raw/display mastery | 21.152174 / 23.267391% | Matches `(8+605/46)×1.1`; duplicate base removed |
+| Strength / caster armor | 2963.624756 / 2855 | Single native armor factor retained |
+| Bare / cast AP | 3052.533447 / 4014.553467 | Commander3% reaches sheet and weapon-inclusive AP |
+| Source product | 1.652892113 | Oracle1.818182 is exactly this×1.10 within printed/f32 precision |
+| Result | hit25119 at3.1s | Oracle hit27935.1 at2.285s; not parity certification |
+| Arms2pc runtime predicate / aura | `Ok(true)` / absent | Actual equipped-set activation missing |
+
+The actual equipped list retains2067 members271456/271454/271459/271457, including original chest271459 with allocation donor268222. Native ItemSetSpell7750 specifies spell1296643/spec71/threshold2/subtree0; set flags and skill requirements are0. Native source modifiers actually applied are137049/1258398/383341/382896, not1296643. Thus neither membership nor native metadata is missing; do not retain an input-gap label for this result.
+
+Current AP reconstructs as `(2537×1.05 + 2855×10%×1.05 + 934)×1.03 = 4014.55375` (actual f32 value4014.553467). Remaining oracle4126 follows the recorded food50/augment25, comparator armor3141.16 and its attribute-floor/AP-round rules. No extra correction factor is missing from this decomposition, and no native armor tuning follows.
+
+Evidence under `game-engine/data/diagnostics/native-spell-diff-2026-10-23/mastery-b67952ca4/`: `database.proof.json`, `warrior-policy-{red,green}.{log,proof.json}`, `policy-retained-{mastery,stats}.{log,proof.json}`, `policy-arms-remeasure.{log,proof.json}`, `arms-set-metadata.proof.json`, and `arms-after-policy/{71.mortal_strike.player.json,mortal-strike.diff.json,factor-ledger.proof.json}`. Consumer exit1 correctly records remaining differences; no consumer tests were rerun because its source did not change.
 
 ## Sources
 

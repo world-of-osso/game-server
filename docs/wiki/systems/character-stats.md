@@ -22,7 +22,7 @@ TC a352b1fa `Player::UpdateMastery` (`StatSystem.cpp549–559`) sums aura318 and
 
 [`WARRIOR_ARMORED_TO_THE_TEETH_SIMC_POLICY` and `WARRIOR_BATTLEFIELD_COMMANDER_SIMC_POLICY`](../investigations/arms-spell-factors.md#ap-components) bind actual active384124 ranked226 amounts and424742 effect5 dummy amount for Warrior Players/class followers. Other classes and ordinary NPCs are excluded. The stat producer solves the native strength/armor linear relationship once (including Vanguard), preserving integer native armor and existing factors; Commander enters shared AP percentages, including weapon AP. TC absence, pinned SimC relationships and approval are ledgered with the [contract](../../specs/character-stats.md#named-warrior-stat-policies).
 
-Four actual reference-gear Arms/Protection REDs at e5cc1ef32 (23.48s) establish missing strength/AP; native rank2 amounts10/4 and Commander3 observed, unlearn/relearn controls use the same real actor. Arms remains on one-factor armor2855. Implementation GREEN pending.
+Four actual reference-gear Arms/Protection REDs at e5cc1ef32 (23.48s) establish missing strength/AP; native rank2 amounts10/4 and Commander3 observed, unlearn/relearn controls use the same real actor. Arms remains on one-factor armor2855. At98093ec85 (productiona1af93852) four policy cases pass19.13s: Arms strength2963.6248/armor2855, Protection3048.0583/7382, and Commander3% on both bare/weapon AP with exact removal restoration. Retained native mastery1GREEN8.20s/stats-filter21GREEN9.07s; actual Arms MS1GREEN10.79s. Build has no compiler warnings. Parent integration gate remains separate.
 
 ## Follower mastery amount refresh — 2026-10-21
 
