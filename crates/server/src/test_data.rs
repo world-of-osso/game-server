@@ -163,8 +163,32 @@ pub fn world_db_path() -> PathBuf {
     require(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"))
 }
 
+/// Shared authored2669 scene for guardian placement qualification; no fake geometry.
+pub fn install_authored_guardian_arena(
+    app: &mut bevy::prelude::App,
+) -> shared::components::Position {
+    let connection = rusqlite::Connection::open_with_flags(
+        world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .expect("read-only authored guardian arena");
+    let origin = connection.query_row(
+        "SELECT position_x,position_y,position_z FROM content_creature WHERE map=2669 AND id1=216619 ORDER BY guid LIMIT 1",
+        [], |row| {
+            let (x, y, z) = crate::terrain_height::wow_to_bevy(row.get(0)?, row.get(1)?, row.get(2)?);
+            Ok(shared::components::Position { x, y, z })
+        },
+    ).expect("authored Orator arena, as in native target148 fixtures");
+    app.insert_resource(ground_map());
+    app.insert_resource(
+        crate::line_of_sight::LineOfSight::load(&crate::ground::ground_data_dir().join("los"))
+            .expect("native guardian arena LOS"),
+    );
+    origin
+}
+
 /// Independent lazy terrain cache backed by the same read-only source maps as the fixture.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn ground_map() -> crate::ground::GroundMap {
     let connection = rusqlite::Connection::open_with_flags(
         world_db_path(),

@@ -214,7 +214,7 @@ pub enum ParityActor {
 }
 
 /// Move an admitted diagnostic party coherently; do not disable map-departure cleanup.
-pub(crate) fn relocate_parity_party(
+pub fn relocate_parity_party(
     world: &mut World,
     owner: Entity,
     copy: crate::maps::InMap,

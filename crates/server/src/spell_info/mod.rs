@@ -493,8 +493,8 @@ impl SpellStore {
         Some(&self.spells[index])
     }
 
-    #[cfg(test)]
-    pub(crate) fn replace_fixture_spell(&mut self, spell: SpellInfo) {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn replace_fixture_spell(&mut self, spell: SpellInfo) {
         let index = self
             .spells
             .binary_search_by_key(&spell.id, |row| row.id)

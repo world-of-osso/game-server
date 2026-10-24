@@ -34,9 +34,8 @@ fn dps_parity_demo_native_guldan_imps_attack_the_selected_dummy() {
                     .and_then(|target| target.0);
                 let admission =
                     crate::spell_cast::read_native_cast_start(world, imp, &spell, run.targets[0]);
-                let costs = crate::spell_cast::applicable_costs(world, imp, &spell);
                 println!(
-                    "DEMO_IMP tick={tick} entity={imp:?} owner_target={owner_target:?} admission={admission:?} costs={costs:?}"
+                    "DEMO_IMP tick={tick} entity={imp:?} owner_target={owner_target:?} admission={admission:?}"
                 );
                 println!(
                     "DEMO_IMP_STATE level={:?} owner_level={:?} faction={:?} map={:?} target_map={:?} enemy={}",
@@ -133,28 +132,11 @@ fn dps_parity_demo_native_first_pull_survives_inflight_precombat_cast() {
 }
 
 fn load_authored_guardian_arena(run: &mut Run) -> shared::components::Position {
-    let conn = rusqlite::Connection::open_with_flags(
-        crate::test_data::world_db_path(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
-    let origin = conn.query_row(
-        "SELECT position_x,position_y,position_z FROM content_creature WHERE map=2669 AND id1=216619 ORDER BY guid LIMIT 1",
-        [], |row| {
-            let (x, y, z) = crate::terrain_height::wow_to_bevy(row.get(0)?, row.get(1)?, row.get(2)?);
-            Ok(shared::components::Position { x, y, z })
-        },
-    ).expect("authored Orator arena, as in native target148 fixtures");
     // This authored2669 scene has no frozen Stockade34 route graph.
     run.app
         .world_mut()
         .remove_resource::<crate::dungeon_simulator::Space>();
-    run.app.insert_resource(crate::test_data::ground_map());
-    run.app.insert_resource(
-        crate::line_of_sight::LineOfSight::load(&crate::ground::ground_data_dir().join("los"))
-            .unwrap(),
-    );
-    origin
+    crate::test_data::install_authored_guardian_arena(&mut run.app)
 }
 
 fn place_guardian_control_in_arena(run: &mut Run, origin: shared::components::Position) {
