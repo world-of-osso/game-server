@@ -1,5 +1,13 @@
 # Follower dungeons
 
+## APL active-enemy admission
+
+- [ ] Dungeon follower entries may require `min_active_enemies`, counting current alive engaged hostile enemies in combat with the actor's group, including its pet combat coverage; no radius-based count or historical pull total.
+- [ ] Keep this independent from geometric `min_enemies`: a radius-less command root can pass active-enemy admission without fake radius/center metadata.
+- [ ] The generator derives conservative per-action minima from pinned APL `active_enemies>N`, boolean guards and called-list reachability; unrestricted alternate uses remain unrestricted. No per-WildThrash threshold branch. Initial source scope is BM253, all applicable actions; no unrequested spec rollout.
+- [ ] Actual Austin ST never casts1264359;2+ engaged enemies retain ordinary command and real pet-child damage. Native RED precedes implementation; no spell, priority, resource, cooldown or damage tuning. Dispersion is outside this BM scope.
+
+
 Follower party roster portraits carry the spawned NPC's actual template-selected `ModelDisplay.display_id`, independent of replication interest. They remain NPC heads; race0 combat-stat inputs must not become synthetic player portrait customization. Ordinary player roster portraits retain canonical customization and head equipment. [Engine portrait contract](../../../game-engine/docs/specs/group-frames.md).
 
 ## Admin harness party staging
