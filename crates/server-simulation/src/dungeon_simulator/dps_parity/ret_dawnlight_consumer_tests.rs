@@ -41,7 +41,15 @@ fn wait_for_damage(run: &mut Run, spell: u32) {
             return;
         }
     }
-    panic!("native spell{spell} never damaged the actual target");
+    let events = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| event.spell_id == Some(spell))
+        .collect::<Vec<_>>();
+    panic!("native spell{spell} never damaged the actual target; events={events:?}");
 }
 
 fn wake_budget() -> Run {
