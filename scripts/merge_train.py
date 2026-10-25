@@ -142,8 +142,15 @@ def merge(entries, log):
 
 
 def check(log):
-    return cargo(log, "check", "--locked", "--workspace", "--all-targets") == 0 \
-        and cargo(log, "fmt", "--check") == 0
+    """Compile check. Formatting is applied, not checked: an unformatted entry would
+    otherwise cost a bisect, and formatter output is never a behavior change."""
+    if cargo(log, "check", "--locked", "--workspace", "--all-targets") != 0:
+        return False
+    if cargo(log, "fmt") != 0:
+        return False
+    if git("status", "--porcelain", "--untracked-files=no").stdout.strip():
+        git("commit", "-qam", "merge train: cargo fmt")
+    return True
 
 
 class MasterBroken(Exception):
