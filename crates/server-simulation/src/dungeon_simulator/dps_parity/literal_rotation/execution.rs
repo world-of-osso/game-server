@@ -557,6 +557,7 @@ fn native_readiness(
         .get(id)
         .cloned()
         .ok_or_else(|| format!("native literal spell{id} absent"))?;
+    spell.cast_destination = action_destination(world, &spell, target)?;
     if let Some(item) = item {
         spell.cast_item_level = Some(item.item_level);
         spell.cast_retail_item_id = Some(item.item_id);
@@ -590,6 +591,27 @@ fn native_readiness(
         }
         Err(reason) => refused_admission(id, reason),
     }
+}
+
+/// TC InitExplicitTargets (Spell.cpp666–678): a cursor action supplies HasDst.
+/// The literal selected unit provides that point; native range/LOS still admit it.
+fn action_destination(
+    world: &World,
+    spell: &crate::spell_info::SpellInfo,
+    target: Entity,
+) -> Result<Option<[f32; 3]>, String> {
+    let cursor = spell.effects.iter().any(|effect| {
+        effect
+            .implicit_targets
+            .iter()
+            .any(|id| matches!(id, 87 | 138))
+    });
+    if !cursor {
+        return Ok(None);
+    }
+    crate::spell_cast::targets::position(world, target)
+        .map(|point| Some(point.to_array()))
+        .ok_or_else(|| format!("native literal cursor target {target:?} lacks a position"))
 }
 
 fn refused_admission(
@@ -647,9 +669,14 @@ pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Re
             Ok(())
         }
         Execution::Spell(id, target, primary) => {
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(id)
+                .ok_or_else(|| format!("native literal spell{id} absent"))?;
             let targets = crate::spell_cast::CastTargets {
                 unit: target,
                 primary,
+                destination: action_destination(world, spell, target)?,
             };
             let result = if world.get::<shared::components::Player>(actor).is_some() {
                 crate::spell_cast::cast_for_player_with_targets(world, actor, id, targets)

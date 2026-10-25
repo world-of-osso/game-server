@@ -295,6 +295,8 @@ mod assisted_costs;
 mod charge_snapshot_tests;
 #[cfg(test)]
 mod combat_area_target_tests;
+#[cfg(test)]
+mod history_apl_tests;
 pub(crate) mod homebind;
 pub(crate) mod jump_charge;
 mod knockback;
@@ -627,6 +629,8 @@ impl ChargeState {
 pub struct SpellHistory {
     /// Ordinary successful casts only; triggered children and failed requests do not advance it.
     successful_casts: HashMap<u32, u64>,
+    #[cfg(any(test, feature = "test-support"))]
+    gcd_casts: Vec<u32>,
     cast_sequence: u64,
     spell_ready_at: HashMap<u32, f64>,
     category_ready_at: HashMap<u32, f64>,
@@ -664,9 +668,28 @@ impl SpellHistory {
             .map(|(&spell, _)| spell)
     }
 
-    fn record_successful_cast(&mut self, spell: u32) {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn previous_gcd_cast(&self, index: usize) -> Option<u32> {
+        self.gcd_casts
+            .len()
+            .checked_sub(index)
+            .and_then(|offset| self.gcd_casts.get(offset).copied())
+    }
+
+    fn record_successful_cast(&mut self, spell: &SpellInfo) {
         self.cast_sequence += 1;
-        self.successful_casts.insert(spell, self.cast_sequence);
+        self.successful_casts.insert(spell.id, self.cast_sequence);
+        // SimC76f8118 action.cpp67–80: successful foreground actions with
+        // trigger_gcd > 0 append; failed, triggered and off-GCD requests do not.
+        #[cfg(any(test, feature = "test-support"))]
+        if gcd_category(spell) != 0
+            && spell
+                .cooldowns
+                .as_ref()
+                .is_some_and(|cd| cd.start_recovery_ms > 0)
+        {
+            self.gcd_casts.push(spell.id);
+        }
     }
 
     fn school_locked(&self, school_mask: u32, now: f64) -> bool {
@@ -1355,6 +1378,8 @@ pub fn cast_for_player_with_target(
 pub struct CastTargets {
     pub unit: Entity,
     pub primary: Option<Entity>,
+    /// Explicit cursor point, retained across cast time and projectile flight.
+    pub destination: Option<[f32; 3]>,
 }
 
 /// Ordinary Player admission with an already selected action context.
@@ -1366,7 +1391,7 @@ pub fn cast_for_player_with_targets(
 ) -> Result<(), CastFailure> {
     let request = SpellCastIntent {
         target_item_guid: None,
-        destination: None,
+        destination: targets.destination,
         spell_id: Some(spell_id),
         spell: String::new(),
         target_entity: Some(targets.unit.to_bits()),
@@ -1975,6 +2000,7 @@ fn validate_start_with_policy(
     casting_restriction::check_cast(world, caster, spell)?;
     shapeshift::check_cast(world, caster, spell)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
+    scripts::check_enhancement_cast(world, caster, spell)?;
     if let Some(block) = crate::auras::cast_blocker(world, caster, spell) {
         return Err(CastFailure::CrowdControlled(block));
     }
@@ -2648,6 +2674,7 @@ fn execute_cast_with_primary(
     druid_transform::before_cast(world, caster, spell, 0)?;
     casting_restriction::check_cast(world, caster, spell)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
+    scripts::check_enhancement_cast(world, caster, spell)?;
     toy_area::check_cast(world, caster, spell.id)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
@@ -2696,7 +2723,7 @@ fn execute_cast_with_primary(
     world
         .get_mut::<SpellHistory>(caster)
         .expect("ordinary successful cast initialized its history")
-        .record_successful_cast(spell.id);
+        .record_successful_cast(spell);
     log_event(
         world,
         cast_event(caster, explicit, spell, CombatLogKind::CastSuccess),
@@ -2733,7 +2760,7 @@ fn execute_cast_with_primary(
     efflorescence::initialize_new_summons(world, caster, previous_efflo_summons);
     scripts::refund_execute(world, caster, spell, explicit, &costs);
     scripts::consume_phalanx(world, caster, spell, explicit);
-    if let Some(hook) = scripts::after_cast(spell.id) {
+    for hook in scripts::after_cast(spell.id) {
         hook(world, caster, spell);
     }
     if !spell.cast_parent_owns_modifier_charges {
@@ -2741,6 +2768,7 @@ fn execute_cast_with_primary(
         scripts::consume_maelstrom_weapon(world, caster, spell);
         scripts::apply_echo_policies(world, caster, spell);
         scripts::after_foreground_spender(world, caster, spell, spell.cast_primary_target);
+        crate::auras::add_ret_crusade_spender_stacks(world, caster, spell, &costs);
         scripts::roll_selected_ret_divine_purpose(world, caster, spell);
         scripts::schedule_empyrean_legacy(world, caster, spell, spell.cast_primary_target);
     }
@@ -3269,7 +3297,7 @@ fn selected_units(plan: &[PlannedEffect]) -> Vec<Entity> {
         .collect()
 }
 
-/// The spell's `OnHit` script on every unit it landed on (`Spell::DoSpellHitOnUnit`).
+/// Source impact policies include misses; native OnHit retains successful-unit admission.
 fn run_hit_scripts(
     world: &mut World,
     caster: Entity,
@@ -3280,11 +3308,9 @@ fn run_hit_scripts(
     let hook = scripts::on_hit(spell.id);
     let context_hook = scripts::on_hit_with_context(spell.id);
     let damage_hook = scripts::on_enemy_damage_hit_with_context(spell.id);
-    if hook.is_none()
-        && context_hook.is_none()
-        && damage_hook.is_none()
-        && spell.cast_policy_context.is_none()
-    {
+    let native_hooks = hook.is_some() || context_hook.is_some() || damage_hook.is_some();
+    let policies = spell.cast_policy_context.is_some() || scripts::has_impact_policy(spell);
+    if !native_hooks && !policies {
         return;
     }
     let ctx = EffectCtx {
@@ -3294,28 +3320,55 @@ fn run_hit_scripts(
         dest: None,
         chain_multiplier: 1.0,
     };
+    dispatch_impact_scripts(world, &ctx, plan, hook, context_hook, damage_hook);
+}
+
+fn dispatch_impact_scripts(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    plan: &TargetPlan,
+    hook: Option<scripts::HitHook>,
+    context_hook: Option<scripts::ContextHitHook>,
+    damage_hook: Option<scripts::ContextHitHook>,
+) {
+    let selected = selected_units(plan);
+    let hits = hit_units(plan).into_iter().collect::<HashSet<_>>();
     let damage_units = if damage_hook.is_some() {
-        enemy_damage_hit_units(world, &ctx)
+        enemy_damage_hit_units(world, ctx)
     } else {
         Vec::new()
     };
-    for unit in hit_units(plan) {
+    for &unit in &selected {
         if world.get_entity(unit).is_err() {
             continue;
         }
-        if let Some(hook) = hook {
-            hook(world, caster, unit, depth);
+        scripts::before_impact_policies(world, ctx, unit);
+        if hits.contains(&unit) {
+            let damage_hook = damage_hook.filter(|_| damage_units.contains(&unit));
+            run_unit_hit_scripts(world, ctx, unit, hook, context_hook, damage_hook);
         }
-        if let Some(hook) = context_hook {
-            hook(world, &ctx, unit);
-        }
-        if let Some(hook) = damage_hook
-            && damage_units.contains(&unit)
-        {
-            hook(world, &ctx, unit);
-        }
-        scripts::apply_hit_policies(world, &ctx, unit);
     }
+    scripts::after_impact_policies(world, ctx, &selected);
+}
+
+fn run_unit_hit_scripts(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    unit: Entity,
+    hook: Option<scripts::HitHook>,
+    context_hook: Option<scripts::ContextHitHook>,
+    damage_hook: Option<scripts::ContextHitHook>,
+) {
+    if let Some(hook) = hook {
+        hook(world, ctx.caster, unit, ctx.depth);
+    }
+    if let Some(hook) = context_hook {
+        hook(world, ctx, unit);
+    }
+    if let Some(hook) = damage_hook {
+        hook(world, ctx, unit);
+    }
+    scripts::apply_hit_policies(world, ctx, unit);
 }
 
 /// Use actual damage TargetInfos, not the union of damage and aura recipients.
@@ -3532,10 +3585,33 @@ fn push_hit_events(
             },
         );
         if harmful {
+            if first_harmful_hit {
+                start_spell_melee_attack(world, caster, spell);
+            }
             elemental_overload::after_hit(world, caster, spell, target, first_harmful_hit);
             first_harmful_hit = false;
         }
     }
+}
+
+/// SimC76f8118 sc_rogue.cpp2685–2687,7863–7872: a successful flagged attack
+/// starts weapon swings once. Native Attributes1 bit9 owns eligibility; retain
+/// the cast's actual hostile primary and any already-running weapon victim/timers.
+fn start_spell_melee_attack(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    const MELEE_COMBAT_START: u32 = 0x200;
+    let flagged = attributes(spell, 1) & MELEE_COMBAT_START != 0;
+    let player = world.get::<Player>(caster).is_some();
+    let attacking = world.get::<crate::combat::AutoAttack>(caster).is_some();
+    if !flagged || !player || attacking {
+        return;
+    }
+    let Some(target) = spell.cast_primary_target else {
+        return;
+    };
+    if !targets::relation_matches(world, caster, target, Relation::Enemy) {
+        return;
+    }
+    crate::combat::start_attack(&mut world.commands(), caster, target, None);
 }
 
 /// `TRIGGER_SPELL`: resolve `spell_id` immediately at `explicit`, ignoring

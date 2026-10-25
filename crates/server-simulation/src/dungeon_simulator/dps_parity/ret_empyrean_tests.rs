@@ -94,6 +94,50 @@ fn wait_for_damage(run: &mut Run, spell: u32) {
 }
 
 #[test]
+#[ignore = "native Legacy Storms must exercise the selected Second Sunrise chance"]
+fn dps_parity_ret_empyrean_background_storm_can_echo_second_sunrise() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = fixture(true);
+    let verdict = resolved_verdict(&run);
+    assert!(has(&run, 431474), "selected native Second Sunrise passive");
+    const LEGACY_CASTS: usize = 32;
+    for _ in 0..LEGACY_CASTS {
+        earn_finisher_power(&mut run, verdict);
+        // Exercise the already-qualified Wrath→Legacy relationship without
+        // changing proc chance or injecting any Storm/Second Sunrise outcome.
+        crate::spell_cast::cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            AVENGING_WRATH,
+            Some(run.actor),
+            1,
+        );
+        let target = run.targets[0];
+        cast_ready(&mut run, verdict, target);
+        for _ in 0..30 {
+            run.app.update();
+        }
+    }
+    let storms = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(DIVINE_STORM)
+                && event.kind == CombatLogKind::Damage
+        })
+        .count();
+    assert!(
+        storms > LEGACY_CASTS,
+        "{LEGACY_CASTS} actual Legacy Storms must earn Second Sunrise repeats; got{storms} hits"
+    );
+}
+
+#[test]
 #[ignore = "selected Legacy must not use the metadata-only every-cast grant"]
 fn dps_parity_ret_empyrean_without_wrath_generators_do_not_grant_legacy() {
     let _seed = crate::random::seed_scope(70448);

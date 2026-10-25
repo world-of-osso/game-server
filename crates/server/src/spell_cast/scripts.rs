@@ -24,32 +24,41 @@ mod batch6;
 mod batch7;
 mod batch8;
 mod batch9;
+mod cast_grants;
+mod cast_resets;
 mod chrono_flame;
 mod clearcasting;
 mod echo_policies;
 mod elemental;
 pub(crate) use elemental::register as register_elemental_policies;
 mod elemental_ascendance;
-pub(super) use echo_policies::after_foreground_cast as apply_echo_policies;
+pub(super) use echo_policies::after_cast as apply_echo_policies;
 pub(super) use elemental::{
     after_launch as finish_scripted_launch,
     capture_damage_modifier as capture_consumed_damage_modifier,
 };
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
+mod enhancement_strikes;
+pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
 mod essence_burst;
+mod feral_frenzy;
+pub(crate) use feral_frenzy::register as register_feral_frenzy;
 mod maelstrom_weapon;
 pub(crate) use maelstrom_weapon::{consume as consume_maelstrom_weapon, snapshots_modifier};
 pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
     maelstrom_weapon::register(scripts);
     enhancement_imbues::register(scripts);
+    enhancement_strikes::register(scripts);
 }
 mod policies;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 pub(crate) use policies::register_channel_policies;
 pub(super) use policies::{
-    after_triggered_cast as apply_triggered_cast_policies, on_hit as apply_hit_policies,
-    snapshot as snapshot_hit_policies,
+    after_impacts as after_impact_policies,
+    after_periodic_damage as apply_periodic_damage_policies,
+    after_triggered_cast as apply_triggered_cast_policies, before_impact as before_impact_policies,
+    has_impact_policy, on_hit as apply_hit_policies, snapshot as snapshot_hit_policies,
 };
 pub(crate) use policies::{
     extends_reapplication, filter_secondary_targets, owns_policy_proc, register_lifecycle_policies,
@@ -129,6 +138,7 @@ pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
 /// TC OnCast runs once after successful checks, before spending and launch.
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
+    cast_grants::on_cast(world, caster, spell_id, depth);
     windwalker::scripted_combo_cast(world, caster, spell_id, depth);
     elemental::before_launch(world, caster, spell_id, depth);
     match spell_id {
@@ -693,8 +703,16 @@ pub(super) use empower_evoker::damage_bonus as empower_damage_bonus;
 
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
-pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
-    if let Some(hook) = policies::after_cast_hook(spell_id) {
+pub fn after_cast(spell_id: u32) -> impl Iterator<Item = AfterCastHook> {
+    // Native handlers and sourced policy relationships are independent effects,
+    // not alternate implementations (SimC76f8118 sc_hunter.cpp5083–5092).
+    native_after_cast(spell_id)
+        .into_iter()
+        .chain(policies::after_cast_hook(spell_id))
+}
+
+fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
+    if let Some(hook) = cast_resets::hook(spell_id) {
         return Some(hook);
     }
     if let Some(hook) = after_cast_auras::hook(spell_id) {
@@ -740,7 +758,8 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         batch10::ARCANE_SURGE => Some(batch10::apply_surge),
         batch9::CONSECRATION => Some(batch9::spawn_consecration),
         batch8::DEMONBOLT => Some(batch8::demonbolt),
-        batch8::CRASH_LIGHTNING => Some(batch8::crash_lightning),
+        batch8::CRASH_LIGHTNING => Some(enhancement_strikes::after_crash),
+        188196 | 188443 | 452201 => Some(enhancement_strikes::after_lightning),
         batch8::ARCANE_BARRAGE => Some(batch8::arcane_barrage),
         batch3::FLASH_HEAL => Some(batch3::flash_heal),
         batch3::PRAYER_OF_HEALING => Some(batch4::prayer),
@@ -833,6 +852,9 @@ pub(super) type TargetPlanHook =
 
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
+    if let Some(hook) = policies::target_plan_hook(spell_id) {
+        return Some(hook);
+    }
     match spell_id {
         1261160 | 224239 | 431911 => Some((Relation::Enemy, ret_damage::area_plan)),
         super::toy_flag::TARGETING => Some((Relation::Any, super::toy_flag::targeting_plan)),
@@ -1558,6 +1580,9 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
         return Some(hook);
     }
     match spell_id {
+        17364 | 115356 | 60103 | 187874 => Some(enhancement_strikes::on_strike),
+        feral_frenzy::FERAL | feral_frenzy::FRANTIC => Some(feral_frenzy::begin),
+        feral_frenzy::FRANTIC_CHILD => Some(feral_frenzy::energize_frantic),
         xuens_battlegear::SCK => Some(xuens_battlegear::capture_sck_parent),
         windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
         voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),

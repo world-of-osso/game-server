@@ -383,6 +383,7 @@ pub fn compute(auras: &ActiveAuras, player_controlled_npc: bool) -> (StatModifie
     acc.combat.flight_speed = slowed(capped(flight, BASE_SPEED));
     acc.combat.swim_speed = slowed(capped(swim, BASE_SWIM_SPEED));
     acc.stats.haste_pct += acc.haste_not_stack;
+    acc.stats.haste_total_pct = super::ret_crusade::haste_total_pct(auras);
     (acc.stats, acc.combat)
 }
 

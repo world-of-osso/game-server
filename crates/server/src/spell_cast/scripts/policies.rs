@@ -5,8 +5,8 @@ use shared::components::{ActiveSpec, PowerType};
 use super::AfterCastHook;
 use crate::auras::ActiveAuras;
 use crate::class_progression::KnownSpells;
-use crate::spell_cast::{CostPool, TargetPlan, effects::EffectCtx, targets};
-use crate::spell_info::{CastPolicyContext, SpellInfo, SpellStore};
+use crate::spell_cast::{CostPool, PlannedEffect, TargetPlan, effects::EffectCtx, targets};
+use crate::spell_info::{CastDamageRole, CastPolicyContext, SpellInfo, SpellStore};
 
 #[derive(Clone, Copy)]
 struct ChannelMomentum {
@@ -19,6 +19,29 @@ struct ChannelMomentum {
 
 #[derive(Clone, Copy)]
 enum Relationship {
+    SpenderPeriodicExtension {
+        resource: PowerType,
+        payload: u32,
+        impact_effect: u8,
+        area_parent: u32,
+        area_effect: u8,
+    },
+    PeriodicSplash {
+        parent: u32,
+        payload: u32,
+        magnitude_spell: u32,
+        percent_effect: u8,
+        cap_effect: u8,
+        radius_slot: u8,
+    },
+    ApplySelfAuraAfterCast {
+        parent: u32,
+        payload: u32,
+    },
+    ConsumeSelfAuraAfterCast {
+        parent: u32,
+        payload: u32,
+    },
     ChannelMomentum(ChannelMomentum),
     ReapplicationExtend {
         payload: u32,
@@ -71,6 +94,36 @@ struct Policy {
 
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
+    // SimC76f8118 sc_hunter.cpp5089/4972,3843–3846: successful Barbed/Cobra
+    // arms selected Nature's Ally; native1276720 owns its value and lifetime.
+    Policy {
+        name: "SIMC_BM_BARBED_NATURES_ALLY",
+        spec: 253,
+        talent: 1273126,
+        relationship: Relationship::ApplySelfAuraAfterCast {
+            parent: 217200,
+            payload: 1276720,
+        },
+    },
+    Policy {
+        name: "SIMC_BM_COBRA_NATURES_ALLY",
+        spec: 253,
+        talent: 1273126,
+        relationship: Relationship::ApplySelfAuraAfterCast {
+            parent: 193455,
+            payload: 1276720,
+        },
+    },
+    // SimC76f8118 sc_hunter.cpp6633: consume only after Kill Command executes.
+    Policy {
+        name: "SIMC_BM_KILL_COMMAND_NATURES_ALLY",
+        spec: 253,
+        talent: 1273126,
+        relationship: Relationship::ConsumeSelfAuraAfterCast {
+            parent: 34026,
+            payload: 1276720,
+        },
+    },
     // SimC76f8118 sc_monk.cpp3970–3998: selected Zenith Stomp fires on Zenith.
     Policy {
         name: "SIMC_WW_ZENITH_STOMP_CHILD",
@@ -96,6 +149,19 @@ const POLICIES: &[Policy] = &[
             primary_only: false,
         },
     },
+    // SimC76f8118 sc_warrior.cpp4452–4456: only Fury Execute main-hand
+    // applies Deep Wounds. Native262115 retains its coefficient and rolling pool.
+    Policy {
+        name: "SIMC_FURY_EXECUTE_DEEP_WOUNDS",
+        spec: 72,
+        talent: 1261060,
+        relationship: Relationship::HitPayload {
+            parent: 280849,
+            payload: 262115,
+            self_target: false,
+            primary_only: false,
+        },
+    },
     // Momentum Boost tooltip: https://warcraft.wiki.gg/wiki/Momentum_Boost
     // SimC76f8118 sc_monk.cpp1699–1704/1730–1734/1839–1841: haste damage,
     // FoF-only stacks, reset and native60%/8s speed on end (also dot.cpp75–81).
@@ -110,6 +176,35 @@ const POLICIES: &[Policy] = &[
             speed: 451298,
             haste_effect: 0,
         }),
+    },
+    // SimC76f8118 sc_paladin.hpp1492–1496/1581–1594: every spender
+    // impact extends owned Dawnlight; primary Storm adds its multi-DoT bonus.
+    Policy {
+        name: "SIMC_RET_ENDLESS_GLEAM",
+        spec: 70,
+        talent: 1263787,
+        relationship: Relationship::SpenderPeriodicExtension {
+            resource: PowerType::HolyPower,
+            payload: 431380,
+            impact_effect: 1,
+            area_parent: 53385,
+            area_effect: 2,
+        },
+    },
+    // SimC76f8118 sc_paladin.cpp2990–2998/3048–3053: resolved tick
+    // times native percent, secondaries only; source also uses effect1 for cap.
+    Policy {
+        name: "SIMC_RET_DAWNLIGHT_PERIODIC_SPLASH",
+        spec: 70,
+        talent: 431377,
+        relationship: Relationship::PeriodicSplash {
+            parent: 431380,
+            payload: 431399,
+            magnitude_spell: 431581,
+            percent_effect: 0,
+            cap_effect: 0,
+            radius_slot: 1,
+        },
     },
     // SimC76f8118 sc_paladin.cpp3016–3026: DOT_EXTEND;
     // source note: "per bolas test Aug 21 2024". Native duration/phase stay owned.
@@ -281,6 +376,246 @@ const POLICIES: &[Policy] = &[
         },
     },
 ];
+
+fn spender_extensions(spell: &SpellInfo) -> impl Iterator<Item = &'static Policy> + '_ {
+    POLICIES.iter().filter(move |policy| {
+        let Relationship::SpenderPeriodicExtension { resource, .. } = policy.relationship else {
+            return false;
+        };
+        spell.cast_damage_role != CastDamageRole::Secondary
+            && spell
+                .power_costs
+                .iter()
+                .any(|cost| cost.power_type == resource as i32)
+    })
+}
+
+pub(in crate::spell_cast) fn has_impact_policy(spell: &SpellInfo) -> bool {
+    spender_extensions(spell).next().is_some()
+}
+
+pub(in crate::spell_cast) fn before_impact(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    for policy in spender_extensions(ctx.spell) {
+        if selected(world, ctx.caster, policy) {
+            extend_spender_impact(world, ctx.caster, target, policy);
+        }
+    }
+}
+
+fn extend_spender_impact(world: &mut World, caster: Entity, target: Entity, policy: &Policy) {
+    let Relationship::SpenderPeriodicExtension {
+        payload,
+        impact_effect,
+        ..
+    } = policy.relationship
+    else {
+        return;
+    };
+    if !owns_periodic(world, caster, target, payload) {
+        return;
+    }
+    if let Some(milliseconds) = read_extension_ms(world, caster, policy, impact_effect) {
+        crate::auras::extend_owned_duration(world, caster, target, &[payload], milliseconds);
+    }
+}
+
+pub(in crate::spell_cast) fn after_impacts(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    targets: &[Entity],
+) {
+    // Ret495–532 echo bypasses the consumer execute; its impact still extends.
+    if ctx.spell.cast_damage_role != CastDamageRole::Primary {
+        return;
+    }
+    for policy in spender_extensions(ctx.spell) {
+        let Relationship::SpenderPeriodicExtension { area_parent, .. } = policy.relationship else {
+            continue;
+        };
+        if ctx.spell.id == area_parent && selected(world, ctx.caster, policy) {
+            extend_spender_area(world, ctx.caster, targets, policy);
+        }
+    }
+}
+
+fn read_owned_targets(
+    world: &World,
+    caster: Entity,
+    payload: u32,
+    targets: &[Entity],
+) -> Vec<Entity> {
+    targets
+        .iter()
+        .copied()
+        .filter(|&target| owns_periodic(world, caster, target, payload))
+        .collect()
+}
+
+fn extend_spender_area(world: &mut World, caster: Entity, targets: &[Entity], policy: &Policy) {
+    let Relationship::SpenderPeriodicExtension {
+        payload,
+        area_effect,
+        ..
+    } = policy.relationship
+    else {
+        return;
+    };
+    let owned = read_owned_targets(world, caster, payload, targets);
+    if owned.len() < 2 {
+        return;
+    }
+    let Some(milliseconds) = read_extension_ms(world, caster, policy, area_effect) else {
+        return;
+    };
+    for target in owned {
+        crate::auras::extend_owned_duration(world, caster, target, &[payload], milliseconds);
+    }
+}
+
+fn read_extension_ms(world: &World, caster: Entity, policy: &Policy, effect: u8) -> Option<u32> {
+    let amount = super::script_effect_value(world, caster, policy.talent, effect);
+    if !amount.is_finite() || !(0.0..=u32::MAX as f32).contains(&amount) {
+        warn!(
+            policy = policy.name,
+            effect, amount, "Native periodic extension invalid"
+        );
+        return None;
+    }
+    Some(amount.round() as u32)
+}
+
+fn splash_policies(parent: u32) -> impl Iterator<Item = &'static Policy> {
+    POLICIES.iter().filter(move |policy| {
+        matches!(policy.relationship,
+        Relationship::PeriodicSplash { parent: id, .. } if id == parent)
+    })
+}
+
+pub(in crate::spell_cast) fn after_periodic_damage(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    amount: f32,
+) {
+    for policy in splash_policies(ctx.spell.id) {
+        if !selected(world, ctx.caster, policy) {
+            continue;
+        }
+        let accepted = cast_periodic_splash(world, ctx, target, amount, policy);
+        if !accepted {
+            warn!(
+                policy = policy.name,
+                ?target,
+                "Native periodic splash refused"
+            );
+        }
+    }
+}
+
+fn cast_periodic_splash(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    amount: f32,
+    policy: &Policy,
+) -> bool {
+    let Relationship::PeriodicSplash {
+        payload,
+        magnitude_spell,
+        percent_effect,
+        ..
+    } = policy.relationship
+    else {
+        unreachable!("periodic splash policy");
+    };
+    let percent = super::script_effect_value(world, ctx.caster, magnitude_spell, percent_effect);
+    // cpp3052–3053 supplies computed tick damage to the native child, not a tuned coefficient.
+    let overrides = super::super::TriggeredSpellOverrides {
+        effect0_amount: Some(amount * percent / 100.0),
+        ..Default::default()
+    };
+    super::super::cast_triggered_with_overrides(
+        world,
+        ctx.caster,
+        payload,
+        Some(target),
+        ctx.depth.saturating_add(1),
+        overrides,
+    )
+}
+
+fn splash_policy(payload: u32) -> Option<&'static Policy> {
+    POLICIES.iter().find(|policy| {
+        matches!(policy.relationship,
+        Relationship::PeriodicSplash { payload: id, .. } if id == payload)
+    })
+}
+
+pub(super) fn target_plan_hook(spell: u32) -> Option<(targets::Relation, super::TargetPlanHook)> {
+    splash_policy(spell).map(|_| {
+        (
+            targets::Relation::Enemy,
+            splash_target_plan as super::TargetPlanHook,
+        )
+    })
+}
+
+fn read_splash_geometry(world: &World, caster: Entity, spell: &SpellInfo) -> (f32, f32) {
+    let policy = splash_policy(spell.id).expect("registered periodic splash policy");
+    let Relationship::PeriodicSplash {
+        magnitude_spell,
+        cap_effect,
+        radius_slot,
+        ..
+    } = policy.relationship
+    else {
+        unreachable!("periodic splash policy");
+    };
+    // Native destination is slot0; its area selector/radius is slot1.
+    let radius = targets::radius(&spell.effects[0], usize::from(radius_slot));
+    let cap = super::script_effect_value(world, caster, magnitude_spell, cap_effect);
+    (radius, cap)
+}
+
+fn soft_cap_multiplier(count: usize, cap: f32) -> f32 {
+    // SimC76f8118 action.cpp1562–1579; max_aoe_enemies defaults to20.
+    const MAX_AOE_ENEMIES: usize = 20;
+    let reduced = if cap > 0.0 && count as f32 > cap {
+        (cap / count.min(MAX_AOE_ENEMIES) as f32).sqrt()
+    } else {
+        1.0
+    };
+    let capped = if count > MAX_AOE_ENEMIES {
+        MAX_AOE_ENEMIES as f32 / count as f32
+    } else {
+        1.0
+    };
+    reduced * capped
+}
+
+fn splash_target_plan(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+) -> TargetPlan {
+    let primary = explicit.expect("native periodic splash requires its actual primary");
+    let center = targets::position(world, primary).expect("periodic splash primary position");
+    let (radius, cap) = read_splash_geometry(world, caster, spell);
+    let mut units = targets::area_units(world, caster, center, radius, targets::Relation::Enemy, 0);
+    units.retain(|&unit| unit != primary);
+    let reduced = soft_cap_multiplier(units.len(), cap);
+    let chain_multipliers = units.iter().map(|&unit| (unit, reduced)).collect();
+    vec![PlannedEffect {
+        index: 0,
+        units,
+        dest: None,
+        chain_multipliers,
+        selected_units: Vec::new(),
+        blocked_units: Vec::new(),
+        prevent_hit_script: false,
+    }]
+}
 
 fn channel_policies() -> impl Iterator<Item = (&'static Policy, ChannelMomentum)> {
     POLICIES
@@ -643,7 +978,9 @@ fn cast_hit_payload(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
 fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
         matches!(policy.relationship,
-        Relationship::CounterAfterCast { parent: trigger, .. }
+        Relationship::ApplySelfAuraAfterCast { parent: trigger, .. }
+        | Relationship::ConsumeSelfAuraAfterCast { parent: trigger, .. }
+        | Relationship::CounterAfterCast { parent: trigger, .. }
         | Relationship::CastEcho { parent: trigger, .. }
         | Relationship::CounterEchoAfterCast { parent: trigger, .. } if trigger == parent)
     })
@@ -679,6 +1016,18 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             continue;
         }
         match policy.relationship {
+            Relationship::ApplySelfAuraAfterCast { payload, .. } => {
+                let depth = super::super::next_trigger_depth(world);
+                super::super::cast_triggered(world, caster, payload, Some(caster), depth);
+            }
+            Relationship::ConsumeSelfAuraAfterCast { payload, .. } => {
+                crate::auras::remove_auras(
+                    world,
+                    caster,
+                    crate::auras::RemoveReason::Consumed,
+                    |aura| aura.spell_id == payload && aura.caster == caster,
+                );
+            }
             Relationship::CounterAfterCast { .. } => grant_counter(world, caster, policy),
             Relationship::CastEcho { .. } => {
                 let depth = super::super::next_trigger_depth(world);

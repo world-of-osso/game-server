@@ -1,5 +1,7 @@
 //! Literal pinned Fury adapter. Native world state owns readiness and all values.
 #[cfg(test)]
+mod deep_wounds_tests;
+#[cfg(test)]
 mod tests;
 use super::{
     Run,
