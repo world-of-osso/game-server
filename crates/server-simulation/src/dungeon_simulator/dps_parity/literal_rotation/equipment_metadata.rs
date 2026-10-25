@@ -55,6 +55,7 @@ pub(super) struct Metadata {
     drivers: BTreeSet<u32>,
     pub stats: BTreeSet<&'static str>,
     pub duration: f64,
+    pub cast_time: f64,
     pub use_buff: bool,
     pub use_damage: bool,
     pub cooldowns: Vec<Cooldown>,
@@ -80,6 +81,7 @@ impl Metadata {
                 metadata.cooldowns.push(cooldown);
             }
         }
+        metadata.cast_time = read_use_cast_time(store, effects)?;
         Ok(metadata)
     }
 
@@ -93,6 +95,35 @@ impl Metadata {
         }
         Ok(0.0)
     }
+}
+
+// SimC76f8118 unique_gear.cpp3878–3907: unhasted action time, channel
+// duration rather than launch time, and0 when no item use action exists.
+fn read_use_cast_time(store: &SpellStore, effects: &[ItemEffect]) -> Result<f64, String> {
+    let Some(effect) = effects.iter().find(|effect| effect.trigger == ON_USE) else {
+        return Ok(0.0);
+    };
+    let spell = read_spell(store, effect.spell_id)?;
+    let misc = spell
+        .misc
+        .as_ref()
+        .ok_or_else(|| format!("native item spell{} lacks timing metadata", spell.id))?;
+    // SpellAttr1 CHANNELED_1/2, same native flags as spell_cast::is_channeled.
+    const CHANNELED: u32 = 0x4 | 0x40;
+    let milliseconds = if misc.attributes[1] & CHANNELED != 0 {
+        misc.duration
+            .ok_or_else(|| format!("native item channel{} lacks duration", spell.id))?
+            .duration_ms
+    } else {
+        misc.cast_time.map_or(0, |cast| cast.base_ms)
+    };
+    if milliseconds < 0 {
+        return Err(format!(
+            "native item spell{} has nonfinite action duration",
+            spell.id
+        ));
+    }
+    Ok(f64::from(milliseconds) / 1000.0)
 }
 
 fn read_buffs(
