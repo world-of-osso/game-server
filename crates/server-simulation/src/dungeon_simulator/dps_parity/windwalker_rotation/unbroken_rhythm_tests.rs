@@ -16,13 +16,21 @@ fn prepare() -> Run {
     let started = run.app.world().resource::<Time>().elapsed();
     super::super::install_fixture_lifetimes(&mut run, started);
     assert!(crate::auras::has_aura(run.app.world(), run.actor, PRODUCER));
-    // Actual Tiger Palm Chi and the existing native aura42 producer, not fixture stacks.
+    // Earn actual Chi first; only source-qualified FoF executes may build tier stacks.
     for _ in 0..3 {
         super::tests::cast(&mut run, 100780);
     }
+    assert!(buff(&run).is_none(), "TP is not the source tier builder");
+    super::tests::cast(&mut run, 113656);
+    for _ in 0..200 {
+        if !crate::auras::has_aura(run.app.world(), run.actor, 113656) {
+            break;
+        }
+        run.app.update();
+    }
     assert!(
         buff(&run).is_some(),
-        "actual TP impacts must earn native1297033"
+        "actual FoF executes earn native1297033"
     );
     assert!(
         events(&run)
@@ -145,7 +153,7 @@ fn capture_ticks(run: &mut Run) {
 
 /// Check resolved damage from its observed native inputs and unaffected source/target
 /// products. This allows script or cast-effectiveness placement, and never rerolls a hit.
-fn assert_tick_damage(run: &Run, expected_bonus: f64, before_hits: usize) -> Value {
+fn assert_tick_damage(run: &Run, expected_bonus: f64, before_hits: usize) {
     let exported = run.app.world().resource::<FactorCapture>().export();
     let rows: Vec<_> = exported["events"]
         .as_array()
@@ -187,18 +195,10 @@ fn assert_tick_damage(run: &Run, expected_bonus: f64, before_hits: usize) -> Val
             "real native damage, not a calculation-only substitute"
         );
     }
-    exported
-}
-
-fn write_factor_receipt(label: &str, factors: &Value) {
-    let path = super::super::inputs::directory()
-        .unwrap()
-        .join(format!("{label}.factors.json"));
-    std::fs::write(path, serde_json::to_vec_pretty(factors).unwrap()).unwrap();
 }
 
 #[test]
-#[ignore = "actual earned native1297033 is consumed once at the SCK parent, producer remains native"]
+#[ignore = "actual earned native1297033 is consumed once and SCK cannot rebuild it"]
 fn literal_ww_native_sck_snapshot_consumes_earned_unbroken_once() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare();
@@ -223,8 +223,8 @@ fn literal_ww_native_sck_snapshot_consumes_earned_unbroken_once() {
     );
     let live = finish_parent(&mut run);
     assert!(
-        live.iter().any(|&stacks| stacks > 0),
-        "native aura42 must still earn a new buff from real NOT_A_PROC107270 ticks"
+        live.iter().all(|&stacks| stacks == 0),
+        "SCK ticks must not rebuild FoF-only tier stacks"
     );
     assert!(crate::auras::has_aura(run.app.world(), run.actor, PRODUCER));
 }
@@ -241,16 +241,15 @@ fn literal_ww_native_sck_snapshot_earned_bonus_is_fixed_across_every_tick() {
     let original_stacks = ((expected - 1.0) / 0.2).round() as u8;
     let live = finish_parent(&mut run);
     assert!(!live.is_empty());
-    let factors = assert_tick_damage(&run, expected, before);
+    assert_tick_damage(&run, expected, before);
     assert!(
         live.iter().any(|&stacks| stacks != original_stacks),
         "live native producer state must differ from the parent's frozen earned amount"
     );
-    write_factor_receipt("sck-earned-snapshot", &factors);
 }
 
 #[test]
-#[ignore = "no-earned parent stays unboosted even as its native ticks legitimately earn a new buff"]
+#[ignore = "no-earned parent stays unboosted and cannot earn FoF-only stacks"]
 fn literal_ww_native_sck_snapshot_no_earned_buff_does_not_read_later_live_stacks() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare();
@@ -264,11 +263,10 @@ fn literal_ww_native_sck_snapshot_no_earned_buff_does_not_read_later_live_stacks
     );
     let live = finish_parent(&mut run);
     assert!(
-        live.iter().any(|&stacks| stacks > 0),
-        "unchanged native producer control"
+        live.iter().all(|&stacks| stacks == 0),
+        "SCK is not a source tier builder"
     );
-    let factors = assert_tick_damage(&run, 1.0, before);
-    write_factor_receipt("sck-no-earned-snapshot", &factors);
+    assert_tick_damage(&run, 1.0, before);
 }
 
 #[test]
@@ -278,6 +276,7 @@ fn literal_ww_native_sck_snapshot_later_parent_does_not_reuse_old_bonus() {
     let mut run = prepare();
     assert!(cast_parent(&mut run) > 1.0);
     finish_parent(&mut run);
+    super::tests::cast(&mut run, 100780); // Real Chi for the later parent, not tier stacks.
     wait_for_natural_buff_expiry(&mut run);
     capture_ticks(&mut run);
     let before = tick_damage(&run).len();
@@ -287,6 +286,40 @@ fn literal_ww_native_sck_snapshot_later_parent_does_not_reuse_old_bonus() {
         "later parent has no earned buff"
     );
     finish_parent(&mut run);
-    let factors = assert_tick_damage(&run, 1.0, before);
-    write_factor_receipt("sck-later-parent-snapshot", &factors);
+    assert_tick_damage(&run, 1.0, before);
+}
+
+#[test]
+#[ignore = "real equipped MID2 FoF-only builder and RSK consumption"]
+fn literal_ww_native_unbroken_source_fof_only_and_rsk_consumption() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(269, 1).unwrap();
+    let started = run.app.world().resource::<Time>().elapsed();
+    super::super::install_fixture_lifetimes(&mut run, started);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, PRODUCER));
+    for _ in 0..3 {
+        super::tests::cast(&mut run, 100780);
+    }
+    assert!(
+        buff(&run).is_none(),
+        "TP must not earn the FoF-execute-only tier buff"
+    );
+    super::tests::cast(&mut run, 113656);
+    for _ in 0..200 {
+        if !crate::auras::has_aura(run.app.world(), run.actor, 113656) {
+            break;
+        }
+        run.app.update();
+    }
+    assert_eq!(
+        buff(&run)
+            .expect("actual FoF executions earn native tier stacks")
+            .stacks,
+        6
+    );
+    super::tests::cast(&mut run, 107428);
+    assert!(
+        buff(&run).is_none(),
+        "actual RSK damage consumes its earned tier buff"
+    );
 }

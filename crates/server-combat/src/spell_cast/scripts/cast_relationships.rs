@@ -9,6 +9,10 @@ use shared::components::ActiveSpec;
 #[derive(Clone, Copy)]
 enum Operation {
     Grant(u32),
+    GrantIfTalent {
+        talent: u32,
+        aura: u32,
+    },
     Consume {
         aura: u32,
         conditional_grant: Option<(u32, u32)>,
@@ -31,6 +35,18 @@ const PRECISE_CONSUMER: Operation = Operation::Consume {
 };
 
 const RULES: &[CastRule] = &[
+    // SimC76f8118 sc_mage.cpp4760–4761: selected Sunfury + Pyroclasm
+    // executes one native buff application, without the HS-spend chance roll.
+    CastRule {
+        name: "SIMC_FIRE_SUNFURY_METEOR_PYROCLASM",
+        spec: 63,
+        talent: 449349,
+        cast: 153561,
+        operation: Operation::GrantIfTalent {
+            talent: 269650,
+            aura: 269651,
+        },
+    },
     // SimC76f8118 sc_hunter.cpp6913–6914: only Trueshot grants Chakram.
     // Native1264902 aura42 supplies1264946 and its actual duration/chance.
     CastRule {
@@ -100,6 +116,35 @@ const RULES: &[CastRule] = &[
         operation: Operation::FreeRecast(1301778),
     },
 ];
+
+struct CritRule {
+    set_aura: u32,
+    modifier: u32,
+    actions: &'static [u32],
+}
+
+const CRIT_RULES: &[CritRule] = &[
+    // SimC76f8118 sc_mage.cpp2369–2370: MID2 adds100% crit for Pyroclasm
+    // hardcasts. Native2060 supplies the earned2pc identity; never grant it.
+    CritRule {
+        set_aura: 1296583,
+        modifier: 269651,
+        actions: &[11366, 2120, 1254851],
+    },
+];
+
+pub(in crate::spell_cast) fn guarantees_crit(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> bool {
+    spell.cast_was_hardcast
+        && CRIT_RULES.iter().any(|rule| {
+            rule.actions.contains(&spell.id)
+                && owns_aura(world, caster, rule.set_aura)
+                && used_modifier(spell, rule.modifier)
+        })
+}
 
 fn selected(world: &World, caster: Entity, rule: &CastRule) -> bool {
     world
@@ -210,6 +255,11 @@ pub(in crate::spell_cast) fn after_cast(world: &mut World, caster: Entity, spell
 fn apply_rule(world: &mut World, caster: Entity, spell: &SpellInfo, rule: &CastRule) {
     match rule.operation {
         Operation::Grant(aura) => grant(world, caster, aura, rule.name),
+        Operation::GrantIfTalent { talent, aura } => {
+            if has_talent(world, caster, talent) {
+                grant(world, caster, aura, rule.name);
+            }
+        }
         Operation::Consume {
             aura,
             conditional_grant,

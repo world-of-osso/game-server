@@ -43,6 +43,47 @@ fn dot_count(run: &Run) -> usize {
         .count()
 }
 
+#[test]
+#[ignore = "native three-target Verdict retains a single hit but spreads Dawnlight"]
+fn dps_parity_dawnlight_targets_verdict_uses_available_secondary() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = native_ret_with_targets(4, 3);
+    let primary = run.targets[0];
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, DAWNLIGHT, Some(primary), 0);
+    cast_and_damage(&mut run, WAKE);
+    assert!(
+        current_holy_power(&run) >= 3.0,
+        "native power admits the ordinary spender"
+    );
+    assert_eq!(budget(&run).unwrap().stacks, 3);
+    cast_finisher(&mut run, VERDICT);
+    wait_for_damage(&mut run, VERDICT);
+    let recipients = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(VERDICT)
+                && event.kind == CombatLogKind::Damage
+        })
+        .filter_map(|event| event.target)
+        .collect::<std::collections::HashSet<_>>();
+    assert_eq!(
+        recipients,
+        std::collections::HashSet::from([run.targets[0].to_bits()]),
+        "Verdict remains single-target"
+    );
+    assert_eq!(
+        dot_count(&run),
+        2,
+        "SimC target_list includes a nearby unhit enemy for the Dawnlight application"
+    );
+    assert_eq!(budget(&run).unwrap().stacks, 2);
+}
+
 fn cast_paid_storm(run: &mut Run) {
     cast_finisher(run, STORM);
     wait_for_damage(run, STORM);

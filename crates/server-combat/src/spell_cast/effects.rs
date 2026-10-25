@@ -950,6 +950,14 @@ fn crit_chance_from_owner(
                 base + spell_bonus,
             )
         });
+    // SimC76f8118 sc_mage.cpp2369–2370: the sourced hardcast policy adds
+    //100% crit to the native chance; target modifiers still apply afterward.
+    let chance = chance
+        + if super::scripts::relationship_guarantees_crit(world, caster, spell) {
+            100.0
+        } else {
+            0.0
+        };
     let modifier = if takes_melee_crit_modifier(spell) {
         world
             .get::<crate::auras::ActiveAuras>(target)
@@ -1630,6 +1638,8 @@ fn damage_source_amount(
         let giantkiller =
             super::scripts::giantkiller_multiplier(world, ctx.caster, target, ctx.spell);
         let ret_damage = super::scripts::ret_damage_multiplier(world, ctx, target, periodic);
+        let shadow_weaving =
+            super::scripts::shadow_weaving_multiplier(world, bonus_caster, target, ctx.spell.id);
         #[cfg(any(test, feature = "test-support"))]
         factor_capture::record_done(
             world,
@@ -1644,9 +1654,18 @@ fn damage_source_amount(
                 ("combo_strikes", combo),
                 ("giantkiller", giantkiller),
                 ("ret_damage", ret_damage),
+                ("shadow_weaving", shadow_weaving),
             ],
         );
-        school_done * versatility * summon * creature * mechanic * combo * giantkiller * ret_damage
+        school_done
+            * versatility
+            * summon
+            * creature
+            * mechanic
+            * combo
+            * giantkiller
+            * ret_damage
+            * shadow_weaving
     };
     let bonus_ctx = EffectCtx {
         caster: bonus_caster,
@@ -1813,6 +1832,13 @@ fn deal_source_damage_and_report(
     } else {
         (source_amount, crit)
     };
+    let hot_streak_hit = !periodic
+        && !resolved_source
+        && ctx.depth == 0
+        && super::scripts::triggers_hot_streak(ctx.spell.id);
+    // Retain the actual pre-damage chance before recipient HP or hit procs change it.
+    let guaranteed_crit =
+        crit && hot_streak_hit && crit_chance(world, ctx.caster, target, ctx.spell) >= 100.0;
     let was_blocked = recorded_hit.map_or_else(
         || super::hit_was_blocked(world, ctx.caster, ctx.spell.id, target),
         |(_, blocked)| blocked,
@@ -1982,8 +2008,8 @@ fn deal_source_damage_and_report(
     if !periodic && !resolved_source {
         super::scripts::after_direct_damage(world, ctx, target, crit);
     }
-    if !periodic && !resolved_source && ctx.depth == 0 {
-        super::scripts::record_fire_hit(world, ctx.caster, ctx.spell, crit);
+    if hot_streak_hit {
+        super::scripts::record_fire_hit(world, ctx.caster, ctx.spell, crit, guaranteed_crit);
     }
     if periodic && ctx.spell.id == super::scripts::FLAME_SHOCK {
         super::scripts::roll_flame_shock_tick(world, ctx.caster);

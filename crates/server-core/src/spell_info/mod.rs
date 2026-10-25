@@ -71,7 +71,8 @@ pub struct ChargedSpellModifier {
 /// Ordinary launch inputs retained for explicit resource-spender hit policies.
 #[derive(Debug, Clone)]
 pub struct CastPolicyContext {
-    pub powers: Vec<PowerType>,
+    /// Effective launch values, retained independently of later resource changes.
+    pub resources: Vec<(PowerType, f32)>,
     pub targets: Vec<Entity>,
 }
 

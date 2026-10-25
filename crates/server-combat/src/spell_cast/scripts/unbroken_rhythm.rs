@@ -1,11 +1,13 @@
 //! SIMC_WW_UNBROKEN_RHYTHM_SCK_SNAPSHOT_CONSUMPTION:
-//! SimC76f8118 sc_monk.cpp1526–1532/1641–1660, native1297033 effect1 values.
+//! SimC76f8118 sc_monk.cpp944/1526–1532/1660/1723–1727; native1297033 values.
 use bevy::prelude::*;
 
 use crate::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
 
 pub(super) const ROOT: u32 = 101546;
 const BUFF: u32 = 1297033;
+const PRODUCER: u32 = 1296624;
+const FOF_DAMAGE: u32 = 117418;
 const TICK_DEPTH: u8 = 1;
 
 /// Actual parent aura identity and its earned damage scalar, not live buff stacks.
@@ -16,6 +18,14 @@ struct SckSnapshot {
 }
 
 pub(crate) fn register_unbroken_rhythm(scripts: &mut auras::scripts::AuraScripts) {
+    // SimC1723–1727 replaces the native unmasked aura42 producer with execute events.
+    scripts.0.insert(
+        PRODUCER,
+        auras::scripts::AuraScript {
+            check_proc: Some(|_, _, _| false),
+            ..Default::default()
+        },
+    );
     scripts.0.insert(
         ROOT,
         auras::scripts::AuraScript {
@@ -23,6 +33,31 @@ pub(crate) fn register_unbroken_rhythm(scripts: &mut auras::scripts::AuraScripts
             ..Default::default()
         },
     );
+}
+
+pub(super) fn after_launch(world: &mut World, caster: Entity, spell: u32) {
+    match spell {
+        FOF_DAMAGE => {
+            // SimC1723–1727: once per regular/tier execute, not per impact or target.
+            let equipped = world.get::<ActiveAuras>(caster).is_some_and(|auras| {
+                auras
+                    .iter()
+                    .any(|aura| aura.spell_id == PRODUCER && aura.caster == caster)
+            });
+            if equipped {
+                crate::spell_cast::cast_triggered(world, caster, BUFF, Some(caster), 1);
+            }
+        }
+        // SimC944/parse_effects.cpp1593–1606 consumes after RSK-family damage.
+        185099 | 468179 => consume_owned_rhythm(world, caster),
+        _ => {}
+    }
+}
+
+fn consume_owned_rhythm(world: &mut World, caster: Entity) {
+    auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+        aura.spell_id == BUFF && aura.caster == caster
+    });
 }
 
 fn earned_multiplier(world: &World, caster: Entity) -> f32 {
@@ -67,9 +102,7 @@ pub(super) fn capture_and_consume(world: &mut World, caster: Entity, unit: Entit
             "SCK parent hit lacks its native aura snapshot context"
         );
     }
-    auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
-        aura.spell_id == BUFF && aura.caster == caster
-    });
+    consume_owned_rhythm(world, caster);
 }
 
 /// Only this parent's real periodic emission carries its frozen effectiveness.

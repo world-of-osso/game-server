@@ -1,8 +1,9 @@
-//! SIMC_SHADOW_TENTACLE_SLAM_CHILDREN: missing native Dummy relationships.
-//! SimC76f8118 sc_priest_shadow.cpp1758–1871; native payloads own all amounts.
+//! Sourced Shadow Dummy relationships and target-dependent mastery.
+//! SimC76f8118 sc_priest_shadow.cpp1758–1871/sc_priest.cpp4285–4341.
+//! Native payloads, mastery and talent effects own all amounts.
 use bevy::prelude::*;
 use rand::seq::SliceRandom;
-use shared::components::Position;
+use shared::components::{ActiveSpec, Position};
 
 use crate::auras::ActiveAuras;
 use crate::class_progression::TraitLoadout;
@@ -14,6 +15,15 @@ const DAMAGE: u32 = 1227621;
 const VT: u32 = 34914;
 const MADDENING_TENTACLES: u32 = 1279353;
 const MADNESS: u32 = 335467;
+const SHADOW_WEAVING: u32 = 343690;
+const MADNESS_WEAVING: u32 = 1240394;
+const VOIDFORM: u32 = 194249;
+const DOTS: &[u32] = &[589, VT, MADNESS];
+// Current native Shadow APL damage; not item/racial procs or reflected self damage.
+// sc_priest.cpp194/1220; sc_priest_shadow.cpp40/561/756/835/1186/1435/1709.
+const WEAVING_PAYLOADS: &[u32] = &[
+    589, 8092, 15407, 32379, VT, 263165, MADNESS, 391403, 450983, DAMAGE, 1242189,
+];
 
 /// SimC sc_priest_shadow.cpp1819–1826 explicitly authors500ms, absent in data.
 /// Keep the override in script policy, not in fabricated native spell records.
@@ -69,7 +79,7 @@ fn apply_slam_dots(world: &mut World, caster: Entity, mut units: Vec<Entity>, de
     // sc_priest_shadow.cpp1758–1785: shuffle only above cap, then prefer fresh VT.
     if units.len() > cap {
         units.shuffle(&mut rand::thread_rng());
-        units.sort_by_key(|&target| owns_vt(world, caster, target));
+        units.sort_by_key(|&target| owns_dot(world, caster, target, VT));
         units.truncate(cap);
     }
     for target in units {
@@ -77,27 +87,23 @@ fn apply_slam_dots(world: &mut World, caster: Entity, mut units: Vec<Entity>, de
     }
 }
 
-fn owns_vt(world: &World, caster: Entity, target: Entity) -> bool {
+fn owns_dot(world: &World, caster: Entity, target: Entity, spell: u32) -> bool {
     let now = super::super::now(world);
     world.get::<ActiveAuras>(target).is_some_and(|auras| {
         auras.iter().any(|aura| {
-            aura.caster == caster
-                && aura.spell_id == VT
-                && aura.expires_at.is_none_or(|expiry| expiry > now)
+            let owned = aura.caster == caster && aura.spell_id == spell;
+            let live = aura.expires_at.is_none_or(|expiry| expiry > now);
+            let periodic = aura.effects.iter().any(|effect| effect.period_ms > 0);
+            owned && live && periodic
         })
     })
 }
 
 fn cast_maddening_tentacles(world: &mut World, caster: Entity, primary: Entity, depth: u8) {
-    let selected = world.get::<TraitLoadout>(caster).is_some_and(|traits| {
-        traits
-            .active_talent_spells()
-            .any(|spell| spell.spell_id == MADDENING_TENTACLES)
-    });
-    if !selected {
+    if !selected(world, caster, MADDENING_TENTACLES) {
         return;
     }
-    let Some(multiplier) = maddening_multiplier(world, caster) else {
+    let Some(percent) = owned_effect_amount(world, caster, MADDENING_TENTACLES, 0) else {
         warn!(?caster, "Maddening Tentacles native effect unavailable");
         return;
     };
@@ -106,15 +112,62 @@ fn cast_maddening_tentacles(world: &mut World, caster: Entity, primary: Entity, 
     };
     // sc_priest_shadow.cpp1272–1275: a background Madness at talent E0 percent.
     // Native rolling-periodic refresh retains unpaid damage from the previous DoT.
-    child.cast_damage_multiplier = Some(multiplier);
+    child.cast_damage_multiplier = Some(percent / 100.0);
     super::super::launch_triggered_spell(world, caster, &child, Some(primary), depth);
 }
 
-fn maddening_multiplier(world: &World, caster: Entity) -> Option<f32> {
+fn selected(world: &World, caster: Entity, talent: u32) -> bool {
+    world.get::<TraitLoadout>(caster).is_some_and(|traits| {
+        traits
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == talent)
+    })
+}
+
+fn owned_effect_amount(world: &World, caster: Entity, spell: u32, index: u8) -> Option<f32> {
     let aura = world
         .get::<ActiveAuras>(caster)?
         .iter()
-        .find(|aura| aura.caster == caster && aura.spell_id == MADDENING_TENTACLES)?;
-    let effect = aura.effects.iter().find(|effect| effect.index == 0)?;
-    Some(effect.amount / 100.0)
+        .find(|aura| aura.caster == caster && aura.spell_id == spell)?;
+    let effect = aura.effects.iter().find(|effect| effect.index == index)?;
+    Some(effect.amount)
+}
+
+/// SimC76f8118 sc_priest.cpp4285–4341: live target DoTs, not a flat school bonus.
+pub(in crate::spell_cast) fn weaving_multiplier(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+) -> f32 {
+    let shadow = world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 258);
+    let eligible = shadow && WEAVING_PAYLOADS.contains(&spell);
+    if !eligible {
+        return 1.0;
+    }
+    let Some(mastery) = owned_effect_amount(world, caster, SHADOW_WEAVING, 0) else {
+        return 1.0;
+    };
+    1.0 + weaving_dots(world, caster, target, spell) * mastery / 100.0
+}
+
+fn weaving_dots(world: &World, caster: Entity, target: Entity, spell: u32) -> f32 {
+    let voidform = crate::auras::has_aura(world, caster, VOIDFORM);
+    let madness = spell == MADNESS || owns_dot(world, caster, target, MADNESS);
+    // An initial DoT hit benefits before its own aura has been installed.
+    let dots = if voidform {
+        3.0
+    } else {
+        DOTS.iter()
+            .filter(|&&dot| spell == dot || owns_dot(world, caster, target, dot))
+            .count() as f32
+    };
+    let extra = if (voidform || madness) && selected(world, caster, MADNESS_WEAVING) {
+        super::script_effect_value(world, caster, MADNESS_WEAVING, 0) / 100.0
+    } else {
+        0.0
+    };
+    dots + extra
 }

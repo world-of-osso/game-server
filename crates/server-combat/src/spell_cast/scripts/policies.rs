@@ -1,9 +1,13 @@
 //! Explicit missing-script policies; native spell records still own payloads.
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, PowerType};
+use std::collections::HashSet;
 
 use super::AfterCastHook;
-use crate::auras::ActiveAuras;
+use crate::auras::{
+    ActiveAuras,
+    spell_mods::{self, SpellModOp},
+};
 use crate::class_progression::KnownSpells;
 use crate::spell_cast::{CostPool, PlannedEffect, TargetPlan, effects::EffectCtx, targets};
 use crate::spell_info::{CastDamageRole, CastPolicyContext, SpellInfo, SpellStore};
@@ -19,6 +23,10 @@ struct ChannelMomentum {
 
 #[derive(Clone, Copy)]
 enum Relationship {
+    OwnedPetSpellAfterCast {
+        parent: u32,
+        payload: u32,
+    },
     TriggerPrimaryAfterCast {
         parent: u32,
         payload: u32,
@@ -43,6 +51,10 @@ enum Relationship {
         payload: u32,
     },
     ConsumeSelfAuraAfterCast {
+        parent: u32,
+        payload: u32,
+    },
+    SpendSelfAuraStackAfterCast {
         parent: u32,
         payload: u32,
     },
@@ -88,6 +100,12 @@ enum Relationship {
         counter: u32,
         count_effect: u8,
     },
+    SpenderAuraExtension {
+        resource: PowerType,
+        parents: &'static [u32],
+        payload: u32,
+        seconds_effect: u8,
+    },
     SpenderHit {
         resource: PowerType,
         counter: u32,
@@ -102,8 +120,47 @@ struct Policy {
     relationship: Relationship,
 }
 
+// sc_rogue.cpp3787/4386/4439/6891 call the shared8704–8716 extension.
+const CUT_TO_THE_CHASE: Relationship = Relationship::SpenderAuraExtension {
+    resource: PowerType::ComboPoints,
+    parents: &[2098, 32645, 196819, 441776],
+    payload: 315496,
+    seconds_effect: 0,
+};
+
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
+    // SimC76f8118 sc_evoker.cpp6584–6595: one successful Disintegrate
+    // spends one earned Mass Disintegrate use, not one per secondary recipient.
+    Policy {
+        name: "SIMC_DEVASTATION_MASS_DISINTEGRATE_CONSUMER",
+        spec: 1467,
+        talent: 436335,
+        relationship: Relationship::SpendSelfAuraStackAfterCast {
+            parent: 356995,
+            payload: 436336,
+        },
+    },
+    // SimC76f8118 sc_evoker.cpp6241–6245: Deep Breath's main impact
+    // executes native353759; DB2 supplies its periodic damage and recipients.
+    Policy {
+        name: "SIMC_DEVASTATION_DEEP_BREATH_PAYLOAD",
+        spec: 1467,
+        talent: 357210,
+        relationship: Relationship::TriggerPrimaryAfterCast {
+            parent: 357210,
+            payload: 353759,
+        },
+    },
+    Policy {
+        name: "SIMC_DEVASTATION_MANEUVERABLE_DEEP_BREATH_PAYLOAD",
+        spec: 1467,
+        talent: 433871,
+        relationship: Relationship::TriggerPrimaryAfterCast {
+            parent: 433874,
+            payload: 353759,
+        },
+    },
     // SimC76f8118 sc_hunter.cpp6702–6703: selected Nature's Ally spawns
     // through its native Effect188 record; native1282474 supplies count/lifetime.
     Policy {
@@ -113,6 +170,17 @@ const POLICIES: &[Policy] = &[
         relationship: Relationship::TriggerPrimaryAfterCast {
             parent: 19574,
             payload: 1282474,
+        },
+    },
+    // SimC76f8118 sc_hunter.cpp6746–6750: every active stable pet applies
+    // Bloodshed after the summon above. Native321538 owns the periodic payload.
+    Policy {
+        name: "SIMC_BM_WRATH_BLOODSHED",
+        spec: 253,
+        talent: 1272099,
+        relationship: Relationship::OwnedPetSpellAfterCast {
+            parent: 19574,
+            payload: 321538,
         },
     },
     // SimC76f8118 sc_hunter.cpp5089/4972,3843–3846: successful Barbed/Cobra
@@ -410,6 +478,24 @@ const POLICIES: &[Policy] = &[
             counter: 431522,
             payload: 431380,
         },
+    },
+    Policy {
+        name: "SIMC_ROGUE_CUT_TO_THE_CHASE",
+        spec: 259,
+        talent: 51667,
+        relationship: CUT_TO_THE_CHASE,
+    },
+    Policy {
+        name: "SIMC_ROGUE_CUT_TO_THE_CHASE",
+        spec: 260,
+        talent: 51667,
+        relationship: CUT_TO_THE_CHASE,
+    },
+    Policy {
+        name: "SIMC_ROGUE_CUT_TO_THE_CHASE",
+        spec: 261,
+        talent: 51667,
+        relationship: CUT_TO_THE_CHASE,
     },
 ];
 
@@ -1067,9 +1153,11 @@ fn roll_replacement_proc(
 fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
         matches!(policy.relationship,
-        Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
+        Relationship::OwnedPetSpellAfterCast { parent: trigger, .. }
+        | Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
         | Relationship::ApplySelfAuraAfterCast { parent: trigger, .. }
         | Relationship::ConsumeSelfAuraAfterCast { parent: trigger, .. }
+        | Relationship::SpendSelfAuraStackAfterCast { parent: trigger, .. }
         | Relationship::CounterAfterCast { parent: trigger, .. }
         | Relationship::ProcReplacement { spell: trigger, .. }
         | Relationship::CastEcho { parent: trigger, .. }
@@ -1077,10 +1165,19 @@ fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     })
 }
 
-fn consumers(powers: &[PowerType]) -> impl Iterator<Item = &'static Policy> + '_ {
+fn consumers(
+    resources: &[(PowerType, f32)],
+    parent: u32,
+) -> impl Iterator<Item = &'static Policy> + '_ {
     POLICIES.iter().filter(move |policy| {
-        matches!(policy.relationship,
-        Relationship::SpenderHit { resource, .. } if powers.contains(&resource))
+        let resource = match policy.relationship {
+            Relationship::SpenderHit { resource, .. } => resource,
+            Relationship::SpenderAuraExtension {
+                resource, parents, ..
+            } if parents.contains(&parent) => resource,
+            _ => return false,
+        };
+        resources.iter().any(|&(power, _)| power == resource)
     })
 }
 
@@ -1107,6 +1204,9 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             continue;
         }
         match policy.relationship {
+            Relationship::OwnedPetSpellAfterCast { payload, .. } => {
+                cast_owned_pet_payload(world, caster, spell, payload);
+            }
             Relationship::TriggerPrimaryAfterCast { payload, .. } => {
                 let depth = super::super::next_trigger_depth(world);
                 super::super::cast_triggered(
@@ -1130,6 +1230,11 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
                     |aura| aura.spell_id == payload && aura.caster == caster,
                 );
             }
+            Relationship::SpendSelfAuraStackAfterCast { payload, .. } => {
+                if let Some(instance) = read_counter_instance(world, caster, payload) {
+                    crate::auras::spend_stack(world, caster, instance);
+                }
+            }
             Relationship::CounterAfterCast { .. } => grant_counter(world, caster, policy),
             Relationship::CastEcho { .. } => {
                 let depth = super::super::next_trigger_depth(world);
@@ -1141,6 +1246,22 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             }
             _ => unreachable!("after-cast policy iterator"),
         }
+    }
+}
+
+fn cast_owned_pet_payload(world: &mut World, caster: Entity, spell: &SpellInfo, payload: u32) {
+    let Some(target) = spell.cast_primary_target else {
+        warn!(
+            ?caster,
+            spell = spell.id,
+            payload,
+            "Owned-pet payload lacks selected primary"
+        );
+        return;
+    };
+    let depth = super::super::next_trigger_depth(world);
+    for pet in crate::hunter_pet::active_owned_pets(world, caster) {
+        super::super::cast_triggered(world, pet, payload, Some(target), depth);
     }
 }
 
@@ -1225,20 +1346,23 @@ pub(in crate::spell_cast) fn snapshot(
     plan: &TargetPlan,
     costs: &[(CostPool, f32)],
 ) -> Option<Box<CastPolicyContext>> {
-    let powers = costs
+    let resources = costs
         .iter()
-        .filter_map(|(pool, _)| match pool {
-            CostPool::Power(power) => Some(*power),
+        .filter_map(|(pool, paid)| match pool {
+            CostPool::Power(power) => Some((
+                *power,
+                super::effective_resource_value(world, caster, spell, *power, *paid),
+            )),
             CostPool::Health => None,
         })
         .collect::<Vec<_>>();
     if spell.cast_parent_owns_modifier_charges
-        || !consumers(&powers).any(|policy| selected(world, caster, policy))
+        || !consumers(&resources, spell.id).any(|policy| selected(world, caster, policy))
     {
         return None;
     }
     let targets = capture_primary_targets(caster, spell, plan)?;
-    Some(Box::new(CastPolicyContext { powers, targets }))
+    Some(Box::new(CastPolicyContext { resources, targets }))
 }
 
 fn capture_primary_targets(
@@ -1278,11 +1402,102 @@ pub(in crate::spell_cast) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, hit:
     if context.targets.first() != Some(&hit) {
         return;
     }
-    for policy in consumers(&context.powers) {
-        if selected(world, ctx.caster, policy) {
-            consume_on_hit(world, ctx.caster, policy, context);
+    for policy in consumers(&context.resources, ctx.spell.id) {
+        if !selected(world, ctx.caster, policy) {
+            continue;
+        }
+        match policy.relationship {
+            Relationship::SpenderAuraExtension { .. } => {
+                extend_spender_aura(world, ctx.caster, policy, context)
+            }
+            _ => consume_on_hit(world, ctx, policy),
         }
     }
+}
+
+fn extend_spender_aura(
+    world: &mut World,
+    caster: Entity,
+    policy: &Policy,
+    context: &CastPolicyContext,
+) {
+    let Some((payload, extension_ms, maximum_ms)) =
+        read_spender_extension(world, caster, policy, context)
+    else {
+        return;
+    };
+    if crate::auras::has_aura(world, caster, payload) {
+        crate::auras::extend_owned_duration_capped(
+            world,
+            caster,
+            caster,
+            &[payload],
+            extension_ms,
+            maximum_ms,
+        );
+        return;
+    }
+    crate::auras::apply_aura(
+        world,
+        &crate::auras::AuraApplication {
+            caster,
+            target: caster,
+            spell_id: payload,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    if !crate::auras::set_owned_duration(
+        world,
+        caster,
+        caster,
+        payload,
+        extension_ms.min(maximum_ms),
+    ) {
+        warn!(
+            policy = policy.name,
+            ?caster,
+            payload,
+            "Native spender aura was not applied"
+        );
+    }
+}
+
+fn read_spender_extension(
+    world: &World,
+    caster: Entity,
+    policy: &Policy,
+    context: &CastPolicyContext,
+) -> Option<(u32, u32, u32)> {
+    let Relationship::SpenderAuraExtension {
+        resource,
+        payload,
+        seconds_effect,
+        ..
+    } = policy.relationship
+    else {
+        return None;
+    };
+    let (_, amount) = context
+        .resources
+        .iter()
+        .find(|&&(power, _)| power == resource)?;
+    if *amount <= 0.0 {
+        return None;
+    }
+    let seconds = super::script_effect_value(world, caster, policy.talent, seconds_effect);
+    let (_, maximum) = super::super::powers::power_value(world, caster, resource)
+        .expect("native spender extension requires its resource pool");
+    let duration = world
+        .resource::<SpellStore>()
+        .get(payload)
+        .and_then(|spell| spell.misc.as_ref()?.duration)
+        .expect("native spender extension payload requires duration");
+    // SimC76f8118 sc_rogue.cpp8712–8716: native seconds per effective point,
+    // capped at the maximum-point payload duration including its30% pandemic.
+    let extension_ms = (*amount * seconds * 1000.0).round() as u32;
+    let maximum_ms = ((maximum + 1.0) * duration.duration_ms as f32 * 1.3).round() as u32;
+    Some((payload, extension_ms, maximum_ms))
 }
 
 fn read_counter_instance(world: &World, caster: Entity, counter: u32) -> Option<u32> {
@@ -1293,7 +1508,8 @@ fn read_counter_instance(world: &World, caster: Entity, counter: u32) -> Option<
         .map(|aura| aura.instance_id)
 }
 
-fn consume_on_hit(world: &mut World, caster: Entity, policy: &Policy, context: &CastPolicyContext) {
+fn consume_on_hit(world: &mut World, ctx: &EffectCtx<'_>, policy: &Policy) {
+    let caster = ctx.caster;
     let Relationship::SpenderHit {
         counter, payload, ..
     } = policy.relationship
@@ -1303,11 +1519,7 @@ fn consume_on_hit(world: &mut World, caster: Entity, policy: &Policy, context: &
     let Some(instance) = read_counter_instance(world, caster, counter) else {
         return;
     };
-    let Some(targets) = read_payload_targets(world, caster, policy, payload, &context.targets)
-    else {
-        return;
-    };
-    let Some(target) = choose_target(world, caster, payload, &targets) else {
+    let Some(target) = read_spender_payload_target(world, ctx, policy, payload) else {
         return;
     };
     if !super::super::try_cast_triggered(world, caster, payload, Some(target), 1) {
@@ -1320,6 +1532,53 @@ fn consume_on_hit(world: &mut World, caster: Entity, policy: &Policy, context: &
         return;
     }
     crate::auras::spend_stack(world, caster, instance);
+}
+
+fn read_spender_payload_target(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    policy: &Policy,
+    payload: u32,
+) -> Option<Entity> {
+    let context = ctx.spell.cast_policy_context.as_ref()?;
+    let available = read_available_targets(world, ctx, &context.targets)?;
+    let targets = read_payload_targets(world, ctx.caster, policy, payload, &available)?;
+    choose_target(world, ctx.caster, payload, &targets)
+}
+
+/// SimC76f8118 action.cpp1738–1780/hpp1512–1535: target_list includes
+/// available enemies even when a single-target spender impacts only its primary.
+fn read_available_targets(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    original: &[Entity],
+) -> Option<Vec<Entity>> {
+    let Some(center) = targets::position(world, ctx.caster) else {
+        warn!(caster = ?ctx.caster, spell = ctx.spell.id, "Native policy caster position unavailable");
+        return None;
+    };
+    let available = query_available_enemies(world, ctx, center);
+    // Original selected units stay first, including the immutable primary.
+    let mut seen = HashSet::new();
+    Some(
+        original
+            .iter()
+            .copied()
+            .chain(available)
+            .filter(|unit| seen.insert(*unit))
+            .collect(),
+    )
+}
+
+fn query_available_enemies(world: &mut World, ctx: &EffectCtx<'_>, center: Vec3) -> Vec<Entity> {
+    let (min, max) = targets::spell_range(ctx.spell, true);
+    let max = spell_mods::modify(world, ctx.caster, ctx.spell, SpellModOp::Range, max);
+    targets::area_units(world, ctx.caster, center, max, targets::Relation::Enemy, 0)
+        .into_iter()
+        .filter(|&unit| {
+            targets::position(world, unit).is_some_and(|position| position.distance(center) >= min)
+        })
+        .collect()
 }
 
 fn read_payload_targets(

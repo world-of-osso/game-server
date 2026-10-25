@@ -74,6 +74,127 @@ fn devastation_literal_empower_rows_preserve_rank_and_primary() {
 
 #[test]
 #[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_deep_breath_cast_damages_the_native_three_target_pack() {
+    let mut run = prepare_literal(1467, 3).unwrap();
+    engage(&mut run);
+    let primary = run.targets[0];
+    let destination = crate::spell_cast::targets::position(run.app.world(), primary)
+        .unwrap()
+        .to_array();
+    crate::spell_cast::creature_cast_with_targets(
+        run.app.world_mut(),
+        run.actor,
+        357210,
+        crate::spell_cast::CastTargets {
+            unit: primary,
+            primary: Some(primary),
+            destination: Some(destination),
+        },
+    )
+    .unwrap();
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(357210)
+                && event.kind == shared::protocol::CombatLogKind::CastSuccess
+        }),
+        "ordinary native Deep Breath must really complete its cast"
+    );
+    // SimC76f8118 sc_evoker.cpp6241–6245: every main impact executes353759.
+    for target in &run.targets {
+        assert!(
+            events.iter().any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(353759)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+            "native Deep Breath cast must damage pack recipient {target:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_mass_disintegrate_native_chain_and_consumption() {
+    let mut run = prepare_literal(1467, 3).unwrap();
+    engage(&mut run);
+    let primary = run.targets[0];
+    for (spell, unit) in [(357208, run.actor), (359073, primary)] {
+        crate::spell_cast::creature_cast_empowered_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            spell,
+            crate::spell_cast::CastTargets {
+                unit,
+                primary: Some(primary),
+                destination: None,
+            },
+            1,
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+    }
+    let stacks = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == 436336 && aura.caster == run.actor)
+            })
+            .map_or(0, |aura| aura.stacks)
+    };
+    assert_eq!(stacks(&run), 2, "two actual empowers earn two uses");
+    crate::spell_cast::creature_cast_with_targets(
+        run.app.world_mut(),
+        run.actor,
+        356995,
+        crate::spell_cast::CastTargets {
+            unit: primary,
+            primary: Some(primary),
+            destination: None,
+        },
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    // SimC76f8118 sc_evoker.cpp6584–6595: only the primary impact spends one use.
+    assert_eq!(
+        stacks(&run),
+        1,
+        "one Disintegrate must spend exactly one earned use"
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for target in &run.targets {
+        assert!(
+            events.iter().any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(356995)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+            "earned Mass Disintegrate must really damage recipient {target:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
 fn devastation_empower_release_grants_selected_mass_disintegrate() {
     let mut run = prepare_literal(1467, 1).unwrap();
     engage(&mut run);

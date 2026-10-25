@@ -8,7 +8,8 @@ mod bouncing_projectiles;
 mod cast_relationships;
 pub(crate) use cast_relationships::register as register_cast_relationships;
 pub(super) use cast_relationships::{
-    after_cast as apply_cast_relationships, ignores_cooldown as relationship_ignores_cooldown,
+    after_cast as apply_cast_relationships, guarantees_crit as relationship_guarantees_crit,
+    ignores_cooldown as relationship_ignores_cooldown,
 };
 mod batch10;
 mod batch11;
@@ -46,6 +47,8 @@ pub(super) use elemental::capture_damage_modifier as capture_consumed_damage_mod
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
 mod enhancement_strikes;
+mod enhancement_tempest;
+mod enhancement_tier;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
 mod essence_burst;
 mod feral_frenzy;
@@ -56,20 +59,31 @@ pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScri
     maelstrom_weapon::register(scripts);
     enhancement_imbues::register(scripts);
     enhancement_strikes::register(scripts);
+    enhancement_tier::register(scripts);
 }
 mod policies;
+mod spellslinger;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 pub(super) use policies::check_cast as check_policy_cast;
 pub(crate) use policies::register_channel_policies;
 pub(super) use policies::{
-    after_impacts as after_impact_policies,
-    after_periodic_damage as apply_periodic_damage_policies,
-    after_triggered_cast as apply_triggered_cast_policies, before_impact as before_impact_policies,
-    has_impact_policy, on_hit as apply_hit_policies, snapshot as snapshot_hit_policies,
+    after_impacts as after_impact_policies, after_triggered_cast as apply_triggered_cast_policies,
+    before_impact as before_impact_policies, has_impact_policy, on_hit as apply_hit_policies,
+    snapshot as snapshot_hit_policies,
 };
 pub(crate) use policies::{
     extends_reapplication, filter_secondary_targets, register_lifecycle_policies,
 };
+
+pub(super) fn apply_periodic_damage_policies(
+    world: &mut World,
+    ctx: &super::effects::EffectCtx,
+    target: Entity,
+    amount: f32,
+) {
+    policies::after_periodic_damage(world, ctx, target, amount);
+    spellslinger::after_periodic_damage(world, ctx, target);
+}
 
 pub(crate) fn owns_policy_proc(spell: u32) -> bool {
     policies::owns_policy_proc(spell) || melee_reset::owns_proc(spell)
@@ -82,7 +96,6 @@ pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
-#[cfg(any(test, feature = "test-support"))]
 pub(super) use hot_streak::triggers_hot_streak;
 pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
@@ -106,9 +119,15 @@ mod ret_tier;
 mod ret_toll;
 pub(super) use ret_tier::after_foreground_spender;
 pub(crate) use ret_tier::owns_arbiter_charge;
+mod resource_values;
+pub(super) use resource_values::{
+    consume_sources as consume_resource_value_sources, effective_value as effective_resource_value,
+};
 mod scourge_strike;
 mod shadow_priest;
-pub(super) use shadow_priest::launch_delay as scripted_launch_delay;
+pub(super) use shadow_priest::{
+    launch_delay as scripted_launch_delay, weaving_multiplier as shadow_weaving_multiplier,
+};
 mod snakeskin_quiver;
 pub(super) use snakeskin_quiver::roll_snakeskin_cobra;
 mod soul_of_the_forest;
@@ -162,6 +181,9 @@ pub(super) fn finish_scripted_launch(
 ) {
     elemental::after_launch(world, caster, spell, consumed, depth, foreground);
     execution_counters::after_launch(world, caster, spell.id);
+    unbroken_rhythm::after_launch(world, caster, spell.id);
+    enhancement_tier::after_launch(world, caster, spell, depth);
+    enhancement_strikes::cast_ride_the_lightning(world, caster, spell, depth);
 }
 
 /// TC OnCast runs once after successful checks, before spending and launch.
@@ -751,6 +773,7 @@ pub fn after_cast(spell_id: u32) -> impl Iterator<Item = AfterCastHook> {
     native_after_cast(spell_id)
         .into_iter()
         .chain(policies::after_cast_hook(spell_id))
+        .chain(spellslinger::after_cast_hook(spell_id))
 }
 
 fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
@@ -802,6 +825,7 @@ fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
         batch8::DEMONBOLT => Some(batch8::demonbolt),
         batch8::CRASH_LIGHTNING => Some(enhancement_strikes::after_crash),
         188196 | 188443 | 452201 => Some(enhancement_strikes::after_lightning),
+        17364 | 115356 | 60103 => Some(enhancement_strikes::grant_elemental_assault),
         batch8::ARCANE_BARRAGE => Some(batch8::arcane_barrage),
         batch3::FLASH_HEAL => Some(batch3::flash_heal),
         batch3::PRAYER_OF_HEALING => Some(batch4::prayer),

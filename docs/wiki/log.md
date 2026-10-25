@@ -1,3 +1,7 @@
+## 2026-10-25 — Fire native binding and proc relationships
+
+[Fire63](systems/simc-apl.md#fire-fixture-adapter): source-selected Flamestrike, selected Meteor→Pyroclasm, retained hardcast crit eligibility and predictable Hot Streak observations. Native data still supplies payloads; numerical parity remains a separate measurement.
+
 ## 2026-10-25 — Havoc literal fixture and Demonic
 
 [Havoc577](systems/simc-apl.md#havoc-fixture-577): shared literal decisions, native cursor context, and talent-sourced Meta before Eye Beam/Gaze with owned-duration extension. Native regressions pass; numerical parity remains open.
