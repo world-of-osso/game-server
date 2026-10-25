@@ -1,0 +1,7494 @@
+{
+  "revision": "53d0e1ce1792e343e25d83adccf18a22f320ff05",
+  "method": "Resolve file mod declarations from lib.rs (including #[path]); scan crate:: and server:: paths and grouped imports; source #[test] inventory, including existing ignored tests. Macro-generated and dynamic edges are not inferred. One schedules/mod.rs match is inside a macro template, not a file. Inbound excludes test/fixture-named files, but may include inline tests. External namespace names are filtered against actual server modules. Confirm finalists manually before moving.",
+  "modules": {
+    "character_data": {
+      "files": [
+        "character_data.rs",
+        "stored_equipment_appearance.rs"
+      ],
+      "tests": 1,
+      "refs": {},
+      "inbound": [],
+      "reachable_gameplay": []
+    },
+    "item_instance": {
+      "files": [
+        "item_instance.rs",
+        "item_instance/bonuses.rs",
+        "item_instance/effects.rs",
+        "item_instance/enchants.rs",
+        "item_instance/load.rs",
+        "item_instance/store.rs"
+      ],
+      "tests": 20,
+      "refs": {},
+      "inbound": [
+        "equipment_effects",
+        "inventory",
+        "item_stats",
+        "persistence",
+        "stats"
+      ],
+      "reachable_gameplay": []
+    },
+    "mythic_plus_catalog": {
+      "files": [
+        "mythic_plus_catalog.rs"
+      ],
+      "tests": 1,
+      "refs": {
+        "mythic_plus_runtime": 1
+      },
+      "inbound": [
+        "mythic_plus"
+      ],
+      "reachable_gameplay": []
+    },
+    "mythic_plus_history": {
+      "files": [
+        "mythic_plus_history.rs"
+      ],
+      "tests": 0,
+      "refs": {},
+      "inbound": [
+        "mythic_plus"
+      ],
+      "reachable_gameplay": []
+    },
+    "mythic_plus_runtime": {
+      "files": [
+        "mythic_plus_runtime.rs"
+      ],
+      "tests": 6,
+      "refs": {},
+      "inbound": [
+        "mythic_plus",
+        "mythic_plus_catalog"
+      ],
+      "reachable_gameplay": []
+    },
+    "pet_battle": {
+      "files": [
+        "pet_battle/mod.rs",
+        "pet_battle/catalog.rs",
+        "pet_battle/effects.rs",
+        "pet_battle/engine.rs",
+        "pet_battle/model.rs",
+        "pet_battle/rules.rs",
+        "pet_battle/stats.rs",
+        "pet_battle/tests.rs",
+        "pet_battle/property_tests.rs",
+        "pet_battle/effects2_tests.rs",
+        "pet_battle/effects3_tests.rs",
+        "pet_battle/effects4_tests.rs",
+        "pet_battle/effects5_tests.rs",
+        "pet_battle/effects6_tests.rs",
+        "pet_battle/effects7_tests.rs",
+        "pet_battle/effects8_tests.rs",
+        "pet_battle/effects9_tests.rs",
+        "pet_battle/effects10_tests.rs",
+        "pet_battle/effects11_tests.rs",
+        "pet_battle/effects12_tests.rs",
+        "pet_battle/effects13_tests.rs",
+        "pet_battle/effects14_tests.rs",
+        "pet_battle/effects15_tests.rs",
+        "pet_battle/effects16_tests.rs",
+        "pet_battle/effects17_tests.rs",
+        "pet_battle/effects18_tests.rs",
+        "pet_battle/effects19_tests.rs",
+        "pet_battle/effects20_tests.rs",
+        "pet_battle/effects21_tests.rs",
+        "pet_battle/effects22_tests.rs",
+        "pet_battle/effects23_tests.rs",
+        "pet_battle/effects24_tests.rs",
+        "pet_battle/effects25_tests.rs"
+      ],
+      "tests": 235,
+      "refs": {},
+      "inbound": [
+        "battle_pets",
+        "pet_journal_state",
+        "wild_pet_battles"
+      ],
+      "reachable_gameplay": []
+    },
+    "raid_history_store": {
+      "files": [
+        "raid_history_store.rs"
+      ],
+      "tests": 1,
+      "refs": {},
+      "inbound": [
+        "raid_history"
+      ],
+      "reachable_gameplay": []
+    },
+    "simc_apl": {
+      "files": [
+        "simc_apl.rs",
+        "simc_apl/expression.rs",
+        "simc_apl/program.rs",
+        "simc_apl/pooling.rs",
+        "simc_apl/context_tests.rs",
+        "simc_apl/pool_tests.rs",
+        "simc_apl/precombat_tests.rs",
+        "simc_apl/program_tests.rs",
+        "simc_apl/run_tests.rs",
+        "simc_apl/target_tests.rs",
+        "simc_apl/tests.rs"
+      ],
+      "tests": 49,
+      "refs": {},
+      "inbound": [
+        "simc_apl_native"
+      ],
+      "reachable_gameplay": []
+    },
+    "native_catalog_cache_tests": {
+      "files": [
+        "test_data/catalog_cache_tests.rs",
+        "test_data/catalog_cache.rs"
+      ],
+      "tests": 8,
+      "refs": {},
+      "inbound": [],
+      "reachable_gameplay": []
+    },
+    "native_catalog_data_tests": {
+      "files": [
+        "test_data/catalog_data_tests.rs",
+        "test_data/../catalog_data.rs"
+      ],
+      "tests": 3,
+      "refs": {},
+      "inbound": [],
+      "reachable_gameplay": []
+    },
+    "achievement": {
+      "files": [
+        "achievement.rs",
+        "achievement_catalog.rs",
+        "achievement_evaluation.rs",
+        "achievement_catalog_tests.rs",
+        "achievement_window.rs",
+        "achievement_window_tests.rs",
+        "achievement_account.rs",
+        "achievement_publication.rs",
+        "dungeon_progress.rs",
+        "achievement_kills.rs",
+        "scenario.rs",
+        "scenario_step82_tests.rs",
+        "scenario_tests.rs",
+        "achievement_writer_tests.rs",
+        "achievement_absent_aura_tests.rs",
+        "achievement_completed_quest_tests.rs",
+        "achievement_constant_worldstate_tests.rs",
+        "achievement_creature_type_tests.rs",
+        "achievement_nested_all_tests.rs",
+        "achievement_tests.rs",
+        "achievement_normal_lock_tests.rs",
+        "achievement_unknown_spell_tests.rs",
+        "achievement_send_perf_tests.rs"
+      ],
+      "tests": 141,
+      "refs": {
+        "auth": 5,
+        "maps": 82,
+        "networking": 1,
+        "persistence": 30,
+        "adventure_guide": 19,
+        "gold": 4,
+        "quest_data": 2,
+        "profession": 9,
+        "class_progression": 8,
+        "mount_journal": 14,
+        "stats": 2,
+        "battle_pets": 16,
+        "ground": 6,
+        "death": 14,
+        "taxi": 1,
+        "area_table": 4,
+        "auras": 50,
+        "hunter_pet": 1,
+        "scripted_ai": 4,
+        "pvp": 4,
+        "faction": 3,
+        "spell_cast": 107,
+        "group": 4,
+        "persistence_writer": 3,
+        "loot": 2,
+        "game_objects": 2,
+        "race_class": 3,
+        "experience": 2,
+        "test_data": 88,
+        "guild_news": 7,
+        "creature_tap": 1,
+        "combat": 16,
+        "world_data": 6,
+        "bank_test_harness": 1,
+        "spell_info": 3,
+        "zones": 6,
+        "unit_creature_type": 3,
+        "persistence_character": 1,
+        "terrain_height": 4,
+        "collection": 4,
+        "world_quest_rewards": 1
+      },
+      "inbound": [
+        "adventure_guide",
+        "auction_house",
+        "auras",
+        "auth_character",
+        "bank",
+        "barber_shop",
+        "battle_pets",
+        "class_progression",
+        "combat",
+        "crafting_orders",
+        "currency",
+        "death",
+        "duel",
+        "economy",
+        "experience",
+        "game_objects",
+        "gold",
+        "inventory",
+        "knockback",
+        "mail",
+        "meeting_stone",
+        "merchant",
+        "messaging",
+        "mirror_timers",
+        "mount_journal",
+        "mythic_plus",
+        "networking",
+        "persistence",
+        "profession",
+        "pvp",
+        "quest",
+        "scripted_ai",
+        "spell_cast",
+        "taxi",
+        "toys",
+        "wild_pet_battles",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "admin_handlers": {
+      "files": [
+        "admin_handlers.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "admin_types": 1,
+        "persistence": 2,
+        "persistence_accounts": 1,
+        "combat": 3,
+        "player_create_info": 1,
+        "persistence_progression": 2,
+        "experience": 1,
+        "rest": 2,
+        "spell_info": 2,
+        "class_progression": 1,
+        "taxi": 1,
+        "gold": 1,
+        "durability": 1,
+        "interest": 1,
+        "terrain_height": 1,
+        "teleport": 1,
+        "maps": 4,
+        "profession": 2,
+        "auras": 1,
+        "networking": 1,
+        "death": 1,
+        "auth": 5,
+        "equipment_admin_types": 1
+      },
+      "inbound": [
+        "admin_ipc",
+        "networking"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "admin_ipc": {
+      "files": [
+        "admin_ipc.rs",
+        "admin_ipc_server.rs"
+      ],
+      "tests": 27,
+      "refs": {
+        "admin_handlers": 1,
+        "admin_types": 2,
+        "persistence": 3,
+        "persistence_accounts": 2,
+        "combat": 3,
+        "taxi": 3,
+        "interest": 2,
+        "item_templates": 5,
+        "merchant": 5,
+        "player_create_info": 5,
+        "gold": 5,
+        "mail": 8,
+        "quest_data": 3,
+        "quest": 3,
+        "maps": 3,
+        "economy": 3,
+        "trading_post": 2,
+        "auth": 10,
+        "mythic_plus": 2,
+        "renown": 1,
+        "inventory": 1,
+        "quest_rules": 1,
+        "followers": 1,
+        "test_data": 1,
+        "death": 4,
+        "networking": 1,
+        "spell_cast": 1,
+        "terrain_height": 1,
+        "equipment_admin_types": 2
+      },
+      "inbound": [],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "admin_types": {
+      "files": [
+        "admin_types.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "equipment_admin_types": 1
+      },
+      "inbound": [
+        "admin_handlers",
+        "admin_ipc",
+        "auction_house",
+        "economy",
+        "maps"
+      ],
+      "reachable_gameplay": []
+    },
+    "adventure_guide": {
+      "files": [
+        "adventure_guide.rs",
+        "adventure_guide_catalog.rs",
+        "adventure_guide_conditions.rs",
+        "adventure_guide_month.rs",
+        "adventure_guide_publication.rs",
+        "adventure_guide_tests.rs"
+      ],
+      "tests": 14,
+      "refs": {
+        "persistence_writer": 2,
+        "maps": 8,
+        "guild_bank": 2,
+        "achievement": 11,
+        "trading_post_store": 4,
+        "auth": 1,
+        "networking": 1,
+        "persistence": 3,
+        "test_data": 7,
+        "bank_test_harness": 11
+      },
+      "inbound": [
+        "achievement",
+        "trading_post",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "appearance_collection": {
+      "files": [
+        "appearance_collection.rs",
+        "appearance_collection_tests.rs"
+      ],
+      "tests": 4,
+      "refs": {
+        "auth": 1,
+        "inventory": 2,
+        "item_templates": 2,
+        "persistence": 4,
+        "gold": 1,
+        "networking": 1,
+        "test_data": 1
+      },
+      "inbound": [
+        "inventory"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "area_table": {
+      "files": [
+        "area_table.rs"
+      ],
+      "tests": 5,
+      "refs": {
+        "faction": 4,
+        "test_data": 4
+      },
+      "inbound": [
+        "achievement",
+        "guild",
+        "guild_news",
+        "meeting_stone",
+        "pvp",
+        "rest",
+        "spell_area",
+        "spell_cast",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "auction_house": {
+      "files": [
+        "auction_house.rs",
+        "auction_house/browse.rs",
+        "auction_house/browse_tests.rs",
+        "auction_house/handlers.rs",
+        "auction_house/operations.rs",
+        "auction_house/queries.rs",
+        "auction_house/search_first_page_tests.rs",
+        "auction_house_tests.rs",
+        "owned_commerce_auction_tests.rs",
+        "auction_house_tests/criteria.rs",
+        "auction_house_tests/load_fixture.rs",
+        "auction_house_tests/actor_parity.rs",
+        "auction_house_tests/clock.rs",
+        "auction_house_tests/core.rs",
+        "auction_house_tests/lifecycle.rs",
+        "auction_house_tests/search.rs",
+        "auction_house_tests/settlement.rs",
+        "auction_house_tests/viewer.rs"
+      ],
+      "tests": 84,
+      "refs": {
+        "auth": 7,
+        "item_templates": 12,
+        "persistence": 12,
+        "achievement": 8,
+        "gold": 11,
+        "maps": 12,
+        "faction": 1,
+        "networking": 3,
+        "npc_interaction": 35,
+        "economy": 11,
+        "test_data": 3,
+        "mail": 3,
+        "owned_commerce_source_tests": 1,
+        "bank_test_harness": 3,
+        "admin_types": 1
+      },
+      "inbound": [
+        "economy",
+        "merchant",
+        "npc_interaction"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "auras": {
+      "files": [
+        "auras/mod.rs",
+        "auras/abundance.rs",
+        "auras/agony.rs",
+        "auras/area_avoidance.rs",
+        "auras/async_stacks.rs",
+        "auras/augmentation.rs",
+        "auras/aura_state.rs",
+        "auras/aura_state/tests.rs",
+        "auras/base_armor.rs",
+        "auras/binding_heals.rs",
+        "auras/charred_warblades.rs",
+        "auras/combat_stats.rs",
+        "auras/damage_shield.rs",
+        "auras/damage_shield_tests.rs",
+        "auras/damage_transfer.rs",
+        "auras/earthen_rage.rs",
+        "auras/ebon_might.rs",
+        "auras/echo_of_light.rs",
+        "auras/effect_immunity.rs",
+        "auras/fear.rs",
+        "auras/fel_devastation.rs",
+        "auras/fixate.rs",
+        "auras/fleeing.rs",
+        "auras/forecast.rs",
+        "auras/handlers.rs",
+        "auras/health_pct_trigger.rs",
+        "auras/ignite.rs",
+        "auras/invisibility.rs",
+        "auras/item_requirements.rs",
+        "auras/light_of_titans.rs",
+        "auras/linked.rs",
+        "auras/linked_summon.rs",
+        "auras/mastery.rs",
+        "auras/mechanic_duration.rs",
+        "auras/mechanic_immunity.rs",
+        "auras/mount.rs",
+        "auras/natures_guardian.rs",
+        "auras/observations.rs",
+        "auras/periodic.rs",
+        "auras/point_mod_tests.rs",
+        "auras/point_mods.rs",
+        "auras/power_amount_trigger.rs",
+        "auras/proc_mask_tests.rs",
+        "auras/procs.rs",
+        "auras/dance_rppm_tests.rs",
+        "auras/proc_event_candidate_tests.rs",
+        "auras/refresh.rs",
+        "auras/ret_sentence.rs",
+        "auras/reward_mods.rs",
+        "auras/rolling_periodic_tests.rs",
+        "auras/scripts.rs",
+        "auras/shapeshift.rs",
+        "auras/spell_mods.rs",
+        "auras/spirit_wolf.rs",
+        "auras/stat_mods.rs",
+        "auras/stealth.rs",
+        "auras/summon_damage.rs",
+        "auras/unit_state.rs",
+        "auras/warrior_stats.rs",
+        "auras/world_state.rs",
+        "auras/world_xp_tests.rs",
+        "auras/override_spell_data.rs",
+        "auras/overrides.rs",
+        "auras/combat_stat_tests.rs",
+        "auras/max_power_pct_tests.rs",
+        "auras/periodic_deadline_tests.rs",
+        "auras/tests.rs",
+        "auras/toy_effects_tests.rs",
+        "auras/agony_tests.rs",
+        "auras/armor_specialization_tests.rs",
+        "auras/augmentation_tests.rs",
+        "auras/autoattack_crit_tests.rs",
+        "auras/base_stat_percent_tests.rs",
+        "auras/bloodsurge_tests.rs",
+        "auras/charred_warblades_tests.rs",
+        "auras/crit_damage_bonus_tests.rs",
+        "auras/critical_chaos_tests.rs",
+        "auras/defensives_tests.rs",
+        "auras/earthen_rage_tests.rs",
+        "auras/ebon_might_tests.rs",
+        "auras/enduring_torment_tests.rs",
+        "auras/fear_tests.rs",
+        "auras/guardian_spirit_controls.rs",
+        "auras/guardian_spirit_tests.rs",
+        "auras/monster_rising_tests.rs",
+        "auras/natures_guardian_tests.rs",
+        "auras/natures_guardian_behavior_tests.rs",
+        "auras/power_strike_tests.rs",
+        "auras/spirit_wolf_tests.rs",
+        "auras/tiger_dash_tests.rs",
+        "auras/total_stat_percent_tests.rs",
+        "auras/versatility_tests.rs",
+        "auras/yseras_gift_tests.rs",
+        "auras/override_tests.rs",
+        "auras/spell_auras_tests.rs",
+        "auras/polymorph_tests.rs",
+        "auras/mage_tests.rs",
+        "auras/mount_tests.rs"
+      ],
+      "tests": 317,
+      "refs": {
+        "auth": 3,
+        "class_progression": 42,
+        "grid_activity": 4,
+        "networking": 4,
+        "spell_cast": 271,
+        "spell_info": 59,
+        "stats": 46,
+        "seething_parachute": 1,
+        "equipment_effects": 2,
+        "combat": 23,
+        "maps": 16,
+        "scripted_ai": 4,
+        "simc_apl_native": 4,
+        "achievement": 1,
+        "quest": 1,
+        "vehicle": 3,
+        "stand_state": 3,
+        "death": 1,
+        "faction": 1,
+        "followers": 4,
+        "creature_aggro": 19,
+        "test_support": 1,
+        "damage_meter": 1,
+        "test_data": 13,
+        "hunter_pet": 2,
+        "level_scaling": 3,
+        "random": 6,
+        "knockback": 1,
+        "creature_ai": 8,
+        "line_of_sight": 3,
+        "interest": 4,
+        "navigation": 4,
+        "item_templates": 5,
+        "profession": 3,
+        "world_data": 10,
+        "zones": 9,
+        "skyriding": 1,
+        "persistence": 12,
+        "persistence_progression": 4,
+        "pvp": 4,
+        "item_stats": 6,
+        "melee": 2,
+        "combat_refs": 1,
+        "toy_catalog": 1,
+        "ground": 1,
+        "unit_target": 2,
+        "group": 1
+      },
+      "inbound": [
+        "achievement",
+        "admin_handlers",
+        "combat",
+        "creature_aggro",
+        "creature_ai",
+        "creature_sight",
+        "equipment_effects",
+        "experience",
+        "followers",
+        "game_objects",
+        "hunter_pet",
+        "interest",
+        "item_proc_data",
+        "knockback",
+        "loot",
+        "mirror_timers",
+        "mount_journal",
+        "networking",
+        "pet_control",
+        "pvp",
+        "quest",
+        "scripted_ai",
+        "seething_parachute",
+        "simc_apl_native",
+        "spell_area",
+        "spell_cast",
+        "stand_state",
+        "toy_catalog",
+        "toys",
+        "trade",
+        "unit_creature_type",
+        "unit_target",
+        "vehicle",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "auth": {
+      "files": [
+        "auth.rs",
+        "auth_writer_tests.rs"
+      ],
+      "tests": 12,
+      "refs": {
+        "auth_character": 1,
+        "persistence": 8,
+        "persistence_accounts": 1,
+        "persistence_writer": 1,
+        "player_create_info": 1,
+        "test_data": 1
+      },
+      "inbound": [
+        "achievement",
+        "admin_handlers",
+        "admin_ipc",
+        "adventure_guide",
+        "appearance_collection",
+        "auction_house",
+        "auras",
+        "auth_character",
+        "bank",
+        "barber_shop",
+        "battle_pets",
+        "calendar",
+        "class_progression",
+        "crafting_orders",
+        "creature_tooltip",
+        "currency",
+        "damage_meter",
+        "death",
+        "duel",
+        "durability",
+        "experience",
+        "followers",
+        "friends",
+        "group",
+        "guild",
+        "guild_bank",
+        "guild_news",
+        "guild_news_network",
+        "guild_perks",
+        "guild_tabards",
+        "housing",
+        "hunter_pet",
+        "ignore_list",
+        "inspect",
+        "inventory",
+        "lfg",
+        "loot",
+        "mail",
+        "maps",
+        "meeting_stone",
+        "merchant",
+        "messaging",
+        "mount_journal",
+        "mythic_plus",
+        "networking",
+        "npc_interaction",
+        "pet_stable",
+        "profession",
+        "pvp",
+        "quest",
+        "quest_time",
+        "renown",
+        "reputation",
+        "rest",
+        "scripted_ai",
+        "spell_area",
+        "spell_cast",
+        "stand_state",
+        "taxi",
+        "threat_updates",
+        "toys",
+        "trade",
+        "trading_post",
+        "transmog",
+        "vehicle",
+        "who",
+        "wild_pet_battles",
+        "world_map",
+        "world_quest_availability",
+        "world_quest_rewards",
+        "world_time"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "auth_character": {
+      "files": [
+        "auth_character.rs",
+        "auth_character_tests.rs"
+      ],
+      "tests": 24,
+      "refs": {
+        "auth": 7,
+        "interest": 1,
+        "item_templates": 1,
+        "merchant": 1,
+        "networking": 2,
+        "persistence": 2,
+        "player_create_info": 2,
+        "profession": 1,
+        "death": 8,
+        "maps": 32,
+        "persistence_writer": 1,
+        "race_class": 1,
+        "achievement": 8,
+        "terrain_height": 3,
+        "spell_cast": 1,
+        "pvp": 7,
+        "currency": 3,
+        "world_map": 2,
+        "friends": 2,
+        "ignore_list": 2,
+        "collection": 5,
+        "faction": 2,
+        "mirror_timers": 4,
+        "durability": 4,
+        "lfg": 1,
+        "stats": 1,
+        "gold": 1,
+        "test_data": 7,
+        "messaging": 1,
+        "world_data": 1,
+        "game_objects": 1,
+        "spawn_pools": 2,
+        "gathering": 2,
+        "ground": 1
+      },
+      "inbound": [
+        "auth"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "bank": {
+      "files": [
+        "bank.rs",
+        "bank_tests.rs",
+        "bank_move_tests.rs",
+        "bank_move_rule_tests.rs"
+      ],
+      "tests": 22,
+      "refs": {
+        "auth": 1,
+        "bank_storage": 2,
+        "gold": 4,
+        "inventory": 4,
+        "item_templates": 2,
+        "npc_interaction": 2,
+        "persistence": 8,
+        "achievement": 4,
+        "bank_test_harness": 6,
+        "test_data": 4,
+        "maps": 1
+      },
+      "inbound": [
+        "guild_bank",
+        "inventory",
+        "profession",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "bank_storage": {
+      "files": [
+        "bank_storage.rs",
+        "bank_storage_tests.rs"
+      ],
+      "tests": 5,
+      "refs": {
+        "persistence": 2
+      },
+      "inbound": [
+        "bank",
+        "guild_bank",
+        "persistence",
+        "profession"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "bank_test_harness": {
+      "files": [
+        "bank_test_harness.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "auth": 1,
+        "bank": 1,
+        "faction": 1,
+        "gold": 1,
+        "guild_bank": 1,
+        "item_templates": 1,
+        "mail": 1,
+        "networking": 1,
+        "npc_interaction": 1,
+        "persistence": 2,
+        "test_data": 2,
+        "area_table": 1,
+        "guild": 1,
+        "inventory": 1,
+        "maps": 2,
+        "game_objects": 6
+      },
+      "inbound": [
+        "auction_house",
+        "guild",
+        "mythic_plus",
+        "raid_history",
+        "world_quest_rewards"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "barber_shop": {
+      "files": [
+        "barber_shop.rs"
+      ],
+      "tests": 6,
+      "refs": {
+        "auth": 1,
+        "gold": 3,
+        "networking": 1,
+        "persistence": 10,
+        "persistence_types": 1,
+        "achievement": 3,
+        "maps": 1,
+        "test_data": 1
+      },
+      "inbound": [],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "battle_pets": {
+      "files": [
+        "battle_pets.rs",
+        "pet_journal_details.rs",
+        "battle_pet_critter_tests.rs",
+        "battle_pet_dismiss_tests.rs",
+        "toys_imaginary_gun_tests.rs",
+        "toys_caster_balloon_tests.rs"
+      ],
+      "tests": 27,
+      "refs": {
+        "auth": 2,
+        "collection": 4,
+        "creature_ai": 3,
+        "interest": 2,
+        "maps": 2,
+        "networking": 2,
+        "persistence": 15,
+        "pet_battle": 5,
+        "spell_info": 4,
+        "wild_pet_battles": 5,
+        "achievement": 1,
+        "spell_cast": 16,
+        "pet_journal_state": 2,
+        "test_data": 3,
+        "group": 1,
+        "auras": 12,
+        "item_templates": 2,
+        "toy_catalog": 1,
+        "game_objects": 1,
+        "gold": 1,
+        "toys": 1,
+        "inventory": 1,
+        "line_of_sight": 1,
+        "ground": 1
+      },
+      "inbound": [
+        "achievement",
+        "collection",
+        "inventory",
+        "pet_journal_state",
+        "spell_cast",
+        "trading_post",
+        "trading_post_store",
+        "wild_pet_battles"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "calendar": {
+      "files": [
+        "calendar.rs"
+      ],
+      "tests": 6,
+      "refs": {
+        "auth": 1,
+        "networking": 1
+      },
+      "inbound": [],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "catalog_data": {
+      "files": [
+        "catalog_data.rs"
+      ],
+      "tests": 0,
+      "refs": {},
+      "inbound": [
+        "followers",
+        "spell_info",
+        "world_data"
+      ],
+      "reachable_gameplay": []
+    },
+    "chair": {
+      "files": [
+        "chair.rs",
+        "chair_tests.rs"
+      ],
+      "tests": 2,
+      "refs": {
+        "game_objects": 3,
+        "stand_state": 1,
+        "terrain_height": 2,
+        "teleport": 1,
+        "test_data": 1
+      },
+      "inbound": [
+        "game_objects",
+        "npc_interaction"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "class_progression": {
+      "files": [
+        "class_progression.rs",
+        "class_progression_tests.rs",
+        "class_progression_loadout_tests.rs",
+        "class_progression_new_class_tests.rs"
+      ],
+      "tests": 43,
+      "refs": {
+        "auth": 7,
+        "networking": 1,
+        "persistence": 2,
+        "persistence_progression": 7,
+        "profession": 4,
+        "race_class": 4,
+        "spell_info": 4,
+        "trait_config": 2,
+        "achievement": 3,
+        "followers": 1,
+        "pvp": 3,
+        "spell_cast": 3,
+        "experience": 4,
+        "player_create_info": 3,
+        "test_data": 4,
+        "auras": 6,
+        "stats": 2,
+        "persistence_character": 14,
+        "guild_perks": 1,
+        "maps": 4,
+        "world_data": 3,
+        "creature_aggro": 1,
+        "combat": 2,
+        "creature_tap": 3,
+        "admin_handlers": 6,
+        "admin_types": 4,
+        "rest": 1
+      },
+      "inbound": [
+        "achievement",
+        "admin_handlers",
+        "auras",
+        "equipment_effects",
+        "followers",
+        "guild_perks",
+        "hunter_pet",
+        "inventory",
+        "item_proc_data",
+        "loot",
+        "mount_journal",
+        "networking",
+        "pet_stable",
+        "player_create_info",
+        "pvp",
+        "simc_apl_native",
+        "skyriding",
+        "spell_cast",
+        "stats"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "collection": {
+      "files": [
+        "collection.rs",
+        "collection_tests.rs"
+      ],
+      "tests": 2,
+      "refs": {
+        "battle_pets": 1,
+        "mount_journal": 1,
+        "persistence": 1
+      },
+      "inbound": [
+        "auth_character",
+        "battle_pets",
+        "persistence"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "combat": {
+      "files": [
+        "combat.rs",
+        "combat_forecast.rs",
+        "combat_enemy_dodge_tests.rs",
+        "combat_npc_general_crit_tests.rs",
+        "combat_npc_victim_block_tests.rs",
+        "combat_tests.rs",
+        "combat_tests/attack_requests.rs",
+        "combat_tests/death.rs",
+        "combat_tests/line_of_sight.rs",
+        "combat_tests/outcomes.rs",
+        "combat_tests/player_damage.rs",
+        "combat_tests/rage.rs",
+        "combat_victim_health_crit_tests.rs"
+      ],
+      "tests": 97,
+      "refs": {
+        "random": 1,
+        "auras": 97,
+        "creature_ai": 2,
+        "creature_scripts": 4,
+        "duel": 5,
+        "faction": 3,
+        "interest": 4,
+        "item_stats": 5,
+        "level_scaling": 13,
+        "line_of_sight": 2,
+        "maps": 13,
+        "melee": 3,
+        "networking": 1,
+        "spell_cast": 50,
+        "stats": 18,
+        "death": 6,
+        "combat_refs": 9,
+        "scripted_ai": 18,
+        "pvp": 5,
+        "zones": 28,
+        "hunter_pet": 4,
+        "hunter_pet_stats": 2,
+        "unit_creature_type": 7,
+        "world_data": 9,
+        "spell_info": 2,
+        "stand_state": 2,
+        "test_support": 5,
+        "vignettes": 3,
+        "creature_aggro": 6,
+        "achievement": 3,
+        "mythic_plus": 1,
+        "creature_tap": 3,
+        "loot": 2,
+        "spawn_pools": 2,
+        "spawn_groups": 3,
+        "grid_activity": 2,
+        "durability": 1,
+        "persistence": 1,
+        "terrain_height": 1,
+        "ground": 1,
+        "test_data": 3,
+        "item_templates": 1
+      },
+      "inbound": [
+        "achievement",
+        "admin_handlers",
+        "admin_ipc",
+        "auras",
+        "creature_aggro",
+        "creature_ai",
+        "creature_sight",
+        "damage_meter",
+        "death",
+        "duel",
+        "experience",
+        "followers",
+        "gathering",
+        "hunter_pet",
+        "loot",
+        "maps",
+        "networking",
+        "pet_control",
+        "pvp",
+        "quest",
+        "reputation",
+        "scripted_ai",
+        "spell_cast",
+        "wild_pet_battles",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "combat_refs": {
+      "files": [
+        "combat_refs.rs",
+        "combat_refs_tests.rs"
+      ],
+      "tests": 10,
+      "refs": {
+        "creature_ai": 1,
+        "creature_aggro": 1,
+        "creature_scripts": 4,
+        "faction": 2,
+        "combat": 4,
+        "spell_cast": 4
+      },
+      "inbound": [
+        "combat",
+        "creature_aggro",
+        "creature_scripts",
+        "followers",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "conditions": {
+      "files": [
+        "conditions.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "zones": 1,
+        "spell_cast": 1,
+        "spell_info": 1
+      },
+      "inbound": [
+        "scripted_ai",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "crafting_orders": {
+      "files": [
+        "crafting_orders/mod.rs",
+        "crafting_orders/cast.rs",
+        "crafting_orders/catalog.rs",
+        "crafting_orders/mail_compat_tests.rs",
+        "crafting_orders/rules.rs",
+        "crafting_orders/runtime.rs",
+        "crafting_orders/store.rs"
+      ],
+      "tests": 1,
+      "refs": {
+        "persistence": 14,
+        "spell_info": 1,
+        "spell_cast": 1,
+        "mail": 7,
+        "profession": 3,
+        "item_templates": 3,
+        "inventory": 4,
+        "gold": 3,
+        "achievement": 1,
+        "auth": 1,
+        "networking": 1,
+        "npc_interaction": 2
+      },
+      "inbound": [
+        "profession",
+        "spell_cast",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "creature_aggro": {
+      "files": [
+        "creature_aggro.rs",
+        "creature_aggro_distance.rs",
+        "creature_threat.rs",
+        "creature_aggro_tests.rs"
+      ],
+      "tests": 43,
+      "refs": {
+        "combat": 6,
+        "creature_ai": 3,
+        "death": 1,
+        "faction": 5,
+        "grid_activity": 1,
+        "maps": 11,
+        "networking": 1,
+        "taxi": 1,
+        "creature_sight": 1,
+        "creature_scripts": 2,
+        "scripted_ai": 19,
+        "line_of_sight": 5,
+        "followers": 2,
+        "auras": 19,
+        "combat_refs": 1,
+        "spell_cast": 11,
+        "creature_tap": 1,
+        "spell_info": 1,
+        "test_data": 4,
+        "world_data": 2,
+        "zones": 3,
+        "interest": 2
+      },
+      "inbound": [
+        "auras",
+        "combat",
+        "combat_refs",
+        "creature_ai",
+        "creature_sight",
+        "followers",
+        "rest",
+        "scripted_ai",
+        "spell_cast",
+        "world_data",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "creature_ai": {
+      "files": [
+        "creature_ai.rs",
+        "creature_ai_tests.rs",
+        "creature_ai_tests/chase.rs",
+        "creature_ai_tests/integration.rs",
+        "creature_ai_tests/leash.rs",
+        "creature_ai_tests/movement.rs",
+        "creature_ai_tests/return_to_spawn.rs",
+        "creature_ai_tests/state.rs",
+        "creature_ai_tests/stockade_chase.rs",
+        "creature_ai_tests/current_victim.rs",
+        "creature_ai_tests/wander.rs",
+        "creature_ai_tests/waypoint.rs"
+      ],
+      "tests": 69,
+      "refs": {
+        "auras": 1,
+        "combat": 2,
+        "grid_activity": 1,
+        "ground": 5,
+        "interest": 1,
+        "maps": 14,
+        "navigation": 11,
+        "terrain_height": 2,
+        "world_data": 7,
+        "knockback": 3,
+        "scripted_ai": 18,
+        "spell_cast": 4,
+        "line_of_sight": 16,
+        "followers": 9,
+        "creature_aggro": 2,
+        "death": 2,
+        "networking": 4,
+        "zones": 3
+      },
+      "inbound": [
+        "auras",
+        "battle_pets",
+        "combat",
+        "combat_refs",
+        "creature_aggro",
+        "creature_sight",
+        "death",
+        "followers",
+        "grid_activity",
+        "hunter_pet",
+        "maps",
+        "networking",
+        "pet_control",
+        "scripted_ai",
+        "simc_apl_native",
+        "spell_cast",
+        "unit_target",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "creature_scripts": {
+      "files": [
+        "creature_scripts.rs",
+        "creature_scripts_tests.rs"
+      ],
+      "tests": 5,
+      "refs": {
+        "combat_refs": 2,
+        "auras": 1,
+        "combat": 2,
+        "spell_cast": 3
+      },
+      "inbound": [
+        "combat",
+        "combat_refs",
+        "creature_aggro",
+        "spell_cast",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "creature_sight": {
+      "files": [
+        "creature_sight.rs",
+        "creature_sight_tests.rs"
+      ],
+      "tests": 8,
+      "refs": {
+        "line_of_sight": 5,
+        "combat": 5,
+        "creature_aggro": 10,
+        "creature_ai": 2,
+        "faction": 1,
+        "grid_activity": 1,
+        "interest": 1,
+        "maps": 2,
+        "scripted_ai": 4,
+        "world_data": 1,
+        "auras": 3,
+        "networking": 1,
+        "spell_cast": 1,
+        "test_data": 1
+      },
+      "inbound": [
+        "creature_aggro"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "creature_tap": {
+      "files": [
+        "creature_tap.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "group": 1,
+        "persistence": 1,
+        "spell_cast": 1,
+        "maps": 2
+      },
+      "inbound": [
+        "achievement",
+        "combat",
+        "creature_aggro",
+        "experience",
+        "loot",
+        "pvp",
+        "quest",
+        "reputation",
+        "scripted_ai",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "creature_tooltip": {
+      "files": [
+        "creature_tooltip.rs",
+        "creature_tooltip_tests.rs"
+      ],
+      "tests": 3,
+      "refs": {
+        "auth": 1,
+        "item_templates": 2,
+        "loot": 2,
+        "merchant": 2,
+        "world_data": 2,
+        "test_data": 1
+      },
+      "inbound": [],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "currency": {
+      "files": [
+        "currency.rs",
+        "currency_tests.rs"
+      ],
+      "tests": 7,
+      "refs": {
+        "auth": 1,
+        "networking": 1,
+        "persistence": 2,
+        "achievement": 5,
+        "pvp": 3
+      },
+      "inbound": [
+        "auth_character",
+        "merchant",
+        "profession",
+        "pvp",
+        "quest",
+        "world_quest_rewards"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "damage_meter": {
+      "files": [
+        "damage_meter.rs",
+        "damage_meter_tests.rs"
+      ],
+      "tests": 21,
+      "refs": {
+        "auth": 1,
+        "group": 2,
+        "networking": 1,
+        "persistence": 1,
+        "hunter_pet": 1,
+        "combat": 2,
+        "spell_cast": 17,
+        "creature_scripts": 1,
+        "creature_ai": 1,
+        "auras": 2,
+        "maps": 1,
+        "combat_refs": 2
+      },
+      "inbound": [
+        "auras",
+        "death",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "death": {
+      "files": [
+        "death.rs",
+        "death/resurrection.rs",
+        "death_support.rs",
+        "death/transitions.rs",
+        "death_tests.rs"
+      ],
+      "tests": 13,
+      "refs": {
+        "auth": 2,
+        "durability": 12,
+        "faction": 1,
+        "interest": 2,
+        "maps": 14,
+        "networking": 3,
+        "teleport": 2,
+        "world_data": 3,
+        "combat": 6,
+        "terrain_height": 2,
+        "spell_cast": 6,
+        "spell_info": 1,
+        "followers": 4,
+        "creature_ai": 1,
+        "persistence": 7,
+        "damage_meter": 1,
+        "mythic_plus": 1,
+        "achievement": 1,
+        "pvp": 1,
+        "stand_state": 1,
+        "creature_aggro": 1
+      },
+      "inbound": [
+        "achievement",
+        "admin_handlers",
+        "admin_ipc",
+        "auras",
+        "auth_character",
+        "combat",
+        "creature_aggro",
+        "creature_ai",
+        "experience",
+        "followers",
+        "group",
+        "knockback",
+        "maps",
+        "mirror_timers",
+        "networking",
+        "persistence",
+        "pvp",
+        "quest",
+        "scripted_ai",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "duel": {
+      "files": [
+        "duel.rs",
+        "duel_tests.rs"
+      ],
+      "tests": 9,
+      "refs": {
+        "auth": 2,
+        "networking": 1,
+        "achievement": 2,
+        "combat": 2,
+        "spell_cast": 1,
+        "death": 1,
+        "test_data": 1,
+        "maps": 1
+      },
+      "inbound": [
+        "combat",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "durability": {
+      "files": [
+        "durability.rs"
+      ],
+      "tests": 7,
+      "refs": {
+        "auth": 1,
+        "networking": 1,
+        "persistence": 1,
+        "test_data": 1
+      },
+      "inbound": [
+        "admin_handlers",
+        "auth_character",
+        "combat",
+        "death",
+        "merchant",
+        "networking",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "economy": {
+      "files": [
+        "economy/mod.rs",
+        "economy/cycle.rs",
+        "economy/ids.rs",
+        "economy/model.rs",
+        "economy/model_tests.rs",
+        "economy/publication.rs",
+        "economy/store.rs",
+        "economy/store_tests.rs",
+        "economy/fifo_tests.rs",
+        "economy/tests.rs"
+      ],
+      "tests": 54,
+      "refs": {
+        "auction_house": 8,
+        "persistence": 16,
+        "gold": 9,
+        "admin_types": 4,
+        "merchant": 1,
+        "persistence_writer": 1,
+        "achievement": 1,
+        "test_data": 7,
+        "auth": 2
+      },
+      "inbound": [
+        "admin_ipc",
+        "auction_house",
+        "merchant",
+        "persistence"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "equipment_admin_types": {
+      "files": [
+        "equipment_admin_types.rs"
+      ],
+      "tests": 0,
+      "refs": {},
+      "inbound": [
+        "admin_handlers",
+        "admin_ipc",
+        "admin_types",
+        "persistence"
+      ],
+      "reachable_gameplay": []
+    },
+    "equipment_effects": {
+      "files": [
+        "equipment_effects.rs",
+        "equipment_effects/item_sets.rs"
+      ],
+      "tests": 6,
+      "refs": {
+        "auras": 27,
+        "spell_info": 1,
+        "stats": 3,
+        "item_instance": 3,
+        "item_templates": 2,
+        "item_stats": 2,
+        "spell_cast": 3,
+        "test_data": 1,
+        "item_proc_data": 3,
+        "class_progression": 5,
+        "profession": 1
+      },
+      "inbound": [
+        "auras"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "experience": {
+      "files": [
+        "experience.rs",
+        "experience_tests.rs"
+      ],
+      "tests": 17,
+      "refs": {
+        "auth": 1,
+        "combat": 1,
+        "creature_tap": 1,
+        "death": 1,
+        "group": 1,
+        "networking": 1,
+        "persistence": 2,
+        "persistence_progression": 2,
+        "rest": 1,
+        "spell_cast": 2,
+        "world_data": 1,
+        "spell_info": 1,
+        "achievement": 7,
+        "stats": 1,
+        "maps": 4,
+        "auras": 3,
+        "test_data": 1
+      },
+      "inbound": [
+        "achievement",
+        "admin_handlers",
+        "class_progression",
+        "quest",
+        "quest_bonus_money",
+        "rest",
+        "world_quest_rewards"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "faction": {
+      "files": [
+        "faction.rs",
+        "faction_tests.rs"
+      ],
+      "tests": 15,
+      "refs": {
+        "test_data": 1
+      },
+      "inbound": [
+        "achievement",
+        "area_table",
+        "auras",
+        "auth_character",
+        "combat",
+        "combat_refs",
+        "creature_aggro",
+        "creature_sight",
+        "death",
+        "followers",
+        "hunter_pet",
+        "item_templates",
+        "mail",
+        "merchant",
+        "npc_interaction",
+        "pet_control",
+        "pvp",
+        "quest",
+        "quest_rules",
+        "rest",
+        "scripted_ai",
+        "spell_cast",
+        "taxi",
+        "trade",
+        "transmog",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "followers": {
+      "files": [
+        "followers/mod.rs",
+        "followers/action_knowledge_tests.rs",
+        "followers/ai.rs",
+        "followers/catalog.rs",
+        "followers/darkflame_drop_tests.rs",
+        "followers/empower_policy.rs",
+        "followers/hazards.rs",
+        "followers/healer_benchmark_profile_tests.rs",
+        "followers/healer_context.rs",
+        "followers/healer_group_cancel_tests.rs",
+        "followers/healer_policy.rs",
+        "followers/healer_triage.rs",
+        "followers/holy_policy.rs",
+        "followers/holy_policy_native_tests.rs",
+        "followers/holy_policy_native_tests/echo_of_light.rs",
+        "followers/holy_priest_tests.rs",
+        "followers/holy_threat_tests.rs",
+        "followers/kit.rs",
+        "followers/kit_ai.rs",
+        "followers/cast_while_casting_tests.rs",
+        "followers/healer_triage_tests.rs",
+        "followers/resto_policy_tests.rs",
+        "followers/kit_area.rs",
+        "followers/kit_defensive_fidelity_tests.rs",
+        "followers/kit_empower_tests.rs",
+        "followers/kit_hunter_policy_tests.rs",
+        "followers/kit_interrupt.rs",
+        "followers/kit_light_of_titans_tests.rs",
+        "followers/native_action_override_tests.rs",
+        "followers/native_book_tests.rs",
+        "followers/proc_definition_tests.rs",
+        "followers/fire_efficiency_tests.rs",
+        "followers/formation_tests.rs",
+        "followers/giantkiller_tests.rs",
+        "followers/intensifying_flame_tests.rs",
+        "followers/kit_elemental_resource_tests.rs",
+        "followers/kit_proc_fidelity_tests.rs",
+        "followers/kit_rotation_fidelity_tests.rs",
+        "followers/kit_rotation_tests.rs",
+        "followers/meteor_tests.rs",
+        "followers/pack_identity.rs",
+        "followers/party.rs",
+        "followers/party_staging.rs",
+        "followers/party_staging_tests.rs",
+        "followers/pull_frontal_tests.rs",
+        "followers/positioning.rs",
+        "followers/pull_admission.rs",
+        "followers/pull_admission_tests.rs",
+        "followers/pull_budget.rs",
+        "followers/pull_budget_tests.rs",
+        "followers/pull_corner_tests.rs",
+        "followers/pull_eligibility_tests.rs",
+        "followers/pull_endpoint_tests.rs",
+        "followers/pull_forecast_tests.rs",
+        "followers/pull_goal_tests.rs",
+        "followers/pull_history.rs",
+        "followers/pull_history_tests.rs",
+        "followers/pull_movement_tests.rs",
+        "followers/pull_position_tests.rs",
+        "followers/pull_cast_origins_tests.rs",
+        "followers/pull_readiness.rs",
+        "followers/pull_readiness_tests.rs",
+        "followers/pull_route.rs",
+        "followers/pull_route_paths.rs",
+        "followers/pull_route_tests.rs",
+        "followers/pull_sources.rs",
+        "followers/pull_sources_tests.rs",
+        "followers/pull_stat_provenance_tests.rs",
+        "followers/resto_policy.rs",
+        "followers/rotation_dummy_tests.rs",
+        "followers/simulator.rs",
+        "followers/simulator/healer_profiles.rs",
+        "followers/spawning.rs",
+        "followers/stockade_diagnostic.rs",
+        "followers/tank_defense.rs",
+        "followers/tank_frontal.rs",
+        "followers/tank_planner.rs",
+        "followers/tank_planner_tests.rs",
+        "followers/utility.rs",
+        "followers/utility_buff_tests.rs",
+        "followers/utility_interrupt.rs",
+        "followers/utility_policy_tests.rs",
+        "followers/group_buff_tests.rs",
+        "followers/catalog_tests.rs",
+        "followers/cc_tests.rs",
+        "followers/combat_refs_tests.rs",
+        "followers/control_cast_stop_tests.rs",
+        "followers/defensive_tests.rs",
+        "followers/hazard_reaction_tests.rs",
+        "followers/hazard_tests.rs",
+        "followers/kit_abundance_tests.rs",
+        "followers/kit_clearcasting_tests.rs",
+        "followers/kit_dot_ownership_tests.rs",
+        "followers/kit_germination_tests.rs",
+        "followers/kit_interrupt_tests.rs",
+        "followers/kit_lifebloom_refresh_tests.rs",
+        "followers/kit_soul_of_forest_tests.rs",
+        "followers/kit_source_tests.rs",
+        "followers/kit_swiftmend_consumption_tests.rs",
+        "followers/kit_swiftmend_tests.rs",
+        "followers/kit_tests.rs",
+        "followers/kit_tranquil_mind_tests.rs",
+        "followers/kit_utility_tests.rs",
+        "followers/kit_wild_growth_tests.rs",
+        "followers/native_fixture.rs",
+        "followers/navigation_tests.rs",
+        "followers/passive_stats_tests.rs",
+        "followers/pet_coverage_tests.rs",
+        "followers/pet_tests.rs",
+        "followers/profile_behavior_tests.rs",
+        "followers/pyroclasm_tests.rs",
+        "followers/rotation_defense_tests.rs",
+        "followers/rotation_imp_tests.rs",
+        "followers/rotation_measurements.rs",
+        "followers/rotation_override_tests.rs",
+        "followers/rotation_proc_tests.rs",
+        "followers/rotation_refresh_tests.rs",
+        "followers/rotation_tests.rs",
+        "followers/tests.rs",
+        "followers/utility_tests.rs",
+        "followers/wire_tests.rs"
+      ],
+      "tests": 580,
+      "refs": {
+        "group": 14,
+        "maps": 115,
+        "creature_aggro": 42,
+        "creature_ai": 102,
+        "spell_cast": 582,
+        "class_progression": 31,
+        "test_data": 66,
+        "auras": 344,
+        "networking": 88,
+        "combat": 51,
+        "pet_control": 25,
+        "hunter_pet": 24,
+        "combat_refs": 14,
+        "spell_info": 113,
+        "catalog_data": 4,
+        "ground": 38,
+        "scripted_ai": 35,
+        "navigation": 43,
+        "world_data": 36,
+        "level_scaling": 12,
+        "persistence": 19,
+        "stats": 35,
+        "random": 28,
+        "test_support": 3,
+        "trait_config": 5,
+        "terrain_height": 10,
+        "lfg": 14,
+        "zones": 47,
+        "grid_activity": 1,
+        "interest": 2,
+        "admin_types": 5,
+        "admin_ipc": 1,
+        "line_of_sight": 14,
+        "creature_sight": 1,
+        "melee": 2,
+        "faction": 2,
+        "auth": 2,
+        "death": 3,
+        "creature_scripts": 1,
+        "creature_tap": 2
+      },
+      "inbound": [
+        "admin_ipc",
+        "auras",
+        "class_progression",
+        "creature_aggro",
+        "creature_ai",
+        "death",
+        "game_objects",
+        "group",
+        "hunter_pet",
+        "lfg",
+        "maps",
+        "mythic_plus",
+        "npc_interaction",
+        "scripted_ai",
+        "simc_apl_native",
+        "spell_cast",
+        "stats",
+        "test_support",
+        "world_area_triggers",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "frame_stats": {
+      "files": [
+        "frame_stats.rs"
+      ],
+      "tests": 2,
+      "refs": {},
+      "inbound": [],
+      "reachable_gameplay": []
+    },
+    "friends": {
+      "files": [
+        "friends.rs",
+        "friends/auto_afk.rs",
+        "friends_tests.rs",
+        "friends_tests/auto_afk.rs"
+      ],
+      "tests": 18,
+      "refs": {
+        "auth": 1,
+        "networking": 1,
+        "persistence": 7,
+        "messaging": 1
+      },
+      "inbound": [
+        "auth_character",
+        "messaging",
+        "networking",
+        "persistence"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "game_objects": {
+      "files": [
+        "game_objects.rs",
+        "game_objects/collision.rs",
+        "game_objects/collision_tests.rs",
+        "game_objects/cooking_focus.rs",
+        "game_objects/cooking_focus_spells.rs",
+        "game_objects/cooking_traps.rs",
+        "game_objects/identity_conditions.rs",
+        "game_objects/locks.rs",
+        "game_objects/quest_object.rs",
+        "game_objects/seaforium_bombs.rs",
+        "game_objects/spellcaster.rs",
+        "game_objects/summoned.rs",
+        "game_objects_tests.rs"
+      ],
+      "tests": 17,
+      "refs": {
+        "interest": 4,
+        "terrain_height": 2,
+        "pvp": 3,
+        "chair": 4,
+        "maps": 15,
+        "spawn_groups": 1,
+        "followers": 1,
+        "gathering": 2,
+        "scripted_ai": 4,
+        "networking": 3,
+        "knockback": 1,
+        "zones": 1,
+        "ground": 11,
+        "line_of_sight": 1,
+        "transport_catalog": 1,
+        "test_data": 4,
+        "spell_cast": 10,
+        "toy_catalog": 1,
+        "race_class": 2,
+        "persistence": 4,
+        "quest_data": 1,
+        "quest_view": 1,
+        "quest_rules": 1,
+        "spell_info": 4,
+        "loot": 1,
+        "quest": 1,
+        "achievement": 1,
+        "group": 1,
+        "auras": 2,
+        "meeting_stone": 5
+      },
+      "inbound": [
+        "achievement",
+        "chair",
+        "gathering",
+        "ground",
+        "housing",
+        "housing_catalog",
+        "line_of_sight",
+        "loot",
+        "maps",
+        "meeting_stone",
+        "mythic_plus",
+        "networking",
+        "npc_interaction",
+        "pvp",
+        "scripted_ai",
+        "spawn_groups",
+        "spawn_pools",
+        "spell_cast",
+        "toy_catalog",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "gathering": {
+      "files": [
+        "gathering/mod.rs",
+        "gathering/data.rs",
+        "gathering/tests.rs"
+      ],
+      "tests": 10,
+      "refs": {
+        "maps": 1,
+        "profession": 10,
+        "spell_cast": 5,
+        "spell_info": 2,
+        "game_objects": 12,
+        "interest": 1,
+        "world_data": 2,
+        "spawn_pools": 7,
+        "combat": 3,
+        "loot": 20,
+        "npc_interaction": 1,
+        "line_of_sight": 1,
+        "persistence": 8,
+        "pvp": 3,
+        "item_templates": 2,
+        "level_scaling": 2,
+        "test_data": 3,
+        "merchant": 1,
+        "networking": 1
+      },
+      "inbound": [
+        "game_objects",
+        "npc_interaction",
+        "scripted_ai",
+        "spawn_pools",
+        "spell_cast",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "gold": {
+      "files": [
+        "gold.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "persistence": 2,
+        "achievement": 4
+      },
+      "inbound": [
+        "achievement",
+        "admin_handlers",
+        "admin_ipc",
+        "auction_house",
+        "bank",
+        "barber_shop",
+        "crafting_orders",
+        "economy",
+        "guild",
+        "guild_bank",
+        "guild_news",
+        "guild_news_network",
+        "guild_tabards",
+        "housing",
+        "housing_acquisition",
+        "inventory",
+        "loot",
+        "mail",
+        "merchant",
+        "mount_journal",
+        "networking",
+        "npc_interaction",
+        "profession",
+        "quest",
+        "spell_cast",
+        "taxi",
+        "toys",
+        "trade",
+        "transmog"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "grid_activity": {
+      "files": [
+        "grid_activity.rs",
+        "grid_activity_tests.rs"
+      ],
+      "tests": 8,
+      "refs": {
+        "creature_ai": 2,
+        "maps": 1,
+        "terrain_height": 1,
+        "world_data": 3,
+        "scripted_ai": 4
+      },
+      "inbound": [
+        "auras",
+        "creature_aggro",
+        "creature_ai",
+        "creature_sight",
+        "followers",
+        "interest",
+        "scripted_ai",
+        "spell_cast",
+        "unit_target",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "ground": {
+      "files": [
+        "ground.rs",
+        "ground/m2_floor_tests.rs",
+        "ground_tests.rs",
+        "ground/startup_latency_tests.rs",
+        "ground/format_metadata_tests.rs",
+        "ground_achievement_fall_tests.rs",
+        "ground_private_runs_tests.rs",
+        "stv_ground_tests.rs",
+        "zephras_ground_tests.rs",
+        "housing_ground_tests.rs",
+        "ground/mfbo_receipts_tests.rs",
+        "ground/mfbo_receipt_cases.rs",
+        "ground/mfbo_receipt_codec.rs",
+        "ground/mfbo_receipt_queries.rs"
+      ],
+      "tests": 43,
+      "refs": {
+        "liquid": 1,
+        "terrain_height": 26,
+        "game_objects": 6,
+        "maps": 17,
+        "world_data": 1,
+        "networking": 17,
+        "persistence": 4,
+        "test_data": 5,
+        "death": 9,
+        "admin_handlers": 2,
+        "achievement": 6,
+        "auth": 2,
+        "auras": 5,
+        "spell_cast": 1,
+        "line_of_sight": 1,
+        "knockback": 3,
+        "player_start": 1
+      },
+      "inbound": [
+        "achievement",
+        "combat",
+        "creature_ai",
+        "followers",
+        "game_objects",
+        "guild",
+        "knockback",
+        "line_of_sight",
+        "maps",
+        "meeting_stone",
+        "mirror_timers",
+        "navigation",
+        "networking",
+        "pvp",
+        "rest",
+        "scripted_ai",
+        "seething_parachute",
+        "spawn_groups",
+        "spawn_pools",
+        "spell_area",
+        "spell_cast",
+        "terrain_height",
+        "vehicle",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "group": {
+      "files": [
+        "group/mod.rs",
+        "group/member_state.rs",
+        "group/registry.rs",
+        "group/tests.rs",
+        "group/follower_tests.rs"
+      ],
+      "tests": 43,
+      "refs": {
+        "auth": 3,
+        "networking": 2,
+        "persistence": 3,
+        "maps": 22,
+        "followers": 7,
+        "death": 2,
+        "item_templates": 1,
+        "gold": 1,
+        "inventory": 1
+      },
+      "inbound": [
+        "achievement",
+        "creature_tap",
+        "damage_meter",
+        "experience",
+        "followers",
+        "game_objects",
+        "housing",
+        "interest",
+        "loot",
+        "maps",
+        "meeting_stone",
+        "messaging",
+        "mythic_plus",
+        "npc_interaction",
+        "persistence",
+        "pvp",
+        "quest",
+        "reputation",
+        "scripted_ai",
+        "spell_cast",
+        "vehicle"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "guild": {
+      "files": [
+        "guild.rs",
+        "guild_online_zone.rs",
+        "guild_charters.rs",
+        "guild_invites.rs",
+        "guild_ranks.rs",
+        "guild_last_online_tests.rs",
+        "guild_online_zone_tests.rs",
+        "guild_ranks_tests.rs",
+        "guild_leadership_transfer_tests.rs"
+      ],
+      "tests": 22,
+      "refs": {
+        "auth": 6,
+        "networking": 4,
+        "persistence": 30,
+        "persistence_character": 23,
+        "persistence_types": 5,
+        "gold": 3,
+        "guild_news_network": 3,
+        "inventory": 3,
+        "guild_bank": 4,
+        "area_table": 4,
+        "ground": 4,
+        "maps": 3,
+        "npc_interaction": 2,
+        "item_templates": 2,
+        "merchant": 1,
+        "bank_test_harness": 4,
+        "messaging": 1,
+        "guild_event_log": 9,
+        "rest": 3,
+        "persistence_progression": 2,
+        "bank_storage": 1
+      },
+      "inbound": [
+        "guild_news",
+        "guild_tabards",
+        "inventory",
+        "messaging"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "guild_bank": {
+      "files": [
+        "guild_bank.rs",
+        "guild_bank_tests.rs",
+        "owned_commerce_guild_tests.rs"
+      ],
+      "tests": 15,
+      "refs": {
+        "auth": 1,
+        "bank": 1,
+        "bank_storage": 2,
+        "gold": 1,
+        "inventory": 2,
+        "item_templates": 1,
+        "npc_interaction": 1,
+        "persistence": 13,
+        "bank_test_harness": 2,
+        "admin_handlers": 1,
+        "admin_types": 1,
+        "owned_commerce_source_tests": 1
+      },
+      "inbound": [
+        "adventure_guide",
+        "guild",
+        "guild_news",
+        "mail",
+        "merchant",
+        "messaging",
+        "persistence"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "guild_event_log": {
+      "files": [
+        "guild_event_log.rs"
+      ],
+      "tests": 1,
+      "refs": {
+        "persistence": 4,
+        "persistence_types": 1
+      },
+      "inbound": [
+        "guild",
+        "guild_news",
+        "persistence",
+        "persistence_character"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "guild_news": {
+      "files": [
+        "guild_news.rs"
+      ],
+      "tests": 3,
+      "refs": {
+        "persistence": 15,
+        "guild": 2,
+        "item_templates": 3,
+        "guild_event_log": 2,
+        "guild_bank": 1,
+        "persistence_types": 1,
+        "persistence_character": 3,
+        "maps": 1,
+        "gold": 2,
+        "test_data": 3,
+        "area_table": 1,
+        "auth": 2
+      },
+      "inbound": [
+        "achievement",
+        "guild_news_network",
+        "loot",
+        "merchant",
+        "persistence",
+        "profession"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "guild_news_network": {
+      "files": [
+        "guild_news_network.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "auth": 1,
+        "persistence": 3,
+        "persistence_writer": 1,
+        "guild_news": 1,
+        "gold": 1
+      },
+      "inbound": [
+        "guild"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "guild_perks": {
+      "files": [
+        "guild_perks.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "auth": 1,
+        "class_progression": 1,
+        "networking": 1
+      },
+      "inbound": [],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "guild_tabards": {
+      "files": [
+        "guild_tabards.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "npc_interaction": 3,
+        "persistence": 5,
+        "gold": 1,
+        "guild": 1,
+        "auth": 1,
+        "networking": 1
+      },
+      "inbound": [],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "housing": {
+      "files": [
+        "housing.rs",
+        "housing_dye_requests.rs",
+        "housing_tests.rs"
+      ],
+      "tests": 2,
+      "refs": {
+        "auth": 1,
+        "housing_catalog": 5,
+        "maps": 10,
+        "networking": 1,
+        "persistence": 6,
+        "spell_info": 1,
+        "housing_acquisition": 3,
+        "game_objects": 7,
+        "group": 6,
+        "gold": 4,
+        "test_data": 1,
+        "terrain_height": 1,
+        "friends": 3
+      },
+      "inbound": [
+        "housing_acquisition",
+        "maps",
+        "npc_interaction"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "housing_acquisition": {
+      "files": [
+        "housing_acquisition.rs",
+        "housing_acquisition_tests.rs"
+      ],
+      "tests": 3,
+      "refs": {
+        "persistence": 5,
+        "housing_catalog": 2,
+        "inventory": 2,
+        "spell_info": 1,
+        "housing": 1,
+        "item_templates": 1,
+        "gold": 1
+      },
+      "inbound": [
+        "housing",
+        "inventory"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "housing_catalog": {
+      "files": [
+        "housing_catalog.rs",
+        "housing_cornerstones.rs",
+        "housing_dye_catalog.rs",
+        "housing_catalog_tests.rs"
+      ],
+      "tests": 3,
+      "refs": {
+        "maps": 1,
+        "game_objects": 5,
+        "persistence": 2
+      },
+      "inbound": [
+        "housing",
+        "housing_acquisition",
+        "housing_quests",
+        "persistence"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "housing_quest_tests": {
+      "files": [
+        "housing_quest_tests.rs"
+      ],
+      "tests": 5,
+      "refs": {
+        "persistence": 2,
+        "quest_data": 1,
+        "housing_quests": 11,
+        "housing_catalog": 1,
+        "quest_rules": 4
+      },
+      "inbound": [],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "housing_quests": {
+      "files": [
+        "housing_quests.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "persistence": 1,
+        "quest_data": 1,
+        "housing_catalog": 1
+      },
+      "inbound": [
+        "merchant",
+        "quest_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "hunter_pet": {
+      "files": [
+        "hunter_pet.rs",
+        "hunter_pet_tests.rs"
+      ],
+      "tests": 22,
+      "refs": {
+        "random": 1,
+        "auth": 1,
+        "class_progression": 1,
+        "creature_ai": 3,
+        "interest": 6,
+        "maps": 3,
+        "networking": 3,
+        "persistence": 4,
+        "spell_cast": 8,
+        "spell_info": 3,
+        "tame": 1,
+        "world_data": 2,
+        "hunter_pet_stats": 3,
+        "stats": 3,
+        "pet_stable": 1,
+        "npc_interaction": 4,
+        "combat": 9,
+        "test_data": 3,
+        "auras": 1,
+        "zones": 3,
+        "followers": 4,
+        "pet_control": 5,
+        "faction": 2
+      },
+      "inbound": [
+        "achievement",
+        "auras",
+        "combat",
+        "damage_meter",
+        "followers",
+        "hunter_pet_stats",
+        "networking",
+        "npc_interaction",
+        "pet_control",
+        "pet_stable",
+        "pvp",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "hunter_pet_stats": {
+      "files": [
+        "hunter_pet_stats.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "hunter_pet": 1,
+        "level_scaling": 1,
+        "stats": 1,
+        "world_data": 1
+      },
+      "inbound": [
+        "combat",
+        "hunter_pet",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "ignore_list": {
+      "files": [
+        "ignore_list.rs"
+      ],
+      "tests": 3,
+      "refs": {
+        "auth": 1,
+        "networking": 1,
+        "persistence": 7
+      },
+      "inbound": [
+        "auth_character",
+        "messaging",
+        "persistence",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "inspect": {
+      "files": [
+        "inspect.rs",
+        "inspect_tests.rs"
+      ],
+      "tests": 3,
+      "refs": {
+        "auth": 1,
+        "networking": 1
+      },
+      "inbound": [],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "interest": {
+      "files": [
+        "interest.rs",
+        "interest_tests.rs",
+        "interest_group_tests.rs"
+      ],
+      "tests": 36,
+      "refs": {
+        "auras": 9,
+        "maps": 1,
+        "networking": 1,
+        "group": 5,
+        "grid_activity": 5,
+        "persistence": 2,
+        "test_data": 2,
+        "spell_cast": 7,
+        "spell_info": 2,
+        "duel": 2,
+        "combat": 4,
+        "creature_ai": 1,
+        "faction": 1
+      },
+      "inbound": [
+        "admin_handlers",
+        "admin_ipc",
+        "auras",
+        "auth_character",
+        "battle_pets",
+        "combat",
+        "creature_ai",
+        "creature_sight",
+        "death",
+        "followers",
+        "game_objects",
+        "gathering",
+        "hunter_pet",
+        "knockback",
+        "maps",
+        "meeting_stone",
+        "messaging",
+        "networking",
+        "npc_interaction",
+        "pvp",
+        "scripted_ai",
+        "spell_cast",
+        "taxi",
+        "teleport",
+        "transport",
+        "vehicle",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "inventory": {
+      "files": [
+        "inventory.rs",
+        "inventory_model.rs",
+        "inventory_max_count_tests.rs",
+        "item_use_tests.rs",
+        "item_use_honor_criteria_tests.rs",
+        "inventory_tests.rs",
+        "inventory_bag_tests.rs",
+        "inventory_titans_grip_tests.rs"
+      ],
+      "tests": 63,
+      "refs": {
+        "appearance_collection": 1,
+        "auth": 2,
+        "gold": 2,
+        "item_templates": 9,
+        "networking": 4,
+        "persistence": 28,
+        "stats": 13,
+        "bank": 2,
+        "class_progression": 4,
+        "spell_info": 13,
+        "merchant": 4,
+        "npc_interaction": 1,
+        "guild": 1,
+        "housing_acquisition": 1,
+        "mount_journal": 5,
+        "toys": 1,
+        "item_stats": 5,
+        "battle_pets": 7,
+        "achievement": 27,
+        "spell_cast": 6,
+        "item_instance": 5,
+        "transmog_store": 1,
+        "bank_test_harness": 1,
+        "bank_storage": 2,
+        "auras": 1,
+        "collection": 2,
+        "test_data": 12,
+        "toy_catalog": 2,
+        "pvp": 2,
+        "currency": 2,
+        "trade": 1
+      },
+      "inbound": [
+        "admin_ipc",
+        "appearance_collection",
+        "bank",
+        "crafting_orders",
+        "guild",
+        "guild_bank",
+        "housing_acquisition",
+        "loot",
+        "mail",
+        "merchant",
+        "mount_journal",
+        "mythic_plus",
+        "networking",
+        "persistence",
+        "player_create_info",
+        "profession",
+        "quest",
+        "quest_view",
+        "spell_cast",
+        "toys",
+        "trade",
+        "transmog"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "item_proc_data": {
+      "files": [
+        "item_proc_data.rs",
+        "item_proc_data/sets.rs",
+        "item_proc_data/tests.rs"
+      ],
+      "tests": 3,
+      "refs": {
+        "auras": 1,
+        "class_progression": 1,
+        "item_templates": 2,
+        "profession": 3,
+        "stats": 3,
+        "spell_info": 1,
+        "test_data": 2
+      },
+      "inbound": [
+        "equipment_effects",
+        "item_stats",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "item_stats": {
+      "files": [
+        "item_stats.rs",
+        "item_stats_tests.rs",
+        "item_scaling_parity_tests.rs"
+      ],
+      "tests": 9,
+      "refs": {
+        "item_templates": 3,
+        "spell_info": 1,
+        "item_proc_data": 1,
+        "stats": 1,
+        "item_instance": 3,
+        "test_data": 2
+      },
+      "inbound": [
+        "combat",
+        "equipment_effects",
+        "inventory",
+        "item_templates",
+        "loot",
+        "melee",
+        "networking",
+        "profession",
+        "scripted_ai",
+        "spell_cast",
+        "stats",
+        "toys",
+        "transmog"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "item_templates": {
+      "files": [
+        "item_templates.rs",
+        "item_templates/loot_need.rs",
+        "item_templates/equip_limit.rs",
+        "item_templates_tests.rs"
+      ],
+      "tests": 4,
+      "refs": {
+        "item_stats": 1,
+        "spell_cast": 3,
+        "race_class": 1,
+        "faction": 1,
+        "spell_info": 1,
+        "test_data": 4
+      },
+      "inbound": [
+        "admin_ipc",
+        "appearance_collection",
+        "auction_house",
+        "auras",
+        "auth_character",
+        "bank",
+        "combat",
+        "crafting_orders",
+        "creature_tooltip",
+        "equipment_effects",
+        "gathering",
+        "guild",
+        "guild_bank",
+        "guild_news",
+        "housing_acquisition",
+        "inventory",
+        "item_proc_data",
+        "item_stats",
+        "loot",
+        "mail",
+        "merchant",
+        "mythic_plus",
+        "networking",
+        "npc_interaction",
+        "persistence",
+        "player_create_info",
+        "profession",
+        "quest",
+        "quest_view",
+        "scripted_ai",
+        "spell_cast",
+        "stats",
+        "toys",
+        "trade",
+        "trading_post",
+        "transmog"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "knockback": {
+      "files": [
+        "knockback.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "networking": 4,
+        "interest": 6,
+        "spell_cast": 5,
+        "line_of_sight": 2,
+        "auras": 1,
+        "death": 2,
+        "achievement": 1,
+        "ground": 1,
+        "maps": 1
+      },
+      "inbound": [
+        "auras",
+        "creature_ai",
+        "game_objects",
+        "pvp",
+        "scripted_ai",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "level_scaling": {
+      "files": [
+        "level_scaling.rs",
+        "level_scaling_tests.rs"
+      ],
+      "tests": 10,
+      "refs": {},
+      "inbound": [
+        "auras",
+        "combat",
+        "followers",
+        "gathering",
+        "hunter_pet_stats",
+        "maps",
+        "scripted_ai",
+        "spell_cast",
+        "test_support",
+        "world_data",
+        "zones"
+      ],
+      "reachable_gameplay": []
+    },
+    "lfg": {
+      "files": [
+        "lfg.rs",
+        "lfg/follower_catalog.rs",
+        "lfg/request_handlers.rs",
+        "lfg/snapshots.rs"
+      ],
+      "tests": 5,
+      "refs": {
+        "auth": 1,
+        "networking": 1,
+        "followers": 3,
+        "pvp": 4
+      },
+      "inbound": [
+        "auth_character",
+        "followers",
+        "pvp"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "line_of_sight": {
+      "files": [
+        "line_of_sight.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "maps": 1,
+        "game_objects": 2,
+        "ground": 2
+      },
+      "inbound": [
+        "auras",
+        "combat",
+        "creature_aggro",
+        "creature_ai",
+        "creature_sight",
+        "followers",
+        "game_objects",
+        "gathering",
+        "knockback",
+        "scripted_ai",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "liquid": {
+      "files": [
+        "liquid.rs"
+      ],
+      "tests": 0,
+      "refs": {},
+      "inbound": [
+        "ground",
+        "mirror_timers",
+        "terrain_height"
+      ],
+      "reachable_gameplay": []
+    },
+    "loot": {
+      "files": [
+        "loot.rs",
+        "loot/group.rs",
+        "loot/tables.rs",
+        "loot/tables_tests.rs",
+        "loot_tests.rs",
+        "loot/group_tests.rs",
+        "loot/encounter_tests.rs"
+      ],
+      "tests": 43,
+      "refs": {
+        "auth": 9,
+        "combat": 3,
+        "creature_tap": 4,
+        "gold": 1,
+        "inventory": 2,
+        "item_templates": 7,
+        "merchant": 3,
+        "networking": 1,
+        "npc_interaction": 1,
+        "persistence": 12,
+        "quest_data": 2,
+        "quest_rules": 3,
+        "quest_view": 1,
+        "auras": 4,
+        "item_stats": 1,
+        "quest": 3,
+        "guild_news": 5,
+        "maps": 7,
+        "zones": 2,
+        "game_objects": 4,
+        "class_progression": 1,
+        "group": 3,
+        "profession": 1,
+        "test_data": 14,
+        "achievement": 8,
+        "appearance_collection": 2,
+        "world_quest_objectives": 1,
+        "persistence_character": 1,
+        "gathering": 2
+      },
+      "inbound": [
+        "achievement",
+        "combat",
+        "creature_tooltip",
+        "game_objects",
+        "gathering",
+        "scripted_ai",
+        "spell_cast",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "mail": {
+      "files": [
+        "mail.rs",
+        "mail_tests.rs"
+      ],
+      "tests": 12,
+      "refs": {
+        "auth": 1,
+        "faction": 1,
+        "gold": 1,
+        "inventory": 2,
+        "item_templates": 1,
+        "npc_interaction": 2,
+        "persistence": 7,
+        "guild_bank": 1,
+        "achievement": 3,
+        "bank_test_harness": 3,
+        "maps": 1,
+        "test_data": 2
+      },
+      "inbound": [
+        "admin_ipc",
+        "crafting_orders"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "maps": {
+      "files": [
+        "maps/mod.rs",
+        "maps/area_triggers.rs",
+        "maps/difficulty.rs",
+        "maps/graveyard.rs",
+        "maps/instances.rs",
+        "maps/housing.rs",
+        "maps/locks.rs",
+        "maps/locks_tests.rs",
+        "maps/login.rs",
+        "maps/persistence.rs",
+        "maps/raid.rs",
+        "maps/store.rs",
+        "maps/transfer.rs",
+        "maps/units.rs",
+        "maps/tests.rs",
+        "maps/housing_dye_wire_tests.rs",
+        "maps/housing_editor_tests.rs",
+        "maps/tests_battleground_nodes.rs",
+        "maps/tests_battleground_backfill.rs",
+        "maps/tests_battleground_backfill_release.rs",
+        "maps/tests_battleground_deserter.rs",
+        "maps/tests_battleground_deserter_port.rs",
+        "maps/tests_battleground_bracket_port.rs",
+        "maps/tests_battleground_dead_port.rs",
+        "maps/tests_battleground_leave_combat.rs",
+        "maps/tests_battleground_dead_exit.rs",
+        "maps/tests_battleground_exit_deserter.rs",
+        "maps/tests_battleground_arrival_mount.rs",
+        "maps/tests_battleground_exit_mount.rs",
+        "maps/tests_battleground_preparation_aura.rs",
+        "maps/tests_skirmish_requeue_pending.rs",
+        "maps/tests_battleground_lfg.rs",
+        "maps/tests_lfg_pvp_join.rs",
+        "maps/tests_rated_arena_lfg.rs",
+        "maps/tests_lfg_rated_arena.rs",
+        "maps/tests_battleground_end_cleanup.rs",
+        "maps/tests_battleground_end_resources.rs",
+        "maps/tests_battleground_end_pets.rs",
+        "maps/tests_battleground_preparation.rs",
+        "maps/tests_battleground_preparation_gates.rs",
+        "maps/tests_skirmish_requeue.rs",
+        "maps/tests_world_area_triggers.rs"
+      ],
+      "tests": 257,
+      "refs": {
+        "terrain_height": 6,
+        "world_area_triggers": 5,
+        "networking": 19,
+        "interest": 12,
+        "persistence": 123,
+        "spawn_pools": 3,
+        "spawn_groups": 1,
+        "scripted_ai": 10,
+        "death": 18,
+        "auth": 3,
+        "group": 12,
+        "admin_types": 7,
+        "zones": 5,
+        "stats": 5,
+        "level_scaling": 3,
+        "game_objects": 29,
+        "world_data": 16,
+        "ground": 5,
+        "housing": 10,
+        "pvp": 110,
+        "raid_history": 1,
+        "test_data": 38,
+        "spell_cast": 51,
+        "transport": 3,
+        "teleport": 1,
+        "combat": 40,
+        "taxi": 1,
+        "followers": 4,
+        "creature_ai": 5,
+        "item_templates": 3,
+        "housing_acquisition": 4,
+        "spell_info": 22,
+        "inventory": 4,
+        "housing_catalog": 5,
+        "gold": 3,
+        "conditions": 1,
+        "auth_character": 2,
+        "faction": 18,
+        "auras": 41,
+        "achievement": 12,
+        "npc_interaction": 5,
+        "currency": 5,
+        "gathering": 2,
+        "raid_history_store": 2,
+        "unit_target": 1,
+        "grid_activity": 1,
+        "merchant": 2,
+        "loot": 1,
+        "quest_data": 1,
+        "item_stats": 1,
+        "toy_catalog": 1,
+        "vehicle": 1,
+        "transport_catalog": 2,
+        "experience": 2,
+        "persistence_progression": 1,
+        "profession": 1,
+        "lfg": 10,
+        "hunter_pet": 10,
+        "pet_control": 1
+      },
+      "inbound": [
+        "achievement",
+        "admin_handlers",
+        "admin_ipc",
+        "adventure_guide",
+        "auction_house",
+        "auras",
+        "auth_character",
+        "barber_shop",
+        "battle_pets",
+        "combat",
+        "creature_aggro",
+        "creature_ai",
+        "creature_sight",
+        "creature_tap",
+        "death",
+        "experience",
+        "followers",
+        "game_objects",
+        "gathering",
+        "grid_activity",
+        "ground",
+        "group",
+        "guild",
+        "guild_news",
+        "housing",
+        "housing_catalog",
+        "hunter_pet",
+        "interest",
+        "knockback",
+        "line_of_sight",
+        "loot",
+        "meeting_stone",
+        "messaging",
+        "mirror_timers",
+        "mythic_plus",
+        "navigation",
+        "networking",
+        "npc_interaction",
+        "persistence",
+        "persistence_character",
+        "pvp",
+        "quest",
+        "quest_data",
+        "quest_rules",
+        "quest_time",
+        "raid_history",
+        "reputation",
+        "rest",
+        "scripted_ai",
+        "seething_parachute",
+        "spawn_groups",
+        "spawn_pools",
+        "spell_area",
+        "spell_cast",
+        "taxi",
+        "test_support",
+        "trading_post",
+        "transport",
+        "transport_movement",
+        "vehicle",
+        "wild_pet_battles",
+        "world_area_triggers",
+        "world_data",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "meeting_stone": {
+      "files": [
+        "meeting_stone/mod.rs",
+        "meeting_stone/ritual.rs",
+        "meeting_stone/summon.rs",
+        "meeting_stone/tests.rs"
+      ],
+      "tests": 20,
+      "refs": {
+        "game_objects": 2,
+        "group": 2,
+        "networking": 4,
+        "persistence": 3,
+        "spell_cast": 8,
+        "interest": 1,
+        "spell_info": 3,
+        "maps": 14,
+        "auth": 2,
+        "terrain_height": 4,
+        "ground": 3,
+        "area_table": 2,
+        "taxi": 1,
+        "achievement": 3,
+        "test_data": 2,
+        "npc_interaction": 1,
+        "auras": 10,
+        "faction": 1
+      },
+      "inbound": [
+        "game_objects",
+        "npc_interaction",
+        "spell_cast",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "melee": {
+      "files": [
+        "melee.rs",
+        "melee_tests.rs"
+      ],
+      "tests": 19,
+      "refs": {
+        "item_stats": 1,
+        "combat": 2
+      },
+      "inbound": [
+        "combat",
+        "scripted_ai",
+        "spell_cast",
+        "stats"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "merchant": {
+      "files": [
+        "merchant.rs",
+        "merchant/catalog.rs",
+        "merchant/economic.rs",
+        "merchant/mount_costs.rs",
+        "merchant/stock.rs",
+        "merchant_tests.rs",
+        "merchant_economy_tests.rs",
+        "merchant_guild_repair_tests.rs",
+        "merchant_mount_cost_tests.rs",
+        "owned_commerce_buyback_tests.rs"
+      ],
+      "tests": 54,
+      "refs": {
+        "auth": 5,
+        "durability": 2,
+        "faction": 2,
+        "gold": 1,
+        "guild_bank": 1,
+        "inventory": 7,
+        "item_templates": 3,
+        "networking": 1,
+        "npc_interaction": 2,
+        "persistence": 20,
+        "quest_data": 1,
+        "economy": 10,
+        "currency": 5,
+        "guild_news": 5,
+        "achievement": 5,
+        "housing_quests": 1,
+        "auction_house": 6,
+        "persistence_character": 1,
+        "test_data": 7,
+        "appearance_collection": 5,
+        "maps": 2,
+        "mount_journal": 2,
+        "admin_handlers": 2,
+        "admin_types": 2,
+        "owned_commerce_source_tests": 2
+      },
+      "inbound": [
+        "admin_ipc",
+        "auth_character",
+        "creature_tooltip",
+        "economy",
+        "guild",
+        "inventory",
+        "loot",
+        "mythic_plus",
+        "persistence",
+        "player_create_info",
+        "profession",
+        "spell_cast",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "messaging": {
+      "files": [
+        "messaging.rs",
+        "messaging_achievement_tests.rs",
+        "messaging_mount_special_tests.rs",
+        "messaging_targeted_emote_tests.rs"
+      ],
+      "tests": 24,
+      "refs": {
+        "group": 3,
+        "ignore_list": 1,
+        "networking": 1,
+        "persistence": 7,
+        "maps": 25,
+        "interest": 3,
+        "friends": 4,
+        "achievement": 5,
+        "auth": 10,
+        "guild": 4,
+        "guild_bank": 1,
+        "persistence_character": 2,
+        "test_data": 2,
+        "faction": 2,
+        "death": 7,
+        "spell_cast": 1
+      },
+      "inbound": [
+        "friends",
+        "guild",
+        "networking",
+        "unit_target"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "mirror_timers": {
+      "files": [
+        "mirror_timers.rs",
+        "mirror_timers_tests.rs"
+      ],
+      "tests": 14,
+      "refs": {
+        "auras": 1,
+        "ground": 1,
+        "liquid": 1,
+        "maps": 1,
+        "networking": 2,
+        "death": 8,
+        "spell_cast": 1,
+        "achievement": 2,
+        "terrain_height": 1,
+        "auth": 1,
+        "persistence": 1,
+        "test_data": 1,
+        "combat": 2
+      },
+      "inbound": [
+        "auth_character"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "mount_journal": {
+      "files": [
+        "mount_journal.rs",
+        "mount_journal_tests.rs"
+      ],
+      "tests": 7,
+      "refs": {
+        "auth": 1,
+        "networking": 2,
+        "persistence": 9,
+        "achievement": 1,
+        "spell_info": 1,
+        "class_progression": 2,
+        "profession": 2,
+        "auras": 7,
+        "spell_cast": 2,
+        "inventory": 4,
+        "gold": 1,
+        "test_data": 2
+      },
+      "inbound": [
+        "achievement",
+        "collection",
+        "inventory",
+        "spell_cast",
+        "trading_post"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "mythic_plus": {
+      "files": [
+        "mythic_plus.rs",
+        "mythic_mentor.rs"
+      ],
+      "tests": 5,
+      "refs": {
+        "auth": 1,
+        "maps": 10,
+        "networking": 1,
+        "persistence": 1,
+        "mythic_plus_catalog": 1,
+        "mythic_plus_runtime": 1,
+        "spell_info": 2,
+        "item_templates": 2,
+        "merchant": 1,
+        "inventory": 1,
+        "game_objects": 5,
+        "mythic_plus_history": 3,
+        "achievement": 7,
+        "bank_test_harness": 6,
+        "group": 2,
+        "followers": 1
+      },
+      "inbound": [
+        "admin_ipc",
+        "combat",
+        "death",
+        "npc_interaction",
+        "scripted_ai"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "navigation": {
+      "files": [
+        "navigation.rs",
+        "navigation/collision_drop.rs",
+        "navigation/deferred.rs",
+        "navigation/fixture_queries.rs",
+        "navigation/hazard_trace.rs",
+        "navigation/requests.rs",
+        "navigation_tests.rs",
+        "navigation_blocking_io_tests.rs",
+        "navigation_request_tests.rs"
+      ],
+      "tests": 30,
+      "refs": {
+        "ground": 3,
+        "maps": 9,
+        "scripted_ai": 1,
+        "world_data": 1,
+        "creature_ai": 5
+      },
+      "inbound": [
+        "auras",
+        "creature_ai",
+        "followers",
+        "npc_interaction",
+        "scripted_ai",
+        "test_support"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "networking": {
+      "files": [
+        "networking.rs",
+        "networking_movement.rs",
+        "networking_binding.rs",
+        "networking_tests.rs",
+        "networking_tests/active_spec.rs",
+        "networking_tests/admin_position.rs",
+        "networking_tests/bag_slots.rs",
+        "networking_tests/client_height.rs",
+        "networking_tests/death.rs",
+        "networking_tests/flight.rs",
+        "networking_tests/forced_disconnect.rs",
+        "networking_tests/ghoststate.rs",
+        "networking_tests/misc.rs",
+        "networking_tests/movement.rs",
+        "networking_tests/physics.rs",
+        "networking_tests/player_motion.rs",
+        "networking_tests/receiver_rate.rs",
+        "networking_tests/regen.rs",
+        "networking_tests/sheet_stats.rs",
+        "networking_tests/skyriding.rs",
+        "networking_tests/stand_state.rs",
+        "networking_tests/stockade_run.rs",
+        "networking_tests/terrain.rs",
+        "networking_tests/vignette.rs",
+        "networking_tests/world_entry.rs"
+      ],
+      "tests": 110,
+      "refs": {
+        "auth": 6,
+        "ground": 7,
+        "interest": 7,
+        "maps": 21,
+        "messaging": 1,
+        "persistence": 9,
+        "terrain_height": 26,
+        "death": 20,
+        "friends": 7,
+        "rest": 3,
+        "persistence_progression": 1,
+        "spell_cast": 4,
+        "pvp": 5,
+        "hunter_pet": 1,
+        "transport": 3,
+        "skyriding": 7,
+        "auras": 12,
+        "transport_movement": 1,
+        "achievement": 2,
+        "class_progression": 1,
+        "test_data": 7,
+        "spell_info": 2,
+        "admin_handlers": 1,
+        "inventory": 1,
+        "gold": 1,
+        "durability": 4,
+        "game_objects": 3,
+        "stats": 2,
+        "item_stats": 1,
+        "sheet_visibility": 1,
+        "item_templates": 1,
+        "stand_state": 1,
+        "creature_ai": 3,
+        "world_data": 1,
+        "combat": 4,
+        "zones": 2
+      },
+      "inbound": [
+        "achievement",
+        "admin_handlers",
+        "admin_ipc",
+        "adventure_guide",
+        "auction_house",
+        "auras",
+        "auth_character",
+        "barber_shop",
+        "battle_pets",
+        "calendar",
+        "class_progression",
+        "combat",
+        "crafting_orders",
+        "creature_aggro",
+        "creature_ai",
+        "currency",
+        "damage_meter",
+        "death",
+        "duel",
+        "durability",
+        "experience",
+        "followers",
+        "friends",
+        "game_objects",
+        "group",
+        "guild",
+        "guild_perks",
+        "guild_tabards",
+        "housing",
+        "hunter_pet",
+        "ignore_list",
+        "inspect",
+        "interest",
+        "inventory",
+        "knockback",
+        "lfg",
+        "loot",
+        "maps",
+        "meeting_stone",
+        "merchant",
+        "messaging",
+        "mirror_timers",
+        "mount_journal",
+        "mythic_plus",
+        "npc_interaction",
+        "pet_control",
+        "pet_stable",
+        "profession",
+        "pvp",
+        "quest",
+        "renown",
+        "reputation",
+        "rest",
+        "scripted_ai",
+        "seething_parachute",
+        "sheet_visibility",
+        "simc_apl_native",
+        "spell_area",
+        "spell_cast",
+        "stand_state",
+        "taxi",
+        "threat_updates",
+        "toys",
+        "trade",
+        "trading_post",
+        "transmog",
+        "transport",
+        "unit_target",
+        "vehicle",
+        "wild_pet_battles",
+        "world_map",
+        "world_quest_availability",
+        "world_quest_rewards"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "npc_interaction": {
+      "files": [
+        "npc_interaction.rs",
+        "npc_interaction/azure_translocation.rs",
+        "npc_interaction/gossip.rs",
+        "npc_interaction/spellclick.rs",
+        "auction_house_tests/regressions.rs",
+        "npc_interaction_tests.rs",
+        "npc_interaction/guild_tabard_tests.rs",
+        "npc_interaction/mobile_banking_tests.rs",
+        "transmog_tests.rs",
+        "housing_interaction_tests.rs",
+        "npc_interaction/azure_book_tests.rs"
+      ],
+      "tests": 36,
+      "refs": {
+        "auth": 11,
+        "faction": 2,
+        "game_objects": 17,
+        "networking": 1,
+        "maps": 18,
+        "scripted_ai": 4,
+        "quest": 1,
+        "quest_data": 1,
+        "gathering": 1,
+        "meeting_stone": 1,
+        "chair": 1,
+        "mythic_plus": 1,
+        "pvp": 1,
+        "housing": 3,
+        "world_data": 2,
+        "navigation": 1,
+        "interest": 2,
+        "persistence": 27,
+        "group": 1,
+        "followers": 1,
+        "hunter_pet": 1,
+        "spell_cast": 2,
+        "test_data": 5,
+        "auction_house": 2,
+        "gold": 2,
+        "item_templates": 4,
+        "terrain_height": 1,
+        "area_table": 1,
+        "guild_tabards": 1,
+        "transmog": 2,
+        "inventory": 3,
+        "housing_catalog": 5
+      },
+      "inbound": [
+        "auction_house",
+        "bank",
+        "crafting_orders",
+        "gathering",
+        "guild",
+        "guild_bank",
+        "guild_tabards",
+        "hunter_pet",
+        "inventory",
+        "loot",
+        "mail",
+        "merchant",
+        "pet_stable",
+        "profession",
+        "scripted_ai",
+        "taxi",
+        "test_support",
+        "trading_post",
+        "transmog",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "owned_commerce_source_tests": {
+      "files": [
+        "owned_commerce_source_tests.rs",
+        "skyborne_kit_fixture.rs"
+      ],
+      "tests": 1,
+      "refs": {
+        "inventory": 1,
+        "item_templates": 1,
+        "persistence": 2,
+        "mail": 8
+      },
+      "inbound": [],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "persistence": {
+      "files": [
+        "persistence.rs",
+        "persistence_appearances.rs",
+        "persistence_banks.rs",
+        "persistence_banks_tests.rs",
+        "guild_rights_migration_tests.rs",
+        "persistence_charters.rs",
+        "persistence_equipment.rs",
+        "persistence_equipment_tests.rs",
+        "persistence_guild_tabards.rs",
+        "persistence_housing.rs",
+        "persistence_housing_access.rs",
+        "persistence_housing_migration.rs",
+        "persistence_housing_dyes.rs",
+        "persistence_housing_variants.rs",
+        "persistence_housing_tests.rs",
+        "persistence_housing_dye_tests.rs",
+        "persistence_inventory.rs",
+        "persistence_item_source_tests.rs",
+        "persistence_mail.rs",
+        "persistence_mail_sender_migration.rs",
+        "persistence_mounts.rs",
+        "persistence_runtime.rs",
+        "persistence_pets.rs",
+        "persistence_quests.rs",
+        "persistence_taxi.rs",
+        "persistence_toys.rs",
+        "persistence_charters_tests.rs",
+        "persistence_guild_tabards_tests.rs",
+        "persistence_tests.rs",
+        "startup_tests.rs",
+        "persistence_customization_tests.rs",
+        "persistence_character_abi_tests.rs"
+      ],
+      "tests": 101,
+      "refs": {
+        "profession": 3,
+        "persistence_character": 7,
+        "persistence_types": 2,
+        "persistence_writer": 3,
+        "achievement": 6,
+        "item_instance": 10,
+        "guild_event_log": 6,
+        "guild_news": 1,
+        "pvp": 6,
+        "maps": 18,
+        "spell_cast": 2,
+        "persistence_progression": 5,
+        "guild_bank": 1,
+        "death": 3,
+        "world_map": 4,
+        "friends": 10,
+        "ignore_list": 4,
+        "collection": 4,
+        "economy": 6,
+        "bank_storage": 1,
+        "guild": 1,
+        "inventory": 5,
+        "item_templates": 5,
+        "merchant": 2,
+        "equipment_admin_types": 1,
+        "group": 5,
+        "spell_info": 1,
+        "housing_catalog": 5,
+        "transmog_store": 3,
+        "test_data": 3,
+        "tame": 1,
+        "auth": 1,
+        "networking": 1,
+        "world_data": 7
+      },
+      "inbound": [
+        "achievement",
+        "admin_handlers",
+        "admin_ipc",
+        "adventure_guide",
+        "appearance_collection",
+        "auction_house",
+        "auras",
+        "auth",
+        "auth_character",
+        "bank",
+        "bank_storage",
+        "barber_shop",
+        "battle_pets",
+        "class_progression",
+        "combat",
+        "crafting_orders",
+        "creature_tap",
+        "currency",
+        "damage_meter",
+        "death",
+        "durability",
+        "economy",
+        "experience",
+        "followers",
+        "friends",
+        "game_objects",
+        "gathering",
+        "gold",
+        "group",
+        "guild",
+        "guild_bank",
+        "guild_event_log",
+        "guild_news",
+        "guild_news_network",
+        "guild_tabards",
+        "housing",
+        "housing_acquisition",
+        "housing_quests",
+        "hunter_pet",
+        "ignore_list",
+        "interest",
+        "inventory",
+        "loot",
+        "mail",
+        "maps",
+        "meeting_stone",
+        "merchant",
+        "messaging",
+        "mount_journal",
+        "mythic_plus",
+        "networking",
+        "npc_interaction",
+        "persistence_accounts",
+        "persistence_character",
+        "pet_stable",
+        "player_create_info",
+        "profession",
+        "pvp",
+        "quest",
+        "quest_rules",
+        "quest_time",
+        "quest_view",
+        "raid_history",
+        "renown",
+        "reputation",
+        "rest",
+        "scripted_ai",
+        "spell_area",
+        "spell_cast",
+        "taxi",
+        "toys",
+        "trade",
+        "trading_post",
+        "trading_post_store",
+        "transmog",
+        "vehicle",
+        "wild_pet_battles",
+        "world_map",
+        "world_quest_availability",
+        "world_quest_rewards"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "persistence_accounts": {
+      "files": [
+        "persistence_accounts.rs",
+        "persistence_accounts_tests.rs"
+      ],
+      "tests": 43,
+      "refs": {
+        "persistence": 9,
+        "player_create_info": 3,
+        "admin_handlers": 1,
+        "admin_types": 1,
+        "race_class": 3,
+        "faction": 1,
+        "maps": 1
+      },
+      "inbound": [
+        "admin_handlers",
+        "admin_ipc",
+        "auth",
+        "scripted_ai",
+        "trading_post"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "persistence_character": {
+      "files": [
+        "persistence_character.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "persistence": 20,
+        "persistence_types": 1,
+        "player_create_info": 2,
+        "guild_event_log": 7,
+        "race_class": 3,
+        "maps": 3,
+        "persistence_progression": 7,
+        "player_start": 3,
+        "spell_cast": 1
+      },
+      "inbound": [
+        "guild",
+        "guild_news",
+        "messaging",
+        "persistence",
+        "renown",
+        "scripted_ai"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "persistence_progression": {
+      "files": [
+        "persistence_progression.rs",
+        "talent_loadout_persistence_tests.rs"
+      ],
+      "tests": 2,
+      "refs": {
+        "trait_config": 1,
+        "persistence": 1
+      },
+      "inbound": [
+        "admin_handlers",
+        "auras",
+        "class_progression",
+        "experience",
+        "networking",
+        "persistence",
+        "persistence_character",
+        "player_create_info",
+        "rest"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "persistence_types": {
+      "files": [
+        "persistence_types.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "terrain_height": 2
+      },
+      "inbound": [
+        "barber_shop",
+        "guild",
+        "guild_event_log",
+        "guild_news",
+        "persistence",
+        "persistence_character"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "persistence_writer": {
+      "files": [
+        "persistence_writer.rs",
+        "native_proof_hold_persistence.rs",
+        "persistence_writer_tests.rs"
+      ],
+      "tests": 8,
+      "refs": {},
+      "inbound": [
+        "achievement",
+        "adventure_guide",
+        "auth",
+        "auth_character",
+        "economy",
+        "guild_news_network",
+        "persistence",
+        "trading_post"
+      ],
+      "reachable_gameplay": []
+    },
+    "pet_control": {
+      "files": [
+        "pet_control.rs",
+        "pet_control_tests.rs",
+        "warlock_pet_tests.rs"
+      ],
+      "tests": 30,
+      "refs": {
+        "combat": 5,
+        "creature_ai": 3,
+        "faction": 2,
+        "hunter_pet": 8,
+        "networking": 1,
+        "spell_info": 4,
+        "spell_cast": 10,
+        "auras": 7,
+        "persistence": 4,
+        "world_data": 2,
+        "test_data": 6,
+        "zones": 1,
+        "auth": 1,
+        "class_progression": 1,
+        "achievement": 1,
+        "creature_scripts": 1,
+        "ground": 3,
+        "line_of_sight": 1
+      },
+      "inbound": [
+        "followers",
+        "hunter_pet",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "pet_journal_state": {
+      "files": [
+        "pet_journal_state.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "pet_battle": 1,
+        "battle_pets": 1
+      },
+      "inbound": [
+        "battle_pets",
+        "wild_pet_battles"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "pet_journal_state_tests": {
+      "files": [
+        "pet_journal_state_tests.rs"
+      ],
+      "tests": 3,
+      "refs": {
+        "pet_journal_state": 1,
+        "pet_battle": 1,
+        "test_data": 1,
+        "battle_pets": 6,
+        "persistence": 6,
+        "collection": 1,
+        "auth": 2,
+        "networking": 1
+      },
+      "inbound": [],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "pet_stable": {
+      "files": [
+        "pet_stable.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "auth": 1,
+        "class_progression": 1,
+        "hunter_pet": 2,
+        "networking": 1,
+        "npc_interaction": 1,
+        "persistence": 1,
+        "world_data": 1
+      },
+      "inbound": [
+        "hunter_pet"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "player_create_info": {
+      "files": [
+        "player_create_info.rs",
+        "player_create_info_tests.rs",
+        "skyborne_kit_tests.rs",
+        "player_start_tests.rs"
+      ],
+      "tests": 16,
+      "refs": {
+        "inventory": 1,
+        "item_templates": 4,
+        "merchant": 4,
+        "persistence": 12,
+        "persistence_progression": 2,
+        "race_class": 3,
+        "player_start": 7,
+        "test_data": 2,
+        "class_progression": 1,
+        "spell_info": 1,
+        "maps": 1,
+        "spell_cast": 1
+      },
+      "inbound": [
+        "admin_handlers",
+        "admin_ipc",
+        "auth",
+        "auth_character",
+        "persistence_character",
+        "scripted_ai"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "player_start": {
+      "files": [
+        "player_start.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "race_class": 1
+      },
+      "inbound": [
+        "persistence_character",
+        "player_create_info"
+      ],
+      "reachable_gameplay": []
+    },
+    "profession": {
+      "files": [
+        "profession.rs",
+        "profession/bank_reagents.rs",
+        "profession/concentration.rs",
+        "profession/crafting_provenance_fixture.rs",
+        "profession/data.rs",
+        "profession/source_requirement_tests.rs",
+        "profession/favorites.rs",
+        "profession/gathering.rs",
+        "profession/modern_crafting_fixture.rs",
+        "profession/quality_reagents.rs",
+        "profession/specializations.rs",
+        "profession/specializations/data.rs",
+        "profession/specializations/descriptions.rs",
+        "profession/specializations/runtime.rs",
+        "profession/specializations/state.rs",
+        "profession/specializations/store.rs",
+        "profession/specializations/view.rs",
+        "profession/specializations/live_fixture.rs",
+        "profession/specializations/tests.rs",
+        "profession/trainer.rs",
+        "profession_tests.rs",
+        "profession/bank_reagents_native_fixture.rs",
+        "crafting_orders/tests.rs",
+        "profession/crafting_origin_tests.rs",
+        "profession/recipe_cooldown_native_fixture.rs",
+        "profession/spell_cooldown_persistence_tests.rs",
+        "profession/concentration_tests.rs"
+      ],
+      "tests": 66,
+      "refs": {
+        "auth": 6,
+        "gold": 2,
+        "inventory": 16,
+        "item_templates": 12,
+        "merchant": 9,
+        "networking": 8,
+        "persistence": 23,
+        "spell_cast": 12,
+        "spell_info": 5,
+        "crafting_orders": 4,
+        "guild_news": 5,
+        "item_stats": 1,
+        "bank": 2,
+        "bank_storage": 3,
+        "currency": 5,
+        "maps": 9,
+        "persistence_accounts": 5,
+        "race_class": 1,
+        "achievement": 8,
+        "trait_config": 4,
+        "npc_interaction": 2,
+        "class_progression": 4,
+        "test_data": 4,
+        "faction": 1,
+        "appearance_collection": 2,
+        "combat": 1,
+        "auras": 1,
+        "creature_scripts": 1,
+        "persistence_character": 1,
+        "mail": 8
+      },
+      "inbound": [
+        "achievement",
+        "admin_handlers",
+        "auras",
+        "auth_character",
+        "class_progression",
+        "crafting_orders",
+        "equipment_effects",
+        "gathering",
+        "item_proc_data",
+        "loot",
+        "mount_journal",
+        "persistence",
+        "quest",
+        "quest_data",
+        "spell_cast",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "pvp": {
+      "files": [
+        "pvp.rs",
+        "pvp_support.rs",
+        "pvp_talents.rs",
+        "pvp_war_mode.rs",
+        "pvp_arena.rs",
+        "pvp_arena_cage.rs",
+        "pvp_arena_cage_tests.rs",
+        "pvp_arena_combat.rs",
+        "pvp_arena_dalaran.rs",
+        "pvp_arena_dalaran_tests.rs",
+        "pvp_arena_lifecycle.rs",
+        "pvp_arena_objects.rs",
+        "pvp_arena_preparation.rs",
+        "pvp_arena_rated_queue.rs",
+        "pvp_personal_rating_tests.rs",
+        "pvp_arena_rated_results.rs",
+        "pvp_arena_scores.rs",
+        "pvp_arena_shuffle.rs",
+        "pvp_arena_shuffle_tests.rs",
+        "pvp_arena_rating.rs",
+        "pvp_arena_sight.rs",
+        "pvp_kill_criteria.rs",
+        "pvp_honor.rs",
+        "pvp_isle.rs",
+        "pvp_isle_siege.rs",
+        "pvp_alterac.rs",
+        "pvp_deephaul.rs",
+        "pvp_entry.rs",
+        "pvp_invites.rs",
+        "pvp_objects.rs",
+        "pvp_seething.rs",
+        "pvp_silvershard.rs",
+        "pvp_bg_backfill.rs",
+        "pvp_bg_backfill_tests.rs",
+        "pvp_bg_preparation.rs",
+        "pvp_leave.rs",
+        "pvp_random_bg.rs",
+        "pvp_random_bg_tests.rs",
+        "pvp_reconnect.rs",
+        "pvp_objective.rs",
+        "pvp_tests.rs",
+        "pvp_bg_honor_tests.rs",
+        "pvp_content_tuning_tests.rs",
+        "pvp_honor_area_tests.rs",
+        "pvp_honor_class_tests.rs",
+        "pvp_honor_tests.rs",
+        "pvp_honor_race_tests.rs",
+        "pvp_kill_criteria_tests.rs",
+        "pvp_lifetime_honor_tests.rs"
+      ],
+      "tests": 74,
+      "refs": {
+        "auras": 91,
+        "auth": 13,
+        "networking": 16,
+        "persistence": 58,
+        "maps": 75,
+        "group": 10,
+        "transport": 6,
+        "game_objects": 34,
+        "death": 21,
+        "unit_target": 1,
+        "lfg": 4,
+        "class_progression": 2,
+        "spell_info": 14,
+        "rest": 4,
+        "spell_cast": 57,
+        "ground": 5,
+        "area_table": 1,
+        "faction": 3,
+        "scripted_ai": 5,
+        "test_data": 13,
+        "knockback": 1,
+        "world_data": 6,
+        "terrain_height": 4,
+        "line_of_sight": 1,
+        "zones": 6,
+        "combat": 5,
+        "interest": 5,
+        "hunter_pet": 2,
+        "achievement": 28,
+        "creature_tap": 4,
+        "currency": 10,
+        "spawn_groups": 1,
+        "stats": 1,
+        "item_stats": 1
+      },
+      "inbound": [
+        "achievement",
+        "auras",
+        "auth_character",
+        "class_progression",
+        "combat",
+        "currency",
+        "death",
+        "game_objects",
+        "gathering",
+        "lfg",
+        "maps",
+        "networking",
+        "npc_interaction",
+        "persistence",
+        "scripted_ai",
+        "spell_cast",
+        "transport",
+        "world_data",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "quest": {
+      "files": [
+        "quest.rs",
+        "quest_requests.rs",
+        "quest_tests.rs",
+        "quest_bonus_money_tests.rs",
+        "quest_max_count_tests.rs",
+        "zephras_quest_tests.rs",
+        "quest_spell_tests.rs",
+        "quest_objectives_tests.rs",
+        "world_quest_talk_tests.rs"
+      ],
+      "tests": 55,
+      "refs": {
+        "auth": 2,
+        "combat": 9,
+        "creature_tap": 3,
+        "death": 4,
+        "gold": 2,
+        "group": 7,
+        "networking": 5,
+        "persistence": 20,
+        "quest_data": 16,
+        "quest_rules": 10,
+        "quest_view": 5,
+        "world_quests": 4,
+        "maps": 35,
+        "experience": 7,
+        "quest_time": 1,
+        "world_quest_availability": 1,
+        "inventory": 8,
+        "zones": 5,
+        "taxi": 2,
+        "terrain_height": 7,
+        "item_templates": 2,
+        "auras": 15,
+        "profession": 5,
+        "currency": 2,
+        "faction": 9,
+        "scripted_ai": 6,
+        "world_quest_rewards": 5,
+        "quest_bonus_money": 6,
+        "achievement": 8,
+        "world_quest_objectives": 4,
+        "test_data": 33,
+        "appearance_collection": 3,
+        "toy_catalog": 1,
+        "persistence_progression": 2,
+        "world_data": 7,
+        "bank_storage": 1,
+        "merchant": 2,
+        "player_create_info": 1,
+        "spell_cast": 12,
+        "creature_ai": 1,
+        "creature_aggro": 1,
+        "spell_info": 3,
+        "conditions": 2,
+        "item_stats": 2,
+        "npc_interaction": 3,
+        "game_objects": 2,
+        "loot": 2
+      },
+      "inbound": [
+        "admin_ipc",
+        "auras",
+        "game_objects",
+        "loot",
+        "npc_interaction",
+        "quest_time",
+        "scripted_ai",
+        "spell_area",
+        "spell_cast",
+        "world_quest_availability"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "quest_bonus_money": {
+      "files": [
+        "quest_bonus_money.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "quest_data": 1,
+        "quest_rules": 1,
+        "experience": 1
+      },
+      "inbound": [
+        "quest",
+        "quest_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "quest_data": {
+      "files": [
+        "quest_data.rs"
+      ],
+      "tests": 1,
+      "refs": {
+        "maps": 1,
+        "world_quest_objectives": 2,
+        "world_quests": 6,
+        "world_quest_rewards": 2,
+        "quest_bonus_money": 1,
+        "profession": 1,
+        "housing_quests": 1,
+        "spell_info": 1,
+        "test_data": 1
+      },
+      "inbound": [
+        "achievement",
+        "admin_ipc",
+        "game_objects",
+        "housing_quests",
+        "loot",
+        "merchant",
+        "npc_interaction",
+        "quest",
+        "quest_bonus_money",
+        "quest_rules",
+        "quest_time",
+        "quest_view",
+        "spell_area",
+        "spell_cast",
+        "world_quest_availability",
+        "world_quest_objectives",
+        "world_quest_rewards"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "quest_rules": {
+      "files": [
+        "quest_rules.rs",
+        "quest_rules_tests.rs"
+      ],
+      "tests": 20,
+      "refs": {
+        "persistence": 3,
+        "quest_data": 3,
+        "faction": 1,
+        "race_class": 1,
+        "maps": 3,
+        "world_quest_objectives": 9
+      },
+      "inbound": [
+        "admin_ipc",
+        "game_objects",
+        "loot",
+        "quest",
+        "quest_bonus_money",
+        "quest_view",
+        "spell_area",
+        "world_quest_availability"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "quest_time": {
+      "files": [
+        "quest_time.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "auth": 1,
+        "maps": 3,
+        "persistence": 3,
+        "quest": 1,
+        "quest_data": 1,
+        "world_quests": 1
+      },
+      "inbound": [
+        "quest"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "quest_view": {
+      "files": [
+        "quest_view.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "persistence": 4,
+        "quest_data": 1,
+        "quest_rules": 1,
+        "inventory": 2,
+        "item_templates": 1,
+        "world_quest_objectives": 2
+      },
+      "inbound": [
+        "game_objects",
+        "loot",
+        "quest",
+        "spell_area",
+        "world_quest_availability"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "race_class": {
+      "files": [
+        "race_class.rs"
+      ],
+      "tests": 11,
+      "refs": {},
+      "inbound": [
+        "achievement",
+        "auth_character",
+        "class_progression",
+        "game_objects",
+        "item_templates",
+        "persistence_character",
+        "player_create_info",
+        "player_start",
+        "profession",
+        "quest_rules"
+      ],
+      "reachable_gameplay": []
+    },
+    "raid_history": {
+      "files": [
+        "raid_history.rs"
+      ],
+      "tests": 1,
+      "refs": {
+        "maps": 9,
+        "persistence": 2,
+        "raid_history_store": 1,
+        "scripted_ai": 2,
+        "bank_test_harness": 1
+      },
+      "inbound": [
+        "maps",
+        "scripted_ai"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "random": {
+      "files": [
+        "random.rs"
+      ],
+      "tests": 1,
+      "refs": {},
+      "inbound": [
+        "auras",
+        "combat",
+        "followers",
+        "hunter_pet",
+        "scripted_ai",
+        "simc_apl_native",
+        "spawn_pools",
+        "spell_cast",
+        "zones"
+      ],
+      "reachable_gameplay": []
+    },
+    "renown": {
+      "files": [
+        "renown.rs",
+        "renown_tests.rs"
+      ],
+      "tests": 7,
+      "refs": {
+        "persistence_character": 1,
+        "persistence": 4,
+        "reputation": 1,
+        "auth": 1,
+        "networking": 1,
+        "bank_test_harness": 5
+      },
+      "inbound": [
+        "admin_ipc",
+        "reputation"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "reputation": {
+      "files": [
+        "reputation.rs",
+        "reputation_tests.rs"
+      ],
+      "tests": 6,
+      "refs": {
+        "auth": 1,
+        "combat": 1,
+        "creature_tap": 1,
+        "group": 1,
+        "networking": 1,
+        "persistence": 6,
+        "world_data": 2,
+        "maps": 1,
+        "renown": 3,
+        "creature_aggro": 1,
+        "persistence_character": 1,
+        "bank_test_harness": 4
+      },
+      "inbound": [
+        "renown",
+        "world_quest_rewards"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "rest": {
+      "files": [
+        "rest.rs"
+      ],
+      "tests": 12,
+      "refs": {
+        "auth": 1,
+        "experience": 1,
+        "networking": 1,
+        "persistence": 2,
+        "persistence_progression": 3,
+        "world_data": 2,
+        "maps": 8,
+        "area_table": 3,
+        "ground": 4,
+        "faction": 3,
+        "terrain_height": 5,
+        "creature_aggro": 1
+      },
+      "inbound": [
+        "admin_handlers",
+        "experience",
+        "networking",
+        "pvp"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "scripted_ai": {
+      "files": [
+        "scripted_ai/mod.rs",
+        "scripted_ai/algethar_academy.rs",
+        "scripted_ai/anubzekt.rs",
+        "scripted_ai/azure_vault.rs",
+        "scripted_ai/azureblade.rs",
+        "scripted_ai/blood_furnace.rs",
+        "scripted_ai/boss_ai.rs",
+        "scripted_ai/bossmod.rs",
+        "scripted_ai/broggok.rs",
+        "scripted_ai/bromach.rs",
+        "scripted_ai/candle_king.rs",
+        "scripted_ai/caster_chase.rs",
+        "scripted_ai/creature_text.rs",
+        "scripted_ai/dailcry.rs",
+        "scripted_ai/doragosa.rs",
+        "scripted_ai/emberon.rs",
+        "scripted_ai/event_map.rs",
+        "scripted_ai/gorek.rs",
+        "scripted_ai/granyth.rs",
+        "scripted_ai/gulping_goliath.rs",
+        "scripted_ai/gutshot.rs",
+        "scripted_ai/hellfire_ramparts.rs",
+        "scripted_ai/hellfire_ramparts/herald.rs",
+        "scripted_ai/hellfire_ramparts/liquid_fire.rs",
+        "scripted_ai/hellfire_ramparts/omor.rs",
+        "scripted_ai/hellfire_ramparts/vazruden.rs",
+        "scripted_ai/instance_script.rs",
+        "scripted_ai/irideus.rs",
+        "scripted_ai/jump_movement.rs",
+        "scripted_ai/kargath.rs",
+        "scripted_ai/khajin.rs",
+        "scripted_ai/kikatal.rs",
+        "scripted_ai/kings_rest.rs",
+        "scripted_ai/kings_rest/gold_follow.rs",
+        "scripted_ai/kings_rest/golden_serpent.rs",
+        "scripted_ai/kings_rest/gust_slash.rs",
+        "scripted_ai/kings_rest/molten_gold.rs",
+        "scripted_ai/kings_rest/serpentine_seal.rs",
+        "scripted_ai/kings_rest/shadow_of_zul.rs",
+        "scripted_ai/kings_rest/temple_trash.rs",
+        "scripted_ai/kokia.rs",
+        "scripted_ai/lost_dwarves.rs",
+        "scripted_ai/maraudon.rs",
+        "scripted_ai/melidrussa.rs",
+        "scripted_ai/model_reach.rs",
+        "scripted_ai/model_reach_tests.rs",
+        "scripted_ai/movement.rs",
+        "scripted_ai/murder_row.rs",
+        "scripted_ai/nethekurse.rs",
+        "scripted_ai/nethekurse_intro.rs",
+        "scripted_ai/orator.rs",
+        "scripted_ai/ragefire_chasm.rs",
+        "scripted_ai/ragefire_chasm/intro_triggers.rs",
+        "scripted_ai/ruby_life_pools.rs",
+        "scripted_ai/scripted_alerts.rs",
+        "scripted_ai/shattered_halls.rs",
+        "scripted_ai/skarmorak.rs",
+        "scripted_ai/smart_ai.rs",
+        "scripted_ai/smart_paths.rs",
+        "scripted_ai/smart_timed.rs",
+        "scripted_ai/smart_instance_data.rs",
+        "scripted_ai/smart_combat.rs",
+        "scripted_ai/smart_escort.rs",
+        "scripted_ai/smart_pose.rs",
+        "scripted_ai/smart_targets.rs",
+        "scripted_ai/smart_lifetimes.rs",
+        "scripted_ai/smart_summons.rs",
+        "scripted_ai/smart_follow.rs",
+        "scripted_ai/smart_escort_tests.rs",
+        "scripted_ai/smart_feero_tests.rs",
+        "scripted_ai/smart_feero_combat_tests.rs",
+        "scripted_ai/smart_feero_live_setup.rs",
+        "scripted_ai/smart_feero_quest_tests.rs",
+        "scripted_ai/talondras.rs",
+        "scripted_ai/the_stockade.rs",
+        "scripted_ai/treemouth.rs",
+        "scripted_ai/tww_rookery.rs",
+        "scripted_ai/umbrelskul.rs",
+        "scripted_ai/vexamus.rs",
+        "scripted_ai/wailing_caverns.rs",
+        "scripted_ai/waypoint_path.rs",
+        "scripted_ai/waypoint_path_tests.rs",
+        "scripted_ai/wratheye.rs",
+        "scripted_ai/fall_movement.rs",
+        "scripted_ai/tests.rs",
+        "scripted_ai/tests/cast_admission.rs",
+        "scripted_ai/tests/data_bosses.rs",
+        "scripted_ai/tests/ancient.rs",
+        "scripted_ai/tests/anubzekt.rs",
+        "scripted_ai/tests/azure_absolute_zero.rs",
+        "scripted_ai/tests/azure_blade.rs",
+        "scripted_ai/tests/azure_combat.rs",
+        "scripted_ai/tests/azure_explosive_brand.rs",
+        "scripted_ai/tests/azure_frost_bomb.rs",
+        "scripted_ai/tests/azure_frozen_ground.rs",
+        "scripted_ai/tests/azure_intro.rs",
+        "scripted_ai/tests/azure_jump_charge.rs",
+        "scripted_ai/tests/azure_leymor_children.rs",
+        "scripted_ai/tests/azure_mechanic_power.rs",
+        "scripted_ai/tests/azure_rune_callbacks.rs",
+        "scripted_ai/tests/azure_rune_fields.rs",
+        "scripted_ai/tests/azure_rune_strip.rs",
+        "scripted_ai/tests/azure_sprout_death.rs",
+        "scripted_ai/tests/azure_sprout_field_actions.rs",
+        "scripted_ai/tests/azure_sprout_fields.rs",
+        "scripted_ai/tests/azure_sprouts.rs",
+        "scripted_ai/tests/azure_telash.rs",
+        "scripted_ai/tests/azure_telash_return.rs",
+        "scripted_ai/tests/broggok.rs",
+        "scripted_ai/tests/bromach.rs",
+        "scripted_ai/tests/candle_king.rs",
+        "scripted_ai/tests/celebras.rs",
+        "scripted_ai/tests/crawth.rs",
+        "scripted_ai/tests/dailcry.rs",
+        "scripted_ai/tests/deios.rs",
+        "scripted_ai/tests/doragosa.rs",
+        "scripted_ai/tests/emberon.rs",
+        "scripted_ai/tests/gargolmar.rs",
+        "scripted_ai/tests/gargolmar_speech.rs",
+        "scripted_ai/tests/gizlock.rs",
+        "scripted_ai/tests/gnomeregan.rs",
+        "scripted_ai/tests/gorek.rs",
+        "scripted_ai/tests/granyth.rs",
+        "scripted_ai/tests/data_bosses_group_criteria.rs",
+        "scripted_ai/tests/gulping_goliath.rs",
+        "scripted_ai/tests/gutshot.rs",
+        "scripted_ai/tests/herald_call.rs",
+        "scripted_ai/tests/herald_damage.rs",
+        "scripted_ai/tests/herald_fall.rs",
+        "scripted_ai/tests/herald_flying_liquid_fire.rs",
+        "scripted_ai/tests/herald_ground.rs",
+        "scripted_ai/tests/herald_intro.rs",
+        "scripted_ai/tests/herald_intro2.rs",
+        "scripted_ai/tests/herald_liquid_fire.rs",
+        "scripted_ai/tests/herald_min1.rs",
+        "scripted_ai/tests/herald_pair.rs",
+        "scripted_ai/tests/herald_reset.rs",
+        "scripted_ai/tests/irideus.rs",
+        "scripted_ai/tests/kargath.rs",
+        "scripted_ai/tests/kelidan.rs",
+        "scripted_ai/tests/khajin.rs",
+        "scripted_ai/tests/kikatal.rs",
+        "scripted_ai/tests/kokia.rs",
+        "scripted_ai/tests/landslide.rs",
+        "scripted_ai/tests/lost_dwarves.rs",
+        "scripted_ai/tests/maraudon.rs",
+        "scripted_ai/tests/melidrussa.rs",
+        "scripted_ai/tests/native_target148.rs",
+        "scripted_ai/tests/nethekurse.rs",
+        "scripted_ai/tests/noxxion.rs",
+        "scripted_ai/tests/omor.rs",
+        "scripted_ai/tests/omor_pushback.rs",
+        "scripted_ai/tests/omor_slay.rs",
+        "scripted_ai/tests/omrogg.rs",
+        "scripted_ai/tests/orator.rs",
+        "scripted_ai/tests/porung.rs",
+        "scripted_ai/tests/skarmorak.rs",
+        "scripted_ai/tests/talondras.rs",
+        "scripted_ai/tests/the_maker.rs",
+        "scripted_ai/tests/theradras.rs",
+        "scripted_ai/tests/treemouth.rs",
+        "scripted_ai/tests/tww_kyrioss.rs",
+        "scripted_ai/tests/umbrelskul.rs",
+        "scripted_ai/tests/vazruden_slay.rs",
+        "scripted_ai/tests/vexamus.rs",
+        "scripted_ai/tests/vyletongue.rs",
+        "scripted_ai/tests/wratheye.rs",
+        "scripted_ai/tests/prepared_input_concurrency_tests.rs",
+        "scripted_ai/tests/prepared_input_tests.rs",
+        "scripted_ai/tests/prepared_inputs.rs",
+        "scripted_ai/tests/ragefire_completion.rs",
+        "scripted_ai/tests/shadowfang_keep.rs",
+        "scripted_ai/tests/wailing_aggro.rs",
+        "scripted_ai/tests/wailing_awakening.rs",
+        "scripted_ai/tests/wailing_escort.rs",
+        "scripted_ai/tests/wailing_physical.rs",
+        "scripted_ai/tests/wailing_progress.rs",
+        "scripted_ai/tests/wailing_ritual_waves.rs",
+        "scripted_ai/tests/wailing_start.rs",
+        "scripted_ai/tests/dungeonach.rs",
+        "scripted_ai/tests/rainfire_visibility.rs",
+        "scripted_ai/tests/smart_combat.rs",
+        "scripted_ai/tests/wailing_caverns.rs"
+      ],
+      "tests": 578,
+      "refs": {
+        "random": 10,
+        "combat": 158,
+        "creature_ai": 161,
+        "grid_activity": 3,
+        "maps": 342,
+        "networking": 8,
+        "game_objects": 28,
+        "auras": 257,
+        "spell_cast": 297,
+        "creature_aggro": 82,
+        "zones": 135,
+        "creature_tap": 1,
+        "persistence": 63,
+        "quest": 8,
+        "test_data": 42,
+        "world_data": 56,
+        "spell_info": 28,
+        "terrain_height": 44,
+        "line_of_sight": 10,
+        "ground": 103,
+        "interest": 74,
+        "pvp": 1,
+        "achievement": 8,
+        "mythic_plus": 1,
+        "raid_history": 1,
+        "navigation": 35,
+        "death": 18,
+        "group": 5,
+        "quest_data": 7,
+        "faction": 4,
+        "persistence_accounts": 1,
+        "persistence_character": 1,
+        "player_create_info": 1,
+        "quest_rules": 1,
+        "npc_interaction": 6,
+        "auth": 3,
+        "level_scaling": 11,
+        "catalog_data": 1,
+        "stats": 10,
+        "gathering": 1,
+        "item_stats": 2,
+        "conditions": 2,
+        "followers": 4,
+        "melee": 4,
+        "knockback": 1,
+        "loot": 2,
+        "item_templates": 2
+      },
+      "inbound": [
+        "achievement",
+        "auras",
+        "combat",
+        "creature_aggro",
+        "creature_ai",
+        "creature_sight",
+        "followers",
+        "game_objects",
+        "grid_activity",
+        "maps",
+        "navigation",
+        "npc_interaction",
+        "pvp",
+        "quest",
+        "raid_history",
+        "spell_cast",
+        "world_data",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "seething_parachute": {
+      "files": [
+        "seething_parachute.rs",
+        "seething_parachute_tests.rs"
+      ],
+      "tests": 4,
+      "refs": {
+        "auras": 5,
+        "ground": 3,
+        "maps": 1,
+        "spell_cast": 8,
+        "networking": 3,
+        "line_of_sight": 2,
+        "terrain_height": 1,
+        "knockback": 1
+      },
+      "inbound": [
+        "auras",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "sheet_visibility": {
+      "files": [
+        "sheet_visibility.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "networking": 1
+      },
+      "inbound": [
+        "networking"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "simc_apl_native": {
+      "files": [
+        "simc_apl_native.rs",
+        "simc_apl_native/reaction.rs",
+        "simc_apl_native/expected_length_tests.rs",
+        "simc_apl_native/movement_distance_tests.rs",
+        "simc_apl_native/refresh_context_tests.rs",
+        "simc_apl_native/target_context_tests.rs",
+        "simc_apl_native/target_tests.rs",
+        "simc_apl_native/tests.rs",
+        "simc_apl_native/action_extension_tests.rs",
+        "simc_apl_native/extension_tests.rs"
+      ],
+      "tests": 37,
+      "refs": {
+        "simc_apl": 1,
+        "spell_info": 14,
+        "followers": 7,
+        "networking": 10,
+        "spell_cast": 48,
+        "auras": 37,
+        "creature_ai": 2,
+        "class_progression": 5,
+        "stats": 5,
+        "random": 3,
+        "trait_config": 1
+      },
+      "inbound": [
+        "auras"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "skyriding": {
+      "files": [
+        "skyriding.rs",
+        "skyriding_tests.rs"
+      ],
+      "tests": 13,
+      "refs": {
+        "spell_info": 1,
+        "spell_cast": 3,
+        "class_progression": 3,
+        "auras": 13,
+        "profession": 1
+      },
+      "inbound": [
+        "auras",
+        "networking",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "spawn_groups": {
+      "files": [
+        "spawn_groups.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "maps": 6,
+        "world_data": 2,
+        "ground": 2,
+        "zones": 1,
+        "game_objects": 2
+      },
+      "inbound": [
+        "combat",
+        "game_objects",
+        "maps",
+        "pvp",
+        "world_data",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "spawn_pools": {
+      "files": [
+        "spawn_pools.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "random": 1,
+        "maps": 1,
+        "world_data": 1,
+        "game_objects": 2,
+        "gathering": 2,
+        "ground": 2,
+        "zones": 1
+      },
+      "inbound": [
+        "combat",
+        "gathering",
+        "maps",
+        "world_data",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "spell_area": {
+      "files": [
+        "spell_area.rs"
+      ],
+      "tests": 4,
+      "refs": {
+        "auras": 1,
+        "spell_info": 2,
+        "quest": 3,
+        "auth": 1,
+        "networking": 1,
+        "maps": 2,
+        "ground": 3,
+        "area_table": 1,
+        "persistence": 3,
+        "quest_data": 1,
+        "quest_rules": 1,
+        "quest_view": 1,
+        "test_data": 1,
+        "spell_cast": 2
+      },
+      "inbound": [],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "spell_cast": {
+      "files": [
+        "spell_cast/mod.rs",
+        "spell_cast/achievement_damage_tests.rs",
+        "spell_cast/achievement_healing_tests.rs",
+        "spell_cast/aoe_avoidance_tests.rs",
+        "spell_cast/area_aura.rs",
+        "spell_cast/area_trigger.rs",
+        "spell_cast/area_trigger/aura_owned.rs",
+        "spell_cast/area_trigger/catalog.rs",
+        "spell_cast/area_trigger/frozen_ground.rs",
+        "spell_cast/area_trigger/meteor.rs",
+        "spell_cast/area_trigger/vault_rune.rs",
+        "spell_cast/attack_power_tests.rs",
+        "spell_cast/aura_spell_restrictions.rs",
+        "spell_cast/auto_repeat.rs",
+        "spell_cast/auto_shot_repeat_tests.rs",
+        "spell_cast/cooldown_query.rs",
+        "spell_cast/holy_metrics.rs",
+        "spell_cast/holy_words_tests.rs",
+        "spell_cast/mastery_base_tests.rs",
+        "spell_cast/trait_effect_points_tests.rs",
+        "spell_cast/autoattack_range_tests.rs",
+        "spell_cast/base_armor_tests.rs",
+        "spell_cast/blooming_infusion.rs",
+        "spell_cast/blooming_infusion_tests.rs",
+        "spell_cast/bonus_stat_tests.rs",
+        "spell_cast/cast_while_moving_tests.rs",
+        "spell_cast/casting_restriction.rs",
+        "spell_cast/casting_restriction_tests.rs",
+        "spell_cast/census_death_grip_tests.rs",
+        "spell_cast/census_e77_shaman_tests.rs",
+        "spell_cast/census_generic_next_tests.rs",
+        "spell_cast/census_guardian_aura_tests.rs",
+        "spell_cast/census_tail_tests.rs",
+        "spell_cast/census_three_tests.rs",
+        "spell_cast/charge.rs",
+        "spell_cast/charge_rate_tests.rs",
+        "spell_cast/charge_type_mask_tests.rs",
+        "spell_cast/chrono_flame_tests.rs",
+        "spell_cast/class_completeness_probe.rs",
+        "spell_cast/class_completeness_tests.rs",
+        "spell_cast/cone_boundary_tests.rs",
+        "spell_cast/control_dream.rs",
+        "spell_cast/control_dream_tests.rs",
+        "spell_cast/cosmetic.rs",
+        "spell_cast/creature.rs",
+        "spell_cast/creature/explicit_targets.rs",
+        "spell_cast/creature_type_damage_tests.rs",
+        "spell_cast/critical_block_tests.rs",
+        "spell_cast/critical_healing_tests.rs",
+        "spell_cast/dead_cast_progress_tests.rs",
+        "spell_cast/dead_caster_channel_tests.rs",
+        "spell_cast/disenchant.rs",
+        "spell_cast/disenchant_tests.rs",
+        "spell_cast/druid_transform.rs",
+        "spell_cast/druid_transform_tests.rs",
+        "spell_cast/dummy10_tests.rs",
+        "spell_cast/dummy11_tests.rs",
+        "spell_cast/dummy12_tests.rs",
+        "spell_cast/dummy13_tests.rs",
+        "spell_cast/dummy14_tests.rs",
+        "spell_cast/dummy15_boundary_tests.rs",
+        "spell_cast/dummy15_tests.rs",
+        "spell_cast/dummy16_tests.rs",
+        "spell_cast/dummy17_tests.rs",
+        "spell_cast/dummy18_tests.rs",
+        "spell_cast/dummy19_boundary_tests.rs",
+        "spell_cast/dummy19_tests.rs",
+        "spell_cast/dummy20_tests.rs",
+        "spell_cast/dummy21_tests.rs",
+        "spell_cast/dummy22_tests.rs",
+        "spell_cast/dummy23_tests.rs",
+        "spell_cast/dummy2_tests.rs",
+        "spell_cast/dummy3_tests.rs",
+        "spell_cast/dummy4_tests.rs",
+        "spell_cast/dummy6_tests.rs",
+        "spell_cast/dummy8_tests.rs",
+        "spell_cast/dummy_tests.rs",
+        "spell_cast/effects.rs",
+        "spell_cast/aura_stat_spell_tests.rs",
+        "spell_cast/bypass_armor_tests.rs",
+        "spell_cast/caster_ability_crit_tests.rs",
+        "spell_cast/factor_capture.rs",
+        "spell_cast/windwalker_mastery_tests.rs",
+        "spell_cast/efflorescence.rs",
+        "spell_cast/elemental_resource.rs",
+        "spell_cast/empower.rs",
+        "spell_cast/empower_input_tests.rs",
+        "spell_cast/excluded_aura_spell_tests.rs",
+        "spell_cast/excluded_caster_type_tests.rs",
+        "spell_cast/expel_harm_tests.rs",
+        "spell_cast/fel_devastation_tests.rs",
+        "spell_cast/full_trigger_dead_target_tests.rs",
+        "spell_cast/guardian.rs",
+        "spell_cast/guardian_core.rs",
+        "spell_cast/guardian_tyrant.rs",
+        "spell_cast/guardian_tests.rs",
+        "spell_cast/history_store.rs",
+        "spell_cast/hit.rs",
+        "spell_cast/aura_expertise_tests.rs",
+        "spell_cast/howl.rs",
+        "spell_cast/impending_victory_tests.rs",
+        "spell_cast/impending_victory_behavior_tests.rs",
+        "spell_cast/interruptibility.rs",
+        "spell_cast/invigorating_fury_tests.rs",
+        "spell_cast/invigorating_fury_behavior_tests.rs",
+        "spell_cast/native_apl.rs",
+        "spell_cast/protection_producer_tests.rs",
+        "spell_cast/always_hit_tests.rs",
+        "spell_cast/protection_item_tests.rs",
+        "spell_cast/venomfang_tests.rs",
+        "spell_cast/sanctuary.rs",
+        "spell_cast/interruptibility_rule_tests.rs",
+        "spell_cast/interruptibility_tests.rs",
+        "spell_cast/mobile_banking.rs",
+        "spell_cast/mobile_banking_tests.rs",
+        "spell_cast/omor_orbital.rs",
+        "spell_cast/ordinary_dead_caster_tests.rs",
+        "spell_cast/prayer_of_mending_tests.rs",
+        "spell_cast/queued_trigger_cost_tests.rs",
+        "spell_cast/required_caster_aura_tests.rs",
+        "spell_cast/scourge_eruption_tests.rs",
+        "spell_cast/touch_of_death_tests.rs",
+        "spell_cast/warrior_stun_tests.rs",
+        "spell_cast/warrior_stuns.rs",
+        "spell_cast/enemy_dodge_tests.rs",
+        "spell_cast/label_recovery_tests.rs",
+        "spell_cast/mechanic_resistance_tests.rs",
+        "spell_cast/melee_crit_taken_tests.rs",
+        "spell_cast/melee_hit_modifier_tests.rs",
+        "spell_cast/missiles.rs",
+        "spell_cast/missiles_tests.rs",
+        "spell_cast/open_lock.rs",
+        "spell_cast/open_lock_tests.rs",
+        "spell_cast/portal_tests.rs",
+        "spell_cast/powers.rs",
+        "spell_cast/protective_growth_tests.rs",
+        "spell_cast/raid_area_tests.rs",
+        "spell_cast/recovery_rate.rs",
+        "spell_cast/reflect.rs",
+        "spell_cast/resources.rs",
+        "spell_cast/runes.rs",
+        "spell_cast/scripts.rs",
+        "spell_cast/scripts/after_cast_auras.rs",
+        "spell_cast/scripts/batch10.rs",
+        "spell_cast/scripts/batch11.rs",
+        "spell_cast/scripts/batch12.rs",
+        "spell_cast/scripts/batch13.rs",
+        "spell_cast/scripts/batch14.rs",
+        "spell_cast/scripts/batch15.rs",
+        "spell_cast/scripts/batch16.rs",
+        "spell_cast/scripts/batch17.rs",
+        "spell_cast/scripts/batch19.rs",
+        "spell_cast/scripts/batch20.rs",
+        "spell_cast/scripts/batch21.rs",
+        "spell_cast/scripts/batch22.rs",
+        "spell_cast/scripts/batch23.rs",
+        "spell_cast/scripts/batch3.rs",
+        "spell_cast/scripts/batch4.rs",
+        "spell_cast/scripts/batch5.rs",
+        "spell_cast/scripts/batch6.rs",
+        "spell_cast/scripts/batch7.rs",
+        "spell_cast/scripts/batch8.rs",
+        "spell_cast/scripts/batch9.rs",
+        "spell_cast/scripts/chrono_flame.rs",
+        "spell_cast/scripts/clearcasting.rs",
+        "spell_cast/scripts/elemental_ascendance.rs",
+        "spell_cast/scripts/empower_evoker.rs",
+        "spell_cast/scripts/essence_burst.rs",
+        "spell_cast/scripts/germination.rs",
+        "spell_cast/scripts/giantkiller.rs",
+        "spell_cast/scripts/holy_priest.rs",
+        "spell_cast/scripts/hot_streak.rs",
+        "spell_cast/scripts/lava_surge.rs",
+        "spell_cast/scripts/prayer_of_mending.rs",
+        "spell_cast/scripts/protection_items.rs",
+        "spell_cast/scripts/ret_empyrean.rs",
+        "spell_cast/scripts/ret_purpose.rs",
+        "spell_cast/scripts/ret_resonance.rs",
+        "spell_cast/scripts/ret_tier.rs",
+        "spell_cast/scripts/ret_toll.rs",
+        "spell_cast/scripts/scourge_strike.rs",
+        "spell_cast/scripts/snakeskin_quiver.rs",
+        "spell_cast/scripts/soul_of_the_forest.rs",
+        "spell_cast/scripts/swiftmend.rs",
+        "spell_cast/scripts/touch_of_death.rs",
+        "spell_cast/scripts/unbroken_rhythm.rs",
+        "spell_cast/scripts/windwalker.rs",
+        "spell_cast/scripts/windwalker_flurry.rs",
+        "spell_cast/scripts/voltaic_blaze.rs",
+        "spell_cast/shapeshift.rs",
+        "spell_cast/summon.rs",
+        "spell_cast/summon_property_tests.rs",
+        "spell_cast/summon_at_tests.rs",
+        "spell_cast/summon_damage_tests.rs",
+        "spell_cast/targets.rs",
+        "spell_cast/targets/ordered_destination.rs",
+        "spell_cast/test_harness.rs",
+        "spell_cast/test_harness/assisted_parity.rs",
+        "spell_cast/arena_cooldowns.rs",
+        "spell_cast/arena_cooldown_tests.rs",
+        "spell_cast/assisted_costs.rs",
+        "spell_cast/charge_snapshot_tests.rs",
+        "spell_cast/combat_area_target_tests.rs",
+        "spell_cast/homebind.rs",
+        "spell_cast/jump_charge.rs",
+        "spell_cast/knockback.rs",
+        "spell_cast/knockback_tests.rs",
+        "spell_cast/knowledge.rs",
+        "spell_cast/knowledge/form.rs",
+        "spell_cast/launch_combat_tests.rs",
+        "spell_cast/school_costs.rs",
+        "spell_cast/teleport.rs",
+        "spell_cast/teleport_positions.rs",
+        "spell_cast/toy_coin.rs",
+        "spell_cast/toy_foam_sword.rs",
+        "spell_cast/toy_scripts.rs",
+        "spell_cast/toy_weather.rs",
+        "spell_cast/toy_wormhole.rs",
+        "spell_cast/elemental_overload.rs",
+        "spell_cast/queued_triggers.rs",
+        "spell_cast/toy_area.rs",
+        "spell_cast/toy_coyote.rs",
+        "spell_cast/toy_facing.rs",
+        "spell_cast/toy_flag.rs",
+        "spell_cast/toy_requirements.rs",
+        "spell_cast/caster_offset_tests.rs",
+        "spell_cast/class_resource_tests.rs",
+        "spell_cast/energizing_elixir_tests.rs",
+        "spell_cast/line_of_sight_tests.rs",
+        "spell_cast/live_ground_destination_tests.rs",
+        "spell_cast/mechanics_talent_tests.rs",
+        "spell_cast/mechanics_tests.rs",
+        "spell_cast/override_queue_tests.rs",
+        "spell_cast/power_drain_tests.rs",
+        "spell_cast/prevent_regen_tests.rs",
+        "spell_cast/queue_tests.rs",
+        "spell_cast/regen_tests.rs",
+        "spell_cast/rezrtap_tests.rs",
+        "spell_cast/source_cast_flags_tests.rs",
+        "spell_cast/target148_tests.rs",
+        "spell_cast/target32_grounding_tests.rs",
+        "spell_cast/target73_tests.rs",
+        "spell_cast/target74_tests.rs",
+        "spell_cast/teleport_tests.rs",
+        "spell_cast/tests.rs",
+        "spell_cast/water_shield_mana_tests.rs"
+      ],
+      "tests": 1073,
+      "refs": {
+        "auras": 1207,
+        "random": 30,
+        "auth": 8,
+        "class_progression": 111,
+        "interest": 13,
+        "networking": 36,
+        "spell_info": 224,
+        "stats": 151,
+        "knockback": 3,
+        "group": 25,
+        "game_objects": 28,
+        "hunter_pet": 50,
+        "persistence": 45,
+        "followers": 13,
+        "scripted_ai": 75,
+        "damage_meter": 1,
+        "pvp": 24,
+        "achievement": 22,
+        "quest": 8,
+        "toy_catalog": 5,
+        "mount_journal": 1,
+        "profession": 18,
+        "line_of_sight": 25,
+        "gathering": 4,
+        "death": 25,
+        "stand_state": 5,
+        "pet_control": 2,
+        "combat": 87,
+        "conditions": 9,
+        "creature_aggro": 14,
+        "crafting_orders": 2,
+        "meeting_stone": 5,
+        "test_data": 59,
+        "maps": 110,
+        "item_templates": 23,
+        "item_stats": 11,
+        "melee": 7,
+        "trait_config": 1,
+        "level_scaling": 32,
+        "creature_ai": 16,
+        "quest_data": 2,
+        "world_data": 59,
+        "faction": 11,
+        "combat_refs": 11,
+        "terrain_height": 13,
+        "ground": 45,
+        "duel": 13,
+        "unit_creature_type": 8,
+        "inventory": 17,
+        "loot": 13,
+        "gold": 3,
+        "merchant": 7,
+        "zones": 13,
+        "creature_scripts": 4,
+        "hunter_pet_stats": 1,
+        "test_support": 6,
+        "creature_tap": 3,
+        "item_proc_data": 14,
+        "item_instance": 3,
+        "persistence_character": 3,
+        "persistence_progression": 2,
+        "npc_interaction": 1,
+        "grid_activity": 4,
+        "seething_parachute": 2,
+        "skyriding": 1,
+        "battle_pets": 1,
+        "area_table": 2,
+        "messaging": 1,
+        "navigation": 1,
+        "friends": 1,
+        "ignore_list": 2
+      },
+      "inbound": [
+        "achievement",
+        "admin_ipc",
+        "auras",
+        "auth_character",
+        "battle_pets",
+        "class_progression",
+        "combat",
+        "conditions",
+        "crafting_orders",
+        "creature_aggro",
+        "creature_ai",
+        "creature_tap",
+        "death",
+        "equipment_effects",
+        "experience",
+        "followers",
+        "game_objects",
+        "gathering",
+        "hunter_pet",
+        "inventory",
+        "item_templates",
+        "knockback",
+        "maps",
+        "meeting_stone",
+        "mirror_timers",
+        "mount_journal",
+        "networking",
+        "npc_interaction",
+        "persistence",
+        "persistence_character",
+        "pet_control",
+        "profession",
+        "pvp",
+        "scripted_ai",
+        "seething_parachute",
+        "simc_apl_native",
+        "skyriding",
+        "spell_area",
+        "spell_info",
+        "toy_catalog",
+        "toys",
+        "transport",
+        "world_data",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "spell_info": {
+      "files": [
+        "spell_info/mod.rs",
+        "spell_info/aura_restrictions_tests.rs",
+        "spell_info/class_data.rs",
+        "spell_info/immunity.rs",
+        "spell_info/immunity_tests.rs",
+        "spell_info/load.rs",
+        "spell_info/load/serverside.rs",
+        "spell_info/positivity.rs",
+        "spell_info/serverside_tests.rs",
+        "spell_info/trait_data.rs",
+        "spell_info/trait_effect_points.rs",
+        "spell_info/tests.rs"
+      ],
+      "tests": 31,
+      "refs": {
+        "spell_cast": 3,
+        "catalog_data": 4,
+        "test_data": 6,
+        "auras": 16,
+        "trait_config": 1
+      },
+      "inbound": [
+        "admin_handlers",
+        "auras",
+        "battle_pets",
+        "class_progression",
+        "combat",
+        "conditions",
+        "crafting_orders",
+        "creature_aggro",
+        "death",
+        "equipment_effects",
+        "experience",
+        "followers",
+        "game_objects",
+        "gathering",
+        "housing",
+        "housing_acquisition",
+        "hunter_pet",
+        "inventory",
+        "item_proc_data",
+        "item_stats",
+        "item_templates",
+        "meeting_stone",
+        "mount_journal",
+        "mythic_plus",
+        "networking",
+        "persistence",
+        "pet_control",
+        "player_create_info",
+        "profession",
+        "pvp",
+        "quest_data",
+        "scripted_ai",
+        "simc_apl_native",
+        "skyriding",
+        "spell_area",
+        "spell_cast",
+        "stats",
+        "toy_catalog",
+        "toys",
+        "trading_post",
+        "trait_config",
+        "vehicle",
+        "wild_pet_battles",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "stand_state": {
+      "files": [
+        "stand_state.rs",
+        "stand_state_tests.rs"
+      ],
+      "tests": 8,
+      "refs": {
+        "auth": 1,
+        "networking": 2,
+        "auras": 3,
+        "spell_cast": 8,
+        "combat": 1
+      },
+      "inbound": [
+        "auras",
+        "chair",
+        "combat",
+        "death",
+        "networking",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "stats": {
+      "files": [
+        "stats.rs",
+        "stats_tests.rs",
+        "stats_instance_tests.rs"
+      ],
+      "tests": 12,
+      "refs": {
+        "class_progression": 1,
+        "item_stats": 6,
+        "item_templates": 8,
+        "melee": 1,
+        "spell_info": 3,
+        "item_instance": 13,
+        "followers": 4,
+        "auth": 1,
+        "persistence": 1,
+        "test_data": 4,
+        "death": 1,
+        "maps": 2,
+        "auth_character": 1,
+        "experience": 1,
+        "admin_handlers": 1,
+        "admin_types": 1
+      },
+      "inbound": [
+        "achievement",
+        "auras",
+        "auth_character",
+        "combat",
+        "equipment_effects",
+        "experience",
+        "followers",
+        "hunter_pet",
+        "hunter_pet_stats",
+        "inventory",
+        "item_proc_data",
+        "item_stats",
+        "maps",
+        "networking",
+        "scripted_ai",
+        "simc_apl_native",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "system_timings": {
+      "files": [
+        "system_timings.rs",
+        "system_timings/network_payloads.rs"
+      ],
+      "tests": 1,
+      "refs": {},
+      "inbound": [],
+      "reachable_gameplay": []
+    },
+    "tame": {
+      "files": [
+        "tame.rs",
+        "tame_tests.rs"
+      ],
+      "tests": 11,
+      "refs": {
+        "world_data": 2,
+        "test_data": 1
+      },
+      "inbound": [
+        "hunter_pet",
+        "persistence"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "taxi": {
+      "files": [
+        "taxi.rs",
+        "taxi/network.rs",
+        "taxi/network_tests.rs",
+        "taxi_tests.rs"
+      ],
+      "tests": 15,
+      "refs": {
+        "auth": 2,
+        "faction": 2,
+        "gold": 1,
+        "interest": 2,
+        "networking": 1,
+        "npc_interaction": 2,
+        "persistence": 3,
+        "teleport": 1,
+        "terrain_height": 4,
+        "maps": 6,
+        "achievement": 10,
+        "test_data": 2,
+        "combat_refs": 2,
+        "combat": 1
+      },
+      "inbound": [
+        "achievement",
+        "admin_handlers",
+        "admin_ipc",
+        "creature_aggro",
+        "maps",
+        "meeting_stone",
+        "quest",
+        "trade",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "teleport": {
+      "files": [
+        "teleport.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "interest": 1
+      },
+      "inbound": [
+        "admin_handlers",
+        "chair",
+        "death",
+        "maps",
+        "taxi"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "terrain_height": {
+      "files": [
+        "terrain_height.rs",
+        "terrain_height_tests.rs",
+        "terrain_height/format_receipts_tests.rs",
+        "terrain_height/receipt_cases.rs",
+        "terrain_height/receipt_codec.rs"
+      ],
+      "tests": 23,
+      "refs": {
+        "liquid": 2,
+        "ground": 6
+      },
+      "inbound": [
+        "admin_handlers",
+        "admin_ipc",
+        "auth_character",
+        "chair",
+        "combat",
+        "creature_ai",
+        "death",
+        "followers",
+        "game_objects",
+        "grid_activity",
+        "ground",
+        "maps",
+        "meeting_stone",
+        "networking",
+        "persistence_types",
+        "pvp",
+        "quest",
+        "rest",
+        "scripted_ai",
+        "spell_cast",
+        "taxi",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "test_data": {
+      "files": [
+        "test_data.rs"
+      ],
+      "tests": 3,
+      "refs": {
+        "networking": 1,
+        "persistence": 3,
+        "world_data": 5,
+        "achievement": 3,
+        "spell_cast": 4,
+        "ground": 4,
+        "maps": 2,
+        "line_of_sight": 1
+      },
+      "inbound": [
+        "admin_ipc",
+        "adventure_guide",
+        "area_table",
+        "auction_house",
+        "auras",
+        "barber_shop",
+        "combat",
+        "creature_aggro",
+        "durability",
+        "equipment_effects",
+        "faction",
+        "followers",
+        "game_objects",
+        "guild_news",
+        "hunter_pet",
+        "interest",
+        "maps",
+        "networking",
+        "npc_interaction",
+        "player_create_info",
+        "quest_data",
+        "scripted_ai",
+        "spell_area",
+        "spell_cast",
+        "spell_info",
+        "test_support",
+        "transport_catalog",
+        "world_data",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "test_support": {
+      "files": [
+        "test_support/mod.rs",
+        "test_support/graph.rs",
+        "test_support/azure_extraction.rs",
+        "test_support/walk_route.rs",
+        "test_support/healer_intake.rs"
+      ],
+      "tests": 6,
+      "refs": {
+        "navigation": 1,
+        "world_data": 3,
+        "maps": 2,
+        "npc_interaction": 3,
+        "test_data": 5,
+        "followers": 1,
+        "level_scaling": 1
+      },
+      "inbound": [
+        "auras",
+        "combat",
+        "followers",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "threat_updates": {
+      "files": [
+        "threat_updates.rs",
+        "threat_updates_tests.rs"
+      ],
+      "tests": 3,
+      "refs": {
+        "auth": 1,
+        "networking": 1,
+        "creature_ai": 1,
+        "spell_cast": 1,
+        "creature_aggro": 4,
+        "auras": 3
+      },
+      "inbound": [],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "toy_catalog": {
+      "files": [
+        "toy_catalog.rs",
+        "toy_interaction.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "spell_info": 1,
+        "spell_cast": 14,
+        "auras": 21,
+        "game_objects": 11,
+        "world_data": 1
+      },
+      "inbound": [
+        "game_objects",
+        "spell_cast",
+        "toys"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "toys": {
+      "files": [
+        "toys.rs",
+        "toys_tests.rs",
+        "toys_akunda_tests.rs",
+        "toys_azerite_firework_tests.rs",
+        "toys_bashiok_tests.rs",
+        "toys_breakfast_tests.rs",
+        "toys_citizens_tests.rs",
+        "toys_coyote_tests.rs",
+        "toys_default_summon_tests.rs",
+        "toys_disguise_tests.rs",
+        "toys_dragon_head_tests.rs",
+        "toys_falling_turn_tests.rs",
+        "toys_flag_tests.rs",
+        "toys_flute_tests.rs",
+        "toys_force_cast_tests.rs",
+        "toys_force_forward_tests.rs",
+        "toys_forlorn_toll_tests.rs",
+        "toys_gnoll_barrel_tests.rs",
+        "toys_group_inheritance_tests.rs",
+        "toys_group_tests.rs",
+        "toys_group_cases.rs",
+        "toys_hearthstone_tests.rs",
+        "toys_item_faction_tests.rs",
+        "toys_kvaldir_tests.rs",
+        "toys_loa_cosmetic_tests.rs",
+        "toys_offering_kit_tests.rs",
+        "toys_oomgut_tests.rs",
+        "toys_owner_flags_tests.rs",
+        "toys_podium_tests.rs",
+        "toys_scarab_tests.rs",
+        "toys_shrine_tests.rs",
+        "toys_sightless_tests.rs",
+        "toys_stampwhistle_tests.rs",
+        "toys_stasis_sand_tests.rs",
+        "toys_stone_whistle_tests.rs",
+        "toys_summon_closure_tests.rs",
+        "toys_summon_level_tests.rs",
+        "toys_target73_tests.rs",
+        "toys_visual_census_tests.rs",
+        "toys_amani_mask_tests.rs",
+        "toys_dh_visual_tests.rs",
+        "toys_eyes_visual_tests.rs",
+        "toys_horn_visual_tests.rs",
+        "toys_orb_visual_tests.rs",
+        "toys_pennant_visual_tests.rs",
+        "toys_ring_visual_tests.rs",
+        "toys_seed_visual_tests.rs",
+        "toys_spotlight_tests.rs",
+        "toys_waywatcher_tests.rs",
+        "toys_ysera_tests.rs"
+      ],
+      "tests": 300,
+      "refs": {
+        "auth": 1,
+        "networking": 7,
+        "persistence": 25,
+        "toy_catalog": 1,
+        "spell_info": 142,
+        "spell_cast": 134,
+        "achievement": 7,
+        "item_templates": 9,
+        "auras": 215,
+        "item_stats": 1,
+        "inventory": 5,
+        "gold": 2,
+        "test_data": 69,
+        "group": 6,
+        "game_objects": 16,
+        "world_data": 8,
+        "creature_ai": 23,
+        "class_progression": 3,
+        "meeting_stone": 2,
+        "maps": 63,
+        "chair": 1,
+        "combat": 4,
+        "race_class": 1,
+        "conditions": 4,
+        "ground": 15,
+        "line_of_sight": 4,
+        "combat_refs": 1,
+        "terrain_height": 3,
+        "merchant": 11,
+        "bank": 1,
+        "stats": 2,
+        "profession": 7,
+        "zones": 2,
+        "death": 2,
+        "faction": 6,
+        "interest": 4,
+        "creature_aggro": 3,
+        "npc_interaction": 5,
+        "mail": 1,
+        "level_scaling": 1
+      },
+      "inbound": [
+        "inventory",
+        "trading_post"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "trade": {
+      "files": [
+        "trade.rs",
+        "trade_support.rs",
+        "inventory_source_tests.rs",
+        "trade_tests.rs",
+        "trade_flow_tests.rs"
+      ],
+      "tests": 26,
+      "refs": {
+        "auras": 1,
+        "auth": 1,
+        "faction": 1,
+        "gold": 5,
+        "item_templates": 5,
+        "networking": 1,
+        "persistence": 9,
+        "taxi": 3,
+        "inventory": 3,
+        "item_stats": 1,
+        "stats": 1,
+        "quest_view": 1,
+        "bank_test_harness": 1,
+        "test_data": 2,
+        "appearance_collection": 2
+      },
+      "inbound": [],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "trading_post": {
+      "files": [
+        "trading_post.rs",
+        "trading_post_catalog.rs",
+        "trading_post_monthly.rs",
+        "trading_post_persistence.rs",
+        "trading_post_tests.rs",
+        "trading_post_monthly_tests.rs",
+        "trading_post_native_proof_hold_tests.rs"
+      ],
+      "tests": 21,
+      "refs": {
+        "persistence_accounts": 2,
+        "npc_interaction": 4,
+        "spell_info": 2,
+        "adventure_guide": 11,
+        "maps": 8,
+        "item_templates": 2,
+        "persistence": 11,
+        "battle_pets": 5,
+        "mount_journal": 1,
+        "toys": 1,
+        "auth": 1,
+        "networking": 1,
+        "trading_post_store": 2,
+        "transmog": 1,
+        "persistence_writer": 2,
+        "bank_test_harness": 16,
+        "achievement": 3,
+        "test_data": 3,
+        "guild_bank": 1
+      },
+      "inbound": [
+        "admin_ipc"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "trading_post_store": {
+      "files": [
+        "trading_post_store.rs"
+      ],
+      "tests": 4,
+      "refs": {
+        "persistence": 25,
+        "battle_pets": 5
+      },
+      "inbound": [
+        "adventure_guide",
+        "trading_post"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "trait_config": {
+      "files": [
+        "trait_config.rs",
+        "trait_config/professions.rs",
+        "trait_config_tests.rs",
+        "profession_trait_tests.rs"
+      ],
+      "tests": 17,
+      "refs": {
+        "spell_info": 4,
+        "test_data": 2
+      },
+      "inbound": [
+        "class_progression",
+        "persistence_progression",
+        "profession",
+        "spell_info"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "transmog": {
+      "files": [
+        "transmog.rs",
+        "transmog/custom_sets.rs",
+        "transmog/data.rs",
+        "transmog/outfits.rs"
+      ],
+      "tests": 3,
+      "refs": {
+        "auth": 1,
+        "faction": 1,
+        "gold": 1,
+        "item_templates": 1,
+        "networking": 1,
+        "npc_interaction": 2,
+        "persistence": 5,
+        "transmog_store": 1,
+        "item_stats": 1,
+        "inventory": 1
+      },
+      "inbound": [
+        "trading_post",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "transmog_store": {
+      "files": [
+        "transmog_store.rs"
+      ],
+      "tests": 0,
+      "refs": {},
+      "inbound": [
+        "inventory",
+        "persistence",
+        "transmog"
+      ],
+      "reachable_gameplay": []
+    },
+    "transport": {
+      "files": [
+        "transport.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "interest": 2,
+        "networking": 1,
+        "pvp": 1,
+        "maps": 4,
+        "spell_cast": 2,
+        "transport_catalog": 1
+      },
+      "inbound": [
+        "maps",
+        "networking",
+        "pvp"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "transport_catalog": {
+      "files": [
+        "transport_catalog.rs"
+      ],
+      "tests": 3,
+      "refs": {
+        "test_data": 1
+      },
+      "inbound": [
+        "transport",
+        "transport_movement",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "transport_movement": {
+      "files": [
+        "transport_movement.rs"
+      ],
+      "tests": 3,
+      "refs": {
+        "maps": 1,
+        "transport_catalog": 1
+      },
+      "inbound": [
+        "networking"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "unit_creature_type": {
+      "files": [
+        "unit_creature_type.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "auras": 1,
+        "world_data": 1
+      },
+      "inbound": [
+        "combat",
+        "spell_cast",
+        "world_data"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "unit_target": {
+      "files": [
+        "unit_target.rs"
+      ],
+      "tests": 4,
+      "refs": {
+        "auras": 1,
+        "creature_ai": 1,
+        "grid_activity": 1,
+        "networking": 2,
+        "messaging": 1
+      },
+      "inbound": [
+        "pvp"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "vehicle": {
+      "files": [
+        "vehicle.rs",
+        "vehicle/isle.rs",
+        "vehicle_tests.rs"
+      ],
+      "tests": 12,
+      "refs": {
+        "ground": 6,
+        "networking": 5,
+        "group": 2,
+        "interest": 2,
+        "auth": 4,
+        "spell_info": 1,
+        "maps": 4,
+        "persistence": 2,
+        "auras": 5,
+        "test_data": 1,
+        "auth_character": 2,
+        "collection": 1
+      },
+      "inbound": [
+        "auras"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "vignettes": {
+      "files": [
+        "vignettes.rs"
+      ],
+      "tests": 0,
+      "refs": {},
+      "inbound": [
+        "combat",
+        "world_data",
+        "zones"
+      ],
+      "reachable_gameplay": []
+    },
+    "who": {
+      "files": [
+        "who.rs"
+      ],
+      "tests": 5,
+      "refs": {
+        "auth": 1
+      },
+      "inbound": [],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "wild_pet_battles": {
+      "files": [
+        "wild_pet_battles.rs",
+        "pvp_pet_battles.rs",
+        "pvp_pet_battle_policy.rs",
+        "pvp_pet_battles_tests.rs",
+        "wild_pet_battles_tests.rs",
+        "wild_pet_achievement_tests.rs",
+        "wild_pet_family_grant_tests.rs"
+      ],
+      "tests": 56,
+      "refs": {
+        "pet_journal_state": 8,
+        "pet_battle": 8,
+        "auth": 1,
+        "battle_pets": 27,
+        "networking": 1,
+        "persistence": 21,
+        "spell_info": 1,
+        "maps": 16,
+        "achievement": 33,
+        "combat": 2,
+        "collection": 3,
+        "test_data": 7,
+        "area_table": 1,
+        "ground": 1,
+        "terrain_height": 1
+      },
+      "inbound": [
+        "battle_pets"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "world_area_triggers": {
+      "files": [
+        "world_area_triggers.rs",
+        "world_area_triggers/catalog.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "maps": 3,
+        "followers": 1,
+        "world_data": 1
+      },
+      "inbound": [
+        "maps"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "world_data": {
+      "files": [
+        "world_data.rs",
+        "world_data/summon_levels.rs"
+      ],
+      "tests": 1,
+      "refs": {
+        "creature_aggro": 1,
+        "level_scaling": 3,
+        "followers": 1,
+        "catalog_data": 3,
+        "spell_cast": 4,
+        "spawn_pools": 2,
+        "spawn_groups": 2,
+        "vignettes": 2,
+        "test_data": 2,
+        "scripted_ai": 7,
+        "faction": 1,
+        "area_table": 1,
+        "npc_interaction": 2,
+        "transmog": 1,
+        "merchant": 1,
+        "profession": 2,
+        "crafting_orders": 1,
+        "loot": 1,
+        "taxi": 1,
+        "unit_creature_type": 1,
+        "durability": 1,
+        "game_objects": 2,
+        "pvp": 9,
+        "gathering": 1,
+        "meeting_stone": 1,
+        "maps": 1,
+        "achievement": 2,
+        "adventure_guide": 1,
+        "bank": 1,
+        "transport_catalog": 1
+      },
+      "inbound": [
+        "achievement",
+        "auras",
+        "combat",
+        "creature_aggro",
+        "creature_ai",
+        "creature_sight",
+        "creature_tooltip",
+        "death",
+        "experience",
+        "followers",
+        "gathering",
+        "grid_activity",
+        "ground",
+        "hunter_pet",
+        "hunter_pet_stats",
+        "maps",
+        "networking",
+        "npc_interaction",
+        "pet_stable",
+        "pvp",
+        "reputation",
+        "rest",
+        "scripted_ai",
+        "spawn_groups",
+        "spawn_pools",
+        "spell_cast",
+        "tame",
+        "test_support",
+        "toy_catalog",
+        "unit_creature_type",
+        "world_area_triggers",
+        "zones"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "world_map": {
+      "files": [
+        "world_map.rs"
+      ],
+      "tests": 2,
+      "refs": {
+        "auth": 1,
+        "networking": 1,
+        "persistence": 4
+      },
+      "inbound": [
+        "auth_character",
+        "persistence"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "world_quest_availability": {
+      "files": [
+        "world_quest_availability.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "persistence": 2,
+        "quest": 1,
+        "auth": 1,
+        "networking": 1,
+        "quest_data": 1,
+        "quest_rules": 2,
+        "quest_view": 1,
+        "world_quest_rewards": 1,
+        "world_quests": 1
+      },
+      "inbound": [
+        "quest"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "world_quest_objectives": {
+      "files": [
+        "world_quest_objectives.rs"
+      ],
+      "tests": 0,
+      "refs": {
+        "quest_data": 4
+      },
+      "inbound": [
+        "quest",
+        "quest_data",
+        "quest_rules",
+        "quest_view"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "world_quest_rewards": {
+      "files": [
+        "world_quest_rewards.rs"
+      ],
+      "tests": 2,
+      "refs": {
+        "quest_data": 1,
+        "persistence": 9,
+        "bank_test_harness": 1,
+        "currency": 3,
+        "networking": 1,
+        "auth": 1,
+        "reputation": 1,
+        "experience": 1
+      },
+      "inbound": [
+        "quest",
+        "quest_data",
+        "world_quest_availability"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "world_quests": {
+      "files": [
+        "world_quests.rs",
+        "world_quest_objective_tests.rs",
+        "world_quest_expiry_tests.rs"
+      ],
+      "tests": 14,
+      "refs": {
+        "persistence": 5,
+        "quest_data": 7,
+        "quest_rules": 11,
+        "world_quest_objectives": 4,
+        "quest_view": 2,
+        "auth": 1,
+        "maps": 1,
+        "quest": 1,
+        "quest_time": 1
+      },
+      "inbound": [
+        "quest",
+        "quest_data",
+        "quest_time",
+        "world_quest_availability"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "world_time": {
+      "files": [
+        "world_time.rs",
+        "world_time_tests.rs"
+      ],
+      "tests": 2,
+      "refs": {
+        "auth": 1
+      },
+      "inbound": [],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    },
+    "zones": {
+      "files": [
+        "zones.rs",
+        "zones/entry.rs",
+        "zones_world_db_tests.rs",
+        "spawn_pools_world_db_tests.rs",
+        "zones_npc_combat_tests.rs",
+        "zones_context_tuning_tests.rs",
+        "zones_entry_tests.rs",
+        "zones_entry_controls_tests.rs"
+      ],
+      "tests": 74,
+      "refs": {
+        "random": 1,
+        "combat": 16,
+        "creature_ai": 8,
+        "grid_activity": 1,
+        "interest": 2,
+        "level_scaling": 6,
+        "spawn_pools": 1,
+        "world_data": 18,
+        "ground": 21,
+        "maps": 45,
+        "spawn_groups": 1,
+        "pvp": 3,
+        "creature_aggro": 8,
+        "creature_scripts": 3,
+        "scripted_ai": 23,
+        "terrain_height": 13,
+        "vignettes": 1,
+        "spell_info": 2,
+        "auras": 17,
+        "test_data": 31,
+        "spell_cast": 9,
+        "faction": 6,
+        "death": 1,
+        "networking": 2,
+        "creature_tap": 1,
+        "persistence": 1,
+        "line_of_sight": 2,
+        "combat_refs": 1
+      },
+      "inbound": [
+        "auras",
+        "combat",
+        "conditions",
+        "creature_aggro",
+        "creature_ai",
+        "followers",
+        "game_objects",
+        "hunter_pet",
+        "loot",
+        "maps",
+        "networking",
+        "pvp",
+        "quest",
+        "scripted_ai",
+        "spawn_groups",
+        "spawn_pools",
+        "spell_cast"
+      ],
+      "reachable_gameplay": [
+        "auras",
+        "combat",
+        "creature_ai",
+        "melee",
+        "spell_cast",
+        "stats"
+      ]
+    }
+  }
+}

@@ -58,6 +58,26 @@ No `execute_cast` seam or gameplay-internal visibility widening is included. Fin
 
 D3 appends11byte-identical public spell test files to the existing consumer, retaining54case identities (51enabled/3existing ignored/0should-panic). The three proc-recipient ignore reasons remain unchanged. No test body, fixture seam, new package/version, profile or gameplay API changes. The existing rusqlite0.35/bundled workspace dependency is wired dev-only for the unchanged summon-property fixture; proc-recipient fixtures import canonical server::random at the consumer root. Pure moves `007c3d144` precede declaration-only wiring; [exact mapping](../../handoffs/crate-split-spell-d3-test-mapping.json) records core→consumer ownership. Consumer inventory becomes229cases (226enabled/3ignored). This1,543-line cut is housekeeping, not a claimed material whole-core speedup. Exact post-build inventory, one combined core/consumer compiler check, parent full gate and paired measurement remain acceptance proof.
 
+## Extraction candidates
+
+Verified: 2026-10-25 at `53d0e1ce1792e343e25d83adccf18a22f320ff05`, before production moves. [Module graph](../../handoffs/crate-split-domain-graph.json) records 172 top-level module owners, file membership, test counts, `crate::`/`server::` edges (including grouped imports), inbound users and transitive gameplay coupling. Counts are source `#[test]` inventories, including existing ignored cases, not a new runtime census. Resolve `mod`/`#[path]` ownership rather than assigning sibling `*_tests.rs` files separate domains. Macro-generated edges require manual confirmation; the apparent bossmod `schedules/mod.rs` declaration is a macro template, not a missing source file.
+
+Rank independent cuts first, then descending tests per `1 + G`, where G is the number of reachable spell_cast/combat/auras/melee/creature_ai/stats modules. Historical wall time is a separate payoff axis, not an invented combined unit. Zero-coupling domains cannot import any server module, including through fixture dependencies. Inbound server users require wiring but do not reverse the new dependency. These five have G=0 and no server imports in their production or tests:
+
+| Rank | Domain | Tests | Historical batch wall | Boundary work |
+|---|---|---:|---:|---|
+| 1 | pet_battle | 235 | 1.387s / 235 cases | rusqlite only; ECS pet adapters remain server-owned |
+| 2 | simc_apl | 49 | not measured in the cited baseline | std-only expression/program/traits; native fact adapter stays in server |
+| 3 | item_instance | 20 | 0.024s / 20 cases | shared protocol, catalog, serde/bitcode and SQLite; update equipment consumers |
+| 4 | race_class | 11 | 0.011s / 11 cases | CSV/serde only; preserve manifest-relative data paths and exact eligibility values |
+| 5 | level_scaling | 10 | 0.006s / 10 cases | Bevy/shared types only; retained gameplay tests use private fixtures, which need an explicit shared fixture boundary |
+
+Historical observations come from `game-engine/data/diagnostics/server-test-perf-2026-10-22/current-master-fixed-history.json` (module groups). They are not timings on this revision, are not additive gate-wall savings, and do not establish causal speedup. The largest independent cut owns many cheap tests: avoiding its test target is real scope reduction, not a claim to remove the expensive gameplay majority.
+
+The suggested commerce/social domains are not currently leaves. Auction house owns 84 cases (historical20.478s), bank22 (11.400s), mail12 (5.491s), calendar6 (0.017s), achievement141 (116.301s), toys300 (historical union measured only24 cases, not a complete domain timing), and housing2 (0.212s; separate housing catalogs/quests not included). Auction/bank/mail depend on auth/persistence/inventory/achievement; calendar depends on auth/networking; achievements and toys directly consume spell/aura/combat state. Each reaches all six gameplay modules transitively. Terrain height23 also cycles through ground. These require actual lower shared types or adapter boundaries before extraction, not public re-exports of server. Larger test counts alone do not make those cheap cuts.
+
+The merge gate follows package ownership plus reverse dependencies: a server-only edit can skip these extracted leaf tests; a leaf edit still tests server and its test consumers. Existing simulator/combat/spell consumers do not provide this server-only skip. Preserve each module prefix inside its new crate for exact case identities, and record the old/new package inventory with each slice.
+
 ## Sources
 
 - `crates/server-catalog/{Cargo.toml,src/lib.rs}`, `crates/server-simulation/{Cargo.toml,src/lib.rs}` — package/dependency ownership.
