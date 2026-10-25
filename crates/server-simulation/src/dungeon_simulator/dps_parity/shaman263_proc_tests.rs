@@ -64,14 +64,17 @@ fn shaman263_real_strike_dispatches_ride_the_lightning_to_native_chain_targets()
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
     for &target in &run.targets {
+        let expected_route = (
+            Some(run.actor.to_bits()),
+            Some(target.to_bits()),
+            Some(211094),
+        );
         let hits = events
             .iter()
             .filter(|event| {
-                event.source == Some(run.actor.to_bits())
-                    && event.target == Some(target.to_bits())
-                    && event.spell_id == Some(211094)
-                    && event.kind == CombatLogKind::Damage
-                    && event.amount > 0
+                let actual_route = (event.source, event.target, event.spell_id);
+                let dealt_damage = event.kind == CombatLogKind::Damage && event.amount > 0;
+                actual_route == expected_route && dealt_damage
             })
             .count();
         assert_eq!(

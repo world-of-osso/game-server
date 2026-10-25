@@ -167,6 +167,7 @@ pub(super) fn finish_scripted_launch(
     execution_counters::after_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
     enhancement_tier::after_launch(world, caster, spell, depth);
+    enhancement_strikes::cast_ride_the_lightning(world, caster, spell, depth);
 }
 
 /// TC OnCast runs once after successful checks, before spending and launch.
