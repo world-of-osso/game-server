@@ -1,3 +1,7 @@
+## 2026-10-24 — Shared parity frontal pack
+
+[Source/proof](../handoffs/parity-frontal-pack-proof-ledger.md): old third dummy53.13°/2.5yd lies outside correct native60°cone/min2 boundary. Actual native FoF2/3 identities and common Mage/Monk layout give two genuine REDs12.83s at1496b0e0d, compile441.33s/zero warnings. Shared symmetric0/−0.5/+0.5 placement preserves primary1.5yd and all gameplay/gating code; GREEN and once-only controlled3T remeasurement pending.
+
 ## 2026-10-24 — Generic health aura-state qualification
 
 [Auras](systems/auras.md#generic-health-aura-states--2026-10-24): independent branch from461aa8102; TC Unit::Update481–487 health siblings2/6/13/21/23/24/25 use Unit.h804–809 integer strict comparisons. fbdc5ee0d core8genuineRED/2controls and actual31146 full-health24275 RED/below20damagePASS32.34s precede implementation.15, otherNone states and rejection semantics preserved;7f34b277e core17GREEN22.56s/native2GREEN41.62s, zero warnings. Independent requested two-crate check ran once at1a573b3ac:PASS0/2m34s/zero warnings; fmtPASS0. Parent broad gate remains separate. [Source/proof ledger](../handoffs/aura-state-health-proof-ledger.md).
