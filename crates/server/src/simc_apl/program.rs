@@ -281,7 +281,7 @@ fn bind_ready_target(rule: &Rule, selection: &mut Selection<'_>) -> Result<Optio
     let Some(action) = bind_target(rule, selection)? else {
         return Ok(None);
     };
-    Ok(rule_ready(rule, &action, selection)?.then_some(action))
+    bind_ready_variant(rule, &action, selection)
 }
 
 fn bind_cycle_target(
@@ -294,6 +294,20 @@ fn bind_cycle_target(
     let limit = if limit > 0 { limit } else { candidates.len() };
     for target in candidates.into_iter().take(limit) {
         action.target = Some(target);
+        if let Some(action) = bind_ready_variant(rule, &action, selection)? {
+            return Ok(Some(action));
+        }
+    }
+    Ok(None)
+}
+
+fn bind_ready_variant(
+    rule: &Rule,
+    action: &Action,
+    selection: &mut Selection<'_>,
+) -> Result<Option<Action>, String> {
+    // SimC76f8118 player.cpp10221–10480: each equipped proxy owns its if context.
+    for action in selection.facts.action_variants(action)? {
         if rule_ready(rule, &action, selection)? {
             return Ok(Some(action));
         }

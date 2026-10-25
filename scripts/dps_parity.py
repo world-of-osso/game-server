@@ -16,7 +16,9 @@ SPECS = {
     103: "Druid_Feral",
 }
 CLASSES = {"paladin", "warrior", "druid", "priest", "shaman", "mage", "hunter",
-           "evoker", "monk", "warlock", "rogue", "death_knight", "demon_hunter"}
+           "evoker", "monk", "warlock", "rogue", "death_knight", "demon_hunter",
+           # Pinned MID2 Death Knight/Demon Hunter profiles use these actor tokens.
+           "deathknight", "demonhunter"}
 SLOTS = {"head", "neck", "shoulders", "back", "chest", "wrists", "hands", "waist",
          "legs", "feet", "finger1", "finger2", "trinket1", "trinket2", "main_hand", "off_hand"}
 CONSUMABLES = {"potion", "flask", "food", "augmentation", "temporary_enchant"}

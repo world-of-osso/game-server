@@ -46,14 +46,29 @@ fn run_use_items_case(rows: &[(&str, &str)], expected_slot: Option<usize>) {
             "actual equipped {slot} on-use must pass native admission first"
         );
     }
+    let bindings = crate::simc_apl_native::Bindings::default();
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let native = crate::simc_apl_native::NativeFacts::new(
+        run.app.world(),
+        run.actor,
+        &bindings,
+        encounter,
+        1,
+    );
+    let facts = [
+        "trinket.1.is.algethar_puzzle_box",
+        "trinket.2.is.algethar_puzzle_box",
+    ]
+    .into_iter()
+    .map(|name| (name.to_owned(), equipment.fact(name, &native).unwrap()))
+    .collect::<std::collections::BTreeMap<_, _>>();
     let mut driver = Driver::new(Program::parse(rows).unwrap());
     let selected = driver
-        .select(
-            "default",
-            &std::collections::BTreeMap::<String, f64>::new(),
-            &prepared,
-            &equipment,
-        )
+        .select("default", &facts, &prepared, &equipment)
         .unwrap();
     let Some(expected_slot) = expected_slot else {
         assert!(
@@ -88,6 +103,30 @@ fn run_use_items_case(rows: &[(&str, &str)], expected_slot: Option<usize>) {
         casts,
         vec![uses[expected_slot].1.on_use.spell_id],
         "one source use_items executes only the first ready native slot, not an instant batch"
+    );
+}
+
+#[test]
+#[ignore = "native use_items condition must be evaluated separately for each actual slot"]
+fn literal_use_items_this_trinket_condition_selects_the_second_ready_item() {
+    run_use_items_case(
+        &[(
+            "default",
+            "use_items,if=this_trinket.is.algethar_puzzle_box",
+        )],
+        Some(1),
+    );
+}
+
+#[test]
+#[ignore = "native use_items other_trinket must resolve relative to each candidate slot"]
+fn literal_use_items_other_trinket_condition_selects_the_first_ready_item() {
+    run_use_items_case(
+        &[(
+            "default",
+            "use_items,if=other_trinket.is.algethar_puzzle_box",
+        )],
+        Some(0),
     );
 }
 
