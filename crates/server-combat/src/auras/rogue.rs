@@ -23,6 +23,7 @@ const LETHAL_POISON_HITS: &[u32] = &[113780, 315585, 8680, 383414];
 struct VenomousRemainder(f64);
 
 pub(super) fn register(scripts: &mut AuraScripts) {
+    spell_cast::scripts::register_rogue_children(scripts);
     scripts.0.insert(
         DEADLY_POISON,
         AuraScript {

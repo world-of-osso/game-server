@@ -130,10 +130,12 @@ mod ret_toll;
 pub(super) use ret_tier::after_foreground_spender;
 pub(crate) use ret_tier::owns_arbiter_charge;
 mod resource_values;
+mod rogue_children;
 mod rogue_hero;
 pub(super) use resource_values::{
     consume_sources as consume_resource_value_sources, effective_value as effective_resource_value,
 };
+pub(crate) use rogue_children::register as register_rogue_children;
 pub(super) use rogue_hero::prepare as prepare_rogue_hero;
 mod scourge_strike;
 mod shadow_priest;

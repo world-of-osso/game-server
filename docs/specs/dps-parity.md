@@ -235,6 +235,11 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Spec1467 follower measurements execute all89 preserved MID1 `76f8118` APL rows through shared `literal_rotation`; retain the named missing-MID2 reference gap and complete exported allocations.
 - `empower_to` selects the real native release stage while retaining the selected hostile primary independently of self casts. Fire Breath dot facts observe native357209 owned by that actor. Disintegrate uses the shared channel decision seam, including action-bound `ticks_remain`.
 
+### Assassination native damage children
+
+- Successful Rupture with selected381627 applies native381628 at the captured effective ComboPoint multiplier, minimum1, without another resource payment. Native coefficients, tick cadence and duration remain unchanged (SimC76f8118 `sc_rogue.cpp5257–5264,6200–6203`).
+- Successful Kingsbane with selected1265387 starts native1265787. Each native effect1 periodic tick dispatches1265794 and1265795 at the retained impacted target. Target loss does not select a replacement; removing the driver clears its target (SimC76f8118 `sc_rogue.cpp4891–4905,4954–4958`).
+
 ### Assassination Deathstalker lifecycle
 
 - Native Garrote establishes one caster-owned457129 mark with selected457052 effect0 stacks, transferring it off the previous target without refreshing an existing mark on the same target. Actual ComboPoint spenders meeting the native effect1 threshold consume one stack and deal457157 damage.
