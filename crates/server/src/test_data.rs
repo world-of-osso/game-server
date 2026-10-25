@@ -7,7 +7,7 @@ pub use server_map_rules::test_data::world_db_path;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-pub(crate) mod catalog_cache;
+pub(crate) use server_core::test_data::catalog_cache;
 
 /// Advance the real selection/admission path until its player is published.
 #[cfg(test)]

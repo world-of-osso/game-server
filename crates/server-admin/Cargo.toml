@@ -1,0 +1,13 @@
+[package]
+name = "server-admin"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "186134ff880f1a6a7b754e4ce43456d775a44caf" }
+# Concrete request/response codecs and the existing local socket task compile here.
+peercred-ipc = { git = "https://github.com/Osso/peercred-ipc.git", tag = "v0.2.0" }
+tokio = { version = "1", features = ["rt-multi-thread"] }

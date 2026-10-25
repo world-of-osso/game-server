@@ -5,6 +5,20 @@ use rusqlite::Connection;
 
 use super::{ProcDefinitionSource, SpellAuraOptions, SpellInfo};
 
+pub const DANCE_OF_CHIJI: u32 = 325201;
+pub const INUNDATE: u32 = 378776;
+/// `ProcTypeMask_1` (TrinityCore `ProcFlags2`).
+pub const PROC2_CAST_SUCCESSFUL: u32 = 0x4;
+
+/// Existing scripted definitions: Chi-action Dance rolls (SimC monk383–392)
+/// and INUNDATE_NATIVE_SUCCESSFUL_UTILITY_CASTS include successful utility casts.
+pub fn scripted_proc_mask(id: u32) -> Option<[u32; 2]> {
+    match id {
+        DANCE_OF_CHIJI | INUNDATE => Some([0, PROC2_CAST_SUCCESSFUL]),
+        _ => None,
+    }
+}
+
 const CAN_PROC_FROM_PROCS: u32 = 0x0400_0000;
 // TC DEAL_MELEE_ABILITY/RANGED_ATTACK/RANGED_ABILITY, helpful/harmful
 // ability/spell/periodic flags (SpellMgr.cpp1893–1895).
@@ -40,7 +54,7 @@ fn definition_source(spell: &SpellInfo, explicit: &HashSet<u32>) -> Option<ProcD
     if explicit.contains(&spell.id) {
         return Some(ProcDefinitionSource::ExplicitTdb);
     }
-    if crate::auras::procs::scripted_proc_mask(spell.id).is_some() {
+    if scripted_proc_mask(spell.id).is_some() {
         return Some(ProcDefinitionSource::Scripted);
     }
     let options = spell.aura_options.as_ref()?;
@@ -84,7 +98,7 @@ fn triggers_spell(spell: &SpellInfo) -> bool {
     spell
         .effects
         .iter()
-        .filter(|effect| crate::auras::is_aura_effect(effect) && effect.aura != 0)
+        .filter(|effect| super::is_aura_effect(effect) && effect.aura != 0)
         .find_map(|effect| match effect.aura {
             28 | 74 | 52 | 51 | 54 => Some(false), // reflect, weapon crit, block, hit chance
             42 | 231 => Some(effect.trigger_spell != 0),

@@ -3,27 +3,50 @@ use bevy::prelude::*;
 
 use crate::auras::{self, ActiveAuras, RemoveReason};
 use crate::random as rand;
-use crate::spell_cast::{CostPool, SpellHistory, applicable_costs};
+use crate::spell_cast::{CostPool, applicable_costs};
 use crate::spell_info::SpellInfo;
 use shared::components::PowerType;
 
 // Source may_combo_strike actions, shared with the published starter policy.
-const COMBO_ACTIONS: &[u32] = &[100780, 100784, 107428, 113656, 101546, 392983, 322109];
+const COMBO_ACTIONS: &[u32] = &[
+    100780, 100784, 107428, 113656, 101546, 392983, 322109, 152175, 1249625, 1272696, 468179,
+];
 const COMBO_STRIKES: u32 = 115636;
 const MASTERY_DAMAGE: &[u32] = &[
-    100780, 100784, 185099, 117418, 107270, 395519, 395521, 322109,
+    100780, 100784, 185099, 117418, 107270, 395519, 395521, 322109, 468179, 451767, 158221,
+    1272696, 1248815,
 ];
 
 #[derive(Component)]
 struct ComboStrikes {
     active: bool,
+    last_action: u32,
+}
+
+pub fn last_combo_action(world: &World, caster: Entity) -> Option<u32> {
+    world
+        .get::<ComboStrikes>(caster)
+        .map(|state| state.last_action)
+}
+
+/// SimC1160/3918: these background damage actions also advance combo identity.
+pub(super) fn scripted_combo_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
+    if depth == 0 || !matches!(spell_id, 468179 | 1272696) {
+        return;
+    }
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+        .expect("admitted native combo child")
+        .clone();
+    ordinary_combo_cast(world, caster, &spell);
 }
 
 const HIT_COMBO: u32 = 196740;
 const HIT_COMBO_BUFF: u32 = 196741;
 const COMBO_BREAKER: u32 = 137384;
 const COMBO_BREAKER_BUFF: u32 = 116768;
-pub(crate) const DANCE_OF_CHIJI: u32 = 325201;
+pub(crate) use crate::spell_info::DANCE_OF_CHIJI;
 const DANCE_BUFF: u32 = 325202;
 const SPINNING_CRANE_KICK: u32 = 101546;
 const MYSTIC_TOUCH_PASSIVE: u32 = 8647;
@@ -160,17 +183,18 @@ pub(crate) fn after_dance_cast_event(world: &mut World, event: &auras::procs::Au
     }
 }
 
-/// Ordinary successful casts only; triggered children do not change combo order.
+/// Source may_combo_strike actions; unrelated triggered children do not advance it.
 pub(crate) fn ordinary_combo_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if !COMBO_ACTIONS.contains(&spell.id) {
         return;
     }
-    let previous = world
-        .get::<SpellHistory>(caster)
-        .and_then(|history| history.last_cast_in(COMBO_ACTIONS));
+    let previous = last_combo_action(world, caster);
     let active = previous != Some(spell.id);
     if auras::has_aura(world, caster, COMBO_STRIKES) {
-        world.entity_mut(caster).insert(ComboStrikes { active });
+        world.entity_mut(caster).insert(ComboStrikes {
+            active,
+            last_action: spell.id,
+        });
     }
     if !auras::has_aura(world, caster, HIT_COMBO) {
         return;
@@ -217,7 +241,7 @@ pub(crate) fn combo_strikes_multiplier(world: &World, caster: Entity, spell: u32
 /// TC has no script/binding and native1272415 has no class mask. The caller
 /// already proved active Combo Strikes; DB2 owns this selected talent's percent.
 fn sunfire_spiral_multiplier(world: &World, caster: Entity, spell: u32) -> f32 {
-    if spell != 185099 {
+    if !matches!(spell, 185099 | 468179) {
         return 1.0;
     }
     let Some(aura) = world
@@ -368,7 +392,7 @@ fn read_rushing_wind_kick_chance(world: &World, caster: Entity) -> Option<f32> {
     )
 }
 
-fn reset_rising_sun_kick(world: &mut World, caster: Entity) {
+pub(super) fn reset_rising_sun_kick(world: &mut World, caster: Entity) {
     let spell = world
         .resource::<crate::spell_info::SpellStore>()
         .get(RISING_SUN_KICK)

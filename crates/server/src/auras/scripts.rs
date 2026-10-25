@@ -126,7 +126,7 @@ pub(super) fn run_periodic(world: &mut World, unit: Entity, aura: &AuraInstance,
     }
 }
 
-pub(super) const INUNDATE: u32 = 378776;
+pub(super) use crate::spell_info::INUNDATE;
 const FEEL_THE_BURN: u32 = 383391;
 const FIRE_BLAST: u32 = 108853;
 const ASPECT_OF_THE_TURTLE: u32 = 186_265;
@@ -400,6 +400,7 @@ fn check_inundate_proc(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    crate::spell_cast::scripts::register_feral_frenzy(&mut scripts);
     scripts.0.insert(
         1236994,
         AuraScript {
@@ -437,6 +438,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     crate::spell_cast::scripts::holy_priest::register(&mut scripts);
     crate::spell_cast::scripts::prayer_of_mending::register(&mut scripts);
     super::earthen_rage::register(&mut scripts);
+    crate::spell_cast::scripts::register_enhancement(&mut scripts);
     super::spirit_wolf::register(&mut scripts);
     super::natures_guardian::register(&mut scripts);
     super::ret_sentence::register(&mut scripts);
@@ -713,6 +715,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     // Extend existing parent lifecycle entries rather than replacing their hooks.
     crate::spell_cast::scripts::register_xuens_battlegear(&mut scripts);
     crate::spell_cast::scripts::register_channel_policies(&mut scripts);
+    crate::spell_cast::scripts::register_elemental_policies(&mut scripts);
 }
 
 /// TC spell_rogue.cpp spell_rog_stealth: 1784's own rows carry no MOD_STEALTH;

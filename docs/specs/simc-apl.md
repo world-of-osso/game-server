@@ -8,7 +8,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [ ] Read explicit native facts for buff stacks/remains/up, cooldown remains/charges/duration, resources, talents, equipment/trinkets, target count/TTD, fight remains, raid-event adds, dots/debuffs and gcd. Unknown operands fail explicitly, including in otherwise inactive condition branches; never silently become false.
 - [ ] Share native equipment identities/stat-buff metadata, on-use vs proc cooldown sources and native tier facts across spec adapters. Reject unknown native stat/tier metadata; preserve original IDs and trinket1→trinket2→other use order.
 - [x] Bind action-dependent facts (`combo_strike`, plain `gcd`, action minimum GCD) to each source row, including variable/call control actions. An actor-wide value is not equivalent.
-- [x] Execute declared variables using source `value`, `setif`, `value_else`, `reset` and numeric `default` semantics.
+- [x] Execute declared variables using source `value`, `setif`, `value_else`, `reset` and numeric `default` semantics. Variable `target_if` selects the native candidate before its condition and assignment, without retargeting later actions.
 - [x] Preserve literal action order and conditional `call_action_list` decisions; native castability selects the first usable action. An exhausted child list returns control to its caller.
 - [x] Accept `call_action_list,use_off_gcd=0|1`. The control remains off-GCD/while-casting as in pinned `action.cpp4648–4661`; each child still requires its own native readiness and row permissions. Invalid boolean values fail explicitly.
 - [x] Implement conditional `run_action_list` switches that never resume the caller after child exhaustion; reject unknown lists.
@@ -31,6 +31,8 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] max_energy=1 reads adapter-owned action-bound maximum_energy and current Energy; it must not use actor energy.max or a hardcoded spell cost. Missing threshold, primary resource or maximum-admission metadata errors explicitly. Source-owned native cost/cap/modifier qualification remains separate.
 
 ## Shared profile and action facts
+
+- [x] Native profile effects accept pinned Shadow Omnium tokens `rune_of_unleashed_fire`, `rune_of_selfmending`, `rune_of_lingering`, `rune_of_critical_power` and `rune_of_overload`, plus numeric TraitNodeEntry IDs. Optional ranks remain ignored like pinned SimC; native trait definitions supply the applied spell and all amounts. Unknown tokens or missing native entries fail explicitly.
 
 - [x] `hero_tree.<alias>` reads the selected native hero subtree, not allocated inactive nodes. Unknown aliases fail explicitly.
 - [x] `buff.<alias>.max_stack` reads the fresh native modified stack limit before a proc exists. Named and contextual `cost`/`cast_time` read current native power modifiers/display units and cast time, without requiring affordability or including GCD occupancy.
