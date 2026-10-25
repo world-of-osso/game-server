@@ -63,3 +63,39 @@ fn unholy_native_max_charges_survives_putrefy_consumption() {
     assert_eq!(after_maximum, maximum);
     assert_eq!(after_available, available - 1.0);
 }
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
+fn unholy_named_masterful_cunning_installs_native_rune() {
+    let (mut profile, traits) = read_reference(252).unwrap();
+    profile.omnium_talents = Some("rune_of_masterful_cunning".into());
+    let run = prepare_literal_reference(profile, &traits, 1,
+        crate::followers::simulator::ParityActor::Player { race: 8 }).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1279612),
+        "named native TraitNodeEntry136818 must apply spell1279612");
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
+fn unholy_festering_strike_earns_ghouls_and_next_native_scythe() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    let cast_strike = |run: &mut Run| {
+        literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+            literal_rotation::execution::Execution::Spell(85948, run.targets[0], Some(run.targets[0]))).unwrap();
+        preparation::finish_pending_setup(run).unwrap();
+    };
+    cast_strike(&mut run);
+    let ready = run.app.world().get::<crate::auras::ActiveAuras>(run.actor).unwrap()
+        .iter().find(|aura| aura.spell_id == 1254252 && aura.caster == run.actor)
+        .expect("Festering Strike must earn the native ready-ghoul counter").stacks;
+    assert!((2..=3).contains(&ready), "native effects2/3 supply two or three ghouls");
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 458123));
+    cast_strike(&mut run);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1241077),
+        "the real replacement Scythe must open its native tracking window");
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
+        && event.spell_id == Some(458128) && event.kind == CombatLogKind::CastSuccess));
+}
