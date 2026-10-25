@@ -54,7 +54,41 @@ fn native_ranged_critical_damage_starts_master_marksman_bleed() {
     // SimC76f8118 sc_hunter.cpp8583–8626: actual crit amount feeds residual269576.
     let _seed = crate::random::seed_scope(70_448);
     let mut run = player(1);
+    run.app
+        .world_mut()
+        .insert_resource(crate::spell_cast::test_harness::ObservedTriggeredCasts::default());
     cast(&mut run, 75, false);
+    // Establish the real critical hit before starting the bleed observation
+    // window; a late crit must still receive a full native tick interval.
+    for _ in 0..600 {
+        run.app.update();
+        let critical = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.spell_id == Some(75) && event.crit && event.amount > 0);
+        if critical {
+            break;
+        }
+    }
+    let target_auras = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.targets[0])
+        .unwrap();
+    let produced = target_auras
+        .iter()
+        .any(|aura| aura.spell_id == 269576 && aura.caster == run.actor);
+    assert!(
+        produced,
+        "actual crit must apply native Master Marksman before ticking: auras={target_auras:?}, launches={:?}",
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+            .0
+    );
     for _ in 0..200 {
         run.app.update();
     }

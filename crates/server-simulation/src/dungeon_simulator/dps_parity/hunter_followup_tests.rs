@@ -61,6 +61,11 @@ fn native_mm_rapid_ticks_reduce_actual_aimed_recharge_with_take_aim() {
     let before = aimed_full_recharge(&run);
     let start = crate::spell_cast::history_now(run.app.world());
     cast(&mut run, 257044, false);
+    // The final native40yd/s missile can outlive the channel. Count its
+    // actual impact as well as the earlier execution-time recharge reduction.
+    for _ in 0..30 {
+        run.app.update();
+    }
     let elapsed = crate::spell_cast::history_now(run.app.world()) - start;
     let reduction = before - elapsed - aimed_full_recharge(&run);
     let ticks = damage_events(&run, 257045);

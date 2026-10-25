@@ -17,11 +17,14 @@ const MASTER_MARKSMAN: u32 = 260309;
 const MASTER_BLEED: u32 = 269576;
 const BLOOD_FLETCHING: u32 = 1319011;
 
-pub(super) fn selected(world: &World, caster: Entity, talent: u32) -> bool {
+fn is_marksmanship(world: &World, caster: Entity) -> bool {
     world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == SPEC)
-        && has_talent(world, caster, talent)
+}
+
+pub(super) fn selected(world: &World, caster: Entity, talent: u32) -> bool {
+    is_marksmanship(world, caster) && has_talent(world, caster, talent)
 }
 
 /// sc_hunter.cpp5315–5318/5371–5374 and5629–5647: primary is full
@@ -35,7 +38,9 @@ pub(super) fn trick_plan(
     let primary = explicit.expect("Trick Shots action requires its actual primary");
     let mut units = vec![primary];
     let mut chain_multipliers = Vec::new();
-    if selected(world, caster, TRICK_SHOTS) && auras::has_aura(world, caster, TRICK_BUFF) {
+    // sc_hunter.cpp5373/5645 checks the earned buff, not the talent.
+    // Volley grants it independently, including profiles without Trick Shots.
+    if is_marksmanship(world, caster) && auras::has_aura(world, caster, TRICK_BUFF) {
         let (count_index, percent_index) = if spell.id == AIMED_SHOT {
             (0, 3)
         } else {
@@ -89,7 +94,7 @@ fn select_trick_targets(
 /// never at channel launch, and never while the actual Volley is active.
 pub(crate) fn finish_rapid(world: &mut World, _target: Entity, aura: &AuraInstance) {
     let caster = aura.caster;
-    if selected(world, caster, TRICK_SHOTS) && !auras::has_aura(world, caster, VOLLEY) {
+    if is_marksmanship(world, caster) && !auras::has_aura(world, caster, VOLLEY) {
         decrement(world, caster, TRICK_BUFF);
     }
 }

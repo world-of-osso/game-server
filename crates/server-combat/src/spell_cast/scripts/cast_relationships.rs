@@ -30,6 +30,7 @@ enum Operation {
 struct CastRule {
     name: &'static str,
     spec: u32,
+    /// Zero means no talent prerequisite: only an already earned buff is consumed.
     talent: u32,
     cast: u32,
     operation: Operation,
@@ -113,7 +114,7 @@ const RULES: &[CastRule] = &[
     CastRule {
         name: "SIMC_MM_AIMED_TRICK_CONSUMER",
         spec: 254,
-        talent: 257621,
+        talent: 0,
         cast: 19434,
         operation: Operation::Decrement {
             aura: 257622,
@@ -205,7 +206,7 @@ fn selected(world: &World, caster: Entity, rule: &CastRule) -> bool {
     world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == rule.spec)
-        && has_talent(world, caster, rule.talent)
+        && (rule.talent == 0 || has_talent(world, caster, rule.talent))
 }
 
 pub(super) fn has_talent(world: &World, caster: Entity, talent: u32) -> bool {
