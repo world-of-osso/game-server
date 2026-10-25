@@ -71,6 +71,7 @@ pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>)
 
 fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
     let mut app = App::new();
+    app.add_plugins(server_spell_scripts::SpellScriptsPlugin);
     app.insert_resource(super::Space(super::graph::read_graph().unwrap()));
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(TICK));

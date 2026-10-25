@@ -1,10 +1,9 @@
 //! Spell scripts (TrinityCore `SpellScript`) keyed by spell ID: behaviour that the
 //! spell's DB2 effects do not carry.
 
+use super::script_registry;
 use crate::random as rand;
 
-mod after_cast_auras;
-mod aura_rolls;
 mod bouncing_projectiles;
 mod cast_relationships;
 mod marksmanship;
@@ -41,15 +40,11 @@ mod batch6;
 mod batch7;
 mod batch8;
 mod batch9;
-mod cast_grants;
-mod cast_resets;
 mod execution_counters;
 mod foreground_procs;
 mod impact_procs;
-mod paid_cooldowns;
 mod periodic_attacks;
 mod secondary_copies;
-pub(super) use paid_cooldowns::after_payment as after_paid_resources;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(crate) use secondary_copies::after_melee as after_melee_residual;
 pub(super) use secondary_copies::after_spell as after_spell_residual;
@@ -86,7 +81,9 @@ pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScri
     enhancement_strikes::register(scripts);
     enhancement_tier::register(scripts);
 }
+mod periodic_counters;
 mod policies;
+pub(crate) use periodic_counters::register as register_periodic_counters;
 mod spellslinger;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 pub(super) use policies::check_cast as check_policy_cast;
@@ -110,8 +107,8 @@ pub(super) fn apply_periodic_damage_policies(
     spellslinger::after_periodic_damage(world, ctx, target);
 }
 
-pub(crate) fn owns_policy_proc(spell: u32) -> bool {
-    policies::owns_policy_proc(spell)
+pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
+    policies::owns_policy_proc(world, spell)
         || melee_reset::owns_proc(spell)
         || resource_values::owns_proc(spell)
 }
@@ -230,7 +227,7 @@ pub(super) fn finish_scripted_launch(
 
 /// TC OnCast runs once after successful checks, before spending and launch.
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
-    cast_grants::on_cast(world, caster, spell_id, depth);
+    script_registry::on_cast(world, caster, spell_id, depth);
     havoc::before_cast(world, caster, spell_id, depth);
     windwalker::scripted_combo_cast(world, caster, spell_id, depth);
     elemental::before_launch(world, caster, spell_id, depth);
@@ -262,6 +259,7 @@ pub(super) fn after_direct_damage(
     target: Entity,
     critical: bool,
 ) {
+    spellslinger::after_direct_damage(world, ctx);
     windwalker_flurry::after_direct_damage(world, ctx, critical);
     melee_reset::roll_replacement_hit(world, ctx, target, critical);
     policies::after_damage(world, ctx);
@@ -298,6 +296,9 @@ pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::Ca
 }
 
 pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
+    if (spell, index) == (50622, 1) {
+        return Some(periodic_attacks::cast_bladestorm_offhand);
+    }
     if (spell, index) == (super::area_trigger::meteor::METEOR, 0) {
         return Some(super::area_trigger::meteor::cast_meteor);
     }
@@ -694,8 +695,8 @@ pub(crate) fn ignores_hit_avoidance(spell: u32) -> bool {
 
 pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 
-pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
-    if let Some(hook) = policies::damage_hook(spell_id) {
+pub fn damage_amount(world: &World, spell_id: u32) -> Option<DamageAmountHook> {
+    if let Some(hook) = policies::damage_hook(world, spell_id) {
         return Some(hook);
     }
     match spell_id {
@@ -820,24 +821,21 @@ pub(super) use empower_evoker::damage_bonus as empower_damage_bonus;
 
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
-pub fn after_cast(spell_id: u32) -> impl Iterator<Item = AfterCastHook> {
+pub fn after_cast(world: &World, spell_id: u32) -> impl Iterator<Item = AfterCastHook> + use<> {
     // Native handlers and sourced policy relationships are independent effects,
     // not alternate implementations (SimC76f8118 sc_hunter.cpp5083–5092).
-    native_after_cast(spell_id)
+    native_after_cast(world, spell_id)
         .into_iter()
-        .chain(policies::after_cast_hook(spell_id))
+        .chain(policies::after_cast_hook(world, spell_id))
         .chain(spellslinger::after_cast_hook(spell_id))
         .chain(batch9::after_cast_hook(spell_id))
-        .chain(aura_rolls::hook(spell_id))
+        .chain(script_registry::aura_roll_after_cast(world, spell_id))
         .chain(resource_values::after_cast_hook(spell_id))
         .chain(evoker_tier::hook(spell_id))
 }
 
-fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
-    if let Some(hook) = cast_resets::hook(spell_id) {
-        return Some(hook);
-    }
-    if let Some(hook) = after_cast_auras::hook(spell_id) {
+fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
+    if let Some(hook) = script_registry::native_after_cast(world, spell_id) {
         return Some(hook);
     }
     if let Some(hook) = stacking_summons::hook(spell_id) {
@@ -977,18 +975,18 @@ pub(super) type TargetPlanHook =
     fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> super::TargetPlan;
 
 /// Script-owned target plans still use normal validation, hit and effect paths.
-pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
-    if let Some(hook) = guardian_impacts::plan_hook(spell_id) {
-        return Some((Relation::Enemy, hook));
-    }
+pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
     if let Some(hook) = marksmanship_explosive::target_plan(spell_id) {
         return Some(hook);
     }
     if let Some(hook) = marksmanship::target_plan(spell_id) {
         return Some(hook);
     }
-    if let Some(hook) = policies::target_plan_hook(spell_id) {
+    if let Some(hook) = policies::target_plan_hook(world, spell_id) {
         return Some(hook);
+    }
+    if let Some(hook) = guardian_impacts::plan_hook(spell_id) {
+        return Some((Relation::Enemy, hook));
     }
     match spell_id {
         1261160 | 224239 | 431911 => Some((Relation::Enemy, ret_damage::area_plan)),
@@ -1335,23 +1333,24 @@ pub fn script_effect_value(world: &World, caster: Entity, spell_id: u32, index: 
 }
 
 /// Reduce the currently running recharge or spell cooldown; never start one.
-fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f64) {
+pub fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f64) {
     let now = super::history_now(world);
-    let charge_category = world
+    let spell = world
         .resource::<crate::spell_info::SpellStore>()
         .get(spell_id)
-        .and_then(|spell| spell.categories.as_ref())
-        .map_or(0, |category| category.charge_category);
+        .expect("cooldown source spell must exist in native catalog");
+    let categories = spell
+        .categories
+        .as_ref()
+        .map_or((0, 0), |row| (row.charge_category, row.category));
     #[cfg(any(test, feature = "test-support"))]
-    let before = super::holy_metrics::read_recharge(world, caster, charge_category, now);
+    let before = super::holy_metrics::read_recharge(world, caster, categories.0, now);
     let reduced = world
         .get_mut::<super::SpellHistory>(caster)
-        .map(|mut history| {
-            reduce_running_timers(&mut history, charge_category, spell_id, now, seconds)
-        });
+        .map(|mut history| reduce_running_timers(&mut history, categories, spell_id, now, seconds));
     #[cfg(any(test, feature = "test-support"))]
     {
-        let after = super::holy_metrics::read_recharge(world, caster, charge_category, now);
+        let after = super::holy_metrics::read_recharge(world, caster, categories.0, now);
         let applied = (before - after).max(0.0).min(seconds);
         super::holy_metrics::record_reduction(world, caster, spell_id, seconds, applied);
     }
@@ -1368,11 +1367,12 @@ fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f6
 
 fn reduce_running_timers(
     history: &mut super::SpellHistory,
-    charge_category: u32,
+    categories: (u32, u32),
     spell_id: u32,
     now: f64,
     seconds: f64,
 ) -> (Option<shared::protocol::SpellChargesUpdate>, Option<u32>) {
+    let (charge_category, category) = categories;
     let charges = history
         .charges
         .get_mut(&charge_category)
@@ -1381,15 +1381,27 @@ fn reduce_running_timers(
             charges.reduce_recovery(now, seconds);
             charges.snapshot(now)
         });
-    let remaining_ms = history
-        .spell_ready_at
-        .get_mut(&spell_id)
-        .filter(|ready| **ready > now)
-        .map(|ready| {
-            *ready = (*ready - seconds).max(now);
-            ((*ready - now) * 1000.0).round() as u32
-        });
-    (charges, remaining_ms)
+    // SimC76f8118 sc_mage.cpp5404–5407 adjusts the ability's effective
+    // cooldown. Native spells may store it solely in a category (e.g.84714),
+    // so reducing only spell_ready_at leaves the actual ability unchanged.
+    let spell_remaining =
+        reduce_ready_time(history.spell_ready_at.get_mut(&spell_id), now, seconds);
+    let category_remaining = if category != 0 {
+        reduce_ready_time(history.category_ready_at.get_mut(&category), now, seconds)
+    } else {
+        None
+    };
+    (
+        charges,
+        spell_remaining.into_iter().chain(category_remaining).max(),
+    )
+}
+
+fn reduce_ready_time(ready: Option<&mut f64>, now: f64, seconds: f64) -> Option<u32> {
+    ready.filter(|ready| **ready > now).map(|ready| {
+        *ready = (*ready - seconds).max(now);
+        ((*ready - now) * 1000.0).round() as u32
+    })
 }
 
 /// Keep the full cooldown duration separate from remaining time: the client
@@ -1399,10 +1411,14 @@ fn send_reduced_cooldown(world: &mut World, caster: Entity, spell_id: u32, remai
         .resource::<crate::spell_info::SpellStore>()
         .get(spell_id)
         .expect("running cooldown spell must be in the catalog");
-    let base = spell
-        .cooldowns
-        .as_ref()
-        .map_or(0, |cooldown| cooldown.recovery_ms);
+    let category = spell.categories.as_ref().map_or(0, |row| row.category);
+    let base = spell.cooldowns.as_ref().map_or(0, |cooldown| {
+        cooldown.recovery_ms.max(if category != 0 {
+            cooldown.category_recovery_ms
+        } else {
+            0
+        })
+    });
     let duration_ms = super::modify(
         world,
         caster,
@@ -1417,7 +1433,7 @@ fn send_reduced_cooldown(world: &mut World, caster: Entity, spell_id: u32, remai
         caster,
         shared::protocol::SpellCooldownUpdate {
             spell_id,
-            category: 0,
+            category,
             duration_ms,
             remaining_ms,
             is_gcd: false,
@@ -1710,8 +1726,8 @@ pub type HitHook = fn(&mut World, Entity, Entity, u8);
 /// OnHit scripts that need per-cast metadata (including original field identity).
 pub(super) type ContextHitHook = fn(&mut World, &super::effects::EffectCtx, Entity);
 
-pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
-    if let Some(hook) = policies::hit_hook(spell_id) {
+pub(super) fn on_hit_with_context(world: &World, spell_id: u32) -> Option<ContextHitHook> {
+    if let Some(hook) = policies::hit_hook(world, spell_id) {
         return Some(hook);
     }
     match spell_id {

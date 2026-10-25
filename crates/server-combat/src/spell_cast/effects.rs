@@ -1627,7 +1627,7 @@ fn damage_source_amount(
     let amount = if resolved_source {
         amount
     } else {
-        super::scripts::damage_amount(ctx.spell.id)
+        super::scripts::damage_amount(world, ctx.spell.id)
             .map_or(amount, |modify| modify(world, ctx.caster, target, amount))
     };
     let done = if resolved_source || ignores_caster_damage_modifiers(ctx.spell) {
