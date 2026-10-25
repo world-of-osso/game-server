@@ -102,6 +102,7 @@ mod rogue_finisher_tests;
 mod shadow_rotation;
 mod shadow_slam_tests;
 mod shadow_tests;
+mod shaman263_proc_tests;
 mod shaman263_tier_tests;
 mod shared_fact_extension_tests;
 pub(crate) mod single_spell;
