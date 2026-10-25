@@ -46,6 +46,7 @@ pub(super) use elemental::capture_damage_modifier as capture_consumed_damage_mod
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
 mod enhancement_strikes;
+mod enhancement_tempest;
 mod enhancement_tier;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
 mod essence_burst;
