@@ -8,6 +8,7 @@ use crate::spell_info::{SpellInfo, SpellStore};
 use shared::components::PowerType;
 
 const DEADLY_POISON: u32 = 2823;
+const INSTANT_POISON: u32 = 315584;
 const DEADLY_INSTANT: u32 = 113780;
 const VENOMOUS_WOUNDS: u32 = 79134;
 const VENOMOUS_BLEEDS: &[u32] = &[703, 1943];
@@ -25,6 +26,13 @@ pub(super) fn register(scripts: &mut AuraScripts) {
         },
     );
     scripts.0.insert(
+        INSTANT_POISON,
+        AuraScript {
+            on_proc: Some(apply_native_coating),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         VENOMOUS_WOUNDS,
         AuraScript {
             check_proc: Some(block_deferred_wounds),
@@ -32,6 +40,32 @@ pub(super) fn register(scripts: &mut AuraScripts) {
             ..Default::default()
         },
     );
+}
+
+// SimC76f8118 sc_rogue.cpp3021–3025: Instant Poison dispatches its
+// native effect0 child on the earned proc recipient, for every Rogue spec.
+fn apply_native_coating(
+    world: &mut World,
+    caster: Entity,
+    aura: &AuraInstance,
+    target: Option<Entity>,
+) {
+    let Some(target) = target else { return };
+    if !spell_cast::targets::relation_matches(world, caster, target, Relation::Enemy) {
+        return;
+    }
+    spell_cast::cast_triggered(world, caster, coating_payload(aura), Some(target), 1);
+}
+
+fn coating_payload(aura: &AuraInstance) -> u32 {
+    let child = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native poison coating must retain effect0")
+        .trigger_spell;
+    assert_ne!(child, 0, "native poison effect0 must name its payload");
+    child
 }
 
 fn apply_deadly_poison(
@@ -46,13 +80,7 @@ fn apply_deadly_poison(
     if !spell_cast::targets::relation_matches(world, caster, target, Relation::Enemy) {
         return;
     }
-    let dot = aura
-        .effects
-        .iter()
-        .find(|effect| effect.index == 0)
-        .expect("native Deadly Poison coating must retain effect0")
-        .trigger_spell;
-    assert_ne!(dot, 0, "native Deadly Poison effect0 must name its DoT");
+    let dot = coating_payload(aura);
     let now = spell_cast::now(world);
     let ticking = world.get::<ActiveAuras>(target).is_some_and(|auras| {
         auras.iter().any(|active| {

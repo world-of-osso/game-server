@@ -1636,7 +1636,7 @@ fn damage_source_amount(
         let mechanic = mechanic_damage_multiplier(world, bonus_caster, ctx.spell, effect);
         let combo = super::scripts::combo_strikes_multiplier(world, bonus_caster, ctx.spell.id);
         let giantkiller =
-            super::scripts::giantkiller_multiplier(world, ctx.caster, target, ctx.spell);
+            super::script_registry::target_damage_multiplier(world, ctx.caster, target, ctx.spell);
         let ret_damage = super::scripts::ret_damage_multiplier(world, ctx, target, periodic);
         let shadow_weaving =
             super::scripts::shadow_weaving_multiplier(world, bonus_caster, target, ctx.spell.id);
@@ -2025,7 +2025,7 @@ fn deal_source_damage_and_report(
         crate::auras::rogue::after_bleed_tick(world, ctx, target);
     }
     if periodic && !resolved_source {
-        super::scripts::apply_mm_explosive_tick(world, ctx, target, amount);
+        super::script_registry::periodic_primary_damage(world, ctx, target, amount);
         super::scripts::apply_periodic_damage_policies(world, ctx, target, amount);
         super::scripts::after_ret_periodic_damage(world, ctx, target, crit);
     }
