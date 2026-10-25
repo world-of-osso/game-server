@@ -42,6 +42,7 @@ mod batch8;
 mod batch9;
 mod execution_counters;
 mod foreground_procs;
+mod frost;
 mod impact_procs;
 mod periodic_attacks;
 mod secondary_copies;
@@ -109,6 +110,7 @@ pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
     policies::owns_policy_proc(world, spell)
         || melee_reset::owns_proc(spell)
         || resource_values::owns_proc(spell)
+        || frost::owns_proc(spell)
 }
 mod germination;
 mod giantkiller;
@@ -175,6 +177,7 @@ pub(crate) fn after_melee_hit(
 ) {
     windwalker_flurry::after_melee_hit(world, caster, hand, critical);
     melee_reset::roll_white_hit(world, caster, critical);
+    frost::after_white_hit(world, caster, critical);
 }
 mod xuens_battlegear;
 pub(crate) use xuens_battlegear::register_xuens_battlegear;
@@ -216,6 +219,7 @@ pub(super) fn finish_scripted_launch(
     foreground: bool,
 ) {
     elemental::after_launch(world, caster, spell, consumed, depth, foreground);
+    frost::after_launch(world, caster, spell.id, foreground);
     policies::pet_sets::finish_cobra(world, caster, spell);
     execution_counters::after_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);

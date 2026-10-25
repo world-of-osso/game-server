@@ -90,6 +90,16 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [x] Native execution preserves the selected action primary separately from the spell's cast unit. A self-target spell must keep its native self cast while forwarding the actual selected hostile primary to child relationships. Preserve that context across queued requests, cast bars and missile snapshots; an absent or unknown context must not select a substitute. Apply the same contract to Player and NPC actors without spell-ID branches, damage multipliers or mutable-target fallbacks. [Proof](../handoffs/hostile-primary-proof-ledger.md).
 
+### Frost literal rotation
+
+- Successful native Frost Strike/Glacial Advance executions roll Rime using native59057 effect2. Actual Frost Strike/Glacial Advance/Howling Blast during Pillar with selected Obliteration grants Killing Machine and rolls native281238 effect2 for native281327 rune restoration. White critical swings use pinned accumulated KM PRD (0.3 dual wield;1.0 two-handed with Might of the Frozen Wastes); ordinary/noncritical hits do not roll. Native passive trigger effects supply the buff identities and payloads (`sc_death_knight.cpp`7716–7719,10889–10900,11177–11189,11614–11622,14824–14825,16163–16165).
+
+- Frost `.react` observes actual native buff/debuff acquisition using the pinned251 player's reaction settings, including new add waves. Predictable Obliteration KM is immediately reacted; white-crit KM retains reaction delay (`sc_death_knight.cpp`13356–13364). No proc is fabricated by reading a fact.
+
+- [ ] Named Frost Omnium tokens, including Lynxlike Reflexes and Burning Haste, and their numeric TraitNodeEntry forms apply the same native auras; do not import reference stat amounts.
+- [ ] Spec251 player measurements execute the pinned76f8118 Frost source-order precombat and combat action rows through the shared literal driver, not the follower or assisted priority. Native70448 supplies readiness, resources, spell values and damage; missing mechanics remain separate parity work.
+- [ ] `death_knight.first_ams_cast` honors the profile delay and pinned20s default without inventing incoming damage or Runic Power.
+
 ### Fire literal fixture
 
 Spec63 measurements use the exact profile action rows with shared `Program`, `Driver`, `Prepared` and `Equipment`, for either native actor kind. Capture fixture control before setup frames; complete native Arcane Intellect, Mirror Image and prepull Pyroblast in source order before starting the combat clock. Fire-only facts read selected-recipient health thresholds and Heat Shimmer from native70448 data; `hot_streak_spells_in_flight` counts this caster's actual eligible missiles, using the same producer identities as native hit handling. Ordinary dungeon follower control is unchanged.
