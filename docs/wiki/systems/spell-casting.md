@@ -1,5 +1,13 @@
 # Spell Casting
 
+## Dawnlight named hit policies — 2026-10-24
+
+`spell_cast/scripts/policies.rs` stores `Policy { name, spec, talent, relationship }` rows. `Relationship::CounterAfterCast` reads a selected talent’s live native effect and casts a native counter; `Relationship::SpenderHit` binds a resource pool, counter and native payload. Specific Dawnlight IDs occur in policy data, not core spell-ID conditionals. The [contract](../../specs/dps-parity.md#ret-dawnlight-policies) explicitly names the two SimC relationships because TC/DB2/TDB do not encode them.
+
+Ordinary native launch stores applicable resource pools (including zero final cost) and the actual selected primary/list in `SpellInfo.cast_policy_context`. Triggered catalog clones have no context. Logical first-hit dispatch checks the live owned counter, native payload target admission and live owned periodic state: refresh on one target, choose the first unticking actual target in an area list, or spend nothing if all tick. Native stack loss does not refresh duration. Native3, maximum6 and431380 payload/timing remain unchanged.
+
+[Ordered source/RED/GREEN ledger](../../handoffs/dawnlight-generic-proof-ledger.md) records strict producer then consumer failures before implementation, native payload/negative controls and15scoped native passes at28bf70027. Literal self-target caller integration still depends on hp1109; secondary Avatar/AoE, Player-policy and full DPS parity remain outside this proof. Compiler gates and parent integration remain separate.
+
 ## Rake actual-stealth eligibility — 2026-10-24
 
 TC `spell_dru_rake2040–2078` checks actual stealth, not legacy231052/405834 aura presence. Rake's shared predicate follows that boundary and native1822 effect3 amounts; Shred's separate predicate and persistent multiplier fields stay unchanged. [Contract](../../specs/player-damage.md#what-it-must-do); [focused source, fixture ordering and gate proof](../../handoffs/feral-rake-stealth-proof-ledger.md). Native Mark of the Wild legitimately interrupts Prowl; isolated comparisons own ordinary buffs before stealth, never bypass interrupt flags or GCD.
