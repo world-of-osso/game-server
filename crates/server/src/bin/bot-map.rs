@@ -1,7 +1,7 @@
 //! Manual Stockade trace renderer; never installed as a server system.
 use std::path::PathBuf;
 
-#[path = "../bot_map/mod.rs"]
+#[path = "../../../server-combat/src/bot_map/mod.rs"]
 mod bot_map;
 use bot_map::{render_trace, scene::read_scene};
 
