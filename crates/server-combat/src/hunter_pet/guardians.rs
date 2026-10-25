@@ -53,7 +53,9 @@ fn spawn_stabled_guardian(
         health.current = health.max;
     }
     if let Some(target) = ctx.spell.cast_primary_target {
-        crate::pet_control::attack_start(world, pet, target);
+        // SimC76f8118 sc_hunter.cpp1706–1711/2248–2253 starts native
+        // melee on summon. Give the pet an order, preserving its saved stance.
+        crate::pet_control::order_attack(world, pet, target);
     }
     crate::spell_cast::log_summon(world, ctx.caster, pet, ctx.spell);
 }
