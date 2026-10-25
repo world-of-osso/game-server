@@ -16,8 +16,14 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Spec253 keeps the requested native actor identity and disables follower-kit decisions before setup. Its pinned76f8118 `hunter_beast_mastery.simc` rows run through the shared `Program`/`Driver`/`Prepared`/`Equipment` path, including native pet summon, snapshot, Auto Shot and target-scored Barbed Shot. Native70448 supplies spell values, readiness, resources and damage; the adapter does not substitute reference damage.
 
+### Outlaw literal fixture
+
+- Spec260 preserves the requested player identity and captures literal control before setup. Execute the profile's complete action rows with shared `Program`/`Driver`/`Prepared`/`Equipment`, not AssistedCombat. The pinned profile requests Instant Poison without a nonlethal coating. Read combo points, Energy, native readiness and earned Roll the Bones states from the actor; never substitute reference damage or synthetic buffs.
+- Shared Rogue operands expose the native combo-point spend capacity and Energy deficit/time-to-max excluding temporary capacity, while retaining permanent talent capacity.
+
 ### Equipment
 
+- `trinket.N.has_stat.<stat>` and `has_buff.<stat>` use the same native item stat-buff existence query, including `any_dps`; direct-damage-only items are false.
 - `trinket.N.has_use_damage` requires an actual native on-use ItemEffect whose spell/reachable native trigger effects deal direct, weapon or periodic damage/leech. Passive-only or stat-only trinkets are false; no item-ID lists or guessed script damage.
 - `trinket.N.cooldown.charges_fractional` reads native charge-category state or ordinary spell/category timers; fractional progress uses authored/resolved recharge duration, never a synthetic cooldown. Aggregate multiple item cooldown sources with pinned max semantics; no cooldown sources returns0.
 
