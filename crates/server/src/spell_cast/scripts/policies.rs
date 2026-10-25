@@ -71,6 +71,19 @@ struct Policy {
 
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
+    // SimC76f8118 sc_warrior.cpp3685–3686: Cleave applies the selected Rend
+    // periodic payload on each landed target; native388539 owns all values.
+    Policy {
+        name: "SIMC_ARMS_CLEAVE_REND",
+        spec: 71,
+        talent: 772,
+        relationship: Relationship::HitPayload {
+            parent: 845,
+            payload: 388539,
+            self_target: false,
+            primary_only: false,
+        },
+    },
     // Momentum Boost tooltip: https://warcraft.wiki.gg/wiki/Momentum_Boost
     // SimC76f8118 sc_monk.cpp1699–1704/1730–1734/1839–1841: haste damage,
     // FoF-only stacks, reset and native60%/8s speed on end (also dot.cpp75–81).

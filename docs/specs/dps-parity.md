@@ -95,6 +95,12 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [ ] Hunter pet ability damage inherits the same integer22% owner total RAP source as melee, including equipped weapon AP; native1264355 damage qualifies the actual effect boundary before the shared input changes. Ability coefficients/variance and native target geometry stay unchanged.
 - [ ] Intrinsic pet AP/weapon damage remains an explicit unqualified gap; do not invent pet_levelstats or import TC's fake primary stats/approximate weapon range. SimC stable_pet60% ownerAP is named divergence `HUNTER_PET_SIMC_OWNER_AP_DIFF`, not mixed with TC22% RAP. Contribution proofs do not certify total pet DPS or Azure survival.
 
+### Arms literal controller
+
+- [x] `SIMC_ARMS_CLEAVE_REND`: an Arms Cleave hit applies native388539 to each landed target only with selected Rend772. Pinned76f8118 `sc_warrior.cpp3685–3686` supplies the missing relationship; native payload amounts, duration and periodic rules remain unchanged.
+
+- [x] Spec71 parity executes the exact reference manifest's action lists through the shared literal evaluator, native readiness/execution and equipment facts. Capture control before warmup, cast the source precombat Battle Stance once, and use native selected targets for Slayer/Colossus lists. When no native follower profile exists, use the real player actor; never fabricate a follower. Stockade/native follower rotations remain unchanged. Potion inventory and external Power Infusion are explicit gaps.
+
 ### Fury player parity
 
 - [x] Spec72 uses `--actor player` and the complete pinned MID2 Fury APL through shared `literal_rotation`. Capture literal control before native setup, execute ordered precombat and submit normal native casts. Do not invent a follower profile. Native overrides select Reckless Abandon and Unrelenting Onslaught variants; native stats, costs, coefficients and trait legality remain authoritative.
@@ -208,6 +214,8 @@ The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native speci
 ### Enhancement fixture driver
 
 Spec263 parity executes the pinned MID2 Enhancement action rows through the shared literal evaluator, using native action admission, equipment and aura/target facts. A real player uses this driver without loading AssistedCombat diagnostic inputs; no follower profile is fabricated. Windfury/Flametongue setup occurs only in precombat. Thorim's LB/CL choice follows successful foreground LB/CL/Tempest dispatch and Tempest target count. This selects actions; it does not certify the underlying Enhancement proc, counter or damage mechanics.
+
+Enhancement native melee procs generate the real344179 counter and187881 modifier together. Foreground affected spells snapshot their native modifiers at launch and consume up to the live187880 effect1 limit; expiry removes the modifier. Voltaic Blaze grants its native effect1 stack count once per execution. Windfury/Flametongue setup resolves the native weapon-enchant payload for the equipped hand; eligible landed melee runs native proc chance/modifiers and25504/10444 damage, without recursive Windfury procs. Sources: pinned SimC `sc_shaman.cpp2640–2675,3039–3055,10123–10125,10919–11023,11870–11988`.
 
 ### Shared literal snapshot operands
 
