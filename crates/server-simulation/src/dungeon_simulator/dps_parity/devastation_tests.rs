@@ -199,6 +199,10 @@ fn devastation_eternity_surge_earns_native_azure_sweep_action() {
     let mut run = prepare_literal(1467, 3).unwrap();
     engage(&mut run);
     let primary = run.targets[0];
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1264822),
+        "the exact profile must earn native MID1 four-piece"
+    );
     assert!(!crate::auras::has_aura(run.app.world(), run.actor, 1265871));
     crate::spell_cast::creature_cast_empowered_with_targets(
         run.app.world_mut(),
@@ -217,27 +221,70 @@ fn devastation_eternity_surge_earns_native_azure_sweep_action() {
         crate::auras::has_aura(run.app.world(), run.actor, 1265871),
         "actual Eternity Surge must earn the native Azure Sweep action override"
     );
+    let sweep_stacks = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == 1265871 && aura.caster == run.actor)
+            })
+            .map_or(0, |aura| aura.stacks)
+    };
+    // SimC76f8118 sc_evoker.cpp10853–10856: actual MID1 four-piece adds one use.
+    assert_eq!(
+        sweep_stacks(&run),
+        2,
+        "native MID1 four-piece must earn two Sweep uses"
+    );
     preparation::finish_pending_setup(&mut run).unwrap();
     assert_eq!(
         literal_rotation::execution::resolve_action(run.app.world(), run.actor, 362969).unwrap(),
         Some(1265872),
         "native aura332 must expose Azure Sweep through known Azure Strike"
     );
-    crate::spell_cast::creature_cast_with_targets(
-        run.app.world_mut(),
-        run.actor,
-        1265872,
-        crate::spell_cast::CastTargets {
-            unit: primary,
-            primary: Some(primary),
-            destination: None,
-        },
-    )
-    .unwrap();
-    preparation::finish_pending_setup(&mut run).unwrap();
-    assert!(
-        !crate::auras::has_aura(run.app.world(), run.actor, 1265871),
-        "the ordinary Sweep must consume its earned native use"
+    let surge_cooldown = |run: &Run| {
+        let world = run.app.world();
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(359073)
+            .unwrap();
+        world
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .unwrap()
+            .remaining_cooldown_ms(spell, crate::spell_cast::now(world))
+    };
+    for remaining_uses in [1, 0] {
+        let before = surge_cooldown(&run);
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            1265872,
+            crate::spell_cast::CastTargets {
+                unit: primary,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        // sc_evoker.cpp5704–5710: actual tier effect1 reduces the running Surge cooldown.
+        assert_eq!(
+            surge_cooldown(&run),
+            before.saturating_sub(2000),
+            "each native Sweep must earn the native two-second Surge reduction"
+        );
+        preparation::finish_pending_setup(&mut run).unwrap();
+        assert_eq!(
+            sweep_stacks(&run),
+            remaining_uses,
+            "each Sweep must spend one earned use, not the entire tier grant"
+        );
+    }
+    assert_eq!(
+        literal_rotation::execution::resolve_action(run.app.world(), run.actor, 362969).unwrap(),
+        Some(362969),
+        "spending the last earned Sweep must restore native Azure Strike"
     );
     let events = &run
         .app

@@ -8,7 +8,9 @@ fn literal_ww_native_wdp_duration_matches_overlap_plus_hasted_grace() {
     let start = run.app.world().resource::<Time>().elapsed();
     super::super::install_fixture_lifetimes(&mut run, start);
     super::super::engage(&mut run);
-    let mut rotation = run.windwalker_rotation.take().unwrap();
+    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>)
+        .downcast::<Rotation>()
+        .unwrap();
     for _ in 0..600 {
         rotation
             .drive(run.app.world_mut(), run.actor, &run.targets)
