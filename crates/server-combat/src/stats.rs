@@ -83,8 +83,9 @@ pub struct StatModifiers {
     /// Aura404: presence replaces both AP bases, including an authored zero.
     pub attack_power_from_sp_pct: Option<f32>,
     pub crit_pct: f32,
+    /// Composed ordinary aura percentage, multiplying haste from rating.
     pub haste_pct: f32,
-    /// Independent percentage multiplying total haste after rating/additive bonuses.
+    /// Independent percentage multiplying rating and ordinary aura haste.
     pub haste_total_pct: f32,
     pub mastery_points: f32,
     pub versatility_pct: f32,
@@ -539,6 +540,11 @@ fn rating_fields(ratings: &mut CombatRatings) -> [(u32, &mut f32); 10] {
     ]
 }
 
+/// SimC76f8118 player.cpp4982–4995: rating and independent aura factors multiply.
+pub(crate) fn compound_haste_pct(current_pct: f32, additional_pct: f32) -> f32 {
+    current_pct + additional_pct * (1.0 + current_pct / 100.0)
+}
+
 /// Retail stats for `input`, with aura `mods` folded in. `None` outside
 /// the class (1..=13) and level (1..=90) tables.
 pub fn compute_character_stats(
@@ -596,9 +602,10 @@ pub fn compute_character_stats(
     };
     // TC StatSystem.cpp549–559: aura318 supplies the base; rating adds points.
     let mastery_points = rating_value(ratings.mastery, MASTERY_RATING[level]) + mods.mastery_points;
-    let base_haste_pct = rating_value(ratings.haste, HASTE_RATING[level]) + mods.haste_pct;
+    let rating_haste_pct = rating_value(ratings.haste, HASTE_RATING[level]);
+    let base_haste_pct = compound_haste_pct(rating_haste_pct, mods.haste_pct);
     // SimC76f8118 sc_paladin.cpp4617–4618/4647–4648: Crusade multiplies haste.
-    let haste_pct = base_haste_pct + (100.0 + base_haste_pct) * mods.haste_total_pct / 100.0;
+    let haste_pct = compound_haste_pct(base_haste_pct, mods.haste_total_pct);
     Some(CharacterStats {
         primary,
         ratings,
