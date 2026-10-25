@@ -69,7 +69,7 @@ mod germination;
 mod giantkiller;
 pub(super) use giantkiller::multiplier as giantkiller_multiplier;
 mod havoc;
-pub(crate) use havoc::is_eye_beam_channel;
+pub(crate) use havoc::{apply_havoc_damage_policies, is_eye_beam_channel};
 pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;

@@ -44,6 +44,9 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Havoc literal rotation
 
+- [ ] Native Burning Blades453177 receives the selected452408 percentage of landed swing, Chaos Strike/Annihilation, First Blood primary-strike and Throw Glaive damage. Native duration, period and rolling-refresh rules determine ticks; residual damage cannot feed itself (pinned sc_demon_hunter.cpp3088–3110).
+- [ ] Selected Initiative388108 grants native391215 on the first positive direct enemy hit, without refreshing on repeated hits against that enemy. Vengeful Retreat's damage child resets those target trackers before its hits (pinned sc_demon_hunter.cpp2608–2620,8567–8576).
+
 - [ ] `SIMC_HAVOC_DEMONIC_TRANSFORMATION`: native Eye Beam198013/Abyssal Gaze452497 with selected213410/spec577 enters native162264 before channel execution, using the live native talent effect0 duration plus the actual hasted channel duration (pinned sc_demon_hunter.cpp4051–4057). If the actor already owns live Meta, extend it without resetting effects or tick phase. No resource grant or damage adjustment; unrelated spells do not trigger the relationship.
 
 - [x] Spec577 player measurements interpret the pinned76f8118 Havoc action lists through the shared literal driver, including source-order precombat, native selected hero tree, and native equipment facts. No replacement priority or resource grants.

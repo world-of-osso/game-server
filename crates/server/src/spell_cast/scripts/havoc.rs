@@ -5,6 +5,22 @@ use shared::components::ActiveSpec;
 use crate::auras::ActiveAuras;
 use crate::class_progression::KnownSpells;
 
+mod damage;
+pub(crate) use damage::apply_havoc_damage_policies;
+
+fn is_havoc(world: &World, caster: Entity) -> bool {
+    world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 577)
+}
+
+fn has_talent(world: &World, caster: Entity, talent: u32) -> bool {
+    is_havoc(world, caster)
+        && world
+            .get::<KnownSpells>(caster)
+            .is_some_and(|known| known.contains(talent))
+}
+
 struct TransformPolicy {
     name: &'static str,
     spec: u32,
@@ -31,6 +47,7 @@ pub(crate) fn is_eye_beam_channel(spell: u32) -> bool {
 }
 
 pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    damage::before_cast(world, caster, spell);
     if !DEMONIC.parents.contains(&spell) || !selected(world, caster) {
         return;
     }
