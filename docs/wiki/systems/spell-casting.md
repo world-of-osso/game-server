@@ -1,5 +1,11 @@
 # Spell Casting
 
+## Selected primary across self casts — 2026-10-24
+
+The shared literal execution carries the native cast unit and selected action primary separately. `CastTargets` supplies both to ordinary Player/NPC admission; existing spell snapshots retain the primary through queued requests and cast bars. Foreground child relationships use that snapshot, not the explicit self-cast unit or a later mutable combat target. Missing context does not choose another target. Native target selectors, values, payment and flight remain unchanged.
+
+The actual Ret self-cast boundary failed with child target=caster and passes with target=hostile plus real damage; four scoped native cases pass at ec5f0f3f3. [Contract](../../specs/dps-parity.md#shared-cast-target-context); [full proof and remaining controls](../../handoffs/hostile-primary-proof-ledger.md). The older Zenith control has an identical lifetime/role fixture failure on plain master3f; it is not repaired in this branch. NPC and actual Player child-primary assertions, Player/queue/composite controls and both post-D3 compiler gates now pass within the linked ledger’s exact scope. The parent’s full gate and new DPS measurements remain separate.
+
 ## Rake actual-stealth eligibility — 2026-10-24
 
 TC `spell_dru_rake2040–2078` checks actual stealth, not legacy231052/405834 aura presence. Rake's shared predicate follows that boundary and native1822 effect3 amounts; Shred's separate predicate and persistent multiplier fields stay unchanged. [Contract](../../specs/player-damage.md#what-it-must-do); [focused source, fixture ordering and gate proof](../../handoffs/feral-rake-stealth-proof-ledger.md). Native Mark of the Wild legitimately interrupts Prowl; isolated comparisons own ordinary buffs before stealth, never bypass interrupt flags or GCD.

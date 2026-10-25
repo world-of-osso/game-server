@@ -1,3 +1,7 @@
+## 2026-10-24 — Selected primary across self casts
+
+[Native cast contexts](systems/spell-casting.md#selected-primary-across-self-casts--2026-10-24) keep explicit cast unit and selected action primary distinct through shared execution and native snapshots. Actual self-cast Ret child-target RED50.92s→four native GREEN60.88s at ec5f0f3f3; no spell-ID branch, multiplier or target fallback. The linked ledger now records NPC/Player assertions, Player/queue/composite controls and passing post-D3 test-target/plain-bin compiler checks. Full parent integration and numerical parity remain separate. The older Zenith lifetime/role assertion also fails on exact plain master3f and remains outside this fix.
+
 ## 2026-10-24 — Generic health aura-state qualification
 
 [Auras](systems/auras.md#generic-health-aura-states--2026-10-24): independent branch from461aa8102; TC Unit::Update481–487 health siblings2/6/13/21/23/24/25 use Unit.h804–809 integer strict comparisons. fbdc5ee0d core8genuineRED/2controls and actual31146 full-health24275 RED/below20damagePASS32.34s precede implementation.15, otherNone states and rejection semantics preserved;7f34b277e core17GREEN22.56s/native2GREEN41.62s, zero warnings. Independent requested two-crate check ran once at1a573b3ac:PASS0/2m34s/zero warnings; fmtPASS0. Parent broad gate remains separate. [Source/proof ledger](../handoffs/aura-state-health-proof-ledger.md).

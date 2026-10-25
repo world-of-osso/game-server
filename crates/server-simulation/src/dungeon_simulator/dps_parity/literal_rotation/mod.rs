@@ -144,7 +144,7 @@ impl Driver {
         execution: Execution,
     ) -> Result<(), String> {
         let ends_precombat = self.selected_precombat && harmful_execution(world, &execution)?;
-        let cancellation = if let Execution::Spell(id, _) = &execution {
+        let cancellation = if let Execution::Spell(id, _, _) = &execution {
             action
                 .options
                 .get("cancel_if")
@@ -200,7 +200,7 @@ fn harmful_execution(world: &World, execution: &Execution) -> Result<bool, Strin
         }
         Execution::Snapshot => return Ok(false),
         Execution::AutoAttack(_) | Execution::RetargetAutoAttack(_) => return Ok(true),
-        Execution::Spell(id, _) => *id,
+        Execution::Spell(id, _, _) => *id,
         Execution::Item(item, _) => item.on_use.spell_id,
     };
     let store = world.resource::<crate::spell_info::SpellStore>();
