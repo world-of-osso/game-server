@@ -16,11 +16,8 @@ mod equipment_input_tests;
 mod equipped_set_tests;
 mod feral_tests;
 mod firestarter_tests;
-<<<<<<< HEAD
 mod fury_rotation;
-=======
 mod gear_profile_tests;
->>>>>>> origin/master
 mod haste_tests;
 mod health_aura_state_tests;
 mod howl_tests;
