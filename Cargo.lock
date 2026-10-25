@@ -6595,6 +6595,7 @@ dependencies = [
  "serde",
  "serde_json",
  "server-catalog",
+ "server-map-rules",
  "server-pet-battle",
  "shared",
  "tempfile",
@@ -6622,6 +6623,16 @@ dependencies = [
  "rand 0.8.5",
  "rusqlite",
  "server",
+ "shared",
+]
+
+[[package]]
+name = "server-map-rules"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bitcode",
+ "rusqlite",
  "shared",
 ]
 

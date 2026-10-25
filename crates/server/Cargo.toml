@@ -6,6 +6,7 @@ rust-version.workspace = true
 
 [dependencies]
 server-catalog = { path = "../server-catalog" }
+server-map-rules = { path = "../server-map-rules" }
 server-pet-battle = { path = "../server-pet-battle" }
 # Only explicit fixture consumers enable these; ordinary server builds stay unchanged.
 blake3 = { version = "1.8", optional = true }
@@ -51,7 +52,7 @@ image = { version = "0.24.9", default-features = false, features = ["png"] }
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 
 [features]
-test-support = ["dep:blake3", "dep:tempfile", "dep:game-engine-core"]
+test-support = ["server-map-rules/test-support", "dep:blake3", "dep:tempfile", "dep:game-engine-core"]
 # Private debug-peer harness; release builds reject it and deploy never enables it.
 native-proof-hold-persistence = []
 # Diagnostic: log per-system wall time every 10 s (enables Bevy system spans).
@@ -70,6 +71,7 @@ name = "game-server-site-export"
 path = "src/bin/site_export.rs"
 
 [dev-dependencies]
+server-map-rules = { path = "../server-map-rules", features = ["test-support"] }
 # Content-address frozen fixture inputs; already present in the workspace graph.
 blake3 = "1.8"
 # Exercise actual SQLite read authorization when proving cache I/O reuse.
