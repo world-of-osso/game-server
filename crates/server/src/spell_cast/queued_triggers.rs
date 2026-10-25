@@ -13,6 +13,14 @@ enum QueuedCastKind {
     CostedTrigger,
     NormalForce,
     FullTrigger,
+    ScaledFullTrigger(f32),
+}
+
+pub(super) struct ScaledTrigger {
+    pub target: Entity,
+    pub spell_id: u32,
+    pub delay_ms: u32,
+    pub multiplier: f32,
 }
 
 struct QueuedTrigger {
@@ -129,6 +137,38 @@ pub(super) fn schedule_full_trigger(
         .push_back(trigger);
 }
 
+/// A source-qualified delayed multiplier changes no native child coefficients.
+pub(super) fn schedule_scaled_full_trigger(
+    world: &mut World,
+    ctx: &super::EffectCtx,
+    request: ScaledTrigger,
+) {
+    if !request.multiplier.is_finite() || request.multiplier < 0.0 {
+        error!(
+            spell = request.spell_id,
+            multiplier = request.multiplier,
+            "Invalid delayed damage multiplier"
+        );
+        return;
+    }
+    let due_ms = now_ms(world) + u64::from(request.delay_ms);
+    let trigger = QueuedTrigger {
+        kind: QueuedCastKind::ScaledFullTrigger(request.multiplier),
+        caster: ctx.caster,
+        target: request.target,
+        destination: None,
+        spell_id: request.spell_id,
+        depth: ctx.depth + 1,
+        item_level: ctx.spell.cast_item_level,
+    };
+    world
+        .resource_mut::<PendingTriggers>()
+        .0
+        .entry(due_ms)
+        .or_default()
+        .push_back(trigger);
+}
+
 /// Source script callback using default TRIGGERED_NONE, not FULL_MASK.
 /// Unlike effect160, this preserves the source caster and chosen target.
 pub(super) fn schedule_normal_cast(
@@ -188,6 +228,30 @@ pub(crate) fn resolve_due(world: &mut World) {
                     trigger.item_level,
                 ) {
                     warn!("Delayed scripted spell {} refused", trigger.spell_id);
+                }
+            }
+            QueuedCastKind::ScaledFullTrigger(multiplier) => {
+                let Some(mut spell) = world
+                    .resource::<super::SpellStore>()
+                    .get(trigger.spell_id)
+                    .cloned()
+                else {
+                    warn!(
+                        spell = trigger.spell_id,
+                        "Delayed scaled spell missing native data"
+                    );
+                    continue;
+                };
+                spell.cast_item_level = trigger.item_level;
+                spell.cast_damage_multiplier = Some(multiplier);
+                if !super::launch_triggered_spell(
+                    world,
+                    trigger.caster,
+                    &spell,
+                    Some(trigger.target),
+                    trigger.depth,
+                ) {
+                    warn!(spell = trigger.spell_id, "Delayed scaled spell refused");
                 }
             }
             QueuedCastKind::NormalForce => {
