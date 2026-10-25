@@ -4,8 +4,8 @@ use crate::auras::{ActiveAuras, aura_now};
 
 #[test]
 fn rotation_fidelity_windwalker_dance_rppm_uses_native_regen_haste_modifier() {
-    // Native Martial Agility1272685 is learned55 and supplies aura342/base30.
-    // Level41 has genuinely zero haste; do not fabricate a stat to exercise scaling.
+    // TC SpellAuraEffects.cpp4517–4528: learned Martial Agility342 changes attack
+    // timers only. The previous positive unified-haste premise was incorrect.
     let (mut h, unit) = crate::followers::kit_tests::at_level(227734, 55, |app| {
         app.add_plugins(crate::stats::StatsPlugin);
     });
@@ -38,9 +38,9 @@ fn rotation_fidelity_windwalker_dance_rppm_uses_native_regen_haste_modifier() {
         .get::<crate::stats::CharacterStats>(unit)
         .unwrap()
         .haste_pct;
-    assert!(
-        haste > 0.0,
-        "actual native derived haste, never injected stats"
+    assert_eq!(
+        haste, 0.0,
+        "native Martial Agility342 is not spell/regen haste; no gear haste exists in this fixture"
     );
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),

@@ -102,6 +102,8 @@ pub struct AuraStatMods {
     /// MOD_MELEE_HASTE_3 319 melee attack time multiplier (`HandleModMeleeSpeedPct`
     /// → `ApplyAttackTimePercentMod`), same per-aura factor as 252.
     pub attack_time_mult: f32,
+    /// Aura342: BASE/OFF/RANGED attack time only (TC HandleModMeleeRangedSpeedPct).
+    pub melee_ranged_attack_time_mult: f32,
     /// WATER_BREATHING 82: no breath timer (`Player::getMaxTimer`).
     pub water_breathing: bool,
     /// MOD_WATER_BREATHING 155 breath duration multiplier (`GetTotalAuraMultiplier`).
@@ -154,6 +156,7 @@ impl Default for AuraStatMods {
             melee_hit_chance_pct: 0.0,
             attack_cast_time_mult: 1.0,
             attack_time_mult: 1.0,
+            melee_ranged_attack_time_mult: 1.0,
             water_breathing: false,
             water_breathing_mult: 1.0,
             health_regen_mult: 1.0,
@@ -563,7 +566,6 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_MELEE_HASTE
             | MOD_RANGED_HASTE
             | MOD_MELEE_RANGED_HASTE
-            | MOD_MELEE_RANGED_HASTE_2
             | MELEE_SLOW
             | HASTE_SPELLS => stats.haste_pct += amount,
             MOD_CASTING_SPEED_NOT_STACK => acc.haste_not_stack = acc.haste_not_stack.max(amount),
@@ -649,6 +651,9 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_HIT_CHANCE => combat.melee_hit_chance_pct += amount,
             MOD_SPEED_SLOW_ALL => combat.attack_cast_time_mult *= time_percent_mod(amount),
             MOD_MELEE_HASTE_3 => combat.attack_time_mult *= time_percent_mod(amount),
+            MOD_MELEE_RANGED_HASTE_2 => {
+                combat.melee_ranged_attack_time_mult *= time_percent_mod(amount)
+            }
             WATER_BREATHING => combat.water_breathing = true,
             MOD_WATER_BREATHING => combat.water_breathing_mult *= pct(amount),
             MOD_HEALTH_REGEN_PERCENT => combat.health_regen_mult *= pct(amount),
