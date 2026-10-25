@@ -1,6 +1,10 @@
 ## 2026-10-25 — Arcane literal player fixture
 
 [Arcane62](systems/simc-apl.md#arcane-fixture-62) executes supplied profile rows through shared literal control with native class admission and no concurrent AssistedCombat. The300s ST controller regression passes; numerical parity remains open.
+## 2026-10-25 — Marksmanship native relationships
+
+[Marksmanship](systems/spell-casting.md#marksmanship-native-relationships--2026-10-25): native stack limits, Volley-earned cleave without its separate talent, caster-owned channel consumption, execution/arrival ordering, residual banks and Explosive primary/secondary relationships.
+
 ## 2026-10-25 — Literal spec registration
 
 [Shared literal fixture machinery](systems/simc-apl.md#shared-literal-fixture-machinery): one sorted driver table replaces per-spec shared seams; spec modules own preparation and reports. Literal selection defaults to both actor identities.
