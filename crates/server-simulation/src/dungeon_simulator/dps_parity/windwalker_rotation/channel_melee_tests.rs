@@ -8,6 +8,7 @@ type Run = super::super::Run;
 const SCK: u32 = 101546;
 const FOF: u32 = 113656;
 const VIVIFY: u32 = 116670;
+const VIVACIOUS_VIVIFICATION: u32 = 392883;
 const ALLOW_ACTIONS_DURING_CHANNEL: u32 = 1;
 
 fn prepare() -> Run {
@@ -94,6 +95,16 @@ fn finish_cast_and_count_white(run: &mut Run, spell: u32) -> usize {
     panic!("actual native spell{spell} did not finish within10s");
 }
 
+fn wait_for_vivacious_expiry(run: &mut Run) {
+    for _ in 0..1000 {
+        if !crate::auras::has_aura(run.app.world(), run.actor, VIVACIOUS_VIVIFICATION) {
+            return;
+        }
+        run.app.update();
+    }
+    panic!("source-earned native20s Vivacious buff did not expire without new casts");
+}
+
 fn channel_flags(run: &Run, state: &CastState) -> u32 {
     assert_eq!(state.cast_type, CastType::Channel);
     run.app
@@ -160,6 +171,8 @@ fn literal_ww_native_channel_melee_fof_stays_blocked_then_resumes() {
 fn literal_ww_native_channel_melee_normal_cast_stays_blocked_then_resumes() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare();
+    // Actual TP casts earn the native -100% Vivify cast-time proc. Let it expire.
+    wait_for_vivacious_expiry(&mut run);
     let actor = run.actor;
     let state = begin_spell(&mut run, VIVIFY, actor);
     assert_eq!(state.cast_type, CastType::Normal);
