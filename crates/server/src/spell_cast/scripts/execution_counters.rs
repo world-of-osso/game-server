@@ -26,8 +26,64 @@ const COUNTERS: &[ExecutionCounter] = &[
     },
 ];
 
+struct ConsumedCounter {
+    actions: &'static [u32],
+    buff: u32,
+    required: &'static [u32],
+    counter: u32,
+}
+
+const CONSUMERS: &[ConsumedCounter] = &[
+    // SimC76f8118 sc_warrior.cpp4347–4352/4547–4554: Execute consumes
+    // one SD stack after base execution, then grants selected Imminent Demise.
+    ConsumedCounter {
+        actions: &[163201, 280735],
+        buff: 52437,
+        required: &[29725, 444769],
+        counter: 445606,
+    },
+];
+
 #[derive(Component, Default)]
 struct ExecutionCounts(BTreeMap<u32, u32>);
+
+pub(super) fn consume_after_foreground_cast(world: &mut World, caster: Entity, action: u32) {
+    for consumer in CONSUMERS
+        .iter()
+        .filter(|consumer| consumer.actions.contains(&action))
+    {
+        let Some(instance) = world.get::<ActiveAuras>(caster).and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == consumer.buff && aura.caster == caster)
+                .map(|aura| aura.instance_id)
+        }) else {
+            continue;
+        };
+        crate::auras::spend_stack(world, caster, instance);
+        let selected = world.get::<ActiveAuras>(caster).is_some_and(|auras| {
+            consumer
+                .required
+                .iter()
+                .all(|spell| auras.has_spell(*spell))
+        });
+        if selected
+            && !crate::spell_cast::try_cast_triggered(
+                world,
+                caster,
+                consumer.counter,
+                Some(caster),
+                1,
+            )
+        {
+            warn!(
+                ?caster,
+                counter = consumer.counter,
+                "Native consumed-stack counter refused"
+            );
+        }
+    }
+}
 
 pub(super) fn after_launch(world: &mut World, caster: Entity, action: u32) {
     for counter in COUNTERS.iter().filter(|counter| counter.action == action) {

@@ -28,7 +28,10 @@ mod cast_grants;
 mod cast_resets;
 mod execution_counters;
 mod foreground_procs;
-pub(super) use foreground_procs::after_foreground_special;
+pub(super) fn after_foreground_special(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    foreground_procs::after_foreground_special(world, caster, spell);
+    execution_counters::consume_after_foreground_cast(world, caster, spell.id);
+}
 mod chrono_flame;
 mod clearcasting;
 mod echo_policies;
