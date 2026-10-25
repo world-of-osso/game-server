@@ -187,6 +187,60 @@ fn spellslinger_native_ray_ticks_conjure_splinters_and_open_splinterstorm() {
     );
 }
 
+#[test]
+#[ignore = "requires private native70448 DB and exact Frost64 inputs"]
+fn frost_mage_native_frozen_orb_pays_thirty_delayed_area_pulses() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(64, 3).unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(84714, run.actor, Some(run.targets[0])),
+    )
+    .unwrap();
+    for _ in 0..8 {
+        run.app.update();
+    }
+    let count_bolts = |run: &Run| {
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(84721)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .filter_map(|event| event.target)
+            .collect::<Vec<_>>()
+    };
+    assert!(
+        count_bolts(&run).is_empty(),
+        "Orb cannot pulse before its500ms activation"
+    );
+    for _ in 0..352 {
+        run.app.update();
+    }
+    let bolts = count_bolts(&run);
+    for target in &run.targets {
+        assert_eq!(
+            bolts
+                .iter()
+                .filter(|&&unit| unit == target.to_bits())
+                .count(),
+            30,
+            "native Orb must pay30 area pulses to each actual in-radius enemy"
+        );
+    }
+    assert_eq!(
+        bolts.len(),
+        90,
+        "one field must not duplicate the area hit per recipient"
+    );
+}
+
 use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
