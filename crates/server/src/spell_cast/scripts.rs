@@ -33,6 +33,9 @@ pub(crate) mod empower_evoker;
 mod essence_burst;
 mod policies;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
+pub(crate) use policies::{
+    extends_reapplication, filter_secondary_targets, owns_policy_proc, register_lifecycle_policies,
+};
 pub(super) use policies::{on_hit as apply_hit_policies, snapshot as snapshot_hit_policies};
 mod germination;
 mod giantkiller;
