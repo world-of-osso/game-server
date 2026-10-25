@@ -1,5 +1,141 @@
-//! Literal Arcane profile control must replace the native follower priority.
+//! Literal Arcane profile control and source-defined native producers.
 use super::*;
+use crate::auras::ActiveAuras;
+use crate::spell_cast::test_harness::ObservedCombatEvents;
+use shared::protocol::CombatLogKind;
+
+fn stacks(run: &Run, spell: u32) -> u8 {
+    run.app
+        .world()
+        .get::<ActiveAuras>(run.actor)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.caster == run.actor && aura.spell_id == spell)
+        })
+        .map_or(0, |aura| aura.stacks)
+}
+
+fn cast(run: &mut Run, spell: u32) {
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(spell, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap_or_else(|error| panic!("ordinary Arcane{spell}: {error}"));
+    preparation::finish_pending_setup(run).unwrap();
+}
+
+fn grant(run: &mut Run, spell: u32, count: u8) {
+    for _ in 0..count {
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: run.actor,
+                target: run.actor,
+                spell_id: spell,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_batch_surge_guarantees_clearcasting() {
+    let mut run = prepare_literal(62, 1).unwrap();
+    assert_eq!(stacks(&run, 263725), 0);
+    cast(&mut run, 365350);
+    assert!(
+        stacks(&run, 263725) > 0,
+        "Surge must earn native Clearcasting"
+    );
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_batch_missiles_ticks_generate_damage_salvo_and_cumulative_power() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(62, 1).unwrap();
+    grant(&mut run, 263725, 1);
+    cast(&mut run, 5143);
+    let hits = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(7268)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
+    assert!(
+        hits >= 4,
+        "ordinary native Missiles must deliver its scheduled ticks: {hits}"
+    );
+    assert!(stacks(&run, 1242974) >= 4, "one Salvo per native tick");
+    assert!(
+        stacks(&run, 1296930) >= 4,
+        "one Cumulative Power per native tick"
+    );
+    let charges = crate::spell_cast::powers::power_value(
+        run.app.world(),
+        run.actor,
+        shared::components::PowerType::ArcaneCharges,
+    )
+    .unwrap()
+    .0;
+    assert!(
+        charges > 0.0,
+        "selected High Voltage must earn native charges across ticks"
+    );
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_batch_barrage_consumes_salvo_and_rolls_native_orb_and_prismatic() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(62, 1).unwrap();
+    // Freeze the actual native max-stack proc as the Barrage input; do not alter its values.
+    grant(&mut run, 1242974, 20);
+    let mut prism = false;
+    let mut orb = false;
+    for _ in 0..12 {
+        if prism && orb {
+            break;
+        }
+        cast(&mut run, 44425);
+        assert_eq!(
+            stacks(&run, 1242974),
+            0,
+            "Barrage consumes Salvo outside Arcane Soul"
+        );
+        prism |= stacks(&run, 1295942) > 0;
+        orb |= run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(153640)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            });
+        grant(&mut run, 1242974, 20);
+    }
+    assert!(prism, "earned Salvo must roll native Prismatic Bolt");
+    assert!(
+        orb,
+        "earned Salvo must roll Orb Barrage and its actual native damage child"
+    );
+}
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec62 profile/traits"]
