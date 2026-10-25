@@ -289,7 +289,7 @@ fn read_wdp_duration_ms(world: &World, caster: Entity) -> Option<i32> {
             let spell = store
                 .get(id)
                 .expect("native WDP prerequisite spell retained");
-            crate::spell_cast::native_apl::cooldown_value(world, caster, spell, "remains")
+            crate::spell_cast::cooldown_query::cooldown_value(world, caster, spell, "remains")
                 .expect("native WDP prerequisite cooldown readable")
         })
         .reduce(f64::min)
@@ -373,9 +373,13 @@ fn reset_rising_sun_kick(world: &mut World, caster: Entity) {
         .resource::<crate::spell_info::SpellStore>()
         .get(RISING_SUN_KICK)
         .expect("native selected RWK retains Rising Sun Kick");
-    let remaining =
-        crate::spell_cast::native_apl::cooldown_value(world, caster, spell, "full_recharge_time")
-            .expect("native Rising Sun Kick full recharge is readable");
+    let remaining = crate::spell_cast::cooldown_query::cooldown_value(
+        world,
+        caster,
+        spell,
+        "full_recharge_time",
+    )
+    .expect("native Rising Sun Kick full recharge is readable");
     // Reduce the actual complete native timer, including its shared charge category.
     // The existing gameplay helper notifies the owner and never changes the GCD.
     super::reduce_cooldown(world, caster, RISING_SUN_KICK, remaining);
