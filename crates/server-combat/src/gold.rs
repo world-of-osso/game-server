@@ -124,7 +124,7 @@ pub(crate) fn record_persisted_gold(
     updates.record(character_id, gold);
 }
 
-pub(crate) struct GoldPlugin;
+pub struct GoldPlugin;
 
 impl Plugin for GoldPlugin {
     fn build(&self, app: &mut App) {
