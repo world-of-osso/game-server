@@ -81,6 +81,7 @@ mod ret_toll_control_tests;
 mod ret_toll_tests;
 mod ret_trigger_resource_tests;
 mod ret_wake_tests;
+mod rogue_finisher_tests;
 mod shadow_rotation;
 mod shadow_tests;
 mod shared_fact_extension_tests;
