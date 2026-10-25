@@ -6,6 +6,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Beast Mastery literal fixture
 
+- Selected Nature's Ally1273126 arms native1276720 after successful Barbed Shot or Cobra Shot; successful Kill Command consumes it. Native after-cast effects must compose with these sourced policy rows, retaining Barbed Focus. Literal `.react` observes native acquisition with the pinned profile's reaction settings.
+
+- Literal precombat provisions the existing native default-duck stable policy and executes ordinary Call Pet. The pet attacks the current encounter primary through native pet control, without restoring follower rotation decisions.
+
 - Spec253 keeps the requested native actor identity and disables follower-kit decisions before setup. Its pinned76f8118 `hunter_beast_mastery.simc` rows run through the shared `Program`/`Driver`/`Prepared`/`Equipment` path, including native pet summon, snapshot, Auto Shot and target-scored Barbed Shot. Native70448 supplies spell values, readiness, resources and damage; the adapter does not substitute reference damage.
 
 ### Equipment
@@ -74,6 +78,11 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Critical ordinary/Legacy Storm and HoW impacts apply native431414 Sun Sear. Each actual Dawnlight tick produces431911 Sun's Avatar with native area/cap values. Critical still-ticking403695 extends its owned duration by native446663 effect0 without resetting tick phase.
 - Divine Arbiter1306923 uses its native first damage effect on the primary and its native second effect on other recipients, never both on the primary. Spell coefficients remain native70448 values.
 
+### Ret Crusade
+
+- Selected1253598 makes31884 start at1 stack and cap at10. Foreground Holy Power consumers add their actual paid amount, or the native base HP equivalent when Divine Purpose, Empyrean Power or Shining Light makes them free. Pinned Hammer of Light grants9. Legacy, echo and Tempest background actions do not add stacks; no HP is granted or altered.
+- Native1253598 effect0 supplies haste per stack, multiplying existing haste. Base Wrath effect amounts, including crit and damage, ignore stack count. Stack gains and reapplications preserve the active Wrath expiry (`sc_paladin.cpp3644–3651,3911,4617–4618,4647–4648`; `sc_paladin.hpp1541–1555,1614–1623`).
+
 ### Ret Divine Toll relationship
 
 - [ ] `SIMC_RET_DIVINE_TOLL_RELATIONSHIP`: selected spec70 normal375576 hits dispatch native406957, or1279408 while actual1277026 mode is active, once per real hostile target. Native effect0 cap and effect1 area geometry/admission bound recipients; preserve existing combat-only implicit admission and count the explicit primary once. Native child coefficients and parent effect5 percentage remain authoritative; no invented DB2 trigger edge. Child funding, Resonance, Exaction and Divine Hammer remain separate qualifications. [Source/proof](../handoffs/ret-qualified-sentence-wake-toll-proof-ledger.md).
@@ -108,7 +117,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Fury player parity
 
 - [x] Spec72 uses `--actor player` and the complete pinned MID2 Fury APL through shared `literal_rotation`. Capture literal control before native setup, execute ordered precombat and submit normal native casts. Do not invent a follower profile. Native overrides select Reckless Abandon and Unrelenting Onslaught variants; native stats, costs, coefficients and trait legality remain authoritative.
-- [ ] Fury Deep Wounds1261060 accepts only actual Execute main-hand280849 impacts; Whirlwind cannot grant it (SimC76f8118 `sc_warrior.cpp4452–4456`). Preserve native262115 damage and periodic behavior.
+- [x] Fury Deep Wounds1261060 accepts only actual Execute main-hand280849 impacts; Whirlwind cannot grant it (SimC76f8118 `sc_warrior.cpp4452–4456`). Preserve native262115 damage and rolling periodic behavior; do not alter Arms71 producers.
 - [ ] Anger Management152278 reduces running Fury Avatar/Recklessness cooldowns from actual paid Rage, using native PowerType display units and effect2's Rage-per-second divisor; free background casts do not contribute (`sc_warrior.cpp1450–1455,1506–1517`).
 - [ ] Selected Unhinged386628 dispatches the live native Bloodthirst variant on odd Bladestorm227847/446035 effect0 ticks, including catch-up ticks, using the actual selected hostile target (`sc_warrior.cpp3257–3268,3316–3334`).
 
@@ -131,6 +140,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Empyrean Legacy relationship
 
 - [ ] `SIMC_RET_EMPYREAN_LEGACY_RELATIONSHIP`: actual Avenging Wrath31884/454351 grants native387178 only for validated selected387170. Actual FV/TV consumes it and schedules zero-delay free background53385 at1+native387170 effect1 percent. Preserve native coefficients, area selectors and flight. Only this background may consume opposite-kind Arbiter without consuming Divine Purpose or its proc charge. Suppress metadata-only every-cast grant/any-hit charge consumption only for this policy's driver/buff; other proc dispatch is unchanged. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#empyrean-legacy-relationship-policy).
+
+- Legacy Storm also rolls selected native Divine Purpose after consuming an opposite Arbiter kind and before Second Sunrise. It can grant fresh Purpose without consuming or classifying existing Purpose; echoes and Tempest cannot inherit this producer (`sc_paladin_retribution.cpp576–602`; `sc_paladin.hpp1665–1726`).
 
 ### Proc recipients
 
@@ -225,7 +236,9 @@ The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native speci
 
 Spec263 parity executes the pinned MID2 Enhancement action rows through the shared literal evaluator, using native action admission, equipment and aura/target facts. A real player uses this driver without loading AssistedCombat diagnostic inputs; no follower profile is fabricated. Windfury/Flametongue setup occurs only in precombat. Thorim's LB/CL choice follows successful foreground LB/CL/Tempest dispatch and Tempest target count. This selects actions; it does not certify the underlying Enhancement proc, counter or damage mechanics.
 
-Enhancement native melee procs generate the real344179 counter and187881 modifier together. Foreground affected spells snapshot their native modifiers at launch and consume up to the live187880 effect1 limit; expiry removes the modifier. Voltaic Blaze grants its native effect1 stack count once per execution. Windfury/Flametongue setup resolves the native weapon-enchant payload for the equipped hand; eligible landed melee runs native proc chance/modifiers and25504/10444 damage, without recursive Windfury procs. Sources: pinned SimC `sc_shaman.cpp2640–2675,3039–3055,10123–10125,10919–11023,11870–11988`.
+Enhancement native melee procs generate the real344179 counter and187881 modifier together. Foreground affected spells snapshot their native modifiers at launch and consume up to the live187880 effect1 limit; expiry removes the modifier. Voltaic Blaze grants its native effect1 stack count once per execution. Windfury/Flametongue setup resolves the native weapon-enchant payload for the equipped hand; eligible landed melee runs native proc chance/modifiers and25504/10444 damage, without recursive Windfury procs. The third attack uses native390288 Unruly Winds, not384355 Elemental Weapons. Sources: pinned SimC `sc_shaman.cpp2640–2675,3039–3055,10123–10125,10919–11023,11870–11988`.
+
+Native Enhancement strike roots dispatch one195592 Crash payload per actual landed root while their Crash buff is active, not one per weapon child. Selected1262713 uses native async1252415 rather than187878; payload stacks multiply its total damage before native-recipient splitting. Thorim invokes the actual last foreground LB/CL choice (initially LB), overridden by an earned Tempest proc, and spends its real MW modifiers on that background cast. Windstrike always invokes; Stormstrike requires Doom Winds; Crash requires Doom Winds or Ascendance. Foreground Tempest requires actual454015 and consumes that proc. Sources: pinned SimC `sc_shaman.cpp4536–4598,5597–5689,6102–6105,10041–10049,12554–12600,12758–12763`.
 
 ### Shared literal snapshot operands
 

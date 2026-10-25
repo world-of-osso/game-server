@@ -73,8 +73,15 @@ fn cast_background_storm(world: &mut World, caster: Entity, target: Entity, mult
         return;
     };
     storm.cast_damage_multiplier = Some(multiplier);
+    storm.cast_primary_target = Some(target);
     if crate::spell_cast::launch_triggered_spell(world, caster, &storm, Some(target), 1) {
         super::ret_tier::after_background_storm(world, caster, target);
+        // Ret576–602/hpp1721–1726: Legacy can produce fresh Purpose,
+        // although it cannot consume or classify the existing charge.
+        super::roll_selected_ret_divine_purpose(world, caster, &storm);
+        // SimC76f8118 Ret573–590/609–625: Legacy constructs the same
+        // Second Sunrise producer as foreground Storm; echoes do not recurse.
+        super::apply_echo_policies(world, caster, &storm);
     } else {
         warn!(
             ?caster,
