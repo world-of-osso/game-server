@@ -209,6 +209,18 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - [x] Selected Unhinged386628 dispatches Arms71 Mortal Strike12294 or Fury72's live native Bloodthirst23881 variant on odd Bladestorm227847/446035 effect0 ticks, including catch-up ticks and excluding tick0, using the actual selected hostile target and native effect1 damage multiplier. Preserve ordinary parent pulses (`sc_warrior.cpp3257–3275,3313–3335`).
 - Frenzy335077 grants one335082 stack per final Rampage201363 execution, not per impact or arbitrary melee event. Its native passive effect0 supplies each stack's value (`sc_warrior.cpp5581–5588,8411,9616`). Source-owned proc policies must prevent the broad native proc hint from independently firing the same aura or consuming its ICD.
 
+### Demonology literal execution and alternative Tyrant
+
+- [ ] Spec266 follower parity consumes every exported pinned profile action through shared literal execution, with native target/resource/trait/equipment facts, actual owned Imp/Tyrant counts and source-qualified readiness. Capture precedes warmup; normal default-pet and harmful-precast completion precede pull. Production dungeon kits are unchanged.
+- [ ] Actual native265187/250289 binds native Burning Cleave1264093 and repeats on the pinned hasted two-second GCD (SimC76f8118 `sc_warlock_pets.cpp1510–1548`). Both Tyrant variants inherit owner-SP1.0 from the same source policy. Native damage coefficients, target plans and normal cast admission remain authoritative. Tests require actual child impacts and observed formula power, not registry/source-string assertions.
+
+- [ ] Selected Dominion I starts its native1276166 counter on actual Tyrant completion; ordinary HoG/Ruination advance only an active counter. At its native cumulative limit, choose among the four native summon spells uniformly, redirect living duplicate unique demons as pinned, and retain one stack. Selected Dominion III refunds through actual native1276318, never by editing the pool. Native Aura Does Not Refresh keeps the original expiry while stacks advance (SimC76f8118 `buff.cpp740–743`).
+- Expected cooldown remaining time follows pinned `cooldown.cpp603–615`: use actual elapsed time since the native timer started versus its observed progress, including reductions. Ready timers return zero; a timer at its complete duration returns that duration. Queries cannot mutate history.
+- Executing native guardians inherit the live owner's spell haste for cast, GCD and hasted channel/duration clocks, retaining spell-specific caster modifiers (SimC76f8118 `pet.cpp222–226`). Creature/class identity and base spell times remain native.
+- Actual Wild Imp104317/55659 guardians cannot regenerate spent Energy (pinned `pets.cpp701/875–882`). Native pool sizes, spell costs and actual exhaustion/removal remain authoritative; other guardian regeneration is unchanged.
+- Player-controlled follower minions inherit the same player-affected attack permission as their owner, without changing either NPC identity or native summon-property ownership rules. Ordinary NPC summons remain subject to NPC-versus-neutral restrictions (SimC76f8118 `pet.cpp66–68`).
+- [ ] Dreadstalker, Imp Lord and Dominion guardians execute source-bound native actions from their actual actors. Only validated source inheritance is adopted; native coefficients and power costs are unchanged. Fresh Imp Lord initialization and its125-Energy readiness gate follow pinned `pets.cpp1680–1705`; this never resets an existing owner or pet pool. Prepared private data must publish the exact native summon-root templates through the existing importer.
+
 ### Shadow Priest literal parity controller
 
 - [x] Implicit selector unions retain each unit once per effect in first-selection order; overlapping destination-area/line selectors cannot duplicate damage or use target-cap slots twice.
@@ -259,6 +271,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - `empower_to` selects the real native release stage while retaining the selected hostile primary independently of self casts. Fire Breath dot facts observe native357209 owned by that actor. Disintegrate uses the shared channel decision seam, including action-bound `ticks_remain`.
 
 ### Measurement
+
+- Origin-centered parity arenas provide explicit open collision/LOS services for native destination selection. They have no dungeon walls or baked-eye requirement, matching pinned `action.cpp1738–1752` target selection. This fixture mode must not change production map LOS or bypass native summon/spell metadata.
 
 - Venomous Wounds returns native Energy after a successful owned Garrote/Rupture tick on an owned poisoned target. Its native refund is divided by the same bleed's active poisoned-target count raised to the native diminishing exponent. Keep fractional gains until a whole Energy is earned. Resolve before the producing aura expires; do not count other Rogues' dots or roll the deferred proc again.
 
