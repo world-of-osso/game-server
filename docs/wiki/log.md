@@ -4508,3 +4508,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0â
 - 2026-10-23: [[server-crates]] records test-only simulator consumer, canonical graph/receipt/marker support and explicit test-support mode; 44-file move is content-identical, API/cfg wiring awaits compiler/full-suite proof. Seven graph cases have explicit core-prefix migration.
 
 - 2026-10-25: Ranked server extraction candidates at53d0e1ce1 using file-module ownership and crate/server import edges; independent pet_battle235, simc_apl49, item_instance20, race_class11, level_scaling10. Added graph evidence; historical timings remain non-causal observations.
+
+- 2026-10-25: Analyzed five heavy modules by historical wall, real native fixture dependencies and minimum production cycle cuts. Full native domains cannot safely skip generic spell/combat edits; map/lock, follower scalar policy and Toy Box data cuts need subset-time qualification. Added exact conservative transitive paths and separated earlier/fixed timing receipts.
