@@ -86,7 +86,7 @@ fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Ve
         {
             while effect.next_tick_at() <= now && effect.next_tick_at() <= expiry {
                 let scheduled_at = effect.next_tick_at();
-                effect.next_tick_index += 1;
+                effect.pay_periodic_tick();
                 ticks.push(Tick {
                     instance_id: aura.instance_id,
                     caster: aura.caster,
@@ -102,6 +102,68 @@ fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Ve
         }
     }
     ticks
+}
+
+/// Read the scheduler's unpaid ticks without advancing or reconstructing its phase.
+pub fn remaining_periodic_ticks(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+) -> Result<u32, String> {
+    let Some(auras) = world.get::<ActiveAuras>(target) else {
+        return Ok(0);
+    };
+    let active = auras
+        .iter()
+        .filter(|aura| aura.caster == caster && aura.spell_id == spell);
+    active
+        .map(count_remaining_ticks)
+        .try_fold(0, |maximum, ticks| ticks.map(|ticks| maximum.max(ticks)))
+}
+
+fn count_remaining_ticks(aura: &super::AuraInstance) -> Result<u32, String> {
+    let periodic: Vec<_> = aura
+        .effects
+        .iter()
+        .filter(|effect| effect.period_ms > 0)
+        .collect();
+    if periodic.is_empty() {
+        return Ok(0);
+    }
+    let expiry = aura.expires_at.ok_or_else(|| {
+        format!(
+            "native APL spell{} has an unbounded periodic schedule",
+            aura.spell_id
+        )
+    })?;
+    Ok(periodic
+        .iter()
+        .map(|effect| {
+            super::refresh::remaining_ticks(effect.next_tick_at(), expiry, effect.period_ms)
+        })
+        .max()
+        .unwrap_or(0))
+}
+
+/// Read scheduled periodic ticks paid by a caster's current spell application.
+///
+/// SimC76f8118 dot.cpp1110 increments current_tick for scheduled ticks, not
+/// damage events. The native extra initial period is tick_zero and does not
+/// advance this count (dot.cpp972–977). Multiple effects do not multiply it:
+/// return their maximum, or zero without a matching aura.
+/// Reading never advances the scheduler, deals damage, or changes aura state.
+pub fn paid_periodic_ticks(world: &World, caster: Entity, target: Entity, spell: u32) -> u64 {
+    world.get::<ActiveAuras>(target).map_or(0, |auras| {
+        let effects = auras
+            .iter()
+            .filter(|aura| aura.caster == caster && aura.spell_id == spell)
+            .flat_map(|aura| &aura.effects);
+        effects
+            .map(|effect| effect.periodic_ticks)
+            .max()
+            .unwrap_or(0)
+    })
 }
 
 /// Run every tick due on `unit` up to `now`.

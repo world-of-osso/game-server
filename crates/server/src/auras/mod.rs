@@ -96,6 +96,7 @@ use crate::networking::PlayerLink;
 use crate::spell_cast::{log_event, targets};
 use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
+pub use periodic::{paid_periodic_ticks, remaining_periodic_ticks};
 pub use spell_mods::SpellModOp;
 pub use stat_mods::AuraStatMods;
 pub(crate) use stat_mods::time_percent_mod;
@@ -246,59 +247,30 @@ pub struct AuraEffectState {
     /// Application time, or the owning dynamic object's phase origin.
     periodic_started_at: f64,
     next_tick_index: u64,
+    /// Periodic ticks paid by this application, independent of its phase origin.
+    periodic_ticks: u64,
+    /// Native extra initial period is tick_zero, not a scheduled SimC dot tick.
+    initial_period_pending: bool,
     /// SCHOOL_ABSORB points left (whole aura, not per stack).
     absorb_remaining: f32,
 }
 
 impl AuraEffectState {
+    fn pay_periodic_tick(&mut self) {
+        self.next_tick_index += 1;
+        if self.initial_period_pending {
+            self.initial_period_pending = false;
+        } else {
+            self.periodic_ticks += 1;
+        }
+    }
+
     fn next_tick_at(&self) -> f64 {
         // Form the ordinal offset in native milliseconds before converting to
         // seconds: neither repeated addition nor fractional-period products drift.
         let offset_ms = self.next_tick_index as f64 * f64::from(self.period_ms);
         self.periodic_started_at + offset_ms / 1000.0
     }
-}
-
-/// Read the scheduler's unpaid ticks without advancing or reconstructing its phase.
-#[cfg(any(test, feature = "test-support"))]
-pub(crate) fn remaining_periodic_ticks(
-    world: &World,
-    caster: Entity,
-    target: Entity,
-    spell: u32,
-) -> Result<u32, String> {
-    let Some(auras) = world.get::<ActiveAuras>(target) else {
-        return Ok(0);
-    };
-    let active = auras
-        .iter()
-        .filter(|aura| aura.caster == caster && aura.spell_id == spell);
-    active
-        .map(count_remaining_ticks)
-        .try_fold(0, |maximum, ticks| ticks.map(|ticks| maximum.max(ticks)))
-}
-
-#[cfg(any(test, feature = "test-support"))]
-fn count_remaining_ticks(aura: &AuraInstance) -> Result<u32, String> {
-    let periodic: Vec<_> = aura
-        .effects
-        .iter()
-        .filter(|effect| effect.period_ms > 0)
-        .collect();
-    if periodic.is_empty() {
-        return Ok(0);
-    }
-    let expiry = aura.expires_at.ok_or_else(|| {
-        format!(
-            "native APL spell{} has an unbounded periodic schedule",
-            aura.spell_id
-        )
-    })?;
-    Ok(periodic
-        .iter()
-        .map(|effect| refresh::remaining_ticks(effect.next_tick_at(), expiry, effect.period_ms))
-        .max()
-        .unwrap_or(0))
 }
 
 /// Proc timers (TrinityCore `Aura` proc fields).
@@ -776,6 +748,7 @@ fn build_effect(
     let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
     let base_period_ms = periodic_base_interval_ms(spell, effect);
     let period_ms = periodic_interval_ms(world, caster, spell, base_period_ms);
+    let extra_initial_period = attributes(spell, 5) & ATTR5_EXTRA_INITIAL_PERIOD != 0;
     AuraEffectState {
         index: effect.index,
         immunity: effect.immunity.clone(),
@@ -788,11 +761,9 @@ fn build_effect(
         // `AuraEffect::ResetPeriodic` (SpellAuraEffects.cpp:957-960): with
         // SPELL_ATTR5_EXTRA_INITIAL_PERIOD the first tick lands on apply.
         periodic_started_at: now,
-        next_tick_index: if attributes(spell, 5) & ATTR5_EXTRA_INITIAL_PERIOD != 0 {
-            0
-        } else {
-            1
-        },
+        next_tick_index: if extra_initial_period { 0 } else { 1 },
+        periodic_ticks: 0,
+        initial_period_pending: extra_initial_period,
         absorb_remaining: amount.max(0.0),
     }
 }
