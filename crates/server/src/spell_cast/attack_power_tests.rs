@@ -323,8 +323,8 @@ fn class_completeness_native_hunter_pet_command_inherits_owner_ranged_not_melee_
     h.advance(3);
     assert_eq!(
         5000.0 - h.health(h.npc),
-        660.0,
-        "native pet:3×(1000 owner RAP×0.22), not owner melee AP1"
+        1800.0,
+        "native pet:3×(1000 owner RAP×0.6), not owner melee AP1"
     );
     assert!(
         h.inbox

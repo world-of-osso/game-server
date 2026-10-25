@@ -1,3 +1,7 @@
+## 2026-10-25 — Havoc literal fixture and Demonic
+
+[Havoc577](systems/simc-apl.md#havoc-fixture-577): shared literal decisions, native cursor context, and talent-sourced Meta before Eye Beam/Gaze with owned-duration extension. Native regressions pass; numerical parity remains open.
+
 ## 2026-10-25 — Shared literal channel execution
 
 [Shared APL machinery](systems/simc-apl.md#source-row-clocks-and-channel-control): source-row deadlines, channel query/execution API, readiness-before-condition and off-GCD call traversal. Native child admission remains unchanged.
