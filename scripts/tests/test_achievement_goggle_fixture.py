@@ -10,7 +10,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = ROOT / 'crates/server/tests/fixtures/prepare_achievement_goggle_db.py'
+SCRIPT = ROOT / 'crates/server-combat/tests/fixtures/prepare_achievement_goggle_db.py'
 
 
 class GoggleFixtureTests(unittest.TestCase):
