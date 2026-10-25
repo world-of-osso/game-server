@@ -51,8 +51,10 @@ mod policies;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 pub(crate) use policies::register_channel_policies;
 pub(super) use policies::{
-    after_triggered_cast as apply_triggered_cast_policies, on_hit as apply_hit_policies,
-    snapshot as snapshot_hit_policies,
+    after_impacts as after_impact_policies,
+    after_periodic_damage as apply_periodic_damage_policies,
+    after_triggered_cast as apply_triggered_cast_policies, before_impact as before_impact_policies,
+    has_impact_policy, on_hit as apply_hit_policies, snapshot as snapshot_hit_policies,
 };
 pub(crate) use policies::{
     extends_reapplication, filter_secondary_targets, owns_policy_proc, register_lifecycle_policies,
@@ -844,6 +846,9 @@ pub(super) type TargetPlanHook =
 
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
+    if let Some(hook) = policies::target_plan_hook(spell_id) {
+        return Some(hook);
+    }
     match spell_id {
         1261160 | 224239 | 431911 => Some((Relation::Enemy, ret_damage::area_plan)),
         super::toy_flag::TARGETING => Some((Relation::Any, super::toy_flag::targeting_plan)),

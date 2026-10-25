@@ -3295,7 +3295,7 @@ fn selected_units(plan: &[PlannedEffect]) -> Vec<Entity> {
         .collect()
 }
 
-/// The spell's `OnHit` script on every unit it landed on (`Spell::DoSpellHitOnUnit`).
+/// Source impact policies include misses; native OnHit retains successful-unit admission.
 fn run_hit_scripts(
     world: &mut World,
     caster: Entity,
@@ -3306,11 +3306,9 @@ fn run_hit_scripts(
     let hook = scripts::on_hit(spell.id);
     let context_hook = scripts::on_hit_with_context(spell.id);
     let damage_hook = scripts::on_enemy_damage_hit_with_context(spell.id);
-    if hook.is_none()
-        && context_hook.is_none()
-        && damage_hook.is_none()
-        && spell.cast_policy_context.is_none()
-    {
+    let native_hooks = hook.is_some() || context_hook.is_some() || damage_hook.is_some();
+    let policies = spell.cast_policy_context.is_some() || scripts::has_impact_policy(spell);
+    if !native_hooks && !policies {
         return;
     }
     let ctx = EffectCtx {
@@ -3320,28 +3318,55 @@ fn run_hit_scripts(
         dest: None,
         chain_multiplier: 1.0,
     };
+    dispatch_impact_scripts(world, &ctx, plan, hook, context_hook, damage_hook);
+}
+
+fn dispatch_impact_scripts(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    plan: &TargetPlan,
+    hook: Option<scripts::HitHook>,
+    context_hook: Option<scripts::ContextHitHook>,
+    damage_hook: Option<scripts::ContextHitHook>,
+) {
+    let selected = selected_units(plan);
+    let hits = hit_units(plan).into_iter().collect::<HashSet<_>>();
     let damage_units = if damage_hook.is_some() {
-        enemy_damage_hit_units(world, &ctx)
+        enemy_damage_hit_units(world, ctx)
     } else {
         Vec::new()
     };
-    for unit in hit_units(plan) {
+    for &unit in &selected {
         if world.get_entity(unit).is_err() {
             continue;
         }
-        if let Some(hook) = hook {
-            hook(world, caster, unit, depth);
+        scripts::before_impact_policies(world, ctx, unit);
+        if hits.contains(&unit) {
+            let damage_hook = damage_hook.filter(|_| damage_units.contains(&unit));
+            run_unit_hit_scripts(world, ctx, unit, hook, context_hook, damage_hook);
         }
-        if let Some(hook) = context_hook {
-            hook(world, &ctx, unit);
-        }
-        if let Some(hook) = damage_hook
-            && damage_units.contains(&unit)
-        {
-            hook(world, &ctx, unit);
-        }
-        scripts::apply_hit_policies(world, &ctx, unit);
     }
+    scripts::after_impact_policies(world, ctx, &selected);
+}
+
+fn run_unit_hit_scripts(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    unit: Entity,
+    hook: Option<scripts::HitHook>,
+    context_hook: Option<scripts::ContextHitHook>,
+    damage_hook: Option<scripts::ContextHitHook>,
+) {
+    if let Some(hook) = hook {
+        hook(world, ctx.caster, unit, ctx.depth);
+    }
+    if let Some(hook) = context_hook {
+        hook(world, ctx, unit);
+    }
+    if let Some(hook) = damage_hook {
+        hook(world, ctx, unit);
+    }
+    scripts::apply_hit_policies(world, ctx, unit);
 }
 
 /// Use actual damage TargetInfos, not the union of damage and aura recipients.
