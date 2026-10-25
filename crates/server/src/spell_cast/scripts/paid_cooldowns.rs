@@ -49,19 +49,7 @@ fn read_reduction(
     policy: &PaidCooldown,
     raw_paid: f32,
 ) -> Option<f64> {
-    if world.get::<ActiveSpec>(caster)?.0 != policy.spec {
-        return None;
-    }
-    let passive = world
-        .get::<ActiveAuras>(caster)?
-        .iter()
-        .find(|aura| aura.spell_id == policy.passive && aura.caster == caster)?;
-    let divisor = passive
-        .effects
-        .iter()
-        .find(|effect| effect.index == policy.divisor_effect)
-        .expect("native paid-resource cooldown divisor")
-        .amount;
+    let divisor = read_native_divisor(world, caster, policy)?;
     let units = world
         .resource::<crate::spell_cast::powers::PowerTypeTable>()
         .get(policy.resource)
@@ -72,4 +60,22 @@ fn read_reduction(
         "native cooldown divisors must be positive"
     );
     Some(f64::from(raw_paid) / f64::from(units) / f64::from(divisor))
+}
+
+fn read_native_divisor(world: &World, caster: Entity, policy: &PaidCooldown) -> Option<f32> {
+    if world.get::<ActiveSpec>(caster)?.0 != policy.spec {
+        return None;
+    }
+    let passive = world
+        .get::<ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.spell_id == policy.passive && aura.caster == caster)?;
+    Some(
+        passive
+            .effects
+            .iter()
+            .find(|effect| effect.index == policy.divisor_effect)
+            .expect("native paid-resource cooldown divisor")
+            .amount,
+    )
 }

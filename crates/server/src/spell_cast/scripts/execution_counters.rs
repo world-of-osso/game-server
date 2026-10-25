@@ -76,36 +76,38 @@ pub(super) fn consume_after_foreground_cast(world: &mut World, caster: Entity, a
         .iter()
         .filter(|consumer| consumer.actions.contains(&action))
     {
-        let Some(instance) = world.get::<ActiveAuras>(caster).and_then(|auras| {
-            auras
-                .iter()
-                .find(|aura| aura.spell_id == consumer.buff && aura.caster == caster)
-                .map(|aura| aura.instance_id)
-        }) else {
-            continue;
-        };
-        crate::auras::spend_stack(world, caster, instance);
-        let selected = world.get::<ActiveAuras>(caster).is_some_and(|auras| {
-            consumer
-                .required
-                .iter()
-                .all(|spell| auras.has_spell(*spell))
-        });
-        if selected
-            && !crate::spell_cast::try_cast_triggered(
-                world,
-                caster,
-                consumer.counter,
-                Some(caster),
-                1,
-            )
-        {
-            warn!(
-                ?caster,
-                counter = consumer.counter,
-                "Native consumed-stack counter refused"
-            );
-        }
+        consume_counter(world, caster, consumer);
+    }
+}
+
+fn consume_counter(world: &mut World, caster: Entity, consumer: &ConsumedCounter) {
+    let Some(instance) = world.get::<ActiveAuras>(caster).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == consumer.buff && aura.caster == caster)
+            .map(|aura| aura.instance_id)
+    }) else {
+        return;
+    };
+    crate::auras::spend_stack(world, caster, instance);
+    grant_selected_counter(world, caster, consumer);
+}
+
+fn grant_selected_counter(world: &mut World, caster: Entity, consumer: &ConsumedCounter) {
+    let selected = world.get::<ActiveAuras>(caster).is_some_and(|auras| {
+        consumer
+            .required
+            .iter()
+            .all(|spell| auras.has_spell(*spell))
+    });
+    if selected
+        && !crate::spell_cast::try_cast_triggered(world, caster, consumer.counter, Some(caster), 1)
+    {
+        warn!(
+            ?caster,
+            counter = consumer.counter,
+            "Native consumed-stack counter refused"
+        );
     }
 }
 
@@ -131,37 +133,38 @@ fn grant_valued_execution_auras(world: &mut World, caster: Entity, action: u32) 
         .iter()
         .filter(|execution| execution.action == action)
     {
-        let value = world.get::<ActiveAuras>(caster).and_then(|auras| {
-            auras
-                .iter()
-                .find(|aura| aura.spell_id == execution.passive && aura.caster == caster)
-                .and_then(|aura| {
-                    aura.effects
-                        .iter()
-                        .find(|effect| effect.index == execution.value_effect)
-                })
-                .map(|effect| effect.amount)
-        });
-        let Some(value) = value else {
+        let Some(value) = read_execution_value(world, caster, execution) else {
             continue;
         };
-        if !crate::spell_cast::cast_triggered_with_overrides(
-            world,
-            caster,
-            execution.payload,
-            Some(caster),
-            1,
-            crate::spell_cast::TriggeredSpellOverrides {
-                effect0_amount: Some(value),
-                ..Default::default()
-            },
-        ) {
-            warn!(
-                ?caster,
-                payload = execution.payload,
-                "Native valued execution aura refused"
-            );
-        }
+        cast_valued_execution(world, caster, execution.payload, value);
+    }
+}
+
+fn read_execution_value(world: &World, caster: Entity, execution: &ValuedExecution) -> Option<f32> {
+    let aura = world
+        .get::<ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.spell_id == execution.passive && aura.caster == caster)?;
+    aura.effects
+        .iter()
+        .find(|effect| effect.index == execution.value_effect)
+        .map(|effect| effect.amount)
+}
+
+fn cast_valued_execution(world: &mut World, caster: Entity, payload: u32, value: f32) {
+    let overrides = crate::spell_cast::TriggeredSpellOverrides {
+        effect0_amount: Some(value),
+        ..Default::default()
+    };
+    if !crate::spell_cast::cast_triggered_with_overrides(
+        world,
+        caster,
+        payload,
+        Some(caster),
+        1,
+        overrides,
+    ) {
+        warn!(?caster, payload, "Native valued execution aura refused");
     }
 }
 
