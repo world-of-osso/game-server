@@ -4,6 +4,11 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+### Literal spec drivers
+
+- Register each literal spec once, in spec-ID order. Adding a spec changes only its own rotation module and its registration line, not shared fields, initialization, dispatch, reporting or preparation branches.
+- Registered literal drivers apply to both Player and Follower identities unless the spec explicitly opts out. Preserve native actor identity, ordered precombat and existing report labels and keys, including null inactive reports.
+
 ### Shared Spellslinger producers
 
 - Selected Splintering Sorcery443739 emits the native specialization payload (Arcane443763/Frost443722) after native Arcane Blast, Prismatic Bolt, Frostbolt, Flurry and Glacial Spike executions. Signature Spell supplies its authored extra conjures. All queued recipients retain the actual hostile primary; individual launches are staggered100ms as pinned `sc_mage.cpp7324–7361` specifies.
@@ -40,9 +45,11 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Spec260 preserves the requested player identity and captures literal control before setup. Execute the profile's complete action rows with shared `Program`/`Driver`/`Prepared`/`Equipment`, not AssistedCombat. The pinned profile requests Instant Poison without a nonlethal coating. Read combo points, Energy, native readiness and earned Roll the Bones states from the actor; never substitute reference damage or synthetic buffs.
 - Shared Rogue operands expose the native combo-point spend capacity and Energy deficit/time-to-max excluding temporary capacity, while retaining permanent talent capacity.
+- Native Rogue-family spells with a ComboPoints cost scale all direct damage effects by frozen effective points. Between the Eyes must not be omitted by an action-ID list; Envenom and Dispatch retain their existing point scaling. Feral Bite keeps its separate maximum-point-normalized rule.
 - Roll the Bones resolves the native specialization action1214909; the obsolete315508 talent endpoint must not suppress it as unknown. A roll replaces old secondary states with exactly one native One of a Kind/Double Trouble/Triple Threat/Jackpot aura at55/30/10/5 odds. Selected Sleight of Hand may raise states below Triple Threat by its native chance; Loaded Dice raises once afterward and is consumed. The new state inherits the native container deadline.
 - The native four-piece source may produce Fang Strike only from Ambush or Sinister Strike, including its sourced extra attack. Read chance and payload from its native effect, rather than treating its broad101% proc hint as an unconditional damage trigger. Dispatch and white swings must not produce their own free-finisher window.
 - A finisher affected by earned Fang Strike snapshots maximum native combo-point capacity for its resource-dependent values, even when actual payment is zero. Consume that Fang Strike use after the successful ordinary cast. Match affected actions through the native aura's family mask, not a finisher-ID branch.
+- Learned Restless Blades reduces its pinned running spell/recharge timers after an eligible finisher using frozen effective combo points, native79096 tenths-of-seconds per point and the native high-roll-state bonus. It must not start absent cooldowns or require a hostile hit context for self-targeted Slice and Dice.
 - Learned Cut to the Chase extends or starts owned native Slice and Dice only after the pinned eligible finisher lands. Freeze effective combo points before payment; use native51667 seconds per point and315496 base duration, capped at the maximum-point pandemic duration. Dispatch, Envenom, Eviscerate and Coup de Grace are the pinned consumers.
 
 ### Equipment
