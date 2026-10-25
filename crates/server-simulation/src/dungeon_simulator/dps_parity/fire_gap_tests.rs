@@ -265,6 +265,87 @@ fn fire_batch_mana_cascade_uses_effect_two_haste() {
     );
 }
 
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_producer_hot_streak_expenditure_grants_mana_cascade() {
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 48108, Some(run.actor), 1);
+    start_native(&mut run, 11366, target);
+    assert_eq!(
+        stacks(&run, 449314),
+        1,
+        "selected Mana Cascade gains one stack per Hot Streak spend"
+    );
+}
+
+fn count_earned_fire_proc(spell: u32) -> usize {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    for _ in 0..64 {
+        crate::spell_cast::cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            48108,
+            Some(run.actor),
+            1,
+        );
+        start_native(&mut run, 11366, target);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..20 {
+            run.app.update();
+        }
+    }
+    run.app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(spell)
+                && event.kind == CombatLogKind::CastSuccess
+        })
+        .count()
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_producer_hot_streak_expenditures_earn_spellfire_spheres() {
+    assert!(
+        count_earned_fire_proc(448604) > 0,
+        "selected Spellfire Spheres must proc from Hot Streak expenditures"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_producer_hot_streak_expenditures_earn_fired_up() {
+    assert!(
+        count_earned_fire_proc(1257350) > 0,
+        "selected Fired Up must proc from Hot Streak expenditures"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_producer_combustion_expiry_grants_memory_of_alar_hyperthermia() {
+    let mut run = prepare_literal(63, 1).unwrap();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 190319, Some(run.actor), 1);
+    for _ in 0..600 {
+        run.app.update();
+        if !crate::auras::has_aura(run.app.world(), run.actor, 190319) {
+            assert!(
+                stacks(&run, 383874) > 0,
+                "Memory of Al'ar starts Hyperthermia when Combustion ends"
+            );
+            return;
+        }
+    }
+    panic!("native Combustion must expire within30s without casts");
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {
