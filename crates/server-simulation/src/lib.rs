@@ -1,6 +1,8 @@
 //! Transport-free qualification against the authoritative server library.
 #![cfg(test)]
 
+extern crate server_combat as server;
+
 use server::{
     auras, class_progression, combat, combat_refs, conditions, creature_aggro, creature_ai,
     creature_scripts, equipment_effects, faction, followers, hunter_pet, item_proc_data,

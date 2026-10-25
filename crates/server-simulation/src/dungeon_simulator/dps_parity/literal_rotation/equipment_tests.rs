@@ -83,6 +83,29 @@ fn equip_reference_profile(world: &mut World, spec: u32) -> Entity {
 }
 
 #[test]
+#[ignore = "requires private native item catalogs"]
+fn literal_equipment_has_stat_uses_native_buff_existence() {
+    let mut world = load_world();
+    // Native61034 supplies Strength;270173 supplies damage without stat buffs.
+    let actor = equip(&mut world, 61034, 270173);
+    assert_eq!(
+        read_facts(
+            &world,
+            actor,
+            &[
+                "trinket.1.has_stat.any_dps",
+                "trinket.1.has_buff.any_dps",
+                "trinket.1.has_stat.strength",
+                "trinket.1.has_stat.mastery",
+                "trinket.2.has_stat.any_dps",
+                "trinket.2.has_buff.any_dps",
+            ]
+        ),
+        vec![Ok(1.0), Ok(1.0), Ok(1.0), Ok(0.0), Ok(0.0), Ok(0.0)]
+    );
+}
+
+#[test]
 #[ignore = "native passive, cast-time and channel item metadata"]
 fn literal_equipment_native_cast_time_is_unhasted_and_channel_aware() {
     let mut world = load_world();
