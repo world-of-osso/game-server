@@ -1,5 +1,6 @@
 - [Elemental literal fixture](systems/simc-apl.md#elemental-fixture-262) — exact profile rows, native Maelstrom/spell admission and named-action target counts; numerical parity remains separate.
 - [Form combat clocks](systems/auras.md#form-combat-clocks--2026-10-23) — all7authored timing rows, native Cat/Bear timed RED and unshifted control; generic cadence/weapon terms retained; reconciliation qualification pending.
+- [Havoc literal fixture and Demonic](systems/simc-apl.md#havoc-fixture-577) — pinned source decisions, native cursor-targeted Meta, and talent-sourced before-channel transformation/extension; numeric parity remains open.
 - [All-DPS parity census — 2026-10-25](investigations/dps-parity-census-2026-10-25.md) — eight measured specs, seventeen exact fixture failures, two missing references at master210df12e3; no surrogate followers.
 - [Action-permitting channel melee](systems/combat.md#action-permitting-channels--2026-10-24) — native ready SCK swing1RED/3controlsPASS→4GREEN27.56s atdb543b270; actual active-channel white0→1 while FoF/normal/noncast controls remain; lead broad/plain-bin gate pending, no numeric parity claim.
 - [Native Unit form display power](systems/auras.md#native-unit-form-display-power--2026-10-24) — NPC Cat and native Bite burn RED→GREEN; player Cat/NPC Moonkin controls, unchanged203-case scope and two-crate check qualified. Parent gate separate; no resource grants or identity coercion.
@@ -972,7 +973,7 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
-- [Shared SimC APL](systems/simc-apl.md) — literal expressions, variables, list/target selection, source-row clocks and paid-tick channel decisions; native facts and cast admission stay caller-owned.
+- [Shared SimC APL](systems/simc-apl.md) — literal expressions, variables, list/target selection, source-row clocks and channel decisions; native facts and cast admission stay caller-owned.
 
 - [Native weapon AP](systems/character-stats.md#native-weapon-attack-power--2026-10-23) — actual Tiger Palm91vs358–377 RED→four native GREEN13.89s; raw item-table AP, attack-type selection and aura366/unequip; parent integration gate pending.
 

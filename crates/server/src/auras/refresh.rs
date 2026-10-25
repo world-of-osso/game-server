@@ -50,6 +50,7 @@ pub(super) fn prepare_application(
     if rolling {
         roll_remaining_periodic(world, target, new);
     }
+    super::ret_crusade::preserve_refresh_duration(world, target, new);
 }
 
 fn previous(world: &World, target: Entity, new: &AuraInstance) -> Option<AuraInstance> {
@@ -132,6 +133,8 @@ fn prepare_periodic_phase(
         {
             fresh.periodic_started_at = prior.next_tick_at();
             fresh.next_tick_index = 0;
+            // A carried future tick is scheduled, not a new tick_zero application.
+            fresh.initial_period_pending = false;
         }
     }
 }

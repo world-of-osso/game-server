@@ -175,6 +175,9 @@ pub(super) fn prepare_ret_precombat(run: &mut Run) -> Result<(), String> {
 }
 
 pub(super) fn prepare_beast_mastery_precombat(run: &mut Run) -> Result<(), String> {
+    // SimC76f8118 sc_hunter.cpp1052: summon_pet defaults to duck. Literal
+    // capture suppresses follower AI, so provision its existing native stable policy here.
+    crate::hunter_pet::provision_follower_duck(run.app.world_mut(), run.actor)?;
     let encounter = crate::simc_apl_native::Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
         duration: 300.0,
@@ -240,6 +243,27 @@ pub(super) fn prepare_enhancement_precombat(run: &mut Run) -> Result<(), String>
     Ok(())
 }
 
+pub(super) fn prepare_shadow_precombat(run: &mut Run) -> Result<(), String> {
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let mut rotation =
+        super::shadow_rotation::Rotation::load(run.app.world_mut(), run.actor, encounter)?;
+    // SimC76f8118 player.cpp6138–6183: execute precombat once in source order.
+    while rotation.precombat_step(run.app.world_mut(), run.actor, &run.targets)? {
+        finish_pending_setup(run)?;
+    }
+    rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
+    run.shadow_rotation = Some(rotation);
+    run.gaps.retain(|gap| {
+        !gap.starts_with("NATIVE_ASSISTED_COMBAT_70448_VS_SIMC_APL")
+            && !gap.starts_with("NATIVE_FOLLOWER_KIT_VS_SIMC_APL")
+    });
+    Ok(())
+}
+
 pub(super) fn prepare_elemental_precombat(run: &mut Run) -> Result<(), String> {
     let encounter = crate::simc_apl_native::Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
@@ -259,6 +283,26 @@ pub(super) fn prepare_elemental_precombat(run: &mut Run) -> Result<(), String> {
     run.elemental_rotation = Some(rotation);
     run.gaps
         .retain(|gap| !gap.starts_with("NATIVE_FOLLOWER_KIT_VS_SIMC_APL"));
+    Ok(())
+}
+
+pub(super) fn prepare_havoc_precombat(run: &mut Run) -> Result<(), String> {
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let mut rotation =
+        super::havoc_rotation::Rotation::load(run.app.world_mut(), run.actor, encounter)?;
+    while rotation.precombat_step(run.app.world_mut(), run.actor, &run.targets)? {
+        finish_pending_setup(run)?;
+    }
+    rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
+    run.havoc_rotation = Some(rotation);
+    run.gaps.retain(|gap| {
+        !gap.starts_with("NATIVE_ASSISTED_COMBAT_70448_VS_SIMC_APL")
+            && !gap.starts_with("NATIVE_FOLLOWER_KIT_VS_SIMC_APL")
+    });
     Ok(())
 }
 

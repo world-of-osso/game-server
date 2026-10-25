@@ -8,6 +8,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [ ] Read explicit native facts for buff stacks/remains/up, cooldown remains/charges/duration, resources, talents, equipment/trinkets, target count/TTD, fight remains, raid-event adds, dots/debuffs and gcd. Unknown operands fail explicitly, including in otherwise inactive condition branches; never silently become false.
 - [ ] Share native equipment identities/stat-buff metadata, on-use vs proc cooldown sources and native tier facts across spec adapters. Reject unknown native stat/tier metadata; preserve original IDs and trinket1→trinket2→other use order.
 - [x] Bind action-dependent facts (`combo_strike`, plain `gcd`, action minimum GCD) to each source row, including variable/call control actions. An actor-wide value is not equivalent.
+- [x] `gcd.remains` reads the actor's actual global GCD clock, including item and control rows without action-spell aliases; it reaches zero on native expiry (pinned `action.cpp3795–3808`).
 - [x] Execute declared variables using source `value`, `setif`, `value_else`, `reset` and numeric `default` semantics. Variable `target_if` selects the native candidate before its condition and assignment, without retargeting later actions.
 - [x] Preserve literal action order and conditional `call_action_list` decisions; native castability selects the first usable action. An exhausted child list returns control to its caller.
 - [x] Accept `call_action_list,use_off_gcd=0|1`. The control remains off-GCD/while-casting as in pinned `action.cpp4648–4661`; each child still requires its own native readiness and row permissions. Invalid boolean values fail explicitly.
@@ -19,6 +20,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] Sample native cast readiness independently for each action/target pair. A self-target NativeAction with target_if retains the selected enemy as its scoring context but maps admitted readiness and dispatch to its actual self target; unknown explicit contexts remain unready, never use default admission as fallback. Harmful precasts use the actor's actual selected enemy when combat candidates have not yet been supplied.
 - [x] Permit adapter-declared action target_ready predicates for each selected candidate. A veto leaves the action declared but unavailable to literal selection; it never rewrites the row or changes native cast admission. Ret Rebuke requires actual target casting state, not inferred reaction timing.
 - [x] Deliver Player literal spells through ordinary Player requests with the selected explicit target, rechecking knowledge and rejecting expired identities rather than redirecting. Preserve selected and AA targets; retain native creature dispatch for WW followers.
+- [x] Native cursor actions supply the selected cast target's position during both readiness and ordinary Player/NPC dispatch. Keep destination, native unit and action-primary identities separate, and retain the point through cast time and flight; ordinary unit actions do not invent a destination.
 - [x] `retarget_auto_attack` changes only the running AA victim, preserving both swing timers and the actor's selection. An already-running AA must not restart onto the primary target.
 - [ ] Expose target-specific readonly resource-limited admission for a chosen power pool. Compare that pool's native maximum locally; never grant or temporarily replace resources. Preserve other pools, health and every other native cast constraint; an unaffordable maximum cannot qualify.
 - [x] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.
@@ -32,9 +34,12 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 ## Shared profile and action facts
 
+- [x] Action-bound `ticks` reads scheduled periodic ticks from the current native channel, not cast-bar progress or damage-event totals. Public `auras::paid_periodic_ticks` returns the maximum per-effect paid count for the actual caster/target/spell application. SimC `tick_zero` damage does not advance this counter; ordinary scheduled ticks do. Reads do not advance state, and absent auras return zero.
+
 - [x] Native profile effects accept pinned Shadow Omnium tokens `rune_of_unleashed_fire`, `rune_of_selfmending`, `rune_of_lingering`, `rune_of_critical_power` and `rune_of_overload`, plus numeric TraitNodeEntry IDs. Optional ranks remain ignored like pinned SimC; native trait definitions supply the applied spell and all amounts. Unknown tokens or missing native entries fail explicitly.
 
-- [x] `hero_tree.<alias>` reads the selected native hero subtree, not allocated inactive nodes. Unknown aliases fail explicitly.
+- [x] `hero_tree.<alias>` reads the selected native hero subtree, not allocated inactive nodes. Remove display-name hyphens as pinned SimC does (`Fel-Scarred` → `felscarred`); unknown aliases fail explicitly.
+- [x] Bare `spell_targets` reads the fixture's actual active-enemy count when distance targeting is disabled, including recurring adds. Preserve one/three-target counts; it is not a named action's geometry count.
 - [x] `buff.<alias>.max_stack` reads the fresh native modified stack limit before a proc exists. Named and contextual `cost`/`cast_time` read current native power modifiers/display units and cast time, without requiring affordability or including GCD occupancy.
 - [x] Literal `auto_shot` starts learned native75 once; its native repeat owns subsequent shots. Literal player engagement does not inject melee attacks before source execution.
 - [x] Target `health` reads the selected native current pool; `retarget` enumerates actual candidates without a spell definition. Target `debuff.react` uses recipient acquisition deadlines and caster-owned aura filtering. Fixture-only absent pull events report zero remaining time and the source no-next-event sentinel.

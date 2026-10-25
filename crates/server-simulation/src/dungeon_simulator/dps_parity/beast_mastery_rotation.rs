@@ -41,6 +41,20 @@ impl Rotation {
         encounter: Encounter,
         profile: &super::inputs::Profile,
     ) -> Result<Self, String> {
+        // SimC76f8118 player.cpp1017–1020: this pinned profile supplies no
+        // reaction overrides; native acquisition samples the source defaults.
+        crate::simc_apl_native::reaction::configure(
+            world,
+            actor,
+            crate::simc_apl_native::reaction::ReactionSettings {
+                mean: 0.25,
+                stddev: 0.0,
+                offset: 0.1,
+                nu: 0.15,
+                maximum: 1.4,
+            },
+            &[1276720],
+        )?;
         let mut bindings = bindings::build();
         let equipment = Equipment::load(world, actor, &mut bindings)?;
         literal_rotation::capture_fixture(world, actor, encounter)?;
@@ -87,6 +101,16 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
+        // SimC76f8118 sc_hunter.cpp1706–1711: an awake pet schedules its
+        // melee independently. Literal capture replaces follower AI's attack order.
+        if let Some(pet) = crate::hunter_pet::summoned_pet(world, actor) {
+            let current = world
+                .get::<crate::networking::CombatTarget>(pet)
+                .and_then(|target| target.0);
+            if current != targets.first().copied() {
+                crate::pet_control::order_companion_pet(world, actor, targets.first().copied());
+            }
+        }
         self.step(world, actor, targets, "default").map(|_| ())
     }
 
