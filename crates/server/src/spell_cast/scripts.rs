@@ -27,8 +27,14 @@ mod batch9;
 mod chrono_flame;
 mod clearcasting;
 mod echo_policies;
+mod elemental;
+pub(crate) use elemental::register as register_elemental_policies;
 mod elemental_ascendance;
 pub(super) use echo_policies::after_foreground_cast as apply_echo_policies;
+pub(super) use elemental::{
+    after_launch as finish_scripted_launch,
+    capture_damage_modifier as capture_consumed_damage_modifier,
+};
 pub(crate) mod empower_evoker;
 mod essence_burst;
 mod policies;
@@ -105,6 +111,7 @@ pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
 /// TC OnCast runs once after successful checks, before spending and launch.
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
+    elemental::before_launch(world, caster, spell_id, depth);
     match spell_id {
         batch16::RET_JUDGMENT | batch16::HOLY_JUDGMENT | batch10::PROTECTION_JUDGMENT => {
             batch16::energize_judgment(world, caster, depth);
