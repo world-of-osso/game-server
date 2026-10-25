@@ -3,7 +3,8 @@ use std::collections::BTreeSet;
 
 use bevy::prelude::*;
 
-use crate::auras::{AuraInstance, AuraScripts, RemoveReason};
+use crate::auras::scripts::AuraScripts;
+use crate::auras::{AuraInstance, RemoveReason};
 
 const TALENT: u32 = 452402;
 const META: u32 = 162264;
