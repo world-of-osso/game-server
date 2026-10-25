@@ -4,7 +4,7 @@
 
 ## 2026-10-24 — Dawnlight named hit policies
 
-[Explicit policies](systems/spell-casting.md#dawnlight-named-hit-policies--2026-10-24) replace neither DB2 nor TDB: named Wake production and foreground-spender consumption use native values and generic dispatch. Producer strict RED→3GREEN precedes consumer strict RED→native15GREEN69.75s at28bf70027, including native refresh/area/all-ticking/free-cost/immune controls and retained tier behavior. Native3/max6/431380 remain authoritative; no core ID branch or primary fallback. Literal hp1109 integration, secondary effects, compiler gates and full parity remain separate.
+[Explicit policies](systems/spell-casting.md#dawnlight-named-hit-policies--2026-10-24) replace neither DB2 nor TDB: named Wake production and foreground-spender consumption use native values and generic dispatch. Producer strict RED→3GREEN precedes consumer strict RED→native15GREEN69.75s at28bf70027, including native refresh/area/all-ticking/free-cost/immune controls and retained tier behavior. Native3/max6/431380 remain authoritative; no core ID branch or primary fallback. Combined test-target/plain-bin checks each ran once/PASS with fmt/zero warnings. Literal hp1109 integration, secondary effects, parent full gate and full parity remain separate.
 
 ## 2026-10-24 — Byte-identical public spell remainder
 

@@ -12,6 +12,12 @@ Pinned SimC76f8118 `sc_paladin_retribution.cpp846–876` executes Wake then gran
 
 Pinned `sc_paladin.hpp1512–1535` applies Dawnlight only on a successful foreground spender’s first target. On one target it can refresh; with multiple targets it first uses an unticking primary, otherwise the first unticking actual action target. It decrements one actual budget only when applying. `sc_paladin.cpp3002–3054` supplies the Dawnlight action context; native431380 remains payload authority. Secondary Avatar/AoE effects are not silently included.
 
+## Final local gates
+
+At docs-only descendant7a7724feb, requested combined `-p server -p server-simulation -p server-spell-tests --tests -j2` check ran **ONCE/PASS112.95s**, plain production `-p server --bins -j2` ran **ONCE/PASS58.25s** with no test-support feature/runner, and fmt **PASS5.14s**. Zero warnings; no later runtime changes. Receipts `three-crate-check-once.*`, `production-bins-check-once.*`, `fmt.*` remain under engine `dawnlight-generic-7b/`. The fresh prepared input hash remains3d2d after all native tests.
+
+Parent owns the full gate, push and landing. These local receipts are not a full-suite, numerical parity or deployment claim. No post-primary300s measurement was started for this branch.
+
 ## Current boundaries
 
 Both named relationships are rows of the same `POLICIES` table (`Policy` plus `Relationship` variants); all specific IDs/spec/talent bindings stay in those rows. Generic core code captures ordinary launch inputs and invokes generic logical-hit dispatch. Native payload admission and `spend_stack` keep target rules, stack cap and remaining duration; no fallback primary is selected.

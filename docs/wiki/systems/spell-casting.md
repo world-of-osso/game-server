@@ -6,7 +6,7 @@
 
 Ordinary native launch stores applicable resource pools (including zero final cost) and the actual selected primary/list in `SpellInfo.cast_policy_context`. Triggered catalog clones have no context. Logical first-hit dispatch checks the live owned counter, native payload target admission and live owned periodic state: refresh on one target, choose the first unticking actual target in an area list, or spend nothing if all tick. Native stack loss does not refresh duration. Native3, maximum6 and431380 payload/timing remain unchanged.
 
-[Ordered source/RED/GREEN ledger](../../handoffs/dawnlight-generic-proof-ledger.md) records strict producer then consumer failures before implementation, native payload/negative controls and15scoped native passes at28bf70027. Literal self-target caller integration still depends on hp1109; secondary Avatar/AoE, Player-policy and full DPS parity remain outside this proof. Compiler gates and parent integration remain separate.
+[Ordered source/RED/GREEN ledger](../../handoffs/dawnlight-generic-proof-ledger.md) records strict producer then consumer failures before implementation, native payload/negative controls and15scoped native passes at28bf70027. Literal self-target caller integration still depends on hp1109; secondary Avatar/AoE, Player-policy and full DPS parity remain outside this proof. Both requested test-target/plain-production compiler gates and fmt pass in that ledger; parent full integration remains separate.
 
 ## Rake actual-stealth eligibility — 2026-10-24
 
