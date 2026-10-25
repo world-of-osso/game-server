@@ -1,5 +1,9 @@
 # Dungeon simulator
 
+## Frontal parity pack —2026-10-24
+
+The [shared parity constructor](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/mod.rs) uses symmetric half-yard lateral steps for all classes and replacement waves. The primary remains1.5yd away; the first two adds are at±0.5yd, within±18.435°. Old `[1.5,index,0]` placement put the third at53.13°/2.5yd, correctly outside native FoF's60° cone and TC's2yd close boundary. Correct the harness, never the gameplay cone. Real FoF recipient and Mage/Monk fixture regressions reach genuine two-RED12.83s before the change, then two-GREEN13.92s at26c83dd27; actual FoF now reaches all three identities, compile18.84s/zero warnings. Once-only controlled3T remeasurement and lead integration remain pending. [Contract](../../specs/dps-parity.md), [source/proof ledger](../../handoffs/parity-frontal-pack-proof-ledger.md).
+
 ## Hunter pet intrinsic/owner stats —2026-10-22
 
 The [survivability contract](../../specs/dps-parity.md#hunter-pet-survivability) follows TC Pet.cpp847–925/StatSystem1187–1310, not mixed SimC stats. `hunter_pet_stats` derives native ExpectedStat create health×template modifier, base armor level×50,30% owner Stamina truncated before×10 bonusHP and70% owner armor. Hunter spawn installs armor and inherited-health bookkeeping; owner CharacterStats changes apply only inherited HP deltas and clamp current on shrink without healing (TC Unit.cpp10070–10093). Other pet categories are unchanged; pet_levelstats/intrinsic primary stats remain absent, no fake TC fallback values are imported.

@@ -54,6 +54,7 @@ const TICKS: u32 = 6_000;
 const ADD_WAVE_TICKS: u32 = 600;
 const LAST_30S_START: u32 = TICKS - ADD_WAVE_TICKS;
 const DUMMY_ENTRY: u32 = 31_146;
+const DUMMY_LATERAL_STEP: f32 = 0.5;
 const FIGHT_DURATION: Duration = Duration::from_secs(300);
 const ADD_LIFETIME: Duration = Duration::from_secs(30);
 // SimC76f8118 raid_event.cpp2700–2701: equal cooldown/duration adds10ms.
@@ -72,11 +73,18 @@ struct Run {
 }
 
 fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, String> {
+    // Keep the reference's three-target pack in front without changing native cones.
+    let lateral_step = index.div_ceil(2) as f32 * DUMMY_LATERAL_STEP;
+    let lateral = if index.is_multiple_of(2) {
+        lateral_step
+    } else {
+        -lateral_step
+    };
     let target = crate::zones::summon_creature(
         app.world_mut(),
         actor,
         DUMMY_ENTRY,
-        [1.5, index as f32, 0.0, std::f32::consts::PI],
+        [1.5, lateral, 0.0, std::f32::consts::PI],
     )
     .ok_or("native training dummy31146 could not spawn")?;
     if app
