@@ -6616,6 +6616,7 @@ version = "0.1.0"
 dependencies = [
  "peercred-ipc",
  "serde",
+ "serde_json",
  "shared",
  "tokio",
 ]
