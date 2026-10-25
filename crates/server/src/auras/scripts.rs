@@ -409,6 +409,7 @@ fn check_inundate_proc(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    crate::spell_cast::scripts::register_havoc(&mut scripts);
     crate::spell_cast::scripts::register_feral_frenzy(&mut scripts);
     scripts.0.insert(
         1236994,

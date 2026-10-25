@@ -6,12 +6,15 @@ use crate::auras::ActiveAuras;
 use crate::class_progression::KnownSpells;
 
 mod damage;
+mod demonsurge;
 pub(crate) use damage::apply_havoc_damage_policies;
+pub use demonsurge::havoc_demonsurge_available;
+pub(crate) use demonsurge::register_havoc;
 
 fn is_havoc(world: &World, caster: Entity) -> bool {
     world
         .get::<ActiveSpec>(caster)
-        .is_some_and(|spec| spec.0 == 577)
+        .is_some_and(|spec| spec.0 == DEMONIC.spec)
 }
 
 fn has_talent(world: &World, caster: Entity, talent: u32) -> bool {
@@ -48,6 +51,7 @@ pub(crate) fn is_eye_beam_channel(spell: u32) -> bool {
 
 pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
     damage::before_cast(world, caster, spell);
+    demonsurge::before_cast(world, caster, spell, depth);
     if !DEMONIC.parents.contains(&spell) || !selected(world, caster) {
         return;
     }
@@ -61,6 +65,7 @@ pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32, depth: 
         return;
     }
     transform_or_extend(world, caster, duration as u32, depth);
+    demonsurge::arm_demonic(world, caster);
     // SimC76f8118 sc_demon_hunter.cpp4051–4057: add the hasted channel
     // duration after Meta has supplied its native haste, not another flat grant.
     let parent = world
@@ -81,13 +86,7 @@ pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32, depth: 
 }
 
 fn selected(world: &World, caster: Entity) -> bool {
-    let correct_spec = world
-        .get::<ActiveSpec>(caster)
-        .is_some_and(|spec| spec.0 == DEMONIC.spec);
-    let learned = world
-        .get::<KnownSpells>(caster)
-        .is_some_and(|known| known.contains(DEMONIC.talent));
-    correct_spec && learned
+    has_talent(world, caster, DEMONIC.talent)
 }
 
 fn transform_or_extend(world: &mut World, caster: Entity, milliseconds: u32, depth: u8) {
