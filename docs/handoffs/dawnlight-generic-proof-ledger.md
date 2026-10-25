@@ -16,9 +16,13 @@ Pinned `sc_paladin.hpp1512–1535` applies Dawnlight only on a successful foregr
 
 |Boundary|Required behavior|Status|
 |---|---|---|
-|Producer|Actual selected Wake damages/earns3HP then arms native3, not max6|Strict RED pending; no production change|
-|NoWake/noHero|Native Judgment or legal unspent Hero points cannot manufacture budget|Controls pending|
+|Producer|Actual selected Wake damages/earns3HP then arms native3, not max6|29a75ec42 genuine missing431522 RED67.06s after raw/live count, real Wake damage and3HP prerequisites pass;2negative controls PASS|
+|NoWake/noHero|Native Judgment or legal unspent Hero points cannot manufacture budget|NoWake/noHero2PASS in the strict producer RED run|
 |Consumer|Actual Wake budget3 followed by funded foreground hit applies owned431380/tick and reduces3→2|Not reached; producer must be GREEN first|
 |Background/target selection|Sourced exclusions and once-per-cast/native recipient behavior|Consumer-stage proof pending|
+
+Producer implementation ports the previously approved Ret behavior into `scripts/policies.rs`: explicit named data owns the selected spec/talent/parent/counter/effect relationship; generic lookup/selection/native-count execution contains no hardcoded spell-ID branch. Native triggered aura application retains its maximum6. Consumer code remains absent until producer GREEN and subsequent consumer RED.
+
+Producer RED receipt: engine `dawnlight-generic-7b/producer-red-v1.{log,proof.json}`; zero warnings, compile1m14s. The failure is the actual missing budget, not a raw2/live3 oracle or admission error.
 
 Input is a fresh canonical4442-derived3d2d private snapshot with only the approved Garrick66→70 surrogate; source hash/schema/profile/trait receipts remain in engine `ability-gap-post-primary-4442d87f/source-inputs.proof.json`. No power, budget, timer, coefficient or metadata grants substitute for the observed boundary.

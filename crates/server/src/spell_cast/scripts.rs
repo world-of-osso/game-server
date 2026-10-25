@@ -29,6 +29,7 @@ mod clearcasting;
 mod elemental_ascendance;
 pub(crate) mod empower_evoker;
 mod essence_burst;
+mod policies;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
 mod giantkiller;
@@ -602,6 +603,9 @@ pub(super) use empower_evoker::damage_bonus as empower_damage_bonus;
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
+    if let Some(hook) = policies::after_cast_hook(spell_id) {
+        return Some(hook);
+    }
     if let Some(hook) = after_cast_auras::hook(spell_id) {
         return Some(hook);
     }
