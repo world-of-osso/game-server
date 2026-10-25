@@ -1,0 +1,9 @@
+[package]
+name = "server-follower-policy"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[features]
+# Preserve the existing forecast observer for native core unit tests.
+test-support = []
