@@ -13,6 +13,10 @@ const DIVINE_STORM: u32 = 53385;
 const SET_PIECES: &[u32] = &[271465, 271463, 271468, 271466, 271464];
 
 pub(super) fn native_ret(piece_count: usize) -> Run {
+    native_ret_with_targets(piece_count, 1)
+}
+
+pub(super) fn native_ret_with_targets(piece_count: usize, count: usize) -> Run {
     let (mut profile, traits) = read_reference(70).unwrap();
     profile.equipment.retain(|item| {
         SET_PIECES
@@ -23,7 +27,7 @@ pub(super) fn native_ret(piece_count: usize) -> Run {
     let mut run = prepare_reference(
         profile,
         &traits,
-        1,
+        count,
         crate::followers::simulator::ParityActor::Follower,
     )
     .unwrap();

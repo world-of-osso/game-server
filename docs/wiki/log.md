@@ -59,6 +59,10 @@
 
 [Bounded ledger](../handoffs/ww-flurry-proof-ledger.md): ec4b89338 actual white/ordinary451839 earning and natural FoF children3 genuine RED/3controlsPASS41.86s. Selected native counts/critical multiplier/cap and class-owned release are implemented;150ms child spacing explicitly cites SimC76f8118 sc_monk.cpp779–781. Generic impact callbacks carry actual native provenance without class IDs. At172da6nativeGREEN25.97s/compile0warnings. Same tested binary/fresh CURRENT backup EACH300s100439.5467ST/134000.8433three-target (−51.3477%/−64.4144%);450617 and451250 both really damage. Native1H/offhand and natural Dual Threat producer remain unqualified; other releases/SCK/recovery stay outside this slice, full lead gate and broader parity remain open.
 
+## 2026-10-24 — Dawnlight named hit policies
+
+[Explicit policies](systems/spell-casting.md#dawnlight-named-hit-policies--2026-10-24) replace neither DB2 nor TDB: named Wake production and foreground-spender consumption use native values and generic dispatch. Producer strict RED→3GREEN precedes consumer strict RED→native15GREEN69.75s at28bf70027, including native refresh/area/all-ticking/free-cost/immune controls and retained tier behavior. Native3/max6/431380 remain authoritative; no core ID branch or primary fallback. Combined test-target/plain-bin checks each ran once/PASS with fmt/zero warnings. Literal hp1109 integration, secondary effects, parent full gate and full parity remain separate.
+
 ## 2026-10-24 — Byte-identical public spell remainder
 
 [D3](systems/server-crates.md#public-spell-remainder-d3):11pure file moves retain54case names/flags (51enabled/3existing ignored), extending the existing consumer to229cases without body/seam/new-package-or-version/API changes. Existing rusqlite0.35/bundled and canonical random import are dev-only consumer wiring. Housekeeping only; exact inventory, combined compiler proof, full gate and matched timing remain distinct.

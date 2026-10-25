@@ -2617,8 +2617,10 @@ fn execute_cast_with_primary(
     let mut launch_modifiers = spell_mods::snapshot_charged_modifiers(world, caster, &prepared);
     launch_modifiers.extend(scripts::pyroclasm_damage_modifier(world, caster, &prepared));
     prepared.cast_charge_mods = Some(launch_modifiers);
+    let plan = plan_targets(world, caster, &prepared, explicit, false)?;
+    prepared.cast_policy_context =
+        scripts::snapshot_hit_policies(world, caster, &prepared, &plan, &costs);
     let spell = &prepared;
-    let plan = plan_targets(world, caster, spell, explicit, false)?;
     if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
         debug!(caster = ?caster, spell_id = spell.id, explicit = ?explicit, plan = ?plan, "Cast execution target plan");
     }
@@ -3212,7 +3214,7 @@ fn run_hit_scripts(
 ) {
     let hook = scripts::on_hit(spell.id);
     let context_hook = scripts::on_hit_with_context(spell.id);
-    if hook.is_none() && context_hook.is_none() {
+    if hook.is_none() && context_hook.is_none() && spell.cast_policy_context.is_none() {
         return;
     }
     let ctx = EffectCtx {
@@ -3232,6 +3234,7 @@ fn run_hit_scripts(
         if let Some(hook) = context_hook {
             hook(world, &ctx, unit);
         }
+        scripts::apply_hit_policies(world, &ctx, unit);
     }
 }
 

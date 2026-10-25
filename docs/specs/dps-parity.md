@@ -29,6 +29,11 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [x] Native execution preserves the selected action primary separately from the spell's cast unit. A self-target spell must keep its native self cast while forwarding the actual selected hostile primary to child relationships. Preserve that context across queued requests, cast bars and missile snapshots; an absent or unknown context must not select a substitute. Apply the same contract to Player and NPC actors without spell-ID branches, damage multipliers or mutable-target fallbacks. [Proof](../handoffs/hostile-primary-proof-ledger.md).
 
+### Ret Dawnlight policies
+
+- [x] `SIMC_RET_DAWNLIGHT_WAKE_PRODUCER`: selected spec70 Dawnlight431377 plus actual ordinary Wake255937 produces native counter431522 from the live modified talent effect0. Native raw2 plus specialization+1 supplies3; retain the native maximum6, not an initial6. No consumer is implied by the producer proof.
+- [x] `SIMC_RET_DAWNLIGHT_SPENDER_CONSUMER`: an eligible successful foreground HolyPower spender applies native431380 on the sourced target and consumes one actual431522 use. Retain native periodic payload, amounts, timing and stack cap. Pinned SimC76f8118 `sc_paladin.hpp1512–1535` owns the missing consumer relationship; `sc_paladin_retribution.cpp846–876` owns Wake production. TC has no script and DB2/TDB have no child edge/proc row. Both are explicit named policy-table entries with generic execution, never fabricated native metadata or core spell-ID branches. [Source and ordered proof](../handoffs/dawnlight-generic-proof-ledger.md).
+
 ### Ret reference knowledge
 
 - [ ] `RET_HAMMER_OF_WRATH_KNOWN_FROM_SELECTED_TALENT_SIMC` permits action24275 only on explicitly prepared spec70 parity/reference actors whose validated active TraitLoadout includes1241288 (including native granted roots). Ordinary native player/follower spellbooks and NeverLearned rules remain unchanged. Removing eligibility must not retain the exception; other specs receive no grant. [Source/proof ledger](../handoffs/ret-paladin-parity-proof-ledger.md#explicit-hammer-of-wrath-knowledge-policy).
