@@ -17,7 +17,7 @@ const MADNESS: u32 = 335467;
 
 /// SimC sc_priest_shadow.cpp1819–1826 explicitly authors500ms, absent in data.
 /// Keep the override in script policy, not in fabricated native spell records.
-pub(super) fn launch_delay(spell: u32, native: f32) -> f32 {
+pub(in crate::spell_cast) fn launch_delay(spell: u32, native: f32) -> f32 {
     if spell == SLAM { 0.5 } else { native }
 }
 
