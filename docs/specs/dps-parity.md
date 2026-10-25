@@ -197,6 +197,12 @@ Spec263 parity executes the pinned MID2 Enhancement action rows through the shar
 
 `action.<alias>.damage` reads the proposed target's native direct school-damage snapshot, including current power, modifiers, mitigation and expected crit, without casting or sampling RNG. Weapon-damage predictions remain explicit errors. Action cooldown/duration and bare `ticking` retain action context. `pet.<summon alias>.active` reads actual living, unexpired, same-map owned summons; absent summons are inactive.
 
+## Marksmanship literal controller
+
+- [x] Spec254 uses a real Player with exact reference gear/traits and unchanged pinned `hunter_marksmanship.simc` source through shared `literal_rotation`. It does not require a nonexistent follower profile or use AssistedCombat priorities.
+- [x] Execute source precombat, preserve native cooldowns/overrides and item admission, and start ranged attacks through native75. Report the literal driver and native stat snapshot. Missing potion inventory and external providers remain explicit gaps, not fabricated effects.
+- [ ] Qualify Trueshot/Chakram, Precise Shots, ground payloads and residual damage before claiming DPS parity. Controller execution alone does not qualify their native mechanics.
+
 ## Tests asserting this spec
 
 - `scripts/tests/test_item_instance_data.py` — concrete signed rows, idempotence, unrelated-table retention and duplicate-ID rollback.
@@ -210,6 +216,14 @@ Spec263 parity executes the pinned MID2 Enhancement action rows through the shar
 - `crates/server/src/stats_instance_tests.rs` — actual StatsPlugin modifier-only change on native chest 271468/enchant 7987; genuine RED missed +50 Strength before consumer wiring; subsequent native GREEN and unchanged legacy Arcane control passed.
 
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/power_tests.rs` — opt-in native253/Duck/Cobra/grant owner/pet snapshots and grouped capped gains, plus native66 authoritative Mana serialization. Genuine receipt RED2 precedes implementation; current14e20fbca GREEN3/3 (110.93s), retained six source/parallel controls, all-target check/fmt pass. Snapshot rates/logged integer gains do not certify integrated realized regeneration or resource mechanics parity.
+
+## Shared profile gear effects
+
+- Reference followers retain NPC identity but use the declared native race for base stats and validated racial spell knowledge. Native player/pet aura effect202 must apply owner racial effects.
+- Aura189 rating buffs must change derived native ratings through their real masks. Item spell scaling class−7 includes its native trinket combat-rating multiplier before rounding. Declared Magisters flask, Void-Touched augmentation, Royal Roast, Recklessness potion and Thalassian Phoenix Oil quality2 use native item/enchant/spell values. Oil coexists with permanent enchants. Potion selects the current highest positive/lowest negative secondary and is available once per encounter; unsupported tokens remain named gaps.
+- Expansion tokens resolve native TraitNodeEntry identities, independent of class talents. Item scripts supply SimC relationships for Heart Morsels/stacking stats, asynchronous Venomfang/expiry bursts and perfected Guillotine poison, plus Omnium fire/lingering/secondary runes. Native proc rates, scaling and recipients remain authoritative; neutral attackable targets must not be rejected as non-hostile factions.
+
+[Implementation](../wiki/systems/character-stats.md#shared-profile-effects--2026-10-25).
 
 ## Known gaps (current cycle)
 

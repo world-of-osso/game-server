@@ -108,7 +108,8 @@ pub const PERIODIC_DAMAGE_AURA: u32 = handlers::PERIODIC_DAMAGE;
 /// 35 (party) and 65 (raid) area auras apply to their resolved targets only:
 /// there is no group backend. 27 PERSISTENT_AREA_AURA applies through its
 /// dynamic object (`spell_cast::area_aura`).
-pub const AURA_EFFECTS: [u32; 4] = [6, 27, 35, 65];
+// SimC76f8118 data_enums.hh881: native202 applies an aura to its resolved owner/pet recipients.
+pub const AURA_EFFECTS: [u32; 5] = [6, 27, 35, 65, 202];
 
 const ATTR0_PASSIVE: u32 = 0x40;
 const ATTR4_NOT_IN_ARENA_OR_RATED_BATTLEGROUND: u32 = 0x0001_0000;
@@ -514,7 +515,7 @@ impl ActiveAuras {
             .find(|aura| aura.instance_id == instance_id)
     }
 
-    fn get_mut(&mut self, instance_id: u32) -> Option<&mut AuraInstance> {
+    pub(crate) fn get_mut(&mut self, instance_id: u32) -> Option<&mut AuraInstance> {
         self.auras
             .iter_mut()
             .find(|aura| aura.instance_id == instance_id)

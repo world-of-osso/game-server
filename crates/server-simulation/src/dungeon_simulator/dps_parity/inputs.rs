@@ -238,7 +238,7 @@ pub(super) fn read_actor(
     }
 }
 
-fn read_reference_race(name: &str) -> Result<u8, String> {
+pub(super) fn read_reference_race(name: &str) -> Result<u8, String> {
     let path = std::env::var_os("DPS_PARITY_WORLD_DB").ok_or("DPS_PARITY_WORLD_DB absent")?;
     let db =
         rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
@@ -378,6 +378,7 @@ pub(super) fn equip(world: &mut World, unit: Entity, profile: &Profile) -> Resul
         crate::stats::EquippedItemModifiers {
             items: modifiers,
             base_stat_redirects,
+            ..Default::default()
         },
     ));
     Ok(())
@@ -420,15 +421,29 @@ pub(super) fn install_traits(
         let follower = world
             .get::<crate::followers::Follower>(unit)
             .ok_or("reference actor is neither player nor follower")?;
-        (
-            follower.profile.spec_id,
+        let evaluated = if let Some(race) = world.get::<server::test_support::ReferenceRace>(unit) {
+            let identity = shared::components::Player {
+                name: String::new(),
+                class: follower.profile.class_id,
+                race: race.0,
+                appearance: Default::default(),
+            };
+            crate::class_progression::evaluate_player_reference_traits(
+                classes,
+                &identity,
+                follower.profile.spec_id,
+                level,
+                &purchases,
+            )
+        } else {
             crate::class_progression::evaluate_reference_traits(
                 classes,
                 &follower.profile,
                 level,
                 &purchases,
-            ),
-        )
+            )
+        };
+        (follower.profile.spec_id, evaluated)
     };
     let (known, traits) =
         evaluated.map_err(|reason| format!("NATIVE_REFERENCE_TRAIT_CONFIG_REJECTED: {reason}"))?;
