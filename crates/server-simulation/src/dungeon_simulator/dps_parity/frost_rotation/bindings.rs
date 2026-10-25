@@ -17,7 +17,8 @@ const ACTIONS: &[(&str, u32, bool)] = &[
     ("reapers_mark", 439843, false),
     ("frostwyrms_fury", 279302, false),
     ("raise_dead", 46585, true),
-    ("empower_rune_weapon", 47568, true),
+    // SimC76f8118 sc_death_knight.cpp10168–10179: harmful AoE at the enemy.
+    ("empower_rune_weapon", 47568, false),
     ("antimagic_shell", 48707, true),
     ("mind_freeze", 47528, false),
     ("blood_fury", 20572, true),
