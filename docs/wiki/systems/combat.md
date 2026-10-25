@@ -1,5 +1,11 @@
 # Combat
 
+## Native per-hand auto-attack overrides
+
+TC `Unit::AttackerStateUpdate` reads the first active Aura361 TriggerSpell for the main hand and first nonzero MiscValue spell for the off hand. The native engine now reads these fields in aura/effect order at the swing snapshot. After existing weapon/timer/target/range/LOS admission it retains native hand clocks and queues that native spell instead of calculating/committing white damage. A refused native child is logged, not replaced by ordinary damage. No Ret spell IDs or recipient substitution occur in generic execution.
+
+Actual selected404542→408385 native damage and no-override white control pass in the [strict Storm ledger](../../handoffs/ret-storm-gap-proof-ledger.md). Native151791/404542 hand-field/application-order controls and retained core melee coverage are tracked separately. The406833 resource-counter relationship is not supplied by the override itself. [Contract](../../specs/dps-parity.md#ret-storm-root-supply-and-secondary-relationships).
+
 Combat logic is split across two crates: `shared/src/formulas/` holds pure combat math (melee hit table, stat conversions, spell formulas), and `server/src/combat.rs` runs the live ECS systems (active auto-attack, direct NPC/player lethal-transition emission, respawn).
 
 ## Content

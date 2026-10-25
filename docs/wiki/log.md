@@ -11,6 +11,8 @@
 
 ## 2026-10-24 — Event-time aura proc candidates
 
+- Ret Storm: [source qualification and strict RED contract](../handoffs/ret-storm-gap-proof-ledger.md) separates native Aura361, source406833 resource counter and Second Sunrise/Tempest; tests committed before genuine RED, then generic Aura361 and approved bounded Sunrise runtime GREEN with native amounts/hostile primary/background controls; core hand-order1/retained62melee cases pass; both compiler checks once/PASS/zero warnings, parent full gate separate.
+
 [Source/proof](../handoffs/aura-proc-event-candidates-proof-ledger.md): TC synchronous candidate collection; native Leydrinker RED→GREEN, generic identity snapshot and shared melee routing.168PASS/3input-dependent failures,2 reproduced on base; Ret AfterCast producer phase1RED/2controlsPASS→3GREEN46.93s. Parent fullgate pending; no spell-ID or metadata override.
 ## 2026-10-24 — Generic mastery initialization qualification
 
