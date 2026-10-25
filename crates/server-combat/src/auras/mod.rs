@@ -46,6 +46,7 @@ pub mod invisibility;
 mod item_requirements;
 mod light_of_titans;
 mod linked;
+mod linked_owners;
 pub(crate) mod linked_summon;
 pub(crate) mod mastery;
 mod mechanic_duration;
