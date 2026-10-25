@@ -30,7 +30,7 @@ struct BankedOverpowered;
 
 pub(super) fn snapshots_modifier(spell: u32) -> bool {
     // sc_mage.cpp2738/2758/2866/2944: spent modifiers survive projectile flight.
-    matches!(spell, SALVO | CUMULATIVE | 1223797)
+    matches!(spell, SALVO | CUMULATIVE | 1223797 | 1277009)
 }
 
 fn is_arcane(world: &World, caster: Entity) -> bool {
@@ -47,7 +47,7 @@ fn selected(world: &World, caster: Entity, talent: u32) -> bool {
     })
 }
 
-fn talent_value(world: &World, caster: Entity, talent: u32, index: u8) -> f32 {
+pub(super) fn talent_value(world: &World, caster: Entity, talent: u32, index: u8) -> f32 {
     if selected(world, caster, talent) {
         super::script_effect_value(world, caster, talent, index)
     } else {
@@ -178,9 +178,13 @@ fn launch_orb(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
         dest: None,
         chain_multiplier: 1.0,
     };
-    queued_triggers::schedule_full_trigger(world, &ctx, target, 153640, 0);
-    for index in 1..=extra {
-        queued_triggers::schedule_full_trigger(world, &ctx, target, 153640, index * 150);
+    // sc_mage.cpp2612–2616: each selected enemy receives one native Orb bolt.
+    let recipients = super::arcane_area::ranged_recipients(world, caster, spell, target);
+    for recipient in recipients {
+        queued_triggers::schedule_full_trigger(world, &ctx, recipient, 153640, 0);
+        for index in 1..=extra {
+            queued_triggers::schedule_full_trigger(world, &ctx, recipient, 153640, index * 150);
+        }
     }
     let salvo = talent_value(world, caster, EXPANDED_MIND, 1) as u32;
     grant_salvo(world, caster, salvo);

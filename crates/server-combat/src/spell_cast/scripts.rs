@@ -5,6 +5,7 @@ use crate::random as rand;
 
 mod after_cast_auras;
 mod arcane;
+mod arcane_area;
 mod arcane_touch;
 pub(crate) use arcane::register as register_arcane;
 pub(super) use arcane_touch::record_damage as record_arcane_touch_damage;
@@ -954,6 +955,9 @@ pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
         return Some(hook);
     }
     match spell_id {
+        44425 => Some((Relation::Enemy, arcane_area::barrage)),
+        7268 => Some((Relation::Enemy, arcane_area::missiles)),
+        1295939 => Some((Relation::Enemy, arcane_area::prismatic)),
         1261160 | 224239 | 431911 => Some((Relation::Enemy, ret_damage::area_plan)),
         super::toy_flag::TARGETING => Some((Relation::Any, super::toy_flag::targeting_plan)),
         super::toy_flag::FLAG => Some((Relation::Any, super::toy_flag::flag_plan)),

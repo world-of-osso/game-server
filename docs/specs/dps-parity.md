@@ -11,7 +11,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Barrage rolls selected Orb Barrage before charge spending, then rolls Prismatic Bolt from earned Salvo and consumes Salvo outside Arcane Soul. Polished Focus refunds its native amount using the pre-Orb stack snapshot. Filler consumes Cumulative Power; Prismatic Bolt also consumes its enabling aura.
 - Touch applies its native caster-owned210824 mark. Owned Mage spell hits accumulate actual damage, excluding positive aura87 vulnerability; expiry or replacement discharges the stored native321507 percentage through210833. Selected Aegwynn's Technique grants Clearcasting. Successful Clearcasting triggers selected Brainstorm and rolls Overpowered Missiles, banking an in-channel proc until the old channel ends.
 - Consumed native Salvo, Cumulative Power and Intuition modifiers are captured through the existing charged-modifier snapshot seam, so projectile arrival cannot lose their earned values.
-- Arcane potion operands use the shared configured native potion facts, never a local name matcher. Orb primary-impact delivery is qualified separately from complete multi-target movement geometry and other pending Arcane relationships.
+- Barrage snapshots charge-based recipient count before Orb Barrage, using native Arcing Cleave's secondary fraction. Missiles uses one full primary effect and its native secondary effect only on additional recipients; Prismatic's separate splash excludes its primary. Orb delivers its native bolt to each source-selected enemy in native range. These recipient contracts do not qualify continuous retail Orb movement geometry.
+- Arcane potion operands use the shared configured native potion facts, never a local name matcher.
 
 ### Shared Spellslinger producers
 
