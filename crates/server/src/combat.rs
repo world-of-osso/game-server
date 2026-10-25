@@ -520,6 +520,8 @@ type AutoAttackers<'w, 's> = Query<
         SwingState<'static>,
         (
             Has<Npc>,
+            Has<shared::components::Player>,
+            Has<crate::followers::Follower>,
             Option<&'static crate::zones::CreatureFlagsExtra>,
             Option<&'static crate::zones::TempSummon>,
             Option<&'static CreatureAttackTime>,
@@ -839,7 +841,7 @@ fn snapshot_attacker(
         mods,
         stats,
         (stat_mods, cast, auras),
-        (creature, flags, summon, attack_time),
+        (creature, player, parity_actor, flags, summon, attack_time),
     ) = attackers.get_mut(entity).ok()?;
     auto_attack.timer = auto_attack.timer.saturating_sub(dt);
     auto_attack.off_hand_timer = auto_attack.off_hand_timer.saturating_sub(dt);
@@ -860,7 +862,11 @@ fn snapshot_attacker(
         stats: stats.cloned(),
         haste_pct: stat_mods.map_or(0.0, |mods| mods.haste_pct),
         enemy_dodge_pct: auras.map_or(0.0, |auras| auras.modifier(MOD_ENEMY_DODGE)),
-        expertise_pct: crate::auras::combat_stats::expertise_reduction(auras, !creature),
+        expertise_pct: crate::auras::combat_stats::class_actor_expertise_reduction(
+            auras,
+            player,
+            parity_actor,
+        ),
         creature,
         authored_attack_time: attack_time.copied(),
         creature_flags: flags.copied(),
@@ -959,7 +965,7 @@ pub(crate) struct Attacker<'a> {
     pub haste_pct: f32,
     /// Signed attacker aura251 sum, snapshotted before mutating victim auras.
     pub enemy_dodge_pct: f32,
-    /// Signed NPC aura240/4 reduction; players do not use this expertise path.
+    /// Native aura240/4 reduction plus the player/class-parity baseline expertise.
     pub expertise_pct: f32,
     /// A creature (`Npc`): it rolls the creature side of the hit table.
     pub creature: bool,

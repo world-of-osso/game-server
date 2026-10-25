@@ -500,3 +500,88 @@ fn native_spell_haste_periodic_attribute_scales_real_tick_period_and_count() {
         );
     }
 }
+
+#[test]
+#[ignore = "opt-in native Ret player/follower hit tables"]
+fn native_class_actor_baseline_expertise_cancels_dummy_dodge_for_swings_and_spells() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::{CombatLogKind, MissKind};
+    let _seed = crate::random::seed_scope(70448);
+    let mut dodges = Vec::new();
+    for identity in [
+        crate::followers::simulator::ParityActor::Player { race: 3 },
+        crate::followers::simulator::ParityActor::Follower,
+    ] {
+        let (profile, traits) = read_reference(70).unwrap();
+        let mut run = prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+        // Isolate the ordinary swing table from native Aura361 replacement attacks.
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            run.actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.effects.iter().any(|effect| effect.aura_type == 361),
+        );
+        engage(&mut run);
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::AutoAttack(run.targets[0]),
+        )
+        .unwrap();
+        for _ in 0..300 {
+            crate::spell_cast::cast_triggered(
+                run.app.world_mut(),
+                run.actor,
+                383328,
+                Some(run.targets[0]),
+                1,
+            );
+            run.app.update();
+        }
+        for _ in 0..4000 {
+            run.app.update();
+        }
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+        let owns = |event: &&shared::protocol::CombatLogEvent| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+        };
+        assert!(
+            events
+                .iter()
+                .filter(owns)
+                .any(|e| e.spell_id == Some(383328) && e.kind == CombatLogKind::Damage)
+        );
+        assert!(
+            events
+                .iter()
+                .filter(owns)
+                .any(|e| e.spell_id.is_none() && e.kind == CombatLogKind::Damage)
+        );
+        let spell_dodges = events
+            .iter()
+            .filter(owns)
+            .filter(|e| {
+                e.spell_id == Some(383328) && e.kind == CombatLogKind::Miss(MissKind::Dodge)
+            })
+            .count();
+        let swing_dodges = events
+            .iter()
+            .filter(owns)
+            .filter(|e| e.spell_id.is_none() && e.kind == CombatLogKind::Miss(MissKind::Dodge))
+            .count();
+        eprintln!(
+            "native class expertise player={} spell_dodges={spell_dodges} swing_dodges={swing_dodges}",
+            run.app
+                .world()
+                .get::<shared::components::Player>(run.actor)
+                .is_some()
+        );
+        dodges.push((spell_dodges, swing_dodges));
+    }
+    assert_eq!(
+        dodges,
+        [(0, 0), (0, 0)],
+        "SimC player.cpp1622 baseline7.5% expertise cancels native dummy dodge"
+    );
+}
