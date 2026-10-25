@@ -25,6 +25,21 @@ fn conductive_energy_real_chain_applies_one_rod_then_mirrors_the_next_complete_c
         run.app.update();
     }
     let world = run.app.world();
+    let chain_hits = world
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(188443)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
+    assert_eq!(
+        chain_hits, 3,
+        "native Chain Lightning must hit all three attackable dummies before Rod application"
+    );
     let rod = world
         .get::<ActiveAuras>(target)
         .unwrap()
