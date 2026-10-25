@@ -2521,10 +2521,14 @@ fn start_channel(world: &mut World, caster: Entity, spell: &SpellInfo, target: O
     if !is_channeled(spell) || channel_ms <= 0 {
         return;
     }
+    // SimC76f8118 action.cpp4390–4420: channel decisions share the actual
+    // periodic cadence, not raw DB2 periods beside a hasted channel duration.
     let tick_ms = spell
         .effects
         .iter()
-        .map(|effect| effect.aura_period_ms)
+        .map(|effect| {
+            crate::auras::periodic_interval_ms(world, caster, spell, effect.aura_period_ms)
+        })
         .filter(|&period| period > 0)
         .min()
         .unwrap_or(0);

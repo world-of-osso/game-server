@@ -158,6 +158,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [x] `line_cd` belongs to the exact literal source row, independently of spell cooldowns, targets, and identical neighboring rows. Only a successful execution starts it.
 - [x] `action.<alias>.channeling` reads the actual matching native channel. `cancel_action` can cancel during casting/GCD. At native channel ticks, `interrupt_if`/`interrupt` requires a genuinely ready higher-priority action; `interrupt_immediate` bypasses only the GCD guard, and `interrupt_global` selects root versus current-list priority scope. `chain` rechecks the same source row at the penultimate tick and recasts only without a higher-priority ready action. Readiness probes do not mutate powers, casts or recovery clocks (SimC76f8118 `dot.cpp707–735,815–869,980–994`).
 
+- Native channel decision ticks use the same modified, hasted interval as the real periodic aura, not the raw DB2 period beside a hasted duration (SimC76f8118 `action.cpp4390–4420`).
+
 - [x] `early_chain_if` works without `chain=1`: after a paid native channel tick, a true expression and ready GCD may re-execute the same ready source row before its penultimate tick, but never ahead of a ready higher-priority action (SimC76f8118 `dot.cpp841–845`).
 
 ### Empyrean Legacy relationship
