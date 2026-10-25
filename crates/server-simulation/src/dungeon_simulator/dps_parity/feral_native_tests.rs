@@ -2,6 +2,53 @@
 use super::*;
 
 #[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_prev_gcd_tracks_successful_foreground_gcd_casts_only() {
+    use server::simc_apl::Facts;
+    let mut run = prepare_literal(103, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let bindings = crate::simc_apl_native::Bindings {
+        actions: [("shred".into(), 5221), ("rake".into(), 1822)].into(),
+        ..Default::default()
+    };
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let read = |run: &Run, name: &str| {
+        crate::simc_apl_native::NativeFacts::new(run.app.world(), actor, &bindings, encounter, 1)
+            .with_targets(Some(target), &run.targets)
+            .value(name)
+            .unwrap()
+    };
+    assert_eq!(read(&run, "prev_gcd.1.shred"), 0.0);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5221, Some(target), false)
+        .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert_eq!(read(&run, "prev_gcd.1.shred"), 1.0);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5217, Some(actor), false).unwrap();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1822, Some(target), 1);
+    assert!(
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5221, Some(actor), false)
+            .is_err()
+    );
+    assert_eq!(
+        read(&run, "prev_gcd.1.shred"),
+        1.0,
+        "off-GCD, triggered and failed requests preserve history"
+    );
+    preparation::finish_pending_setup(&mut run).unwrap();
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 1822, Some(target), false)
+        .unwrap();
+    assert_eq!(read(&run, "prev_gcd.1.rake"), 1.0);
+    assert_eq!(read(&run, "prev_gcd.2.shred"), 1.0);
+}
+
+#[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec103 exact profile/traits"]
 fn feral_frenzy_selected_profile_executes_native_children_and_earns_combo_points() {
     let mut run = prepare_literal(103, 1).expect("selected Feral profile");

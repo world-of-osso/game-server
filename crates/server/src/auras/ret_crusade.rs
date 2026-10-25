@@ -118,7 +118,7 @@ fn spender_stack_gain(spell: &SpellInfo, costs: &[(CostPool, f32)]) -> u8 {
             .iter()
             .flatten()
             .any(|modifier| match modifier.aura_spell_id {
-                223819 => true,
+                408458 => true,
                 326733 => spell.id == 53385,
                 327510 => spell.id == 85673,
                 _ => false,
