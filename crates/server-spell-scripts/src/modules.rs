@@ -1,72 +1,66 @@
-//! The module order is stable; dispatch-stage semantics live in combat's
-//! `spell_cast::script_registry`. New policies belong in their module's const slice.
+//! Register new modules with one alphabetical line. The numeric position preserves
+//! historical dispatch order independently of declaration order; do not renumber it.
 use super::combat;
 use combat::spell_cast::script_registry::SpellScriptHook;
 
-#[path = "modules/frost.rs"]
-mod frost;
+macro_rules! register_modules {
+    ($($name:ident: ($position:literal, $path:literal)),* $(,)?) => {
+        $(#[path = $path] mod $name;)*
+        pub const MODULES: &[&[SpellScriptHook]] = &order_modules([
+            $(($position, $name::HOOKS)),*
+        ]);
+    };
+}
 
-#[path = "modules/after_cast_auras.rs"]
-mod after_cast_auras;
-#[path = "modules/aura_rolls.rs"]
-mod aura_rolls;
-#[path = "modules/beast_mastery.rs"]
-mod beast_mastery;
-#[path = "modules/cast_grants.rs"]
-mod cast_grants;
-#[path = "modules/cast_resets.rs"]
-mod cast_resets;
-#[path = "modules/devastation.rs"]
-mod devastation;
-#[path = "modules/essence_burst.rs"]
-mod essence_burst;
-#[path = "modules/evoker_tier.rs"]
-mod evoker_tier;
-#[path = "modules/germination.rs"]
-mod germination;
-#[path = "modules/giantkiller.rs"]
-mod giantkiller;
-#[path = "modules/havoc.rs"]
-mod havoc;
-#[path = "modules/marksmanship_explosive.rs"]
-mod marksmanship_explosive;
-#[path = "modules/paid_cooldowns.rs"]
-mod paid_cooldowns;
-#[path = "modules/ret_purpose.rs"]
-mod ret_purpose;
-#[path = "modules/ret_resonance.rs"]
-mod ret_resonance;
-#[path = "modules/retribution.rs"]
-mod retribution;
-#[path = "modules/rogue.rs"]
-mod rogue;
-#[path = "modules/warrior.rs"]
-mod warrior;
-#[path = "modules/windwalker_momentum.rs"]
-mod windwalker_momentum;
-#[path = "modules/windwalker_zenith.rs"]
-mod windwalker_zenith;
+const fn order_modules<const N: usize>(
+    mut modules: [(u16, &'static [SpellScriptHook]); N],
+) -> [&'static [SpellScriptHook]; N] {
+    let mut index = 1;
+    while index < N {
+        let entry = modules[index];
+        let mut position = index;
+        while position > 0 && modules[position - 1].0 > entry.0 {
+            modules[position] = modules[position - 1];
+            position -= 1;
+        }
+        modules[position] = entry;
+        index += 1;
+    }
+    let mut ordered: [&[SpellScriptHook]; N] = [&[]; N];
+    index = 0;
+    while index < N {
+        if index > 0 {
+            assert!(
+                modules[index - 1].0 != modules[index].0,
+                "duplicate module position"
+            );
+        }
+        ordered[index] = modules[index].1;
+        index += 1;
+    }
+    ordered
+}
 
-pub const MODULES: &[&[SpellScriptHook]] = &[
-    devastation::HOOKS,
-    beast_mastery::HOOKS,
-    windwalker_zenith::HOOKS,
-    warrior::HOOKS,
-    windwalker_momentum::HOOKS,
-    retribution::HOOKS,
-    rogue::HOOKS,
-    frost::HOOKS,
-    cast_resets::HOOKS,
-    after_cast_auras::HOOKS,
-    aura_rolls::HOOKS,
-    cast_grants::HOOKS,
-    paid_cooldowns::HOOKS,
-    essence_burst::HOOKS,
-    havoc::HOOKS,
-    evoker_tier::HOOKS,
-    giantkiller::HOOKS,
-    marksmanship_explosive::HOOKS,
-    ret_resonance::HOOKS,
-    germination::HOOKS,
-    ret_purpose::HOOKS,
-];
+register_modules! {
+    after_cast_auras: (100, "modules/after_cast_auras.rs"),
+    aura_rolls: (110, "modules/aura_rolls.rs"),
+    beast_mastery: (20, "modules/beast_mastery.rs"),
+    cast_grants: (120, "modules/cast_grants.rs"),
+    cast_resets: (90, "modules/cast_resets.rs"),
+    devastation: (10, "modules/devastation.rs"),
+    essence_burst: (140, "modules/essence_burst.rs"),
+    evoker_tier: (160, "modules/evoker_tier.rs"),
+    frost: (80, "modules/frost.rs"),
+    germination: (200, "modules/germination.rs"),
+    giantkiller: (170, "modules/giantkiller.rs"),
+    havoc: (150, "modules/havoc.rs"),
+    marksmanship_explosive: (180, "modules/marksmanship_explosive.rs"),
+    paid_cooldowns: (130, "modules/paid_cooldowns.rs"),
+    ret_purpose: (210, "modules/ret_purpose.rs"),
+    ret_resonance: (190, "modules/ret_resonance.rs"),
+    retribution: (60, "modules/retribution.rs"),
+    rogue: (70, "modules/rogue.rs"),
+    warrior: (40, "modules/warrior.rs"),
+    windwalker_momentum: (50, "modules/windwalker_momentum.rs"),
+    windwalker_zenith: (30, "modules/windwalker_zenith.rs"),
+}
