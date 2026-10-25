@@ -3462,10 +3462,33 @@ fn push_hit_events(
             },
         );
         if harmful {
+            if first_harmful_hit {
+                start_spell_melee_attack(world, caster, spell);
+            }
             elemental_overload::after_hit(world, caster, spell, target, first_harmful_hit);
             first_harmful_hit = false;
         }
     }
+}
+
+/// SimC76f8118 sc_rogue.cpp2685–2687,7863–7872: a successful flagged attack
+/// starts weapon swings once. Native Attributes1 bit9 owns eligibility; retain
+/// the cast's actual hostile primary and any already-running weapon victim/timers.
+fn start_spell_melee_attack(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    const MELEE_COMBAT_START: u32 = 0x200;
+    let flagged = attributes(spell, 1) & MELEE_COMBAT_START != 0;
+    let player = world.get::<Player>(caster).is_some();
+    let attacking = world.get::<crate::combat::AutoAttack>(caster).is_some();
+    if !flagged || !player || attacking {
+        return;
+    }
+    let Some(target) = spell.cast_primary_target else {
+        return;
+    };
+    if !targets::relation_matches(world, caster, target, Relation::Enemy) {
+        return;
+    }
+    crate::combat::start_attack(&mut world.commands(), caster, target, None);
 }
 
 /// `TRIGGER_SPELL`: resolve `spell_id` immediately at `explicit`, ignoring

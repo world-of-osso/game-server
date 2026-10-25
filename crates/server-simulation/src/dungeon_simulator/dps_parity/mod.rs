@@ -1,6 +1,7 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
 mod active_enemy_tests;
 mod assassination_knowledge_tests;
+mod assassination_mechanics_tests;
 mod assassination_rotation;
 mod aura342_tests;
 mod barbed_budget_tests;
