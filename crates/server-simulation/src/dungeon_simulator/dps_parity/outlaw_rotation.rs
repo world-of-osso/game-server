@@ -250,11 +250,15 @@ impl super::SpecDriver for Rotation {
         "LITERAL_SIMC_OUTLAW_76f8118"
     }
 
-    fn drive(&mut self, world: &mut World, actor: Entity, targets: &[Entity]) -> Result<(), String> {
+    fn drive(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
         self.drive(world, actor, targets)
     }
 }
-
 
 struct OutlawFacts<'a> {
     rogue: RogueFacts<'a>,

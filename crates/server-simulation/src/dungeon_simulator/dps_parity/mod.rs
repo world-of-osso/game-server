@@ -144,6 +144,8 @@ struct SpecRegistration {
 }
 
 // Register a spec only here and in its own module. The table is sorted by spec ID.
+// Until rustfmt traverses macro-declared modules, format changed rotation files
+// directly with `rustfmt --edition 2024` as well as running `cargo fmt`.
 macro_rules! spec_drivers {
     ($($spec_id:literal => $module:ident,)*) => {
         $(mod $module;)*

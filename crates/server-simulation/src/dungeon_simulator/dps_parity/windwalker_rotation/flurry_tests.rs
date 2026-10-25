@@ -274,7 +274,9 @@ fn literal_ww_native_flurry_fof_releases_earned_charges_and_native_children() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare(true);
     super::super::engage(&mut run);
-    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>).downcast::<Rotation>().unwrap();
+    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>)
+        .downcast::<Rotation>()
+        .unwrap();
     let mut earned_before_cast = None;
     for _ in 0..6000 {
         let before = charges(&run);
@@ -344,7 +346,9 @@ fn literal_ww_native_flurry_missed_white_does_not_earn_charges() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare(true);
     super::super::engage(&mut run);
-    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>).downcast::<Rotation>().unwrap();
+    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>)
+        .downcast::<Rotation>()
+        .unwrap();
     for _ in 0..6000 {
         let before = charges(&run);
         let count = events(&run).len();
