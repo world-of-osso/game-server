@@ -30,12 +30,19 @@ Wire contract: shared-protocol `docs/guild-ranks.md`.
 - Named exclusions: `GUILD_RANK_ASSIGNMENT_AUTHENTICATOR_GAP`, `GUILD_RANK_ASSIGNMENT_LEADERSHIP_GAP` (direct assignment cannot transfer/disband; voluntary transfer has a [separate contract](guild-leadership-transfer.md)), `GUILD_RANK_ASSIGNMENT_CONFIG_EXCLUDED` (existing creation/reordering unchanged). No authenticator eligibility fields are fabricated. Protocol/server/client land together; native proof is post-landing.
 
 ### Social permissions
+- [x] Existing recipient-authorized ChatHistoryResponse shares ordered ChatChannel with live ChatMessage. Native typed buffering preserves their actual message-ID order so a history replacement cannot erase a later live delivery. Held-worker real UDP RED/GREEN and combined two-actor native acceptance pass in both skins. No new chat service or message schema.
 - [x] Guild/officer chat requires separate listening and speaking rights; history records only authorized recipients.
 - [x] Chat membership decisions use authoritative persisted guild IDs when components are stale.
 - [ ] Invitations, MOTD, guild information and officer-note editing/viewing require their rank flags.
 - [x] Leave removes a non-master's membership; a Guild Master receives ERR_GUILD_LEADER_LEAVE.
 - [x] Remove-member requires the removal flag and a strictly lower-ranked same-guild target.
 - [x] Removal atomically deletes membership, guild-local rank, note and pending invitation; daily bank usage remains. Online player components and recipient rosters refresh, including the removed member's empty roster. Rejoining starts at the lowest rank.
+
+### Confirmed guild disband
+- [x] `GuildRankRequest::Disband` selects only the authenticated actor's current guild and requires current rank0; nonmasters/unguilded/foreign actors cannot delete it.
+- [x] One durable transaction removes all members, ranks/notes, profile, bank contents/money/logs/usage, invitations to the guild, event/news/appearance/date metadata and the reserved name; unrelated guilds and player inventories remain unchanged.
+- [x] Existing recipient snapshots refresh all removed online members to empty authority and remove replicated membership/design. Offline members remain unguilded after reopen. No last-member prerequisite and no synthetic quit-event history.
+- Tests: `crates/server/src/guild_disband_tests.rs`. Native confirmation/source contract: [client disband](../../../game-engine/docs/specs/guild-disband.md). Four server disband controls pass, including real authenticated dispatch and closed/reopened redb. Combined actual native action/fresh-process readback passes in Modern and Forever; [client acceptance](../../../game-engine/docs/specs/guild-disband.md#acceptance--2026-10-25) owns evidence paths.
 
 ### Invitation lifecycle
 - [x] Invitations reject already-guilded, already-invited, missing/offline and self targets with Retail GlobalStrings; invitation rights come from persisted actor membership.
