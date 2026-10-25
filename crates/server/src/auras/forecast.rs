@@ -1,6 +1,15 @@
 //! Read-only lifetime of the native stats used by a current melee projection.
 use super::*;
 
+/// Positive, unexpired school absorption; never mutate or refill shield capacity.
+pub(crate) fn has_absorb(auras: &ActiveAuras, now: f64) -> bool {
+    auras
+        .iter()
+        .filter(|aura| aura.expires_at.is_none_or(|expiry| expiry > now))
+        .flat_map(|aura| &aura.effects)
+        .any(|effect| effect.aura_type == handlers::SCHOOL_ABSORB && effect.absorb_remaining > 0.0)
+}
+
 /// Live native tick phase and depleted shield pools, without rolling or applying effects.
 pub(crate) fn healing_coverage(auras: &ActiveAuras, now: f64, horizon: f64) -> (f32, f32) {
     let mut periodic = 0.0;
