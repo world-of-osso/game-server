@@ -1,6 +1,124 @@
 //! Source-order variables and call lists from pinned Ret/WW APL rows.
 use super::*;
 
+#[test]
+fn simc_apl_native_readiness_precedes_if_expression() {
+    let program =
+        Program::parse(&[("default", "missing_item,if=buff.unequipped_proc.up")]).unwrap();
+    let facts = BTreeMap::<String, f64>::new();
+    let mut state = program.state();
+    assert!(
+        program
+            .select("default", &facts, &mut state, |_| Ok(false))
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        program
+            .select("default", &facts, &mut state, |_| Ok(true))
+            .is_err()
+    );
+}
+
+#[test]
+fn simc_apl_channel_priority_stops_at_exact_source_row() {
+    let program = Program::parse(&[
+        ("default", "blast,if=time>=1"),
+        ("default", "call_action_list,name=channel"),
+        ("default", "lower_priority"),
+        ("channel", "evocation,interrupt_if=1"),
+        ("channel", "evocation,interrupt_if=1"),
+    ])
+    .unwrap();
+    let mut state = program.state();
+    let clock = |time| BTreeMap::from([("time".into(), time)]);
+    let active = program
+        .select("default", &clock(0.0), &mut state, |_| Ok(true))
+        .unwrap()
+        .unwrap();
+    assert_eq!(active.source_row, Some(3));
+    assert!(
+        program
+            .select_before("default", &active, false, &clock(1.0), &mut state, |_| Ok(
+                true
+            ))
+            .unwrap()
+            .is_none()
+    );
+    assert_eq!(
+        program
+            .select_before("default", &active, true, &clock(1.0), &mut state, |_| Ok(
+                true
+            ))
+            .unwrap()
+            .unwrap()
+            .name,
+        "blast"
+    );
+    assert!(
+        program
+            .select_before("default", &active, true, &clock(1.0), &mut state, |_| Ok(
+                false
+            ))
+            .unwrap()
+            .is_none()
+    );
+    let second = program
+        .select_row(4, &clock(1.0), &mut state, |_| Ok(true))
+        .unwrap()
+        .unwrap();
+    assert_eq!(second.source_row, Some(4));
+    assert_eq!(
+        program
+            .select_before("default", &second, false, &clock(1.0), &mut state, |_| Ok(
+                true
+            ))
+            .unwrap()
+            .unwrap()
+            .source_row,
+        Some(3)
+    );
+}
+
+#[test]
+fn simc_apl_off_gcd_call_preserves_each_childs_native_readiness() {
+    let facts = BTreeMap::<String, f64>::new();
+    for value in ["0", "1"] {
+        let call = format!("call_action_list,name=cooldowns,use_off_gcd={value}");
+        let program = Program::parse(&[
+            ("default", call.as_str()),
+            ("cooldowns", "hardcast"),
+            ("cooldowns", "instant,use_off_gcd=1"),
+        ])
+        .unwrap();
+        let mut state = program.state();
+        // A held native GCD admits the child instant, not the earlier hardcast.
+        let selected = program
+            .select("default", &facts, &mut state, |action| {
+                Ok(action.options.get("use_off_gcd").map(String::as_str) == Some("1"))
+            })
+            .unwrap()
+            .unwrap();
+        assert_eq!(selected.name, "instant");
+        assert!(
+            program
+                .select("default", &facts, &mut state, |_| Ok(false))
+                .unwrap()
+                .is_none()
+        );
+    }
+    assert!(
+        Program::parse(&[
+            (
+                "default",
+                "call_action_list,name=cooldowns,use_off_gcd=maybe"
+            ),
+            ("cooldowns", "instant")
+        ])
+        .is_err()
+    );
+}
+
 fn facts(rows: &[(&str, f64)]) -> BTreeMap<String, f64> {
     rows.iter()
         .map(|&(key, value)| (key.into(), value))

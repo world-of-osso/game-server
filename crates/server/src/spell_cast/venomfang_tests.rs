@@ -76,7 +76,6 @@ fn unequip_venomfang(h: &mut Harness) {
 }
 
 #[test]
-#[ignore = "RED: equipped Venomfang has no source-backed producer"]
 fn protection_producers_venomfang_equipped_poison_ticks_then_bursts_after_unequip() {
     let mut h = item_fixture(false);
     equip_venomfang(&mut h);

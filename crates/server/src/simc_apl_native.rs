@@ -621,6 +621,16 @@ impl<'a> NativeFacts<'a> {
             "duration" => Ok(f64::from(crate::auras::fresh_duration_ms(
                 self.world, self.actor, self.actor, spell,
             )) / 1000.0),
+            // SimC76f8118 action.cpp3590: action.<name>.channeling reflects the
+            // actor's actual active channel, never an aura or a normal cast.
+            "channeling" => Ok(bool_value(
+                self.world
+                    .get::<shared::casting::CastState>(self.actor)
+                    .is_some_and(|cast| {
+                        cast.spell_id == spell.id
+                            && cast.cast_type == shared::casting::CastType::Channel
+                    }),
+            )),
             "in_flight" | "in_flight_remains" => {
                 crate::spell_cast::native_apl::flight_value(self.world, self.actor, spell, property)
             }
@@ -824,6 +834,13 @@ impl Facts for NativeFacts<'_> {
         }
         match name {
             "time" => Ok(self.elapsed()),
+            // dot.cpp671: tick_time is the channel's current native tick period.
+            "tick_time" => self
+                .world
+                .get::<shared::casting::CastState>(self.actor)
+                .filter(|cast| cast.cast_type == shared::casting::CastType::Channel)
+                .map(|cast| f64::from(cast.channel_tick_interval))
+                .ok_or_else(|| "tick_time requires an active native channel".into()),
             "expected_combat_length" => self.expected_combat_length(),
             "fight_remains" => self.remaining(name),
             "active_enemies" => Ok(self.active_enemies as f64),

@@ -74,6 +74,7 @@ pub(super) fn should_wait(
         usable: &mut admitted,
         stack: Vec::new(),
         pooling: false,
+        stop_before: None,
     };
     Ok(bind_ready_target(next, &mut maximum)?.is_some())
 }

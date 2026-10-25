@@ -49,6 +49,7 @@ fn native_apl_literal_retarget_enumerates_real_native_candidates() {
     )
     .with_targets(Some(run.targets[0]), &run.targets);
     let action = Action {
+        source_row: None,
         name: "retarget".into(),
         target: None,
         options: Default::default(),
@@ -73,6 +74,7 @@ fn native_apl_target_health_reads_selected_candidate_current_health() {
     )
     .with_targets(Some(run.targets[0]), &run.targets);
     let action = Action {
+        source_row: None,
         name: "retarget".into(),
         target: Some(run.targets[0].to_bits()),
         options: Default::default(),
@@ -132,6 +134,7 @@ fn native_apl_target_debuff_react_tracks_actual_owned_aura_acquisition() {
     )
     .unwrap();
     let action = Action {
+        source_row: None,
         name: "aimed_shot".into(),
         target: Some(target.to_bits()),
         options: Default::default(),
@@ -222,6 +225,7 @@ fn native_apl_cast_time_uses_current_native_action_modifiers() {
     let world = run.app.world();
     let f = NativeFacts::new(world, run.actor, &b, clock(world), 1);
     let aimed = Action {
+        source_row: None,
         name: "aimed_shot".into(),
         target: None,
         options: Default::default(),
@@ -245,6 +249,7 @@ fn native_apl_action_cost_uses_current_native_power_modifiers() {
     let world = run.app.world();
     let f = NativeFacts::new(world, run.actor, &b, clock(world), 1);
     let aimed = Action {
+        source_row: None,
         name: "aimed_shot".into(),
         target: None,
         options: Default::default(),
@@ -275,6 +280,7 @@ fn native_apl_auto_shot_starts_and_does_not_restart_weapon_attack() {
     let mut b = Bindings::default();
     let equipment = Equipment::load(run.app.world_mut(), run.actor, &mut b).unwrap();
     let action = Action {
+        source_row: None,
         name: "auto_shot".into(),
         target: None,
         options: Default::default(),

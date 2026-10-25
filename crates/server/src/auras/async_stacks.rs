@@ -55,11 +55,19 @@ pub(super) fn expire_async_stacks(world: &mut World, unit: Entity, now: f64) {
         return;
     };
     let mut changed = false;
+    let mut losses = Vec::new();
     for aura in &mut auras.auras {
+        let before = aura.stacks;
         changed |= expire_instance_stacks(aura, now);
+        if before > aura.stacks {
+            losses.push((aura.clone(), before - aura.stacks));
+        }
     }
     auras.dirty |= changed;
     drop(auras);
+    for (aura, lost) in losses {
+        super::scripts::run_stack_loss(world, unit, &aura, lost);
+    }
     if changed {
         super::auras_changed(world, unit);
     }
