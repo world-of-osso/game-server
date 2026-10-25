@@ -405,6 +405,9 @@ impl ActionFacts for RogueFacts<'_> {
     }
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
+            // SimC76f8118 action.cpp3795–3808 evaluates the proposed action's
+            // GCD. Preserve that context through the shared native binding.
+            "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" => self.native.value_for(action, name),
             "remains" | "refreshable" => self
                 .native
                 .value_for(action, &format!("dot.{}.{}", action.name, name)),
