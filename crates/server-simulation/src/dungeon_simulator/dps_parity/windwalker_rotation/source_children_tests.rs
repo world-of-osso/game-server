@@ -43,7 +43,12 @@ fn rsk_cooldown(run: &Run) -> f64 {
         .resource::<crate::spell_info::SpellStore>()
         .get(RSK)
         .unwrap();
-    crate::spell_cast::cooldown_query::cooldown_value(world, run.actor, spell, "remains").unwrap()
+    world
+        .get::<crate::spell_cast::SpellHistory>(run.actor)
+        .map_or(0.0, |history| {
+            history.remaining_cooldown_ms(spell, crate::spell_cast::history_now(world)) as f64
+                / 1000.0
+        })
 }
 
 #[test]
@@ -113,11 +118,11 @@ fn literal_ww_native_source_children_full_trigger_ignores_caster_aura() {
     assert!(!crate::auras::has_aura(run.app.world(), run.actor, 1291484));
     let actor = run.actor;
     let target = run.targets[0];
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, STOMP, Some(target), 1);
     assert!(
-        crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, STOMP, Some(target), 1),
-        "FULL_MASK must ignore the native caster-aura prerequisite"
+        hits(&run, STOMP) > 0,
+        "FULL_MASK must ignore the native caster-aura prerequisite and deliver its child"
     );
-    assert!(hits(&run, STOMP) > 0, "actual native child delivery");
 }
 
 #[test]
