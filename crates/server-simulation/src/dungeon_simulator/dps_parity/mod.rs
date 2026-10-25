@@ -26,6 +26,7 @@ mod enhancement_mechanics_tests;
 mod enhancement_operand_tests;
 mod enhancement_strike_tests;
 mod enhancement_tests;
+mod enhancement_unleashed_tests;
 mod equipment_input_tests;
 mod equipped_set_tests;
 mod feral_native_tests;
