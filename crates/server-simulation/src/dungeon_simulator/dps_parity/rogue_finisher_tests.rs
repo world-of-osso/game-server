@@ -17,11 +17,11 @@ fn rogue_finisher_starts_and_extends_native_slice_and_dice() {
     for _ in 0..2 {
         // This case measures paid four-point extensions, not the separate
         // maximum-effective-point Fang Strike policy.
-        crate::auras::remove_aura(
+        crate::auras::remove_auras(
             run.app.world_mut(),
             run.actor,
-            1301405,
             crate::auras::RemoveReason::Consumed,
+            |aura| aura.spell_id == 1301405 && aura.caster == run.actor,
         );
         {
             let mut powers = run

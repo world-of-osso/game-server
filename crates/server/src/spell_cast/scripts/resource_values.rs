@@ -71,6 +71,8 @@ pub(in crate::spell_cast) fn consume_sources(world: &mut World, caster: Entity, 
         .map(|rule| rule.aura)
         .collect();
     for source in sources {
-        crate::auras::remove_aura(world, caster, source, RemoveReason::Consumed);
+        crate::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+            aura.spell_id == source && aura.caster == caster
+        });
     }
 }
