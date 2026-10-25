@@ -41,6 +41,22 @@ fn learned(world: &World, caster: Entity, spell: u32) -> bool {
 pub(super) fn register(scripts: &mut AuraScripts) {
     // SimC5597–5598/5273–5275 qualifies the landed strike root, not arbitrary
     // native generic proc flags or both individual weapon children.
+    // SimC10280–10283 grants Descending Skies only on actual Ascendance;
+    // 5610/12249–12261 rolls Awakening Storms only for strike roots.
+    scripts.0.insert(
+        1264688,
+        AuraScript {
+            check_proc: Some(check_descending_skies),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        455129,
+        AuraScript {
+            check_proc: Some(check_awakening_storms),
+            ..Default::default()
+        },
+    );
     scripts.0.insert(
         CRASH_STACKS,
         AuraScript {
@@ -48,6 +64,28 @@ pub(super) fn register(scripts: &mut AuraScripts) {
             ..Default::default()
         },
     );
+}
+
+fn check_descending_skies(_world: &World, _aura: &AuraInstance, event: &AuraEvent) -> bool {
+    matches!(event.spell_id, Some(114051 | 1219480))
+}
+
+fn check_awakening_storms(_world: &World, _aura: &AuraInstance, event: &AuraEvent) -> bool {
+    matches!(event.spell_id, Some(17364 | 115356))
+}
+
+pub(super) fn grant_elemental_assault(world: &mut World, caster: Entity, _spell: &SpellInfo) {
+    // SimC76f8118 sc_shaman.cpp5225/5605–5608/12023–12039: normal roots, including misses.
+    const ELEMENTAL_ASSAULT: u32 = 210853;
+    if !enhancement(world, caster) || !learned(world, caster, ELEMENTAL_ASSAULT) {
+        return;
+    }
+    let chance = super::script_effect_value(world, caster, ELEMENTAL_ASSAULT, 2);
+    if crate::random::random::<f32>() * 100.0 >= chance {
+        return;
+    }
+    let count = super::script_effect_value(world, caster, ELEMENTAL_ASSAULT, 1) as u8;
+    super::maelstrom_weapon::generate(world, caster, count);
 }
 
 fn strike_hook_owns_payload(_world: &World, _aura: &AuraInstance, _event: &AuraEvent) -> bool {

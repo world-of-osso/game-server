@@ -23,6 +23,7 @@ mod elemental_mechanics_tests;
 mod elemental_rotation;
 mod elemental_rotation_tests;
 mod engagement_tests;
+mod enhancement_generation_tests;
 mod enhancement_mechanics_tests;
 mod enhancement_operand_tests;
 mod enhancement_rotation;
@@ -50,6 +51,8 @@ pub(crate) mod literal_rotation;
 mod marksmanship_fact_tests;
 mod marksmanship_mechanics_tests;
 mod marksmanship_rotation;
+mod outlaw_rotation;
+mod outlaw_tests;
 mod owner_cooldown_tests;
 mod pack_tactics_tests;
 mod periodic_crit_tests;
@@ -89,10 +92,12 @@ mod ret_toll_control_tests;
 mod ret_toll_tests;
 mod ret_trigger_resource_tests;
 mod ret_wake_tests;
+mod rogue_finisher_tests;
 mod shadow_mastery_tests;
 mod shadow_rotation;
 mod shadow_slam_tests;
 mod shadow_tests;
+mod shaman263_tier_tests;
 mod shared_fact_extension_tests;
 pub(crate) mod single_spell;
 mod snakeskin_tests;
@@ -132,6 +137,7 @@ struct Run {
     marksmanship_rotation: Option<marksmanship_rotation::Rotation>,
     beast_mastery_rotation: Option<beast_mastery_rotation::Rotation>,
     assassination_rotation: Option<assassination_rotation::Rotation>,
+    outlaw_rotation: Option<outlaw_rotation::Rotation>,
     enhancement_rotation: Option<enhancement_rotation::Rotation>,
     havoc_rotation: Option<havoc_rotation::Rotation>,
     arms_rotation: Option<arms_rotation::Rotation>,
@@ -341,6 +347,11 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
         preparation::prepare_marksmanship_precombat(&mut run)?;
         return Ok(run);
     }
+    if spec_id == 260 {
+        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
+        outlaw_rotation::prepare_precombat(&mut run)?;
+        return Ok(run);
+    }
     if spec_id == 259 {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
         prepare_assassination_precombat(&mut run)?;
@@ -493,6 +504,7 @@ fn spawn_reference(
         marksmanship_rotation: None,
         beast_mastery_rotation: None,
         assassination_rotation: None,
+        outlaw_rotation: None,
         enhancement_rotation: None,
         havoc_rotation: None,
         arms_rotation: None,
@@ -745,6 +757,9 @@ fn drive_player(run: &mut Run) -> Result<(), String> {
     if let Some(rotation) = &mut run.marksmanship_rotation {
         rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
     }
+    if let Some(rotation) = &mut run.outlaw_rotation {
+        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    }
     if let Some(rotation) = &mut run.assassination_rotation {
         rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
     }
@@ -787,8 +802,7 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     let started = Instant::now();
     let (seconds, buff_uptimes, engagement_samples) = advance_combat(&mut run)?;
     let combat = report::combat(run.app.world(), &run.damage_targets, seconds);
-    Ok(
-        json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
+    let mut output = json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "actor_kind": if run.app.world().get::<shared::components::Player>(run.actor).is_some() { "player" } else { "follower" },
         "enhancement_rotation": run.enhancement_rotation.as_ref().map(|rotation| rotation.report()),
         "havoc_rotation": run.havoc_rotation.as_ref().map(|rotation| rotation.report()),
@@ -811,8 +825,11 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
         "targets_before": targets, "targets_after": target_snapshot(&run),
         "target_waves": run.target_waves, "pet": report::pet(run.app.world(), run.actor, &run.damage_targets),
         "buff_uptime_pct": buff_uptimes, "engagement_samples": engagement_samples, "gaps": run.gaps,
-        "reference_race": run.profile.race, "server_build": 70448, "simc_build": 70391}),
-    )
+        "reference_race": run.profile.race, "server_build": 70448, "simc_build": 70391});
+    if run.outlaw_rotation.is_some() {
+        output["driver"] = json!("LITERAL_SIMC_OUTLAW_76f8118");
+    }
+    Ok(output)
 }
 
 #[test]
