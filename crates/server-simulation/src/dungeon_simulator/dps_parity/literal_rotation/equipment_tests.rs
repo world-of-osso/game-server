@@ -4,6 +4,9 @@ use crate::simc_apl_native::{Encounter, FightStyle};
 use shared::item_data::ItemDefinitionSource;
 use std::path::PathBuf;
 
+#[path = "ground_target_tests.rs"]
+mod ground_target_tests;
+
 pub(super) fn load_world() -> World {
     let path = PathBuf::from(std::env::var_os("DPS_PARITY_WORLD_DB").expect("private native DB"));
     let db =
@@ -77,6 +80,36 @@ fn equip_reference_profile(world: &mut World, spec: u32) -> Entity {
     let actor = world.spawn(crate::class_progression::ActiveSpec(spec)).id();
     inputs::equip(world, actor, &profile).unwrap();
     actor
+}
+
+#[test]
+#[ignore = "requires private native item catalogs; real Arcane reference trinkets"]
+fn literal_equipment_absent_named_membership_and_use_are_unavailable() {
+    let mut world = load_world();
+    let actor = equip(&mut world, 250215, 281215);
+    let membership = read_facts(
+        &world,
+        actor,
+        &[
+            "equipped.250215",
+            "equipped.freightrunners_flask",
+            "equipped.FREIGHTRUNNERS_FLASK",
+            "equipped.ever_collapsing_void_fissure",
+        ],
+    );
+    let mut bindings = Bindings::default();
+    let equipment = Equipment::load(&world, actor, &mut bindings).unwrap();
+    let absent = Action {
+        source_row: None,
+        name: "use_item".into(),
+        target: None,
+        options: [("name".into(), "ever_collapsing_void_fissure".into())].into(),
+    };
+    let named_use = equipment.slot_for_action(&absent);
+    assert_eq!(
+        (membership, named_use),
+        (vec![Ok(1.0), Ok(1.0), Ok(1.0), Ok(0.0)], Ok(None))
+    );
 }
 
 #[test]

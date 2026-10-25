@@ -179,7 +179,11 @@ impl Equipment {
             .options
             .get("name")
             .ok_or("literal item action lacks slot/name")?;
-        let ids = self.named_ids(name)?;
+        // SimC76f8118 player.cpp9873–9884: an absent named item is a
+        // background/unavailable use action, not missing native numeric metadata.
+        let Some(ids) = self.names.get(&name.to_ascii_lowercase()) else {
+            return Ok(None);
+        };
         Ok(self
             .uses()
             .find(|(_, item)| ids.contains(&item.item_id))
@@ -245,9 +249,11 @@ impl Equipment {
         let equipped = if let Ok(id) = item.parse::<u32>() {
             self.equipped.contains(&id)
         } else {
-            self.named_ids(item)?
-                .iter()
-                .any(|id| self.equipped.contains(id))
+            // SimC76f8118 player.cpp11974–11993 compares equipped names
+            // case-insensitively and returns false when none match the literal.
+            self.names
+                .get(&item.to_ascii_lowercase())
+                .is_some_and(|ids| ids.iter().any(|id| self.equipped.contains(id)))
         };
         Ok(boolean(equipped))
     }

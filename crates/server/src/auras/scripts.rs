@@ -102,6 +102,15 @@ pub(super) fn check_proc(
     aura: &AuraInstance,
     event: &super::procs::AuraEvent,
 ) -> bool {
+    // SimC76f8118 sc_warrior.cpp4452–4456: Fury's Execute-MH hit policy
+    // owns Deep Wounds; the native broad melee mask would roll every impact.
+    if aura.spell_id == 1261060
+        && world
+            .get::<shared::components::ActiveSpec>(aura.caster)
+            .is_some_and(|spec| spec.0 == 72)
+    {
+        return false;
+    }
     if crate::spell_cast::scripts::owns_policy_proc(aura.spell_id) {
         return false;
     }
@@ -400,6 +409,7 @@ fn check_inundate_proc(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    crate::spell_cast::scripts::register_feral_frenzy(&mut scripts);
     scripts.0.insert(
         1236994,
         AuraScript {
@@ -437,6 +447,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     crate::spell_cast::scripts::holy_priest::register(&mut scripts);
     crate::spell_cast::scripts::prayer_of_mending::register(&mut scripts);
     super::earthen_rage::register(&mut scripts);
+    super::rogue::register(&mut scripts);
     crate::spell_cast::scripts::register_enhancement(&mut scripts);
     super::spirit_wolf::register(&mut scripts);
     super::natures_guardian::register(&mut scripts);
@@ -714,6 +725,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     // Extend existing parent lifecycle entries rather than replacing their hooks.
     crate::spell_cast::scripts::register_xuens_battlegear(&mut scripts);
     crate::spell_cast::scripts::register_channel_policies(&mut scripts);
+    crate::spell_cast::scripts::register_elemental_policies(&mut scripts);
 }
 
 /// TC spell_rogue.cpp spell_rog_stealth: 1784's own rows carry no MOD_STEALTH;

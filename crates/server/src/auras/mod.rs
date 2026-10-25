@@ -63,9 +63,12 @@ pub(crate) mod power_amount_trigger;
 mod proc_mask_tests;
 pub mod procs;
 mod refresh;
+mod ret_crusade;
+pub(crate) use ret_crusade::after_spender as add_ret_crusade_spender_stacks;
 mod ret_sentence;
 pub(crate) use ret_sentence::track_cast as track_ret_sentence_cast;
 pub(crate) mod reward_mods;
+mod rogue;
 #[cfg(test)]
 mod rolling_periodic_tests;
 pub mod scripts;
@@ -324,7 +327,11 @@ impl AuraInstance {
     }
 
     pub(crate) fn stack_multiplier(&self) -> f32 {
-        f32::from(self.stacks.max(1))
+        if ret_crusade::ignores_effect_stacks(self.spell_id) {
+            1.0
+        } else {
+            f32::from(self.stacks.max(1))
+        }
     }
 
     fn view(&self, now: f64) -> AuraView {
@@ -653,7 +660,8 @@ fn duration_ms(world: &World, application: &AuraApplication, spell: &SpellInfo) 
     );
     let extension = scripts::self_regrowth_duration_bonus(world, application);
     let duration = (duration + extension).max(0.0) as u32;
-    mechanic_duration::modify_duration(world, application, spell, duration)
+    let duration = mechanic_duration::modify_duration(world, application, spell, duration);
+    crate::spell_cast::haste_channel_duration_ms(world, application.caster, spell, duration)
 }
 
 /// Fresh resolved-spell duration through the ordinary caster/target modifier path.
@@ -744,6 +752,12 @@ fn build_effect(
     } else {
         crate::spell_cast::effects::modded_base_points(world, caster, spell, effect)
     };
+    // A cast's scripted damage multiplier persists in its actual periodic payload.
+    let amount = if effect.aura == PERIODIC_DAMAGE_AURA {
+        amount * spell.cast_damage_multiplier.unwrap_or(1.0)
+    } else {
+        amount
+    };
     let amount = scripts::snapshot_periodic_amount(world, caster, spell, effect, amount);
     let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
     let base_period_ms = periodic_base_interval_ms(spell, effect);
@@ -770,6 +784,9 @@ fn build_effect(
 
 /// Fresh native stack limit, including the caster's MaxAuraStacks modifiers.
 pub(crate) fn fresh_max_stacks(world: &World, caster: Entity, spell: &SpellInfo) -> u8 {
+    if let Some(maximum) = ret_crusade::maximum_stacks(world, caster, spell) {
+        return maximum;
+    }
     let maximum = spell
         .aura_options
         .as_deref()
@@ -1589,6 +1606,31 @@ pub(crate) fn refresh_duration(world: &mut World, target: Entity, spell_id: u32)
         aura.expires_at = Some(now + f64::from(aura.duration_ms) / 1_000.0);
         auras.dirty = true;
     }
+}
+
+/// Set the lifetime of an existing owned aura without replacing its native effects.
+pub(crate) fn set_owned_duration(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+    milliseconds: u32,
+) -> bool {
+    let now = aura_now(world);
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(target) else {
+        return false;
+    };
+    let Some(aura) = auras
+        .auras
+        .iter_mut()
+        .find(|aura| aura.spell_id == spell && aura.caster == caster)
+    else {
+        return false;
+    };
+    aura.duration_ms = milliseconds;
+    aura.expires_at = Some(now + f64::from(milliseconds) / 1000.0);
+    auras.dirty = true;
+    true
 }
 
 /// Extend existing finite auras owned by this caster without restarting ticks.

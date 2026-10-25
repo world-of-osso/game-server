@@ -1,3 +1,11 @@
+## 2026-10-25 — Havoc literal fixture and Demonic
+
+[Havoc577](systems/simc-apl.md#havoc-fixture-577): shared literal decisions, native cursor context, and talent-sourced Meta before Eye Beam/Gaze with owned-duration extension. Native regressions pass; numerical parity remains open.
+
+## 2026-10-25 — Shared literal channel execution
+
+[Shared APL machinery](systems/simc-apl.md#source-row-clocks-and-channel-control): source-row deadlines, channel query/execution API, readiness-before-condition and off-GCD call traversal. Native child admission remains unchanged.
+
 ## 2026-10-25 — Spell data crate foundation
 
 [Server boundaries](systems/server-crates.md#spell-data-foundation-2026-10-25): move canonical spell data, loaders and immutable fixture cache into `server-core`; keep native gameplay integration tests in `server`. Algorithms and numeric data are unchanged. Hot-gameplay ownership and paired edit timings remain separate work.

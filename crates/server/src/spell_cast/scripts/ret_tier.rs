@@ -9,7 +9,7 @@ use crate::spell_info::SpellInfo;
 
 const TWO_PIECE: u32 = 1296660;
 const FOUR_PIECE: u32 = 1296661;
-const DIVINE_PURPOSE: u32 = 223819;
+const DIVINE_PURPOSE: u32 = 408458;
 const DIVINE_POWER: u32 = 1305230;
 const VERDICT_ARBITER: u32 = 1306161;
 const STORM_ARBITER: u32 = 1306162;
