@@ -74,6 +74,66 @@ fn devastation_literal_empower_rows_preserve_rank_and_primary() {
 
 #[test]
 #[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_empower_release_grants_selected_mass_disintegrate() {
+    let mut run = prepare_literal(1467, 1).unwrap();
+    engage(&mut run);
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(run.actor)
+            .unwrap()
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == 436335),
+        "the exact profile must select native Mass Disintegrate"
+    );
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 436336));
+    crate::spell_cast::creature_cast_empowered_with_targets(
+        run.app.world_mut(),
+        run.actor,
+        357208,
+        crate::spell_cast::CastTargets {
+            unit: run.actor,
+            primary: Some(run.targets[0]),
+            destination: None,
+        },
+        1,
+    )
+    .unwrap();
+    for _ in 0..200 {
+        run.app.update();
+        let released = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.targets[0])
+            .is_some_and(|auras| {
+                auras
+                    .iter()
+                    .any(|aura| aura.spell_id == 357209 && aura.caster == run.actor)
+            });
+        if released {
+            // SimC76f8118 sc_evoker.cpp4703–4704: empower release grants one stack.
+            let stacks = run
+                .app
+                .world()
+                .get::<crate::auras::ActiveAuras>(run.actor)
+                .and_then(|auras| {
+                    auras
+                        .iter()
+                        .find(|aura| aura.spell_id == 436336 && aura.caster == run.actor)
+                })
+                .map_or(0, |aura| aura.stacks);
+            assert_eq!(
+                stacks, 1,
+                "successful Fire Breath release must earn Mass Disintegrate"
+            );
+            return;
+        }
+    }
+    panic!("native Fire Breath release never reached its selected target");
+}
+
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
 fn devastation_literal_measurement_executes_reference_deep_breath() {
     let mut run = prepare_measurement(1467, 1).unwrap();
     let deep_breath =
