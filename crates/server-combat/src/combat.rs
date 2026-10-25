@@ -1393,12 +1393,20 @@ fn read_outcome_chances(
             })
     });
     let generic_creature = attacker.creature && attacker.stats.is_none();
-    // CharacterStats already includes generic crit auras; stat-less pets keep their own bonuses.
-    let npc_crit_modifier = if generic_creature {
-        attacker.mods.map_or(0.0, |mods| mods.npc_crit_pct)
-    } else {
-        0.0
-    };
+    // CharacterStats includes290, not weapon-only52. Preserve each once.
+    let npc_crit_modifier = attacker.mods.map_or(0.0, |mods| {
+        let generic = if generic_creature {
+            mods.npc_crit_pct
+        } else {
+            0.0
+        };
+        let weapon = if attacker.creature {
+            mods.npc_weapon_crit_pct
+        } else {
+            0.0
+        };
+        generic + weapon
+    });
     // Unit.cpp2885–2893: NO_CRIT excludes NPC base5 + source52/290, not class/owner crit.
     const NO_CRIT: u32 = 0x20000;
     let no_crit_flag = attacker

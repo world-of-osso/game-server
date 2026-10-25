@@ -61,10 +61,8 @@ fn literal_native_melee_crit_class_npc_uses_character_stats() {
     let world = run.app.world();
     assert!(world.get::<shared::components::Npc>(actor).is_some());
     let base = world.get::<CharacterStats>(actor).unwrap().crit_pct;
-    let white_bonus = world
-        .get::<AuraStatMods>(actor)
-        .unwrap()
-        .autoattack_crit_pct;
+    let modifiers = world.get::<AuraStatMods>(actor).unwrap();
+    let white_bonus = modifiers.autoattack_crit_pct + modifiers.npc_weapon_crit_pct;
     assert!(
         base > SAMPLING_TOLERANCE_PCT,
         "actual profile distinguishes class crit from NPC base"
