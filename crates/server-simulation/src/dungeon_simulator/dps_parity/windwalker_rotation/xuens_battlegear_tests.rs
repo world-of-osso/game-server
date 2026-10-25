@@ -1,6 +1,7 @@
 //! SIMC_WW_XUENS_BATTLEGEAR_FOF_RECOVERY: actual casts, impacts and running timers.
 //! No aura/stack/power/stat/crit grants, clock rewinds or coefficient changes.
 use super::*;
+use crate::spell_cast::effects::factor_capture::FactorCapture;
 use crate::spell_cast::powers::power_value;
 use crate::spell_cast::test_harness::{ObservedCombatEvents, ObservedSelectedTargets};
 use shared::components::{Position, PowerType};
@@ -270,7 +271,14 @@ fn earn_rwk(run: &mut Run) {
 
 fn observe_rwk(primary_critical: bool) {
     let mut run = prepare(3, true);
-    for _ in 0..8 {
+    run.app.insert_resource(FactorCapture::new(
+        run.actor,
+        run.targets[0],
+        RWK_DAMAGE,
+        "xuen_rwk",
+        64,
+    ));
+    for attempt in 0..8 {
         wait_fof_ready(&mut run);
         earn_rwk(&mut run);
         prime_fof(&mut run);
@@ -293,6 +301,15 @@ fn observe_rwk(primary_critical: bool) {
             .damage
             .iter()
             .any(|event| event.target != Some(primary) && event.crit);
+        receipt(
+            &format!("xuen-rwk-{primary_critical}-{attempt}"),
+            json!({
+                "primary_crit":primary_crit,"secondary_crit":secondary_crit,
+                "selected":sample.selected.iter().map(|unit|unit.to_bits()).collect::<Vec<_>>(),
+                "damage":sample.damage.iter().map(|event|json!({"target":event.target,"crit":event.crit,"amount":event.amount})).collect::<Vec<_>>(),
+                "factors":run.app.world().resource::<FactorCapture>().export(),
+            }),
+        );
         if primary_critical && primary_crit {
             assert_sample("xuen-rwk-primary-crit", &sample, budget(&run, 1));
             return;
