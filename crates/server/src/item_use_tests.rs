@@ -669,7 +669,7 @@ fn native_proc_capture_item_use_is_not_an_ordinary_spell_origin() {
         }
     }
 
-    // The item invocation must not write its origin into the shared spell store.
+    // Item origin must not leak into a following ordinary spell invocation.
     crate::spell_cast::creature_cast(eater.h.app.world_mut(), caster, 17, Some(caster), false)
         .expect("ordinary native Shield after the item");
     let ordinary_events: Vec<_> = eater
