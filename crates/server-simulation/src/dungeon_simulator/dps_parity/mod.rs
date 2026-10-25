@@ -25,13 +25,18 @@ mod power_tests;
 mod precombat_tests;
 mod preparation;
 mod profile_initialization;
+mod rake_stealth_tests;
 mod report;
 mod ret_empyrean_tests;
 mod ret_purpose_tests;
 #[cfg(test)]
 mod ret_rotation;
+mod ret_sentence_tests;
 mod ret_tier_tests;
 mod shared_fact_extension_tests;
+mod ret_toll_control_tests;
+mod ret_toll_tests;
+mod ret_wake_tests;
 pub(crate) mod single_spell;
 mod snakeskin_tests;
 mod windwalker_rotation;
@@ -264,6 +269,12 @@ fn spawn_reference(
         copy,
         identity,
     )?;
+    // Pinned player.cpp1288: this Patchwerk fixture configures no movement event.
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(crate::simc_apl_native::FixtureMovement {
+            distance_to_move: 0.0,
+        });
     inputs::equip(app.world_mut(), actor, &profile)?;
     inputs::install_traits(app.world_mut(), actor, traits)?;
     profile_initialization::initialize_declared_powers(app.world_mut(), actor, &profile)?;

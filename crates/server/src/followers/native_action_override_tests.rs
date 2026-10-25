@@ -86,7 +86,7 @@ fn finisher_power_cost(world: &World, actor: Entity, finisher: u32) -> f32 {
 }
 
 fn earn_finisher_power(h: &mut Harness, actor: Entity, finisher: u32) {
-    use crate::spell_cast::{CastFailure, native_apl};
+    use crate::spell_cast::{CastFailure, cooldown_query};
     let required = finisher_power_cost(h.app.world(), actor, finisher);
     let judgment = h
         .app
@@ -104,7 +104,7 @@ fn earn_finisher_power(h: &mut Harness, actor: Entity, finisher: u32) {
                 .unwrap()
                 .0;
         let charges =
-            native_apl::cooldown_value(h.app.world(), actor, &judgment, "charges").unwrap();
+            cooldown_query::cooldown_value(h.app.world(), actor, &judgment, "charges").unwrap();
         let world = h.app.world();
         let in_combat = world
             .get::<shared::components::CombatStatus>(actor)
