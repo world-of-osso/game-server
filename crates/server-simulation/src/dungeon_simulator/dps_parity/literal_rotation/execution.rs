@@ -2,12 +2,14 @@
 use super::equipment::{Equipment, ItemUse};
 use bevy::prelude::*;
 use server::simc_apl::Action;
+pub(crate) use server::spell_cast::knowledge::resolve_action;
 use shared::components::PowerType;
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone)]
 pub(crate) enum Execution {
     Snapshot,
+    CancelCast,
     AutoAttack(Entity),
     RetargetAutoAttack(Entity),
     // Spell, native cast unit, and selected action primary (not inferred from that unit).
@@ -47,6 +49,7 @@ pub(crate) struct Prepared {
     moving: bool,
     cast_active: bool,
     gcd_active: bool,
+    after_channel: bool,
 }
 
 impl Prepared {
@@ -58,6 +61,36 @@ impl Prepared {
         actions: impl IntoIterator<Item = NativeAction<'a>>,
         needs_snapshot: bool,
     ) -> Result<Self, String> {
+        Self::read_with_policy(
+            world,
+            actor,
+            targets,
+            equipment,
+            actions,
+            needs_snapshot,
+            false,
+        )
+    }
+
+    pub fn read_after_channel<'a>(
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+        equipment: &Equipment,
+        actions: impl IntoIterator<Item = NativeAction<'a>>,
+    ) -> Result<Self, String> {
+        Self::read_with_policy(world, actor, targets, equipment, actions, false, true)
+    }
+
+    fn read_with_policy<'a>(
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+        equipment: &Equipment,
+        actions: impl IntoIterator<Item = NativeAction<'a>>,
+        needs_snapshot: bool,
+        after_channel: bool,
+    ) -> Result<Self, String> {
         let moving = world
             .get::<crate::networking::Moving>(actor)
             .is_some_and(|moving| moving.0);
@@ -68,8 +101,9 @@ impl Prepared {
         let targets = native_targets(world, actor, targets);
         let mut prepared = Self {
             moving,
-            cast_active,
-            gcd_active,
+            cast_active: cast_active && !after_channel,
+            gcd_active: gcd_active && !after_channel,
+            after_channel,
             ready: BTreeMap::new(),
             limits: BTreeMap::new(),
             declared: ["snapshot_stats", "auto_attack", "retarget_auto_attack"]
@@ -77,13 +111,32 @@ impl Prepared {
                 .map(str::to_owned)
                 .collect(),
         };
+        if cast_active {
+            prepared
+                .ready
+                .insert(("cancel_action".into(), None), Execution::CancelCast);
+        }
         if needs_snapshot {
             prepared
                 .ready
                 .insert(("snapshot_stats".into(), None), Execution::Snapshot);
         }
         read_attacks(world, actor, &targets, &mut prepared.ready);
-        read_spells(world, actor, &targets, actions, &mut prepared)?;
+        // SimC76f8118 sc_hunter.cpp7909 binds native Auto Shot75.
+        // Knowledge/native admission still decide whether the actor can start it.
+        let repeated = NativeAction {
+            name: "auto_shot",
+            spell: 75,
+            talent: None,
+            self_target: false,
+        };
+        read_spells(
+            world,
+            actor,
+            &targets,
+            actions.into_iter().chain([repeated]),
+            &mut prepared,
+        )?;
         if let Some(potion) = world
             .get::<super::super::profile_effects::Potion>(actor)
             .copied()
@@ -116,6 +169,9 @@ impl Prepared {
     }
 
     pub fn permits_row(&self, action: &Action) -> Result<bool, String> {
+        if action.name == "cancel_action" {
+            return Ok(true);
+        }
         if read_boolean_option(action, "moving")?.is_some_and(|moving| moving != self.moving) {
             return Ok(false);
         }
@@ -187,6 +243,7 @@ impl Prepared {
         }
         for slot in equipment.use_items_slots(action, program)? {
             let singular = Action {
+                source_row: None,
                 name: "use_item".into(),
                 target: action.target,
                 options: [("slot".into(), slot.into())].into(),
@@ -228,7 +285,7 @@ fn read_composite_plan(
         let Some(spell) = resolve_action(world, actor, step.spell)? else {
             return Ok(None);
         };
-        if !native_readiness(world, actor, spell, target, None)?.ready {
+        if !native_readiness(world, actor, spell, target, None, false)?.ready {
             return Ok(None);
         }
         pending.push(Execution::Spell(
@@ -409,13 +466,18 @@ fn read_spell(
     let Some(id) = resolve_action(world, actor, id)? else {
         return Ok(());
     };
+    // SimC76f8118 sc_hunter.cpp7269–7274: start once; native repeats
+    // own later shots. This applies to any native autorepeat, not a spell-ID branch.
+    if crate::spell_cast::test_harness::read_native_auto_repeat(world, actor, id) {
+        return Ok(());
+    }
     let targets = if self_target {
         std::slice::from_ref(&actor)
     } else {
         enemies
     };
     for (index, &target) in targets.iter().enumerate() {
-        let state = native_readiness(world, actor, id, target, None)?;
+        let state = native_readiness(world, actor, id, target, None, prepared.after_channel)?;
         record_probe(
             prepared,
             (name.into(), Some(target)),
@@ -450,7 +512,14 @@ fn read_item(
     let name = format!("item:{slot}");
     prepared.declared.insert(name.clone());
     for target in std::iter::once(actor).chain(targets.iter().copied()) {
-        let state = native_readiness(world, actor, item.on_use.spell_id, target, Some(item))?;
+        let state = native_readiness(
+            world,
+            actor,
+            item.on_use.spell_id,
+            target,
+            Some(item),
+            prepared.after_channel,
+        )?;
         record_probe(
             prepared,
             (name.clone(), Some(target)),
@@ -474,17 +543,13 @@ fn talent_permits(world: &World, actor: Entity, talent: Option<u32>) -> Result<b
         .any(|spell| spell.spell_id == talent))
 }
 
-pub(crate) fn resolve_action(world: &World, actor: Entity, id: u32) -> Result<Option<u32>, String> {
-    crate::spell_cast::knowledge::resolve_optional_actor_action(world, actor, id)
-        .map_err(|reason| format!("native literal action knowledge: {reason:?}"))
-}
-
 fn native_readiness(
     world: &mut World,
     actor: Entity,
     id: u32,
     target: Entity,
     item: Option<ItemUse>,
+    after_channel: bool,
 ) -> Result<NativeReadiness, String> {
     let mut spell = world
         .resource::<crate::spell_info::SpellStore>()
@@ -495,11 +560,22 @@ fn native_readiness(
         spell.cast_item_level = Some(item.item_level);
         spell.cast_retail_item_id = Some(item.item_id);
     }
-    match crate::spell_cast::read_native_cast_start(world, actor, &spell, target) {
+    let admission = if after_channel {
+        crate::spell_cast::read_native_cast_after_channel(world, actor, &spell, target)
+    } else {
+        crate::spell_cast::read_native_cast_start(world, actor, &spell, target)
+    };
+    match admission {
         Ok(_) => Ok(NativeReadiness {
             ready: true,
             limited: None,
         }),
+        Err(crate::spell_cast::CastFailure::NotEnoughPower(_)) if after_channel => {
+            Ok(NativeReadiness {
+                ready: false,
+                limited: None,
+            })
+        }
         Err(crate::spell_cast::CastFailure::NotEnoughPower(power)) => {
             match crate::spell_cast::read_native_cast_at_resource_max(
                 world, actor, &spell, target, power,
@@ -534,6 +610,10 @@ fn refused_admission(
 pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<(), String> {
     match action {
         Execution::Snapshot => Err("snapshot execution belongs to the native stat recorder".into()),
+        Execution::CancelCast => {
+            crate::spell_cast::cancel_cast(world, actor);
+            Ok(())
+        }
         Execution::Composite(_) => {
             Err("composite execution requires an ordered precombat executor".into())
         }

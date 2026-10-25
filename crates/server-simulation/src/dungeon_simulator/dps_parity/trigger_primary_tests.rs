@@ -10,6 +10,11 @@ fn trigger_primary_native_annihilation_children_hit_selected_enemy() {
     let target = h.npc;
     h.set_power(PowerType::Fury, 100.0);
     h.cast_and_deliver(201427, Some(target));
+    // The delayed off-hand child must keep the cast selection, not a live target.
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(crate::networking::CombatTarget(None));
     h.advance(20);
     for child in [227518, 201428] {
         assert!(

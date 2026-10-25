@@ -43,6 +43,7 @@ fn literal_ww_native_wdp_duration_matches_overlap_plus_hasted_grace() {
 
 fn read_fact(run: &mut super::super::Run, rotation: &Rotation, name: &str) -> f64 {
     let action = Action {
+        source_row: None,
         name: "whirling_dragon_punch".into(),
         target: None,
         options: Default::default(),

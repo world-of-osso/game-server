@@ -102,6 +102,9 @@ pub(super) fn check_proc(
     aura: &AuraInstance,
     event: &super::procs::AuraEvent,
 ) -> bool {
+    if crate::spell_cast::scripts::owns_policy_proc(aura.spell_id) {
+        return false;
+    }
     // SIMC_RET_TIER_MID2_DIVINE_PURPOSE_RELATIONSHIP owns these charges;
     // only a different-kind actual spender consumes them, not arbitrary casts.
     if crate::spell_cast::scripts::owns_arbiter_charge(aura.spell_id) {
@@ -405,6 +408,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     crate::spell_cast::scripts::register_midnight_items(&mut scripts);
+    crate::spell_cast::scripts::register_lifecycle_policies(&mut scripts);
     crate::spell_cast::scripts::register_wdp_relationship(&mut scripts);
     crate::spell_cast::scripts::register_unbroken_rhythm(&mut scripts);
     scripts.0.insert(

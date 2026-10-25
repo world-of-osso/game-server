@@ -126,6 +126,13 @@ impl Equipment {
     }
 
     fn requested_use_items_slots(&self, action: &Action) -> Result<Vec<&str>, String> {
+        if let Some(slot) = action.options.get("slot") {
+            return self
+                .slots
+                .get_key_value(slot)
+                .map(|(slot, _)| vec![slot.as_str()])
+                .ok_or_else(|| format!("unknown native item proxy slot {slot}"));
+        }
         let Some(slots) = action.options.get("slots") else {
             return Ok(self.uses().map(|(slot, _)| slot).collect());
         };

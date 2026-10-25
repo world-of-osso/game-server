@@ -15,6 +15,17 @@ pub(crate) fn expertise_reduction(auras: Option<&ActiveAuras>, player: bool) -> 
     expertise / 4.0
 }
 
+/// SimC76f8118 player.cpp1622 supplies7.5% baseline expertise. Class parity
+/// followers share this player behavior; ordinary NPC aura240 remains unchanged.
+pub(crate) fn class_actor_expertise_reduction(
+    auras: Option<&ActiveAuras>,
+    player: bool,
+    parity_actor: bool,
+) -> f32 {
+    let baseline = if player || parity_actor { 7.5 } else { 0.0 };
+    expertise_reduction(auras, player) + baseline
+}
+
 /// TC a352b1fa SpellInfo.cpp1974-1985: family0 and an empty mask are wildcards.
 fn affects_spell(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> bool {
     if aura.class_set == 0 {

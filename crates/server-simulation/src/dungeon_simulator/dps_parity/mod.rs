@@ -6,6 +6,7 @@ mod composite_precombat_tests;
 mod dummy_reference_tests;
 mod elemental_ascendance_tests;
 mod engagement_tests;
+mod enhancement_operand_tests;
 mod equipment_input_tests;
 mod equipped_set_tests;
 mod feral_tests;
@@ -16,6 +17,7 @@ mod health_aura_state_tests;
 mod howl_tests;
 mod inputs;
 pub(crate) mod literal_rotation;
+mod marksmanship_fact_tests;
 mod owner_cooldown_tests;
 mod pack_tactics_tests;
 mod periodic_crit_tests;
@@ -32,6 +34,8 @@ mod profile_effects;
 mod profile_initialization;
 mod rake_stealth_tests;
 mod report;
+mod ret_batch_tests;
+mod ret_damage_tests;
 mod ret_dawnlight_consumer_tests;
 mod ret_dawnlight_target_tests;
 mod ret_dawnlight_tests;
@@ -93,7 +97,7 @@ fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, Str
         app.world_mut(),
         actor,
         DUMMY_ENTRY,
-        [1.5, lateral, 0.0, std::f32::consts::PI],
+        [1.5, lateral, 0.0, 0.0],
     )
     .ok_or("native training dummy31146 could not spawn")?;
     if app
@@ -103,6 +107,7 @@ fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, Str
     {
         return Err("native31146 lacks its actual training-dummy script".into());
     }
+    face_dummy_away_from_actor(app.world_mut(), actor, target);
     // SIMC_FIXED_TIME_TARGET_HEALTH owns this fixture's current health. Source31146
     // has RegenHealth=1; its ordinary two-second heal must not alter phase gates.
     // Keep the template, script, flags and damage handling unchanged.
@@ -110,6 +115,21 @@ fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, Str
         .entity_mut(target)
         .remove::<crate::spell_cast::powers::CreatureHealthRegenTimer>();
     Ok(target)
+}
+
+// SimC76f8118 attack.cpp277–279: position=back excludes frontal parries.
+// Keep the native pack positions/cones; change only the opponent's facing.
+fn face_dummy_away_from_actor(world: &mut World, actor: Entity, target: Entity) {
+    use shared::components::{Position, Rotation};
+    let actor = *world.get::<Position>(actor).expect("parity actor position");
+    let target_position = *world
+        .get::<Position>(target)
+        .expect("parity dummy position");
+    let orientation = (actor.z - target_position.z).atan2(target_position.x - actor.x);
+    world
+        .get_mut::<Rotation>(target)
+        .expect("parity dummy rotation")
+        .y = orientation + std::f32::consts::FRAC_PI_2;
 }
 
 fn spawn_targets(app: &mut App, actor: Entity, count: usize) -> Result<Vec<Entity>, String> {
@@ -351,13 +371,26 @@ fn engage_fixture_opponents(run: &mut Run) {
 }
 
 fn engage(run: &mut Run) {
+    for &target in &run.targets {
+        face_dummy_away_from_actor(run.app.world_mut(), run.actor, target);
+    }
     let owner = fixture_player(run);
     let world = run.app.world_mut();
     // A player selects its target directly; a follower retains its quiet controller.
-    world.entity_mut(owner).insert((
-        crate::networking::CombatTarget(Some(run.targets[0])),
-        crate::combat::AutoAttack::new(run.targets[0]),
-    ));
+    let literal_player = owner == run.actor
+        && world
+            .get::<literal_rotation::LiteralParityFixture>(run.actor)
+            .is_some();
+    world
+        .entity_mut(owner)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    // SimC76f8118 sc_hunter.cpp7269–7274: the literal source starts its
+    // weapon action. Engagement must not inject an extra melee attack first.
+    if !literal_player {
+        world
+            .entity_mut(owner)
+            .insert(crate::combat::AutoAttack::new(run.targets[0]));
+    }
     if world
         .get::<literal_rotation::LiteralParityFixture>(run.actor)
         .is_none()
@@ -800,6 +833,7 @@ fn dps_parity_fixture_add_health_and_ttd_follow_each_summon_lifetime() {
                 .unwrap();
             let native_pct = f64::from(health.current) * 100.0 / f64::from(health.max);
             let action = Action {
+                source_row: None,
                 name: "auto_attack".into(),
                 target: Some(target.to_bits()),
                 options: Default::default(),

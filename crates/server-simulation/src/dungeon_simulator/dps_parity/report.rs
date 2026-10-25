@@ -123,6 +123,9 @@ struct ActionTotals {
     casts: u32,
     crits: u32,
     crit_damage: u64,
+    misses: u32,
+    dodges: u32,
+    parries: u32,
 }
 
 fn action_report(
@@ -140,6 +143,7 @@ fn action_report(
     };
     json!({"actor": actor, "spell_id": spell, "damage": totals.damage, "hits": totals.hits,
         "count": totals.casts, "crit_hits": totals.crits, "crit_damage": totals.crit_damage,
+        "misses": totals.misses, "dodges": totals.dodges, "parries": totals.parries,
         "noncrit_hits": totals.hits - totals.crits, "noncrit_damage": totals.damage - totals.crit_damage,
         "crit_rate": average(u64::from(totals.crits), totals.hits),
         "average_crit": average(totals.crit_damage, totals.crits),
@@ -161,6 +165,16 @@ pub(super) fn combat(world: &World, targets: &[Entity], seconds: f64) -> Value {
         let dummy = event
             .target
             .is_some_and(|target| targets.iter().any(|unit| unit.to_bits() == target));
+        if dummy && let CombatLogKind::Miss(kind) = event.kind {
+            use shared::protocol::MissKind;
+            let entry = actions.entry(key).or_default();
+            match kind {
+                MissKind::Miss => entry.misses += 1,
+                MissKind::Dodge => entry.dodges += 1,
+                MissKind::Parry => entry.parries += 1,
+                _ => {}
+            }
+        }
         if dummy && event.kind == CombatLogKind::Damage {
             let entry = actions.entry(key).or_default();
             let amount = u64::try_from(event.amount).expect("nonnegative damage log");
@@ -359,4 +373,66 @@ fn native_damage_recipient_accounting_preserves_retired_and_zero_output_targets(
     assert_eq!(pet_action["damage"], 200);
     assert_eq!(pet_action["hits"], 1);
     assert_eq!(pet_action["count"], 0);
+}
+
+#[test]
+fn native_action_report_counts_miss_dodge_parry_and_keeps_miss_only_abilities() {
+    use shared::protocol::MissKind;
+    let mut world = World::new();
+    let actor = world.spawn_empty().id();
+    let target = world.spawn_empty().id();
+    let foreign = world.spawn_empty().id();
+    let event = |spell, kind, recipient| CombatLogEvent {
+        source: Some(actor.to_bits()),
+        target: Some(recipient),
+        spell_id: Some(spell),
+        school_mask: 2,
+        amount: 0,
+        overflow: 0,
+        absorbed: 0,
+        resisted: 0,
+        blocked: 0,
+        crit: false,
+        glancing: false,
+        periodic: false,
+        extra_spell_id: None,
+        timestamp_unix_ms: 0,
+        kind,
+    };
+    let at = target.to_bits();
+    world.insert_resource(crate::spell_cast::test_harness::ObservedCombatEvents(vec![
+        CombatLogEvent {
+            amount: 120,
+            ..event(383328, CombatLogKind::Damage, at)
+        },
+        event(383328, CombatLogKind::CastSuccess, at),
+        event(383328, CombatLogKind::Miss(MissKind::Miss), at),
+        event(383328, CombatLogKind::Miss(MissKind::Miss), at),
+        event(383328, CombatLogKind::Miss(MissKind::Dodge), at),
+        event(383328, CombatLogKind::Miss(MissKind::Parry), at),
+        event(
+            383328,
+            CombatLogKind::Miss(MissKind::Dodge),
+            foreign.to_bits(),
+        ),
+        event(408385, CombatLogKind::Miss(MissKind::Dodge), at),
+    ]));
+    let report = combat(&world, &[target], 10.0);
+    assert_eq!(report["total_damage"], 120);
+    let actions = report["actions"].as_array().unwrap();
+    let verdict = actions.iter().find(|a| a["spell_id"] == 383328).unwrap();
+    assert_eq!(verdict["hits"], 1);
+    assert_eq!(verdict["count"], 1);
+    assert_eq!(verdict["misses"], 2);
+    assert_eq!(verdict["dodges"], 1);
+    assert_eq!(verdict["parries"], 1);
+    let strike = actions
+        .iter()
+        .find(|a| a["spell_id"] == 408385)
+        .expect("a miss-only background ability must not disappear");
+    assert_eq!(strike["hits"], 0);
+    assert_eq!(strike["damage"], 0);
+    assert_eq!(strike["misses"], 0);
+    assert_eq!(strike["dodges"], 1);
+    assert_eq!(strike["parries"], 0);
 }

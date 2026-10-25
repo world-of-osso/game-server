@@ -243,6 +243,13 @@ impl<'a> NativeFacts<'a> {
         }
         let target = self.selected_target(action)?;
         match property {
+            // SimC76f8118 hunter_marksmanship.simc18 scores target.health;
+            // the native candidate supplies its actual current pool.
+            "health" => self
+                .world
+                .get::<shared::components::Health>(target)
+                .map(|health| f64::from(health.current))
+                .ok_or("native target lacks Health".into()),
             "health.pct" => self.target_health_pct(target),
             "debuff.casting.up" => Ok(bool_value(
                 self.world
@@ -385,6 +392,9 @@ impl<'a> NativeFacts<'a> {
                 .iter()
                 .map(|aura| f64::from(aura.stacks))
                 .fold(0.0, f64::max)),
+            // SimC76f8118 buff.cpp485–508/2004–2015: target procs use the
+            // same observed stack deadlines as self buffs, on their actual recipient.
+            "react" => reaction::reacted_stacks(self.world, target, id, &active),
             _ => Err(format!("unknown native target-aura property {property}")),
         }
     }
@@ -505,6 +515,10 @@ impl<'a> NativeFacts<'a> {
                 self.actor,
                 self.spell(id)?,
             )) / 1000.0),
+            // SimC76f8118 buff.cpp450–455: limit exists before the first proc.
+            "max_stack" => Ok(f64::from(
+                crate::auras::fresh_max_stacks(self.world, self.actor, self.spell(id)?).max(1),
+            )),
             "at_max_stacks" => Ok(bool_value(
                 active
                     .iter()
@@ -512,6 +526,24 @@ impl<'a> NativeFacts<'a> {
             )),
             _ => Err(format!("unknown native APL buff property {property}")),
         }
+    }
+
+    fn hero_tree(&self, alias: &str) -> Result<f64, String> {
+        // SimC76f8118 player.cpp12209–12224: selected hero tree, not learned spells.
+        let classes = self.world.resource::<crate::spell_info::ClassSpells>();
+        let tree = classes
+            .classes
+            .iter()
+            .flat_map(|class| &class.traits.sub_trees)
+            .find(|tree| tree.name.to_ascii_lowercase().replace(' ', "_") == alias)
+            .ok_or_else(|| format!("unknown native APL hero tree {alias}"))?;
+        let traits = self
+            .world
+            .get::<crate::class_progression::TraitLoadout>(self.actor)
+            .ok_or("native APL selected TraitLoadout unavailable")?;
+        Ok(bool_value(
+            traits.selected_sub_tree(classes) == Some(tree.id),
+        ))
     }
 
     fn talent(&self, operand: &str) -> Result<f64, String> {
@@ -568,9 +600,37 @@ impl<'a> NativeFacts<'a> {
         self.spell(id)
     }
 
-    fn action_property(&self, alias: &str, property: &str) -> Result<f64, String> {
+    fn action_property(
+        &self,
+        alias: &str,
+        property: &str,
+        action: Option<&Action>,
+    ) -> Result<f64, String> {
         let spell = self.action_spell(alias)?;
         match property {
+            // SimC76f8118 action.cpp3502-3503: snapshot one target and average crit.
+            "damage" => crate::spell_cast::effects::expected_direct_damage(
+                self.world,
+                self.actor,
+                self.selected_target(action)?,
+                spell,
+            )
+            .map(f64::from),
+            // SimC76f8118 action.cpp3287-3288 and dot.cpp448 expose metadata, not remains.
+            "cooldown" => self.cooldown_for_spell(spell, "duration"),
+            "duration" => Ok(f64::from(crate::auras::fresh_duration_ms(
+                self.world, self.actor, self.actor, spell,
+            )) / 1000.0),
+            // SimC76f8118 action.cpp3590: action.<name>.channeling reflects the
+            // actor's actual active channel, never an aura or a normal cast.
+            "channeling" => Ok(bool_value(
+                self.world
+                    .get::<shared::casting::CastState>(self.actor)
+                    .is_some_and(|cast| {
+                        cast.spell_id == spell.id
+                            && cast.cast_type == shared::casting::CastType::Channel
+                    }),
+            )),
             "in_flight" | "in_flight_remains" => {
                 crate::spell_cast::native_apl::flight_value(self.world, self.actor, spell, property)
             }
@@ -581,8 +641,58 @@ impl<'a> NativeFacts<'a> {
             "execute_time" => Ok(crate::spell_cast::native_apl::execute_time(
                 self.world, self.actor, spell,
             )),
+            // SimC76f8118 action.cpp3263–3273: cast time excludes GCD occupancy.
+            "cast_time" => Ok(f64::from(
+                crate::spell_cast::cast_time_ms(self.world, self.actor, spell).max(0),
+            ) / 1000.0),
+            "cost" => self.action_cost(spell),
             _ => Err(format!("unknown native APL action property {property}")),
         }
+    }
+
+    fn action_cost(&self, spell: &crate::spell_info::SpellInfo) -> Result<f64, String> {
+        // SimC76f8118 action.cpp1192–1230: current-resource cost, not affordability.
+        let costs = crate::spell_cast::applicable_costs(self.world, self.actor, spell)
+            .map_err(|error| format!("native APL spell{} cost: {error:?}", spell.id))?;
+        let Some(&(pool, amount, _)) = costs.first() else {
+            return Ok(0.0);
+        };
+        let display = match pool {
+            crate::spell_cast::CostPool::Health => 1,
+            crate::spell_cast::CostPool::Power(power) => {
+                self.world
+                    .resource::<crate::spell_cast::powers::PowerTypeTable>()
+                    .get(power)
+                    .ok_or_else(|| format!("native APL cost metadata absent: {power:?}"))?
+                    .display_modifier
+            }
+        };
+        if display <= 0 {
+            return Err("native APL cost display modifier must be positive".into());
+        }
+        Ok(f64::from(amount) / f64::from(display))
+    }
+
+    fn pet(&self, operand: &str) -> Result<f64, String> {
+        let (alias, property) = split_property(operand, "pet")?;
+        let spell = bound_spell(&self.bindings.actions, alias, "pet summon")?;
+        self.spell(spell)?;
+        if property != "active" {
+            return Err(format!("unknown native APL pet property {property}"));
+        }
+        let now = crate::spell_cast::now(self.world);
+        // SimC76f8118 player.cpp12458-12460: active reads an actual awake owned pet.
+        Ok(bool_value(self.world.iter_entities().any(|entity| {
+            entity
+                .get::<crate::spell_cast::summon::SummonedCreature>()
+                .is_some_and(|summon| {
+                    summon.owner == self.actor
+                        && summon.spell_id == spell
+                        && summon.expires_at.is_none_or(|expires| expires > now)
+                        && crate::spell_cast::targets::is_alive(self.world, entity.id())
+                        && crate::spell_cast::targets::same_map(self.world, self.actor, entity.id())
+                })
+        })))
     }
 
     fn spell_haste(&self) -> Result<f64, String> {
@@ -604,7 +714,15 @@ impl<'a> NativeFacts<'a> {
             "execute_time" => Ok(crate::spell_cast::native_apl::execute_time(
                 self.world, self.actor, spell,
             )),
+            "cast_time" | "cost" => self.action_property(&action.name, name, Some(action)),
             "ticks_remain" => self.ticks_remaining(spell.id),
+            // SimC76f8118 dot.cpp540: ticking refers to this proposed action's dot.
+            "ticking" => {
+                let target = self.selected_target(Some(action))?;
+                Ok(bool_value(
+                    !self.read_owned_auras(target, spell.id).is_empty(),
+                ))
+            }
             _ => Err(format!("unknown native APL contextual property {name}")),
         }
     }
@@ -687,6 +805,14 @@ impl Facts for NativeFacts<'_> {
         if let Some(value) = self.targeted_value(name, None) {
             return value;
         }
+        if let Some(property) = name.strip_prefix("raid_event.pull.") {
+            // SimC76f8118 raid_event.cpp3068–3141: no configured event.
+            // Patchwerk fixtures have no pull events; dungeon schedules stay explicit.
+            if matches!(self.encounter, Encounter::Dungeon { .. }) {
+                return Err(format!("DUNGEON_PULL_EVENT_UNAVAILABLE: {name}"));
+            }
+            return fixture_add_value(None, property, self.world.resource::<Time>().elapsed());
+        }
         if let Some(property) = name.strip_prefix("raid_event.adds.") {
             return self.adds(property);
         }
@@ -698,6 +824,13 @@ impl Facts for NativeFacts<'_> {
         }
         match name {
             "time" => Ok(self.elapsed()),
+            // dot.cpp671: tick_time is the channel's current native tick period.
+            "tick_time" => self
+                .world
+                .get::<shared::casting::CastState>(self.actor)
+                .filter(|cast| cast.cast_type == shared::casting::CastType::Channel)
+                .map(|cast| f64::from(cast.channel_tick_interval))
+                .ok_or_else(|| "tick_time requires an active native channel".into()),
             "expected_combat_length" => self.expected_combat_length(),
             "fight_remains" => self.remaining(name),
             "active_enemies" => Ok(self.active_enemies as f64),
@@ -706,12 +839,15 @@ impl Facts for NativeFacts<'_> {
             "movement.remains" => self.movement_value("remains"),
             "movement.speed" => self.movement_value("speed"),
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "charges_fractional"
-            | "full_recharge_time" | "execute_time" | "ticks_remain" => {
+            | "full_recharge_time" | "execute_time" | "ticks_remain" | "ticking" => {
                 Err(format!("native APL {name} requires action context"))
             }
             _ => {
                 if let Some(value) = name.strip_prefix("buff.") {
                     return self.buff(value);
+                }
+                if let Some(value) = name.strip_prefix("hero_tree.") {
+                    return self.hero_tree(value);
                 }
                 if let Some(value) = name.strip_prefix("talent.") {
                     return self.talent(value);
@@ -721,7 +857,10 @@ impl Facts for NativeFacts<'_> {
                 }
                 if let Some(value) = name.strip_prefix("action.") {
                     let (alias, property) = split_property(value, "action")?;
-                    return self.action_property(alias, property);
+                    return self.action_property(alias, property, None);
+                }
+                if let Some(value) = name.strip_prefix("pet.") {
+                    return self.pet(value);
                 }
                 if let Some(value) = name.strip_prefix("fight_style.") {
                     return self.fight_style(value);
@@ -734,8 +873,14 @@ impl Facts for NativeFacts<'_> {
 
 impl ActionFacts for NativeFacts<'_> {
     fn target_ids(&self, action: &Action) -> Result<Vec<u64>, String> {
+        // SimC76f8118 hunter_marksmanship.simc18: retarget scores real
+        // candidates without requiring a corresponding spell definition.
         let spell = match action.name.as_str() {
-            "run_action_list" | "call_action_list" | "auto_attack" | "retarget_auto_attack" => None,
+            "run_action_list"
+            | "call_action_list"
+            | "auto_attack"
+            | "retarget_auto_attack"
+            | "retarget" => None,
             _ => Some(self.action_spell(&action.name)?),
         };
         self.ordered_targets()?
@@ -752,10 +897,16 @@ impl ActionFacts for NativeFacts<'_> {
         if let Some(value) = self.targeted_value(name, Some(action)) {
             return value;
         }
+        if let Some(value) = name.strip_prefix("action.") {
+            let (alias, property) = split_property(value, "action")?;
+            return self.action_property(alias, property, Some(action));
+        }
         match name {
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" => self.gcd(action, name),
             "charges" | "charges_fractional" | "full_recharge_time" | "execute_time"
-            | "ticks_remain" => self.contextual_property(action, name),
+            | "cast_time" | "cost" | "ticks_remain" | "ticking" => {
+                self.contextual_property(action, name)
+            }
             _ => self.value(name),
         }
     }
