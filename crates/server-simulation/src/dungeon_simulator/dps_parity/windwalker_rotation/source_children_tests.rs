@@ -45,6 +45,7 @@ fn rsk_cooldown(run: &mut Run) -> f64 {
     let rotation = run.windwalker_rotation.take().unwrap();
     let action = Action {
         name: "rising_sun_kick".into(),
+        source_row: None,
         target: None,
         options: Default::default(),
     };
