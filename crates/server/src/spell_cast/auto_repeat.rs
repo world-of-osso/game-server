@@ -74,7 +74,9 @@ fn ranged_attack_secs(world: &World, caster: Entity) -> f32 {
     let attack_time = world
         .get::<CharacterStats>(caster)
         .map_or(BASE_ATTACK_SECS, |stats| {
-            let base = if stats.main_hand.kind == WeaponType::Ranged {
+            let base = if crate::auras::shapeshift::attack_timing(world, caster).is_some() {
+                crate::auras::shapeshift::FORM_RANGED_ATTACK_SECS
+            } else if stats.main_hand.kind == WeaponType::Ranged {
                 stats.main_hand.speed
             } else {
                 BASE_ATTACK_SECS
