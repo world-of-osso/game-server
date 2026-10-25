@@ -1540,8 +1540,15 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
         voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),
         ret_toll::ROOT => Some(ret_toll::cast_child),
         343527 => Some(ret_damage::sentence_init),
-        20271 | 406957 | 24275 | 1279408 => Some(ret_damage::judgment_mastery),
         77_478 => Some(batch9::cast_earthquake_knockdown),
+        _ => None,
+    }
+}
+
+/// Damage-only impact scripts do not receive caster buffs or other aura recipients.
+pub(super) fn on_enemy_damage_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
+    match spell_id {
+        20271 | 406957 | 24275 | 1279408 => Some(ret_damage::judgment_mastery),
         _ => None,
     }
 }
