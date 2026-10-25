@@ -108,6 +108,10 @@ mod ret_tier;
 mod ret_toll;
 pub(super) use ret_tier::after_foreground_spender;
 pub(crate) use ret_tier::owns_arbiter_charge;
+mod resource_values;
+pub(super) use resource_values::{
+    consume_sources as consume_resource_value_sources, effective_value as effective_resource_value,
+};
 mod scourge_strike;
 mod shadow_priest;
 pub(super) use shadow_priest::launch_delay as scripted_launch_delay;

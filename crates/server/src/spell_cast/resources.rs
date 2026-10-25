@@ -121,7 +121,13 @@ pub(super) fn snapshot(
     costs: &[(CostPool, f32)],
 ) -> SpellInfo {
     let mut spell = source.clone();
-    let combo = spent(costs, PowerType::ComboPoints);
+    let combo = super::scripts::effective_resource_value(
+        world,
+        caster,
+        source,
+        PowerType::ComboPoints,
+        spent(costs, PowerType::ComboPoints),
+    );
     if combo > 0.0
         && let Some(misc) = &mut spell.misc
     {
