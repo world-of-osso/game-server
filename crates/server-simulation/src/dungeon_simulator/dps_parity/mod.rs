@@ -768,13 +768,12 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     let started = Instant::now();
     let (seconds, buff_uptimes, engagement_samples) = advance_combat(&mut run)?;
     let combat = report::combat(run.app.world(), &run.damage_targets, seconds);
-    Ok(
-        json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
+    let mut output = json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "actor_kind": if run.app.world().get::<shared::components::Player>(run.actor).is_some() { "player" } else { "follower" },
         "enhancement_rotation": run.enhancement_rotation.as_ref().map(|rotation| rotation.report()),
         "havoc_rotation": run.havoc_rotation.as_ref().map(|rotation| rotation.report()),
         "arms_rotation": run.arms_rotation.as_ref().map(|rotation| rotation.report()),
-        "driver": if run.outlaw_rotation.is_some() { "LITERAL_SIMC_OUTLAW_76f8118" } else if run.shadow_rotation.is_some() { "LITERAL_SIMC_SHADOW_76f8118" } else if run.havoc_rotation.is_some() { "LITERAL_SIMC_HAVOC_76f8118" } else if run.beast_mastery_rotation.is_some() { "LITERAL_SIMC_BEAST_MASTERY_76f8118" } else if run.arms_rotation.is_some() { "LITERAL_SIMC_ARMS_76f8118" } else if run.fury_rotation.is_some() { "LITERAL_SIMC_FURY_76f8118" } else if run.elemental_rotation.is_some() { "LITERAL_SIMC_ELEMENTAL_76f8118" } else if run.marksmanship_rotation.is_some() { "LITERAL_SIMC_MARKSMANSHIP_76f8118" } else if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "driver": if run.shadow_rotation.is_some() { "LITERAL_SIMC_SHADOW_76f8118" } else if run.havoc_rotation.is_some() { "LITERAL_SIMC_HAVOC_76f8118" } else if run.beast_mastery_rotation.is_some() { "LITERAL_SIMC_BEAST_MASTERY_76f8118" } else if run.arms_rotation.is_some() { "LITERAL_SIMC_ARMS_76f8118" } else if run.fury_rotation.is_some() { "LITERAL_SIMC_FURY_76f8118" } else if run.elemental_rotation.is_some() { "LITERAL_SIMC_ELEMENTAL_76f8118" } else if run.marksmanship_rotation.is_some() { "LITERAL_SIMC_MARKSMANSHIP_76f8118" } else if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
         "fury_rotation": run.fury_rotation.as_ref().map(|rotation| rotation.report()),
         "windwalker_rotation": run.windwalker_rotation.as_ref().map(|rotation| rotation.report()),
         "ret_rotation": run.ret_rotation.as_ref().map(|rotation| rotation.report()),
@@ -790,8 +789,11 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
         "targets_before": targets, "targets_after": target_snapshot(&run),
         "target_waves": run.target_waves, "pet": report::pet(run.app.world(), run.actor, &run.damage_targets),
         "buff_uptime_pct": buff_uptimes, "engagement_samples": engagement_samples, "gaps": run.gaps,
-        "reference_race": run.profile.race, "server_build": 70448, "simc_build": 70391}),
-    )
+        "reference_race": run.profile.race, "server_build": 70448, "simc_build": 70391});
+    if run.outlaw_rotation.is_some() {
+        output["driver"] = json!("LITERAL_SIMC_OUTLAW_76f8118");
+    }
+    Ok(output)
 }
 
 #[test]
