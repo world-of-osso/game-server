@@ -32,11 +32,42 @@ fn prepare_antoran_tyrant() -> (Run, Entity) {
     (run, actor)
 }
 
+fn tyrant_admission_note(run: &mut Run, tyrant: Entity) -> String {
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1264093)
+        .unwrap()
+        .clone();
+    let mut notes = Vec::new();
+    for target in [run.targets[0], tyrant] {
+        let result =
+            crate::spell_cast::read_native_cast_start(run.app.world_mut(), tyrant, &spell, target);
+        let result = match result {
+            Ok(_) => "ready".to_owned(),
+            Err(error) => format!("{error:?}"),
+        };
+        notes.push(format!("target={} admission={result}", target.to_bits()));
+    }
+    let world = run.app.world();
+    format!(
+        "{} summon={:?} position={:?} owner_target={:?}",
+        notes.join("; "),
+        world.get::<crate::spell_cast::summon::SummonedCreature>(tyrant),
+        world.get::<shared::components::Position>(tyrant),
+        world
+            .get::<crate::networking::CombatTarget>(run.actor)
+            .and_then(|target| target.0)
+    )
+}
+
 #[test]
 #[ignore = "requires private266 inputs; actual native alternative Tyrant root"]
 fn demonology_antoran_tyrant_repeats_burning_cleave() {
     let _seed = crate::random::seed_scope(70448);
     let (mut run, tyrant) = prepare_antoran_tyrant();
+    let admission = tyrant_admission_note(&mut run, tyrant);
     for _ in 0..200 {
         run.app.update();
     }
@@ -55,7 +86,7 @@ fn demonology_antoran_tyrant_repeats_burning_cleave() {
         .count();
     assert!(
         hits >= 3,
-        "real Antoran Tyrant must bind and repeat native Burning Cleave, got{hits}"
+        "real Antoran Tyrant must bind and repeat native Burning Cleave, got{hits}; {admission}"
     );
 }
 
@@ -92,6 +123,110 @@ fn demonology_antoran_tyrant_inherits_same_owner_sp_as_base_tyrant() {
     assert!(
         (inherited - f64::from(expected)).abs() < 1.0,
         "alternative Tyrant keeps default owner SP1.0: actual={inherited}, owner={expected}"
+    );
+}
+
+fn summon_native_dreadstalker(run: &mut Run) -> Entity {
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        193331,
+        Some(run.actor),
+        true,
+    )
+    .expect("native triggered Dreadstalker summon must be admitted");
+    for _ in 0..100 {
+        let dog = run
+            .app
+            .world_mut()
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(run.app.world())
+            .find(|(_, summon)| summon.owner == run.actor && summon.spell_id == 193331)
+            .map(|(unit, _)| unit);
+        if let Some(dog) = dog {
+            return dog;
+        }
+        run.app.update();
+    }
+    panic!("native Dreadstalker must spawn within five seconds");
+}
+
+#[test]
+#[ignore = "requires private266 inputs; caster-relative native summon geometry"]
+fn demonology_native_summon_uses_open_fixture_geometry() {
+    let mut run = prepare_literal(266, 1).unwrap();
+    let dog = summon_native_dreadstalker(&mut run);
+    assert_eq!(
+        run.app
+            .world()
+            .get::<shared::components::Npc>(dog)
+            .unwrap()
+            .template_id,
+        98035
+    );
+}
+
+#[test]
+#[ignore = "requires private266 inputs; actual Dreadstalker expiry funds Demonic Core"]
+fn demonology_dreadstalker_demise_grants_native_core() {
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(run.actor)
+            .unwrap()
+            .contains(426115)
+    );
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 264173));
+    let dog = summon_native_dreadstalker(&mut run);
+    for _ in 0..1000 {
+        if run.app.world().get_entity(dog).is_err() {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        run.app.world().get_entity(dog).is_err(),
+        "native summon must actually expire"
+    );
+    let stacks = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 264173)
+        .map_or(0, |aura| aura.stacks);
+    assert_eq!(
+        stacks, 1,
+        "native267102 effect1 is a100% Core grant on actual Dreadstalker demise"
+    );
+}
+
+#[test]
+#[ignore = "requires private266 inputs; native Aura Does Not Refresh bit"]
+fn demonology_dominion_stacks_without_extending_native_expiry() {
+    let mut run = prepare_literal(266, 1).unwrap();
+    let read = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 1276166)
+            .map(|aura| (aura.expires_at, aura.stacks))
+    };
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 1276166, Some(run.actor), 0);
+    let (expiry, _) = read(&run).expect("native counter first grant");
+    for _ in 0..20 {
+        run.app.update();
+    }
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 1276166, Some(run.actor), 0);
+    let (refreshed, stacks) = read(&run).expect("native counter second grant");
+    assert_eq!(stacks, 2, "native cumulative stacks must still advance");
+    assert_eq!(
+        refreshed, expiry,
+        "native Attributes15 bit9 forbids extending expiry"
     );
 }
 

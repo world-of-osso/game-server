@@ -6,6 +6,13 @@ use shared::components::PowerType;
 use std::collections::BTreeMap;
 use std::time::Duration;
 
+/// SimC76f8118 action.cpp1738–1752: open encounter geometry, not a native
+/// map-data fallback. Production worlds do not call this fixture setup.
+pub fn install_open_arena(world: &mut World) {
+    world.insert_resource(crate::line_of_sight::LineOfSight::open_arena());
+    world.insert_resource(crate::ground::GroundMap::flat_arena(0.0));
+}
+
 /// Explicit fixture lifetime/role; never changes the native creature template.
 #[derive(Component, Clone, Copy)]
 pub struct FixtureTarget {

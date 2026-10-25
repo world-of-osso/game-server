@@ -30,6 +30,8 @@ mod echo_policies;
 mod elemental;
 pub(crate) use elemental::register as register_elemental_policies;
 mod elemental_ascendance;
+mod guardian_impacts;
+mod stacking_summons;
 pub(super) use echo_policies::after_foreground_cast as apply_echo_policies;
 pub(super) use elemental::{
     after_launch as finish_scripted_launch,
@@ -383,6 +385,9 @@ pub(super) fn consumes_effect_value(spell_id: u32, effect_index: u8) -> bool {
 }
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
+    if let Some(hook) = guardian_impacts::hit_hook(spell_id, effect_index) {
+        return Some(hook);
+    }
     match (spell_id, effect_index) {
         (crate::scripted_ai::orator::TERRORIZE_SELECTOR, 0) => {
             Some(crate::scripted_ai::orator::terrorize_hit)
@@ -694,6 +699,9 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     if let Some(hook) = after_cast_auras::hook(spell_id) {
         return Some(hook);
     }
+    if let Some(hook) = stacking_summons::hook(spell_id) {
+        return Some(hook);
+    }
     match spell_id {
         33757 | 318038 => Some(enhancement_imbues::apply),
         voltaic_blaze::ROOT => Some(maelstrom_weapon::grant_voltaic_blaze),
@@ -827,6 +835,9 @@ pub(super) type TargetPlanHook =
 
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
+    if let Some(hook) = guardian_impacts::plan_hook(spell_id) {
+        return Some((Relation::Enemy, hook));
+    }
     match spell_id {
         1261160 | 224239 | 431911 => Some((Relation::Enemy, ret_damage::area_plan)),
         super::toy_flag::TARGETING => Some((Relation::Any, super::toy_flag::targeting_plan)),

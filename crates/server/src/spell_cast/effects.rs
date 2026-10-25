@@ -336,13 +336,13 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
         {
             let entry = world
                 .get::<shared::components::Npc>(unit)
-                .map(|npc| npc.template_id);
-            let spell_share = match (summon.spell_id, entry) {
-                (104317, Some(55659)) => WILD_IMP_OWNER_SPELL_POWER,
-                (265187, Some(135002)) => TYRANT_OWNER_SPELL_POWER,
-                _ => DEMON_OWNER_SPELL_POWER,
-            };
-            return demon_power_stats(world, summon.owner, spell_share);
+                .unwrap()
+                .template_id;
+            let spell_share = super::guardian::owner_spell_share(summon.spell_id, entry)
+                .unwrap_or(DEMON_OWNER_SPELL_POWER);
+            let attack_share = super::guardian::owner_attack_share(summon.spell_id, entry)
+                .unwrap_or(DEMON_OWNER_ATTACK_POWER);
+            return demon_power_stats(world, summon.owner, spell_share, attack_share);
         }
     }
     if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(unit) {
@@ -353,7 +353,12 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
         {
             // TC StatSystem.cpp1358: controlled SUMMON_PET uses the IsPet branch.
             // Water Elemental's separate40% branch is for non-pet guardians, not56.
-            return demon_power_stats(world, pet.owner, DEMON_OWNER_SPELL_POWER);
+            return demon_power_stats(
+                world,
+                pet.owner,
+                DEMON_OWNER_SPELL_POWER,
+                DEMON_OWNER_ATTACK_POWER,
+            );
         }
         return (0.0, hunter_pet_attack_power(world, pet.owner));
     }
@@ -371,20 +376,20 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
 
 /// Guardian::UpdateAttackPowerAndDamage (TC StatSystem.cpp:1358-1367): demons
 /// inherit 15% spell bonus and 57% AP from the owner's fire/shadow spell power.
-/// Source-qualified Wild Imp and base Tyrant use their explicit SimC SP policies.
+/// Source-qualified guardians use their explicit validated SimC inheritance policies.
 /// CharacterStats currently exposes one spell-power value, not school-specific values.
-fn demon_power_stats(world: &World, owner: Entity, spell_share: f32) -> (f32, f32) {
+fn demon_power_stats(
+    world: &World,
+    owner: Entity,
+    spell_share: f32,
+    attack_share: f32,
+) -> (f32, f32) {
     let power = world
         .get::<CharacterStats>(owner)
         .map_or(0.0, |stats| stats.spell_power.max(0.0));
-    (power * spell_share, power * DEMON_OWNER_ATTACK_POWER)
+    (power * spell_share, power * attack_share)
 }
 
-// WARLOCK_WILD_IMP_OWNER_SP_SIMC: constructor705 overrides base19.
-// Keep native104318 coefficient; do not adopt SimC's unvalidated AP share.
-const WILD_IMP_OWNER_SPELL_POWER: f32 = 1.2;
-// WARLOCK_TYRANT_OWNER_SP_SIMC: constructor1510 retains base19 SP1.0.
-const TYRANT_OWNER_SPELL_POWER: f32 = 1.0;
 const DEMON_OWNER_SPELL_POWER: f32 = 0.15;
 const DEMON_OWNER_ATTACK_POWER: f32 = 0.57;
 

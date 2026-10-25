@@ -7,6 +7,7 @@ use crate::spell_info::SpellInfo;
 
 const ROLLING_PERIODIC: u32 = 0x4000;
 const PERIODIC_REFRESH_EXTENDS_DURATION: u32 = 0x0010_0000;
+const AURA_DOES_NOT_REFRESH: u32 = 0x200;
 const IGNORE_PAIN: u32 = 190456;
 const PROTECTION_WARRIOR: u32 = 73;
 const SHIELD_BLOCK: u32 = 132404;
@@ -47,8 +48,24 @@ pub(super) fn prepare_application(
         }
         _ => {}
     }
+    preserve_expiry(world, target, new, spell);
     if rolling {
         roll_remaining_periodic(world, target, new);
+    }
+}
+
+fn preserve_expiry(world: &World, target: Entity, new: &mut AuraInstance, spell: &SpellInfo) {
+    // SimC76f8118 buff.cpp731–743: native Attr15 bit9 disables duration
+    // refresh, but not stack advancement. Native Pandemic takes precedence.
+    let disabled = spell.misc.as_ref().is_some_and(|misc| {
+        misc.attributes[15] & AURA_DOES_NOT_REFRESH != 0
+            && misc.attributes[13] & PERIODIC_REFRESH_EXTENDS_DURATION == 0
+    });
+    if disabled
+        && let Some(old) = previous(world, target, new)
+        && old.expires_at.is_none_or(|expiry| expiry > aura_now(world))
+    {
+        new.expires_at = old.expires_at;
     }
 }
 

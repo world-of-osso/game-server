@@ -1000,6 +1000,7 @@ pub(crate) fn despawn_summon(world: &mut World, entity: Entity) {
             "Despawn summon {entity}: spell {}, properties {}",
             summon.spell_id, summon.properties_id
         );
+        super::guardian::core::on_demise(world, entity);
         super::guardian::tyrant::on_despawn(world, entity);
     }
     unregister_source_summon(world, entity);

@@ -8,8 +8,9 @@ mod aura342_tests;
 mod barbed_budget_tests;
 mod beast_mastery_rotation;
 mod composite_precombat_tests;
-mod dummy_reference_tests;
+mod demonology_rotation;
 mod demonology_tests;
+mod dummy_reference_tests;
 mod elemental_ascendance_tests;
 mod elemental_mechanics_tests;
 mod elemental_rotation;
@@ -107,6 +108,7 @@ struct Run {
     enhancement_rotation: Option<enhancement_rotation::Rotation>,
     arms_rotation: Option<arms_rotation::Rotation>,
     fury_rotation: Option<fury_rotation::Rotation>,
+    demonology_rotation: Option<demonology_rotation::Rotation>,
 }
 
 fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, String> {
@@ -295,6 +297,16 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
         preparation::prepare_beast_mastery_precombat(&mut run)?;
         return Ok(run);
     }
+    if spec_id == 266
+        && matches!(
+            &identity,
+            crate::followers::simulator::ParityActor::Follower
+        )
+    {
+        let mut run = spawn_reference(profile, &traits, count, identity)?;
+        preparation::prepare_demonology_precombat(&mut run)?;
+        return Ok(run);
+    }
     if spec_id == 254 {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
         preparation::prepare_marksmanship_precombat(&mut run)?;
@@ -394,6 +406,7 @@ fn spawn_reference(
     let copy = super::runtime::create_copy(&mut app);
     // Origin-centered parity fixtures have no frozen dungeon geometry.
     app.world_mut().remove_resource::<super::Space>();
+    crate::simc_apl_native::install_open_arena(app.world_mut());
     let level = profile
         .level
         .parse()
@@ -446,6 +459,7 @@ fn spawn_reference(
         enhancement_rotation: None,
         arms_rotation: None,
         fury_rotation: None,
+        demonology_rotation: None,
     })
 }
 
@@ -702,6 +716,9 @@ fn drive_player(run: &mut Run) -> Result<(), String> {
     if let Some(rotation) = &mut run.arms_rotation {
         rotation.step(run.app.world_mut(), run.actor, &run.targets, false)?;
     }
+    if let Some(rotation) = &mut run.demonology_rotation {
+        rotation.step(run.app.world_mut(), run.actor, &run.targets, false)?;
+    }
     Ok(())
 }
 
@@ -717,9 +734,10 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     Ok(
         json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "actor_kind": if run.app.world().get::<shared::components::Player>(run.actor).is_some() { "player" } else { "follower" },
+        "demonology_rotation": run.demonology_rotation.as_ref().map(|rotation| rotation.report()),
         "enhancement_rotation": run.enhancement_rotation.as_ref().map(|rotation| rotation.report()),
         "arms_rotation": run.arms_rotation.as_ref().map(|rotation| rotation.report()),
-        "driver": if run.beast_mastery_rotation.is_some() { "LITERAL_SIMC_BEAST_MASTERY_76f8118" } else if run.arms_rotation.is_some() { "LITERAL_SIMC_ARMS_76f8118" } else if run.fury_rotation.is_some() { "LITERAL_SIMC_FURY_76f8118" } else if run.elemental_rotation.is_some() { "LITERAL_SIMC_ELEMENTAL_76f8118" } else if run.marksmanship_rotation.is_some() { "LITERAL_SIMC_MARKSMANSHIP_76f8118" } else if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "driver": if run.demonology_rotation.is_some() { "LITERAL_SIMC_DEMONOLOGY_76f8118" } else if run.beast_mastery_rotation.is_some() { "LITERAL_SIMC_BEAST_MASTERY_76f8118" } else if run.arms_rotation.is_some() { "LITERAL_SIMC_ARMS_76f8118" } else if run.fury_rotation.is_some() { "LITERAL_SIMC_FURY_76f8118" } else if run.elemental_rotation.is_some() { "LITERAL_SIMC_ELEMENTAL_76f8118" } else if run.marksmanship_rotation.is_some() { "LITERAL_SIMC_MARKSMANSHIP_76f8118" } else if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
         "fury_rotation": run.fury_rotation.as_ref().map(|rotation| rotation.report()),
         "windwalker_rotation": run.windwalker_rotation.as_ref().map(|rotation| rotation.report()),
         "ret_rotation": run.ret_rotation.as_ref().map(|rotation| rotation.report()),

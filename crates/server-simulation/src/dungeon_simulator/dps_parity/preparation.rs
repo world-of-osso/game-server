@@ -231,6 +231,39 @@ pub(super) fn prepare_elemental_precombat(run: &mut Run) -> Result<(), String> {
     Ok(())
 }
 
+pub(super) fn prepare_demonology_precombat(run: &mut Run) -> Result<(), String> {
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    // Capture and configure reactions before native passives/setup can acquire auras.
+    let mut rotation = super::demonology_rotation::Rotation::load(
+        run.app.world_mut(),
+        run.actor,
+        &run.profile,
+        encounter,
+    )?;
+    warm_up_reference(run)?;
+    // Native30146 costs one shard; declared starting shards are zero. Wait
+    // for ordinary readiness rather than silently consuming the summon row.
+    if let Some(pet) = super::literal_rotation::default_pet::ConfiguredPet::read(
+        run.app.world(),
+        run.actor,
+        &run.profile,
+    )? {
+        wait_for_configured_pet_action(run, &pet)?;
+    }
+    while rotation.step(run.app.world_mut(), run.actor, &run.targets, true)? {
+        finish_pending_setup(run)?;
+    }
+    rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
+    run.gaps
+        .retain(|gap| !gap.starts_with("NATIVE_FOLLOWER_KIT_VS_SIMC_APL:"));
+    run.demonology_rotation = Some(rotation);
+    Ok(())
+}
+
 pub(super) fn prepare_windwalker_precombat(run: &mut Run) -> Result<(), String> {
     let encounter = crate::simc_apl_native::Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
