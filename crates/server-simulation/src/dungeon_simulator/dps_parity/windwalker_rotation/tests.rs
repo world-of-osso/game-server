@@ -45,6 +45,75 @@ pub(super) fn cast(run: &mut super::super::Run, spell: u32) {
 }
 
 #[test]
+#[ignore = "native shared parity fixture: Mage and Monk targets must fit the frontal pack"]
+fn literal_native_frontal_pack_keeps_shared_fixture_targets_in_front() {
+    let minimum_cosine = 30_f32.to_radians().cos();
+    for spec in [63, 269] {
+        let run = super::super::prepare_measurement(spec, 3).unwrap();
+        let world = run.app.world();
+        let actor = world
+            .get::<shared::components::Position>(run.actor)
+            .unwrap();
+        let primary = world
+            .get::<shared::components::Position>(run.targets[0])
+            .unwrap();
+        let forward = Vec2::new(primary.x - actor.x, primary.z - actor.z).normalize();
+        for &target in &run.targets {
+            let position = world.get::<shared::components::Position>(target).unwrap();
+            let offset = Vec2::new(position.x - actor.x, position.z - actor.z);
+            let cosine = offset.normalize().dot(forward);
+            assert!(
+                cosine >= minimum_cosine,
+                "spec{spec} target{target:?} must fit the shared60-degree frontal pack: actor={actor:?} target={position:?} cosine={cosine}"
+            );
+        }
+    }
+}
+
+#[test]
+#[ignore = "native shared parity fixture: real FoF must reach all three configured opponents"]
+fn literal_native_frontal_pack_fof_hits_all_three_fixture_opponents() {
+    let _scope = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(269, 3).unwrap();
+    let started = run.app.world().resource::<Time>().elapsed();
+    super::super::install_fixture_lifetimes(&mut run, started);
+    super::super::engage(&mut run);
+    for _ in 0..3 {
+        cast(&mut run, 100780);
+    }
+    let first_event = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    cast(&mut run, 113656);
+    for _ in 0..200 {
+        run.app.update();
+        if !crate::auras::has_aura(run.app.world(), run.actor, 113656) {
+            break;
+        }
+    }
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 113656),
+        "the actual native FoF channel must finish"
+    );
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[first_event..];
+    let recipients: std::collections::BTreeSet<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(117418)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .filter_map(|event| event.target)
+        .collect();
+    let expected: std::collections::BTreeSet<_> =
+        run.targets.iter().map(|target| target.to_bits()).collect();
+    eprintln!("FRONTAL_PACK_FOF recipients={recipients:?} expected={expected:?}");
+    assert_eq!(
+        recipients, expected,
+        "native FoF must reach all three opponents without widening its authored cone"
+    );
+}
+
+#[test]
 #[ignore = "literal WW native RED: action-specific combo facts after actual TP and utility"]
 fn literal_ww_native_combo_facts_follow_the_proposed_action_and_ignore_utility() {
     let mut run = super::super::prepare(269, 1).unwrap();
