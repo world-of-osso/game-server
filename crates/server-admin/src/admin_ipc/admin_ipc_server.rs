@@ -7,13 +7,13 @@ use super::socket_path;
 use crate::admin_types::{AdminRequest, AdminResponse};
 
 /// Internal command passed from IPC server thread to Bevy main loop.
-pub(super) struct AdminCommand {
+pub struct AdminCommand {
     pub request: AdminRequest,
     pub respond: mpsc::Sender<AdminResponse>,
 }
 
 /// RAII guard that removes the socket file on drop.
-pub(super) struct SocketGuard {
+pub struct SocketGuard {
     pub path: PathBuf,
 }
 
@@ -43,7 +43,7 @@ pub(super) fn claim_socket_path(path: &Path) -> Result<(), String> {
 
 /// Spawn the IPC server on a tokio runtime in a background thread. Fails when a live
 /// server holds the socket path (`claim_socket_path`).
-pub(super) fn init() -> Result<(mpsc::Receiver<AdminCommand>, SocketGuard), String> {
+pub fn init() -> Result<(mpsc::Receiver<AdminCommand>, SocketGuard), String> {
     let path = socket_path();
     claim_socket_path(&path)?;
 

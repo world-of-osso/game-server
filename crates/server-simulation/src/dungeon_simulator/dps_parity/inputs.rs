@@ -205,6 +205,58 @@ fn dps_parity_simc_frost_allocations_keep_production_validation_strict() {
     );
 }
 
+#[test]
+#[ignore = "requires private native DB and exact Devastation allocations"]
+fn dps_parity_simc_hero_spec_gate_98931_is_fixture_only() {
+    use crate::class_progression::TraitLoadout;
+    use crate::trait_config::{Purchase, TraitContext, build_config};
+    let run = super::prepare_literal(1467, 1)
+        .expect("SimC admits allocated hero98931 despite its native spec1473 gate");
+    let world = run.app.world();
+    let traits = world.get::<TraitLoadout>(run.actor).unwrap();
+    assert!(
+        traits
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 438587),
+        "allocated Mass Eruption must remain active for the reference actor"
+    );
+    let hero = traits
+        .source_config()
+        .0
+        .iter()
+        .find(|entry| entry.node_id == 98931 && entry.entry_id == 122279)
+        .unwrap();
+    assert_eq!(
+        hero.total(),
+        1,
+        "native granted rank must not duplicate the exported total"
+    );
+    let classes = world.resource::<crate::spell_info::ClassSpells>();
+    let tree = &classes
+        .classes
+        .iter()
+        .find(|class| class.class_id == 13)
+        .unwrap()
+        .traits;
+    let error = build_config(
+        tree,
+        TraitContext {
+            spec_id: 1467,
+            level: 90,
+        },
+        &[Purchase {
+            node_id: 98931,
+            entry_id: 122279,
+            ranks: 1,
+        }],
+    )
+    .expect_err("production must still reject the cross-spec hero allocation");
+    assert!(
+        error.contains("98931") && error.contains("25886"),
+        "{error}"
+    );
+}
+
 #[derive(Deserialize)]
 pub(super) struct AllocatedTrait {
     pub node_id: u32,
@@ -265,15 +317,20 @@ pub(super) fn read_reference_race(name: &str) -> Result<u8, String> {
             matches.push(id);
         }
     }
-    if expected == "human" {
-        // Pinned SimC76f8118 util.cpp1989-1994 maps RACE_HUMAN to1.
-        // Native70448 also calls ThinHuman33 "Human"; display names are not IDs.
-        const SIMC_HUMAN_RACE_ID: u8 = 1;
+    // Pinned SimC76f8118 util.cpp1989–1994: Human1, not ThinHuman33.
+    // util.cpp503–504/2152–2153: plain dracthyr means Horde70, not Alliance52.
+    // Duplicate native display names must not select an arbitrary identity.
+    let source_race = match expected.as_str() {
+        "human" => Some(1),
+        "dracthyr" => Some(70),
+        _ => None,
+    };
+    if let Some(source_race) = source_race {
         return matches
-            .contains(&SIMC_HUMAN_RACE_ID)
-            .then_some(SIMC_HUMAN_RACE_ID)
+            .contains(&source_race)
+            .then_some(source_race)
             .ok_or_else(|| {
-                format!("reference human source race1 absent from native matches {matches:?}")
+                format!("reference {name} source race{source_race} absent from native matches {matches:?}")
             });
     }
     match matches.as_slice() {
@@ -282,6 +339,14 @@ pub(super) fn read_reference_race(name: &str) -> Result<u8, String> {
             "reference race {name:?} matched native races {matches:?}"
         )),
     }
+}
+
+#[test]
+#[ignore = "requires private native world DB with both Dracthyr factions"]
+fn dps_parity_dracthyr_reference_uses_simc_horde_identity() {
+    assert_eq!(read_reference_race("dracthyr").unwrap(), 70);
+    assert_eq!(read_reference_race("human").unwrap(), 1);
+    assert!(read_reference_race("unknown_reference_race").is_err());
 }
 
 pub(super) fn slot(name: &str) -> Result<EquipmentSlot, String> {

@@ -197,7 +197,7 @@ fn lookup<T: Clone>(table: &HashMap<u32, T>, id: u32) -> Option<T> {
     table.get(&id).cloned()
 }
 
-pub(super) fn load_spell_store(conn: &Connection) -> rusqlite::Result<SpellStore> {
+pub fn load_spell_store(conn: &Connection) -> rusqlite::Result<SpellStore> {
     let lookups = Lookups::load(conn)?;
     let mut spells = load_names(conn)?;
     load_misc(conn, &lookups, &mut spells)?;

@@ -245,6 +245,26 @@ fn ret_gear_profile_native_potion_selects_extrema_and_is_consumed_once() {
 }
 
 #[test]
+#[ignore = "requires exact258 profile/player and private native database"]
+fn native_expansion_named_shadow_profile_and_numeric_entries_apply_real_auras() {
+    const NAMED: &str = "rune_of_unleashed_fire/rune_of_selfmending/rune_of_lingering/rune_of_critical_power/rune_of_overload";
+    const NUMERIC: &str = "136822/136819:1/136817/136815/136814";
+    for tokens in [NAMED, NUMERIC] {
+        let (mut profile, traits) = super::read_reference(258).unwrap();
+        assert_eq!(profile.omnium_talents.as_deref(), Some(NAMED));
+        profile.omnium_talents = Some(tokens.into());
+        let identity = super::inputs::read_actor(&profile).unwrap();
+        let run = super::prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+        for spell in [1279599, 1279603, 1287555, 1279609, 1279614] {
+            assert!(
+                crate::auras::has_aura(run.app.world(), run.actor, spell),
+                "{tokens}: native Omnium aura{spell} missing"
+            );
+        }
+    }
+}
+
+#[test]
 #[ignore = "requires prepared Ret profile and private native database"]
 fn ret_gear_profile_native_expansion_traits_apply() {
     let run = super::prepare_literal(70, 1).unwrap();

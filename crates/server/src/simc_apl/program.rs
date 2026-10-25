@@ -614,7 +614,16 @@ fn parse_variable(
     options: &BTreeMap<String, String>,
     defaults: &mut BTreeMap<String, f64>,
 ) -> Result<Body, String> {
-    const OPTIONS: &[&str] = &["name", "op", "value", "condition", "value_else", "default"];
+    // SimC76f8118 apl_priest.cpp aoe_variables: variables inherit action target_if.
+    const OPTIONS: &[&str] = &[
+        "name",
+        "op",
+        "value",
+        "condition",
+        "value_else",
+        "default",
+        "target_if",
+    ];
     if let Some(key) = options.keys().find(|key| !OPTIONS.contains(&key.as_str())) {
         return Err(format!("unsupported APL variable option {key}"));
     }
