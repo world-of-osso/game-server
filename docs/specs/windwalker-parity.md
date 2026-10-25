@@ -4,6 +4,7 @@ Spec269 rotation spells and selected talents follow pinned SimC76f8118 behavior 
 
 ## Required behavior
 
+- Native spell-haste flags shorten both channel cast state and its aura lifetime with periodic intervals, preserving the channel tick count rather than adding haste-driven ticks.
 - FoF emits the equipped MID2 extra child and selected Jadefire completion damage instead of standalone root AP damage. Zenith emits its selected Stomp child and resets actual RSK recovery. Real RWK/WDP/Jadefire/Stomp children receive source-declared mastery; RWK scales then splits over its actual selected targets.
 - Interpret the pinned MID2 Windwalker literal APL using action-bound facts, actual native spellbook/castability and explicit unknown-operand failures ([shared contract](simc-apl.md)).
 - `WW_COMBO_STRIKES_SIMC_POLICY`: the first eligible action activates mastery; repeating the last eligible action disables it. Include source-declared RWK/Zenith Stomp damage actions; utility, failed casts and unrelated triggered children do not advance combo order. Hit Combo is not required. Use native115636 effect0 coefficient times raw mastery points, only on source-eligible damage.

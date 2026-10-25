@@ -690,7 +690,8 @@ fn duration_ms(world: &World, application: &AuraApplication, spell: &SpellInfo) 
     );
     let extension = scripts::self_regrowth_duration_bonus(world, application);
     let duration = (duration + extension).max(0.0) as u32;
-    mechanic_duration::modify_duration(world, application, spell, duration)
+    let duration = mechanic_duration::modify_duration(world, application, spell, duration);
+    crate::spell_cast::haste_channel_duration_ms(world, application.caster, spell, duration)
 }
 
 /// Fresh resolved-spell duration through the ordinary caster/target modifier path.
