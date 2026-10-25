@@ -50,6 +50,8 @@ mod howl_tests;
 #[cfg(test)]
 mod hunter_bloodshed_tests;
 #[cfg(test)]
+mod hunter_command_tests;
+#[cfg(test)]
 mod hunter_focus_tests;
 #[cfg(test)]
 mod hunter_stomp_tests;
