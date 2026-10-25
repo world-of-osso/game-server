@@ -45,6 +45,58 @@ fn targets() -> Targets {
 }
 
 #[test]
+fn simc_apl_variable_target_if_selects_before_condition_and_keeps_assignment_local() {
+    struct ShadowTargets(Vec<(u64, f64, bool)>);
+    impl Facts for ShadowTargets {
+        fn value(&self, name: &str) -> Result<f64, String> {
+            Err(format!("unknown actor operand {name}"))
+        }
+    }
+    impl ActionFacts for ShadowTargets {
+        fn target_ids(&self, _action: &Action) -> Result<Vec<u64>, String> {
+            Ok(self.0.iter().map(|row| row.0).collect())
+        }
+        fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
+            let (_, ttd, refreshable) = self
+                .0
+                .iter()
+                .find(|row| Some(row.0) == action.target)
+                .ok_or("variable target missing")?;
+            match name {
+                "target.time_to_die" => Ok(*ttd),
+                "dot.vampiric_touch.refreshable" => Ok(f64::from(u8::from(*refreshable))),
+                _ => self.value(name),
+            }
+        }
+    }
+    // SimC76f8118 apl_priest.cpp aoe_variables uses ordinary action.cpp2435–2468
+    // target selection before2619 if_expr, then variable.cpp executes the assignment.
+    let program = Program::parse(&[
+        ("default", "variable,name=is_vt_possible,op=set,value=0,default=1"),
+        ("default", "variable,name=is_vt_possible,op=set,value=1,target_if=max:(target.time_to_die*dot.vampiric_touch.refreshable),if=target.time_to_die>=18"),
+        ("default", "mind_blast,if=variable.is_vt_possible"),
+        ("default", "mind_flay"),
+    ]).unwrap();
+    for (units, expected, value) in [
+        (vec![(41, 5.0, true), (42, 30.0, true)], "mind_blast", 1.0),
+        (vec![(41, 50.0, false), (42, 12.0, true)], "mind_flay", 0.0),
+        (vec![], "mind_flay", 0.0),
+    ] {
+        let mut state = program.state();
+        let selected = program
+            .select("default", &ShadowTargets(units), &mut state, |_| Ok(true))
+            .unwrap()
+            .unwrap();
+        assert_eq!(selected.name, expected);
+        assert_eq!(state.value("is_vt_possible"), Some(value));
+        assert_eq!(
+            selected.target, None,
+            "a variable's selected target cannot leak to the next spell"
+        );
+    }
+}
+
+#[test]
 fn simc_apl_target_min_max_select_real_candidate_identity() {
     for (mode, expected) in [("min", 42), ("max", 41)] {
         let literal = format!("execute,target_if={mode}:target.health.pct");

@@ -437,6 +437,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     crate::spell_cast::scripts::holy_priest::register(&mut scripts);
     crate::spell_cast::scripts::prayer_of_mending::register(&mut scripts);
     super::earthen_rage::register(&mut scripts);
+    crate::spell_cast::scripts::register_enhancement(&mut scripts);
     super::spirit_wolf::register(&mut scripts);
     super::natures_guardian::register(&mut scripts);
     super::ret_sentence::register(&mut scripts);
@@ -713,6 +714,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     // Extend existing parent lifecycle entries rather than replacing their hooks.
     crate::spell_cast::scripts::register_xuens_battlegear(&mut scripts);
     crate::spell_cast::scripts::register_channel_policies(&mut scripts);
+    crate::spell_cast::scripts::register_elemental_policies(&mut scripts);
 }
 
 /// TC spell_rogue.cpp spell_rog_stealth: 1784's own rows carry no MOD_STEALTH;

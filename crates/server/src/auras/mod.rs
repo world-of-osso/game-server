@@ -681,7 +681,8 @@ fn duration_ms(world: &World, application: &AuraApplication, spell: &SpellInfo) 
     );
     let extension = scripts::self_regrowth_duration_bonus(world, application);
     let duration = (duration + extension).max(0.0) as u32;
-    mechanic_duration::modify_duration(world, application, spell, duration)
+    let duration = mechanic_duration::modify_duration(world, application, spell, duration);
+    crate::spell_cast::haste_channel_duration_ms(world, application.caster, spell, duration)
 }
 
 /// Fresh resolved-spell duration through the ordinary caster/target modifier path.
@@ -771,6 +772,12 @@ fn build_effect(
         crate::spell_cast::effects::scaled_amount(world, caster, spell, effect)
     } else {
         crate::spell_cast::effects::modded_base_points(world, caster, spell, effect)
+    };
+    // A cast's scripted damage multiplier persists in its actual periodic payload.
+    let amount = if effect.aura == PERIODIC_DAMAGE_AURA {
+        amount * spell.cast_damage_multiplier.unwrap_or(1.0)
+    } else {
+        amount
     };
     let amount = scripts::snapshot_periodic_amount(world, caster, spell, effect, amount);
     let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);

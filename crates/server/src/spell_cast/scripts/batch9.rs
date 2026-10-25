@@ -51,6 +51,7 @@ pub(super) struct GroundPulses {
     caster: Entity,
     root: u32,
     child: u32,
+    cast_damage_multiplier: Option<f32>,
     radius: f32,
     cap: usize,
     relation: targets::Relation,
@@ -178,6 +179,7 @@ fn read_ground_pulses(world: &World, ctx: &EffectCtx) -> GroundPulses {
         caster: ctx.caster,
         root: ctx.spell.id,
         child,
+        cast_damage_multiplier: ctx.spell.cast_damage_multiplier,
         radius,
         cap,
         relation,
@@ -409,6 +411,7 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
         .get(pulses.child)
         .expect("named ground spell child")
         .clone();
+    child.cast_damage_multiplier = pulses.cast_damage_multiplier;
     // TC casts77478 with OriginalCaster=at->GetGUID(); preserve it through flight.
     if matches!(pulses.root, EARTHQUAKE | EARTHQUAKE_TARGET) {
         child.cast_original_caster = Some(entity);

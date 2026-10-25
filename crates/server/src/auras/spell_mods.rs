@@ -182,7 +182,9 @@ pub(crate) fn snapshot_charged_modifiers(
     let Some(auras) = world.get::<ActiveAuras>(caster) else {
         return Vec::new();
     };
-    let charged = auras.iter().filter(|aura| aura.charges > 0);
+    let charged = auras.iter().filter(|aura| {
+        aura.charges > 0 || crate::spell_cast::scripts::snapshots_modifier(aura.spell_id)
+    });
     charged
         .flat_map(|aura| {
             let effects = aura.effects.iter().filter(move |effect| {
@@ -265,7 +267,11 @@ fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellMo
     world.get::<ActiveAuras>(caster).map_or(frozen, |auras| {
         matching(auras, spell, op)
             .filter(|(aura, _)| !snapshots_periodic_modifier(aura, op))
-            .filter(|(aura, _)| spell.cast_charge_mods.is_none() || aura.charges == 0)
+            .filter(|(aura, _)| {
+                spell.cast_charge_mods.is_none()
+                    || (aura.charges == 0
+                        && !crate::spell_cast::scripts::snapshots_modifier(aura.spell_id))
+            })
             .fold(frozen, |sum, (aura, effect)| {
                 let amount = stacked_amount(aura, effect);
                 let percent = is_pct(effect.aura_type);
