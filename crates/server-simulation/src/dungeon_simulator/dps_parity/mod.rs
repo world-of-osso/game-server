@@ -10,6 +10,7 @@ mod equipment_input_tests;
 mod equipped_set_tests;
 mod feral_tests;
 mod firestarter_tests;
+mod gear_profile_tests;
 mod haste_tests;
 mod health_aura_state_tests;
 mod howl_tests;
@@ -27,6 +28,7 @@ mod power_haste_tests;
 mod power_tests;
 mod precombat_tests;
 mod preparation;
+mod profile_effects;
 mod profile_initialization;
 mod rake_stealth_tests;
 mod report;
@@ -298,9 +300,14 @@ fn spawn_reference(
         .insert(crate::simc_apl_native::FixtureMovement {
             distance_to_move: 0.0,
         });
+    let race = inputs::read_reference_race(&profile.race)?;
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(server::test_support::ReferenceRace(race));
     inputs::equip(app.world_mut(), actor, &profile)?;
     inputs::install_traits(app.world_mut(), actor, traits)?;
     profile_initialization::initialize_declared_powers(app.world_mut(), actor, &profile)?;
+    profile_effects::install(app.world_mut(), actor, &profile)?;
     let targets = spawn_targets(&mut app, actor, count)?;
     let target_waves = vec![
         json!({"at": 0.0, "entities": targets.iter().map(|unit| unit.to_bits()).collect::<Vec<_>>()}),

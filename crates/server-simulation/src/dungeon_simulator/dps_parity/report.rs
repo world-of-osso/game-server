@@ -236,19 +236,14 @@ pub(super) fn gaps(profile: &super::inputs::Profile, is_player: bool) -> Vec<Str
             "NATIVE_TARGET_ADMISSION_FOR_RANGE_FACTS".into(),
         ]
     } else {
-        vec![
-            format!("FOLLOWER_RACE0_VS_REFERENCE_{}", profile.race),
-            "NATIVE_FOLLOWER_KIT_VS_SIMC_APL: rotation changes are lead-owned".into(),
-        ]
+        vec!["NATIVE_FOLLOWER_KIT_VS_SIMC_APL: rotation changes are lead-owned".into()]
     };
     gaps.extend(profile.reference_gap.iter().cloned());
-    if profile.omnium_talents.is_some() {
-        gaps.push("SIMC_OMNIUM_TALENTS_UNMODELED".into());
-    }
     gaps.extend(
         profile
             .consumables
             .iter()
+            .filter(|(kind, value)| !super::profile_effects::supported(kind, value))
             .map(|(kind, value)| format!("CONSUMABLE_UNMODELED:{kind}={value}")),
     );
     for item in &profile.equipment {

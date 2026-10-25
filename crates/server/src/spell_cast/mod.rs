@@ -3489,6 +3489,8 @@ pub(super) fn cast_triggered_with_item_level(
 #[derive(Default)]
 pub(crate) struct TriggeredSpellOverrides {
     pub effect0_amount: Option<f32>,
+    pub item_level: Option<u16>,
+    pub effect_mask: Option<u32>,
     pub aura_stacks: Option<u8>,
     pub original_caster: Option<Entity>,
     /// Authored background-action lifetime, e.g. native Whirling Blade's amount.
@@ -3508,6 +3510,12 @@ pub(crate) fn cast_triggered_with_overrides(
     };
     spell.cast_aura_stacks = values.aura_stacks;
     spell.cast_original_caster = values.original_caster;
+    spell.cast_item_level = values.item_level;
+    if let Some(mask) = values.effect_mask {
+        spell
+            .effects
+            .retain(|effect| mask & (1 << effect.index) != 0);
+    }
     if let Some(milliseconds) = values.duration_ms {
         let Some(duration) = spell.misc.as_mut().and_then(|misc| misc.duration.as_mut()) else {
             warn!("Triggered spell {spell_id} skipped: duration override has no native duration");

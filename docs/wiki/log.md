@@ -1,3 +1,7 @@
+## 2026-10-25 — Shared profile gear effects
+
+[Character stats](systems/character-stats.md#shared-profile-effects--2026-10-25): native consumables, independent temporary enchants, reference racial identity, Omnium entry resolution, Heart/Venomfang/fire relationships and neutral proc recipients. Values remain native; SimC supplies behavior.
+
 ## 2026-10-25 — All-DPS parity census
 
 [Census](investigations/dps-parity-census-2026-10-25.md): current canonical private database, master210df12e3, official followers and player-mode attempts for missing followers. Eight measured specs, seventeen exact fixture failures, two missing references. No surrogate profiles or mechanics changes.
