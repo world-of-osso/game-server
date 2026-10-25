@@ -1,3 +1,7 @@
+## 2026-10-24 — Xuen merge reconciliation on mastera804
+
+[Reconciliation proof](../handoffs/ww-xuens-recovery-proof-ledger.md#mastera804-reconciliation--native23-green): frozen36eeb2339 merged, not rebased, onto exacta804 atd54c1b64d. Preserve SCK periodic snapshot, four-argument Xuen/Flurry callback and both additive wiki sections. Same binary passes13Xuen38.93s,6Flurry50.16s and4SCK24.48s; compiler582.99s/zero warnings, fmt/diff pass, conflict-region readability has no findings. Lead re-gate/new merged-source plain --bins remains separate; no300s rerun.
+
 ## 2026-10-24 — Selected primary across self casts
 
 [Native cast contexts](systems/spell-casting.md#selected-primary-across-self-casts--2026-10-24) keep explicit cast unit and selected action primary distinct through shared execution and native snapshots. Actual self-cast Ret child-target RED50.92s→four native GREEN60.88s at ec5f0f3f3; no spell-ID branch, multiplier or target fallback. The linked ledger now records NPC/Player assertions, Player/queue/composite controls and passing post-D3 test-target/plain-bin compiler checks. Full parent integration and numerical parity remain separate. The older Zenith lifetime/role assertion also fails on exact plain master3f and remains outside this fix.

@@ -1,10 +1,14 @@
 # Windwalker Xuen's Battlegear FoF recovery
 
-## Mastera804 reconciliation — verification pending
+## Mastera804 reconciliation — native23 GREEN
 
 Frozen36eeb2339 is merged, not rebased, into a new `ww-xuen-reconcile-a804` branch from exact mastera804452eb5be0c2665e33d83a525a23e7f34678e. Gatexr1111 ran no tests: its merge stopped on scripts.rs and three additive wiki conflicts. Preserve both the current SCK `periodic_trigger` and incoming four-argument `after_direct_damage`; Flurry forwards once and Xuen receives actual target/crit. SCK registers before Xuen extends the existing101546 lifecycle entry, retaining snapshot cleanup and natural completion. Both wiki sections are kept at every conflict; no gameplay redesign or new policy.
 
-The merged source will run native Xuen13, retained Flurry6 and SCK snapshot4 against one source-pinned binary, plus formatter/diff/readability proof. Current results below remain historicalf188 evidence until the new receipts are recorded. No300s rerun; the lead owns the re-gate and plain production --bins requirement.
+Merged source `d54c1b64d801f39016a0c27feea9532fa6a2ea7e` has exact parentsa804452eb/36eeb2339. Native Xuen13GREEN38.93s, retained Flurry6GREEN50.16s and SCK snapshot4GREEN24.48s use the same binary SHA256 `e7f5dfccef593a70ab986f28eff82a485e8524321375dfd8e55124e7460691b2`. Compiler582.99s/zero warnings; formatter/diff pass, conflict-region readability has no findings. Native budgets/crit-role/interruption, Flurry earning/release and earned/no-earned/later-parent snapshot behavior all remain qualified. Documentation-only follow-up does not invalidate this source proof.
+
+Evidence root `game-engine/data/diagnostics/ww-parity-2026-10-23/`: `xuen-reconcile-a804-d54c1b64d.build.{log,proof.json}`, `native-xuen-reconcile-a804-d54c1b64d-{xuen,flurry,sck}/` and `xuen-reconcile-a804-proof-ledger.json`. Each runtime retains fresh canonical4442/private7bad backup and exact frozen inputs/binary receipts. No300s rerun, worker push or spawned agents. The lead owns the re-gate and **new merged-source plain production --bins** requirement; the originalf188 --bins proof below is historical, not a current gate claim.
+
+## Original qualification
 
 Approved2026-10-24: `SIMC_WW_XUENS_BATTLEGEAR_FOF_RECOVERY`, third after Flurry and SCK. `ww-xuens-recovery` starts at origin/master4996e5967, merges production-reader fix3f897bd38, then current master7b10a2c9b at1caa0ab7b. Tested production source is f188c66c1b9827087d8a07b9803de3cf2c453817; only proof documentation follows. Flurry is landed; SCKc743e921e/sk1106 remains separately frozen/gated.
 
