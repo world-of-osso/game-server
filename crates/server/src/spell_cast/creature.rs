@@ -112,6 +112,23 @@ pub(crate) fn creature_cast_ignoring_in_progress(
     super::begin_validated_cast(world, caster, &spell, target)
 }
 
+/// SimC76f8118 sc_shaman.cpp4846–4847: background overloads have no cast time.
+/// The foreground owns earned modifier uses; retain normal costs/aura checks.
+pub(crate) fn creature_cast_instant_background(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
+) -> Result<(), CastFailure> {
+    let (mut spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
+    if let Some(misc) = &mut spell.misc {
+        misc.cast_time = None;
+    }
+    spell.cast_parent_owns_modifier_charges = true;
+    let target = super::validate_start(world, caster, &spell, explicit, true)?;
+    super::begin_validated_cast(world, caster, &spell, target)
+}
+
 /// TC partial-trigger casts may override BP0 without bypassing native costs,
 /// cooldowns, aura checks or child proc behavior (Execution Sentence expiry).
 pub(crate) fn creature_cast_with_effect0_ignoring_in_progress(

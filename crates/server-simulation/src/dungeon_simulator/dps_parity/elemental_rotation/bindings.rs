@@ -7,7 +7,8 @@ const ACTIONS: &[(&str, u32, bool, Option<u32>)] = &[
     ("lightning_bolt", 188196, false, None),
     ("chain_lightning", 188443, false, None),
     ("lava_burst", 51505, false, None),
-    ("flame_shock", 188389, false, None),
+    // Native70448 SkillLine924 learns470411; its effect64 casts188389's damage/DoT.
+    ("flame_shock", 470411, false, None),
     ("earth_shock", 8042, false, Some(8042)),
     ("elemental_blast", 117014, false, Some(117014)),
     ("earthquake", 61882, false, Some(61882)),

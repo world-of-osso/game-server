@@ -9,6 +9,7 @@ mod barbed_budget_tests;
 mod composite_precombat_tests;
 mod dummy_reference_tests;
 mod elemental_ascendance_tests;
+mod elemental_cadence_tests;
 mod elemental_mechanics_tests;
 mod elemental_rotation;
 mod elemental_rotation_tests;

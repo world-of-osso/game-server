@@ -89,6 +89,10 @@ const DAMAGE_RULES: &[DamageRule] = &[
 // 7700–7704 grants the ordinary/Fusion-of-Elements root's buff afterward.
 const BUFF_RULES: &[(u32, bool)] = &[(117014, false), (120588, true)];
 
+// SimC76f8118 sc_shaman.cpp8759: trigger(effectN(5).base_value()) uses.
+// Native zero-based effect4 owns the count; a refresh adds uses up to its cap.
+const USE_GRANTS: &[(u32, u32, u8)] = &[(191634, 191634, 4)];
+
 fn selected(world: &World, caster: Entity, talent: u32) -> bool {
     world
         .get::<ActiveSpec>(caster)
@@ -151,6 +155,32 @@ pub(in crate::spell_cast) fn after_launch(
         grant_mote(world, caster, spell.id, depth);
     }
     grant_blast_buff(world, caster, spell.id, false, depth);
+    grant_native_uses(world, caster, spell.id);
+}
+
+fn grant_native_uses(world: &mut World, caster: Entity, spell: u32) {
+    let Some(&(_, aura_spell, effect)) = USE_GRANTS.iter().find(|rule| rule.0 == spell) else {
+        return;
+    };
+    if !selected(world, caster, spell) {
+        return;
+    }
+    let uses = super::script_effect_value(world, caster, spell, effect) as u8;
+    assert!(uses > 0, "native next-spell grant must supply uses");
+    let Some(aura) = world.get::<ActiveAuras>(caster).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == aura_spell && aura.caster == caster)
+    }) else {
+        warn!(
+            ?caster,
+            spell, aura_spell, "Native use-grant aura missing after cast"
+        );
+        return;
+    };
+    // Applying the native aura already contributed one stack.
+    let stacks = aura.stacks.saturating_add(uses - 1);
+    crate::auras::set_self_cast_stacks(world, caster, aura_spell, stacks);
 }
 
 // SimC76f8118 sc_shaman.cpp7245–7247: only normal Lava Burst earns MOTE.

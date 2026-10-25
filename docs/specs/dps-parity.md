@@ -268,6 +268,12 @@ The Elemental MOTE policy uses the resolved native260734 effect0 amount, not an 
 
 Elemental Blast117014 grants one native118522/173183/173184 buff after its cast; overload120588 grants it before execution. Choose uniformly among inactive buffs until all three are active, then refresh one. Native aura values and durations stay unchanged (`sc_shaman.cpp`7545–7577,7615–7620,7700–7704).
 
+Flame Shock's literal action uses learned native470411, whose costed trigger casts188389. The DoT fact retains188389; do not grant knowledge of its unlearned payload or bypass readiness.
+
+Elemental Overload callbacks are instant background actions that can execute during a foreground hardcast without replacing its cast state. Native child damage, resource costs and aura/target checks remain authoritative; effect160 ordinary forced casts remain unchanged (SimC76f8118 `sc_shaman.cpp`4846–4847).
+
+Stormkeeper grants its native effect4 count of next-spell uses, bounded by the native stack cap. Each use carries one native modifier amount, not a stack-multiplied bonus. A successful foreground root spends one use; its background overload does not spend another (`sc_shaman.cpp`8759).
+
 ## Out of scope
 
 Rotation/decision implementation belongs to the lead/rotation agents. No system install, native-table re-export, canonical data mutation or protocol change without demonstrated need. Reference SimC is the official local CLI-only source build at76f8118cf3f7f41dad20708e8328e1f4ab2deebc (embedded70391); server inputs remain70448. Durable evidence lives in `game-engine/data/diagnostics/dps-parity-2026-10-21/`.

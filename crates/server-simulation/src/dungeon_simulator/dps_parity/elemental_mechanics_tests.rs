@@ -8,13 +8,13 @@ const MOTE: u32 = 260734;
 const BLAST_BUFFS: &[u32] = &[118522, 173183, 173184];
 type DamageSample = (u64, f32, f32);
 
-fn fixture() -> Run {
+pub(super) fn fixture() -> Run {
     let mut run = prepare_literal(262, 1).unwrap();
     engage(&mut run);
     run
 }
 
-fn settle(run: &mut Run) {
+pub(super) fn settle(run: &mut Run) {
     for _ in 0..600 {
         run.app.update();
         let world = run.app.world();
@@ -34,7 +34,7 @@ fn settle(run: &mut Run) {
     panic!("native Elemental cast/GCD failed to finish");
 }
 
-fn cast(run: &mut Run, spell: u32) {
+pub(super) fn cast(run: &mut Run, spell: u32) {
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
         run.actor,
@@ -46,7 +46,7 @@ fn cast(run: &mut Run, spell: u32) {
     settle(run);
 }
 
-fn own_aura(run: &Run, spell: u32) -> Option<&crate::auras::AuraInstance> {
+pub(super) fn own_aura(run: &Run, spell: u32) -> Option<&crate::auras::AuraInstance> {
     run.app
         .world()
         .get::<ActiveAuras>(run.actor)
