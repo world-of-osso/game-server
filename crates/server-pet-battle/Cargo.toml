@@ -7,3 +7,7 @@ rust-version.workspace = true
 [dependencies]
 # The existing world.db catalog loader and its unchanged SQLite fixtures.
 rusqlite = { version = "0.35", features = ["bundled"] }
+
+[dev-dependencies]
+# The unchanged catalog-inventory test serializes its coverage report.
+serde_json = "1"
