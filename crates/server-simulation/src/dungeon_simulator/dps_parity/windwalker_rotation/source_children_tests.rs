@@ -1,5 +1,6 @@
 //! Real source-driven FoF and Zenith children, without granting state.
 use super::*;
+use crate::spell_cast::effects::factor_capture::FactorCapture;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
@@ -48,6 +49,7 @@ fn rsk_cooldown(run: &Run) -> f64 {
 #[test]
 #[ignore = "actual FoF dispatches MID2 extra damage and selected Jadefire at channel end"]
 fn literal_ww_native_source_children_fof_mid2_and_jadefire() {
+    let _seed = crate::random::seed_scope(70448);
     let mut run = prepare();
     assert!(
         crate::auras::has_aura(run.app.world(), run.actor, 1296621),
@@ -85,6 +87,7 @@ fn literal_ww_native_source_children_fof_mid2_and_jadefire() {
 #[test]
 #[ignore = "actual Zenith starts native Stomp damage and resets the spent RSK cooldown"]
 fn literal_ww_native_source_children_zenith_stomp_and_rsk_reset() {
+    let _seed = crate::random::seed_scope(70448);
     let mut run = prepare();
     super::tests::cast(&mut run, RSK);
     assert!(
@@ -100,4 +103,55 @@ fn literal_ww_native_source_children_zenith_stomp_and_rsk_reset() {
         rsk_cooldown(&run) <= 0.002,
         "Zenith resets actual RSK recovery"
     );
+}
+
+#[test]
+#[ignore = "native FULL_MASK Stomp trigger ignores caster aura requirements"]
+fn literal_ww_native_source_children_full_trigger_ignores_caster_aura() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare();
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 1291484));
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(
+        crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, STOMP, Some(target), 1),
+        "FULL_MASK must ignore the native caster-aura prerequisite"
+    );
+    assert!(hits(&run, STOMP) > 0, "actual native child delivery");
+}
+
+#[test]
+#[ignore = "real WDP child damage receives native Combo Strikes mastery"]
+fn literal_ww_native_source_children_wdp_uses_native_mastery() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare();
+    super::tests::cast(&mut run, RSK);
+    super::tests::cast(&mut run, FOF);
+    for _ in 0..200 {
+        if !crate::auras::has_aura(run.app.world(), run.actor, FOF) {
+            break;
+        }
+        run.app.update();
+    }
+    run.app.insert_resource(FactorCapture::new(
+        run.actor,
+        run.targets[0],
+        451767,
+        "wdp_mastery",
+        5,
+    ));
+    super::tests::cast(&mut run, 152175);
+    assert!(hits(&run, 451767) > 0, "actual WDP child delivery");
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let empowered = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|row| row["applied_multipliers"].as_array())
+        .flatten()
+        .any(|factor| {
+            factor["factor"] == "combo_strikes"
+                && factor["value"].as_f64().is_some_and(|value| value > 1.0)
+        });
+    assert!(empowered, "actual WDP damage must include native mastery");
 }
