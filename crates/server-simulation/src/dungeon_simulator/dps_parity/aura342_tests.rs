@@ -1,4 +1,6 @@
 //! Native haste composition and independent342 cast/white clocks.
+#[path = "melee_crit_tests.rs"]
+mod melee_crit_tests;
 use super::*;
 use crate::auras::ActiveAuras;
 use crate::spell_cast::powers::PowerPools;
