@@ -208,12 +208,30 @@ impl Equipment {
         let (index, field) = tail
             .split_once('.')
             .ok_or("literal trinket requires a field")?;
-        let slot = match index {
-            "1" => "trinket1",
-            "2" => "trinket2",
-            _ => return Err(format!("unknown literal trinket {index}")),
+        match self.trinket_slot(index)? {
+            Some(item) => self.trinket_fact(item, field, native),
+            None => Ok(0.0),
+        }
+    }
+
+    fn trinket_slot(&self, alias: &str) -> Result<Option<&Slot>, String> {
+        match alias {
+            "1" => return Ok(Some(&self.slots["trinket1"])),
+            "2" => return Ok(Some(&self.slots["trinket2"])),
+            _ if alias.parse::<u32>().is_ok() => {
+                return Err(format!("unknown literal trinket {alias}"));
+            }
+            _ => {}
+        }
+        // SimC76f8118 unique_gear.cpp4245–4261: bind a named equipped
+        // trinket's actual slot; absent names are a constant-zero expression.
+        let Some(ids) = self.names.get(&alias.to_ascii_lowercase()) else {
+            return Ok(None);
         };
-        self.trinket_fact(&self.slots[slot], field, native)
+        Ok(["trinket1", "trinket2"]
+            .into_iter()
+            .map(|slot| &self.slots[slot])
+            .find(|item| ids.contains(&item.item_id)))
     }
 
     fn trinket_fact(
