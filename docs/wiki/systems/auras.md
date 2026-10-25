@@ -565,7 +565,7 @@ Source: pinned TC `a352b1fa`, `Unit.cpp:1607–1657`; [encounter requirements](.
 
 ## Procs
 
-Emitters push `AuraEvent{actor, target, actor_mask, target_mask, spell, can_proc, periodic, damage}` into `PendingAuraEvents`. `damage` is the damage the target took, after absorbs, in its own health units: a level-scaled creature's health loss (`level_scaling::health_loss`), not the attacker-frame amount. `process_aura_events` drains the queue in `FixedUpdate`. Masks use TrinityCore `ProcFlags`/`ProcFlags2`.
+Emitters call `procs::push_event` with `AuraEvent{actor, target, actor_mask, target_mask, spell, can_proc, periodic, damage}`; the queue pins actor/target aura instance identities at that moment. Later applications cannot proc or spend charges on an older queued event, even in the same cast/tick. Existing native filters and charge handling remain unchanged, and remaining candidates keep native aura order. TC `Unit.cpp10611–10670` gathers the current aura map synchronously; there is no generic castId exemption. [Qualification](../../handoffs/aura-proc-event-candidates-proof-ledger.md). `damage` is the damage the target took, after absorbs, in its own health units: a level-scaled creature's health loss (`level_scaling::health_loss`), not the attacker-frame amount. `process_aura_events` drains the queue in `FixedUpdate`. Masks use TrinityCore `ProcFlags`/`ProcFlags2`.
 
 | Event | Actor | Target |
 |---|---|---|
