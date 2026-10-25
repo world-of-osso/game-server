@@ -54,6 +54,8 @@ mod hunter_command_tests;
 #[cfg(test)]
 mod hunter_focus_tests;
 #[cfg(test)]
+mod hunter_melee_tests;
+#[cfg(test)]
 mod hunter_stomp_tests;
 mod inputs;
 mod literal_ranged_attack_tests;
