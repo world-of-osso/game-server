@@ -44,7 +44,6 @@ mod elemental;
 pub(crate) use elemental::register as register_elemental_policies;
 mod elemental_ascendance;
 pub(super) use echo_policies::after_cast as apply_echo_policies;
-pub(super) use elemental::capture_damage_modifier as capture_consumed_damage_modifier;
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
 mod enhancement_strikes;
@@ -87,7 +86,9 @@ pub(super) fn apply_periodic_damage_policies(
 }
 
 pub(crate) fn owns_policy_proc(spell: u32) -> bool {
-    policies::owns_policy_proc(spell) || melee_reset::owns_proc(spell)
+    policies::owns_policy_proc(spell)
+        || melee_reset::owns_proc(spell)
+        || resource_values::owns_proc(spell)
 }
 mod germination;
 mod giantkiller;
@@ -172,6 +173,16 @@ pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havo
 pub(crate) use batch20::proc_charges;
 pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
+pub(super) fn capture_consumed_damage_modifier(
+    world: &World,
+    caster: Entity,
+    spell: &mut SpellInfo,
+    foreground: bool,
+) -> Option<u32> {
+    policies::pet_sets::capture_cobra_damage(world, caster, spell);
+    elemental::capture_damage_modifier(world, caster, spell, foreground)
+}
+
 pub(super) fn finish_scripted_launch(
     world: &mut World,
     caster: Entity,
@@ -181,6 +192,7 @@ pub(super) fn finish_scripted_launch(
     foreground: bool,
 ) {
     elemental::after_launch(world, caster, spell, consumed, depth, foreground);
+    policies::pet_sets::finish_cobra(world, caster, spell);
     execution_counters::after_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
     enhancement_tier::after_launch(world, caster, spell, depth);
@@ -777,6 +789,7 @@ pub fn after_cast(spell_id: u32) -> impl Iterator<Item = AfterCastHook> {
         .chain(spellslinger::after_cast_hook(spell_id))
         .chain(batch9::after_cast_hook(spell_id))
         .chain(aura_rolls::hook(spell_id))
+        .chain(resource_values::after_cast_hook(spell_id))
 }
 
 fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
