@@ -827,6 +827,7 @@ impl Facts for NativeFacts<'_> {
         if let Some(alias) = name.strip_prefix("spell_targets.") {
             let action = Action {
                 name: alias.to_owned(),
+                source_row: None,
                 target: None,
                 options: Default::default(),
             };
