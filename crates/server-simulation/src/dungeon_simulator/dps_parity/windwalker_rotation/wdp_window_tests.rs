@@ -169,7 +169,9 @@ fn literal_ww_native_wdp_first_enabler_window_exposes_source_and_native_rejectio
     let start = run.app.world().resource::<Time>().elapsed();
     super::super::install_fixture_lifetimes(&mut run, start);
     super::super::engage(&mut run);
-    let mut rotation = run.windwalker_rotation.take().unwrap();
+    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>)
+        .downcast::<Rotation>()
+        .unwrap();
     let mut seen = false;
     let mut closed_frames = 0;
     let mut trace = Vec::new();

@@ -1510,7 +1510,7 @@ pub(crate) fn deal_copied_damage(world: &mut World, ctx: &EffectCtx, target: Ent
 }
 
 /// TC Unit.cpp:6922–6929/6962; SharedDefines.h:576/687.
-fn creature_type_damage_multiplier(
+pub(super) fn creature_type_damage_multiplier(
     world: &World,
     caster: Entity,
     target: Entity,
@@ -1876,6 +1876,17 @@ fn deal_source_damage_and_report(
     }
     let target_multiplier = damage_taken(world, ctx, target, &damage);
     let cast_multiplier = cast_damage_multiplier(ctx.spell);
+    let creature = if resolved_source || ignores_caster_damage_modifiers(ctx.spell) {
+        1.0
+    } else {
+        creature_type_damage_multiplier(world, damage.bonus_caster, target, ctx.spell)
+    };
+    // Residual copies remove primary-only modifiers and retain the source crit.
+    let residual_source = if creature > 0.0 {
+        source_amount * cast_multiplier / creature
+    } else {
+        0.0
+    };
     let unrounded = (source_amount * target_multiplier * cast_multiplier).max(0.0);
     let amount = unrounded.round();
     #[cfg(any(test, feature = "test-support"))]
@@ -2006,6 +2017,7 @@ fn deal_source_damage_and_report(
         super::scripts::after_ret_periodic_damage(world, ctx, target, crit);
     }
     if !periodic && !resolved_source {
+        super::scripts::after_spell_residual(world, ctx, target, residual_source);
         super::scripts::after_direct_damage(world, ctx, target, crit);
     }
     if hot_streak_hit {
