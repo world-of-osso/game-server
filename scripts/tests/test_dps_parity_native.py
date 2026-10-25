@@ -15,6 +15,12 @@ import unittest
 )
 class NativeSourceViewTests(unittest.TestCase):
     def test_process_reads_frozen_database_without_mutating_host_source(self):
+        self.assert_source_view(shared_target=False)
+
+    def test_process_accepts_explicit_shared_cargo_target_without_mutating_host_source(self):
+        self.assert_source_view(shared_target=True)
+
+    def assert_source_view(self, *, shared_target):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "data").mkdir()
@@ -41,19 +47,33 @@ with sqlite3.connect(sys.argv[1]) as db:
             script = root / "scripts/dps_parity_native.py"
             script.parent.mkdir()
             shutil.copy2(Path(__file__).resolve().parents[1] / script.name, script)
-            executable = root / "target/debug/deps/server_simulation-fixture"
+            target = root / ("shared-target" if shared_target else "target")
+            executable = target / "debug/deps/server_simulation-fixture"
             executable.parent.mkdir(parents=True)
             executable.write_text(f"#!{sys.executable}\n" + code)
             executable.chmod(0o755)
             command = [sys.executable, str(script), str(executable), str(live)]
+            environment = os.environ | {"DPS_PARITY_WORLD_DB": str(frozen)}
+            environment.pop("CARGO_TARGET_DIR", None)
+            if shared_target:
+                environment["CARGO_TARGET_DIR"] = str(target)
             result = subprocess.run(
                 command, capture_output=True, text=True, timeout=30,
-                env=os.environ | {"DPS_PARITY_WORLD_DB": str(frozen)},
+                env=environment,
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(result.stdout.splitlines(), ["frozen", "readonly"])
             self.assertEqual(hashlib.sha256(live.read_bytes()).hexdigest(), before)
             self.assertEqual(hashlib.sha256(frozen.read_bytes()).hexdigest(), frozen_before)
+            if shared_target:
+                unselected = root / "unselected-target"
+                unselected.mkdir()
+                refused = subprocess.run(
+                    command, capture_output=True, text=True, timeout=30,
+                    env=environment | {"CARGO_TARGET_DIR": str(unselected)},
+                )
+                self.assertNotEqual(refused.returncode, 0)
+                self.assertIn("selected Cargo target", refused.stderr)
             with sqlite3.connect(live) as db:
                 self.assertEqual(
                     db.execute("SELECT value FROM source_marker").fetchall(),
