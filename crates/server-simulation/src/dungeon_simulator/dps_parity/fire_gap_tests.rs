@@ -259,9 +259,10 @@ fn fire_batch_mana_cascade_uses_effect_two_haste() {
         .get::<crate::stats::CharacterStats>(run.actor)
         .unwrap()
         .haste_pct;
+    let haste_factor = (100.0 + after) / (100.0 + before);
     assert!(
-        (after - before - 0.5).abs() < 0.01,
-        "one native stack supplies0.5% haste: {before} -> {after}"
+        (haste_factor - 1.005).abs() < 0.0001,
+        "one native stack multiplies haste by1.005: {before} -> {after}"
     );
 }
 

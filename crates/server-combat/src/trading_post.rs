@@ -35,7 +35,7 @@ pub(crate) fn admin_grant_tender(
     Ok(store::grant_tender(db, account, amount)?.tender)
 }
 
-pub(crate) struct TradingPostPlugin;
+pub struct TradingPostPlugin;
 impl Plugin for TradingPostPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<catalog::Catalog>()

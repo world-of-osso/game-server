@@ -7,7 +7,7 @@ use shared::components::{PowerType, UnitStats};
 
 use super::handlers::*;
 use super::{ActiveAuras, AuraInstance};
-use crate::stats::StatModifiers;
+use crate::stats::{StatModifiers, compound_haste_pct};
 
 /// School bit indexes 0 Physical .. 6 Arcane.
 pub const SCHOOL_COUNT: usize = 7;
@@ -382,7 +382,7 @@ pub fn compute(auras: &ActiveAuras, player_controlled_npc: bool) -> (StatModifie
     acc.combat.movement_speed = slowed(capped(run, BASE_SPEED));
     acc.combat.flight_speed = slowed(capped(flight, BASE_SPEED));
     acc.combat.swim_speed = slowed(capped(swim, BASE_SWIM_SPEED));
-    acc.stats.haste_pct += acc.haste_not_stack;
+    acc.stats.haste_pct = compound_haste_pct(acc.stats.haste_pct, acc.haste_not_stack);
     acc.stats.haste_total_pct = super::ret_crusade::haste_total_pct(auras);
     (acc.stats, acc.combat)
 }
@@ -584,15 +584,16 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                     .find(|effect| effect.index == 1)
                     .expect("native Mana Cascade requires effect2")
                     .amount;
-                stats.haste_pct += haste * 0.1 * stacks;
+                stats.haste_pct = compound_haste_pct(stats.haste_pct, haste * 0.1 * stacks);
             }
-            // Retail 12.x haste is one stat: melee, ranged and spell haste
-            // auras all add to it.
+            // SimC76f8118 player.cpp4987–4995: independent haste buffs multiply.
             MOD_MELEE_HASTE
             | MOD_RANGED_HASTE
             | MOD_MELEE_RANGED_HASTE
             | MELEE_SLOW
-            | HASTE_SPELLS => stats.haste_pct += amount,
+            | HASTE_SPELLS => {
+                stats.haste_pct = compound_haste_pct(stats.haste_pct, amount);
+            }
             MOD_CASTING_SPEED_NOT_STACK => acc.haste_not_stack = acc.haste_not_stack.max(amount),
             MASTERY => stats.mastery_points += amount,
             // Player::ApplyModOverrideSpellPowerByAPPercent adds each aura's amount

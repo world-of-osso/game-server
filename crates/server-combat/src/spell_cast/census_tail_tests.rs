@@ -8,6 +8,7 @@ const DREAMWALK: u32 = 193_753;
 const DREAMWALK_TRACKING_QUEST: u32 = 39_174;
 const FEROCIOUS_BITE: u32 = 22_568;
 const CAT_FORM: u32 = 768;
+const INCARNATION_KING_OF_THE_JUNGLE: u32 = 102_543;
 const WILT: u32 = 23_772;
 const BARKSKIN: u32 = 22_812;
 
@@ -106,7 +107,6 @@ fn feral_bite_cast(energy: f32) -> (f32, f32) {
 }
 
 #[test]
-#[ignore = "Feral Bite TC port pending: genuine extra-Energy RED, outside shared knowledge slice"]
 fn feral_bite_native_extra_energy_scales_damage_after_base_cost_before_burn() {
     let (base, remaining) = feral_bite_cast(25.0);
     assert!(base > 0.0, "native Bite must hit before comparing factors");
@@ -119,6 +119,94 @@ fn feral_bite_native_extra_energy_scales_damage_after_base_cost_before_burn() {
         assert!(
             (damage - base * multiplier).abs() <= 2.0,
             "Energy{energy}: damage{damage}, base{base}, expected multiplier{multiplier}"
+        );
+    }
+}
+
+fn apply_native_saber_jaws(h: &mut Harness) -> f32 {
+    let talent = world_db().unwrap().store.get(421432).unwrap();
+    let caster = h.caster;
+    super::execute_cast(h.app.world_mut(), caster, talent, Some(caster)).unwrap();
+    let auras = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(caster)
+        .unwrap();
+    let saber = auras.iter().find(|aura| aura.spell_id == 421432).unwrap();
+    saber
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount
+        / 100.0
+}
+
+fn feral_saber_jaws_cast(extra_energy: f32) -> (f32, f32) {
+    let _scope = crate::random::seed_scope(70448);
+    let mut h = burn_fixture(true);
+    let source = world_db().unwrap();
+    let caster = h.caster;
+    let bonus = apply_native_saber_jaws(&mut h);
+    h.set_power(PowerType::ComboPoints, 5.0);
+    let bite = source.store.get(FEROCIOUS_BITE).unwrap();
+    let costs = super::spell_costs(h.app.world(), caster, bite).unwrap();
+    let base_energy = super::resources::spent(&costs, PowerType::Energy);
+    h.set_power(PowerType::Energy, base_energy + extra_energy);
+    let before = h.health(h.npc);
+    super::execute_cast(h.app.world_mut(), caster, bite, Some(h.npc)).unwrap();
+    assert_eq!(h.power(PowerType::Energy), 0.0);
+    (before - h.health(h.npc), bonus)
+}
+
+#[test]
+fn feral_saber_jaws_amplifies_native_extra_energy_bonus() {
+    let (base, bonus) = feral_saber_jaws_cast(0.0);
+    let (extra, _) = feral_saber_jaws_cast(25.0);
+    assert!(base > 0.0 && bonus > 0.0);
+    assert!(
+        (extra - base * (2.0 + bonus)).abs() <= 2.0,
+        "native Saber Jaws augments only Bite's excess-Energy term: base{base}, extra{extra}, bonus{bonus}"
+    );
+}
+
+fn feral_bite_incarnation_cast(extra_energy: f32) -> (f32, f32) {
+    let _scope = crate::random::seed_scope(70448);
+    let mut h = burn_fixture(true);
+    let source = world_db().unwrap();
+    let incarnation = source.store.get(INCARNATION_KING_OF_THE_JUNGLE).unwrap();
+    let caster = h.caster;
+    super::execute_cast(h.app.world_mut(), caster, incarnation, Some(caster)).unwrap();
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        caster,
+        INCARNATION_KING_OF_THE_JUNGLE,
+    ));
+    h.set_power(PowerType::ComboPoints, 5.0);
+    let bite = source.store.get(FEROCIOUS_BITE).unwrap();
+    let costs = super::spell_costs(h.app.world(), caster, bite).unwrap();
+    let base_energy = super::resources::spent(&costs, PowerType::Energy);
+    h.set_power(PowerType::Energy, base_energy + extra_energy);
+    let before = h.health(h.npc);
+    super::execute_cast(h.app.world_mut(), caster, bite, Some(h.npc)).unwrap();
+    (before - h.health(h.npc), h.power(PowerType::Energy))
+}
+
+#[test]
+fn feral_bite_native_incarnation_preserves_actual_extra_energy_cap() {
+    let (base, remaining) = feral_bite_incarnation_cast(0.0);
+    assert!(base > 0.0);
+    assert_eq!(remaining, 0.0);
+    // Native70448 Incarnation effect1 is a trigger, not an aura effect.
+    // Its real cost modifier changes ordinary payment, not this native25 cap.
+    for (extra, multiplier, expected_remaining) in
+        [(12.5, 1.5, 0.0), (25.0, 2.0, 0.0), (50.0, 2.0, 25.0)]
+    {
+        let (damage, remaining) = feral_bite_incarnation_cast(extra);
+        assert_eq!(remaining, expected_remaining, "extra Energy{extra}");
+        assert!(
+            (damage - base * multiplier).abs() <= 2.0,
+            "extra Energy{extra}: damage{damage}, base{base}, expected factor{multiplier}"
         );
     }
 }
