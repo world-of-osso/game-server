@@ -107,14 +107,33 @@ fn cast_literal_storm(run: &mut super::super::Run) {
 #[test]
 #[ignore = "native literal self-cast must retain hostile primary for forwarded child"]
 fn dps_parity_ret_tier_literal_self_cast_preserves_arbiter_hostile_primary() {
-    use super::super::ret_tier_tests::{cast_finisher, grant_native_purpose, has, native_ret};
+    let _seed = crate::random::seed_scope(70448);
+    assert_arbiter_primary(super::super::ret_tier_tests::native_ret(4));
+}
+
+#[test]
+#[ignore = "native Player self-cast retains its selected hostile primary"]
+fn dps_parity_ret_tier_player_self_cast_preserves_arbiter_hostile_primary() {
+    let _seed = crate::random::seed_scope(70448);
+    let (profile, traits) = super::super::read_reference(70).unwrap();
+    let mut run = super::super::prepare_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race: 3 },
+    )
+    .unwrap();
+    super::super::engage(&mut run);
+    assert_arbiter_primary(run);
+}
+
+fn assert_arbiter_primary(mut run: super::super::Run) {
+    use super::super::ret_tier_tests::{cast_finisher, grant_native_purpose, has};
     use crate::spell_cast::test_harness::ObservedTriggeredCasts;
     const FINAL_VERDICT: u32 = 383328;
     const DIVINE_STORM: u32 = 53385;
     const DIVINE_ARBITER: u32 = 1306923;
     const VERDICT_ARBITER: u32 = 1306161;
-    let _seed = crate::random::seed_scope(70448);
-    let mut run = native_ret(4);
     run.app.init_resource::<ObservedTriggeredCasts>();
     execution::execute(
         run.app.world_mut(),
