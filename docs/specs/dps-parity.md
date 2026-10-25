@@ -4,6 +4,16 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+### Shared Spellslinger producers
+
+- Selected Splintering Sorcery443739 emits the native specialization payload (Arcane443763/Frost443722) after native Arcane Blast, Prismatic Bolt, Frostbolt, Flurry and Glacial Spike executions. Signature Spell supplies its authored extra conjures. All queued recipients retain the actual hostile primary; individual launches are staggered100ms as pinned `sc_mage.cpp7324–7361` specifies.
+- Each native Ray of Frost damage tick conjures the native Splinterstorm effect2 amount, then opens/refreshes native1247908. Conjures during an earned Splinterstorm/Arcane Surge window use the selected native doubling chance. Native spell records retain damage coefficients.
+
+### Frost Mage literal fixture
+
+- Spec64 captures the native player before setup and executes the unchanged exported76f8118 Frost action rows through shared `Program`/`Driver`/`Prepared`/`Equipment`, not AssistedCombat4512.
+- Precombat completes real Intellect and its first usable harmful precast before engagement. Native clocks, channel decisions, knowledge, costs, cooldowns and70448 spell values remain authoritative. Buff and recipient Freezing reaction clocks are configured before acquisition, including new add waves.
+
 ### Beast Mastery literal fixture
 
 - Main-pet Focus regeneration is continuous at1.25 times the owner's native potential Focus rate, including its native haste and modifiers. It is independent of owner resource cap and entity iteration order. Stable guardians do not regenerate Focus. The legacy24-Focus-per4s path is removed.
@@ -24,6 +34,9 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Spec260 preserves the requested player identity and captures literal control before setup. Execute the profile's complete action rows with shared `Program`/`Driver`/`Prepared`/`Equipment`, not AssistedCombat. The pinned profile requests Instant Poison without a nonlethal coating. Read combo points, Energy, native readiness and earned Roll the Bones states from the actor; never substitute reference damage or synthetic buffs.
 - Shared Rogue operands expose the native combo-point spend capacity and Energy deficit/time-to-max excluding temporary capacity, while retaining permanent talent capacity.
+- Roll the Bones resolves the native specialization action1214909; the obsolete315508 talent endpoint must not suppress it as unknown. A roll replaces old secondary states with exactly one native One of a Kind/Double Trouble/Triple Threat/Jackpot aura at55/30/10/5 odds. Selected Sleight of Hand may raise states below Triple Threat by its native chance; Loaded Dice raises once afterward and is consumed. The new state inherits the native container deadline.
+- A finisher affected by earned Fang Strike snapshots maximum native combo-point capacity for its resource-dependent values, even when actual payment is zero. Consume that Fang Strike use after the successful ordinary cast. Match affected actions through the native aura's family mask, not a finisher-ID branch.
+- Learned Cut to the Chase extends or starts owned native Slice and Dice only after the pinned eligible finisher lands. Freeze effective combo points before payment; use native51667 seconds per point and315496 base duration, capped at the maximum-point pandemic duration. Dispatch, Envenom, Eviscerate and Coup de Grace are the pinned consumers.
 
 ### Equipment
 
@@ -57,6 +70,11 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Fire literal fixture
 
 Spec63 measurements use the exact profile action rows with shared `Program`, `Driver`, `Prepared` and `Equipment`, for either native actor kind. Capture fixture control before setup frames; complete native Arcane Intellect, Mirror Image and prepull Pyroblast in source order before starting the combat clock. Fire-only facts read selected-recipient health thresholds and Heat Shimmer from native70448 data; `hot_streak_spells_in_flight` counts this caster's actual eligible missiles, using the same producer identities as native hit handling. Ordinary dungeon follower control is unchanged.
+
+- Flamestrike binds the selected native talent:2120 first, otherwise1254851, consistently for facts and dispatch.
+- Meteor with selected Sunfury Execution and Pyroclasm applies one native269651 stack without the ordinary Hot Streak expenditure chance roll.
+- An actual Pyroclasm hardcast with the earned native MID2 two-piece adds the source100% crit bonus. Preserve the admitted modifier through proc consumption and missile impact; instant Hot Streak casts do not qualify.
+- Guaranteed critical hits predict their actual Heating Up acquisition; an observed Heating Up conversion predicts Hot Streak. A critical hit with Hot Streak already active preserves and predicts it without creating Heating Up.
 
 ### Havoc literal rotation
 
@@ -157,11 +175,13 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Shadow Priest literal parity controller
 
-- [ ] Implicit selector unions retain each unit once per effect in first-selection order; overlapping destination-area/line selectors cannot duplicate damage or use target-cap slots twice.
+- [x] Implicit selector unions retain each unit once per effect in first-selection order; overlapping destination-area/line selectors cannot duplicate damage or use target-cap slots twice.
 
 - [x] Spec258 executes the pinned Shadow APL through shared `literal_rotation`, preserving native spell identities, selected traits, resources, equipment and target selection. Missing native follower profiles use the real-player fixture; they never create follower data. Precombat runs once before engagement. No native kit or AssistedCombat driver runs beside the literal controller.
 - [x] Native `target.has_absorb` reads live positive school-absorb capacity; an absent, expired or depleted shield is false (SimC76f8118 `player.cpp11813–11814`).
-- [ ] `SIMC_SHADOW_TENTACLE_SLAM_CHILDREN`:1227280 lands after the pinned500ms scripted travel time while its self-Energize stays immediate. Apply34914 first in1227621's native area, using root effect2's cap and preferring enemies without the caster's VT; damage all selected enemies, then apply335467 at selected1279353 effect0's native percentage without paying Insanity. Persist the multiplier in periodic-leech snapshots and retain native rolling carry (`sc_priest_shadow.cpp1733–1785,1819–1871,1272–1275`). No native records, coefficients or durations are replaced.
+- [x] `SIMC_SHADOW_TENTACLE_SLAM_CHILDREN`:1227280 lands after the pinned500ms scripted travel time while its self-Energize stays immediate. Apply34914 first in1227621's native area, using root effect2's cap and preferring enemies without the caster's VT; damage all selected enemies, then apply335467 at selected1279353 effect0's native percentage without paying Insanity. Persist the multiplier in periodic-leech snapshots and retain native rolling carry (`sc_priest_shadow.cpp1733–1785,1819–1871,1272–1275`). No native records, coefficients or durations are replaced.
+
+- [ ] Shadow Weaving343690 scales eligible Shadow damage by live mastery per owned active589/34914/335467 on the recipient, counting a DoT being applied. Voidform194249 assumes three DoTs. Selected Madness Weaving1240394 adds its native effect0 percentage when Madness is active or during Voidform (`sc_priest.cpp4285–4341`). Native mastery amounts and damage coefficients remain unchanged. Eligibility follows the pinned priest actions, excluding item/racial procs and reflected self-damage.
 
 ### Literal precombat execution
 
@@ -294,6 +314,10 @@ Enhancement native melee procs generate the real344179 counter and187881 modifie
 Native Enhancement strike roots dispatch one195592 Crash payload per actual landed root while their Crash buff is active, not one per weapon child. Selected1262713 uses native async1252415 rather than187878; payload stacks multiply its total damage before native-recipient splitting. Thorim invokes the actual last foreground LB/CL choice (initially LB), overridden by an earned Tempest proc, and spends its real MW modifiers on that background cast. Windstrike always invokes; Stormstrike requires Doom Winds; Crash requires Doom Winds or Ascendance. Foreground Tempest requires actual454015 and consumes that proc. Sources: pinned SimC `sc_shaman.cpp4536–4598,5597–5689,6102–6105,10041–10049,12554–12600,12758–12763`.
 
 Native Enhancement Static Accumulation384437 ticks generate real MW stacks at their native amount/period. Selected Elemental Assault210853 grants its modified native effect1 stack count on ordinary strike/Lava Lash roots, including misses. Each actual consumed MW stack reduces running Strike/Lava Lash recharge by Elemental Tempo1250364 effect2 milliseconds. Descending Skies1264688 admits only actual Ascendance casts; Awakening Storms455129 admits only Strike roots, preserving native proc chance/RPPM and payload. Sources: pinned SimC `sc_shaman.cpp5225,5605–5610,10280–10283,11780–11787,12023–12039,12249–12261,12838–12847`.
+
+Selected Ride the Lightning289874 emits native211094 once per actual Strike/Lava Lash execution, using its native chain targets. This background variant neither benefits from nor spends MW. Real Tempest casts spend one454015 stack, preserving the other earned proc; Thorim spends its current Tempest proc before its MW consumption can earn a new one.
+
+Actual Enhancement MW consumption draws Tempest's pinned two-success100-card deck once per consumed stack, preserving greater-than10-card success spacing within and across decks. At most one native454015 proc is granted per spell. It does not substitute a Bernoulli roll or the talent's unused displayed chance for SimC's explicit deck parameters.
 
 Equipped native MID2 Enhancement two-piece1296627 makes real Voltaic Blaze apply1299975 Burning Core to its selected primary. Its native periodic effect dispatches333977 Fire Nova from the original caster; its caster-specific native damage modifier remains authoritative. Each Fire Nova explosion execution with equipped four-piece1296628 reduces running Crash Lightning recharge by its native effect0 milliseconds and grants1299991 Short Circuit once, not per area target.
 

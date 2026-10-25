@@ -6,7 +6,7 @@ rust-version.workspace = true
 
 # This package has no production code or normal dependency enabling fixture behavior.
 [dev-dependencies]
-server = { path = "../server", features = ["test-support"] }
+server-combat = { path = "../server-combat", features = ["test-support"] }
 bevy = { version = "0.19", default-features = false, features = ["bevy_log", "bevy_state"] }
 shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "186134ff880f1a6a7b754e4ce43456d775a44caf" }
 serde = { version = "1", features = ["derive"] }
@@ -15,4 +15,4 @@ blake3 = "1.8"
 tempfile = "3"
 rusqlite = { version = "0.35", features = ["bundled"] }
 # Exact frozen AssistedCombat types/rules shared with the core fixture bindings.
-game-engine-core = { git = "ssh://git@github.com/world-of-osso/game-engine.git", rev = "9ef2efe2d317b837d352fe8c5227086a4fdcd490" }
+game-engine-core = { git = "ssh://git@github.com/world-of-osso/game-engine.git", rev = "88b78756cbb16759290e0f7df30e2c26417c7f1f", default-features = false }

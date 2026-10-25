@@ -2,9 +2,9 @@ use peercred_ipc::Client;
 use serde::{Deserialize, Serialize};
 use shared::components::CharacterAppearance;
 
-#[path = "../admin_output.rs"]
+#[path = "../../../server-combat/src/admin_output.rs"]
 mod admin_output;
-#[path = "../equipment_admin_types.rs"]
+#[path = "../../../server-combat/src/equipment_admin_types.rs"]
 mod equipment_admin_types;
 use equipment_admin_types::{EquipmentGrantItem, EquipmentOwnership};
 

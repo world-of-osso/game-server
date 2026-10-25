@@ -1,6 +1,7 @@
 //! Native70448 identities qualified against spell_name and selected trait definitions.
 use super::super::literal_rotation::execution::NativeAction;
 use crate::simc_apl_native::Bindings;
+use bevy::prelude::*;
 use shared::components::PowerType;
 
 const ACTIONS: &[(&str, u32)] = &[
@@ -46,14 +47,26 @@ const TALENTS: &[(&str, u32)] = &[
     ("sunfury_execution", 449349),
 ];
 
-pub(super) fn build() -> Bindings {
+pub(super) fn build(world: &World, actor: Entity) -> Result<Bindings, String> {
+    let traits = world
+        .get::<crate::class_progression::TraitLoadout>(actor)
+        .ok_or("native Fire selected traits absent")?;
+    // SimC76f8118 sc_mage.cpp3888–3891: selected2120, otherwise selected1254851.
+    let flamestrike = if traits
+        .active_talent_spells()
+        .any(|spell| spell.spell_id == 2120)
+    {
+        2120
+    } else {
+        1254851
+    };
     let names = |entries: &[(&str, u32)]| {
         entries
             .iter()
             .map(|&(name, id)| (name.into(), id))
             .collect()
     };
-    Bindings {
+    let mut bindings = Bindings {
         actions: names(ACTIONS),
         buffs: names(BUFFS),
         // The pinned Fire source has no dot.* refresh operands to bind.
@@ -61,15 +74,19 @@ pub(super) fn build() -> Bindings {
         talents: names(TALENTS),
         resources: [("mana".into(), PowerType::Mana)].into(),
         global_cooldown_spell: 133,
-    }
+    };
+    bindings.actions.insert("flamestrike".into(), flamestrike);
+    Ok(bindings)
 }
 
-pub(super) fn execution_actions() -> impl Iterator<Item = NativeAction<'static>> {
+pub(super) fn execution_actions(
+    bindings: &Bindings,
+) -> impl Iterator<Item = NativeAction<'static>> + '_ {
     // Native KnownSpells/overrides and cast admission decide usability. No potion
     // inventory or external buff provider is provisioned by this fixture.
-    ACTIONS.iter().map(|&(name, spell)| NativeAction {
+    ACTIONS.iter().map(move |&(name, _)| NativeAction {
         name,
-        spell,
+        spell: bindings.actions[name],
         talent: None,
         self_target: matches!(
             name,

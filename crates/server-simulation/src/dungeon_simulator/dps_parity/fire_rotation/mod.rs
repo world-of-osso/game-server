@@ -52,7 +52,7 @@ impl Rotation {
         if !matches!(encounter, Encounter::Fixture { .. }) {
             return Err("literal Fire requires an explicit Fixture encounter".into());
         }
-        let mut bindings = bindings::build();
+        let mut bindings = bindings::build(world, actor)?;
         configure_reactions(world, actor, &bindings)?;
         let equipment = Equipment::load(world, actor, &mut bindings)?;
         let rotation = Self {
@@ -137,7 +137,7 @@ impl Rotation {
             actor,
             targets,
             &self.equipment,
-            bindings::execution_actions(),
+            bindings::execution_actions(&self.bindings),
             snapshot,
         )
     }

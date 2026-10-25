@@ -19,6 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import shutil
 import subprocess
@@ -223,13 +224,17 @@ def split_test(test):
     i = test.index("--") if "--" in test else len(test)
     cargo_args, binary_args, filters = [], list(test[i + 1:]), []
     takes_value = False
+    previous = None
     for arg in test[:i]:
         if takes_value:
-            cargo_args.append(arg)
+            # Gameplay tests moved from `server` to `server-combat` (b316f4d9b); `server` keeps
+            # only binaries and site export, so old submissions are retargeted.
+            cargo_args.append("server-combat" if previous in ("-p", "--package") and arg == "server" else arg)
             takes_value = False
         elif arg.startswith("-"):
             cargo_args.append(arg)
             takes_value = arg in CARGO_VALUE_FLAGS
+            previous = arg
         else:
             filters.append(arg)
     return cargo_args, "--", filters + binary_args
@@ -272,7 +277,9 @@ def run_executable(entry, test, executable, cwd, entry_log):
                          stderr=subprocess.STDOUT, check=False)
     with entry_log.open("a") as f:
         f.write(f"\n$ {shlex.join(command)}\n{out.stdout}")
-    return out.returncode
+    ran = sum(int(m) for m in re.findall(r"test result: \w+\. (\d+) passed; (?:\d+) failed", out.stdout))
+    ran += sum(int(m) for m in re.findall(r"test result: \w+\. \d+ passed; (\d+) failed", out.stdout))
+    return out.returncode, ran
 
 
 def run_tests(entries, log):
@@ -289,12 +296,19 @@ def run_tests(entries, log):
             else:
                 jobs += [(entry, test, exe, cwd, entry_log) for exe, cwd in found]
     with ThreadPoolExecutor(TEST_PARALLEL) as pool:
-        codes = list(pool.map(lambda job: (job[0]["id"], run_executable(*job)), jobs))
-    failing = broken | {entry_id for entry_id, code in codes if code}
+        codes = list(pool.map(lambda job: ((job[0]["id"], tuple(job[1])), run_executable(*job)), jobs))
+    failing = broken | {key[0] for key, (code, _) in codes if code}
+    # A --test that runs no test at all (a stale filter or package) is a failure, not a pass.
+    ran = {}
+    for key, (_, count) in codes:
+        ran[key] = ran.get(key, 0) + count
+    empty = {e["id"] for e in entries for t in e["tests"]
+             if e["id"] not in broken and ran.get((e["id"], tuple(t)), 0) == 0}
     passed, failed = [], []
     for entry in entries:
-        if entry["id"] in failing:
-            entry["reason"] = f"tests failed; see {entry['test_log']}"
+        if entry["id"] in failing or entry["id"] in empty:
+            entry["reason"] = (f"tests failed; see {entry['test_log']}" if entry["id"] in failing
+                               else f"tests failed: a --test ran 0 tests (stale filter or package?); see {entry['test_log']}")
             failed.append(entry)
         else:
             passed.append(entry)
@@ -533,6 +547,50 @@ def run(_args):
             time.sleep(30)
 
 
+def status(_args):
+    """Print the train's throughput metrics as JSON (read-only)."""
+    now = time.time()
+
+    def ages(directory):
+        times = [p.stat().st_mtime for p in directory.glob("*.json")]
+        return {"count": len(times), "oldest_minutes": round((now - min(times)) / 60, 1) if times else None}
+
+    cycles = []
+    logs = sorted(LOGS.glob("cycle-*.log"), key=lambda p: p.stat().st_mtime)
+    for start, log in enumerate(logs[-4:]):
+        text = log.read_text(errors="replace")
+        begun = time.mktime(time.strptime(log.name[6:21], "%Y%m%dT%H%M%S"))
+        cycles.append({"log": log.name, "minutes": round((log.stat().st_mtime - begun) / 60, 1),
+                       "checks": text.count("$ cargo check"), "push_races": text.count("push raced")})
+    results = sorted(RESULTS.glob("*.json"), key=lambda p: p.stat().st_mtime)[-30:]
+    outcome = {}
+    for path in results:
+        entry = json.loads(path.read_text())
+        state = entry["status"].split(" ")[0]
+        if state == "rejected":
+            reason = entry.get("reason", "")
+            state = next((name for key, name in (("superseded", "rejected: superseded"),
+                                                  ("merge conflict", "rejected: merge conflict"),
+                                                  ("check or fmt", "rejected: check/fmt"),
+                                                  ("tests failed", "rejected: tests failed"),
+                                                  ("RED", "rejected: RED gate")) if key in reason),
+                         "rejected: other")
+            if state == "rejected: tests failed" and not entry["land"]:
+                state = "probe RED (expected)"
+        outcome[state] = outcome.get(state, 0) + 1
+    git("fetch", "-q", "origin", check=False)
+    landed = git("log", "-1", "--format=%ct %h %s", "--invert-grep", "--grep=^merge train",
+                 "--grep=^AGENTS", "origin/master", check=False).stdout.split(" ", 2)
+    report = {"unit": subprocess.run(["systemctl", "--user", "is-active", "merge-train"], text=True,
+                                     capture_output=True).stdout.strip(),
+              "queue": ages(QUEUE), "running": ages(RUNNING),
+              "cycles": cycles[:-1], "current_cycle": cycles[-1] if cycles else None,
+              "last_30_results": outcome,
+              "last_landing": {"minutes_ago": round((now - int(landed[0])) / 60, 1), "commit": landed[1],
+                               "subject": landed[2].strip()} if len(landed) == 3 else None}
+    print(json.dumps(report, indent=2))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -551,6 +609,7 @@ def main():
     w.add_argument("id")
     w.set_defaults(func=wait)
     sub.add_parser("run").set_defaults(func=run)
+    sub.add_parser("status", help="throughput metrics for the periodic bottleneck check").set_defaults(func=status)
     args = parser.parse_args()
     args.func(args)
 

@@ -1,3 +1,7 @@
+## 2026-10-25 — Fire native binding and proc relationships
+
+[Fire63](systems/simc-apl.md#fire-fixture-adapter): source-selected Flamestrike, selected Meteor→Pyroclasm, retained hardcast crit eligibility and predictable Hot Streak observations. Native data still supplies payloads; numerical parity remains a separate measurement.
+
 ## 2026-10-25 — Havoc literal fixture and Demonic
 
 [Havoc577](systems/simc-apl.md#havoc-fixture-577): shared literal decisions, native cursor context, and talent-sourced Meta before Eye Beam/Gaze with owned-duration extension. Native regressions pass; numerical parity remains open.
@@ -111,6 +115,12 @@
 ## 2026-10-24 — Dawnlight named hit policies
 
 [Explicit policies](systems/spell-casting.md#dawnlight-named-hit-policies--2026-10-24) replace neither DB2 nor TDB: named Wake production and foreground-spender consumption use native values and generic dispatch. Producer strict RED→3GREEN precedes consumer strict RED→native15GREEN69.75s at28bf70027, including native refresh/area/all-ticking/free-cost/immune controls and retained tier behavior. Native3/max6/431380 remain authoritative; no core ID branch or primary fallback. Combined test-target/plain-bin checks each ran once/PASS with fmt/zero warnings. Literal hp1109 integration, secondary effects, parent full gate and full parity remain separate.
+## 2026-10-25 — Guild disband authority and durable deletion
+
+[Disband](systems/guild-lifecycle.md#guild-disband) uses the authenticated rank0 current guild, one redb transaction for all members and guild-owned metadata/name reservation, and the existing previous-member refresh path. The request has no supplied guild/actor ID. Four behavioral RED cases reached the missing wire variant; all four now pass, alongside retained Chat rights/history and leadership controls. Combined actual two-client Chat/disband native acceptance passes in both skins, with disband fresh-process readback. [Client acceptance](../../../game-engine/docs/specs/guild-disband.md#acceptance--2026-10-25) owns capture/artifact provenance. No invented quit-event history or last-member restriction.
+## 2026-10-24 — Guild chat history response ordering
+
+[History/live ordering](systems/guild-lifecycle.md#guild-chat-historylive-ordering--2026-10-24) changes only the existing response channel, preserving recipient authorization and storage. Real UDP/native typed-buffer RED demonstrates later live delivery loss; shared-channel/client relay repair is committed before GREEN/native proof.
 
 ## 2026-10-24 — Byte-identical public spell remainder
 
