@@ -138,6 +138,58 @@ fn arcane_batch_barrage_consumes_salvo_and_rolls_native_orb_and_prismatic() {
 }
 
 #[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_touch_native_cast_marks_target_and_expires_into_stored_damage() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(62, 1).unwrap();
+    cast(&mut run, 321507);
+    let owned_touch = run
+        .app
+        .world()
+        .get::<ActiveAuras>(run.targets[0])
+        .is_some_and(|auras| {
+            auras
+                .iter()
+                .any(|aura| aura.caster == run.actor && aura.spell_id == 210824)
+        });
+    assert!(
+        owned_touch,
+        "actual Touch cast must apply its native accumulation debuff"
+    );
+    cast(&mut run, 30451);
+    let until = crate::spell_cast::now(run.app.world()) + 15.0;
+    while crate::spell_cast::now(run.app.world()) < until {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(210833)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "owned spell damage must discharge into native210833 on expiration"
+    );
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_touch_aegwynns_clearcasting_also_grants_selected_brainstorm() {
+    let mut run = prepare_literal(62, 1).unwrap();
+    cast(&mut run, 321507);
+    assert!(
+        stacks(&run, 263725) > 0,
+        "selected Aegwynn's Technique guarantees Clearcasting"
+    );
+    assert!(
+        stacks(&run, 461531) > 0,
+        "every successful Clearcasting also triggers Brainstorm"
+    );
+}
+
+#[test]
 #[ignore = "merge-train shared PRD regression"]
 fn arcane_batch_clearcasting_prd_uses_the_pinned_coefficient_cap() {
     let constant = crate::random::accumulated_proc_constant(0.12, 13);
