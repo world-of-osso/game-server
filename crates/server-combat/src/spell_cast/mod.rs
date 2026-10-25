@@ -2743,7 +2743,8 @@ fn execute_cast_with_primary(
     }
     // TC Spell.cpp3843–3869: OnCast precedes TakePower and SendSpellGo.
     scripts::before_ret_damage_cast(world, caster, spell, 0);
-    scripts::on_cast(world, caster, spell, 0);
+    scripts::before_arcane_cast(world, caster, spell, 0);
+    scripts::on_cast(world, caster, spell.id, 0);
     take_cast_resources(world, caster, spell, &costs);
     start_cooldowns(world, caster, spell);
     scripts::ordinary_combo_cast(world, caster, spell);
@@ -2805,6 +2806,7 @@ fn execute_cast_with_primary(
         scripts::schedule_empyrean_legacy(world, caster, spell, spell.cast_primary_target);
     }
     scripts::after_foreground_special(world, caster, spell);
+    scripts::after_arcane_foreground(world, caster, spell);
     blooming_infusion::after_cast(world, caster, spell);
     druid_transform::after_cast(world, caster, spell);
     // Spell::finish (Spell.cpp:4448-4450): some spells stop the caster's auto-attack.
@@ -3852,7 +3854,8 @@ fn launch_triggered_spell(
             }
             crate::achievement::record_spell_cast(world, caster, spell.id);
             scripts::before_ret_damage_cast(world, caster, spell, depth);
-            scripts::on_cast(world, caster, spell, depth);
+            scripts::before_arcane_cast(world, caster, spell, depth);
+            scripts::on_cast(world, caster, spell.id, depth);
             scripts::spawn_ravager_field(world, caster, spell, explicit, depth);
             missiles::launch(world, caster, spell, plan, depth);
             scripts::finish_scripted_launch(world, caster, spell, consumed_damage, depth, false);
@@ -3911,7 +3914,8 @@ fn execute_costed_trigger(
     let consumed_damage =
         scripts::capture_consumed_damage_modifier(world, caster, &mut prepared, false);
     scripts::before_ret_damage_cast(world, caster, &prepared, depth);
-    scripts::on_cast(world, caster, &prepared, depth);
+    scripts::before_arcane_cast(world, caster, &prepared, depth);
+    scripts::on_cast(world, caster, prepared.id, depth);
     take_cast_resources(world, caster, &prepared, &costs);
     crate::achievement::record_spell_cast(world, caster, prepared.id);
     missiles::launch(world, caster, &prepared, plan, depth);

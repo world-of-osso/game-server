@@ -53,7 +53,7 @@ fn roll_impact_proc(world: &mut World, ctx: &EffectCtx, target: Entity, policy: 
         return;
     };
     let attempts = advance_attempts(world, ctx.caster, policy.passive);
-    let constant = crate::random::accumulated_proc_constant(probability);
+    let constant = crate::random::accumulated_proc_constant(probability, 0);
     let chance = (constant * f64::from(attempts) * 100.0).min(100.0) as f32;
     if procs::try_policy_proc(world, ctx.caster, instance, chance) {
         cast_impact_proc(world, ctx, target, policy);

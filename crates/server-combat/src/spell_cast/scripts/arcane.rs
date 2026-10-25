@@ -197,7 +197,11 @@ fn launch_orb(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
     grant_salvo(world, caster, salvo);
 }
 
-pub(super) fn after_foreground(world: &mut World, caster: Entity, spell: &SpellInfo) {
+pub(in crate::spell_cast) fn after_foreground(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+) {
     if !is_arcane(world, caster) {
         return;
     }
@@ -323,7 +327,12 @@ fn finish_filler(world: &mut World, caster: Entity, spell: u32) {
     }
 }
 
-pub(super) fn before_cast(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
+pub(in crate::spell_cast) fn before_cast(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    depth: u8,
+) {
     if !is_arcane(world, caster) {
         return;
     }

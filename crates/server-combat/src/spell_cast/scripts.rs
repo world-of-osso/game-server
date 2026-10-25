@@ -8,6 +8,9 @@ mod arcane;
 mod arcane_area;
 mod arcane_touch;
 pub(crate) use arcane::register as register_arcane;
+pub(super) use arcane::{
+    after_foreground as after_arcane_foreground, before_cast as before_arcane_cast,
+};
 pub(super) use arcane_touch::record_damage as record_arcane_touch_damage;
 mod aura_rolls;
 mod bouncing_projectiles;
@@ -48,7 +51,6 @@ pub(super) use paid_cooldowns::after_payment as after_paid_resources;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(super) fn after_foreground_special(world: &mut World, caster: Entity, spell: &SpellInfo) {
     foreground_procs::after_foreground_special(world, caster, spell);
-    arcane::after_foreground(world, caster, spell);
     execution_counters::consume_after_foreground_cast(world, caster, spell.id);
 }
 mod chrono_flame;
@@ -221,9 +223,7 @@ pub(super) fn finish_scripted_launch(
 }
 
 /// TC OnCast runs once after successful checks, before spending and launch.
-pub(super) fn on_cast(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
-    let spell_id = spell.id;
-    arcane::before_cast(world, caster, spell, depth);
+pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
     cast_grants::on_cast(world, caster, spell_id, depth);
     havoc::before_cast(world, caster, spell_id, depth);
     windwalker::scripted_combo_cast(world, caster, spell_id, depth);
