@@ -530,6 +530,34 @@ pub(crate) fn try_policy_proc(world: &mut World, unit: Entity, id: u32, chance: 
     start_proc_cooldown(world, unit, id, now).is_some()
 }
 
+/// Scripted execution sources reuse native RPPM attempts and internal cooldowns.
+pub(crate) fn try_native_policy_proc(world: &mut World, unit: Entity, id: u32) -> bool {
+    let now = aura_now(world);
+    let ready = world
+        .get::<ActiveAuras>(unit)
+        .and_then(|auras| auras.get(id))
+        .is_some_and(|aura| now >= aura.proc.next_ready_at);
+    if !ready {
+        return false;
+    }
+    let chance = proc_chance(world, unit, id, now);
+    try_policy_proc(world, unit, id, chance)
+}
+
+/// Guaranteed source callbacks use the native ICD without an additional RNG roll.
+pub(crate) fn start_policy_proc(world: &mut World, unit: Entity, id: u32) -> Option<AuraInstance> {
+    let now = aura_now(world);
+    let ready = world
+        .get::<ActiveAuras>(unit)
+        .and_then(|auras| auras.get(id))
+        .is_some_and(|aura| now >= aura.proc.next_ready_at);
+    if ready {
+        start_proc_cooldown(world, unit, id, now)
+    } else {
+        None
+    }
+}
+
 fn try_proc(world: &mut World, unit: Entity, other: Option<Entity>, id: u32, event: &AuraEvent) {
     let now = aura_now(world);
     let ready = world

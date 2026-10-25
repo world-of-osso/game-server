@@ -224,6 +224,7 @@ impl Equipment {
     ) -> Result<f64, String> {
         match field {
             "ilvl" => Ok(f64::from(item.item_level)),
+            "cast_time" => Ok(item.metadata.cast_time),
             "proc.any_dps.default_value" => item.metadata.proc_default_value(),
             "has_use_buff" => Ok(boolean(item.on_use.is_some_and(|item| item.stat_buff))),
             "has_use_damage" => Ok(boolean(item.on_use.is_some() && item.metadata.use_damage)),

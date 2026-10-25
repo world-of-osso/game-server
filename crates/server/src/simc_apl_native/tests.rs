@@ -7,6 +7,32 @@ mod action_extensions;
 #[path = "extension_tests.rs"]
 mod extensions;
 
+#[test]
+fn native_apl_weapon_group_reads_actual_main_hand() {
+    use shared::components::WeaponType;
+    let mut world = World::new();
+    let actor = world.spawn(crate::stats::CharacterStats::default()).id();
+    let bindings = Bindings::default();
+    let encounter = Encounter::Fixture {
+        started_at: 0.0,
+        duration: 300.0,
+        style: FightStyle::Patchwerk,
+    };
+    for (kind, expected) in [
+        (WeaponType::OneHand, 0.0),
+        (WeaponType::TwoHand, 1.0),
+        (WeaponType::Dagger, 0.0),
+    ] {
+        world
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .main_hand
+            .kind = kind;
+        let native = NativeFacts::new(&world, actor, &bindings, encounter, 1);
+        assert_eq!(native.value("main_hand.2h"), Ok(expected));
+    }
+}
+
 const TIGER_PALM: u32 = 100780;
 const BLACKOUT_KICK: u32 = 100784;
 const HIT_COMBO: u32 = 196740;
