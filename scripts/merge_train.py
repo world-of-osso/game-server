@@ -267,7 +267,9 @@ def cycle():
             list(pool.map(lambda e: measure(e, executable), [e for e in probes if e["measure"]]))
     write_results(rejected + failed + probes)
     # Landing tree excludes probes, so it is rebuilt and retested on its own.
-    master = push(landing, log, built=not probes) if landing else None
+    # Every probe or failed entry is still merged in this tree; only a tree of exactly the
+    # landing entries may be pushed as built.
+    master = push(landing, log, built=not (probes or failed)) if landing else None
     if master:
         for entry in landing:
             entry["status"] = f"landed in {master}"
