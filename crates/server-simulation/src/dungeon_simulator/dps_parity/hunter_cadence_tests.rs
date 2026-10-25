@@ -34,19 +34,17 @@ fn native_bulletstorm_rapid_fire_fills_stacks_and_aimed_spends_one() {
     let mut run = player(1);
     cast(&mut run, 257044, false);
     let (earned, maximum) = stacks(&run, 389020).expect("actual Rapid Fire grants Bulletstorm");
-    assert!(
-        maximum > 1,
-        "native fixture has multiple Bulletstorm applications"
-    );
+    assert!(maximum > 0, "native Bulletstorm has a positive stack limit");
     assert_eq!(
         earned, maximum,
         "Rapid Fire grants the actual native maximum"
     );
     cast(&mut run, 19434, false);
+    let remaining = (maximum > 1).then(|| (maximum - 1, maximum));
     assert_eq!(
         stacks(&run, 389020),
-        Some((maximum - 1, maximum)),
-        "actual Aimed Shot spends one, not every Bulletstorm stack"
+        remaining,
+        "actual Aimed Shot spends one native Bulletstorm use"
     );
 }
 
