@@ -137,29 +137,45 @@ def check(log):
         and cargo(log, "fmt", "--check") == 0
 
 
+class MasterBroken(Exception):
+    pass
+
+
 def build_checked(entries, log):
-    """Return (tree entries that check together, rejected). Bisect linearly on failure."""
+    """Return (tree entries that check together, rejected), with the tree checked out.
+    A failing set is split in halves, so a few broken entries cost O(k log n) checks."""
     reset_tree()
     merged, rejected = merge(entries, log)
+    good = []
+
+    def tree_checks(candidates):
+        reset_tree()
+        merge(good + candidates, log)
+        return check(log)
+
+    def admit(candidates):
+        if not candidates:
+            return
+        if tree_checks(candidates):
+            good.extend(candidates)
+        elif len(candidates) == 1:
+            candidates[0]["reason"] = f"check or fmt fails with this commit; see {log}"
+            rejected.append(candidates[0])
+        else:
+            half = len(candidates) // 2
+            admit(candidates[:half])
+            admit(candidates[half:])
+
     if check(log):
         return merged, rejected
-    # The joint tree fails: add entries one by one so only the breaking ones are dropped.
+    # A broken master rejects everything; report that instead of blaming entries.
     reset_tree()
-    kept = []
-    for entry in merged:
-        # --no-ff keeps HEAD~1 the previous tree, so a failing entry can be dropped.
-        if git("merge", "--no-ff", "--no-edit", "-q", entry["commit"], check=False).returncode:
-            git("merge", "--abort", check=False)
-            entry["reason"] = "merge conflict"
-            rejected.append(entry)
-            continue
-        if check(log):
-            kept.append(entry)
-        else:
-            entry["reason"] = f"check or fmt fails with this commit; see {log}"
-            rejected.append(entry)
-            git("reset", "-q", "--hard", "HEAD~1")
-    return kept, rejected
+    if not check(log):
+        raise MasterBroken(f"origin/master itself fails check; see {log}")
+    admit(merged)
+    reset_tree()
+    merge(good, log)
+    return good, rejected
 
 
 def run_tests(entries, log):
@@ -267,7 +283,9 @@ def cycle():
             list(pool.map(lambda e: measure(e, executable), [e for e in probes if e["measure"]]))
     write_results(rejected + failed + probes)
     # Landing tree excludes probes, so it is rebuilt and retested on its own.
-    master = push(landing, log, built=not probes) if landing else None
+    # Every probe or failed entry is still merged in this tree; only a tree of exactly the
+    # landing entries may be pushed as built.
+    master = push(landing, log, built=not (probes or failed)) if landing else None
     if master:
         for entry in landing:
             entry["status"] = f"landed in {master}"
@@ -278,16 +296,26 @@ def cycle():
         write_results(landing)
 
 
+def requeue():
+    """Entries left in running/ go back to the queue."""
+    for path in RUNNING.glob("*.json"):
+        path.rename(QUEUE / path.name)
+
+
 def run(_args):
     for directory in (QUEUE, RUNNING, RESULTS, LOGS):
         directory.mkdir(parents=True, exist_ok=True)
-    # Entries left in running/ by an interrupted cycle go back to the queue.
-    for path in RUNNING.glob("*.json"):
-        path.rename(QUEUE / path.name)
+    requeue()
     while True:
         queued = list(QUEUE.glob("*.json"))
         if queued and time.time() - min(p.stat().st_mtime for p in queued) >= GATHER_SECONDS:
-            cycle()
+            try:
+                cycle()
+            except MasterBroken as error:
+                # Not the entries' fault: keep them queued until master or the shared checkout is fixed.
+                print(error, flush=True)
+                requeue()
+                time.sleep(300)
         else:
             time.sleep(30)
 
