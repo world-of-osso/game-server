@@ -4,7 +4,7 @@ use crate::spell_cast::test_harness::harness;
 use shared::{components::PowerType, protocol::CombatLogKind};
 
 fn festering_wound_grants(spell: u32) -> usize {
-    let mut h = harness(vec![], &[197147, spell], 6).unwrap();
+    let mut h = harness(vec![], &[197147, 195757, spell], 6).unwrap();
     crate::auras::apply_aura(
         h.app.world_mut(),
         &crate::auras::AuraApplication {
@@ -15,6 +15,7 @@ fn festering_wound_grants(spell: u32) -> usize {
             source: crate::auras::AuraSource::Cast,
         },
     );
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 197147));
     h.set_power(PowerType::RunicPower, 0.0);
     procs::push_event(
         h.app.world_mut(),
