@@ -32,7 +32,8 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 ## Shared profile and action facts
 
-- [x] `hero_tree.<alias>` reads the selected native hero subtree, not allocated inactive nodes. Unknown aliases fail explicitly.
+- [x] `hero_tree.<alias>` reads the selected native hero subtree, not allocated inactive nodes. Remove display-name hyphens as pinned SimC does (`Fel-Scarred` → `felscarred`); unknown aliases fail explicitly.
+- [x] Bare `spell_targets` reads the fixture's actual active-enemy count when distance targeting is disabled, including recurring adds. Preserve one/three-target counts; it is not a named action's geometry count.
 - [x] `buff.<alias>.max_stack` reads the fresh native modified stack limit before a proc exists. Named and contextual `cost`/`cast_time` read current native power modifiers/display units and cast time, without requiring affordability or including GCD occupancy.
 - [x] Literal `auto_shot` starts learned native75 once; its native repeat owns subsequent shots. Literal player engagement does not inject melee attacks before source execution.
 - [x] Target `health` reads the selected native current pool; `retarget` enumerates actual candidates without a spell definition. Target `debuff.react` uses recipient acquisition deadlines and caster-owned aura filtering. Fixture-only absent pull events report zero remaining time and the source no-next-event sentinel.

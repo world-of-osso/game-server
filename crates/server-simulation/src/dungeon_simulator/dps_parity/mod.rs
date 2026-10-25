@@ -19,6 +19,7 @@ mod firestarter_tests;
 mod fury_rotation;
 mod gear_profile_tests;
 mod haste_tests;
+mod havoc_fact_tests;
 mod health_aura_state_tests;
 mod howl_tests;
 mod inputs;
