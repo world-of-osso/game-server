@@ -18,17 +18,23 @@ struct Specialization {
     spec: u32,
     payload: u32,
     surge: Option<u32>,
+    orb: u32,
+    cooldown_effect: u8,
 }
 const SPECIALIZATIONS: &[Specialization] = &[
     Specialization {
         spec: 62,
         payload: 443763,
         surge: Some(365362),
+        orb: 153626,
+        cooldown_effect: 0,
     },
     Specialization {
         spec: 64,
         payload: 443722,
         surge: None,
+        orb: 84714,
+        cooldown_effect: 1,
     },
 ];
 
@@ -175,6 +181,30 @@ fn conjure(world: &mut World, ctx: &EffectCtx, target: Entity, spec: Specializat
             delay += CONJURE_SPACING_MS;
         }
     }
+}
+
+pub(super) fn after_direct_damage(world: &mut World, ctx: &EffectCtx) {
+    let Some(spec) = specialization(world, ctx.caster) else {
+        return;
+    };
+    const SPELLFROST_TEACHINGS: u32 = 444986;
+    if ctx.spell.id != spec.payload || !selected(world, ctx.caster, SPELLFROST_TEACHINGS) {
+        return;
+    }
+    // SimC76f8118 sc_mage.cpp5404–5407: a landed Splinter adjusts the
+    // specialization's actual Orb recharge. Native effects carry milliseconds.
+    let milliseconds = script_effect_value(
+        world,
+        ctx.caster,
+        SPELLFROST_TEACHINGS,
+        spec.cooldown_effect,
+    );
+    super::reduce_cooldown(
+        world,
+        ctx.caster,
+        spec.orb,
+        f64::from(milliseconds) / 1000.0,
+    );
 }
 
 struct PeriodicSource {

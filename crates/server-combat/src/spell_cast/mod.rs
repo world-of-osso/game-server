@@ -227,7 +227,9 @@ pub(crate) mod recovery_rate;
 mod reflect;
 mod resources;
 pub mod runes;
+pub mod script_registry;
 pub mod scripts;
+pub use resources::spent;
 mod shapeshift;
 pub mod summon;
 #[cfg(test)]
@@ -325,6 +327,7 @@ pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
+        app.init_resource::<script_registry::SpellScriptRegistry>();
         #[cfg(any(test, feature = "test-support"))]
         app.insert_resource(toy_requirements::fixture());
         app.add_plugins(crate::knockback::KnockbackPlugin);
@@ -2046,7 +2049,7 @@ fn validate_start_with_policy(
     if blocked_by_moving && world.get::<Moving>(caster).is_some_and(|moving| moving.0) {
         return Err(CastFailure::Moving);
     }
-    if scripts::target_plan(spell.id).is_none()
+    if scripts::target_plan(world, spell.id).is_none()
         && let Some(id) = handled_effects(spell).find_map(targets::unsupported_target)
     {
         return Err(CastFailure::Unsupported(format!(
@@ -2241,7 +2244,7 @@ fn validate_target(
         .any(crate::death::resurrection::is_resurrection);
     // Retail resurrection rows have both implicit targets zero; their effect still
     // requires an explicit dead ally and the normal range/LOS checks.
-    let requirement = scripts::target_plan(spell.id)
+    let requirement = scripts::target_plan(world, spell.id)
         .map(|(relation, _)| relation)
         .or_else(|| targets::explicit_requirement(handled_effects(spell)))
         .or_else(|| {
@@ -2790,7 +2793,7 @@ fn execute_cast_with_primary(
     efflorescence::initialize_new_summons(world, caster, previous_efflo_summons);
     scripts::refund_execute(world, caster, spell, explicit, &costs);
     scripts::consume_phalanx(world, caster, spell, explicit);
-    for hook in scripts::after_cast(spell.id) {
+    for hook in scripts::after_cast(world, spell.id) {
         hook(world, caster, spell);
     }
     if !spell.cast_parent_owns_modifier_charges {
@@ -2934,7 +2937,7 @@ fn plan_targets(
             })
             .collect());
     }
-    if let Some((_, select)) = scripts::target_plan(spell.id) {
+    if let Some((_, select)) = scripts::target_plan(world, spell.id) {
         let mut plan = select(world, caster, spell, explicit);
         hit::remove_defended_targets(world, caster, spell, &mut plan);
         return Ok(plan);
@@ -3343,10 +3346,10 @@ fn run_hit_scripts(
     depth: u8,
 ) {
     let hook = scripts::on_hit(spell.id);
-    let context_hook = scripts::on_hit_with_context(spell.id);
+    let context_hook = scripts::on_hit_with_context(world, spell.id);
     let damage_hook = scripts::on_enemy_damage_hit_with_context(spell.id);
     let native_hooks = hook.is_some() || context_hook.is_some() || damage_hook.is_some();
-    let policies = spell.cast_policy_context.is_some() || scripts::has_impact_policy(spell);
+    let policies = spell.cast_policy_context.is_some() || scripts::has_impact_policy(world, spell);
     if !native_hooks && !policies {
         return;
     }
@@ -3671,7 +3674,7 @@ pub fn cast_triggered(
 }
 
 /// `cast_triggered`, reporting whether the cast went off (TC `SPELL_CAST_OK`).
-pub(crate) fn try_cast_triggered(
+pub fn try_cast_triggered(
     world: &mut World,
     caster: Entity,
     spell_id: u32,
@@ -3936,7 +3939,7 @@ fn take_cast_resources(
         return;
     }
     spend_costs(world, caster, costs);
-    scripts::after_paid_resources(world, caster, costs);
+    script_registry::after_payment(world, caster, costs);
     scripts::empower_gargoyles(world, caster, costs);
     crate::profession::take_reagents(world, caster, spell);
 }
@@ -4105,7 +4108,7 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
 
 /// `SpellHistory::RestoreCharge` (a352b1fa SpellHistory.cpp:831-840) `count` times: give back the
 /// most recently used charges of `charge_category`; the oldest keeps recovering.
-pub(crate) fn restore_charges(world: &mut World, unit: Entity, charge_category: u32, count: u8) {
+pub fn restore_charges(world: &mut World, unit: Entity, charge_category: u32, count: u8) {
     let now = history_now(world);
     let Some(mut history) = world.get_mut::<SpellHistory>(unit) else {
         return;

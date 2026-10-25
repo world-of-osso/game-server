@@ -3,7 +3,8 @@
 pub(crate) use ::rand::*;
 
 #[cfg(any(test, feature = "test-support"))]
-pub(crate) use ::rand::{Rng, SeedableRng, distributions, rngs, seq};
+pub use ::rand::Rng;
+pub(crate) use ::rand::{SeedableRng, distributions, rngs, seq};
 
 #[cfg(any(test, feature = "test-support"))]
 thread_local! {
@@ -28,10 +29,10 @@ impl Drop for SeedScope {
 }
 
 #[cfg(any(test, feature = "test-support"))]
-pub(crate) struct ThreadRng;
+pub struct ThreadRng;
 
 #[cfg(any(test, feature = "test-support"))]
-pub(crate) fn thread_rng() -> ThreadRng {
+pub fn thread_rng() -> ThreadRng {
     ThreadRng
 }
 
@@ -60,7 +61,7 @@ impl ::rand::RngCore for ThreadRng {
 }
 
 #[cfg(any(test, feature = "test-support"))]
-pub(crate) fn random<T>() -> T
+pub fn random<T>() -> T
 where
     distributions::Standard: distributions::Distribution<T>,
 {

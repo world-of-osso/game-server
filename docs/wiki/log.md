@@ -11,7 +11,7 @@
 
 ## 2026-10-25 — Warrior execution relationships
 
-[Warrior execution](systems/spell-casting.md#native-warrior-execution-relationships--2026-10-25): native timer ownership, actor-wide PRD, execution-count/valued rewards, captured periodic ordinals and paid-resource cooldown reductions. The Deep Wounds reapplication policy is explicit; other native per-tick contracts remain unchanged. Source qualification is distinct from runtime acceptance.
+[Warrior execution](systems/spell-casting.md#native-warrior-execution-relationships--2026-10-25): native timer ownership, actor-wide PRD, execution-count/valued rewards, captured periodic ordinals and paid-resource cooldown reductions. The Deep Wounds reapplication policy is explicit; other native per-tick contracts remain unchanged. Source qualification is distinct from runtime acceptance. Fury's source-only50622 slot now owns its native off-hand area once per landed main-hand tick, rather than losing it in the per-unit effect64 launcher.
 ## 2026-10-25 — Fire native binding and proc relationships
 
 [Fire63](systems/simc-apl.md#fire-fixture-adapter): source-selected Flamestrike, selected Meteor→Pyroclasm, retained hardcast crit eligibility and predictable Hot Streak observations. Native data still supplies payloads; numerical parity remains a separate measurement.
@@ -4602,3 +4602,7 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 - 2026-10-25: Pet split proof atd1e3d6cf6: workspace/all-target check and fmt pass; leaf230PASS/5existingignored, exact235runtime names and33source hashes preserved; touched-server77PASS/8ignored plus required-ground-env exact retry1PASS. Zero warnings, no assertion/code change for retry, no full suite/push. Original failed receipts retained.
 
 - 2026-10-25: Extracted dependency-free follower pull-budget policy and five unchanged tests; native measurement/AI/spell integration stays in server.
+
+## 2026-10-25 — Downstream spell-script registry
+
+Documented the first compile-boundary slice in [spell-script-crate](systems/spell-script-crate.md): all relationship-policy rows and five complete hook modules move downstream; the remaining implementations stay in combat. Dispatch order has one code-level contract.
