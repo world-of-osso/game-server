@@ -91,12 +91,12 @@ impl GuildProfileTextRequest for SetGuildInfo {
 
 #[path = "guild_charters.rs"]
 pub(crate) mod charters;
+#[path = "guild_disband.rs"]
+mod disband;
 #[path = "guild_invites.rs"]
 mod guild_invites;
 #[path = "guild_ranks.rs"]
 mod guild_ranks;
-#[path = "guild_disband.rs"]
-mod disband;
 pub(crate) use guild_invites::load_pending_invitation;
 #[cfg(test)]
 use guild_ranks::apply_rank_request;
@@ -651,11 +651,11 @@ mod guild_online_zone_tests;
 mod guild_ranks_tests;
 
 #[cfg(test)]
-#[path = "guild_leadership_transfer_tests.rs"]
-mod guild_leadership_transfer_tests;
-#[cfg(test)]
 #[path = "guild_disband_tests.rs"]
 mod guild_disband_tests;
+#[cfg(test)]
+#[path = "guild_leadership_transfer_tests.rs"]
+mod guild_leadership_transfer_tests;
 
 #[cfg(test)]
 mod tests {
