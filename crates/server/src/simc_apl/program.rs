@@ -316,13 +316,14 @@ fn bind_ready_variant(
 }
 
 fn rule_ready(rule: &Rule, action: &Action, selection: &mut Selection<'_>) -> Result<bool, String> {
-    if !condition_passes(rule, action, selection)? {
+    // SimC76f8118 action.cpp2578–2583/2619–2620: native action readiness
+    // precedes if_expr. Unavailable spells/items do not bind their conditions.
+    if matches!(&rule.body, Body::Action)
+        && (!pooling::options_ready(action, selection)? || !(selection.usable)(action)?)
+    {
         return Ok(false);
     }
-    if matches!(&rule.body, Body::Action) {
-        return Ok(pooling::options_ready(action, selection)? && (selection.usable)(action)?);
-    }
-    Ok(true)
+    condition_passes(rule, action, selection)
 }
 
 fn condition_passes(

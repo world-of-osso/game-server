@@ -1,6 +1,25 @@
 //! Source-order variables and call lists from pinned Ret/WW APL rows.
 use super::*;
 
+#[test]
+fn simc_apl_native_readiness_precedes_if_expression() {
+    let program =
+        Program::parse(&[("default", "missing_item,if=buff.unequipped_proc.up")]).unwrap();
+    let facts = BTreeMap::<String, f64>::new();
+    let mut state = program.state();
+    assert!(
+        program
+            .select("default", &facts, &mut state, |_| Ok(false))
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        program
+            .select("default", &facts, &mut state, |_| Ok(true))
+            .is_err()
+    );
+}
+
 fn facts(rows: &[(&str, f64)]) -> BTreeMap<String, f64> {
     rows.iter()
         .map(|&(key, value)| (key.into(), value))
