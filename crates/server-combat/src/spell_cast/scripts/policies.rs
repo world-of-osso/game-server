@@ -24,6 +24,11 @@ struct ChannelMomentum {
 
 #[derive(Clone, Copy)]
 enum Relationship {
+    ReduceCooldownAfterCast {
+        parent: u32,
+        cooldown: u32,
+        milliseconds_effect: u8,
+    },
     OwnedPetSpellAfterCast {
         parent: u32,
         payload: u32,
@@ -212,6 +217,18 @@ const POLICIES: &[Policy] = &[
         relationship: Relationship::ConsumeSelfAuraAfterCast {
             parent: 34026,
             payload: 1276720,
+        },
+    },
+    // SimC76f8118 sc_hunter.cpp5135–5136: successful Barbed Shot reduces
+    // running Kill Command recharge by selected War Orders' third native effect.
+    Policy {
+        name: "SIMC_BM_BARBED_WAR_ORDERS",
+        spec: 253,
+        talent: 393933,
+        relationship: Relationship::ReduceCooldownAfterCast {
+            parent: 217200,
+            cooldown: 34026,
+            milliseconds_effect: 2,
         },
     },
     // SimC76f8118 sc_monk.cpp3970–3998: selected Zenith Stomp fires on Zenith.
@@ -1155,7 +1172,8 @@ fn roll_replacement_proc(
 fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
         matches!(policy.relationship,
-        Relationship::OwnedPetSpellAfterCast { parent: trigger, .. }
+        Relationship::ReduceCooldownAfterCast { parent: trigger, .. }
+        | Relationship::OwnedPetSpellAfterCast { parent: trigger, .. }
         | Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
         | Relationship::ApplySelfAuraAfterCast { parent: trigger, .. }
         | Relationship::ConsumeSelfAuraAfterCast { parent: trigger, .. }
@@ -1205,6 +1223,16 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             continue;
         }
         match policy.relationship {
+            Relationship::ReduceCooldownAfterCast {
+                cooldown,
+                milliseconds_effect,
+                ..
+            } => {
+                let milliseconds =
+                    super::script_effect_value(world, caster, policy.talent, milliseconds_effect);
+                let seconds = f64::from(milliseconds) / 1000.0;
+                super::reduce_cooldown(world, caster, cooldown, seconds);
+            }
             Relationship::OwnedPetSpellAfterCast { payload, .. } => {
                 cast_owned_pet_payload(world, caster, spell, payload);
             }
