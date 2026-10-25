@@ -5,7 +5,9 @@ use crate::random as rand;
 
 mod after_cast_auras;
 mod arcane;
+mod arcane_touch;
 pub(crate) use arcane::register as register_arcane;
+pub(super) use arcane_touch::record_damage as record_arcane_touch_damage;
 mod bouncing_projectiles;
 mod cast_relationships;
 pub(crate) use cast_relationships::register as register_cast_relationships;
@@ -289,6 +291,9 @@ pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::Ef
     if (spell, index) == (super::toy_flag::TARGETING, 0) {
         return Some(super::toy_flag::plant);
     }
+    if (spell, index) == (321507, 0) {
+        return Some(arcane_touch::apply);
+    }
     prayer_of_mending::effect_handler(spell, index)
         .or_else(|| batch13::effect_handler(spell, index))
 }
@@ -328,7 +333,9 @@ use crate::spell_info::SpellInfo;
 /// Frostbolt: its effects are TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE) only.
 /// Sourced consumers retain native modifier amounts through projectile impact.
 pub(crate) fn snapshots_modifier(id: u32) -> bool {
-    maelstrom_weapon::snapshots_modifier(id) || cast_relationships::snapshots_modifier(id)
+    maelstrom_weapon::snapshots_modifier(id)
+        || cast_relationships::snapshots_modifier(id)
+        || arcane::snapshots_modifier(id)
 }
 
 const FROSTBOLT: u32 = 116;

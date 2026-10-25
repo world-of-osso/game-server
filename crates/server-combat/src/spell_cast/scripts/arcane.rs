@@ -25,6 +25,14 @@ struct ClearcastingAttempts(u32);
 #[derive(Component)]
 struct BarrageSalvo(u8);
 
+#[derive(Component)]
+struct BankedOverpowered;
+
+pub(super) fn snapshots_modifier(spell: u32) -> bool {
+    // sc_mage.cpp2738/2758/2866/2944: spent modifiers survive projectile flight.
+    matches!(spell, SALVO | CUMULATIVE | 1223797)
+}
+
 fn is_arcane(world: &World, caster: Entity) -> bool {
     world
         .get::<ActiveSpec>(caster)
@@ -110,10 +118,12 @@ pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u
 }
 
 pub(crate) fn register(scripts: &mut AuraScripts) {
+    super::arcane_touch::register(scripts);
     scripts.0.insert(
         MISSILES,
         AuraScript {
             on_periodic: Some(missiles_tick),
+            on_remove: Some(finish_missiles),
             ..Default::default()
         },
     );
@@ -181,14 +191,56 @@ pub(super) fn after_foreground(world: &mut World, caster: Entity, spell: &SpellI
         return;
     }
     // sc_mage.cpp1855–1863/2694/2841/3205: only eligible executions roll.
-    if matches!(spell.id, 30451 | 44425 | MISSILES | ORB | 1449) {
+    if matches!(spell.id, 30451 | 44425 | MISSILES | ORB | 1449 | 321507) {
         roll_clearcasting(world, caster);
     }
     match spell.id {
-        365350 => grant(world, caster, CLEARCASTING, 1), // sc_mage.cpp3363
+        365350 => grant_clearcasting(world, caster), // sc_mage.cpp3363
+        321507 if selected(world, caster, 1243507) => grant_clearcasting(world, caster),
         30451 | 1295924 => finish_filler(world, caster, spell.id),
         44425 => finish_barrage(world, caster),
         _ => {}
+    }
+}
+
+fn grant_clearcasting(world: &mut World, caster: Entity) {
+    // sc_mage.cpp7363–7406: successful Clearcasting also grants Brainstorm
+    // and rolls Overpowered; an active Missiles channel banks that proc.
+    grant(world, caster, CLEARCASTING, 1);
+    if selected(world, caster, 461261) {
+        grant(world, caster, 461531, 1);
+    }
+    if !roll(talent_value(world, caster, 1244329, 0)) {
+        return;
+    }
+    let channeling = world
+        .get::<shared::casting::CastState>(caster)
+        .is_some_and(|cast| {
+            cast.spell_id == MISSILES && cast.cast_type == shared::casting::CastType::Channel
+        });
+    if channeling {
+        world.entity_mut(caster).insert(BankedOverpowered);
+    } else {
+        grant(world, caster, 1277009, 1);
+    }
+}
+
+fn finish_missiles(world: &mut World, _: Entity, aura: &AuraInstance, _: auras::RemoveReason) {
+    // sc_mage.cpp3214–3223: only the hostile channel application owns finish.
+    if !aura
+        .effects
+        .iter()
+        .any(|effect| effect.index == 0 && effect.period_ms > 0)
+    {
+        return;
+    }
+    expire(world, aura.caster, 1277009);
+    if world
+        .entity_mut(aura.caster)
+        .take::<BankedOverpowered>()
+        .is_some()
+    {
+        grant(world, aura.caster, 1277009, 1);
     }
 }
 
@@ -219,7 +271,7 @@ fn roll_clearcasting(world: &mut World, caster: Entity) {
         attempts.0 = 0;
     }
     if success {
-        grant(world, caster, CLEARCASTING, 1);
+        grant_clearcasting(world, caster);
     }
 }
 
@@ -232,7 +284,7 @@ fn finish_filler(world: &mut World, caster: Entity, spell: u32) {
     if spell == 1295924 {
         expire(world, caster, PRISMATIC);
         if roll(talent_value(world, caster, 1295944, 0)) {
-            grant(world, caster, CLEARCASTING, 1);
+            grant_clearcasting(world, caster);
         }
     }
 }
