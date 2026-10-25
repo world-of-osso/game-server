@@ -46,7 +46,7 @@ const HIT_COMBO: u32 = 196740;
 const HIT_COMBO_BUFF: u32 = 196741;
 const COMBO_BREAKER: u32 = 137384;
 const COMBO_BREAKER_BUFF: u32 = 116768;
-pub(crate) const DANCE_OF_CHIJI: u32 = 325201;
+pub(crate) use crate::spell_info::DANCE_OF_CHIJI;
 const DANCE_BUFF: u32 = 325202;
 const SPINNING_CRANE_KICK: u32 = 101546;
 const MYSTIC_TOUCH_PASSIVE: u32 = 8647;

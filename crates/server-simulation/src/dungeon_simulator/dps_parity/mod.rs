@@ -1,5 +1,8 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
 mod active_enemy_tests;
+mod arms_rotation;
+mod arms_tests;
+mod assassination_knowledge_tests;
 mod assassination_rotation;
 mod aura342_tests;
 mod barbed_budget_tests;
@@ -9,6 +12,7 @@ mod elemental_ascendance_tests;
 mod elemental_rotation;
 mod elemental_rotation_tests;
 mod engagement_tests;
+mod enhancement_mechanics_tests;
 mod enhancement_operand_tests;
 mod enhancement_rotation;
 mod enhancement_tests;
@@ -96,6 +100,7 @@ struct Run {
     marksmanship_rotation: Option<marksmanship_rotation::Rotation>,
     assassination_rotation: Option<assassination_rotation::Rotation>,
     enhancement_rotation: Option<enhancement_rotation::Rotation>,
+    arms_rotation: Option<arms_rotation::Rotation>,
     fury_rotation: Option<fury_rotation::Rotation>,
 }
 
@@ -293,6 +298,11 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
     if spec_id == 263 {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
         preparation::prepare_enhancement_precombat(&mut run)?;
+        return Ok(run);
+    }
+    if spec_id == 71 {
+        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
+        preparation::prepare_arms_precombat(&mut run)?;
         Ok(run)
     } else if matches!(spec_id, 70 | 262 | 269)
         && matches!(
@@ -423,6 +433,7 @@ fn spawn_reference(
         marksmanship_rotation: None,
         assassination_rotation: None,
         enhancement_rotation: None,
+        arms_rotation: None,
         fury_rotation: None,
     })
 }
@@ -674,6 +685,9 @@ fn drive_player(run: &mut Run) -> Result<(), String> {
     if let Some(rotation) = &mut run.enhancement_rotation {
         rotation.step(run.app.world_mut(), run.actor, &run.targets, "default")?;
     }
+    if let Some(rotation) = &mut run.arms_rotation {
+        rotation.step(run.app.world_mut(), run.actor, &run.targets, false)?;
+    }
     Ok(())
 }
 
@@ -690,7 +704,8 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
         json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "actor_kind": if run.app.world().get::<shared::components::Player>(run.actor).is_some() { "player" } else { "follower" },
         "enhancement_rotation": run.enhancement_rotation.as_ref().map(|rotation| rotation.report()),
-        "driver": if run.fury_rotation.is_some() { "LITERAL_SIMC_FURY_76f8118" } else if run.elemental_rotation.is_some() { "LITERAL_SIMC_ELEMENTAL_76f8118" } else if run.marksmanship_rotation.is_some() { "LITERAL_SIMC_MARKSMANSHIP_76f8118" } else if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "arms_rotation": run.arms_rotation.as_ref().map(|rotation| rotation.report()),
+        "driver": if run.arms_rotation.is_some() { "LITERAL_SIMC_ARMS_76f8118" } else if run.fury_rotation.is_some() { "LITERAL_SIMC_FURY_76f8118" } else if run.elemental_rotation.is_some() { "LITERAL_SIMC_ELEMENTAL_76f8118" } else if run.marksmanship_rotation.is_some() { "LITERAL_SIMC_MARKSMANSHIP_76f8118" } else if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
         "fury_rotation": run.fury_rotation.as_ref().map(|rotation| rotation.report()),
         "windwalker_rotation": run.windwalker_rotation.as_ref().map(|rotation| rotation.report()),
         "ret_rotation": run.ret_rotation.as_ref().map(|rotation| rotation.report()),

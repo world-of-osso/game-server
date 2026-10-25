@@ -105,12 +105,7 @@ pub(crate) use unit_state::{orb_deception_display, supports_zero_entry_costume};
 /// SPELL_AURA_PERIODIC_DAMAGE.
 pub const PERIODIC_DAMAGE_AURA: u32 = handlers::PERIODIC_DAMAGE;
 
-/// SpellEffects IDs that apply an aura (`SpellEffect.aura` is the AuraType).
-/// 35 (party) and 65 (raid) area auras apply to their resolved targets only:
-/// there is no group backend. 27 PERSISTENT_AREA_AURA applies through its
-/// dynamic object (`spell_cast::area_aura`).
-// SimC76f8118 data_enums.hh881: native202 applies an aura to its resolved owner/pet recipients.
-pub const AURA_EFFECTS: [u32; 5] = [6, 27, 35, 65, 202];
+pub use crate::spell_info::{AURA_EFFECTS, is_aura_effect};
 
 const ATTR0_PASSIVE: u32 = 0x40;
 const ATTR4_NOT_IN_ARENA_OR_RATED_BATTLEGROUND: u32 = 0x0001_0000;
@@ -629,10 +624,6 @@ fn passive_map_allowed(world: &World, unit: Entity, spell: &SpellInfo) -> bool {
         InstanceType::Arena => !no_arena,
         _ => true,
     }
-}
-
-pub fn is_aura_effect(effect: &SpellEffect) -> bool {
-    AURA_EFFECTS.contains(&effect.effect)
 }
 
 /// Every aura effect index of `spell` as an `AuraApplication` mask.
