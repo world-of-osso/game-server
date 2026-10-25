@@ -172,6 +172,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Arms literal controller
 
+- [ ] Sweeping Strikes grants the current native effect4 use count (12 in70448). Each affected single-target attack uses the native extra-target count and secondary damage percentage; one use is consumed only when it hits at least two targets. Preserve the native primary strike, costs and cooldowns (`sc_warrior.cpp1230,1256–1273,1324–1325,5287–5294`).
+
 - [ ] Ordinary Execute163201 and native Massacre281000 snapshot actual paid Rage before taking costs. Their native260798 payload scales by twice paid/native maximum Rage; a genuinely free cast retains the full two-times multiplier. Resolve the maximum from the applicable native base-plus-optional cost row, not remaining power at child delivery. Preserve native coefficients and apply the native surviving-target refund to both parents (`sc_warrior.cpp4212–4238,4335–4348`).
 
 - [x] `SIMC_ARMS_MASTER_OF_WARFARE_REPLACEMENT`: ordinary Heroic Strike1269383 requires the actual1269391 proc and consumes it after successful execution. The source-qualified producer uses the shared PRD helper at pinned15% only for eligible foreground Mortal Strike, Overpower, Slam and Execute damage while the proc is absent; native101 metadata is a script placeholder, not a guaranteed proc. White attacks, Cleave and the consuming Heroic Strike do not produce it. Keep native proc duration, replacement payload and costs (`sc_warrior.cpp1666,3164–3168,3512–3516,3565–3581,4254–4258,5468–5472`).
