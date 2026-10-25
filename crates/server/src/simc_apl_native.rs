@@ -540,7 +540,15 @@ impl<'a> NativeFacts<'a> {
             .classes
             .iter()
             .flat_map(|class| &class.traits.sub_trees)
-            .find(|tree| tree.name.to_ascii_lowercase().replace(' ', "_") == alias)
+            // SimC76f8118 trait_data.cpp225–236 / util.cpp3250–3276:
+            // display-name hyphens are removed (native Fel-Scarred → felscarred).
+            .find(|tree| {
+                tree.name
+                    .to_ascii_lowercase()
+                    .replace(' ', "_")
+                    .replace('-', "")
+                    == alias
+            })
             .ok_or_else(|| format!("unknown native APL hero tree {alias}"))?;
         let traits = self
             .world
@@ -792,10 +800,12 @@ impl<'a> NativeFacts<'a> {
 
     fn gcd(&self, action: &Action, operand: &str) -> Result<f64, String> {
         let control = matches!(action.name.as_str(), "variable" | "call_action_list");
-        if control && matches!(operand, "gcd" | "gcd.min" | "gcd.remains") {
+        if control && matches!(operand, "gcd" | "gcd.min") {
             return Ok(0.0);
         }
-        let spell = if operand == "gcd.max" {
+        // SimC76f8118 action.cpp3795–3808 reads player.gcd_ready even for
+        // item/control rows, which have no native action-spell alias.
+        let spell = if matches!(operand, "gcd.max" | "gcd.remains") {
             self.spell(self.bindings.global_cooldown_spell)?
         } else {
             let id = bound_spell(&self.bindings.actions, &action.name, "action")?;
@@ -882,7 +892,9 @@ impl Facts for NativeFacts<'_> {
                 .ok_or_else(|| "tick_time requires an active native channel".into()),
             "expected_combat_length" => self.expected_combat_length(),
             "fight_remains" => self.remaining(name),
-            "active_enemies" => Ok(self.active_enemies as f64),
+            // SimC76f8118 action.cpp3886–3896: without distance targeting,
+            // bare spell_targets uses active_enemies, including recurring adds.
+            "active_enemies" | "spell_targets" => Ok(self.active_enemies as f64),
             "spell_haste" => self.spell_haste(),
             "movement.distance" => self.movement_distance(),
             "movement.remains" => self.movement_value("remains"),

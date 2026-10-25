@@ -7,6 +7,10 @@ mod assassination_mechanics_tests;
 mod assassination_rotation;
 mod aura342_tests;
 mod barbed_budget_tests;
+#[cfg(test)]
+mod beast_mastery_mechanics_tests;
+#[cfg(test)]
+mod beast_mastery_pet_tests;
 mod beast_mastery_rotation;
 mod composite_precombat_tests;
 mod dummy_reference_tests;
@@ -27,6 +31,7 @@ mod firestarter_tests;
 mod fury_rotation;
 mod gear_profile_tests;
 mod haste_tests;
+mod havoc_fact_tests;
 mod health_aura_state_tests;
 mod howl_tests;
 mod inputs;
@@ -51,6 +56,7 @@ mod rake_stealth_tests;
 mod report;
 mod ret_auto_proc_tests;
 mod ret_batch_tests;
+mod ret_crusade_tests;
 mod ret_damage_relationship_tests;
 mod ret_damage_tests;
 mod ret_dawnlight_consumer_tests;
