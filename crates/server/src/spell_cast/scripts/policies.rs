@@ -34,6 +34,14 @@ enum Relationship {
         cap_effect: u8,
         radius_slot: u8,
     },
+    ApplySelfAuraAfterCast {
+        parent: u32,
+        payload: u32,
+    },
+    ConsumeSelfAuraAfterCast {
+        parent: u32,
+        payload: u32,
+    },
     ChannelMomentum(ChannelMomentum),
     ReapplicationExtend {
         payload: u32,
@@ -86,6 +94,36 @@ struct Policy {
 
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
+    // SimC76f8118 sc_hunter.cpp5089/4972,3843–3846: successful Barbed/Cobra
+    // arms selected Nature's Ally; native1276720 owns its value and lifetime.
+    Policy {
+        name: "SIMC_BM_BARBED_NATURES_ALLY",
+        spec: 253,
+        talent: 1273126,
+        relationship: Relationship::ApplySelfAuraAfterCast {
+            parent: 217200,
+            payload: 1276720,
+        },
+    },
+    Policy {
+        name: "SIMC_BM_COBRA_NATURES_ALLY",
+        spec: 253,
+        talent: 1273126,
+        relationship: Relationship::ApplySelfAuraAfterCast {
+            parent: 193455,
+            payload: 1276720,
+        },
+    },
+    // SimC76f8118 sc_hunter.cpp6633: consume only after Kill Command executes.
+    Policy {
+        name: "SIMC_BM_KILL_COMMAND_NATURES_ALLY",
+        spec: 253,
+        talent: 1273126,
+        relationship: Relationship::ConsumeSelfAuraAfterCast {
+            parent: 34026,
+            payload: 1276720,
+        },
+    },
     // SimC76f8118 sc_monk.cpp3970–3998: selected Zenith Stomp fires on Zenith.
     Policy {
         name: "SIMC_WW_ZENITH_STOMP_CHILD",
@@ -940,7 +978,9 @@ fn cast_hit_payload(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
 fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
         matches!(policy.relationship,
-        Relationship::CounterAfterCast { parent: trigger, .. }
+        Relationship::ApplySelfAuraAfterCast { parent: trigger, .. }
+        | Relationship::ConsumeSelfAuraAfterCast { parent: trigger, .. }
+        | Relationship::CounterAfterCast { parent: trigger, .. }
         | Relationship::CastEcho { parent: trigger, .. }
         | Relationship::CounterEchoAfterCast { parent: trigger, .. } if trigger == parent)
     })
@@ -976,6 +1016,18 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             continue;
         }
         match policy.relationship {
+            Relationship::ApplySelfAuraAfterCast { payload, .. } => {
+                let depth = super::super::next_trigger_depth(world);
+                super::super::cast_triggered(world, caster, payload, Some(caster), depth);
+            }
+            Relationship::ConsumeSelfAuraAfterCast { payload, .. } => {
+                crate::auras::remove_auras(
+                    world,
+                    caster,
+                    crate::auras::RemoveReason::Consumed,
+                    |aura| aura.spell_id == payload && aura.caster == caster,
+                );
+            }
             Relationship::CounterAfterCast { .. } => grant_counter(world, caster, policy),
             Relationship::CastEcho { .. } => {
                 let depth = super::super::next_trigger_depth(world);

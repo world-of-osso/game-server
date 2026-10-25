@@ -31,7 +31,7 @@ mod echo_policies;
 mod elemental;
 pub(crate) use elemental::register as register_elemental_policies;
 mod elemental_ascendance;
-pub(super) use echo_policies::after_foreground_cast as apply_echo_policies;
+pub(super) use echo_policies::after_cast as apply_echo_policies;
 pub(super) use elemental::{
     after_launch as finish_scripted_launch,
     capture_damage_modifier as capture_consumed_damage_modifier,
@@ -698,11 +698,16 @@ pub(super) use empower_evoker::damage_bonus as empower_damage_bonus;
 
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
-pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
+pub fn after_cast(spell_id: u32) -> impl Iterator<Item = AfterCastHook> {
+    // Native handlers and sourced policy relationships are independent effects,
+    // not alternate implementations (SimC76f8118 sc_hunter.cpp5083–5092).
+    native_after_cast(spell_id)
+        .into_iter()
+        .chain(policies::after_cast_hook(spell_id))
+}
+
+fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
     if let Some(hook) = cast_resets::hook(spell_id) {
-        return Some(hook);
-    }
-    if let Some(hook) = policies::after_cast_hook(spell_id) {
         return Some(hook);
     }
     if let Some(hook) = after_cast_auras::hook(spell_id) {

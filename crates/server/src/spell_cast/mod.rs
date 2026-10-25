@@ -2735,7 +2735,7 @@ fn execute_cast_with_primary(
     efflorescence::initialize_new_summons(world, caster, previous_efflo_summons);
     scripts::refund_execute(world, caster, spell, explicit, &costs);
     scripts::consume_phalanx(world, caster, spell, explicit);
-    if let Some(hook) = scripts::after_cast(spell.id) {
+    for hook in scripts::after_cast(spell.id) {
         hook(world, caster, spell);
     }
     if !spell.cast_parent_owns_modifier_charges {
