@@ -27,10 +27,23 @@ mod batch9;
 mod chrono_flame;
 mod clearcasting;
 mod echo_policies;
+mod elemental;
+pub(crate) use elemental::register as register_elemental_policies;
 mod elemental_ascendance;
 pub(super) use echo_policies::after_foreground_cast as apply_echo_policies;
+pub(super) use elemental::{
+    after_launch as finish_scripted_launch,
+    capture_damage_modifier as capture_consumed_damage_modifier,
+};
 pub(crate) mod empower_evoker;
+mod enhancement_imbues;
 mod essence_burst;
+mod maelstrom_weapon;
+pub(crate) use maelstrom_weapon::{consume as consume_maelstrom_weapon, snapshots_modifier};
+pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
+    maelstrom_weapon::register(scripts);
+    enhancement_imbues::register(scripts);
+}
 mod policies;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 pub(crate) use policies::register_channel_policies;
@@ -50,6 +63,7 @@ mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
 pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
+mod melee_reset;
 mod midnight_items;
 pub(crate) mod prayer_of_mending;
 mod protection_items;
@@ -81,7 +95,15 @@ mod unbroken_rhythm;
 pub(crate) use unbroken_rhythm::register_unbroken_rhythm;
 mod windwalker;
 mod windwalker_flurry;
-pub(crate) use windwalker_flurry::after_melee_hit;
+pub(crate) fn after_melee_hit(
+    world: &mut World,
+    caster: Entity,
+    hand: crate::melee::Hand,
+    critical: bool,
+) {
+    windwalker_flurry::after_melee_hit(world, caster, hand, critical);
+    melee_reset::roll_white_hit(world, caster, critical);
+}
 mod xuens_battlegear;
 pub(crate) use xuens_battlegear::register_xuens_battlegear;
 
@@ -105,6 +127,7 @@ pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
 /// TC OnCast runs once after successful checks, before spending and launch.
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
+    elemental::before_launch(world, caster, spell_id, depth);
     match spell_id {
         batch16::RET_JUDGMENT | batch16::HOLY_JUDGMENT | batch10::PROTECTION_JUDGMENT => {
             batch16::energize_judgment(world, caster, depth);
@@ -134,6 +157,7 @@ pub(super) fn after_direct_damage(
     critical: bool,
 ) {
     windwalker_flurry::after_direct_damage(world, ctx, critical);
+    melee_reset::roll_replacement_hit(world, ctx, target, critical);
     policies::after_damage(world, ctx);
     ret_damage::after_direct_damage(world, ctx, target, critical);
     // SimC76f8118 unique_gear_midnight.cpp6351–6355: perfected Guillotine impacts apply Venomfang.
@@ -629,11 +653,13 @@ pub(super) fn snapshot_proc_modifiers(
     auras
         .iter()
         .filter(|aura| {
-            matches!(aura.spell_id, hot_streak::HOT_STREAK | lava_surge::PROC)
-                && aura.effects.iter().any(|effect| {
-                    effect.misc_values[0] == crate::auras::SpellModOp::ChangeCastTime as i32
-                        && crate::auras::spell_mods::class_mask_affects(aura, effect, spell)
-                })
+            matches!(
+                aura.spell_id,
+                hot_streak::HOT_STREAK | lava_surge::PROC | maelstrom_weapon::MODIFIER
+            ) && aura.effects.iter().any(|effect| {
+                effect.misc_values[0] == crate::auras::SpellModOp::ChangeCastTime as i32
+                    && crate::auras::spell_mods::class_mask_affects(aura, effect, spell)
+            })
         })
         .map(|aura| aura.instance_id)
         .collect()
@@ -669,6 +695,8 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         return Some(hook);
     }
     match spell_id {
+        33757 | 318038 => Some(enhancement_imbues::apply),
+        voltaic_blaze::ROOT => Some(maelstrom_weapon::grant_voltaic_blaze),
         ret_resonance::TOLL => Some(ret_resonance::grant_after_toll),
         windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
         windwalker::FISTS_OF_FURY => Some(windwalker_flurry::release),
@@ -1529,8 +1557,15 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
         voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),
         ret_toll::ROOT => Some(ret_toll::cast_child),
         343527 => Some(ret_damage::sentence_init),
-        20271 | 406957 | 24275 | 1279408 => Some(ret_damage::judgment_mastery),
         77_478 => Some(batch9::cast_earthquake_knockdown),
+        _ => None,
+    }
+}
+
+/// Damage-only impact scripts do not receive caster buffs or other aura recipients.
+pub(super) fn on_enemy_damage_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
+    match spell_id {
+        20271 | 406957 | 24275 | 1279408 => Some(ret_damage::judgment_mastery),
         _ => None,
     }
 }

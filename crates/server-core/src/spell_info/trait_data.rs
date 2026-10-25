@@ -250,10 +250,7 @@ pub(crate) fn load_trait_tree(conn: &Connection, skill_line: u32) -> rusqlite::R
 }
 
 /// Load one explicit tree's shared rules, without class-specialization Starter builds.
-pub(crate) fn load_trait_tree_by_id(
-    conn: &Connection,
-    tree_id: u32,
-) -> rusqlite::Result<TraitTree> {
+pub fn load_trait_tree_by_id(conn: &Connection, tree_id: u32) -> rusqlite::Result<TraitTree> {
     let spec_sets = load_spec_sets(conn)?;
     let conds = |sql: &str| load_linked_conds(conn, sql, tree_id, &spec_sets);
     let costs = |sql: &str| load_linked_costs(conn, sql, tree_id);
