@@ -10,7 +10,7 @@ The registry carries static slices and function pointers, not a dependency from 
 
 ## First slice
 
-Complete moved modules: cast resets, after-cast native aura triggers, weighted aura rolls, cast grants and paid-resource cooldowns. Their policy rows, native-value reads and callbacks move together. Other `spell_cast/scripts` implementations remain in combat for subsequent slices; the full directory move is not complete.
+Complete moved modules: cast resets, after-cast native aura triggers, weighted aura rolls, cast grants and paid-resource cooldowns. Their policy rows, native-value reads and callbacks move together. Essence Burst and Havoc's Demonic transformation also live downstream: the former uses first-match native after-cast dispatch; Demonic is the last registered OnCast callback, before combat's combo tracking and elemental launch. Other `spell_cast/scripts` implementations remain in combat for subsequent slices; the full directory move is not complete.
 
 ## Tests
 
