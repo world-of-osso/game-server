@@ -1,5 +1,6 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
 mod active_enemy_tests;
+mod arms_massacre_sudden_death_tests;
 mod arms_sweeping_tests;
 mod arms_tests;
 mod assassination_energy_tests;
