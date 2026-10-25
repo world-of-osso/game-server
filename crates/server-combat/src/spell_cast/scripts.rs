@@ -245,6 +245,7 @@ pub(super) fn after_direct_damage(
     critical: bool,
 ) {
     windwalker_flurry::after_direct_damage(world, ctx, critical);
+    arcane::after_splinter_hit(world, ctx);
     melee_reset::roll_replacement_hit(world, ctx, target, critical);
     policies::after_damage(world, ctx);
     ret_damage::after_direct_damage(world, ctx, target, critical);

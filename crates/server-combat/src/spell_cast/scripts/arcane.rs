@@ -180,7 +180,14 @@ fn launch_orb(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
     };
     // sc_mage.cpp2612–2616: each selected enemy receives one native Orb bolt.
     let recipients = super::arcane_area::ranged_recipients(world, caster, spell, target);
-    for recipient in recipients {
+    let count = talent_value(world, caster, 444256, 3) as u32;
+    let maximum = talent_value(world, caster, 444256, 0) as u32;
+    for (index, recipient) in recipients.into_iter().enumerate() {
+        // sc_mage.cpp2668–2675: Splintering Orbs limits total conjures by
+        // native count-per-impact, not by inventing an AoE damage coefficient.
+        if count > 0 && index < (maximum / count) as usize {
+            super::spellslinger::conjure_from_spell(world, caster, spell, recipient, count);
+        }
         queued_triggers::schedule_full_trigger(world, &ctx, recipient, 153640, 0);
         for index in 1..=extra {
             queued_triggers::schedule_full_trigger(world, &ctx, recipient, 153640, index * 150);
@@ -199,10 +206,16 @@ pub(super) fn after_foreground(world: &mut World, caster: Entity, spell: &SpellI
         roll_clearcasting(world, caster);
     }
     match spell.id {
+        321507 => {
+            let count = talent_value(world, caster, 470021, 0) as u32;
+            conjure_at_primary(world, caster, spell, count);
+            if selected(world, caster, 1243507) {
+                grant_clearcasting(world, caster);
+            }
+        }
         365350 => grant_clearcasting(world, caster), // sc_mage.cpp3363
-        321507 if selected(world, caster, 1243507) => grant_clearcasting(world, caster),
         30451 | 1295924 => finish_filler(world, caster, spell.id),
-        44425 => finish_barrage(world, caster),
+        44425 => finish_barrage(world, caster, spell),
         _ => {}
     }
 }
@@ -279,6 +292,23 @@ fn roll_clearcasting(world: &mut World, caster: Entity) {
     }
 }
 
+fn conjure_at_primary(world: &mut World, caster: Entity, spell: &SpellInfo, count: u32) {
+    if let Some(target) = spell.cast_primary_target {
+        super::spellslinger::conjure_from_spell(world, caster, spell, target, count);
+    }
+}
+
+pub(super) fn after_splinter_hit(world: &mut World, ctx: &EffectCtx) {
+    if ctx.spell.id != 443763 || !is_arcane(world, ctx.caster) {
+        return;
+    }
+    // sc_mage.cpp5406–5407: Infused Splinters rolls once per actual impact.
+    if roll(talent_value(world, ctx.caster, 1261080, 0)) {
+        let count = talent_value(world, ctx.caster, 1261080, 2) as u32;
+        grant_salvo(world, ctx.caster, count);
+    }
+}
+
 fn finish_filler(world: &mut World, caster: Entity, spell: u32) {
     // sc_mage.cpp2860/2866/2942–2950: native grant amounts, then clear spent buffs.
     let effect = if spell == 30451 { 0 } else { 2 };
@@ -294,7 +324,15 @@ fn finish_filler(world: &mut World, caster: Entity, spell: u32) {
 }
 
 pub(super) fn before_cast(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
-    if spell.id != 44425 || !is_arcane(world, caster) {
+    if !is_arcane(world, caster) {
+        return;
+    }
+    if spell.id == 365350 {
+        // sc_mage.cpp3348: conjure before the new Surge doubling window exists.
+        let count = talent_value(world, caster, 443783, 0) as u32;
+        conjure_at_primary(world, caster, spell, count);
+    }
+    if spell.id != 44425 {
         return;
     }
     // sc_mage.cpp2719–2731: Orb Barrage executes before charge spending/launch.
@@ -308,7 +346,7 @@ pub(super) fn before_cast(world: &mut World, caster: Entity, spell: &SpellInfo, 
     }
 }
 
-fn finish_barrage(world: &mut World, caster: Entity) {
+fn finish_barrage(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // sc_mage.cpp2740–2759: use earned Salvo, roll Prismatic, then consume Salvo.
     let salvo = stacks(world, caster, SALVO);
     if roll(f32::from(salvo) * talent_value(world, caster, 1295923, 0)) {
@@ -317,6 +355,11 @@ fn finish_barrage(world: &mut World, caster: Entity) {
     expire(world, caster, 1223797);
     if !auras::has_aura(world, caster, 451038) {
         expire(world, caster, SALVO);
+    }
+    // sc_mage.cpp2760–2761: Force of Will consumes the actual earned Salvo count.
+    let per_splinter = talent_value(world, caster, 444719, 0) as u32;
+    if per_splinter > 0 {
+        conjure_at_primary(world, caster, spell, u32::from(salvo) / per_splinter);
     }
     // sc_mage.cpp2719–2721/2762–2764: Polished Focus uses pre-Orb Salvo.
     let old_salvo = world
