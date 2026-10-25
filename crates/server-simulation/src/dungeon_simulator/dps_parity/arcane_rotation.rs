@@ -38,7 +38,6 @@ pub(super) struct Rotation {
     bindings: Bindings,
     equipment: Equipment,
     encounter: Encounter,
-    potion: String,
 }
 
 const BUFFS: &[(&str, u32)] = &[
@@ -142,11 +141,6 @@ impl Rotation {
             bindings,
             equipment,
             encounter,
-            potion: profile
-                .consumables
-                .get("potion")
-                .ok_or("Arcane profile has no configured potion")?
-                .clone(),
         };
         literal_rotation::capture_fixture(world, actor, encounter)?;
         Ok(rotation)
@@ -185,7 +179,6 @@ impl Rotation {
             &self.equipment,
             self.encounter,
             targets,
-            &self.potion,
         );
         self.driver
             .poll_precombat(&facts, &prepared, &self.equipment)
@@ -216,7 +209,6 @@ impl Rotation {
             &self.equipment,
             self.encounter,
             targets,
-            &self.potion,
         );
         if let Some((action, execution)) =
             self.driver
@@ -248,7 +240,6 @@ impl Rotation {
             &self.equipment,
             self.encounter,
             targets,
-            &self.potion,
         );
         if let Some(decision) =
             self.driver
@@ -264,7 +255,6 @@ impl Rotation {
 struct ArcaneFacts<'a> {
     native: NativeFacts<'a>,
     equipment: &'a Equipment,
-    potion: &'a str,
 }
 impl<'a> ArcaneFacts<'a> {
     fn new(
@@ -274,13 +264,11 @@ impl<'a> ArcaneFacts<'a> {
         equipment: &'a Equipment,
         encounter: Encounter,
         targets: &'a [Entity],
-        potion: &'a str,
     ) -> Self {
         Self {
             native: NativeFacts::new(world, actor, bindings, encounter, targets.len())
                 .with_targets(targets.first().copied(), targets),
             equipment,
-            potion,
         }
     }
 }
@@ -288,11 +276,6 @@ impl Facts for ArcaneFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
         if name == "buff.arcane_charge.stack" {
             return self.native.value("arcane_charges");
-        }
-        if let Some(alias) = name.strip_prefix("potion.") {
-            return Ok(f64::from(
-                self.potion == alias || self.potion.strip_suffix("_2") == Some(alias),
-            ));
         }
         if name.starts_with("equipped.")
             || name.starts_with("set_bonus.")

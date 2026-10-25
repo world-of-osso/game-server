@@ -67,14 +67,16 @@ where
     Rng::r#gen(&mut thread_rng())
 }
 
-/// SimC76f8118 proc_rng.hpp170–236: default-cap PRD constant for a mean rate.
+/// SimC76f8118 proc_rng.hpp170–236: PRD constant for a mean rate and cap.
+/// Zero means uncapped (the source's numerical limit100000).
 /// Roll `constant * attempts_since_success` and reset attempts after success.
-pub fn accumulated_proc_constant(probability: f64) -> f64 {
+pub fn accumulated_proc_constant(probability: f64, cap: u32) -> f64 {
     assert!(probability.is_finite(), "proc probability must be finite");
+    let cap = if cap == 0 { 100_000 } else { cap.min(100_000) };
     if probability <= 0.0 {
         return 0.0;
     }
-    if probability <= 1.0 / 100_000.0 {
+    if probability <= 1.0 / f64::from(cap) {
         return 1e-300;
     }
     if probability >= 1.0 {
@@ -83,7 +85,7 @@ pub fn accumulated_proc_constant(probability: f64) -> f64 {
     let expected = 1.0 / probability;
     let mut constant = (1.25 * probability * probability).min(0.99);
     for _ in 0..20 {
-        let (attempts, derivative) = accumulated_expected_attempts(constant);
+        let (attempts, derivative) = accumulated_expected_attempts(constant, cap);
         let error = attempts - expected;
         if error.abs() < 1e-12 {
             break;
@@ -93,12 +95,12 @@ pub fn accumulated_proc_constant(probability: f64) -> f64 {
     constant
 }
 
-fn accumulated_expected_attempts(constant: f64) -> (f64, f64) {
+fn accumulated_expected_attempts(constant: f64, cap: u32) -> (f64, f64) {
     let mut chain = 1.0;
     let mut chain_derivative = 0.0;
     let mut expected = 0.0;
     let mut derivative = 0.0;
-    for attempt in 1..=100_000 {
+    for attempt in 1..=cap {
         expected += chain;
         derivative += chain_derivative;
         let chance = f64::from(attempt) * constant;
@@ -123,7 +125,7 @@ fn accumulated_proc_constants_match_expected_proc_rates() {
         (0.5, 0.3021030253487419),
         (1.0, 1.0),
     ] {
-        let actual = accumulated_proc_constant(probability);
+        let actual = accumulated_proc_constant(probability, 0);
         if expected == 0.0 || expected == 1e-300 || expected == 1.0 {
             assert_eq!(actual, expected);
         } else {

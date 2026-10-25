@@ -4,6 +4,13 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+### Arcane native execution relationships
+
+- Eligible Arcane Blast, Barrage, Missiles, Orb and Explosion executions roll native Clearcasting's effect1 mean through shared accumulated PRD. Pinned `sc_mage.cpp6626–6631` uses13 for the coefficient calculation, not an actual13-attempt guarantee. Arcane Surge grants Clearcasting without a roll.
+- Actual hostile Missiles periodic ticks execute native7268 once, generating Cumulative Power and selected Salvo/Focusing Crystal/High Voltage from native values. The secondary damage effect requires its selected AoE talent or earned Overpowered Missiles.
+- Barrage rolls selected Orb Barrage before charge spending, then rolls Prismatic Bolt from earned Salvo and consumes Salvo outside Arcane Soul. Polished Focus refunds its native amount using the pre-Orb stack snapshot. Filler consumes Cumulative Power; Prismatic Bolt also consumes its enabling aura.
+- Arcane potion operands use the shared configured native potion facts, never a local name matcher. Orb primary-impact delivery is qualified separately from complete multi-target movement geometry and other pending Arcane relationships.
+
 ### Shared Spellslinger producers
 
 - Selected Splintering Sorcery443739 emits the native specialization payload (Arcane443763/Frost443722) after native Arcane Blast, Prismatic Bolt, Frostbolt, Flurry and Glacial Spike executions. Signature Spell supplies its authored extra conjures. All queued recipients retain the actual hostile primary; individual launches are staggered100ms as pinned `sc_mage.cpp7324–7361` specifies.

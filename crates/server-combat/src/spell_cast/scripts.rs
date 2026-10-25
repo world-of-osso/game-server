@@ -4,6 +4,8 @@
 use crate::random as rand;
 
 mod after_cast_auras;
+mod arcane;
+pub(crate) use arcane::register as register_arcane;
 mod bouncing_projectiles;
 mod cast_relationships;
 pub(crate) use cast_relationships::register as register_cast_relationships;
@@ -35,7 +37,10 @@ mod cast_grants;
 mod cast_resets;
 mod execution_counters;
 mod foreground_procs;
-pub(super) use foreground_procs::after_foreground_special;
+pub(super) fn after_foreground_special(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    foreground_procs::after_foreground_special(world, caster, spell);
+    arcane::after_foreground(world, caster, spell);
+}
 mod chrono_flame;
 mod clearcasting;
 mod echo_policies;
@@ -180,6 +185,7 @@ pub(super) fn finish_scripted_launch(
     foreground: bool,
 ) {
     elemental::after_launch(world, caster, spell, consumed, depth, foreground);
+    arcane::after_launch(world, caster, spell, depth);
     execution_counters::after_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
     enhancement_tier::after_launch(world, caster, spell, depth);
@@ -187,7 +193,9 @@ pub(super) fn finish_scripted_launch(
 }
 
 /// TC OnCast runs once after successful checks, before spending and launch.
-pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
+pub(super) fn on_cast(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
+    let spell_id = spell.id;
+    arcane::before_cast(world, caster, spell, depth);
     cast_grants::on_cast(world, caster, spell_id, depth);
     havoc::before_cast(world, caster, spell_id, depth);
     windwalker::scripted_combo_cast(world, caster, spell_id, depth);
@@ -300,7 +308,8 @@ pub(super) use batch21::berserk_combo_bonus;
 pub(super) use batch22::healing_multiplier;
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
-    windwalker_children::effect_enabled(spell, index)
+    arcane::effect_enabled(world, caster, spell, index)
+        && windwalker_children::effect_enabled(spell, index)
         && !(spell == 343527 && index == 4)
         && batch19::effect_enabled(world, caster, spell, index)
         && batch11::effect_enabled(world, caster, spell, index)

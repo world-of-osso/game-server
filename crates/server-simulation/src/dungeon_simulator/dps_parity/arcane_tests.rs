@@ -138,6 +138,24 @@ fn arcane_batch_barrage_consumes_salvo_and_rolls_native_orb_and_prismatic() {
 }
 
 #[test]
+#[ignore = "merge-train shared PRD regression"]
+fn arcane_batch_clearcasting_prd_uses_the_pinned_coefficient_cap() {
+    let constant = crate::random::accumulated_proc_constant(0.12, 13);
+    let mut survival = 1.0;
+    let mut expected_attempts = 0.0;
+    for attempt in 1..=13 {
+        expected_attempts += survival;
+        survival *= 1.0 - (constant * f64::from(attempt)).min(1.0);
+    }
+    assert!((expected_attempts - 1.0 / 0.12).abs() < 1e-10);
+    assert_eq!(crate::random::accumulated_proc_constant(0.05, 13), 1e-300);
+    assert!(
+        (crate::random::accumulated_proc_constant(0.15, 0) - 0.03222091437308769).abs() < 1e-12,
+        "uncapped Arms caller unchanged"
+    );
+}
+
+#[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec62 profile/traits"]
 fn arcane_literal_fixture_executes_profile_cooldowns_and_filler() {
     let result = measure(62, 1).expect("native Arcane profile fixture");
