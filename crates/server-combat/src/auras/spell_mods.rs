@@ -159,7 +159,9 @@ fn matching<'a>(
 // not a multiplier on its native additional-target amount.
 // Native1265871 suppresses points stacking (effect attribute0x40); tier uses
 // do not multiply its ordinary damage modifier (sc_evoker.cpp10850–10856).
-const STACKED_NEXT_SPELL_USES: &[u32] = &[53390, 117828, 116768, 325202, 114255, 191634, 436336, 1265871];
+const STACKED_NEXT_SPELL_USES: &[u32] = &[
+    53390, 117828, 116768, 325202, 114255, 191634, 436336, 1265871,
+];
 
 fn stacked_amount(aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
     let stacks = if STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) {
