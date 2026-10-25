@@ -60,6 +60,7 @@ pub(crate) use policies::{
 mod germination;
 mod giantkiller;
 pub(super) use giantkiller::multiplier as giantkiller_multiplier;
+mod havoc;
 pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
@@ -132,6 +133,7 @@ pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
 /// TC OnCast runs once after successful checks, before spending and launch.
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
+    havoc::before_cast(world, caster, spell_id, depth);
     windwalker::scripted_combo_cast(world, caster, spell_id, depth);
     elemental::before_launch(world, caster, spell_id, depth);
     match spell_id {

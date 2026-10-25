@@ -1636,6 +1636,31 @@ pub(crate) fn refresh_duration(world: &mut World, target: Entity, spell_id: u32)
     }
 }
 
+/// Set the lifetime of an existing owned aura without replacing its native effects.
+pub(crate) fn set_owned_duration(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+    milliseconds: u32,
+) -> bool {
+    let now = aura_now(world);
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(target) else {
+        return false;
+    };
+    let Some(aura) = auras
+        .auras
+        .iter_mut()
+        .find(|aura| aura.spell_id == spell && aura.caster == caster)
+    else {
+        return false;
+    };
+    aura.duration_ms = milliseconds;
+    aura.expires_at = Some(now + f64::from(milliseconds) / 1000.0);
+    auras.dirty = true;
+    true
+}
+
 /// Extend existing finite auras owned by this caster without restarting ticks.
 pub(crate) fn extend_owned_duration(
     world: &mut World,
