@@ -275,6 +275,11 @@ fn boolean(value: bool) -> f64 {
 }
 
 fn stat_fact(metadata: &Metadata, name: &str) -> Result<f64, String> {
+    // SimC76f8118 unique_gear.cpp3343–3348 excludes only tertiary ratings.
+    // Native Metadata already filters those utility-only effects from stats.
+    if name == "any_dps" {
+        return Ok(boolean(!metadata.stats.is_empty()));
+    }
     if !matches!(
         name,
         "strength" | "agility" | "intellect" | "mastery" | "versatility" | "haste" | "crit"
