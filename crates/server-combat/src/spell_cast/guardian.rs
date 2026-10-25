@@ -536,6 +536,7 @@ fn native_cast_targets(
     super::CastTargets {
         unit,
         primary: Some(enemy),
+        destination: None,
     }
 }
 
