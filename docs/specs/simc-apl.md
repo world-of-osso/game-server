@@ -22,6 +22,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] Deliver Player literal spells through ordinary Player requests with the selected explicit target, rechecking knowledge and rejecting expired identities rather than redirecting. Preserve selected and AA targets; retain native creature dispatch for WW followers.
 - [x] Native cursor actions supply the selected cast target's position during both readiness and ordinary Player/NPC dispatch. Keep destination, native unit and action-primary identities separate, and retain the point through cast time and flight; ordinary unit actions do not invent a destination.
 - [x] `retarget_auto_attack` changes only the running AA victim, preserving both swing timers and the actor's selection. An already-running AA must not restart onto the primary target.
+- [x] A flagged ranged-weapon Player cast must not start melee swings. Native attack-start flags retain the actual equipped weapon mode; the Hunter literal driver starts ranged repeats through Auto Shot.
 - [ ] Expose target-specific readonly resource-limited admission for a chosen power pool. Compare that pool's native maximum locally; never grant or temporarily replace resources. Preserve other pools, health and every other native cast constraint; an unaffordable maximum cannot qualify.
 - [x] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.
 
@@ -34,6 +35,9 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 ## Shared profile and action facts
 
+- `buff.<alias>.last_trigger` retains the last successful native application or refresh across removal, relative to the encounter clock. An unused buff returns the pinned minimum-time sentinel; acquisition must be configured before application.
+- `potion.<name>` matches the configured native potion option case-insensitively, including its exact quality or the name without a final underscore/digit. `cooldown.potion.remains` reads the actual potion spell and ItemEffect category history, not a synthetic timer.
+
 - [x] Action-bound `ticks` reads scheduled periodic ticks from the current native channel, not cast-bar progress or damage-event totals. Public `auras::paid_periodic_ticks` returns the maximum per-effect paid count for the actual caster/target/spell application. SimC `tick_zero` damage does not advance this counter; ordinary scheduled ticks do. Reads do not advance state, and absent auras return zero.
 
 - [x] Native profile effects accept pinned Shadow Omnium tokens `rune_of_unleashed_fire`, `rune_of_selfmending`, `rune_of_lingering`, `rune_of_critical_power` and `rune_of_overload`, plus numeric TraitNodeEntry IDs. Optional ranks remain ignored like pinned SimC; native trait definitions supply the applied spell and all amounts. Unknown tokens or missing native entries fail explicitly.
@@ -43,6 +47,9 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] `buff.<alias>.max_stack` reads the fresh native modified stack limit before a proc exists. Named and contextual `cost`/`cast_time` read current native power modifiers/display units and cast time, without requiring affordability or including GCD occupancy.
 - [x] Literal `auto_shot` starts learned native75 once; its native repeat owns subsequent shots. Literal player engagement does not inject melee attacks before source execution.
 - [x] Target `health` reads the selected native current pool; `retarget` enumerates actual candidates without a spell definition. Target `debuff.react` uses recipient acquisition deadlines and caster-owned aura filtering. Fixture-only absent pull events report zero remaining time and the source no-next-event sentinel.
+
+- [x] `action.<alias>.executing` and `execute_remains` read only the matching native cast/channel; inactive or different spells return0. `action.<alias>.last_used` reads the latest successful ordinary completion relative to the encounter epoch; cast requests, failed casts and triggered children do not advance it. Unused actions retain the pinned negative minimum-time sentinel.
+- [x] Action-bound `cooldown_react` requires the real spell/category/charge cooldown to be ready, including Fire Blast's short recovery while spare charges remain. Current native explicit resets do not impose a reaction-required delay.
 
 ## Equipped use_items
 
