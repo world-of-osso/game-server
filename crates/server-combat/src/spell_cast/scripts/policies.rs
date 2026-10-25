@@ -1,4 +1,5 @@
 //! Explicit missing-script policies; native spell records still own payloads.
+pub(super) mod pet_sets;
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, PowerType};
 use std::collections::HashSet;
@@ -1095,7 +1096,7 @@ pub(super) fn hit_hook(parent: u32) -> Option<super::ContextHitHook> {
         matches!(policy.relationship, Relationship::ProcReplacement { triggers, .. }
             if triggers.iter().any(|(spell, _)| *spell == parent))
     });
-    (replacement || hit_payloads(parent).next().is_some())
+    (replacement || hit_payloads(parent).next().is_some() || pet_sets::has_hit(parent))
         .then_some(cast_hit_payload as super::ContextHitHook)
 }
 
@@ -1120,6 +1121,7 @@ fn cast_hit_payload(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
         super::super::cast_triggered(world, ctx.caster, payload, Some(recipient), ctx.depth + 1);
     }
     produce_replacement_proc(world, ctx);
+    pet_sets::on_hit(world, ctx);
 }
 
 #[derive(Component, Default)]
@@ -1202,9 +1204,8 @@ fn consumers(
 }
 
 pub(super) fn after_cast_hook(parent: u32) -> Option<AfterCastHook> {
-    producers(parent)
-        .next()
-        .map(|_| apply_after_cast as AfterCastHook)
+    (producers(parent).next().is_some() || pet_sets::has_cast(parent))
+        .then_some(apply_after_cast as AfterCastHook)
 }
 
 fn selected(world: &World, caster: Entity, policy: &Policy) -> bool {
@@ -1267,6 +1268,7 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             _ => unreachable!("after-cast policy iterator"),
         }
     }
+    pet_sets::after_cast(world, caster, spell);
 }
 
 fn cast_owned_pet_payload(world: &mut World, caster: Entity, spell: &SpellInfo, payload: u32) {

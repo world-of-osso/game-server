@@ -44,7 +44,6 @@ mod elemental;
 pub(crate) use elemental::register as register_elemental_policies;
 mod elemental_ascendance;
 pub(super) use echo_policies::after_cast as apply_echo_policies;
-pub(super) use elemental::capture_damage_modifier as capture_consumed_damage_modifier;
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
 mod enhancement_strikes;
@@ -172,6 +171,16 @@ pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havo
 pub(crate) use batch20::proc_charges;
 pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
+pub(super) fn capture_consumed_damage_modifier(
+    world: &World,
+    caster: Entity,
+    spell: &mut SpellInfo,
+    foreground: bool,
+) -> Option<u32> {
+    policies::pet_sets::capture_cobra_damage(world, caster, spell);
+    elemental::capture_damage_modifier(world, caster, spell, foreground)
+}
+
 pub(super) fn finish_scripted_launch(
     world: &mut World,
     caster: Entity,
@@ -181,6 +190,7 @@ pub(super) fn finish_scripted_launch(
     foreground: bool,
 ) {
     elemental::after_launch(world, caster, spell, consumed, depth, foreground);
+    policies::pet_sets::finish_cobra(world, caster, spell);
     execution_counters::after_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
     enhancement_tier::after_launch(world, caster, spell, depth);
