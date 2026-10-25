@@ -27,6 +27,14 @@ fn beast_mastery_natures_ally_guardian_attacks_and_expires_without_replacing_pet
         "selected Nature's Ally must summon an additional real stable pet"
     );
     let guardian = *pets.iter().find(|&&unit| unit != main).unwrap();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        34026,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("native command must dispatch to both pets");
     assert_eq!(
         crate::hunter_pet::summoned_pet(run.app.world(), run.actor),
         Some(main)
@@ -43,6 +51,14 @@ fn beast_mastery_natures_ally_guardian_attacks_and_expires_without_replacing_pet
             .any(|action| action["actor"] == guardian.to_bits()
                 && action["damage"].as_u64().unwrap() > 0),
         "real guardian must attack during its native lifetime: {combat}"
+    );
+    assert!(
+        combat["actions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|action| action["actor"] == guardian.to_bits() && action["spell_id"] == 83381),
+        "Nature's Ally must receive actual commanded pet attacks: {combat}"
     );
     for _ in 0..150 {
         run.app.update();
