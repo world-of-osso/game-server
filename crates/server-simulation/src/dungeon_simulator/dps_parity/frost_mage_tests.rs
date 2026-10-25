@@ -111,6 +111,38 @@ fn frost_mage_native_potion_facts_follow_configured_item_cooldown() {
     assert!(read(&run, "cooldown.potion.remains") < remains);
 }
 
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62/Frost64 inputs"]
+fn spellslinger_native_arcane_and_frost_casts_conjure_their_own_splinters() {
+    for (spec, source, payload) in [(62, 30451, 443763), (64, 116, 443722)] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(spec, 1).unwrap();
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            source,
+            Some(run.targets[0]),
+            false,
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(run.actor.to_bits())
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id == Some(payload)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "ordinary selected spec{spec} cast{source} must launch native Splinter{payload}"
+        );
+    }
+}
+
 use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
