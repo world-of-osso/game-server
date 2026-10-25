@@ -373,6 +373,16 @@ Equipped native MID2 Enhancement two-piece1296627 makes real Voltaic Blaze apply
 - [x] Actual Aimed Shot and selected No Scope Rapid Fire produce native Precise Shots. Real spenders consume it, preserve its damage through projectile arrival and trigger selected Stargazer.
 - [x] Selected Unstable Trigger permits exactly one native-duration, Focus-free Explosive Shot recast inside its existing cooldown; that recast does not create another window.
 - [x] Volley delivers its native-duration periodic payload at the selected ground point to every actual in-radius target; all magnitudes remain native-data driven.
+- Selected Stalk and Strike grants native Lock and Load on Chakram. Rapid Fire fills native Bulletstorm uses and Aimed Shot spends one. The native70448 Bulletstorm maximum is authoritative, even when different from the reference build.
+- Volley grants Trick Shots for its field duration. Aimed Shot and Rapid Fire ticks hit actual nearby secondary targets with native Trick Shots limits and secondary percentages. Outside Volley, Aimed Shot consumes one use at launch and Rapid Fire at channel completion.
+- Master Marksman banks actual critical Hunter damage into native269576 with its native period, duration and rolling unpaid carry. Selected Blood Fletching supplies the Aimed Shot share; neither producer invents a coefficient.
+- `hunter_cadence_tests` exercises the four native cast, stack, critical-damage and real-recipient boundaries.
+- Each executed Rapid Fire tick applies selected Take Aim's native Aimed recharge reduction. Actual Auto Shots roll selected Lock and Load's native chance.
+- Selected Feathered Frenzy Trueshot force-produces an owned Sentinel's Mark at the selected hostile primary. Actual Precise spenders roll the native mark chance; Aimed impact consumes a mark into Lunar Storm's native count and payload at the pinned150ms spacing. A mark grants Moon's Blessing's native Aimed recharge reduction.
+- Actual Rapid Fire damage banks Sanctified Armaments with native residual values and carry. An Aimed critical impact applies Blood Fletching's native mark after1ms; later direct/periodic damage triggers its native bleed payload without recursive self-triggers or armor mitigation.
+- `hunter_followup_tests` covers real recharge, repeating Auto Shots, forced mark consumption and both native damage producers.
+- Each actual Explosive Shot primary tick feeds native212680 secondary-only cleave at the root's native excluded-share percentage and reduced-AoE cap. The equipped MID2 four-piece reduces running Aimed and Rapid recovery by its native effect2 milliseconds once per primary tick, never per cleave recipient.
+- A target-carried Rapid Fire channel consumes its caster's earned Trick Shots on natural completion outside actual Volley; the channel's recipient is not its owner. `hunter_explosive_tests` covers actual cleave recipients, both real recharge clocks and this ownership boundary.
 
 ## Tests asserting this spec
 
