@@ -277,7 +277,7 @@ fn literal_ww_native_zenith_target_if_preserves_enemy_context_and_self_aura() {
     // target_if reads explicit fixture TTD/boss role; native setup does not install it.
     let started_at = run.app.world().resource::<Time>().elapsed();
     super::super::install_fixture_lifetimes(&mut run, started_at);
-    let mut rotation = run.windwalker_rotation.take().unwrap();
+    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>).downcast::<Rotation>().unwrap();
     let prepared = Prepared::read(
         run.app.world_mut(),
         run.actor,
@@ -357,7 +357,7 @@ fn run_literal(count: usize) {
     let _scope = crate::random::seed_scope(70448);
     let mut run = super::super::prepare_measurement(269, count).unwrap();
     super::super::engage(&mut run);
-    let mut rotation = run.windwalker_rotation.take().unwrap();
+    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>).downcast::<Rotation>().unwrap();
     for frame in 0..600 {
         if frame % 20 == 0 {
             log_zenith_priority_probe(&mut run, &rotation, frame);
@@ -444,7 +444,7 @@ fn literal_ww_native_fof_channel_releases_damage_on_the_measured_target() {
     let _scope = crate::random::seed_scope(70448);
     let mut run = super::super::prepare_measurement(269, 1).unwrap();
     super::super::engage(&mut run);
-    let mut rotation = run.windwalker_rotation.take().unwrap();
+    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>).downcast::<Rotation>().unwrap();
     let mut observed_channel = false;
     for _ in 0..600 {
         rotation
@@ -539,7 +539,7 @@ fn literal_ww_native_selected_wdp_earns_its_native_cooldown_window() {
     let started_at = run.app.world().resource::<Time>().elapsed();
     super::super::install_fixture_lifetimes(&mut run, started_at);
     super::super::engage(&mut run);
-    let mut rotation = run.windwalker_rotation.take().unwrap();
+    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>).downcast::<Rotation>().unwrap();
     assert!(
         run.app
             .world()
@@ -688,11 +688,11 @@ fn literal_ww_native_unselected_wdp_owner_does_not_earn_the_enabler() {
     choice.entry_id = 125014;
     let identity = super::super::inputs::read_actor(&profile).unwrap();
     let mut run = super::super::prepare_literal_reference(profile, &traits, 1, identity).unwrap();
-    super::super::preparation::prepare_windwalker_precombat(&mut run).unwrap();
+    run.spec_driver = Some(super::prepare_driver(&mut run).unwrap());
     let started_at = run.app.world().resource::<Time>().elapsed();
     super::super::install_fixture_lifetimes(&mut run, started_at);
     super::super::engage(&mut run);
-    let mut rotation = run.windwalker_rotation.take().unwrap();
+    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>).downcast::<Rotation>().unwrap();
     assert!(
         !run.app
             .world()
