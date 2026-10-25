@@ -403,6 +403,49 @@ fn fire_hero_recent_heating_up_survives_a_noncritical_fireball() {
     );
 }
 
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_meteorite_hot_streak_expenditures_earn_glorious_incandescence() {
+    assert!(
+        count_earned_fire_proc(451073) > 0,
+        "Spellfire Sphere procs also produce selected Glorious Incandescence"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_meteorite_fire_blast_spends_glorious_stack_and_impacts_target() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 451073, Some(run.actor), 1);
+    assert_eq!(stacks(&run, 451073), 1);
+    start_native(&mut run, 108853, target);
+    for _ in 0..80 {
+        run.app.update();
+    }
+    assert_eq!(
+        stacks(&run, 451073),
+        0,
+        "one actual Fire Blast spends one stored Glorious stack"
+    );
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(449569)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+        "earned Glorious meteorites must really damage the native target"
+    );
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {

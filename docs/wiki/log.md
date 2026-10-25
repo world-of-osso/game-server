@@ -7,7 +7,7 @@
 [Warrior execution](systems/spell-casting.md#native-warrior-execution-relationships--2026-10-25): native timer ownership, actor-wide PRD, execution-count/valued rewards, captured periodic ordinals and paid-resource cooldown reductions. The Deep Wounds reapplication policy is explicit; other native per-tick contracts remain unchanged. Source qualification is distinct from runtime acceptance.
 ## 2026-10-25 — Fire native binding and proc relationships
 
-[Fire63](systems/simc-apl.md#fire-fixture-adapter): source-selected Flamestrike, selected Meteor→Pyroclasm, retained hardcast crit eligibility and predictable Hot Streak observations. Native data still supplies payloads; numerical parity remains a separate measurement.
+[Fire63](systems/simc-apl.md#fire-fixture-adapter): selected Flamestrike, Meteor travel and Pyroclasm, native hero/Fired Up producers, capped opening spheres and Heating Up grace. MID2's label modifies the Pyroclasm payload, not its chance. Native data still supplies payloads; numerical acceptance remains separate.
 
 ## 2026-10-25 — Havoc literal fixture and Demonic
 
