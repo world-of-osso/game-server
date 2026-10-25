@@ -1145,7 +1145,7 @@ const EFFECT_ATTR_CHAIN_FROM_INITIAL_TARGET: u32 = 0x0000_0080;
 /// the caster (`SPELL_ATTR2_CHAIN_FROM_CASTER`, searched over the spell range) or the
 /// effect from its initial target (`ChainFromInitialTarget`). Line of sight, the
 /// `SPELL_ATTR5_MELEE_CHAIN_TARGETING` front arc (facing is not modelled) and the
-/// ChainTargets / ChainJumpDistance spell mods are not modelled.
+/// ChainJumpDistance spell mods are not modelled.
 pub fn chain_targets(
     world: &mut World,
     caster: Entity,
@@ -1154,10 +1154,19 @@ pub fn chain_targets(
     target: Entity,
     relation: Relation,
 ) -> Vec<Entity> {
-    if effect.chain_targets <= 1 {
+    // TC a352b1fa Spell.cpp1834–1836 applies native ChainTargets modifiers
+    // before deciding whether this effect chains at all.
+    let max_targets = crate::auras::spell_mods::modify(
+        world,
+        caster,
+        spell,
+        crate::auras::SpellModOp::ChainTargets,
+        effect.chain_targets as f32,
+    ) as i32;
+    if max_targets <= 1 {
         return Vec::new();
     }
-    let jumps = (effect.chain_targets - 1) as usize;
+    let jumps = (max_targets - 1) as usize;
     let defense = spell
         .categories
         .as_ref()
