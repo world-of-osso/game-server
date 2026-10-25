@@ -96,6 +96,19 @@ const POLICIES: &[Policy] = &[
             primary_only: false,
         },
     },
+    // SimC76f8118 sc_warrior.cpp4452–4456: only Fury Execute main-hand
+    // applies Deep Wounds. Native262115 retains its coefficient and rolling pool.
+    Policy {
+        name: "SIMC_FURY_EXECUTE_DEEP_WOUNDS",
+        spec: 72,
+        talent: 1261060,
+        relationship: Relationship::HitPayload {
+            parent: 280849,
+            payload: 262115,
+            self_target: false,
+            primary_only: false,
+        },
+    },
     // Momentum Boost tooltip: https://warcraft.wiki.gg/wiki/Momentum_Boost
     // SimC76f8118 sc_monk.cpp1699–1704/1730–1734/1839–1841: haste damage,
     // FoF-only stacks, reset and native60%/8s speed on end (also dot.cpp75–81).

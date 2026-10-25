@@ -1355,6 +1355,8 @@ pub fn cast_for_player_with_target(
 pub struct CastTargets {
     pub unit: Entity,
     pub primary: Option<Entity>,
+    /// Explicit cursor point, retained across cast time and projectile flight.
+    pub destination: Option<[f32; 3]>,
 }
 
 /// Ordinary Player admission with an already selected action context.
@@ -1366,7 +1368,7 @@ pub fn cast_for_player_with_targets(
 ) -> Result<(), CastFailure> {
     let request = SpellCastIntent {
         target_item_guid: None,
-        destination: None,
+        destination: targets.destination,
         spell_id: Some(spell_id),
         spell: String::new(),
         target_entity: Some(targets.unit.to_bits()),
