@@ -73,6 +73,7 @@ pub(super) fn grant_voltaic_blaze(world: &mut World, caster: Entity, spell: &Spe
     // SimC sc_shaman.cpp10123–10125: once on execute, not per hit or Maelstrom power.
     let count = super::script_effect_value(world, caster, spell.id, 1) as u8;
     generate(world, caster, count);
+    super::enhancement_tier::apply_burning_core(world, caster, spell);
 }
 
 fn remove_modifier(world: &mut World, caster: Entity, aura: &AuraInstance, _reason: RemoveReason) {

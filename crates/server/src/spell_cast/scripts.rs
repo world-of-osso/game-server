@@ -46,6 +46,7 @@ pub(super) use elemental::capture_damage_modifier as capture_consumed_damage_mod
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
 mod enhancement_strikes;
+mod enhancement_tier;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
 mod essence_burst;
 mod feral_frenzy;
@@ -56,6 +57,7 @@ pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScri
     maelstrom_weapon::register(scripts);
     enhancement_imbues::register(scripts);
     enhancement_strikes::register(scripts);
+    enhancement_tier::register(scripts);
 }
 mod policies;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
@@ -154,6 +156,7 @@ pub(super) fn finish_scripted_launch(
 ) {
     elemental::after_launch(world, caster, spell, consumed, depth, foreground);
     execution_counters::after_launch(world, caster, spell.id);
+    enhancement_tier::after_launch(world, caster, spell, depth);
 }
 
 /// TC OnCast runs once after successful checks, before spending and launch.

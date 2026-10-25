@@ -267,6 +267,8 @@ Native Enhancement strike roots dispatch one195592 Crash payload per actual land
 
 Native Enhancement Static Accumulation384437 ticks generate real MW stacks at their native amount/period. Selected Elemental Assault210853 grants its modified native effect1 stack count on ordinary strike/Lava Lash roots, including misses. Each actual consumed MW stack reduces running Strike/Lava Lash recharge by Elemental Tempo1250364 effect2 milliseconds. Descending Skies1264688 admits only actual Ascendance casts; Awakening Storms455129 admits only Strike roots, preserving native proc chance/RPPM and payload. Sources: pinned SimC `sc_shaman.cpp5225,5605–5610,10280–10283,11780–11787,12023–12039,12249–12261,12838–12847`.
 
+Equipped native MID2 Enhancement two-piece1296627 makes real Voltaic Blaze apply1299975 Burning Core to its selected primary. Its native periodic effect dispatches333977 Fire Nova from the original caster; its caster-specific native damage modifier remains authoritative. Each Fire Nova explosion execution with equipped four-piece1296628 reduces running Crash Lightning recharge by its native effect0 milliseconds and grants1299991 Short Circuit once, not per area target.
+
 ### Shared literal snapshot operands
 
 `action.<alias>.damage` reads the proposed target's native direct school-damage snapshot, including current power, modifiers, mitigation and expected crit, without casting or sampling RNG. Weapon-damage predictions remain explicit errors. Action cooldown/duration and bare `ticking` retain action context. `pet.<summon alias>.active` reads actual living, unexpired, same-map owned summons; absent summons are inactive.
