@@ -4,10 +4,8 @@ use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
 mod damage;
-mod dance;
 mod demonsurge;
 pub(crate) use damage::apply_havoc_damage_policies;
-pub(crate) use dance::{filter_dance_targets, first_blood_damage, trigger_dance};
 pub use demonsurge::havoc_demonsurge_available;
 pub(crate) use demonsurge::register_havoc;
 

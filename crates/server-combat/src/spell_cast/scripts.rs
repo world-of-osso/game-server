@@ -98,7 +98,6 @@ pub(crate) fn filter_secondary_targets(
     units: &mut Vec<Entity>,
 ) {
     policies::filter_secondary_targets(world, caster, spell, effect, primary, units);
-    havoc::filter_dance_targets(world, caster, spell, primary, units);
     midnight_items::filter_font_targets(spell, primary, units);
 }
 
@@ -323,9 +322,6 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
 }
 /// Native per-unit scripts replace the default effect handler before dispatch.
 pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
-    if matches!(spell, 188499 | 210152) && (1..=4).contains(&index) {
-        return Some(havoc::trigger_dance);
-    }
     if let Some(hook) = bouncing_projectiles::hook(spell, index) {
         return Some(hook);
     }
@@ -707,7 +703,6 @@ pub fn damage_amount(world: &World, spell_id: u32) -> Option<DamageAmountHook> {
     }
     match spell_id {
         midnight_items::FONT_SPLATTER => Some(midnight_items::splatter_damage),
-        391374 | 391378 | 393055 | 393054 => Some(havoc::first_blood_damage),
         windwalker_dual_threat::DAMAGE => Some(windwalker_dual_threat::damage),
         windwalker_children::JADEFIRE => Some(windwalker_children::jadefire_damage),
         windwalker_children::RWK_DAMAGE => Some(windwalker_children::rushing_wind_damage),
