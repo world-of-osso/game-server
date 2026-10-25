@@ -238,7 +238,7 @@ pub(super) fn read_actor(
     }
 }
 
-fn read_reference_race(name: &str) -> Result<u8, String> {
+pub(super) fn read_reference_race(name: &str) -> Result<u8, String> {
     let path = std::env::var_os("DPS_PARITY_WORLD_DB").ok_or("DPS_PARITY_WORLD_DB absent")?;
     let db =
         rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
@@ -265,15 +265,20 @@ fn read_reference_race(name: &str) -> Result<u8, String> {
             matches.push(id);
         }
     }
-    if expected == "human" {
-        // Pinned SimC76f8118 util.cpp1989-1994 maps RACE_HUMAN to1.
-        // Native70448 also calls ThinHuman33 "Human"; display names are not IDs.
-        const SIMC_HUMAN_RACE_ID: u8 = 1;
+    // Pinned SimC76f8118 util.cpp1989–1994: Human1, not ThinHuman33.
+    // util.cpp503–504/2152–2153: plain dracthyr means Horde70, not Alliance52.
+    // Duplicate native display names must not select an arbitrary identity.
+    let source_race = match expected.as_str() {
+        "human" => Some(1),
+        "dracthyr" => Some(70),
+        _ => None,
+    };
+    if let Some(source_race) = source_race {
         return matches
-            .contains(&SIMC_HUMAN_RACE_ID)
-            .then_some(SIMC_HUMAN_RACE_ID)
+            .contains(&source_race)
+            .then_some(source_race)
             .ok_or_else(|| {
-                format!("reference human source race1 absent from native matches {matches:?}")
+                format!("reference {name} source race{source_race} absent from native matches {matches:?}")
             });
     }
     match matches.as_slice() {
@@ -282,6 +287,14 @@ fn read_reference_race(name: &str) -> Result<u8, String> {
             "reference race {name:?} matched native races {matches:?}"
         )),
     }
+}
+
+#[test]
+#[ignore = "requires private native world DB with both Dracthyr factions"]
+fn dps_parity_dracthyr_reference_uses_simc_horde_identity() {
+    assert_eq!(read_reference_race("dracthyr").unwrap(), 70);
+    assert_eq!(read_reference_race("human").unwrap(), 1);
+    assert!(read_reference_race("unknown_reference_race").is_err());
 }
 
 pub(super) fn slot(name: &str) -> Result<EquipmentSlot, String> {
@@ -378,6 +391,7 @@ pub(super) fn equip(world: &mut World, unit: Entity, profile: &Profile) -> Resul
         crate::stats::EquippedItemModifiers {
             items: modifiers,
             base_stat_redirects,
+            ..Default::default()
         },
     ));
     Ok(())
@@ -420,15 +434,29 @@ pub(super) fn install_traits(
         let follower = world
             .get::<crate::followers::Follower>(unit)
             .ok_or("reference actor is neither player nor follower")?;
-        (
-            follower.profile.spec_id,
+        let evaluated = if let Some(race) = world.get::<server::test_support::ReferenceRace>(unit) {
+            let identity = shared::components::Player {
+                name: String::new(),
+                class: follower.profile.class_id,
+                race: race.0,
+                appearance: Default::default(),
+            };
+            crate::class_progression::evaluate_player_reference_traits(
+                classes,
+                &identity,
+                follower.profile.spec_id,
+                level,
+                &purchases,
+            )
+        } else {
             crate::class_progression::evaluate_reference_traits(
                 classes,
                 &follower.profile,
                 level,
                 &purchases,
-            ),
-        )
+            )
+        };
+        (follower.profile.spec_id, evaluated)
     };
     let (known, traits) =
         evaluated.map_err(|reason| format!("NATIVE_REFERENCE_TRAIT_CONFIG_REJECTED: {reason}"))?;

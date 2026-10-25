@@ -10,15 +10,6 @@ pub mod mythic_plus_runtime;
 pub mod raid_history_store;
 pub mod simc_apl;
 
-// Keep fixture cache contracts testable without compiling the server entry point.
-#[cfg(test)]
-#[path = "test_data/catalog_cache_tests.rs"]
-mod native_catalog_cache_tests;
-
-#[cfg(test)]
-#[path = "test_data/catalog_data_tests.rs"]
-mod native_catalog_data_tests;
-
 mod achievement;
 mod admin_handlers;
 mod admin_ipc;
@@ -37,13 +28,14 @@ mod bank_test_harness;
 mod barber_shop;
 mod battle_pets;
 mod calendar;
-mod catalog_data;
+use server_core::catalog_data;
 mod chair;
 pub mod class_progression;
 mod collection;
 pub mod combat;
 pub mod combat_refs;
 pub mod conditions;
+pub mod consumables;
 mod crafting_orders;
 pub mod creature_aggro;
 pub mod creature_ai;
