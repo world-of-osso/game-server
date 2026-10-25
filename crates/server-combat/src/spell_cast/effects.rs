@@ -1637,6 +1637,8 @@ fn damage_source_amount(
         let combo = super::scripts::combo_strikes_multiplier(world, bonus_caster, ctx.spell.id);
         let giantkiller =
             super::scripts::giantkiller_multiplier(world, ctx.caster, target, ctx.spell);
+        let evoker_tier =
+            super::scripts::evoker_tier_multiplier(world, ctx.caster, target, ctx.spell);
         let ret_damage = super::scripts::ret_damage_multiplier(world, ctx, target, periodic);
         let shadow_weaving =
             super::scripts::shadow_weaving_multiplier(world, bonus_caster, target, ctx.spell.id);
@@ -1653,6 +1655,7 @@ fn damage_source_amount(
                 ("mechanic_damage", mechanic),
                 ("combo_strikes", combo),
                 ("giantkiller", giantkiller),
+                ("evoker_tier", evoker_tier),
                 ("ret_damage", ret_damage),
                 ("shadow_weaving", shadow_weaving),
             ],
@@ -1664,6 +1667,7 @@ fn damage_source_amount(
             * mechanic
             * combo
             * giantkiller
+            * evoker_tier
             * ret_damage
             * shadow_weaving
     };

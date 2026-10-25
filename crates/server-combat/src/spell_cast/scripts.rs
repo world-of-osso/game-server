@@ -60,6 +60,7 @@ mod enhancement_tempest;
 mod enhancement_tier;
 mod evoker_tier;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
+pub(super) use evoker_tier::damage_multiplier as evoker_tier_multiplier;
 mod essence_burst;
 mod feral_frenzy;
 pub(crate) use feral_frenzy::register as register_feral_frenzy;
