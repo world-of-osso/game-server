@@ -269,7 +269,14 @@ Native Enhancement strike roots dispatch one195592 Crash payload per actual land
 
 - [x] Spec254 uses a real Player with exact reference gear/traits and unchanged pinned `hunter_marksmanship.simc` source through shared `literal_rotation`. It does not require a nonexistent follower profile or use AssistedCombat priorities.
 - [x] Execute source precombat, preserve native cooldowns/overrides and item admission, and start ranged attacks through native75. Report the literal driver and native stat snapshot. Missing potion inventory and external providers remain explicit gaps, not fabricated effects.
-- [ ] Qualify Trueshot/Chakram, Precise Shots, ground payloads and residual damage before claiming DPS parity. Controller execution alone does not qualify their native mechanics.
+- [ ] Qualify remaining residual damage and both full-duration DPS references before claiming parity. Controller execution alone does not qualify native mechanics.
+
+### Marksmanship native cast relationships
+
+- [x] Only actual Trueshot enables Moonlight Chakram; a Chakram cast consumes that enabler and delivers the native bounce count, delay and selected ramp to actual targets.
+- [x] Actual Aimed Shot and selected No Scope Rapid Fire produce native Precise Shots. Real spenders consume it, preserve its damage through projectile arrival and trigger selected Stargazer.
+- [x] Selected Unstable Trigger permits exactly one native-duration, Focus-free Explosive Shot recast inside its existing cooldown; that recast does not create another window.
+- [x] Volley delivers its native-duration periodic payload at the selected ground point to every actual in-radius target; all magnitudes remain native-data driven.
 
 ## Tests asserting this spec
 
