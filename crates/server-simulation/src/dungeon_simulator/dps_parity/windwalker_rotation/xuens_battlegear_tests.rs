@@ -454,6 +454,39 @@ fn literal_ww_native_xuen_recovery_sck_no_hit_control() {
 }
 
 #[test]
+#[ignore = "actual stop-cast after SCK impacts is not natural completion and grants no recovery"]
+fn literal_ww_native_xuen_recovery_interrupted_sck_control() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare(1, true);
+    prime_fof(&mut run);
+    let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    let target = run.targets[0];
+    cast(&mut run, SCK, target);
+    for _ in 0..20 {
+        if !damage_since(&run, cursor, SCK_TICK).is_empty() {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(!damage_since(&run, cursor, SCK_TICK).is_empty());
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, SCK));
+    let before = deadline(&run);
+    crate::spell_cast::cancel_cast(run.app.world_mut(), run.actor);
+    run.app.update();
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, SCK));
+    advance(&mut run, 3.0);
+    let actual = before - deadline(&run);
+    receipt(
+        "xuen-sck-interrupted",
+        json!({"actual":actual,"expected":0.0}),
+    );
+    assert!(
+        actual.abs() < 0.002,
+        "stopping a real channel must not grant expiry recovery"
+    );
+}
+
+#[test]
 #[ignore = "unselected native Xuen entry, actual critical RSK and existing FoF timer"]
 fn literal_ww_native_xuen_recovery_unselected_rsk_control() {
     let _seed = crate::random::seed_scope(70448);

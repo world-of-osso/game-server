@@ -23,8 +23,8 @@ pub type DamageProcHook = fn(&mut World, Entity, &AuraInstance, &super::procs::A
 pub struct AuraScript {
     pub on_apply: Option<AuraHook>,
     pub on_remove: Option<RemoveHook>,
-    /// Natural expiry only, after the ordinary removal hook.
-    pub on_expire: Option<AuraHook>,
+    /// Duration expiry or explicit full channel completion, never interruption.
+    pub on_natural_end: Option<AuraHook>,
     pub on_periodic: Option<PeriodicHook>,
     pub on_proc: Option<ProcHook>,
     pub check_proc: Option<ProcCheckHook>,
@@ -58,9 +58,13 @@ pub(super) fn run_remove(
     if let Some(run) = script.on_remove {
         run(world, unit, aura, reason);
     }
-    if reason == super::RemoveReason::Expired
-        && let Some(run) = script.on_expire
-    {
+    if reason == super::RemoveReason::Expired {
+        run_natural_end(world, unit, aura);
+    }
+}
+
+pub(super) fn run_natural_end(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if let Some(run) = script(world, aura.spell_id).and_then(|script| script.on_natural_end) {
         run(world, unit, aura);
     }
 }

@@ -107,7 +107,7 @@ pub(super) fn record_sck_impacts(world: &mut World, ctx: &EffectCtx, _effect: &S
 
 pub(crate) fn register_xuens_battlegear(scripts: &mut crate::auras::scripts::AuraScripts) {
     // Retain independent on_remove consumers (including Unbroken Rhythm).
-    scripts.0.entry(SCK).or_default().on_expire = Some(recover_on_sck_expiry);
+    scripts.0.entry(SCK).or_default().on_natural_end = Some(recover_on_sck_expiry);
 }
 
 fn recover_on_sck_expiry(world: &mut World, unit: Entity, aura: &AuraInstance) {
