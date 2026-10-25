@@ -528,6 +528,13 @@ fn send_deliveries(
 ) {
     for (link, mut sender) in conns.iter_mut() {
         for (_, msg) in deliveries.iter().filter(|(player, _)| *player == link.0) {
+            #[cfg(debug_assertions)]
+            if matches!(msg.channel, ChatType::Guild | ChatType::Officer) {
+                eprintln!(
+                    "GUILD_CHAT_SERVER_ENQUEUE recipient={:?} message={msg:?}",
+                    link.0
+                );
+            }
             sender.send::<ChatChannel>(msg.clone());
         }
     }
