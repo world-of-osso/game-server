@@ -67,16 +67,16 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: u32, foregr
     if !foreground || !is_frost(world, caster) {
         return;
     }
+    if matches!(spell, 49143 | 194913 | 49184) {
+        trigger_obliteration(world, caster);
+    }
     // SimC76f8118 sc_death_knight.cpp10889–10900/11177–11189:
-    // FS/GA roll Rime's native effect2 (not its displayed effect1).
+    // after Obliteration, FS/GA roll Rime's native effect2 (not effect1).
     if matches!(spell, 49143 | 194913) && auras::has_aura(world, caster, RIME) {
         let chance = super::script_effect_value(world, caster, RIME, 1);
         if random::random::<f32>() * 100.0 < chance {
             trigger_native_buff(world, caster, RIME);
         }
-    }
-    if matches!(spell, 49143 | 194913 | 49184) {
-        trigger_obliteration(world, caster);
     }
 }
 
