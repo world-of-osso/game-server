@@ -332,6 +332,62 @@ fn spellslinger_native_impacts_reduce_actual_specialization_orb_recharge() {
     }
 }
 
+#[test]
+#[ignore = "requires private native70448 DB and exact Frost64 inputs"]
+fn frost_mage_native_periodic_icicles_enable_and_pay_glacial_spike() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(64, 1).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1246832),
+        "the actual selected Icicles passive must exist before testing its periodic producer"
+    );
+    for _ in 0..800 {
+        run.app.update();
+    }
+    let stacks = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.caster == run.actor && aura.spell_id == 205473)
+        .map_or(0, |aura| aura.stacks);
+    assert_eq!(
+        stacks, 5,
+        "native hasted Icicles must accumulate without casting Frostbolt"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1222865),
+        "the native counter cap must enable Glacial Spike"
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(199786, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..20 {
+        run.app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 1222865),
+        "a successful Spike must consume its actual enabler"
+    );
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(228600)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "the real Spike must deliver native228600 rather than a zero-damage Dummy cast"
+    );
+}
+
 use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
