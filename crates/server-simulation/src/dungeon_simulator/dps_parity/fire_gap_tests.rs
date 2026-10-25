@@ -346,6 +346,91 @@ fn fire_producer_combustion_expiry_grants_memory_of_alar_hyperthermia() {
     panic!("native Combustion must expire within30s without casts");
 }
 
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_hero_precombat_keeps_the_pinned_five_initial_spellfire_spheres() {
+    let run = prepare_measurement(63, 1).unwrap();
+    assert_eq!(
+        stacks(&run, 448604),
+        5,
+        "pinned mage.initial_spellfire_spheres defaults to5"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_hero_combustion_consumes_codex_spheres() {
+    let mut run = prepare_literal(63, 1).unwrap();
+    for _ in 0..5 {
+        crate::spell_cast::cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            448604,
+            Some(run.actor),
+            1,
+        );
+    }
+    assert_eq!(stacks(&run, 448604), 5);
+    let actor = run.actor;
+    start_native(&mut run, 190319, actor);
+    assert_eq!(
+        stacks(&run, 448604),
+        0,
+        "Codex consumes the stored spheres on Phoenix invocation"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_hero_combustion_restores_native_spontaneous_combustion_charge() {
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    for _ in 0..3 {
+        start_native(&mut run, 108853, target);
+        preparation::finish_pending_setup(&mut run).unwrap();
+    }
+    let actor = run.actor;
+    start_native(&mut run, 190319, actor);
+    start_native(&mut run, 108853, target);
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_hero_recent_heating_up_survives_a_noncritical_fireball() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+    health.current = health.max * 0.5;
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 108853, Some(target), 1);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 133, Some(target), 1);
+    for _ in 0..6 {
+        run.app.update();
+    }
+    let hits: Vec<_> = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(133)
+                && event.kind == CombatLogKind::Damage
+        })
+        .collect();
+    assert_eq!(hits.len(), 1);
+    assert!(
+        !hits[0].crit,
+        "native seeded noncritical Fireball precondition"
+    );
+    assert_eq!(
+        stacks(&run, 48107),
+        1,
+        "noncritical hits cannot erase Heating Up in its first200ms"
+    );
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {
