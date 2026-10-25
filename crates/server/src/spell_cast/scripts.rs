@@ -70,6 +70,7 @@ pub(super) use policies::{
 };
 pub(crate) use policies::{
     extends_reapplication, filter_secondary_targets, owns_policy_proc, register_lifecycle_policies,
+    rolls_reapplication,
 };
 mod germination;
 mod giantkiller;

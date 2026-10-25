@@ -61,7 +61,8 @@ Native boundary fixtures: `dungeon_simulator/dps_parity/periodic_crit_tests.rs`.
 
 ## Native rolling periodic refresh
 
-TC a352b1fa `SpellAuraEffects.cpp:832–873` supplies the rolling-amount rule.
+TC a352b1fa `SpellAuraEffects.cpp:832–873` supplies the default native rolling-amount rule.
+[Source-qualified Deep Wounds](dps-parity.md#fury-player-parity) explicitly selects its pinned SimC reapplication behavior; unrelated native per-tick contracts remain unchanged.
 This is shared aura execution, not an Echo/Ignite proc or learned-spell grant.
 
 - [x] Native Attr10 `ROLLING_PERIODIC` selects one shared carry path for periodic damage/healing, including335467 leech.

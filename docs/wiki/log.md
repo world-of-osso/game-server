@@ -1,3 +1,7 @@
+## 2026-10-25 — Warrior execution relationships
+
+[Warrior execution](systems/spell-casting.md#native-warrior-execution-relationships--2026-10-25): native timer ownership, actor-wide PRD, execution-count/valued rewards, captured periodic ordinals and paid-resource cooldown reductions. The Deep Wounds reapplication policy is explicit; other native per-tick contracts remain unchanged. Source qualification is distinct from pending runtime acceptance.
+
 ## 2026-10-25 — Havoc literal fixture and Demonic
 
 [Havoc577](systems/simc-apl.md#havoc-fixture-577): shared literal decisions, native cursor context, and talent-sourced Meta before Eye Beam/Gaze with owned-duration extension. Native regressions pass; numerical parity remains open.

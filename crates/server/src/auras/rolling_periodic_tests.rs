@@ -131,14 +131,13 @@ fn assert_native_full_mask_rolling(cast_child: fn(&mut Harness, Entity, u32)) {
     );
     finish_aura(&mut h, &refreshed);
     let remaining = ticks(&h, target, LANGUISH, start);
-    assert_eq!(remaining.len(), (total + 1) as usize);
-    // SimC76f8118 action.cpp4614–4617/4995–5016: the pending tick plus
-    // two fresh native ticks share one old + two fresh ticks' damage budget.
-    let expected = paid.amount;
+    assert_eq!(remaining.len(), total as usize);
+    // TC rounds the fresh amount after adding unpaid estimated amount / total ticks.
+    let expected = (paid.amount as f32 * (1.0 + (total - 1) as f32 / total as f32)).round() as i32;
     for tick in remaining {
         assert_eq!(
             tick.amount, expected,
-            "rolling refresh must conserve old plus fresh native damage across its longer schedule"
+            "native flag must carry unpaid damage, not simply replace it"
         );
     }
 }

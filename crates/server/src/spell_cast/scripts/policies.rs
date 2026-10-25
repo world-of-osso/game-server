@@ -46,6 +46,9 @@ enum Relationship {
     ReapplicationExtend {
         payload: u32,
     },
+    ReapplicationRolling {
+        payload: u32,
+    },
     LinkedAura {
         parent: u32,
         payload: u32,
@@ -94,6 +97,20 @@ struct Policy {
 
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
+    // SimC76f8118 sc_warrior.cpp3798–3805 forces coefficient-based Deep
+    // Wounds rolling; action.cpp2730/4614/4995 supplies its refresh budget/lifetime.
+    Policy {
+        name: "SIMC_FURY_DEEP_WOUNDS_ROLLING",
+        spec: 72,
+        talent: 1261060,
+        relationship: Relationship::ReapplicationRolling { payload: 262115 },
+    },
+    Policy {
+        name: "SIMC_ARMS_DEEP_WOUNDS_ROLLING",
+        spec: 71,
+        talent: 1261060,
+        relationship: Relationship::ReapplicationRolling { payload: 262115 },
+    },
     // SimC76f8118 sc_hunter.cpp5089/4972,3843–3846: successful Barbed/Cobra
     // arms selected Nature's Ally; native1276720 owns its value and lifetime.
     Policy {
@@ -702,6 +719,14 @@ fn end_channel_policy(
         }
     }
     super::windwalker_children::channel_ended(world, unit, aura, reason);
+}
+
+pub(crate) fn rolls_reapplication(world: &World, caster: Entity, payload: u32) -> bool {
+    POLICIES.iter().any(|policy| {
+        let matches_payload = matches!(policy.relationship,
+            Relationship::ReapplicationRolling { payload: id } if id == payload);
+        matches_payload && selected(world, caster, policy)
+    })
 }
 
 pub(crate) fn extends_reapplication(world: &World, caster: Entity, payload: u32) -> bool {

@@ -1,5 +1,19 @@
 # Spell Casting
 
+## Native Warrior execution relationships — 2026-10-25
+
+The [Fury/Warrior contract](../../specs/dps-parity.md#fury-player-parity) is implemented as source-qualified rows, not spell-ID branches in the shared cast engine. Native70448 supplies effects, probabilities, ICDs, resource units and payloads; SimC76f8118 supplies execution boundaries.
+
+- `scripts/foreground_procs.rs` rolls the selected passive through native RPPM timers after an ordinary special execution. The execution-consumer wrapper follows that roll, so Execute can consume its newly earned stack.
+- `scripts/impact_procs.rs` keeps actor-wide PRD attempts and uses `random::accumulated_proc_constant`; `auras::procs::policy_proc_ready` preserves timer ownership. `owns_policy_proc` blocks broad native hints for relationships that own their event predicate.
+- `scripts/execution_counters.rs` runs after native launch for foreground and background casts. It owns execution-count rewards, single-stack consumers and valued child auras; Frenzy reads its native passive value instead of the child's zero catalog points.
+- `scripts/periodic_attacks.rs` reads the paid ordinal captured in each due `Tick`, not the scheduler's final count after catch-up. Children resolve live native action overrides and retain their actual selected primary.
+- `scripts/paid_cooldowns.rs` observes the successful payment vector after `spend_costs`, converts raw units through native `PowerTypeTable`, and reduces only running cooldowns. Later resource gains are not subtracted from the paid amount.
+
+`Relationship::ReapplicationRolling` selects the [Deep Wounds exception](auras.md#native-rolling-periodic-refresh--2026-10-22) through the existing policy resolver. It is separate from default native per-tick carry; neither its budget nor duration rule is inferred for other spells from the native rolling flag alone.
+
+Sources: `crates/server/src/spell_cast/{mod.rs,scripts.rs,scripts/}`, `crates/server/src/auras/{procs.rs,periodic.rs,refresh.rs}`, and native fixtures under `crates/server-simulation/src/dungeon_simulator/dps_parity/{fury_rotation,warrior_proc_tests.rs}`. Exact SimC source lines are recorded beside each policy row. Runtime acceptance is tracked separately from this implementation description.
+
 ## Bounded Storm echo policy
 
 `echo_policies.rs` stores `EchoPolicy` rows: name, spec, selected talent, root/payload IDs and native effect indices. `SIMC_RET_SECOND_SUNRISE_STORM_ECHO` is explicitly approved because pinned SimC76f8118 Ret495–638 supplies a relationship absent from TC/native child fields. Only ordinary53385 enters generic foreground dispatch. The actual selected primary is mandatory; no target substitution. Runtime reads owned live431474 chance/effectiveness, then shared proc code reuses that aura's native internal cooldown. A queued full-trigger native child carries the observed effectiveness, has no extra resource payment and cannot recursively enter the foreground hook. No200ms timer is introduced.

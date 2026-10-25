@@ -15,6 +15,12 @@ const RIP: u32 = 1079;
 const RAKE: u32 = 155722;
 
 #[derive(Clone, Copy)]
+enum RollingBudget {
+    PerTick,
+    NativeDuration(u32),
+}
+
+#[derive(Clone, Copy)]
 enum DurationCarry {
     Pandemic,
     Extend,
@@ -28,14 +34,17 @@ pub(super) fn prepare_application(
     spell: &SpellInfo,
 ) {
     let fresh_duration_ms = new.duration_ms;
-    let rolling = spell
-        .misc
-        .as_ref()
-        .is_some_and(|misc| misc.attributes[10] & ROLLING_PERIODIC != 0);
+    let sourced_rolling =
+        crate::spell_cast::scripts::rolls_reapplication(world, new.caster, new.spell_id);
+    let rolling = sourced_rolling
+        || spell
+            .misc
+            .as_ref()
+            .is_some_and(|misc| misc.attributes[10] & ROLLING_PERIODIC != 0);
     if rolling {
         settle_previous_ticks(world, target, new);
     }
-    prepare_periodic_phase(world, target, new, spell, rolling);
+    prepare_periodic_phase(world, target, new, spell, sourced_rolling);
     if crate::spell_cast::scripts::extends_reapplication(world, new.caster, new.spell_id) {
         carry_duration(world, target, new, DurationCarry::Extend);
     }
@@ -49,8 +58,13 @@ pub(super) fn prepare_application(
         _ => {}
     }
     if rolling {
-        carry_rolling_duration(world, target, new);
-        roll_remaining_periodic(world, target, new, fresh_duration_ms);
+        let budget = if sourced_rolling {
+            carry_rolling_duration(world, target, new);
+            RollingBudget::NativeDuration(fresh_duration_ms)
+        } else {
+            RollingBudget::PerTick
+        };
+        roll_remaining_periodic(world, target, new, budget);
     }
     super::ret_crusade::preserve_refresh_duration(world, target, new);
 }
@@ -164,13 +178,14 @@ fn carry_rolling_duration(world: &World, target: Entity, new: &mut AuraInstance)
     new.expires_at = Some(now + f64::from(new.duration_ms) / 1000.0);
 }
 
-/// SimC76f8118 action.cpp4995–5016: old unpaid + fresh native budget is
-/// shared across the refreshed schedule, rather than adding an extra fresh tick's damage.
+/// Native per-tick carry: TC a352b1fa SpellAuraEffects.cpp832–849.
+/// Source-qualified coefficient rolling: SimC76f8118 action.cpp4995–5016
+/// shares old unpaid + fresh native duration budget across the new schedule.
 fn roll_remaining_periodic(
     world: &World,
     target: Entity,
     new: &mut AuraInstance,
-    fresh_duration_ms: u32,
+    budget: RollingBudget,
 ) {
     let Some(old) = previous(world, target, new) else {
         return;
@@ -189,10 +204,14 @@ fn roll_remaining_periodic(
         let unpaid = remaining_ticks(prior.next_tick_at(), old_expiry, prior.period_ms);
         let future = remaining_ticks(fresh.next_tick_at(), new_expiry, fresh.period_ms);
         if future > 0 {
-            let fresh_ticks = fresh_duration_ms as f32 / fresh.period_ms as f32;
-            let fresh_budget = fresh.amount * fresh_ticks;
             let unpaid_budget = prior.amount * old.stack_multiplier() * unpaid as f32;
-            fresh.amount = (fresh_budget + unpaid_budget) / future as f32;
+            fresh.amount = match budget {
+                RollingBudget::PerTick => fresh.amount + unpaid_budget / future as f32,
+                RollingBudget::NativeDuration(duration) => {
+                    let fresh_ticks = duration as f32 / fresh.period_ms as f32;
+                    (fresh.amount * fresh_ticks + unpaid_budget) / future as f32
+                }
+            };
         }
     }
 }
