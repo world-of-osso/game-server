@@ -1,10 +1,12 @@
 //! Explicit native proc families constrain dispatch, including an empty aura mask.
 use crate::auras::procs::{self, AuraEvent, PROC_DEAL_MELEE_ABILITY};
-use crate::spell_cast::test_harness::harness;
+use crate::spell_cast::test_harness::{ObservedCombatEvents, ObservedTriggeredCasts, harness};
 use shared::{components::PowerType, protocol::CombatLogKind};
 
 fn festering_wound_grants(spell: u32) -> usize {
     let mut h = harness(vec![], &[197147, 195757, spell], 6).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    h.app.init_resource::<ObservedTriggeredCasts>();
     crate::auras::apply_aura(
         h.app.world_mut(),
         &crate::auras::AuraApplication {
@@ -17,6 +19,16 @@ fn festering_wound_grants(spell: u32) -> usize {
     );
     assert!(crate::auras::has_aura(h.app.world(), h.caster, 197147));
     h.set_power(PowerType::RunicPower, 0.0);
+    eprintln!(
+        "PROC_BEFORE spell={spell} auras={:?}",
+        h.app.world().get::<crate::auras::ActiveAuras>(h.caster)
+    );
+    let store = h.app.world().resource::<crate::spell_info::SpellStore>();
+    eprintln!(
+        "PROC_NATIVE parent={:?} event={:?}",
+        store.get(197147).unwrap().aura_options,
+        store.get(spell).unwrap().class_options
+    );
     procs::push_event(
         h.app.world_mut(),
         AuraEvent {
@@ -34,6 +46,13 @@ fn festering_wound_grants(spell: u32) -> usize {
         },
     );
     h.advance(3);
+    eprintln!(
+        "PROC_AFTER auras={:?} rp={} casts={:?} events={:?}",
+        h.app.world().get::<crate::auras::ActiveAuras>(h.caster),
+        h.power(PowerType::RunicPower),
+        h.app.world().resource::<ObservedTriggeredCasts>().0,
+        h.app.world().resource::<ObservedCombatEvents>().0
+    );
     h.inbox
         .log
         .iter()
