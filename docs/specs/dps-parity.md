@@ -365,6 +365,7 @@ Equipped native MID2 Enhancement two-piece1296627 makes real Voltaic Blaze apply
 
 - [x] Spec254 uses a real Player with exact reference gear/traits and unchanged pinned `hunter_marksmanship.simc` source through shared `literal_rotation`. It does not require a nonexistent follower profile or use AssistedCombat priorities.
 - [x] Execute source precombat, preserve native cooldowns/overrides and item admission, and start ranged attacks through native75. Report the literal driver and native stat snapshot. Missing potion inventory and external providers remain explicit gaps, not fabricated effects.
+- Sentinel's Mark `.react` clocks belong to each actual recipient. Configure the exact pinned254 reference player reaction settings before acquisition for initial targets and replacement waves; never infer acquisition at query time. Keep the literal action rows unchanged.
 - [ ] Qualify remaining residual damage and both full-duration DPS references before claiming parity. Controller execution alone does not qualify native mechanics.
 
 ### Marksmanship native cast relationships
