@@ -118,6 +118,35 @@ fn setup_cast_or_gcd_active(run: &Run) -> bool {
             .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)))
 }
 
+pub(super) fn prepare_frost_mage_precombat(run: &mut Run) -> Result<(), String> {
+    use super::literal_rotation::PrecombatPoll;
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let mut rotation = super::frost_mage_rotation::Rotation::load(
+        run.app.world_mut(),
+        run.actor,
+        encounter,
+        &run.profile,
+    )?;
+    for _ in 0..MAX_SETUP_TICKS {
+        match rotation.poll_precombat(run.app.world_mut(), run.actor, &run.targets)? {
+            PrecombatPoll::Waiting => finish_pending_setup(run)?,
+            PrecombatPoll::Selected { action, execution } => {
+                execute_precombat_plan(run, &mut rotation.driver, action, execution)?;
+            }
+            PrecombatPoll::Finished => {
+                rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
+                run.frost_mage_rotation = Some(rotation);
+                return Ok(());
+            }
+        }
+    }
+    Err("native Frost Mage precombat exceeded setup bound".into())
+}
+
 pub(super) fn prepare_ret_precombat(run: &mut Run) -> Result<(), String> {
     use super::literal_rotation::PrecombatPoll;
     let encounter = crate::simc_apl_native::Encounter::Fixture {
