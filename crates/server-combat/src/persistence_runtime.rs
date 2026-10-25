@@ -11,9 +11,7 @@ use crate::death::PlayerDeathState;
 use crate::maps::persistence::CHARACTER_MAPS;
 use crate::maps::{InMap, MapTransfer};
 
-/// Marker component linking a player entity to its character_id for periodic saves.
-#[derive(Component, Debug)]
-pub struct ClientId(pub u64);
+pub use server_core::session_state::ClientId;
 
 /// Save interval in ticks (300 ticks at 20Hz = 15 seconds).
 const SAVE_INTERVAL_TICKS: u64 = 300;

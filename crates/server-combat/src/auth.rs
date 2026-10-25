@@ -21,11 +21,7 @@ pub struct PendingAuth;
 #[derive(Component, Debug)]
 pub struct PendingAuthTimer(pub f64);
 
-/// Marker for authenticated connections.
-#[derive(Component, Debug)]
-pub struct Authenticated {
-    pub account_id: u64,
-}
+pub use server_core::session_state::Authenticated;
 
 /// Server-authored disconnect that should be delivered to the client before the socket closes.
 #[derive(Component, Debug, Clone)]
@@ -34,11 +30,7 @@ pub struct PendingForcedDisconnect {
     pub sent_at: Option<f64>,
 }
 
-/// Marker for connections that have entered the world.
-#[derive(Component, Debug)]
-pub struct InWorld {
-    pub character_id: u64,
-}
+pub use server_core::session_state::InWorld;
 
 /// Tracks the active connection for each authenticated account.
 #[derive(Resource, Default)]
