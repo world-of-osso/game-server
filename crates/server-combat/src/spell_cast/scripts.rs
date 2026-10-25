@@ -103,10 +103,8 @@ pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
 }
 pub(crate) mod holy_priest;
 mod hot_streak;
-mod lava_surge;
 pub(super) use hot_streak::triggers_hot_streak;
 pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
-pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 mod melee_reset;
 mod midnight_items;
 pub(crate) mod prayer_of_mending;
@@ -766,23 +764,19 @@ pub(super) fn snapshot_proc_modifiers(
     auras
         .iter()
         .filter(|aura| {
-            matches!(
+            (matches!(
                 aura.spell_id,
-                hot_streak::HOT_STREAK | lava_surge::PROC | maelstrom_weapon::MODIFIER
-            ) && aura.effects.iter().any(|effect| {
-                effect.misc_values[0] == crate::auras::SpellModOp::ChangeCastTime as i32
-                    && crate::auras::spell_mods::class_mask_affects(aura, effect, spell)
-            })
+                hot_streak::HOT_STREAK | maelstrom_weapon::MODIFIER
+            ) || world
+                .resource::<script_registry::SpellScriptRegistry>()
+                .is_cast_time_proc(aura.spell_id))
+                && aura.effects.iter().any(|effect| {
+                    effect.misc_values[0] == crate::auras::SpellModOp::ChangeCastTime as i32
+                        && crate::auras::spell_mods::class_mask_affects(aura, effect, spell)
+                })
         })
         .map(|aura| aura.instance_id)
         .collect()
-}
-
-pub(crate) fn preserve_unadmitted_proc(
-    spell: &SpellInfo,
-    aura: &crate::auras::AuraInstance,
-) -> bool {
-    aura.spell_id == lava_surge::PROC && !spell.cast_proc_mods.contains(&aura.instance_id)
 }
 
 /// `SpellCastFn` on `AfterCast`: runs once on the caster after the spell resolved.
@@ -827,7 +821,6 @@ fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
         hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE | hot_streak::NATIVE_FLAMESTRIKE => {
             Some(hot_streak::consume_procs_and_roll_pyroclasm)
         }
-        lava_surge::LAVA_BURST => Some(lava_surge::restore_deferred_charge),
         IMPENDING_VICTORY => Some(heal_and_consume_victorious),
         ENRAGED_REGENERATION => Some(cast_invigorating_fury_heal),
         crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_DAMAGE => {
@@ -1731,7 +1724,6 @@ pub fn on_hit(world: &World, spell_id: u32) -> Option<HitHook> {
         107428 | 113656 => Some(windwalker::trigger_wdp_enabler_on_hit),
         unbroken_rhythm::ROOT => Some(unbroken_rhythm::capture_and_consume),
 
-        lava_surge::PROC => Some(lava_surge::restore_on_proc_hit),
         swiftmend::SWIFTMEND => Some(swiftmend::hit),
         soul_of_the_forest::REGROWTH => Some(clearcasting::regrowth_hit),
         soul_of_the_forest::REJUVENATION => Some(soul_of_the_forest::consume_after_heal),

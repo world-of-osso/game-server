@@ -56,6 +56,7 @@ register_modules! {
     germination: (200, "modules/germination.rs"),
     giantkiller: (170, "modules/giantkiller.rs"),
     havoc: (150, "modules/havoc.rs"),
+    lava_surge: (300, "modules/lava_surge.rs"),
     marksmanship_explosive: (180, "modules/marksmanship_explosive.rs"),
     paid_cooldowns: (130, "modules/paid_cooldowns.rs"),
     periodic_counters: (270, "modules/periodic_counters.rs"),

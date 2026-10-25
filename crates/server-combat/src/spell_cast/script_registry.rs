@@ -22,6 +22,9 @@
 //! - `ConsumedEffectValues`: classifies script-read effect77 data, without dispatch.
 //! - `LaunchDelay`: first explicit override, otherwise retain the native delay.
 //! - `DotMasteryMultiplier`: factors at the original Shadow Weaving damage boundary.
+//! - `CastTimeProcs` and `PreserveUnadmittedProcs`: admission markers and charged-mod
+//!   preservation; the native class mask and instance IDs still own consumption.
+//! - `PeriodicDamageFinished`: after actual periodic damage, before Ret periodic hooks.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
 
@@ -57,6 +60,7 @@ pub type CriticalChanceHook = fn(&World, Entity, Entity, u32) -> Option<f32>;
 pub type AuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type LaunchDelayLookup = fn(u32) -> Option<f32>;
 pub type DotMasteryMultiplierHook = fn(&World, Entity, Entity, u32) -> f32;
+pub type PeriodicDamageFinishedHook = fn(&mut World, &EffectCtx<'_>);
 
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
@@ -83,6 +87,9 @@ pub enum SpellScriptHook {
     ConsumedEffectValues(&'static [(u32, u8)]),
     LaunchDelay(LaunchDelayLookup),
     DotMasteryMultiplier(DotMasteryMultiplierHook),
+    CastTimeProcs(&'static [u32]),
+    PreserveUnadmittedProcs(&'static [u32]),
+    PeriodicDamageFinished(PeriodicDamageFinishedHook),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -119,6 +126,25 @@ impl SpellScriptRegistry {
             SpellScriptHook::ConsumedEffectValues(values) => values.contains(&(spell, index)),
             _ => false,
         })
+    }
+
+    pub fn is_cast_time_proc(self, spell: u32) -> bool {
+        self.hooks().any(|hook| match hook {
+            SpellScriptHook::CastTimeProcs(spells) => spells.contains(&spell),
+            _ => false,
+        })
+    }
+
+    pub fn preserve_unadmitted_proc(
+        self,
+        spell: &SpellInfo,
+        aura: &crate::auras::AuraInstance,
+    ) -> bool {
+        !spell.cast_proc_mods.contains(&aura.instance_id)
+            && self.hooks().any(|hook| match hook {
+                SpellScriptHook::PreserveUnadmittedProcs(spells) => spells.contains(&aura.spell_id),
+                _ => false,
+            })
     }
 
     pub fn policies(self) -> impl Iterator<Item = &'static Policy> {
@@ -351,6 +377,14 @@ pub fn dot_mastery_multiplier(world: &World, caster: Entity, target: Entity, spe
             _ => None,
         })
         .product()
+}
+
+pub fn periodic_damage_finished(world: &mut World, ctx: &EffectCtx<'_>) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::PeriodicDamageFinished(run) = hook {
+            run(world, ctx);
+        }
+    }
 }
 
 #[cfg(test)]
