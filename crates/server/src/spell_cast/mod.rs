@@ -3247,7 +3247,12 @@ fn run_hit_scripts(
 ) {
     let hook = scripts::on_hit(spell.id);
     let context_hook = scripts::on_hit_with_context(spell.id);
-    if hook.is_none() && context_hook.is_none() && spell.cast_policy_context.is_none() {
+    let damage_hook = scripts::on_enemy_damage_hit_with_context(spell.id);
+    if hook.is_none()
+        && context_hook.is_none()
+        && damage_hook.is_none()
+        && spell.cast_policy_context.is_none()
+    {
         return;
     }
     let ctx = EffectCtx {
@@ -3256,6 +3261,11 @@ fn run_hit_scripts(
         depth,
         dest: None,
         chain_multiplier: 1.0,
+    };
+    let damage_units = if damage_hook.is_some() {
+        enemy_damage_hit_units(world, &ctx)
+    } else {
+        Vec::new()
     };
     for unit in hit_units(plan) {
         if world.get_entity(unit).is_err() {
@@ -3267,8 +3277,35 @@ fn run_hit_scripts(
         if let Some(hook) = context_hook {
             hook(world, &ctx, unit);
         }
+        if let Some(hook) = damage_hook
+            && damage_units.contains(&unit)
+        {
+            hook(world, &ctx, unit);
+        }
         scripts::apply_hit_policies(world, &ctx, unit);
     }
+}
+
+/// Use actual damage TargetInfos, not the union of damage and aura recipients.
+/// SimC76f8118 sc_paladin.cpp1436–1456 rolls Judgment mastery on enemy impacts.
+fn enemy_damage_hit_units(world: &World, ctx: &EffectCtx) -> Vec<Entity> {
+    let frame = world
+        .get_resource::<ResolvingHits>()
+        .and_then(|hits| hits.0.last())
+        .filter(|frame| {
+            frame.caster == ctx.caster && frame.spell_id == ctx.spell.id && frame.depth == ctx.depth
+        });
+    let Some(frame) = frame else {
+        return Vec::new();
+    };
+    frame
+        .damage
+        .iter()
+        .map(|(unit, _)| *unit)
+        .filter(|&unit| {
+            targets::relation_matches(world, ctx.caster, unit, targets::Relation::Enemy)
+        })
+        .collect()
 }
 
 /// Direct damage of the spells resolving now, gathered per unit for their hit events
