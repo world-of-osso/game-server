@@ -115,17 +115,7 @@ pub(super) fn wild_thrash(world: &mut World, caster: Entity, target: Entity, dep
 
 fn cast_pet_command(world: &mut World, caster: Entity, target: Entity, spell: u32, depth: u8) {
     // SimC76f8118 sc_hunter.cpp6585–6588: main, companion and Nature's Ally.
-    let pets: Vec<_> = world
-        .query::<(Entity, &crate::hunter_pet::HunterPet)>()
-        .iter(world)
-        .filter(|(unit, pet)| {
-            pet.owner == caster
-                && targets::is_alive(world, *unit)
-                && targets::same_map(world, caster, *unit)
-        })
-        .map(|(unit, _)| unit)
-        .collect();
-    for pet in pets {
+    for pet in crate::hunter_pet::active_owned_pets(world, caster) {
         cast_owned_pet_command(world, caster, pet, target, spell, depth);
     }
 }

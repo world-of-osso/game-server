@@ -303,21 +303,22 @@ def run_tests(entries, log):
 
 def push(entries, log):
     """Build, test and push master plus the entries. Failing entries are rejected and the
-    rest rebuilt; a push race rebuilds on the new master."""
+    rest rebuilt; a push race rebuilds on the new master. Returns (master, pushed entries);
+    entries deferred back to the queue are in neither."""
     while entries:
         tree, rejected = build_and_test(entries, log)
         if rejected:
-            for entry in rejected:
-                entry["status"] = "rejected"
-            write_results(rejected)
             entries = tree
             continue
+        if not tree:
+            break
         result = git("push", "origin", "HEAD:master", check=False)
         if result.returncode == 0:
-            return git("rev-parse", "HEAD").stdout.strip()
+            return git("rev-parse", "HEAD").stdout.strip(), tree
+        entries = tree
         with log.open("a") as out:
             out.write(f"push raced, rebuilding:\n{result.stderr}\n")
-    return None
+    return None, []
 
 
 def parity_executable(log):
@@ -401,6 +402,9 @@ def build_and_test(entries, log):
         if queued.exists():  # RED twins have no queue file; their entry is requeued by cycle()
             queued.rename(QUEUE / queued.name)
     passed, failed = run_tests(tree, log)
+    for entry in failed:
+        entry["status"] = "rejected"
+    write_results([e for e in failed if not e["id"].endswith("-red")])
     return passed, rejected + failed
 
 
@@ -451,12 +455,10 @@ def red_twin(entry):
 
 def land(entries, log):
     """Build exactly these entries on master, push the passing ones, then measure them."""
-    master = push(entries, log) if entries else None
-    if master:
-        for entry in entries:
-            if entry.get("status") != "rejected":
-                entry["status"] = f"landed in {master}"
-        measure_then_write([e for e in entries if e["status"].startswith("landed")], log)
+    master, pushed = push(entries, log)
+    for entry in pushed:
+        entry["status"] = f"landed in {master}"
+    measure_then_write(pushed, log)
 
 
 def run_probes(probes, gated, log):

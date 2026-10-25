@@ -238,7 +238,11 @@ impl Equipment {
                 .fold(0.0, f64::max)),
             "cooldown.remains" | "cooldown.ready" => read_cooldown(item, field, native),
             "proc.any_dps.duration" => Ok(item.metadata.duration),
-            _ if field.starts_with("has_buff.") => stat_fact(&item.metadata, &field[9..]),
+            // SimC76f8118 unique_gear.cpp4307–4311: has_ selects the same
+            // stat-buff existence expression, including both APL spellings.
+            _ if field.starts_with("has_buff.") || field.starts_with("has_stat.") => {
+                stat_fact(&item.metadata, &field[9..])
+            }
             _ if field.starts_with("is.") => Ok(boolean(
                 self.named_ids(&field[3..])?.contains(&item.item_id),
             )),
@@ -271,6 +275,11 @@ fn boolean(value: bool) -> f64 {
 }
 
 fn stat_fact(metadata: &Metadata, name: &str) -> Result<f64, String> {
+    // SimC76f8118 unique_gear.cpp3343–3348 excludes only tertiary ratings.
+    // Native Metadata already filters those utility-only effects from stats.
+    if name == "any_dps" {
+        return Ok(boolean(!metadata.stats.is_empty()));
+    }
     if !matches!(
         name,
         "strength" | "agility" | "intellect" | "mastery" | "versatility" | "haste" | "crit"

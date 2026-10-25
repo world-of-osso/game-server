@@ -1,9 +1,13 @@
 //! Explicit missing-script policies; native spell records still own payloads.
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, PowerType};
+use std::collections::HashSet;
 
 use super::AfterCastHook;
-use crate::auras::ActiveAuras;
+use crate::auras::{
+    ActiveAuras,
+    spell_mods::{self, SpellModOp},
+};
 use crate::class_progression::KnownSpells;
 use crate::spell_cast::{CostPool, PlannedEffect, TargetPlan, effects::EffectCtx, targets};
 use crate::spell_info::{CastDamageRole, CastPolicyContext, SpellInfo, SpellStore};
@@ -19,6 +23,10 @@ struct ChannelMomentum {
 
 #[derive(Clone, Copy)]
 enum Relationship {
+    OwnedPetSpellAfterCast {
+        parent: u32,
+        payload: u32,
+    },
     TriggerPrimaryAfterCast {
         parent: u32,
         payload: u32,
@@ -113,6 +121,17 @@ const POLICIES: &[Policy] = &[
         relationship: Relationship::TriggerPrimaryAfterCast {
             parent: 19574,
             payload: 1282474,
+        },
+    },
+    // SimC76f8118 sc_hunter.cpp6746–6750: every active stable pet applies
+    // Bloodshed after the summon above. Native321538 owns the periodic payload.
+    Policy {
+        name: "SIMC_BM_WRATH_BLOODSHED",
+        spec: 253,
+        talent: 1272099,
+        relationship: Relationship::OwnedPetSpellAfterCast {
+            parent: 19574,
+            payload: 321538,
         },
     },
     // SimC76f8118 sc_hunter.cpp5089/4972,3843–3846: successful Barbed/Cobra
@@ -1067,7 +1086,8 @@ fn roll_replacement_proc(
 fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
         matches!(policy.relationship,
-        Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
+        Relationship::OwnedPetSpellAfterCast { parent: trigger, .. }
+        | Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
         | Relationship::ApplySelfAuraAfterCast { parent: trigger, .. }
         | Relationship::ConsumeSelfAuraAfterCast { parent: trigger, .. }
         | Relationship::CounterAfterCast { parent: trigger, .. }
@@ -1107,6 +1127,9 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             continue;
         }
         match policy.relationship {
+            Relationship::OwnedPetSpellAfterCast { payload, .. } => {
+                cast_owned_pet_payload(world, caster, spell, payload);
+            }
             Relationship::TriggerPrimaryAfterCast { payload, .. } => {
                 let depth = super::super::next_trigger_depth(world);
                 super::super::cast_triggered(
@@ -1141,6 +1164,22 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             }
             _ => unreachable!("after-cast policy iterator"),
         }
+    }
+}
+
+fn cast_owned_pet_payload(world: &mut World, caster: Entity, spell: &SpellInfo, payload: u32) {
+    let Some(target) = spell.cast_primary_target else {
+        warn!(
+            ?caster,
+            spell = spell.id,
+            payload,
+            "Owned-pet payload lacks selected primary"
+        );
+        return;
+    };
+    let depth = super::super::next_trigger_depth(world);
+    for pet in crate::hunter_pet::active_owned_pets(world, caster) {
+        super::super::cast_triggered(world, pet, payload, Some(target), depth);
     }
 }
 
@@ -1280,7 +1319,7 @@ pub(in crate::spell_cast) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, hit:
     }
     for policy in consumers(&context.powers) {
         if selected(world, ctx.caster, policy) {
-            consume_on_hit(world, ctx.caster, policy, context);
+            consume_on_hit(world, ctx, policy);
         }
     }
 }
@@ -1293,7 +1332,8 @@ fn read_counter_instance(world: &World, caster: Entity, counter: u32) -> Option<
         .map(|aura| aura.instance_id)
 }
 
-fn consume_on_hit(world: &mut World, caster: Entity, policy: &Policy, context: &CastPolicyContext) {
+fn consume_on_hit(world: &mut World, ctx: &EffectCtx<'_>, policy: &Policy) {
+    let caster = ctx.caster;
     let Relationship::SpenderHit {
         counter, payload, ..
     } = policy.relationship
@@ -1303,11 +1343,7 @@ fn consume_on_hit(world: &mut World, caster: Entity, policy: &Policy, context: &
     let Some(instance) = read_counter_instance(world, caster, counter) else {
         return;
     };
-    let Some(targets) = read_payload_targets(world, caster, policy, payload, &context.targets)
-    else {
-        return;
-    };
-    let Some(target) = choose_target(world, caster, payload, &targets) else {
+    let Some(target) = read_spender_payload_target(world, ctx, policy, payload) else {
         return;
     };
     if !super::super::try_cast_triggered(world, caster, payload, Some(target), 1) {
@@ -1320,6 +1356,53 @@ fn consume_on_hit(world: &mut World, caster: Entity, policy: &Policy, context: &
         return;
     }
     crate::auras::spend_stack(world, caster, instance);
+}
+
+fn read_spender_payload_target(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    policy: &Policy,
+    payload: u32,
+) -> Option<Entity> {
+    let context = ctx.spell.cast_policy_context.as_ref()?;
+    let available = read_available_targets(world, ctx, &context.targets)?;
+    let targets = read_payload_targets(world, ctx.caster, policy, payload, &available)?;
+    choose_target(world, ctx.caster, payload, &targets)
+}
+
+/// SimC76f8118 action.cpp1738–1780/hpp1512–1535: target_list includes
+/// available enemies even when a single-target spender impacts only its primary.
+fn read_available_targets(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    original: &[Entity],
+) -> Option<Vec<Entity>> {
+    let Some(center) = targets::position(world, ctx.caster) else {
+        warn!(caster = ?ctx.caster, spell = ctx.spell.id, "Native policy caster position unavailable");
+        return None;
+    };
+    let available = query_available_enemies(world, ctx, center);
+    // Original selected units stay first, including the immutable primary.
+    let mut seen = HashSet::new();
+    Some(
+        original
+            .iter()
+            .copied()
+            .chain(available)
+            .filter(|unit| seen.insert(*unit))
+            .collect(),
+    )
+}
+
+fn query_available_enemies(world: &mut World, ctx: &EffectCtx<'_>, center: Vec3) -> Vec<Entity> {
+    let (min, max) = targets::spell_range(ctx.spell, true);
+    let max = spell_mods::modify(world, ctx.caster, ctx.spell, SpellModOp::Range, max);
+    targets::area_units(world, ctx.caster, center, max, targets::Relation::Enemy, 0)
+        .into_iter()
+        .filter(|&unit| {
+            targets::position(world, unit).is_some_and(|position| position.distance(center) >= min)
+        })
+        .collect()
 }
 
 fn read_payload_targets(

@@ -46,6 +46,7 @@ fn spawn_stabled_guardian(
     // autonomous Focus-spending family ability (sc_hunter.cpp2150–2155/2230–2234).
     world.entity_mut(pet).insert((
         StabledPetGuardian { expires_at },
+        PetFocusRegen::Disabled,
         crate::pet_control::PetCharm::new(Default::default(), stored.react_state),
     ));
     if let Some(mut health) = world.get_mut::<Health>(pet) {

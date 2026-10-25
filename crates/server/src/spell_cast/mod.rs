@@ -256,7 +256,9 @@ use crate::interest::NetworkVisibility;
 use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
-pub use creature::{AiTarget, creature_cast, creature_cast_with_targets};
+pub use creature::{
+    AiTarget, creature_cast, creature_cast_empowered_with_targets, creature_cast_with_targets,
+};
 pub(crate) use creature::{
     ai_spell_target, creature_cast_empowered, creature_cast_ignoring_cooldowns,
     creature_cast_ignoring_in_progress, creature_cast_interrupting_self,
@@ -2536,10 +2538,14 @@ fn start_channel(world: &mut World, caster: Entity, spell: &SpellInfo, target: O
     if !is_channeled(spell) || channel_ms <= 0 {
         return;
     }
+    // SimC76f8118 action.cpp4390–4420: channel decisions share the actual
+    // periodic cadence, not raw DB2 periods beside a hasted channel duration.
     let tick_ms = spell
         .effects
         .iter()
-        .map(|effect| effect.aura_period_ms)
+        .map(|effect| {
+            crate::auras::periodic_interval_ms(world, caster, spell, effect.aura_period_ms)
+        })
         .filter(|&period| period > 0)
         .min()
         .unwrap_or(0);
