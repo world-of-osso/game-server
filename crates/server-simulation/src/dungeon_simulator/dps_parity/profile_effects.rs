@@ -54,11 +54,12 @@ fn install_oils(world: &mut World, actor: Entity, value: &str) -> Result<(), Str
             continue;
         }
         let slot = super::inputs::slot(slot)?;
-        if !world
+        let equipped = world
             .get::<crate::stats::EquippedItems>(actor)
-            .is_some_and(|e| e.items.iter().any(|(s, _, _)| *s == slot))
-        {
-            return Err("temporary enchant has no equipped weapon".into());
+            .ok_or("temporary enchant owner lacks native equipment")?;
+        // SimC76f8118 item.cpp2237–2245: inactive slots do not initialize enchants.
+        if !equipped.items.iter().any(|(s, _, _)| *s == slot) {
+            continue;
         }
         // SimC76f8118 temporary_enchant.inc116 binds quality2 to native enchant8052.
         oils.push((slot, 8052));

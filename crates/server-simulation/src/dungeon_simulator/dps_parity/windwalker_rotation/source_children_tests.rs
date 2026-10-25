@@ -67,6 +67,15 @@ fn rsk_cooldown(run: &mut Run) -> f64 {
 fn literal_ww_native_source_children_fof_mid2_and_jadefire() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::stats::EquippedItemModifiers>(run.actor)
+            .unwrap()
+            .temporary_enchants,
+        vec![(shared::protocol::EquipmentSlot::MainHand, 8052)],
+        "two-handed BIS applies only the equipped main-hand oil"
+    );
     assert!(
         crate::auras::has_aura(run.app.world(), run.actor, 1296621),
         "real equipped MID2 two-piece"
