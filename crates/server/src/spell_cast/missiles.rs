@@ -43,6 +43,7 @@ impl PendingSpellHits {
         self.0.iter().any(|hit| hit.caster == caster)
     }
 
+    #[cfg(any(test, feature = "test-support"))]
     pub(super) fn earliest_due(&self, caster: Entity, spell_id: u32) -> Option<f64> {
         self.0
             .iter()
@@ -92,6 +93,7 @@ pub(super) fn launch(
 ) {
     // All successful ordinary/triggered casts reach this once, before flight/hit.
     crate::scripted_ai::on_spell_cast(world, caster, spell.id);
+    super::scripts::reduce_barbed_scales(world, caster, spell);
     let reflections: Vec<(Entity, Reflection)> = super::hit_units(&plan)
         .into_iter()
         .filter_map(|unit| Some((unit, reflect::roll(world, caster, spell, unit)?)))

@@ -30,13 +30,82 @@
 
 [Generic mastery](systems/character-stats.md#generic-mastery-base--2026-10-23): native zero-rating Arms Player114585 aura3188 produces16 at9215bc7fc, genuine RED10.95s on a fresh canonical snapshot. Remove only the duplicate hardcoded8 per TC UpdateMastery; rating/coefficient handling unchanged. At0576893d7 three-class unlearn/relearn1GREEN14.73s and stats-filter21GREEN8.35s, no compiler warnings; parent gate separate. [Historical Arms ledger](investigations/arms-spell-factors.md) exactly reconstructs AP3597.85vs4126/source1.799109vs1.818182, explicitly distinguishes SimC's double Reinforced Plates armor, and requires fresh post-redirect gear/tier qualification.
 
+## 2026-10-24 — Byte-identical public spell remainder
+
+[D3](systems/server-crates.md#public-spell-remainder-d3):11pure file moves retain54case names/flags (51enabled/3existing ignored), extending the existing consumer to229cases without body/seam/new-package-or-version/API changes. Existing rusqlite0.35/bundled and canonical random import are dev-only consumer wiring. Housekeeping only; exact inventory, combined compiler proof, full gate and matched timing remain distinct.
+
+## 2026-10-24 — Movement remains/speed scalars
+
+[Native movement predicates](systems/simc-apl.md#configured-movement-distance): three unknown-operand REDs/four distance controls PASS→all7GREEN0.00s atf3c760d3a, two-package test-target check146s/fmtPASS/zero warnings. Speed reads native run/aura modifiers even idle; positive-distance remains divides by live speed, explicit no-event zero stays0. Parent deferred scheduling because no pinned moving reference exists: MOVEMENT_EVENT_SCHEDULING_UNREFERENCED, no unpaired selector/timer added.
+
+## 2026-10-24 — Explicit movement.distance fixture state
+
+[Configured movement distance](systems/simc-apl.md#configured-movement-distance): pinned76f8118 current.distance_to_move, not target range/native travel. Four actual unknown-operand REDs→4GREEN0.00s atc8fafe180; existing movement-event absence1GREEN10.01s, server+server-simulation test-target check81s and fmtPASS/zero warnings. Patchwerk explicitly initializes0; missing/dungeon configuration stays named. No scheduler, remains/speed, full native rotation or DPS claim.
+## 2026-10-24 — Source-bound ordinary cone boundary
+
+[Model geometry](systems/model-geometry.md#ordinary-cone-close-boundary):607781b26 genuine native FoF117418/Mage120 close-off-arc2RED plus strict2yd/far/vertical1GREEN8.31s. Shared ordinary cones now use TC's strict3D target bounding radius/min2; existing98609-row loader retains radius alongside unchanged reach. No unknown-radius substitution, line bypass or WW IDs. Native harness uses actual Kobold10913/scale1. GREEN, unchanged cone/frontal controls and two-crate check pending; lead full gate and WW numerical parity separate.
+
+## 2026-10-24 — Isolated qualified Ret Sentence/Wake/Toll packet
+
+[Auras](systems/auras.md#ret-sentence-and-toll-relationships--2026-10-24): direct-owner Sentence expiry/cancel/native-percentage/physical/foreign controls, ordinary Wake damage/resource/knowledge and Toll ST/3T/cap/range/mode/percentage total eleven unique native cases with exact revision receipts. Packet starts at masterd7e86cd0f and excludes development-only Expurgation/Rebuke/Aura361/literal work; no whole-rotation or DPS claim. [Scope/source/proof ledger](../handoffs/ret-qualified-sentence-wake-toll-proof-ledger.md); integration check separate.
+## 2026-10-24 — WDP child relationships and original-primary context qualified
+## 2026-10-24 — Add-event activity fact
+
+[Native APL facts](systems/simc-apl.md#native-binding-boundary): `raid_event.adds.up` has4genuine unknown-property REDs plus1retained property control atd7c06c8ee. Pinned SimC activity now reads existing actual-wave deadline, not count/existence; no new event model. Unchanged5/5GREEN0.00s atf9252a098 (1m39compile/0warnings); state-reader scope only, parent integration pending. [Scoped proof](../handoffs/adds-up-proof-ledger.md).
+
+## 2026-10-24 — Expurgation Dummy-proc qualification
+
+[Exact source/RED/GREEN/consumer ledger](../handoffs/ww-wdp-damage-children-proof-ledger.md): DB2/TDB/TC have no child edge; approved source relationship emits451767 once at retained primary and158221 at native aura226 ticks. Authored Attributes5=512 adds initial0; fixture corrected to native0/250/500/750/1000, no production clock change. Rebased onto51a28da8a as6f99:7nativeGREEN32.31s; three unchanged Voltaic/Quake consumers eachPASS once, separate unchanged Ret Toll8PASS. Fresh-backup-EACH300s89912.5433ST/113892.0267three-target (−56.4469%/−69.7546%); both native children now damage. Native coefficients/caps/geometry unchanged; full numeric/WDP mastery and broader recipient qualifications remain open.
+
+## 2026-10-24 — WDP duration policy approved after first-window trace
+
+[Exact source/duration ledger](../handoffs/ww-wdp-enabler-proof-ledger.md#current-approved-duration-override--2026-10-24): first native1000ms window expires exactly when producing GCD ends (7.95→8.95s), despite source STrow43 being true. New duration test genuinely RED1000 vs7265ms10.15s. Approved producer-only SimC4552–4572 overlap+hasted1500ms/refresh NONE override retains DB2 base and152175 gates. At5618c1eea native5GREEN29.45s; first7265ms window admits actual source152175 at8.95s, no post-GCD target/cost refusal. Fresh-backup-EACH300s97359.4833ST/105538.6233three-target (−52.8397%/−71.9729%); root casts8/3 but damage children158221/451767 absent. Numerical/damage qualification remains open.
+
+## 2026-10-24 — WDP native enabler RED→GREEN
+
+[WDP enabler policy](../handoffs/ww-wdp-enabler-proof-ledger.md): after installing declared fixture lifetimes, actual selected owner/RSK/FoF/overlapping-CD premises pass and missing196742 fails14.46s. Bounded selected-owner root-OnHit producer uses generic native1000ms aura; native152175 gate/damage unchanged. SimC measured1500ms grace explicitly excluded. Separateww-wdp-enabler branch; ww-monk-parity pinnedc4 during gate. Owned1000ms/actual one-CD-negative and valid unselected-owner/overlap controls now GREEN across013/e072 (unchanged b275production). Fresh-backup-EACH300s89384.0867ST/106899.63three-target; still no WDPcasts/damage and far outside numerical band.
+## 2026-10-24 — rg1074 native fixture and FULL_MASK corrections
+
+[Regression source/proof ledger](../handoffs/rg1074-regression-proof-ledger.md): parent gate reproduced missing native Mana metadata in the UDP fixture and Echo's lost original tick phase.101459804 loads real power metadata;395ad19d1 carries native DONT_RESET_PERIODIC_TIMER from both FULL_MASK cast paths into generic refresh, restoring the correct triggered Languish oracle as well. Ordinary Barbed reset/DB2 amounts remain unchanged; no Echo exception or regen fallback. Exactmasterdc3 merged810a2b1e6; exact UDP1GREEN8.52s/Echo1GREEN14.44s plus generic rolling2GREEN10.33s/dummy20nineGREEN15.92s on one qualified ELF (13PASS, clean43m04s build). Parent broad gate remains separate.
+
+## 2026-10-24 — BM dungeon active-enemy admission
+
+[Source and proof](../handoffs/bm-active-enemy-proof-ledger.md): actual Austin ST29WildThrash commands reproduces forbidden admission;2/3-engaged controls retain native pet hits. Generic `min_active_enemies` reads current group combat coverage separately from geometric `min_enemies`. Generator projects every reachable pinned BM APL use; one native row changes, derived minimum2, no per-spell threshold or fake radius. Source/producer12GREEN plus fresh native990-loadout exporter1GREEN16.20s; a451 native3GREEN24.63s (ST0,2/3-target positives). Matched single-seed ST53884.8→58222.9 and3T44344.4→43712.8 retain both outcomes; parent integration/publication pending, no whole-DPS claim.
+
+## 2026-10-24 — DB2 periodic amounts override tooltip totals
+
+[Native-source correction](../handoffs/bm-native-periodic-proof-ledger.md): full-lifetime diagnostics first disproved loss of the old fixed-five budget. DB2/TC source comparison then reproduced fresh per-tick and refresh-schedule failures at198697bd9 (2FAIL/2PASS21.52s). Generic9bb480581 removes the sole tooltip-derived refresh normalization and uses native stacking/Pandemic/reset inputs; no Barbed replacement path or coefficient tuning. Native4GREEN27.34s at9bb480581, compile12m17s; broad integration pending. Previous fixed-total inference and dummy closure are withdrawn.
+
+## 2026-10-23 — Barbed Scales cast-boundary reduction
+
+[Owner return](systems/spell-casting.md#native-owner-cooldown-returns-2026-10-23): actual controlled native Player normal/free Cobra both reproduce missing2s reduction; absence controlsPASS21.30s. Existing shared successful-launch path applies native469880 through pending-cooldown reduction;57786fbd9 owner6GREEN24.39s. Matched single-seed cadence improves while total DPS falls; [proof](../handoffs/bm-owner-cooldown-proof-ledger.md) retains exact channel/cast changes without tuning or a whole-DPS claim. No hit-time shim or movement/range change.
+
+## 2026-10-23 — Native Scent charge return
+
+[Owner cooldown boundary](systems/spell-casting.md#native-owner-cooldown-returns-2026-10-23): actual selected count1/BW after real Barbed spend reproduces missing return; absence control passes. Existing native RestoreCharge bound before independent pet strike;9a03 nativeScent2GREEN19.78s after real1.25s BW (active1→2, absent1). [Proof](../handoffs/bm-owner-cooldown-proof-ledger.md). Scales free-cast RED retained, normal fixture geometry still under investigation; no range/rotation/stat tuning.
+
+## 2026-10-23 — Snakeskin Quiver execute binding
+
+[Named native-chance policy](systems/spell-casting.md#native-snakeskin-quiver-2026-10-23): real Austin300s RED122Auto/43paid/0free →b77 native2GREEN26.23s (122Auto/29paid/13free versus removed122Auto/43paid/0free). Actual victim/native chance, no timer or damage edits. [Proof](../handoffs/bm-snakeskin-proof-ledger.md); splitB/name-preserving integration31788 plus public-CombatStop fixture fix2391 passes requested server+server-simulation --tests check2m21s; parent broad gate remains separate, not a DPS-gain claim.
+
+## 2026-10-23 — Pack Tactics instant Focus bridge
+
+[Native launch bridge](systems/spell-casting.md#twentieth-batch-authored-totals-and-next-spell-uses): genuine Player launch/Austin kit-count RED2FAIL and removed-passive1PASS →3GREEN32.01s at ccfb44c19. Periodic246152 preserved; native Rage center1GREEN14.48s. Adapterd5e39 and WW fixture correction7216 merged; parent integration gate remains pending. [Proof](../handoffs/bm-pack-resource-proof-ledger.md).
+
+## 2026-10-23 — Haste-affected resource potential producer
+
+[Resource potential](systems/spell-casting.md#haste-affected-continuous-resource-regeneration--2026-10-23): native0x400 flags and live haste feed one uncapped rate calculation reused by actual regen; cap wire/cache remains0. Focus/Energy native rate RED2ad5, explicit0/25 Rogue cap RED4efc and three capped native fact REDecaf are qualified; producer implemented, NativeFacts consumer/GREEN still pending. Discrete pet Focus and separate rune cooldowns are unchanged; no DPS parity claim.
+
+## 2026-10-23 — Frenzy ranked-point timing oracle
+
+[Native Frenzy](investigations/follower-data.md#native-frenzy-pet-cadence--2026-10-21): points24184 Multiply curve94381 maps rank2→2, so raw20 becomes effective40. Correct29/40-frame runtime contradicted the raw-point test's33.333 expectation. Oracle now reads the active ranked amount, preserves the one-frame bound and owner/guardian isolation; production unchanged, corrected GREEN pending. Local bwrap Python-spawn failure is not gameplay RED.
 ## 2026-10-24 — Shared configured expected combat length GREEN
 
 [Shared expected length](systems/simc-apl.md#expected-combat-length):88095009c4genuineRED0.02s→991b7fcde4/4GREEN0.00s,14m24compile/0warnings after landed924638aba merge. Fixture duration147.5/300/600.25 stays independent of elapsed72/remaining;0/-1/NaN/±Inf and Dungeon are named unavailable, proposed action returns configured215.75. No fixed300/default/extra field/DB input. Tests enabled attribute-only; integration remains main-owned. [Proof](../handoffs/expected-combat-length-proof-ledger.md).
 
 ## 2026-10-24 — Shared pool-for-next resource contract
 
-[Contract proof](../handoffs/feral-shared-program-proof-ledger.md#shared-resource-contract-implementation): concrete5RED/1control→6GREEN; entire engine-free shared44GREEN ata63. Pool wait propagates through calls, never dispatches or grants resources; source conditions/native maximum admission remain separate. max_energy requires action-bound maximum_energy; original two reporter cases now error explicitly until14860 supplies missing cost/cap facts. Native Feral adapter and parity remain open.
+[Contract proof](../handoffs/feral-shared-program-proof-ledger.md#shared-resource-contract-implementation): concrete5RED/1control→6GREEN; entire engine-free shared44GREEN ata63. Pool wait propagates through calls, never dispatches or grants resources; source conditions/native maximum admission remain separate. max_energy requires action-bound maximum_energy; original two reporter cases initially error explicitly without cost/cap facts; corrected d101+new-interface fixture hooks yield4reporterGREEN/full53GREEN atc4, with rows/assertions/threshold unchanged. Native Feral adapter and parity remain open.
 
 ## 2026-10-24 — Exact Feral Program reporter RED and FIRST integration
 
@@ -110,6 +179,10 @@ At96b572797, [native packet27/27](../handoffs/native-precombat-proof-ledger.md#c
 ## 2026-10-23 — Judgment cast-time Holy Power correction
 
 [Judgment](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers): pinned TC OnCast/HasSpell315867 contradicts former damage-hit/aura gating. Genuine native cast-before-impact, immune-target and aura-only REDs atde7b6e406; shared20271/275773/275779 ordinary/triggered/costed-trigger correction has native16GREEN and warning-free retained controls at02090739e. No fixture resource grants or DPS claim. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#judgment-cast-time-resource-correction).
+## 2026-10-24 — Isolated Rake actual-stealth predicate
+
+[Rake](systems/spell-casting.md#rake-actual-stealth-eligibility--2026-10-24) ports TC2040–2078 without legacy rank grants; exact-profile native RED and seven development GREEN cases are recorded in the [focused gate ledger](../handoffs/feral-rake-stealth-proof-ledger.md). Clean branch starts exact1fb0230ad with no literal-development ancestry or observer API; relocated native-case1PASS31.65s, four relocated core casesPASS16.03s, expanded three-package test-target check0. Original two-package check had started before scope expansion and is separately recorded. Shred/persistent fields unchanged; parent full workspace gate pending.
+
 ## 2026-10-23 — Readonly native selected-pool admission
 
 [Shared Prepared](systems/simc-apl.md#shared-literal-fixture-machinery) resource hook reproduces2genuineRED at6134141c7 against current-canonical backup05577b33612d (21.25s). Native max comparison now affects only the chosen pool's local affordability, never the world's resources; preserves other costs/constraints and exact target. Energy/Chi and far-target cases use actual learned spells/pools. GREEN pending. Pool control and next-row semantics remain14766-owned; no DPS claim.
@@ -169,6 +242,7 @@ Merged current master4a2deb367 into native-spell-diff. Resolution retains owner-
 
 ## 2026-10-23 — Periodic critical ticks
 
+[Periodic crit](systems/auras.md#periodic-critical-ticks--2026-10-23): TC-native eligibility/live rolls and critical damage/healing bonuses, with explicit `FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_SPELL_OWNER` policy for class actors and owned pets/totems. Native RED7b924:2controlsPASS/5featureFAIL35.83s, then first7GREEN42.94s. Required real1943+21880 ordering REDcf191c5: native flat +10 raises normal10937→11038, critical73726 versus74307.8125 expected; initial follower259 fixture failure explicitly invalid. Fix4928e0227 moves periodic roll behind numeric source/flat bonuses; hp1026-integrated86d457e1c all8GREEN57.80s, Rupture74305 within source74307.8125±4; parentpc1037 integration/check/fmt pending. Clocks, attribution, APL and pet stats unchanged.
 [Periodic crit](systems/auras.md#periodic-critical-ticks--2026-10-23): TC-native eligibility/live rolls and critical damage/healing bonuses, with explicit `FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_SPELL_OWNER` policy for class actors and owned pets/totems. Native RED7b924:2controlsPASS/5featureFAIL35.83s, then first7GREEN42.94s. Required real1943+21880 ordering REDcf191c5: native flat +10 raises normal10937→11038, critical73726 versus74307.8125 expected; initial follower259 fixture failure explicitly invalid. Move periodic roll behind numeric source/flat bonuses; final GREEN pending. Clocks, attribution, APL and pet stats unchanged.
 ## 2026-10-23 — Native trait effect-point source boundary
 

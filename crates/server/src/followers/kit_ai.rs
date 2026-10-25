@@ -374,6 +374,10 @@ pub(super) fn conditions_met(
     entry: &Entry,
 ) -> bool {
     let condition = &entry.conditions;
+    // This is ai::engaged_enemies, not a selected target, historical pull or area count.
+    if enemies.len() < condition.min_active_enemies {
+        return false;
+    }
     let party_in_combat = party.iter().any(|member| {
         world.get::<InMap>(*member) == world.get::<InMap>(unit)
             && world

@@ -23,14 +23,11 @@ pub mod area_aura;
 pub mod area_trigger;
 #[cfg(test)]
 mod attack_power_tests;
-#[cfg(test)]
-mod attack_restriction_tests;
 mod aura_spell_restrictions;
 pub(crate) mod auto_repeat;
 #[cfg(test)]
 mod auto_shot_repeat_tests;
-#[cfg(test)]
-mod hit_positivity_tests;
+pub(crate) mod cooldown_query;
 #[cfg(any(test, feature = "test-support"))]
 pub mod holy_metrics;
 #[cfg(test)]
@@ -55,8 +52,6 @@ mod casting_restriction;
 #[cfg(test)]
 mod casting_restriction_tests;
 #[cfg(test)]
-mod category_cooldown_tests;
-#[cfg(test)]
 mod census_death_grip_tests;
 #[cfg(test)]
 mod census_e77_shaman_tests;
@@ -79,6 +74,8 @@ mod chrono_flame_tests;
 mod class_completeness_probe;
 #[cfg(test)]
 mod class_completeness_tests;
+#[cfg(test)]
+mod cone_boundary_tests;
 pub(crate) mod control_dream;
 #[cfg(test)]
 mod control_dream_tests;
@@ -165,6 +162,7 @@ pub mod guardian;
 mod guardian_tests;
 pub(crate) mod history_store;
 mod hit;
+mod howl;
 #[cfg(test)]
 mod impending_victory_tests;
 mod interruptibility;
@@ -172,8 +170,6 @@ mod interruptibility;
 mod invigorating_fury_tests;
 #[cfg(any(test, feature = "test-support"))]
 pub mod native_apl;
-#[cfg(test)]
-mod proc_recipient_tests;
 #[cfg(test)]
 mod protection_producer_tests;
 mod sanctuary;
@@ -193,13 +189,9 @@ mod prayer_of_mending_tests;
 #[cfg(test)]
 mod queued_trigger_cost_tests;
 #[cfg(test)]
-mod readiness_lifetime_tests;
-#[cfg(test)]
 mod required_caster_aura_tests;
 #[cfg(test)]
 mod scourge_eruption_tests;
-#[cfg(test)]
-mod summon_lifetime_tests;
 #[cfg(test)]
 mod touch_of_death_tests;
 #[cfg(test)]
@@ -228,8 +220,6 @@ mod protective_growth_tests;
 #[cfg(test)]
 mod raid_area_tests;
 pub(crate) mod recovery_rate;
-#[cfg(test)]
-mod recovery_rate_tests;
 mod reflect;
 mod resources;
 pub mod runes;
@@ -321,8 +311,6 @@ mod toy_weather;
 mod toy_wormhole;
 
 mod elemental_overload;
-#[cfg(test)]
-mod elemental_overload_tests;
 pub(crate) mod queued_triggers;
 
 pub struct SpellCastPlugin;
@@ -2501,6 +2489,7 @@ pub(crate) fn execute_cast(
     spell: &SpellInfo,
     explicit: Option<Entity>,
 ) -> Result<(), CastFailure> {
+    let primary_target = explicit;
     check_ordinary_caster_life(world, caster, spell)?;
     mobile_banking::check_cast(world, caster, spell.id)?;
     druid_transform::before_cast(world, caster, spell, 0)?;
@@ -2519,6 +2508,7 @@ pub(crate) fn execute_cast(
     crate::profession::check_cast_items(world, caster, spell)?;
     disenchant::check_cast(world, caster, spell)?;
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
+    prepared.cast_primary_target = primary_target;
     let mut launch_modifiers = spell_mods::snapshot_charged_modifiers(world, caster, &prepared);
     launch_modifiers.extend(scripts::pyroclasm_damage_modifier(world, caster, &prepared));
     prepared.cast_charge_mods = Some(launch_modifiers);
@@ -3454,7 +3444,11 @@ fn load_triggered_spell(world: &World, spell_id: u32, depth: u8) -> Option<Spell
     let spell = world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(spell_id))
-        .cloned();
+        .cloned()
+        .map(|mut spell| {
+            spell.cast_dont_reset_periodic_timer = true;
+            spell
+        });
     if spell.is_none() {
         warn!("Triggered spell {spell_id} not found");
     }
@@ -3489,6 +3483,9 @@ fn launch_triggered_spell(
     explicit: Option<Entity>,
     depth: u8,
 ) -> bool {
+    let mut prepared = spell.clone();
+    prepared.cast_primary_target = explicit;
+    let spell = &prepared;
     match plan_triggered_spell(world, caster, spell, explicit, depth) {
         Ok(mut plan) => {
             scripts::snapshot_guillotine_health(world, caster, spell, &mut plan);
@@ -3543,13 +3540,15 @@ fn execute_costed_trigger(
     explicit: Option<Entity>,
     depth: u8,
 ) -> Result<(), CastFailure> {
+    let primary_target = explicit;
     druid_transform::before_cast(world, caster, spell, depth)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Start)?;
     aura_spell_restrictions::check_target(world, caster, explicit, spell)?;
     let costs = spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
-    let prepared = resources::snapshot(world, caster, spell, &costs);
+    let mut prepared = resources::snapshot(world, caster, spell, &costs);
+    prepared.cast_primary_target = primary_target;
     let plan = plan_targets(world, caster, &prepared, explicit, true)?;
     scripts::on_cast(world, caster, prepared.id, depth);
     take_cast_resources(world, caster, &prepared, &costs);
@@ -3967,8 +3966,6 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
 }
 
 #[cfg(test)]
-mod additional_optional_power_tests;
-#[cfg(test)]
 mod caster_offset_tests;
 #[cfg(test)]
 mod class_resource_tests;
@@ -3983,8 +3980,6 @@ mod mechanics_talent_tests;
 #[cfg(test)]
 mod mechanics_tests;
 #[cfg(test)]
-mod optional_flat_cost_tests;
-#[cfg(test)]
 mod override_queue_tests;
 #[cfg(test)]
 mod power_drain_tests;
@@ -3996,8 +3991,6 @@ mod queue_tests;
 mod regen_tests;
 #[cfg(test)]
 mod rezrtap_tests;
-#[cfg(test)]
-mod rogue_stealth_tests;
 #[cfg(test)]
 mod source_cast_flags_tests;
 #[cfg(test)]

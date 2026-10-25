@@ -63,6 +63,7 @@ pub(crate) mod power_amount_trigger;
 mod proc_mask_tests;
 pub mod procs;
 mod refresh;
+mod ret_sentence;
 pub(crate) mod reward_mods;
 #[cfg(test)]
 mod rolling_periodic_tests;
@@ -185,6 +186,7 @@ pub fn aura_now(world: &World) -> f64 {
     world.resource::<Time<Virtual>>().elapsed_secs_f64()
 }
 
+#[cfg(any(test, feature = "test-support"))]
 /// Actual native equipment proc timer; reading never starts or retimes a proc.
 pub(crate) fn equipment_proc_cooldown_remaining(
     world: &World,
@@ -419,10 +421,7 @@ impl AuraInstance {
                 .iter_mut()
                 .find(|effect| effect.index == fresh.index)
             {
-                Some(effect) => {
-                    effect.amount = fresh.amount;
-                    effect.absorb_remaining = fresh.absorb_remaining;
-                }
+                Some(effect) => *effect = fresh,
                 None => self.effects.push(fresh),
             }
         }

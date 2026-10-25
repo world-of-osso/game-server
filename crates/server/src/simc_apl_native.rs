@@ -29,6 +29,12 @@ pub struct FixtureAdds {
     pub count: usize,
 }
 
+/// Explicit SimC fixture movement state, independent of native target geometry.
+#[derive(Component, Clone, Copy)]
+pub struct FixtureMovement {
+    pub distance_to_move: f64,
+}
+
 pub type ResolveDotSpell = fn(&World, Entity, u32) -> Result<crate::spell_info::SpellInfo, String>;
 
 #[derive(Clone, Copy)]
@@ -169,7 +175,7 @@ impl<'a> NativeFacts<'a> {
         spell: &crate::spell_info::SpellInfo,
         property: &str,
     ) -> Result<f64, String> {
-        crate::spell_cast::native_apl::cooldown_value(self.world, self.actor, spell, property)
+        crate::spell_cast::cooldown_query::cooldown_value(self.world, self.actor, spell, property)
     }
 
     pub fn equipment_proc_cooldown(
@@ -395,6 +401,38 @@ impl<'a> NativeFacts<'a> {
         )
     }
 
+    fn movement_distance(&self) -> Result<f64, String> {
+        if matches!(self.encounter, Encounter::Dungeon { .. }) {
+            return Err("DUNGEON_MOVEMENT_DISTANCE_UNAVAILABLE: movement.distance".into());
+        }
+        self.world
+            .get::<FixtureMovement>(self.actor)
+            .map(|movement| movement.distance_to_move)
+            .ok_or_else(|| {
+                "NATIVE_MOVEMENT_DISTANCE_UNAVAILABLE: configure fixture distance_to_move".into()
+            })
+    }
+
+    fn movement_value(&self, property: &str) -> Result<f64, String> {
+        let distance = self.movement_distance()?;
+        let run = self
+            .world
+            .get::<crate::creature_ai::SpawnPoint>(self.actor)
+            .map_or(1.0, |spawn| spawn.speed_run);
+        let modifier = self
+            .world
+            .get::<crate::auras::AuraStatMods>(self.actor)
+            .map_or(1.0, |mods| mods.movement_speed);
+        let speed = f64::from(crate::creature_ai::BASE_RUN_SPEED * run * modifier);
+        match property {
+            "speed" => Ok(speed),
+            "remains" if distance > 0.0 => Ok(distance / speed),
+            // All admitted fixtures configure no movement event/buff.
+            "remains" => Ok(0.0),
+            _ => Err(format!("unknown native movement property {property}")),
+        }
+    }
+
     fn movement_event(&self, property: &str) -> Result<f64, String> {
         if matches!(self.encounter, Encounter::Dungeon { .. }) {
             return Err(format!(
@@ -528,7 +566,7 @@ impl<'a> NativeFacts<'a> {
             "in_flight" | "in_flight_remains" => {
                 crate::spell_cast::native_apl::flight_value(self.world, self.actor, spell, property)
             }
-            "usable_in" => crate::spell_cast::native_apl::cooldown_value(
+            "usable_in" => crate::spell_cast::cooldown_query::cooldown_value(
                 self.world, self.actor, spell, "remains",
             ),
             "ready" => crate::spell_cast::native_apl::action_ready(self.world, self.actor, spell),
@@ -548,7 +586,9 @@ impl<'a> NativeFacts<'a> {
         let spell = self.action_spell(&action.name)?;
         match name {
             "charges" | "charges_fractional" | "full_recharge_time" => {
-                crate::spell_cast::native_apl::cooldown_value(self.world, self.actor, spell, name)
+                crate::spell_cast::cooldown_query::cooldown_value(
+                    self.world, self.actor, spell, name,
+                )
             }
             "execute_time" => Ok(crate::spell_cast::native_apl::execute_time(
                 self.world, self.actor, spell,
@@ -611,17 +651,9 @@ impl<'a> NativeFacts<'a> {
     }
 
     fn regen(&self, power: PowerType) -> Result<f64, String> {
-        let pools = self
-            .world
-            .get::<crate::spell_cast::powers::PowerPools>(self.actor)
-            .ok_or("native APL actor lacks PowerPools")?;
-        if power == PowerType::Mana {
-            return Ok(f64::from(pools.mana_regen_per_sec));
-        }
-        pools
-            .get(power)
-            .map(|pool| f64::from(pool.regen_per_sec))
-            .ok_or_else(|| format!("native APL actor lacks regen pool {power:?}"))
+        crate::spell_cast::powers::potential_power_regen(self.world, self.actor, power)
+            .map(f64::from)
+            .ok_or_else(|| format!("native APL potential regen unavailable for {power:?}"))
     }
 
     fn gcd(&self, action: &Action, operand: &str) -> Result<f64, String> {
@@ -659,9 +691,9 @@ impl Facts for NativeFacts<'_> {
             "fight_remains" => self.remaining(name),
             "active_enemies" => Ok(self.active_enemies as f64),
             "spell_haste" => self.spell_haste(),
-            "movement.distance" => Err(
-                "MOVEMENT_DISTANCE_UNAVAILABLE: configured movement.distance has no native fixture movement plan".into(),
-            ),
+            "movement.distance" => self.movement_distance(),
+            "movement.remains" => self.movement_value("remains"),
+            "movement.speed" => self.movement_value("speed"),
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "charges_fractional"
             | "full_recharge_time" | "execute_time" | "ticks_remain" => {
                 Err(format!("native APL {name} requires action context"))
@@ -727,6 +759,11 @@ fn fixture_add_value(
     let never = i64::MAX as f64 / 1000.0;
     Ok(match property {
         "exists" => bool_value(adds.is_some()),
+        // raid_event.cpp3097–3108: configured events are up only during an active wave.
+        "up" => bool_value(
+            adds.and_then(|adds| adds.expires_at)
+                .is_some_and(|at| at > now),
+        ),
         "remains" => adds
             .and_then(|adds| adds.expires_at)
             .map_or(0.0, |at| at.saturating_sub(now).as_secs_f64()),
@@ -773,6 +810,8 @@ fn bool_value(value: bool) -> f64 {
 
 #[cfg(test)]
 mod expected_length_tests;
+#[cfg(test)]
+mod movement_distance_tests;
 #[cfg(test)]
 mod refresh_context_tests;
 #[cfg(test)]
