@@ -31,7 +31,7 @@ mod echo_policies;
 mod elemental;
 pub(crate) use elemental::register as register_elemental_policies;
 mod elemental_ascendance;
-pub(super) use echo_policies::after_foreground_cast as apply_echo_policies;
+pub(super) use echo_policies::after_cast as apply_echo_policies;
 pub(super) use elemental::{
     after_launch as finish_scripted_launch,
     capture_damage_modifier as capture_consumed_damage_modifier,
