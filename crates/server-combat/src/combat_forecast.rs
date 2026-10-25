@@ -167,6 +167,7 @@ fn read_attacker(world: &World, enemy: Entity) -> Result<Attacker<'_>, String> {
             .map(|summon| summon.summoner),
         spirit_wolf: None,
         hunter_owner_ap: None,
+        hunter_owner_crit_pct: None,
     })
 }
 
