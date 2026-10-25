@@ -13,8 +13,21 @@ fn native_bm_pet_white_swings_read_live_owner_critical_chance() {
         .crit_pct = 100.0;
     engage(&mut run);
     crate::pet_control::order_companion_pet(run.app.world_mut(), run.actor, Some(run.targets[0]));
-    for _ in 0..200 {
+    let mut previous_crit = 100.0;
+    for frame in 0..200 {
         run.app.update();
+        let live_crit = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .crit_pct;
+        if live_crit != previous_crit {
+            eprintln!(
+                "NATIVE_PET_OWNER_CRIT frame={frame} previous={previous_crit} live={live_crit}"
+            );
+            previous_crit = live_crit;
+        }
     }
     let combat = report::combat(run.app.world(), &run.damage_targets, 10.0);
     let swings = combat["actions"]
