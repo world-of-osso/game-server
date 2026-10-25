@@ -15,6 +15,7 @@ const ATTR0_NO_ACTIVE_DEFENSE: u32 = 0x0020_0000;
 const ATTR3_COMPLETELY_BLOCKED: u32 = 0x8;
 const ATTR8_NO_ATTACK_BLOCK: u32 = 0x1;
 const ATTR3_NO_AVOIDANCE: u32 = 0x40;
+const ATTR3_ALWAYS_HIT: u32 = 0x0004_0000;
 const ATTR7_NO_ATTACK_MISS: u32 = 0x0200_0000;
 const ATTR7_NO_ATTACK_DODGE: u32 = 0x0080_0000;
 #[cfg(test)]
@@ -34,6 +35,9 @@ pub(super) fn remove_defended_targets(
     spell: &SpellInfo,
     plan: &mut TargetPlan,
 ) {
+    for effect in plan.iter_mut() {
+        effect.selected_units = effect.units.clone();
+    }
     let negative =
         crate::spell_info::positivity::negative_effects(world.resource::<SpellStore>(), spell);
     let misses: Vec<_> = super::hit_units(plan)
@@ -141,7 +145,9 @@ fn roll_defense(
     if school_immune || mechanic_immunity::blocks_mechanic(world, unit, spell, 0) {
         return Some(MissKind::Immune);
     }
-    if attributes(spell, 3) & ATTR3_NO_AVOIDANCE != 0 {
+    // Object::SpellHitResult: ALWAYS_HIT bypasses avoidance, not immunity.
+    // Reflection remains a separate launch decision in missiles::launch.
+    if attributes(spell, 3) & (ATTR3_NO_AVOIDANCE | ATTR3_ALWAYS_HIT) != 0 {
         return None;
     }
     let defense = spell
@@ -525,7 +531,7 @@ mod tests {
     #[test]
     fn native_npc_dodge_chance_follows_authored_tuning_and_exact_level_bonus() {
         use crate::auras::{RemoveReason, remove_auras};
-        use crate::spell_cast::npc_dodge_tests::spawn_native_dodge_target;
+        use crate::spell_cast::test_harness::spawn_native_dodge_target;
         use shared::components::{Level, UnitLevel};
 
         // Native40 tuning73 clamps1..30; native626 tuning6 clamps5..30.

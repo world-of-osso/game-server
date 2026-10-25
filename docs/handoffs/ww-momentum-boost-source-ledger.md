@@ -1,0 +1,40 @@
+# Momentum Boost: native eligibility versus SimC
+
+Verified2026-10-23. Source investigation only; no WW proc filter, coefficient change or tier-event bridge is authorized by these differences. [WW matrix](ww-source-census.md).
+
+## Native source
+
+Current-canonical private copy from `native-after-equipment-redirect-d45fe30e8`: source SHA568200017bcb3b5ed6f17931fc0994fff502c5c801f93f96197fc718bcd493bf, copy SHA dd1de231e32c26291182dff050a8de5a5132908723ed21454eb128e45e4b05ae.
+
+- 451294 is passive(Attr0=64), Attr3=0, SpellClassSet53, all SpellClassMask words0. Effect0 is APPLY_AURA/PROC_TRIGGER_SPELL42→451297, no effect class mask or EffectAttributes. Proc chance100, flags262160(0x40010: melee ability and harmful periodic), no ICD, PPM or charges.
+- 451297 supplies native10% damage modifier per stack, max10. Native data does not declare a FoF-only family mask.
+- Both451294 and451297 have no SpellAuraRestrictions rows. Local70448 SpellCastingRequirements/SpellAuraRestrictions/SpellShapeshift CSVs contain neither ID. The missing SQLite SpellCastingRequirements table was not treated as proof of no condition; the raw CSV was checked.
+- TraitDefinition129658→TraitNodeEntry124820 is selected in the exact269 export at rank1/max1/active1, TraitSubTreeID0. The passive is not an accidentally enabled inactive hero node in this fixture.
+
+TC a352b1fa SpellMgr.cpp1888–1903 refuses certain unrestricted generated procs only when CAN_PROC_FROM_PROCS is present, among its other predicates.451294 has Attr3=0 and is not in14860's `feral-parity-2026-10-23/tc-default-proc-refusal-census.json`. The supplied pinned TDB census reports no explicit451294 spell_proc row. No451294/451297/Momentum Boost script was found in pinnedTCsrc/server C++.
+
+With the observed native source records, ordinary Tiger Palm is an eligible melee ability; there is no identified native FoF-only or hero/aura requirement. Keep generated-TC eligibility unless additional authoritative native data proves a restriction. Do not repurpose the unrelated default-proc refusal fix to suppress this producer.
+
+## Actual observed states and alignment
+
+`native-spell-diff-2026-10-23/green-998083262/269.fists_of_fury.three_ticks.json` primes with actual TP→TP. Native451297 already has2stacks before FoF; first three recorded channel impacts carry20/50/60% Momentum modifiers, with source-product4.08/5.10/5.44 and script-product1. Later state has7stacks. These are observed proc/state differences, not coefficients.
+
+Oracle ordinal0 and1 both at1.004s are different REAL actions: `fists_of_fury_damage_mid2_2pc` and regular `fists_of_fury_damage`, per SimC1805–1827. Therefore the initial three-ordinal comparison was not three aligned channel ticks.14796's `fof-aligned/269.two_tp_then_fof.json` confirms identical TP→TP→FoF still has no SimC451297 before the channel. Compare native117418 channel impacts only against the regular oracle action.
+
+Native1296621 tier2pc aura is absent before FoF; no extra tier tick provenance follows from the ordinary113656→1174181s/tick0 bridge. Native tier application belongs to14913/is1039; no WW-specific extra hit is implemented here. Mystic Touch's1.0 versus1.05 target multiplier is a separately approved learned8647 producer.
+
+## Regular-channel comparison and input confound
+
+14796's `fof-aligned/current-native-vs-regular.{0,1,2}.diff.json` now select only regular117418/`fists_of_fury_damage` impacts. Native source products4.079827/5.099784/5.439769 versus4.527425/5.432910/5.885652 do not imply a coefficient correction: coefficient2.6082 and armor match. The first native stack is school1.071 × Combo Strikes1.8575876 × native spell modifiers2.050704; target1 versus1.05 is a separate missing Mystic Touch producer. Native AP term uses3702.22 versus3786, and native versatility1.0364815 versus1.022778 also differs.
+
+`native-current-data/native-fof.proof.json` records revision4bda4a241. It does NOT include generic stat-redirect implementationf9a01f71e (ancestry and loader checked). Its actual output still lists unmodeled redirected_base_stats for271519→271875,271517→251223,271518→268225. Requalify those source stats after [equipment redirect integration](equipment-stat-redirect-proof-ledger.md); do not independently tune the84AP gap while this concrete input feature is absent from the measured code. The ff8ba4206 binary now completes native300s ST/3T at47064.44/81373.16 (−77.20%/−78.39%, NOT parity), using fresh per-measurement current canonical backups in `native-after-target-seam-ff8ba4206`. All3 redirect gaps disappear; native versatility changes3.648→2.277778, with haste/mastery/crit allocations corrected. AGILITY/AP remains2768.22, so the hypothesis that redirect would resolve the84AP gap is now falsified; do not claim that gap fixed. These combined-code receipts are not isolated causal DPS comparisons to older snapshots.
+
+## Remaining AP input decomposition
+
+Read `fof-aligned/269.two_tp_then_fof.txt`1645/1730–1752: comparator initial raw Agility2537, Harandar Celebration1232585 adds50, then Void-Touched1264426 adds25, reaching2612. Native ff8 final Agility2768.21997 divided by the native Leather Specialization1202275% and Against All Odds4509864% is raw2535. `(2537+50+25)*1.05*1.04=2852.304`; `(2612-2535)*1.092=84.084`, accounting for the approximately84AP difference within printed rounding. The extra raw2 is consistent with the separately declared race0-versus-Troll gap, but its base catalog provenance is not yet qualified.
+
+This identifies missing declared consumable input, not a weapon-AP coefficient defect. Do NOT add75 flat Agility. Native data has1264426 Aura29/primary selector−2 with scaling coefficient0.191499993/class−1; food1232585 has Dummy50 effects but zero-base stat effects, so the food stat producer still needs native qualification. Both consumables are already explicit execution gaps. The comparator's50/25 values are observations, not runtime authority or permission to grant buffs/items/resources.
+
+## Comparator-only divergence
+
+Pinned SimC monk/sc_monk.cpp1699–1704 parses451297 and separately derives a FoF damage multiplier from melee haste and451294effect1. Its1730–1734 triggers451297 after FoF impact;1839–1841 expires it after the final tick and triggers the speed buff. That is narrower than the native generated proc source above. The comparator explains different stack histories; it does not override native masks or authorize copying its haste formula into runtime. No numerical parity claim or native mechanic fix follows until actual action identities, initial state and native eligibility are aligned.

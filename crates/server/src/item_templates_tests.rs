@@ -60,6 +60,7 @@ fn content_item_rows_load_inventory_attributes() {
             inventory_type: 21,
             max_stack: 1,
             max_count: 0,
+            item_set: 0,
             bonding: BIND_ON_EQUIP,
             required_level: 1,
             allowable_class: -1,

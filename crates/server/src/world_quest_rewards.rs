@@ -76,7 +76,7 @@ fn load_numeric_rewards(
     Ok(())
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[test]
 fn world_quest_authentic_reputation_cap_prevents_exalted_reward_but_allows_losses() {
     let conn = rusqlite::Connection::open_in_memory().unwrap();
@@ -117,7 +117,7 @@ fn world_quest_authentic_reputation_cap_prevents_exalted_reward_but_allows_losse
     );
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[test]
 fn world_quest_publication_keeps_watched_bar_in_step_with_committed_reputation() {
     use lightyear::prelude::{MessageReceiver, MessageSender};

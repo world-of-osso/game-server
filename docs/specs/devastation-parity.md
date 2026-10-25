@@ -7,7 +7,7 @@ Devastation1467 must execute its DPS rotation natively and measure within10% of 
 - [ ] Preserve strict native trait legality. Under `SIMC_PROFILE_TRAIT_EDGE_DIVERGENCE`, omit only node98931/entry122279 from both native inputs and the derived SimC profile (`hero_talents=122279:0`), with no replacement. Preserve all remaining allocated/effective ranks, gear and APL text.
 - [ ] Apply native362980's actual mastery amount once to direct and periodic Evoker-family224 damage. Reuse ordinary damage-modifier exclusions and never inherit owner mastery onto a pet.
 - [ ] Under `DEVASTATION_GIANTKILLER_SIMC_POLICY`, scale mastery by target health fraction with a30% floor. Native Tyranny376888 gives full mastery during Dragonrage375087; the named secondary damage spells353759,441172 and1292322 retain their pinned full-mastery exception when Tyranny is active. Removing mastery/Tyranny or using another class's spell preserves the appropriate unmodified path. Healing receives no damage multiplier.
-- [ ] Interpret the literal reference APL through the shared `simc_apl`/`simc_apl_native` path. Unsupported facts/options remain cited policy gaps, never substitute a local priority list or invented facts.
+- [ ] Interpret the literal reference APL through the shared `simc_apl`/`simc_apl_native` path. Unsupported facts/options remain cited policy gaps, never substitute a local priority list or invented facts. Fire Breath refreshability uses fresh native release duration for the proposed eligible empower rank and current Blast Furnace, including ordinary duration modifiers—not the raw child spell duration or a carried refresh duration.
 - [ ] Qualify every reference damage channel and achieve±10% native DPS on both scenarios, preserving per-ability/stat/buff and per-target receipts.
 
 ## How it works
@@ -24,12 +24,18 @@ Devastation1467 must execute its DPS rotation natively and measure within10% of 
 
 ## Tests asserting this spec
 
-Four ignored `giantkiller_native_*` cases were pushed at3caafcc03 before implementation. Frozen0d07469b8 execution produced genuine4RED (22.30s): actual Flame2995 versus3354.4, Disintegrate2090 versus2340.8 and Deep Breath DoT2598 versus2909.76 with actual12% native mastery. These failures establish absent mastery consequences; later floor/exclusion branches still require GREEN execution.
+Four ignored `giantkiller_native_*` cases were pushed at3caafcc03 before implementation. Frozen0d07469b8 execution produced genuine4RED (22.30s): actual Flame2995 versus3354.4, Disintegrate2090 versus2340.8 and Deep Breath DoT2598 versus2909.76 with actual12% native mastery. These failures establish absent mastery consequences. Frozen f50689cfa execution passed all four cases in25.40s: health100/50/10% and30%floor, ordinary Tyranny/Dragonrage controls, other-family exclusion, and all three secondary exceptions. Tests remain opt-in because they require frozen native inputs. Evidence: `game-engine/data/diagnostics/dev-evoker-parity-2026-10-22/giantkiller-green-f50689cfa.log`.
 
 ## Known gaps (current cycle)
 
-- [ ] Giantkiller targeted GREEN and full floor/Tyranny/exclusion qualification.
+- [x] Giantkiller targeted GREEN and full floor/Tyranny/exclusion qualification atf50689cfa (4/4,25.40s).
 - [ ] Literal APL dispatch, remaining native damage channels, consumables and final300s parity. Historical pre-Giantkiller1cf83f408 measures15650.57ST/20146.43three-target versus113727.53/182444.53 (−86.24%/−88.96%); these are diagnosis, not acceptance.
+
+## Native build divergences
+
+`DEVASTATION_REFINED_ESSENCE_BUILD_DIVERGENCE`: native70448 `SpellEffect` for1261452/EffectIndex1 is aura108, operation22 (`PeriodicHealingAndDamage`), base+15%. Pinned SimC70391 applies+25% to Disintegrate. Preserve native+15%; never tune it to the oracle. Evidence: `game-engine/data/diagnostics/dev-evoker-parity-2026-10-22/disintegrate-factor-source-receipt.json` records read-only native rows and the no-raid oracle factors/hash. This delta is data provenance, not a missing consequence or a parity-band waiver. Retire when the authenticated source builds agree.
+
+Arcane Intensity375618's base8% versus SimC16% is not this divergence: selected rank2 requires native rank-derived effect points. The shared trait-rank lifecycle owns that correction; Dev must re-check its deployed data receipt before attributing a remaining numerical difference.
 
 ## Out of scope
 

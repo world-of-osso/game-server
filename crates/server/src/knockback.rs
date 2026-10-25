@@ -10,7 +10,7 @@ use shared::components::{
 };
 
 #[derive(Component, Clone)]
-pub(crate) struct KnockbackFlight {
+pub struct KnockbackFlight {
     origin: Vec3,
     velocity: Vec3,
     elapsed: f32,

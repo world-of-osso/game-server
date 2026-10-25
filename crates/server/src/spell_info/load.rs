@@ -220,11 +220,13 @@ pub(super) fn load_spell_store(conn: &Connection) -> rusqlite::Result<SpellStore
     load_spell_visuals(conn, &mut spells)?;
     serverside::load_serverside_spells(conn, &lookups, &mut spells)?;
     finish(&mut spells);
-    Ok(SpellStore::from_spells(spells))
+    let mut store = SpellStore::from_spells(spells);
+    store.trait_effect_points = super::trait_effect_points::TraitEffectPoints::load(conn)?.into();
+    Ok(store)
 }
 
 /// Add a copy's server-side spells to an already loaded store.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(super) fn append_serverside_spells(
     conn: &Connection,
     store: &mut SpellStore,

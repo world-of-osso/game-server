@@ -4,6 +4,10 @@ Target: the **whole server/workspace suite** must finish within900s execution wa
 
 In the historical profile-only investigation, controlled same-source route initialization is **3.045× faster in CPU and4.046× in wall time** with the server override; all5437 discovered case identities and ignore statuses are unchanged. Full native Stockade passes in73.885s. Profile-only full union **does not meet the target**:2277.819s combined wall (37m58s),6347.253s CPU,9.67GiB child peakRSS and15.25GiB sampled peak swap. All2815 enabled/81 ignored cases are accounted for; four failures are named below. Workspace check and format pass. Test-only immutable-cache/Arc work follows; the profile change alone is not completion.
 
+## Crate-split follow-up
+
+B's simulator and C's melee consumer now have completed bounded native/comment-rebuild pairs; see [the measurement record](server-crate-split-measurements.md) for exact revisions, case counts, hashes, timings and concurrent-load limitations. Those shared-host observations do not replace this page's whole-workspace budget proof or establish causal runtime speedups.
+
 ## Baseline and cause
 
 The reported debug gate took40–64minutes and reached approximately7.9GB RSS plus7.9GB swap. Historical gate logs are `/home/osso/.worktrees/logs/gate-{fu913,sm909,ct911,rd912}-srv.log`; exact filter sources are `lead-gate-{fu913,sm894,rd912}.sh` in that directory.
@@ -335,8 +339,8 @@ Use the committed default `test` profile through ordinary `cargo test --locked -
 ## Sources
 
 - [Cargo test/dependency profiles](../../../Cargo.toml).
-- [Simulator manual clock and loaders](../../../crates/server/src/dungeon_simulator/runtime.rs).
-- [Simulator catalog ownership](../../../crates/server/src/dungeon_simulator/catalogs.rs).
+- [Simulator manual clock and loaders](../../../crates/server-simulation/src/dungeon_simulator/runtime.rs).
+- [Simulator catalog ownership](../../../crates/server-simulation/src/dungeon_simulator/catalogs.rs).
 - [Canonical fixture ownership](../../../crates/server/src/test_data.rs).
 - Evidence: `baseline-binary.json`, `baseline-union-census.json`, `baseline-safe.jsonl`, `baseline-safe.time`, `baseline-safe-processes.json`, `frozen-world.json`, `baseline-full-stockade.perf` and `baseline-full-stockade-hotspots.txt` in the directory above.
 - Lead-owned housekeeping: `/home/osso/.worktrees/logs/{prune-target-deps.py,disk-housekeeping.sh,test_prune_target_deps.py}`; the four gate scripts and their recorded heads.

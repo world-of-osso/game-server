@@ -34,7 +34,7 @@ pub(crate) struct PlayerDeathParams<'w, 's> {
     commands: Commands<'w, 's>,
     senders: Query<'w, 's, &'static mut MessageSender<DeathStateUpdate>>,
     replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     counters: ResMut<'w, DeathTransitionCounters>,
 }
 
@@ -48,7 +48,7 @@ pub(crate) fn process_player_death_transitions(
         .map(|transition| transition.player)
         .collect::<HashSet<_>>();
     for player_entity in processed_players {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         {
             params.counters.players_visited += 1;
         }
@@ -75,7 +75,7 @@ pub(crate) fn process_player_death_transitions(
         health.current = 0.0;
         if let Some(replication_dirty) = params.replication_dirty.as_deref() {
             replication_dirty.mark(player_entity);
-            #[cfg(test)]
+            #[cfg(any(test, feature = "test-support"))]
             {
                 params.counters.replication_marks += 1;
             }

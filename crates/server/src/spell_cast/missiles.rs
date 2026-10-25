@@ -42,6 +42,15 @@ impl PendingSpellHits {
     pub(super) fn has_caster(&self, caster: Entity) -> bool {
         self.0.iter().any(|hit| hit.caster == caster)
     }
+
+    #[cfg(any(test, feature = "test-support"))]
+    pub(super) fn earliest_due(&self, caster: Entity, spell_id: u32) -> Option<f64> {
+        self.0
+            .iter()
+            .filter(|hit| hit.caster == caster && hit.spell.id == spell_id)
+            .map(|hit| hit.due)
+            .min_by(f64::total_cmp)
+    }
 }
 
 #[derive(Debug)]
@@ -84,12 +93,13 @@ pub(super) fn launch(
 ) {
     // All successful ordinary/triggered casts reach this once, before flight/hit.
     crate::scripted_ai::on_spell_cast(world, caster, spell.id);
+    super::scripts::reduce_barbed_scales(world, caster, spell);
     let reflections: Vec<(Entity, Reflection)> = super::hit_units(&plan)
         .into_iter()
         .filter_map(|unit| Some((unit, reflect::roll(world, caster, spell, unit)?)))
         .collect();
     // `PreprocessSpellLaunch` (Spell.cpp:8538-8541): only the caster enters combat.
-    for target in super::hit_units(&plan) {
+    for target in super::selected_units(&plan) {
         if super::starts_combat(world, caster, target, spell) {
             crate::combat_refs::set_in_combat_with_suppressed(world, caster, target);
         }
@@ -205,13 +215,12 @@ fn land_now(
                 .collect();
             let plan = plan
                 .into_iter()
-                .map(|planned| PlannedEffect {
-                    units: planned
-                        .units
-                        .into_iter()
-                        .filter(|unit| reachable.contains(unit))
-                        .collect(),
-                    ..planned
+                .map(|mut planned| {
+                    planned.units.retain(|unit| reachable.contains(unit));
+                    planned
+                        .selected_units
+                        .retain(|unit| reachable.contains(unit));
+                    planned
                 })
                 .collect();
             hit(world, caster, spell, &plan, depth);
@@ -249,7 +258,7 @@ fn hit(world: &mut World, caster: Entity, spell: &SpellInfo, plan: &TargetPlan, 
     if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
         debug!(caster = ?caster, plan = ?plan, "Azerite landing plan");
     }
-    for target in super::hit_units(plan) {
+    for target in super::selected_units(plan) {
         if super::starts_combat(world, caster, target, spell) {
             crate::combat_refs::engage_attacked_target(world, caster, target);
         }
@@ -276,6 +285,7 @@ fn split_reflected(
                     units: vec![caster],
                     dest: planned.dest,
                     chain_multipliers: vec![(caster, planned.chain_multiplier(reflector))],
+                    selected_units: Vec::new(),
                     blocked_units: Vec::new(),
                     prevent_hit_script: planned.prevent_hit_script,
                 })
@@ -287,14 +297,26 @@ fn split_reflected(
     let plan = plan
         .into_iter()
         .filter_map(|planned| {
-            let had_units = !planned.units.is_empty();
+            let had_units = !planned.units.is_empty() || !planned.selected_units.is_empty();
+            let selected_units: Vec<Entity> = super::selected_units(std::slice::from_ref(&planned))
+                .into_iter()
+                .filter(|unit| {
+                    !reflections
+                        .iter()
+                        .any(|(reflector, kind)| reflector == unit && *kind == Reflection::Reflect)
+                })
+                .collect();
             let units: Vec<Entity> = planned
                 .units
                 .iter()
                 .copied()
                 .filter(|unit| !reflections.iter().any(|(reflector, _)| reflector == unit))
                 .collect();
-            (units.len() > 0 || !had_units).then(|| PlannedEffect { units, ..planned })
+            (!units.is_empty() || !selected_units.is_empty() || !had_units).then(|| PlannedEffect {
+                units,
+                selected_units,
+                ..planned
+            })
         })
         .collect();
     (plan, reflected)
@@ -317,7 +339,7 @@ fn landings(
             .find(|(delayed, _)| *delayed == unit)
             .map_or(0, |(_, delay)| *delay)
     };
-    let units = super::hit_units(&plan);
+    let units = super::selected_units(&plan);
     let mut moments: Vec<u64> = units.iter().map(|&unit| delay_of(unit)).collect();
     moments.sort_unstable();
     let unitless_moment = destination_delay.unwrap_or_else(|| {
@@ -326,7 +348,10 @@ fn landings(
             .copied()
             .unwrap_or_else(|| delays.iter().map(|(_, delay)| *delay).min().unwrap_or(0))
     });
-    if plan.iter().any(|planned| planned.units.is_empty()) {
+    if plan
+        .iter()
+        .any(|planned| planned.units.is_empty() && planned.selected_units.is_empty())
+    {
         moments.push(unitless_moment);
     }
     moments.sort_unstable();
@@ -343,14 +368,24 @@ fn landings(
                         .copied()
                         .filter(|&unit| delay_of(unit) == moment)
                         .collect();
-                    let unitless = planned.units.is_empty() && moment == unitless_moment;
-                    (!units.is_empty() || unitless).then(|| PlannedEffect {
+                    let selected_units: Vec<Entity> = planned
+                        .selected_units
+                        .iter()
+                        .copied()
+                        .filter(|&unit| delay_of(unit) == moment)
+                        .collect();
+                    let unitless = planned.units.is_empty()
+                        && planned.selected_units.is_empty()
+                        && moment == unitless_moment;
+                    let has_units = !units.is_empty() || !selected_units.is_empty();
+                    (has_units || unitless).then(|| PlannedEffect {
                         units,
+                        selected_units,
                         ..planned.clone()
                     })
                 })
                 .collect();
-            let alive_at_launch = super::hit_units(&plan)
+            let alive_at_launch = super::selected_units(&plan)
                 .into_iter()
                 .map(|unit| (unit, super::targets::is_alive(world, unit)))
                 .collect();
@@ -393,25 +428,14 @@ fn hit_delays(
     spell: &SpellInfo,
     plan: &TargetPlan,
 ) -> (Vec<(Entity, u64)>, Option<u64>) {
-    let units = super::hit_units(plan);
+    let units = super::selected_units(plan);
     let misc = spell.misc.as_ref();
     let speed = misc.map_or(0.0, |misc| misc.speed);
     let launch_delay = misc.map_or(0.0, |misc| misc.launch_delay);
-    let min_duration = misc.map_or(0.0, |misc| misc.min_duration);
     let speed_is_delay = attributes(spell, 9) & SPELL_ATTR9_MISSILE_SPEED_IS_DELAY_IN_SEC != 0;
     if is_channeled(spell) || (speed <= 0.0 && launch_delay <= 0.0 && !speed_is_delay) {
         return (units.into_iter().map(|unit| (unit, 0)).collect(), None);
     }
-    let travel = |distance: f32| -> f32 {
-        if speed_is_delay {
-            speed.max(min_duration)
-        } else if speed > 0.0 {
-            (distance / speed).max(min_duration)
-        } else {
-            0.0
-        }
-    };
-    let to_ms = |secs: f32| (f64::from(secs) * 1000.0).floor() as u64;
     let origin = position(world, caster);
     let dest = plan
         .iter()
@@ -423,8 +447,7 @@ fn hit_delays(
         })
         .find_map(|planned| planned.dest);
     if let Some(dest) = dest {
-        let distance = origin.map_or(0.0, |origin| origin.distance(dest.position));
-        let delay = to_ms(launch_delay + travel(distance));
+        let delay = destination_delay_ms(world, caster, spell, dest.position);
         return (
             // TC Spell.cpp:2486–2521,4096–4138: self hits precede the destination.
             units
@@ -437,7 +460,9 @@ fn hit_delays(
     let bouncy = attributes(spell, 4) & SPELL_ATTR4_BOUNCY_CHAIN_MISSILES != 0;
     let effect_mask = |unit: Entity| -> u64 {
         plan.iter()
-            .filter(|planned| planned.units.contains(&unit))
+            .filter(|planned| {
+                planned.units.contains(&unit) || planned.selected_units.contains(&unit)
+            })
             .fold(0, |mask, planned| mask | 1 << planned.index)
     };
     let mut delays: Vec<(Entity, u64)> = Vec::with_capacity(units.len());
@@ -463,10 +488,41 @@ fn hit_delays(
         let distance = source
             .zip(position(world, unit))
             .map_or(0.0, |(from, to)| from.distance(to));
-        let flight = launch + travel(distance.max(MIN_MISSILE_DISTANCE));
-        delays.push((unit, start + to_ms(flight)));
+        let flight = launch + travel_seconds(spell, distance.max(MIN_MISSILE_DISTANCE));
+        delays.push((unit, start + milliseconds(flight)));
     }
     (delays, None)
+}
+
+/// Same native destination delay used by actual missile launch and scripted continuations.
+pub(super) fn destination_delay_ms(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    destination: Vec3,
+) -> u64 {
+    if is_channeled(spell) {
+        return 0;
+    }
+    let distance = position(world, caster).map_or(0.0, |origin| origin.distance(destination));
+    let launch = spell.misc.as_ref().map_or(0.0, |misc| misc.launch_delay);
+    milliseconds(launch + travel_seconds(spell, distance))
+}
+
+fn travel_seconds(spell: &SpellInfo, distance: f32) -> f32 {
+    let speed = spell.misc.as_ref().map_or(0.0, |misc| misc.speed);
+    let minimum = spell.misc.as_ref().map_or(0.0, |misc| misc.min_duration);
+    if attributes(spell, 9) & SPELL_ATTR9_MISSILE_SPEED_IS_DELAY_IN_SEC != 0 {
+        speed.max(minimum)
+    } else if speed > 0.0 {
+        (distance / speed).max(minimum)
+    } else {
+        0.0
+    }
+}
+
+fn milliseconds(seconds: f32) -> u64 {
+    (f64::from(seconds) * 1000.0).floor() as u64
 }
 
 fn position(world: &World, unit: Entity) -> Option<Vec3> {

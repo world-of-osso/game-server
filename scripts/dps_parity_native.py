@@ -36,12 +36,12 @@ def main(arguments: Sequence[str]) -> None:
     root = Path(__file__).resolve().parents[1]
     executable = Path(arguments[0]).resolve(strict=True)
     if (
-        not executable.name.startswith("game_server-")
+        not executable.name.startswith("server_simulation-")
         or not executable.is_relative_to(root / "target")
         or not os.access(executable, os.X_OK)
     ):
         raise ValueError(
-            "only this checkout's executable game_server-* test binaries are allowed"
+            "only this checkout's executable server_simulation-* test binaries are allowed"
         )
     prepared_value = os.environ.get("DPS_PARITY_WORLD_DB")
     if prepared_value is None:

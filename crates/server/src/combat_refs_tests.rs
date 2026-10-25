@@ -61,6 +61,22 @@ fn advance_secs(app: &mut App, secs: f64) {
 }
 
 #[test]
+fn dummy_pve_reference_is_not_generically_timed_even_for_a_threatless_attacker() {
+    let mut app = app();
+    let attacker = passive_creature(&mut app);
+    let dummy = passive_creature(&mut app);
+    app.world_mut()
+        .entity_mut(dummy)
+        .insert(crate::creature_scripts::TrainingDummy::default());
+    set_in_combat_with(app.world_mut(), attacker, dummy);
+    // Only the generic manager is installed here. The script's independent
+    // timer, qualified by the native fixtures, must be the sole PvE expiry owner.
+    advance_secs(&mut app, 6.0);
+    assert!(in_combat(&app, attacker));
+    assert!(in_combat(&app, dummy));
+}
+
+#[test]
 fn a_fight_with_a_creature_lasts_until_it_stops_combat_however_long_the_lull() {
     let mut app = app();
     let hero = player(&mut app, "Hero");

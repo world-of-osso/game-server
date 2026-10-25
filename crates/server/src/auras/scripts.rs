@@ -80,6 +80,16 @@ pub(super) fn check_proc(
     aura: &AuraInstance,
     event: &super::procs::AuraEvent,
 ) -> bool {
+    // SIMC_RET_TIER_MID2_DIVINE_PURPOSE_RELATIONSHIP owns these charges;
+    // only a different-kind actual spender consumes them, not arbitrary casts.
+    if crate::spell_cast::scripts::owns_arbiter_charge(aura.spell_id) {
+        return false;
+    }
+    // SIMC_RET_EMPYREAN_LEGACY_RELATIONSHIP replaces only its own driver/buff
+    // predicates: Wrath grants it, actual Verdict consumes it.
+    if crate::spell_cast::scripts::owns_empyrean_proc(aura.spell_id) {
+        return false;
+    }
     script(world, aura.spell_id)
         .and_then(|script| script.check_proc)
         .is_none_or(|check| check(world, aura, event))
@@ -365,6 +375,7 @@ fn check_inundate_proc(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    crate::spell_cast::scripts::register_wdp_relationship(&mut scripts);
     scripts.0.insert(
         INUNDATE,
         AuraScript {
@@ -393,6 +404,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     super::earthen_rage::register(&mut scripts);
     super::spirit_wolf::register(&mut scripts);
     super::natures_guardian::register(&mut scripts);
+    super::ret_sentence::register(&mut scripts);
     scripts.0.insert(
         super::fel_devastation::FEL_DEVASTATION,
         AuraScript {
@@ -428,6 +440,29 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         AuraScript {
             on_apply: Some(crate::spell_cast::scripts::replace_lifebloom),
             on_remove: Some(crate::spell_cast::scripts::bloom_lifebloom),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        crate::spell_cast::scripts::GUILLOTINE,
+        AuraScript {
+            check_proc: Some(crate::spell_cast::scripts::check_guillotine_proc),
+            on_damage_proc: Some(crate::spell_cast::scripts::cast_guillotine),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        crate::spell_cast::scripts::WHIRLING_BLADE,
+        AuraScript {
+            check_proc: Some(crate::spell_cast::scripts::check_whirling_blade_proc),
+            on_damage_proc: Some(crate::spell_cast::scripts::cast_whirling_ravager),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        crate::spell_cast::scripts::PHALANX_TALENT,
+        AuraScript {
+            check_proc: Some(crate::spell_cast::scripts::check_phalanx_proc),
             ..Default::default()
         },
     );

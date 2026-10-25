@@ -26,6 +26,36 @@ pub(crate) fn cast_meteor(world: &mut World, ctx: &EffectCtx, _effect: &SpellEff
     }
 }
 
+#[cfg(any(test, feature = "test-support"))]
+/// Observe existing TC delay fields and admitted missiles; never retain a separate timer.
+pub(crate) fn pending_impact_due(world: &World, caster: Entity) -> Result<Option<f64>, String> {
+    let mut earliest = world
+        .resource::<crate::spell_cast::missiles::PendingSpellHits>()
+        .earliest_due(caster, METEOR_MISSILE);
+    let Some(mut query) = world.try_query::<(&SpellAreaTrigger, &shared::components::Position)>()
+    else {
+        return Ok(earliest);
+    };
+    for (trigger, position) in query
+        .iter(world)
+        .filter(|(trigger, _)| trigger.caster == caster && trigger.spell_id == DELAY_FIELD)
+    {
+        let Some(expires) = trigger.expires_at else {
+            continue;
+        };
+        let missile = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(METEOR_MISSILE)
+            .ok_or("native Meteor continuation153564 definition absent")?;
+        let destination = Vec3::new(position.x, position.y, position.z);
+        let delay =
+            crate::spell_cast::missiles::destination_delay_ms(world, caster, missile, destination);
+        let due = expires + delay as f64 / 1000.0;
+        earliest = Some(earliest.map_or(due, |existing| existing.min(due)));
+    }
+    Ok(earliest)
+}
+
 pub(super) fn is_delay_field(spell: u32, properties: i32) -> bool {
     spell == DELAY_FIELD && properties == DELAY_PROPERTIES
 }

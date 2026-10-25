@@ -54,12 +54,12 @@ the flag. A consumer supplies sourced per-tick BP0 via the existing
 settlement and unpaid carry. Preserve native owner/recipient and ordinary
 coefficient/eligibility rules.12654 producer proof is owned elsewhere.
 
-Barbed's fresh five-amount normalization remains; shared carry owns its old pool.
-335467's duplicated spell-ID carry was removed, retaining its fractional values.
-The schedule counts retained native phase, preserving seven-initial/six-refreshed
-Barbed behavior. No new generic periodic clock, estimator snapshot representation
-or fractional-tick model was introduced. Passing these boundaries does not certify
-every flagged spell producer or dynamic multiplier interaction.
+Historicalaeeaa1b87 retained Barbed's fixed-five normalization and existing phase;
+those assumptions are superseded by the [DB2/TC correction](bm-native-periodic-proof-ledger.md).
+335467's duplicated spell-ID carry remains removed, retaining fractional values.
+The original19-case proof is historical, not qualification of the corrected refresh
+schedule. No estimator snapshot representation or fractional-tick model was added.
+Passing those boundaries does not certify every producer or dynamic multiplier.
 
 Prismatic Echoes390967's separate mastery bonus remains open. Native mechanic
 proof is not policy admission, simulator healing efficacy/survival, or live pixels.

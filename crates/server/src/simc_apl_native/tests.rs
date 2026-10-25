@@ -2,6 +2,11 @@ use super::*;
 use crate::spell_cast::test_harness::Harness;
 use crate::spell_info::SpellStore;
 
+#[path = "action_extension_tests.rs"]
+mod action_extensions;
+#[path = "extension_tests.rs"]
+mod extensions;
+
 const TIGER_PALM: u32 = 100780;
 const BLACKOUT_KICK: u32 = 100784;
 const HIT_COMBO: u32 = 196740;
@@ -19,6 +24,7 @@ fn bindings() -> Bindings {
         .map(|(name, id)| (name.into(), id))
         .into(),
         buffs: [("hit_combo".into(), HIT_COMBO_BUFF)].into(),
+        dot_refresh: Default::default(),
         talents: [("hit_combo".into(), HIT_COMBO)].into(),
         resources: [
             ("energy".into(), PowerType::Energy),
@@ -31,7 +37,7 @@ fn bindings() -> Bindings {
 
 fn fixture(world: &World) -> Encounter {
     Encounter::Fixture {
-        started_at: crate::spell_cast::history_now(world),
+        started_at: crate::spell_cast::now(world),
         duration: 300.0,
         style: FightStyle::Patchwerk,
     }
@@ -231,6 +237,16 @@ fn native_apl_facts_fixture_clock_and_unavailable_dungeon_ttd_are_explicit() {
     let (mut h, actor) = monk();
     let b = bindings();
     let clock = fixture(h.app.world());
+    let expires_at = h.app.world().resource::<Time>().elapsed() + Duration::from_secs(300);
+    h.app.world_mut().entity_mut(h.npc).insert(FixtureTarget {
+        expires_at,
+        lifetime: Duration::from_secs(300),
+        is_boss: true,
+    });
+    h.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::networking::CombatTarget(Some(h.npc)));
     h.advance(40);
     let f = NativeFacts::new(h.app.world(), actor, &b, clock, 3);
     let elapsed = f.value("time").unwrap();

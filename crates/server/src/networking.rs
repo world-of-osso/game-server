@@ -105,7 +105,7 @@ pub(crate) fn face_player(world: &mut World, player: Entity, yaw: f32) {
 /// Whether the player's newest input requests translation. Server-only; a
 /// blocking cast freezes `Position`, so casts read intent instead.
 #[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub(crate) struct Moving(pub bool);
+pub struct Moving(pub bool);
 
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub(crate) struct FallTracker {

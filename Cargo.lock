@@ -6594,6 +6594,7 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+ "server-catalog",
  "shared",
  "tempfile",
  "tokio",
@@ -6602,6 +6603,51 @@ dependencies = [
  "wow-chunk",
  "wow-m2",
  "wow-wmo",
+]
+
+[[package]]
+name = "server-catalog"
+version = "0.1.0"
+dependencies = [
+ "rusqlite",
+]
+
+[[package]]
+name = "server-combat-tests"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "lightyear",
+ "rand 0.8.5",
+ "rusqlite",
+ "server",
+ "shared",
+]
+
+[[package]]
+name = "server-simulation"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "blake3",
+ "game-engine-core",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "server",
+ "shared",
+ "tempfile",
+]
+
+[[package]]
+name = "server-spell-tests"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "lightyear",
+ "rusqlite",
+ "server",
+ "shared",
 ]
 
 [[package]]

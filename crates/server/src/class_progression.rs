@@ -27,8 +27,8 @@ use crate::profession::PlayerProfessions;
 use crate::race_class::race_mask_allows;
 use crate::spell_info::{ClassInfo, ClassSpells, SpecInfo};
 use crate::trait_config::{
-    ConfigEntry, Purchase, TraitContext, build_config, granted_entries, starter_purchases,
-    talent_spell_entries, unspent,
+    ConfigEntry, Purchase, TraitContext, build_config, granted_entries,
+    ranked_talent_spell_entries, starter_purchases, unspent,
 };
 
 /// Retail spec choice unlocks at level 10; below it the class "Initial" spec is active.
@@ -51,28 +51,28 @@ pub struct KnownSpells(Vec<u32>, Vec<(u32, u32)>, Vec<u32>);
 
 impl KnownSpells {
     /// Native baseline book without player-only PvP or guild grants.
-    pub(crate) fn from_baseline(spells: Vec<u32>) -> Self {
+    pub fn from_baseline(spells: Vec<u32>) -> Self {
         Self(spells, Vec::new(), Vec::new())
     }
 
     /// Membership-derived grants are separate from baseline/profession knowledge.
-    pub(crate) fn guild_grants(&self) -> &[u32] {
+    pub fn guild_grants(&self) -> &[u32] {
         &self.2
     }
-    pub(crate) fn set_guild_grants(&mut self, spells: &[u32]) {
+    pub fn set_guild_grants(&mut self, spells: &[u32]) {
         self.2 = spells.to_vec();
     }
-    pub(crate) fn pvp_grants(&self) -> &[(u32, u32)] {
+    pub fn pvp_grants(&self) -> &[(u32, u32)] {
         &self.1
     }
-    pub(crate) fn set_pvp_grants(&mut self, mut grants: Vec<(u32, u32)>) {
+    pub fn set_pvp_grants(&mut self, mut grants: Vec<(u32, u32)>) {
         grants.sort_unstable();
         grants.dedup();
         self.1 = grants;
     }
 
-    #[cfg(test)]
-    pub(crate) fn fixture(spells: Vec<u32>) -> Self {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn fixture(spells: Vec<u32>) -> Self {
         Self(spells, Vec::new(), Vec::new())
     }
 
@@ -132,22 +132,42 @@ pub struct TraitLoadout {
     tree_id: u32,
     entries: Vec<ConfigEntry>,
     unspent: Vec<(u32, i32)>,
-    spells: Vec<KnownSpell>,
+    spells: Vec<AppliedTraitSpell>,
     /// `(TraitDefinition.OverridesSpellID, SpellID)` of the applied talents, then
     /// `(SpecializationSpells.OverridesSpellID, SpellID)` of the spec's learned spells:
     /// the baseline spell is not known and its bar buttons show the replacement.
-    overrides: Vec<(u32, u32)>,
+    pub(crate) overrides: Vec<(u32, u32)>,
+    /// Selected `(TraitDefinition.SpellID, VisibleSpellID)` action links.
+    pub(crate) visible_actions: Vec<(u32, u32)>,
 }
 
 impl TraitLoadout {
     /// Integration point for the aura runtime: active and passive spells of
     /// the applied talents, in config order. Known spells include them.
     pub fn active_talent_spells(&self) -> impl Iterator<Item = KnownSpell> + '_ {
-        self.spells.iter().copied()
+        self.spells.iter().map(|spell| spell.known)
     }
 
-    #[cfg(test)]
-    pub(crate) fn source_config(&self) -> (&[ConfigEntry], &[(u32, i32)]) {
+    /// TC GetTraitInfoForSpell: metadata belongs to this learned definition spell,
+    /// not arbitrary triggered children or matching spell names.
+    pub(crate) fn spell_trait(&self, spell_id: u32) -> Option<SpellTrait> {
+        self.spells
+            .iter()
+            .rev()
+            .find(|spell| spell.known.spell_id == spell_id)
+            .map(|spell| spell.trait_info)
+    }
+
+    pub(crate) fn selected_sub_tree(&self, classes: &ClassSpells) -> Option<u32> {
+        let class = classes
+            .classes
+            .iter()
+            .find(|class| class.traits.tree_id == self.tree_id)?;
+        crate::trait_config::selected_sub_tree(&class.traits, &self.entries)
+    }
+
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn source_config(&self) -> (&[ConfigEntry], &[(u32, i32)]) {
         (&self.entries, &self.unspent)
     }
 
@@ -223,6 +243,19 @@ fn publish_learned_spells(
             send(&mut senders, connection, SpellsLearned { spells: learned });
         }
     }
+}
+
+/// TC PlayerSpellTrait, attached when an applied trait learns its definition spell.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct SpellTrait {
+    pub definition_id: u32,
+    pub rank: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct AppliedTraitSpell {
+    known: KnownSpell,
+    trait_info: SpellTrait,
 }
 
 /// A known spell and its SPELL_ATTR0_PASSIVE flag.
@@ -535,21 +568,32 @@ fn build_trait_loadout(
     ctx: TraitContext,
     entries: Vec<ConfigEntry>,
 ) -> TraitLoadout {
-    let talents: Vec<_> = talent_spell_entries(&class.traits, &entries).collect();
+    let talents: Vec<_> = ranked_talent_spell_entries(&class.traits, &entries).collect();
     TraitLoadout {
         tree_id: class.traits.tree_id,
         unspent: unspent(&class.traits, ctx, &entries),
         spells: talents
             .iter()
-            .map(|entry| KnownSpell {
-                spell_id: entry.spell_id,
-                passive: entry.passive,
+            .map(|(entry, rank)| AppliedTraitSpell {
+                known: KnownSpell {
+                    spell_id: entry.spell_id,
+                    passive: entry.passive,
+                },
+                trait_info: SpellTrait {
+                    definition_id: entry.definition_id,
+                    rank: *rank,
+                },
             })
+            .collect(),
+        visible_actions: talents
+            .iter()
+            .filter(|(entry, _)| entry.visible_spell_id != 0)
+            .map(|(entry, _)| (entry.spell_id, entry.visible_spell_id))
             .collect(),
         overrides: talents
             .iter()
-            .filter(|entry| entry.overrides_spell_id != 0)
-            .map(|entry| (entry.overrides_spell_id, entry.spell_id))
+            .filter(|(entry, _)| entry.overrides_spell_id != 0)
+            .map(|(entry, _)| (entry.overrides_spell_id, entry.spell_id))
             .chain(spec_overrides(spec, ctx.level))
             .collect(),
         entries,
@@ -625,8 +669,8 @@ fn collect_npc_starter_spells(
 
 /// Evaluate allocated reference ranks through native grants, budgets and overrides.
 /// A failed config is an explicit measurement gap, never a default-loadout fallback.
-#[cfg(test)]
-pub(crate) fn evaluate_reference_traits(
+#[cfg(any(test, feature = "test-support"))]
+pub fn evaluate_reference_traits(
     classes: &ClassSpells,
     profile: &crate::followers::Profile,
     level: u8,
@@ -642,8 +686,8 @@ pub(crate) fn evaluate_reference_traits(
     evaluate_player_reference_traits(classes, &identity, profile.spec_id, level, allocated)
 }
 
-#[cfg(test)]
-pub(crate) fn evaluate_player_reference_traits(
+#[cfg(any(test, feature = "test-support"))]
+pub fn evaluate_player_reference_traits(
     classes: &ClassSpells,
     identity: &Player,
     spec_id: u32,
@@ -662,7 +706,7 @@ pub(crate) fn evaluate_player_reference_traits(
     Ok((known, evaluated.traits))
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 fn reference_purchases(
     tree: &crate::spell_info::TraitTree,
     ctx: TraitContext,

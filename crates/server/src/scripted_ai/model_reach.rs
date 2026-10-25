@@ -13,16 +13,32 @@ pub(crate) const PLAYER_COMBAT_REACH: f32 = 1.5;
 /// TC a352b1fa ObjectDefines.h:39, rounded to its f32 representation.
 pub(crate) const PLAYER_BOUNDING_RADIUS: f32 = 0.389;
 
-/// `creature_model_info.CombatReach` by display, from the prepared
+/// Native model dimensions, before the unit's effective object/display scale.
+#[derive(Clone)]
+pub(crate) struct ModelDimensions {
+    pub(crate) combat_reach: f32,
+    pub(crate) bounding_radius: f32,
+}
+
+/// `creature_model_info` dimensions by display, from the prepared
 /// `encounter_creature_model_info` rows (scripts/encounter_model_geometry.py).
 #[derive(Resource)]
-#[cfg_attr(test, derive(Clone))]
-pub(crate) struct ModelReaches(pub(crate) HashMap<u32, f32>);
+#[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
+pub struct ModelReaches(pub(crate) HashMap<u32, ModelDimensions>);
 
-pub(crate) fn load_model_reaches(conn: &rusqlite::Connection) -> rusqlite::Result<ModelReaches> {
-    let mut statement =
-        conn.prepare("SELECT DisplayID,CombatReach FROM encounter_creature_model_info")?;
-    let rows = statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+pub fn load_model_reaches(conn: &rusqlite::Connection) -> rusqlite::Result<ModelReaches> {
+    let mut statement = conn.prepare(
+        "SELECT DisplayID,CombatReach,BoundingRadius FROM encounter_creature_model_info",
+    )?;
+    let rows = statement.query_map([], |row| {
+        Ok((
+            row.get(0)?,
+            ModelDimensions {
+                combat_reach: row.get(1)?,
+                bounding_radius: row.get(2)?,
+            },
+        ))
+    })?;
     Ok(ModelReaches(rows.collect::<rusqlite::Result<_>>()?))
 }
 
@@ -35,7 +51,11 @@ pub(crate) fn scaled_model_dimension(authored: Option<f32>, default: f32, scale:
 /// Authored model reach wins; an actual display missing model-info uses the approved
 /// TC player default. `UnitScale` already includes creature and display scale.
 pub(crate) fn creature_combat_reach(models: &ModelReaches, display: u32, scale: f32) -> f32 {
-    scaled_model_dimension(models.0.get(&display).copied(), PLAYER_COMBAT_REACH, scale)
+    scaled_model_dimension(
+        models.0.get(&display).map(|model| model.combat_reach),
+        PLAYER_COMBAT_REACH,
+        scale,
+    )
 }
 
 /// A player's default reach, or a creature's authored/project-default reach.
@@ -48,6 +68,18 @@ pub(crate) fn combat_reach(world: &World, unit: Entity) -> Option<f32> {
     let display = world.get::<ModelDisplay>(unit)?.display_id;
     let models = world.get_resource::<ModelReaches>()?;
     Some(creature_combat_reach(models, display, scale))
+}
+
+/// Source-bound radius for cone boundaries. Unlike the approved reach policy,
+/// an unknown creature model does not supply a guessed radius.
+pub(crate) fn bounding_radius(world: &World, unit: Entity) -> Option<f32> {
+    let scale = world.get::<UnitScale>(unit).map_or(1.0, |scale| scale.0);
+    if world.get::<Player>(unit).is_some() {
+        return Some(PLAYER_BOUNDING_RADIUS * scale);
+    }
+    let display = world.get::<ModelDisplay>(unit)?.display_id;
+    let model = world.get_resource::<ModelReaches>()?.0.get(&display)?;
+    Some(model.bounding_radius * scale)
 }
 
 /// `WorldObject::GetDistance(obj)` (Object.cpp:430): exact 3D distance minus both

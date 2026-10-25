@@ -1,0 +1,15 @@
+[package]
+name = "server-spell-tests"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+# Test-only consumer; ordinary workspace builds do not activate fixture support.
+[dev-dependencies]
+server = { path = "../server", features = ["test-support"] }
+bevy = { version = "0.19", default-features = false, features = ["bevy_log", "bevy_state"] }
+# Existing read-only summon-property SQLite fixture; same workspace version/features.
+rusqlite = { version = "0.35", features = ["bundled"] }
+# Preserve canonical native messages and components in fixture observations.
+lightyear = { version = "0.28", features = ["server", "netcode", "replication", "udp"] }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "186134ff880f1a6a7b754e4ce43456d775a44caf" }

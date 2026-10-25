@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::time::Duration;
 
+use bevy::ecs::system::RunSystemOnce;
 use bevy::prelude::*;
 use lightyear::connection::host::HostClient;
 use lightyear::prelude::*;
@@ -15,8 +16,8 @@ use shared::components::{
 };
 use shared::protocol::{
     AttackStart, AttackStop, AttackStopped, AttackSwing, CancelAura, CastFailed, CombatChannel,
-    CombatLogEvent, CombatLogKind, ProtocolPlugin, SetTarget, SpellCastIntent, SpellChargesUpdate,
-    SpellCooldownUpdate, SpellFailure, SpellGo, StopSpellCast,
+    CombatEvent, CombatEventType, CombatLogEvent, CombatLogKind, ProtocolPlugin, SetTarget,
+    SpellCastIntent, SpellChargesUpdate, SpellCooldownUpdate, SpellFailure, SpellGo, StopSpellCast,
 };
 
 use super::powers::{PowerPools, PowerTypeTable, load_power_type_table};
@@ -27,25 +28,125 @@ use crate::spell_info::{ClassInfo, ClassSpells, SpellInfo, SpellStore, load_spel
 use crate::stats::CharacterStats;
 
 mod assisted_parity;
-pub(crate) use assisted_parity::{
+pub use assisted_parity::{
     read_facts as read_assisted_parity_facts, read_request_window as read_assisted_request_window,
 };
 
 /// Opt-in actual server combat events, including ownerless NPC self-events.
 /// Captured before owner routing; never changes production delivery or ownership.
 #[derive(Resource, Default)]
-pub(crate) struct ObservedCombatEvents(pub Vec<CombatLogEvent>);
+pub struct ObservedCombatEvents(pub Vec<CombatLogEvent>);
 
 /// Actual successful triggered launch boundary; FULL_MASK casts have no wire SpellGo.
 #[derive(Resource, Default)]
-pub(crate) struct ObservedTriggeredCasts(pub Vec<(Entity, u32, Option<Entity>)>);
+pub struct ObservedTriggeredCasts(pub Vec<(Entity, u32, Option<Entity>)>);
 
-pub(crate) struct WorldData {
-    pub(crate) store: SpellStore,
-    pub(crate) classes: ClassSpells,
-    pub(crate) powers_db: PathBuf,
+pub fn collect_swings(
+    h: &mut Harness,
+    attacker: Entity,
+    victim: Entity,
+    count: usize,
+) -> Vec<CombatLogEvent> {
+    let mut cursor = h.inbox.log.len();
+    h.app
+        .world_mut()
+        .run_system_once(move |mut commands: Commands| {
+            crate::combat::start_attack(&mut commands, attacker, victim, None);
+        })
+        .unwrap();
+    let mut swings = Vec::new();
+    // Bound ordinary delivery, never rewrite native swing timers or RNG.
+    for _ in 0..count * 60 {
+        h.advance(1);
+        swings.extend(
+            h.inbox.log[cursor..]
+                .iter()
+                .filter(|event| {
+                    event.source == Some(attacker.to_bits())
+                        && event.target == Some(victim.to_bits())
+                        && event.spell_id.is_none()
+                        && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+                })
+                .cloned(),
+        );
+        cursor = h.inbox.log.len();
+        if swings.len() == count {
+            crate::combat::attack_stop(h.app.world_mut(), attacker);
+            h.advance(3);
+            return swings;
+        }
+    }
+    panic!("only {} of{count} ordinary swing attempts", swings.len());
 }
 
+pub fn collect_broadcast_swings(
+    h: &mut Harness,
+    attacker: Entity,
+    victim: Entity,
+    count: usize,
+) -> Vec<CombatEvent> {
+    h.app
+        .world_mut()
+        .run_system_once(move |mut commands: Commands| {
+            crate::combat::start_attack(&mut commands, attacker, victim, None);
+        })
+        .unwrap();
+    let mut events = Vec::new();
+    for _ in 0..count * 60 {
+        h.advance(1);
+        events.extend(
+            drain::<CombatEvent>(&mut h.app, h.connection)
+                .into_iter()
+                .filter(|event| {
+                    event.attacker == attacker.to_bits()
+                        && event.target == victim.to_bits()
+                        && event.spell_id == 0
+                        && matches!(
+                            event.event_type,
+                            CombatEventType::MeleeDamage
+                                | CombatEventType::CriticalHit
+                                | CombatEventType::Miss
+                                | CombatEventType::Dodge
+                                | CombatEventType::Parry
+                                | CombatEventType::Block
+                        )
+                }),
+        );
+        if events.len() == count {
+            crate::combat::attack_stop(h.app.world_mut(), attacker);
+            h.advance(3);
+            return events;
+        }
+    }
+    panic!(
+        "only {} of{count} broadcast swings: {events:?}",
+        events.len()
+    );
+}
+
+pub struct WorldData {
+    pub(crate) store: SpellStore,
+    pub(crate) classes: ClassSpells,
+    pub powers_db: PathBuf,
+}
+
+impl WorldData {
+    /// Read the canonical cached spells when preparing a fixture's inputs.
+    pub fn spell_store(&self) -> &SpellStore {
+        &self.store
+    }
+}
+
+/// Observe the canonical category's consumed charges and oldest pending recharge.
+pub fn charge_recovery(history: &super::SpellHistory, category: u32) -> (u8, Option<f64>) {
+    let charges = &history.charges[&category];
+    (
+        charges.used(),
+        charges.pending.front().map(|charge| charge.ready_at),
+    )
+}
+
+#[cfg(test)]
 pub(crate) fn place_toy_caster_on_source_area(
     h: &mut Harness,
     fdid: u32,
@@ -55,6 +156,7 @@ pub(crate) fn place_toy_caster_on_source_area(
     place_toy_caster_on_source_map_area(h, 0, fdid, point, area);
 }
 
+#[cfg(test)]
 pub(crate) fn place_toy_caster_on_source_map_area(
     h: &mut Harness,
     map: u32,
@@ -92,11 +194,12 @@ pub(crate) fn place_toy_caster_on_source_map_area(
 
 /// What an effect with `Variance` 0.05 and an amount of `base` deals or
 /// heals: `base` ± 2.5%, rounded (SpellEffectInfo::CalcValue).
-pub(crate) fn varied(base: f32) -> std::ops::RangeInclusive<f32> {
+#[cfg(any(test, feature = "test-support"))]
+pub fn varied(base: f32) -> std::ops::RangeInclusive<f32> {
     (base * 0.975).round()..=(base * 1.025).round()
 }
 
-pub(crate) fn world_db() -> Option<&'static WorldData> {
+pub fn world_db() -> Option<&'static WorldData> {
     static DATA: OnceLock<Option<WorldData>> = OnceLock::new();
     DATA.get_or_init(|| {
         let path = crate::test_data::world_db_path();
@@ -112,23 +215,23 @@ pub(crate) fn world_db() -> Option<&'static WorldData> {
 }
 
 /// Shared process input under target/, never mutable app state or canonical data.
-pub(crate) struct PreparedClassWorld {
+pub struct PreparedClassWorld {
     directory: std::sync::Arc<tempfile::TempDir>,
 }
 
 impl PreparedClassWorld {
-    pub(crate) fn path(&self) -> PathBuf {
+    pub fn path(&self) -> PathBuf {
         self.directory.path().join("world.class-summons.copy.db")
     }
 
-    pub(crate) fn world_data(&self) -> crate::world_data::WorldData {
+    pub fn world_data(&self) -> crate::world_data::WorldData {
         static DATA: OnceLock<crate::world_data::WorldData> = OnceLock::new();
         DATA.get_or_init(|| crate::world_data::load_world_data(&self.path()))
             .clone()
     }
 }
 
-pub(crate) fn prepare_class_world() -> PreparedClassWorld {
+pub fn prepare_class_world() -> PreparedClassWorld {
     static DIRECTORY: OnceLock<std::sync::Arc<tempfile::TempDir>> = OnceLock::new();
     PreparedClassWorld {
         directory: DIRECTORY.get_or_init(import_class_world).clone(),
@@ -163,7 +266,7 @@ fn import_class_world() -> std::sync::Arc<tempfile::TempDir> {
 }
 
 /// Explicit native template authority for fixtures whose spells restrict creature type.
-pub(crate) fn load_native_creature_world(entries: &[u32]) -> crate::world_data::WorldData {
+pub fn load_native_creature_world(entries: &[u32]) -> crate::world_data::WorldData {
     let source = crate::test_data::world_data();
     let templates: std::collections::HashMap<_, _> = entries
         .iter()
@@ -180,6 +283,81 @@ pub(crate) fn load_native_creature_world(entries: &[u32]) -> crate::world_data::
         expected_stats: source.expected_stats.clone(),
         ..Default::default()
     }
+}
+
+pub fn spawn_native_dodge_target(entry: u32, facing: f32) -> Harness {
+    use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
+    use shared::components::{Rotation, UnitLevel};
+    const STRIKE: u32 = 38598;
+    const CLOAK_OF_DARKNESS: u32 = 70188;
+    let mut h = harness_with(
+        Vec::new(),
+        &[STRIKE, CLOAK_OF_DARKNESS, 853, 7384, 51723, 19434],
+        4,
+        true,
+    )
+    .unwrap();
+    let native = load_native_creature_world(&[entry]);
+    let template = &native.templates[&entry];
+    h.app.world_mut().entity_mut(h.npc).insert((
+        Npc {
+            template_id: entry,
+            name: template.name.clone(),
+        },
+        UnitFactionTemplate(u32::from(template.faction)),
+        UnitLevel(template.max_level),
+        Rotation {
+            x: 0.0,
+            y: facing + std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
+    ));
+    if let Some(tuning) = &template.tuning {
+        assert_eq!(tuning.delta.0, tuning.delta.1);
+        let scaling = shared::level_scaling::LevelScaling {
+            content_tuning_id: tuning.content_tuning_id,
+            min_level: template.min_level,
+            max_level: template.max_level,
+            delta: tuning.delta.0,
+        };
+        let level = scaling.native_level();
+        // Keep native guard damage nonlethal; dodge inputs remain unchanged.
+        const HEALTH_BUFFER_MULTIPLIER: f32 = 16.0;
+        let health = tuning.stats.max_health(level) * HEALTH_BUFFER_MULTIPLIER;
+        h.app.world_mut().entity_mut(h.npc).insert((
+            UnitLevel(level),
+            shared::components::Health {
+                current: health,
+                max: health,
+            },
+            scaling,
+            crate::level_scaling::ScaledStats(tuning.stats.clone()),
+        ));
+    }
+    h.app.insert_resource(native);
+    h.advance(2);
+    assert!(super::targets::is_hostile(h.app.world(), h.caster, h.npc));
+    let target = h.npc;
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: target,
+            target,
+            spell_id: CLOAK_OF_DARKNESS,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    h.advance(2);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<ActiveAuras>(target)
+            .unwrap()
+            .modifier(49),
+        100.0
+    );
+    h
 }
 
 pub(crate) fn power_table(data: &WorldData) -> PowerTypeTable {
@@ -218,30 +396,30 @@ pub(crate) fn class_spells(data: &WorldData) -> ClassSpells {
     }
 }
 
-pub(crate) struct Harness {
-    pub(crate) app: App,
-    pub(crate) caster: Entity,
-    pub(crate) connection: Entity,
-    pub(crate) npc: Entity,
-    pub(crate) inbox: Inbox,
+pub struct Harness {
+    pub app: App,
+    pub caster: Entity,
+    pub connection: Entity,
+    pub npc: Entity,
+    pub inbox: Inbox,
 }
 
 /// Messages drained from the connection every frame (unread HostClient
 /// messages do not survive later frames).
 #[derive(Default)]
-pub(crate) struct Inbox {
-    pub(crate) failed: Vec<CastFailed>,
-    pub(crate) inventory_errors: Vec<shared::protocol::InventoryError>,
-    pub(crate) go: Vec<SpellGo>,
-    pub(crate) cooldowns: Vec<SpellCooldownUpdate>,
-    pub(crate) charges: Vec<SpellChargesUpdate>,
-    pub(crate) bars: Vec<shared::protocol::ActionBarSnapshot>,
-    pub(crate) log: Vec<CombatLogEvent>,
-    pub(crate) attack_starts: Vec<AttackStart>,
-    pub(crate) attack_stops: Vec<AttackStopped>,
+pub struct Inbox {
+    pub failed: Vec<CastFailed>,
+    pub inventory_errors: Vec<shared::protocol::InventoryError>,
+    pub go: Vec<SpellGo>,
+    pub cooldowns: Vec<SpellCooldownUpdate>,
+    pub charges: Vec<SpellChargesUpdate>,
+    pub bars: Vec<shared::protocol::ActionBarSnapshot>,
+    pub log: Vec<CombatLogEvent>,
+    pub attack_starts: Vec<AttackStart>,
+    pub attack_stops: Vec<AttackStopped>,
 }
 
-pub(crate) fn spawn_player(app: &mut App, class: u8, x: f32) -> Entity {
+pub fn spawn_player(app: &mut App, class: u8, x: f32) -> Entity {
     app.world_mut()
         .spawn((
             Player {
@@ -280,7 +458,8 @@ pub(crate) fn spawn_player(app: &mut App, class: u8, x: f32) -> Entity {
         .id()
 }
 
-pub(crate) fn spawn_npc(app: &mut App, x: f32) -> Entity {
+pub fn spawn_npc(app: &mut App, x: f32) -> Entity {
+    let model = &crate::test_data::world_data().templates[&6].models[0];
     app.world_mut()
         .spawn((
             Npc {
@@ -290,6 +469,11 @@ pub(crate) fn spawn_npc(app: &mut App, x: f32) -> Entity {
             crate::zones::CreatureFlagsExtra(
                 crate::test_data::world_data().templates[&6].flags_extra,
             ),
+            // Actual Kobold Vermin display identity and native display scale.
+            shared::components::ModelDisplay {
+                display_id: model.display_id,
+            },
+            shared::components::UnitScale(model.display_scale),
             // Kobold Vermin: hostile to the Human caster.
             UnitFactionTemplate(25),
             Position { x, y: 0.0, z: 0.0 },
@@ -366,17 +550,19 @@ pub(crate) fn spawn_peer_connection(app: &mut App, player: Entity, peer: u64) ->
 
 /// Level 10 Human caster of `class` at the origin with fixed
 /// `CharacterStats` (100 SP/AP, 10 000 base mana), hostile kobold at 3 yd.
-pub(crate) fn harness(extra: Vec<SpellInfo>, ids: &[u32], class: u8) -> Option<Harness> {
+pub fn harness(extra: Vec<SpellInfo>, ids: &[u32], class: u8) -> Option<Harness> {
     harness_with(extra, ids, class, false)
 }
 
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) const SUNWELL_RADIANCE: u32 = 45769;
 
 /// Opt-in coefficient/admission fixture, not a legal class loadout. Native
 /// Sunwell Radiance45769 effect1 supplies permanent enemy-dodge reduction20
 /// (published70391 SpellEffect37781, SpellDuration21). Keep ordinary NPC dodge
 /// active in all other fixtures; never change RNG or spell defense attributes.
-pub(crate) fn harness_with_native_enemy_dodge_reduction(
+#[cfg(any(test, feature = "test-support"))]
+pub fn harness_with_native_enemy_dodge_reduction(
     extra: Vec<SpellInfo>,
     ids: &[u32],
     class: u8,
@@ -389,11 +575,13 @@ pub(crate) fn harness_with_native_enemy_dodge_reduction(
 }
 
 /// Custom coefficient fixtures load SUNWELL_RADIANCE explicitly before opting in.
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn apply_native_enemy_dodge_reduction(h: &mut Harness) {
     apply_native_enemy_dodge_reduction_to(h, h.caster);
 }
 
 /// Pet and foreign-player damage fixtures must qualify the actual attacker.
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn apply_native_enemy_dodge_reduction_to(h: &mut Harness, attacker: Entity) {
     crate::auras::apply_aura(
         h.app.world_mut(),
@@ -417,7 +605,7 @@ pub(crate) fn apply_native_enemy_dodge_reduction_to(h: &mut Harness, attacker: E
 
 /// `computed_stats`: run `StatsPlugin` on a fresh caster (100/100 health,
 /// 0/0 mana, as spawned on world entry) instead of the fixed stats.
-pub(crate) fn harness_with(
+pub fn harness_with(
     extra: Vec<SpellInfo>,
     ids: &[u32],
     class: u8,
@@ -469,13 +657,14 @@ pub(crate) fn harness_with_plugins(
         .collect();
     spells.extend(extra);
     let known = KnownSpells::fixture(spells.iter().map(|spell| spell.id).collect());
-    app.insert_resource(SpellStore::fixture(spells));
+    app.insert_resource(SpellStore::fixture_from_catalog(spells, &data.store));
     app.insert_resource(power_table(data));
     app.insert_resource(crate::item_stats::load_item_scaling_tables(&data.powers_db).unwrap());
     app.insert_resource(shapeshift_forms(data));
     let conn =
         Connection::open_with_flags(&data.powers_db, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     app.insert_resource(crate::unit_creature_type::load_race_types(&conn).unwrap());
+    app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap());
     app.insert_resource(
         crate::maps::store::load_map_store(&conn).expect("Actual passive map eligibility metadata"),
     );
@@ -515,6 +704,7 @@ pub(crate) fn harness_with_plugins(
 
 /// Charge's target (its DUMMY effect, `TARGET_UNIT_TARGET_ENEMY`) must stand within
 /// SpellRange 95, 8-25 yards: move the kobold to 10 yards.
+#[cfg(test)]
 pub(crate) fn charge_range(h: &mut Harness) {
     h.app.world_mut().entity_mut(h.npc).insert(Position {
         x: 10.0,
@@ -524,6 +714,7 @@ pub(crate) fn charge_range(h: &mut Harness) {
 }
 
 /// Establish actual raid eligibility through invite/accept, preserving case-supplied IDs.
+#[cfg(test)]
 pub(crate) fn group_fixture_players(app: &mut App, leader: (Entity, u64), member: (Entity, u64)) {
     let (leader, leader_id) = leader;
     let (member, member_id) = member;
@@ -548,6 +739,7 @@ pub(crate) fn group_fixture_players(app: &mut App, leader: (Entity, u64), member
     assert!(groups.is_in_same_group(leader_id, member_id));
 }
 
+#[cfg(test)]
 fn fixture_online_member(world: &World, entity: Entity) -> crate::group::OnlineMember {
     let player = world.get::<Player>(entity).unwrap();
     crate::group::OnlineMember {
@@ -570,12 +762,12 @@ pub(crate) fn drain<M: lightyear::prelude::Message>(app: &mut App, connection: E
 }
 
 impl Harness {
-    pub(crate) fn cast(&mut self, spell_id: u32, target: Option<Entity>) {
+    pub fn cast(&mut self, spell_id: u32, target: Option<Entity>) {
         self.cast_witnessed(spell_id, target, None);
     }
 
     /// A cast carrying the line of sight `witness` ray.
-    pub(crate) fn cast_witnessed(
+    pub fn cast_witnessed(
         &mut self,
         spell_id: u32,
         target: Option<Entity>,
@@ -596,7 +788,7 @@ impl Harness {
     }
 
     /// `CMSG_SET_SELECTION`: select `target`, or clear the selection.
-    pub(crate) fn select(&mut self, target: Option<Entity>) {
+    pub fn select(&mut self, target: Option<Entity>) {
         self.app
             .world_mut()
             .get_mut::<MessageSender<SetTarget>>(self.connection)
@@ -607,7 +799,7 @@ impl Harness {
     }
 
     /// `CMSG_ATTACK_SWING` at `target`; like a cast, it arrives 3 frames later.
-    pub(crate) fn attack(&mut self, target: Entity) {
+    pub fn attack(&mut self, target: Entity) {
         self.app
             .world_mut()
             .get_mut::<MessageSender<AttackSwing>>(self.connection)
@@ -618,7 +810,7 @@ impl Harness {
     }
 
     /// `CMSG_ATTACK_STOP`.
-    pub(crate) fn stop_attack(&mut self) {
+    pub fn stop_attack(&mut self) {
         self.app
             .world_mut()
             .get_mut::<MessageSender<AttackStop>>(self.connection)
@@ -628,12 +820,12 @@ impl Harness {
 
     /// Send + HostClient loopback delivery takes 3 frames (as in the old
     /// cast presentation tests); the cast resolves in the receiving frame.
-    pub(crate) fn cast_and_deliver(&mut self, spell_id: u32, target: Option<Entity>) {
+    pub fn cast_and_deliver(&mut self, spell_id: u32, target: Option<Entity>) {
         self.cast(spell_id, target);
         self.advance(3);
     }
 
-    pub(crate) fn advance(&mut self, frames: usize) {
+    pub fn advance(&mut self, frames: usize) {
         for _ in 0..frames {
             crate::navigation::drain_fixture(&mut self.app);
             self.app.update();
@@ -674,16 +866,16 @@ impl Harness {
         }
     }
 
-    pub(crate) fn health(&self, entity: Entity) -> f32 {
+    pub fn health(&self, entity: Entity) -> f32 {
         self.app.world().get::<Health>(entity).unwrap().current
     }
 
-    pub(crate) fn power(&self, power: PowerType) -> f32 {
+    pub fn power(&self, power: PowerType) -> f32 {
         let pools = self.app.world().get::<PowerPools>(self.caster).unwrap();
         pools.get(power).unwrap().current
     }
 
-    pub(crate) fn set_power(&mut self, power: PowerType, value: f32) {
+    pub fn set_power(&mut self, power: PowerType, value: f32) {
         let mut pools = self
             .app
             .world_mut()
@@ -693,6 +885,7 @@ impl Harness {
     }
 }
 
+#[cfg(test)]
 pub(crate) fn assert_combat_log_metadata(
     events: &[shared::protocol::CombatLogEvent],
     before: std::time::SystemTime,
