@@ -31,7 +31,7 @@ pub(crate) fn after_melee_hit(world: &mut World, caster: Entity, hand: Hand, cri
     }
 }
 
-/// No natural Dual Threat producer is added: only its actual landed native damage.
+/// Actual landed Dual Threat damage earns once; its replaced white impact does not.
 pub(crate) fn after_direct_damage(world: &mut World, ctx: &EffectCtx, critical: bool) {
     if ctx.spell.id == DUAL_THREAT {
         // SimC2064–2066 attributes Dual Threat to the main-hand weapon group.
