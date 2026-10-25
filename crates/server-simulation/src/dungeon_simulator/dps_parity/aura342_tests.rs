@@ -1,4 +1,4 @@
-//! Actual native342 cast and ordinary white clocks; producer policy is separate.
+//! Native haste composition and independent342 cast/white clocks.
 use super::*;
 use crate::auras::ActiveAuras;
 use crate::spell_cast::powers::PowerPools;
@@ -6,6 +6,27 @@ use crate::spell_cast::test_harness::ObservedCombatEvents;
 use crate::stats::CharacterStats;
 use shared::components::PowerType;
 use shared::protocol::CombatLogKind;
+
+#[test]
+#[ignore = "native WW1205 haste rating and ordinary5% aura multiply before attack/cast clocks"]
+fn literal_native_haste_ww_rating_multiplies_ordinary_aura() {
+    let run = prepare_measurement(269, 1).unwrap();
+    let world = run.app.world();
+    let stats = world.get::<CharacterStats>(run.actor).unwrap();
+    let modifiers = world.get::<crate::stats::StatModifiers>(run.actor).unwrap();
+    assert_eq!(stats.ratings.haste, 1205.0, "actual native profile rating");
+    assert_eq!(modifiers.haste_pct, 5.0, "actual ordinary native aura");
+    // SimC76f8118 player.cpp4982–4995 multiplies rating and aura haste.
+    let expected = 33.755_68;
+    eprintln!(
+        "NATIVE_HASTE rating={} aura={} derived={} expected={expected}",
+        stats.ratings.haste, modifiers.haste_pct, stats.haste_pct
+    );
+    assert!(
+        (stats.haste_pct - expected).abs() < 0.0001,
+        "native1205 rating +5% aura must produce33.7557%, not additive32.3864%"
+    );
+}
 
 const SPEED: u32 = 451298;
 const CAST_PROBE: u32 = 116;
