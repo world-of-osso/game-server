@@ -4,6 +4,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+- The native encounter fixture faces the actor toward its actual primary before engagement, so source-qualified frontal attacks can reach the pack. Keep native directional selectors, widths and radii unchanged.
+
 ### Literal spec drivers
 
 - Register each literal spec once, in spec-ID order. Adding a spec changes only its own rotation module and its registration line, not shared fields, initialization, dispatch, reporting or preparation branches.
