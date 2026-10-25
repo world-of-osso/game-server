@@ -1,3 +1,7 @@
+## 2026-10-25 — Admin protocol and transport crate
+
+[Server boundaries](systems/server-crates.md#admin-transport-boundary-2026-10-25): `server-admin` compiles the existing concrete IPC codecs and socket task below gameplay. Native dispatch stays in `server`; wire data and socket tests are unchanged.
+
 ## 2026-10-25 — All-DPS parity census
 
 [Census](investigations/dps-parity-census-2026-10-25.md): current canonical private database, master210df12e3, official followers and player-mode attempts for missing followers. Eight measured specs, seventeen exact fixture failures, two missing references. No surrogate profiles or mechanics changes.

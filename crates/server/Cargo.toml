@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+server-admin = { path = "../server-admin" }
 server-catalog = { path = "../server-catalog" }
 server-follower-policy = { path = "../server-follower-policy" }
 server-map-rules = { path = "../server-map-rules" }
