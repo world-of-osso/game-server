@@ -18,7 +18,6 @@ use shared::protocol::{
 };
 
 pub type CharacterId = u64;
-pub type GroupId = u64;
 
 /// A player currently in the world.
 #[derive(Clone, Debug, PartialEq)]

@@ -770,18 +770,6 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<CreatureSpawn> {
     })
 }
 
-/// `ObjectMgr::ParseSpawnDifficulties`: comma-separated `Difficulty.db2` IDs.
-pub(crate) fn parse_spawn_difficulties(text: &str) -> Vec<u32> {
-    text.split(',')
-        .map(|token| {
-            token
-                .trim()
-                .parse()
-                .unwrap_or_else(|_| panic!("bad spawnDifficulties {text:?}"))
-        })
-        .collect()
-}
-
 /// 0 in a spawn override column means the template's value.
 fn nonzero(value: i64) -> Option<u32> {
     (value != 0).then_some(value as u32)

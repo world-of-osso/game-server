@@ -8,22 +8,6 @@ use shared::components::Rotation;
 
 use crate::maps::{InMap, MapStore};
 
-#[derive(Component, Debug, Clone)]
-pub(crate) struct WorldAreaTrigger {
-    pub spawn_id: u64,
-    pub create_properties_id: u32,
-    pub create_properties_custom: bool,
-    pub template_id: u32,
-    pub template_custom: bool,
-    pub visual_spell: Option<u32>,
-    pub shape: u32,
-    pub shape_data: [f32; 8],
-    pub script_name: String,
-    pub phase_use_flags: u8,
-    pub phase_id: u32,
-    pub phase_group: u32,
-}
-
 /// All created instance entry paths queue this once; there is no caster/aura lifetime.
 /// The realm's existing Follower205→Normal1 population policy leaves source rows intact.
 pub(crate) fn spawn_map(world: &mut World, map: InMap, difficulty: u32) {

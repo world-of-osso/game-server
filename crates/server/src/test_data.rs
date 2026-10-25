@@ -159,9 +159,6 @@ fn prepared_class_fixture_remains_read_only_and_app_mutations_are_isolated() {
 }
 
 /// `data/world.db` of this checkout.
-pub fn world_db_path() -> PathBuf {
-    require(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"))
-}
 
 /// Independent lazy terrain cache backed by the same read-only source maps as the fixture.
 #[cfg(test)]
@@ -205,17 +202,6 @@ pub fn install_native_collision(app: &mut bevy::prelude::App) -> Result<(), Stri
 }
 
 /// `path`, panicking with how to provide it when it does not exist.
-pub(crate) fn require(path: PathBuf) -> PathBuf {
-    assert!(
-        path.exists(),
-        "{} not found: tests need the real data files. In a worktree, link the canonical \
-         data/ with `python3 /syncthing/Sync/Projects/world-of-osso/game-engine/scripts/agent/\
-         link-worktree-data.py <canonical checkout> <worktree>` (or symlink data/ to the \
-         canonical checkout's data/).",
-        path.display()
-    );
-    path
-}
 
 /// Full idle population across diverse layouts, as in the live world's optional components.
 #[cfg(test)]

@@ -13,20 +13,6 @@ use shared::protocol::{RaidDifficultySet, SetRaidDifficulty};
 const SAVED_RAID_DIFFICULTY: TableDefinition<u64, &[u8]> =
     TableDefinition::new("character_raid_difficulty");
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, bitcode::Encode, bitcode::Decode)]
-pub struct RaidDifficulty {
-    pub primary: u32,
-    pub legacy: u32,
-}
-impl Default for RaidDifficulty {
-    fn default() -> Self {
-        Self {
-            primary: 14,
-            legacy: 3,
-        }
-    }
-}
-
 pub(crate) fn load(db: &Database, character: u64) -> RaidDifficulty {
     let txn = db.begin_read().expect("read raid difficulty");
     let Ok(table) = txn.open_table(SAVED_RAID_DIFFICULTY) else {
