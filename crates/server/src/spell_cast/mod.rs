@@ -295,6 +295,8 @@ mod assisted_costs;
 mod charge_snapshot_tests;
 #[cfg(test)]
 mod combat_area_target_tests;
+#[cfg(test)]
+mod history_apl_tests;
 pub(crate) mod homebind;
 pub(crate) mod jump_charge;
 mod knockback;
@@ -627,6 +629,8 @@ impl ChargeState {
 pub struct SpellHistory {
     /// Ordinary successful casts only; triggered children and failed requests do not advance it.
     successful_casts: HashMap<u32, u64>,
+    #[cfg(any(test, feature = "test-support"))]
+    gcd_casts: Vec<u32>,
     cast_sequence: u64,
     spell_ready_at: HashMap<u32, f64>,
     category_ready_at: HashMap<u32, f64>,
@@ -664,9 +668,28 @@ impl SpellHistory {
             .map(|(&spell, _)| spell)
     }
 
-    fn record_successful_cast(&mut self, spell: u32) {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn previous_gcd_cast(&self, index: usize) -> Option<u32> {
+        self.gcd_casts
+            .len()
+            .checked_sub(index)
+            .and_then(|offset| self.gcd_casts.get(offset).copied())
+    }
+
+    fn record_successful_cast(&mut self, spell: &SpellInfo) {
         self.cast_sequence += 1;
-        self.successful_casts.insert(spell, self.cast_sequence);
+        self.successful_casts.insert(spell.id, self.cast_sequence);
+        // SimC76f8118 action.cpp67–80: successful foreground actions with
+        // trigger_gcd > 0 append; failed, triggered and off-GCD requests do not.
+        #[cfg(any(test, feature = "test-support"))]
+        if gcd_category(spell) != 0
+            && spell
+                .cooldowns
+                .as_ref()
+                .is_some_and(|cd| cd.start_recovery_ms > 0)
+        {
+            self.gcd_casts.push(spell.id);
+        }
     }
 
     fn school_locked(&self, school_mask: u32, now: f64) -> bool {
@@ -2696,7 +2719,7 @@ fn execute_cast_with_primary(
     world
         .get_mut::<SpellHistory>(caster)
         .expect("ordinary successful cast initialized its history")
-        .record_successful_cast(spell.id);
+        .record_successful_cast(spell);
     log_event(
         world,
         cast_event(caster, explicit, spell, CombatLogKind::CastSuccess),

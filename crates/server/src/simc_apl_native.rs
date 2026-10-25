@@ -805,10 +805,43 @@ impl<'a> NativeFacts<'a> {
     }
 }
 
+impl NativeFacts<'_> {
+    fn previous_gcd(&self, operand: &str) -> Result<f64, String> {
+        // SimC76f8118 action.cpp3900–3936: 1-based foreground GCD history.
+        let (index, alias) = operand
+            .split_once('.')
+            .ok_or_else(|| format!("invalid native prev_gcd operand {operand}"))?;
+        let index = index
+            .parse::<usize>()
+            .ok()
+            .filter(|index| *index > 0)
+            .ok_or_else(|| format!("native prev_gcd requires a positive index: {operand}"))?;
+        let requested = bound_spell(&self.bindings.actions, alias, "previous action")?;
+        let resolved =
+            crate::spell_cast::knowledge::resolve_action(self.world, self.actor, requested)?;
+        let previous = self
+            .world
+            .get::<crate::spell_cast::SpellHistory>(self.actor)
+            .and_then(|history| history.previous_gcd_cast(index));
+        let previous = previous
+            .map(|spell| {
+                // Compare alias endpoints: a selected native override and its base
+                // action share one APL identity (e.g. Deep Breath357210/433874).
+                crate::spell_cast::knowledge::resolve_action(self.world, self.actor, spell)
+            })
+            .transpose()?
+            .flatten();
+        Ok(bool_value(resolved.is_some() && resolved == previous))
+    }
+}
+
 impl Facts for NativeFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
         if let Some(value) = self.targeted_value(name, None) {
             return value;
+        }
+        if let Some(operand) = name.strip_prefix("prev_gcd.") {
+            return self.previous_gcd(operand);
         }
         if let Some(property) = name.strip_prefix("raid_event.pull.") {
             // SimC76f8118 raid_event.cpp3068–3141: no configured event.
