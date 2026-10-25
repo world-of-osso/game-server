@@ -823,7 +823,7 @@ fn reduced_by_armor(spell: &SpellInfo) -> bool {
             .effects
             .iter()
             .any(|effect| effect.mechanic == MECHANIC_BLEED);
-    spell.school_mask() & 1 != 0 && !bleed
+    spell.school_mask() & 1 != 0 && !bleed && !super::scripts::sentinel_ignores_armor(spell.id)
 }
 
 /// The target's armor against the caster: a creature's own armor at the
@@ -2000,6 +2000,7 @@ fn deal_source_damage_and_report(
     log_event(world, event);
     if !resolved_source {
         super::scripts::apply_marksman_residual(world, ctx, target, crit, amount);
+        super::scripts::apply_sentinel_damage(world, ctx, target, crit, amount);
     }
     if periodic {
         crate::auras::rogue::after_bleed_tick(world, ctx, target);

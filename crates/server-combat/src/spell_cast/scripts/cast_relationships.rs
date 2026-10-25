@@ -299,6 +299,7 @@ pub(in crate::spell_cast) fn ignores_cooldown(
 }
 
 pub(in crate::spell_cast) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    super::marksmanship_sentinel::after_cast(world, caster, spell);
     for rule in RULES.iter().filter(|rule| rule.cast == spell.id) {
         if !selected(world, caster, rule) {
             continue;

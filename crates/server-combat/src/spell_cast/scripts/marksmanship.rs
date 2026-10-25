@@ -17,7 +17,7 @@ const MASTER_MARKSMAN: u32 = 260309;
 const MASTER_BLEED: u32 = 269576;
 const BLOOD_FLETCHING: u32 = 1319011;
 
-fn selected(world: &World, caster: Entity, talent: u32) -> bool {
+pub(super) fn selected(world: &World, caster: Entity, talent: u32) -> bool {
     world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == SPEC)
@@ -123,21 +123,32 @@ pub(in crate::spell_cast) fn apply_residual(
         MASTER_MARKSMAN
     };
     let percent = super::script_effect_value(world, ctx.caster, talent, 0);
-    let tick_amount = damage * percent / 100.0 / native_bleed_ticks(world) as f32;
+    bank_residual(world, ctx, target, MASTER_BLEED, percent, damage);
+}
+
+pub(super) fn bank_residual(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    child: u32,
+    percent: f32,
+    damage: f32,
+) {
+    let tick_amount = damage * percent / 100.0 / native_residual_ticks(world, child) as f32;
     super::super::cast_triggered_with_effect0_amount(
         world,
         ctx.caster,
-        MASTER_BLEED,
+        child,
         Some(target),
         ctx.depth + 1,
         tick_amount,
     );
 }
 
-fn native_bleed_ticks(world: &World) -> u32 {
+fn native_residual_ticks(world: &World, child: u32) -> u32 {
     let bleed = world
         .resource::<SpellStore>()
-        .get(MASTER_BLEED)
+        .get(child)
         .expect("native Master Marksman bleed");
     let duration = bleed
         .misc
@@ -156,6 +167,28 @@ fn native_bleed_ticks(world: &World) -> u32 {
         "native Master Marksman requires at least one tick"
     );
     ticks
+}
+
+/// sc_hunter.cpp5686–5687: one native Take Aim reduction per executed
+/// Rapid tick, not once per recipient and not only on critical impacts.
+pub(crate) fn begin_rapid_tick(world: &mut World, caster: Entity) {
+    const TAKE_AIM: u32 = 1273132;
+    if selected(world, caster, TAKE_AIM) {
+        let seconds = f64::from(super::script_effect_value(world, caster, TAKE_AIM, 1)) / 1000.0;
+        super::reduce_cooldown(world, caster, AIMED_SHOT, seconds);
+    }
+}
+
+/// sc_hunter.cpp3991/4014–4016: native talent chance on actual Auto Shot.
+pub(super) fn roll_auto_lock(world: &mut World, ctx: &EffectCtx) {
+    const LOCK_AND_LOAD: u32 = 194595;
+    if ctx.spell.id != 75 || !selected(world, ctx.caster, LOCK_AND_LOAD) {
+        return;
+    }
+    let chance = super::script_effect_value(world, ctx.caster, LOCK_AND_LOAD, 0);
+    if crate::random::random::<f32>() * 100.0 < chance {
+        super::super::cast_triggered(world, ctx.caster, 194594, Some(ctx.caster), 1);
+    }
 }
 
 pub(super) fn target_plan(spell: u32) -> Option<(targets::Relation, super::TargetPlanHook)> {
