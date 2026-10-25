@@ -575,6 +575,17 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                     effect.amount.trunc() * stacks,
                 );
             }
+            // SimC76f8118 sc_mage.cpp6497–6501: effect2 ×0.001 is the
+            // fractional haste per Mana Cascade stack; effect1 is zero-valued.
+            MELEE_SLOW if matches!(aura.spell_id, 449314 | 449322) => {
+                let haste = aura
+                    .effects
+                    .iter()
+                    .find(|effect| effect.index == 1)
+                    .expect("native Mana Cascade requires effect2")
+                    .amount;
+                stats.haste_pct += haste * 0.1 * stacks;
+            }
             // Retail 12.x haste is one stat: melee, ranged and spell haste
             // auras all add to it.
             MOD_MELEE_HASTE

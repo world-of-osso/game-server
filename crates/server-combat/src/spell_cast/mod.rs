@@ -2780,6 +2780,12 @@ fn execute_cast_with_primary(
             reflected: false,
         },
     );
+    let flamestrike_chance = scripts::flamestrike_hot_streak_chance(
+        world,
+        caster,
+        spell,
+        plan.iter().flat_map(|effect| &effect.units).copied().next(),
+    );
     let previous_efflo_summons = efflorescence::read_previous_summons(world, caster, spell.id);
     scripts::spawn_ravager_field(world, caster, spell, explicit, 0);
     missiles::launch(world, caster, spell, plan, 0);
@@ -2789,6 +2795,9 @@ fn execute_cast_with_primary(
     scripts::consume_phalanx(world, caster, spell, explicit);
     for hook in scripts::after_cast(spell.id) {
         hook(world, caster, spell);
+    }
+    if let Some(chance) = flamestrike_chance {
+        scripts::roll_flamestrike_hot_streak(world, caster, chance);
     }
     if !spell.cast_parent_owns_modifier_charges {
         spell_mods::consume_charges(world, caster, spell);

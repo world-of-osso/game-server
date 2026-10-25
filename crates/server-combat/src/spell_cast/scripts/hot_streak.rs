@@ -35,6 +35,10 @@ pub(crate) fn record_fire_hit(
     if !eligible || !learned {
         return;
     }
+    apply_hot_streak_outcome(world, caster, crit, guaranteed);
+}
+
+fn apply_hot_streak_outcome(world: &mut World, caster: Entity, crit: bool, guaranteed: bool) {
     // SimC76f8118 sc_mage.cpp2138–2159/2186–2192: guaranteed outcomes
     // predict HU, and known-HU conversions predict HS; wasted crits keep HS.
     if crit && crate::auras::has_aura(world, caster, HOT_STREAK) {
@@ -72,6 +76,34 @@ pub(crate) fn record_fire_hit(
             }
         }
     }
+}
+
+/// SimC76f8118 sc_mage.cpp3913–3920: one independent Fuel roll per cast
+/// that hits any recipient, using the cast's crit snapshot before proc consumption.
+pub(crate) fn flamestrike_hot_streak_chance(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    hit: Option<Entity>,
+) -> Option<f32> {
+    if !matches!(spell.id, FLAMESTRIKE | NATIVE_FLAMESTRIKE) {
+        return None;
+    }
+    let hit = hit?;
+    let known = world.get::<KnownSpells>(caster)?;
+    if !known.contains(DRIVER) {
+        return None;
+    }
+    Some(if known.contains(416094) {
+        crate::spell_cast::effects::crit_chance(world, caster, hit, spell)
+    } else {
+        0.0
+    })
+}
+
+pub(crate) fn roll_flamestrike_hot_streak(world: &mut World, caster: Entity, chance: f32) {
+    let crit = rand::random::<f32>() * 100.0 < chance;
+    apply_hot_streak_outcome(world, caster, crit, chance >= 100.0);
 }
 
 fn consume_admitted_hot_streak(world: &mut World, caster: Entity, spell: &SpellInfo) -> bool {
@@ -137,11 +169,12 @@ pub(crate) fn consume_procs_and_roll_pyroclasm(
 }
 
 fn roll_pyroclasm(world: &mut World, caster: Entity) {
-    let chance = world
-        .get::<ActiveAuras>(caster)
-        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == PYROCLASM_TALENT))
-        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
-        .map_or(0.0, |effect| effect.amount);
+    if !crate::auras::has_aura(world, caster, PYROCLASM_TALENT) {
+        return;
+    }
+    // SimC76f8118 sc_mage.cpp6446: read live talent Effect1. Native MID2
+    //1296584 modifies label5947 after the talent aura's cached amount was made.
+    let chance = super::script_effect_value(world, caster, PYROCLASM_TALENT, 0);
     if chance > 0.0 && rand::random::<f32>() * 100.0 < chance {
         crate::spell_cast::cast_triggered(world, caster, PYROCLASM, Some(caster), 1);
     }

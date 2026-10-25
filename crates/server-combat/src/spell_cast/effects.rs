@@ -913,7 +913,7 @@ fn takes_melee_crit_modifier(spell: &SpellInfo) -> bool {
 const SPELL_ATTR2_CANT_CRIT: u32 = 0x2000_0000;
 
 /// CritChance mods and script values precede the victim's melee crit modifier.
-fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+pub(super) fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
     // SimC76f8118 engine/player/pet.cpp217–220: controlled pets inherit the
     // live owner's melee/spell crit. Scripts and target modifiers keep the pet.
     let owner = world
