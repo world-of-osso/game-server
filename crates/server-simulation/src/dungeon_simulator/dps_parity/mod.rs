@@ -3,6 +3,7 @@ mod active_enemy_tests;
 mod arms_rotation;
 mod arms_tests;
 mod assassination_energy_tests;
+mod assassination_hero_tests;
 mod assassination_knowledge_tests;
 mod assassination_mechanics_tests;
 mod assassination_poison_tests;
