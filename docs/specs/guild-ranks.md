@@ -37,6 +37,12 @@ Wire contract: shared-protocol `docs/guild-ranks.md`.
 - [x] Remove-member requires the removal flag and a strictly lower-ranked same-guild target.
 - [x] Removal atomically deletes membership, guild-local rank, note and pending invitation; daily bank usage remains. Online player components and recipient rosters refresh, including the removed member's empty roster. Rejoining starts at the lowest rank.
 
+### Confirmed guild disband
+- [ ] `GuildRankRequest::Disband` selects only the authenticated actor's current guild and requires current rank0; nonmasters/unguilded/foreign actors cannot delete it.
+- [ ] One durable transaction removes all members, ranks/notes, profile, bank contents/money/logs/usage, invitations to the guild, event/news/appearance/date metadata and the reserved name; unrelated guilds and player inventories remain unchanged.
+- [ ] Existing recipient snapshots refresh all removed online members to empty authority and remove replicated membership/design. Offline members remain unguilded after reopen. No last-member prerequisite and no synthetic quit-event history.
+- Tests: `crates/server/src/guild_disband_tests.rs`. Native confirmation/source contract: [client disband](../../../game-engine/docs/specs/guild-disband.md). GREEN/native proof pending.
+
 ### Invitation lifecycle
 - [x] Invitations reject already-guilded, already-invited, missing/offline and self targets with Retail GlobalStrings; invitation rights come from persisted actor membership.
 - [x] Online invitees receive GuildInvitation; a persisted pending invitation is delivered on world entry. Decline consumes it.

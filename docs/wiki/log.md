@@ -1,3 +1,7 @@
+## 2026-10-25 — Guild disband authority and durable deletion
+
+[Disband](systems/guild-lifecycle.md#guild-disband) uses the authenticated rank0 current guild, one redb transaction for all members and guild-owned metadata/name reservation, and the existing previous-member refresh path. The request has no supplied guild/actor ID. Four behavioral RED cases reached the missing wire variant; GREEN and native proof remain pending. No invented quit-event history or last-member restriction.
+
 ## 2026-10-23 — Native Elemental launch resources qualified
 
 [Launch Maelstrom](investigations/follower-data.md#lightning-launch-maelstrom-children--2026-10-22): native10GREEN+nonzero Mage1GREEN, retained root/SK7GREEN. StatsPlugin70 ST/3T699.8/1026.733DPS; complete printed samples recovered after optional-directory export failure, not2PASS. No causal/parity or fullPoM proc ownership claim.

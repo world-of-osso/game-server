@@ -95,6 +95,8 @@ pub(crate) mod charters;
 mod guild_invites;
 #[path = "guild_ranks.rs"]
 mod guild_ranks;
+#[path = "guild_disband.rs"]
+mod disband;
 pub(crate) use guild_invites::load_pending_invitation;
 #[cfg(test)]
 use guild_ranks::apply_rank_request;
