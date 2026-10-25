@@ -7,10 +7,19 @@ mod after_cast_auras;
 mod aura_rolls;
 mod bouncing_projectiles;
 mod cast_relationships;
+mod marksmanship;
+mod marksmanship_explosive;
+pub(super) use marksmanship_explosive::after_tick as apply_mm_explosive_tick;
+mod marksmanship_sentinel;
 pub(crate) use cast_relationships::register as register_cast_relationships;
 pub(super) use cast_relationships::{
     after_cast as apply_cast_relationships, guarantees_crit as relationship_guarantees_crit,
     ignores_cooldown as relationship_ignores_cooldown,
+};
+pub(super) use marksmanship::apply_residual as apply_marksman_residual;
+pub(crate) use marksmanship::{begin_rapid_tick, finish_rapid};
+pub(super) use marksmanship_sentinel::{
+    after_damage as apply_sentinel_damage, ignores_armor as sentinel_ignores_armor,
 };
 mod batch10;
 mod batch11;
@@ -39,8 +48,11 @@ mod foreground_procs;
 mod impact_procs;
 mod paid_cooldowns;
 mod periodic_attacks;
+mod secondary_copies;
 pub(super) use paid_cooldowns::after_payment as after_paid_resources;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
+pub(crate) use secondary_copies::after_melee as after_melee_residual;
+pub(super) use secondary_copies::after_spell as after_spell_residual;
 pub(super) fn after_foreground_special(world: &mut World, caster: Entity, spell: &SpellInfo) {
     foreground_procs::after_foreground_special(world, caster, spell);
     execution_counters::consume_after_foreground_cast(world, caster, spell.id);
@@ -54,9 +66,11 @@ mod elemental_ascendance;
 pub(super) use echo_policies::after_cast as apply_echo_policies;
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
+mod enhancement_modes;
 mod enhancement_strikes;
 mod enhancement_tempest;
 mod enhancement_tier;
+mod evoker_tier;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
 mod essence_burst;
 mod feral_frenzy;
@@ -66,6 +80,7 @@ pub(crate) use maelstrom_weapon::consume as consume_maelstrom_weapon;
 pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
     maelstrom_weapon::register(scripts);
     enhancement_imbues::register(scripts);
+    enhancement_modes::register(scripts);
     enhancement_strikes::register(scripts);
     enhancement_tier::register(scripts);
 }
@@ -154,6 +169,10 @@ pub(crate) use unbroken_rhythm::register_unbroken_rhythm;
 mod windwalker;
 mod windwalker_children;
 pub use windwalker::last_combo_action;
+mod windwalker_dual_threat;
+pub(crate) use windwalker_dual_threat::{
+    read_replacement as white_impact_replacement, roll_replacement as replace_white_impact,
+};
 mod windwalker_flurry;
 pub(crate) fn after_melee_hit(
     world: &mut World,
@@ -251,6 +270,7 @@ pub(super) fn after_direct_damage(
     policies::after_damage(world, ctx);
     impact_procs::after_damage(world, ctx, target);
     ret_damage::after_direct_damage(world, ctx, target, critical);
+    marksmanship::roll_auto_lock(world, ctx);
     // SimC76f8118 unique_gear_midnight.cpp6351–6355: perfected Guillotine impacts apply Venomfang.
     if ctx.spell.id == 1306624 {
         midnight_items::apply_perfected_venom(world, ctx.caster, target);
@@ -667,6 +687,11 @@ pub(crate) fn rake_bleed_snapshot(world: &World, caster: Entity, amount: f32) ->
     batch7::rake_initial_damage(world, caster, caster, amount)
 }
 
+/// SimC76f8118 sc_monk.cpp2048: Dual Threat's spell child cannot miss.
+pub(crate) fn ignores_hit_avoidance(spell: u32) -> bool {
+    spell == windwalker_dual_threat::DAMAGE
+}
+
 pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
@@ -674,6 +699,7 @@ pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
         return Some(hook);
     }
     match spell_id {
+        windwalker_dual_threat::DAMAGE => Some(windwalker_dual_threat::damage),
         windwalker_children::JADEFIRE => Some(windwalker_children::jadefire_damage),
         windwalker_children::RWK_DAMAGE => Some(windwalker_children::rushing_wind_damage),
         super::elemental_overload::LIGHTNING_OVERLOAD
@@ -804,6 +830,7 @@ pub fn after_cast(spell_id: u32) -> impl Iterator<Item = AfterCastHook> {
         .chain(batch9::after_cast_hook(spell_id))
         .chain(aura_rolls::hook(spell_id))
         .chain(resource_values::after_cast_hook(spell_id))
+        .chain(evoker_tier::hook(spell_id))
 }
 
 fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
@@ -948,6 +975,12 @@ pub(super) type TargetPlanHook =
 
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
+    if let Some(hook) = marksmanship_explosive::target_plan(spell_id) {
+        return Some(hook);
+    }
+    if let Some(hook) = marksmanship::target_plan(spell_id) {
+        return Some(hook);
+    }
     if let Some(hook) = policies::target_plan_hook(spell_id) {
         return Some(hook);
     }

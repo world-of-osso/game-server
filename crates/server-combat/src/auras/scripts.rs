@@ -683,6 +683,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         crate::spell_cast::scripts::RAPID_FIRE,
         AuraScript {
             on_periodic: Some(crate::spell_cast::scripts::cast_rapid_fire_tick),
+            on_natural_end: Some(crate::spell_cast::scripts::finish_rapid),
             ..Default::default()
         },
     );
