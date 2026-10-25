@@ -92,9 +92,42 @@ fn arms_execute_damage_scales_with_paid_rage_and_free_proc_is_full_strength() {
 
 fn cast_arms_execute_at_rage(rage: f32, sudden_death: bool) -> (f64, f64) {
     use super::literal_rotation::execution::{Execution, execute};
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_arms_execute(rage, sudden_death);
+    let target = run.targets[0];
+    execute(
+        run.app.world_mut(),
+        run.actor,
+        Execution::Spell(163201, target, Some(target)),
+    )
+    .unwrap();
+    // Capture actual spend before a real frame delivers Massacre's queued child
+    // and native melee can generate additional Rage.
+    let paid = read_execute_paid_rage(&run, rage);
+    run.app.update();
+    let damage: f64 = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(260798)
+                && event.source == Some(run.actor.to_bits())
+                && event.kind == CombatLogKind::Damage
+        })
+        .map(|event| f64::from(event.amount))
+        .sum();
+    assert!(
+        damage > 0.0,
+        "the native Execute damage child must really land"
+    );
+    (damage, paid)
+}
+
+fn prepare_arms_execute(rage: f32, sudden_death: bool) -> Run {
     use crate::spell_cast::powers::PowerPools;
     use shared::components::{Health, PowerType};
-    let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(71, 1).unwrap();
     engage(&mut run);
     let target = run.targets[0];
@@ -118,32 +151,17 @@ fn cast_arms_execute_at_rage(rage: f32, sudden_death: bool) -> (f64, f64) {
             1,
         );
     }
-    execute(
-        run.app.world_mut(),
-        run.actor,
-        Execution::Spell(163201, target, Some(target)),
-    )
-    .unwrap();
-    read_execute_damage_and_paid_rage(&run, rage)
+    run
 }
 
-fn read_execute_damage_and_paid_rage(run: &Run, initial_rage: f32) -> (f64, f64) {
+fn read_execute_paid_rage(run: &Run, initial_rage: f32) -> f64 {
     use crate::spell_cast::powers::PowerPools;
     use shared::components::PowerType;
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
-    let damage: f64 = events
-        .iter()
-        .filter(|event| {
-            event.spell_id == Some(260798)
-                && event.source == Some(run.actor.to_bits())
-                && event.kind == CombatLogKind::Damage
-        })
-        .map(|event| f64::from(event.amount))
-        .sum();
     let refund: f64 = events
         .iter()
         .filter(|event| {
-            event.spell_id == Some(163201)
+            matches!(event.spell_id, Some(163201 | 281000))
                 && event.target == Some(run.actor.to_bits())
                 && event.kind == CombatLogKind::Energize
         })
@@ -157,11 +175,7 @@ fn read_execute_damage_and_paid_rage(run: &Run, initial_rage: f32) -> (f64, f64)
         .get(PowerType::Rage)
         .unwrap()
         .current;
-    assert!(
-        damage > 0.0,
-        "the native Execute damage child must really land"
-    );
-    (damage, f64::from(initial_rage - remaining) + refund)
+    f64::from(initial_rage - remaining) + refund
 }
 
 fn prepare_arms_with_native_rage() -> Run {
