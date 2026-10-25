@@ -6595,6 +6595,7 @@ dependencies = [
  "serde",
  "serde_json",
  "server-catalog",
+ "server-pet-battle",
  "shared",
  "tempfile",
  "tokio",
@@ -6622,6 +6623,13 @@ dependencies = [
  "rusqlite",
  "server",
  "shared",
+]
+
+[[package]]
+name = "server-pet-battle"
+version = "0.1.0"
+dependencies = [
+ "rusqlite",
 ]
 
 [[package]]

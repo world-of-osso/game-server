@@ -4510,3 +4510,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0â
 - 2026-10-23: [[server-crates]] records five stable catalog modules extracted with unchanged data/logic, canonical imports and updated generator destinations; no test relocations or measured speedup claim.
 - 2026-10-23: [[server-crates]] moves main module declarations/App assembly into the existing lib and keeps a five-line bin; library-artifact source-view test replaces old binary artifact selection. Full suite/census and paired measurements remain pending.
 - 2026-10-23: [[server-crates]] records test-only simulator consumer, canonical graph/receipt/marker support and explicit test-support mode; 44-file move is content-identical, API/cfg wiring awaits compiler/full-suite proof. Seven graph cases have explicit core-prefix migration.
+
+- 2026-10-25: Extracted canonical pet_battle production and235cases (230enabled/five existing ignored) into server-pet-battle, with source hashes and exact ownership mapping. Direct server imports replace the old module; no reverse dependency or compatibility shim. Full-suite gate remains lead-owned.

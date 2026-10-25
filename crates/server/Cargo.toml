@@ -6,6 +6,7 @@ rust-version.workspace = true
 
 [dependencies]
 server-catalog = { path = "../server-catalog" }
+server-pet-battle = { path = "../server-pet-battle" }
 # Only explicit fixture consumers enable these; ordinary server builds stay unchanged.
 blake3 = { version = "1.8", optional = true }
 tempfile = { version = "3", optional = true }

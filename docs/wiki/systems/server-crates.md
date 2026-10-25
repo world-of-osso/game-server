@@ -58,6 +58,14 @@ No `execute_cast` seam or gameplay-internal visibility widening is included. Fin
 
 D3 appends11byte-identical public spell test files to the existing consumer, retaining54case identities (51enabled/3existing ignored/0should-panic). The three proc-recipient ignore reasons remain unchanged. No test body, fixture seam, new package/version, profile or gameplay API changes. The existing rusqlite0.35/bundled workspace dependency is wired dev-only for the unchanged summon-property fixture; proc-recipient fixtures import canonical server::random at the consumer root. Pure moves `007c3d144` precede declaration-only wiring; [exact mapping](../../handoffs/crate-split-spell-d3-test-mapping.json) records core→consumer ownership. Consumer inventory becomes229cases (226enabled/3ignored). This1,543-line cut is housekeeping, not a claimed material whole-core speedup. Exact post-build inventory, one combined core/consumer compiler check, parent full gate and paired measurement remain acceptance proof.
 
+## Independent pet-battle rules leaf
+
+Verified source boundary: 2026-10-25, based on `1da5f8bca`. `server-pet-battle` owns the complete deterministic `pet_battle` module: catalog/SQLite decoding, model, effect execution, rules, stats and all235 cases (230 enabled, five existing ignored with unchanged reasons). Its only dependency is the existing rusqlite0.35/bundled; it never depends on server, shared ECS types, networking or fixture consumers. Server depends on this leaf and imports its canonical types directly. No compatibility re-export or duplicate implementation remains. Server-owned live pet adapters, journal persistence and wire snapshots do not move.
+
+Pure move `fef186a7e` relocates33 files byte-for-byte before wiring. [Exact case and file mapping](../../handoffs/crate-split-pet-battle-test-mapping.json) retains the `pet_battle::tests::...` names, flags and SHA256 for every relocated source. Both package manifests stay two levels below the workspace root, so unchanged manifest-relative world.db fixture paths still resolve to the same data. The opt2/debug1 test override follows the moved code. Namespace changes in server tests select the same types and do not change assertions.
+
+Gate scope now permits a server-only change to skip the leaf's tests. A leaf change still selects server and its reverse-dependency consumers. This removes235 cheap cases from the server test binary; it is not a claim to reduce the37-minute gameplay gate materially. Bounded verification covers the workspace/all-target compiler check, formatter, leaf test inventory/runtime and touched live-adapter modules; the lead owns the full-suite gate.
+
 ## Sources
 
 - `crates/server-catalog/{Cargo.toml,src/lib.rs}`, `crates/server-simulation/{Cargo.toml,src/lib.rs}` — package/dependency ownership.
