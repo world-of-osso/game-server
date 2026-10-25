@@ -883,6 +883,8 @@ fn class_completeness_native80_shadowfrost_partial_immunity_still_generates_runi
     // Partial-immunity control requires a hit; avoidance is covered separately.
     apply_native_enemy_dodge_reduction(&mut h);
     h.set_power(PowerType::RunicPower, 0.0);
+    // TC Unit.cpp483 / SpellInfo.cpp2499: native343294 requires below35% health.
+    h.app.world_mut().get_mut::<Health>(h.npc).unwrap().max = 20_000.0;
     apply_native_immunity(&mut h, 7940); // Authored Frost16, not Shadow32.
     h.cast_and_deliver(343294, Some(h.npc));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
@@ -896,6 +898,8 @@ fn class_completeness_native80_shadowfrost_combined_immunity_prevents_rune_costs
     use shared::components::PowerType;
     let mut h = native80_fixture(&[343294, 137005], 6, 252);
     h.set_power(PowerType::RunicPower, 0.0);
+    // TC Unit.cpp483 / SpellInfo.cpp2499: native343294 requires below35% health.
+    h.app.world_mut().get_mut::<Health>(h.npc).unwrap().max = 20_000.0;
     apply_native_immunity(&mut h, 7940);
     apply_native_immunity(&mut h, 7743); // Separate native Shadow32 makes full48.
     h.cast_and_deliver(343294, Some(h.npc));

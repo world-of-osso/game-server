@@ -1,5 +1,5 @@
 //! Literal row options gate actual native actor readiness, never replace it.
-//! Configured movement distance has no fixture evidence and must remain a named gap.
+//! Configured fixture distance is independent of the native protocol moving bit.
 use super::*;
 use execution::NativeAction;
 use std::collections::BTreeMap;
@@ -114,7 +114,7 @@ fn start_native_gcd(run: &mut Run) {
     execution::execute(
         run.app.world_mut(),
         run.actor,
-        Execution::Spell(100780, run.targets[0]),
+        Execution::Spell(100780, run.targets[0], Some(run.targets[0])),
     )
     .unwrap();
     let history = run
@@ -182,8 +182,8 @@ fn literal_native_gating_explicit_off_gcd_row_preserves_native_gcd() {
 }
 
 #[test]
-#[ignore = "native269 configured-distance gap; requires current private inputs and player identity"]
-fn literal_native_gating_configured_movement_distance_is_a_named_gap() {
+#[ignore = "native269 configured movement row and missing-fact propagation; player identity"]
+fn literal_native_gating_configured_movement_distance_drives_literal_row() {
     let _seed = crate::random::seed_scope(70448);
     let (mut run, equipment) = native_monk();
     let prepared = prepare_native(&mut run, &equipment);
@@ -194,6 +194,39 @@ fn literal_native_gating_configured_movement_distance_is_a_named_gap() {
         duration: 300.0,
         style: crate::simc_apl_native::FightStyle::Patchwerk,
     };
+    for (distance, eligible) in [(0.0, false), (7.25, true)] {
+        run.app
+            .world_mut()
+            .get_mut::<crate::simc_apl_native::FixtureMovement>(run.actor)
+            .unwrap()
+            .distance_to_move = distance;
+        let facts = crate::simc_apl_native::NativeFacts::new(
+            run.app.world(),
+            run.actor,
+            &bindings,
+            encounter,
+            1,
+        );
+        assert_eq!(facts.value("movement.distance").unwrap(), distance);
+        let mut driver = Driver::new(
+            Program::parse(&[("default", "tiger_palm,if=movement.distance>6")]).unwrap(),
+        );
+        let selected = driver
+            .select("default", &facts, &prepared, &equipment)
+            .unwrap();
+        assert_eq!(
+            selected.is_some(),
+            eligible,
+            "configured distance{distance}"
+        );
+        if let Some((action, _)) = selected {
+            assert_eq!(action.name, "tiger_palm");
+        }
+    }
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .remove::<crate::simc_apl_native::FixtureMovement>();
     let facts = crate::simc_apl_native::NativeFacts::new(
         run.app.world(),
         run.actor,
@@ -205,8 +238,10 @@ fn literal_native_gating_configured_movement_distance_is_a_named_gap() {
         Driver::new(Program::parse(&[("default", "tiger_palm,if=movement.distance>6")]).unwrap());
     let error = match driver.select("default", &facts, &prepared, &equipment) {
         Err(error) => error,
-        Ok(_) => panic!("configured movement distance must not be fabricated as zero"),
+        Ok(_) => panic!("missing fixture movement configuration must propagate its named error"),
     };
-    assert!(error.contains("MOVEMENT_DISTANCE_UNAVAILABLE"), "{error}");
-    assert!(error.contains("movement.distance"), "{error}");
+    assert!(
+        error.contains("NATIVE_MOVEMENT_DISTANCE_UNAVAILABLE"),
+        "{error}"
+    );
 }
