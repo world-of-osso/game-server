@@ -1499,6 +1499,9 @@ pub type HitHook = fn(&mut World, Entity, Entity, u8);
 pub(super) type ContextHitHook = fn(&mut World, &super::effects::EffectCtx, Entity);
 
 pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
+    if let Some(hook) = policies::hit_hook(spell_id) {
+        return Some(hook);
+    }
     match spell_id {
         xuens_battlegear::SCK => Some(xuens_battlegear::capture_sck_parent),
         windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
