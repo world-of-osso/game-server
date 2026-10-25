@@ -63,6 +63,8 @@ pub(crate) mod power_amount_trigger;
 mod proc_mask_tests;
 pub mod procs;
 mod refresh;
+mod ret_crusade;
+pub(crate) use ret_crusade::after_spender as add_ret_crusade_spender_stacks;
 mod ret_sentence;
 pub(crate) use ret_sentence::track_cast as track_ret_sentence_cast;
 pub(crate) mod reward_mods;
@@ -352,7 +354,11 @@ impl AuraInstance {
     }
 
     pub(crate) fn stack_multiplier(&self) -> f32 {
-        f32::from(self.stacks.max(1))
+        if ret_crusade::ignores_effect_stacks(self.spell_id) {
+            1.0
+        } else {
+            f32::from(self.stacks.max(1))
+        }
     }
 
     fn view(&self, now: f64) -> AuraView {
@@ -799,6 +805,9 @@ fn build_effect(
 
 /// Fresh native stack limit, including the caster's MaxAuraStacks modifiers.
 pub(crate) fn fresh_max_stacks(world: &World, caster: Entity, spell: &SpellInfo) -> u8 {
+    if let Some(maximum) = ret_crusade::maximum_stacks(world, caster, spell) {
+        return maximum;
+    }
     let maximum = spell
         .aura_options
         .as_deref()
