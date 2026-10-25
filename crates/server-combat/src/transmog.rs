@@ -360,7 +360,7 @@ fn can_hide(slot: EquipmentSlot) -> bool {
     )
 }
 
-pub(crate) struct TransmogPlugin;
+pub struct TransmogPlugin;
 impl Plugin for TransmogPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(

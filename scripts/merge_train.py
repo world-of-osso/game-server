@@ -142,8 +142,15 @@ def merge(entries, log):
 
 
 def check(log):
-    return cargo(log, "check", "--locked", "--workspace", "--all-targets") == 0 \
-        and cargo(log, "fmt", "--check") == 0
+    """Compile check. Formatting is applied, not checked: an unformatted entry would
+    otherwise cost a bisect, and formatter output is never a behavior change."""
+    if cargo(log, "check", "--locked", "--workspace", "--all-targets") != 0:
+        return False
+    if cargo(log, "fmt") != 0:
+        return False
+    if git("status", "--porcelain", "--untracked-files=no").stdout.strip():
+        git("commit", "-qam", "merge train: cargo fmt")
+    return True
 
 
 class MasterBroken(Exception):
@@ -505,16 +512,28 @@ def run_probes(probes, gated, log):
     return proven
 
 
+def mark_phase(log, phase, entries):
+    """Record which entries the running cycle is on, for `where`."""
+    (HOME / "current.json").write_text(json.dumps(
+        {"cycle": log.name, "phase": phase, "since": time.time(), "entries": [e["id"] for e in entries]}))
+
+
 def cycle():
     entries = take_queue()
     log = LOGS / f"cycle-{time.strftime('%Y%m%dT%H%M%S')}.log"
     wait_for_capacity()
     probes = [e for e in entries if not e["land"]]
     gated = [e for e in entries if e["land"] and e.get("red")]
+    plain = [e for e in entries if e["land"] and not e.get("red")]
     # Plain landings go first: a slow probe bisect must not hold them back.
-    land([e for e in entries if e["land"] and not e.get("red")], log)
+    mark_phase(log, "1/3 plain landings", plain)
+    land(plain, log)
     if probes or gated:
-        land(run_probes(probes, gated, log), log)
+        mark_phase(log, "2/3 probes and RED twins", probes + gated)
+        proven = run_probes(probes, gated, log)
+        mark_phase(log, "3/3 RED-gated landings", proven)
+        land(proven, log)
+    (HOME / "current.json").unlink(missing_ok=True)
 
 
 def requeue():
@@ -545,6 +564,25 @@ def run(_args):
                 time.sleep(300)
         else:
             time.sleep(30)
+
+
+def where(args):
+    """Say where one entry is: queued, in which phase of the running cycle, or done."""
+    for directory, label in ((RESULTS, "done"), (QUEUE, "queued for the next cycle")):
+        path = directory / f"{args.id}.json"
+        if path.exists():
+            entry = json.loads(path.read_text())
+            print(f"{label}: {entry.get('status', '')} {entry.get('reason', '')[:300]}".rstrip())
+            return
+    if (RUNNING / f"{args.id}.json").exists():
+        current = HOME / "current.json"
+        info = json.loads(current.read_text()) if current.exists() else {}
+        here = args.id in info.get("entries", [])
+        minutes = round((time.time() - info.get("since", time.time())) / 60, 1)
+        print(f"in cycle {info.get('cycle')}: phase {info.get('phase')} ({minutes} min)"
+              + ("; this entry is in the current phase" if here else "; this entry waits for a later phase of this cycle"))
+        return
+    print("unknown id")
 
 
 def status(_args):
@@ -609,6 +647,9 @@ def main():
     w.add_argument("id")
     w.set_defaults(func=wait)
     sub.add_parser("run").set_defaults(func=run)
+    wh = sub.add_parser("where", help="where one entry is")
+    wh.add_argument("id")
+    wh.set_defaults(func=where)
     sub.add_parser("status", help="throughput metrics for the periodic bottleneck check").set_defaults(func=status)
     args = parser.parse_args()
     args.func(args)
