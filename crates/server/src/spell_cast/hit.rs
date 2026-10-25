@@ -296,9 +296,10 @@ fn weapon_spell_dodge_chance(
 fn apply_caster_dodge_modifiers(world: &World, caster: Entity, dodge: f32) -> f32 {
     let caster_auras = world.get::<ActiveAuras>(caster);
     let enemy_dodge = caster_auras.map_or(0.0, |auras| auras.modifier(MOD_ENEMY_DODGE));
-    let expertise = crate::auras::combat_stats::expertise_reduction(
+    let expertise = crate::auras::combat_stats::class_actor_expertise_reduction(
         caster_auras,
         world.get::<shared::components::Player>(caster).is_some(),
+        world.get::<crate::followers::Follower>(caster).is_some(),
     );
     (dodge + enemy_dodge - expertise).max(0.0)
 }
