@@ -45,6 +45,7 @@ mod marksmanship_rotation;
 mod owner_cooldown_tests;
 mod pack_tactics_tests;
 mod periodic_crit_tests;
+mod periodic_final_tick_tests;
 mod pet_child_tests;
 mod pet_melee_tests;
 mod pet_stats_tests;

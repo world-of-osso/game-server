@@ -153,6 +153,9 @@ pub struct SpellInfo {
     /// Scripted effectiveness on this cast's damage only, retained through flight.
     #[serde(skip)]
     pub cast_damage_multiplier: Option<f32>,
+    /// Fraction of a final periodic interval, applied after damage/healing modifiers.
+    #[serde(skip)]
+    pub cast_periodic_fraction: Option<f32>,
     #[serde(skip)]
     pub cast_damage_role: CastDamageRole,
     /// Every `spell_power` row, sorted by `OrderIndex`.
