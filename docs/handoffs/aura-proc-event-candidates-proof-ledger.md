@@ -14,6 +14,12 @@ Existing `proc OR charge --include-ignored` filters executed **ONCE:169PASS/2FAI
 
 All commands, exact source revision, counts, logs, private-input hashes and the one-line procs merge diff are in engine `data/diagnostics/aura-proc-event-candidates-reconcile-2026-10-24/` (`check-once.*`, `ley.*`, `resonance.*`, `proc-charge-once.*`, `proc-inputs.proof.json`, `summary.proof.json`). Native canonical data is read-only and was proc-synchronized during the task; native phase tests retain their original52fa input rather than masquerading as new DPS measurement. Ret development remains separate pending actual pe landing; this work does not remove its experimental OnCast producer early.
 
+## Reconciliation against bf1102/master09f — requested follow-up
+
+Parent reports the prior full gate passed with only3known baseline failures and no proc/charge failures, but the landing merge conflicted. This branch now merges exact landed09f6866fb05e1fa160bd33a64404cabb8129bc7f. In this merge direction procs.rs retains both behaviors without conflict: actor/target identities are captured before synchronous Sentence assessment, then the pinned event is queued. The actual runtime conflict is combat.rs: retain master's shared `landed` predicate and new after-melee behavior, but route swing events through `push_event`, not the retired raw pending vector. Union the index; preserve bf1102 reaction/duration/execute-time changes.
+
+No new mechanic or ID exemption. The parent deleted this worktree’s old target; use a normal cold native build, never copy another target. Required follow-up proof is once each: combined server/server-simulation/server-spell-tests test-target check, plain production server bins check, original proc/charge filter including D3-moved consumer cases, original3Resonance AfterCast cases and fmt. All are pending at this merge receipt. New artifacts use the existing engine reconcile diagnostics `master-09f/` subdirectory; prior once-only receipts are historical and not overwritten.
+
 ## Source and failure boundary
 
 Pinned TC a352b1fa `Unit.cpp10611–10630` gathers the current aura map and10638–10670 collects candidates synchronously before executing procs. `Spell.cpp3843→3918→3950` orders OnCast→cast-success procs→AfterCast. `SpellAuras.cpp1834–1980` has no blanket castId exemption. The previous native queue stored raw events and scanned the later live aura map, incorrectly admitting auras applied after the event.

@@ -104,6 +104,10 @@ Native behavioral tests: `simc_apl_native/tests.rs` (earned Hit Combo and Chi, r
 
 Behavioral source: `followers/native_flight_tests.rs` covers Pyroblast launch/countdown/impact, hardcast exclusion, actor isolation and Meteor handoff/refusal. At3e3cacb6d, current-canonical source-view library tests yield startup1PASS/flight4genuine unknown-property RED in9.65s, compile19m12/zero warnings. Both requested properties are evaluated before failure. The earlier binary-target source-view refusal was not RED. Implementation reads pending native deadlines and the live TC Meteor continuation; targeted GREEN remains pending.
 
+### Add-event activity
+
+- [x] `raid_event.adds.up` returns1 only while a configured fixture add event is active, otherwise0 (including absent, waiting, exact expiry and retired waves); a later active wave returns1 again. Configured event existence/count and enemy count are not activity substitutes. Pinned SimC76f8118 raid_event.cpp2440–2443/3068–3108; [scoped proof ledger](../handoffs/adds-up-proof-ledger.md).
+
 ## Assigned native fact extensions
 
 - [ ] `talent.<name>.rank` reads selected native total ranks, not learned-spell membership.
@@ -133,6 +137,22 @@ TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyC
 - [ ] Positive selected-target casting reaction requires a qualified native snapshot. Actual absence of CastState is known false; active casting stays NATIVE_CASTING_REACTION_UNAVAILABLE rather than inventing a timer.
 
 [Target-context API proof and exact remaining gaps](../handoffs/native-target-context-proof-ledger.md).
+
+## Native buff reaction, duration and named execution time
+
+`buff.<alias>.react` must return the reacted native stack count using source/profile reaction settings and real stack-acquisition boundaries, never alias `up` or invent a constant delay. Pinned76f8118 `buff.cpp485–503,2004–2015,2697–2703` assigns deadlines only to newly gained stacks; `player.cpp1017–1020,7763–7766` supplies default distribution/cap. `buff.<alias>.duration` reads full/fresh native duration, not declining remaining time (`buff.cpp355–360`). Named `action.<alias>.execute_time` must use the same native cast/channel/haste helper as bare contextual `execute_time`, without a second formula.
+
+Five ignored `native_apl_shared_*` fixtures cover real Feral135700 absence, earned Omen16864 white-hit proc, overcap refresh, natural expiry and reacquisition; ordinary TigerFury5217 full duration versus declining remains; and rated Living Flame/Disintegrate cast/channel occupation. No granted auras, resources or actor stats. At e42d224cd four buff fixtures reach unknown-property RED in16.53s; the named execution fixture reaches unknown-property RED in19.29s after supplying the prepared reference inputs. Implementation delegates duration and named execution time to existing native helpers. Explicit reaction settings (.25 mean/.05 stddev/.1 offset/.15 exponential-nu/1.4 cap seconds for the reference player) must be configured before tracked acquisition. Native apply/refresh/stack-loss/removal hooks retain deadlines per gained stack; overcap refresh never retimes existing stacks. Active unconfigured/unobserved buffs fail explicitly; genuine absence returns zero. At d5b83f217 all five fixtures pass22.44s, including a corrected native-cap precondition distinguishing stack gain from overcap refresh; requested server/simulation/spell-tests check passes once in1m45s with no warnings. [Exact proof and exclusions](../handoffs/shared-buff-facts-proof-ledger.md). Lead full integration gate and Feral's generic `prev_gcd` qualification remain separate.
+## Configured movement distance
+
+- [x] `movement.distance` reads the actor's explicit fixture `distance_to_move`, matching pinned SimC76f8118 `player.cpp12146–12148`. Never substitute target range, actor position or native travel distance.
+- [x] Patchwerk parity setup explicitly configures zero when no movement event exists, matching `player.cpp1288`; explicitly supplied positive values and subsequent state updates remain distinct from geometry.
+- [x] Missing configuration fails `NATIVE_MOVEMENT_DISTANCE_UNAVAILABLE`; dungeon callers fail `DUNGEON_MOVEMENT_DISTANCE_UNAVAILABLE` rather than borrowing fixture metadata.
+
+- [x] `movement.remains` divides positive configured distance by current native run speed; with zero distance and the admitted no-movement-event fixture it is zero. `movement.speed` reports native base run speed times current native run/aura modifiers even while idle, not last movement stride speed.
+- [x] Missing/dungeon movement state remains an explicit error for remains/speed as for distance; no target range or invented timing.
+
+`MOVEMENT_EVENT_SCHEDULING_UNREFERENCED` remains open: all pinned references are Patchwerk single-target or default-style adds with no movement events. Do not add an unpaired moving-style selector, event scheduler or active movement-buff model until a pinned reference supplies that contract.
 
 ## Expected combat length
 

@@ -60,6 +60,9 @@ pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direc
 pub(crate) use soul_of_the_forest::snapshot_amount as snapshot_soul_of_the_forest;
 mod touch_of_death;
 mod windwalker;
+mod windwalker_flurry;
+pub(super) use windwalker_flurry::after_direct_damage;
+pub(crate) use windwalker_flurry::after_melee_hit;
 
 mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
@@ -606,6 +609,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
         ret_resonance::TOLL => Some(ret_resonance::grant_after_toll),
         windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
+        windwalker::FISTS_OF_FURY => Some(windwalker_flurry::release),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
         prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {

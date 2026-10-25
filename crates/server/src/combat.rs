@@ -819,9 +819,18 @@ fn record_swing(
         return;
     };
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), target_entity);
+    let landed = !outcome.immune && !outcome.kind.avoided();
+    if landed {
+        crate::spell_cast::scripts::after_melee_hit(
+            world,
+            attacker_entity,
+            outcome.hand,
+            outcome.kind == MeleeOutcome::Crit,
+        );
+    }
     // Procs default to normal and critical hits (SpellMgr::LoadSpellProcs
     // HitMask 0); dodge- and parry-triggered procs are not modelled.
-    if !outcome.immune && !outcome.kind.avoided() {
+    if landed {
         for event in swing_aura_events(attacker_entity, target_entity, &outcome) {
             procs::push_event(world, event);
         }
