@@ -14,6 +14,7 @@ const REFERENCE: &[(usize, f64, f64)] = &[
 #[test]
 #[ignore = "native70448 Ret300s proc count must match pinned SimC opportunity/rate"]
 fn ret_art_of_war_native_proc_count_matches_reference_rate() {
+    let mut failures = Vec::new();
     for &(targets, reference_attempts, reference_procs) in REFERENCE {
         let _seed = crate::random::seed_scope(70448);
         let mut run = prepare_measurement(70, targets).unwrap();
@@ -29,22 +30,33 @@ fn ret_art_of_war_native_proc_count_matches_reference_rate() {
         };
         let attempts = count_casts(CRUSADING_STRIKE);
         let procs = count_casts(ART_OF_WAR);
+        let chance_effects = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 406064)
+            .unwrap()
+            .effects
+            .iter()
+            .map(|effect| (effect.index, effect.amount))
+            .collect::<Vec<_>>();
         //192 opportunities are one fight, not999: a three-sigma binomial
         // window detects a real rate deficit without demanding an exact RNG path.
         let reference_rate = reference_procs / reference_attempts;
         let expected = attempts * reference_rate;
         let tolerance = 3.0 * (attempts * reference_rate * (1.0 - reference_rate)).sqrt();
         eprintln!(
-            "AOW_NATIVE targets={targets} trigger={CRUSADING_STRIKE} attempts={attempts} procs={procs} expected={expected} tolerance={tolerance} uptime={:?}",
+            "AOW_NATIVE targets={targets} trigger={CRUSADING_STRIKE} attempts={attempts} procs={procs} expected={expected} tolerance={tolerance} live_chance_effects={chance_effects:?} uptime={:?}",
             uptimes.get(&406086)
         );
-        assert!(
-            (attempts / reference_attempts - 1.0).abs() <= 0.10,
-            "native repeating attack volume {attempts} differs from reference{reference_attempts}"
-        );
-        assert!(
-            (procs - expected).abs() <= tolerance,
-            "native Art of War {procs}/{attempts} outside the reference rate{reference_rate}; expected{expected}±{tolerance}"
-        );
+        if (attempts / reference_attempts - 1.0).abs() > 0.10 {
+            failures.push(format!("targets{targets}: native repeating attack volume {attempts} differs from reference{reference_attempts}"));
+        }
+        if (procs - expected).abs() > tolerance {
+            failures.push(format!("targets{targets}: native Art of War {procs}/{attempts} outside reference rate{reference_rate}; expected{expected}±{tolerance}"));
+        }
     }
+    assert!(failures.is_empty(), "{}", failures.join("; "));
 }
