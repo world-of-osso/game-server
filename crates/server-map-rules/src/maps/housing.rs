@@ -7,7 +7,7 @@ use shared::protocol::TransferAbortReason;
 
 impl InstanceManager {
     /// Called after the service checks neighborhood membership or house access.
-    pub(crate) fn authorize_housing_entry(
+    pub fn authorize_housing_entry(
         &mut self,
         store: &MapStore,
         map_id: u32,
@@ -40,7 +40,7 @@ impl InstanceManager {
         Ok(ResolvedMap { map, created })
     }
 
-    pub(crate) fn authorized_housing_map(&self, character_id: u64, map_id: u32) -> Option<InMap> {
+    pub fn authorized_housing_map(&self, character_id: u64, map_id: u32) -> Option<InMap> {
         self.housing_by_character
             .get(&character_id)
             .copied()
@@ -60,11 +60,11 @@ impl InstanceManager {
         Ok(ResolvedMap { map, created })
     }
 
-    pub(crate) fn revoke_housing_entry(&mut self, character_id: u64) {
+    pub fn revoke_housing_entry(&mut self, character_id: u64) {
         self.housing_by_character.remove(&character_id);
     }
 
-    pub(crate) fn housing_property(&self, map: InMap) -> Option<u64> {
+    pub fn housing_property(&self, map: InMap) -> Option<u64> {
         self.housing_copies
             .iter()
             .find_map(|(&(map_id, property_id), &copy)| {

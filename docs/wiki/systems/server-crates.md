@@ -58,19 +58,30 @@ No `execute_cast` seam or gameplay-internal visibility widening is included. Fin
 
 D3 appends11byte-identical public spell test files to the existing consumer, retaining54case identities (51enabled/3existing ignored/0should-panic). The three proc-recipient ignore reasons remain unchanged. No test body, fixture seam, new package/version, profile or gameplay API changes. The existing rusqlite0.35/bundled workspace dependency is wired dev-only for the unchanged summon-property fixture; proc-recipient fixtures import canonical server::random at the consumer root. Pure moves `007c3d144` precede declaration-only wiring; [exact mapping](../../handoffs/crate-split-spell-d3-test-mapping.json) records core→consumer ownership. Consumer inventory becomes229cases (226enabled/3ignored). This1,543-line cut is housekeeping, not a claimed material whole-core speedup. Exact post-build inventory, one combined core/consumer compiler check, parent full gate and paired measurement remain acceptance proof.
 
-## Independent pet-battle rules leaf
+## Independent domain crates
 
-Verified source boundary: 2026-10-25, based on `1da5f8bca`. `server-pet-battle` owns the complete deterministic `pet_battle` module: catalog/SQLite decoding, model, effect execution, rules, stats and all235 cases (230 enabled, five existing ignored with unchanged reasons). Its only production dependency is the existing rusqlite0.35/bundled; unchanged catalog-coverage output uses serde_json as a dev dependency. It never depends on server, shared ECS types, networking or fixture consumers. Server depends on this leaf and imports its canonical types directly. No compatibility re-export or duplicate implementation remains. Server-owned live pet adapters, journal persistence and wire snapshots do not move.
+`server-pet-battle` owns the deterministic catalog/rules and235unchanged tests (230enabled/five existing ignored). Server imports its types directly; no server dependency or compatibility implementation remains.
 
-Pure move `fef186a7e` relocates33 files byte-for-byte before wiring. [Exact case and file mapping](../../handoffs/crate-split-pet-battle-test-mapping.json) retains the `pet_battle::tests::...` names, flags and SHA256 for every relocated source. Both package manifests stay two levels below the workspace root, so unchanged manifest-relative world.db fixture paths still resolve to the same data. The opt2/debug1 test override follows the moved code. Namespace changes in server tests select the same types and do not change assertions.
+`server-map-rules` owns map identity/difficulty/clock records, metadata/static-area catalogs, locks, admission/reset rules and graveyard choice. [32 unchanged tests](../../handoffs/crate-split-map-test-mapping.md) move with them. Core retains native transfer/PvP/housing/script integration tests and the original catalog-cache decorator. Fixture helpers have one feature-gated lower owner.
 
-Gate scope now permits a server-only change to skip the leaf's tests. A leaf change still selects server and its reverse-dependency consumers. This removes235 cheap cases from the server test binary; it is not a claim to reduce the37-minute gameplay gate materially. Bounded verification covers the workspace/all-target compiler check, formatter, leaf test inventory/runtime and touched live-adapter modules; the lead owns the full-suite gate.
+`server-follower-policy` owns scalar pull-budget inputs/decisions and [five unchanged tests](../../handoffs/crate-split-follower-policy-test-mapping.md), with no dependencies. Native measurement, readiness, AI and spell execution remain in server. The existing test-only forecast observer is shared through a dev-only `test-support` feature.
 
-Pet-pilot proof at code `d1e3d6cf6`: `cargo check --locked --workspace --all-targets` PASS, `cargo fmt --check` PASS, and `cargo test --locked -p server-pet-battle`230PASS/five existing ignored/zero failures in4.47s. All235actual names and ignore identities/reasons match the mapping; all33moved file hashes remain unchanged after formatting. Source checks do not replace this runtime inventory.
+## Extraction candidates
 
-Touched-server coverage: `cargo test --locked -p server --lib -- battle_pets:: pet_journal_state_tests:: wild_pet_battles:: --test-threads=6` executes86cases:77PASS/eight existing ignored/one fixture-setup failure in24.61s. The sole failure requires the real ground directory; rerunning **only** `wild_pet_battles::pvp::tests::achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser` with `GAME_SERVER_GROUND_DIR=/home/osso/Projects/world-of-osso/game-engine/data`, `--exact`, and the same code passes1/1 in7.73s. Combined proof covers78enabled/eight existing ignored cases; the original command's nonzero receipt is retained, not relabeled as a clean batch. No assertion/input/gameplay change or broad rerun follows. Successful check and both test scopes have zero warnings; no full-suite run or push. Manual changed-line readability audit finds only namespace/formatter changes, no added control flow or suppressions.
+Completed prerequisites: map rules and follower budget policy. Next: shared cycle-breaking identity/on-use types, then larger domains. The initial53d0e1ce1 graph found pet235, APL49, item-instance20, race/class11 and level-scaling10tests without gameplay imports; counts alone do not determine priority.
 
-Evidence: `/home/osso/.worktrees/logs/crate-split-pet-battle-{proof.json,check-fixed.log,leaf-tests.log,server-tests.log,server-retry.log}`. The initial missing serde_json dev-dependency failure and the original ground-env failure remain in the ledger. Later documentation-only commits do not invalidate code proof. Lead full-suite acceptance remains separate.
+[Measured heavy-module walls](../investigations/server-test-performance.md) locate the larger boundaries:
+
+| Domain | Earlier wall | Blocking cycle / next cut |
+|---|---:|---|
+| Scripted AI |517s|Damage/cast hooks↔scripts; lower hook records and a host interface. Native encounter tests still need real spells/combat.|
+| SpellCast |499s|Aura↔cast↔damage/proc execution; lower immutable records, not the native assertions.|
+| Toys |280s|Box/catalog↔spell classification/cast; lower on-use descriptors and keep a native adapter.|
+| Followers |205s|AI↔spells, owner identity and pull-history callbacks; lower scalar budget/identity, then observation boundaries.|
+| Maps |95s|Identity/rules now lower; transfer↔combat/cast/PvP/housing orchestration remains core-owned.|
+
+These are historical module walls, not additive gate savings. Heavy toy/follower/encounter tests execute real spells and auras; traits alone do not make that coverage safe to skip. Shared types must have one lower owner, never a re-export of the whole core.
+
 
 ## Sources
 
