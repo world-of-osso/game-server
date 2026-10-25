@@ -1,6 +1,13 @@
 ## 2026-10-24 — Action-permitting channel melee
 
 [Source/proof](../handoffs/channel-melee-proof-ledger.md): TC channel allow-actions bit0x1 avoids UNIT_STATE_CASTING; generic melee wrongly treated every CastState as blocking. ActualSCK1.5s/ready0ns/zero-white gives genuine1RED, FoF/normalVivify/noncast3controlsPASS11.67s at1d196cead. Preserve spell permissions, both timer clocks, crowd-control and victim avoidance; no class IDs or scalar changes. Generic gate implementationdb543b270 committed before4GREEN27.56s; actual active-channel SCK white0→1, all three controls unchanged, compiler405.74s/zero warnings. Lead broad/plain-bin gate remains separate; no300s rerun.
+## 2026-10-24 — Xuen merge reconciliation on mastera804
+
+[Reconciliation proof](../handoffs/ww-xuens-recovery-proof-ledger.md#mastera804-reconciliation--native23-green): frozen36eeb2339 merged, not rebased, onto exacta804 atd54c1b64d. Preserve SCK periodic snapshot, four-argument Xuen/Flurry callback and both additive wiki sections. Same binary passes13Xuen38.93s,6Flurry50.16s and4SCK24.48s; compiler582.99s/zero warnings, fmt/diff pass, conflict-region readability has no findings. Lead re-gate/new merged-source plain --bins remains separate; no300s rerun.
+
+## 2026-10-24 — Native Unit form display power
+
+[Unit display power](systems/auras.md#native-unit-form-display-power--2026-10-24): a Player-only return left actual NPC Cat on Mana and native22568 burn unchanged100→100. The Unit metadata fix preserves resource contents/identity and player synchronization. NPC Cat/burn plus player Cat/caster-NPC controls are qualified within the once-only retained power/shapeshift scope; missing real fixture sidecar failures were corrected and retried alone. [Proof](../handoffs/form-display-power-proof-ledger.md) records203 unique passes, separate check and private input identity; parent gate and numerical Feral parity remain separate.
 
 ## 2026-10-24 — Event-time aura proc candidates
 
@@ -41,6 +48,10 @@
 
 [Native cast contexts](systems/spell-casting.md#selected-primary-across-self-casts--2026-10-24) keep explicit cast unit and selected action primary distinct through shared execution and native snapshots. Actual self-cast Ret child-target RED50.92s→four native GREEN60.88s at ec5f0f3f3; no spell-ID branch, multiplier or target fallback. The linked ledger now records NPC/Player assertions, Player/queue/composite controls and passing post-D3 test-target/plain-bin compiler checks. Full parent integration and numerical parity remain separate. The older Zenith lifetime/role assertion also fails on exact plain master3f and remains outside this fix.
 
+## 2026-10-24 — Shared parity frontal pack
+
+[Source/proof](../handoffs/parity-frontal-pack-proof-ledger.md): old third dummy53.13°/2.5yd lies outside correct native60°cone/min2 boundary. Actual native FoF2/3 identities and common Mage/Monk layout give two genuine REDs12.83s at1496b0e0d, compile441.33s/zero warnings. Shared symmetric0/−0.5/+0.5 placement preserves primary1.5yd and all gameplay/gating code; two native GREEN13.92s at26c83dd27, compile18.84s/zero warnings. Once-only controlled3T remeasurement/lead integration pending.
+
 ## 2026-10-24 — Generic health aura-state qualification
 
 [Auras](systems/auras.md#generic-health-aura-states--2026-10-24): independent branch from461aa8102; TC Unit::Update481–487 health siblings2/6/13/21/23/24/25 use Unit.h804–809 integer strict comparisons. fbdc5ee0d core8genuineRED/2controls and actual31146 full-health24275 RED/below20damagePASS32.34s precede implementation.15, otherNone states and rejection semantics preserved;7f34b277e core17GREEN22.56s/native2GREEN41.62s, zero warnings. Independent requested two-crate check ran once at1a573b3ac:PASS0/2m34s/zero warnings; fmtPASS0. Parent broad gate remains separate. [Source/proof ledger](../handoffs/aura-state-health-proof-ledger.md).
@@ -51,9 +62,16 @@
 ## 2026-10-24 — Shared native APL buff facts takeover
 
 [Exact source/proof ledger](../handoffs/shared-buff-facts-proof-ledger.md): isolated shared duration/react/named-time work from dead14781's Evoker branch onto requested1466a4ca7. Real TF5217, Omen16864→135700 proc/stack/refresh/expiry/reacquisition and rated cast/channel controls reach genuine RED before implementation. Native-cap precondition corrects an old fixture's stack-gain-as-overcap assumption; fiveGREEN22.44s atd5b83f217, requested server/simulation/spell-tests check once0/1m45s/no warnings. Explicit source reaction distribution, cfg-only lifecycle hooks, no query-side duration reconstruction or Evoker implementation. Lead full gate remains separate.
+## 2026-10-24 — Xuen FoF recovery strict RED and consumer
+
+[Named-policy ledger](../handoffs/ww-xuens-recovery-proof-ledger.md): f0ab339b6 actual6RED/6controlsPASS36.52s precedes implementation; real RSK/RWK critical and SCK1/3/6 budgets fail, native noncrit/secondary-only/no-hit/unselected/no-timer controls pass. Native TargetInfo/natural-end hooks keep policy IDs in scripts. Current master7b integrated atf188c66c1:13GREEN41.09s plus retainedFlurry6GREEN23.72s, compile496s/0warnings, plain --binsPASS87.49s/0warnings. Full-duration channel completion differs from interrupted ChannelEnded; real stop-cast control gives0. TC/DB2 absence retained; full lead gate separate, no numerical-parity claim.
 ## 2026-10-24 — Native Flurry core earning/release
 
 [Bounded ledger](../handoffs/ww-flurry-proof-ledger.md): ec4b89338 actual white/ordinary451839 earning and natural FoF children3 genuine RED/3controlsPASS41.86s. Selected native counts/critical multiplier/cap and class-owned release are implemented;150ms child spacing explicitly cites SimC76f8118 sc_monk.cpp779–781. Generic impact callbacks carry actual native provenance without class IDs. At172da6nativeGREEN25.97s/compile0warnings. Same tested binary/fresh CURRENT backup EACH300s100439.5467ST/134000.8433three-target (−51.3477%/−64.4144%);450617 and451250 both really damage. Native1H/offhand and natural Dual Threat producer remain unqualified; other releases/SCK/recovery stay outside this slice, full lead gate and broader parity remain open.
+
+## 2026-10-24 — Dawnlight named hit policies
+
+[Explicit policies](systems/spell-casting.md#dawnlight-named-hit-policies--2026-10-24) replace neither DB2 nor TDB: named Wake production and foreground-spender consumption use native values and generic dispatch. Producer strict RED→3GREEN precedes consumer strict RED→native15GREEN69.75s at28bf70027, including native refresh/area/all-ticking/free-cost/immune controls and retained tier behavior. Native3/max6/431380 remain authoritative; no core ID branch or primary fallback. Combined test-target/plain-bin checks each ran once/PASS with fmt/zero warnings. Literal hp1109 integration, secondary effects, parent full gate and full parity remain separate.
 
 ## 2026-10-24 — Byte-identical public spell remainder
 

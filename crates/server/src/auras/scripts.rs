@@ -23,6 +23,8 @@ pub type DamageProcHook = fn(&mut World, Entity, &AuraInstance, &super::procs::A
 pub struct AuraScript {
     pub on_apply: Option<AuraHook>,
     pub on_remove: Option<RemoveHook>,
+    /// Duration expiry or explicit full channel completion, never interruption.
+    pub on_natural_end: Option<AuraHook>,
     pub on_periodic: Option<PeriodicHook>,
     pub on_proc: Option<ProcHook>,
     pub check_proc: Option<ProcCheckHook>,
@@ -50,8 +52,20 @@ pub(super) fn run_remove(
     aura: &AuraInstance,
     reason: super::RemoveReason,
 ) {
-    if let Some(run) = script(world, aura.spell_id).and_then(|script| script.on_remove) {
+    let Some(script) = script(world, aura.spell_id) else {
+        return;
+    };
+    if let Some(run) = script.on_remove {
         run(world, unit, aura, reason);
+    }
+    if reason == super::RemoveReason::Expired {
+        run_natural_end(world, unit, aura);
+    }
+}
+
+pub(super) fn run_natural_end(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if let Some(run) = script(world, aura.spell_id).and_then(|script| script.on_natural_end) {
+        run(world, unit, aura);
     }
 }
 
@@ -676,6 +690,8 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
             ..Default::default()
         },
     );
+    // Extend existing parent lifecycle entries rather than replacing their hooks.
+    crate::spell_cast::scripts::register_xuens_battlegear(&mut scripts);
 }
 
 /// TC spell_rogue.cpp spell_rog_stealth: 1784's own rows carry no MOD_STEALTH;

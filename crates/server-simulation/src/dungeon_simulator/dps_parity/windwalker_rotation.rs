@@ -197,3 +197,5 @@ mod wdp_children_tests;
 mod wdp_duration_tests;
 #[cfg(test)]
 mod wdp_window_tests;
+#[cfg(test)]
+mod xuens_battlegear_tests;

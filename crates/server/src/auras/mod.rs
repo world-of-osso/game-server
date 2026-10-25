@@ -2183,7 +2183,20 @@ pub fn channel_completed(world: &mut World, caster: Entity, spell_id: u32) {
         })
         .collect();
     for (unit, instance_id, expiry) in channel_auras {
-        periodic::run_ticks_until(world, unit, instance_id, expiry);
+        complete_timed_channel_aura(world, unit, instance_id, expiry);
+    }
+}
+
+fn complete_timed_channel_aura(world: &mut World, unit: Entity, instance_id: u32, expiry: f64) {
+    periodic::run_ticks_until(world, unit, instance_id, expiry);
+    // Only this explicit full-duration path is natural completion.
+    // Both completion and interruption later remove with ChannelEnded.
+    let aura = world
+        .get::<ActiveAuras>(unit)
+        .and_then(|auras| auras.get(instance_id))
+        .cloned();
+    if let Some(aura) = aura {
+        scripts::run_natural_end(world, unit, &aura);
     }
 }
 
