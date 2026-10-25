@@ -1,9 +1,13 @@
 //! Explicit missing-script policies; native spell records still own payloads.
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, PowerType};
+use std::collections::HashSet;
 
 use super::AfterCastHook;
-use crate::auras::ActiveAuras;
+use crate::auras::{
+    ActiveAuras,
+    spell_mods::{self, SpellModOp},
+};
 use crate::class_progression::KnownSpells;
 use crate::spell_cast::{CostPool, PlannedEffect, TargetPlan, effects::EffectCtx, targets};
 use crate::spell_info::{CastDamageRole, CastPolicyContext, SpellInfo, SpellStore};
@@ -1280,7 +1284,7 @@ pub(in crate::spell_cast) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, hit:
     }
     for policy in consumers(&context.powers) {
         if selected(world, ctx.caster, policy) {
-            consume_on_hit(world, ctx.caster, policy, context);
+            consume_on_hit(world, ctx, policy);
         }
     }
 }
@@ -1293,7 +1297,8 @@ fn read_counter_instance(world: &World, caster: Entity, counter: u32) -> Option<
         .map(|aura| aura.instance_id)
 }
 
-fn consume_on_hit(world: &mut World, caster: Entity, policy: &Policy, context: &CastPolicyContext) {
+fn consume_on_hit(world: &mut World, ctx: &EffectCtx<'_>, policy: &Policy) {
+    let caster = ctx.caster;
     let Relationship::SpenderHit {
         counter, payload, ..
     } = policy.relationship
@@ -1303,11 +1308,7 @@ fn consume_on_hit(world: &mut World, caster: Entity, policy: &Policy, context: &
     let Some(instance) = read_counter_instance(world, caster, counter) else {
         return;
     };
-    let Some(targets) = read_payload_targets(world, caster, policy, payload, &context.targets)
-    else {
-        return;
-    };
-    let Some(target) = choose_target(world, caster, payload, &targets) else {
+    let Some(target) = read_spender_payload_target(world, ctx, policy, payload) else {
         return;
     };
     if !super::super::try_cast_triggered(world, caster, payload, Some(target), 1) {
@@ -1320,6 +1321,53 @@ fn consume_on_hit(world: &mut World, caster: Entity, policy: &Policy, context: &
         return;
     }
     crate::auras::spend_stack(world, caster, instance);
+}
+
+fn read_spender_payload_target(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    policy: &Policy,
+    payload: u32,
+) -> Option<Entity> {
+    let context = ctx.spell.cast_policy_context.as_ref()?;
+    let available = read_available_targets(world, ctx, &context.targets)?;
+    let targets = read_payload_targets(world, ctx.caster, policy, payload, &available)?;
+    choose_target(world, ctx.caster, payload, &targets)
+}
+
+/// SimC76f8118 action.cpp1738–1780/hpp1512–1535: target_list includes
+/// available enemies even when a single-target spender impacts only its primary.
+fn read_available_targets(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    original: &[Entity],
+) -> Option<Vec<Entity>> {
+    let Some(center) = targets::position(world, ctx.caster) else {
+        warn!(caster = ?ctx.caster, spell = ctx.spell.id, "Native policy caster position unavailable");
+        return None;
+    };
+    let available = query_available_enemies(world, ctx, center);
+    // Original selected units stay first, including the immutable primary.
+    let mut seen = HashSet::new();
+    Some(
+        original
+            .iter()
+            .copied()
+            .chain(available)
+            .filter(|unit| seen.insert(*unit))
+            .collect(),
+    )
+}
+
+fn query_available_enemies(world: &mut World, ctx: &EffectCtx<'_>, center: Vec3) -> Vec<Entity> {
+    let (min, max) = targets::spell_range(ctx.spell, true);
+    let max = spell_mods::modify(world, ctx.caster, ctx.spell, SpellModOp::Range, max);
+    targets::area_units(world, ctx.caster, center, max, targets::Relation::Enemy, 0)
+        .into_iter()
+        .filter(|&unit| {
+            targets::position(world, unit).is_some_and(|position| position.distance(center) >= min)
+        })
+        .collect()
 }
 
 fn read_payload_targets(
