@@ -35,6 +35,7 @@ mod ret_dawnlight_tests;
 mod ret_empyrean_tests;
 mod ret_purpose_tests;
 mod ret_resonance_phase_tests;
+mod ret_resource_tests;
 #[cfg(test)]
 mod ret_rotation;
 mod ret_sentence_tests;
