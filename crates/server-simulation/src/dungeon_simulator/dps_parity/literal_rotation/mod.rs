@@ -187,7 +187,7 @@ impl Driver {
         if matches!(execution, Execution::Snapshot) {
             self.snapshot = Some(super::report::stats(world, actor));
         } else {
-            execution::execute(world, actor, execution)?;
+            execution::execute_row(world, actor, &action, execution)?;
         }
         if let Some((row, deadline)) = self.pending_line.take() {
             self.line_ready_at.insert(row, deadline);

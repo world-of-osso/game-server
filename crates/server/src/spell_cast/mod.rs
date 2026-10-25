@@ -256,7 +256,9 @@ use crate::interest::NetworkVisibility;
 use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
-pub use creature::{AiTarget, creature_cast, creature_cast_with_targets};
+pub use creature::{
+    AiTarget, creature_cast, creature_cast_empowered_with_targets, creature_cast_with_targets,
+};
 pub(crate) use creature::{
     ai_spell_target, creature_cast_empowered, creature_cast_ignoring_cooldowns,
     creature_cast_ignoring_in_progress, creature_cast_interrupting_self,

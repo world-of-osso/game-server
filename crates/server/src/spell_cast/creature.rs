@@ -87,6 +87,24 @@ pub(crate) fn creature_cast_empowered(
     start_cast(world, caster, &spell, explicit)
 }
 
+/// Ordinary empower cast retaining its independent selected hostile primary.
+pub fn creature_cast_empowered_with_targets(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    targets: super::CastTargets,
+    stage: u8,
+) -> Result<(), CastFailure> {
+    let (mut spell, explicit) = load_creature_cast(world, caster, spell_id, Some(targets.unit))?;
+    if stage == 0 || spell.empower_stages.is_empty() {
+        return Err(CastFailure::Unsupported(format!(
+            "spell{spell_id} cannot empower to stage{stage}"
+        )));
+    }
+    spell.cast_empower_to = Some(stage);
+    super::start_cast_with_primary(world, caster, &spell, explicit, targets.primary)
+}
+
 /// TC source flag0x2: ordinary cast except SpellHistory::IsReady/HandleCooldowns.
 /// GCD, cast time, caster-aura and power checks remain independent.
 pub(crate) fn creature_cast_ignoring_cooldowns(
