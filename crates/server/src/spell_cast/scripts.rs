@@ -94,6 +94,8 @@ mod touch_of_death;
 mod unbroken_rhythm;
 pub(crate) use unbroken_rhythm::register_unbroken_rhythm;
 mod windwalker;
+mod windwalker_children;
+pub use windwalker::last_combo_action;
 mod windwalker_flurry;
 pub(crate) fn after_melee_hit(
     world: &mut World,
@@ -127,6 +129,7 @@ pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
 /// TC OnCast runs once after successful checks, before spending and launch.
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
+    windwalker::scripted_combo_cast(world, caster, spell_id, depth);
     elemental::before_launch(world, caster, spell_id, depth);
     match spell_id {
         batch16::RET_JUDGMENT | batch16::HOLY_JUDGMENT | batch10::PROTECTION_JUDGMENT => {
@@ -233,7 +236,8 @@ pub(super) use batch21::berserk_combo_bonus;
 pub(super) use batch22::healing_multiplier;
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
-    !(spell == 343527 && index == 4)
+    windwalker_children::effect_enabled(spell, index)
+        && !(spell == 343527 && index == 4)
         && batch19::effect_enabled(world, caster, spell, index)
         && batch11::effect_enabled(world, caster, spell, index)
         && batch13::effect_enabled(spell, index)
@@ -569,6 +573,8 @@ pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
         return Some(hook);
     }
     match spell_id {
+        windwalker_children::JADEFIRE => Some(windwalker_children::jadefire_damage),
+        windwalker_children::RWK_DAMAGE => Some(windwalker_children::rushing_wind_damage),
         super::elemental_overload::LIGHTNING_OVERLOAD
         | super::elemental_overload::CHAIN_OVERLOAD
         | super::elemental_overload::LAVA_OVERLOAD_DAMAGE
@@ -699,7 +705,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         voltaic_blaze::ROOT => Some(maelstrom_weapon::grant_voltaic_blaze),
         ret_resonance::TOLL => Some(ret_resonance::grant_after_toll),
         windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
-        windwalker::FISTS_OF_FURY => Some(windwalker_flurry::release),
+        windwalker::FISTS_OF_FURY => Some(windwalker_children::fof_executed),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
         prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
@@ -1573,6 +1579,7 @@ pub(super) fn on_enemy_damage_hit_with_context(spell_id: u32) -> Option<ContextH
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
         elemental_ascendance::ASCENDANCE => Some(elemental_ascendance::cast_entry),
+        windwalker_children::ZENITH => Some(windwalker_children::zenith_hit),
         100780 => Some(windwalker::tiger_palm_hit),
         100784 => Some(windwalker::blackout_kick_hit),
         107428 | 113656 => Some(windwalker::trigger_wdp_enabler_on_hit),
