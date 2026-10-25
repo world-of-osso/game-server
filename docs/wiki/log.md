@@ -25,6 +25,24 @@
 ## 2026-10-24 — Expurgation Dummy-proc qualification
 
 [Auras](systems/auras.md#expurgation-dummy-proc--2026-10-24): native selected383344/actual184575 hit yields genuine missing383346 RED atcce395359; unrelated Judgment control passes40.15s. TC806–821 supplies a class callback using partial-trigger semantics, not a generic Dummy promotion. Native amounts/cadence and actual recipient retained; callback7/8PASS exposes unwanted Judgment-scenario DoT. Effective source needs numeric family/type/phase overrides; canonical table is presence-only. Lead routed import/runtime semantics to14775; callback remains unqualified, no local filter. [Ledger](../handoffs/ret-paladin-parity-proof-ledger.md#expurgation-native-dummy-proc).
+## 2026-10-24 — Native Flurry core earning/release
+
+[Bounded ledger](../handoffs/ww-flurry-proof-ledger.md): ec4b89338 actual white/ordinary451839 earning and natural FoF children3 genuine RED/3controlsPASS41.86s. Selected native counts/critical multiplier/cap and class-owned release are implemented;150ms child spacing explicitly cites SimC76f8118 sc_monk.cpp779–781. Generic impact callbacks carry actual native provenance without class IDs. At172da6nativeGREEN25.97s/compile0warnings. Same tested binary/fresh CURRENT backup EACH300s100439.5467ST/134000.8433three-target (−51.3477%/−64.4144%);450617 and451250 both really damage. Native1H/offhand and natural Dual Threat producer remain unqualified; other releases/SCK/recovery stay outside this slice, full lead gate and broader parity remain open.
+
+## 2026-10-24 — Byte-identical public spell remainder
+
+[D3](systems/server-crates.md#public-spell-remainder-d3):11pure file moves retain54case names/flags (51enabled/3existing ignored), extending the existing consumer to229cases without body/seam/new-package-or-version/API changes. Existing rusqlite0.35/bundled and canonical random import are dev-only consumer wiring. Housekeeping only; exact inventory, combined compiler proof, full gate and matched timing remain distinct.
+
+## 2026-10-24 — Movement remains/speed scalars
+
+[Native movement predicates](systems/simc-apl.md#configured-movement-distance): three unknown-operand REDs/four distance controls PASS→all7GREEN0.00s atf3c760d3a, two-package test-target check146s/fmtPASS/zero warnings. Speed reads native run/aura modifiers even idle; positive-distance remains divides by live speed, explicit no-event zero stays0. Parent deferred scheduling because no pinned moving reference exists: MOVEMENT_EVENT_SCHEDULING_UNREFERENCED, no unpaired selector/timer added.
+
+## 2026-10-24 — Explicit movement.distance fixture state
+
+[Configured movement distance](systems/simc-apl.md#configured-movement-distance): pinned76f8118 current.distance_to_move, not target range/native travel. Four actual unknown-operand REDs→4GREEN0.00s atc8fafe180; existing movement-event absence1GREEN10.01s, server+server-simulation test-target check81s and fmtPASS/zero warnings. Patchwerk explicitly initializes0; missing/dungeon configuration stays named. No scheduler, remains/speed, full native rotation or DPS claim.
+## 2026-10-24 — Source-bound ordinary cone boundary
+
+[Model geometry](systems/model-geometry.md#ordinary-cone-close-boundary):607781b26 genuine native FoF117418/Mage120 close-off-arc2RED plus strict2yd/far/vertical1GREEN8.31s. Shared ordinary cones now use TC's strict3D target bounding radius/min2; existing98609-row loader retains radius alongside unchanged reach. No unknown-radius substitution, line bypass or WW IDs. Native harness uses actual Kobold10913/scale1. GREEN, unchanged cone/frontal controls and two-crate check pending; lead full gate and WW numerical parity separate.
 
 ## 2026-10-24 — Isolated qualified Ret Sentence/Wake/Toll packet
 
