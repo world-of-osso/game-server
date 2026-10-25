@@ -24,6 +24,32 @@ fn damage_hits(run: &Run, spell: u32, target: Entity) -> usize {
         .count()
 }
 
+#[test]
+#[ignore = "native263 reference inputs and private world database"]
+fn shaman263_static_accumulation_stops_when_its_last_real_mode_expires() {
+    // SimC76f8118 sc_shaman.cpp12840–12860: mode lifetime, not raw Static's15s, owns this aura.
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(263, 1).unwrap();
+    let actor = run.actor;
+    cast(&mut run, 384352, actor);
+    assert!(crate::auras::has_aura(run.app.world(), actor, 466772));
+    assert!(crate::auras::has_aura(run.app.world(), actor, 384437));
+    for _ in 0..1200 {
+        if !crate::auras::has_aura(run.app.world(), actor, 466772) {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 466772),
+        "real mode must finish its native lifetime"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 384437),
+        "Static cannot keep generating after its last actual mode ends"
+    );
+}
+
 fn tempest_procs(run: &Run) -> u8 {
     run.app
         .world()
