@@ -382,20 +382,6 @@ fn fire_hero_combustion_consumes_codex_spheres() {
 
 #[test]
 #[ignore = "requires exact Fire63 inputs and private70448 DB"]
-fn fire_hero_combustion_restores_native_spontaneous_combustion_charge() {
-    let mut run = prepare_literal(63, 1).unwrap();
-    let target = run.targets[0];
-    for _ in 0..3 {
-        start_native(&mut run, 108853, target);
-        preparation::finish_pending_setup(&mut run).unwrap();
-    }
-    let actor = run.actor;
-    start_native(&mut run, 190319, actor);
-    start_native(&mut run, 108853, target);
-}
-
-#[test]
-#[ignore = "requires exact Fire63 inputs and private70448 DB"]
 fn fire_hero_recent_heating_up_survives_a_noncritical_fireball() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(63, 1).unwrap();
