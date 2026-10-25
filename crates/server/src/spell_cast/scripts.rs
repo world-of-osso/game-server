@@ -33,6 +33,7 @@ pub(crate) mod empower_evoker;
 mod essence_burst;
 mod policies;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
+pub(crate) use policies::register_channel_policies;
 pub(crate) use policies::{
     extends_reapplication, filter_secondary_targets, owns_policy_proc, register_lifecycle_policies,
 };
@@ -123,6 +124,7 @@ pub(super) fn after_direct_damage(
     critical: bool,
 ) {
     windwalker_flurry::after_direct_damage(world, ctx, critical);
+    policies::after_damage(world, ctx);
     match ctx.spell.id {
         xuens_battlegear::RSK_DAMAGE | xuens_battlegear::RWK_DAMAGE => {
             xuens_battlegear::reduce_fof_on_critical_impact(world, ctx, target, critical);
@@ -523,6 +525,9 @@ pub(crate) fn rake_bleed_snapshot(world: &World, caster: Entity, amount: f32) ->
 pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
+    if let Some(hook) = policies::damage_hook(spell_id) {
+        return Some(hook);
+    }
     match spell_id {
         super::elemental_overload::LIGHTNING_OVERLOAD
         | super::elemental_overload::CHAIN_OVERLOAD

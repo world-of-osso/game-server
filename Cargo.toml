@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/server-map-rules", "crates/server-pet-battle", "crates/server-spell-tests", "crates/server-combat-tests", "crates/server-simulation", "crates/server-catalog", "crates/server", "crates/client", "crates/integration-tests", "crates/los", "crates/navigation"]
+members = ["crates/server-follower-policy", "crates/server-map-rules", "crates/server-pet-battle", "crates/server-spell-tests", "crates/server-combat-tests", "crates/server-simulation", "crates/server-catalog", "crates/server", "crates/client", "crates/integration-tests", "crates/los", "crates/navigation"]
 exclude = ["vendor/bevy_replicon", "vendor/lightyear_replication", "vendor/recastnavigation-sys"]
 
 [workspace.package]
@@ -18,6 +18,10 @@ opt-level = 2
 # Dependency optimization alone leaves these hot paths unoptimized.
 # Keep test assertions/overflow checks; limited debug info avoids full test DWARF.
 [profile.test.package.server]
+opt-level = 2
+debug = 1
+
+[profile.test.package.server-follower-policy]
 opt-level = 2
 debug = 1
 

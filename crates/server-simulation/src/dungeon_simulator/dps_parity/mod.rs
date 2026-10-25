@@ -5,6 +5,7 @@ mod barbed_budget_tests;
 mod composite_precombat_tests;
 mod dummy_reference_tests;
 mod elemental_ascendance_tests;
+mod enhancement_operand_tests;
 mod engagement_tests;
 mod equipment_input_tests;
 mod equipped_set_tests;
@@ -15,6 +16,7 @@ mod health_aura_state_tests;
 mod howl_tests;
 mod inputs;
 pub(crate) mod literal_rotation;
+mod marksmanship_fact_tests;
 mod owner_cooldown_tests;
 mod pack_tactics_tests;
 mod periodic_crit_tests;
@@ -48,6 +50,7 @@ mod ret_wake_tests;
 mod shared_fact_extension_tests;
 pub(crate) mod single_spell;
 mod snakeskin_tests;
+mod trigger_primary_tests;
 mod warrior_stat_tests;
 mod windwalker_rotation;
 use crate::simc_apl_native::{FixtureAdds, FixtureTarget};
@@ -347,10 +350,20 @@ fn engage(run: &mut Run) {
     let owner = fixture_player(run);
     let world = run.app.world_mut();
     // A player selects its target directly; a follower retains its quiet controller.
-    world.entity_mut(owner).insert((
-        crate::networking::CombatTarget(Some(run.targets[0])),
-        crate::combat::AutoAttack::new(run.targets[0]),
-    ));
+    let literal_player = owner == run.actor
+        && world
+            .get::<literal_rotation::LiteralParityFixture>(run.actor)
+            .is_some();
+    world
+        .entity_mut(owner)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    // SimC76f8118 sc_hunter.cpp7269–7274: the literal source starts its
+    // weapon action. Engagement must not inject an extra melee attack first.
+    if !literal_player {
+        world
+            .entity_mut(owner)
+            .insert(crate::combat::AutoAttack::new(run.targets[0]));
+    }
     if world
         .get::<literal_rotation::LiteralParityFixture>(run.actor)
         .is_none()

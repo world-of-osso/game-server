@@ -440,3 +440,63 @@ fn dps_parity_power_haste_rogue_potential_zero_haste_survives_cap_and_spend() {
 fn dps_parity_power_haste_rogue_potential_twenty_five_haste_survives_cap_and_spend() {
     assert_rogue_potential_case(25.0, 12.5, 4.0, 50.625);
 }
+
+#[test]
+fn native_spell_haste_periodic_attribute_scales_real_tick_period_and_count() {
+    use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    for (spell, index, haste, expected_period, expected_ticks) in [
+        (403695, 1, 0.0, 3000, 0),
+        (403695, 1, 50.0, 2000, 1),
+        (3147, 0, 50.0, 3000, 0),
+    ] {
+        let mut h = harness(vec![], &[spell], 2).expect("native periodic spell metadata");
+        h.app.init_resource::<ObservedCombatEvents>();
+        h.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(h.caster)
+            .unwrap()
+            .haste_pct = haste;
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &AuraApplication {
+                caster: h.caster,
+                target: h.npc,
+                spell_id: spell,
+                effect_mask: 1 << index,
+                source: AuraSource::Cast,
+            },
+        );
+        let period = h
+            .app
+            .world()
+            .get::<ActiveAuras>(h.npc)
+            .unwrap()
+            .iter()
+            .find(|a| a.spell_id == spell)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|e| e.index == index)
+            .unwrap()
+            .period_ms;
+        assert_eq!(
+            period, expected_period,
+            "native attribute0x2000 uses caster spell haste"
+        );
+        h.advance(42);
+        let ticks = h
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|e| e.spell_id == Some(spell) && e.kind == CombatLogKind::Damage && e.periodic)
+            .count();
+        assert_eq!(
+            ticks, expected_ticks,
+            "same2.1s interval must contain the hasted tick only"
+        );
+    }
+}
