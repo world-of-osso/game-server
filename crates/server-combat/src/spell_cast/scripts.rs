@@ -7,10 +7,19 @@ mod after_cast_auras;
 mod aura_rolls;
 mod bouncing_projectiles;
 mod cast_relationships;
+mod marksmanship;
+mod marksmanship_explosive;
+pub(super) use marksmanship_explosive::after_tick as apply_mm_explosive_tick;
+mod marksmanship_sentinel;
 pub(crate) use cast_relationships::register as register_cast_relationships;
 pub(super) use cast_relationships::{
     after_cast as apply_cast_relationships, guarantees_crit as relationship_guarantees_crit,
     ignores_cooldown as relationship_ignores_cooldown,
+};
+pub(super) use marksmanship::apply_residual as apply_marksman_residual;
+pub(crate) use marksmanship::{begin_rapid_tick, finish_rapid};
+pub(super) use marksmanship_sentinel::{
+    after_damage as apply_sentinel_damage, ignores_armor as sentinel_ignores_armor,
 };
 mod batch10;
 mod batch11;
@@ -256,6 +265,7 @@ pub(super) fn after_direct_damage(
     policies::after_damage(world, ctx);
     impact_procs::after_damage(world, ctx, target);
     ret_damage::after_direct_damage(world, ctx, target, critical);
+    marksmanship::roll_auto_lock(world, ctx);
     // SimC76f8118 unique_gear_midnight.cpp6351–6355: perfected Guillotine impacts apply Venomfang.
     if ctx.spell.id == 1306624 {
         midnight_items::apply_perfected_venom(world, ctx.caster, target);
@@ -960,6 +970,12 @@ pub(super) type TargetPlanHook =
 
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
+    if let Some(hook) = marksmanship_explosive::target_plan(spell_id) {
+        return Some(hook);
+    }
+    if let Some(hook) = marksmanship::target_plan(spell_id) {
+        return Some(hook);
+    }
     if let Some(hook) = policies::target_plan_hook(spell_id) {
         return Some(hook);
     }

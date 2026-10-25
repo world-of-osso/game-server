@@ -7,7 +7,7 @@ use literal_rotation::{
 use server::simc_apl::Action;
 use shared::protocol::CombatLogKind;
 
-fn player(count: usize) -> Run {
+pub(super) fn player(count: usize) -> Run {
     let (profile, traits) = read_reference(254).unwrap();
     let identity = inputs::read_actor(&profile).unwrap();
     let mut run = prepare_literal_reference(profile, &traits, count, identity).unwrap();
@@ -16,7 +16,7 @@ fn player(count: usize) -> Run {
 }
 
 /// Returns Focus paid immediately by an instant request, before regen advances.
-fn cast(run: &mut Run, spell: u32, self_target: bool) -> f32 {
+pub(super) fn cast(run: &mut Run, spell: u32, self_target: bool) -> f32 {
     let equipment = Equipment::load(run.app.world(), run.actor, &mut Default::default()).unwrap();
     let action = Action {
         source_row: None,
@@ -61,7 +61,7 @@ fn current_focus(run: &Run) -> f32 {
     .0
 }
 
-fn owned_buff(run: &Run, spell: u32) -> bool {
+pub(super) fn owned_buff(run: &Run, spell: u32) -> bool {
     run.app
         .world()
         .get::<crate::auras::ActiveAuras>(run.actor)
