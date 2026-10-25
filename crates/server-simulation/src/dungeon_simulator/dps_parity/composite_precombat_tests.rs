@@ -77,6 +77,7 @@ fn literal_precombat_composite_waits_for_native_coatings_and_effects() {
     .unwrap();
     for name in NAMES {
         let action = server::simc_apl::Action {
+            source_row: None,
             name: name.into(),
             target: None,
             options: Default::default(),

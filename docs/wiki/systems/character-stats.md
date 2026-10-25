@@ -86,6 +86,16 @@ Rating units follow SimC `rating_t::init`: the game-table value is the rating ne
 
 ## Gear
 
+### Shared profile effects — 2026-10-25
+
+The parity fixture installs declared consumables and expansion effects in `dps_parity/profile_effects.rs`. Numeric Omnium tokens identify native `TraitNodeEntry` rows, not class nodes. The fixture's `ReferenceRace` supplies native base-stat race and racial knowledge without adding `Player` identity to followers. Native aura effect202 admits owner racial effects such as Dwarf59224.
+
+Aura29 misc−2 contributes hybrid Str/Agi/Int through the native main-stat filter, not Stamina/Spirit (SimC `buff.cpp3421–3434`). Aura189 contributes every represented native rating mask to derived stats, not only versatility. Item spell scaling class−7 multiplies its native item budget by the trinket combat-rating multiplier before rounding (SimC `spell_data.cpp424–441`); quality2 Magisters is165 native mastery, not170 tracked-only points. `EquippedItemModifiers.temporary_enchants` carries slot/enchant identities independently of permanent enchants; ordinary Stats and equipment-aura reconciliation consume both. The profile's potion uses native item readiness and removes its one-use fixture entitlement after a successful cast. `consumables.rs` supplies Royal Roast's native coefficient relationship and Recklessness's highest/lowest-secondary selection.
+
+`spell_cast/scripts/midnight_items.rs` implements pinned SimC76f8118 Heart, Venomfang and Omnium relationships using native values. Native asynchronous stack expiry has an optional stack-loss hook for Venomfang bursts. Perfected Guillotine poison reads the equipped weapon driver's item level, not the trinket's. Proc recipient checks reuse the native nullable-recipient predicate: faction-neutral31146 is attackable and must not be rejected by an `is_hostile` test.
+
+Sources: SimC `unique_gear_midnight.cpp184–220,3750–3803,6063–6202,6279–6383`, `unique_gear.cpp3677–3705`; [profile contract](../../specs/dps-parity.md#shared-profile-gear-effects), [item scripts](../../../crates/server/src/spell_cast/scripts/midnight_items.rs), [profile setup](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/profile_effects.rs). Pet propagation of effect202 is not qualified by the owner-only racial fixture.
+
 ### Profile stat-allocation redirects — 2026-10-23
 
 `redirected_base_stats` is server-local per-slot context in `EquippedItemModifiers.base_stat_redirects`, not a replacement equipped item or a wire/persisted modifier. The shared parity input validates the native donor; Stats uses a temporary original-template copy with only donor stat types/allocations, then the original profile's ordinary bonuses/item level. Original socket multipliers, armor, weapon, effects and set membership remain untouched. Explicit0 means no redirect, as in pinned SimC `item.cpp95/1314`; malformed/missing native donors fail before gear insertion. Other unknown options retain their diagnostic gaps.

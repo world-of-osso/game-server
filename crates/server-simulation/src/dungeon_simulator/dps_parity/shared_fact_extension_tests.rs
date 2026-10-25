@@ -314,6 +314,7 @@ fn native_apl_shared_named_execute_time_matches_real_hasted_cast_and_channel() {
         let mut bindings = Bindings::default();
         bindings.actions.insert(name.into(), spell);
         let action = Action {
+            source_row: None,
             name: name.into(),
             target: None,
             options: Default::default(),
