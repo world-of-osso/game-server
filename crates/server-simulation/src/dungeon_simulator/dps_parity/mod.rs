@@ -42,6 +42,7 @@ mod havoc_tests;
 mod health_aura_state_tests;
 mod howl_tests;
 mod inputs;
+mod literal_ranged_attack_tests;
 pub(crate) mod literal_rotation;
 mod marksmanship_fact_tests;
 mod marksmanship_mechanics_tests;
@@ -832,8 +833,6 @@ fn marksmanship_literal_fixture_casts_reference_actions() {
     let report = measure(254, 1).expect("native Marksmanship fixture");
     assert_eq!(report["driver"], "LITERAL_SIMC_MARKSMANSHIP_76f8118");
     let actions = report["combat"]["actions"].as_array().unwrap();
-    // Native Trueshot is currently replaced by an incorrectly procced Chakram;
-    // its mechanics are a separate parity fix, not an APL rewrite.
     for spell in [75, 19434, 257044] {
         assert!(
             actions.iter().any(|action| action["spell_id"] == spell),
