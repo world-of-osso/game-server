@@ -262,6 +262,7 @@ pub(crate) use creature::{
     creature_cast_ignoring_in_progress, creature_cast_interrupting_self,
 };
 use effects::{EffectCtx, UnhandledEffects};
+pub use scripts::last_combo_action;
 use targets::{Dest, Relation};
 
 /// `SpellInterruptFlags::Movement`.
@@ -1015,7 +1016,35 @@ pub(crate) fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i
     if base <= 0 {
         return base;
     }
-    modify(world, caster, spell, SpellModOp::Duration, base as f32).round() as i32
+    let duration = modify(world, caster, spell, SpellModOp::Duration, base as f32);
+    haste_channel_duration_ms(world, caster, spell, duration.max(0.0).round() as u32) as i32
+}
+
+/// SimC76f8118 action.cpp4390–4420 hastes channel duration with its ticks.
+/// TC Object.cpp1816–1838/Spell.cpp3264–3266/4010–4017 share this for aura/cast state.
+pub(crate) fn haste_channel_duration_ms(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    duration: u32,
+) -> u32 {
+    if !is_channeled(spell) || attributes(spell, 5) & 0x2000 == 0 {
+        return duration;
+    }
+    let modded = modify(
+        world,
+        caster,
+        spell,
+        SpellModOp::ChangeCastTime,
+        duration as f32,
+    );
+    let haste = world
+        .get::<CharacterStats>(caster)
+        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+    let slow = world
+        .get::<crate::auras::AuraStatMods>(caster)
+        .map_or(1.0, |mods| mods.attack_cast_time_mult);
+    (modded / haste.max(0.01) * slow).max(0.0) as u32
 }
 
 /// Effects that have a handler, apply an aura or run a script hook; only
@@ -1326,6 +1355,8 @@ pub fn cast_for_player_with_target(
 pub struct CastTargets {
     pub unit: Entity,
     pub primary: Option<Entity>,
+    /// Explicit cursor point, retained across cast time and projectile flight.
+    pub destination: Option<[f32; 3]>,
 }
 
 /// Ordinary Player admission with an already selected action context.
@@ -1337,7 +1368,7 @@ pub fn cast_for_player_with_targets(
 ) -> Result<(), CastFailure> {
     let request = SpellCastIntent {
         target_item_guid: None,
-        destination: None,
+        destination: targets.destination,
         spell_id: Some(spell_id),
         spell: String::new(),
         target_entity: Some(targets.unit.to_bits()),
@@ -2704,7 +2735,7 @@ fn execute_cast_with_primary(
     efflorescence::initialize_new_summons(world, caster, previous_efflo_summons);
     scripts::refund_execute(world, caster, spell, explicit, &costs);
     scripts::consume_phalanx(world, caster, spell, explicit);
-    if let Some(hook) = scripts::after_cast(spell.id) {
+    for hook in scripts::after_cast(spell.id) {
         hook(world, caster, spell);
     }
     if !spell.cast_parent_owns_modifier_charges {
@@ -2712,6 +2743,7 @@ fn execute_cast_with_primary(
         scripts::consume_maelstrom_weapon(world, caster, spell);
         scripts::apply_echo_policies(world, caster, spell);
         scripts::after_foreground_spender(world, caster, spell, spell.cast_primary_target);
+        crate::auras::add_ret_crusade_spender_stacks(world, caster, spell, &costs);
         scripts::roll_selected_ret_divine_purpose(world, caster, spell);
         scripts::schedule_empyrean_legacy(world, caster, spell, spell.cast_primary_target);
     }
@@ -3503,10 +3535,33 @@ fn push_hit_events(
             },
         );
         if harmful {
+            if first_harmful_hit {
+                start_spell_melee_attack(world, caster, spell);
+            }
             elemental_overload::after_hit(world, caster, spell, target, first_harmful_hit);
             first_harmful_hit = false;
         }
     }
+}
+
+/// SimC76f8118 sc_rogue.cpp2685–2687,7863–7872: a successful flagged attack
+/// starts weapon swings once. Native Attributes1 bit9 owns eligibility; retain
+/// the cast's actual hostile primary and any already-running weapon victim/timers.
+fn start_spell_melee_attack(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    const MELEE_COMBAT_START: u32 = 0x200;
+    let flagged = attributes(spell, 1) & MELEE_COMBAT_START != 0;
+    let player = world.get::<Player>(caster).is_some();
+    let attacking = world.get::<crate::combat::AutoAttack>(caster).is_some();
+    if !flagged || !player || attacking {
+        return;
+    }
+    let Some(target) = spell.cast_primary_target else {
+        return;
+    };
+    if !targets::relation_matches(world, caster, target, Relation::Enemy) {
+        return;
+    }
+    crate::combat::start_attack(&mut world.commands(), caster, target, None);
 }
 
 /// `TRIGGER_SPELL`: resolve `spell_id` immediately at `explicit`, ignoring
@@ -3662,8 +3717,14 @@ fn plan_triggered_spell(
     explicit: Option<Entity>,
     depth: u8,
 ) -> Result<TargetPlan, CastFailure> {
+    // TC a352b1fa Spell.cpp4243–4255 resolves the explicit GUID before launch;
+    // a deferred proc may retain a unit that has since despawned, not a live target.
+    if explicit.is_some_and(|target| world.get_entity(target).is_err()) {
+        return Err(CastFailure::InvalidTarget);
+    }
     druid_transform::before_cast(world, caster, spell, depth)?;
-    aura_spell_restrictions::check_caster(world, caster, spell)?;
+    // FULL_MASK includes IGNORE_CASTER_AURASTATE (TC Spell.cpp5873–5890).
+    // Ordinary and costed-trigger paths retain their caster requirements.
     // CheckTarget's TARGETS_DEAD is independent of BAD_TARGETS/relation bypass.
     // Non-unit objects have no Health and do not take this unit-only check.
     let target_dead = explicit

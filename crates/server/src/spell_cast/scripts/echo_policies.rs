@@ -60,11 +60,7 @@ fn read_live_values(world: &World, caster: Entity, policy: &EchoPolicy) -> Optio
     ))
 }
 
-pub(in crate::spell_cast) fn after_foreground_cast(
-    world: &mut World,
-    caster: Entity,
-    spell: &SpellInfo,
-) {
+pub(in crate::spell_cast) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if spell.cast_parent_owns_modifier_charges {
         return;
     }
