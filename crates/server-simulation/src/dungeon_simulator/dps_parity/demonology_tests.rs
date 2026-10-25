@@ -150,29 +150,77 @@ fn demonology_antoran_tyrant_inherits_same_owner_sp_as_base_tyrant() {
     );
 }
 
-fn summon_native_dreadstalker(run: &mut Run) -> Entity {
-    crate::spell_cast::creature_cast(
-        run.app.world_mut(),
-        run.actor,
-        193331,
-        Some(run.actor),
-        true,
-    )
-    .expect("native triggered Dreadstalker summon must be admitted");
+fn summon_native_guardian(run: &mut Run, root: u32) -> Entity {
+    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, root, Some(run.actor), true)
+        .expect("native triggered guardian summon must be admitted");
     for _ in 0..100 {
         let dog = run
             .app
             .world_mut()
             .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
             .iter(run.app.world())
-            .find(|(_, summon)| summon.owner == run.actor && summon.spell_id == 193331)
+            .find(|(_, summon)| summon.owner == run.actor && summon.spell_id == root)
             .map(|(unit, _)| unit);
         if let Some(dog) = dog {
             return dog;
         }
         run.app.update();
     }
-    panic!("native Dreadstalker must spawn within five seconds");
+    panic!("native guardian root{root} must spawn within five seconds");
+}
+
+fn summon_native_dreadstalker(run: &mut Run) -> Entity {
+    summon_native_guardian(run, 193331)
+}
+
+#[test]
+#[ignore = "requires private266 inputs; actual Wild Imp Energy regeneration"]
+fn demonology_wild_imp_spent_energy_does_not_regenerate() {
+    let mut run = prepare_literal(266, 1).unwrap();
+    let imp = summon_native_guardian(&mut run, 104317);
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        imp,
+        104318,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("actual Wild Imp must cast native Fel Firebolt");
+    for _ in 0..100 {
+        run.app.update();
+        if run
+            .app
+            .world()
+            .get::<shared::casting::CastState>(imp)
+            .is_none()
+        {
+            break;
+        }
+    }
+    let energy = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::spell_cast::powers::PowerPools>(imp)
+            .unwrap()
+            .get(shared::components::PowerType::Energy)
+            .unwrap()
+            .current
+    };
+    let spent = energy(&run);
+    assert!(
+        spent < 100.0,
+        "actual Fel Firebolt must spend native Energy"
+    );
+    for _ in 0..40 {
+        run.app.update();
+    }
+    // SimC76f8118 sc_warlock_pets.cpp701/875–882: Wild Imp Energy
+    // regeneration is disabled; waiting cannot fund another bolt.
+    assert_eq!(
+        energy(&run),
+        spent,
+        "Wild Imp must not regenerate spent Energy"
+    );
 }
 
 #[test]
