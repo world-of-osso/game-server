@@ -685,6 +685,17 @@ impl<'a> NativeFacts<'a> {
         })))
     }
 
+    fn main_hand_is_two_handed(&self) -> Result<f64, String> {
+        // SimC76f8118 player.cpp12001–12004: actual equipped weapon group.
+        let stats = self
+            .world
+            .get::<crate::stats::CharacterStats>(self.actor)
+            .ok_or("native APL actor lacks derived weapon stats")?;
+        Ok(bool_value(
+            stats.main_hand.kind == shared::components::WeaponType::TwoHand,
+        ))
+    }
+
     fn spell_haste(&self) -> Result<f64, String> {
         let stats = self
             .world
@@ -818,6 +829,7 @@ impl Facts for NativeFacts<'_> {
             "fight_remains" => self.remaining(name),
             "active_enemies" => Ok(self.active_enemies as f64),
             "spell_haste" => self.spell_haste(),
+            "main_hand.2h" => self.main_hand_is_two_handed(),
             "movement.distance" => self.movement_distance(),
             "movement.remains" => self.movement_value("remains"),
             "movement.speed" => self.movement_value("speed"),

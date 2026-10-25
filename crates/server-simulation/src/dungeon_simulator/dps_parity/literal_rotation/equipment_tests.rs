@@ -80,6 +80,34 @@ fn equip_reference_profile(world: &mut World, spec: u32) -> Entity {
 }
 
 #[test]
+#[ignore = "native passive, cast-time and channel item metadata"]
+fn literal_equipment_native_cast_time_is_unhasted_and_channel_aware() {
+    let mut world = load_world();
+    // Native70448: Frost's passive damage trinkets, Algeth'ar383781 base2s,
+    // and Noxious Venom267402 native channel duration3s.
+    for (first, second, expected) in [
+        (270175, 270173, vec![Ok(0.0), Ok(0.0)]),
+        (193701, 158367, vec![Ok(2.0), Ok(3.0)]),
+    ] {
+        let actor = equip(&mut world, first, second);
+        world
+            .entity_mut(actor)
+            .insert(crate::stats::CharacterStats {
+                haste_pct: 100.0,
+                ..Default::default()
+            });
+        assert_eq!(
+            read_facts(
+                &world,
+                actor,
+                &["trinket.1.cast_time", "trinket.2.cast_time"]
+            ),
+            expected
+        );
+    }
+}
+
+#[test]
 #[ignore = "exact native Dev/Fire/Assassination profile instances; passive and bonus-derived levels"]
 fn literal_equipment_native_profile_item_levels_include_passive_and_bonus_instances() {
     let mut world = load_world();
