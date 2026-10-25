@@ -107,6 +107,8 @@ mod ret_toll;
 pub(super) use ret_tier::after_foreground_spender;
 pub(crate) use ret_tier::owns_arbiter_charge;
 mod scourge_strike;
+mod shadow_priest;
+pub(super) use shadow_priest::launch_delay as scripted_launch_delay;
 mod snakeskin_quiver;
 pub(super) use snakeskin_quiver::roll_snakeskin_cobra;
 mod soul_of_the_forest;
@@ -428,7 +430,11 @@ pub(super) fn relocate_destination(
 pub(super) fn consumes_effect_value(spell_id: u32, effect_index: u8) -> bool {
     // TC a352b1fa spell_priest.cpp4483-4487: CalcDamage reads execute bonus E3.
     // spell_shaman.cpp1015-1027: OnHit reads knockdown chance E1.
-    matches!((spell_id, effect_index), (32_379, 3) | (77_478, 1))
+    // SimC76f8118 sc_priest_shadow.cpp1733–1739: Slam E2 supplies the VT cap.
+    matches!(
+        (spell_id, effect_index),
+        (32_379, 3) | (77_478, 1) | (shadow_priest::SLAM, 2)
+    )
 }
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
@@ -437,6 +443,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
             Some(crate::scripted_ai::orator::terrorize_hit)
         }
         (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::cast_damage),
+        (shadow_priest::SLAM, 0) => Some(shadow_priest::slam_impact),
         (49_576, 0) => Some(death_grip),
         (108_199, 1) => Some(cast_subduing_grasp),
         (20_538, 0) => Some(hate_to_zero),
