@@ -20,8 +20,8 @@ Devastation1467 must execute its DPS rotation natively and measure within10% of 
 
 ## Implementation inventory
 
-- `crates/server-combat/src/spell_cast/scripts/giantkiller.rs` — native mastery amount and bounded target-health policy.
-- `crates/server-combat/src/spell_cast/scripts/evoker_tier.rs` — native Azure Sweep uses and MID1 Surge recovery.
+- `crates/server-spell-scripts/src/modules/giantkiller.rs` — native mastery amount and bounded target-health policy.
+- `crates/server-spell-scripts/src/modules/evoker_tier.rs` — native Azure Sweep uses and MID1 Surge recovery.
 - `crates/server-combat/src/spell_cast/effects.rs` — ordinary direct/periodic source-damage integration, excluding already-resolved copies.
 - `crates/server-combat/src/followers/giantkiller_tests.rs` — real level90 Kybel damage and native passive lifetime controls.
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/` — exact-gear, strict-trait300s measurement.
