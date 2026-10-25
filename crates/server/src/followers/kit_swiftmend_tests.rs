@@ -97,13 +97,9 @@ fn follower_swiftmend_qualification_removed_real_rejuvenation_no_longer_qualifie
 #[test]
 fn follower_swiftmend_qualification_uncomputed_native_state_is_not_false() {
     let (h, healer) = level32(CRENNA);
-    let execute = h.app.world().resource::<SpellStore>().get(163201).unwrap();
-    let state = execute
-        .aura_restrictions
-        .as_ref()
-        .unwrap()
-        .target_aura_state;
-    assert_eq!(state, 2);
+    // TC SharedDefines.h: state4/FROZEN remains uncomputed. State2 is now a
+    // sourced health threshold, so it no longer represents unknown-state policy.
+    let state = 4;
     assert_eq!(
         crate::auras::aura_state::read_computed_state(h.app.world(), healer, state),
         None
