@@ -19,6 +19,59 @@ fn encounter(world: &World) -> Encounter {
     }
 }
 
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn native_item_and_control_gcd_remains_uses_actor_clock() {
+    let mut run = super::prepare_literal(1467, 1).unwrap();
+    super::engage(&mut run);
+    let bindings = Bindings {
+        actions: [("azure_strike".into(), 362969)].into(),
+        global_cooldown_spell: 361469,
+        ..Default::default()
+    };
+    let read = |run: &crate::dungeon_simulator::dps_parity::Run, name: &str| {
+        let action = Action {
+            name: name.into(),
+            target: None,
+            source_row: None,
+            options: [("slot".into(), "trinket1".into())].into(),
+        };
+        NativeFacts::new(
+            run.app.world(),
+            run.actor,
+            &bindings,
+            Encounter::Fixture {
+                started_at: 0.0,
+                duration: 300.0,
+                style: crate::simc_apl_native::FightStyle::Patchwerk,
+            },
+            run.targets.len(),
+        )
+        .value_for(&action, "gcd.remains")
+        .unwrap()
+    };
+    for name in ["use_item", "variable", "call_action_list"] {
+        assert_eq!(read(&run, name), 0.0, "{name}");
+    }
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        362969,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    let remains = read(&run, "azure_strike");
+    assert!(remains > 0.0, "actual Azure Strike must start native GCD");
+    for name in ["use_item", "variable", "call_action_list"] {
+        assert_eq!(read(&run, name), remains, "{name}");
+    }
+    for _ in 0..60 {
+        run.app.update();
+    }
+    assert_eq!(read(&run, "use_item"), 0.0);
+}
+
 fn feral() -> (App, Entity, Bindings) {
     let mut app = super::super::runtime::build_app();
     let copy = super::super::runtime::create_copy(&mut app);
