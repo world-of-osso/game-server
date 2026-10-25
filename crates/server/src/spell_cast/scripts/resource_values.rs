@@ -46,7 +46,7 @@ fn affects(aura: &AuraInstance, spell: &SpellInfo, index: u8) -> bool {
         .any(|effect| effect.index == index && spell_mods::class_mask_affects(aura, effect, spell))
 }
 
-pub(super) fn effective_value(
+pub(in crate::spell_cast) fn effective_value(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
@@ -64,7 +64,7 @@ pub(super) fn effective_value(
     paid
 }
 
-pub(super) fn consume_sources(world: &mut World, caster: Entity, spell: &SpellInfo) {
+pub(in crate::spell_cast) fn consume_sources(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let sources: Vec<_> = RULES
         .iter()
         .filter(|rule| matches(world, caster, spell, rule))
