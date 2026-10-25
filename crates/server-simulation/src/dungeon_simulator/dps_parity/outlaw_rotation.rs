@@ -185,6 +185,8 @@ impl Rotation {
             ),
             world,
             actor,
+            prepared: &prepared,
+            equipment: &self.equipment,
         };
         if precombat {
             return self
@@ -246,6 +248,8 @@ struct OutlawFacts<'a> {
     rogue: RogueFacts<'a>,
     world: &'a World,
     actor: Entity,
+    prepared: &'a Prepared,
+    equipment: &'a Equipment,
 }
 impl Facts for OutlawFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
@@ -263,6 +267,22 @@ impl Facts for OutlawFacts<'_> {
     }
 }
 impl ActionFacts for OutlawFacts<'_> {
+    fn primary_resource(&self) -> Result<String, String> {
+        // SimC76f8118 sc_rogue.cpp1221: Rogue pooling uses Energy.
+        self.rogue.value("energy")?;
+        Ok("energy".into())
+    }
+
+    fn ready_at_resource_max(&self, action: &Action, resource: &str) -> Result<bool, String> {
+        if resource != "energy" {
+            return Err(format!("unbound native Outlaw pool {resource}"));
+        }
+        Ok(self.prepared.execution(action, self.equipment)?.is_some()
+            || self
+                .prepared
+                .resource_limited(action, self.equipment, PowerType::Energy)?)
+    }
+
     fn target_ids(&self, action: &Action) -> Result<Vec<u64>, String> {
         self.rogue.target_ids(action)
     }
