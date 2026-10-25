@@ -2842,20 +2842,20 @@ fn discount_missed_rune_costs(costs: Vec<(CostPool, f32)>, missed: bool) -> Vec<
 
 /// One handled effect's unit targets and destination.
 #[derive(Debug, Clone)]
-struct PlannedEffect {
-    index: usize,
-    units: Vec<Entity>,
+pub struct PlannedEffect {
+    pub index: usize,
+    pub units: Vec<Entity>,
     /// Original selection survives MISS/IMMUNE for launch/arrival combat, not effects.
-    selected_units: Vec<Entity>,
-    dest: Option<Dest>,
+    pub selected_units: Vec<Entity>,
+    pub dest: Option<Dest>,
     /// A chained effect's damage and healing multiplier per unit: `EffectChainAmplitude`
     /// to the power of the unit's place in the chain (`m_damageMultipliers`,
     /// Spell.cpp:1840-1844, 8631-8636). Empty for an unchained effect.
-    chain_multipliers: Vec<(Entity, f32)>,
+    pub chain_multipliers: Vec<(Entity, f32)>,
     /// Native block hit result, retained across flight for these unit targets.
-    blocked_units: Vec<Entity>,
+    pub blocked_units: Vec<Entity>,
     /// Source per-cast continuation state; retain hit receipts when the hook is suppressed.
-    prevent_hit_script: bool,
+    pub prevent_hit_script: bool,
 }
 
 impl PlannedEffect {
@@ -2867,7 +2867,7 @@ impl PlannedEffect {
     }
 }
 
-type TargetPlan = Vec<PlannedEffect>;
+pub type TargetPlan = Vec<PlannedEffect>;
 
 /// The first effect whose targets `Spell::SelectSpellTargets` selects together with
 /// effect `index` (Spell.cpp:741-781): an effect with the same implicit targets and, for
@@ -3479,7 +3479,7 @@ fn hit_was_blocked(world: &World, caster: Entity, spell_id: u32, target: Entity)
 }
 
 /// A linked child inherits the active hit's trigger depth, without persisting cast state in an aura.
-pub(crate) fn next_trigger_depth(world: &World) -> u8 {
+pub fn next_trigger_depth(world: &World) -> u8 {
     world
         .get_resource::<ResolvingHits>()
         .and_then(|hits| hits.0.last())
@@ -3709,7 +3709,7 @@ pub(super) fn cast_triggered_with_item_level(
 
 /// Sourced per-cast overrides retained in real triggered spell snapshots.
 #[derive(Default)]
-pub(crate) struct TriggeredSpellOverrides {
+pub struct TriggeredSpellOverrides {
     pub effect0_amount: Option<f32>,
     pub item_level: Option<u16>,
     pub effect_mask: Option<u32>,
@@ -3719,7 +3719,7 @@ pub(crate) struct TriggeredSpellOverrides {
     pub duration_ms: Option<i32>,
 }
 
-pub(crate) fn cast_triggered_with_overrides(
+pub fn cast_triggered_with_overrides(
     world: &mut World,
     caster: Entity,
     spell_id: u32,
@@ -3757,7 +3757,7 @@ pub(crate) fn cast_triggered_with_overrides(
 }
 
 /// Source AddSpellBP0 for Ysera's Gift's percent-of-owner-health children.
-pub(crate) fn cast_triggered_with_effect0_amount(
+pub fn cast_triggered_with_effect0_amount(
     world: &mut World,
     caster: Entity,
     spell_id: u32,

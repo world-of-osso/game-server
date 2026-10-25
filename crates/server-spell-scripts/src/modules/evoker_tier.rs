@@ -3,9 +3,13 @@
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
-use super::AfterCastHook;
-use crate::auras::{SpellModOp, has_aura, spell_mods};
-use crate::spell_info::{SpellInfo, SpellStore};
+use super::combat;
+use combat::auras::{SpellModOp, has_aura, spell_mods};
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_cast::scripts::{AfterCastHook, reduce_cooldown, script_effect_value};
+use combat::spell_info::{SpellInfo, SpellStore};
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterResourceValues(hook)];
 
 const AZURE_SWEEP_TALENT: u32 = 1265867;
 const AZURE_SWEEP_BUFF: u32 = 1265871;
@@ -36,9 +40,9 @@ fn grant_sweep_uses(world: &mut World, caster: Entity, _spell: &SpellInfo) {
         .expect("native Azure Sweep buff metadata");
     // MID1 four-piece's native label5988/Charges31 adds to the ordinary one use.
     let uses = spell_mods::modify(world, caster, buff, SpellModOp::Charges, 1.0) as u32;
-    let depth = super::super::next_trigger_depth(world);
+    let depth = combat::spell_cast::next_trigger_depth(world);
     for _ in 0..uses {
-        if !crate::spell_cast::try_cast_triggered(
+        if !combat::spell_cast::try_cast_triggered(
             world,
             caster,
             AZURE_SWEEP_BUFF,
@@ -55,8 +59,8 @@ fn reduce_surge_cooldown(world: &mut World, caster: Entity, _spell: &SpellInfo) 
     if !is_devastation(world, caster) || !has_aura(world, caster, MID1_FOUR_PIECE) {
         return;
     }
-    let milliseconds = super::script_effect_value(world, caster, MID1_FOUR_PIECE, 1);
-    super::reduce_cooldown(
+    let milliseconds = script_effect_value(world, caster, MID1_FOUR_PIECE, 1);
+    reduce_cooldown(
         world,
         caster,
         ETERNITY_SURGE,

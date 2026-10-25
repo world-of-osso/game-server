@@ -20,10 +20,18 @@ mod cast_resets;
 mod devastation;
 #[path = "modules/essence_burst.rs"]
 mod essence_burst;
+#[path = "modules/evoker_tier.rs"]
+mod evoker_tier;
+#[path = "modules/giantkiller.rs"]
+mod giantkiller;
 #[path = "modules/havoc.rs"]
 mod havoc;
+#[path = "modules/marksmanship_explosive.rs"]
+mod marksmanship_explosive;
 #[path = "modules/paid_cooldowns.rs"]
 mod paid_cooldowns;
+#[path = "modules/ret_resonance.rs"]
+mod ret_resonance;
 #[path = "modules/retribution.rs"]
 mod retribution;
 #[path = "modules/rogue.rs"]
@@ -51,4 +59,8 @@ pub const MODULES: &[&[SpellScriptHook]] = &[
     paid_cooldowns::HOOKS,
     essence_burst::HOOKS,
     havoc::HOOKS,
+    evoker_tier::HOOKS,
+    giantkiller::HOOKS,
+    marksmanship_explosive::HOOKS,
+    ret_resonance::HOOKS,
 ];

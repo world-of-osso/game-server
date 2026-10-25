@@ -7,8 +7,6 @@ use crate::random as rand;
 mod bouncing_projectiles;
 mod cast_relationships;
 mod marksmanship;
-mod marksmanship_explosive;
-pub(super) use marksmanship_explosive::after_tick as apply_mm_explosive_tick;
 mod marksmanship_sentinel;
 pub(crate) use cast_relationships::register as register_cast_relationships;
 pub(super) use cast_relationships::{
@@ -65,7 +63,6 @@ mod enhancement_modes;
 mod enhancement_strikes;
 mod enhancement_tempest;
 mod enhancement_tier;
-mod evoker_tier;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
 mod feral_frenzy;
 pub(crate) use feral_frenzy::register as register_feral_frenzy;
@@ -109,10 +106,8 @@ pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
         || melee_reset::owns_proc(spell)
         || resource_values::owns_proc(spell)
 }
-mod germination;
-mod giantkiller;
-pub(super) use giantkiller::multiplier as giantkiller_multiplier;
 mod fire_procs;
+mod germination;
 pub(crate) mod holy_priest;
 mod hot_streak;
 pub(crate) use fire_procs::register as register_fire_procs;
@@ -139,7 +134,6 @@ mod ret_empyrean;
 pub(crate) use ret_empyrean::owns_empyrean_proc;
 pub(super) use ret_empyrean::schedule_empyrean_legacy;
 mod ret_purpose;
-mod ret_resonance;
 pub(super) use ret_purpose::roll_selected_ret_divine_purpose;
 mod ret_tier;
 mod ret_toll;
@@ -829,7 +823,7 @@ pub fn after_cast(world: &World, spell_id: u32) -> impl Iterator<Item = AfterCas
         .chain(batch9::after_cast_hook(spell_id))
         .chain(script_registry::aura_roll_after_cast(world, spell_id))
         .chain(resource_values::after_cast_hook(spell_id))
-        .chain(evoker_tier::hook(spell_id))
+        .chain(script_registry::after_resource_values(world, spell_id))
 }
 
 fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
@@ -839,7 +833,6 @@ fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
         33757 | 318038 => Some(enhancement_imbues::apply),
         voltaic_blaze::ROOT => Some(maelstrom_weapon::grant_voltaic_blaze),
-        ret_resonance::TOLL => Some(ret_resonance::grant_after_toll),
         windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
         windwalker::FISTS_OF_FURY => Some(windwalker_children::fof_executed),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
@@ -963,12 +956,11 @@ fn demon_spikes(world: &mut World, caster: Entity, _target: Entity, _depth: u8) 
     );
 }
 
-pub(super) type TargetPlanHook =
-    fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> super::TargetPlan;
+use script_registry::TargetPlanHook;
 
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
-    if let Some(hook) = marksmanship_explosive::target_plan(spell_id) {
+    if let Some(hook) = script_registry::target_plan(world, spell_id) {
         return Some(hook);
     }
     if let Some(hook) = marksmanship::target_plan(spell_id) {
