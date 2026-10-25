@@ -104,7 +104,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Fury player parity
 
 - [x] Spec72 uses `--actor player` and the complete pinned MID2 Fury APL through shared `literal_rotation`. Capture literal control before native setup, execute ordered precombat and submit normal native casts. Do not invent a follower profile. Native overrides select Reckless Abandon and Unrelenting Onslaught variants; native stats, costs, coefficients and trait legality remain authoritative.
-- [ ] Fury Deep Wounds1261060 accepts only actual Execute main-hand280849 impacts; Whirlwind cannot grant it (SimC76f8118 `sc_warrior.cpp4452–4456`). Preserve native262115 damage and periodic behavior.
+- [x] Fury Deep Wounds1261060 accepts only actual Execute main-hand280849 impacts; Whirlwind cannot grant it (SimC76f8118 `sc_warrior.cpp4452–4456`). Preserve native262115 damage and rolling periodic behavior; do not alter Arms71 producers.
 - [ ] Anger Management152278 reduces running Fury Avatar/Recklessness cooldowns from actual paid Rage, using native PowerType display units and effect2's Rage-per-second divisor; free background casts do not contribute (`sc_warrior.cpp1450–1455,1506–1517`).
 - [ ] Selected Unhinged386628 dispatches the live native Bloodthirst variant on odd Bladestorm227847/446035 effect0 ticks, including catch-up ticks, using the actual selected hostile target (`sc_warrior.cpp3257–3268,3316–3334`).
 
