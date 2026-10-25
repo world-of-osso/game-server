@@ -149,6 +149,40 @@ fn guild_disband_authenticated_request_refreshes_both_online_clients() {
         save_guild_member_rank(h.db(), id, rank);
     }
     let peer = h.connect_character(member, "Cara");
+    let peer_player = h
+        .app
+        .world()
+        .get::<crate::networking::PlayerLink>(peer)
+        .unwrap()
+        .0;
+    for player in [h.player, peer_player] {
+        h.app.world_mut().entity_mut(player).insert((
+            shared::components::GuildMembership {
+                guild_id: 7,
+                guild_name: "Disband Guild".into(),
+            },
+            shared::guild_creation::GuildTabardDesign {
+                icon: 1,
+                icon_color: 1,
+                border: 1,
+                border_color: 1,
+                background_color: 1,
+            },
+        ));
+    }
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .remove::<crate::auth::Authenticated>();
+    h.send::<GuildRankRequest, GuildChannel>(request());
+    assert_eq!(
+        crate::persistence_character::list_guild_members(h.db(), 7).len(),
+        2
+    );
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .insert(crate::auth::Authenticated { account_id: 1 });
     h.take::<GuildRanksState>();
     h.take_for::<GuildRanksState>(peer);
     h.send_from::<GuildRankRequest, GuildChannel>(peer, request());
@@ -168,11 +202,19 @@ fn guild_disband_authenticated_request_refreshes_both_online_clients() {
         assert!(state.ranks.is_empty() && state.members.is_empty());
         assert!(state.error.is_none());
     }
-    assert!(
-        h.app
-            .world()
-            .get::<shared::components::GuildMembership>(h.player)
-            .is_none()
-    );
+    for player in [h.player, peer_player] {
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::GuildMembership>(player)
+                .is_none()
+        );
+        assert!(
+            h.app
+                .world()
+                .get::<shared::guild_creation::GuildTabardDesign>(player)
+                .is_none()
+        );
+    }
     assert!(crate::persistence::load_character_guild(h.db(), member).is_none());
 }
