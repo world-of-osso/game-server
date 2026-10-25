@@ -97,7 +97,9 @@ def submit(args):
     commit = subprocess.run(["git", "rev-parse", "--verify", f"{args.commit}^{{commit}}"],
                             text=True, capture_output=True, check=True).stdout.strip()
     entry = {"id": uuid.uuid4().hex[:10], "owner": args.owner, "commit": commit,
-             "land": args.land, "env": dict(pair.split("=", 1) for pair in args.env), "tests": [shlex.split(test) for test in args.test],
+             "land": args.land, "red": args.red and subprocess.run(
+                 ["git", "rev-parse", "--verify", f"{args.red}^{{commit}}"], text=True,
+                 capture_output=True, check=True).stdout.strip(), "env": dict(pair.split("=", 1) for pair in args.env), "tests": [shlex.split(test) for test in args.test],
              "measure": [parse_measure(m) for m in args.measure], "submitted": time.time()}
     QUEUE.mkdir(parents=True, exist_ok=True)
     (QUEUE / f"{entry['id']}.json").write_text(json.dumps(entry, indent=2))
@@ -281,31 +283,23 @@ def run_tests(entries, log):
     return passed, failed
 
 
-def push(entries, log, built):
-    """Push master plus the landing entries. Unless the tree already holds exactly those
-    entries (built), rebuild and retest them first. Retry on races."""
-    while True:
-        if built:
-            tree, rejected, failed = entries, [], []
-            built = False
-        else:
-            tree, rejected = build_checked(entries, log)
-            tree, failed = run_tests(tree, log)
-        if rejected or failed:
-            for entry in rejected + failed:
+def push(entries, log):
+    """Build, test and push master plus the entries. Failing entries are rejected and the
+    rest rebuilt; a push race rebuilds on the new master."""
+    while entries:
+        tree, rejected = build_and_test(entries, log)
+        if rejected:
+            for entry in rejected:
                 entry["status"] = "rejected"
+            write_results(rejected)
             entries = tree
-            write_results(rejected + failed)
-            if not entries:
-                return None
             continue
-        if not tree:
-            return None
         result = git("push", "origin", "HEAD:master", check=False)
         if result.returncode == 0:
             return git("rev-parse", "HEAD").stdout.strip()
         with log.open("a") as out:
             out.write(f"push raced, rebuilding:\n{result.stderr}\n")
+    return None
 
 
 def parity_executable(log):
@@ -352,41 +346,79 @@ def take_queue():
     return sorted(entries, key=lambda e: e["submitted"])
 
 
+def build_and_test(entries, log):
+    """Check (bisecting failures) and test entries on master. Returns (passed, rejected);
+    entries that only conflict with other queued entries go back to the queue."""
+    tree, rejected = build_checked(entries, log)
+    for entry in [e for e in rejected if e.get("defer")]:
+        del entry["defer"], entry["reason"]
+        queued = RUNNING / f"{entry['id']}.json"
+        if queued.exists():  # RED twins have no queue file; their entry is requeued by cycle()
+            queued.rename(QUEUE / queued.name)
+    rejected = [e for e in rejected if not e.get("defer")]
+    passed, failed = run_tests(tree, log)
+    return passed, rejected + failed
+
+
+def measure_all(entries, log):
+    entries = [e for e in entries if e["measure"]]
+    executable = parity_executable(log) if entries else None
+    if executable:
+        with ThreadPoolExecutor(MEASURE_PARALLEL) as pool:
+            list(pool.map(lambda e: measure(e, executable), entries))
+
+
+def red_twin(entry):
+    """The entry's tests at its --red commit (tests without the fix): they must fail."""
+    # Keeps --measure: it supplies the native test inputs. Twins are never measured.
+    return entry | {"id": f"{entry['id']}-red", "commit": entry["red"], "land": False}
+
+
 def cycle():
     entries = take_queue()
     log = LOGS / f"cycle-{time.strftime('%Y%m%dT%H%M%S')}.log"
     wait_for_capacity()
-    # One tree with every entry: probes get their test results from it.
-    tree, rejected = build_checked(entries, log)
-    deferred = [e for e in rejected if e.get("defer")]
-    rejected = [e for e in rejected if not e.get("defer")]
-    for entry in deferred:
-        del entry["defer"], entry["reason"]
-        (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
-    tested, failed = run_tests(tree, log)
-    for entry in rejected + failed:
-        entry["status"] = "rejected"
-    probes = [e for e in tested if not e["land"]]
-    landing = [e for e in tested if e["land"]]
-    for entry in probes:
-        entry["status"] = "probe passed"
-    executable = parity_executable(log) if any(e["measure"] for e in probes) else None
-    if executable:
-        with ThreadPoolExecutor(MEASURE_PARALLEL) as pool:
-            list(pool.map(lambda e: measure(e, executable), [e for e in probes if e["measure"]]))
-    write_results(rejected + failed + probes)
-    # Landing tree excludes probes, so it is rebuilt and retested on its own.
-    # Every probe or failed entry is still merged in this tree; only a tree of exactly the
-    # landing entries may be pushed as built.
-    master = push(landing, log, built=not (probes or failed)) if landing else None
+    landing = [e for e in entries if e["land"]]
+    probes = [e for e in entries if not e["land"]]
+    # Phase 1: probes and RED twins share one tree; it is never pushed.
+    twins = {e["id"]: red_twin(e) for e in landing if e.get("red")}
+    if probes or twins:
+        passed, failed = build_and_test(probes + list(twins.values()), log)
+        for entry in passed:
+            entry["status"] = "probe passed"
+        for entry in failed:
+            entry["status"] = "rejected"
+        real = [e for e in passed + failed if not e["id"].endswith("-red")]
+        measure_all([e for e in real if e["status"] == "probe passed"], log)
+        write_results(real)
+        outcome = {e["id"]: e for e in passed + failed}
+        for entry in list(landing):
+            twin = twins.get(entry["id"])
+            if twin is None:
+                continue
+            twin = outcome.get(twin["id"])
+            if twin is None:  # deferred with its probe tree; retry the pair next cycle
+                landing.remove(entry)
+                (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
+                continue
+            entry["red_log"] = twin.get("test_log")
+            if twin["status"] != "rejected" or "tests failed" not in twin.get("reason", ""):
+                entry["status"] = "rejected"
+                entry["reason"] = ("RED not observed: tests pass without the fix" if twin["status"] != "rejected"
+                                   else f"RED commit does not build: {twin.get('reason', '')[:500]}")
+                landing.remove(entry)
+                write_results([entry])
+    # Phase 2: exactly the landing entries on master; this tree is what gets pushed.
+    if not landing:
+        return
+    master = push(landing, log)
     if master:
         for entry in landing:
-            entry["status"] = f"landed in {master}"
-        executable = parity_executable(log) if any(e["measure"] for e in landing) else None
-        if executable:
-            with ThreadPoolExecutor(MEASURE_PARALLEL) as pool:
-                list(pool.map(lambda e: measure(e, executable), [e for e in landing if e["measure"]]))
-        write_results(landing)
+            if entry.get("status") != "rejected":
+                entry["status"] = f"landed in {master}"
+        landed = [e for e in landing if e["status"].startswith("landed")]
+        measure_all(landed, log)
+        write_results(landed)
 
 
 def requeue():
@@ -399,7 +431,13 @@ def run(_args):
     for directory in (QUEUE, RUNNING, RESULTS, LOGS):
         directory.mkdir(parents=True, exist_ok=True)
     requeue()
+    script = Path(__file__).resolve()
+    loaded = script.stat().st_mtime
     while True:
+        # deploy_merge_train.py replaces this file; pick it up between cycles.
+        if script.stat().st_mtime != loaded:
+            print("merge_train.py changed, reloading", flush=True)
+            os.execv(sys.executable, [sys.executable, str(script), "run"])
         queued = list(QUEUE.glob("*.json"))
         if queued and time.time() - min(p.stat().st_mtime for p in queued) >= GATHER_SECONDS:
             try:
@@ -424,6 +462,8 @@ def main():
                    help="also supplies DPS_PARITY_* and the DB view to server-simulation tests")
     s.add_argument("--env", action="append", default=[], help="KEY=VALUE for this entry's tests")
     s.add_argument("--land", action="store_true", help="push to master when green")
+    s.add_argument("--red", help="commit with the tests but without the fix; its tests must fail "
+                                 "in the same cycle before the entry lands (replaces a separate RED probe)")
     s.set_defaults(func=submit)
     w = sub.add_parser("wait")
     w.add_argument("id")
