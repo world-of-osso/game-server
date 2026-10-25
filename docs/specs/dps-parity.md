@@ -235,6 +235,11 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Spec1467 follower measurements execute all89 preserved MID1 `76f8118` APL rows through shared `literal_rotation`; retain the named missing-MID2 reference gap and complete exported allocations.
 - `empower_to` selects the real native release stage while retaining the selected hostile primary independently of self casts. Fire Breath dot facts observe native357209 owned by that actor. Disintegrate uses the shared channel decision seam, including action-bound `ticks_remain`.
 
+### Assassination Deathstalker lifecycle
+
+- Native Garrote establishes one caster-owned457129 mark with selected457052 effect0 stacks, transferring it off the previous target without refreshing an existing mark on the same target. Actual ComboPoint spenders meeting the native effect1 threshold consume one stack and deal457157 damage.
+- Depleting a mark with selected457058 grants native457280 after1ms, including its native Energy effect. A maximum-ComboPoint Envenom snapshots its native damage/critical bonus, reapplies the native mark count and consumes Darkest Night. Lower-ComboPoint casts neither consume marks nor Darkest Night while it is active. Scope is spec259; other Rogue specs are unchanged. Source: SimC76f8118 `sc_rogue.cpp2435–2440,2569–2574,4599,8732–8817`. Quietus Celeris, mark-target death, Mass Casualty and Hunt Them Down remain separate gaps.
+
 ### Measurement
 
 - Ordinary Envenom snapshots Amplifying Poison's native bonus when the recipient has at least the coating's native threshold of caster-owned383414 stacks. Consume exactly that threshold before the cast generates poison; preserve other casters' stacks and sub-threshold state (SimC76f8118 `sc_rogue.cpp4281–4310`).
