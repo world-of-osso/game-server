@@ -19,6 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import shutil
 import subprocess
@@ -141,8 +142,15 @@ def merge(entries, log):
 
 
 def check(log):
-    return cargo(log, "check", "--locked", "--workspace", "--all-targets") == 0 \
-        and cargo(log, "fmt", "--check") == 0
+    """Compile check. Formatting is applied, not checked: an unformatted entry would
+    otherwise cost a bisect, and formatter output is never a behavior change."""
+    if cargo(log, "check", "--locked", "--workspace", "--all-targets") != 0:
+        return False
+    if cargo(log, "fmt") != 0:
+        return False
+    if git("status", "--porcelain", "--untracked-files=no").stdout.strip():
+        git("commit", "-qam", "merge train: cargo fmt")
+    return True
 
 
 class MasterBroken(Exception):
@@ -223,13 +231,17 @@ def split_test(test):
     i = test.index("--") if "--" in test else len(test)
     cargo_args, binary_args, filters = [], list(test[i + 1:]), []
     takes_value = False
+    previous = None
     for arg in test[:i]:
         if takes_value:
-            cargo_args.append(arg)
+            # Gameplay tests moved from `server` to `server-combat` (b316f4d9b); `server` keeps
+            # only binaries and site export, so old submissions are retargeted.
+            cargo_args.append("server-combat" if previous in ("-p", "--package") and arg == "server" else arg)
             takes_value = False
         elif arg.startswith("-"):
             cargo_args.append(arg)
             takes_value = arg in CARGO_VALUE_FLAGS
+            previous = arg
         else:
             filters.append(arg)
     return cargo_args, "--", filters + binary_args
@@ -272,7 +284,9 @@ def run_executable(entry, test, executable, cwd, entry_log):
                          stderr=subprocess.STDOUT, check=False)
     with entry_log.open("a") as f:
         f.write(f"\n$ {shlex.join(command)}\n{out.stdout}")
-    return out.returncode
+    ran = sum(int(m) for m in re.findall(r"test result: \w+\. (\d+) passed; (?:\d+) failed", out.stdout))
+    ran += sum(int(m) for m in re.findall(r"test result: \w+\. \d+ passed; (\d+) failed", out.stdout))
+    return out.returncode, ran
 
 
 def run_tests(entries, log):
@@ -289,12 +303,19 @@ def run_tests(entries, log):
             else:
                 jobs += [(entry, test, exe, cwd, entry_log) for exe, cwd in found]
     with ThreadPoolExecutor(TEST_PARALLEL) as pool:
-        codes = list(pool.map(lambda job: (job[0]["id"], run_executable(*job)), jobs))
-    failing = broken | {entry_id for entry_id, code in codes if code}
+        codes = list(pool.map(lambda job: ((job[0]["id"], tuple(job[1])), run_executable(*job)), jobs))
+    failing = broken | {key[0] for key, (code, _) in codes if code}
+    # A --test that runs no test at all (a stale filter or package) is a failure, not a pass.
+    ran = {}
+    for key, (_, count) in codes:
+        ran[key] = ran.get(key, 0) + count
+    empty = {e["id"] for e in entries for t in e["tests"]
+             if e["id"] not in broken and ran.get((e["id"], tuple(t)), 0) == 0}
     passed, failed = [], []
     for entry in entries:
-        if entry["id"] in failing:
-            entry["reason"] = f"tests failed; see {entry['test_log']}"
+        if entry["id"] in failing or entry["id"] in empty:
+            entry["reason"] = (f"tests failed; see {entry['test_log']}" if entry["id"] in failing
+                               else f"tests failed: a --test ran 0 tests (stale filter or package?); see {entry['test_log']}")
             failed.append(entry)
         else:
             passed.append(entry)
@@ -491,16 +512,28 @@ def run_probes(probes, gated, log):
     return proven
 
 
+def mark_phase(log, phase, entries):
+    """Record which entries the running cycle is on, for `where`."""
+    (HOME / "current.json").write_text(json.dumps(
+        {"cycle": log.name, "phase": phase, "since": time.time(), "entries": [e["id"] for e in entries]}))
+
+
 def cycle():
     entries = take_queue()
     log = LOGS / f"cycle-{time.strftime('%Y%m%dT%H%M%S')}.log"
     wait_for_capacity()
     probes = [e for e in entries if not e["land"]]
     gated = [e for e in entries if e["land"] and e.get("red")]
+    plain = [e for e in entries if e["land"] and not e.get("red")]
     # Plain landings go first: a slow probe bisect must not hold them back.
-    land([e for e in entries if e["land"] and not e.get("red")], log)
+    mark_phase(log, "1/3 plain landings", plain)
+    land(plain, log)
     if probes or gated:
-        land(run_probes(probes, gated, log), log)
+        mark_phase(log, "2/3 probes and RED twins", probes + gated)
+        proven = run_probes(probes, gated, log)
+        mark_phase(log, "3/3 RED-gated landings", proven)
+        land(proven, log)
+    (HOME / "current.json").unlink(missing_ok=True)
 
 
 def requeue():
@@ -531,6 +564,25 @@ def run(_args):
                 time.sleep(300)
         else:
             time.sleep(30)
+
+
+def where(args):
+    """Say where one entry is: queued, in which phase of the running cycle, or done."""
+    for directory, label in ((RESULTS, "done"), (QUEUE, "queued for the next cycle")):
+        path = directory / f"{args.id}.json"
+        if path.exists():
+            entry = json.loads(path.read_text())
+            print(f"{label}: {entry.get('status', '')} {entry.get('reason', '')[:300]}".rstrip())
+            return
+    if (RUNNING / f"{args.id}.json").exists():
+        current = HOME / "current.json"
+        info = json.loads(current.read_text()) if current.exists() else {}
+        here = args.id in info.get("entries", [])
+        minutes = round((time.time() - info.get("since", time.time())) / 60, 1)
+        print(f"in cycle {info.get('cycle')}: phase {info.get('phase')} ({minutes} min)"
+              + ("; this entry is in the current phase" if here else "; this entry waits for a later phase of this cycle"))
+        return
+    print("unknown id")
 
 
 def status(_args):
@@ -595,6 +647,9 @@ def main():
     w.add_argument("id")
     w.set_defaults(func=wait)
     sub.add_parser("run").set_defaults(func=run)
+    wh = sub.add_parser("where", help="where one entry is")
+    wh.add_argument("id")
+    wh.set_defaults(func=where)
     sub.add_parser("status", help="throughput metrics for the periodic bottleneck check").set_defaults(func=status)
     args = parser.parse_args()
     args.func(args)

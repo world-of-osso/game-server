@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+server-combat = { path = "../server-combat" }
 server-core = { path = "../server-core" }
 server-admin = { path = "../server-admin" }
 server-catalog = { path = "../server-catalog" }
@@ -55,11 +56,11 @@ image = { version = "0.24.9", default-features = false, features = ["png"] }
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 
 [features]
-test-support = ["server-core/test-support", "server-map-rules/test-support", "dep:blake3", "dep:tempfile", "dep:game-engine-core"]
+test-support = ["server-combat/test-support", "server-core/test-support", "server-map-rules/test-support", "dep:blake3", "dep:tempfile", "dep:game-engine-core"]
 # Private debug-peer harness; release builds reject it and deploy never enables it.
-native-proof-hold-persistence = []
+native-proof-hold-persistence = ["server-combat/native-proof-hold-persistence"]
 # Diagnostic: log per-system wall time every 10 s (enables Bevy system spans).
-system-timings = ["bevy/trace", "dep:lightyear_link", "dep:lightyear_transport"]
+system-timings = ["server-combat/system-timings", "bevy/trace", "dep:lightyear_link", "dep:lightyear_transport"]
 
 [[bin]]
 name = "game-server"
@@ -74,6 +75,7 @@ name = "game-server-site-export"
 path = "src/bin/site_export.rs"
 
 [dev-dependencies]
+server-combat = { path = "../server-combat", features = ["test-support"] }
 server-core = { path = "../server-core", features = ["test-support"] }
 server-follower-policy = { path = "../server-follower-policy", features = ["test-support"] }
 server-map-rules = { path = "../server-map-rules", features = ["test-support"] }
