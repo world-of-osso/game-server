@@ -13,7 +13,11 @@ const STOMP: u32 = 1272696;
 const RSK: u32 = 107428;
 
 fn prepare() -> Run {
-    let mut run = super::super::prepare_measurement(269, 1).unwrap();
+    prepare_targets(1)
+}
+
+fn prepare_targets(targets: usize) -> Run {
+    let mut run = super::super::prepare_measurement(269, targets).unwrap();
     let started = run.app.world().resource::<Time>().elapsed();
     super::super::install_fixture_lifetimes(&mut run, started);
     super::super::engage(&mut run);
@@ -38,7 +42,7 @@ fn hits(run: &Run, spell: u32) -> usize {
 }
 
 fn rsk_cooldown(run: &mut Run) -> f64 {
-    let mut rotation = run.windwalker_rotation.take().unwrap();
+    let rotation = run.windwalker_rotation.take().unwrap();
     let action = Action {
         name: "rising_sun_kick".into(),
         target: None,
@@ -165,4 +169,47 @@ fn literal_ww_native_source_children_wdp_uses_native_mastery() {
                 && factor["value"].as_f64().is_some_and(|value| value > 1.0)
         });
     assert!(empowered, "actual WDP damage must include native mastery");
+}
+
+#[test]
+#[ignore = "native RWK uses authored target scaling and divides its actual selected target count"]
+fn literal_ww_native_source_children_rwk_uses_authored_split_multiplier() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_targets(3);
+    run.app.insert_resource(FactorCapture::new(
+        run.actor,
+        run.targets[0],
+        468179,
+        "rwk_split",
+        5,
+    ));
+    super::tests::cast(&mut run, 468179);
+    assert_eq!(hits(&run, 468179), 3, "three actual native cone recipients");
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let world = run.app.world();
+    let root = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(467307)
+        .unwrap();
+    let percent = root
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .base_points;
+    let expected = (1.0 + 3.0 * f64::from(percent) / 100.0) / 3.0;
+    let rows: Vec<_> = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|row| row["event"] == "result")
+        .collect();
+    assert!(!rows.is_empty());
+    for row in rows {
+        let actual = row["factors"]["native_script_product"].as_f64().unwrap();
+        assert!(
+            (actual - expected).abs() < 0.00001,
+            "RWK actual split multiplier={actual}, authored={expected}"
+        );
+    }
 }
