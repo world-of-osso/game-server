@@ -41,6 +41,11 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [x] Native execution preserves the selected action primary separately from the spell's cast unit. A self-target spell must keep its native self cast while forwarding the actual selected hostile primary to child relationships. Preserve that context across queued requests, cast bars and missile snapshots; an absent or unknown context must not select a substitute. Apply the same contract to Player and NPC actors without spell-ID branches, damage multipliers or mutable-target fallbacks. [Proof](../handoffs/hostile-primary-proof-ledger.md).
 
+### Frost literal rotation
+
+- [ ] Spec251 player measurements execute the pinned76f8118 Frost source-order precombat and combat action rows through the shared literal driver, not the follower or assisted priority. Native70448 supplies readiness, resources, spell values and damage; missing mechanics remain separate parity work.
+- [ ] `death_knight.first_ams_cast` honors the profile delay and pinned20s default without inventing incoming damage or Runic Power.
+
 ### Havoc literal rotation
 
 - [x] `SIMC_HAVOC_DEMONIC_TRANSFORMATION`: native Eye Beam198013/Abyssal Gaze452497 with selected213410/spec577 enters native162264 before channel execution, using the live native talent effect0 duration. If the actor already owns live Meta, extend it without resetting effects or tick phase. No resource grant or damage adjustment; unrelated spells do not trigger the relationship.
