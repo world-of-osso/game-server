@@ -413,6 +413,7 @@ pub(super) fn register_class_scripts(
     registry: Res<crate::spell_cast::script_registry::SpellScriptRegistry>,
 ) {
     crate::spell_cast::scripts::register_feral_frenzy(&mut scripts);
+    crate::spell_cast::scripts::register_periodic_counters(&mut scripts);
     scripts.0.insert(
         1236994,
         AuraScript {
@@ -685,6 +686,7 @@ pub(super) fn register_class_scripts(
         crate::spell_cast::scripts::RAPID_FIRE,
         AuraScript {
             on_periodic: Some(crate::spell_cast::scripts::cast_rapid_fire_tick),
+            on_natural_end: Some(crate::spell_cast::scripts::finish_rapid),
             ..Default::default()
         },
     );

@@ -2,12 +2,12 @@
 
 ## Native Warrior execution relationships — 2026-10-25
 
-The [Fury/Warrior contract](../../specs/dps-parity.md#fury-player-parity) is implemented as source-qualified rows, not spell-ID branches in the shared cast engine. Native70448 supplies effects, probabilities, ICDs, resource units and payloads; SimC76f8118 supplies execution boundaries.
+The [Fury/Warrior contract](../../specs/dps-parity.md#fury-player-parity) is implemented as source-qualified scripts, not spell-ID branches in the shared cast engine. Native70448 supplies effects, probabilities, ICDs, resource units and payloads; SimC76f8118 supplies execution boundaries.
 
 - `scripts/foreground_procs.rs` rolls the selected passive through native RPPM timers after an ordinary special execution. The execution-consumer wrapper follows that roll, so Execute can consume its newly earned stack.
 - `scripts/impact_procs.rs` keeps actor-wide PRD attempts and uses `random::accumulated_proc_constant`; `auras::procs::policy_proc_ready` preserves timer ownership. `owns_policy_proc` blocks broad native hints for relationships that own their event predicate.
 - `scripts/execution_counters.rs` runs after native launch for foreground and background casts. It owns execution-count rewards, single-stack consumers and valued child auras; Frenzy reads its native passive value instead of the child's zero catalog points.
-- `scripts/periodic_attacks.rs` reads the paid ordinal captured in each due `Tick`, not the scheduler's final count after catch-up. Children resolve live native action overrides and retain their actual selected primary.
+- `scripts/periodic_attacks.rs` reads the paid ordinal captured in each due `Tick`, not the scheduler's final count after catch-up. Children resolve live native action overrides and retain their actual selected primary. Its `cast_bladestorm_offhand` hook owns50622 effect1 once after a landed main-hand area, only for dual-wielding Fury. That native slot selects SRC_CASTER and has no unit recipient for generic effect64 launch; the hook dispatches the native95738 area once rather than per hit.
 - `server-spell-scripts/src/modules/paid_cooldowns.rs` observes the successful payment vector after `spend_costs`, converts raw units through native `PowerTypeTable`, and reduces only running cooldowns. Later resource gains are not subtracted from the paid amount.
 
 `periodic_attacks::ROLLING_REAPPLICATIONS` stores payload, selected passive and eligible specs. `scripts::rolls_reapplication` selects the [Deep Wounds exception](auras.md#native-rolling-periodic-refresh--2026-10-22) from those rows, independently of the shared cast-policy registry. Neither its budget nor duration rule is inferred for other spells from the native rolling flag alone.

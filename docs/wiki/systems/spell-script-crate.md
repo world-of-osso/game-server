@@ -6,7 +6,7 @@
 
 Each downstream module exports a const `HOOKS` slice. `src/modules.rs` supplies the ordered slice of slices; existing policy additions change only their module. The authoritative lookup and dispatch-order contract is documented once in [`script_registry.rs`](../../../crates/server-combat/src/spell_cast/script_registry.rs). Policy rows retain their original traversal order, including the separated Windwalker groups.
 
-The registry carries static slices and function pointers, not a dependency from combat to script implementations. Iterators copy static registrations out of the resource before callbacks mutate the World. Relationship execution remains in combat; all 35 former `policies.rs` rows live in downstream per-module tables.
+The registry carries static slices and function pointers, not a dependency from combat to script implementations. Iterators copy static registrations out of the resource before callbacks mutate the World. Relationship execution remains in combat; all 37 former `policies.rs` rows live in downstream per-module tables.
 
 ## First slice
 

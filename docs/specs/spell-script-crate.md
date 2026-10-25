@@ -30,7 +30,7 @@
 
 ## Known gaps (current cycle)
 
-- [ ] Move the remaining spell script implementations in later slices; this slice moves all 35 relationship-policy rows and five complete leaf modules.
+- [ ] Move the remaining spell script implementations in later slices; this slice moves all 37 relationship-policy rows and five complete leaf modules.
 
 ## Out of scope
 

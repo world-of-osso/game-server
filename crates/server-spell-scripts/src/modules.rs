@@ -3,6 +3,9 @@
 use super::combat;
 use combat::spell_cast::script_registry::SpellScriptHook;
 
+#[path = "modules/frost.rs"]
+mod frost;
+
 #[path = "modules/after_cast_auras.rs"]
 mod after_cast_auras;
 #[path = "modules/aura_rolls.rs"]
@@ -36,6 +39,7 @@ pub const MODULES: &[&[SpellScriptHook]] = &[
     windwalker_momentum::HOOKS,
     retribution::HOOKS,
     rogue::HOOKS,
+    frost::HOOKS,
     cast_resets::HOOKS,
     after_cast_auras::HOOKS,
     aura_rolls::HOOKS,
