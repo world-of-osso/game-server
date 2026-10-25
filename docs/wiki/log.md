@@ -9,6 +9,10 @@
 
 [Unit display power](systems/auras.md#native-unit-form-display-power--2026-10-24): a Player-only return left actual NPC Cat on Mana and native22568 burn unchanged100→100. The Unit metadata fix preserves resource contents/identity and player synchronization. NPC Cat/burn plus player Cat/caster-NPC controls are qualified within the once-only retained power/shapeshift scope; missing real fixture sidecar failures were corrected and retried alone. [Proof](../handoffs/form-display-power-proof-ledger.md) records203 unique passes, separate check and private input identity; parent gate and numerical Feral parity remain separate.
 
+## 2026-10-24 — Generic aura342 attack timers
+
+[Source/proof and72-spell census](../handoffs/aura342-attack-timers-proof-ledger.md): TC SpellAuraEffects414/4517–4528 changes only BASE/OFF/RANGED clocks. Actual451298 yields3RED16.17s ataae8bb251: cast1106→802ms, Energy17.41→24.01, actual swing reset2.274→1.649 instead of1.42125s. Separate342 attack-time product removes spell/resource haste pollution; ranged shares342 but not melee-only319. Stale Dance level55 haste premise is explicitly corrected, no data/ID exceptions. GREEN/lead gate pending; Momentum separate.
+
 ## 2026-10-24 — Event-time aura proc candidates
 
 - Ret Storm: [source qualification and strict RED contract](../handoffs/ret-storm-gap-proof-ledger.md) separates native Aura361, source406833 resource counter and Second Sunrise/Tempest; tests committed before genuine RED, then generic Aura361 and approved bounded Sunrise runtime GREEN with native amounts/hostile primary/background controls; core hand-order1/retained62melee cases pass; both compiler checks once/PASS/zero warnings, parent full gate separate.

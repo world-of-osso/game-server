@@ -463,7 +463,7 @@ pub(crate) struct CreatureAttackTime(pub f32);
 impl CreatureAttackTime {
     fn modified(self, haste_pct: f32, mods: Option<&AuraStatMods>) -> f32 {
         let slow = mods.map_or(1.0, |mods| {
-            mods.attack_cast_time_mult * mods.attack_time_mult
+            mods.attack_cast_time_mult * mods.attack_time_mult * mods.melee_ranged_attack_time_mult
         });
         self.0 * crate::auras::time_percent_mod(haste_pct) * slow
     }
@@ -990,7 +990,7 @@ impl Attacker<'_> {
     /// authored interval and TC's signed attack-time factors.
     fn swing_time(&self, weapon: &WeaponDamage) -> f32 {
         let slow = self.mods.map_or(1.0, |mods| {
-            mods.attack_cast_time_mult * mods.attack_time_mult
+            mods.attack_cast_time_mult * mods.attack_time_mult * mods.melee_ranged_attack_time_mult
         });
         if self.spirit_wolf.is_some() {
             return weapon.speed / (1.0 + self.haste_pct / 100.0).max(0.01) * slow;

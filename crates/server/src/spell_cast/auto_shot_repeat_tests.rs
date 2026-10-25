@@ -12,6 +12,7 @@ use shared::protocol::{CombatChannel, StopSpellCast};
 use std::ops::RangeInclusive;
 
 const AUTO_SHOT: u32 = 75;
+const MOMENTUM_SPEED: u32 = 451298;
 /// CharacterLoadout158 (Hunter, Purpose0) item: InventoryType26, ItemDelay3000.
 const BEASTSOUL_RIFLE: u32 = 73000;
 /// Native MOD_STUN12 control.
@@ -20,7 +21,13 @@ const HAMMER_OF_JUSTICE: u32 = 853;
 const AUTO_SHOT_RANGE: f32 = 40.0;
 
 fn hunter() -> Harness {
-    let mut h = harness_with(Vec::new(), &[AUTO_SHOT, HAMMER_OF_JUSTICE], 3, true).unwrap();
+    let mut h = harness_with(
+        Vec::new(),
+        &[AUTO_SHOT, HAMMER_OF_JUSTICE, MOMENTUM_SPEED],
+        3,
+        true,
+    )
+    .unwrap();
     let path = crate::test_data::world_db_path();
     h.app
         .world_mut()
@@ -112,6 +119,44 @@ fn class_completeness_native_auto_shot_repeats_at_ranged_weapon_speed() {
         assert!(
             interval.contains(&(pair[1] - pair[0])),
             "ranged cadence {shots:?}"
+        );
+    }
+}
+
+#[test]
+fn class_completeness_native_auto_shot_aura342_changes_only_ranged_attack_time() {
+    let mut h = hunter();
+    let baseline = shot_interval_frames(&h);
+    let haste = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .haste_pct;
+    h.cast(MOMENTUM_SPEED, Some(h.caster));
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        h.caster,
+        MOMENTUM_SPEED
+    ));
+    let after = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .haste_pct;
+    assert_eq!(after, haste, "native342 changes no spell/resource haste");
+    start_auto_shot(&mut h);
+    let shots = shots_over(&mut h, baseline.end() * 2 + 2);
+    assert!(shots.len() >= 3, "actual faster ranged repeats: {shots:?}");
+    let expected = *baseline.end() as f32 / 1.6;
+    for pair in shots.windows(2) {
+        let interval = (pair[1] - pair[0]) as f32;
+        assert!(
+            (interval - expected).abs() <= 1.0,
+            "native60%342 ranged interval={interval}, expected={expected}, shots={shots:?}"
         );
     }
 }
