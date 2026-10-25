@@ -348,12 +348,12 @@ fn fire_producer_combustion_expiry_grants_memory_of_alar_hyperthermia() {
 
 #[test]
 #[ignore = "requires exact Fire63 inputs and private70448 DB"]
-fn fire_hero_precombat_keeps_the_pinned_five_initial_spellfire_spheres() {
+fn fire_hero_precombat_clamps_pinned_initial_spellfire_spheres_to_native_cap() {
     let run = prepare_measurement(63, 1).unwrap();
     assert_eq!(
         stacks(&run, 448604),
-        5,
-        "pinned mage.initial_spellfire_spheres defaults to5"
+        3,
+        "pinned initial5 applications must fill the native3-stack cap"
     );
 }
 
@@ -370,7 +370,7 @@ fn fire_hero_combustion_consumes_codex_spheres() {
             1,
         );
     }
-    assert_eq!(stacks(&run, 448604), 5);
+    assert_eq!(stacks(&run, 448604), 3, "native Sphere stack cap");
     let actor = run.actor;
     start_native(&mut run, 190319, actor);
     assert_eq!(
