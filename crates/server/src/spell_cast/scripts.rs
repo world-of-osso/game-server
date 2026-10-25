@@ -26,6 +26,8 @@ mod batch8;
 mod batch9;
 mod cast_grants;
 mod cast_resets;
+mod foreground_procs;
+pub(super) use foreground_procs::after_foreground_special;
 mod chrono_flame;
 mod clearcasting;
 mod echo_policies;
