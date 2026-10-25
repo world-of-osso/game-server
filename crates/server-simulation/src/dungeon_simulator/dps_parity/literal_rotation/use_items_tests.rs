@@ -37,6 +37,7 @@ fn run_use_items_case(rows: &[(&str, &str)], expected_slot: Option<usize>) {
     .unwrap();
     for slot in ["trinket1", "trinket2"] {
         let explicit = Action {
+            source_row: None,
             name: "use_item".into(),
             target: None,
             options: [("slot".into(), slot.into())].into(),

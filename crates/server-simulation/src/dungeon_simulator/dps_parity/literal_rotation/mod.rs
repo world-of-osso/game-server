@@ -1,4 +1,8 @@
 //! Shared native fixture machinery; source rows and spec facts belong to adapters.
+mod channel;
+#[cfg(test)]
+mod channel_tests;
+pub(crate) use channel::Decision as ChannelDecision;
 #[cfg(test)]
 mod composite_tests;
 pub(crate) mod default_pet;
@@ -58,6 +62,10 @@ pub(crate) struct Driver {
     precombat_harmful_executed: bool,
     pub snapshot: Option<Value>,
     cancellation: Option<(Action, Expression, u32)>,
+    line_ready_at: std::collections::BTreeMap<usize, f64>,
+    pending_line: Option<(usize, f64)>,
+    selected_list: String,
+    channel: Option<channel::Channel>,
     pub decisions: u64,
 }
 
@@ -72,6 +80,10 @@ impl Driver {
             precombat_harmful_executed: false,
             snapshot: None,
             cancellation: None,
+            line_ready_at: Default::default(),
+            pending_line: None,
+            selected_list: String::new(),
+            channel: None,
             decisions: 0,
         }
     }
@@ -116,11 +128,14 @@ impl Driver {
         };
         let facts: &dyn ActionFacts = &item_context;
         let mut usable = |action: &Action| {
-            Ok(prepared.permits_row(action)?
-                && facts.target_ready(action)?
-                && prepared
-                    .execution_in(action, equipment, &self.program)?
-                    .is_some())
+            candidate_ready(
+                action,
+                facts,
+                prepared,
+                equipment,
+                &self.program,
+                &self.line_ready_at,
+            )
         };
         let action = if list == "precombat" {
             self.program.select_next(
@@ -140,6 +155,8 @@ impl Driver {
         let execution = prepared
             .execution_in(&action, equipment, &self.program)?
             .ok_or("selected literal action lost native readiness")?;
+        self.pending_line = line_deadline(&action, facts)?;
+        self.selected_list = list.into();
         Ok(Some((action, execution)))
     }
 
@@ -162,10 +179,21 @@ impl Driver {
         } else {
             None
         };
+        let channel_action = if let Execution::Spell(spell, _, _) = &execution {
+            channel::Channel::read(&action, *spell, &self.selected_list)?
+        } else {
+            None
+        };
         if matches!(execution, Execution::Snapshot) {
             self.snapshot = Some(super::report::stats(world, actor));
         } else {
             execution::execute(world, actor, execution)?;
+        }
+        if let Some((row, deadline)) = self.pending_line.take() {
+            self.line_ready_at.insert(row, deadline);
+        }
+        if channel_action.is_some() {
+            self.channel = channel_action;
         }
         if cancellation.is_some() {
             self.cancellation = cancellation;
@@ -205,7 +233,7 @@ fn harmful_execution(world: &World, execution: &Execution) -> Result<bool, Strin
         Execution::Composite(_) => {
             return Err("composite precombat requires a clock-aware executor".into());
         }
-        Execution::Snapshot => return Ok(false),
+        Execution::Snapshot | Execution::CancelCast => return Ok(false),
         Execution::AutoAttack(_) | Execution::RetargetAutoAttack(_) => return Ok(true),
         Execution::Spell(id, _, _) => *id,
         Execution::Item(item, _) => item.on_use.spell_id,
@@ -215,6 +243,48 @@ fn harmful_execution(world: &World, execution: &Execution) -> Result<bool, Strin
         .get(id)
         .ok_or_else(|| format!("native precombat spell{id} missing"))?;
     Ok(crate::spell_info::positivity::negative_effects(store, spell) != 0)
+}
+
+fn candidate_ready(
+    action: &Action,
+    facts: &dyn ActionFacts,
+    prepared: &Prepared,
+    equipment: &Equipment,
+    program: &Program,
+    deadlines: &std::collections::BTreeMap<usize, f64>,
+) -> Result<bool, String> {
+    Ok(line_ready(action, facts, deadlines)?
+        && prepared.permits_row(action)?
+        && facts.target_ready(action)?
+        && prepared.execution_in(action, equipment, program)?.is_some())
+}
+
+fn line_ready(
+    action: &Action,
+    facts: &dyn ActionFacts,
+    deadlines: &std::collections::BTreeMap<usize, f64>,
+) -> Result<bool, String> {
+    let Some(row) = action.source_row else {
+        return Ok(true);
+    };
+    let Some(deadline) = deadlines.get(&row) else {
+        return Ok(true);
+    };
+    Ok(facts.value_for(action, "time")? >= *deadline)
+}
+
+fn line_deadline(action: &Action, facts: &dyn ActionFacts) -> Result<Option<(usize, f64)>, String> {
+    let Some(value) = action.options.get("line_cd") else {
+        return Ok(None);
+    };
+    let row = action.source_row.ok_or("line_cd requires a source row")?;
+    // SimC76f8118 action.cpp85/567/2610: line_cooldown belongs to this action object,
+    // not its spell cooldown, another identical row, or its target.
+    let seconds = Expression::parse(value)?.evaluate(&BoundAction { facts, action })?;
+    if !seconds.is_finite() || seconds < 0.0 {
+        return Err("line_cd must be finite and nonnegative".into());
+    }
+    Ok(Some((row, facts.value_for(action, "time")? + seconds)))
 }
 
 struct BoundAction<'a> {

@@ -48,12 +48,14 @@ fn native_apl_bare_ticking_uses_proposed_action_and_owned_target() {
     let facts = NativeFacts::new(h.app.world(), h.caster, &bindings, encounter(), 2)
         .with_targets(Some(h.npc), &targets);
     let action = Action {
+        source_row: None,
         name: "rend".into(),
         target: None,
         options: Default::default(),
     };
     assert_eq!(facts.value_for(&action, "ticking").unwrap(), 1.0);
     let secondary = Action {
+        source_row: None,
         target: Some(other.to_bits()),
         ..action
     };
