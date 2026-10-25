@@ -4,7 +4,7 @@ use shared::components::{ActiveSpec, PowerType};
 
 use super::AfterCastHook;
 use crate::auras::ActiveAuras;
-use crate::class_progression::TraitLoadout;
+use crate::class_progression::KnownSpells;
 use crate::spell_cast::{CostPool, TargetPlan, effects::EffectCtx, targets};
 use crate::spell_info::{CastPolicyContext, SpellInfo, SpellStore};
 
@@ -20,6 +20,24 @@ struct ChannelMomentum {
 #[derive(Clone, Copy)]
 enum Relationship {
     ChannelMomentum(ChannelMomentum),
+    ReapplicationExtend {
+        payload: u32,
+    },
+    LinkedAura {
+        parent: u32,
+        payload: u32,
+    },
+    CastEcho {
+        parent: u32,
+        payload: u32,
+        required_auras: &'static [u32],
+        effectiveness_effect: u8,
+    },
+    SecondaryEffect {
+        parent: u32,
+        effect: u8,
+        cap_effect: u8,
+    },
     HitPayload {
         parent: u32,
         payload: u32,
@@ -61,6 +79,91 @@ const POLICIES: &[Policy] = &[
             speed: 451298,
             haste_effect: 0,
         }),
+    },
+    // SimC76f8118 sc_paladin.cpp3016–3026: DOT_EXTEND;
+    // source note: "per bolas test Aug 21 2024". Native duration/phase stay owned.
+    Policy {
+        name: "SIMC_RET_DAWNLIGHT_REAPPLICATION_EXTEND",
+        spec: 70,
+        talent: 431377,
+        relationship: Relationship::ReapplicationExtend { payload: 431380 },
+    },
+    // SimC76f8118 sc_paladin.cpp314–315: Hammer mode follows wings.
+    Policy {
+        name: "SIMC_RET_WRATH_HAMMER_MODE",
+        spec: 70,
+        talent: 1241288,
+        relationship: Relationship::LinkedAura {
+            parent: 31884,
+            payload: 1277026,
+        },
+    },
+    Policy {
+        name: "SIMC_RET_BACKGROUND_WRATH_HAMMER_MODE",
+        spec: 70,
+        talent: 1241288,
+        relationship: Relationship::LinkedAura {
+            parent: 454351,
+            payload: 1277026,
+        },
+    },
+    // SimC76f8118 sc_paladin.cpp1745–1748; Ret1126–1127:
+    // HoW during wings mirrors BoJ at native talent effectiveness and ICD.
+    Policy {
+        name: "SIMC_RET_WALK_INTO_LIGHT",
+        spec: 70,
+        talent: 1263782,
+        relationship: Relationship::CastEcho {
+            parent: 24275,
+            payload: 184575,
+            required_auras: &[31884, 454351],
+            effectiveness_effect: 2,
+        },
+    },
+    Policy {
+        name: "SIMC_RET_TOLL_WALK_INTO_LIGHT",
+        spec: 70,
+        talent: 1263782,
+        relationship: Relationship::CastEcho {
+            parent: 1279408,
+            payload: 184575,
+            required_auras: &[31884, 454351],
+            effectiveness_effect: 2,
+        },
+    },
+    // SimC76f8118 sc_paladin.cpp1481–1486,1550–1564,1689–1698:
+    // primary uses effect1; Blessed Champion adds only secondary recipients.
+    Policy {
+        name: "SIMC_RET_JUDGMENT_SECONDARIES",
+        spec: 70,
+        talent: 403010,
+        relationship: Relationship::SecondaryEffect {
+            parent: 20271,
+            effect: 2,
+            cap_effect: 0,
+        },
+    },
+    Policy {
+        name: "SIMC_RET_HAMMER_SECONDARIES",
+        spec: 70,
+        talent: 403010,
+        relationship: Relationship::SecondaryEffect {
+            parent: 24275,
+            effect: 2,
+            cap_effect: 3,
+        },
+    },
+    // SimC76f8118 sc_paladin.cpp1502–1521,1580–1590: Toll Judgment earns HP.
+    Policy {
+        name: "SIMC_RET_TOLL_JUDGMENT_HOLY_POWER",
+        spec: 70,
+        talent: 315867,
+        relationship: Relationship::HitPayload {
+            parent: 406957,
+            payload: 220637,
+            self_target: true,
+            primary_only: true,
+        },
     },
     // SimC76f8118 sc_paladin.cpp888–916: each successful primary strike
     // grants the native406834 effect0, independently of the old stack counter.
@@ -209,7 +312,184 @@ fn end_channel_policy(
     }
 }
 
-fn hit_resources(parent: u32) -> impl Iterator<Item = &'static Policy> {
+pub(crate) fn extends_reapplication(world: &World, caster: Entity, payload: u32) -> bool {
+    POLICIES.iter().any(|policy| {
+        let matches_payload = matches!(policy.relationship,
+            Relationship::ReapplicationExtend { payload: id } if id == payload);
+        matches_payload && selected(world, caster, policy)
+    })
+}
+
+pub(crate) fn register_lifecycle_policies(scripts: &mut crate::auras::scripts::AuraScripts) {
+    for policy in POLICIES {
+        if let Relationship::LinkedAura { parent, .. } = policy.relationship {
+            scripts.0.insert(
+                parent,
+                crate::auras::scripts::AuraScript {
+                    on_apply: Some(apply_linked_aura),
+                    on_remove: Some(remove_linked_aura),
+                    ..Default::default()
+                },
+            );
+        }
+    }
+}
+
+fn apply_linked_aura(world: &mut World, unit: Entity, aura: &crate::auras::AuraInstance) {
+    for policy in POLICIES {
+        let Relationship::LinkedAura { parent, payload } = policy.relationship else {
+            continue;
+        };
+        if parent == aura.spell_id && selected(world, unit, policy) {
+            let depth = super::super::next_trigger_depth(world);
+            super::super::cast_triggered(world, unit, payload, Some(unit), depth);
+        }
+    }
+}
+
+fn remove_linked_aura(
+    world: &mut World,
+    unit: Entity,
+    aura: &crate::auras::AuraInstance,
+    reason: crate::auras::RemoveReason,
+) {
+    for policy in POLICIES {
+        let Relationship::LinkedAura { parent, payload } = policy.relationship else {
+            continue;
+        };
+        if parent == aura.spell_id {
+            crate::auras::remove_auras(world, unit, reason, |child| {
+                child.spell_id == payload && child.caster == aura.caster
+            });
+        }
+    }
+}
+
+pub(crate) fn filter_secondary_targets(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: u8,
+    primary: Option<Entity>,
+    units: &mut Vec<Entity>,
+) {
+    for policy in POLICIES {
+        let Relationship::SecondaryEffect {
+            parent,
+            effect: index,
+            cap_effect,
+        } = policy.relationship
+        else {
+            continue;
+        };
+        if parent != spell.id || index != effect {
+            continue;
+        }
+        filter_policy_secondaries(world, caster, policy, cap_effect, primary, units);
+    }
+}
+
+fn filter_policy_secondaries(
+    world: &World,
+    caster: Entity,
+    policy: &Policy,
+    cap_effect: u8,
+    primary: Option<Entity>,
+    units: &mut Vec<Entity>,
+) {
+    if !selected(world, caster, policy) {
+        units.clear();
+        return;
+    }
+    units.retain(|unit| Some(*unit) != primary);
+    let cap = super::script_effect_value(world, caster, policy.talent, cap_effect);
+    if !cap.is_finite() || cap < 0.0 {
+        warn!(
+            policy = policy.name,
+            cap, "Native secondary target cap invalid"
+        );
+        units.clear();
+        return;
+    }
+    units.truncate(cap as usize);
+}
+
+fn cast_echo(world: &mut World, caster: Entity, spell: &SpellInfo, policy: &Policy) {
+    let Relationship::CastEcho {
+        payload,
+        required_auras,
+        effectiveness_effect,
+        ..
+    } = policy.relationship
+    else {
+        return;
+    };
+    let Some(target) = spell.cast_primary_target else {
+        warn!(policy = policy.name, "Native cast echo primary unavailable");
+        return;
+    };
+    if !try_echo_proc(world, caster, policy, required_auras) {
+        return;
+    }
+    let effectiveness =
+        super::script_effect_value(world, caster, policy.talent, effectiveness_effect);
+    launch_scaled_payload(world, caster, target, policy, payload, effectiveness);
+}
+
+fn try_echo_proc(
+    world: &mut World,
+    caster: Entity,
+    policy: &Policy,
+    required_auras: &[u32],
+) -> bool {
+    if !required_auras
+        .iter()
+        .any(|id| crate::auras::has_aura(world, caster, *id))
+    {
+        return false;
+    }
+    let Some(instance) = world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == policy.talent))
+        .map(|aura| aura.instance_id)
+    else {
+        return false;
+    };
+    crate::auras::procs::try_policy_proc(world, caster, instance, 100.0)
+}
+
+fn launch_scaled_payload(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    policy: &Policy,
+    payload: u32,
+    effectiveness: f32,
+) {
+    let depth = super::super::next_trigger_depth(world);
+    let Some(mut child) = super::super::load_triggered_spell(world, payload, depth) else {
+        return;
+    };
+    child.cast_damage_multiplier = Some(effectiveness / 100.0);
+    if !super::super::launch_triggered_spell(world, caster, &child, Some(target), depth) {
+        warn!(
+            policy = policy.name,
+            ?caster,
+            ?target,
+            "Native cast echo refused"
+        );
+    }
+}
+
+// CastEcho owns its source event predicate and the native shared ICD. Raw
+// CAST_SUCCESSFUL hints must not consume that ICD on unrelated/self phases.
+pub(crate) fn owns_policy_proc(spell: u32) -> bool {
+    POLICIES.iter().any(|policy| {
+        policy.talent == spell && matches!(policy.relationship, Relationship::CastEcho { .. })
+    })
+}
+
+fn hit_payloads(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
         matches!(policy.relationship,
             Relationship::HitPayload { parent: id, .. } if id == parent)
@@ -217,16 +497,16 @@ fn hit_resources(parent: u32) -> impl Iterator<Item = &'static Policy> {
 }
 
 pub(super) fn hit_hook(parent: u32) -> Option<super::ContextHitHook> {
-    hit_resources(parent)
+    hit_payloads(parent)
         .next()
         .map(|_| cast_hit_payload as super::ContextHitHook)
 }
 
 fn cast_hit_payload(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
-    let primary = super::super::resolving_targets(world, ctx)
-        .and_then(|targets| targets.first())
-        .copied();
-    for policy in hit_resources(ctx.spell.id) {
+    // Self auras can resolve before a hostile missile; that local phase's
+    // first TargetInfo is not the original action primary.
+    let primary = ctx.spell.cast_primary_target;
+    for policy in hit_payloads(ctx.spell.id) {
         let Relationship::HitPayload {
             payload,
             self_target,
@@ -247,7 +527,8 @@ fn cast_hit_payload(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
 fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
         matches!(policy.relationship,
-        Relationship::CounterAfterCast { parent: trigger, .. } if trigger == parent)
+        Relationship::CounterAfterCast { parent: trigger, .. }
+        | Relationship::CastEcho { parent: trigger, .. } if trigger == parent)
     })
 }
 
@@ -268,18 +549,22 @@ fn selected(world: &World, caster: Entity, policy: &Policy) -> bool {
     let correct_spec = world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == policy.spec);
-    let owns_talent = world.get::<TraitLoadout>(caster).is_some_and(|talents| {
-        talents
-            .active_talent_spells()
-            .any(|spell| spell.spell_id == policy.talent)
-    });
+    // Learned native abilities include specialization grants as well as selected traits.
+    let owns_talent = world
+        .get::<KnownSpells>(caster)
+        .is_some_and(|known| known.contains(policy.talent));
     correct_spec && owns_talent
 }
 
 fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     for policy in producers(spell.id) {
-        if selected(world, caster, policy) {
-            grant_counter(world, caster, policy);
+        if !selected(world, caster, policy) {
+            continue;
+        }
+        match policy.relationship {
+            Relationship::CounterAfterCast { .. } => grant_counter(world, caster, policy),
+            Relationship::CastEcho { .. } => cast_echo(world, caster, spell, policy),
+            _ => unreachable!("after-cast policy iterator"),
         }
     }
 }

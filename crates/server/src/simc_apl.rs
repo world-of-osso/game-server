@@ -89,6 +89,8 @@ impl Expression {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Action {
+    /// Stable source-row identity, independent of selected target and action options.
+    pub source_row: Option<usize>,
     pub name: String,
     /// Selected native target identity; None leaves the caller's current target unchanged.
     pub target: Option<u64>,

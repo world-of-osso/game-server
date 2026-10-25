@@ -1778,6 +1778,7 @@ enum StartCheck {
     Native,
     ResourceMax(PowerType),
     IgnoreCastInProgress,
+    ChannelDecision,
     TankHealCapability,
     HealerDecision,
 }
@@ -1805,6 +1806,24 @@ pub fn read_native_cast_start(
     target: Entity,
 ) -> Result<Option<Entity>, CastFailure> {
     validate_start(world, caster, spell, Some(target), false)
+}
+
+/// SimC76f8118 dot.cpp732/984–990: ask whether an action is ready after
+/// stopping the channel. Only the current cast and GCD vetoes are omitted;
+/// resources, cooldowns, charges, target admission and native state remain live.
+pub fn read_native_cast_after_channel(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+) -> Result<Option<Entity>, CastFailure> {
+    validate_start_with_policy(
+        world,
+        caster,
+        spell,
+        Some(target),
+        StartCheck::ChannelDecision,
+    )
 }
 
 /// Read ordinary native admission using only the chosen pool's maximum in the
@@ -2057,7 +2076,10 @@ fn permits_transient_gcd(
     check: StartCheck,
     ready_at: f64,
 ) -> bool {
-    if check == StartCheck::HealerDecision {
+    if matches!(
+        check,
+        StartCheck::HealerDecision | StartCheck::ChannelDecision
+    ) {
         return true;
     }
     if check != StartCheck::TankHealCapability {
@@ -2882,6 +2904,7 @@ fn plan_targets(
                 }
             };
         effects::retain_threat_level_targets(world, spell, effect, &mut units);
+        scripts::filter_secondary_targets(world, caster, spell, effect.index, explicit, &mut units);
         if let Some(filter) = scripts::area_target_filter(spell.id, effect.index) {
             filter(world, spell, explicit, &mut units);
         }
@@ -3489,6 +3512,8 @@ pub(super) fn cast_triggered_with_item_level(
 #[derive(Default)]
 pub(crate) struct TriggeredSpellOverrides {
     pub effect0_amount: Option<f32>,
+    pub item_level: Option<u16>,
+    pub effect_mask: Option<u32>,
     pub aura_stacks: Option<u8>,
     pub original_caster: Option<Entity>,
     /// Authored background-action lifetime, e.g. native Whirling Blade's amount.
@@ -3508,6 +3533,12 @@ pub(crate) fn cast_triggered_with_overrides(
     };
     spell.cast_aura_stacks = values.aura_stacks;
     spell.cast_original_caster = values.original_caster;
+    spell.cast_item_level = values.item_level;
+    if let Some(mask) = values.effect_mask {
+        spell
+            .effects
+            .retain(|effect| mask & (1 << effect.index) != 0);
+    }
     if let Some(milliseconds) = values.duration_ms {
         let Some(duration) = spell.misc.as_mut().and_then(|misc| misc.duration.as_mut()) else {
             warn!("Triggered spell {spell_id} skipped: duration override has no native duration");

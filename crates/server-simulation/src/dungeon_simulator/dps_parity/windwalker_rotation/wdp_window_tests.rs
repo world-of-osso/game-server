@@ -8,6 +8,7 @@ type Run = super::super::Run;
 
 fn action() -> Action {
     Action {
+        source_row: None,
         name: "whirling_dragon_punch".into(),
         target: None,
         options: Default::default(),

@@ -441,7 +441,7 @@ fn scales_with_spell_damage(effect: &SpellEffect) -> bool {
 /// `SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS`. Item-level spells instead
 /// use RandPropPoints at the casting item's effective level. Not modelled:
 /// the target's level of `SPELL_ATTR8_USE_TARGETS_LEVEL_FOR_SPELL_SCALING` and the casting item's
-/// level multipliers of classes -6 and -7.
+/// level multiplier of class -6.
 fn calc_base_value(world: &World, caster: Entity, spell: &SpellInfo, effect: &SpellEffect) -> f32 {
     let attribute = |index: usize| spell.misc.as_ref().map_or(0, |misc| misc.attributes[index]);
     let level = world
@@ -496,7 +496,12 @@ fn item_spell_scaling_value(world: &World, spell: &SpellInfo, effect: &SpellEffe
         -9 => 1,
         _ => 2,
     };
-    let value = row[column] * effect.coefficient;
+    let mut value = row[column] * effect.coefficient;
+    if effect.scaling_class == -7 {
+        // SimC76f8118 spell_data.cpp424–441: special scale7 applies the native
+        // trinket combat-rating multiplier to its item budget before rounding.
+        value *= tables.rating_multiplier[usize::from(level) - 1][2];
+    }
     if value > 0.0 && value < 1.0 {
         1.0
     } else {
@@ -779,12 +784,9 @@ fn weapon_hit(world: &World, caster: Entity, normalized: bool) -> f32 {
     let weapon = world
         .get::<CharacterStats>(caster)
         .map_or(WeaponDamage::UNARMED, |stats| stats.main_hand);
-    let speed = if normalized {
-        weapon.kind.normalized_speed()
-    } else {
-        weapon.speed
-    };
-    let roll = weapon.min + rand::random::<f32>() * (weapon.max - weapon.min);
+    let form = crate::auras::shapeshift::attack_timing(world, caster);
+    let (minimum, maximum, speed) = crate::melee::weapon_damage_terms(&weapon, normalized, form);
+    let roll = minimum + rand::random::<f32>() * (maximum - minimum);
     roll + attack_power / crate::melee::ATTACK_POWER_PER_DPS * speed
 }
 
@@ -2585,10 +2587,27 @@ fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     };
     spell.cast_destination = ctx.spell.cast_destination;
     spell.cast_item_level = ctx.spell.cast_item_level;
-    // SimC76f8118 sc_demon_hunter.cpp: Annihilation's child strikes retain
-    // the selected enemy even though the native parent casts on self.
-    spell.cast_primary_target = ctx.primary_target();
-    super::launch_triggered_spell(world, ctx.caster, &spell, Some(target), depth);
+    let target = trigger_recipient(ctx, &spell, target);
+    super::launch_triggered_spell(world, ctx.caster, &spell, target, depth);
+}
+
+pub(super) fn trigger_recipient(
+    ctx: &EffectCtx,
+    child: &SpellInfo,
+    target: Entity,
+) -> Option<Entity> {
+    // SimC76f8118 sc_demon_hunter.cpp7588–7591 retains the parent's enemy
+    // for both strikes. TC a352b1fa SpellEffects.cpp680–683 uses the original
+    // cast unit on the launch path, not the self recipient of the trigger effect.
+    let needs_enemy = matches!(
+        super::targets::explicit_requirement(child.effects.iter()),
+        Some(super::targets::Relation::Enemy)
+    );
+    if target == ctx.caster && needs_enemy {
+        ctx.primary_target()
+    } else {
+        Some(target)
+    }
 }
 
 /// 140 FORCE_CAST (`Spell::EffectForceCast`, SpellEffects.cpp:791-849): the target casts

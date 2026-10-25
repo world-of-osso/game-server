@@ -42,7 +42,10 @@ fn cast_tigers_fury(h: &mut Harness, actor: Entity) {
 fn generic_proc_definition_refuses_unsourced_savage_fury() {
     let _seed = crate::random::seed_scope(70448);
     let (mut h, actor) = fixture(449645, false);
-    assert!(!crate::auras::has_aura(h.app.world(), actor, 449646));
+    assert!(
+        !crate::auras::has_aura(h.app.world(), actor, 449646),
+        "unsafe generated449645 must not proc during native bootstrap either"
+    );
     cast_tigers_fury(&mut h, actor);
     assert!(crate::auras::has_aura(h.app.world(), actor, 5217));
     assert!(crate::auras::has_aura(h.app.world(), actor, 449645));
@@ -83,8 +86,16 @@ fn generic_proc_definition_preserves_explicit_infected_wounds() {
 #[ignore = "native private DB: generated391875 has authored100ms ICD and remains eligible"]
 fn generic_proc_definition_preserves_generated_frantic_momentum() {
     let _seed = crate::random::seed_scope(70448);
-    let (mut h, actor) = fixture(391875, false);
-    assert!(!crate::auras::has_aura(h.app.world(), actor, 391876));
-    cast_tigers_fury(&mut h, actor);
-    assert!(crate::auras::has_aura(h.app.world(), actor, 391876));
+    let (h, actor) = fixture(391875, false);
+    assert!(
+        !h.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap()
+            .contains(391876)
+    );
+    assert!(
+        crate::auras::has_aura(h.app.world(), actor, 391876),
+        "legitimate generated391875 must still proc from real native bootstrap casts"
+    );
 }
