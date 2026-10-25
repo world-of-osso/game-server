@@ -23,8 +23,8 @@ Receipts: `game-engine/data/diagnostics/feral-parity-2026-10-23/ft1083-reconcile
 | Command/scope | Revision | Result | Later invalidation |
 |---|---|---|---|
 | Requested combined native check: `-p server -p server-simulation -p server-spell-tests --tests -j 2` | Merge `ef720fd8b0d85d989501c0a50c5bfbfd2ec2f2c5` | Ran once after capacity admission; exit 101, 499.14s. Five caller diagnostics refer to the same private `execution::resolve_action` import | Visibility fixed in `2d0bc79c8`; retain the failed receipt, do not call it a passing final check |
-| Targeted native `cargo test` through the build helper, all three packages, `--lib -j 2`, six filters, `--include-ignored --nocapture --test-threads=1` | `2d0bc79c8bac07770e0e5545f26fac52a794d1c5` | Exit 0; 36 passed, none failed/ignored. Cold compile 51m41s; total 3,181.43s; no compiler warnings | Subsequent changes are documentation only |
-| `cargo fmt --all --check` | `2d0bc79c8bac07770e0e5545f26fac52a794d1c5` | Exit 0 | Subsequent changes are documentation only |
+| Targeted native `cargo test` through the build helper, all three packages, `--lib -j 2`, six filters, `--include-ignored --nocapture --test-threads=1` | `2d0bc79c8bac07770e0e5545f26fac52a794d1c5` | Exit 0; 36 passed, none failed/ignored. Cold compile 51m41s; total 3,181.43s; no compiler warnings | Valid through ledger-only `3fec675b9`; later master merge requires a new integration gate |
+| `cargo fmt --all --check` | `2d0bc79c8bac07770e0e5545f26fac52a794d1c5` | Exit 0 | Valid through ledger-only `3fec675b9`; later master merge requires new proof |
 
 The visibility correction is a `pub(crate)` re-export of the same core resolver, not a restored wrapper. The requested broad check was not repeated. The targeted command compiled and linked all three library test targets, including the formerly failing Ret/WDP callers. This is not a new passing `--tests` check covering every target kind. See `check.proof.json`, `tests.proof.json`, retained stdout/stderr, and `fmt.final.proof.json`.
 
@@ -42,4 +42,16 @@ All 33 historical target cases now have current proof, plus three relocated cons
 
 ## Limits
 
-No full 300-second Feral ST/3T run, numerical parity, new native mechanic, deployment or push is claimed. The literal development branch still requires explicit parent landing/consumption notices for `bf1102` and `fp1104`.
+No full 300-second Feral ST/3T run, numerical parity, new native mechanic, deployment or push is claimed. `bf1102` subsequently landed and is included through the exact master merge below. Literal native-pool qualification still requires the parent-owned `fp1104` landing notice.
+
+## fr1108 loader gate repair
+
+Parent reported that `fr1108` did not land: both successful-load aura-restriction tests fail with `no such table: tdb_spell_proc`, including an isolated rerun. The failed full gate is not a ready/green claim; other failures in that log remain outside this assigned repair.
+
+Merged exact `a804452eb5be0c2665e33d83a525a23e7f34678e` as `44dc0b1abc1646b60b36ec1f4d3e94a3635d1df4`; only two wiki conflicts required resolution, preserving both sides. `origin/master` had advanced at inspection; the requested exact revision was used. Frozen `e4b269947` is untouched.
+
+The four restriction-loader cases reproduced at `44dc0b1ab`: **2 failed / 2 passed**, exit 101, 2,420.73s including cold single-package compilation (tests 0.03s). Both failures are the same missing TC source table; malformed/absent restriction-table controls passed. Receipts: `game-engine/data/diagnostics/feral-parity-2026-10-23/fr1108-loader/red.{proof.json,stdout.log,stderr.log}`.
+
+Root cause: `open_spell_database` applied only the DB2 schema, but production `load_spell_store` now also requires audited TC proc-source presence. The DB2 importer must not own TC tables. Repair the in-memory fixture constructor with an explicitly empty `tdb_spell_proc(SpellId PRIMARY KEY)` table; no proc rows are invented. Other direct loader fixtures were inspected: immunity tests attach the native database, where SQLite resolves the TC table; teleport fixtures load their separate position adapter rather than `load_spell_store`. Neither requires this fix.
+
+A new missing-proc-source control drops that table and requires the production loader to return its source-table error. Runtime loading remains strict: no fallback, schema migration, database publication or gameplay change. Targeted five-case GREEN qualification is pending. Parent owns the re-gate and push.
