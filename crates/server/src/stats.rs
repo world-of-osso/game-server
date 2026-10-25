@@ -42,6 +42,8 @@ pub struct EquippedItemModifiers {
     pub items: Vec<(EquipmentSlot, server::item_instance::ItemInstanceModifiers)>,
     /// Profile-declared allocation donors; equipped identities/effects remain original.
     pub base_stat_redirects: Vec<(EquipmentSlot, u32)>,
+    /// Temporary native enchants coexist with the permanent instance enchant.
+    pub temporary_enchants: Vec<(EquipmentSlot, u32)>,
 }
 
 #[derive(Resource, Default)]
@@ -82,6 +84,8 @@ pub struct StatModifiers {
     pub attack_power_from_sp_pct: Option<f32>,
     pub crit_pct: f32,
     pub haste_pct: f32,
+    /// Independent percentage multiplying total haste after rating/additive bonuses.
+    pub haste_total_pct: f32,
     pub mastery_points: f32,
     pub versatility_pct: f32,
     pub max_health_pct: f32,
@@ -493,7 +497,7 @@ fn apply_rating_conversions(
     }
 }
 
-fn add_rating_bonus(ratings: &mut CombatRatings, target: u32, bonus: f32) {
+pub(crate) fn add_rating_bonus(ratings: &mut CombatRatings, target: u32, bonus: f32) {
     for (mask, value) in rating_fields(ratings) {
         if target & mask != 0 {
             *value += bonus;
@@ -592,6 +596,9 @@ pub fn compute_character_stats(
     };
     // TC StatSystem.cpp549–559: aura318 supplies the base; rating adds points.
     let mastery_points = rating_value(ratings.mastery, MASTERY_RATING[level]) + mods.mastery_points;
+    let base_haste_pct = rating_value(ratings.haste, HASTE_RATING[level]) + mods.haste_pct;
+    // SimC76f8118 sc_paladin.cpp4617–4618/4647–4648: Crusade multiplies haste.
+    let haste_pct = base_haste_pct + (100.0 + base_haste_pct) * mods.haste_total_pct / 100.0;
     Some(CharacterStats {
         primary,
         ratings,
@@ -612,7 +619,7 @@ pub fn compute_character_stats(
         ranged_attack_power,
         weapon_attack_power: WeaponAttackPower::default(),
         crit_pct: BASE_CRIT_PCT + rating_value(ratings.crit, CRIT_RATING[level]) + mods.crit_pct,
-        haste_pct: rating_value(ratings.haste, HASTE_RATING[level]) + mods.haste_pct,
+        haste_pct,
         mastery_pct: mastery_points * input.mastery_coefficient,
         mastery_points,
         versatility_pct: rating_value(ratings.versatility, VERSATILITY_RATING[level])
@@ -854,6 +861,23 @@ impl ItemData<'_> {
         let stats_template = self.read_stat_template(template, source, modifiers, slot);
         let (stats, weapon_ap) = self.equipped_stats(&stats_template, source, properties, level);
         gear.apply_item(slot, template, stats, weapon_ap);
+        if let Some(modifiers) = modifiers {
+            for &(_, enchant) in modifiers
+                .temporary_enchants
+                .iter()
+                .filter(|(key, _)| *key == slot)
+            {
+                let tables = &self
+                    .instances
+                    .as_deref()
+                    .expect("native temporary enchant tables")
+                    .enchants;
+                let contribution =
+                    server::item_instance::enchants::enchantment_stats(enchant, level, tables)
+                        .unwrap_or_else(|error| panic!("temporary enchant{enchant}: {error}"));
+                gear.blocks.push(contribution.stats);
+            }
+        }
     }
 
     fn read_stat_template(
@@ -1114,6 +1138,9 @@ pub(crate) fn update_character_stats(
     spells: Option<Res<SpellStore>>,
     items: ItemData,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
+    #[cfg(any(test, feature = "test-support"))] reference_races: Query<
+        &crate::test_support::ReferenceRace,
+    >,
 ) {
     for (
         entity,
@@ -1136,6 +1163,10 @@ pub(crate) fn update_character_stats(
         let Some((class_id, race, spec_id)) = stat_identity(player, follower, spec) else {
             continue;
         };
+        #[cfg(any(test, feature = "test-support"))]
+        let race = reference_races
+            .get(entity)
+            .map_or(race, |identity| identity.0);
         let class = class_info(classes.as_deref(), class_id);
         let (primary_stat, mastery_coefficient) = spec_inputs(class, spec_id, spells.as_deref());
         let gear = items.gear(equipped, instance_modifiers, level.0);

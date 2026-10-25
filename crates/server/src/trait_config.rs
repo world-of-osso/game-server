@@ -129,25 +129,85 @@ pub fn build_config(
 
 /// SIMC_PARITY_ALLOCATIONS: pinned player.cpp2696–2860 decodes allocations
 /// without validating parent edges or currency gates. Only parity fixtures use
-/// this policy; native membership, ranks, spec, choice, subtree and budget remain.
+/// this policy; native membership, ranks, non-hero spec, choice, subtree and budget remain.
+/// player.cpp2775 exempts HERO allocations from spec gates; native granted ranks
+/// are subtracted once from exported totals under the same fixture policy.
 #[cfg(any(test, feature = "test-support"))]
 pub fn build_simc_fixture_config(
     tree: &TraitTree,
     ctx: TraitContext,
-    purchases: &[Purchase],
+    allocated: &[Purchase],
 ) -> Result<Vec<ConfigEntry>, String> {
     let mut fixture = tree.clone();
     for node in &mut fixture.nodes {
         node.parents.clear();
         node.conds.retain(is_not_currency_gate);
+        let hero = node.sub_tree_id != 0;
+        if hero {
+            clear_fixture_hero_spec_gates(&mut node.conds);
+        }
         for entry in &mut node.entries {
             entry.conds.retain(is_not_currency_gate);
+            if hero {
+                clear_fixture_hero_spec_gates(&mut entry.conds);
+            }
         }
     }
     for group in &mut fixture.groups {
         group.conds.retain(is_not_currency_gate);
+        if is_hero_group(tree, group.id) {
+            clear_fixture_hero_spec_gates(&mut group.conds);
+        }
     }
-    build_config(&fixture, ctx, purchases)
+    let grants = granted_entries(&fixture, ctx);
+    let purchases = subtract_granted_ranks(allocated, &grants);
+    let entries = merge_purchases(&fixture, grants, &purchases)?;
+    validate(&fixture, ctx, &entries)?;
+    Ok(entries)
+}
+
+#[cfg(any(test, feature = "test-support"))]
+fn subtract_granted_ranks(allocated: &[Purchase], grants: &[ConfigEntry]) -> Vec<Purchase> {
+    allocated
+        .iter()
+        .map(|entry| {
+            let granted = grants
+                .iter()
+                .find(|grant| grant.node_id == entry.node_id && grant.entry_id == entry.entry_id)
+                .map_or(0, |grant| grant.granted);
+            Purchase {
+                ranks: entry.ranks.saturating_sub(granted),
+                ..*entry
+            }
+        })
+        .collect()
+}
+
+#[cfg(any(test, feature = "test-support"))]
+fn clear_fixture_hero_spec_gates(conds: &mut [TraitCond]) {
+    // SimC76f8118 player.cpp2775–2779: HERO allocations ignore id_spec.
+    // Do not alter granted-rank eligibility or any other condition field.
+    for cond in conds.iter_mut().filter(|cond| {
+        matches!(
+            cond.kind,
+            TraitCondType::Available | TraitCondType::Visible | TraitCondType::RanksAllowed
+        )
+    }) {
+        cond.spec_set_id = 0;
+        cond.spec_set.clear();
+    }
+}
+
+#[cfg(any(test, feature = "test-support"))]
+fn is_hero_group(tree: &TraitTree, group: u32) -> bool {
+    let mut members = tree
+        .nodes
+        .iter()
+        .filter(|node| node.groups.contains(&group));
+    let Some(first) = members.next() else {
+        return false;
+    };
+    first.sub_tree_id != 0 && members.all(|node| node.sub_tree_id != 0)
 }
 
 #[cfg(any(test, feature = "test-support"))]

@@ -1,6 +1,7 @@
-//! SIMC_RET_DIVINE_PURPOSE_TRIGGER: selected408459 -> native223819.
+//! SIMC_RET_DIVINE_PURPOSE_TRIGGER: selected408459 -> native Ret408458.
 //! TC a352b1fa spell_paladin.cpp549–579 supplies HolyPower cost/amount semantics,
-//! but registers223817. SimC76f8118 sc_paladin.hpp1721–1726 binds selected408459.
+//! but registers223817. SimC76f8118 sc_paladin.hpp1721–1726 binds selected408459;
+//! sc_paladin.cpp4342 selects native408458 for Ret, not generic223819.
 use bevy::prelude::*;
 use shared::components::PowerType;
 
@@ -11,7 +12,7 @@ use crate::spell_cast::CostPool;
 use crate::spell_info::SpellInfo;
 
 const PURPOSE_TALENT: u32 = 408459;
-const DIVINE_PURPOSE: u32 = 223819;
+const DIVINE_PURPOSE: u32 = 408458;
 
 fn selected_chance(world: &World, caster: Entity) -> Option<f32> {
     let selected = world
@@ -62,6 +63,6 @@ pub(in crate::spell_cast) fn roll_selected_ret_divine_purpose(
         return;
     }
     if !crate::spell_cast::try_cast_triggered(world, caster, DIVINE_PURPOSE, Some(caster), 1) {
-        warn!(?caster, "Ret native Divine Purpose223819 refused");
+        warn!(?caster, "Ret native Divine Purpose408458 refused");
     }
 }

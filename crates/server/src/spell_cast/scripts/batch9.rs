@@ -51,6 +51,7 @@ pub(super) struct GroundPulses {
     caster: Entity,
     root: u32,
     child: u32,
+    cast_damage_multiplier: Option<f32>,
     radius: f32,
     cap: usize,
     relation: targets::Relation,
@@ -169,10 +170,16 @@ fn read_ground_pulses(world: &World, ctx: &EffectCtx) -> GroundPulses {
         ),
         _ => unreachable!("only registered ground pulse spells"),
     };
+    // Native0x2000 uses the same periodic interval for fields and auras.
+    // SimC76f8118 sc_paladin.cpp509–512 qualifies Consecration's ground cadence.
+    let period_ms =
+        crate::auras::periodic_interval_ms(world, ctx.caster, ctx.spell, (period * 1000.0) as u32);
+    let period = f64::from(period_ms) / 1000.0;
     GroundPulses {
         caster: ctx.caster,
         root: ctx.spell.id,
         child,
+        cast_damage_multiplier: ctx.spell.cast_damage_multiplier,
         radius,
         cap,
         relation,
@@ -404,6 +411,7 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
         .get(pulses.child)
         .expect("named ground spell child")
         .clone();
+    child.cast_damage_multiplier = pulses.cast_damage_multiplier;
     // TC casts77478 with OriginalCaster=at->GetGUID(); preserve it through flight.
     if matches!(pulses.root, EARTHQUAKE | EARTHQUAKE_TARGET) {
         child.cast_original_caster = Some(entity);

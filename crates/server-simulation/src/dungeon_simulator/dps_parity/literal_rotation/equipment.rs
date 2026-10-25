@@ -33,6 +33,23 @@ pub(crate) struct ItemUse {
     stat_buff: bool,
 }
 
+impl ItemUse {
+    pub(crate) fn consumable(world: &World, item_id: u32) -> Result<Self, String> {
+        let template = world
+            .resource::<ItemTemplates>()
+            .get(ItemDefinitionSource::Retail, item_id)
+            .ok_or_else(|| format!("native consumable item{item_id} absent"))?;
+        Ok(Self {
+            item_id,
+            on_use: template
+                .on_use
+                .ok_or("native consumable has no on-use spell")?,
+            item_level: template.scaling.item_level,
+            stat_buff: true,
+        })
+    }
+}
+
 struct Slot {
     item_id: u32,
     item_level: u16,
@@ -162,7 +179,11 @@ impl Equipment {
             .options
             .get("name")
             .ok_or("literal item action lacks slot/name")?;
-        let ids = self.named_ids(name)?;
+        // SimC76f8118 player.cpp9873–9884: an absent named item is a
+        // background/unavailable use action, not missing native numeric metadata.
+        let Some(ids) = self.names.get(&name.to_ascii_lowercase()) else {
+            return Ok(None);
+        };
         Ok(self
             .uses()
             .find(|(_, item)| ids.contains(&item.item_id))
@@ -229,9 +250,11 @@ impl Equipment {
         let equipped = if let Ok(id) = item.parse::<u32>() {
             self.equipped.contains(&id)
         } else {
-            self.named_ids(item)?
-                .iter()
-                .any(|id| self.equipped.contains(id))
+            // SimC76f8118 player.cpp11974–11993 compares equipped names
+            // case-insensitively and returns false when none match the literal.
+            self.names
+                .get(&item.to_ascii_lowercase())
+                .is_some_and(|ids| ids.iter().any(|id| self.equipped.contains(id)))
         };
         Ok(boolean(equipped))
     }

@@ -383,6 +383,7 @@ pub fn compute(auras: &ActiveAuras, player_controlled_npc: bool) -> (StatModifie
     acc.combat.flight_speed = slowed(capped(flight, BASE_SPEED));
     acc.combat.swim_speed = slowed(capped(swim, BASE_SWIM_SPEED));
     acc.stats.haste_pct += acc.haste_not_stack;
+    acc.stats.haste_total_pct = super::ret_crusade::haste_total_pct(auras);
     (acc.stats, acc.combat)
 }
 
@@ -454,10 +455,17 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             540 if aura.spell_id == super::augmentation::SHIFTING_SANDS && effect.index == 0 => {
                 stats.versatility_pct += amount;
             }
-            // MiscValue is the stat index; negative is every stat.
+            // SimC76f8118 buff.cpp3421–3434: −1 means all stats; −2 is
+            // Str/Agi/Int only. Stats' native main-stat filter selects one hybrid.
             MOD_STAT => each_stat(
                 &mut stats.primary_flat,
-                |index| misc < 0 || misc as usize == index,
+                |index| {
+                    if misc == -2 {
+                        matches!(index, 0 | 1 | 3)
+                    } else {
+                        misc < 0 || misc as usize == index
+                    }
+                },
                 |stat| *stat += amount,
             ),
             MOD_PERCENT_STAT => {
@@ -558,8 +566,14 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_VERSATILITY => stats.versatility_pct += effect.amount.trunc() * stacks,
             // HandleModRating truncates each effect before ApplyRatingMod. Do not
             // triple-count the same rating for damage/healing/damage-taken bits.
-            MOD_RATING if misc == VERSATILITY_RATING_MASK => {
-                stats.ratings_flat.versatility += effect.amount.trunc() * stacks;
+            // SimC76f8118 buff.cpp3620 applies every stat_buff_t rating through stat_gain.
+            // Use the native mask mapper once per effect, including unified sub-ratings.
+            MOD_RATING => {
+                crate::stats::add_rating_bonus(
+                    &mut stats.ratings_flat,
+                    misc as u32,
+                    effect.amount.trunc() * stacks,
+                );
             }
             // Retail 12.x haste is one stat: melee, ranged and spell haste
             // auras all add to it.

@@ -24,28 +24,65 @@ mod batch6;
 mod batch7;
 mod batch8;
 mod batch9;
+mod cast_grants;
+mod cast_resets;
 mod chrono_flame;
 mod clearcasting;
 mod echo_policies;
+mod elemental;
+pub(crate) use elemental::register as register_elemental_policies;
 mod elemental_ascendance;
-pub(super) use echo_policies::after_foreground_cast as apply_echo_policies;
+pub(super) use echo_policies::after_cast as apply_echo_policies;
+pub(super) use elemental::{
+    after_launch as finish_scripted_launch,
+    capture_damage_modifier as capture_consumed_damage_modifier,
+};
 pub(crate) mod empower_evoker;
+mod enhancement_imbues;
+mod enhancement_strikes;
+pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
 mod essence_burst;
+mod feral_frenzy;
+pub(crate) use feral_frenzy::register as register_feral_frenzy;
+mod maelstrom_weapon;
+pub(crate) use maelstrom_weapon::{consume as consume_maelstrom_weapon, snapshots_modifier};
+pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
+    maelstrom_weapon::register(scripts);
+    enhancement_imbues::register(scripts);
+    enhancement_strikes::register(scripts);
+}
 mod policies;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 pub(crate) use policies::register_channel_policies;
-pub(super) use policies::{on_hit as apply_hit_policies, snapshot as snapshot_hit_policies};
+pub(super) use policies::{
+    after_impacts as after_impact_policies,
+    after_periodic_damage as apply_periodic_damage_policies,
+    after_triggered_cast as apply_triggered_cast_policies, before_impact as before_impact_policies,
+    has_impact_policy, on_hit as apply_hit_policies, snapshot as snapshot_hit_policies,
+};
+pub(crate) use policies::{
+    extends_reapplication, filter_secondary_targets, owns_policy_proc, register_lifecycle_policies,
+};
 mod germination;
 mod giantkiller;
 pub(super) use giantkiller::multiplier as giantkiller_multiplier;
+mod havoc;
 pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
 pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
+mod melee_reset;
+mod midnight_items;
 pub(crate) mod prayer_of_mending;
 mod protection_items;
+pub(crate) use midnight_items::register as register_midnight_items;
+mod ret_damage;
+pub(super) use ret_damage::{
+    after_periodic_damage as after_ret_periodic_damage, before_cast as before_ret_damage_cast,
+    damage_multiplier as ret_damage_multiplier, prepare_stored_damage,
+};
 mod ret_empyrean;
 pub(crate) use ret_empyrean::owns_empyrean_proc;
 pub(super) use ret_empyrean::schedule_empyrean_legacy;
@@ -67,8 +104,18 @@ mod touch_of_death;
 mod unbroken_rhythm;
 pub(crate) use unbroken_rhythm::register_unbroken_rhythm;
 mod windwalker;
+mod windwalker_children;
+pub use windwalker::last_combo_action;
 mod windwalker_flurry;
-pub(crate) use windwalker_flurry::after_melee_hit;
+pub(crate) fn after_melee_hit(
+    world: &mut World,
+    caster: Entity,
+    hand: crate::melee::Hand,
+    critical: bool,
+) {
+    windwalker_flurry::after_melee_hit(world, caster, hand, critical);
+    melee_reset::roll_white_hit(world, caster, critical);
+}
 mod xuens_battlegear;
 pub(crate) use xuens_battlegear::register_xuens_battlegear;
 
@@ -92,6 +139,10 @@ pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
 /// TC OnCast runs once after successful checks, before spending and launch.
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
+    cast_grants::on_cast(world, caster, spell_id, depth);
+    havoc::before_cast(world, caster, spell_id, depth);
+    windwalker::scripted_combo_cast(world, caster, spell_id, depth);
+    elemental::before_launch(world, caster, spell_id, depth);
     match spell_id {
         batch16::RET_JUDGMENT | batch16::HOLY_JUDGMENT | batch10::PROTECTION_JUDGMENT => {
             batch16::energize_judgment(world, caster, depth);
@@ -121,7 +172,13 @@ pub(super) fn after_direct_damage(
     critical: bool,
 ) {
     windwalker_flurry::after_direct_damage(world, ctx, critical);
+    melee_reset::roll_replacement_hit(world, ctx, target, critical);
     policies::after_damage(world, ctx);
+    ret_damage::after_direct_damage(world, ctx, target, critical);
+    // SimC76f8118 unique_gear_midnight.cpp6351–6355: perfected Guillotine impacts apply Venomfang.
+    if ctx.spell.id == 1306624 {
+        midnight_items::apply_perfected_venom(world, ctx.caster, target);
+    }
     match ctx.spell.id {
         xuens_battlegear::RSK_DAMAGE | xuens_battlegear::RWK_DAMAGE => {
             xuens_battlegear::reduce_fof_on_critical_impact(world, ctx, target, critical);
@@ -191,7 +248,9 @@ pub(super) use batch21::berserk_combo_bonus;
 pub(super) use batch22::healing_multiplier;
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
-    batch19::effect_enabled(world, caster, spell, index)
+    windwalker_children::effect_enabled(spell, index)
+        && !(spell == 343527 && index == 4)
+        && batch19::effect_enabled(world, caster, spell, index)
         && batch11::effect_enabled(world, caster, spell, index)
         && batch13::effect_enabled(spell, index)
         && batch15::effect_enabled(world, caster, spell, index)
@@ -526,6 +585,8 @@ pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
         return Some(hook);
     }
     match spell_id {
+        windwalker_children::JADEFIRE => Some(windwalker_children::jadefire_damage),
+        windwalker_children::RWK_DAMAGE => Some(windwalker_children::rushing_wind_damage),
         super::elemental_overload::LIGHTNING_OVERLOAD
         | super::elemental_overload::CHAIN_OVERLOAD
         | super::elemental_overload::LAVA_OVERLOAD_DAMAGE
@@ -610,11 +671,13 @@ pub(super) fn snapshot_proc_modifiers(
     auras
         .iter()
         .filter(|aura| {
-            matches!(aura.spell_id, hot_streak::HOT_STREAK | lava_surge::PROC)
-                && aura.effects.iter().any(|effect| {
-                    effect.misc_values[0] == crate::auras::SpellModOp::ChangeCastTime as i32
-                        && crate::auras::spell_mods::class_mask_affects(aura, effect, spell)
-                })
+            matches!(
+                aura.spell_id,
+                hot_streak::HOT_STREAK | lava_surge::PROC | maelstrom_weapon::MODIFIER
+            ) && aura.effects.iter().any(|effect| {
+                effect.misc_values[0] == crate::auras::SpellModOp::ChangeCastTime as i32
+                    && crate::auras::spell_mods::class_mask_affects(aura, effect, spell)
+            })
         })
         .map(|aura| aura.instance_id)
         .collect()
@@ -642,17 +705,27 @@ pub(super) use empower_evoker::damage_bonus as empower_damage_bonus;
 
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
-pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
-    if let Some(hook) = policies::after_cast_hook(spell_id) {
+pub fn after_cast(spell_id: u32) -> impl Iterator<Item = AfterCastHook> {
+    // Native handlers and sourced policy relationships are independent effects,
+    // not alternate implementations (SimC76f8118 sc_hunter.cpp5083–5092).
+    native_after_cast(spell_id)
+        .into_iter()
+        .chain(policies::after_cast_hook(spell_id))
+}
+
+fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
+    if let Some(hook) = cast_resets::hook(spell_id) {
         return Some(hook);
     }
     if let Some(hook) = after_cast_auras::hook(spell_id) {
         return Some(hook);
     }
     match spell_id {
+        33757 | 318038 => Some(enhancement_imbues::apply),
+        voltaic_blaze::ROOT => Some(maelstrom_weapon::grant_voltaic_blaze),
         ret_resonance::TOLL => Some(ret_resonance::grant_after_toll),
         windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
-        windwalker::FISTS_OF_FURY => Some(windwalker_flurry::release),
+        windwalker::FISTS_OF_FURY => Some(windwalker_children::fof_executed),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
         prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
@@ -687,7 +760,8 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         batch10::ARCANE_SURGE => Some(batch10::apply_surge),
         batch9::CONSECRATION => Some(batch9::spawn_consecration),
         batch8::DEMONBOLT => Some(batch8::demonbolt),
-        batch8::CRASH_LIGHTNING => Some(batch8::crash_lightning),
+        batch8::CRASH_LIGHTNING => Some(enhancement_strikes::after_crash),
+        188196 | 188443 | 452201 => Some(enhancement_strikes::after_lightning),
         batch8::ARCANE_BARRAGE => Some(batch8::arcane_barrage),
         batch3::FLASH_HEAL => Some(batch3::flash_heal),
         batch3::PRAYER_OF_HEALING => Some(batch4::prayer),
@@ -738,6 +812,7 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
         (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
         (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::limit_targets),
         (ret_toll::ROOT, 1) => Some(ret_toll::limit_area),
+        (1306923, 1) => Some(ret_damage::exclude_primary_cleave),
         (145_110, 0) => Some(pick_yseras_gift_group_target),
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         (30735, 0) => Some(crate::scripted_ai::nethekurse::filter_shadow_sear),
@@ -779,7 +854,11 @@ pub(super) type TargetPlanHook =
 
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
+    if let Some(hook) = policies::target_plan_hook(spell_id) {
+        return Some(hook);
+    }
     match spell_id {
+        1261160 | 224239 | 431911 => Some((Relation::Enemy, ret_damage::area_plan)),
         super::toy_flag::TARGETING => Some((Relation::Any, super::toy_flag::targeting_plan)),
         super::toy_flag::FLAG => Some((Relation::Any, super::toy_flag::flag_plan)),
         97372 => Some((Relation::Any, track_switch_plan)),
@@ -1503,11 +1582,23 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
         return Some(hook);
     }
     match spell_id {
+        17364 | 115356 | 60103 | 187874 => Some(enhancement_strikes::on_strike),
+        feral_frenzy::FERAL | feral_frenzy::FRANTIC => Some(feral_frenzy::begin),
+        feral_frenzy::FRANTIC_CHILD => Some(feral_frenzy::energize_frantic),
         xuens_battlegear::SCK => Some(xuens_battlegear::capture_sck_parent),
         windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
         voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),
         ret_toll::ROOT => Some(ret_toll::cast_child),
+        343527 => Some(ret_damage::sentence_init),
         77_478 => Some(batch9::cast_earthquake_knockdown),
+        _ => None,
+    }
+}
+
+/// Damage-only impact scripts do not receive caster buffs or other aura recipients.
+pub(super) fn on_enemy_damage_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
+    match spell_id {
+        20271 | 406957 | 24275 | 1279408 => Some(ret_damage::judgment_mastery),
         _ => None,
     }
 }
@@ -1515,6 +1606,7 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
         elemental_ascendance::ASCENDANCE => Some(elemental_ascendance::cast_entry),
+        windwalker_children::ZENITH => Some(windwalker_children::zenith_hit),
         100780 => Some(windwalker::tiger_palm_hit),
         100784 => Some(windwalker::blackout_kick_hit),
         107428 | 113656 => Some(windwalker::trigger_wdp_enabler_on_hit),

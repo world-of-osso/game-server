@@ -60,11 +60,7 @@ fn read_live_values(world: &World, caster: Entity, policy: &EchoPolicy) -> Optio
     ))
 }
 
-pub(in crate::spell_cast) fn after_foreground_cast(
-    world: &mut World,
-    caster: Entity,
-    spell: &SpellInfo,
-) {
+pub(in crate::spell_cast) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if spell.cast_parent_owns_modifier_charges {
         return;
     }
@@ -117,6 +113,7 @@ fn queue_echo(
             return;
         };
         child.cast_damage_multiplier = Some(multiplier);
+        child.cast_damage_role = crate::spell_info::CastDamageRole::Echo;
         if !super::super::launch_triggered_spell(world, caster, &child, Some(target), 1) {
             warn!(
                 policy = policy.name,

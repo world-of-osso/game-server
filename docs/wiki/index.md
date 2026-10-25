@@ -1,10 +1,13 @@
+- [Elemental literal fixture](systems/simc-apl.md#elemental-fixture-262) — exact profile rows, native Maelstrom/spell admission and named-action target counts; numerical parity remains separate.
 - [Form combat clocks](systems/auras.md#form-combat-clocks--2026-10-23) — all7authored timing rows, native Cat/Bear timed RED and unshifted control; generic cadence/weapon terms retained; reconciliation qualification pending.
+- [Havoc literal fixture and Demonic](systems/simc-apl.md#havoc-fixture-577) — pinned source decisions, native cursor-targeted Meta, and talent-sourced before-channel transformation/extension; numeric parity remains open.
 - [All-DPS parity census — 2026-10-25](investigations/dps-parity-census-2026-10-25.md) — eight measured specs, seventeen exact fixture failures, two missing references at master210df12e3; no surrogate followers.
 - [Action-permitting channel melee](systems/combat.md#action-permitting-channels--2026-10-24) — native ready SCK swing1RED/3controlsPASS→4GREEN27.56s atdb543b270; actual active-channel white0→1 while FoF/normal/noncast controls remain; lead broad/plain-bin gate pending, no numeric parity claim.
 - [Native Unit form display power](systems/auras.md#native-unit-form-display-power--2026-10-24) — NPC Cat and native Bite burn RED→GREEN; player Cat/NPC Moonkin controls, unchanged203-case scope and two-crate check qualified. Parent gate separate; no resource grants or identity coercion.
 - [Aura342 attack timers](../handoffs/aura342-attack-timers-proof-ledger.md) — pinned TC BASE/OFF/RANGED-only handler, real cast/regen/swing3RED before generic fold; all72 native users listed, stale Martial Agility Dance premise corrected; GREEN/lead gate pending, Momentum separate.
 - [Event-time aura proc candidates](../handoffs/aura-proc-event-candidates-proof-ledger.md) — master09f reconciliation preserves Sentence, event-time snapshots and landed after-melee/buff facts; combined/plain-bin checks eachONCE0, Resonance3GREEN; proc/charge172PASS/2historical precondition failures with every case executed once, not a full-pass claim. No spell override; parent owns landing.
 
+- [Shared profile gear effects](systems/character-stats.md#shared-profile-effects--2026-10-25) — native consumables, oil, race and Omnium setup; Heart/Venomfang/fire relationships and neutral recipients.
 - [Ret Storm source qualification](../handoffs/ret-storm-gap-proof-ledger.md) — ranked root supply is separate from same-ID echoes; native Aura361 and approved bounded Sunrise strict RED→GREEN, actual root1.0/echo0.5 damage/hostile primary and background/no-Hero controls; core hand-order test and retained62melee cases pass; test-target/plain-bin checks pass once; parent full gate and excluded sources remain separate.
 - [Item use-damage/fractional charges](../handoffs/equipment-facts-proof-ledger.md#on-use-damage-and-fractional-charges--2026-10-24) — native on-use damage types/no item lists; actual Jewel3→2→2.5→3 and single-charge timer progress,3RED→16unique Equipment passing proofs; b228ec5c9 check PASS/zero warnings, Feral integration separate.
 - [Long/short set tier aliases](../handoffs/equipment-facts-proof-ledger.md#long-tier-spelling-correction--2026-10-24) — source-derived midnight_season_2/mid2 and every pinned tier's302native-set bindings; actual Fire2060 RED→13EquipmentGREEN36.28s at03fa77956, no activation/APL change.
@@ -969,7 +972,7 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
-- [Shared SimC APL](systems/simc-apl.md) — literal expressions/variables/calls; corrected source-backed run/target24GREEN atad720fc3c (old inherited-child oracle withdrawn). Native Player/target admission1WW controlPASS/6RED at4f91688e8 →7GREEN27.17s at e99b879e8 after hp1026.
+- [Shared SimC APL](systems/simc-apl.md) — literal expressions, variables, list/target selection, source-row clocks and channel decisions; native facts and cast admission stay caller-owned.
 
 - [Native weapon AP](systems/character-stats.md#native-weapon-attack-power--2026-10-23) — actual Tiger Palm91vs358–377 RED→four native GREEN13.89s; raw item-table AP, attack-type selection and aura366/unequip; parent integration gate pending.
 

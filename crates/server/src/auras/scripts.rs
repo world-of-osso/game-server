@@ -23,6 +23,8 @@ pub type DamageProcHook = fn(&mut World, Entity, &AuraInstance, &super::procs::A
 pub struct AuraScript {
     pub on_apply: Option<AuraHook>,
     pub on_remove: Option<RemoveHook>,
+    /// One callback for asynchronous native stack expirations, including the last stack.
+    pub on_stack_loss: Option<fn(&mut World, Entity, &AuraInstance, u8)>,
     /// Duration expiry or explicit full channel completion, never interruption.
     pub on_natural_end: Option<AuraHook>,
     pub on_periodic: Option<PeriodicHook>,
@@ -63,6 +65,12 @@ pub(super) fn run_remove(
     }
 }
 
+pub(super) fn run_stack_loss(world: &mut World, unit: Entity, aura: &AuraInstance, lost: u8) {
+    if let Some(run) = script(world, aura.spell_id).and_then(|script| script.on_stack_loss) {
+        run(world, unit, aura, lost);
+    }
+}
+
 pub(super) fn run_natural_end(world: &mut World, unit: Entity, aura: &AuraInstance) {
     if let Some(run) = script(world, aura.spell_id).and_then(|script| script.on_natural_end) {
         run(world, unit, aura);
@@ -94,6 +102,18 @@ pub(super) fn check_proc(
     aura: &AuraInstance,
     event: &super::procs::AuraEvent,
 ) -> bool {
+    // SimC76f8118 sc_warrior.cpp4452–4456: Fury's Execute-MH hit policy
+    // owns Deep Wounds; the native broad melee mask would roll every impact.
+    if aura.spell_id == 1261060
+        && world
+            .get::<shared::components::ActiveSpec>(aura.caster)
+            .is_some_and(|spec| spec.0 == 72)
+    {
+        return false;
+    }
+    if crate::spell_cast::scripts::owns_policy_proc(aura.spell_id) {
+        return false;
+    }
     // SIMC_RET_TIER_MID2_DIVINE_PURPOSE_RELATIONSHIP owns these charges;
     // only a different-kind actual spender consumes them, not arbitrary casts.
     if crate::spell_cast::scripts::owns_arbiter_charge(aura.spell_id) {
@@ -115,7 +135,7 @@ pub(super) fn run_periodic(world: &mut World, unit: Entity, aura: &AuraInstance,
     }
 }
 
-pub(super) const INUNDATE: u32 = 378776;
+pub(super) use crate::spell_info::INUNDATE;
 const FEEL_THE_BURN: u32 = 383391;
 const FIRE_BLAST: u32 = 108853;
 const ASPECT_OF_THE_TURTLE: u32 = 186_265;
@@ -389,6 +409,16 @@ fn check_inundate_proc(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    crate::spell_cast::scripts::register_feral_frenzy(&mut scripts);
+    scripts.0.insert(
+        1236994,
+        AuraScript {
+            on_apply: Some(crate::consumables::select_recklessness),
+            ..Default::default()
+        },
+    );
+    crate::spell_cast::scripts::register_midnight_items(&mut scripts);
+    crate::spell_cast::scripts::register_lifecycle_policies(&mut scripts);
     crate::spell_cast::scripts::register_wdp_relationship(&mut scripts);
     crate::spell_cast::scripts::register_unbroken_rhythm(&mut scripts);
     scripts.0.insert(
@@ -417,6 +447,8 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     crate::spell_cast::scripts::holy_priest::register(&mut scripts);
     crate::spell_cast::scripts::prayer_of_mending::register(&mut scripts);
     super::earthen_rage::register(&mut scripts);
+    super::rogue::register(&mut scripts);
+    crate::spell_cast::scripts::register_enhancement(&mut scripts);
     super::spirit_wolf::register(&mut scripts);
     super::natures_guardian::register(&mut scripts);
     super::ret_sentence::register(&mut scripts);
@@ -693,6 +725,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     // Extend existing parent lifecycle entries rather than replacing their hooks.
     crate::spell_cast::scripts::register_xuens_battlegear(&mut scripts);
     crate::spell_cast::scripts::register_channel_policies(&mut scripts);
+    crate::spell_cast::scripts::register_elemental_policies(&mut scripts);
 }
 
 /// TC spell_rogue.cpp spell_rog_stealth: 1784's own rows carry no MOD_STEALTH;

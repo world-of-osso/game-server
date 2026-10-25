@@ -64,7 +64,8 @@ pub fn creature_cast_with_targets(
     spell_id: u32,
     targets: super::CastTargets,
 ) -> Result<(), CastFailure> {
-    let (spell, explicit) = load_creature_cast(world, caster, spell_id, Some(targets.unit))?;
+    let (mut spell, explicit) = load_creature_cast(world, caster, spell_id, Some(targets.unit))?;
+    spell.cast_destination = targets.destination;
     super::start_cast_with_primary(world, caster, &spell, explicit, targets.primary)
 }
 
@@ -130,6 +131,7 @@ pub(crate) fn creature_cast_with_effect0_ignoring_in_progress(
             "partial-trigger BP0 effect missing".into(),
         ))?;
     effect.base_points = amount;
+    super::scripts::prepare_stored_damage(&mut spell);
     let target = super::validate_start(world, caster, &spell, explicit, true)?;
     super::begin_validated_cast(world, caster, &spell, target)
 }
