@@ -761,7 +761,7 @@ fn build_effect(
     } else {
         amount
     };
-    let amount = scripts::snapshot_periodic_amount(world, caster, spell, effect, amount);
+    let amount = scripts::snapshot_aura_amount(world, caster, spell, effect, amount);
     let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
     let base_period_ms = periodic_base_interval_ms(spell, effect);
     let period_ms = periodic_interval_ms(world, caster, spell, base_period_ms);

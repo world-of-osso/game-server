@@ -3264,6 +3264,14 @@ fn resolve_effects(
     for unit in hit_units(plan) {
         crate::scripted_ai::spell_hit(world, unit, caster, spell.id);
     }
+    let ctx = EffectCtx {
+        caster,
+        spell,
+        depth,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    scripts::after_resolved_hits(world, &ctx);
     let (damage, healing) = world
         .get_resource_mut::<ResolvingHits>()
         .and_then(|mut resolving| resolving.0.pop())
@@ -3450,10 +3458,22 @@ struct HitFrame {
 /// Actual resolving TargetInfos, not mutable combat focus or only successful hits.
 /// The first entry owns native primary impact even when it misses.
 pub(super) fn resolving_targets<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w [Entity]> {
+    Some(resolving_frame(world, ctx)?.selected.as_slice())
+}
+
+/// Actual direct damage of this native resolution, isolated from nested child casts.
+pub(super) fn resolving_damage<'w>(
+    world: &'w World,
+    ctx: &EffectCtx<'_>,
+) -> Option<&'w [(Entity, f32)]> {
+    Some(resolving_frame(world, ctx)?.damage.as_slice())
+}
+
+fn resolving_frame<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w HitFrame> {
     let frame = world.get_resource::<ResolvingHits>()?.0.last()?;
     let matches =
         frame.caster == ctx.caster && frame.spell_id == ctx.spell.id && frame.depth == ctx.depth;
-    matches.then_some(frame.selected.as_slice())
+    matches.then_some(frame)
 }
 
 /// Read the innermost matching hit's block result; nested casts own their frame.
