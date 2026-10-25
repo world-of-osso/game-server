@@ -23,6 +23,10 @@ struct ChannelMomentum {
 
 #[derive(Clone, Copy)]
 enum Relationship {
+    OwnedPetSpellAfterCast {
+        parent: u32,
+        payload: u32,
+    },
     TriggerPrimaryAfterCast {
         parent: u32,
         payload: u32,
@@ -122,23 +126,25 @@ const CUT_TO_THE_CHASE: Relationship = Relationship::SpenderAuraExtension {
 
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
+    // SimC76f8118 sc_evoker.cpp6241–6245: Deep Breath's main impact
+    // executes native353759; DB2 supplies its periodic damage and recipients.
     Policy {
-        name: "SIMC_ROGUE_CUT_TO_THE_CHASE",
-        spec: 259,
-        talent: 51667,
-        relationship: CUT_TO_THE_CHASE,
+        name: "SIMC_DEVASTATION_DEEP_BREATH_PAYLOAD",
+        spec: 1467,
+        talent: 357210,
+        relationship: Relationship::TriggerPrimaryAfterCast {
+            parent: 357210,
+            payload: 353759,
+        },
     },
     Policy {
-        name: "SIMC_ROGUE_CUT_TO_THE_CHASE",
-        spec: 260,
-        talent: 51667,
-        relationship: CUT_TO_THE_CHASE,
-    },
-    Policy {
-        name: "SIMC_ROGUE_CUT_TO_THE_CHASE",
-        spec: 261,
-        talent: 51667,
-        relationship: CUT_TO_THE_CHASE,
+        name: "SIMC_DEVASTATION_MANEUVERABLE_DEEP_BREATH_PAYLOAD",
+        spec: 1467,
+        talent: 433871,
+        relationship: Relationship::TriggerPrimaryAfterCast {
+            parent: 433874,
+            payload: 353759,
+        },
     },
     // SimC76f8118 sc_hunter.cpp6702–6703: selected Nature's Ally spawns
     // through its native Effect188 record; native1282474 supplies count/lifetime.
@@ -149,6 +155,17 @@ const POLICIES: &[Policy] = &[
         relationship: Relationship::TriggerPrimaryAfterCast {
             parent: 19574,
             payload: 1282474,
+        },
+    },
+    // SimC76f8118 sc_hunter.cpp6746–6750: every active stable pet applies
+    // Bloodshed after the summon above. Native321538 owns the periodic payload.
+    Policy {
+        name: "SIMC_BM_WRATH_BLOODSHED",
+        spec: 253,
+        talent: 1272099,
+        relationship: Relationship::OwnedPetSpellAfterCast {
+            parent: 19574,
+            payload: 321538,
         },
     },
     // SimC76f8118 sc_hunter.cpp5089/4972,3843–3846: successful Barbed/Cobra
@@ -446,6 +463,24 @@ const POLICIES: &[Policy] = &[
             counter: 431522,
             payload: 431380,
         },
+    },
+    Policy {
+        name: "SIMC_ROGUE_CUT_TO_THE_CHASE",
+        spec: 259,
+        talent: 51667,
+        relationship: CUT_TO_THE_CHASE,
+    },
+    Policy {
+        name: "SIMC_ROGUE_CUT_TO_THE_CHASE",
+        spec: 260,
+        talent: 51667,
+        relationship: CUT_TO_THE_CHASE,
+    },
+    Policy {
+        name: "SIMC_ROGUE_CUT_TO_THE_CHASE",
+        spec: 261,
+        talent: 51667,
+        relationship: CUT_TO_THE_CHASE,
     },
 ];
 
@@ -1103,7 +1138,8 @@ fn roll_replacement_proc(
 fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
         matches!(policy.relationship,
-        Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
+        Relationship::OwnedPetSpellAfterCast { parent: trigger, .. }
+        | Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
         | Relationship::ApplySelfAuraAfterCast { parent: trigger, .. }
         | Relationship::ConsumeSelfAuraAfterCast { parent: trigger, .. }
         | Relationship::CounterAfterCast { parent: trigger, .. }
@@ -1152,6 +1188,9 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             continue;
         }
         match policy.relationship {
+            Relationship::OwnedPetSpellAfterCast { payload, .. } => {
+                cast_owned_pet_payload(world, caster, spell, payload);
+            }
             Relationship::TriggerPrimaryAfterCast { payload, .. } => {
                 let depth = super::super::next_trigger_depth(world);
                 super::super::cast_triggered(
@@ -1186,6 +1225,22 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             }
             _ => unreachable!("after-cast policy iterator"),
         }
+    }
+}
+
+fn cast_owned_pet_payload(world: &mut World, caster: Entity, spell: &SpellInfo, payload: u32) {
+    let Some(target) = spell.cast_primary_target else {
+        warn!(
+            ?caster,
+            spell = spell.id,
+            payload,
+            "Owned-pet payload lacks selected primary"
+        );
+        return;
+    };
+    let depth = super::super::next_trigger_depth(world);
+    for pet in crate::hunter_pet::active_owned_pets(world, caster) {
+        super::super::cast_triggered(world, pet, payload, Some(target), depth);
     }
 }
 

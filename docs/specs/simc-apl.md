@@ -53,6 +53,8 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 ## Equipped use_items
 
+- `trinket.<name>.<property>` resolves the original equipped trinket slot case-insensitively, sharing numeric-slot property reads. An absent named trinket evaluates to zero (pinned `unique_gear.cpp4245–4261`).
+
 - [x] Named equipment matching is case-insensitive. A name with no equipped match makes `equipped.<name>` false and a named `use_item` unavailable, without repairing literal spellings or fabricating item metadata (SimC76f8118 `player.cpp9873–9884,11974–11993`).
 
 - [x] Evaluate each equipped proxy's condition before selecting its native use. `this_trinket` and `other_trinket` resolve relative to that candidate, preserving source slot order, exclusions and actual cooldown admission.

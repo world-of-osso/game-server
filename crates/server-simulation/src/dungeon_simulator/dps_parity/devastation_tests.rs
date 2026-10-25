@@ -74,6 +74,57 @@ fn devastation_literal_empower_rows_preserve_rank_and_primary() {
 
 #[test]
 #[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_deep_breath_cast_damages_the_native_three_target_pack() {
+    let mut run = prepare_literal(1467, 3).unwrap();
+    engage(&mut run);
+    let primary = run.targets[0];
+    let destination = crate::spell_cast::targets::position(run.app.world(), primary)
+        .unwrap()
+        .to_array();
+    crate::spell_cast::creature_cast_with_targets(
+        run.app.world_mut(),
+        run.actor,
+        357210,
+        crate::spell_cast::CastTargets {
+            unit: primary,
+            primary: Some(primary),
+            destination: Some(destination),
+        },
+    )
+    .unwrap();
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(357210)
+                && event.kind == shared::protocol::CombatLogKind::CastSuccess
+        }),
+        "ordinary native Deep Breath must really complete its cast"
+    );
+    // SimC76f8118 sc_evoker.cpp6241–6245: every main impact executes353759.
+    for target in &run.targets {
+        assert!(
+            events.iter().any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(353759)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+            "native Deep Breath cast must damage pack recipient {target:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
 fn devastation_empower_release_grants_selected_mass_disintegrate() {
     let mut run = prepare_literal(1467, 1).unwrap();
     engage(&mut run);
