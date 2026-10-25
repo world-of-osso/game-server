@@ -1,6 +1,9 @@
 ## 2026-10-24 — Xuen FoF recovery strict RED and consumer
 
 [Named-policy ledger](../handoffs/ww-xuens-recovery-proof-ledger.md): f0ab339b6 actual6RED/6controlsPASS36.52s precedes implementation; real RSK/RWK critical and SCK1/3/6 budgets fail, native noncrit/secondary-only/no-hit/unselected/no-timer controls pass. Native TargetInfo context and expiry-only hook keep policy IDs in scripts; TC/DB2 absence retained, GREEN/full gate pending, no numerical-parity claim.
+## 2026-10-24 — Native Flurry core earning/release
+
+[Bounded ledger](../handoffs/ww-flurry-proof-ledger.md): ec4b89338 actual white/ordinary451839 earning and natural FoF children3 genuine RED/3controlsPASS41.86s. Selected native counts/critical multiplier/cap and class-owned release are implemented;150ms child spacing explicitly cites SimC76f8118 sc_monk.cpp779–781. Generic impact callbacks carry actual native provenance without class IDs. At172da6nativeGREEN25.97s/compile0warnings. Same tested binary/fresh CURRENT backup EACH300s100439.5467ST/134000.8433three-target (−51.3477%/−64.4144%);450617 and451250 both really damage. Native1H/offhand and natural Dual Threat producer remain unqualified; other releases/SCK/recovery stay outside this slice, full lead gate and broader parity remain open.
 
 ## 2026-10-24 — Byte-identical public spell remainder
 

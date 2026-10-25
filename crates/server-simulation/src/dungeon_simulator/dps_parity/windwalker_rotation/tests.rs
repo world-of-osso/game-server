@@ -19,7 +19,7 @@ fn action(name: &str) -> Action {
     }
 }
 
-fn cast(run: &mut super::super::Run, spell: u32) {
+pub(super) fn cast(run: &mut super::super::Run, spell: u32) {
     use crate::spell_cast::CastFailure;
     for _ in 0..1200 {
         match crate::spell_cast::creature_cast(

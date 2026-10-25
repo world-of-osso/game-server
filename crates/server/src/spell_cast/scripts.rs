@@ -59,6 +59,8 @@ pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direc
 pub(crate) use soul_of_the_forest::snapshot_amount as snapshot_soul_of_the_forest;
 mod touch_of_death;
 mod windwalker;
+mod windwalker_flurry;
+pub(crate) use windwalker_flurry::after_melee_hit;
 mod xuens_battlegear;
 pub(crate) use xuens_battlegear::register_xuens_battlegear;
 
@@ -99,6 +101,7 @@ pub(super) fn after_direct_damage(
     target: Entity,
     critical: bool,
 ) {
+    windwalker_flurry::after_direct_damage(world, ctx, critical);
     match ctx.spell.id {
         xuens_battlegear::RSK_DAMAGE | xuens_battlegear::RWK_DAMAGE => {
             xuens_battlegear::reduce_fof_on_critical_impact(world, ctx, target, critical);
@@ -622,6 +625,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     }
     match spell_id {
         windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
+        windwalker::FISTS_OF_FURY => Some(windwalker_flurry::release),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
         prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
