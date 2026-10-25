@@ -18,6 +18,7 @@
 //! - `ContextHit` and `DamageAmount`: first match after generic policy lookup.
 //! - `CheckTarget`: before native target checks; first error stops admission.
 //! - `AutoRepeat`: after the actual Auto Shot launch.
+//! - `EarlyAuraRegistration`: startup aura scripts, before native registration.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
 
@@ -50,6 +51,7 @@ pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 pub type DamageAmountLookup = fn(u32) -> Option<DamageAmountHook>;
 pub type AutoRepeatHook = fn(&mut World, Entity, Entity);
 pub type CriticalChanceHook = fn(&World, Entity, Entity, u32) -> Option<f32>;
+pub type AuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
@@ -72,6 +74,7 @@ pub enum SpellScriptHook {
     DamageAmount(DamageAmountLookup),
     AutoRepeat(AutoRepeatHook),
     CriticalChance(CriticalChanceHook),
+    EarlyAuraRegistration(AuraRegistrationHook),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -93,6 +96,14 @@ impl SpellScriptRegistry {
             SpellScriptHook::EffectHit(lookup) => lookup(spell, index),
             _ => None,
         })
+    }
+
+    pub fn register_early_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::EarlyAuraRegistration(register) = hook {
+                register(scripts);
+            }
+        }
     }
 
     pub fn policies(self) -> impl Iterator<Item = &'static Policy> {

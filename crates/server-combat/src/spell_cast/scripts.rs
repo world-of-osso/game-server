@@ -63,8 +63,6 @@ mod enhancement_strikes;
 mod enhancement_tempest;
 mod enhancement_tier;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
-mod feral_frenzy;
-pub(crate) use feral_frenzy::register as register_feral_frenzy;
 mod maelstrom_weapon;
 pub(crate) use maelstrom_weapon::consume as consume_maelstrom_weapon;
 pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
@@ -74,9 +72,7 @@ pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScri
     enhancement_strikes::register(scripts);
     enhancement_tier::register(scripts);
 }
-mod periodic_counters;
 mod policies;
-pub(crate) use periodic_counters::register as register_periodic_counters;
 mod spellslinger;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 pub(super) use policies::check_cast as check_policy_cast;
@@ -125,7 +121,6 @@ mod ret_empyrean;
 pub(crate) use ret_empyrean::owns_empyrean_proc;
 pub(super) use ret_empyrean::schedule_empyrean_legacy;
 mod ret_tier;
-mod ret_toll;
 pub(super) use ret_tier::after_foreground_spender;
 pub(crate) use ret_tier::owns_arbiter_charge;
 mod resource_values;
@@ -920,7 +915,6 @@ pub fn area_target_filter(
     }
     match (spell_id, effect_index) {
         (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
-        (ret_toll::ROOT, 1) => Some(ret_toll::limit_area),
         (1306923, 1) => Some(ret_damage::exclude_primary_cleave),
         (145_110, 0) => Some(pick_yseras_gift_group_target),
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
@@ -1714,11 +1708,8 @@ pub(super) fn on_hit_with_context(world: &World, spell_id: u32) -> Option<Contex
     }
     match spell_id {
         17364 | 115356 | 60103 | 187874 => Some(enhancement_strikes::on_strike),
-        feral_frenzy::FERAL | feral_frenzy::FRANTIC => Some(feral_frenzy::begin),
-        feral_frenzy::FRANTIC_CHILD => Some(feral_frenzy::energize_frantic),
         xuens_battlegear::SCK => Some(xuens_battlegear::capture_sck_parent),
         windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
-        ret_toll::ROOT => Some(ret_toll::cast_child),
         343527 => Some(ret_damage::sentence_init),
         77_478 => Some(batch9::cast_earthquake_knockdown),
         _ => None,

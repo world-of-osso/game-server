@@ -24,6 +24,10 @@ Germination's redirect runs before a planned aura application; a consumed applic
 
 Elemental Ascendance uses ordinary hit lookup; Voltaic Blaze owns effect-hit lookup, contextual impact, target limiting and guaranteed critical chance. Touch of Death owns admission and damage amount; Snakeskin Quiver rolls after actual Auto Shot launch. Target handling copies the installed registry so a moved effect-hit callback is still recognized when selecting effect targets, not only when executing impacts. Combat retains native lookup order around each registry boundary.
 
+## Aura registration
+
+Feral/Frantic Frenzy and periodic Icicle counters register their complete native aura lifecycle callbacks through `EarlyAuraRegistration`, at the original start of aura-script registration. Their effect IDs, per-entity state, target ownership and scheduled children live downstream. Divine Toll's target cap and contextual child dispatch also live downstream and use the existing area-filter and contextual-hit slots.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.

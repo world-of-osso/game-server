@@ -610,7 +610,7 @@ fn level_scaled_points(
 }
 
 /// Base points (`calc_base_value`) with the caster's Points and PointsIndexN mods.
-pub(crate) fn modded_base_points(
+pub fn modded_base_points(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
