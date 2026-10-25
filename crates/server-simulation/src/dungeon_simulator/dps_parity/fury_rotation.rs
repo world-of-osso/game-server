@@ -8,6 +8,7 @@ mod sudden_death_tests;
 #[cfg(test)]
 mod tests;
 use super::{
+    Run,
     literal_rotation::{
         self, Driver,
         equipment::Equipment,
@@ -235,7 +236,7 @@ impl Rotation {
     }
 }
 
-pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {
+pub(super) fn prepare_driver(run: &mut Run) -> Result<Box<dyn super::SpecDriver>, String> {
     let encounter = Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
         duration: 300.0,
