@@ -50,6 +50,7 @@ pub(super) fn prepare_application(
     if rolling {
         roll_remaining_periodic(world, target, new);
     }
+    super::ret_crusade::preserve_refresh_duration(world, target, new);
 }
 
 fn previous(world: &World, target: Entity, new: &AuraInstance) -> Option<AuraInstance> {

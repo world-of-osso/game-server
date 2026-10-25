@@ -6,6 +6,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Beast Mastery literal fixture
 
+- Literal precombat provisions the existing native default-duck stable policy and executes ordinary Call Pet. The pet attacks the current encounter primary through native pet control, without restoring follower rotation decisions.
+
 - Spec253 keeps the requested native actor identity and disables follower-kit decisions before setup. Its pinned76f8118 `hunter_beast_mastery.simc` rows run through the shared `Program`/`Driver`/`Prepared`/`Equipment` path, including native pet summon, snapshot, Auto Shot and target-scored Barbed Shot. Native70448 supplies spell values, readiness, resources and damage; the adapter does not substitute reference damage.
 
 ### Equipment
@@ -73,6 +75,11 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Storm produces224239 Tempest, or a53385 Tempest for a Sunrise echo, at native383396 effectiveness. Retained primary/echo/secondary cast roles prevent recursive children and extra resource consumption.
 - Critical ordinary/Legacy Storm and HoW impacts apply native431414 Sun Sear. Each actual Dawnlight tick produces431911 Sun's Avatar with native area/cap values. Critical still-ticking403695 extends its owned duration by native446663 effect0 without resetting tick phase.
 - Divine Arbiter1306923 uses its native first damage effect on the primary and its native second effect on other recipients, never both on the primary. Spell coefficients remain native70448 values.
+
+### Ret Crusade
+
+- Selected1253598 makes31884 start at1 stack and cap at10. Foreground Holy Power consumers add their actual paid amount, or the native base HP equivalent when Divine Purpose, Empyrean Power or Shining Light makes them free. Pinned Hammer of Light grants9. Legacy, echo and Tempest background actions do not add stacks; no HP is granted or altered.
+- Native1253598 effect0 supplies haste per stack, multiplying existing haste. Base Wrath effect amounts, including crit and damage, ignore stack count. Stack gains and reapplications preserve the active Wrath expiry (`sc_paladin.cpp3644–3651,3911,4617–4618,4647–4648`; `sc_paladin.hpp1541–1555,1614–1623`).
 
 ### Ret Divine Toll relationship
 
@@ -143,6 +150,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Periodic auras and GroundPulses fields with native `SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC` (Attributes5 `0x2000`) apply caster spell haste after the native period spell modifiers, truncating to integer milliseconds. Their unchanged duration admits the resulting extra ticks. Unflagged auras retain their native period. Source: TC a352b1fa `SpellAuraEffects.cpp999–1012`.
 
 ### Measurement
+
+- A successful harmful Player ability carrying the native melee-combat-start flag starts weapon swings at its retained hostile primary. An existing weapon victim and swing timers remain unchanged. Fixture engagement does not inject the missing attack; no ability whitelist or damage multiplier substitutes for the native flag.
 
 - Spec259 player fixtures execute the profile's literal pinned Assassination action rows through the shared APL evaluator, not AssistedCombat or follower-kit priorities. `apply_poison` uses the selected native coating casts in source order and waits for each real cast before the next precombat row. Production follower decisions remain unchanged.
 
