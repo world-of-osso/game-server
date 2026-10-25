@@ -118,6 +118,37 @@ fn setup_cast_or_gcd_active(run: &Run) -> bool {
             .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)))
 }
 
+pub(super) fn prepare_fire_precombat(run: &mut Run) -> Result<(), String> {
+    use super::literal_rotation::PrecombatPoll;
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let mut rotation = super::fire_rotation::Rotation::load(
+        run.app.world_mut(),
+        run.actor,
+        encounter,
+        &run.profile,
+    )?;
+    loop {
+        match rotation.poll_precombat(run.app.world_mut(), run.actor, &run.targets)? {
+            PrecombatPoll::Waiting => finish_pending_setup(run)?,
+            PrecombatPoll::Selected { action, execution } => {
+                execute_precombat_plan(run, &mut rotation.driver, action, execution)?;
+            }
+            PrecombatPoll::Finished => break,
+        }
+    }
+    rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
+    run.fire_rotation = Some(rotation);
+    run.gaps.retain(|gap| {
+        !gap.starts_with("NATIVE_ASSISTED_COMBAT_70448_VS_SIMC_APL")
+            && !gap.starts_with("NATIVE_FOLLOWER_KIT_VS_SIMC_APL")
+    });
+    Ok(())
+}
+
 pub(super) fn prepare_ret_precombat(run: &mut Run) -> Result<(), String> {
     use super::literal_rotation::PrecombatPoll;
     let encounter = crate::simc_apl_native::Encounter::Fixture {
