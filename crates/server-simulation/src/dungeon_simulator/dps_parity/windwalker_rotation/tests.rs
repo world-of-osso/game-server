@@ -19,7 +19,7 @@ fn action(name: &str) -> Action {
     }
 }
 
-fn cast(run: &mut super::super::Run, spell: u32) {
+pub(super) fn cast(run: &mut super::super::Run, spell: u32) {
     use crate::spell_cast::CastFailure;
     for _ in 0..1200 {
         match crate::spell_cast::creature_cast(
@@ -509,7 +509,7 @@ fn literal_ww_native_selected_wdp_earns_its_native_cooldown_window() {
             .iter()
             .find(|aura| aura.spell_id == 196742 && aura.caster == run.actor)
         {
-            earned_duration = Some(aura.duration_ms);
+            earned_duration.get_or_insert(aura.duration_ms);
         }
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
@@ -527,10 +527,140 @@ fn literal_ww_native_selected_wdp_earns_its_native_cooldown_window() {
         overlapping_native_cooldowns,
         "both actual native cooldowns must overlap"
     );
+    assert!(
+        earned_duration.is_some_and(|duration| duration > 1000),
+        "selected owner must earn the approved cooldown-overlap plus hasted-grace window"
+    );
+    let base_duration = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(196742)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
+        .duration
+        .as_ref()
+        .unwrap()
+        .duration_ms;
     assert_eq!(
-        earned_duration,
-        Some(1000),
-        "selected owner must earn native196742 with DB2's1000ms, not SimC's measured1500ms grace"
+        base_duration, 1000,
+        "the scripted override must not mutate DB2's base duration"
+    );
+}
+
+#[test]
+#[ignore = "native landed RSK cannot earn WDP while FoF remains unspent and ready"]
+fn literal_ww_native_rsk_without_fof_cooldown_does_not_earn_wdp_enabler() {
+    let _scope = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(269, 1).unwrap();
+    let encounter = fixture(run.app.world());
+    let rotation = Rotation::load(run.app.world_mut(), run.actor, encounter).unwrap();
+    cast(&mut run, 100780);
+    cast(&mut run, 100780);
+    cast(&mut run, 107428);
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(185099)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "the native RSK child must actually land"
+    );
+    assert_eq!(
+        rotation
+            .value_for(
+                run.app.world_mut(),
+                run.actor,
+                &run.targets,
+                &action("fists_of_fury"),
+                "cooldown.fists_of_fury.remains"
+            )
+            .unwrap(),
+        0.0
+    );
+    assert!(
+        rotation
+            .value_for(
+                run.app.world_mut(),
+                run.actor,
+                &run.targets,
+                &action("rising_sun_kick"),
+                "cooldown.rising_sun_kick.remains"
+            )
+            .unwrap()
+            > 0.0
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 196742),
+        "one actual cooldown is insufficient for the native WDP enabler"
+    );
+}
+
+#[test]
+#[ignore = "native unselected WDP owner has real overlapping cooldowns but cannot earn the enabler"]
+fn literal_ww_native_unselected_wdp_owner_does_not_earn_the_enabler() {
+    let _scope = crate::random::seed_scope(70448);
+    let (profile, mut traits) = super::super::read_reference(269).unwrap();
+    // Native node101207 is a choice:125014/392983 Windlord versus134452/152175 WDP.
+    // Keep the same point spend so later native20-point gates remain valid.
+    let choice = traits
+        .iter_mut()
+        .find(|entry| entry.entry_id == 134452)
+        .unwrap();
+    assert_eq!(choice.node_id, 101207);
+    choice.entry_id = 125014;
+    let identity = super::super::inputs::read_actor(&profile).unwrap();
+    let mut run = super::super::prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+    super::super::preparation::prepare_windwalker_precombat(&mut run).unwrap();
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    super::super::install_fixture_lifetimes(&mut run, started_at);
+    super::super::engage(&mut run);
+    let mut rotation = run.windwalker_rotation.take().unwrap();
+    assert!(
+        !run.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(run.actor)
+            .unwrap()
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 152175)
+    );
+    let mut overlapping_native_cooldowns = false;
+    for _ in 0..600 {
+        rotation
+            .drive(run.app.world_mut(), run.actor, &run.targets)
+            .unwrap();
+        run.app.update();
+        let rsk = rotation
+            .value_for(
+                run.app.world_mut(),
+                run.actor,
+                &run.targets,
+                &action("rising_sun_kick"),
+                "cooldown.rising_sun_kick.remains",
+            )
+            .unwrap();
+        let fof = rotation
+            .value_for(
+                run.app.world_mut(),
+                run.actor,
+                &run.targets,
+                &action("fists_of_fury"),
+                "cooldown.fists_of_fury.remains",
+            )
+            .unwrap();
+        overlapping_native_cooldowns |= rsk > 0.0 && fof > 0.0;
+        assert!(
+            !crate::auras::has_aura(run.app.world(), run.actor, 196742),
+            "unselected native WDP owner cannot earn the196742 enabler"
+        );
+    }
+    assert!(
+        overlapping_native_cooldowns,
+        "negative control must reach the real cooldown boundary"
     );
 }
 

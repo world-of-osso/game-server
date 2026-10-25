@@ -1,5 +1,8 @@
 # Spell Casting
 
+## Rake actual-stealth eligibility — 2026-10-24
+
+TC `spell_dru_rake2040–2078` checks actual stealth, not legacy231052/405834 aura presence. Rake's shared predicate follows that boundary and native1822 effect3 amounts; Shred's separate predicate and persistent multiplier fields stay unchanged. [Contract](../../specs/player-damage.md#what-it-must-do); [focused source, fixture ordering and gate proof](../../handoffs/feral-rake-stealth-proof-ledger.md). Native Mark of the Wild legitimately interrupts Prowl; isolated comparisons own ordinary buffs before stealth, never bypass interrupt flags or GCD.
 ## Haste-affected continuous resource regeneration — 2026-10-23
 
 `PowerType.Flags0x400` now selects live native haste for continuous rates, before the existing flat aura85 term. Current native flagged rows are Focus, Energy, Runes and Essence; runes retain their already-hasted separate cooldown producer, and pet Focus retains its discrete native timer. Unflagged Mana keeps its base-mana rate. No class-specific haste list, injected stats or resource grants.

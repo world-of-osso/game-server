@@ -2,6 +2,47 @@
 
 [Auras](systems/auras.md#generic-health-aura-states--2026-10-24): independent branch from461aa8102; TC Unit::Update481–487 health siblings2/6/13/21/23/24/25 use Unit.h804–809 integer strict comparisons. fbdc5ee0d core8genuineRED/2controls and actual31146 full-health24275 RED/below20damagePASS32.34s precede implementation.15, otherNone states and rejection semantics preserved;7f34b277e core17GREEN22.56s/native2GREEN41.62s, zero warnings. Independent requested two-crate check ran once at1a573b3ac:PASS0/2m34s/zero warnings; fmtPASS0. Parent broad gate remains separate. [Source/proof ledger](../handoffs/aura-state-health-proof-ledger.md).
 
+## 2026-10-24 — Shared native APL buff facts takeover
+
+[Exact source/proof ledger](../handoffs/shared-buff-facts-proof-ledger.md): isolated shared duration/react/named-time work from dead14781's Evoker branch onto requested1466a4ca7. Real TF5217, Omen16864→135700 proc/stack/refresh/expiry/reacquisition and rated cast/channel controls reach genuine RED before implementation. Native-cap precondition corrects an old fixture's stack-gain-as-overcap assumption; fiveGREEN22.44s atd5b83f217, requested server/simulation/spell-tests check once0/1m45s/no warnings. Explicit source reaction distribution, cfg-only lifecycle hooks, no query-side duration reconstruction or Evoker implementation. Lead full gate remains separate.
+## 2026-10-24 — Native Flurry core earning/release
+
+[Bounded ledger](../handoffs/ww-flurry-proof-ledger.md): ec4b89338 actual white/ordinary451839 earning and natural FoF children3 genuine RED/3controlsPASS41.86s. Selected native counts/critical multiplier/cap and class-owned release are implemented;150ms child spacing explicitly cites SimC76f8118 sc_monk.cpp779–781. Generic impact callbacks carry actual native provenance without class IDs. At172da6nativeGREEN25.97s/compile0warnings. Same tested binary/fresh CURRENT backup EACH300s100439.5467ST/134000.8433three-target (−51.3477%/−64.4144%);450617 and451250 both really damage. Native1H/offhand and natural Dual Threat producer remain unqualified; other releases/SCK/recovery stay outside this slice, full lead gate and broader parity remain open.
+
+## 2026-10-24 — Byte-identical public spell remainder
+
+[D3](systems/server-crates.md#public-spell-remainder-d3):11pure file moves retain54case names/flags (51enabled/3existing ignored), extending the existing consumer to229cases without body/seam/new-package-or-version/API changes. Existing rusqlite0.35/bundled and canonical random import are dev-only consumer wiring. Housekeeping only; exact inventory, combined compiler proof, full gate and matched timing remain distinct.
+
+## 2026-10-24 — Movement remains/speed scalars
+
+[Native movement predicates](systems/simc-apl.md#configured-movement-distance): three unknown-operand REDs/four distance controls PASS→all7GREEN0.00s atf3c760d3a, two-package test-target check146s/fmtPASS/zero warnings. Speed reads native run/aura modifiers even idle; positive-distance remains divides by live speed, explicit no-event zero stays0. Parent deferred scheduling because no pinned moving reference exists: MOVEMENT_EVENT_SCHEDULING_UNREFERENCED, no unpaired selector/timer added.
+
+## 2026-10-24 — Explicit movement.distance fixture state
+
+[Configured movement distance](systems/simc-apl.md#configured-movement-distance): pinned76f8118 current.distance_to_move, not target range/native travel. Four actual unknown-operand REDs→4GREEN0.00s atc8fafe180; existing movement-event absence1GREEN10.01s, server+server-simulation test-target check81s and fmtPASS/zero warnings. Patchwerk explicitly initializes0; missing/dungeon configuration stays named. No scheduler, remains/speed, full native rotation or DPS claim.
+## 2026-10-24 — Source-bound ordinary cone boundary
+
+[Model geometry](systems/model-geometry.md#ordinary-cone-close-boundary):607781b26 genuine native FoF117418/Mage120 close-off-arc2RED plus strict2yd/far/vertical1GREEN8.31s. Shared ordinary cones now use TC's strict3D target bounding radius/min2; existing98609-row loader retains radius alongside unchanged reach. No unknown-radius substitution, line bypass or WW IDs. Native harness uses actual Kobold10913/scale1. GREEN, unchanged cone/frontal controls and two-crate check pending; lead full gate and WW numerical parity separate.
+
+## 2026-10-24 — Isolated qualified Ret Sentence/Wake/Toll packet
+
+[Auras](systems/auras.md#ret-sentence-and-toll-relationships--2026-10-24): direct-owner Sentence expiry/cancel/native-percentage/physical/foreign controls, ordinary Wake damage/resource/knowledge and Toll ST/3T/cap/range/mode/percentage total eleven unique native cases with exact revision receipts. Packet starts at masterd7e86cd0f and excludes development-only Expurgation/Rebuke/Aura361/literal work; no whole-rotation or DPS claim. [Scope/source/proof ledger](../handoffs/ret-qualified-sentence-wake-toll-proof-ledger.md); integration check separate.
+## 2026-10-24 — WDP child relationships and original-primary context qualified
+## 2026-10-24 — Add-event activity fact
+
+[Native APL facts](systems/simc-apl.md#native-binding-boundary): `raid_event.adds.up` has4genuine unknown-property REDs plus1retained property control atd7c06c8ee. Pinned SimC activity now reads existing actual-wave deadline, not count/existence; no new event model. Unchanged5/5GREEN0.00s atf9252a098 (1m39compile/0warnings); state-reader scope only, parent integration pending. [Scoped proof](../handoffs/adds-up-proof-ledger.md).
+
+## 2026-10-24 — Expurgation Dummy-proc qualification
+
+[Exact source/RED/GREEN/consumer ledger](../handoffs/ww-wdp-damage-children-proof-ledger.md): DB2/TDB/TC have no child edge; approved source relationship emits451767 once at retained primary and158221 at native aura226 ticks. Authored Attributes5=512 adds initial0; fixture corrected to native0/250/500/750/1000, no production clock change. Rebased onto51a28da8a as6f99:7nativeGREEN32.31s; three unchanged Voltaic/Quake consumers eachPASS once, separate unchanged Ret Toll8PASS. Fresh-backup-EACH300s89912.5433ST/113892.0267three-target (−56.4469%/−69.7546%); both native children now damage. Native coefficients/caps/geometry unchanged; full numeric/WDP mastery and broader recipient qualifications remain open.
+
+## 2026-10-24 — WDP duration policy approved after first-window trace
+
+[Exact source/duration ledger](../handoffs/ww-wdp-enabler-proof-ledger.md#current-approved-duration-override--2026-10-24): first native1000ms window expires exactly when producing GCD ends (7.95→8.95s), despite source STrow43 being true. New duration test genuinely RED1000 vs7265ms10.15s. Approved producer-only SimC4552–4572 overlap+hasted1500ms/refresh NONE override retains DB2 base and152175 gates. At5618c1eea native5GREEN29.45s; first7265ms window admits actual source152175 at8.95s, no post-GCD target/cost refusal. Fresh-backup-EACH300s97359.4833ST/105538.6233three-target (−52.8397%/−71.9729%); root casts8/3 but damage children158221/451767 absent. Numerical/damage qualification remains open.
+
+## 2026-10-24 — WDP native enabler RED→GREEN
+
+[WDP enabler policy](../handoffs/ww-wdp-enabler-proof-ledger.md): after installing declared fixture lifetimes, actual selected owner/RSK/FoF/overlapping-CD premises pass and missing196742 fails14.46s. Bounded selected-owner root-OnHit producer uses generic native1000ms aura; native152175 gate/damage unchanged. SimC measured1500ms grace explicitly excluded. Separateww-wdp-enabler branch; ww-monk-parity pinnedc4 during gate. Owned1000ms/actual one-CD-negative and valid unselected-owner/overlap controls now GREEN across013/e072 (unchanged b275production). Fresh-backup-EACH300s89384.0867ST/106899.63three-target; still no WDPcasts/damage and far outside numerical band.
 ## 2026-10-24 — rg1074 native fixture and FULL_MASK corrections
 
 [Regression source/proof ledger](../handoffs/rg1074-regression-proof-ledger.md): parent gate reproduced missing native Mana metadata in the UDP fixture and Echo's lost original tick phase.101459804 loads real power metadata;395ad19d1 carries native DONT_RESET_PERIODIC_TIMER from both FULL_MASK cast paths into generic refresh, restoring the correct triggered Languish oracle as well. Ordinary Barbed reset/DB2 amounts remain unchanged; no Echo exception or regen fallback. Exactmasterdc3 merged810a2b1e6; exact UDP1GREEN8.52s/Echo1GREEN14.44s plus generic rolling2GREEN10.33s/dummy20nineGREEN15.92s on one qualified ELF (13PASS, clean43m04s build). Parent broad gate remains separate.
@@ -43,7 +84,7 @@
 
 ## 2026-10-24 — Shared pool-for-next resource contract
 
-[Contract proof](../handoffs/feral-shared-program-proof-ledger.md#shared-resource-contract-implementation): concrete5RED/1control→6GREEN; entire engine-free shared44GREEN ata63. Pool wait propagates through calls, never dispatches or grants resources; source conditions/native maximum admission remain separate. max_energy requires action-bound maximum_energy; original two reporter cases now error explicitly until14860 supplies missing cost/cap facts. Native Feral adapter and parity remain open.
+[Contract proof](../handoffs/feral-shared-program-proof-ledger.md#shared-resource-contract-implementation): concrete5RED/1control→6GREEN; entire engine-free shared44GREEN ata63. Pool wait propagates through calls, never dispatches or grants resources; source conditions/native maximum admission remain separate. max_energy requires action-bound maximum_energy; original two reporter cases initially error explicitly without cost/cap facts; corrected d101+new-interface fixture hooks yield4reporterGREEN/full53GREEN atc4, with rows/assertions/threshold unchanged. Native Feral adapter and parity remain open.
 
 ## 2026-10-24 — Exact Feral Program reporter RED and FIRST integration
 
@@ -117,6 +158,10 @@ At96b572797, [native packet27/27](../handoffs/native-precombat-proof-ledger.md#c
 ## 2026-10-23 — Judgment cast-time Holy Power correction
 
 [Judgment](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers): pinned TC OnCast/HasSpell315867 contradicts former damage-hit/aura gating. Genuine native cast-before-impact, immune-target and aura-only REDs atde7b6e406; shared20271/275773/275779 ordinary/triggered/costed-trigger correction has native16GREEN and warning-free retained controls at02090739e. No fixture resource grants or DPS claim. [Proof](../handoffs/ret-paladin-parity-proof-ledger.md#judgment-cast-time-resource-correction).
+## 2026-10-24 — Isolated Rake actual-stealth predicate
+
+[Rake](systems/spell-casting.md#rake-actual-stealth-eligibility--2026-10-24) ports TC2040–2078 without legacy rank grants; exact-profile native RED and seven development GREEN cases are recorded in the [focused gate ledger](../handoffs/feral-rake-stealth-proof-ledger.md). Clean branch starts exact1fb0230ad with no literal-development ancestry or observer API; relocated native-case1PASS31.65s, four relocated core casesPASS16.03s, expanded three-package test-target check0. Original two-package check had started before scope expansion and is separately recorded. Shred/persistent fields unchanged; parent full workspace gate pending.
+
 ## 2026-10-23 — Readonly native selected-pool admission
 
 [Shared Prepared](systems/simc-apl.md#shared-literal-fixture-machinery) resource hook reproduces2genuineRED at6134141c7 against current-canonical backup05577b33612d (21.25s). Native max comparison now affects only the chosen pool's local affordability, never the world's resources; preserves other costs/constraints and exact target. Energy/Chi and far-target cases use actual learned spells/pools. GREEN pending. Pool control and next-row semantics remain14766-owned; no DPS claim.
