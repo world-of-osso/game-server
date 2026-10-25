@@ -410,7 +410,7 @@ fn check_inundate_proc(
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     crate::spell_cast::scripts::register_feral_frenzy(&mut scripts);
-    crate::spell_cast::scripts::register_fire_procs(&mut scripts);
+    crate::spell_cast::scripts::register_periodic_counters(&mut scripts);
     scripts.0.insert(
         1236994,
         AuraScript {
@@ -453,6 +453,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     super::spirit_wolf::register(&mut scripts);
     super::natures_guardian::register(&mut scripts);
     super::ret_sentence::register(&mut scripts);
+    crate::spell_cast::scripts::register_fire_procs(&mut scripts);
     scripts.0.insert(
         super::fel_devastation::FEL_DEVASTATION,
         AuraScript {
@@ -683,6 +684,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         crate::spell_cast::scripts::RAPID_FIRE,
         AuraScript {
             on_periodic: Some(crate::spell_cast::scripts::cast_rapid_fire_tick),
+            on_natural_end: Some(crate::spell_cast::scripts::finish_rapid),
             ..Default::default()
         },
     );

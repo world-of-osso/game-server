@@ -9,6 +9,12 @@ use shared::components::ActiveSpec;
 #[derive(Clone, Copy)]
 enum Operation {
     Grant(u32),
+    FillStacks(u32),
+    GrantForCastDuration(u32),
+    Decrement {
+        aura: u32,
+        unless_aura: Option<u32>,
+    },
     GrantIfTalent {
         talent: u32,
         aura: u32,
@@ -24,6 +30,7 @@ enum Operation {
 struct CastRule {
     name: &'static str,
     spec: u32,
+    /// Zero means no talent prerequisite: only an already earned buff is consumed.
     talent: u32,
     cast: u32,
     operation: Operation,
@@ -67,6 +74,55 @@ const RULES: &[CastRule] = &[
             conditional_grant: None,
         },
     },
+    // SimC76f8118 sc_hunter.cpp4482–4485: selected Stalk and Strike
+    // grants Lock and Load on the actual Chakram cast, not on each bounce.
+    CastRule {
+        name: "SIMC_MM_STALK_LOCK_AND_LOAD",
+        spec: 254,
+        talent: 1266069,
+        cast: 1264949,
+        operation: Operation::Grant(194594),
+    },
+    // sc_hunter.cpp5803–5806/5596: fill the native buff's actual maximum,
+    // then spend exactly one use per Aimed Shot. Native70448 has one use.
+    CastRule {
+        name: "SIMC_MM_BULLETSTORM_PRODUCER",
+        spec: 254,
+        talent: 389019,
+        cast: 257044,
+        operation: Operation::FillStacks(389020),
+    },
+    CastRule {
+        name: "SIMC_MM_BULLETSTORM_CONSUMER",
+        spec: 254,
+        talent: 389019,
+        cast: 19434,
+        operation: Operation::Decrement {
+            aura: 389020,
+            unless_aura: None,
+        },
+    },
+    // sc_hunter.cpp6990–6994/3632–3637: Volley grants Trick Shots for
+    // its native field duration; ordinary Aimed/Rapid consume only outside Volley.
+    CastRule {
+        name: "SIMC_MM_VOLLEY_TRICK_SHOTS",
+        spec: 254,
+        talent: 260243,
+        cast: 260243,
+        operation: Operation::GrantForCastDuration(257622),
+    },
+    CastRule {
+        name: "SIMC_MM_AIMED_TRICK_CONSUMER",
+        spec: 254,
+        talent: 0,
+        cast: 19434,
+        operation: Operation::Decrement {
+            aura: 257622,
+            unless_aura: Some(260243),
+        },
+    },
+    // sc_hunter.cpp5836 consumes on last_tick, not at channel launch.
+    // The native Rapid Fire aura's natural-end hook owns that boundary.
     // sc_hunter.cpp5565–5567: one native Precise Shots application per Aimed Shot.
     CastRule {
         name: "SIMC_MM_AIMED_PRECISE_SHOTS",
@@ -150,10 +206,10 @@ fn selected(world: &World, caster: Entity, rule: &CastRule) -> bool {
     world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == rule.spec)
-        && has_talent(world, caster, rule.talent)
+        && (rule.talent == 0 || has_talent(world, caster, rule.talent))
 }
 
-fn has_talent(world: &World, caster: Entity, talent: u32) -> bool {
+pub(super) fn has_talent(world: &World, caster: Entity, talent: u32) -> bool {
     world.get::<TraitLoadout>(caster).is_some_and(|traits| {
         traits
             .active_talent_spells()
@@ -244,6 +300,7 @@ pub(in crate::spell_cast) fn ignores_cooldown(
 }
 
 pub(in crate::spell_cast) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    super::marksmanship_sentinel::after_cast(world, caster, spell);
     for rule in RULES.iter().filter(|rule| rule.cast == spell.id) {
         if !selected(world, caster, rule) {
             continue;
@@ -255,6 +312,15 @@ pub(in crate::spell_cast) fn after_cast(world: &mut World, caster: Entity, spell
 fn apply_rule(world: &mut World, caster: Entity, spell: &SpellInfo, rule: &CastRule) {
     match rule.operation {
         Operation::Grant(aura) => grant(world, caster, aura, rule.name),
+        Operation::FillStacks(aura) => grant_maximum(world, caster, aura, rule.name),
+        Operation::GrantForCastDuration(aura) => {
+            grant_for_cast_duration(world, caster, spell, aura, rule.name)
+        }
+        Operation::Decrement { aura, unless_aura } => {
+            if unless_aura.is_none_or(|excluded| !owns_aura(world, caster, excluded)) {
+                decrement(world, caster, aura);
+            }
+        }
         Operation::GrantIfTalent { talent, aura } => {
             if has_talent(world, caster, talent) {
                 grant(world, caster, aura, rule.name);
@@ -280,6 +346,74 @@ fn apply_rule(world: &mut World, caster: Entity, spell: &SpellInfo, rule: &CastR
             }
         }
         Operation::NativeProc => {}
+    }
+}
+
+pub(super) fn decrement(world: &mut World, caster: Entity, spell: u32) {
+    let stacks = world.get::<ActiveAuras>(caster).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.caster == caster && aura.spell_id == spell)
+            .map(|aura| aura.stacks)
+    });
+    match stacks {
+        Some(0 | 1) => {
+            consume(world, caster, spell);
+        }
+        Some(count) => {
+            crate::auras::set_self_cast_stacks(world, caster, spell, count - 1);
+        }
+        None => {}
+    }
+}
+
+fn grant_maximum(world: &mut World, caster: Entity, aura: u32, policy: &'static str) {
+    let buff = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(aura)
+        .expect("relationship requires native buff");
+    let maximum = crate::auras::fresh_max_stacks(world, caster, buff).max(1);
+    grant_with_overrides(
+        world,
+        caster,
+        aura,
+        policy,
+        super::super::TriggeredSpellOverrides {
+            aura_stacks: Some(maximum),
+            ..Default::default()
+        },
+    );
+}
+
+fn grant_for_cast_duration(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    aura: u32,
+    policy: &'static str,
+) {
+    let duration = super::super::duration_ms(world, caster, spell) as i32;
+    grant_with_overrides(
+        world,
+        caster,
+        aura,
+        policy,
+        super::super::TriggeredSpellOverrides {
+            duration_ms: Some(duration),
+            ..Default::default()
+        },
+    );
+}
+
+fn grant_with_overrides(
+    world: &mut World,
+    caster: Entity,
+    spell: u32,
+    policy: &'static str,
+    values: super::super::TriggeredSpellOverrides,
+) {
+    if !super::super::cast_triggered_with_overrides(world, caster, spell, Some(caster), 1, values) {
+        warn!(?caster, spell, policy, "Native relationship aura refused");
     }
 }
 
