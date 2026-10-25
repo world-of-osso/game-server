@@ -28,13 +28,26 @@ fn damage_events(run: &Run, spell: u32) -> usize {
 }
 
 fn aimed_full_recharge(run: &Run) -> f64 {
-    let world = run.app.world();
-    let spell = world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(19434)
-        .unwrap();
-    crate::spell_cast::cooldown_query::cooldown_value(world, run.actor, spell, "full_recharge_time")
-        .unwrap()
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    use server::simc_apl::Facts;
+    let bindings = Bindings {
+        actions: [("aimed_shot".into(), 19434)].into(),
+        global_cooldown_spell: 19434,
+        ..Default::default()
+    };
+    NativeFacts::new(
+        run.app.world(),
+        run.actor,
+        &bindings,
+        Encounter::Fixture {
+            started_at: 0.0,
+            duration: 300.0,
+            style: FightStyle::Patchwerk,
+        },
+        1,
+    )
+    .value("cooldown.aimed_shot.full_recharge_time")
+    .unwrap()
 }
 
 #[test]
