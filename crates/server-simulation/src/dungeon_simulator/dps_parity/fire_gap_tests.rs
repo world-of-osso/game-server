@@ -203,4 +203,12 @@ fn fire_gap_guaranteed_crits_predict_native_hot_streak_reactions() {
         1.0,
         "known HU plus guaranteed crit predicts HS"
     );
+    for _ in 0..12 {
+        run.app.update();
+    }
+    start_native(&mut run, 108853, target);
+    run.app.update();
+    assert_eq!(stacks(&run, 48108), 1, "a wasted crit preserves HS");
+    assert_eq!(stacks(&run, 48107), 0, "a wasted crit does not create HU");
+    assert_eq!(reacted(&run, "buff.hot_streak.react"), 1.0);
 }
