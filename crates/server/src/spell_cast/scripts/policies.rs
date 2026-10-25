@@ -19,6 +19,10 @@ struct ChannelMomentum {
 
 #[derive(Clone, Copy)]
 enum Relationship {
+    TriggerPrimaryAfterCast {
+        parent: u32,
+        payload: u32,
+    },
     SpenderPeriodicExtension {
         resource: PowerType,
         payload: u32,
@@ -100,6 +104,17 @@ struct Policy {
 
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
+    // SimC76f8118 sc_hunter.cpp6702–6703: selected Nature's Ally spawns
+    // through its native Effect188 record; native1282474 supplies count/lifetime.
+    Policy {
+        name: "SIMC_BM_WRATH_NATURES_ALLY_SUMMON",
+        spec: 253,
+        talent: 1273043,
+        relationship: Relationship::TriggerPrimaryAfterCast {
+            parent: 19574,
+            payload: 1282474,
+        },
+    },
     // SimC76f8118 sc_hunter.cpp5089/4972,3843–3846: successful Barbed/Cobra
     // arms selected Nature's Ally; native1276720 owns its value and lifetime.
     Policy {
@@ -1052,7 +1067,8 @@ fn roll_replacement_proc(
 fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
         matches!(policy.relationship,
-        Relationship::ApplySelfAuraAfterCast { parent: trigger, .. }
+        Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
+        | Relationship::ApplySelfAuraAfterCast { parent: trigger, .. }
         | Relationship::ConsumeSelfAuraAfterCast { parent: trigger, .. }
         | Relationship::CounterAfterCast { parent: trigger, .. }
         | Relationship::ProcReplacement { spell: trigger, .. }
@@ -1091,6 +1107,16 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             continue;
         }
         match policy.relationship {
+            Relationship::TriggerPrimaryAfterCast { payload, .. } => {
+                let depth = super::super::next_trigger_depth(world);
+                super::super::cast_triggered(
+                    world,
+                    caster,
+                    payload,
+                    spell.cast_primary_target,
+                    depth,
+                );
+            }
             Relationship::ApplySelfAuraAfterCast { payload, .. } => {
                 let depth = super::super::next_trigger_depth(world);
                 super::super::cast_triggered(world, caster, payload, Some(caster), depth);

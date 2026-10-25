@@ -294,6 +294,9 @@ pub fn cast_handler(effect_id: u32) -> Option<CastEffectHandler> {
             crate::game_objects::summoned::spawn_wild
         }
         crate::hunter_pet::EFFECT_SUMMON_PET => crate::hunter_pet::effect_summon_pet,
+        crate::hunter_pet::EFFECT_SUMMON_STABLED_PET_AS_GUARDIAN => {
+            crate::hunter_pet::effect_summon_stabled_pet
+        }
         crate::hunter_pet::EFFECT_RESURRECT_PET => crate::hunter_pet::effect_revive_pet,
         super::summon::EFFECT_SUMMON => super::summon::summon_creature,
         super::area_trigger::EFFECT_CREATE_AREATRIGGER => super::area_trigger::create_area_trigger,
