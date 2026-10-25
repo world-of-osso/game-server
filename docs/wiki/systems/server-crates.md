@@ -64,9 +64,11 @@ D3 appends11byte-identical public spell test files to the existing consumer, ret
 
 `server-map-rules` owns map identity/difficulty/clock records, metadata/static-area catalogs, locks, admission/reset rules and graveyard choice. [32 unchanged tests](../../handoffs/crate-split-map-test-mapping.md) move with them. Core retains native transfer/PvP/housing/script integration tests and the original catalog-cache decorator. Fixture helpers have one feature-gated lower owner.
 
+`server-follower-policy` owns scalar pull-budget inputs/decisions and [five unchanged tests](../../handoffs/crate-split-follower-policy-test-mapping.md), with no dependencies. Native measurement, readiness, AI and spell execution remain in server. The existing test-only forecast observer is shared through a dev-only `test-support` feature.
+
 ## Extraction candidates
 
-Structural order: map rules → follower budget policy → shared cycle-breaking types → larger domains. The initial53d0e1ce1 graph found pet235, APL49, item-instance20, race/class11 and level-scaling10tests without gameplay imports; counts alone do not determine priority.
+Completed prerequisites: map rules and follower budget policy. Next: shared cycle-breaking identity/on-use types, then larger domains. The initial53d0e1ce1 graph found pet235, APL49, item-instance20, race/class11 and level-scaling10tests without gameplay imports; counts alone do not determine priority.
 
 [Measured heavy-module walls](../investigations/server-test-performance.md) locate the larger boundaries:
 
