@@ -126,7 +126,7 @@ fn prepare_periodic_phase(
     target: Entity,
     new: &mut AuraInstance,
     spell: &SpellInfo,
-    rolling: bool,
+    sourced_rolling: bool,
 ) {
     let stacking = spell
         .aura_options
@@ -136,7 +136,9 @@ fn prepare_periodic_phase(
         .misc
         .as_ref()
         .is_some_and(|misc| misc.attributes[13] & PERIODIC_REFRESH_EXTENDS_DURATION != 0);
-    if !spell.cast_dont_reset_periodic_timer && !stacking && !pandemic && !rolling {
+    let native_preserves_phase = spell.cast_dont_reset_periodic_timer || stacking || pandemic;
+    let preserve_phase = native_preserves_phase || sourced_rolling;
+    if !preserve_phase {
         return;
     }
     let Some(old) = previous(world, target, new) else {
