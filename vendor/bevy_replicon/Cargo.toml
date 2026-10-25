@@ -68,6 +68,9 @@ world_serialization = ["bevy/bevy_world_serialization"]
 name = "bevy_replicon"
 path = "src/lib.rs"
 
+[dependencies.server-runtime]
+path = "../../crates/server-runtime"
+
 [dependencies.bevy]
 version = "0.19"
 features = ["bevy_state"]

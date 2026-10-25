@@ -7,10 +7,10 @@ use bevy::{
 };
 
 #[derive(Default)]
-pub(crate) struct DirtyReplicationEntities {
-    pub(crate) all_senders: EntityIndexSet,
-    pub(crate) per_sender: EntityHashMap<EntityIndexSet>,
-    pub(crate) full_senders: EntityIndexSet,
+pub struct DirtyReplicationEntities {
+    pub all_senders: EntityIndexSet,
+    pub per_sender: EntityHashMap<EntityIndexSet>,
+    pub full_senders: EntityIndexSet,
 }
 
 /// Replicated entities that must be reconsidered by the server sender.
@@ -36,11 +36,11 @@ impl ReplicationDirtyQueue {
             .insert(entity);
     }
 
-    pub(crate) fn mark_full_sender(&self, sender: Entity) {
+    pub fn mark_full_sender(&self, sender: Entity) {
         self.lock().full_senders.insert(sender);
     }
 
-    pub(crate) fn drain(&self) -> DirtyReplicationEntities {
+    pub fn drain(&self) -> DirtyReplicationEntities {
         mem::take(&mut *self.lock())
     }
 
