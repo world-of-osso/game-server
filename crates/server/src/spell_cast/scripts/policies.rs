@@ -104,6 +104,26 @@ struct Policy {
 
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
+    // SimC76f8118 sc_evoker.cpp6241–6245: Deep Breath's main impact
+    // executes native353759; DB2 supplies its periodic damage and recipients.
+    Policy {
+        name: "SIMC_DEVASTATION_DEEP_BREATH_PAYLOAD",
+        spec: 1467,
+        talent: 357210,
+        relationship: Relationship::TriggerPrimaryAfterCast {
+            parent: 357210,
+            payload: 353759,
+        },
+    },
+    Policy {
+        name: "SIMC_DEVASTATION_MANEUVERABLE_DEEP_BREATH_PAYLOAD",
+        spec: 1467,
+        talent: 433871,
+        relationship: Relationship::TriggerPrimaryAfterCast {
+            parent: 433874,
+            payload: 353759,
+        },
+    },
     // SimC76f8118 sc_hunter.cpp6702–6703: selected Nature's Ally spawns
     // through its native Effect188 record; native1282474 supplies count/lifetime.
     Policy {
