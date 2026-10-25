@@ -319,15 +319,17 @@ pub(super) fn absorb_amount(
     Some(health.max * percent / 100.0)
 }
 
-///1822's stealth bonus also applies to its named155722 bleed, frozen on apply.
-///Do not re-read stealth at each tick or modify arbitrary periodic auras.
-pub(super) fn snapshot_periodic_amount(
+/// Source-qualified native aura amounts, frozen on application and refresh.
+/// Periodic policies never re-read their launch bonuses at each tick.
+pub(super) fn snapshot_aura_amount(
     world: &World,
     caster: Entity,
     spell: &crate::spell_info::SpellInfo,
     effect: &crate::spell_info::SpellEffect,
     amount: f32,
 ) -> f32 {
+    let amount =
+        crate::spell_cast::scripts::snapshot_rod_amount(world, spell, effect.index, amount);
     let amount = if effect.aura == super::PERIODIC_DAMAGE_AURA {
         super::spell_mods::snapshot_periodic_amount(world, caster, spell, amount)
     } else {
