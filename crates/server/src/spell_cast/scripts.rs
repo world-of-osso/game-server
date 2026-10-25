@@ -31,6 +31,7 @@ pub(crate) mod empower_evoker;
 mod essence_burst;
 mod policies;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
+pub(super) use policies::{on_hit as apply_hit_policies, snapshot as snapshot_hit_policies};
 mod germination;
 mod giantkiller;
 pub(super) use giantkiller::multiplier as giantkiller_multiplier;

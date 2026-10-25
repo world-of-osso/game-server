@@ -29,6 +29,7 @@ use std::time::Instant;
 use bevy::prelude::*;
 use rusqlite::Connection;
 use serde::Serialize;
+use shared::components::PowerType;
 
 pub(crate) use class_data::MAX_LEVEL;
 #[cfg(any(test, feature = "test-support"))]
@@ -54,6 +55,13 @@ pub(crate) struct ChargedSpellModifier {
     pub op: i32,
     pub percent: bool,
     pub amount: f32,
+}
+
+/// Ordinary launch inputs retained for explicit resource-spender hit policies.
+#[derive(Debug, Clone)]
+pub(crate) struct CastPolicyContext {
+    pub powers: Vec<PowerType>,
+    pub targets: Vec<Entity>,
 }
 
 /// One spell's DB2 data at DifficultyID 0. Sparse tables are boxed so the
@@ -86,6 +94,9 @@ pub struct SpellInfo {
     /// Read-only to hit scripts; never inferred from an effect's self/area recipients.
     #[serde(skip)]
     pub(crate) cast_primary_target: Option<Entity>,
+    /// Sourced ordinary-hit policy inputs; triggered catalog clones keep None.
+    #[serde(skip)]
+    pub(crate) cast_policy_context: Option<Box<CastPolicyContext>>,
     /// Per-cast ground point; preserved in queued/cast snapshots, never DB2 metadata.
     #[serde(skip)]
     pub(crate) cast_destination: Option<[f32; 3]>,
