@@ -58,15 +58,17 @@ fn fury_deep_wounds_rolling_refresh_keeps_next_tick_and_adds_full_native_duratio
             aura.expires_at.unwrap() - crate::auras::aura_now(run.app.world()),
         )
     };
-    eprintln!(
-        "Deep Wounds effective schedule before refresh (duration_ms, period_ms, remains_s): {:?}",
-        schedule(&run)
-    );
+    let initial = schedule(&run);
+    assert_eq!((initial.0, initial.1), (6000, 1000));
+    let elapsed_ms = f64::from(initial.0) - initial.2 * 1000.0;
+    let next_tick_ms = f64::from(initial.1) - elapsed_ms.rem_euclid(f64::from(initial.1));
+    let expected_duration = initial.0 + next_tick_ms.round() as u32;
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 262115, Some(target), 1);
     run.app.update();
-    eprintln!(
-        "Deep Wounds effective schedule after refresh (duration_ms, period_ms, remains_s): {:?}",
-        schedule(&run)
+    assert_eq!(
+        schedule(&run).0,
+        expected_duration,
+        "rolling refresh lifetime includes the pending half-period plus a full native duration"
     );
     for _ in 0..159 {
         run.app.update();

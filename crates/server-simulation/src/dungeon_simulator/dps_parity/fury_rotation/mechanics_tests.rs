@@ -93,15 +93,24 @@ fn fury_anger_management_reduces_recklessness_from_actual_rampage_cost() {
     cast_native(&mut run, 1719, actor);
     crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Rage, 1300.0)
         .unwrap();
-    let before = crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Rage)
+    // Net Rage also includes gains during Rampage's native completion window.
+    // Read the actual native payment input, not the later bank balance.
+    let rampage = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(184367)
+        .unwrap();
+    let paid = crate::spell_cast::applicable_costs(run.app.world(), actor, rampage)
         .unwrap()
-        .0;
+        .iter()
+        .filter(|(pool, _, _)| *pool == crate::spell_cast::CostPool::Power(PowerType::Rage))
+        .map(|(_, amount, _)| *amount)
+        .sum::<f32>();
+    assert_eq!(paid, 800.0, "actual native Rampage costs80 displayed Rage");
     let deadline = cooldown_deadline(&run, 1719);
     let target = run.targets[0];
     cast_native(&mut run, 184367, target);
-    let after = crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Rage)
-        .unwrap()
-        .0;
     let native_divisor = run
         .app
         .world()
@@ -109,7 +118,7 @@ fn fury_anger_management_reduces_recklessness_from_actual_rampage_cost() {
         .get(PowerType::Rage)
         .unwrap()
         .display_modifier as f64;
-    let expected = f64::from(before - after) / native_divisor / 20.0;
+    let expected = f64::from(paid) / native_divisor / 20.0;
     let reduction = deadline - cooldown_deadline(&run, 1719);
     assert!(expected > 0.0);
     assert!(
