@@ -62,18 +62,28 @@ pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScri
     enhancement_tier::register(scripts);
 }
 mod policies;
+mod spellslinger;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 pub(super) use policies::check_cast as check_policy_cast;
 pub(crate) use policies::register_channel_policies;
 pub(super) use policies::{
-    after_impacts as after_impact_policies,
-    after_periodic_damage as apply_periodic_damage_policies,
-    after_triggered_cast as apply_triggered_cast_policies, before_impact as before_impact_policies,
-    has_impact_policy, on_hit as apply_hit_policies, snapshot as snapshot_hit_policies,
+    after_impacts as after_impact_policies, after_triggered_cast as apply_triggered_cast_policies,
+    before_impact as before_impact_policies, has_impact_policy, on_hit as apply_hit_policies,
+    snapshot as snapshot_hit_policies,
 };
 pub(crate) use policies::{
     extends_reapplication, filter_secondary_targets, register_lifecycle_policies,
 };
+
+pub(super) fn apply_periodic_damage_policies(
+    world: &mut World,
+    ctx: &super::effects::EffectCtx,
+    target: Entity,
+    amount: f32,
+) {
+    policies::after_periodic_damage(world, ctx, target, amount);
+    spellslinger::after_periodic_damage(world, ctx, target);
+}
 
 pub(crate) fn owns_policy_proc(spell: u32) -> bool {
     policies::owns_policy_proc(spell) || melee_reset::owns_proc(spell)
@@ -763,6 +773,7 @@ pub fn after_cast(spell_id: u32) -> impl Iterator<Item = AfterCastHook> {
     native_after_cast(spell_id)
         .into_iter()
         .chain(policies::after_cast_hook(spell_id))
+        .chain(spellslinger::after_cast_hook(spell_id))
 }
 
 fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
