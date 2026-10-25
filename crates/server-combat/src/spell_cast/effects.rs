@@ -1105,6 +1105,8 @@ fn critical_damage_amount(
         SpellModOp::CritDamageAndHealing,
         base_bonus,
     );
+    let bonus =
+        super::scripts::elemental_ancestors::modify_critical_bonus(world, caster, spell.id, bonus);
     let total = amount + bonus;
     if weapon_order {
         total * multiplier

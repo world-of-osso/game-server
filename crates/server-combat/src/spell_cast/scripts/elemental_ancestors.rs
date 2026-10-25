@@ -137,6 +137,35 @@ pub(super) fn lava_multiplier(world: &World, caster: Entity, _target: Entity, am
     amount * (1.0 + crit / 100.0)
 }
 
+// SimC76f8118 sc_shaman.cpp11468–11469 adds the three Ancestor spells
+// to Elemental Fury's first effect; parse_effects.cpp1895 uses one-based indexes.
+// Native60188 effect0 owns the bonus; do not fabricate family masks or amounts.
+pub(in crate::spell_cast) fn modify_critical_bonus(
+    world: &World,
+    caster: Entity,
+    spell: u32,
+    bonus: f32,
+) -> f32 {
+    if !matches!(spell, 447419 | 447425 | BLAST) {
+        return bonus;
+    }
+    let Some(owner) = owner(world, caster) else {
+        return bonus;
+    };
+    if !selected(world, owner, 60188) {
+        return bonus;
+    }
+    let effect = world
+        .get::<crate::auras::ActiveAuras>(owner)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 60188 && aura.caster == owner)
+        })
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0));
+    effect.map_or(bonus, |effect| bonus * (1.0 + effect.amount / 100.0))
+}
+
 pub(in crate::spell_cast) fn on_despawn(world: &mut World, actor: Entity) {
     let Some(owner) = owner(world, actor) else {
         return;

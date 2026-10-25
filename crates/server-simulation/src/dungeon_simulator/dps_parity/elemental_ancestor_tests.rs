@@ -94,7 +94,7 @@ fn ancestor_lava_damage(keep_fury: bool) -> (f64, f64, f64) {
     let bonus = fury
         .effects
         .iter()
-        .find(|effect| effect.index == 1)
+        .find(|effect| effect.index == 0)
         .unwrap()
         .amount;
     let instance = fury.instance_id;
@@ -141,7 +141,7 @@ fn ancestor_lava_damage(keep_fury: bool) -> (f64, f64, f64) {
 #[ignore = "requires private262 native DB/profile with native445624 template closure"]
 fn elemental_ancestor_lava_critical_bonus_uses_live_native_elemental_fury() {
     // SimC76f8118 sc_shaman.cpp11468–11469 explicitly adds the three
-    // Ancestor spells to native Elemental Fury effect1's critical bonus.
+    // Ancestor spells to native Elemental Fury effect0's critical bonus.
     let (ordinary, _, variance) = ancestor_lava_damage(false);
     let (empowered, percent, _) = ancestor_lava_damage(true);
     assert!(percent > 0.0);
