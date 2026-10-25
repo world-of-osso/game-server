@@ -2,7 +2,7 @@
 
 ## Frontal parity pack —2026-10-24
 
-The [shared parity constructor](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/mod.rs) uses symmetric half-yard lateral steps for all classes and replacement waves. The primary remains1.5yd away; the first two adds are at±0.5yd, within±18.435°. Old `[1.5,index,0]` placement put the third at53.13°/2.5yd, correctly outside native FoF's60° cone and TC's2yd close boundary. Correct the harness, never the gameplay cone. Real FoF recipient and Mage/Monk fixture regressions reach genuine two-RED12.83s before the change; GREEN and once-only controlled3T remeasurement are pending. [Contract](../../specs/dps-parity.md), [source/proof ledger](../../handoffs/parity-frontal-pack-proof-ledger.md).
+The [shared parity constructor](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/mod.rs) uses symmetric half-yard lateral steps for all classes and replacement waves. The primary remains1.5yd away; the first two adds are at±0.5yd, within±18.435°. Old `[1.5,index,0]` placement put the third at53.13°/2.5yd, correctly outside native FoF's60° cone and TC's2yd close boundary. Correct the harness, never the gameplay cone. Real FoF recipient and Mage/Monk fixture regressions reach genuine two-RED12.83s before the change, then two-GREEN13.92s at26c83dd27; actual FoF now reaches all three identities, compile18.84s/zero warnings. Once-only controlled3T remeasurement and lead integration remain pending. [Contract](../../specs/dps-parity.md), [source/proof ledger](../../handoffs/parity-frontal-pack-proof-ledger.md).
 
 ## Hunter pet intrinsic/owner stats —2026-10-22
 

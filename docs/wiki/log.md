@@ -1,6 +1,6 @@
 ## 2026-10-24 — Shared parity frontal pack
 
-[Source/proof](../handoffs/parity-frontal-pack-proof-ledger.md): old third dummy53.13°/2.5yd lies outside correct native60°cone/min2 boundary. Actual native FoF2/3 identities and common Mage/Monk layout give two genuine REDs12.83s at1496b0e0d, compile441.33s/zero warnings. Shared symmetric0/−0.5/+0.5 placement preserves primary1.5yd and all gameplay/gating code; GREEN and once-only controlled3T remeasurement pending.
+[Source/proof](../handoffs/parity-frontal-pack-proof-ledger.md): old third dummy53.13°/2.5yd lies outside correct native60°cone/min2 boundary. Actual native FoF2/3 identities and common Mage/Monk layout give two genuine REDs12.83s at1496b0e0d, compile441.33s/zero warnings. Shared symmetric0/−0.5/+0.5 placement preserves primary1.5yd and all gameplay/gating code; two native GREEN13.92s at26c83dd27, compile18.84s/zero warnings. Once-only controlled3T remeasurement/lead integration pending.
 
 ## 2026-10-24 — Generic health aura-state qualification
 
