@@ -61,7 +61,9 @@ pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScri
     enhancement_strikes::register(scripts);
     enhancement_tier::register(scripts);
 }
+mod periodic_counters;
 mod policies;
+pub(crate) use periodic_counters::register as register_periodic_counters;
 mod spellslinger;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 pub(super) use policies::check_cast as check_policy_cast;

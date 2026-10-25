@@ -131,6 +131,35 @@ const CUT_TO_THE_CHASE: Relationship = Relationship::SpenderAuraExtension {
 
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
+    // SimC76f8118 sc_mage.cpp4243–4245/4275–4279: native Spike payload
+    // and successful-cast consumption of its Icicles/enabler.
+    Policy {
+        name: "SIMC_FROST_GLACIAL_SPIKE_DAMAGE",
+        spec: 64,
+        talent: 1246832,
+        relationship: Relationship::TriggerPrimaryAfterCast {
+            parent: 199786,
+            payload: 228600,
+        },
+    },
+    Policy {
+        name: "SIMC_FROST_GLACIAL_SPIKE_ICICLE_CONSUMER",
+        spec: 64,
+        talent: 1246832,
+        relationship: Relationship::ConsumeSelfAuraAfterCast {
+            parent: 199786,
+            payload: 205473,
+        },
+    },
+    Policy {
+        name: "SIMC_FROST_GLACIAL_SPIKE_ENABLER_CONSUMER",
+        spec: 64,
+        talent: 1246832,
+        relationship: Relationship::ConsumeSelfAuraAfterCast {
+            parent: 199786,
+            payload: 1222865,
+        },
+    },
     // SimC76f8118 sc_evoker.cpp5592–5599: starting Eternity Surge grants
     // selected Azure Sweep. Native1265871 supplies its action override and damage mod.
     Policy {
