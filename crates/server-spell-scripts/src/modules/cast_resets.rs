@@ -1,9 +1,14 @@
 //! Authored cast-result relationships; native spell effects supply proc values.
+use super::combat;
+use combat::spell_cast::script_registry::SpellScriptHook;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::NativeAfterCast(hook)];
+
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
-use crate::spell_cast;
-use crate::spell_info::{SpellInfo, SpellStore};
+use combat::spell_cast;
+use combat::spell_info::{SpellInfo, SpellStore};
 
 struct CastReset {
     spec: u32,
@@ -24,7 +29,7 @@ const RESETS: &[CastReset] = &[
     },
 ];
 
-pub(super) fn hook(spell: u32) -> Option<super::AfterCastHook> {
+fn hook(spell: u32) -> Option<combat::spell_cast::scripts::AfterCastHook> {
     RESETS
         .iter()
         .any(|reset| reset.producer == spell)
@@ -39,8 +44,13 @@ fn roll_resets(world: &mut World, caster: Entity, spell: &SpellInfo) {
         {
             continue;
         }
-        let chance = super::script_effect_value(world, caster, spell.id, reset.chance_effect);
-        if crate::random::random::<f32>() * 100.0 >= chance {
+        let chance = combat::spell_cast::scripts::script_effect_value(
+            world,
+            caster,
+            spell.id,
+            reset.chance_effect,
+        );
+        if combat::random::random::<f32>() * 100.0 >= chance {
             continue;
         }
         for action in reset.actions {

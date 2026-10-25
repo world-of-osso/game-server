@@ -134,6 +134,7 @@ impl Plugin for AuraPlugin {
         app.init_resource::<procs::PendingAuraEvents>()
             .init_resource::<UnhandledAuras>()
             .init_resource::<scripts::AuraScripts>()
+            .init_resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
             .add_systems(
                 Startup,
                 (
@@ -1642,7 +1643,7 @@ pub(crate) fn refresh_duration(world: &mut World, target: Entity, spell_id: u32)
 }
 
 /// Set the lifetime of an existing owned aura without replacing its native effects.
-pub(crate) fn set_owned_duration(
+pub fn set_owned_duration(
     world: &mut World,
     caster: Entity,
     target: Entity,

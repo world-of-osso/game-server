@@ -1,10 +1,9 @@
 //! Spell scripts (TrinityCore `SpellScript`) keyed by spell ID: behaviour that the
 //! spell's DB2 effects do not carry.
 
+use super::script_registry;
 use crate::random as rand;
 
-mod after_cast_auras;
-mod aura_rolls;
 mod bouncing_projectiles;
 mod cast_relationships;
 mod marksmanship;
@@ -41,15 +40,11 @@ mod batch6;
 mod batch7;
 mod batch8;
 mod batch9;
-mod cast_grants;
-mod cast_resets;
 mod execution_counters;
 mod foreground_procs;
 mod impact_procs;
-mod paid_cooldowns;
 mod periodic_attacks;
 mod secondary_copies;
-pub(super) use paid_cooldowns::after_payment as after_paid_resources;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(crate) use secondary_copies::after_melee as after_melee_residual;
 pub(super) use secondary_copies::after_spell as after_spell_residual;
@@ -111,8 +106,8 @@ pub(super) fn apply_periodic_damage_policies(
     spellslinger::after_periodic_damage(world, ctx, target);
 }
 
-pub(crate) fn owns_policy_proc(spell: u32) -> bool {
-    policies::owns_policy_proc(spell)
+pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
+    policies::owns_policy_proc(world, spell)
         || melee_reset::owns_proc(spell)
         || resource_values::owns_proc(spell)
 }
@@ -231,7 +226,7 @@ pub(super) fn finish_scripted_launch(
 
 /// TC OnCast runs once after successful checks, before spending and launch.
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
-    cast_grants::on_cast(world, caster, spell_id, depth);
+    script_registry::on_cast(world, caster, spell_id, depth);
     havoc::before_cast(world, caster, spell_id, depth);
     windwalker::scripted_combo_cast(world, caster, spell_id, depth);
     elemental::before_launch(world, caster, spell_id, depth);
@@ -696,8 +691,8 @@ pub(crate) fn ignores_hit_avoidance(spell: u32) -> bool {
 
 pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 
-pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
-    if let Some(hook) = policies::damage_hook(spell_id) {
+pub fn damage_amount(world: &World, spell_id: u32) -> Option<DamageAmountHook> {
+    if let Some(hook) = policies::damage_hook(world, spell_id) {
         return Some(hook);
     }
     match spell_id {
@@ -822,24 +817,21 @@ pub(super) use empower_evoker::damage_bonus as empower_damage_bonus;
 
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
-pub fn after_cast(spell_id: u32) -> impl Iterator<Item = AfterCastHook> {
+pub fn after_cast(world: &World, spell_id: u32) -> impl Iterator<Item = AfterCastHook> + use<> {
     // Native handlers and sourced policy relationships are independent effects,
     // not alternate implementations (SimC76f8118 sc_hunter.cpp5083–5092).
-    native_after_cast(spell_id)
+    native_after_cast(world, spell_id)
         .into_iter()
-        .chain(policies::after_cast_hook(spell_id))
+        .chain(policies::after_cast_hook(world, spell_id))
         .chain(spellslinger::after_cast_hook(spell_id))
         .chain(batch9::after_cast_hook(spell_id))
-        .chain(aura_rolls::hook(spell_id))
+        .chain(script_registry::aura_roll_after_cast(world, spell_id))
         .chain(resource_values::after_cast_hook(spell_id))
         .chain(evoker_tier::hook(spell_id))
 }
 
-fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
-    if let Some(hook) = cast_resets::hook(spell_id) {
-        return Some(hook);
-    }
-    if let Some(hook) = after_cast_auras::hook(spell_id) {
+fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
+    if let Some(hook) = script_registry::native_after_cast(world, spell_id) {
         return Some(hook);
     }
     match spell_id {
@@ -976,14 +968,14 @@ pub(super) type TargetPlanHook =
     fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> super::TargetPlan;
 
 /// Script-owned target plans still use normal validation, hit and effect paths.
-pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
+pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
     if let Some(hook) = marksmanship_explosive::target_plan(spell_id) {
         return Some(hook);
     }
     if let Some(hook) = marksmanship::target_plan(spell_id) {
         return Some(hook);
     }
-    if let Some(hook) = policies::target_plan_hook(spell_id) {
+    if let Some(hook) = policies::target_plan_hook(world, spell_id) {
         return Some(hook);
     }
     match spell_id {
@@ -1331,7 +1323,7 @@ pub fn script_effect_value(world: &World, caster: Entity, spell_id: u32, index: 
 }
 
 /// Reduce the currently running recharge or spell cooldown; never start one.
-fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f64) {
+pub fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f64) {
     let now = super::history_now(world);
     let spell = world
         .resource::<crate::spell_info::SpellStore>()
@@ -1724,8 +1716,8 @@ pub type HitHook = fn(&mut World, Entity, Entity, u8);
 /// OnHit scripts that need per-cast metadata (including original field identity).
 pub(super) type ContextHitHook = fn(&mut World, &super::effects::EffectCtx, Entity);
 
-pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
-    if let Some(hook) = policies::hit_hook(spell_id) {
+pub(super) fn on_hit_with_context(world: &World, spell_id: u32) -> Option<ContextHitHook> {
+    if let Some(hook) = policies::hit_hook(world, spell_id) {
         return Some(hook);
     }
     match spell_id {

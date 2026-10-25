@@ -4599,3 +4599,7 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0â
 - 2026-10-25: Pet split proof atd1e3d6cf6: workspace/all-target check and fmt pass; leaf230PASS/5existingignored, exact235runtime names and33source hashes preserved; touched-server77PASS/8ignored plus required-ground-env exact retry1PASS. Zero warnings, no assertion/code change for retry, no full suite/push. Original failed receipts retained.
 
 - 2026-10-25: Extracted dependency-free follower pull-budget policy and five unchanged tests; native measurement/AI/spell integration stays in server.
+
+## 2026-10-25 â€” Downstream spell-script registry
+
+Documented the first compile-boundary slice in [spell-script-crate](systems/spell-script-crate.md): all relationship-policy rows and five complete hook modules move downstream; the remaining implementations stay in combat. Dispatch order has one code-level contract.
