@@ -10,7 +10,7 @@ const BUDGET: u32 = 431522;
 const WAKE: u32 = 255937;
 const JUDGMENT: u32 = 20271;
 
-fn budget(run: &Run) -> Option<&crate::auras::AuraInstance> {
+pub(super) fn budget(run: &Run) -> Option<&crate::auras::AuraInstance> {
     run.app
         .world()
         .get::<crate::auras::ActiveAuras>(run.actor)?
@@ -18,7 +18,7 @@ fn budget(run: &Run) -> Option<&crate::auras::AuraInstance> {
         .find(|aura| aura.spell_id == BUDGET && aura.caster == run.actor)
 }
 
-fn cast_and_damage(run: &mut Run, spell: u32) {
+pub(super) fn cast_and_damage(run: &mut Run, spell: u32) {
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
@@ -55,7 +55,7 @@ fn cast_and_damage(run: &mut Run, spell: u32) {
     panic!("ordinary native spell{spell} never damaged the actual enemy");
 }
 
-fn native_count(run: &Run) -> f32 {
+pub(super) fn native_count(run: &Run) -> f32 {
     let world = run.app.world();
     let selected = world
         .get::<crate::class_progression::TraitLoadout>(run.actor)

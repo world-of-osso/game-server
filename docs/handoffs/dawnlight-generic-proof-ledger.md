@@ -17,11 +17,11 @@ Pinned `sc_paladin.hpp1512–1535` applies Dawnlight only on a successful foregr
 |Boundary|Required behavior|Status|
 |---|---|---|
 |Producer|Actual selected Wake damages/earns3HP then arms native3, not max6|29a75ec42 genuine missing431522 RED67.06s after raw/live count, real Wake damage and3HP prerequisites pass;2negative controls PASS|
-|NoWake/noHero|Native Judgment or legal unspent Hero points cannot manufacture budget|NoWake/noHero2PASS in the strict producer RED run|
+|NoWake/noHero|Native Judgment or legal unspent Hero points cannot manufacture budget|NoWake/noHero2PASS in the strict producer RED run; unchanged producer suite3GREEN40.94s at60f30134b|
 |Consumer|Actual Wake budget3 followed by funded foreground hit applies owned431380/tick and reduces3→2|Not reached; producer must be GREEN first|
 |Background/target selection|Sourced exclusions and once-per-cast/native recipient behavior|Consumer-stage proof pending|
 
-Producer implementation ports the previously approved Ret behavior into `scripts/policies.rs`: explicit named data owns the selected spec/talent/parent/counter/effect relationship; generic lookup/selection/native-count execution contains no hardcoded spell-ID branch. Native triggered aura application retains its maximum6. Consumer code remains absent until producer GREEN and subsequent consumer RED.
+Producer implementation ports the previously approved Ret behavior into `scripts/policies.rs`: explicit named data owns the selected spec/talent/parent/counter/effect relationship; generic lookup/selection/native-count execution contains no hardcoded spell-ID branch. Native triggered aura application retains its maximum6. At60f30134b the unchanged producer suite is **3/3GREEN40.94s**, warning-free1m06s compile (`producer-green-v1.*`): native3/max6 and both negatives pass. Consumer code remains absent; its tests are added only after this producer GREEN.
 
 Producer RED receipt: engine `dawnlight-generic-7b/producer-red-v1.{log,proof.json}`; zero warnings, compile1m14s. The failure is the actual missing budget, not a raw2/live3 oracle or admission error.
 
