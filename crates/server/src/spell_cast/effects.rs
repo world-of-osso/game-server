@@ -2585,10 +2585,27 @@ fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     };
     spell.cast_destination = ctx.spell.cast_destination;
     spell.cast_item_level = ctx.spell.cast_item_level;
-    // SimC76f8118 sc_demon_hunter.cpp: Annihilation's child strikes retain
-    // the selected enemy even though the native parent casts on self.
-    spell.cast_primary_target = ctx.primary_target();
-    super::launch_triggered_spell(world, ctx.caster, &spell, Some(target), depth);
+    let target = trigger_recipient(ctx, &spell, target);
+    super::launch_triggered_spell(world, ctx.caster, &spell, target, depth);
+}
+
+pub(super) fn trigger_recipient(
+    ctx: &EffectCtx,
+    child: &SpellInfo,
+    target: Entity,
+) -> Option<Entity> {
+    // SimC76f8118 sc_demon_hunter.cpp7588–7591 retains the parent's enemy
+    // for both strikes. TC a352b1fa SpellEffects.cpp680–683 uses the original
+    // cast unit on the launch path, not the self recipient of the trigger effect.
+    let needs_enemy = matches!(
+        super::targets::explicit_requirement(child.effects.iter()),
+        Some(super::targets::Relation::Enemy)
+    );
+    if target == ctx.caster && needs_enemy {
+        ctx.primary_target()
+    } else {
+        Some(target)
+    }
 }
 
 /// 140 FORCE_CAST (`Spell::EffectForceCast`, SpellEffects.cpp:791-849): the target casts
