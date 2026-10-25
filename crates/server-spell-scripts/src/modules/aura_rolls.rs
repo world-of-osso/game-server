@@ -1,10 +1,15 @@
 //! Weighted exclusive aura states; native payloads retain all their effects and values.
-use super::AfterCastHook;
-use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
-use crate::class_progression::KnownSpells;
-use crate::random::Rng;
-use crate::spell_info::SpellInfo;
+use super::combat;
+use combat::spell_cast::script_registry::SpellScriptHook;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AuraRollAfterCast(hook)];
+
 use bevy::prelude::*;
+use combat::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
+use combat::class_progression::KnownSpells;
+use combat::random::Rng;
+use combat::spell_cast::scripts::AfterCastHook;
+use combat::spell_info::SpellInfo;
 
 struct Outcome {
     aura: u32,
@@ -49,7 +54,7 @@ const RULES: &[RollRule] = &[
     },
 ];
 
-pub(super) fn hook(parent: u32) -> Option<AfterCastHook> {
+fn hook(parent: u32) -> Option<AfterCastHook> {
     RULES
         .iter()
         .any(|rule| rule.cast == parent)
@@ -58,7 +63,7 @@ pub(super) fn hook(parent: u32) -> Option<AfterCastHook> {
 
 fn roll_state(world: &World, caster: Entity, rule: &RollRule) -> usize {
     let total: f64 = rule.outcomes.iter().map(|outcome| outcome.weight).sum();
-    let roll = crate::random::thread_rng().gen_range(0.0..total);
+    let roll = combat::random::thread_rng().gen_range(0.0..total);
     let mut cumulative = 0.0;
     let mut state = rule
         .outcomes
@@ -73,20 +78,24 @@ fn roll_state(world: &World, caster: Entity, rule: &RollRule) -> usize {
         .get::<KnownSpells>(caster)
         .is_some_and(|known| known.contains(rule.upgrade_spell));
     if state < rule.upgrade_limit && upgrade_known {
-        let chance =
-            super::script_effect_value(world, caster, rule.upgrade_spell, rule.upgrade_effect);
-        if crate::random::thread_rng().gen_range(0.0..100.0) < chance {
+        let chance = combat::spell_cast::scripts::script_effect_value(
+            world,
+            caster,
+            rule.upgrade_spell,
+            rule.upgrade_effect,
+        );
+        if combat::random::thread_rng().gen_range(0.0..100.0) < chance {
             state += 1;
         }
     }
-    if crate::auras::has_aura(world, caster, rule.guaranteed_upgrade_aura) {
+    if combat::auras::has_aura(world, caster, rule.guaranteed_upgrade_aura) {
         state += 1;
     }
     state.min(rule.outcomes.len()) - 1
 }
 
 fn read_container_remaining_ms(world: &World, caster: Entity, spell: u32) -> u32 {
-    let now = super::super::now(world);
+    let now = combat::spell_cast::now(world);
     let container = world
         .get::<ActiveAuras>(caster)
         .and_then(|auras| {
@@ -106,7 +115,7 @@ fn apply_roll(world: &mut World, caster: Entity, spell: &SpellInfo) {
         let state = roll_state(world, caster, rule);
         let duration = read_container_remaining_ms(world, caster, spell.id);
         // sc_rogue.cpp7740–7752 replaces old states and consumes Loaded Dice.
-        crate::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+        combat::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
             aura.caster == caster
                 && rule
                     .outcomes
@@ -114,7 +123,7 @@ fn apply_roll(world: &mut World, caster: Entity, spell: &SpellInfo) {
                     .any(|outcome| outcome.aura == aura.spell_id)
         });
         let payload = rule.outcomes[state].aura;
-        crate::auras::apply_aura(
+        combat::auras::apply_aura(
             world,
             &AuraApplication {
                 caster,
@@ -125,10 +134,10 @@ fn apply_roll(world: &mut World, caster: Entity, spell: &SpellInfo) {
             },
         );
         assert!(
-            crate::auras::set_owned_duration(world, caster, caster, payload, duration),
+            combat::auras::set_owned_duration(world, caster, caster, payload, duration),
             "native exclusive roll payload must be applied"
         );
-        crate::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+        combat::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
             aura.caster == caster && aura.spell_id == rule.guaranteed_upgrade_aura
         });
     }
