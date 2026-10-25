@@ -2,6 +2,166 @@ use super::*;
 
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
+fn beast_mastery_natures_ally_guardian_attacks_and_expires_without_replacing_pet() {
+    let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
+    engage(&mut run);
+    let main = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(19574, run.actor, Some(run.targets[0])),
+    )
+    .expect("ordinary Bestial Wrath with selected hostile primary");
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let pets: Vec<_> = run
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::hunter_pet::HunterPet)>()
+        .iter(run.app.world())
+        .filter(|(_, pet)| pet.owner == run.actor)
+        .map(|(unit, _)| unit)
+        .collect();
+    assert_eq!(
+        pets.len(),
+        2,
+        "selected Nature's Ally must summon an additional real stable pet"
+    );
+    let guardian = *pets.iter().find(|&&unit| unit != main).unwrap();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        34026,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("native command must dispatch to both pets");
+    assert_eq!(
+        crate::hunter_pet::summoned_pet(run.app.world(), run.actor),
+        Some(main)
+    );
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let combat = report::combat(run.app.world(), &run.damage_targets, 10.0);
+    assert!(
+        combat["actions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|action| action["actor"] == guardian.to_bits()
+                && action["damage"].as_u64().unwrap() > 0),
+        "real guardian must attack during its native lifetime: {combat}"
+    );
+    assert!(
+        combat["actions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|action| action["actor"] == guardian.to_bits() && action["spell_id"] == 83381),
+        "Nature's Ally must receive actual commanded pet attacks: {combat}"
+    );
+    for _ in 0..150 {
+        run.app.update();
+    }
+    assert!(
+        run.app.world().get_entity(guardian).is_err(),
+        "native15s guardian must expire"
+    );
+    assert_eq!(
+        crate::hunter_pet::summoned_pet(run.app.world(), run.actor),
+        Some(main),
+        "guardian expiry must not dismiss or replace the stable's current pet"
+    );
+}
+
+#[test]
+#[ignore = "requires private spec253 reference inputs and native world DB"]
+fn beast_mastery_pet_damage_reads_native_owner_spell_modifiers() {
+    use server::simc_apl::Facts;
+    let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+    let bindings = crate::simc_apl_native::Bindings {
+        actions: [("pet_command".into(), 83381)].into(),
+        ..Default::default()
+    };
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let damage = |run: &Run| {
+        crate::simc_apl_native::NativeFacts::new(run.app.world(), pet, &bindings, encounter, 1)
+            .with_targets(Some(run.targets[0]), &run.targets)
+            .value("action.pet_command.damage")
+            .unwrap()
+    };
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        193455,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let bonus = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1276720)
+        .unwrap()
+        .effects[0]
+        .base_points;
+    let after = damage(&run);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 1276720,
+    );
+    let before = damage(&run);
+    let expected = before * (1.0 + f64::from(bonus) / 100.0);
+    assert!(
+        (after - expected).abs() < expected * 0.001,
+        "native owner's Nature's Ally amount must modify actual pet damage: before={before}, after={after}, expected={expected}"
+    );
+}
+
+#[test]
+#[ignore = "requires private spec253 reference inputs and native world DB"]
+fn beast_mastery_native_pet_direct_attacks_can_crit() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
+    engage(&mut run);
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+    for spell in [83381, 49966] {
+        for _ in 0..64 {
+            crate::spell_cast::cast_triggered(
+                run.app.world_mut(),
+                pet,
+                spell,
+                Some(run.targets[0]),
+                1,
+            );
+        }
+    }
+    let combat = report::combat(run.app.world(), &run.damage_targets, 1.0);
+    for spell in [83381, 49966] {
+        let action = combat["actions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|action| action["spell_id"] == spell)
+            .unwrap();
+        assert!(
+            action["crit_hits"].as_u64().unwrap() > 0,
+            "real pet spells must inherit the owner's native critical chance: {spell}; {action}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private spec253 reference inputs and native world DB"]
 fn beast_mastery_barbed_and_cobra_arm_consumable_natures_ally() {
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
     engage(&mut run);

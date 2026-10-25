@@ -34,6 +34,8 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 ## Shared profile and action facts
 
+- [x] Action-bound `ticks` reads scheduled periodic ticks from the current native channel, not cast-bar progress or damage-event totals. Public `auras::paid_periodic_ticks` returns the maximum per-effect paid count for the actual caster/target/spell application. SimC `tick_zero` damage does not advance this counter; ordinary scheduled ticks do. Reads do not advance state, and absent auras return zero.
+
 - [x] Native profile effects accept pinned Shadow Omnium tokens `rune_of_unleashed_fire`, `rune_of_selfmending`, `rune_of_lingering`, `rune_of_critical_power` and `rune_of_overload`, plus numeric TraitNodeEntry IDs. Optional ranks remain ignored like pinned SimC; native trait definitions supply the applied spell and all amounts. Unknown tokens or missing native entries fail explicitly.
 
 - [x] `hero_tree.<alias>` reads the selected native hero subtree, not allocated inactive nodes. Remove display-name hyphens as pinned SimC does (`Fel-Scarred` → `felscarred`); unknown aliases fail explicitly.

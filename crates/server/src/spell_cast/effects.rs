@@ -294,6 +294,9 @@ pub fn cast_handler(effect_id: u32) -> Option<CastEffectHandler> {
             crate::game_objects::summoned::spawn_wild
         }
         crate::hunter_pet::EFFECT_SUMMON_PET => crate::hunter_pet::effect_summon_pet,
+        crate::hunter_pet::EFFECT_SUMMON_STABLED_PET_AS_GUARDIAN => {
+            crate::hunter_pet::effect_summon_stabled_pet
+        }
         crate::hunter_pet::EFFECT_RESURRECT_PET => crate::hunter_pet::effect_revive_pet,
         super::summon::EFFECT_SUMMON => super::summon::summon_creature,
         super::area_trigger::EFFECT_CREATE_AREATRIGGER => super::area_trigger::create_area_trigger,
@@ -911,7 +914,12 @@ const SPELL_ATTR2_CANT_CRIT: u32 = 0x2000_0000;
 
 /// CritChance mods and script values precede the victim's melee crit modifier.
 fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
-    crit_chance_from_owner(world, caster, target, spell, caster)
+    // SimC76f8118 engine/player/pet.cpp217–220: controlled pets inherit the
+    // live owner's melee/spell crit. Scripts and target modifiers keep the pet.
+    let owner = world
+        .get::<crate::hunter_pet::HunterPet>(caster)
+        .map_or(caster, |pet| pet.owner);
+    crit_chance_from_owner(world, caster, target, spell, owner)
 }
 
 fn crit_chance_from_owner(
@@ -1359,7 +1367,13 @@ fn modded_amount(world: &World, ctx: &EffectCtx, amount: f32, periodic: bool) ->
     } else {
         SpellModOp::HealingAndDamage
     };
-    spell_mods::modify(world, ctx.caster, ctx.spell, op, amount)
+    // SimC76f8118 sc_hunter.cpp2537–2545/2776–2786: pet abilities read
+    // their owner's matching talent/buff effects. Native masks and amounts
+    // decide applicability; the pet remains the actual damage caster.
+    let owner = world
+        .get::<crate::hunter_pet::HunterPet>(ctx.caster)
+        .map_or(ctx.caster, |pet| pet.owner);
+    spell_mods::modify(world, owner, ctx.spell, op, amount)
 }
 
 fn stat_mods(world: &World, unit: Entity) -> Option<&AuraStatMods> {
@@ -1674,6 +1688,10 @@ fn damage_taken(world: &World, ctx: &EffectCtx, target: Entity, damage: &DamageI
     }
 }
 
+fn cast_damage_multiplier(spell: &SpellInfo) -> f32 {
+    spell.cast_damage_multiplier.unwrap_or(1.0) * spell.cast_periodic_fraction.unwrap_or(1.0)
+}
+
 /// Source amount followed by the native recipient reduction and authored cast multiplier.
 pub(super) fn damage_before_mitigation(
     world: &World,
@@ -1683,7 +1701,7 @@ pub(super) fn damage_before_mitigation(
 ) -> f32 {
     (damage_source_amount(world, ctx, target, damage)
         * damage_taken(world, ctx, target, damage)
-        * ctx.spell.cast_damage_multiplier.unwrap_or(1.0))
+        * cast_damage_multiplier(ctx.spell))
     .max(0.0)
 }
 
@@ -1831,7 +1849,7 @@ fn deal_source_damage_and_report(
         return 0.0;
     }
     let target_multiplier = damage_taken(world, ctx, target, &damage);
-    let cast_multiplier = ctx.spell.cast_damage_multiplier.unwrap_or(1.0);
+    let cast_multiplier = cast_damage_multiplier(ctx.spell);
     let unrounded = (source_amount * target_multiplier * cast_multiplier).max(0.0);
     let amount = unrounded.round();
     #[cfg(any(test, feature = "test-support"))]
@@ -2120,7 +2138,8 @@ pub fn apply_heal(
         * super::scripts::soul_of_the_forest_direct_multiplier(
             world, ctx.caster, ctx.spell, periodic,
         );
-    let amount = (modded_amount(world, ctx, amount, periodic) * done * taken * named)
+    let fraction = ctx.spell.cast_periodic_fraction.unwrap_or(1.0);
+    let amount = (modded_amount(world, ctx, amount, periodic) * done * taken * named * fraction)
         .max(0.0)
         .round();
     // TC SpellAuraEffects.cpp5893–5897: healing bonuses precede the tick roll.

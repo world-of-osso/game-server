@@ -2,6 +2,10 @@
 #[cfg(test)]
 mod deep_wounds_tests;
 #[cfg(test)]
+mod mechanics_tests;
+#[cfg(test)]
+mod sudden_death_tests;
+#[cfg(test)]
 mod tests;
 use super::{
     Run,

@@ -671,7 +671,7 @@ pub fn order_companion_pet(world: &mut World, owner: Entity, target: Option<Enti
     }
 }
 
-fn attack_start(world: &mut World, pet: Entity, target: Entity) {
+pub(crate) fn attack_start(world: &mut World, pet: Entity, target: Entity) {
     if !can_attack(world, pet, target) {
         return;
     }
