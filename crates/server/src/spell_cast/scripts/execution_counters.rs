@@ -145,13 +145,16 @@ fn grant_valued_execution_auras(world: &mut World, caster: Entity, action: u32) 
         let Some(value) = value else {
             continue;
         };
-        if !crate::spell_cast::cast_triggered_with_effect0_amount(
+        if !crate::spell_cast::cast_triggered_with_overrides(
             world,
             caster,
             execution.payload,
             Some(caster),
             1,
-            value,
+            crate::spell_cast::TriggeredSpellOverrides {
+                effect0_amount: Some(value),
+                ..Default::default()
+            },
         ) {
             warn!(
                 ?caster,
