@@ -70,6 +70,7 @@ spec_drivers! {
     262 => elemental_rotation,
     263 => enhancement_rotation,
     266 => demonology_rotation,
+    267 => destruction_rotation,
     269 => windwalker_rotation,
     577 => havoc_rotation,
     1467 => devastation_rotation,
