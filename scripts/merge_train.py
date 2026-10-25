@@ -367,13 +367,16 @@ def take_queue():
 
 def drop_superseded(entries):
     """A landing entry whose commit is an ancestor of a later landing entry from the same
-    owner is a stale version of it (owners resubmit after fixing compile errors)."""
+    owner is a stale version of it (owners resubmit after fixing compile errors); a
+    resubmitted identical commit is a duplicate."""
     landing = [e for e in entries if e["land"]]
     stale = []
     for old in landing:
         for new in landing:
-            if new["submitted"] > old["submitted"] and new["owner"] == old["owner"] \
-                    and new["commit"] != old["commit"] \
+            if new["submitted"] <= old["submitted"]:
+                continue
+            # The same commit twice (any owner) is one landing; keep the newest request.
+            if new["commit"] == old["commit"] or new["owner"] == old["owner"] \
                     and git("merge-base", "--is-ancestor", old["commit"], new["commit"], check=False).returncode == 0:
                 old["status"], old["reason"] = "rejected", f"superseded by {new['id']}"
                 stale.append(old)
