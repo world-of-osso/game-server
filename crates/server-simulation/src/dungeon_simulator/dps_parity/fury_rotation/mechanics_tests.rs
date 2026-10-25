@@ -154,6 +154,12 @@ fn fury_unhinged_bladestorm_ticks_execute_actual_bloodthirst_variant() {
     let actor = run.actor;
     cast_native(&mut run, 1719, actor);
     cast_native(&mut run, 446035, actor);
+    // Process several due aura ticks in one fixed update. Each must keep its
+    // own ordinal, rather than reading the scheduler's final paid count.
+    run.app
+        .world_mut()
+        .resource_mut::<Time<Fixed>>()
+        .set_timestep_seconds(3.0);
     for _ in 0..100 {
         run.app.update();
     }
