@@ -36,6 +36,7 @@ mod ret_tier_tests;
 mod ret_toll_control_tests;
 mod ret_toll_tests;
 mod ret_wake_tests;
+mod shared_fact_extension_tests;
 pub(crate) mod single_spell;
 mod snakeskin_tests;
 mod windwalker_rotation;
