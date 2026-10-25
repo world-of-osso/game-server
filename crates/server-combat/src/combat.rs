@@ -666,10 +666,15 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     commands: Commands<'w, 's>,
 }
 
-/// Live owner crit for a native Hunter pet (SimC76f8118 pet.cpp217–220).
+/// Live owner crit for native Hunter pets and executing guardians.
+/// SimC76f8118 pet.cpp217–220: the shared source serves swings and spells.
 pub fn read_pet_owner_critical_chance(world: &World, unit: Entity) -> Option<f32> {
-    world.get::<crate::hunter_pet_stats::HunterInheritedStats>(unit)?;
-    let owner = world.get::<crate::hunter_pet::HunterPet>(unit)?.owner;
+    let owner = if let Some(owner) = crate::spell_cast::guardian::stat_owner(world, unit) {
+        owner
+    } else {
+        world.get::<crate::hunter_pet_stats::HunterInheritedStats>(unit)?;
+        world.get::<crate::hunter_pet::HunterPet>(unit)?.owner
+    };
     Some(
         world
             .get::<CharacterStats>(owner)

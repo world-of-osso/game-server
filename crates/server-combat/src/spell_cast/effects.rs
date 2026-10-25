@@ -939,9 +939,12 @@ fn crit_chance_from_owner(
     }
     let chance =
         super::scripts::crit_chance(world, caster, target, spell.id).unwrap_or_else(|| {
-            let base = world
-                .get::<CharacterStats>(spell_owner)
-                .map_or(0.0, |stats| stats.crit_pct);
+            let base =
+                crate::combat::read_pet_owner_critical_chance(world, caster).unwrap_or_else(|| {
+                    world
+                        .get::<CharacterStats>(spell_owner)
+                        .map_or(0.0, |stats| stats.crit_pct)
+                });
             let spell_bonus = if uses_weapon_crit_bonus_order(spell) {
                 0.0
             } else {
