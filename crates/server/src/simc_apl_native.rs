@@ -613,6 +613,32 @@ impl<'a> NativeFacts<'a> {
     ) -> Result<f64, String> {
         let spell = self.action_spell(alias)?;
         match property {
+            // SimC76f8118 action.cpp3609–3626: the matching live cast/channel only.
+            "executing" => Ok(bool_value(
+                self.world
+                    .get::<shared::casting::CastState>(self.actor)
+                    .is_some_and(|cast| cast.spell_id == spell.id),
+            )),
+            "execute_remains" => Ok(self
+                .world
+                .get::<shared::casting::CastState>(self.actor)
+                .filter(|cast| cast.spell_id == spell.id)
+                .map_or(0.0, |cast| {
+                    f64::from((cast.duration - cast.elapsed).max(0.0))
+                })),
+            "last_used" => {
+                // action.cpp3644–3669 and timespan.hpp216: unused is timespan::min.
+                let start = match self.encounter {
+                    Encounter::Fixture { started_at, .. } | Encounter::Dungeon { started_at } => {
+                        started_at
+                    }
+                };
+                Ok(self
+                    .world
+                    .get::<crate::spell_cast::SpellHistory>(self.actor)
+                    .and_then(|history| history.last_successful_cast_at(spell.id))
+                    .map_or(i64::MIN as f64 / 1000.0, |at| at - start))
+            }
             // SimC76f8118 action.cpp3502-3503: snapshot one target and average crit.
             "damage" => crate::spell_cast::effects::expected_direct_damage(
                 self.world,
@@ -719,6 +745,11 @@ impl<'a> NativeFacts<'a> {
             "execute_time" => Ok(crate::spell_cast::native_apl::execute_time(
                 self.world, self.actor, spell,
             )),
+            // SimC76f8118 action.cpp3375–3377: current cooldown must be up.
+            // Native explicit resets have no reaction-required reset delay.
+            "cooldown_react" => self
+                .cooldown_for_spell(spell, "remains")
+                .map(|remains| bool_value(remains <= 0.0)),
             "cast_time" | "cost" => self.action_property(&action.name, name, Some(action)),
             "ticks_remain" => self.ticks_remaining(spell.id),
             // SimC76f8118 dot.cpp540: ticking refers to this proposed action's dot.
@@ -953,7 +984,7 @@ impl ActionFacts for NativeFacts<'_> {
         match name {
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" => self.gcd(action, name),
             "charges" | "charges_fractional" | "full_recharge_time" | "execute_time"
-            | "cast_time" | "cost" | "ticks_remain" | "ticking" => {
+            | "cast_time" | "cost" | "ticks_remain" | "ticking" | "cooldown_react" => {
                 self.contextual_property(action, name)
             }
             _ => self.value(name),

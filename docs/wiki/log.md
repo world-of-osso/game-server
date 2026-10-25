@@ -4,6 +4,10 @@
 ## 2026-10-25 — Admin protocol and transport crate
 
 [Server boundaries](systems/server-crates.md#admin-transport-boundary-2026-10-25): `server-admin` compiles the existing concrete IPC codecs and socket task below gameplay. Native dispatch stays in `server`; wire data and socket tests are unchanged.
+## 2026-10-25 — Fire literal fixture
+
+[Fire63](systems/simc-apl.md#fire-fixture-adapter) uses exact profile rows and shared native execution for follower and player fixtures. Native setup remains source-ordered; dungeon AI is unchanged. Numerical parity is a separate measurement.
+
 ## 2026-10-25 — Elemental literal fixture
 
 [Elemental262](systems/simc-apl.md#elemental-fixture-262): exact profile actions use the shared literal evaluator and native dispatch, with precombat, selected Swiftness replacement and named-action target counts. Native regression tests cover controller activation and live candidates. Numerical DPS and guardian/proc qualification remain separate.

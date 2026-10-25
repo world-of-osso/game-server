@@ -39,6 +39,9 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] Literal `auto_shot` starts learned native75 once; its native repeat owns subsequent shots. Literal player engagement does not inject melee attacks before source execution.
 - [x] Target `health` reads the selected native current pool; `retarget` enumerates actual candidates without a spell definition. Target `debuff.react` uses recipient acquisition deadlines and caster-owned aura filtering. Fixture-only absent pull events report zero remaining time and the source no-next-event sentinel.
 
+- [x] `action.<alias>.executing` and `execute_remains` read only the matching native cast/channel; inactive or different spells return0. `action.<alias>.last_used` reads the latest successful ordinary completion relative to the encounter epoch; cast requests, failed casts and triggered children do not advance it. Unused actions retain the pinned negative minimum-time sentinel.
+- [x] Action-bound `cooldown_react` requires the real spell/category/charge cooldown to be ready, including Fire Blast's short recovery while spare charges remain. Current native explicit resets do not impose a reaction-required delay.
+
 ## Equipped use_items
 
 - [x] Named equipment matching is case-insensitive. A name with no equipped match makes `equipped.<name>` false and a named `use_item` unavailable, without repairing literal spellings or fabricating item metadata (SimC76f8118 `player.cpp9873–9884,11974–11993`).
