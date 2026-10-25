@@ -149,6 +149,7 @@ impl Prepared {
                 potion.0.on_use.spell_id,
                 actor,
                 Some(potion.0),
+                after_channel,
             )?;
             record_probe(
                 &mut prepared,

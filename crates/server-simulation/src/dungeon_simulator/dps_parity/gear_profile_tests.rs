@@ -40,6 +40,113 @@ fn ret_gear_profile_native_consumables_apply() {
 
 #[test]
 #[ignore = "requires prepared Ret profile and private native database"]
+fn ret_gear_profile_native_flask_changes_derived_mastery_rating() {
+    let mut run = super::prepare_literal(70, 1).unwrap();
+    let before = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .ratings
+        .mastery;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1235108,
+    );
+    run.app.update();
+    let after = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .ratings
+        .mastery;
+    assert!(
+        before > after,
+        "native Magisters flask must raise derived mastery, not just store aura points: before={before}, after={after}"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared Ret profile and private native database"]
+fn ret_gear_profile_native_flask_uses_item_rating_multiplier() {
+    let run = super::prepare_literal(70, 1).unwrap();
+    let world = run.app.world();
+    let item = world
+        .resource::<crate::item_templates::ItemTemplates>()
+        .get(shared::item_data::ItemDefinitionSource::Retail, 241322)
+        .unwrap();
+    let level = item.scaling.item_level;
+    let tables = world.resource::<crate::item_stats::ItemScalingTables>();
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1235108)
+        .unwrap();
+    let coefficient = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .coefficient;
+    let expected = (tables.spell_budgets[&level][2]
+        * coefficient
+        * tables.rating_multiplier[usize::from(level) - 1][2])
+        .round();
+    let aura = world
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1235108)
+        .unwrap();
+    let actual = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    assert_eq!(
+        actual, expected,
+        "native scaling class -7 includes its rating multiplier"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared Ret profile and private native database"]
+fn ret_gear_profile_native_primary_consumables_do_not_grant_stamina() {
+    let mut run = super::prepare_literal(70, 1).unwrap();
+    let before = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .primary;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| matches!(aura.spell_id, 1264426 | 1294727),
+    );
+    run.app.update();
+    let after = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .primary;
+    assert!(
+        before.strength > after.strength,
+        "primary consumables must still grant real Strength"
+    );
+    assert_eq!(
+        before.stamina, after.stamina,
+        "hybrid primary stats do not include Stamina"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared Ret profile and private native database"]
 fn ret_gear_profile_native_oil_coexists_with_permanent_enchant() {
     let mut run = super::prepare_literal(70, 1).unwrap();
     let before = run
@@ -78,6 +185,7 @@ fn ret_gear_profile_native_potion_selects_extrema_and_is_consumed_once() {
     let mut bindings = crate::simc_apl_native::Bindings::default();
     let equipment = Equipment::load(run.app.world(), run.actor, &mut bindings).unwrap();
     let action = server::simc_apl::Action {
+        source_row: None,
         name: "potion".into(),
         target: None,
         options: Default::default(),

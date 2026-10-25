@@ -206,7 +206,7 @@ The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native speci
 ## Shared profile gear effects
 
 - Reference followers retain NPC identity but use the declared native race for base stats and validated racial spell knowledge. Native player/pet aura effect202 must apply owner racial effects.
-- Declared Magisters flask, Void-Touched augmentation, Royal Roast, Recklessness potion and Thalassian Phoenix Oil quality2 use native item/enchant/spell values. Oil coexists with permanent enchants. Potion selects the current highest positive/lowest negative secondary and is available once per encounter; unsupported tokens remain named gaps.
+- Aura189 rating buffs must change derived native ratings through their real masks. Item spell scaling class−7 includes its native trinket combat-rating multiplier before rounding. Declared Magisters flask, Void-Touched augmentation, Royal Roast, Recklessness potion and Thalassian Phoenix Oil quality2 use native item/enchant/spell values. Oil coexists with permanent enchants. Potion selects the current highest positive/lowest negative secondary and is available once per encounter; unsupported tokens remain named gaps.
 - Expansion tokens resolve native TraitNodeEntry identities, independent of class talents. Item scripts supply SimC relationships for Heart Morsels/stacking stats, asynchronous Venomfang/expiry bursts and perfected Guillotine poison, plus Omnium fire/lingering/secondary runes. Native proc rates, scaling and recipients remain authoritative; neutral attackable targets must not be rejected as non-hostile factions.
 
 [Implementation](../wiki/systems/character-stats.md#shared-profile-effects--2026-10-25).

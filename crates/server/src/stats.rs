@@ -495,7 +495,7 @@ fn apply_rating_conversions(
     }
 }
 
-fn add_rating_bonus(ratings: &mut CombatRatings, target: u32, bonus: f32) {
+pub(crate) fn add_rating_bonus(ratings: &mut CombatRatings, target: u32, bonus: f32) {
     for (mask, value) in rating_fields(ratings) {
         if target & mask != 0 {
             *value += bonus;
