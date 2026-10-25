@@ -36,6 +36,10 @@ Native193331 initially failed with `target43 requires collision data`. Origin-ce
 
 Pinned `pets.cpp1233–1257` rolls native267102 effect1 on each Dreadstalker demise when Demoniac is known. This uses ordinary native264173 stack application, not the Imp's accumulated fade distribution. The policy runs at actual summon removal; the new Core implementation awaits its GREEN run.
 
+## Follower minion target permission
+
+Lantha is an NPC with `UNIT_FLAG_PLAYER_CONTROLLED`. Native attack admission uses `faction::player_affected`, but summon initialization checked only for an owner `Player` component. That mismatch leaves a follower's actual minion on the NPC-versus-neutral attack path. The minion flag producer now uses the same owner predicate as attack admission, retaining native minion ownership and ordinary NPC restrictions. Train RED/GREEN qualification is pending.
+
 ## Dominion and guardian execution
 
 The source-policy table also binds native Dreadbite271971, Greater Felbolt1277116 and the four Dominion actions. Dreadstalker AP inheritance1.06769 and Imp Lord SP2.75 are validated in pinned `pets.cpp`; the unvalidated Dreadstalker SP1.3 and Imp Lord AP1.375 are not imported. A fresh Imp Lord starts with200 Energy and waits for125 before casting. Native SpellPower retains the40-Energy cost; native regeneration remains in control.
@@ -56,7 +60,7 @@ Artifacts under engine `data/diagnostics/demo-parity-2026-10-23/`: `266.referenc
 
 - [Oracle contract](../reference/simc-spell-oracle.md) — match actors/formula IDs and compare first differing factor.
 - [Parity contract](../../specs/dps-parity.md) — matched inputs and native-boundary requirements.
-- [Guardian dispatch](../../../crates/server/src/spell_cast/guardian.rs) — actual spell bindings and native admission.
+- [Guardian dispatch](../../../crates/server-combat/src/spell_cast/guardian.rs) — actual spell bindings and native admission.
 - [Wild Imp source importer](../../../scripts/add_guardian_templates.py) — publishes qualified55659 only, not unqualified98035.
 
 ## See Also

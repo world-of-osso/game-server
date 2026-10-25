@@ -782,8 +782,11 @@ fn roll_guardian_level(
 
 /// TC Unit::SetMinion sets PLAYER_CONTROLLED only for player owners.
 /// Companion immunity augments ownership flags instead of replacing them.
-fn calculate_summon_unit_flags(owner_is_player: bool, properties: SummonProperties) -> u32 {
-    let ownership = if owner_is_player && properties.is_minion() {
+fn calculate_summon_unit_flags(
+    owner_is_player_affected: bool,
+    properties: SummonProperties,
+) -> u32 {
+    let ownership = if owner_is_player_affected && properties.is_minion() {
         crate::faction::UNIT_FLAG_PLAYER_CONTROLLED
     } else {
         0
@@ -830,7 +833,14 @@ fn spawn_summon(
     let replicate = world.get::<Replicate>(owner).is_some();
     let display_id = template.display_id;
     let private_owner = private_summon_owner(world, owner, properties.flags);
-    let unit_flags = calculate_summon_unit_flags(world.get::<Player>(owner).is_some(), properties);
+    // SimC76f8118 pet.cpp66–68: pets retain the owner's enemy target.
+    // Use the same GetAffectingPlayer semantics as native attack admission;
+    // a player-controlled follower remains an NPC, including when it summons.
+    let owner_is_player_affected = crate::faction::player_affected(
+        world.get::<Player>(owner).is_some(),
+        world.get::<UnitFlags>(owner),
+    );
+    let unit_flags = calculate_summon_unit_flags(owner_is_player_affected, properties);
     let mut entity = world.spawn((
         (
             Position {
