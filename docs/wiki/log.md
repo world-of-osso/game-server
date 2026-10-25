@@ -1,6 +1,10 @@
 ## 2026-10-25 — Elemental literal fixture
 
 [Elemental262](systems/simc-apl.md#elemental-fixture-262): exact profile actions use the shared literal evaluator and native dispatch, with precombat, selected Swiftness replacement and named-action target counts. Native regression tests cover controller activation and live candidates. Numerical DPS and guardian/proc qualification remain separate.
+## 2026-10-25 — Shared literal channel execution
+
+[Shared APL machinery](systems/simc-apl.md#source-row-clocks-and-channel-control): source-row deadlines, paid-tick channel query/execution API, readiness-before-condition and off-GCD call traversal. Native child admission remains unchanged.
+
 ## 2026-10-25 — Shared profile gear effects
 
 [Character stats](systems/character-stats.md#shared-profile-effects--2026-10-25): native consumables, independent temporary enchants, reference racial identity, Omnium entry resolution, Heart/Venomfang/fire relationships and neutral proc recipients. Values remain native; SimC supplies behavior.
