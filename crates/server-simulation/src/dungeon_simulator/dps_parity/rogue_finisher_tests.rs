@@ -13,7 +13,7 @@ fn rogue_finisher_starts_and_extends_native_slice_and_dice() {
     );
     assert!(!crate::auras::has_aura(run.app.world(), run.actor, 315496));
     engage(&mut run);
-    let mut previous_expiry = None;
+    let mut previous_expiry: Option<f64> = None;
     for _ in 0..2 {
         {
             let mut powers = run
