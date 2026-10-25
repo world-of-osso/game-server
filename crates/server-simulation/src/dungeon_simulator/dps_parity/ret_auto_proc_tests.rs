@@ -92,6 +92,39 @@ fn ret_auto_proc_art_of_war_earns_buff_and_resets_blade() {
 }
 
 #[test]
+#[ignore = "native70448 earned Art of War stacks must be consumed by ordinary Blade"]
+fn ret_auto_proc_blade_consumes_one_earned_art_of_war_stack() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = player_in_melee();
+    let stacks = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 406086))
+            .map_or(0, |aura| aura.stacks)
+    };
+    for _ in 0..6000 {
+        run.app.update();
+        if stacks(&run) == 2 {
+            crate::spell_cast::cast_for_player_with_target(
+                run.app.world_mut(),
+                run.actor,
+                184575,
+                Some(run.targets[0]),
+            )
+            .unwrap();
+            assert_eq!(
+                stacks(&run),
+                1,
+                "selected Light Within consumes one earned Art of War stack on Blade"
+            );
+            return;
+        }
+    }
+    panic!("actual repeating attacks must earn two native Art of War stacks");
+}
+
+#[test]
 #[ignore = "native70448 Walk Into Light grants its AW resource and buff payload"]
 fn ret_auto_proc_wrath_grants_walk_into_light_holy_power_and_anshe() {
     let mut run = player_in_melee();
