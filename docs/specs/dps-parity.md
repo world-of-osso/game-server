@@ -144,6 +144,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Measurement
 
+- Earned Deadly Poison coating procs apply their native effect0 DoT to the actual proc recipient. A repeat while that caster's poison is still ticking also deals the sourced instant poison hit. Other casters' poisons do not enable that instant. Native proc admission/chance, damage and durations remain authoritative.
+
 - A successful harmful Player ability carrying the native melee-combat-start flag starts weapon swings at its retained hostile primary. An existing weapon victim and swing timers remain unchanged. Fixture engagement does not inject the missing attack; no ability whitelist or damage multiplier substitutes for the native flag.
 
 - Spec259 player fixtures execute the profile's literal pinned Assassination action rows through the shared APL evaluator, not AssistedCombat or follower-kit priorities. `apply_poison` uses the selected native coating casts in source order and waits for each real cast before the next precombat row. Production follower decisions remain unchanged.

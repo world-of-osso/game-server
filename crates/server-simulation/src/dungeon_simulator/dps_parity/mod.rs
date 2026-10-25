@@ -4,6 +4,7 @@ mod arms_rotation;
 mod arms_tests;
 mod assassination_knowledge_tests;
 mod assassination_mechanics_tests;
+mod assassination_poison_tests;
 mod assassination_rotation;
 mod aura342_tests;
 mod barbed_budget_tests;

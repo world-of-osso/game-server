@@ -66,6 +66,7 @@ mod refresh;
 mod ret_sentence;
 pub(crate) use ret_sentence::track_cast as track_ret_sentence_cast;
 pub(crate) mod reward_mods;
+mod rogue;
 #[cfg(test)]
 mod rolling_periodic_tests;
 pub mod scripts;
