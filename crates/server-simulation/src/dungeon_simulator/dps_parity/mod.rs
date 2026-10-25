@@ -33,6 +33,7 @@ mod firestarter_tests;
 mod fury_rotation;
 mod gear_profile_tests;
 mod haste_tests;
+mod havoc_channels_tests;
 mod havoc_fact_tests;
 mod havoc_rotation;
 mod havoc_tests;
