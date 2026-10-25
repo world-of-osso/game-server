@@ -1,10 +1,12 @@
 //! SimC76f8118 dot.cpp1154–1170/action.cpp5223: finite DoTs pay a fractional final tick.
 use super::*;
+use crate::followers::simulator::ParityActor;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
-fn native_dot(spec: u32, spell: u32) -> Run {
-    let mut run = prepare_literal(spec, 1).expect("exact native profile and traits");
+fn native_dot(spec: u32, spell: u32, actor: ParityActor) -> Run {
+    let (profile, traits) = read_reference(spec).expect("exact native profile and traits");
+    let mut run = prepare_literal_reference(profile, &traits, 1, actor).unwrap();
     engage(&mut run);
     crate::spell_cast::cast_triggered(
         run.app.world_mut(),
@@ -36,7 +38,24 @@ fn expected_ticks(run: &Run, spell: u32) -> u32 {
         0,
         "native profile must leave a fractional final interval"
     );
-    aura.duration_ms.div_ceil(period)
+    aura.duration_ms.div_ceil(period) + read_initial_periodic_ticks(run, spell)
+}
+
+fn read_initial_periodic_ticks(run: &Run, spell: u32) -> u32 {
+    // TC SharedDefines.h630; SimC action.cpp673 reads SX_TICK_ON_APPLICATION.
+    const EXTRA_INITIAL_PERIOD: u32 = 0x200;
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell)
+        .unwrap();
+    u32::from(
+        spell
+            .misc
+            .as_ref()
+            .is_some_and(|misc| misc.attributes[5] & EXTRA_INITIAL_PERIOD != 0),
+    )
 }
 
 fn periodic_damage_ticks(run: &Run, spell: u32) -> usize {
@@ -55,9 +74,9 @@ fn periodic_damage_ticks(run: &Run, spell: u32) -> usize {
         .count()
 }
 
-fn assert_native_final_tick(spec: u32, spell: u32) {
+fn assert_native_final_tick(spec: u32, spell: u32, actor: ParityActor) {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = native_dot(spec, spell);
+    let mut run = native_dot(spec, spell, actor);
     let expected = expected_ticks(&run, spell);
     for _ in 0..1600 {
         run.app.update();
@@ -80,11 +99,11 @@ fn assert_native_final_tick(spec: u32, spell: u32) {
 #[test]
 #[ignore = "native spec70 profile/traits and prepared world DB"]
 fn native_periodic_final_dawnlight_tick() {
-    assert_native_final_tick(70, 431380);
+    assert_native_final_tick(70, 431380, ParityActor::Follower);
 }
 
 #[test]
 #[ignore = "native spec258 profile/traits and prepared world DB"]
 fn native_periodic_final_shadow_word_pain_tick() {
-    assert_native_final_tick(258, 589);
+    assert_native_final_tick(258, 589, ParityActor::Player);
 }
