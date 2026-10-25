@@ -17,7 +17,8 @@ const CHANNEL_LINK: u32 = 98_979;
 const CHANNEL_CHILD: u32 = 98_973;
 
 fn linked_harness() -> Harness {
-    harness_with(
+    // TC Player.cpp30545 CanUseMastery requires the active Guardian spec's known mastery.
+    let mut h = harness_with(
         Vec::new(),
         &[
             IRONFUR,
@@ -32,11 +33,25 @@ fn linked_harness() -> Harness {
             STACKING_CHILD,
             CHANNEL_LINK,
             CHANNEL_CHILD,
+            155783,
+            114585,
         ],
         11,
         true,
     )
-    .unwrap()
+    .unwrap();
+    let conn = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let (_, classes) = crate::spell_info::load_spell_data(&conn).unwrap();
+    h.app.insert_resource(classes);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::ActiveSpec(104));
+    h
 }
 
 fn apply_link(h: &mut Harness, spell_id: u32, caster: Entity, target: Entity) {

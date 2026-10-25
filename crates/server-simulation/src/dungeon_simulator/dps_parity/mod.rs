@@ -6,9 +6,11 @@ mod dummy_reference_tests;
 mod elemental_ascendance_tests;
 mod engagement_tests;
 mod equipment_input_tests;
+mod equipped_set_tests;
 mod feral_tests;
 mod firestarter_tests;
 mod haste_tests;
+mod health_aura_state_tests;
 mod howl_tests;
 mod inputs;
 pub(crate) mod literal_rotation;
@@ -25,14 +27,21 @@ mod power_tests;
 mod precombat_tests;
 mod preparation;
 mod profile_initialization;
+mod rake_stealth_tests;
 mod report;
 mod ret_empyrean_tests;
 mod ret_purpose_tests;
 #[cfg(test)]
 mod ret_rotation;
+mod ret_sentence_tests;
 mod ret_tier_tests;
+mod ret_toll_control_tests;
+mod ret_toll_tests;
+mod ret_wake_tests;
+mod shared_fact_extension_tests;
 pub(crate) mod single_spell;
 mod snakeskin_tests;
+mod warrior_stat_tests;
 mod windwalker_rotation;
 use crate::simc_apl_native::{FixtureAdds, FixtureTarget};
 use bevy::prelude::*;
@@ -263,6 +272,12 @@ fn spawn_reference(
         copy,
         identity,
     )?;
+    // Pinned player.cpp1288: this Patchwerk fixture configures no movement event.
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(crate::simc_apl_native::FixtureMovement {
+            distance_to_move: 0.0,
+        });
     inputs::equip(app.world_mut(), actor, &profile)?;
     inputs::install_traits(app.world_mut(), actor, traits)?;
     profile_initialization::initialize_declared_powers(app.world_mut(), actor, &profile)?;

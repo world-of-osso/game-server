@@ -81,6 +81,112 @@ fn dps_parity_ret_literal_native_prepared_verdict_uses_selected_damage_action() 
     );
 }
 
+fn cast_literal_storm(run: &mut super::super::Run) {
+    let mut bindings = bindings();
+    let equipment = Equipment::load(run.app.world(), run.actor, &mut bindings).unwrap();
+    let action = action("divine_storm");
+    for _ in 0..200 {
+        let prepared = Prepared::read(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &equipment,
+            execution_actions(),
+            false,
+        )
+        .unwrap();
+        if let Some(execution) = prepared.execution(&action, &equipment).unwrap() {
+            execution::execute(run.app.world_mut(), run.actor, execution).unwrap();
+            return;
+        }
+        run.app.update();
+    }
+    panic!("naturally funded literal Storm did not become ready");
+}
+
+#[test]
+#[ignore = "native literal self-cast must retain hostile primary for forwarded child"]
+fn dps_parity_ret_tier_literal_self_cast_preserves_arbiter_hostile_primary() {
+    let _seed = crate::random::seed_scope(70448);
+    assert_arbiter_primary(super::super::ret_tier_tests::native_ret(4));
+}
+
+#[test]
+#[ignore = "native Player self-cast retains its selected hostile primary"]
+fn dps_parity_ret_tier_player_self_cast_preserves_arbiter_hostile_primary() {
+    let _seed = crate::random::seed_scope(70448);
+    let (profile, traits) = super::super::read_reference(70).unwrap();
+    let mut run = super::super::prepare_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race: 3 },
+    )
+    .unwrap();
+    super::super::engage(&mut run);
+    assert_arbiter_primary(run);
+}
+
+fn assert_arbiter_primary(mut run: super::super::Run) {
+    use super::super::ret_tier_tests::{cast_finisher, grant_native_purpose, has};
+    use crate::spell_cast::test_harness::ObservedTriggeredCasts;
+    const FINAL_VERDICT: u32 = 383328;
+    const DIVINE_STORM: u32 = 53385;
+    const DIVINE_ARBITER: u32 = 1306923;
+    const VERDICT_ARBITER: u32 = 1306161;
+    run.app.init_resource::<ObservedTriggeredCasts>();
+    execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        execution::Execution::AutoAttack(run.targets[0]),
+    )
+    .unwrap();
+    grant_native_purpose(&mut run);
+    cast_finisher(&mut run, FINAL_VERDICT);
+    assert!(has(&run, VERDICT_ARBITER));
+    assert_eq!(damage(&run, DIVINE_ARBITER), 0);
+    super::super::ret_purpose_tests::earn_finisher_power(&mut run, DIVINE_STORM);
+    cast_literal_storm(&mut run);
+    assert!(
+        !has(&run, VERDICT_ARBITER),
+        "real opposite-kind spender consumed pending kind"
+    );
+    let child_targets = run
+        .app
+        .world()
+        .resource::<ObservedTriggeredCasts>()
+        .0
+        .iter()
+        .filter(|(caster, spell, _)| *caster == run.actor && *spell == DIVINE_ARBITER)
+        .map(|(_, _, target)| *target)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        child_targets,
+        vec![Some(run.targets[0])],
+        "literal self-target must not replace forwarded child's hostile primary; caster={:?}",
+        run.actor
+    );
+    for _ in 0..200 {
+        run.app.update();
+        if damage(&run, DIVINE_ARBITER) > 0 {
+            break;
+        }
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(DIVINE_ARBITER)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "native child must actually damage hostile primary"
+    );
+}
+
 fn damage(run: &super::super::Run, spell: u32) -> i64 {
     run.app
         .world()

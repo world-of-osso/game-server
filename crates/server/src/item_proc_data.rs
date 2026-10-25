@@ -104,7 +104,7 @@ fn parse_role_amount(expression: &str) -> Result<f32, String> {
     Ok(amount)
 }
 
-pub(crate) fn has_equipped_bonus(world: &World, unit: Entity, spell: u32) -> Result<bool, String> {
+pub fn has_equipped_bonus(world: &World, unit: Entity, spell: u32) -> Result<bool, String> {
     let inputs = world
         .get_resource::<ItemProcInputs>()
         .ok_or("native item proc inputs not initialized")?;

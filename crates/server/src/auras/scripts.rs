@@ -376,6 +376,7 @@ fn check_inundate_proc(
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     crate::spell_cast::scripts::register_wdp_relationship(&mut scripts);
+    crate::spell_cast::scripts::register_unbroken_rhythm(&mut scripts);
     scripts.0.insert(
         INUNDATE,
         AuraScript {
@@ -404,6 +405,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     super::earthen_rage::register(&mut scripts);
     super::spirit_wolf::register(&mut scripts);
     super::natures_guardian::register(&mut scripts);
+    super::ret_sentence::register(&mut scripts);
     scripts.0.insert(
         super::fel_devastation::FEL_DEVASTATION,
         AuraScript {

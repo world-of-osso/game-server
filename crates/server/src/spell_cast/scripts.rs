@@ -47,6 +47,7 @@ pub(super) use ret_empyrean::schedule_empyrean_legacy;
 mod ret_purpose;
 pub(super) use ret_purpose::roll_selected_ret_divine_purpose;
 mod ret_tier;
+mod ret_toll;
 pub(super) use ret_tier::after_foreground_spender;
 pub(crate) use ret_tier::owns_arbiter_charge;
 mod scourge_strike;
@@ -57,7 +58,12 @@ mod swiftmend;
 pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direct_multiplier;
 pub(crate) use soul_of_the_forest::snapshot_amount as snapshot_soul_of_the_forest;
 mod touch_of_death;
+mod unbroken_rhythm;
+pub(crate) use unbroken_rhythm::register_unbroken_rhythm;
 mod windwalker;
+mod windwalker_flurry;
+pub(super) use windwalker_flurry::after_direct_damage;
+pub(crate) use windwalker_flurry::after_melee_hit;
 
 mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
@@ -86,6 +92,17 @@ pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u
         // SimC's ordinary/background Avenging Wrath constructors use these IDs.
         31884 | 454351 => ret_empyrean::grant_on_wrath(world, caster, depth),
         _ => {}
+    }
+}
+
+/// A registered emission replaces only that parent's native periodic trigger.
+pub(crate) fn periodic_trigger(
+    spell: u32,
+    index: u8,
+) -> Option<crate::auras::scripts::PeriodicHook> {
+    match (spell, index) {
+        (unbroken_rhythm::ROOT, 0) => Some(unbroken_rhythm::cast_tick),
+        _ => None,
     }
 }
 
@@ -603,6 +620,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     }
     match spell_id {
         windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
+        windwalker::FISTS_OF_FURY => Some(windwalker_flurry::release),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
         prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
@@ -687,6 +705,7 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
     match (spell_id, effect_index) {
         (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
         (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::limit_targets),
+        (ret_toll::ROOT, 1) => Some(ret_toll::limit_area),
         (145_110, 0) => Some(pick_yseras_gift_group_target),
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         (30735, 0) => Some(crate::scripted_ai::nethekurse::filter_shadow_sear),
@@ -1451,6 +1470,7 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
     match spell_id {
         windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
         voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),
+        ret_toll::ROOT => Some(ret_toll::cast_child),
         77_478 => Some(batch9::cast_earthquake_knockdown),
         _ => None,
     }
@@ -1462,6 +1482,7 @@ pub fn on_hit(spell_id: u32) -> Option<HitHook> {
         100780 => Some(windwalker::tiger_palm_hit),
         100784 => Some(windwalker::blackout_kick_hit),
         107428 | 113656 => Some(windwalker::trigger_wdp_enabler_on_hit),
+        unbroken_rhythm::ROOT => Some(unbroken_rhythm::capture_and_consume),
 
         lava_surge::PROC => Some(lava_surge::restore_on_proc_hit),
         swiftmend::SWIFTMEND => Some(swiftmend::hit),

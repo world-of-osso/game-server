@@ -80,6 +80,43 @@ fn mastery_follower(entry: u32) -> (Harness, Entity) {
     (h, unit)
 }
 
+#[test]
+fn native_mastery_follower_learns_universal_base_without_racial_skill_lines() {
+    let (h, unit) = mastery_follower(GARRICK);
+    let known = h
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(unit)
+        .unwrap();
+    assert!(
+        known.contains(114585),
+        "SkillLineAbility25920 in universal skill183"
+    );
+    assert!(crate::auras::has_aura(h.app.world(), unit, 114585));
+    // This native starter actor can have other mastery modifiers; TC sums live aura318.
+    let auras = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(unit)
+        .unwrap();
+    let expected: f32 = auras
+        .iter()
+        .map(|aura| {
+            aura.effects
+                .iter()
+                .filter(|effect| effect.aura_type == 318)
+                .map(|effect| effect.amount * f32::from(aura.stacks))
+                .sum::<f32>()
+        })
+        .sum();
+    let stats = h.app.world().get::<CharacterStats>(unit).unwrap();
+    assert_eq!(stats.ratings.mastery, 0.0);
+    assert!(expected > 0.0);
+    assert_eq!(stats.mastery_points, expected);
+    // Human language98 belongs to race-restricted skill98, not the race0 bridge.
+    assert!(!known.contains(668));
+}
+
 fn apply_native_aura(h: &mut Harness, unit: Entity, spell_id: u32) {
     let spell = h
         .app

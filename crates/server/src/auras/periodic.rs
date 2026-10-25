@@ -220,25 +220,34 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
         {
             crate::spell_cast::omor_orbital::cast_whip_tick(world, unit, tick.trigger_spell);
         }
-        PERIODIC_TRIGGER_SPELL => {
-            // TC OnEffectPeriodic runs before the default trigger, even when
-            // DB2 has no trigger (the script supplies Mirror Image1264098).
-            run_scripted_tick(world, unit, spell, tick);
-            if tick.trigger_spell != 0 {
-                crate::spell_cast::cast_triggered(
-                    world,
-                    tick.caster,
-                    tick.trigger_spell,
-                    Some(unit),
-                    TICK_TRIGGER_DEPTH,
-                );
-            }
-        }
+        PERIODIC_TRIGGER_SPELL => run_trigger_tick(world, unit, spell, tick),
         PERIODIC_DUMMY => run_dummy_tick(world, unit, spell, tick),
         other => debug!(
             "Spell {}: periodic aura type {other} has no tick handler",
             spell.id
         ),
+    }
+}
+
+fn run_trigger_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
+    // Additive OnEffectPeriodic still precedes default or registered emission.
+    // This also preserves script-only triggers such as Mirror Image1264098.
+    run_scripted_tick(world, unit, spell, tick);
+    if let Some(run) = crate::spell_cast::scripts::periodic_trigger(spell.id, tick.effect_index) {
+        let aura = world
+            .get::<ActiveAuras>(unit)
+            .and_then(|auras| auras.get(tick.instance_id))
+            .cloned()
+            .expect("registered periodic trigger retains its native parent aura");
+        run(world, unit, &aura, tick.effect_index);
+    } else if tick.trigger_spell != 0 {
+        crate::spell_cast::cast_triggered(
+            world,
+            tick.caster,
+            tick.trigger_spell,
+            Some(unit),
+            TICK_TRIGGER_DEPTH,
+        );
     }
 }
 

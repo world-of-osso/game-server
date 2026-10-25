@@ -90,6 +90,8 @@ For positive native RPPM rates, `SpellProcsPerMinuteMod` Type1 must scale the ef
 
 ## Computed target aura state
 
+Health states match TC a352b1fa `Unit.cpp481–487` and `Unit.h804–809`:2 strictly below20%,6 below25%,13 below35%,21 below20%or above80%,23 above75%,24 below35%or above80%,25 below50%. Compare native integer health counts against truncated percentage-of-max counts; equality is neither below nor above. Read current/max health at query time, without cached flags or timers. Missing Health is unknown. Do not compute any other previously unknown state or change the Some(false)-only rejection rule. Existing15 and exemptions below stay unchanged. [Source/proof](../handoffs/aura-state-health-proof-ledger.md).
+
 TargetAuraState/ExcludeTargetAuraState checks use only sourced, computable states. State15 (Druid periodic heal) derives from active aura source class family7 with mask0&0x50 or mask1&0x04000000, after TC's category1133 classification. Any caster's matching active aura qualifies:15 is not in TC's per-caster mask14/16. Owner-target and modelled vehicle-caster exemptions, plus affecting aura262, bypass state checks only, not other spell/type restrictions. Unknown states remain `TARGET_AURA_STATE_UNCOMPUTED`, never a reason to refuse a spell. Charmer and unmodelled vehicle representations remain explicit gaps; do not synthesize them. Follower owner mapping is [named project policy](follower-dungeons.md#full-spec-follower-kits-user-decision-2026-10-18).
 
 ## Germination Rejuvenation routing

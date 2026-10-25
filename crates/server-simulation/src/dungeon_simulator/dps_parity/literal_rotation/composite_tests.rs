@@ -146,7 +146,7 @@ fn assert_native_steps_ready(
             options: Default::default(),
         };
         assert!(
-            matches!(prepared.execution(&action, equipment).unwrap(), Some(Execution::Spell(spell, target))
+            matches!(prepared.execution(&action, equipment).unwrap(), Some(Execution::Spell(spell, target, _))
             if spell == step.spell && target == actor),
             "each selected step must have real native admission: {}",
             step.name
@@ -174,7 +174,7 @@ fn pending(selected: Option<(Action, Execution)>, actor: Entity) -> Vec<u32> {
     steps
         .into_iter()
         .map(|step| match step {
-            Execution::Spell(spell, target) => {
+            Execution::Spell(spell, target, _) => {
                 assert_eq!(target, actor);
                 spell
             }
@@ -276,8 +276,8 @@ fn literal_composite_world_execute_rejects_without_dispatching_first_step() {
     let (mut run, _) = native_player(259);
     assert!(!owned_aura(&run, COATINGS[0]));
     let plan = Execution::Composite(vec![
-        Execution::Spell(COATINGS[0], run.actor),
-        Execution::Spell(COATINGS[1], run.actor),
+        Execution::Spell(COATINGS[0], run.actor, None),
+        Execution::Spell(COATINGS[1], run.actor, None),
     ]);
     let error = execution::execute(run.app.world_mut(), run.actor, plan).unwrap_err();
     assert!(error.contains("precombat"), "{error}");

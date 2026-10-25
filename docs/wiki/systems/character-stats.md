@@ -14,6 +14,20 @@ Ordinary NPCs without `CharacterStats` still have no class-derived spell power, 
 
 Ignored actual Tiger Palm RED:91 vs TC358–377 from base98+weapon291, native coefficient0.9 and Battle Shout1.05. Generic implementation committed after that RED; four targeted native cases pass13.89s at4b9d2be73 (zero compiler warnings), including offhand/ranged percentages and SP/unequip. Tests are now enabled; parent-owned integration gates remain pending. Autoattack AP/6 versus TC3.5 remains an explicit deferred discrepancy, unchanged. [Proof/source ledger](../../handoffs/ww-weapon-ap-proof-ledger.md).
 
+## Generic mastery base — 2026-10-23
+
+TC a352b1fa `Player::UpdateMastery` (`StatSystem.cpp549–559`) sums aura318 and mastery rating only. The old producer added hardcoded8 to native114585's actual aura3188. An unequipped level90 Arms Player with real passive/StatsPlugin reproduced16 instead of8 at9215bc7fc (genuine native RED10.95s, frozen canonical SHAcd7230ac1d62bf7d7ea8fef5fbb82faa9f36b61ec78108e591f1204c614a8ed6). Removing the constant fixes the generic source rather than adding a per-class correction. Rating DR and specialization coefficients are unchanged. At0576893d7 native zero-rating Warrior/Monk/Mage and actual unlearn/relearn pass1/1 (14.73s); the stats-filter scope passes21/21 (8.35s), including real character selection/level changes and aura8+rating2=10. No compiler warnings; parent integration gate remains separate. Stats-only unit worlds without aura318 now correctly report no implicit base. [Historical Arms decomposition](../investigations/arms-spell-factors.md) separates this from gear, tier and comparator differences.
+
+### Initialization and knowledge gate — 2026-10-24
+
+Removing the unconditional8 exposed a production follower initialization gap: `default_skill_spells(class, 0, level)` rejected skill183's explicit all-races mask `[-1,-1]`. Native `skill_race_class_info` row5 and `SkillLineAbility`25920 supply114585 (aura318,8 points) through that universal skill; ordinary human progression already learns it. `race_mask_allows` now admits the explicit universal mask for race0 while retaining restricted-mask rejection. Stats also gate aura318 plus rating on knowing a mastery spell of the active specialization, matching TC a352b1fa `Player.cpp30545–30550` and `StatSystem.cpp549–568`; spec coefficients never supply a base. Native created-player/level-up/passive-reapply passed, while initialized Garrick failed knowledge114585 at5d1c30c81. After merging1fb0230ad, all19 sa1089 regression cases pass across d96bfa968/faea69f47; source-neutral follower/base+bonus knowledge/lifecycle/race controls also pass. Fixture-only corrections supply real spec knowledge/base passives or the production StatsPlugin; no existing behavioral assertions changed. Two-crate test check passes once atfaea69f47 (2m47s, zero warnings), fmt passes; full integration remains lead-owned. [Per-test proof and production RED](../../handoffs/generic-mastery-initialization-proof.md).
+
+## Named Warrior strength/AP policies — 2026-10-23
+
+[`WARRIOR_ARMORED_TO_THE_TEETH_SIMC_POLICY` and `WARRIOR_BATTLEFIELD_COMMANDER_SIMC_POLICY`](../investigations/arms-spell-factors.md#ap-components) bind actual active384124 ranked226 amounts and424742 effect5 dummy amount for Warrior Players/class followers. Other classes and ordinary NPCs are excluded. The stat producer solves the native strength/armor linear relationship once (including Vanguard), preserving integer native armor and existing factors; Commander enters shared AP percentages, including weapon AP. TC absence, pinned SimC relationships and approval are ledgered with the [contract](../../specs/character-stats.md#named-warrior-stat-policies).
+
+Four actual reference-gear Arms/Protection REDs at e5cc1ef32 (23.48s) establish missing strength/AP; native rank2 amounts10/4 and Commander3 observed, unlearn/relearn controls use the same real actor. Arms remains on one-factor armor2855. At98093ec85 (productiona1af93852) four policy cases pass19.13s: Arms strength2963.6248/armor2855, Protection3048.0583/7382, and Commander3% on both bare/weapon AP with exact removal restoration. Retained native mastery1GREEN8.20s/stats-filter21GREEN9.07s; actual Arms MS1GREEN10.79s. Build has no compiler warnings. Parent integration gate remains separate.
+
 ## Follower mastery amount refresh — 2026-10-21
 
 `auras/mastery.rs` originally admitted only `Player`, although approved followers already had `CharacterStats.mastery_points`. This left native76671/76857 aura166 AP bonuses and168534 aura108 damage modifiers at zero on the NPC bridge. The same attribute-driven calculation and amount refresh now admit `Player` or `Follower`; an arbitrary NPC carrying `CharacterStats` remains excluded. Source: TC a352b1fa `SpellInfo.cpp600` / `StatSystem.cpp549`, extended only by the existing [follower class-stat policy](../investigations/follower-data.md).70448 coefficients are unchanged. Native ignored RED reproduced AP620 vs669.6 and Lightning Bolt modifier157.5 vs166.118; enabled mastery/NPC controls pass in the13-case2ba4ec43a GREEN (22.04s). Tests: `followers/passive_stats_tests.rs` (`dps_parity_follower_native_*`).
@@ -63,7 +77,7 @@ Native Duck174884/level90 baseline6eeb06d59 dealt four attributed14-damage swing
 5. **Crit %** = 5 + DR(crit rating / rating-per-1%) + `crit_pct`.
 6. **Haste %** = DR(haste rating / rating-per-1%) + `haste_pct`.
 7. **Versatility %** = DR(versatility rating / rating-per-1%) + `versatility_pct`.
-8. **Mastery %** = (8 + DR(mastery rating / rating-per-point) + `mastery_points`) × mastery coefficient.
+8. **Mastery %** = (DR(mastery rating / rating-per-point) + aura318 `mastery_points`) × mastery coefficient. Native114585 supplies8 base points; no second hardcoded base.
 9. **Armor** = gear armor rating.
 
 DR is curve 21024 from SimC `item_scaling.inc` (12.0.1.66709), applied as in `player_t::apply_combat_rating_dr`. It is the identity up to 30%. Tertiary ratings (gear `ITEM_MOD_CR_SPEED` 61, `CR_LIFESTEAL` 62, `CR_AVOIDANCE` 63) convert with gtCombatRatings Speed/Lifesteal/Avoidance and diminish on curve 21025 (`DIMINISHING_RETURN_TERTIARY_CR_CURVE`, identity up to 10%); no content item carries one today. Rating conversion and DR exist only in `stats.rs`; the server does not use `shared::formulas` rating functions.
@@ -90,6 +104,38 @@ Actual103 profile→StatsPlugin at7aa72bf47 reproduces five tier allocation erro
 The main-hand result is `CharacterStats.main_hand` (unarmed 1–2 at 2.0 s, TrinityCore `BASE_MINDAMAGE`/`BASE_MAXDAMAGE`); an off-hand weapon is `CharacterStats.off_hand`. Auto-attacks swing both ([[player-damage]]). Spell weapon hits (effects 58, 121, 31) roll it and add AP / 6 × speed; 121 uses the normalized speed (dagger 1.7, one-hand 2.4, two-hand 3.3, ranged 2.8).
 
 `EquippedItems.items` holds `(EquipmentSlot, ItemDefinitionSource, item_id)` of physically equipped items. Inventory publishes it on world entry and deltas. `EquippedItemModifiers.items` separately carries slot-bound instance properties; changing only those properties also triggers the production recompute.
+
+### Native equipped-set auras — 2026-10-23
+
+The consolidated rt1086 path reconciles ordinary item/enchant and set-owned auras in the global AuraPlugin FixedUpdate schedule, sharing the aura applier. `item_proc_data::sets` is the sole catalog/predicate source; original Retail `ItemTemplate.item_set` comes from native `ItemSparse.ItemSet`, with native `ItemSetSpell` rows indexed by set/spell. Selection uses actual equipped counts, threshold and current specialization; TC legacy-inactive bit0x01 disables a set. Allocation donors never replace equipped identities. The consolidated source is `AuraSource::ItemSet(set_id)`, not an arbitrary member slot; losing eligibility removes only the owned aura. Earlier603/778 receipts named that internal source `EquipmentSet`; no alternate producer/source path is retained. Active-spec changes also reconcile. No spell-ID cases or imported stat totals.
+
+Strict native RED atb84957a9e: real Arms2067 two-piece equip has0 instead of1 aura1296643; real Protection own2pc likewise0 instead of1 while Arms exclusion passes (two genuine failures29.67s). Both use exact reference Player gear/selected traits and the real application schedule. At778524924 (production8171bf2aa) both native lifecycle cases pass30.66s: equip/unequip,2/4-piece thresholds and spec switches. A control-fixture correction derives membership from native ItemSparse: Prot wears Legs271455 rather than Arms Hands, so the old slot guess accidentally kept two pieces. Production selection was unchanged. Retained Warrior policy4GREEN27.23s; actual Arms MS1GREEN16.91s observes1296643/1296644 owned by EquipmentSet2067 and native2pc10% actually applied. Source product1.818181634 matches oracle1.818182; damage27631, AP4014.553467/caster armor2855/mastery605 unchanged. Both-package `cargo check --tests` passes90.70s, zero warnings. Parent integration gate and live deployment remain separate.
+
+Production entry registers ItemScaling/Inventory/Aura plugins; startup loads the same metadata and login/inventory deltas publish `EquippedItems`/`EquippedItemModifiers` consumed here. This is not a fixture-only activation path. Read-only Sakuin inspection found activePID61507 starting `/var/lib/game-server/bin/game-server`; its installed ELF rodata did not contain current equipment-effects/producer-catalog markers. No exact deployed revision, new set activation or live equip smoke is inferred; no remote mutation/deployment occurred. Evidence: `native-spell-diff-2026-10-23/mastery-b67952ca4/set-activation/sakuin-*.proof.json`.
+
+Consolidated on landed master5d39f490a atfb65c93c6; cf7c76c71 repairs only cross-crate predicate visibility and the relocated combat tests' stale import. Both-package `cargo check --locked -p server -p server-simulation --tests -j2` passes24.49s without warnings. Same actual Arms/Protection lifecycle2 + Warrior policy4 controls pass6/6 in31.34s after11m16s compilation; no doubled set aura, source formulas unchanged. Frozen native world SHA`cd7230ac1d62bf7d7ea8fef5fbb82faa9f36b61ec78108e591f1204c614a8ed6`; binary SHA`62640926474cd68c7c64fd45f9466a20483f2791450780cf6c9c88f9661298d8`. Full commands/code/binary receipts: engine `data/diagnostics/native-spell-diff-2026-10-23/consolidated-fb65c93c6/`. These targeted proofs replace603's duplicate-producer packet; parent integration/acceptance remains separate. No new ilvl/proc facts or DPS-band claim.
+
+603 originally added normal sets only and named skill/subtree gaps. Consolidation preserves rt1086's pre-existing sourced selectors: actual `PlayerProfessions.rank` compared with native RequiredSkill/Rank, and the selected native TraitLoadout subtree compared with ItemSetSpell.TraitSubTreeID. No inferred skill or invented hero choice is supplied. The native conditional-set inventory remains below; it is no longer an unsupported list when those actual selectors are available.
+
+| Set | Name | Required skill/rank |
+|---|---|---|
+|421|Bloodvine Garb|197/300|
+|441|Primal Batskin|165/300|
+|442|Blood Tiger Harness|165/300|
+|444|The Darksoul|164/300|
+|559|Spellstrike Infusion|2539/50|
+|565|Khorium Ward|2476/50|
+|566|Burning Rage|164/350|
+|569|Faith in Felsteel|164/350|
+|572|Battlecast Garb|2539/50|
+|573|Fel Skin|2531/50|
+|574|Strength of the Clefthoof|2531/50|
+|575|Felstalker Armor|2531/50|
+|576|Fury of the Nether|165/350|
+
+Subtree-qualified row: set1964 `LH Test [do not translate]`, ItemSetSpell row7219/spell1240644/subtree21/threshold1. Its consolidated selector reads the actual selected native subtree; a missing/nonmatching selection does not qualify. Historical603 gap inventory/hash remains `set-activation/selector-gaps.proof.json`; it does not override preserved rt behavior. Real Blood Tiger442/skill165/rank300 control covers below/at/removed profession ranks; no new subtree runtime qualification is claimed here.
+
+Sources: TC `Item.cpp76–230` AddItemsSetItem/RemoveItemsSetItem and `DBCEnums.h1527–1529`; [metadata selector](../../../crates/server/src/item_proc_data.rs), [production aura seam](../../../crates/server/src/equipment_effects.rs), [native lifecycle tests](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/equipped_set_tests.rs), [contract](../../specs/dps-parity.md#equipment), [inventory](inventory.md).
 
 ### Instance properties — 2026-10-21
 

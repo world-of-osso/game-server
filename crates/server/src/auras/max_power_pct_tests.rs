@@ -106,6 +106,18 @@ fn powers_missing_catalog_does_not_guess_native_max_power_or_mutate_existing_poo
 fn census_tail_178_native_savant_preserves_missing_mana_and_removes_reversibly() {
     let mut h = fixture(8);
     let caster = h.caster;
+    // TC Player.cpp30545 CanUseMastery requires the active spec's known mastery.
+    let data = crate::spell_cast::test_harness::world_db().unwrap();
+    h.app.insert_resource(data.classes.clone());
+    h.app.insert_resource(data.store.clone());
+    h.app.world_mut().entity_mut(caster).insert((
+        crate::class_progression::ActiveSpec(62),
+        crate::class_progression::KnownSpells::fixture(vec![SAVANT, 114585]),
+    ));
+    h.advance(6);
+    // Preserve the native base passive while isolating Savant's apply/remove boundary.
+    remove(&mut h, SAVANT);
+    h.advance(3);
     let baseline = mana(&h).max;
     h.app.world_mut().get_mut::<Mana>(caster).unwrap().current = baseline / 2.0;
     apply(&mut h, caster, SAVANT, 0);

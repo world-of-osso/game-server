@@ -54,8 +54,8 @@ fn level_80_human_holy_paladin_base_stats() {
     assert_eq!(stats.base_mana, 50_000.0);
     assert_eq!((stats.spell_power, stats.attack_power), (159.0, 159.0));
     assert_eq!((stats.crit_pct, stats.haste_pct), (5.0, 0.0));
-    // 8 base mastery points × 1.5.
-    assert_eq!(stats.mastery_pct, 12.0);
+    // No aura318 or mastery rating: no implicit mastery base.
+    assert_eq!((stats.mastery_points, stats.mastery_pct), (0.0, 0.0));
 }
 
 #[test]
@@ -119,10 +119,22 @@ fn gear_counts_only_the_spec_primary_stat_and_ratings_convert_per_level() {
     assert_eq!(stats.base_mana, 250_000.0);
     assert!((stats.crit_pct - 15.0).abs() < 1e-4, "{}", stats.crit_pct);
     assert!((stats.haste_pct - 10.0).abs() < 1e-4, "{}", stats.haste_pct);
-    assert!(
-        (stats.mastery_pct - 15.0).abs() < 1e-4,
-        "{}",
-        stats.mastery_pct
+    assert_eq!((stats.mastery_points, stats.mastery_pct), (2.0, 3.0));
+    let with_mastery_aura = compute_character_stats(
+        &input,
+        Some(&StatModifiers {
+            mastery_points: 8.0,
+            ..default()
+        }),
+    )
+    .unwrap();
+    assert_eq!(
+        (
+            with_mastery_aura.mastery_points,
+            with_mastery_aura.mastery_pct
+        ),
+        (10.0, 15.0),
+        "aura318 base adds once to the two rating points"
     );
     assert_eq!(stats.armor, 3000.0);
 }
@@ -247,14 +259,13 @@ fn entering_world_rescales_persisted_health_and_follows_spec_and_admin_level() {
     let stats = world.get::<CharacterStats>(player).unwrap();
     assert_eq!((stats.spell_power, stats.mastery_pct), (0.0, 0.0));
 
-    // class_progression resolves Holy at 80; spell power and the mastery
-    // coefficient follow.
+    // Holy selects Intellect; this Stats-only app has no aura318 producer.
     app.world_mut()
         .entity_mut(player)
         .insert(ActiveSpec(SPEC_HOLY));
     app.update();
     let stats = app.world().get::<CharacterStats>(player).unwrap();
-    assert_eq!((stats.spell_power, stats.mastery_pct), (159.0, 12.0));
+    assert_eq!((stats.spell_power, stats.mastery_pct), (159.0, 0.0));
 
     let response = app
         .world_mut()
@@ -526,6 +537,6 @@ fn level_20_arcane_mage_in_caster_cloth_derives_sheet_stats() {
         close(derived.versatility_pct, 6.0 / 5.202_747),
         "{derived:?}"
     );
-    // 8 base mastery points × Savant's 1.32 coefficient.
-    assert!(close(derived.mastery_pct, 10.56), "{derived:?}");
+    // No mastery rating or aura318 in this Stats-only world.
+    assert_eq!(derived.mastery_pct, 0.0);
 }
