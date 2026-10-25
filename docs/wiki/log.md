@@ -1,6 +1,9 @@
 ## 2026-10-24 — Shared native APL buff facts takeover
 
 [Exact source/proof ledger](../handoffs/shared-buff-facts-proof-ledger.md): isolated shared duration/react/named-time work from dead14781's Evoker branch onto requested1466a4ca7. Real TF5217, Omen16864→135700 proc/stack/refresh/expiry/reacquisition and rated cast/channel controls reach genuine RED before implementation. Native-cap precondition corrects an old fixture's stack-gain-as-overcap assumption; fiveGREEN22.44s atd5b83f217, requested server/simulation/spell-tests check once0/1m45s/no warnings. Explicit source reaction distribution, cfg-only lifecycle hooks, no query-side duration reconstruction or Evoker implementation. Lead full gate remains separate.
+## 2026-10-24 — Native Flurry core earning/release
+
+[Bounded ledger](../handoffs/ww-flurry-proof-ledger.md): ec4b89338 actual white/ordinary451839 earning and natural FoF children3 genuine RED/3controlsPASS41.86s. Selected native counts/critical multiplier/cap and class-owned release are implemented;150ms child spacing explicitly cites SimC76f8118 sc_monk.cpp779–781. Generic impact callbacks carry actual native provenance without class IDs. At172da6nativeGREEN25.97s/compile0warnings. Same tested binary/fresh CURRENT backup EACH300s100439.5467ST/134000.8433three-target (−51.3477%/−64.4144%);450617 and451250 both really damage. Native1H/offhand and natural Dual Threat producer remain unqualified; other releases/SCK/recovery stay outside this slice, full lead gate and broader parity remain open.
 
 ## 2026-10-24 — Byte-identical public spell remainder
 
