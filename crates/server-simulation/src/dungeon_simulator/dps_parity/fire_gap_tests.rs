@@ -81,54 +81,59 @@ fn fire_gap_sunfury_meteor_guarantees_one_pyroclasm_stack() {
 #[ignore = "requires exact Fire63 inputs and private70448 DB"]
 fn fire_gap_mid2_pyroclasm_hardcasts_crit_after_proc_consumption() {
     let _seed = crate::random::seed_scope(70_448);
-    let mut run = prepare_literal(63, 1).unwrap();
-    assert!(
-        crate::auras::has_aura(run.app.world(), run.actor, 1296583),
-        "earned native2pc"
-    );
-    let target = run.targets[0];
-    let first = run.app.world().resource::<ObservedCombatEvents>().0.len();
-    for _ in 0..5 {
-        // Keep the actual recipient below Firestarter; never change caster crit.
-        let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
-        health.current = health.max * 0.5;
-        crate::spell_cast::cast_triggered(
-            run.app.world_mut(),
-            run.actor,
-            269651,
-            Some(run.actor),
-            1,
-        );
-        start_native(&mut run, 11366, target);
-        assert!(
-            run.app
-                .world()
-                .get::<shared::casting::CastState>(run.actor)
-                .is_some(),
-            "real hardcast"
-        );
-        preparation::finish_pending_setup(&mut run).unwrap();
-        assert_eq!(
-            stacks(&run, 269651),
-            0,
-            "native proc spent before missile impact"
-        );
-        for _ in 0..20 {
-            run.app.update();
-        }
-    }
-    let hits: Vec<_> = run.app.world().resource::<ObservedCombatEvents>().0[first..]
-        .iter()
-        .filter(|event| {
-            event.source == Some(run.actor.to_bits())
-                && event.target == Some(target.to_bits())
-                && event.spell_id == Some(11366)
-                && event.kind == CombatLogKind::Damage
+    let crits: Vec<_> = (0..5)
+        .map(|_| {
+            // Separate native actors prevent earlier guaranteed crits from earning
+            // Hot Streak and turning a later trial into an instant cast.
+            let mut run = prepare_literal(63, 1).unwrap();
+            assert!(
+                crate::auras::has_aura(run.app.world(), run.actor, 1296583),
+                "earned native2pc"
+            );
+            let target = run.targets[0];
+            let first = run.app.world().resource::<ObservedCombatEvents>().0.len();
+            // Keep the actual recipient below Firestarter; never change caster crit.
+            let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+            health.current = health.max * 0.5;
+            crate::spell_cast::cast_triggered(
+                run.app.world_mut(),
+                run.actor,
+                269651,
+                Some(run.actor),
+                1,
+            );
+            start_native(&mut run, 11366, target);
+            assert!(
+                run.app
+                    .world()
+                    .get::<shared::casting::CastState>(run.actor)
+                    .is_some(),
+                "real hardcast"
+            );
+            preparation::finish_pending_setup(&mut run).unwrap();
+            assert_eq!(
+                stacks(&run, 269651),
+                0,
+                "native proc spent before missile impact"
+            );
+            for _ in 0..20 {
+                run.app.update();
+            }
+            let hits: Vec<_> = run.app.world().resource::<ObservedCombatEvents>().0[first..]
+                .iter()
+                .filter(|event| {
+                    event.source == Some(run.actor.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(11366)
+                        && event.kind == CombatLogKind::Damage
+                })
+                .collect();
+            assert_eq!(hits.len(), 1);
+            hits[0].crit
         })
         .collect();
-    assert_eq!(hits.len(), 5);
     assert!(
-        hits.iter().all(|hit| hit.crit),
+        crits.into_iter().all(|crit| crit),
         "native MID2 hardcast guarantee must survive proc consumption"
     );
 }
