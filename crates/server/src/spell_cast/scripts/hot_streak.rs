@@ -21,7 +21,13 @@ pub(crate) fn triggers_hot_streak(spell_id: u32) -> bool {
     matches!(spell_id, 133 | 108853 | 319836 | PYROBLAST | 2948)
 }
 
-pub(crate) fn record_fire_hit(world: &mut World, caster: Entity, spell: &SpellInfo, crit: bool) {
+pub(crate) fn record_fire_hit(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    crit: bool,
+    guaranteed: bool,
+) {
     let eligible = triggers_hot_streak(spell.id);
     let learned = world
         .get::<KnownSpells>(caster)
@@ -29,6 +35,18 @@ pub(crate) fn record_fire_hit(world: &mut World, caster: Entity, spell: &SpellIn
     if !eligible || !learned {
         return;
     }
+    // SimC76f8118 sc_mage.cpp2138–2159/2186–2192: guaranteed outcomes
+    // predict HU, and known-HU conversions predict HS; wasted crits keep HS.
+    if crit && crate::auras::has_aura(world, caster, HOT_STREAK) {
+        if guaranteed {
+            #[cfg(any(test, feature = "test-support"))]
+            crate::simc_apl_native::reaction::predict(world, caster, HOT_STREAK);
+        }
+        return;
+    }
+    #[cfg(any(test, feature = "test-support"))]
+    let reacted =
+        crate::simc_apl_native::reaction::has_observed_reaction(world, caster, HEATING_UP);
     let heating_up = world
         .get::<ActiveAuras>(caster)
         .and_then(|auras| {
@@ -47,6 +65,12 @@ pub(crate) fn record_fire_hit(world: &mut World, caster: Entity, spell: &SpellIn
             HEATING_UP
         };
         crate::spell_cast::cast_triggered(world, caster, proc, Some(caster), 1);
+        if guaranteed {
+            #[cfg(any(test, feature = "test-support"))]
+            if heating_up.is_none() || reacted {
+                crate::simc_apl_native::reaction::predict(world, caster, proc);
+            }
+        }
     }
 }
 
