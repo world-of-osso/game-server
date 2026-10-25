@@ -37,8 +37,38 @@ fn fury_deep_wounds_rolling_refresh_keeps_next_tick_and_adds_full_native_duratio
         run.app.update();
     }
     let before = deep_wounds_ticks(&run);
+    let schedule = |run: &Run| {
+        let aura = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 262115 && aura.caster == actor)
+            .unwrap();
+        let period = aura
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .period_ms;
+        (
+            aura.duration_ms,
+            period,
+            aura.expires_at.unwrap() - crate::auras::aura_now(run.app.world()),
+        )
+    };
+    eprintln!(
+        "Deep Wounds effective schedule before refresh (duration_ms, period_ms, remains_s): {:?}",
+        schedule(&run)
+    );
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 262115, Some(target), 1);
-    for _ in 0..160 {
+    run.app.update();
+    eprintln!(
+        "Deep Wounds effective schedule after refresh (duration_ms, period_ms, remains_s): {:?}",
+        schedule(&run)
+    );
+    for _ in 0..159 {
         run.app.update();
     }
     // SimC76f8118 action.cpp4614–4617/4995–5016: DOT_ROLLING carries
