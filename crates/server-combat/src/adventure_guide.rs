@@ -63,7 +63,7 @@ pub(crate) fn calendar_month(now: i64) -> shared::protocol::JournalMonth {
     month::month_at(now, 0, now)
 }
 
-pub(crate) struct AdventureGuidePlugin;
+pub struct AdventureGuidePlugin;
 impl Plugin for AdventureGuidePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<AdventureCatalog>()

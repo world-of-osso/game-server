@@ -53,6 +53,8 @@ mod hunter_cadence_tests;
 #[cfg(test)]
 mod hunter_focus_tests;
 mod hunter_followup_tests;
+#[cfg(test)]
+mod hunter_stomp_tests;
 mod inputs;
 mod literal_ranged_attack_tests;
 pub(crate) mod literal_rotation;
