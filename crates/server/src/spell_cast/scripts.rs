@@ -115,7 +115,9 @@ pub(super) use resource_values::{
 };
 mod scourge_strike;
 mod shadow_priest;
-pub(super) use shadow_priest::launch_delay as scripted_launch_delay;
+pub(super) use shadow_priest::{
+    launch_delay as scripted_launch_delay, weaving_multiplier as shadow_weaving_multiplier,
+};
 mod snakeskin_quiver;
 pub(super) use snakeskin_quiver::roll_snakeskin_cobra;
 mod soul_of_the_forest;

@@ -170,11 +170,13 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Shadow Priest literal parity controller
 
-- [ ] Implicit selector unions retain each unit once per effect in first-selection order; overlapping destination-area/line selectors cannot duplicate damage or use target-cap slots twice.
+- [x] Implicit selector unions retain each unit once per effect in first-selection order; overlapping destination-area/line selectors cannot duplicate damage or use target-cap slots twice.
 
 - [x] Spec258 executes the pinned Shadow APL through shared `literal_rotation`, preserving native spell identities, selected traits, resources, equipment and target selection. Missing native follower profiles use the real-player fixture; they never create follower data. Precombat runs once before engagement. No native kit or AssistedCombat driver runs beside the literal controller.
 - [x] Native `target.has_absorb` reads live positive school-absorb capacity; an absent, expired or depleted shield is false (SimC76f8118 `player.cpp11813–11814`).
-- [ ] `SIMC_SHADOW_TENTACLE_SLAM_CHILDREN`:1227280 lands after the pinned500ms scripted travel time while its self-Energize stays immediate. Apply34914 first in1227621's native area, using root effect2's cap and preferring enemies without the caster's VT; damage all selected enemies, then apply335467 at selected1279353 effect0's native percentage without paying Insanity. Persist the multiplier in periodic-leech snapshots and retain native rolling carry (`sc_priest_shadow.cpp1733–1785,1819–1871,1272–1275`). No native records, coefficients or durations are replaced.
+- [x] `SIMC_SHADOW_TENTACLE_SLAM_CHILDREN`:1227280 lands after the pinned500ms scripted travel time while its self-Energize stays immediate. Apply34914 first in1227621's native area, using root effect2's cap and preferring enemies without the caster's VT; damage all selected enemies, then apply335467 at selected1279353 effect0's native percentage without paying Insanity. Persist the multiplier in periodic-leech snapshots and retain native rolling carry (`sc_priest_shadow.cpp1733–1785,1819–1871,1272–1275`). No native records, coefficients or durations are replaced.
+
+- [ ] Shadow Weaving343690 scales eligible Shadow damage by live mastery per owned active589/34914/335467 on the recipient, counting a DoT being applied. Voidform194249 assumes three DoTs. Selected Madness Weaving1240394 adds its native effect0 percentage when Madness is active or during Voidform (`sc_priest.cpp4285–4341`). Native mastery amounts and damage coefficients remain unchanged. Eligibility follows the pinned priest actions, excluding item/racial procs and reflected self-damage.
 
 ### Literal precombat execution
 
