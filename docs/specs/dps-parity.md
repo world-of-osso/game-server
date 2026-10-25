@@ -4,6 +4,11 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+### Frost Mage literal fixture
+
+- Spec64 captures the native player before setup and executes the unchanged exported76f8118 Frost action rows through shared `Program`/`Driver`/`Prepared`/`Equipment`, not AssistedCombat4512.
+- Precombat completes real Intellect and its first usable harmful precast before engagement. Native clocks, channel decisions, knowledge, costs, cooldowns and70448 spell values remain authoritative. Buff and recipient Freezing reaction clocks are configured before acquisition, including new add waves.
+
 ### Beast Mastery literal fixture
 
 - Main-pet Focus regeneration is continuous at1.25 times the owner's native potential Focus rate, including its native haste and modifiers. It is independent of owner resource cap and entity iteration order. Stable guardians do not regenerate Focus. The legacy24-Focus-per4s path is removed.
