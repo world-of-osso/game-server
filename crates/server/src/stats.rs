@@ -84,6 +84,8 @@ pub struct StatModifiers {
     pub attack_power_from_sp_pct: Option<f32>,
     pub crit_pct: f32,
     pub haste_pct: f32,
+    /// Independent percentage multiplying total haste after rating/additive bonuses.
+    pub haste_total_pct: f32,
     pub mastery_points: f32,
     pub versatility_pct: f32,
     pub max_health_pct: f32,
@@ -594,6 +596,9 @@ pub fn compute_character_stats(
     };
     // TC StatSystem.cpp549–559: aura318 supplies the base; rating adds points.
     let mastery_points = rating_value(ratings.mastery, MASTERY_RATING[level]) + mods.mastery_points;
+    let base_haste_pct = rating_value(ratings.haste, HASTE_RATING[level]) + mods.haste_pct;
+    // SimC76f8118 sc_paladin.cpp4617–4618/4647–4648: Crusade multiplies haste.
+    let haste_pct = base_haste_pct + (100.0 + base_haste_pct) * mods.haste_total_pct / 100.0;
     Some(CharacterStats {
         primary,
         ratings,
@@ -614,7 +619,7 @@ pub fn compute_character_stats(
         ranged_attack_power,
         weapon_attack_power: WeaponAttackPower::default(),
         crit_pct: BASE_CRIT_PCT + rating_value(ratings.crit, CRIT_RATING[level]) + mods.crit_pct,
-        haste_pct: rating_value(ratings.haste, HASTE_RATING[level]) + mods.haste_pct,
+        haste_pct,
         mastery_pct: mastery_points * input.mastery_coefficient,
         mastery_points,
         versatility_pct: rating_value(ratings.versatility, VERSATILITY_RATING[level])

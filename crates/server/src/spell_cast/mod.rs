@@ -1355,6 +1355,8 @@ pub fn cast_for_player_with_target(
 pub struct CastTargets {
     pub unit: Entity,
     pub primary: Option<Entity>,
+    /// Explicit cursor point, retained across cast time and projectile flight.
+    pub destination: Option<[f32; 3]>,
 }
 
 /// Ordinary Player admission with an already selected action context.
@@ -1366,7 +1368,7 @@ pub fn cast_for_player_with_targets(
 ) -> Result<(), CastFailure> {
     let request = SpellCastIntent {
         target_item_guid: None,
-        destination: None,
+        destination: targets.destination,
         spell_id: Some(spell_id),
         spell: String::new(),
         target_entity: Some(targets.unit.to_bits()),
@@ -2741,6 +2743,7 @@ fn execute_cast_with_primary(
         scripts::consume_maelstrom_weapon(world, caster, spell);
         scripts::apply_echo_policies(world, caster, spell);
         scripts::after_foreground_spender(world, caster, spell, spell.cast_primary_target);
+        crate::auras::add_ret_crusade_spender_stacks(world, caster, spell, &costs);
         scripts::roll_selected_ret_divine_purpose(world, caster, spell);
         scripts::schedule_empyrean_legacy(world, caster, spell, spell.cast_primary_target);
     }
