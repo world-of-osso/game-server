@@ -296,6 +296,11 @@ pub(crate) fn after_builder_hit(world: &mut World, ctx: &EffectCtx<'_>, critical
 }
 
 fn is_combo_builder(spell: &SpellInfo) -> bool {
+    // sc_rogue.cpp5085–5086/5933–5934/6351–6352 explicitly exclude
+    // Pistol Shot, Shuriken Toss and Poisoned Knife despite native CP gains.
+    if matches!(spell.id, 185763 | 114014 | 185565) {
+        return false;
+    }
     if matches!(spell.id, 51723 | 5374 | 27576) {
         return true;
     }
