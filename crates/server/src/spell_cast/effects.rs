@@ -2496,6 +2496,9 @@ fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     };
     spell.cast_destination = ctx.spell.cast_destination;
     spell.cast_item_level = ctx.spell.cast_item_level;
+    // SimC76f8118 sc_demon_hunter.cpp: Annihilation's child strikes retain
+    // the selected enemy even though the native parent casts on self.
+    spell.cast_primary_target = ctx.primary_target();
     super::launch_triggered_spell(world, ctx.caster, &spell, Some(target), depth);
 }
 
