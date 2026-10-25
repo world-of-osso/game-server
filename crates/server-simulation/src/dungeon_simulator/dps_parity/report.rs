@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 pub(super) fn stats(world: &World, actor: Entity) -> Value {
     let sheet = world.get::<crate::stats::CharacterStats>(actor).unwrap();
     let attack_time_mult = world
-        .get::<crate::auras::AuraCombatMods>(actor)
+        .get::<crate::auras::AuraStatMods>(actor)
         .map_or(1.0, |mods| {
             mods.attack_cast_time_mult * mods.attack_time_mult * mods.melee_ranged_attack_time_mult
         });
