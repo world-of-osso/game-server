@@ -25,12 +25,6 @@ fn enhancement_linked_modes_keep_earning_maelstrom_until_the_last_real_mode_ends
     assert!(auras::has_aura(run.app.world(), actor, 114051));
     assert!(auras::has_aura(run.app.world(), actor, 466772));
     assert!(auras::has_aura(run.app.world(), actor, 384437));
-    assert!(
-        run.app
-            .world()
-            .get::<crate::combat::AutoAttack>(actor)
-            .is_none()
-    );
     for _ in 0..400 {
         if !auras::has_aura(run.app.world(), actor, 466772) {
             break;
@@ -43,8 +37,12 @@ fn enhancement_linked_modes_keep_earning_maelstrom_until_the_last_real_mode_ends
         auras::has_aura(run.app.world(), actor, 384437),
         "ending Doom Winds cannot remove the live Ascendance-owned Static Accumulation"
     );
+    // Native469270 has MELEE_COMBAT_START (Attributes1=512); its real pulses may start swings.
+    // Stop fixture melee only after Doom ends so the remaining producer is isolated.
+    run.app.world_mut().entity_mut(actor).remove::<crate::combat::AutoAttack>();
     let target = run.targets[0];
     cast(&mut run, 188196, target);
+    assert!(run.app.world().get::<crate::combat::AutoAttack>(actor).is_none());
     let before = weapon_stacks(&run);
     for _ in 0..40 {
         run.app.update();
