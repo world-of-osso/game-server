@@ -6,7 +6,14 @@ fn native_bm_animal_companion_follows_main_pet_lifecycle_and_commands() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
     let main = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
-    let pets = crate::hunter_pet::active_owned_pets(run.app.world_mut(), run.actor);
+    let pets: Vec<_> = run
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::hunter_pet::HunterPet)>()
+        .iter(run.app.world())
+        .filter(|(_, pet)| pet.owner == run.actor)
+        .map(|(unit, _)| unit)
+        .collect();
     assert_eq!(
         pets.len(),
         2,
