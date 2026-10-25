@@ -88,6 +88,14 @@ fn read_precast_readiness(run: &mut Run, id: u32) -> Result<bool, String> {
     }
 }
 
+pub(super) fn consume_profile_food(run: &mut Run) -> Result<(), String> {
+    // SimC76f8118 unique_gear_midnight.cpp85–103 selects composed ratings at food start.
+    // Both literal and ordinary setup must finish native gear/passive initialization first.
+    warm_up_reference(run)?;
+    super::profile_effects::install_food(run.app.world_mut(), run.actor, &run.profile)?;
+    finish_pending_setup(run)
+}
+
 pub(super) fn warm_up_reference(run: &mut Run) -> Result<(), String> {
     for _ in 0..4 {
         run.app.update();

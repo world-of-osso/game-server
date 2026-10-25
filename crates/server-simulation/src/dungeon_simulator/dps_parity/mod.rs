@@ -297,7 +297,7 @@ fn prepare_literal_reference(
         style: crate::simc_apl_native::FightStyle::Patchwerk,
     };
     literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter)?;
-    preparation::warm_up_reference(&mut run)?;
+    preparation::consume_profile_food(&mut run)?;
     Ok(run)
 }
 
@@ -406,11 +406,7 @@ fn prepare_reference(
     identity: crate::followers::simulator::ParityActor,
 ) -> Result<Run, String> {
     let mut run = spawn_reference(profile, traits, count, identity)?;
-    // SimC76f8118 unique_gear_midnight.cpp85–103 selects from composed ratings
-    // when food starts. Resolve native gear/passives before consumption or pet casts.
-    preparation::warm_up_reference(&mut run)?;
-    profile_effects::install_food(run.app.world_mut(), run.actor, &run.profile)?;
-    preparation::finish_pending_setup(&mut run)?;
+    preparation::consume_profile_food(&mut run)?;
     preparation::start_configured_native_pet(&mut run)?;
     preparation::finish_pending_setup(&mut run)?;
     Ok(run)
