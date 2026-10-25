@@ -1,3 +1,7 @@
+## 2026-10-24 — Xuen FoF recovery strict RED and consumer
+
+[Named-policy ledger](../handoffs/ww-xuens-recovery-proof-ledger.md): f0ab339b6 actual6RED/6controlsPASS36.52s precedes implementation; real RSK/RWK critical and SCK1/3/6 budgets fail, native noncrit/secondary-only/no-hit/unselected/no-timer controls pass. Native TargetInfo context and expiry-only hook keep policy IDs in scripts; TC/DB2 absence retained, GREEN/full gate pending, no numerical-parity claim.
+
 ## 2026-10-24 — Byte-identical public spell remainder
 
 [D3](systems/server-crates.md#public-spell-remainder-d3):11pure file moves retain54case names/flags (51enabled/3existing ignored), extending the existing consumer to229cases without body/seam/new-package-or-version/API changes. Existing rusqlite0.35/bundled and canonical random import are dev-only consumer wiring. Housekeeping only; exact inventory, combined compiler proof, full gate and matched timing remain distinct.

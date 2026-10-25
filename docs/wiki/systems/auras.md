@@ -1,5 +1,9 @@
 # Auras
 
+## Natural-expiry hook — 2026-10-24
+
+`AuraScript.on_expire` runs only for `RemoveReason::Expired`, after the existing on_remove hook. Registrations can extend an existing parent entry without replacing other lifecycle consumers. Xuen's class script uses this for its actual SCK aura instance/unique impacted Entity set, clears that set and reduces only existing FoF recovery using native budgets; independent Unbroken Rhythm on_remove cleanup remains separate. [Exact named policy, source absence and pending GREEN](../../handoffs/ww-xuens-recovery-proof-ledger.md).
+
 ## Ret Sentence and Toll relationships — 2026-10-24
 
 `SIMC_RET_EXECUTION_SENTENCE_ACCUMULATION` supplies only missing admission for direct owner's nonphysical damage on its own343527 target. Native effect1 percentage and TC expiry-only387113 BP0 partial-trigger dispatch remain authoritative. `SIMC_RET_DIVINE_TOLL_RELATIONSHIP` bridges375576 to406957 or1279408 under actual1277026, retaining native cap/radius/combat admission and effect5 percentage through existing generic hooks. TC/native/TDB absence audits, exact scoped RED/GREEN receipts and open pet/funding/secondary relationships live in the [qualified packet ledger](../../handoffs/ret-qualified-sentence-wake-toll-proof-ledger.md). Eleven unique native Sentence/Wake/Toll cases are historically qualified; packet integration proof is separate. [Contract](../../specs/dps-parity.md#ret-execution-sentence-accumulation), [Sentence code](../../../crates/server/src/auras/ret_sentence.rs), [Toll code](../../../crates/server/src/spell_cast/scripts/ret_toll.rs).

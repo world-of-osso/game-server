@@ -1,5 +1,9 @@
 # Spell Casting
 
+## Xuen's Battlegear impact context — 2026-10-24
+
+`HitFrame.selected` stores actual resolving TargetInfo Entity IDs, including misses, in native order. Its matching-frame slice is distinct from original-request `cast_primary_target`; neither is mutable CombatTarget. Class scripts use the first native TargetInfo for the approved RSK/RWK critical-recovery policy and the full list for unique SCK impact membership. The generic direct-damage callback carries actual target/crit without core spell IDs. Strict native6RED/6controlsPASS precedes implementation; GREEN/full gate remain pending. [Policy, TC/DB2 absence and proof](../../handoffs/ww-xuens-recovery-proof-ledger.md).
+
 ## Rake actual-stealth eligibility — 2026-10-24
 
 TC `spell_dru_rake2040–2078` checks actual stealth, not legacy231052/405834 aura presence. Rake's shared predicate follows that boundary and native1822 effect3 amounts; Shred's separate predicate and persistent multiplier fields stay unchanged. [Contract](../../specs/player-damage.md#what-it-must-do); [focused source, fixture ordering and gate proof](../../handoffs/feral-rake-stealth-proof-ledger.md). Native Mark of the Wild legitimately interrupts Prowl; isolated comparisons own ordinary buffs before stealth, never bypass interrupt flags or GCD.

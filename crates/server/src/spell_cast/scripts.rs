@@ -59,6 +59,8 @@ pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direc
 pub(crate) use soul_of_the_forest::snapshot_amount as snapshot_soul_of_the_forest;
 mod touch_of_death;
 mod windwalker;
+mod xuens_battlegear;
+pub(crate) use xuens_battlegear::register_xuens_battlegear;
 
 mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
@@ -90,9 +92,25 @@ pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u
     }
 }
 
+/// Resolved native direct-damage outcome; class IDs and policy stay in scripts.
+pub(super) fn after_direct_damage(
+    world: &mut World,
+    ctx: &super::effects::EffectCtx,
+    target: Entity,
+    critical: bool,
+) {
+    match ctx.spell.id {
+        xuens_battlegear::RSK_DAMAGE | xuens_battlegear::RWK_DAMAGE => {
+            xuens_battlegear::reduce_fof_on_critical_impact(world, ctx, target, critical);
+        }
+        _ => {}
+    }
+}
+
 /// OnEffectHit runs once per effect without replacing generic or aura dispatch.
 pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
     match (spell, index) {
+        (xuens_battlegear::SCK_TICK, 0) => Some(xuens_battlegear::record_sck_impacts),
         (crate::scripted_ai::azure_vault::ERUPTING_FISSURE, 0) => {
             Some(crate::scripted_ai::azure_vault::cast_fissure_selector)
         }
@@ -1451,6 +1469,7 @@ pub(super) type ContextHitHook = fn(&mut World, &super::effects::EffectCtx, Enti
 
 pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
     match spell_id {
+        xuens_battlegear::SCK => Some(xuens_battlegear::capture_sck_parent),
         windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
         voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),
         ret_toll::ROOT => Some(ret_toll::cast_child),

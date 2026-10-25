@@ -1,5 +1,9 @@
 # Windwalker source census (in progress)
 
+## Xuen FoF recovery named policy — f0ab339b6 strict RED
+
+`SIMC_WW_XUENS_BATTLEGEAR_FOF_RECOVERY`: approved conditional primary RSK/RWK critical and unique SCK-expiry consumers, native392993 effect1/3/4 budgets4000/500/2500ms. TC/DB2 conditional relationship is absent, not inferred from generic proc flags. Actual native6RED/6controlsPASS36.52s precedes class implementation; native TargetInfo context and expiry-only seam preserve other consumers. GREEN and lead full gate pending; no broad numerical claim. [Exact source/coverage ledger](ww-xuens-recovery-proof-ledger.md).
+
 Verified2026-10-24 (current WDP receipts; older sections retain their named revisions). Native DB2/TC precede SimC76f8118; no parity claim. Shared native-book helper belongs to14752. `follower_spec_kit` membership below is **not** proof of native KnownSpells membership; selected reference traits are installed separately by `dps_parity::inputs::install_traits`.
 
 ## Current WDP child dispatch qualification —6f99b6c4f
