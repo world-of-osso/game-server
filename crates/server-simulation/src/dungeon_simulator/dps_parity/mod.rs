@@ -806,6 +806,7 @@ fn dps_parity_fixture_add_health_and_ttd_follow_each_summon_lifetime() {
                 .unwrap();
             let native_pct = f64::from(health.current) * 100.0 / f64::from(health.max);
             let action = Action {
+                source_row: None,
                 name: "auto_attack".into(),
                 target: Some(target.to_bits()),
                 options: Default::default(),

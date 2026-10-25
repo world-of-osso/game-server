@@ -20,6 +20,66 @@ fn simc_apl_native_readiness_precedes_if_expression() {
     );
 }
 
+#[test]
+fn simc_apl_channel_priority_stops_at_exact_source_row() {
+    let program = Program::parse(&[
+        ("default", "blast,if=time>=1"),
+        ("default", "call_action_list,name=channel"),
+        ("default", "lower_priority"),
+        ("channel", "evocation,interrupt_if=1"),
+        ("channel", "evocation,interrupt_if=1"),
+    ])
+    .unwrap();
+    let mut state = program.state();
+    let clock = |time| BTreeMap::from([("time".into(), time)]);
+    let active = program
+        .select("default", &clock(0.0), &mut state, |_| Ok(true))
+        .unwrap()
+        .unwrap();
+    assert_eq!(active.source_row, Some(3));
+    assert!(
+        program
+            .select_before("default", &active, false, &clock(1.0), &mut state, |_| Ok(
+                true
+            ))
+            .unwrap()
+            .is_none()
+    );
+    assert_eq!(
+        program
+            .select_before("default", &active, true, &clock(1.0), &mut state, |_| Ok(
+                true
+            ))
+            .unwrap()
+            .unwrap()
+            .name,
+        "blast"
+    );
+    assert!(
+        program
+            .select_before("default", &active, true, &clock(1.0), &mut state, |_| Ok(
+                false
+            ))
+            .unwrap()
+            .is_none()
+    );
+    let second = program
+        .select_row(4, &clock(1.0), &mut state, |_| Ok(true))
+        .unwrap()
+        .unwrap();
+    assert_eq!(second.source_row, Some(4));
+    assert_eq!(
+        program
+            .select_before("default", &second, false, &clock(1.0), &mut state, |_| Ok(
+                true
+            ))
+            .unwrap()
+            .unwrap()
+            .source_row,
+        Some(3)
+    );
+}
+
 fn facts(rows: &[(&str, f64)]) -> BTreeMap<String, f64> {
     rows.iter()
         .map(|&(key, value)| (key.into(), value))

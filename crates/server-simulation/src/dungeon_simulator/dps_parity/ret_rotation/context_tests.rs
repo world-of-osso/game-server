@@ -34,6 +34,7 @@ fn dps_parity_ret_literal_native_context_preserves_native_facts_and_pool() {
         &run.targets,
     );
     let action = |name: &str| Action {
+        source_row: None,
         name: name.into(),
         target: None,
         options: Default::default(),

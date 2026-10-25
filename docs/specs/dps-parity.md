@@ -94,9 +94,11 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [ ] Initialize profile-declared class start pools/default pet before precombat, using native pool units and configured profile values. Class resource tokens resolve through native PowerType metadata/display units, not a spec-specific reset. Current pinned Warlock profiles declare soul_shards0 and sayaad/felguard/imp. Precasts build resources naturally; summon_pet runs once and no-ops when the requested native pet already exists. Demo's Felguard must exist at pull.
 - [ ] Harmful precasts use the shared target-aware Prepared enemy seam, preserving exact selected identities and normal cast permission. Pool_resource uses the GREEN readiness-only requested-pool query, never live resource mutation.
 
-### Literal action readiness
+### Literal action readiness and channels
 
 - [x] Ordinary native action/item readiness precedes its `if` expression. Unavailable actions do not bind unreachable item/buff conditions; unsupported operands on an available action remain explicit errors (SimC76f8118 `action.cpp2578–2583,2619–2620`).
+- [x] `line_cd` belongs to the exact literal source row, independently of spell cooldowns, targets, and identical neighboring rows. Only a successful execution starts it.
+- [x] `action.<alias>.channeling` reads the actual matching native channel. `cancel_action` can cancel during casting/GCD. At native channel ticks, `interrupt_if`/`interrupt` requires a genuinely ready higher-priority action; `interrupt_immediate` bypasses only the GCD guard, and `interrupt_global` selects root versus current-list priority scope. `chain` rechecks the same source row at the penultimate tick and recasts only without a higher-priority ready action. Readiness probes do not mutate powers, casts or recovery clocks (SimC76f8118 `dot.cpp707–735,815–869,980–994`).
 
 ### Empyrean Legacy relationship
 
