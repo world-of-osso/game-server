@@ -1,0 +1,2055 @@
+{
+  "base": "1da5f8bcaa2cd71dcdb83bb1db689aea7ce34884",
+  "cases": [
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects10_tests::pet_battle_team_damage_heal_all_active_slots_and_cap_distinct_injured_allies",
+      "new_name": "pet_battle::tests::effects10_tests::pet_battle_team_damage_heal_all_active_slots_and_cap_distinct_injured_allies",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects10_tests::pet_battle_team_damage_heal_does_not_resurrect_either_teams_dead_reserves",
+      "new_name": "pet_battle::tests::effects10_tests::pet_battle_team_damage_heal_does_not_resurrect_either_teams_dead_reserves",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects10_tests::pet_battle_team_damage_heal_enemy_miss_preserves_other_hits_and_allied_healing",
+      "new_name": "pet_battle::tests::effects10_tests::pet_battle_team_damage_heal_enemy_miss_preserves_other_hits_and_allied_healing",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects10_tests::pet_battle_team_damage_heal_all_enemy_misses_still_heal_each_ally",
+      "new_name": "pet_battle::tests::effects10_tests::pet_battle_team_damage_heal_all_enemy_misses_still_heal_each_ally",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects10_tests::pet_battle_team_damage_heal_rays_of_light_heals_after_the_last_enemy_faints",
+      "new_name": "pet_battle::tests::effects10_tests::pet_battle_team_damage_heal_rays_of_light_heals_after_the_last_enemy_faints",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects10_tests::pet_battle_starfall_applies_moonlight_after_healing_and_existing_weather_modifies_next_cast",
+      "new_name": "pet_battle::tests::effects10_tests::pet_battle_starfall_applies_moonlight_after_healing_and_existing_weather_modifies_next_cast",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects10_tests::pet_battle_starfall_other_ambiguous_team_selectors_remain_rejected_before_rng",
+      "new_name": "pet_battle::tests::effects10_tests::pet_battle_starfall_other_ambiguous_team_selectors_remain_rejected_before_rng",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects11_tests::pet_battle_rapid_fire_two_waves_follow_all_active_slots_without_touching_allies",
+      "new_name": "pet_battle::tests::effects11_tests::pet_battle_rapid_fire_two_waves_follow_all_active_slots_without_touching_allies",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects11_tests::pet_battle_rapid_fire_independent_misses_in_either_wave_preserve_other_targets",
+      "new_name": "pet_battle::tests::effects11_tests::pet_battle_rapid_fire_independent_misses_in_either_wave_preserve_other_targets",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects11_tests::pet_battle_rapid_fire_first_wave_faint_does_not_retarget_second_wave",
+      "new_name": "pet_battle::tests::effects11_tests::pet_battle_rapid_fire_first_wave_faint_does_not_retarget_second_wave",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects11_tests::pet_battle_rapid_fire_dead_reserve_stays_dead_through_both_waves",
+      "new_name": "pet_battle::tests::effects11_tests::pet_battle_rapid_fire_dead_reserve_stays_dead_through_both_waves",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects11_tests::pet_battle_rapid_fire_other_wave_selector_remains_rejected",
+      "new_name": "pet_battle::tests::effects11_tests::pet_battle_rapid_fire_other_wave_selector_remains_rejected",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects12_tests::pet_battle_primal_cry_pairs_damage_and_distinct_slows_for_all_active_slots",
+      "new_name": "pet_battle::tests::effects12_tests::pet_battle_primal_cry_pairs_damage_and_distinct_slows_for_all_active_slots",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects12_tests::pet_battle_primal_cry_damage_miss_skips_only_matching_slow_and_next_pair_still_hits",
+      "new_name": "pet_battle::tests::effects12_tests::pet_battle_primal_cry_damage_miss_skips_only_matching_slow_and_next_pair_still_hits",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects12_tests::pet_battle_primal_cry_refreshes_live_slows_without_stacking",
+      "new_name": "pet_battle::tests::effects12_tests::pet_battle_primal_cry_refreshes_live_slows_without_stacking",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects12_tests::pet_battle_primal_cry_dead_reserve_is_neither_damaged_slowed_nor_revived",
+      "new_name": "pet_battle::tests::effects12_tests::pet_battle_primal_cry_dead_reserve_is_neither_damaged_slowed_nor_revived",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects13_tests::pet_battle_team_damage_hits_each_enemy_for_all_active_slots",
+      "new_name": "pet_battle::tests::effects13_tests::pet_battle_team_damage_hits_each_enemy_for_all_active_slots",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects13_tests::pet_battle_team_damage_individual_misses_preserve_other_enemy_hits",
+      "new_name": "pet_battle::tests::effects13_tests::pet_battle_team_damage_individual_misses_preserve_other_enemy_hits",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects13_tests::pet_battle_team_damage_dead_reserve_stays_dead_without_retargeting",
+      "new_name": "pet_battle::tests::effects13_tests::pet_battle_team_damage_dead_reserve_stays_dead_without_retargeting",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects13_tests::pet_battle_team_damage_shadow_bolt_volley_uses_authored_thirty_percent_variance",
+      "new_name": "pet_battle::tests::effects13_tests::pet_battle_team_damage_shadow_bolt_volley_uses_authored_thirty_percent_variance",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects13_tests::pet_battle_team_wave_clears_both_teams_objects_even_when_all_damage_misses",
+      "new_name": "pet_battle::tests::effects13_tests::pet_battle_team_wave_clears_both_teams_objects_even_when_all_damage_misses",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects14_tests::pet_battle_bonestorm_hits_each_enemy_and_charges_only_the_actual_caster",
+      "new_name": "pet_battle::tests::effects14_tests::pet_battle_bonestorm_hits_each_enemy_and_charges_only_the_actual_caster",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects14_tests::pet_battle_bonestorm_individual_misses_do_not_cancel_other_hits_or_the_cost",
+      "new_name": "pet_battle::tests::effects14_tests::pet_battle_bonestorm_individual_misses_do_not_cancel_other_hits_or_the_cost",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects14_tests::pet_battle_bonestorm_keeps_dead_reserves_dead_and_still_charges_the_caster",
+      "new_name": "pet_battle::tests::effects14_tests::pet_battle_bonestorm_keeps_dead_reserves_dead_and_still_charges_the_caster",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects14_tests::pet_battle_bonestorm_cost_uses_caster_maximum_not_current_or_enemy_health",
+      "new_name": "pet_battle::tests::effects14_tests::pet_battle_bonestorm_cost_uses_caster_maximum_not_current_or_enemy_health",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects14_tests::pet_battle_bonestorm30_pays_after_the_last_enemy_faints",
+      "new_name": "pet_battle::tests::effects14_tests::pet_battle_bonestorm30_pays_after_the_last_enemy_faints",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects15_tests::pet_battle_sunshell_enemy_all_active_pairs_damage_all_players_and_raise_only_maximum_hp",
+      "new_name": "pet_battle::tests::effects15_tests::pet_battle_sunshell_enemy_all_active_pairs_damage_all_players_and_raise_only_maximum_hp",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects15_tests::pet_battle_sunshell_individual_and_all_player_misses_do_not_cancel_sunny_day",
+      "new_name": "pet_battle::tests::effects15_tests::pet_battle_sunshell_individual_and_all_player_misses_do_not_cancel_sunny_day",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects15_tests::pet_battle_sunshell_dead_reserves_are_not_hit_or_resurrected",
+      "new_name": "pet_battle::tests::effects15_tests::pet_battle_sunshell_dead_reserves_are_not_hit_or_resurrected",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects15_tests::pet_battle_sunshell_global_healing_bonus_and_expiry_reuse_sunlight_convention",
+      "new_name": "pet_battle::tests::effects15_tests::pet_battle_sunshell_global_healing_bonus_and_expiry_reuse_sunlight_convention",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects15_tests::pet_battle_sunshell_weather_replacement_restores_maximum_and_removes_old_bonus",
+      "new_name": "pet_battle::tests::effects15_tests::pet_battle_sunshell_weather_replacement_restores_maximum_and_removes_old_bonus",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects15_tests::pet_battle_shell_rush_all_active_pairs_hit_enemies_and_swap_the_casters_highest_hp_bench",
+      "new_name": "pet_battle::tests::effects15_tests::pet_battle_shell_rush_all_active_pairs_hit_enemies_and_swap_the_casters_highest_hp_bench",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects15_tests::pet_battle_shell_rush_independent_swap_row_runs_after_individual_and_all_enemy_misses",
+      "new_name": "pet_battle::tests::effects15_tests::pet_battle_shell_rush_independent_swap_row_runs_after_individual_and_all_enemy_misses",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects15_tests::pet_battle_shell_rush_skips_dead_bench_and_leaves_the_caster_when_no_bench_is_alive",
+      "new_name": "pet_battle::tests::effects15_tests::pet_battle_shell_rush_skips_dead_bench_and_leaves_the_caster_when_no_bench_is_alive",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects15_tests::pet_battle_shell_rush_tied_bench_uses_existing_uniform_selection",
+      "new_name": "pet_battle::tests::effects15_tests::pet_battle_shell_rush_tied_bench_uses_existing_uniform_selection",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects15_tests::pet_battle_shell_rush_keeps_existing_outgoing_and_incoming_swap_locks",
+      "new_name": "pet_battle::tests::effects15_tests::pet_battle_shell_rush_keeps_existing_outgoing_and_incoming_swap_locks",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects15_tests::pet_battle_shell_rush_end_of_action_policy_swaps_after_the_last_enemy_faints",
+      "new_name": "pet_battle::tests::effects15_tests::pet_battle_shell_rush_end_of_action_policy_swaps_after_the_last_enemy_faints",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects16_tests::pet_battle_call_of_winter_all_active_pairs_test_each_recipients_existing_chill",
+      "new_name": "pet_battle::tests::effects16_tests::pet_battle_call_of_winter_all_active_pairs_test_each_recipients_existing_chill",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects16_tests::pet_battle_call_of_winter_individual_and_all_misses_still_apply_blizzard",
+      "new_name": "pet_battle::tests::effects16_tests::pet_battle_call_of_winter_individual_and_all_misses_still_apply_blizzard",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects16_tests::pet_battle_call_of_winter_skips_dead_backlines_without_redirecting_their_bonus",
+      "new_name": "pet_battle::tests::effects16_tests::pet_battle_call_of_winter_skips_dead_backlines_without_redirecting_their_bonus",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects16_tests::pet_battle_call_of_winter_recast_uses_prior_blizzard_bonus_and_chill",
+      "new_name": "pet_battle::tests::effects16_tests::pet_battle_call_of_winter_recast_uses_prior_blizzard_bonus_and_chill",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects16_tests::pet_battle_call_of_winter_weather_replaces_and_expires_with_existing_clock",
+      "new_name": "pet_battle::tests::effects16_tests::pet_battle_call_of_winter_weather_replaces_and_expires_with_existing_clock",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects16_tests::pet_battle_call_of_winter_existing_end_of_action_policy_applies_weather_before_winner",
+      "new_name": "pet_battle::tests::effects16_tests::pet_battle_call_of_winter_existing_end_of_action_policy_applies_weather_before_winner",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects17_tests::pet_battle_blood_harvest_all_active_pairs_heal_distinct_allies_by_actual_paired_damage",
+      "new_name": "pet_battle::tests::effects17_tests::pet_battle_blood_harvest_all_active_pairs_heal_distinct_allies_by_actual_paired_damage",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects17_tests::pet_battle_blood_harvest_each_and_all_misses_never_reuse_previous_damage_for_healing",
+      "new_name": "pet_battle::tests::effects17_tests::pet_battle_blood_harvest_each_and_all_misses_never_reuse_previous_damage_for_healing",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects17_tests::pet_battle_blood_harvest_dead_enemies_cannot_carry_a_previous_hit_into_another_ally",
+      "new_name": "pet_battle::tests::effects17_tests::pet_battle_blood_harvest_dead_enemies_cannot_carry_a_previous_hit_into_another_ally",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects17_tests::pet_battle_blood_harvest_keeps_dead_allies_dead_and_caps_each_living_ally",
+      "new_name": "pet_battle::tests::effects17_tests::pet_battle_blood_harvest_keeps_dead_allies_dead_and_caps_each_living_ally",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects17_tests::pet_battle_blood_harvest_healing_tracks_critical_and_type_modified_actual_damage",
+      "new_name": "pet_battle::tests::effects17_tests::pet_battle_blood_harvest_healing_tracks_critical_and_type_modified_actual_damage",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects17_tests::pet_battle_blood_harvest_uses_caster_healing_done_and_each_allies_healing_taken",
+      "new_name": "pet_battle::tests::effects17_tests::pet_battle_blood_harvest_uses_caster_healing_done_and_each_allies_healing_taken",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects17_tests::pet_battle_blood_harvest_existing_end_of_action_policy_heals_after_last_enemy_faints",
+      "new_name": "pet_battle::tests::effects17_tests::pet_battle_blood_harvest_existing_end_of_action_policy_heals_after_last_enemy_faints",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects18_tests::pet_battle_whirling_gears_all_active_pairs_swap_the_players_lowest_absolute_hp_bench",
+      "new_name": "pet_battle::tests::effects18_tests::pet_battle_whirling_gears_all_active_pairs_swap_the_players_lowest_absolute_hp_bench",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects18_tests::pet_battle_whirling_gears_independent_swap_uses_post_hit_hp_after_each_or_all_misses",
+      "new_name": "pet_battle::tests::effects18_tests::pet_battle_whirling_gears_independent_swap_uses_post_hit_hp_after_each_or_all_misses",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects18_tests::pet_battle_whirling_gears_skips_dead_bench_and_preserves_current_when_none_alive",
+      "new_name": "pet_battle::tests::effects18_tests::pet_battle_whirling_gears_skips_dead_bench_and_preserves_current_when_none_alive",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects18_tests::pet_battle_whirling_gears_tied_lowest_bench_retains_existing_uniform_selection",
+      "new_name": "pet_battle::tests::effects18_tests::pet_battle_whirling_gears_tied_lowest_bench_retains_existing_uniform_selection",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects18_tests::pet_battle_whirling_gears_retains_existing_outgoing_and_selected_incoming_locks",
+      "new_name": "pet_battle::tests::effects18_tests::pet_battle_whirling_gears_retains_existing_outgoing_and_selected_incoming_locks",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects18_tests::pet_battle_whirling_gears_existing_end_of_action_policy_finishes_when_no_player_pet_survives",
+      "new_name": "pet_battle::tests::effects18_tests::pet_battle_whirling_gears_existing_end_of_action_policy_finishes_when_no_player_pet_survives",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects19_tests::pet_battle_mega_discharge_all_active_pairs_hit_primary_and_backline_then_debuff_only_caster",
+      "new_name": "pet_battle::tests::effects19_tests::pet_battle_mega_discharge_all_active_pairs_hit_primary_and_backline_then_debuff_only_caster",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects19_tests::pet_battle_mega_discharge_duration_one_same_round_policy_only_boosts_attacks_after_cast",
+      "new_name": "pet_battle::tests::effects19_tests::pet_battle_mega_discharge_duration_one_same_round_policy_only_boosts_attacks_after_cast",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects19_tests::pet_battle_mega_discharge_each_and_all_misses_still_apply_the_independent_self_debuff",
+      "new_name": "pet_battle::tests::effects19_tests::pet_battle_mega_discharge_each_and_all_misses_still_apply_the_independent_self_debuff",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects19_tests::pet_battle_mega_discharge_dead_player_reserves_stay_dead_without_redirecting_backline_hits",
+      "new_name": "pet_battle::tests::effects19_tests::pet_battle_mega_discharge_dead_player_reserves_stay_dead_without_redirecting_backline_hits",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects19_tests::pet_battle_mega_discharge_existing_terminal_policy_applies_self_debuff_after_last_player_faints",
+      "new_name": "pet_battle::tests::effects19_tests::pet_battle_mega_discharge_existing_terminal_policy_applies_self_debuff_after_last_player_faints",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects20_tests::pet_battle_poison_protocol_all_active_pairs_apply_distinct_poison_and_preserve_allies",
+      "new_name": "pet_battle::tests::effects20_tests::pet_battle_poison_protocol_all_active_pairs_apply_distinct_poison_and_preserve_allies",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects20_tests::pet_battle_poison_protocol_each_miss_skips_only_its_paired_poison_and_all_misses_skip_all",
+      "new_name": "pet_battle::tests::effects20_tests::pet_battle_poison_protocol_each_miss_skips_only_its_paired_poison_and_all_misses_skip_all",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects20_tests::pet_battle_poison_protocol_direct_miss_cannot_poison_on_later_favorable_random_draws",
+      "new_name": "pet_battle::tests::effects20_tests::pet_battle_poison_protocol_direct_miss_cannot_poison_on_later_favorable_random_draws",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects20_tests::pet_battle_poison_protocol_blocked_or_zero_direct_damage_cannot_qualify_a_poison",
+      "new_name": "pet_battle::tests::effects20_tests::pet_battle_poison_protocol_blocked_or_zero_direct_damage_cannot_qualify_a_poison",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects20_tests::pet_battle_poison_protocol_dead_reserves_and_primary_faint_do_not_cancel_other_victims",
+      "new_name": "pet_battle::tests::effects20_tests::pet_battle_poison_protocol_dead_reserves_and_primary_faint_do_not_cancel_other_victims",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects20_tests::pet_battle_poison_protocol_periodic_power_stays_with_original_caster_through_swap_and_expiry",
+      "new_name": "pet_battle::tests::effects20_tests::pet_battle_poison_protocol_periodic_power_stays_with_original_caster_through_swap_and_expiry",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects20_tests::pet_battle_poison_protocol_composes_with_existing_poison_fang_refresh_and_clock",
+      "new_name": "pet_battle::tests::effects20_tests::pet_battle_poison_protocol_composes_with_existing_poison_fang_refresh_and_clock",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects20_tests::pet_battle_poison_protocol_does_not_reuse_a_prior_action_or_periodic_hit_after_all_misses",
+      "new_name": "pet_battle::tests::effects20_tests::pet_battle_poison_protocol_does_not_reuse_a_prior_action_or_periodic_hit_after_all_misses",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects21_tests::pet_battle_anvil_drop_nine_active_pairs_leap_then_land_on_distinct_enemies",
+      "new_name": "pet_battle::tests::effects21_tests::pet_battle_anvil_drop_nine_active_pairs_leap_then_land_on_distinct_enemies",
+      "ignored": true,
+      "ignore_reason": "PET_BATTLE_OVERRIDE_INDEX_1_SEMANTICS_UNPROVEN"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects21_tests::pet_battle_anvil_drop_misses_do_not_cancel_other_victims_or_leaping_cleanup",
+      "new_name": "pet_battle::tests::effects21_tests::pet_battle_anvil_drop_misses_do_not_cancel_other_victims_or_leaping_cleanup",
+      "ignored": true,
+      "ignore_reason": "PET_BATTLE_OVERRIDE_INDEX_1_SEMANTICS_UNPROVEN"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects21_tests::pet_battle_anvil_drop_dead_reserves_and_primary_faint_keep_remaining_targets",
+      "new_name": "pet_battle::tests::effects21_tests::pet_battle_anvil_drop_dead_reserves_and_primary_faint_keep_remaining_targets",
+      "ignored": true,
+      "ignore_reason": "PET_BATTLE_OVERRIDE_INDEX_1_SEMANTICS_UNPROVEN"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects21_tests::pet_battle_anvil_drop_final_faint_finishes_action_and_removes_leaping",
+      "new_name": "pet_battle::tests::effects21_tests::pet_battle_anvil_drop_final_faint_finishes_action_and_removes_leaping",
+      "ignored": true,
+      "ignore_reason": "PET_BATTLE_OVERRIDE_INDEX_1_SEMANTICS_UNPROVEN"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects21_tests::pet_battle_anvil_drop_speed_order_controls_which_round_incoming_attack_is_blocked",
+      "new_name": "pet_battle::tests::effects21_tests::pet_battle_anvil_drop_speed_order_controls_which_round_incoming_attack_is_blocked",
+      "ignored": true,
+      "ignore_reason": "PET_BATTLE_OVERRIDE_INDEX_1_SEMANTICS_UNPROVEN"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects22_tests::pet_battle_current_health_torment_hits_each_enemy_once_and_leeches_actual_damage",
+      "new_name": "pet_battle::tests::effects22_tests::pet_battle_current_health_torment_hits_each_enemy_once_and_leeches_actual_damage",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects22_tests::pet_battle_current_health_torment_does_not_repeat_previous_leech_on_dead_or_missed_pet",
+      "new_name": "pet_battle::tests::effects22_tests::pet_battle_current_health_torment_does_not_repeat_previous_leech_on_dead_or_missed_pet",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects22_tests::pet_battle_current_health_torment_keeps_existing_hostile_percentage_type_convention",
+      "new_name": "pet_battle::tests::effects22_tests::pet_battle_current_health_torment_keeps_existing_hostile_percentage_type_convention",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects22_tests::pet_battle_current_health_mind_games_costs_each_friendly_slot_without_family_scaling",
+      "new_name": "pet_battle::tests::effects22_tests::pet_battle_current_health_mind_games_costs_each_friendly_slot_without_family_scaling",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects22_tests::pet_battle_current_health_torment_blocked_victims_do_not_leech_previous_damage",
+      "new_name": "pet_battle::tests::effects22_tests::pet_battle_current_health_torment_blocked_victims_do_not_leech_previous_damage",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects22_tests::pet_battle_current_health_torment_floors_tiny_hits_without_power_crit_or_variance_draws",
+      "new_name": "pet_battle::tests::effects22_tests::pet_battle_current_health_torment_floors_tiny_hits_without_power_crit_or_variance_draws",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects22_tests::pet_battle_current_health_torment_selector_variant_remains_explicit_gap",
+      "new_name": "pet_battle::tests::effects22_tests::pet_battle_current_health_torment_selector_variant_remains_explicit_gap",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects23_tests::pet_battle_species_heal_counts_only_other_same_species_team_members",
+      "new_name": "pet_battle::tests::effects23_tests::pet_battle_species_heal_counts_only_other_same_species_team_members",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects23_tests::pet_battle_species_heal_uses_roster_identity_not_family_or_alive_filter",
+      "new_name": "pet_battle::tests::effects23_tests::pet_battle_species_heal_uses_roster_identity_not_family_or_alive_filter",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects23_tests::pet_battle_species_heal_preserves_accuracy_cap_and_healing_modifiers",
+      "new_name": "pet_battle::tests::effects23_tests::pet_battle_species_heal_preserves_accuracy_cap_and_healing_modifiers",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects23_tests::pet_battle_species_heal_zero_variance_does_not_draw_critical_or_random_healing",
+      "new_name": "pet_battle::tests::effects23_tests::pet_battle_species_heal_zero_variance_does_not_draw_critical_or_random_healing",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects24_tests::pet_battle_frostbite_refresh_keeps_every_stack_alive_then_expires_without_reapplication",
+      "new_name": "pet_battle::tests::effects24_tests::pet_battle_frostbite_refresh_keeps_every_stack_alive_then_expires_without_reapplication",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects24_tests::pet_battle_frostbite_refresh_does_not_refresh_another_victims_stacks",
+      "new_name": "pet_battle::tests::effects24_tests::pet_battle_frostbite_refresh_does_not_refresh_another_victims_stacks",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects24_tests::pet_battle_frostbite_refresh_preserves_each_original_casters_damage_after_swap",
+      "new_name": "pet_battle::tests::effects24_tests::pet_battle_frostbite_refresh_preserves_each_original_casters_damage_after_swap",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects24_tests::pet_battle_frostbite_refresh_is_independent_of_new_stack_miss_and_does_not_create_stacks",
+      "new_name": "pet_battle::tests::effects24_tests::pet_battle_frostbite_refresh_is_independent_of_new_stack_miss_and_does_not_create_stacks",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects24_tests::pet_battle_frostbite_refresh_does_not_admit_unproven_blistering_cold_pad_follow",
+      "new_name": "pet_battle::tests::effects24_tests::pet_battle_frostbite_refresh_does_not_admit_unproven_blistering_cold_pad_follow",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects25_tests::pet_battle_last_hit_power_pct_uses_real_hit_and_both_authored_power_values",
+      "new_name": "pet_battle::tests::effects25_tests::pet_battle_last_hit_power_pct_uses_real_hit_and_both_authored_power_values",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects25_tests::pet_battle_last_hit_power_pct_preserves_previous_round_hit_and_zero_history",
+      "new_name": "pet_battle::tests::effects25_tests::pet_battle_last_hit_power_pct_preserves_previous_round_hit_and_zero_history",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects25_tests::pet_battle_last_hit_power_pct_reuses_hostile_family_scaling_and_floor",
+      "new_name": "pet_battle::tests::effects25_tests::pet_battle_last_hit_power_pct_reuses_hostile_family_scaling_and_floor",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects25_tests::pet_battle_last_hit_power_pct_respects_misses_and_real_wall_blocks",
+      "new_name": "pet_battle::tests::effects25_tests::pet_battle_last_hit_power_pct_respects_misses_and_real_wall_blocks",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects25_tests::pet_battle_last_hit_power_pct_uses_actual_last_periodic_hit_without_second_power_scaling",
+      "new_name": "pet_battle::tests::effects25_tests::pet_battle_last_hit_power_pct_uses_actual_last_periodic_hit_without_second_power_scaling",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_consumption_speed_bonus_is_strict_and_uses_modified_speed",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_consumption_speed_bonus_is_strict_and_uses_modified_speed",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_creeping_fungus_ticks_moonlight_bonus",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_creeping_fungus_ticks_moonlight_bonus",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_weakening_blow_cannot_faint_or_trigger_mechanical_revive",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_weakening_blow_cannot_faint_or_trigger_mechanical_revive",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_eat_the_fly_below_health_threshold_heal",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_eat_the_fly_below_health_threshold_heal",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_stench_applies_to_each_enemy_slot_and_expires",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_stench_applies_to_each_enemy_slot_and_expires",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_cyclone_tracks_enemy_team_across_swap_and_tidal_removes_it",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_cyclone_tracks_enemy_team_across_swap_and_tidal_removes_it",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_arcane_explosion_follows_active_slot_and_other_slots",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_arcane_explosion_follows_active_slot_and_other_slots",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_deep_burn_bonus_requires_burning_target",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_deep_burn_bonus_requires_burning_target",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_kick_interrupts_only_when_acting_first",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_kick_interrupts_only_when_acting_first",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_deep_freeze_chilled_stun_and_critter_immunity",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_deep_freeze_chilled_stun_and_critter_immunity",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_leech_life_heals_after_hit_only_and_web_doubles",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_leech_life_heals_after_hit_only_and_web_doubles",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_cauterize_uses_half_actual_last_hit_without_power_scaling",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_cauterize_uses_half_actual_last_hit_without_power_scaling",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_comeback_requires_lower_health_for_additional_damage",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_comeback_requires_lower_health_for_additional_damage",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_predatory_strike_quarter_health_boundary",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_predatory_strike_quarter_health_boundary",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_nocturnal_strike_blind_guarantees_hit_but_not_targetability",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_nocturnal_strike_blind_guarantees_hit_but_not_targetability",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_wind_up_charges_fires_and_charges_again",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_wind_up_charges_fires_and_charges_again",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects2_tests::pet_battle_rebuild_heals_only_living_other_mechanical_allies",
+      "new_name": "pet_battle::tests::effects2_tests::pet_battle_rebuild_heals_only_living_other_mechanical_allies",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects3_tests::pet_battle_effects3_next_used_ability_lock_is_wearer_owned_and_one_shot",
+      "new_name": "pet_battle::tests::effects3_tests::pet_battle_effects3_next_used_ability_lock_is_wearer_owned_and_one_shot",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects3_tests::pet_battle_effects3_next_ability_aura_waits_through_pass_and_swap",
+      "new_name": "pet_battle::tests::effects3_tests::pet_battle_effects3_next_ability_aura_waits_through_pass_and_swap",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects3_tests::pet_battle_effects3_lock_does_not_abort_committed_deep_breath",
+      "new_name": "pet_battle::tests::effects3_tests::pet_battle_effects3_lock_does_not_abort_committed_deep_breath",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects3_tests::pet_battle_effects3_missed_lock_aura_does_not_lock_next_ability",
+      "new_name": "pet_battle::tests::effects3_tests::pet_battle_effects3_missed_lock_aura_does_not_lock_next_ability",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects3_tests::pet_battle_effects3_mind_games_locks_own_one_based_slots_not_opponent",
+      "new_name": "pet_battle::tests::effects3_tests::pet_battle_effects3_mind_games_locks_own_one_based_slots_not_opponent",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects3_tests::pet_battle_effects3_ambiguous_persistent_spores_and_override_still_reject_without_rng",
+      "new_name": "pet_battle::tests::effects3_tests::pet_battle_effects3_ambiguous_persistent_spores_and_override_still_reject_without_rng",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects4_tests::pet_battle_fade_dodges_then_swaps_to_either_living_reserve",
+      "new_name": "pet_battle::tests::effects4_tests::pet_battle_fade_dodges_then_swaps_to_either_living_reserve",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects4_tests::pet_battle_fade_does_not_select_a_fainted_reserve",
+      "new_name": "pet_battle::tests::effects4_tests::pet_battle_fade_does_not_select_a_fainted_reserve",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects4_tests::pet_battle_fade_stays_when_there_is_no_living_reserve",
+      "new_name": "pet_battle::tests::effects4_tests::pet_battle_fade_stays_when_there_is_no_living_reserve",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects5_tests::pet_battle_dragons_call_routes_same_species_bonus_for_both_teams_and_all_active_slots",
+      "new_name": "pet_battle::tests::effects5_tests::pet_battle_dragons_call_routes_same_species_bonus_for_both_teams_and_all_active_slots",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects5_tests::pet_battle_dragons_call_counts_fainted_roster_member_without_reviving_it",
+      "new_name": "pet_battle::tests::effects5_tests::pet_battle_dragons_call_counts_fainted_roster_member_without_reviving_it",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects5_tests::pet_battle_dragons_call_preserves_direct_attack_miss_rules",
+      "new_name": "pet_battle::tests::effects5_tests::pet_battle_dragons_call_preserves_direct_attack_miss_rules",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects5_tests::pet_battle_dragons_call_test_only_templates_and_unestablished_parameters_reject_before_rng",
+      "new_name": "pet_battle::tests::effects5_tests::pet_battle_dragons_call_test_only_templates_and_unestablished_parameters_reject_before_rng",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects5_tests::pet_battle_dragons_call_unknown_species_identity_is_not_synthesized",
+      "new_name": "pet_battle::tests::effects5_tests::pet_battle_dragons_call_unknown_species_identity_is_not_synthesized",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects5_tests::pet_battle_bench_resurrection_revives_only_dead_reserves_for_every_active_slot",
+      "new_name": "pet_battle::tests::effects5_tests::pet_battle_bench_resurrection_revives_only_dead_reserves_for_every_active_slot",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects5_tests::pet_battle_bench_resurrection_does_not_heal_living_reserve",
+      "new_name": "pet_battle::tests::effects5_tests::pet_battle_bench_resurrection_does_not_heal_living_reserve",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects5_tests::pet_battle_bench_resurrection_survives_old_undead_clock_without_resetting_passive",
+      "new_name": "pet_battle::tests::effects5_tests::pet_battle_bench_resurrection_survives_old_undead_clock_without_resetting_passive",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects5_tests::pet_battle_two_way_walls_share_two_blocks_between_allied_and_enemy_attacks",
+      "new_name": "pet_battle::tests::effects5_tests::pet_battle_two_way_walls_share_two_blocks_between_allied_and_enemy_attacks",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects5_tests::pet_battle_two_way_wall_preserves_charges_when_attacks_miss",
+      "new_name": "pet_battle::tests::effects5_tests::pet_battle_two_way_wall_preserves_charges_when_attacks_miss",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects5_tests::pet_battle_two_way_wall_recast_restores_two_shared_charges",
+      "new_name": "pet_battle::tests::effects5_tests::pet_battle_two_way_wall_recast_restores_two_shared_charges",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects5_tests::pet_battle_two_way_wall_follows_owner_team_across_swaps",
+      "new_name": "pet_battle::tests::effects5_tests::pet_battle_two_way_wall_follows_owner_team_across_swaps",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects5_tests::pet_battle_two_way_wall_does_not_block_existing_periodic_damage",
+      "new_name": "pet_battle::tests::effects5_tests::pet_battle_two_way_wall_does_not_block_existing_periodic_damage",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects5_tests::pet_battle_tidal_wave_clears_two_way_wall_after_its_attacks",
+      "new_name": "pet_battle::tests::effects5_tests::pet_battle_tidal_wave_clears_two_way_wall_after_its_attacks",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects5_tests::pet_battle_onyx_wall_distinct_friendly_prevention_semantics_stay_rejected",
+      "new_name": "pet_battle::tests::effects5_tests::pet_battle_onyx_wall_distinct_friendly_prevention_semantics_stay_rejected",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects6_tests::pet_battle_miss_branch_haymaker_stuns_only_its_user_after_a_miss",
+      "new_name": "pet_battle::tests::effects6_tests::pet_battle_miss_branch_haymaker_stuns_only_its_user_after_a_miss",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects6_tests::pet_battle_miss_branch_gift_heals_only_its_user_after_a_miss",
+      "new_name": "pet_battle::tests::effects6_tests::pet_battle_miss_branch_gift_heals_only_its_user_after_a_miss",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects6_tests::pet_battle_miss_branch_success_does_not_stun_or_heal_the_user",
+      "new_name": "pet_battle::tests::effects6_tests::pet_battle_miss_branch_success_does_not_stun_or_heal_the_user",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects6_tests::pet_battle_miss_branch_block_is_not_a_miss",
+      "new_name": "pet_battle::tests::effects6_tests::pet_battle_miss_branch_block_is_not_a_miss",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects6_tests::pet_battle_miss_branch_ignores_an_opponents_earlier_miss_in_the_same_round",
+      "new_name": "pet_battle::tests::effects6_tests::pet_battle_miss_branch_ignores_an_opponents_earlier_miss_in_the_same_round",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects6_tests::pet_battle_miss_branch_self_outcomes_follow_both_teams_and_active_slots",
+      "new_name": "pet_battle::tests::effects6_tests::pet_battle_miss_branch_self_outcomes_follow_both_teams_and_active_slots",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects6_tests::pet_battle_miss_branch_unknown_gate_rejects_before_rng",
+      "new_name": "pet_battle::tests::effects6_tests::pet_battle_miss_branch_unknown_gate_rejects_before_rng",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects6_tests::pet_battle_refuge_shields_caster_and_only_critter_reserves_independently",
+      "new_name": "pet_battle::tests::effects6_tests::pet_battle_refuge_shields_caster_and_only_critter_reserves_independently",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects6_tests::pet_battle_refuge_routes_other_friendly_slots_for_both_teams_and_every_active_slot",
+      "new_name": "pet_battle::tests::effects6_tests::pet_battle_refuge_routes_other_friendly_slots_for_both_teams_and_every_active_slot",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects6_tests::pet_battle_refuge_expires_each_unused_shield_after_six_subsequent_rounds",
+      "new_name": "pet_battle::tests::effects6_tests::pet_battle_refuge_expires_each_unused_shield_after_six_subsequent_rounds",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects6_tests::pet_battle_refuge_other_caster_refreshes_without_stacking_and_preserves_source",
+      "new_name": "pet_battle::tests::effects6_tests::pet_battle_refuge_other_caster_refreshes_without_stacking_and_preserves_source",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects6_tests::pet_battle_refuge_does_not_apply_to_or_revive_a_fainted_critter",
+      "new_name": "pet_battle::tests::effects6_tests::pet_battle_refuge_does_not_apply_to_or_revive_a_fainted_critter",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects6_tests::pet_battle_refuge_keeps_its_charge_through_periodic_damage",
+      "new_name": "pet_battle::tests::effects6_tests::pet_battle_refuge_keeps_its_charge_through_periodic_damage",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects6_tests::pet_battle_refuge_does_not_block_or_consume_charges_for_outgoing_attacks",
+      "new_name": "pet_battle::tests::effects6_tests::pet_battle_refuge_does_not_block_or_consume_charges_for_outgoing_attacks",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects6_tests::pet_battle_refuge_unknown_family_selector_rejects_before_rng",
+      "new_name": "pet_battle::tests::effects6_tests::pet_battle_refuge_unknown_family_selector_rejects_before_rng",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects7_tests::pet_battle_launch_rocket_creates_then_launches_and_requires_another_setup",
+      "new_name": "pet_battle::tests::effects7_tests::pet_battle_launch_rocket_creates_then_launches_and_requires_another_setup",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects7_tests::pet_battle_launch_rocket_setup_is_not_an_enemy_attack_and_missed_launch_spends_rocket",
+      "new_name": "pet_battle::tests::effects7_tests::pet_battle_launch_rocket_setup_is_not_an_enemy_attack_and_missed_launch_spends_rocket",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects7_tests::pet_battle_launch_rocket_uses_mechanical_damage_against_each_defender_family",
+      "new_name": "pet_battle::tests::effects7_tests::pet_battle_launch_rocket_uses_mechanical_damage_against_each_defender_family",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects7_tests::pet_battle_launch_rocket_rejects_unqualified_parameters_before_rng",
+      "new_name": "pet_battle::tests::effects7_tests::pet_battle_launch_rocket_rejects_unqualified_parameters_before_rng",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects7_tests::pet_battle_armageddon_hits_each_enemy_then_kills_its_mechanical_caster_without_failsafe",
+      "new_name": "pet_battle::tests::effects7_tests::pet_battle_armageddon_hits_each_enemy_then_kills_its_mechanical_caster_without_failsafe",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects7_tests::pet_battle_armageddon_routes_both_teams_and_all_active_slots",
+      "new_name": "pet_battle::tests::effects7_tests::pet_battle_armageddon_routes_both_teams_and_all_active_slots",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects7_tests::pet_battle_armageddon_uses_each_enemy_family_without_sharing_one_hit",
+      "new_name": "pet_battle::tests::effects7_tests::pet_battle_armageddon_uses_each_enemy_family_without_sharing_one_hit",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects7_tests::pet_battle_armageddon_misses_do_not_cancel_the_casters_sacrifice",
+      "new_name": "pet_battle::tests::effects7_tests::pet_battle_armageddon_misses_do_not_cancel_the_casters_sacrifice",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects7_tests::pet_battle_armageddon_skips_dead_enemy_reserves_and_preserves_living_allies",
+      "new_name": "pet_battle::tests::effects7_tests::pet_battle_armageddon_skips_dead_enemy_reserves_and_preserves_living_allies",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects7_tests::pet_battle_armageddon_finishes_its_self_kill_after_the_last_enemy_faints",
+      "new_name": "pet_battle::tests::effects7_tests::pet_battle_armageddon_finishes_its_self_kill_after_the_last_enemy_faints",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects7_tests::pet_battle_armageddon_unqualified_reverse_kill_rejects_before_rng",
+      "new_name": "pet_battle::tests::effects7_tests::pet_battle_armageddon_unqualified_reverse_kill_rejects_before_rng",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects8_tests::pet_battle_lock_on_marks_the_enemy_then_launches_and_requires_a_new_lock",
+      "new_name": "pet_battle::tests::effects8_tests::pet_battle_lock_on_marks_the_enemy_then_launches_and_requires_a_new_lock",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects8_tests::pet_battle_lock_on_expires_after_an_unused_round",
+      "new_name": "pet_battle::tests::effects8_tests::pet_battle_lock_on_expires_after_an_unused_round",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects8_tests::pet_battle_lock_on_marks_a_new_enemy_instead_of_shooting_the_old_target",
+      "new_name": "pet_battle::tests::effects8_tests::pet_battle_lock_on_marks_a_new_enemy_instead_of_shooting_the_old_target",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects8_tests::pet_battle_lock_on_missed_launch_consumes_the_target_mark",
+      "new_name": "pet_battle::tests::effects8_tests::pet_battle_lock_on_missed_launch_consumes_the_target_mark",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects8_tests::pet_battle_lock_on_setup_obeys_enemy_dodge",
+      "new_name": "pet_battle::tests::effects8_tests::pet_battle_lock_on_setup_obeys_enemy_dodge",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects8_tests::pet_battle_lock_on_rejects_unqualified_duration_before_rng",
+      "new_name": "pet_battle::tests::effects8_tests::pet_battle_lock_on_rejects_unqualified_duration_before_rng",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects8_tests::pet_battle_life_exchange_equalizes_active_health_without_touching_reserves",
+      "new_name": "pet_battle::tests::effects8_tests::pet_battle_life_exchange_equalizes_active_health_without_touching_reserves",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects8_tests::pet_battle_life_exchange_caps_health_gained_at_the_casters_maximum",
+      "new_name": "pet_battle::tests::effects8_tests::pet_battle_life_exchange_caps_health_gained_at_the_casters_maximum",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects8_tests::pet_battle_life_exchange_miss_preserves_both_health_values",
+      "new_name": "pet_battle::tests::effects8_tests::pet_battle_life_exchange_miss_preserves_both_health_values",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects8_tests::pet_battle_life_exchange_rejects_unqualified_parameters_before_rng",
+      "new_name": "pet_battle::tests::effects8_tests::pet_battle_life_exchange_rejects_unqualified_parameters_before_rng",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects9_tests::pet_battle_level_health_constructor_validates_and_records_actual_level",
+      "new_name": "pet_battle::tests::effects9_tests::pet_battle_level_health_constructor_validates_and_records_actual_level",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects9_tests::pet_battle_level_health_missing_rule_metadata_rejects_before_rng",
+      "new_name": "pet_battle::tests::effects9_tests::pet_battle_level_health_missing_rule_metadata_rejects_before_rng",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects9_tests::pet_battle_level_health_unqualified_owners_remain_rejected",
+      "new_name": "pet_battle::tests::effects9_tests::pet_battle_level_health_unqualified_owners_remain_rejected",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects9_tests::pet_battle_level_health_bonus_uses_authored_points_per_level_before_healing",
+      "new_name": "pet_battle::tests::effects9_tests::pet_battle_level_health_bonus_uses_authored_points_per_level_before_healing",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects9_tests::pet_battle_level_health_bonus_refresh_does_not_stack_maximum_health",
+      "new_name": "pet_battle::tests::effects9_tests::pet_battle_level_health_bonus_refresh_does_not_stack_maximum_health",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects9_tests::pet_battle_level_health_bonus_expiry_removes_capacity_and_caps_current_health",
+      "new_name": "pet_battle::tests::effects9_tests::pet_battle_level_health_bonus_expiry_removes_capacity_and_caps_current_health",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects9_tests::pet_battle_level_health_bonus_preserves_existing_sunlight_percent_convention",
+      "new_name": "pet_battle::tests::effects9_tests::pet_battle_level_health_bonus_preserves_existing_sunlight_percent_convention",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::effects9_tests::pet_battle_level_health_bonus_rejects_unqualified_aura_values_before_rng",
+      "new_name": "pet_battle::tests::effects9_tests::pet_battle_level_health_bonus_rejects_unqualified_aura_values_before_rng",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_forced_swap_priority_cleanup_stays_on_original_pet",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_forced_swap_priority_cleanup_stays_on_original_pet",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_50_moth_balls_state_gate_before_accuracy",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_50_moth_balls_state_gate_before_accuracy",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_31_critter_rejects_direct_stun_state",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_31_critter_rejects_direct_stun_state",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_undetermined_kill_targets_are_rejected_before_rng",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_undetermined_kill_targets_are_rejected_before_rng",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_decoy_refresh_restores_two_team_charges",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_decoy_refresh_restores_two_team_charges",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_246_bend_time_clears_incoming_cooldowns_once",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_246_bend_time_clears_incoming_cooldowns_once",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_85_tidal_wave_cleans_objects_and_attacks_all_slots",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_85_tidal_wave_cleans_objects_and_attacks_all_slots",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_111_49_failsafe_revives_twenty_percent",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_111_49_failsafe_revives_twenty_percent",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_373_reconstruction_changes_three_ability_slots",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_373_reconstruction_changes_three_ability_slots",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_169_scorched_earth_ticks_both_fronts_elemental_immune",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_169_scorched_earth_ticks_both_fronts_elemental_immune",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_170_solar_beam_sunlight_conditional_bonus",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_170_solar_beam_sunlight_conditional_bonus",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_171_photosynthesis_sunlight_doubles_tick_not_team_pad",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_171_photosynthesis_sunlight_doubles_tick_not_team_pad",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_28_decoy_two_team_blocks_persist_through_swap",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_28_decoy_two_team_blocks_persist_through_swap",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_136_sear_magic_cleans_pet_auras_not_weather",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_136_sear_magic_cleans_pet_auras_not_weather",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_139_145_force_health_swap_cancels_queued_ability",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_139_145_force_health_swap_cancels_queued_ability",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_68_135_explode_bypasses_failsafe",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_68_135_explode_bypasses_failsafe",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_157_belly_slide_blizzard_only_priority",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_157_belly_slide_blizzard_only_priority",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_104_devour_only_heals_after_kill",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_104_devour_only_heals_after_kill",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_63_tranquility_heals_swapped_pet_using_source_power",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_63_tranquility_heals_swapped_pet_using_source_power",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_vicious_fang_miss_does_not_ramp_and_damage_flags_reset",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_vicious_fang_miss_does_not_ramp_and_damage_flags_reset",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_80_weather_all_slots_replace_expire_elemental",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_80_weather_all_slots_replace_expire_elemental",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_24_sunlight_enemy_slots_and_80_max_health",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_24_sunlight_enemy_slots_and_80_max_health",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_141_arcane_storm_splits_pool_and_weather_bonus",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_141_arcane_storm_splits_pool_and_weather_bonus",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_29_takedown_adds_only_when_target_stunned",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_29_takedown_adds_only_when_target_stunned",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_62_trample_percent_has_no_power_scaling",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_62_trample_percent_has_no_power_scaling",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_178_bash_resilient_reports_immune",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_178_bash_resilient_reports_immune",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_384_385_tail_sweep_selects_first_or_last",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_384_385_tail_sweep_selects_first_or_last",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_death_coil_158_stops_failed_chain_32_heals_damage",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_death_coil_158_stops_failed_chain_32_heals_damage",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_quick_attack_79_116_priority_restores_speed",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_quick_attack_79_116_priority_restores_speed",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_frog_kiss_27_ramps_177_blocks_resilient",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_frog_kiss_27_ramps_177_blocks_resilient",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::property_tests::pet_battle_22_dummy_points_are_tooltip_metadata",
+      "new_name": "pet_battle::tests::property_tests::pet_battle_22_dummy_points_are_tooltip_metadata",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_locked_ability_slots_cannot_be_used",
+      "new_name": "pet_battle::tests::pet_battle_locked_ability_slots_cannot_be_used",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_real_species39_rare_breed3_stats",
+      "new_name": "pet_battle::tests::pet_battle_real_species39_rare_breed3_stats",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_missing_world_tables_are_explicit",
+      "new_name": "pet_battle::tests::pet_battle_missing_world_tables_are_explicit",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_bite_strong_weak_neutral_real_id110",
+      "new_name": "pet_battle::tests::pet_battle_bite_strong_weak_neutral_real_id110",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_accuracy_crit_variance_and_replay",
+      "new_name": "pet_battle::tests::pet_battle_accuracy_crit_variance_and_replay",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_poison_fang_ticks_five_rounds",
+      "new_name": "pet_battle::tests::pet_battle_poison_fang_ticks_five_rounds",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_time_stop_stun_skips_and_grants_resilient",
+      "new_name": "pet_battle::tests::pet_battle_time_stop_stun_skips_and_grants_resilient",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_speed_ties_swaps_and_forfeit",
+      "new_name": "pet_battle::tests::pet_battle_speed_ties_swaps_and_forfeit",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_beast_critter_flying_magic_passives",
+      "new_name": "pet_battle::tests::pet_battle_beast_critter_flying_magic_passives",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_undead_and_mechanical_revive_once",
+      "new_name": "pet_battle::tests::pet_battle_undead_and_mechanical_revive_once",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_burrow_multiturn_unaura_and_cooldown",
+      "new_name": "pet_battle::tests::pet_battle_burrow_multiturn_unaura_and_cooldown",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_heal_modifiers_and_cooldown_expiry",
+      "new_name": "pet_battle::tests::pet_battle_heal_modifiers_and_cooldown_expiry",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_unsupported_effect_rejects_before_rng",
+      "new_name": "pet_battle::tests::pet_battle_unsupported_effect_rejects_before_rng",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_curse_of_doom_waits_four_rounds_real_id218",
+      "new_name": "pet_battle::tests::pet_battle_curse_of_doom_waits_four_rounds_real_id218",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_wish_heals_current_active_after_swap_real_id273",
+      "new_name": "pet_battle::tests::pet_battle_wish_heals_current_active_after_swap_real_id273",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_fainted_replacement_does_not_advance_combat",
+      "new_name": "pet_battle::tests::pet_battle_fainted_replacement_does_not_advance_combat",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_unimplemented_object_aura_is_rejected",
+      "new_name": "pet_battle::tests::pet_battle_unimplemented_object_aura_is_rejected",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_deep_breath_state_and_humanoid_recovery",
+      "new_name": "pet_battle::tests::pet_battle_deep_breath_state_and_humanoid_recovery",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_rejected_action_preserves_rng",
+      "new_name": "pet_battle::tests::pet_battle_rejected_action_preserves_rng",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_resilient_does_not_block_root_real_grasp249",
+      "new_name": "pet_battle::tests::pet_battle_resilient_does_not_block_root_real_grasp249",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_aquatic_dot_and_dragon_next_round",
+      "new_name": "pet_battle::tests::pet_battle_aquatic_dot_and_dragon_next_round",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_missed_poison_chain_and_aura_refresh",
+      "new_name": "pet_battle::tests::pet_battle_missed_poison_chain_and_aura_refresh",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_defeat_cancels_fainted_pet_attack",
+      "new_name": "pet_battle::tests::pet_battle_defeat_cancels_fainted_pet_attack",
+      "ignored": false,
+      "ignore_reason": null
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-pet-battle",
+      "old_name": "pet_battle::tests::pet_battle_catalog_inventory_and_admission",
+      "new_name": "pet_battle::tests::pet_battle_catalog_inventory_and_admission",
+      "ignored": false,
+      "ignore_reason": null
+    }
+  ],
+  "files": [
+    {
+      "old": "crates/server/src/pet_battle/catalog.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/catalog.rs",
+      "sha256": "4065e4415065811a12c9ce47db7d0135d5b287e33a9c8dd95781827eaab1cdb8"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects.rs",
+      "sha256": "85e26f1859431725ffc25f3d84a57307f0619b497e6305d426039902de82b84f"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects10_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects10_tests.rs",
+      "sha256": "02a2cfbe46a511fea1e79ab3db33853a21454fa16d360eaa53c3cf0ddb9a7da9"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects11_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects11_tests.rs",
+      "sha256": "13166639f0186a930142d5d4ce730bcf57b4de791449d9bdd1dd648304f52193"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects12_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects12_tests.rs",
+      "sha256": "06e3267ce0dbc252e14fe31bc2da27734c59edf1ce60f6cd223dae2bd91f17a4"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects13_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects13_tests.rs",
+      "sha256": "9a4c5f118e7635886830f1a3a893032bf038ca32b98333072ee5063d285aef1d"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects14_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects14_tests.rs",
+      "sha256": "03ad88e949f8271265e9e34c7adf7ae64581e24249cefb0f4062826f81daebc9"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects15_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects15_tests.rs",
+      "sha256": "37ee0a08b2f1fbb5b5631bd010257abd76881b039e136f83adea48edaf4e6bf6"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects16_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects16_tests.rs",
+      "sha256": "e8256a5ce7867f43a3a9f25bbe2172cf1c7dd842cc96b034840ecc14fcb0a158"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects17_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects17_tests.rs",
+      "sha256": "1b68913f21fe10f06a61f3dbd691b7d8396b7103f2c67d09ac6f7d6565a94a5a"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects18_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects18_tests.rs",
+      "sha256": "61116e5b0fbdbe579db1d6aba5d21f6ff5f97513593cabf2c5c34fd9acd01ac9"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects19_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects19_tests.rs",
+      "sha256": "4ad981b503996decdbe5e23d04455ce1b3b646cea5d932e619383822a7ce9e37"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects20_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects20_tests.rs",
+      "sha256": "f61bfa9022a464bc13a74cd81badc380231aca8528430222e4385849670539f2"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects21_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects21_tests.rs",
+      "sha256": "9194671317e22d612b13a5f958e1866cf43825b06d9e4832258ed66703039d0f"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects22_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects22_tests.rs",
+      "sha256": "3f0cfcfbd8709a77aa024fa4aa0f12cb4d7a16d54799c73e44a736eedb6b84bf"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects23_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects23_tests.rs",
+      "sha256": "fade569d4ece6f71b6a5b4b73119d51acdc2d7f1da92e01252da97214aaf292c"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects24_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects24_tests.rs",
+      "sha256": "dc64cfcb54fe1f3e276dcffbca3f024da5bb6bc13940c01e1488fbb0b48b3a02"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects25_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects25_tests.rs",
+      "sha256": "cd9e6b09108b282c3b2c26e54fca92cb14a7ce993a91453dead9717707dbc0ed"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects2_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects2_tests.rs",
+      "sha256": "3a623919df5ecbb7c06326fdc12331aa9a6c63fbca4af53be6ff3d5e0e704d0d"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects3_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects3_tests.rs",
+      "sha256": "28319035abce3b2c9c15745a1d870b49838897925ad94a76f43361adf14ac7c1"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects4_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects4_tests.rs",
+      "sha256": "d80c369fa1140fb25c585de49eb34eff8f407f5430ff1f5d128b3e92226b1f0c"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects5_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects5_tests.rs",
+      "sha256": "7a8055c3cf04d64871879a92e853c2b83b5ee480417d0c19af1e526f3bc0b57b"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects6_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects6_tests.rs",
+      "sha256": "70012af73f2ad7118397ec049cc60eeb50831fb00cc09bab3286226c87ddfc2e"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects7_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects7_tests.rs",
+      "sha256": "bf728a9cc0c4f594807b53e9491c990cfbf26cbdb5d6650fc447c2c325c93d18"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects8_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects8_tests.rs",
+      "sha256": "a1d8d2bb3bf47b9f307ac887e6810760917eb55e897f32428f381b38e5015e85"
+    },
+    {
+      "old": "crates/server/src/pet_battle/effects9_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/effects9_tests.rs",
+      "sha256": "f20181e8845f2821b43010dea25ec440bb876f9a2a26216b1281bea60a76e042"
+    },
+    {
+      "old": "crates/server/src/pet_battle/engine.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/engine.rs",
+      "sha256": "63ee76beff0d62ce5bfbec4ed11acbcec8436ac421ba260097f6451d179c7ffe"
+    },
+    {
+      "old": "crates/server/src/pet_battle/mod.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/mod.rs",
+      "sha256": "5280de3219cdf02d8b7c2eb7d30edd3b52f64b57928e84eb1a8afc5d40bc51ec"
+    },
+    {
+      "old": "crates/server/src/pet_battle/model.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/model.rs",
+      "sha256": "8baa00ef1b55431a2e6a9df1ce30371749b1546fd692b7abe62bb1f8ed71cc7c"
+    },
+    {
+      "old": "crates/server/src/pet_battle/property_tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/property_tests.rs",
+      "sha256": "9105143ebc95dbae62aca166722332db89770e0a17749762734bf191cb193616"
+    },
+    {
+      "old": "crates/server/src/pet_battle/rules.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/rules.rs",
+      "sha256": "e37d6a9a9f58807a74131d9bbd05df6a6e3a4b1876b90f6d915919771000f518"
+    },
+    {
+      "old": "crates/server/src/pet_battle/stats.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/stats.rs",
+      "sha256": "99a11b977e0c43ee1b7c96afa7cd4fb8c7c543fb0a692d46ae98598c8f96da1b"
+    },
+    {
+      "old": "crates/server/src/pet_battle/tests.rs",
+      "new": "crates/server-pet-battle/src/pet_battle/tests.rs",
+      "sha256": "ad432f0f624a61c02ed7c20feae5a853504e776618561fc5db1817d8065727e4"
+    }
+  ],
+  "ignored": 5,
+  "should_panic": 0,
+  "enabled": 230
+}

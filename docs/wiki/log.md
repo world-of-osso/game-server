@@ -1,3 +1,6 @@
+## 2026-10-24 — Action-permitting channel melee
+
+[Source/proof](../handoffs/channel-melee-proof-ledger.md): TC channel allow-actions bit0x1 avoids UNIT_STATE_CASTING; generic melee wrongly treated every CastState as blocking. ActualSCK1.5s/ready0ns/zero-white gives genuine1RED, FoF/normalVivify/noncast3controlsPASS11.67s at1d196cead. Preserve spell permissions, both timer clocks, crowd-control and victim avoidance; no class IDs or scalar changes. Generic gate implementationdb543b270 committed before4GREEN27.56s; actual active-channel SCK white0→1, all three controls unchanged, compiler405.74s/zero warnings. Lead broad/plain-bin gate remains separate; no300s rerun.
 ## 2026-10-24 — Xuen merge reconciliation on mastera804
 
 [Reconciliation proof](../handoffs/ww-xuens-recovery-proof-ledger.md#mastera804-reconciliation--native23-green): frozen36eeb2339 merged, not rebased, onto exacta804 atd54c1b64d. Preserve SCK periodic snapshot, four-argument Xuen/Flurry callback and both additive wiki sections. Same binary passes13Xuen38.93s,6Flurry50.16s and4SCK24.48s; compiler582.99s/zero warnings, fmt/diff pass, conflict-region readability has no findings. Lead re-gate/new merged-source plain --bins remains separate; no300s rerun.
@@ -6,7 +9,13 @@
 
 [Unit display power](systems/auras.md#native-unit-form-display-power--2026-10-24): a Player-only return left actual NPC Cat on Mana and native22568 burn unchanged100→100. The Unit metadata fix preserves resource contents/identity and player synchronization. NPC Cat/burn plus player Cat/caster-NPC controls are qualified within the once-only retained power/shapeshift scope; missing real fixture sidecar failures were corrected and retried alone. [Proof](../handoffs/form-display-power-proof-ledger.md) records203 unique passes, separate check and private input identity; parent gate and numerical Feral parity remain separate.
 
+## 2026-10-24 — Generic aura342 attack timers
+
+[Source/proof and72-spell census](../handoffs/aura342-attack-timers-proof-ledger.md): TC SpellAuraEffects414/4517–4528 changes only BASE/OFF/RANGED clocks. Actual451298 yields3RED16.17s ataae8bb251: cast1106→802ms, Energy17.41→24.01, actual swing reset2.274→1.649 instead of1.42125s. Separate342 attack-time product removes spell/resource haste pollution; ranged shares342 but not melee-only319. Stale Dance level55 haste premise is explicitly corrected, no data/ID exceptions. GREEN/lead gate pending; Momentum separate.
+
 ## 2026-10-24 — Event-time aura proc candidates
+
+- Ret Storm: [source qualification and strict RED contract](../handoffs/ret-storm-gap-proof-ledger.md) separates native Aura361, source406833 resource counter and Second Sunrise/Tempest; tests committed before genuine RED, then generic Aura361 and approved bounded Sunrise runtime GREEN with native amounts/hostile primary/background controls; core hand-order1/retained62melee cases pass; both compiler checks once/PASS/zero warnings, parent full gate separate.
 
 [Source/proof](../handoffs/aura-proc-event-candidates-proof-ledger.md): TC synchronous candidate collection; native Leydrinker RED→GREEN, generic identity snapshot and shared melee routing.168PASS/3input-dependent failures,2 reproduced on base; Ret AfterCast producer phase1RED/2controlsPASS→3GREEN46.93s. Parent fullgate pending; no spell-ID or metadata override.
 ## 2026-10-24 — Generic mastery initialization qualification
@@ -4527,3 +4536,6 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 - 2026-10-23: [[server-crates]] records test-only simulator consumer, canonical graph/receipt/marker support and explicit test-support mode; 44-file move is content-identical, API/cfg wiring awaits compiler/full-suite proof. Seven graph cases have explicit core-prefix migration.
 
 - 2026-10-25: Moved canonical map identity/metadata/locks/admission and32independent cases below server as the first structural prerequisite. Native transfer/PvP/housing/script integration tests remain server-owned; original core cache decorator preserved. Check and fmt pass with zero warnings; all32moved tests pass with exact names.
+- 2026-10-25: Extracted canonical pet_battle production and235cases (230enabled/five existing ignored) into server-pet-battle, with source hashes and exact ownership mapping. Direct server imports replace the old module; no reverse dependency or compatibility shim. Full-suite gate remains lead-owned.
+
+- 2026-10-25: Pet split proof atd1e3d6cf6: workspace/all-target check and fmt pass; leaf230PASS/5existingignored, exact235runtime names and33source hashes preserved; touched-server77PASS/8ignored plus required-ground-env exact retry1PASS. Zero warnings, no assertion/code change for retry, no full suite/push. Original failed receipts retained.

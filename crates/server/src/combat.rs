@@ -31,6 +31,8 @@ use std::collections::VecDeque;
 
 /// Melee attack range in yards.
 const MELEE_RANGE: f32 = 5.0;
+/// TC SharedDefines.h621: these channels do not set UNIT_STATE_CASTING.
+const SPELL_ATTR5_ALLOW_ACTIONS_DURING_CHANNEL: u32 = 0x0000_0001;
 /// Attack's spell ID for the existing owner spell-error channel.
 const ATTACK_SPELL_ID: u32 = 6603;
 /// Default unit attack time and existing ExpectedStat damage normalization.
@@ -40,6 +42,8 @@ pub const AUTO_ATTACK_INTERVAL: f32 = 2.0;
 const UNIT_MISS_CHANCE_PCT: f32 = 5.0;
 /// Signed attacker dodge modifier (`Unit::GetUnitDodgeChance`, Unit.cpp2775).
 const MOD_ENEMY_DODGE: u32 = 251;
+/// TC Unit::AttackerStateUpdate reads native per-hand replacement spells.
+const OVERRIDE_AUTOATTACK_WITH_MELEE_SPELL: u32 = 361;
 /// Non-player expertise (`Unit::GetUnitDodgeChance`/`GetUnitParryChance`).
 /// A swing of one hand pushes the other hand's timer to at least this
 /// (`ATTACK_DISPLAY_DELAY`, Unit.h:643; Unit::AttackerStateUpdate, Unit.cpp:2203-2230).
@@ -459,7 +463,7 @@ pub(crate) struct CreatureAttackTime(pub f32);
 impl CreatureAttackTime {
     fn modified(self, haste_pct: f32, mods: Option<&AuraStatMods>) -> f32 {
         let slow = mods.map_or(1.0, |mods| {
-            mods.attack_cast_time_mult * mods.attack_time_mult
+            mods.attack_cast_time_mult * mods.attack_time_mult * mods.melee_ranged_attack_time_mult
         });
         self.0 * crate::auras::time_percent_mod(haste_pct) * slow
     }
@@ -528,7 +532,7 @@ type AutoAttackers<'w, 's> = Query<
 /// (`UNIT_STATE_CASTING`, `UNIT_STATE_CANNOT_AUTOATTACK`).
 type SwingState<'a> = (
     Option<&'a crate::stats::StatModifiers>,
-    Has<shared::casting::CastState>,
+    Option<&'a shared::casting::CastState>,
     Option<&'a crate::auras::ActiveAuras>,
 );
 
@@ -671,7 +675,12 @@ fn auto_attack_unit(
     let mut redirect_health = HashMap::new();
     // Release the attacker's read of ActiveAuras before mutating the victim's
     // absorb capacity. A player can be both an attacker and a victim.
-    let Some(mut snapshot) = snapshot_attacker(&mut params.units.p0(), attacker_entity, dt) else {
+    let Some(mut snapshot) = snapshot_attacker(
+        &mut params.units.p0(),
+        attacker_entity,
+        dt,
+        params.spells.as_deref(),
+    ) else {
         return;
     };
     let target_entity = snapshot.auto_attack.victim;
@@ -731,6 +740,10 @@ fn auto_attack_unit(
                 sight: &params.sight,
                 armor_constants: params.armor_constants.as_deref(),
                 spells: params.spells.as_deref(),
+                melee_override: match hand {
+                    Hand::Main => snapshot.attack_spells[0],
+                    Hand::Off => snapshot.attack_spells[1],
+                },
                 creature_types: crate::unit_creature_type::CreatureTypes {
                     races: params.race_types.as_deref(),
                     forms: params.forms.as_deref(),
@@ -760,6 +773,7 @@ struct SwingSnapshot {
     auto_attack: AutoAttack,
     position: Position,
     mods: Option<AuraStatMods>,
+    attack_spells: [Option<u32>; 2],
     stats: Option<CharacterStats>,
     haste_pct: f32,
     enemy_dodge_pct: f32,
@@ -770,10 +784,53 @@ struct SwingSnapshot {
     temp_summoner: Option<Entity>,
 }
 
+/// TC Unit.cpp3107–3120/2166–2180: cast bars and melee-blocking state differ.
+fn cast_blocks_auto_attack(
+    cast: Option<&shared::casting::CastState>,
+    spells: Option<&crate::spell_info::SpellStore>,
+) -> bool {
+    let Some(cast) = cast else {
+        return false;
+    };
+    if cast.cast_type != shared::casting::CastType::Channel {
+        return true;
+    }
+    let allows_actions = spells
+        .and_then(|spells| spells.get(cast.spell_id))
+        .and_then(|spell| spell.misc.as_ref())
+        .is_some_and(|misc| misc.attributes[5] & SPELL_ATTR5_ALLOW_ACTIONS_DURING_CHANNEL != 0);
+    !allows_actions
+}
+
+fn read_melee_override(auras: Option<&crate::auras::ActiveAuras>, hand: Hand) -> Option<u32> {
+    let mut effects = auras?
+        .iter()
+        .flat_map(|aura| &aura.effects)
+        .filter(|effect| effect.aura_type == OVERRIDE_AUTOATTACK_WITH_MELEE_SPELL);
+    let spell = match hand {
+        Hand::Main => effects.next()?.trigger_spell,
+        Hand::Off => {
+            effects
+                .find(|effect| effect.misc_values[0] != 0)?
+                .misc_values[0] as u32
+        }
+    };
+    (spell != 0).then_some(spell)
+}
+
+fn queue_melee_override(commands: &mut Commands, caster: Entity, target: Entity, spell: u32) {
+    commands.queue(move |world: &mut World| {
+        if !crate::spell_cast::try_cast_triggered(world, caster, spell, Some(target), 1) {
+            warn!(?caster, ?target, spell, "Native melee override refused");
+        }
+    });
+}
+
 fn snapshot_attacker(
     attackers: &mut AutoAttackers,
     entity: Entity,
     dt: Duration,
+    spells: Option<&crate::spell_info::SpellStore>,
 ) -> Option<SwingSnapshot> {
     let (
         _,
@@ -781,19 +838,25 @@ fn snapshot_attacker(
         position,
         mods,
         stats,
-        (stat_mods, casting, auras),
+        (stat_mods, cast, auras),
         (creature, flags, summon, attack_time),
     ) = attackers.get_mut(entity).ok()?;
     auto_attack.timer = auto_attack.timer.saturating_sub(dt);
     auto_attack.off_hand_timer = auto_attack.off_hand_timer.saturating_sub(dt);
     // Unit::DoMeleeAttackIfReady: timers run even while casting or controlled.
-    if casting || auras.is_some_and(|auras| auras.cannot_auto_attack()) {
+    if cast_blocks_auto_attack(cast, spells)
+        || auras.is_some_and(|auras| auras.cannot_auto_attack())
+    {
         return None;
     }
     Some(SwingSnapshot {
         auto_attack: auto_attack.clone(),
         position: *position,
         mods: mods.cloned(),
+        attack_spells: [
+            read_melee_override(auras, Hand::Main),
+            read_melee_override(auras, Hand::Off),
+        ],
         stats: stats.cloned(),
         haste_pct: stat_mods.map_or(0.0, |mods| mods.haste_pct),
         enemy_dodge_pct: auras.map_or(0.0, |auras| auras.modifier(MOD_ENEMY_DODGE)),
@@ -927,7 +990,7 @@ impl Attacker<'_> {
     /// authored interval and TC's signed attack-time factors.
     fn swing_time(&self, weapon: &WeaponDamage) -> f32 {
         let slow = self.mods.map_or(1.0, |mods| {
-            mods.attack_cast_time_mult * mods.attack_time_mult
+            mods.attack_cast_time_mult * mods.attack_time_mult * mods.melee_ranged_attack_time_mult
         });
         if self.spirit_wolf.is_some() {
             return weapon.speed / (1.0 + self.haste_pct / 100.0).max(0.01) * slow;
@@ -949,6 +1012,7 @@ pub(crate) struct SwingContext<'a, 'w, 's> {
     summon_modifiers: &'a crate::auras::summon_damage::SummonDamageModifiers<'w, 's>,
     pub armor_constants: Option<&'a ArmorConstants>,
     spells: Option<&'a crate::spell_info::SpellStore>,
+    melee_override: Option<u32>,
     sight: &'a SwingSight<'w, 's>,
     creature_types: crate::unit_creature_type::CreatureTypes<'a>,
 }
@@ -1549,6 +1613,14 @@ fn try_swing(
         context.sight.send_blocked_swing(commands, attacker.entity);
         return None;
     }
+    let pet_time = context
+        .summon_modifiers
+        .pet_melee_time_multiplier(attacker.entity);
+    reset_swing_timers(auto_attack, hand, attacker.swing_time(&weapon) * pet_time);
+    if let Some(spell) = context.melee_override {
+        queue_melee_override(commands, attacker.entity, target_entity, spell);
+        return None;
+    }
     let unit = |entity| {
         context.scaling.get(entity).map_or(
             UnitScaling::from_item((None, None, None)),
@@ -1716,10 +1788,6 @@ fn try_swing(
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
     // Commit health-sensitive limits and real rescue children in swing order.
     let incoming_loss = health_loss(training_dummy, scaled_loss);
-    let pet_time = context
-        .summon_modifiers
-        .pet_melee_time_multiplier(attacker.entity);
-    reset_swing_timers(auto_attack, hand, attacker.swing_time(&weapon) * pet_time);
     let outcome = SwingOutcome {
         hand,
         kind,
@@ -2561,6 +2629,9 @@ mod npc_general_crit_tests;
 #[cfg(test)]
 #[path = "combat_npc_victim_block_tests.rs"]
 mod npc_victim_block_tests;
+#[cfg(test)]
+#[path = "combat_override_tests.rs"]
+mod override_tests;
 #[cfg(test)]
 #[path = "combat_tests.rs"]
 mod tests;

@@ -2,6 +2,13 @@
 
 Bevy 0.19 authoritative game server for the WoW project (Lightyear 0.28 networking, redb auth/characters, SQLite world data).
 
+## Speed overrides (this project overrides global rules)
+
+- Fix = one behavioral test failing before and passing after, then `cargo check --locked --workspace --all-targets`, `cargo fmt --check`, the touched tests, commit. No proof ledgers, receipt JSON, census files, control batteries or fidelity escalation.
+- DPS parity: SimC (pinned in `docs/specs/dps-parity.md`) decides behavior; native data supplies values. Match SimC without asking; cite the SimC line in a code comment. Measure with `scripts/dps_parity_measure.py` after every fix.
+- Fix adjacent issues on the critical path directly; mention them in the report. No approval round-trips.
+- Agents merge `origin/master` and push their own parity work straight to `master` after the checks above; retry on push races. No full-suite gate before landing; the full suite runs after landing and its failures are fixed forward.
+
 ## Wiki
 
 LLM-maintained knowledge base at `docs/wiki/`. See `docs/wiki/SCHEMA.md` for conventions and workflows. Read `docs/wiki/index.md` first when answering questions about the project.

@@ -521,6 +521,20 @@ fn proc_chance(world: &mut World, unit: Entity, id: u32, now: f64) -> f32 {
     spell_mods::modify(world, unit, &spell, SpellModOp::ProcChance, chance)
 }
 
+/// Named source policies supply their live effect chance, not fabricated proc metadata.
+/// Reuse the owning native aura's actual proc timer and DB2 internal cooldown.
+pub(crate) fn try_policy_proc(world: &mut World, unit: Entity, id: u32, chance: f32) -> bool {
+    let now = aura_now(world);
+    let ready = world
+        .get::<ActiveAuras>(unit)
+        .and_then(|auras| auras.get(id))
+        .is_some_and(|aura| now >= aura.proc.next_ready_at);
+    if !ready || chance <= 0.0 || rand::random::<f32>() * 100.0 >= chance {
+        return false;
+    }
+    start_proc_cooldown(world, unit, id, now).is_some()
+}
+
 fn try_proc(world: &mut World, unit: Entity, other: Option<Entity>, id: u32, event: &AuraEvent) {
     let now = aura_now(world);
     let ready = world

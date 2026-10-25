@@ -1,5 +1,11 @@
 # Combat
 
+## Native per-hand auto-attack overrides
+
+TC `Unit::AttackerStateUpdate` reads the first active Aura361 TriggerSpell for the main hand and first nonzero MiscValue spell for the off hand. The native engine now reads these fields in aura/effect order at the swing snapshot. After existing weapon/timer/target/range/LOS admission it retains native hand clocks and queues that native spell instead of calculating/committing white damage. A refused native child is logged, not replaced by ordinary damage. No Ret spell IDs or recipient substitution occur in generic execution.
+
+Actual selected404542→408385 native damage and no-override white control pass in the [strict Storm ledger](../../handoffs/ret-storm-gap-proof-ledger.md). Native151791/404542 hand-field/application-order controls and retained core melee coverage are tracked separately. The406833 resource-counter relationship is not supplied by the override itself. [Contract](../../specs/dps-parity.md#ret-storm-root-supply-and-secondary-relationships).
+
 Combat logic is split across two crates: `shared/src/formulas/` holds pure combat math (melee hit table, stat conversions, spell formulas), and `server/src/combat.rs` runs the live ECS systems (active auto-attack, direct NPC/player lethal-transition emission, respawn).
 
 ## Content
@@ -35,6 +41,16 @@ Selecting a unit never attacks it. TrinityCore `HandleSetSelectionOpcode` (MiscH
 - **Selection changes.** The server does not stop auto-attack when the selection changes. The client sends `AttackSwing` for a new attackable selection and `AttackStop` otherwise.
 
 Tests: `combat_tests/attack_requests.rs` (selection neither swings nor enters combat; swing, echo, first-swing combat; stop; switch keeps the timer; friendly, corpse, uninteractible and unknown refusals; victim death; Polymorph).
+
+## Action-permitting channels —2026-10-24
+
+TC a352b1fa `Unit.cpp3107–3120` does not set `UNIT_STATE_CASTING` for channels with `SPELL_ATTR5_ALLOW_ACTIONS_DURING_CHANNEL` (SharedDefines.h621, bit0x1); `DoMeleeAttackIfReady2166–2180` checks that state, not cast-bar presence. The melee snapshot now reads actual `CastState` and native `SpellStore` permissions. Normal casts and nonallowing channels still block, both hand timers keep advancing, and crowd-control/victim-avoidance paths remain unchanged. Native SCK101546 has0x2201; FoF113656 lacks the allow-actions bit. No core spell IDs or cast/timer/stat changes are introduced.
+
+Real SCK with a naturally ready0ns attack timer stays active1.5s yet produces zero white deliveries before the correction: genuine RED plus three controlsPASS11.67s at1d196cead. Vivify's normal-cast control waits for its genuinely earned20s instant-cast proc to expire; it does not remove that aura or change stats. Atdb543b270 the same four native cases pass27.56s; actual SCK white deliveries become1 while the cast remains active, and all three controls retain their behavior. Compiler405.74s/zero warnings; lead broad/plain-bin gate remains separate. [Contract](../../specs/dps-parity.md), [source/proof ledger](../../handoffs/channel-melee-proof-ledger.md).
+
+## Aura342 attack-time scope —2026-10-24
+
+TC `HandleModMeleeRangedSpeedPct` changes BASE/OFF/RANGED clocks only. Native342 now folds into `AuraStatMods.melee_ranged_attack_time_mult`, consumed by main/off-hand/creature clocks and ranged autorepeat, not `StatModifiers.haste_pct`. Melee-only319 remains separate. Real451298/+60% produces three genuine REDs before this change: cast1106→802ms, Energy17.41→24.01 and reset2.274→1.649s instead of1.42125s. Generic fold GREEN is pending; Momentum's missing producer/lifecycle and haste-damage policy are separate. [All72 native4442 users and exact proof](../../handoffs/aura342-attack-timers-proof-ledger.md); [contract](../../specs/dps-parity.md).
 
 ## Combat State
 
