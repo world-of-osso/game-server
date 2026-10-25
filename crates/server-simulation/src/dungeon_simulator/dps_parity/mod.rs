@@ -52,6 +52,8 @@ mod hunter_bloodshed_tests;
 #[cfg(test)]
 mod hunter_command_tests;
 #[cfg(test)]
+mod hunter_companion_tests;
+#[cfg(test)]
 mod hunter_focus_tests;
 #[cfg(test)]
 mod hunter_melee_tests;
