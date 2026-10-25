@@ -11,6 +11,8 @@ pub(super) enum Operator {
     LessEqual,
     Greater,
     GreaterEqual,
+    Minimum,
+    Maximum,
     Add,
     Subtract,
     Multiply,
@@ -29,6 +31,7 @@ impl Operator {
             | Self::LessEqual
             | Self::Greater
             | Self::GreaterEqual => 4,
+            Self::Minimum | Self::Maximum => 5,
             Self::Add | Self::Subtract => 6,
             Self::Multiply | Self::Divide | Self::Modulo => 7,
         }
@@ -42,6 +45,21 @@ impl Operator {
             Self::LessEqual => truth(left <= right),
             Self::Greater => truth(left > right),
             Self::GreaterEqual => truth(left >= right),
+            // SimC uses C++ std::min/max: ties and unordered pairs keep left.
+            Self::Minimum => {
+                if right < left {
+                    right
+                } else {
+                    left
+                }
+            }
+            Self::Maximum => {
+                if left < right {
+                    right
+                } else {
+                    left
+                }
+            }
             Self::Add => left + right,
             Self::Subtract => left - right,
             Self::Multiply => left * right,
@@ -126,6 +144,9 @@ const OPERATORS: &[(&str, Token)] = &[
     ("%%", Token::Binary(Operator::Modulo)),
     ("!=", Token::Binary(Operator::NotEqual)),
     ("==", Token::Binary(Operator::Equal)),
+    // SimC76f8118 expressions.cpp130–145: the >? token means minimum.
+    (">?", Token::Binary(Operator::Minimum)),
+    ("<?", Token::Binary(Operator::Maximum)),
     ("<=", Token::Binary(Operator::LessEqual)),
     (">=", Token::Binary(Operator::GreaterEqual)),
     ("&&", Token::Binary(Operator::And)),
