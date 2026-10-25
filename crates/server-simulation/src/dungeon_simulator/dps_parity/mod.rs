@@ -47,6 +47,7 @@ mod ret_storm_gap_tests;
 mod ret_tier_tests;
 mod ret_toll_control_tests;
 mod ret_toll_tests;
+mod ret_trigger_resource_tests;
 mod ret_wake_tests;
 mod shared_fact_extension_tests;
 pub(crate) mod single_spell;

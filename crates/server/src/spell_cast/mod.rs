@@ -3652,6 +3652,7 @@ fn launch_triggered_spell(
             scripts::on_cast(world, caster, spell.id, depth);
             scripts::spawn_ravager_field(world, caster, spell, explicit, depth);
             missiles::launch(world, caster, spell, plan, depth);
+            scripts::apply_triggered_cast_policies(world, caster, spell, depth);
             druid_transform::after_cast(world, caster, spell);
             true
         }
