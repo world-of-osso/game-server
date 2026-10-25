@@ -142,8 +142,19 @@ For an active channel, sample `Prepared::read_after_channel`, build live action-
 
 `call_action_list` retains its literal option values but is interpreter control, not an executable spell. Off-GCD traversal never changes a child's own Prepared admission. See the [behavior contract](../../specs/simc-apl.md) and [channel requirements](../../specs/dps-parity.md#literal-action-readiness-and-channels).
 
+## Rogue literal fixture and effective resource values
+
+The Outlaw adapter passes the profile's complete rows through the shared evaluator. Roll the Bones binds specialization action1214909, not the obsolete315508 trait endpoint. Shared Rogue facts retain action context for GCD queries and read permanent Energy capacity separately from temporary increases. These bindings do not establish numerical DPS parity.
+
+`CastPolicyContext.resources` stores `(PowerType, effective_value)` pairs at launch. Actual payment remains separate. `resource_values.rs` matches an earned Fang Strike aura through its native family mask, snapshots the native combo-point maximum even for a free finisher, and consumes the one-use window after ordinary execution. Multiplying damage by paid cost had produced zero-damage Dispatch casts.
+
+The shared spender-hit policy starts or extends native Slice and Dice after an eligible primary hit. Cut to the Chase reads native51667 seconds per effective point and315496 base duration; its cap follows the pinned maximum-point pandemic formula. Native producer-event qualification remains separate from value snapshots and consumption.
+
 ## Sources
 
+- [Outlaw adapter](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/outlaw_rotation.rs) — literal rows and native action bindings.
+- [Effective resource policies](../../../crates/server-combat/src/spell_cast/scripts/resource_values.rs) — pinned `sc_rogue.cpp1926,2021–2027` and native family-mask/pool data.
+- [Spender hit policies](../../../crates/server-combat/src/spell_cast/scripts/policies.rs) — pinned `sc_rogue.cpp3787,4386,4439,6891,8704–8716` and native aura amounts/duration.
 - [Havoc adapter](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/havoc_rotation.rs) — literal source rows and virtual action predicates.
 - [Demonic policy](../../../crates/server/src/spell_cast/scripts/havoc.rs) — pinned relationship with native payload and duration.
 
