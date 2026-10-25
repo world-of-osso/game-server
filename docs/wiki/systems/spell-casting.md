@@ -1,5 +1,11 @@
 # Spell Casting
 
+## Bounded Storm echo policy
+
+`echo_policies.rs` stores `EchoPolicy` rows: name, spec, selected talent, root/payload IDs and native effect indices. `SIMC_RET_SECOND_SUNRISE_STORM_ECHO` is explicitly approved because pinned SimC76f8118 Ret495–638 supplies a relationship absent from TC/native child fields. Only ordinary53385 enters generic foreground dispatch. The actual selected primary is mandatory; no target substitution. Runtime reads owned live431474 chance/effectiveness, then shared proc code reuses that aura's native internal cooldown. A queued full-trigger native child carries the observed effectiveness, has no extra resource payment and cannot recursively enter the foreground hook. No200ms timer is introduced.
+
+Native4442 raw15/30 plus1258011 effect modifiers5/20 produce effective20/50. The parent reports guide15/30 from Maxroll12.1.5/Skycoach; that source conflict is recorded, not resolved by tuning native data. [Contract](../../specs/dps-parity.md#ret-storm-root-supply-and-secondary-relationships), [strict RED and capability ledger](../../handoffs/ret-storm-gap-proof-ledger.md). Native positive/no-Hero RED→GREEN and actual root1.0/echo0.5 damage are recorded there. HoW, Tempest, Empyrean/other background-source eligibility and full parity remain separate.
+
 ## Selected primary across self casts — 2026-10-24
 
 The shared literal execution carries the native cast unit and selected action primary separately. `CastTargets` supplies both to ordinary Player/NPC admission; existing spell snapshots retain the primary through queued requests and cast bars. Foreground child relationships use that snapshot, not the explicit self-cast unit or a later mutable combat target. Missing context does not choose another target. Native target selectors, values, payment and flight remain unchanged.
