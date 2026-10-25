@@ -64,6 +64,13 @@ pub(super) fn apply_rank_request(
     }
     let mut guild = load_guild(db, guild_id);
     let actor_rank = load_guild_member_rank(db, &guild, actor);
+    if matches!(request, GuildRankRequest::Disband) {
+        if actor_rank != 0 {
+            return Err(GuildRankError::Permissions);
+        }
+        super::disband::delete_guild(db, guild_id);
+        return Ok(());
+    }
     if matches!(
         request,
         GuildRankRequest::Leave | GuildRankRequest::RemoveMember { .. }
@@ -398,7 +405,8 @@ fn edit_rank(
         | GuildRankRequest::Demote { .. }
         | GuildRankRequest::SetMemberNote { .. }
         | GuildRankRequest::SetMemberRank { .. }
-        | GuildRankRequest::TransferLeadership { .. } => {
+        | GuildRankRequest::TransferLeadership { .. }
+        | GuildRankRequest::Disband => {
             unreachable!("handled before rank editing")
         }
     }
@@ -560,9 +568,10 @@ pub(super) fn process_rank_requests(
                     if persistence::load_character_guild(&db.db, recipient_world.character_id)
                         .is_none()
                     {
-                        commands
-                            .entity(link.0)
-                            .remove::<shared::components::GuildMembership>();
+                        commands.entity(link.0).remove::<(
+                            shared::components::GuildMembership,
+                            shared::guild_creation::GuildTabardDesign,
+                        )>();
                     }
                     if let Ok(mut sender) = senders.get_mut(recipient) {
                         sender.send::<GuildChannel>(snapshot(
