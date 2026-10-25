@@ -550,7 +550,26 @@ fn engage_fixture_opponents(run: &mut Run) {
     }
 }
 
+// SimC76f8118 sc_demon_hunter.cpp3927–3938 models Eye Beam as target AoE.
+// The native fixture pack is at +X; player Rotation.y=0 instead faces +Z.
+// Establish encounter facing, not a replacement cone or target list.
+fn face_actor_toward_primary(world: &mut World, actor: Entity, primary: Entity) {
+    use shared::components::{Position, Rotation};
+    let from = *world
+        .get::<Position>(actor)
+        .expect("fixture actor position");
+    let to = *world
+        .get::<Position>(primary)
+        .expect("fixture primary position");
+    let orientation = (from.z - to.z).atan2(to.x - from.x);
+    world
+        .get_mut::<Rotation>(actor)
+        .expect("fixture actor rotation")
+        .y = orientation + std::f32::consts::FRAC_PI_2;
+}
+
 fn engage(run: &mut Run) {
+    face_actor_toward_primary(run.app.world_mut(), run.actor, run.targets[0]);
     for &target in &run.targets {
         face_dummy_away_from_actor(run.app.world_mut(), run.actor, target);
     }
