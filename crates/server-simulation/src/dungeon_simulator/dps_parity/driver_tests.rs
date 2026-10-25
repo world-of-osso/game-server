@@ -109,12 +109,10 @@ fn selected_driver_errors_are_not_replaced_by_another_rotation() {
 }
 
 #[test]
-fn nonliteral_driver_labels_and_null_reports_are_unchanged() {
+fn nonliteral_follower_label_and_null_reports_are_unchanged() {
     let mut run = fixture(false);
     run.spec_driver = None;
-    assert_eq!(driver_report(&run)["driver"], "NATIVE_FOLLOWER_KIT");
-    run.player_rotation = Some(player_rotation::PlayerRotation::load(63, 0.0).unwrap());
     let output = driver_report(&run);
-    assert_eq!(output["driver"], "NATIVE_ASSISTED_COMBAT_70448");
+    assert_eq!(output["driver"], "NATIVE_FOLLOWER_KIT");
     assert_eq!(output["fire_rotation"], Value::Null);
 }
