@@ -30,6 +30,20 @@ fn elemental_literal_maintains_flame_shock_through_its_native_cast_wrapper() {
     let mut run = prepare_measurement(262, 1).unwrap();
     engage(&mut run);
     clear_events(&mut run);
+    let wrapper = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(470411)
+        .unwrap()
+        .clone();
+    let initial_readiness = crate::spell_cast::read_native_cast_start(
+        run.app.world_mut(),
+        run.actor,
+        &wrapper,
+        run.targets[0],
+    );
+    let resolved = crate::spell_cast::knowledge::resolve_action(run.app.world(), run.actor, 470411);
     for _ in 0..1200 {
         drive_player(&mut run).unwrap();
         run.app.update();
@@ -59,7 +73,7 @@ fn elemental_literal_maintains_flame_shock_through_its_native_cast_wrapper() {
         .unwrap();
     assert!(
         casts >= 2 && ticks >= 30,
-        "native470411→188389 wrapper casts{casts}, ticks{ticks}, known wrapper{}, known payload{}",
+        "native470411→188389 wrapper casts{casts}, ticks{ticks}, initial readiness{initial_readiness:?}, resolved{resolved:?}, known wrapper{}, known payload{}",
         known.contains(470411),
         known.contains(188389)
     );

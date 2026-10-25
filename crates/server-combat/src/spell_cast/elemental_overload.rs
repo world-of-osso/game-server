@@ -46,9 +46,9 @@ fn stormkeeper_modified_cast(spell: &SpellInfo) -> bool {
         .any(|modifier| modifier.aura_spell_id == STORMKEEPER)
 }
 
-/// TDB168534 phase2 is HIT: roll once per landed target, then wait400ms.
+/// SimC76f8118 sc_shaman.cpp3316–3351: roll at travel scheduling, not impact.
 /// The retained launch snapshot proves SK matched even after charge consumption.
-pub(super) fn after_hit(
+pub(super) fn after_launch(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,

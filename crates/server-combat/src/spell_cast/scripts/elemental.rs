@@ -187,6 +187,9 @@ fn grant_native_uses(world: &mut World, caster: Entity, spell: u32) {
 // The native16166 generated HIT mask is broad and would re-grant it on Lightning.
 pub(crate) fn register(scripts: &mut crate::auras::scripts::AuraScripts) {
     scripts.0.entry(MASTER_OF_ELEMENTS).or_default().check_proc = Some(block_generated_mote_proc);
+    // SimC76f8118 sc_shaman.cpp6595/7449: the foreground action owns SK uses.
+    // Its generated HIT proc must not also spend the shared charge between roots.
+    scripts.0.entry(191634).or_default().check_proc = Some(block_generated_mote_proc);
 }
 
 fn block_generated_mote_proc(

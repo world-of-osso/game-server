@@ -99,6 +99,15 @@ pub(super) fn launch(
     plan: TargetPlan,
     depth: u8,
 ) {
+    // SimC76f8118 sc_shaman.cpp3316–3351 schedules overloads before parent travel.
+    let mut first = true;
+    for target in super::hit_units(&plan) {
+        if super::targets::relation_matches(world, caster, target, super::targets::Relation::Enemy)
+        {
+            super::elemental_overload::after_launch(world, caster, spell, target, first);
+            first = false;
+        }
+    }
     // All successful ordinary/triggered casts reach this once, before flight/hit.
     crate::scripted_ai::on_spell_cast(world, caster, spell.id);
     super::scripts::reduce_barbed_scales(world, caster, spell);

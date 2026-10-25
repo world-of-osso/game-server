@@ -3619,7 +3619,6 @@ fn push_hit_events(
             if first_harmful_hit {
                 start_spell_melee_attack(world, caster, spell);
             }
-            elemental_overload::after_hit(world, caster, spell, target, first_harmful_hit);
             first_harmful_hit = false;
         }
     }
