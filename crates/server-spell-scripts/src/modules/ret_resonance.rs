@@ -4,9 +4,18 @@
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
-use crate::class_progression::TraitLoadout;
-use crate::spell_cast::{self, TriggeredSpellOverrides};
-use crate::spell_info::{SpellInfo, SpellStore};
+use super::combat;
+use combat::class_progression::TraitLoadout;
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_cast::scripts::AfterCastHook;
+use combat::spell_cast::{self, TriggeredSpellOverrides};
+use combat::spell_info::{SpellInfo, SpellStore};
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::NativeAfterCast(hook)];
+
+fn hook(spell: u32) -> Option<AfterCastHook> {
+    (spell == TOLL).then_some(grant_after_toll)
+}
 
 pub(super) const TOLL: u32 = 375576;
 const TALENT: u32 = 384027;
