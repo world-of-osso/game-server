@@ -955,6 +955,7 @@ pub(in crate::spell_cast) fn after_triggered_cast(
     spell: &SpellInfo,
     depth: u8,
 ) {
+    super::resource_values::apply_producers(world, caster, spell);
     // SimC's common HoW execute also mirrors on Toll/Resonance/Sunrise.
     // Counter consumers remain foreground-only, so same-ID echoes cannot recurse.
     for policy in producers(spell.id) {

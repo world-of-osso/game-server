@@ -1,3 +1,7 @@
+## 2026-10-25 — Rogue literal state and effective resources
+
+[Rogue fixture](systems/simc-apl.md#rogue-literal-fixture-and-effective-resource-values): native RtB action binding, Fang Strike effective-point snapshots independent of zero payment, owned one-use consumption and shared native Cut to the Chase. Native regressions qualify those state boundaries; producer-event rules and numerical parity remain separate.
+
 ## 2026-10-25 — Fire native binding and proc relationships
 
 [Fire63](systems/simc-apl.md#fire-fixture-adapter): source-selected Flamestrike, selected Meteor→Pyroclasm, retained hardcast crit eligibility and predictable Hot Streak observations. Native data still supplies payloads; numerical parity remains a separate measurement.
