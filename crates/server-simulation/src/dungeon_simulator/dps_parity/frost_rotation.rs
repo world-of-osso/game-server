@@ -253,3 +253,47 @@ impl ActionFacts for FrostFacts<'_> {
         }
     }
 }
+
+#[test]
+#[ignore = "native Frost literal ERW enemy dispatch, damage and actual400 raw RP grant"]
+fn frost_literal_empower_rune_weapon_uses_hostile_primary() {
+    let mut run = super::prepare_literal(251, 1).unwrap();
+    super::engage(&mut run);
+    let encounter = Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let rotation = Rotation::load(run.app.world_mut(), run.actor, &run.profile, encounter).unwrap();
+    let prepared = rotation
+        .read_prepared(run.app.world_mut(), run.actor, &run.targets, false)
+        .unwrap();
+    let action = Action {
+        name: "empower_rune_weapon".into(),
+        target: None,
+        options: Default::default(),
+    };
+    let execution = prepared
+        .execution(&action, &rotation.equipment)
+        .unwrap()
+        .expect("native ERW must be admitted against the hostile primary");
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor, execution).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let combat = super::report::combat(run.app.world(), &run.targets, 2.0);
+    assert!(
+        combat["actions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["spell_id"] == 47568 && row["damage"].as_u64().unwrap() > 0)
+    );
+    assert!(
+        combat["energize"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["spell_id"] == 1230959 && row["effective_gain"] == 400)
+    );
+}
