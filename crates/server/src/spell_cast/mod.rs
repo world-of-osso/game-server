@@ -238,7 +238,6 @@ pub mod test_harness;
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use bevy::ecs::system::SystemState;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::casting::{CastState, CastTickResult, CastType};
@@ -1716,11 +1715,9 @@ pub(crate) fn caster_knows_spell(world: &mut World, caster: Entity, spell_id: u3
     {
         return true;
     }
-    let mut known = SystemState::<Query<&KnownSpells>>::new(world);
-    let known = known
-        .get(world)
-        .expect("plain component query always validates");
-    crate::class_progression::knows_spell(&known, caster, spell_id)
+    // SimC76f8118 sc_rogue.cpp10272–10273: selected Thistle Tea grants its cast
+    // action. Use the selection resolver here too; raw spellbook IDs omit grants.
+    knowledge::resolve_actor_action(world, caster, spell_id).is_ok()
         || taught_by_known_spell(world, caster, spell_id)
         || crate::auras::overrides::grants_spell(world, caster, spell_id)
         || world.get::<KnownSpells>(caster).is_some_and(|known| {
