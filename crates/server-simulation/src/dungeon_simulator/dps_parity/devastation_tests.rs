@@ -195,6 +195,71 @@ fn devastation_mass_disintegrate_native_chain_and_consumption() {
 
 #[test]
 #[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_eternity_surge_earns_native_azure_sweep_action() {
+    let mut run = prepare_literal(1467, 3).unwrap();
+    engage(&mut run);
+    let primary = run.targets[0];
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 1265871));
+    crate::spell_cast::creature_cast_empowered_with_targets(
+        run.app.world_mut(),
+        run.actor,
+        359073,
+        crate::spell_cast::CastTargets {
+            unit: primary,
+            primary: Some(primary),
+            destination: None,
+        },
+        1,
+    )
+    .unwrap();
+    // SimC76f8118 sc_evoker.cpp5592–5599: Surge execute grants Azure Sweep.
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1265871),
+        "actual Eternity Surge must earn the native Azure Sweep action override"
+    );
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert_eq!(
+        literal_rotation::execution::resolve_action(run.app.world(), run.actor, 362969).unwrap(),
+        Some(1265872),
+        "native aura332 must expose Azure Sweep through known Azure Strike"
+    );
+    crate::spell_cast::creature_cast_with_targets(
+        run.app.world_mut(),
+        run.actor,
+        1265872,
+        crate::spell_cast::CastTargets {
+            unit: primary,
+            primary: Some(primary),
+            destination: None,
+        },
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 1265871),
+        "the ordinary Sweep must consume its earned native use"
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for target in &run.targets {
+        assert!(
+            events.iter().any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(1265872)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+            "earned Azure Sweep must really damage recipient {target:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
 fn devastation_empower_release_grants_selected_mass_disintegrate() {
     let mut run = prepare_literal(1467, 1).unwrap();
     engage(&mut run);
