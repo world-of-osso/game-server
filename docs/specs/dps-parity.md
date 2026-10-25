@@ -14,6 +14,13 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Selected Splintering Sorcery443739 emits the native specialization payload (Arcane443763/Frost443722) after native Arcane Blast, Prismatic Bolt, Frostbolt, Flurry and Glacial Spike executions. Signature Spell supplies its authored extra conjures. All queued recipients retain the actual hostile primary; individual launches are staggered100ms as pinned `sc_mage.cpp7324–7361` specifies.
 - Each native Ray of Frost damage tick conjures the native Splinterstorm effect2 amount, then opens/refreshes native1247908. Conjures during an earned Splinterstorm/Arcane Surge window use the selected native doubling chance. Native spell records retain damage coefficients.
 
+- Each actual native Splinter impact with selected Spellfrost Teachings444986 reduces the specialization's running Orb cooldown/recharge by its native effect (Arcane index0/Frost index1, milliseconds). The shared reducer updates active native spell, category and charge timers without starting inactive timers; cooldown packets retain the native category and full duration. Unrelated payloads do not reduce recharge.
+
+### Frost Mage native Icicles and Glacial Spike
+
+- Selected Icicles1246832 uses its actual hasted PERIODIC_DUMMY clock to apply native205473 without a spell cast. The first native interval has the pinned random phase (`sc_mage.cpp5559–5581`); later intervals keep native timing. Reaching the actual counter cap enables1222865.
+- A successful native Glacial Spike199786 dispatches native228600 to its preserved hostile primary, then consumes205473 and1222865 (`sc_mage.cpp4243–4245,4275–4279`). No reference damage or replacement coefficient is applied.
+
 ### Frost Mage native Orb
 
 - Frozen Orb84714 schedules native84721 area damage through the shared ground-pulse scheduler. Its source-qualified activation minimum and interval are500ms (`sc_mage.cpp4181–4206`); native root duration and child radius/damage supply all remaining values. One pulse hits each in-radius enemy once, without multiplying the area cast by the number of recipients. Native15s duration pays30 pulses, including the last tick.

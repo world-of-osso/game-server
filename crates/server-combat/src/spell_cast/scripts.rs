@@ -84,7 +84,9 @@ pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScri
     enhancement_strikes::register(scripts);
     enhancement_tier::register(scripts);
 }
+mod periodic_counters;
 mod policies;
+pub(crate) use periodic_counters::register as register_periodic_counters;
 mod spellslinger;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 pub(super) use policies::check_cast as check_policy_cast;
@@ -260,6 +262,7 @@ pub(super) fn after_direct_damage(
     target: Entity,
     critical: bool,
 ) {
+    spellslinger::after_direct_damage(world, ctx);
     windwalker_flurry::after_direct_damage(world, ctx, critical);
     melee_reset::roll_replacement_hit(world, ctx, target, critical);
     policies::after_damage(world, ctx);
@@ -1326,21 +1329,22 @@ pub fn script_effect_value(world: &World, caster: Entity, spell_id: u32, index: 
 /// Reduce the currently running recharge or spell cooldown; never start one.
 fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f64) {
     let now = super::history_now(world);
-    let charge_category = world
+    let spell = world
         .resource::<crate::spell_info::SpellStore>()
         .get(spell_id)
-        .and_then(|spell| spell.categories.as_ref())
-        .map_or(0, |category| category.charge_category);
+        .expect("cooldown source spell must exist in native catalog");
+    let categories = spell
+        .categories
+        .as_ref()
+        .map_or((0, 0), |row| (row.charge_category, row.category));
     #[cfg(any(test, feature = "test-support"))]
-    let before = super::holy_metrics::read_recharge(world, caster, charge_category, now);
+    let before = super::holy_metrics::read_recharge(world, caster, categories.0, now);
     let reduced = world
         .get_mut::<super::SpellHistory>(caster)
-        .map(|mut history| {
-            reduce_running_timers(&mut history, charge_category, spell_id, now, seconds)
-        });
+        .map(|mut history| reduce_running_timers(&mut history, categories, spell_id, now, seconds));
     #[cfg(any(test, feature = "test-support"))]
     {
-        let after = super::holy_metrics::read_recharge(world, caster, charge_category, now);
+        let after = super::holy_metrics::read_recharge(world, caster, categories.0, now);
         let applied = (before - after).max(0.0).min(seconds);
         super::holy_metrics::record_reduction(world, caster, spell_id, seconds, applied);
     }
@@ -1357,11 +1361,12 @@ fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f6
 
 fn reduce_running_timers(
     history: &mut super::SpellHistory,
-    charge_category: u32,
+    categories: (u32, u32),
     spell_id: u32,
     now: f64,
     seconds: f64,
 ) -> (Option<shared::protocol::SpellChargesUpdate>, Option<u32>) {
+    let (charge_category, category) = categories;
     let charges = history
         .charges
         .get_mut(&charge_category)
@@ -1370,15 +1375,27 @@ fn reduce_running_timers(
             charges.reduce_recovery(now, seconds);
             charges.snapshot(now)
         });
-    let remaining_ms = history
-        .spell_ready_at
-        .get_mut(&spell_id)
-        .filter(|ready| **ready > now)
-        .map(|ready| {
-            *ready = (*ready - seconds).max(now);
-            ((*ready - now) * 1000.0).round() as u32
-        });
-    (charges, remaining_ms)
+    // SimC76f8118 sc_mage.cpp5404–5407 adjusts the ability's effective
+    // cooldown. Native spells may store it solely in a category (e.g.84714),
+    // so reducing only spell_ready_at leaves the actual ability unchanged.
+    let spell_remaining =
+        reduce_ready_time(history.spell_ready_at.get_mut(&spell_id), now, seconds);
+    let category_remaining = if category != 0 {
+        reduce_ready_time(history.category_ready_at.get_mut(&category), now, seconds)
+    } else {
+        None
+    };
+    (
+        charges,
+        spell_remaining.into_iter().chain(category_remaining).max(),
+    )
+}
+
+fn reduce_ready_time(ready: Option<&mut f64>, now: f64, seconds: f64) -> Option<u32> {
+    ready.filter(|ready| **ready > now).map(|ready| {
+        *ready = (*ready - seconds).max(now);
+        ((*ready - now) * 1000.0).round() as u32
+    })
 }
 
 /// Keep the full cooldown duration separate from remaining time: the client
@@ -1388,10 +1405,14 @@ fn send_reduced_cooldown(world: &mut World, caster: Entity, spell_id: u32, remai
         .resource::<crate::spell_info::SpellStore>()
         .get(spell_id)
         .expect("running cooldown spell must be in the catalog");
-    let base = spell
-        .cooldowns
-        .as_ref()
-        .map_or(0, |cooldown| cooldown.recovery_ms);
+    let category = spell.categories.as_ref().map_or(0, |row| row.category);
+    let base = spell.cooldowns.as_ref().map_or(0, |cooldown| {
+        cooldown.recovery_ms.max(if category != 0 {
+            cooldown.category_recovery_ms
+        } else {
+            0
+        })
+    });
     let duration_ms = super::modify(
         world,
         caster,
@@ -1406,7 +1427,7 @@ fn send_reduced_cooldown(world: &mut World, caster: Entity, spell_id: u32, remai
         caster,
         shared::protocol::SpellCooldownUpdate {
             spell_id,
-            category: 0,
+            category,
             duration_ms,
             remaining_ms,
             is_gcd: false,
