@@ -34,6 +34,7 @@ mod haste_tests;
 mod havoc_fact_tests;
 mod health_aura_state_tests;
 mod howl_tests;
+mod hunter_cadence_tests;
 mod inputs;
 mod literal_ranged_attack_tests;
 pub(crate) mod literal_rotation;
