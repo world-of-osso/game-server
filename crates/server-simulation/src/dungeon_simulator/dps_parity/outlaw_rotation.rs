@@ -22,7 +22,8 @@ const ACTIONS: &[(&str, u32, bool)] = &[
     ("stealth", 1784, true),
     ("adrenaline_rush", 13750, true),
     ("slice_and_dice", 315496, true),
-    ("roll_the_bones", 315508, true),
+    // sc_rogue.cpp9980 resolves the specialization grant; native70448 uses1214909.
+    ("roll_the_bones", 1214909, true),
     ("kick", 1766, false),
     ("ambush", 8676, false),
     ("sinister_strike", 193315, false),
@@ -56,7 +57,7 @@ fn bindings() -> Bindings {
         buffs: [
             ("adrenaline_rush", 13750),
             ("blade_flurry", 13877),
-            ("roll_the_bones", 315508),
+            ("roll_the_bones", 1214909),
             ("loaded_dice", 256171),
             ("opportunity", 195627),
             ("audacity", 386270),

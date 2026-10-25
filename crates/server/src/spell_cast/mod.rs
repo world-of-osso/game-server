@@ -2792,6 +2792,7 @@ fn execute_cast_with_primary(
     }
     if !spell.cast_parent_owns_modifier_charges {
         spell_mods::consume_charges(world, caster, spell);
+        scripts::consume_resource_value_sources(world, caster, spell);
         // Spend admitted modifiers before an ordinary cast grants its next window.
         scripts::apply_cast_relationships(world, caster, spell);
         scripts::consume_maelstrom_weapon(world, caster, spell);

@@ -1,8 +1,38 @@
 //! Source-qualified extra attacks on native periodic trigger ordinals.
 use crate::auras::ActiveAuras;
+use crate::class_progression::KnownSpells;
 use crate::spell_info::SpellStore;
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
+
+struct RollingReapplication {
+    specs: &'static [u32],
+    passive: u32,
+    payload: u32,
+}
+
+const ROLLING_REAPPLICATIONS: &[RollingReapplication] = &[
+    // SimC76f8118 sc_warrior.cpp3798–3805 forces coefficient-based Deep
+    // Wounds rolling; action.cpp2730/4614/4995 supplies its refresh budget/lifetime.
+    RollingReapplication {
+        specs: &[71, 72],
+        passive: 1261060,
+        payload: 262115,
+    },
+];
+
+pub(crate) fn rolls_reapplication(world: &World, caster: Entity, payload: u32) -> bool {
+    let Some(spec) = world.get::<ActiveSpec>(caster) else {
+        return false;
+    };
+    let Some(known) = world.get::<KnownSpells>(caster) else {
+        return false;
+    };
+    ROLLING_REAPPLICATIONS.iter().any(|policy| {
+        let selected = policy.specs.contains(&spec.0) && known.contains(policy.passive);
+        policy.payload == payload && selected
+    })
+}
 
 struct PeriodicAttack {
     parents: &'static [u32],

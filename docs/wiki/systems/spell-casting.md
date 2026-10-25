@@ -10,7 +10,7 @@ The [Fury/Warrior contract](../../specs/dps-parity.md#fury-player-parity) is imp
 - `scripts/periodic_attacks.rs` reads the paid ordinal captured in each due `Tick`, not the scheduler's final count after catch-up. Children resolve live native action overrides and retain their actual selected primary.
 - `scripts/paid_cooldowns.rs` observes the successful payment vector after `spend_costs`, converts raw units through native `PowerTypeTable`, and reduces only running cooldowns. Later resource gains are not subtracted from the paid amount.
 
-`Relationship::ReapplicationRolling` selects the [Deep Wounds exception](auras.md#native-rolling-periodic-refresh--2026-10-22) through the existing policy resolver. It is separate from default native per-tick carry; neither its budget nor duration rule is inferred for other spells from the native rolling flag alone.
+`periodic_attacks::ROLLING_REAPPLICATIONS` stores payload, selected passive and eligible specs. `scripts::rolls_reapplication` selects the [Deep Wounds exception](auras.md#native-rolling-periodic-refresh--2026-10-22) from those rows, independently of the shared cast-policy registry. Neither its budget nor duration rule is inferred for other spells from the native rolling flag alone.
 
 Sources: `crates/server/src/spell_cast/{mod.rs,scripts.rs,scripts/}`, `crates/server/src/auras/{procs.rs,periodic.rs,refresh.rs}`, and native fixtures under `crates/server-simulation/src/dungeon_simulator/dps_parity/{fury_rotation,warrior_proc_tests.rs}`. Exact SimC source lines are recorded beside each policy row. Runtime acceptance is tracked separately from this implementation description.
 

@@ -1638,6 +1638,8 @@ fn damage_source_amount(
         let giantkiller =
             super::scripts::giantkiller_multiplier(world, ctx.caster, target, ctx.spell);
         let ret_damage = super::scripts::ret_damage_multiplier(world, ctx, target, periodic);
+        let shadow_weaving =
+            super::scripts::shadow_weaving_multiplier(world, bonus_caster, target, ctx.spell.id);
         #[cfg(any(test, feature = "test-support"))]
         factor_capture::record_done(
             world,
@@ -1652,9 +1654,18 @@ fn damage_source_amount(
                 ("combo_strikes", combo),
                 ("giantkiller", giantkiller),
                 ("ret_damage", ret_damage),
+                ("shadow_weaving", shadow_weaving),
             ],
         );
-        school_done * versatility * summon * creature * mechanic * combo * giantkiller * ret_damage
+        school_done
+            * versatility
+            * summon
+            * creature
+            * mechanic
+            * combo
+            * giantkiller
+            * ret_damage
+            * shadow_weaving
     };
     let bonus_ctx = EffectCtx {
         caster: bonus_caster,

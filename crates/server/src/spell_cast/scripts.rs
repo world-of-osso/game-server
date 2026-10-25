@@ -39,7 +39,7 @@ mod impact_procs;
 mod paid_cooldowns;
 mod periodic_attacks;
 pub(super) use paid_cooldowns::after_payment as after_paid_resources;
-pub(crate) use periodic_attacks::after_periodic_trigger;
+pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(super) fn after_foreground_special(world: &mut World, caster: Entity, spell: &SpellInfo) {
     foreground_procs::after_foreground_special(world, caster, spell);
     execution_counters::consume_after_foreground_cast(world, caster, spell.id);
@@ -81,7 +81,6 @@ pub(super) use policies::{
 };
 pub(crate) use policies::{
     extends_reapplication, filter_secondary_targets, register_lifecycle_policies,
-    rolls_reapplication,
 };
 
 pub(crate) fn owns_policy_proc(spell: u32) -> bool {
@@ -118,9 +117,15 @@ mod ret_tier;
 mod ret_toll;
 pub(super) use ret_tier::after_foreground_spender;
 pub(crate) use ret_tier::owns_arbiter_charge;
+mod resource_values;
+pub(super) use resource_values::{
+    consume_sources as consume_resource_value_sources, effective_value as effective_resource_value,
+};
 mod scourge_strike;
 mod shadow_priest;
-pub(super) use shadow_priest::launch_delay as scripted_launch_delay;
+pub(super) use shadow_priest::{
+    launch_delay as scripted_launch_delay, weaving_multiplier as shadow_weaving_multiplier,
+};
 mod snakeskin_quiver;
 pub(super) use snakeskin_quiver::roll_snakeskin_cobra;
 mod soul_of_the_forest;

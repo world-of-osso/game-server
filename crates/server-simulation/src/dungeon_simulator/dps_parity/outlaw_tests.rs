@@ -1,5 +1,119 @@
 use super::*;
 use server::simc_apl::Facts;
+
+#[test]
+#[ignore = "requires private native260 profile/traits and player actor"]
+fn outlaw_literal_uses_the_known_roll_the_bones_action() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(260, 1).unwrap();
+    engage(&mut run);
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
+    for _ in 0..200 {
+        drive_player(&mut run).unwrap();
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && event.spell_id == Some(1214909)),
+        "literal Roll the Bones must execute the native specialization action"
+    );
+}
+
+#[test]
+#[ignore = "requires private native260 profile/traits and player actor"]
+fn outlaw_earned_fang_strike_finisher_deals_damage_and_consumes_the_use() {
+    use shared::components::PowerType;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(260, 1).unwrap();
+    engage(&mut run);
+    for _ in 0..32 {
+        if crate::auras::has_aura(run.app.world(), run.actor, 1301405) {
+            break;
+        }
+        {
+            let mut powers = run
+                .app
+                .world_mut()
+                .get_mut::<crate::spell_cast::powers::PowerPools>(run.actor)
+                .unwrap();
+            let energy = powers.get_mut(PowerType::Energy).unwrap();
+            energy.current = energy.max;
+        }
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(
+                193315,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+    }
+    let instance = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1301405)
+        .expect("ordinary attacks must earn native Fang Strike")
+        .instance_id;
+    {
+        let mut powers = run
+            .app
+            .world_mut()
+            .get_mut::<crate::spell_cast::powers::PowerPools>(run.actor)
+            .unwrap();
+        powers.get_mut(PowerType::Energy).unwrap().current = 0.0;
+        powers.get_mut(PowerType::ComboPoints).unwrap().current = 0.0;
+    }
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(2098, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(2098)
+                && event.amount > 0),
+        "a free Fang Strike finisher uses effective combo points, not zero paid cost"
+    );
+    assert!(
+        !run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.instance_id == instance),
+        "the earned Fang Strike use must be consumed"
+    );
+}
 use shared::protocol::CombatLogKind;
 
 #[test]
