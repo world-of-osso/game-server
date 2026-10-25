@@ -1,6 +1,6 @@
 ## 2026-10-25 — Shared literal channel execution
 
-[Shared APL machinery](systems/simc-apl.md#source-row-clocks-and-channel-control): source-row deadlines, paid-tick channel query/execution API, readiness-before-condition and off-GCD call traversal. Native child admission remains unchanged.
+[Shared APL machinery](systems/simc-apl.md#source-row-clocks-and-channel-control): source-row deadlines, channel query/execution API, readiness-before-condition and off-GCD call traversal. Native child admission remains unchanged.
 
 ## 2026-10-25 — Shared profile gear effects
 
