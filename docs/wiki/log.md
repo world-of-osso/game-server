@@ -1,3 +1,7 @@
+## 2026-10-24 — Selected primary across self casts
+
+[Native cast contexts](systems/spell-casting.md#selected-primary-across-self-casts--2026-10-24) keep explicit cast unit and selected action primary distinct through shared execution and native snapshots. Actual self-cast Ret child-target RED50.92s→four native GREEN60.88s at ec5f0f3f3; no spell-ID branch, multiplier or target fallback. Player/queue controls and post-D3 compile gates pending. The older Zenith lifetime/role assertion also fails on exact plain master3f and remains outside this fix.
+
 ## 2026-10-24 — Byte-identical public spell remainder
 
 [D3](systems/server-crates.md#public-spell-remainder-d3):11pure file moves retain54case names/flags (51enabled/3existing ignored), extending the existing consumer to229cases without body/seam/new-package-or-version/API changes. Existing rusqlite0.35/bundled and canonical random import are dev-only consumer wiring. Housekeeping only; exact inventory, combined compiler proof, full gate and matched timing remain distinct.
