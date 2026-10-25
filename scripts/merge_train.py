@@ -20,6 +20,7 @@ import json
 import os
 from pathlib import Path
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -318,13 +319,14 @@ def parity_executable(log):
     return None
 
 
-def measure(entry, executable):
+def measure(entry, executable, target):
     lines = []
     for m in entry["measure"]:
         command = [sys.executable, str(TREE / "scripts/dps_parity_measure.py"), "--executable", executable,
                    "--spec", m["spec"], "--targets", m["targets"], "--actor", m.get("actor", "follower"),
                    "--world-db", m["world_db"], "--output", m["output"]]
-        out = subprocess.run(command, cwd=TREE, env=base_env(), text=True, capture_output=True, check=False)
+        out = subprocess.run(command, cwd=TREE, env=base_env() | {"CARGO_TARGET_DIR": str(target)},
+                             text=True, capture_output=True, check=False)
         lines += [line for line in out.stdout.splitlines() if "NATIVE_DPS" in line or "FAILED" in line]
     entry["measurements"] = lines
 
@@ -360,12 +362,43 @@ def build_and_test(entries, log):
     return passed, rejected + failed
 
 
-def measure_all(entries, log):
-    entries = [e for e in entries if e["measure"]]
-    executable = parity_executable(log) if entries else None
-    if executable:
-        with ThreadPoolExecutor(MEASURE_PARALLEL) as pool:
-            list(pool.map(lambda e: measure(e, executable), entries))
+# Measurements run in the background so the next cycle can build meanwhile.
+MEASURER = ThreadPoolExecutor(MEASURE_PARALLEL)
+MEASURING = set()  # futures; a reload waits until they finish
+
+
+def measure_then_write(entries, log):
+    """Write results now for entries without --measure; measure the others from a private
+    copy of this cycle's executable (the next build overwrites target-lead), then write."""
+    measured = [e for e in entries if e["measure"]]
+    write_results([e for e in entries if not e["measure"]])
+    executable = parity_executable(log) if measured else None
+    if executable is None:
+        for entry in measured:
+            entry["measurements"] = ["FAILED: parity executable did not build"]
+        write_results(measured)
+        return
+    # dps_parity_native.py accepts executables under CARGO_TARGET_DIR only.
+    target = HOME / "bin" / uuid.uuid4().hex[:10]
+    target.mkdir(parents=True)
+    copy = target / Path(executable).name
+    shutil.copy2(executable, copy)
+    pending = [len(measured)]
+
+    def finish(entry):
+        try:
+            measure(entry, str(copy), target)
+        except Exception as error:  # a failed measurement must still produce a result
+            entry["measurements"] = [f"FAILED: {error}"]
+        write_results([entry])
+        pending[0] -= 1
+        if pending[0] == 0:
+            shutil.rmtree(target, ignore_errors=True)
+
+    for entry in measured:
+        future = MEASURER.submit(finish, entry)
+        MEASURING.add(future)
+        future.add_done_callback(MEASURING.discard)
 
 
 def red_twin(entry):
@@ -389,8 +422,8 @@ def cycle():
         for entry in failed:
             entry["status"] = "rejected"
         real = [e for e in passed + failed if not e["id"].endswith("-red")]
-        measure_all([e for e in real if e["status"] == "probe passed"], log)
-        write_results(real)
+        write_results([e for e in real if e["status"] != "probe passed"])
+        measure_then_write([e for e in real if e["status"] == "probe passed"], log)
         outcome = {e["id"]: e for e in passed + failed}
         for entry in list(landing):
             twin = twins.get(entry["id"])
@@ -417,8 +450,7 @@ def cycle():
             if entry.get("status") != "rejected":
                 entry["status"] = f"landed in {master}"
         landed = [e for e in landing if e["status"].startswith("landed")]
-        measure_all(landed, log)
-        write_results(landed)
+        measure_then_write(landed, log)
 
 
 def requeue():
@@ -435,7 +467,7 @@ def run(_args):
     loaded = script.stat().st_mtime
     while True:
         # deploy_merge_train.py replaces this file; pick it up between cycles.
-        if script.stat().st_mtime != loaded:
+        if script.stat().st_mtime != loaded and not MEASURING:
             print("merge_train.py changed, reloading", flush=True)
             os.execv(sys.executable, [sys.executable, str(script), "run"])
         queued = list(QUEUE.glob("*.json"))
