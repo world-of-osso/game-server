@@ -939,9 +939,12 @@ fn crit_chance_from_owner(
     }
     let chance =
         super::scripts::crit_chance(world, caster, target, spell.id).unwrap_or_else(|| {
-            let base = world
-                .get::<CharacterStats>(spell_owner)
-                .map_or(0.0, |stats| stats.crit_pct);
+            let base =
+                crate::combat::read_pet_owner_critical_chance(world, caster).unwrap_or_else(|| {
+                    world
+                        .get::<CharacterStats>(spell_owner)
+                        .map_or(0.0, |stats| stats.crit_pct)
+                });
             let spell_bonus = if uses_weapon_crit_bonus_order(spell) {
                 0.0
             } else {
@@ -2014,6 +2017,14 @@ fn deal_source_damage_and_report(
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::finish(world, ctx, target, &damage, &event);
     log_event(world, event);
+    super::scripts::apply_havoc_damage_policies(
+        world,
+        ctx.caster,
+        target,
+        Some(ctx.spell.id),
+        amount,
+        periodic,
+    );
     if !resolved_source {
         super::scripts::apply_marksman_residual(world, ctx, target, crit, amount);
         super::scripts::apply_sentinel_damage(world, ctx, target, crit, amount);

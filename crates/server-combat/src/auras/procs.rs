@@ -36,6 +36,10 @@ mod dance_rppm_tests;
 #[path = "proc_event_candidate_tests.rs"]
 mod event_candidate_tests;
 
+#[cfg(test)]
+#[path = "proc_family_tests.rs"]
+mod family_tests;
+
 use crate::random as rand;
 use bevy::prelude::*;
 use std::collections::HashSet;
@@ -433,6 +437,16 @@ fn proc_matches(
     if mask[0] & SPELL_PROC_MASK == 0 {
         return true;
     }
+    // TC a352b1fa SpellMgr.cpp555–560 / SpellInfo.cpp1974–1984:
+    // explicit TDB family predicates replace, not merge with, generated masks.
+    let explicit_family = world
+        .get_resource::<SpellStore>()
+        .and_then(|store| store.get(aura.spell_id))
+        .and_then(|spell| spell.aura_options.as_ref())
+        .and_then(|options| options.proc_family);
+    if let Some((family, family_mask)) = explicit_family {
+        return event_spell.is_none_or(|spell| matches_explicit_family(spell, family, family_mask));
+    }
     let family_mask = aura
         .effects
         .iter()
@@ -450,6 +464,18 @@ fn proc_matches(
             options.spell_class_set == aura.class_set
                 && (0..4).any(|word| options.spell_class_mask[word] & family_mask[word] != 0)
         })
+}
+
+fn matches_explicit_family(spell: &SpellInfo, family: u32, mask: [u32; 4]) -> bool {
+    if family == 0 {
+        return true;
+    }
+    let Some(options) = spell.class_options.as_ref() else {
+        return false;
+    };
+    let mask_matches =
+        mask == [0; 4] || (0..4).any(|word| options.spell_class_mask[word] & mask[word] != 0);
+    options.spell_class_set == family && mask_matches
 }
 
 /// TC SpellInfo.cpp4292–4308/4358–4371: Type1 rows select haste channels;

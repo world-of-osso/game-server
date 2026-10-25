@@ -40,6 +40,7 @@ mod batch8;
 mod batch9;
 mod execution_counters;
 mod foreground_procs;
+mod frost;
 mod impact_procs;
 mod periodic_attacks;
 mod secondary_copies;
@@ -62,10 +63,15 @@ pub(super) use echo_policies::after_cast as apply_echo_policies;
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
 mod enhancement_modes;
+mod enhancement_rod;
+pub(super) use enhancement_rod::after_resolution as after_resolved_hits;
+pub(crate) use enhancement_rod::snapshot_rod_amount;
 mod enhancement_strikes;
 mod enhancement_tempest;
 mod enhancement_tier;
+mod enhancement_unleashed;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
+pub(super) use enhancement_unleashed::update as update_unleashed;
 mod feral_frenzy;
 pub(crate) use feral_frenzy::register as register_feral_frenzy;
 mod maelstrom_weapon;
@@ -89,9 +95,19 @@ pub(super) use policies::{
     before_impact as before_impact_policies, has_impact_policy, on_hit as apply_hit_policies,
     snapshot as snapshot_hit_policies,
 };
-pub(crate) use policies::{
-    extends_reapplication, filter_secondary_targets, register_lifecycle_policies,
-};
+pub(crate) use policies::{extends_reapplication, register_lifecycle_policies};
+
+pub(crate) fn filter_secondary_targets(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: u8,
+    primary: Option<Entity>,
+    units: &mut Vec<Entity>,
+) {
+    policies::filter_secondary_targets(world, caster, spell, effect, primary, units);
+    midnight_items::filter_font_targets(spell, primary, units);
+}
 
 pub(super) fn apply_periodic_damage_policies(
     world: &mut World,
@@ -101,14 +117,21 @@ pub(super) fn apply_periodic_damage_policies(
 ) {
     policies::after_periodic_damage(world, ctx, target, amount);
     spellslinger::after_periodic_damage(world, ctx, target);
+    midnight_items::after_periodic_damage(world, ctx, target);
 }
 
 pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
     policies::owns_policy_proc(world, spell)
         || melee_reset::owns_proc(spell)
         || resource_values::owns_proc(spell)
+        || frost::owns_proc(spell)
 }
 mod germination;
+mod havoc;
+pub(crate) use havoc::{apply_havoc_damage_policies, is_eye_beam_channel, register_havoc};
+pub use havoc::{
+    arm_demonic as arm_havoc_demonic, before_cast as before_havoc_cast, havoc_demonsurge_available,
+};
 pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
@@ -169,6 +192,7 @@ pub(crate) fn after_melee_hit(
 ) {
     windwalker_flurry::after_melee_hit(world, caster, hand, critical);
     melee_reset::roll_white_hit(world, caster, critical);
+    frost::after_white_hit(world, caster, critical);
 }
 mod xuens_battlegear;
 pub(crate) use xuens_battlegear::register_xuens_battlegear;
@@ -210,6 +234,7 @@ pub(super) fn finish_scripted_launch(
     foreground: bool,
 ) {
     elemental::after_launch(world, caster, spell, consumed, depth, foreground);
+    frost::after_launch(world, caster, spell.id, foreground);
     policies::pet_sets::finish_cobra(world, caster, spell);
     execution_counters::after_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
@@ -691,6 +716,7 @@ pub fn damage_amount(world: &World, spell_id: u32) -> Option<DamageAmountHook> {
         return Some(hook);
     }
     match spell_id {
+        midnight_items::FONT_SPLATTER => Some(midnight_items::splatter_damage),
         windwalker_dual_threat::DAMAGE => Some(windwalker_dual_threat::damage),
         windwalker_children::JADEFIRE => Some(windwalker_children::jadefire_damage),
         windwalker_children::RWK_DAMAGE => Some(windwalker_children::rushing_wind_damage),
