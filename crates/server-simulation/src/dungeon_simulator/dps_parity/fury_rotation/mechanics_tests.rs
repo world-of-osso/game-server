@@ -155,6 +155,46 @@ fn fury_anger_management_reduces_recklessness_from_actual_rampage_cost() {
 }
 
 #[test]
+#[ignore = "requires exact Fury72 player profile and native Bladestorm children"]
+fn fury_bladestorm_native_ticks_execute_one_offhand_area_cast() {
+    let _seed_scope = crate::random::seed_scope(70_448);
+    let mut run = super::super::prepare_measurement(72, 3).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    cast_native(&mut run, 446035, actor);
+    run.app
+        .world_mut()
+        .resource_mut::<Time<Fixed>>()
+        .set_timestep_seconds(3.0);
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let combat = super::super::report::combat(run.app.world(), &run.damage_targets, 5.0);
+    let attempts = |spell: u32| {
+        combat["actions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|action| action["spell_id"] == spell)
+            .map(|action| {
+                ["hits", "misses", "dodges", "parries"]
+                    .iter()
+                    .map(|field| action[*field].as_u64().unwrap())
+                    .sum::<u64>()
+            })
+            .sum::<u64>()
+    };
+    assert!(attempts(50622) >= 3, "native main-hand area must execute");
+    // SimC76f8118 sc_warrior.cpp3249–3254/3335–3340: one native off-hand
+    // area follows each main-hand tick, not one area per main-hand recipient.
+    assert_eq!(
+        attempts(95738),
+        attempts(50622),
+        "each native Fury Bladestorm tick must execute one off-hand area: {combat}"
+    );
+}
+
+#[test]
 #[ignore = "requires exact Fury72 player profile and native selected Unhinged"]
 fn fury_unhinged_bladestorm_ticks_execute_actual_bloodthirst_variant() {
     let _seed_scope = crate::random::seed_scope(70_448);
