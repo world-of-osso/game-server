@@ -25,6 +25,14 @@ pub(crate) fn flight_value(
     }
 }
 
+/// SimC76f8118 sc_mage.cpp6988–7010 sums caster-owned eligible travel events.
+pub fn hot_streak_spells_in_flight(world: &World, caster: Entity) -> Result<f64, String> {
+    let pending = world
+        .get_resource::<missiles::PendingSpellHits>()
+        .ok_or("native Hot Streak pending missile state unavailable")?;
+    Ok(pending.count_matching(caster, scripts::triggers_hot_streak) as f64)
+}
+
 /// Native target-only admission; no cooldown, power, knowledge or cast mutation.
 pub(crate) fn target_eligible(
     world: &World,

@@ -36,6 +36,13 @@ pub struct FixtureMovement {
     pub distance_to_move: f64,
 }
 
+/// Source profile identity bound to the actual native consumable use metadata.
+#[derive(Component)]
+pub struct ConfiguredPotion {
+    pub name: String,
+    pub on_use: crate::item_templates::OnUseSpell,
+}
+
 pub type ResolveDotSpell = fn(&World, Entity, u32) -> Result<crate::spell_info::SpellInfo, String>;
 
 #[derive(Clone, Copy)]
@@ -525,6 +532,17 @@ impl<'a> NativeFacts<'a> {
                 .fold(0.0, f64::max)),
             "remains" => Ok(buff_remaining(&active, now)),
             "react" => reaction::reacted_stacks(self.world, self.actor, id, &active),
+            "last_trigger" => {
+                // SimC76f8118 buff.cpp551–555/2189/3056: encounter-relative
+                // last successful trigger survives expiry; unused is timespan::min.
+                let start = match self.encounter {
+                    Encounter::Fixture { started_at, .. } | Encounter::Dungeon { started_at } => {
+                        started_at
+                    }
+                };
+                Ok(reaction::last_trigger(self.world, self.actor, id)?
+                    .map_or(i64::MIN as f64 / 1000.0, |at| at - start))
+            }
             "duration" => Ok(f64::from(crate::auras::fresh_duration_ms(
                 self.world,
                 self.actor,
@@ -615,8 +633,53 @@ impl<'a> NativeFacts<'a> {
 
     fn cooldown(&self, operand: &str) -> Result<f64, String> {
         let (alias, property) = split_property(operand, "cooldown")?;
+        if alias == "potion" {
+            return self.potion_cooldown(property);
+        }
         let id = bound_spell(&self.bindings.actions, alias, "action")?;
         self.cooldown_for_spell(self.spell(id)?, property)
+    }
+
+    fn potion_cooldown(&self, property: &str) -> Result<f64, String> {
+        let potion = self
+            .world
+            .get::<ConfiguredPotion>(self.actor)
+            .ok_or("NATIVE_POTION_UNAVAILABLE: profile has no native use item")?;
+        // SimC76f8118 consumable.cpp433–443: use the actor's potion
+        // cooldown; native ItemEffect supplies its category and recovery.
+        let mut spell = self.spell(potion.on_use.spell_id)?.clone();
+        let cooldown = potion.on_use.cooldown;
+        if cooldown.category != 0 && cooldown.category_ms > 0 {
+            spell
+                .categories
+                .get_or_insert_with(Default::default)
+                .category = cooldown.category;
+            spell
+                .cooldowns
+                .get_or_insert_with(Default::default)
+                .category_recovery_ms = cooldown.category_ms;
+        }
+        self.cooldown_for_spell(&spell, property)
+    }
+
+    fn potion_matches(&self, alias: &str) -> f64 {
+        let Some(potion) = self.world.get::<ConfiguredPotion>(self.actor) else {
+            return 0.0;
+        };
+        // SimC76f8118 player.cpp12376–12408: exact case-insensitive option,
+        // then strip only a final underscore plus one quality digit.
+        let bytes = potion.name.as_bytes();
+        let unqualified = if bytes.len() >= 2
+            && bytes[bytes.len() - 2] == b'_'
+            && bytes[bytes.len() - 1].is_ascii_digit()
+        {
+            &potion.name[..bytes.len() - 2]
+        } else {
+            &potion.name
+        };
+        bool_value(
+            potion.name.eq_ignore_ascii_case(alias) || unqualified.eq_ignore_ascii_case(alias),
+        )
     }
 
     fn action_spell(&self, alias: &str) -> Result<&crate::spell_info::SpellInfo, String> {
@@ -632,6 +695,32 @@ impl<'a> NativeFacts<'a> {
     ) -> Result<f64, String> {
         let spell = self.action_spell(alias)?;
         match property {
+            // SimC76f8118 action.cpp3609–3626: the matching live cast/channel only.
+            "executing" => Ok(bool_value(
+                self.world
+                    .get::<shared::casting::CastState>(self.actor)
+                    .is_some_and(|cast| cast.spell_id == spell.id),
+            )),
+            "execute_remains" => Ok(self
+                .world
+                .get::<shared::casting::CastState>(self.actor)
+                .filter(|cast| cast.spell_id == spell.id)
+                .map_or(0.0, |cast| {
+                    f64::from((cast.duration - cast.elapsed).max(0.0))
+                })),
+            "last_used" => {
+                // action.cpp3644–3669 and timespan.hpp216: unused is timespan::min.
+                let start = match self.encounter {
+                    Encounter::Fixture { started_at, .. } | Encounter::Dungeon { started_at } => {
+                        started_at
+                    }
+                };
+                Ok(self
+                    .world
+                    .get::<crate::spell_cast::SpellHistory>(self.actor)
+                    .and_then(|history| history.last_successful_cast_at(spell.id))
+                    .map_or(i64::MIN as f64 / 1000.0, |at| at - start))
+            }
             // SimC76f8118 action.cpp3502-3503: snapshot one target and average crit.
             "damage" => crate::spell_cast::effects::expected_direct_damage(
                 self.world,
@@ -749,6 +838,11 @@ impl<'a> NativeFacts<'a> {
             "execute_time" => Ok(crate::spell_cast::native_apl::execute_time(
                 self.world, self.actor, spell,
             )),
+            // SimC76f8118 action.cpp3375–3377: current cooldown must be up.
+            // Native explicit resets have no reaction-required reset delay.
+            "cooldown_react" => self
+                .cooldown_for_spell(spell, "remains")
+                .map(|remains| bool_value(remains <= 0.0)),
             "cast_time" | "cost" => self.action_property(&action.name, name, Some(action)),
             "ticks_remain" => self.ticks_remaining(spell.id),
             "ticks" => self.elapsed_ticks(spell.id),
@@ -890,6 +984,9 @@ impl Facts for NativeFacts<'_> {
         if let Some(value) = self.targeted_value(name, None) {
             return value;
         }
+        if let Some(alias) = name.strip_prefix("potion.") {
+            return Ok(self.potion_matches(alias));
+        }
         if let Some(operand) = name.strip_prefix("prev_gcd.") {
             return self.previous_gcd(operand);
         }
@@ -1006,7 +1103,7 @@ impl ActionFacts for NativeFacts<'_> {
         match name {
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" => self.gcd(action, name),
             "charges" | "charges_fractional" | "full_recharge_time" | "execute_time"
-            | "cast_time" | "cost" | "ticks_remain" | "ticks" | "ticking" => {
+            | "cast_time" | "cost" | "ticks_remain" | "ticks" | "ticking" | "cooldown_react" => {
                 self.contextual_property(action, name)
             }
             _ => self.value(name),

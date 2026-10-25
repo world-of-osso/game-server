@@ -16,9 +16,13 @@ pub(super) const PYROBLAST: u32 = 11366;
 pub(super) const FLAMESTRIKE: u32 = 2120;
 pub(super) const NATIVE_FLAMESTRIKE: u32 = 1254851;
 
+/// SimC76f8118 sc_mage.cpp6988–7010: only Hot Streak producers enter its flight count.
+pub(crate) fn triggers_hot_streak(spell_id: u32) -> bool {
+    matches!(spell_id, 133 | 108853 | 319836 | PYROBLAST | 2948)
+}
+
 pub(crate) fn record_fire_hit(world: &mut World, caster: Entity, spell: &SpellInfo, crit: bool) {
-    // SimC marks only Fireball, Fire Blast, Pyroblast and Scorch as HS triggers.
-    let eligible = matches!(spell.id, 133 | 108853 | 319836 | PYROBLAST | 2948);
+    let eligible = triggers_hot_streak(spell.id);
     let learned = world
         .get::<KnownSpells>(caster)
         .is_some_and(|known| known.contains(DRIVER));

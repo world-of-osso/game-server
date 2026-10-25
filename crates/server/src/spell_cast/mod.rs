@@ -624,11 +624,17 @@ impl ChargeState {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+struct SuccessfulCast {
+    sequence: u64,
+    at: f64,
+}
+
 /// Per-unit cooldown state in real elapsed server seconds (`history_now`).
 #[derive(Component, Debug, Clone, Default)]
 pub struct SpellHistory {
     /// Ordinary successful casts only; triggered children and failed requests do not advance it.
-    successful_casts: HashMap<u32, u64>,
+    successful_casts: HashMap<u32, SuccessfulCast>,
     #[cfg(any(test, feature = "test-support"))]
     gcd_casts: Vec<u32>,
     cast_sequence: u64,
@@ -654,7 +660,7 @@ impl SpellHistory {
             .filter_map(|spell| {
                 self.successful_casts
                     .get(spell)
-                    .map(|order| (*spell, *order))
+                    .map(|cast| (*spell, cast.sequence))
             })
             .max_by_key(|(_, order)| *order)
             .map(|(spell, _)| spell)
@@ -664,7 +670,7 @@ impl SpellHistory {
     pub fn last_successful_cast(&self) -> Option<u32> {
         self.successful_casts
             .iter()
-            .max_by_key(|(_, order)| *order)
+            .max_by_key(|(_, cast)| cast.sequence)
             .map(|(&spell, _)| spell)
     }
 
@@ -676,9 +682,20 @@ impl SpellHistory {
             .and_then(|offset| self.gcd_casts.get(offset).copied())
     }
 
-    fn record_successful_cast(&mut self, spell: &SpellInfo) {
+    /// Simulation-clock completion of an ordinary successful cast, never its request.
+    pub fn last_successful_cast_at(&self, spell: u32) -> Option<f64> {
+        self.successful_casts.get(&spell).map(|cast| cast.at)
+    }
+
+    fn record_successful_cast(&mut self, spell: &SpellInfo, at: f64) {
         self.cast_sequence += 1;
-        self.successful_casts.insert(spell.id, self.cast_sequence);
+        self.successful_casts.insert(
+            spell.id,
+            SuccessfulCast {
+                sequence: self.cast_sequence,
+                at,
+            },
+        );
         // SimC76f8118 action.cpp67–80: successful foreground actions with
         // trigger_gcd > 0 append; failed, triggered and off-GCD requests do not.
         #[cfg(any(test, feature = "test-support"))]
@@ -2722,10 +2739,12 @@ fn execute_cast_with_primary(
     take_cast_resources(world, caster, spell, &costs);
     start_cooldowns(world, caster, spell);
     scripts::ordinary_combo_cast(world, caster, spell);
+    // SimC76f8118 action.cpp2032/3644–3669: last_used updates at execution.
+    let completed_at = now(world);
     world
         .get_mut::<SpellHistory>(caster)
         .expect("ordinary successful cast initialized its history")
-        .record_successful_cast(spell);
+        .record_successful_cast(spell, completed_at);
     log_event(
         world,
         cast_event(caster, explicit, spell, CombatLogKind::CastSuccess),
@@ -3600,14 +3619,21 @@ fn push_hit_events(
 }
 
 /// SimC76f8118 sc_rogue.cpp2685–2687,7863–7872: a successful flagged attack
-/// starts weapon swings once. Native Attributes1 bit9 owns eligibility; retain
-/// the cast's actual hostile primary and any already-running weapon victim/timers.
+/// starts weapon swings once. SimC76f8118 sc_hunter.cpp7236–7246 selects Auto Shot,
+/// not melee, for ranged weapons. The native flag does not select weapon mode.
+/// Retain the actual hostile primary and any running weapon victim/timers.
 fn start_spell_melee_attack(world: &mut World, caster: Entity, spell: &SpellInfo) {
     const MELEE_COMBAT_START: u32 = 0x200;
     let flagged = attributes(spell, 1) & MELEE_COMBAT_START != 0;
     let player = world.get::<Player>(caster).is_some();
     let attacking = world.get::<crate::combat::AutoAttack>(caster).is_some();
     if !flagged || !player || attacking {
+        return;
+    }
+    let ranged_weapon = world
+        .get::<crate::stats::CharacterStats>(caster)
+        .is_some_and(|stats| stats.main_hand.kind == shared::components::WeaponType::Ranged);
+    if ranged_weapon {
         return;
     }
     let Some(target) = spell.cast_primary_target else {
