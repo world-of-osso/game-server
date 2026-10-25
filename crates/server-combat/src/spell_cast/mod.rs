@@ -540,6 +540,8 @@ struct ChargeState {
     recovery_ms: f32,
     recovery_mult: f32,
     pending: VecDeque<ChargeRecovery>,
+    /// Start of this recharge cycle; later uses do not restart its first timer.
+    started_at: f64,
     /// Exact time the final missing charge returned, not the observed frame.
     fully_ready_at: f64,
 }
@@ -571,6 +573,9 @@ impl ChargeState {
         let duration = Self::calculate_recovery_seconds(self.recovery_ms, self.recovery_mult);
         if self.max == 0 || duration <= 0.0 {
             return;
+        }
+        if self.pending.is_empty() {
+            self.started_at = now;
         }
         let ready_at = self.pending.back().map_or_else(
             || now + (duration - f64::from(ready_credit) / 1000.0).max(0.0),
@@ -641,6 +646,8 @@ pub struct SpellHistory {
     gcd_casts: Vec<u32>,
     cast_sequence: u64,
     spell_ready_at: HashMap<u32, f64>,
+    /// Actual timer starts survive deadline reductions and rate changes.
+    cooldown_started_at: HashMap<u32, f64>,
     category_ready_at: HashMap<u32, f64>,
     /// Native spell that last started each category timer, for masked rate changes.
     category_spell_ids: HashMap<u32, u32>,
@@ -781,6 +788,7 @@ impl SpellHistory {
                 recovery_ms: 0.0,
                 recovery_mult: mods.recovery_mult,
                 pending: VecDeque::new(),
+                started_at: 0.0,
                 fully_ready_at: 0.0,
             });
         state.max = max;
@@ -4053,6 +4061,7 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
     // A fully discounted authored cooldown becomes ready now, not at its old deadline.
     if base_recovery_ms > 0 || base_category_ms > 0 {
+        history.cooldown_started_at.insert(spell.id, now);
         // TC SpellHistory.cpp:505: when spell recovery is zero, its entry
         // lasts until category recovery, so ResetCooldown can erase both.
         let spell_ms = if recovery_ms > 0 {

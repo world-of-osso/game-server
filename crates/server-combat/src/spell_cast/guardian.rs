@@ -16,6 +16,10 @@ pub(super) mod tyrant;
 const SUMMON_DEMONIC_TYRANT: u32 = 265187;
 const ANTORAN_ARMAMENTS: u32 = 1250921;
 
+// SimC76f8118 pets.cpp701/875–882: the actual Wild Imp consumes its
+// initial native Energy without regeneration, then fades when exhausted.
+const NO_POWER_REGEN: &[(u32, u32)] = &[(104317, 55659)];
+
 struct GuardianPolicy {
     summons: &'static [u32],
     entry: u32,
@@ -303,6 +307,7 @@ pub(super) fn load_startup(mut commands: Commands) {
 #[derive(Component)]
 pub(super) struct GuardianActor {
     spells: Vec<u32>,
+    pub(super) regenerates_power: bool,
     /// Untimed actions already attempted; source-once casts use real history.
     once_used: Vec<u32>,
     spell_ready_at: HashMap<u32, f64>,
@@ -350,6 +355,7 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
     world.entity_mut(actor).insert((
         GuardianActor {
             spells,
+            regenerates_power: !NO_POWER_REGEN.contains(&(root, entry)),
             once_used: Vec::new(),
             spell_ready_at: HashMap::new(),
             repeat_gcd: policy.and_then(|row| row.repeat_gcd),

@@ -34,11 +34,17 @@ The master210df12e3 census was12839.69/196789.57 ST DPS (6.524%) and16544.99/420
 
 Native193331 initially failed with `target43 requires collision data`. Origin-centered parity fixtures now select explicit open LOS and a flat floor at0, without dungeon walls or baked-eye rows. Production maps still require their native bake. The actual native Dreadstalker now spawns and expires; its demise regression reached missing Core (0 instead of1), which the previous collision failure hid.
 
-Pinned `pets.cpp1233–1257` rolls native267102 effect1 on each Dreadstalker demise when Demoniac is known. This uses ordinary native264173 stack application, not the Imp's accumulated fade distribution. The policy runs at actual summon removal; the new Core implementation awaits its GREEN run.
+Pinned `pets.cpp1233–1257` rolls native267102 effect1 on each Dreadstalker demise when Demoniac is known. This uses ordinary native264173 stack application, not the Imp's accumulated fade distribution. The policy runs at actual summon removal. The train's real-expiry regression passes with one Core after the Dreadstalker is removed.
 
 ## Follower minion target permission
 
-Lantha is an NPC with `UNIT_FLAG_PLAYER_CONTROLLED`. Native attack admission uses `faction::player_affected`, but summon initialization checked only for an owner `Player` component. That mismatch leaves a follower's actual minion on the NPC-versus-neutral attack path. The minion flag producer now uses the same owner predicate as attack admission, retaining native minion ownership and ordinary NPC restrictions. Train RED/GREEN qualification is pending.
+Lantha is an NPC with `UNIT_FLAG_PLAYER_CONTROLLED`. Native attack admission uses `faction::player_affected`, but summon initialization checked only for an owner `Player` component. That mismatch leaves a follower's actual minion on the NPC-versus-neutral attack path. The minion flag producer now uses the same owner predicate as attack admission, retaining native minion ownership and ordinary NPC restrictions. Train qualification proves the neutral-target permission regression and both Tyrant damage/SP tests fail before this fix and pass afterward. The full literal test now reaches unsupported `cooldown.summon_demonic_tyrant.remains_expected`, so no full-duration DPS result is available yet.
+
+## Native cooldown estimates and Wild Imp exhaustion
+
+The shared cooldown query implements pinned `cooldown.cpp603–615` expected-remains estimation from the native timer's actual start, current duration and remaining time. Timer starts survive reductions and rate changes; charge cycles retain their first start rather than resetting it on later uses. Reads do not advance timers.
+
+Pinned `pets.cpp701/875–882` disables regeneration for actual Wild Imps. The normal player-controlled power path otherwise grants native Energy regeneration, which can prevent exhaustion and the associated Core grant. Actual104317/55659 guardian initialization now records the source's no-regeneration policy; both runtime regeneration and APL potential-regeneration facts use it. Native pool size and Fel Firebolt costs are unchanged. Train qualification is pending.
 
 ## Dominion and guardian execution
 
