@@ -20,9 +20,9 @@ fn fund_finisher(run: &mut Run, points: f32) {
     powers.get_mut(PowerType::ComboPoints).unwrap().current = points;
 }
 
-fn first_between_the_eyes_damage(points: f32) -> f64 {
+fn first_finisher_damage(spec: u32, spell: u32, points: f32) -> f64 {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_literal(260, 1).unwrap();
+    let mut run = prepare_literal(spec, 1).unwrap();
     engage(&mut run);
     fund_finisher(&mut run, points);
     run.app
@@ -33,7 +33,7 @@ fn first_between_the_eyes_damage(points: f32) -> f64 {
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
-        literal_rotation::execution::Execution::Spell(315341, run.targets[0], Some(run.targets[0])),
+        literal_rotation::execution::Execution::Spell(spell, run.targets[0], Some(run.targets[0])),
     )
     .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
@@ -47,7 +47,7 @@ fn first_between_the_eyes_damage(points: f32) -> f64 {
         .find(|event| {
             event.source == Some(run.actor.to_bits())
                 && event.kind == CombatLogKind::Damage
-                && event.spell_id == Some(315341)
+                && event.spell_id == Some(spell)
         })
         .unwrap();
     assert!(
@@ -61,13 +61,27 @@ fn first_between_the_eyes_damage(points: f32) -> f64 {
 #[test]
 #[ignore = "requires private native260 player profile and traits"]
 fn outlaw_between_the_eyes_values_actual_combo_points() {
-    let one = first_between_the_eyes_damage(1.0);
-    let five = first_between_the_eyes_damage(5.0);
+    let one = first_finisher_damage(260, 315341, 1.0);
+    let five = first_finisher_damage(260, 315341, 5.0);
     let ratio = five / one;
     assert!(
         (4.5..5.5).contains(&ratio),
         "five native points must scale the one-point payload, not repeat it: {one}/{five}, ratio={ratio}"
     );
+}
+
+#[test]
+#[ignore = "requires private native259/260 player profiles and traits"]
+fn rogue_envenom_and_dispatch_retain_paid_point_scaling() {
+    for (spec, spell) in [(259, 32645), (260, 2098)] {
+        let one = first_finisher_damage(spec, spell, 1.0);
+        let five = first_finisher_damage(spec, spell, 5.0);
+        let ratio = five / one;
+        assert!(
+            (4.5..5.5).contains(&ratio),
+            "native finisher{spell} must retain five-point scaling: {one}/{five}, ratio={ratio}"
+        );
+    }
 }
 
 fn between_the_eyes_remaining(run: &Run) -> f64 {
