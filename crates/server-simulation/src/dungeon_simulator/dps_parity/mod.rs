@@ -40,6 +40,8 @@ mod health_aura_state_tests;
 mod howl_tests;
 #[cfg(test)]
 mod hunter_bloodshed_tests;
+#[cfg(test)]
+mod hunter_focus_tests;
 mod inputs;
 pub(crate) mod literal_rotation;
 mod marksmanship_fact_tests;
