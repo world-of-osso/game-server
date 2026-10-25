@@ -621,9 +621,23 @@ impl SwingSight<'_, '_> {
     }
 }
 
+/// Caster-wide eligibility retained across both hands and target changes.
+#[derive(Component, Clone, Copy, Default, PartialEq, Eq)]
+struct WhiteImpactGate {
+    allowed: bool,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct WhiteImpactReplacement {
+    pub spell_id: u32,
+    pub chance_pct: f32,
+}
+
 #[derive(SystemParam)]
 pub(crate) struct AutoAttackParams<'w, 's> {
     units: ParamSet<'w, 's, (AutoAttackers<'w, 's>, AutoAttackTargets<'w, 's>)>,
+    traits: Query<'w, 's, &'static crate::class_progression::TraitLoadout>,
+    impact_gates: Query<'w, 's, &'static WhiteImpactGate>,
     scaling: Query<'w, 's, ScalingItem<'static>>,
     spirit_wolves: Query<'w, 's, &'static crate::spell_cast::guardian::SpiritWolf>,
     hunter_pets: Query<
@@ -683,9 +697,16 @@ fn auto_attack_unit(
         dt,
         params.forms.as_deref(),
         params.spells.as_deref(),
+        params.traits.get(attacker_entity).ok(),
     ) else {
         return;
     };
+    let initial_gate = params
+        .impact_gates
+        .get(attacker_entity)
+        .copied()
+        .unwrap_or_default();
+    let mut impact_gate = initial_gate;
     let target_entity = snapshot.auto_attack.victim;
     let observer = params
         .invisibility
@@ -744,6 +765,7 @@ fn auto_attack_unit(
                 sight: &params.sight,
                 armor_constants: params.armor_constants.as_deref(),
                 spells: params.spells.as_deref(),
+                impact_replacement: snapshot.impact_replacement,
                 melee_override: match hand {
                     Hand::Main => snapshot.attack_spells[0],
                     Hand::Off => snapshot.attack_spells[1],
@@ -756,6 +778,7 @@ fn auto_attack_unit(
             },
             target_entity,
             &mut snapshot.auto_attack,
+            &mut impact_gate,
             &mut params.commands,
             &mut redirect_health,
         ) else {
@@ -765,6 +788,9 @@ fn auto_attack_unit(
     }
     if let Ok((_, mut auto_attack, ..)) = params.units.p0().get_mut(attacker_entity) {
         *auto_attack = snapshot.auto_attack;
+    }
+    if impact_gate != initial_gate {
+        params.commands.entity(attacker_entity).insert(impact_gate);
     }
     for (attacker, target, outcome) in swings {
         params.commands.queue(move |world: &mut World| {
@@ -778,6 +804,7 @@ struct SwingSnapshot {
     position: Position,
     mods: Option<AuraStatMods>,
     attack_spells: [Option<u32>; 2],
+    impact_replacement: Option<WhiteImpactReplacement>,
     stats: Option<CharacterStats>,
     haste_pct: f32,
     enemy_dodge_pct: f32,
@@ -837,6 +864,7 @@ fn snapshot_attacker(
     dt: Duration,
     forms: Option<&crate::auras::shapeshift::ShapeshiftForms>,
     spells: Option<&crate::spell_info::SpellStore>,
+    traits: Option<&crate::class_progression::TraitLoadout>,
 ) -> Option<SwingSnapshot> {
     let (
         _,
@@ -863,6 +891,9 @@ fn snapshot_attacker(
             read_melee_override(auras, Hand::Main),
             read_melee_override(auras, Hand::Off),
         ],
+        impact_replacement: crate::spell_cast::scripts::white_impact_replacement(
+            auras, traits, entity,
+        ),
         stats: stats.cloned(),
         haste_pct: stat_mods.map_or(0.0, |mods| mods.haste_pct),
         enemy_dodge_pct: auras.map_or(0.0, |auras| auras.modifier(MOD_ENEMY_DODGE)),
@@ -1036,6 +1067,7 @@ pub(crate) struct SwingContext<'a, 'w, 's> {
     pub armor_constants: Option<&'a ArmorConstants>,
     spells: Option<&'a crate::spell_info::SpellStore>,
     melee_override: Option<u32>,
+    impact_replacement: Option<WhiteImpactReplacement>,
     sight: &'a SwingSight<'w, 's>,
     creature_types: crate::unit_creature_type::CreatureTypes<'a>,
 }
@@ -1596,6 +1628,7 @@ fn try_swing(
     context: &SwingContext,
     target_entity: Entity,
     auto_attack: &mut AutoAttack,
+    impact_gate: &mut WhiteImpactGate,
     commands: &mut Commands,
     redirect_health: &mut HashMap<Entity, f32>,
 ) -> Option<SwingCommitReceipt> {
@@ -1724,6 +1757,15 @@ fn try_swing(
         avoidance.1.as_deref(),
         &health,
     );
+    let immune = crate::auras::immune_to_school(avoidance.1.as_deref(), 1);
+    if let Some(spell) = crate::spell_cast::scripts::replace_white_impact(
+        context.impact_replacement,
+        &mut impact_gate.allowed,
+        !kind.avoided() && !immune,
+    ) {
+        queue_melee_override(commands, attacker.entity, target_entity, spell);
+        return None;
+    }
     // Unit::DealMeleeDamage → DealDamage (Unit.cpp:1185-1186): every swing, missed or
     // not, stands a player victim up.
     if stand_state.is_some_and(|state| state.0 != shared::components::StandState::Stand) {
@@ -1731,7 +1773,6 @@ fn try_swing(
             crate::stand_state::stand_on_damage(world, target_entity)
         });
     }
-    let immune = crate::auras::immune_to_school(avoidance.1.as_deref(), 1);
     let (outcome_damage, blocked) = melee::outcome_damage(
         armored,
         kind,

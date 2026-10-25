@@ -62,6 +62,8 @@ pub(crate) mod literal_rotation;
 mod marksmanship_fact_tests;
 mod marksmanship_mechanics_tests;
 mod marksmanship_rotation;
+mod outlaw_cleave_tests;
+mod outlaw_resource_tests;
 mod outlaw_rotation;
 mod outlaw_tests;
 mod owner_cooldown_tests;
