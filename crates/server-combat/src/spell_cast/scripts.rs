@@ -299,6 +299,9 @@ pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::Ca
 }
 
 pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
+    if (spell, index) == (50622, 1) {
+        return Some(periodic_attacks::cast_bladestorm_offhand);
+    }
     if (spell, index) == (super::area_trigger::meteor::METEOR, 0) {
         return Some(super::area_trigger::meteor::cast_meteor);
     }
