@@ -22,6 +22,8 @@ mod devastation;
 mod essence_burst;
 #[path = "modules/evoker_tier.rs"]
 mod evoker_tier;
+#[path = "modules/germination.rs"]
+mod germination;
 #[path = "modules/giantkiller.rs"]
 mod giantkiller;
 #[path = "modules/havoc.rs"]
@@ -30,6 +32,8 @@ mod havoc;
 mod marksmanship_explosive;
 #[path = "modules/paid_cooldowns.rs"]
 mod paid_cooldowns;
+#[path = "modules/ret_purpose.rs"]
+mod ret_purpose;
 #[path = "modules/ret_resonance.rs"]
 mod ret_resonance;
 #[path = "modules/retribution.rs"]
@@ -63,4 +67,6 @@ pub const MODULES: &[&[SpellScriptHook]] = &[
     giantkiller::HOOKS,
     marksmanship_explosive::HOOKS,
     ret_resonance::HOOKS,
+    germination::HOOKS,
+    ret_purpose::HOOKS,
 ];

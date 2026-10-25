@@ -16,6 +16,10 @@ Complete moved modules: cast resets, after-cast native aura triggers, weighted a
 
 MM Explosive owns a downstream target-plan lookup and primary-periodic-damage callback. Combat calls those at the original selection/tick positions, including the primary tick's amount and trigger depth. Giantkiller's multiplier runs at its original effects boundary. Evoker tier runs after resource-value after-cast callbacks; Divine Resonance uses native after-cast lookup. These modules own their native IDs and tables; extending them does not edit combat dispatch. Target-plan lookup is first-match, while damage callbacks and post-resource callbacks retain registration order.
 
+## Aura application and spender stages
+
+Germination's redirect runs before a planned aura application; a consumed application stops at the first redirect. Ret Divine Purpose runs after foreground Crusade spender stacks and at the corresponding background Storm callback, before Legacy/echo dispatch. The policy still reads actual Holy Power cost-pool presence, selected traits, and native aura chance downstream.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.

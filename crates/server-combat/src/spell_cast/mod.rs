@@ -2804,7 +2804,7 @@ fn execute_cast_with_primary(
         scripts::apply_echo_policies(world, caster, spell);
         scripts::after_foreground_spender(world, caster, spell, spell.cast_primary_target);
         crate::auras::add_ret_crusade_spender_stacks(world, caster, spell, &costs);
-        scripts::roll_selected_ret_divine_purpose(world, caster, spell);
+        script_registry::after_spender_stacks(world, caster, spell);
         scripts::schedule_empyrean_legacy(world, caster, spell, spell.cast_primary_target);
     }
     scripts::after_foreground_special(world, caster, spell);
@@ -3247,7 +3247,7 @@ fn resolve_effects(
         }
     }
     for (target, effect_mask) in aura_masks {
-        if scripts::redirect_rejuvenation(world, caster, target, spell.id, depth) {
+        if script_registry::aura_redirect(world, caster, target, spell.id, depth) {
             continue;
         }
         scripts::bloom_lifebloom_before_refresh(world, caster, target, spell.id, depth);

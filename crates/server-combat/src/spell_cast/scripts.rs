@@ -106,11 +106,9 @@ pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
         || melee_reset::owns_proc(spell)
         || resource_values::owns_proc(spell)
 }
-mod germination;
 pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
-pub(super) use germination::redirect_rejuvenation;
 pub(super) use hot_streak::triggers_hot_streak;
 pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
@@ -127,8 +125,6 @@ pub(super) use ret_damage::{
 mod ret_empyrean;
 pub(crate) use ret_empyrean::owns_empyrean_proc;
 pub(super) use ret_empyrean::schedule_empyrean_legacy;
-mod ret_purpose;
-pub(super) use ret_purpose::roll_selected_ret_divine_purpose;
 mod ret_tier;
 mod ret_toll;
 pub(super) use ret_tier::after_foreground_spender;

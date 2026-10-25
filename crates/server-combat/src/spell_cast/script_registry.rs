@@ -10,6 +10,9 @@
 //! - `TargetPlan`: first matching module wins before combat's native target plans.
 //! - `PeriodicPrimaryDamage`: all modules run at the Explosive primary-tick boundary.
 //! - `TargetDamageMultiplier`: factors run at the Giantkiller damage boundary.
+//! - `AfterSpenderStacks`: after foreground Crusade stacks and the corresponding
+//!   background Storm callback; before Empyrean Legacy or echo policy dispatch.
+//! - `AuraRedirect`: first redirect consumes application before native aura dispatch.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
 
@@ -25,6 +28,7 @@ pub type TargetPlanHook = fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> 
 pub type TargetPlanLookup = fn(u32) -> Option<(Relation, TargetPlanHook)>;
 pub type PeriodicPrimaryDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, f32);
 pub type TargetDamageMultiplierHook = fn(&World, Entity, Entity, &SpellInfo) -> f32;
+pub type AuraRedirectHook = fn(&mut World, Entity, Entity, u32, u8) -> bool;
 
 pub type AfterCastLookup = fn(u32) -> Option<AfterCastHook>;
 pub type OnCastHook = fn(&mut World, Entity, u32, u8);
@@ -41,6 +45,8 @@ pub enum SpellScriptHook {
     TargetPlan(TargetPlanLookup),
     PeriodicPrimaryDamage(PeriodicPrimaryDamageHook),
     TargetDamageMultiplier(TargetDamageMultiplierHook),
+    AfterSpenderStacks(AfterCastHook),
+    AuraRedirect(AuraRedirectHook),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -169,6 +175,30 @@ pub fn target_damage_multiplier(
             _ => None,
         })
         .product()
+}
+
+pub fn after_spender_stacks(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterSpenderStacks(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn aura_redirect(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+    depth: u8,
+) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::AuraRedirect(run) => run(world, caster, target, spell, depth),
+            _ => false,
+        })
 }
 
 #[cfg(test)]
