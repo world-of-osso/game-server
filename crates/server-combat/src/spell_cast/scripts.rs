@@ -71,9 +71,19 @@ pub(super) use policies::{
     before_impact as before_impact_policies, has_impact_policy, on_hit as apply_hit_policies,
     snapshot as snapshot_hit_policies,
 };
-pub(crate) use policies::{
-    extends_reapplication, filter_secondary_targets, register_lifecycle_policies,
-};
+pub(crate) use policies::{extends_reapplication, register_lifecycle_policies};
+
+pub(crate) fn filter_secondary_targets(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: u8,
+    primary: Option<Entity>,
+    units: &mut Vec<Entity>,
+) {
+    policies::filter_secondary_targets(world, caster, spell, effect, primary, units);
+    havoc::filter_dance_targets(world, caster, spell, primary, units);
+}
 
 pub(super) fn apply_periodic_damage_policies(
     world: &mut World,
@@ -274,6 +284,9 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
 }
 /// Native per-unit scripts replace the default effect handler before dispatch.
 pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+    if matches!(spell, 188499 | 210152) && (1..=4).contains(&index) {
+        return Some(havoc::trigger_dance);
+    }
     if let Some(hook) = bouncing_projectiles::hook(spell, index) {
         return Some(hook);
     }
@@ -649,6 +662,7 @@ pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
         return Some(hook);
     }
     match spell_id {
+        391374 | 391378 | 393055 | 393054 => Some(havoc::first_blood_damage),
         windwalker_children::JADEFIRE => Some(windwalker_children::jadefire_damage),
         windwalker_children::RWK_DAMAGE => Some(windwalker_children::rushing_wind_damage),
         super::elemental_overload::LIGHTNING_OVERLOAD

@@ -6,6 +6,8 @@ use crate::auras::ActiveAuras;
 use crate::class_progression::KnownSpells;
 
 mod damage;
+mod dance;
+pub(crate) use dance::{filter_dance_targets, first_blood_damage, trigger_dance};
 mod demonsurge;
 pub(crate) use damage::apply_havoc_damage_policies;
 pub use demonsurge::havoc_demonsurge_available;
