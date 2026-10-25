@@ -8,7 +8,8 @@ mod bouncing_projectiles;
 mod cast_relationships;
 pub(crate) use cast_relationships::register as register_cast_relationships;
 pub(super) use cast_relationships::{
-    after_cast as apply_cast_relationships, ignores_cooldown as relationship_ignores_cooldown,
+    after_cast as apply_cast_relationships, guarantees_crit as relationship_guarantees_crit,
+    ignores_cooldown as relationship_ignores_cooldown,
 };
 mod batch10;
 mod batch11;
@@ -85,7 +86,6 @@ pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
-#[cfg(any(test, feature = "test-support"))]
 pub(super) use hot_streak::triggers_hot_streak;
 pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};

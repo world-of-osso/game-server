@@ -33,6 +33,7 @@ mod equipment_input_tests;
 mod equipped_set_tests;
 mod feral_native_tests;
 mod feral_tests;
+mod fire_gap_tests;
 mod fire_literal_tests;
 mod fire_rotation;
 mod firestarter_tests;
