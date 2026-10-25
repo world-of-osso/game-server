@@ -135,4 +135,19 @@ fn arms_unhinged_bladestorm_ticks_execute_native_mortal_strike() {
         ),
         "Arms Unhinged must execute real native Mortal Strike during Bladestorm"
     );
+    let hits = |spell| {
+        events
+            .iter()
+            .filter(|event| {
+                event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(spell)
+            })
+            .count()
+    };
+    assert_eq!(
+        hits(12294),
+        hits(50622) / 2,
+        "one Mortal Strike per odd Bladestorm tick, with the initial pulse excluded"
+    );
 }

@@ -61,7 +61,8 @@ Native boundary fixtures: `dungeon_simulator/dps_parity/periodic_crit_tests.rs`.
 
 ## Native rolling periodic refresh
 
-TC a352b1fa `SpellAuraEffects.cpp:832–873` supplies the rolling-amount rule.
+TC a352b1fa `SpellAuraEffects.cpp:832–873` supplies the default native rolling-amount rule.
+[Source-qualified Deep Wounds](dps-parity.md#fury-player-parity) explicitly selects its pinned SimC reapplication behavior; unrelated native per-tick contracts remain unchanged.
 This is shared aura execution, not an Echo/Ignite proc or learned-spell grant.
 
 - [x] Native Attr10 `ROLLING_PERIODIC` selects one shared carry path for periodic damage/healing, including335467 leech.
@@ -72,8 +73,8 @@ This is shared aura execution, not an Echo/Ignite proc or learned-spell grant.
 - [ ] Qualify actual12654 producer integration separately; its flag uses the same shared path, but the Ignite producer belongs to another slice.
 
 Generic native boundary assertions:
-`crates/server/src/auras/rolling_periodic_tests.rs`; native Echo/ownership assertions:
-`crates/server/src/followers/holy_policy_native_tests/echo_of_light.rs`.
+`crates/server-combat/src/auras/rolling_periodic_tests.rs`; native Echo/ownership assertions:
+`crates/server-combat/src/followers/holy_policy_native_tests/echo_of_light.rs`.
 Existing Barbed and335467 regressions remain required controls. This does not
 certify all native flagged spell producers or change periodic-clock ownership.
 

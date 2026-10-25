@@ -2353,7 +2353,10 @@ fn roll_power_burn_amount(
     let value = trait_base_points(world, ctx.caster, ctx.spell, effect, base);
     let variance = roll_power_drain_variance(effect.variance);
     let rolled = value + base * variance;
-    let amount = modify_base_points(world, ctx.caster, ctx.spell, effect, rolled).round();
+    let amount = modify_base_points(world, ctx.caster, ctx.spell, effect, rolled);
+    let amount =
+        super::ferocious_bite::burn_limit(world, ctx.caster, ctx.spell, effect.index, amount)
+            .round();
     (amount >= 0.0).then_some(amount)
 }
 
