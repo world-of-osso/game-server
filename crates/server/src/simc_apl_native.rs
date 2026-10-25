@@ -251,6 +251,17 @@ impl<'a> NativeFacts<'a> {
                 .map(|health| f64::from(health.current))
                 .ok_or("native target lacks Health".into()),
             "health.pct" => self.target_health_pct(target),
+            // SimC76f8118 player.cpp11813–11814: query the actual target's live shield.
+            "has_absorb" => Ok(bool_value(
+                self.world
+                    .get::<crate::auras::ActiveAuras>(target)
+                    .is_some_and(|auras| {
+                        crate::auras::forecast::has_absorb(
+                            auras,
+                            crate::spell_cast::now(self.world),
+                        )
+                    }),
+            )),
             "debuff.casting.up" => Ok(bool_value(
                 self.world
                     .get::<shared::casting::CastState>(target)
