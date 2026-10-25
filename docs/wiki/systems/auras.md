@@ -1,5 +1,9 @@
 # Auras
 
+## Ret Sentence and Toll relationships — 2026-10-24
+
+`SIMC_RET_EXECUTION_SENTENCE_ACCUMULATION` supplies only missing admission for direct owner's nonphysical damage on its own343527 target. Native effect1 percentage and TC expiry-only387113 BP0 partial-trigger dispatch remain authoritative. `SIMC_RET_DIVINE_TOLL_RELATIONSHIP` bridges375576 to406957 or1279408 under actual1277026, retaining native cap/radius/combat admission and effect5 percentage through existing generic hooks. TC/native/TDB absence audits, exact scoped RED/GREEN receipts and open pet/funding/secondary relationships live in the [qualified packet ledger](../../handoffs/ret-qualified-sentence-wake-toll-proof-ledger.md). Eleven unique native Sentence/Wake/Toll cases are historically qualified; packet integration proof is separate. [Contract](../../specs/dps-parity.md#ret-execution-sentence-accumulation), [Sentence code](../../../crates/server/src/auras/ret_sentence.rs), [Toll code](../../../crates/server/src/spell_cast/scripts/ret_toll.rs).
+
 ## Explicit proc source presence — 2026-10-23
 
 `import_spell_proc_presence.py` publishes only the audited effective TC IDs to `tdb_spell_proc(SpellId PRIMARY KEY)`, verifying every base/update source hash first. One transaction reconciles IDs while preserving retained value columns and unrelated tables. It does not parse SQL again or apply numeric proc overrides. The supplied audit pins1283base rows plus7updates yielding1291IDs. [Contract and source/qualification ledger](../../handoffs/feral-source-census.md#explicit-tdb-provenance-boundary). Runtime provenance/refusal is a separate follow-up, not part of the shared action-knowledge helper.

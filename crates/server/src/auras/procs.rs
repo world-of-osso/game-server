@@ -157,6 +157,7 @@ pub(crate) fn select_proc_trigger_target(
 }
 
 pub fn push_event(world: &mut World, event: AuraEvent) {
+    super::ret_sentence::record_damage(world, &event);
     if let Some(mut pending) = world.get_resource_mut::<PendingAuraEvents>() {
         pending.0.push(event);
     }

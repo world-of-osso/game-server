@@ -6625,16 +6625,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "server-spell-tests"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "lightyear",
- "server",
- "shared",
-]
-
-[[package]]
 name = "server-simulation"
 version = "0.1.0"
 dependencies = [
@@ -6647,6 +6637,17 @@ dependencies = [
  "server",
  "shared",
  "tempfile",
+]
+
+[[package]]
+name = "server-spell-tests"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "lightyear",
+ "rusqlite",
+ "server",
+ "shared",
 ]
 
 [[package]]
