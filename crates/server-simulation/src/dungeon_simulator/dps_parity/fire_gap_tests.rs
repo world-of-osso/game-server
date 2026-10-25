@@ -446,6 +446,26 @@ fn fire_meteorite_fire_blast_spends_glorious_stack_and_impacts_target() {
     );
 }
 
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_meteorite_pyroblast_does_not_spend_a_glorious_stack() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 451073, Some(run.actor), 1);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 48108, Some(run.actor), 1);
+    start_native(&mut run, 11366, target);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..20 {
+        run.app.update();
+    }
+    assert_eq!(
+        stacks(&run, 451073),
+        1,
+        "Glorious Incandescence belongs to Fire Blast, not Pyroblast"
+    );
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {
