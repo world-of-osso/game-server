@@ -246,6 +246,7 @@ pub(super) fn after_direct_damage(
     critical: bool,
 ) {
     windwalker_flurry::after_direct_damage(world, ctx, critical);
+    crate::auras::rogue::after_builder_hit(world, ctx, critical);
     melee_reset::roll_replacement_hit(world, ctx, target, critical);
     policies::after_damage(world, ctx);
     impact_procs::after_damage(world, ctx, target);

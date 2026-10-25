@@ -11,6 +11,7 @@ const DEADLY_POISON: u32 = 2823;
 const INSTANT_POISON: u32 = 315584;
 const DEADLY_INSTANT: u32 = 113780;
 const VENOMOUS_WOUNDS: u32 = 79134;
+const SEAL_FATE: u32 = 14190;
 const VENOMOUS_BLEEDS: &[u32] = &[703, 1943];
 const DISPEL_POISON: u8 = 4;
 const IMPROVED_GARROTE: u32 = 381632;
@@ -41,9 +42,16 @@ pub(super) fn register(scripts: &mut AuraScripts) {
         },
     );
     scripts.0.insert(
+        SEAL_FATE,
+        AuraScript {
+            check_proc: Some(block_deferred_proc),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         VENOMOUS_WOUNDS,
         AuraScript {
-            check_proc: Some(block_deferred_wounds),
+            check_proc: Some(block_deferred_proc),
             on_remove: Some(clear_venomous_remainder),
             ..Default::default()
         },
@@ -246,8 +254,61 @@ fn read_amplifying_values(world: &World, caster: Entity) -> Option<(f32, u8)> {
 
 // The native periodic-hit producer below owns this proc before aura expiry.
 // Queued generic proc dispatch runs after expiry and cannot recover that count.
-fn block_deferred_wounds(_world: &World, _aura: &AuraInstance, _event: &procs::AuraEvent) -> bool {
+fn block_deferred_proc(_world: &World, _aura: &AuraInstance, _event: &procs::AuraEvent) -> bool {
     false
+}
+
+/// SimC76f8118 sc_rogue.cpp2178–2180/4471–4473/5137–5138/7921–7937:
+/// actual critical CP-builder impacts roll the selected native chance and child.
+/// Mutilate's hands and Fan's dummy builder are explicitly scripted exceptions.
+pub(crate) fn after_builder_hit(world: &mut World, ctx: &EffectCtx<'_>, critical: bool) {
+    if !critical || !is_combo_builder(ctx.spell) {
+        return;
+    }
+    let values = world.get::<ActiveAuras>(ctx.caster).and_then(|auras| {
+        let talent = auras
+            .iter()
+            .find(|aura| aura.spell_id == SEAL_FATE && aura.caster == ctx.caster)?;
+        let chance = talent
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .expect("native Seal Fate retains its chance")
+            .amount;
+        let payload = talent
+            .effects
+            .iter()
+            .find(|effect| effect.index == 1)
+            .expect("native Seal Fate retains its child")
+            .trigger_spell;
+        Some((talent.instance_id, chance, payload))
+    });
+    let Some((instance, chance, payload)) = values else {
+        return;
+    };
+    assert_ne!(
+        payload, 0,
+        "native Seal Fate requires a combo-point payload"
+    );
+    if procs::try_policy_proc(world, ctx.caster, instance, chance) {
+        spell_cast::cast_triggered(world, ctx.caster, payload, Some(ctx.caster), ctx.depth + 1);
+    }
+}
+
+fn is_combo_builder(spell: &SpellInfo) -> bool {
+    if matches!(spell.id, 51723 | 5374 | 27576) {
+        return true;
+    }
+    spell
+        .class_options
+        .as_ref()
+        .is_some_and(|class| class.spell_class_set == 8)
+        && spell.effects.iter().any(|effect| {
+            let energizes_combo =
+                effect.effect == 30 && effect.misc_values[0] == PowerType::ComboPoints as i32;
+            let adds_combo = effect.effect == 80;
+            (energizes_combo || adds_combo) && effect.base_points > 0.0
+        })
 }
 
 fn clear_venomous_remainder(
