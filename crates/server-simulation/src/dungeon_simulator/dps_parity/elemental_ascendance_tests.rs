@@ -106,6 +106,7 @@ fn measure_overloads(ascended: bool, targets: usize, root: u32, overload: u32) -
         .resource_mut::<ObservedCombatEvents>()
         .0
         .clear();
+    let launched_at = crate::spell_cast::now(run.app.world());
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
         actor,
@@ -114,44 +115,34 @@ fn measure_overloads(ascended: bool, targets: usize, root: u32, overload: u32) -
         false,
     )
     .unwrap();
-    let mut root_hit_at = run
-        .app
-        .world()
-        .resource::<ObservedCombatEvents>()
-        .0
-        .iter()
-        .any(|event| {
-            event.source == Some(actor.to_bits())
-                && event.spell_id == Some(root)
-                && event.kind == CombatLogKind::Damage
-                && event.amount > 0
-        })
-        .then(|| crate::spell_cast::now(run.app.world()));
+    assert!(run.app.world().resource::<ObservedCombatEvents>().0.iter().any(|event| {
+        event.source == Some(actor.to_bits())
+            && event.spell_id == Some(root)
+            && event.kind == CombatLogKind::CastSuccess
+    }), "actual Stormkeeper makes this root launch immediately");
+    let mut first_overload_at = None;
     for _ in 0..40 {
         run.app.update();
         let now = crate::spell_cast::now(run.app.world());
         let events = &run.app.world().resource::<ObservedCombatEvents>().0;
-        if root_hit_at.is_none()
-            && events.iter().any(|event| {
-                event.source == Some(actor.to_bits())
-                    && event.spell_id == Some(root)
-                    && event.kind == CombatLogKind::Damage
-                    && event.amount > 0
-            })
-        {
-            root_hit_at = Some(now);
+        let overload_cast = events.iter().any(|event| {
+            event.source == Some(actor.to_bits())
+                && event.spell_id == Some(overload)
+                && event.kind == CombatLogKind::CastSuccess
+        });
+        // SimC76f8118 sc_shaman.cpp3316–3351 schedules the400ms callback
+        // before parent travel, not400ms after the parent's damage impact.
+        if now - launched_at < 0.399 {
+            assert!(!overload_cast, "overload cannot execute before launch+400ms");
         }
-        if root_hit_at.is_some_and(|at| now - at < 0.399) {
-            assert!(
-                !events
-                    .iter()
-                    .any(|event| event.source == Some(actor.to_bits())
-                        && event.spell_id == Some(overload)
-                        && event.kind == CombatLogKind::CastSuccess),
-                "additional overload must retain the native HIT+400ms boundary"
-            );
+        if overload_cast && first_overload_at.is_none() {
+            first_overload_at = Some(now);
         }
     }
+    let delay = first_overload_at.expect("actual delayed overload execution") - launched_at;
+    let frame_seconds = run.app.world().resource::<Time>().delta_secs_f64();
+    assert!(delay >= 0.399 && delay <= 0.401 + frame_seconds,
+        "SimC launch+400ms callback, rounded to the next native frame: delay{delay}, frame{frame_seconds}");
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
     let roots = events
         .iter()

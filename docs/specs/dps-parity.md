@@ -422,7 +422,7 @@ Elemental Blast117014 grants one native118522/173183/173184 buff after its cast;
 
 Flame Shock's literal action uses learned native470411, whose costed trigger casts188389. The DoT fact retains188389; do not grant knowledge of its unlearned payload or bypass readiness.
 
-Elemental Overload callbacks are instant background actions that can execute during a foreground hardcast without replacing its cast state. Native child damage, resource costs and aura/target checks remain authoritative; effect160 ordinary forced casts remain unchanged (SimC76f8118 `sc_shaman.cpp`4846–4847).
+Elemental Overload callbacks are instant background actions that can execute during a foreground hardcast without replacing its cast state. Schedule the400ms callback before parent projectile travel, not400ms after impact (`sc_shaman.cpp`3316–3351). Native child damage, resource costs and aura/target checks remain authoritative; effect160 ordinary forced casts remain unchanged (SimC76f8118 `sc_shaman.cpp`4846–4847).
 
 Stormkeeper grants its native effect4 count of next-spell uses, bounded by the native stack cap. Retain the native single proc charge; do not represent the same uses again as extra charges. Each use carries one native modifier amount, not a stack-multiplied bonus. A successful foreground root spends one use; its background overload does not spend another (`sc_shaman.cpp`8759).
 
