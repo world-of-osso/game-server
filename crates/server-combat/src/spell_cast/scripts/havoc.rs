@@ -25,7 +25,7 @@ fn has_talent(world: &World, caster: Entity, talent: u32) -> bool {
 }
 
 pub(crate) fn is_eye_beam_channel(spell: u32) -> bool {
-    matches!(spell, 198013 | 452497)
+    matches!(spell, super::EYE_BEAM | 452497)
 }
 
 pub fn before_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
