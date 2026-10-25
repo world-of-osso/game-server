@@ -233,6 +233,7 @@ pub(super) fn after_direct_damage(
     target: Entity,
     critical: bool,
 ) {
+    spellslinger::after_direct_damage(world, ctx);
     windwalker_flurry::after_direct_damage(world, ctx, critical);
     melee_reset::roll_replacement_hit(world, ctx, target, critical);
     policies::after_damage(world, ctx);
