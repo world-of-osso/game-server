@@ -63,7 +63,13 @@ fn equipped_spells(world: &World, unit: Entity) -> Vec<(EquipmentSlot, SpellInfo
                 .find(|(key, _)| *key == slot)
                 .map(|(_, state)| state.clone())
                 .unwrap_or_default();
-            resolve_slot_spells(world, slot, item_id, &properties, level)
+            let temporary: Vec<_> = modifiers
+                .temporary_enchants
+                .iter()
+                .filter(|(key, _)| *key == slot)
+                .map(|(_, id)| *id)
+                .collect();
+            resolve_slot_spells(world, slot, item_id, &properties, level, &temporary)
         })
         .collect()
 }
@@ -74,9 +80,21 @@ fn resolve_slot_spells(
     item_id: u32,
     properties: &ItemInstanceModifiers,
     level: u8,
+    temporary: &[u32],
 ) -> Vec<(EquipmentSlot, SpellInfo)> {
     let (item_level, bonus_effects) = resolve_item_level_and_effects(world, item_id, properties);
-    let ids = equipped_spell_ids(world, item_id, &bonus_effects, properties, level);
+    let mut ids = equipped_spell_ids(world, item_id, &bonus_effects, properties, level);
+    for &id in temporary {
+        let contribution = server::item_instance::enchants::enchantment_stats(
+            id,
+            level,
+            &world.resource::<NativeItemInstances>().enchants,
+        )
+        .unwrap_or_else(|error| panic!("temporary enchant{id}: {error}"));
+        ids.extend(contribution.equip_spells);
+    }
+    ids.sort_unstable();
+    ids.dedup();
     ids.into_iter()
         .map(|id| {
             let mut spell = world

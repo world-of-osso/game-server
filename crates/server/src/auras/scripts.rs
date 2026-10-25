@@ -23,6 +23,8 @@ pub type DamageProcHook = fn(&mut World, Entity, &AuraInstance, &super::procs::A
 pub struct AuraScript {
     pub on_apply: Option<AuraHook>,
     pub on_remove: Option<RemoveHook>,
+    /// One callback for asynchronous native stack expirations, including the last stack.
+    pub on_stack_loss: Option<fn(&mut World, Entity, &AuraInstance, u8)>,
     /// Duration expiry or explicit full channel completion, never interruption.
     pub on_natural_end: Option<AuraHook>,
     pub on_periodic: Option<PeriodicHook>,
@@ -60,6 +62,12 @@ pub(super) fn run_remove(
     }
     if reason == super::RemoveReason::Expired {
         run_natural_end(world, unit, aura);
+    }
+}
+
+pub(super) fn run_stack_loss(world: &mut World, unit: Entity, aura: &AuraInstance, lost: u8) {
+    if let Some(run) = script(world, aura.spell_id).and_then(|script| script.on_stack_loss) {
+        run(world, unit, aura, lost);
     }
 }
 
@@ -392,6 +400,14 @@ fn check_inundate_proc(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    scripts.0.insert(
+        1236994,
+        AuraScript {
+            on_apply: Some(crate::consumables::select_recklessness),
+            ..Default::default()
+        },
+    );
+    crate::spell_cast::scripts::register_midnight_items(&mut scripts);
     crate::spell_cast::scripts::register_lifecycle_policies(&mut scripts);
     crate::spell_cast::scripts::register_wdp_relationship(&mut scripts);
     crate::spell_cast::scripts::register_unbroken_rhythm(&mut scripts);

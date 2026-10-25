@@ -4,6 +4,12 @@
 ## 2026-10-25 — Admin protocol and transport crate
 
 [Server boundaries](systems/server-crates.md#admin-transport-boundary-2026-10-25): `server-admin` compiles the existing concrete IPC codecs and socket task below gameplay. Native dispatch stays in `server`; wire data and socket tests are unchanged.
+## 2026-10-25 — Elemental literal fixture
+
+[Elemental262](systems/simc-apl.md#elemental-fixture-262): exact profile actions use the shared literal evaluator and native dispatch, with precombat, selected Swiftness replacement and named-action target counts. Native regression tests cover controller activation and live candidates. Numerical DPS and guardian/proc qualification remain separate.
+## 2026-10-25 — Shared profile gear effects
+
+[Character stats](systems/character-stats.md#shared-profile-effects--2026-10-25): native consumables, independent temporary enchants, reference racial identity, Omnium entry resolution, Heart/Venomfang/fire relationships and neutral proc recipients. Values remain native; SimC supplies behavior.
 
 ## 2026-10-25 — All-DPS parity census
 

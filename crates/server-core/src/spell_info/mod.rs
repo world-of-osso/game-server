@@ -46,7 +46,8 @@ pub use trait_data::{
 /// 35 (party) and 65 (raid) area auras apply to their resolved targets only:
 /// there is no group backend. 27 PERSISTENT_AREA_AURA applies through its
 /// dynamic object (`spell_cast::area_aura`).
-pub const AURA_EFFECTS: [u32; 4] = [6, 27, 35, 65];
+// SimC76f8118 data_enums.hh881: native202 applies an aura to its resolved owner/pet recipients.
+pub const AURA_EFFECTS: [u32; 5] = [6, 27, 35, 65, 202];
 
 pub fn is_aura_effect(effect: &SpellEffect) -> bool {
     AURA_EFFECTS.contains(&effect.effect)
@@ -72,6 +73,15 @@ pub struct ChargedSpellModifier {
 pub struct CastPolicyContext {
     pub powers: Vec<PowerType>,
     pub targets: Vec<Entity>,
+}
+
+/// Source-qualified damage children retain their role through launch and flight.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum CastDamageRole {
+    #[default]
+    Primary,
+    Echo,
+    Secondary,
 }
 
 /// One spell's DB2 data at DifficultyID 0. Sparse tables are boxed so the
@@ -143,6 +153,8 @@ pub struct SpellInfo {
     /// Scripted effectiveness on this cast's damage only, retained through flight.
     #[serde(skip)]
     pub cast_damage_multiplier: Option<f32>,
+    #[serde(skip)]
+    pub cast_damage_role: CastDamageRole,
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,

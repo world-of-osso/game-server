@@ -111,6 +111,20 @@ pub fn has_equipped_bonus(world: &World, unit: Entity, spell: u32) -> Result<boo
     inputs.has_set_bonus(world, unit, spell)
 }
 
+/// SimC76f8118 unique_gear.cpp5023–5025 uses the same role expression as native variable884.
+pub(crate) fn default_role_multiplier(world: &World, unit: Entity) -> Result<f32, String> {
+    let inputs = world
+        .get_resource::<ItemProcInputs>()
+        .ok_or("native item proc inputs not initialized")?;
+    let expression = inputs
+        .variables
+        .get(&884)
+        .ok_or("native role variable884 absent")?;
+    parse_role_multiplier(expression, |spell| {
+        crate::auras::has_aura(world, unit, spell)
+    })
+}
+
 pub(crate) fn role_multiplier(world: &World, unit: Entity, driver: u32) -> Result<f32, String> {
     world
         .get_resource::<ItemProcInputs>()
