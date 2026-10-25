@@ -68,7 +68,7 @@ pub(crate) use ret_crusade::after_spender as add_ret_crusade_spender_stacks;
 mod ret_sentence;
 pub(crate) use ret_sentence::track_cast as track_ret_sentence_cast;
 pub(crate) mod reward_mods;
-mod rogue;
+pub(crate) mod rogue;
 #[cfg(test)]
 mod rolling_periodic_tests;
 pub mod scripts;
@@ -753,7 +753,10 @@ fn build_effect(
         crate::spell_cast::effects::modded_base_points(world, caster, spell, effect)
     };
     // A cast's scripted damage multiplier persists in its actual periodic payload.
-    let amount = if effect.aura == PERIODIC_DAMAGE_AURA {
+    let amount = if matches!(
+        effect.aura,
+        handlers::PERIODIC_DAMAGE | handlers::PERIODIC_LEECH
+    ) {
         amount * spell.cast_damage_multiplier.unwrap_or(1.0)
     } else {
         amount
