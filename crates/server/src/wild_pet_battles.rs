@@ -1,11 +1,11 @@
 //! Wild PvE decisions wrap the deterministic turn library; transport owns no rules.
 use crate::pet_journal_state::{OwnedBattleStates, default_abilities};
-use ::server::pet_battle::{
+use bevy::prelude::*;
+use rusqlite::{Connection, OpenFlags};
+use server_pet_battle::pet_battle::{
     Action, Battle, BattleRng, Catalog, Event, Outcome, Pet, States, Team, calculate_stats,
     validate_ability,
 };
-use bevy::prelude::*;
-use rusqlite::{Connection, OpenFlags};
 use shared::pet_battle::{MAX_PER_SPECIES, OwnedPet, PetJournal, PetQuality};
 use shared::protocol::*;
 use std::collections::{BTreeMap, BTreeSet};
@@ -502,7 +502,10 @@ impl Encounter {
         }
     }
 }
-fn aura_snapshot(aura: &::server::pet_battle::Aura, catalog: &WildCatalog) -> BattleAuraSnapshot {
+fn aura_snapshot(
+    aura: &server_pet_battle::pet_battle::Aura,
+    catalog: &WildCatalog,
+) -> BattleAuraSnapshot {
     let (name, icon) = &catalog.ability_art[&aura.ability];
     BattleAuraSnapshot {
         ability_id: aura.ability,

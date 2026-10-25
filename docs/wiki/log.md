@@ -1,3 +1,10 @@
+## 2026-10-25 — All-DPS parity census
+
+[Census](investigations/dps-parity-census-2026-10-25.md): current canonical private database, master210df12e3, official followers and player-mode attempts for missing followers. Eight measured specs, seventeen exact fixture failures, two missing references. No surrogate profiles or mechanics changes.
+
+## 2026-10-24 — Action-permitting channel melee
+
+[Source/proof](../handoffs/channel-melee-proof-ledger.md): TC channel allow-actions bit0x1 avoids UNIT_STATE_CASTING; generic melee wrongly treated every CastState as blocking. ActualSCK1.5s/ready0ns/zero-white gives genuine1RED, FoF/normalVivify/noncast3controlsPASS11.67s at1d196cead. Preserve spell permissions, both timer clocks, crowd-control and victim avoidance; no class IDs or scalar changes. Generic gate implementationdb543b270 committed before4GREEN27.56s; actual active-channel SCK white0→1, all three controls unchanged, compiler405.74s/zero warnings. Lead broad/plain-bin gate remains separate; no300s rerun.
 ## 2026-10-24 — Xuen merge reconciliation on mastera804
 
 [Reconciliation proof](../handoffs/ww-xuens-recovery-proof-ledger.md#mastera804-reconciliation--native23-green): frozen36eeb2339 merged, not rebased, onto exacta804 atd54c1b64d. Preserve SCK periodic snapshot, four-argument Xuen/Flurry callback and both additive wiki sections. Same binary passes13Xuen38.93s,6Flurry50.16s and4SCK24.48s; compiler582.99s/zero warnings, fmt/diff pass, conflict-region readability has no findings. Lead re-gate/new merged-source plain --bins remains separate; no300s rerun.
@@ -4531,3 +4538,8 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 - 2026-10-23: [[server-crates]] records five stable catalog modules extracted with unchanged data/logic, canonical imports and updated generator destinations; no test relocations or measured speedup claim.
 - 2026-10-23: [[server-crates]] moves main module declarations/App assembly into the existing lib and keeps a five-line bin; library-artifact source-view test replaces old binary artifact selection. Full suite/census and paired measurements remain pending.
 - 2026-10-23: [[server-crates]] records test-only simulator consumer, canonical graph/receipt/marker support and explicit test-support mode; 44-file move is content-identical, API/cfg wiring awaits compiler/full-suite proof. Seven graph cases have explicit core-prefix migration.
+
+- 2026-10-25: Moved canonical map identity/metadata/locks/admission and32independent cases below server as the first structural prerequisite. Native transfer/PvP/housing/script integration tests remain server-owned; original core cache decorator preserved. Check and fmt pass with zero warnings; all32moved tests pass with exact names.
+- 2026-10-25: Extracted canonical pet_battle production and235cases (230enabled/five existing ignored) into server-pet-battle, with source hashes and exact ownership mapping. Direct server imports replace the old module; no reverse dependency or compatibility shim. Full-suite gate remains lead-owned.
+
+- 2026-10-25: Pet split proof atd1e3d6cf6: workspace/all-target check and fmt pass; leaf230PASS/5existingignored, exact235runtime names and33source hashes preserved; touched-server77PASS/8ignored plus required-ground-env exact retry1PASS. Zero warnings, no assertion/code change for retry, no full suite/push. Original failed receipts retained.

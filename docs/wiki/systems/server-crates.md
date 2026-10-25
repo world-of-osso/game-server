@@ -58,6 +58,29 @@ No `execute_cast` seam or gameplay-internal visibility widening is included. Fin
 
 D3 appends11byte-identical public spell test files to the existing consumer, retaining54case identities (51enabled/3existing ignored/0should-panic). The three proc-recipient ignore reasons remain unchanged. No test body, fixture seam, new package/version, profile or gameplay API changes. The existing rusqlite0.35/bundled workspace dependency is wired dev-only for the unchanged summon-property fixture; proc-recipient fixtures import canonical server::random at the consumer root. Pure moves `007c3d144` precede declaration-only wiring; [exact mapping](../../handoffs/crate-split-spell-d3-test-mapping.json) records core→consumer ownership. Consumer inventory becomes229cases (226enabled/3ignored). This1,543-line cut is housekeeping, not a claimed material whole-core speedup. Exact post-build inventory, one combined core/consumer compiler check, parent full gate and paired measurement remain acceptance proof.
 
+## Independent domain crates
+
+`server-pet-battle` owns the deterministic catalog/rules and235unchanged tests (230enabled/five existing ignored). Server imports its types directly; no server dependency or compatibility implementation remains.
+
+`server-map-rules` owns map identity/difficulty/clock records, metadata/static-area catalogs, locks, admission/reset rules and graveyard choice. [32 unchanged tests](../../handoffs/crate-split-map-test-mapping.md) move with them. Core retains native transfer/PvP/housing/script integration tests and the original catalog-cache decorator. Fixture helpers have one feature-gated lower owner.
+
+## Extraction candidates
+
+Structural order: map rules → follower budget policy → shared cycle-breaking types → larger domains. The initial53d0e1ce1 graph found pet235, APL49, item-instance20, race/class11 and level-scaling10tests without gameplay imports; counts alone do not determine priority.
+
+[Measured heavy-module walls](../investigations/server-test-performance.md) locate the larger boundaries:
+
+| Domain | Earlier wall | Blocking cycle / next cut |
+|---|---:|---|
+| Scripted AI |517s|Damage/cast hooks↔scripts; lower hook records and a host interface. Native encounter tests still need real spells/combat.|
+| SpellCast |499s|Aura↔cast↔damage/proc execution; lower immutable records, not the native assertions.|
+| Toys |280s|Box/catalog↔spell classification/cast; lower on-use descriptors and keep a native adapter.|
+| Followers |205s|AI↔spells, owner identity and pull-history callbacks; lower scalar budget/identity, then observation boundaries.|
+| Maps |95s|Identity/rules now lower; transfer↔combat/cast/PvP/housing orchestration remains core-owned.|
+
+These are historical module walls, not additive gate savings. Heavy toy/follower/encounter tests execute real spells and auras; traits alone do not make that coverage safe to skip. Shared types must have one lower owner, never a re-export of the whole core.
+
+
 ## Sources
 
 - `crates/server-catalog/{Cargo.toml,src/lib.rs}`, `crates/server-simulation/{Cargo.toml,src/lib.rs}` — package/dependency ownership.

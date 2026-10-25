@@ -116,7 +116,7 @@ impl PetCatalog {
         pet: &OwnedPet,
         state: &OwnedPetBattleState,
     ) -> Result<OwnedPetBattleSnapshot, String> {
-        let stats = server::pet_battle::calculate_stats(
+        let stats = server_pet_battle::pet_battle::calculate_stats(
             &self.battle,
             pet.species_id,
             pet.breed_id.into(),

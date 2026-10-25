@@ -6,13 +6,19 @@ use std::collections::BTreeMap;
 
 pub(super) fn stats(world: &World, actor: Entity) -> Value {
     let sheet = world.get::<crate::stats::CharacterStats>(actor).unwrap();
+    let attack_time_mult = world
+        .get::<crate::auras::AuraStatMods>(actor)
+        .map_or(1.0, |mods| {
+            mods.attack_cast_time_mult * mods.attack_time_mult * mods.melee_ranged_attack_time_mult
+        });
+    let auto_attack_speed = attack_time_mult / (1.0 + sheet.haste_pct / 100.0);
     json!({"attribute": {"strength": sheet.primary.strength, "agility": sheet.primary.agility,
         "stamina": sheet.primary.stamina, "intellect": sheet.primary.intellect},
         "native": {"crit_pct": sheet.crit_pct, "haste_pct": sheet.haste_pct,
         "mastery_pct": sheet.mastery_pct, "mastery_points": sheet.mastery_points,
         "versatility_pct": sheet.versatility_pct, "attack_power": sheet.attack_power,
         "ranged_attack_power": sheet.ranged_attack_power, "spell_power": sheet.spell_power,
-        "armor": sheet.armor}, "ratings": sheet.ratings,
+        "armor": sheet.armor, "auto_attack_speed": auto_attack_speed}, "ratings": sheet.ratings,
         "main_hand": {"min": sheet.main_hand.min, "max": sheet.main_hand.max},
         "level": world.get::<shared::components::Level>(actor).unwrap().0,
         "powers": power_snapshot(world, actor)})
@@ -110,31 +116,67 @@ fn summarize_target_damage(events: &[CombatLogEvent], targets: &[Entity]) -> Val
     json!(rows)
 }
 
+#[derive(Default)]
+struct ActionTotals {
+    damage: u64,
+    hits: u32,
+    casts: u32,
+    crits: u32,
+    crit_damage: u64,
+}
+
+fn action_report(
+    actor: Option<u64>,
+    spell: Option<u32>,
+    totals: ActionTotals,
+    total: u64,
+) -> Value {
+    let average = |damage: u64, hits: u32| {
+        if hits > 0 {
+            damage as f64 / f64::from(hits)
+        } else {
+            0.0
+        }
+    };
+    json!({"actor": actor, "spell_id": spell, "damage": totals.damage, "hits": totals.hits,
+        "count": totals.casts, "crit_hits": totals.crits, "crit_damage": totals.crit_damage,
+        "noncrit_hits": totals.hits - totals.crits, "noncrit_damage": totals.damage - totals.crit_damage,
+        "crit_rate": average(u64::from(totals.crits), totals.hits),
+        "average_crit": average(totals.crit_damage, totals.crits),
+        "average_noncrit": average(totals.damage - totals.crit_damage, totals.hits - totals.crits),
+        "average_hit": average(totals.damage, totals.hits),
+        "share_pct": if total > 0 { totals.damage as f64 * 100.0 / total as f64 } else { 0.0 }})
+}
+
 pub(super) fn combat(world: &World, targets: &[Entity], seconds: f64) -> Value {
     let events = &world
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
-    let mut actions = BTreeMap::<(Option<u64>, Option<u32>), (u64, u32, u32)>::new();
+    let mut actions = BTreeMap::<(Option<u64>, Option<u32>), ActionTotals>::new();
     for event in events {
         let key = (event.source, event.spell_id);
         if event.kind == CombatLogKind::CastSuccess {
-            actions.entry(key).or_default().2 += 1;
+            actions.entry(key).or_default().casts += 1;
         }
         let dummy = event
             .target
             .is_some_and(|target| targets.iter().any(|unit| unit.to_bits() == target));
         if dummy && event.kind == CombatLogKind::Damage {
             let entry = actions.entry(key).or_default();
-            entry.0 += u64::try_from(event.amount).expect("nonnegative damage log");
-            entry.1 += 1;
+            let amount = u64::try_from(event.amount).expect("nonnegative damage log");
+            entry.damage += amount;
+            entry.hits += 1;
+            if event.crit {
+                entry.crits += 1;
+                entry.crit_damage += amount;
+            }
         }
     }
-    let total: u64 = actions.values().map(|entry| entry.0).sum();
-    let actions: Vec<_> = actions.into_iter().map(|((actor, spell), (damage, hits, casts))| {
-        json!({"actor": actor, "spell_id": spell, "damage": damage, "hits": hits, "count": casts,
-            "average_hit": if hits > 0 { damage as f64 / f64::from(hits) } else { 0.0 },
-            "share_pct": if total > 0 { damage as f64 * 100.0 / total as f64 } else { 0.0 }})
-    }).collect();
+    let total: u64 = actions.values().map(|entry| entry.damage).sum();
+    let actions: Vec<_> = actions
+        .into_iter()
+        .map(|((actor, spell), totals)| action_report(actor, spell, totals, total))
+        .collect();
     json!({"dps": total as f64 / seconds, "total_damage": total, "actions": actions,
         "event_count": events.len(), "damage_by_target": summarize_target_damage(events, targets),
         "energize": energize_receipts(events),
@@ -250,7 +292,10 @@ fn native_damage_recipient_accounting_preserves_retired_and_zero_output_targets(
         kind: CombatLogKind::Damage,
     };
     world.insert_resource(crate::spell_cast::test_harness::ObservedCombatEvents(vec![
-        damage(Some(main), 100),
+        CombatLogEvent {
+            crit: true,
+            ..damage(Some(main), 100)
+        },
         CombatLogEvent {
             source: Some(pet.to_bits()),
             periodic: true,
@@ -305,6 +350,13 @@ fn native_damage_recipient_accounting_preserves_retired_and_zero_output_targets(
     assert_eq!(owner_action["damage"], 400);
     assert_eq!(owner_action["hits"], 3);
     assert_eq!(owner_action["count"], 1);
+    assert_eq!(owner_action["crit_hits"], 1);
+    assert_eq!(owner_action["crit_damage"], 100);
+    assert_eq!(owner_action["noncrit_hits"], 2);
+    assert_eq!(owner_action["noncrit_damage"], 300);
+    assert_eq!(owner_action["crit_rate"], 1.0 / 3.0);
+    assert_eq!(owner_action["average_crit"], 100.0);
+    assert_eq!(owner_action["average_noncrit"], 150.0);
     let pet_action = actions
         .iter()
         .find(|row| row["actor"] == pet.to_bits())

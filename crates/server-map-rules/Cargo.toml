@@ -1,0 +1,18 @@
+[package]
+name = "server-map-rules"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# Existing ECS identity/resource derives and map geometry; no gameplay plugin.
+bevy = { version = "0.19", default-features = false, features = ["bevy_log"] }
+bitcode = "0.6"
+# Canonical transfer errors and map-admission wire records.
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "186134ff880f1a6a7b754e4ce43456d775a44caf" }
+# Unchanged world.db map/static-area catalog reader.
+rusqlite = { version = "0.35", features = ["bundled"] }
+
+[features]
+# Share the original immutable map fixtures and required-data paths with core tests.
+test-support = []
