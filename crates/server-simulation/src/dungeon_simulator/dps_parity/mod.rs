@@ -31,6 +31,7 @@ mod rake_stealth_tests;
 mod report;
 mod ret_empyrean_tests;
 mod ret_purpose_tests;
+mod ret_resonance_phase_tests;
 #[cfg(test)]
 mod ret_rotation;
 mod ret_sentence_tests;

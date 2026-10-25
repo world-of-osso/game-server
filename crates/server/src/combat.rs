@@ -11,7 +11,7 @@ use shared::protocol::{
 };
 
 use crate::auras::AuraStatMods;
-use crate::auras::procs::{self, AuraEvent, PendingAuraEvents};
+use crate::auras::procs::{self, AuraEvent};
 use crate::creature_ai::{SpawnPoint, WaypointState};
 use crate::creature_scripts::{TrainingDummy, health_loss};
 use crate::duel::DuelOpponent;
@@ -830,10 +830,10 @@ fn record_swing(
     }
     // Procs default to normal and critical hits (SpellMgr::LoadSpellProcs
     // HitMask 0); dodge- and parry-triggered procs are not modelled.
-    if landed && let Some(mut pending) = world.get_resource_mut::<PendingAuraEvents>() {
-        pending
-            .0
-            .extend(swing_aura_events(attacker_entity, target_entity, &outcome));
+    if landed {
+        for event in swing_aura_events(attacker_entity, target_entity, &outcome) {
+            procs::push_event(world, event);
+        }
     }
     let caused_damage = outcome.damage > 0.0;
     record_swing_events(world, attacker_entity, target_entity, outcome);

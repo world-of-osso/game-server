@@ -2,6 +2,9 @@
 
 [Unit display power](systems/auras.md#native-unit-form-display-power--2026-10-24): a Player-only return left actual NPC Cat on Mana and native22568 burn unchanged100→100. The Unit metadata fix preserves resource contents/identity and player synchronization. NPC Cat/burn plus player Cat/caster-NPC controls are qualified within the once-only retained power/shapeshift scope; missing real fixture sidecar failures were corrected and retried alone. [Proof](../handoffs/form-display-power-proof-ledger.md) records203 unique passes, separate check and private input identity; parent gate and numerical Feral parity remain separate.
 
+## 2026-10-24 — Event-time aura proc candidates
+
+[Source/proof](../handoffs/aura-proc-event-candidates-proof-ledger.md): TC synchronous candidate collection; native Leydrinker RED→GREEN, generic identity snapshot and shared melee routing.168PASS/3input-dependent failures,2 reproduced on base; Ret AfterCast producer phase1RED/2controlsPASS→3GREEN46.93s. Parent fullgate pending; no spell-ID or metadata override.
 ## 2026-10-24 — Generic mastery initialization qualification
 
 [Production RED and per-test ledger](../handoffs/generic-mastery-initialization-proof.md): at5d1c30c81 ordinary created/leveled player and passive reapply PASS, actual follower missing114585 FAIL. Explicit universal race mask was rejected for source-neutral race0, dropping skill183's native base. e587f83a7 fixes learning and TC known-active-spec gating without an implicit base. Pinned1fb0230ad merged in dd3f387ce. All19 new sa1089 failures now PASS across d96bfa968/faea69f47, with only authorized fixture setup corrections; new follower exact aura-total/restricted-language controls pass. Two-crate test check once PASS2m47s/zero warnings; fmt PASS. e4126a743 retained; no push, deployment or full-suite claim.
