@@ -827,6 +827,16 @@ impl Facts for NativeFacts<'_> {
         if let Some(alias) = name.strip_prefix("active_dot.") {
             return self.active_dot(alias);
         }
+        // SimC76f8118 action.cpp3817–3896: this named action's available
+        // targets, not the currently proposed action's target count.
+        if let Some(alias) = name.strip_prefix("spell_targets.") {
+            let action = Action {
+                name: alias.to_owned(),
+                target: None,
+                options: Default::default(),
+            };
+            return self.target_ids(&action).map(|targets| targets.len() as f64);
+        }
         match name {
             "time" => Ok(self.elapsed()),
             // dot.cpp671: tick_time is the channel's current native tick period.

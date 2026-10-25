@@ -117,6 +117,7 @@ fn queue_echo(
             return;
         };
         child.cast_damage_multiplier = Some(multiplier);
+        child.cast_damage_role = crate::spell_info::CastDamageRole::Echo;
         if !super::super::launch_triggered_spell(world, caster, &child, Some(target), 1) {
             warn!(
                 policy = policy.name,

@@ -47,8 +47,15 @@ mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
 pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
+mod midnight_items;
 pub(crate) mod prayer_of_mending;
 mod protection_items;
+pub(crate) use midnight_items::register as register_midnight_items;
+mod ret_damage;
+pub(super) use ret_damage::{
+    after_periodic_damage as after_ret_periodic_damage, before_cast as before_ret_damage_cast,
+    damage_multiplier as ret_damage_multiplier, prepare_stored_damage,
+};
 mod ret_empyrean;
 pub(crate) use ret_empyrean::owns_empyrean_proc;
 pub(super) use ret_empyrean::schedule_empyrean_legacy;
@@ -125,6 +132,11 @@ pub(super) fn after_direct_damage(
 ) {
     windwalker_flurry::after_direct_damage(world, ctx, critical);
     policies::after_damage(world, ctx);
+    ret_damage::after_direct_damage(world, ctx, target, critical);
+    // SimC76f8118 unique_gear_midnight.cpp6351–6355: perfected Guillotine impacts apply Venomfang.
+    if ctx.spell.id == 1306624 {
+        midnight_items::apply_perfected_venom(world, ctx.caster, target);
+    }
     match ctx.spell.id {
         xuens_battlegear::RSK_DAMAGE | xuens_battlegear::RWK_DAMAGE => {
             xuens_battlegear::reduce_fof_on_critical_impact(world, ctx, target, critical);
@@ -194,7 +206,8 @@ pub(super) use batch21::berserk_combo_bonus;
 pub(super) use batch22::healing_multiplier;
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
-    batch19::effect_enabled(world, caster, spell, index)
+    !(spell == 343527 && index == 4)
+        && batch19::effect_enabled(world, caster, spell, index)
         && batch11::effect_enabled(world, caster, spell, index)
         && batch13::effect_enabled(spell, index)
         && batch15::effect_enabled(world, caster, spell, index)
@@ -741,6 +754,7 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
         (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
         (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::limit_targets),
         (ret_toll::ROOT, 1) => Some(ret_toll::limit_area),
+        (1306923, 1) => Some(ret_damage::exclude_primary_cleave),
         (145_110, 0) => Some(pick_yseras_gift_group_target),
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         (30735, 0) => Some(crate::scripted_ai::nethekurse::filter_shadow_sear),
@@ -783,6 +797,7 @@ pub(super) type TargetPlanHook =
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
     match spell_id {
+        1261160 | 224239 | 431911 => Some((Relation::Enemy, ret_damage::area_plan)),
         super::toy_flag::TARGETING => Some((Relation::Any, super::toy_flag::targeting_plan)),
         super::toy_flag::FLAG => Some((Relation::Any, super::toy_flag::flag_plan)),
         97372 => Some((Relation::Any, track_switch_plan)),
@@ -1510,6 +1525,8 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
         windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
         voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),
         ret_toll::ROOT => Some(ret_toll::cast_child),
+        343527 => Some(ret_damage::sentence_init),
+        20271 | 406957 | 24275 | 1279408 => Some(ret_damage::judgment_mastery),
         77_478 => Some(batch9::cast_earthquake_knockdown),
         _ => None,
     }
