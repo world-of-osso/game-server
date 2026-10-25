@@ -11,6 +11,8 @@ mod assassination_rotation;
 mod aura342_tests;
 mod barbed_budget_tests;
 #[cfg(test)]
+mod beast_mastery_mechanics_tests;
+#[cfg(test)]
 mod beast_mastery_pet_tests;
 mod beast_mastery_rotation;
 mod composite_precombat_tests;
@@ -61,6 +63,7 @@ mod ret_crusade_tests;
 mod ret_damage_relationship_tests;
 mod ret_damage_tests;
 mod ret_dawnlight_consumer_tests;
+mod ret_dawnlight_remainder_tests;
 mod ret_dawnlight_target_tests;
 mod ret_dawnlight_tests;
 mod ret_empyrean_tests;

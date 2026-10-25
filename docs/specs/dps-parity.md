@@ -6,6 +6,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Beast Mastery literal fixture
 
+- Selected Nature's Ally1273126 arms native1276720 after successful Barbed Shot or Cobra Shot; successful Kill Command consumes it. Native after-cast effects must compose with these sourced policy rows, retaining Barbed Focus. Literal `.react` observes native acquisition with the pinned profile's reaction settings.
+
 - Literal precombat provisions the existing native default-duck stable policy and executes ordinary Call Pet. The pet attacks the current encounter primary through native pet control, without restoring follower rotation decisions.
 
 - Spec253 keeps the requested native actor identity and disables follower-kit decisions before setup. Its pinned76f8118 `hunter_beast_mastery.simc` rows run through the shared `Program`/`Driver`/`Prepared`/`Equipment` path, including native pet summon, snapshot, Auto Shot and target-scored Barbed Shot. Native70448 supplies spell values, readiness, resources and damage; the adapter does not substitute reference damage.

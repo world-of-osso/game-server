@@ -41,6 +41,20 @@ impl Rotation {
         encounter: Encounter,
         profile: &super::inputs::Profile,
     ) -> Result<Self, String> {
+        // SimC76f8118 player.cpp1017–1020: this pinned profile supplies no
+        // reaction overrides; native acquisition samples the source defaults.
+        crate::simc_apl_native::reaction::configure(
+            world,
+            actor,
+            crate::simc_apl_native::reaction::ReactionSettings {
+                mean: 0.25,
+                stddev: 0.0,
+                offset: 0.1,
+                nu: 0.15,
+                maximum: 1.4,
+            },
+            &[1276720],
+        )?;
         let mut bindings = bindings::build();
         let equipment = Equipment::load(world, actor, &mut bindings)?;
         literal_rotation::capture_fixture(world, actor, encounter)?;
