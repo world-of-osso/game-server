@@ -1,6 +1,9 @@
-//! Literal Ret adapter qualification; native facts and execution stay shared.
+//! Literal pinned Ret fixture adapter; native facts and execution stay shared.
+mod context;
+mod driver;
 use super::literal_rotation::equipment::Equipment;
 use crate::simc_apl_native::{Bindings, NativeFacts};
+pub(super) use driver::Rotation;
 use server::simc_apl::{Action, ActionFacts, Facts};
 use shared::components::PowerType;
 
@@ -158,9 +161,15 @@ impl ActionFacts for RetFacts<'_> {
 }
 
 #[cfg(test)]
+mod context_tests;
+#[cfg(test)]
 mod dispatch_tests;
 #[cfg(test)]
 mod equipment_tests;
+#[cfg(test)]
+mod finisher_tests;
+#[cfg(test)]
+mod lifecycle_tests;
 #[cfg(test)]
 mod readiness_tests;
 #[cfg(test)]

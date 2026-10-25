@@ -100,6 +100,8 @@ fn dps_parity_ret_literal_native_casting_target_selects_and_receives_rebuke() {
 #[ignore = "literal Ret target_ready: idle real31146 must not select unconditional Rebuke"]
 fn dps_parity_ret_literal_native_idle_target_does_not_select_rebuke() {
     let mut run = super::super::ret_tier_tests::native_ret(4);
+    let started_at = run.app.world().resource::<bevy::prelude::Time>().elapsed();
+    super::super::install_fixture_lifetimes(&mut run, started_at);
     assert!(
         run.app
             .world()

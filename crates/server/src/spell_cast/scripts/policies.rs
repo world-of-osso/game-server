@@ -10,6 +10,12 @@ use crate::spell_info::{CastPolicyContext, SpellInfo, SpellStore};
 
 #[derive(Clone, Copy)]
 enum Relationship {
+    HitPayload {
+        parent: u32,
+        payload: u32,
+        self_target: bool,
+        primary_only: bool,
+    },
     CounterAfterCast {
         parent: u32,
         counter: u32,
@@ -31,6 +37,43 @@ struct Policy {
 
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
+    // SimC76f8118 sc_paladin.cpp888–916: each successful primary strike
+    // grants the native406834 effect0, independently of the old stack counter.
+    Policy {
+        name: "SIMC_RET_CRUSADING_STRIKE_HOLY_POWER",
+        spec: 70,
+        talent: 404542,
+        relationship: Relationship::HitPayload {
+            parent: 408385,
+            payload: 406834,
+            self_target: true,
+            primary_only: true,
+        },
+    },
+    // SimC76f8118 sc_paladin_retribution.cpp432–436: BoJ impact applies
+    // Expurgation. Native404358 carries the secondary BoJ target damage.
+    Policy {
+        name: "SIMC_RET_BLADE_EXPURGATION",
+        spec: 70,
+        talent: 383344,
+        relationship: Relationship::HitPayload {
+            parent: 184575,
+            payload: 383346,
+            self_target: false,
+            primary_only: false,
+        },
+    },
+    Policy {
+        name: "SIMC_RET_BLADE_SECONDARY_EXPURGATION",
+        spec: 70,
+        talent: 383344,
+        relationship: Relationship::HitPayload {
+            parent: 404358,
+            payload: 383346,
+            self_target: false,
+            primary_only: false,
+        },
+    },
     // sc_paladin_retribution.cpp846–876; native raw2 + specialization1 wins.
     Policy {
         name: "SIMC_RET_DAWNLIGHT_WAKE_PRODUCER",
@@ -54,6 +97,41 @@ const POLICIES: &[Policy] = &[
         },
     },
 ];
+
+fn hit_resources(parent: u32) -> impl Iterator<Item = &'static Policy> {
+    POLICIES.iter().filter(move |policy| {
+        matches!(policy.relationship,
+            Relationship::HitPayload { parent: id, .. } if id == parent)
+    })
+}
+
+pub(super) fn hit_hook(parent: u32) -> Option<super::ContextHitHook> {
+    hit_resources(parent)
+        .next()
+        .map(|_| cast_hit_payload as super::ContextHitHook)
+}
+
+fn cast_hit_payload(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    let primary = super::super::resolving_targets(world, ctx)
+        .and_then(|targets| targets.first())
+        .copied();
+    for policy in hit_resources(ctx.spell.id) {
+        let Relationship::HitPayload {
+            payload,
+            self_target,
+            primary_only,
+            ..
+        } = policy.relationship
+        else {
+            unreachable!("hit-payload policy iterator");
+        };
+        if !selected(world, ctx.caster, policy) || (primary_only && primary != Some(target)) {
+            continue;
+        }
+        let recipient = if self_target { ctx.caster } else { target };
+        super::super::cast_triggered(world, ctx.caster, payload, Some(recipient), ctx.depth + 1);
+    }
+}
 
 fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
