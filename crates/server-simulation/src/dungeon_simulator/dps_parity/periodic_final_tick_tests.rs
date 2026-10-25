@@ -105,5 +105,7 @@ fn native_periodic_final_dawnlight_tick() {
 #[test]
 #[ignore = "native spec258 profile/traits and prepared world DB"]
 fn native_periodic_final_shadow_word_pain_tick() {
-    assert_native_final_tick(258, 589, ParityActor::Player);
+    let (profile, _) = read_reference(258).unwrap();
+    let race = inputs::read_reference_race(&profile.race).unwrap();
+    assert_native_final_tick(258, 589, ParityActor::Player { race });
 }
