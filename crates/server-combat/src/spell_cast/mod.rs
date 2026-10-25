@@ -389,6 +389,7 @@ impl Plugin for SpellCastPlugin {
                     crate::game_objects::summoned::expire_objects.after(advance_casts),
                     area_trigger::update_area_triggers.after(advance_casts),
                     scripts::update_ground_pulses.after(advance_casts),
+                    scripts::update_unleashed.after(advance_casts),
                     toy_coin::catch_landed_coins.after(advance_casts),
                 ),
             );

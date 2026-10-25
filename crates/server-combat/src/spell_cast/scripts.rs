@@ -68,6 +68,8 @@ pub(crate) use enhancement_rod::snapshot_rod_amount;
 mod enhancement_strikes;
 mod enhancement_tempest;
 mod enhancement_tier;
+mod enhancement_unleashed;
+pub(super) use enhancement_unleashed::update as update_unleashed;
 mod evoker_tier;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
 mod feral_frenzy;
