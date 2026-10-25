@@ -34,6 +34,15 @@ class ParityProfileTests(unittest.TestCase):
             healer = json.loads((output / "105.profile.json").read_text())
             self.assertIn("No shipped", healer["gap"])
 
+    def test_shipped_demonhunter_and_deathknight_directives_preserve_class_namespace(self):
+        for actor, spec, resource in [("demonhunter", "havoc", "fury"),
+                                      ("deathknight", "unholy", "runic_power")]:
+            with self.subTest(actor=actor):
+                profile = PARITY.parse_profile(f'{actor}="MID2_{spec}"\nspec={spec}\n{actor}.{resource}=0\n')
+                self.assertEqual(profile.get("class"), actor)
+                self.assertEqual(profile.get("name"), f"MID2_{spec}")
+                self.assertEqual(profile[f"{actor}.{resource}"], "0")
+
     def test_extracts_native_item_instance_and_preserves_rotation_text(self):
         profile = PARITY.parse_profile('''paladin="MID1_Paladin_Protection"
 spec=protection

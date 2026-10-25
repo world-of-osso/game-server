@@ -15,8 +15,9 @@ SPECS = {
     1467: "Evoker_Devastation", 269: "Monk_Windwalker", 266: "Warlock_Demonology",
     103: "Druid_Feral",
 }
+# SimC76f8118 sim/sim.cpp3935–3936: actor directives have no underscores.
 CLASSES = {"paladin", "warrior", "druid", "priest", "shaman", "mage", "hunter",
-           "evoker", "monk", "warlock", "rogue", "death_knight", "demon_hunter"}
+           "evoker", "monk", "warlock", "rogue", "deathknight", "demonhunter"}
 SLOTS = {"head", "neck", "shoulders", "back", "chest", "wrists", "hands", "waist",
          "legs", "feet", "finger1", "finger2", "trinket1", "trinket2", "main_hand", "off_hand"}
 CONSUMABLES = {"potion", "flask", "food", "augmentation", "temporary_enchant"}
