@@ -1,6 +1,9 @@
 ## 2026-10-25 — Arcane literal player fixture
 
 [Arcane62](systems/simc-apl.md#arcane-fixture-62) executes supplied profile rows through shared literal control with native class admission and no concurrent AssistedCombat. The300s ST controller regression passes; numerical parity remains open.
+## 2026-10-25 — Havoc literal fixture and Demonic
+
+[Havoc577](systems/simc-apl.md#havoc-fixture-577): shared literal decisions, native cursor context, and talent-sourced Meta before Eye Beam/Gaze with owned-duration extension. Native regressions pass; numerical parity remains open.
 
 ## 2026-10-25 — Shared literal channel execution
 

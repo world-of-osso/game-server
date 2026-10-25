@@ -86,6 +86,12 @@ Clock-aware `preparation::execute_precombat_plan` now consumes selected native p
 
 `Driver::poll_precombat` returns Waiting/Selected original Action+Execution/Finished. Actual native Player63 Arcane Intellect GCD/cursor and Pyroblast/while-casting row controls first produce2RED at85a3a1c20. Prepared now samples CastState plus native GCD; busy polling cannot consume variables/rows, direct busy precombat select fails explicitly, and use_while_casting supplements native admission. Caller advances real App frames and starts its fight epoch after setup; final flight remains native782 state, not a timer. At3d32d68bf actual Fire2GREEN27.11s plus23 relevant simulation regressions pass:1459→55342→real11366/2.337s, setup5.35s, native flight still1/0.142s at Finished. [Exact proof/exclusions](../../handoffs/shared-precombat-poll-proof-ledger.md#current-green-scope--3d32d68bf); full Fire adapter/facts remain open.
 
+## Havoc fixture (577)
+
+`havoc_rotation` embeds the pinned76f8118 action rows and uses shared Driver/Prepared execution. Metamorphosis191427 retains the selected enemy as its native cursor destination; declaring it self-targeted loses the required ground point. Adapter-only per-action Demonsurge flags do not produce native explosion damage, and soul-fragment pickups remain unmodeled.
+
+`SIMC_HAVOC_DEMONIC_TRANSFORMATION` runs before native Eye Beam/Gaze channel execution. Selected213410 supplies the native duration for162264; an existing owned Meta is extended without replacing effects or restarting its phase. The [native tests](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/havoc_tests.rs) cover source casts, cursor admission, first transformation and extension. Numerical parity remains open. [Contract](../../specs/dps-parity.md#havoc-literal-rotation).
+
 ## Elemental fixture (262)
 
 `dps_parity::elemental_rotation` parses the exact profile's `actions` into the shared `Program`. Its bindings supply native spell identities and Maelstrom; shared equipment facts, target selection, readiness and execution remain authoritative. Capture precedes native warmup, ordered precombat completes before engagement, and ordinary followers keep their native kit. Wind Shear requires an actual casting target. Ancestral Swiftness disables the Nature's Swiftness source row when its selected talent is active (SimC76f8118 `sc_shaman.cpp`8132–8137).
@@ -127,6 +133,9 @@ For an active channel, sample `Prepared::read_after_channel`, build live action-
 `call_action_list` retains its literal option values but is interpreter control, not an executable spell. Off-GCD traversal never changes a child's own Prepared admission. See the [behavior contract](../../specs/simc-apl.md) and [channel requirements](../../specs/dps-parity.md#literal-action-readiness-and-channels).
 
 ## Sources
+
+- [Havoc adapter](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/havoc_rotation.rs) — literal source rows and virtual action predicates.
+- [Demonic policy](../../../crates/server/src/spell_cast/scripts/havoc.rs) — pinned relationship with native payload and duration.
 
 - Pinned SimC76f8118 `engine/sim/expressions.cpp:22–154,333–440,1081–1130` — lexer, arithmetic/boolean decisions and precedence.
 - `engine/action/variable.cpp:19–133` — defaults and variable construction; `engine/player/action_variable.cpp:19–26` — initial values.

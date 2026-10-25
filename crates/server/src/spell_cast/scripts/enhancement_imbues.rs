@@ -16,7 +16,8 @@ const WINDFURY: u32 = 319773;
 const FLAMETONGUE: u32 = 319778;
 const WINDFURY_ATTACK: u32 = 25504;
 const FLAMETONGUE_ATTACK: u32 = 10444;
-const UNRULY_WINDS: u32 = 384355;
+// Native70448 Unruly Winds;384355 is Elemental Weapons, not the extra-attack talent.
+const UNRULY_WINDS: u32 = 390288;
 const REQUIRES_MAIN_HAND: u32 = 0x0000_0400;
 const REQUIRES_OFF_HAND: u32 = 0x0100_0000;
 

@@ -11,6 +11,155 @@ const CLEARCASTING: u32 = 135700;
 // Pinned player.cpp1017–1020/7763–7766: source default reaction-time upper bound.
 const SOURCE_REACTION_MAX_SECONDS: f64 = 1.4;
 
+#[test]
+#[ignore = "requires native258 player/private profile; real Mind Flay channel ticks"]
+fn native_apl_channel_paid_ticks_follow_real_periodics_not_damage_events() {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    use server::simc_apl::{Action, ActionFacts};
+    use shared::protocol::CombatLogKind;
+    let mut run = super::prepare_literal(258, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    let bindings = Bindings {
+        actions: [("mind_flay".into(), 15407), ("mind_blast".into(), 8092)].into(),
+        ..Default::default()
+    };
+    let encounter = Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: FightStyle::Patchwerk,
+    };
+    let action = Action {
+        name: "mind_flay".into(),
+        target: Some(target.to_bits()),
+        source_row: None,
+        options: Default::default(),
+    };
+    let read_ticks = |world: &World, action: &Action| {
+        NativeFacts::new(world, actor, &bindings, encounter, 1)
+            .with_targets(Some(target), &[target])
+            .value_for(action, "ticks")
+            .unwrap()
+    };
+    super::engage(&mut run);
+    super::literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        super::literal_rotation::execution::Execution::Spell(15407, target, Some(target)),
+    )
+    .unwrap();
+    for _ in 0..200 {
+        run.app.update();
+        let ticks = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(15407)
+                    && event.periodic
+                    && event.kind == CombatLogKind::Damage
+            })
+            .count();
+        if ticks < 2 {
+            continue;
+        }
+        assert_eq!(ticks, 2);
+        assert_eq!(read_ticks(run.app.world(), &action), 2.0);
+        assert_eq!(
+            read_ticks(run.app.world(), &action),
+            2.0,
+            "read does not advance channel"
+        );
+        let energize_ticks = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(actor.to_bits())
+                    && event.spell_id == Some(15407)
+                    && event.kind == CombatLogKind::Energize
+                    && event.periodic
+            })
+            .count();
+        assert!(energize_ticks > 0);
+        assert_eq!(
+            crate::auras::paid_periodic_ticks(run.app.world(), actor, actor, 15407),
+            energize_ticks as u64,
+            "self resource ticks count without self damage events"
+        );
+        let other = Action {
+            name: "mind_blast".into(),
+            ..action.clone()
+        };
+        assert_eq!(read_ticks(run.app.world(), &other), 0.0);
+        crate::spell_cast::cancel_cast(run.app.world_mut(), actor);
+        assert_eq!(read_ticks(run.app.world(), &action), 0.0);
+        assert_eq!(
+            crate::auras::paid_periodic_ticks(run.app.world(), actor, target, 15407),
+            0
+        );
+        assert_eq!(
+            crate::auras::remaining_periodic_ticks(run.app.world(), actor, target, 15407).unwrap(),
+            0
+        );
+        return;
+    }
+    panic!("native Mind Flay did not deliver two real damage ticks");
+}
+
+#[test]
+#[ignore = "requires native258 player/private profile; real Void Torrent tick_zero"]
+fn native_apl_channel_paid_ticks_exclude_initial_void_torrent_tick_zero() {
+    use shared::protocol::CombatLogKind;
+    let mut run = super::prepare_literal(258, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    super::engage(&mut run);
+    super::literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        super::literal_rotation::execution::Execution::Spell(263165, target, Some(target)),
+    )
+    .unwrap();
+    // SimC76f8118 dot.cpp972–977 tick_zero calls tick() directly, unlike the
+    // scheduled event at1110. Native263165 retains EXTRA_INITIAL_PERIOD0x200.
+    for _ in 0..200 {
+        run.app.update();
+        let hits = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(263165)
+                    && event.kind == CombatLogKind::Damage
+                    && event.periodic
+            })
+            .count();
+        if hits == 0 {
+            continue;
+        }
+        assert!(hits <= 2);
+        assert_eq!(
+            crate::auras::paid_periodic_ticks(run.app.world(), actor, target, 263165),
+            (hits - 1) as u64,
+            "initial tick deals real damage without advancing scheduled current_tick"
+        );
+        if hits == 2 {
+            return;
+        }
+    }
+    panic!("native Void Torrent did not deliver initial and scheduled ticks");
+}
+
 fn encounter(world: &World) -> Encounter {
     Encounter::Fixture {
         started_at: crate::spell_cast::now(world),

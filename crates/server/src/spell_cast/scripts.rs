@@ -24,6 +24,7 @@ mod batch6;
 mod batch7;
 mod batch8;
 mod batch9;
+mod cast_grants;
 mod cast_resets;
 mod chrono_flame;
 mod clearcasting;
@@ -38,6 +39,8 @@ pub(super) use elemental::{
 };
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
+mod enhancement_strikes;
+pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
 mod essence_burst;
 mod feral_frenzy;
 pub(crate) use feral_frenzy::register as register_feral_frenzy;
@@ -46,6 +49,7 @@ pub(crate) use maelstrom_weapon::{consume as consume_maelstrom_weapon, snapshots
 pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
     maelstrom_weapon::register(scripts);
     enhancement_imbues::register(scripts);
+    enhancement_strikes::register(scripts);
 }
 mod policies;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
@@ -62,6 +66,7 @@ pub(crate) use policies::{
 mod germination;
 mod giantkiller;
 pub(super) use giantkiller::multiplier as giantkiller_multiplier;
+mod havoc;
 pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
@@ -134,6 +139,8 @@ pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
 /// TC OnCast runs once after successful checks, before spending and launch.
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
+    cast_grants::on_cast(world, caster, spell_id, depth);
+    havoc::before_cast(world, caster, spell_id, depth);
     windwalker::scripted_combo_cast(world, caster, spell_id, depth);
     elemental::before_launch(world, caster, spell_id, depth);
     match spell_id {
@@ -753,7 +760,8 @@ fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
         batch10::ARCANE_SURGE => Some(batch10::apply_surge),
         batch9::CONSECRATION => Some(batch9::spawn_consecration),
         batch8::DEMONBOLT => Some(batch8::demonbolt),
-        batch8::CRASH_LIGHTNING => Some(batch8::crash_lightning),
+        batch8::CRASH_LIGHTNING => Some(enhancement_strikes::after_crash),
+        188196 | 188443 | 452201 => Some(enhancement_strikes::after_lightning),
         batch8::ARCANE_BARRAGE => Some(batch8::arcane_barrage),
         batch3::FLASH_HEAL => Some(batch3::flash_heal),
         batch3::PRAYER_OF_HEALING => Some(batch4::prayer),
@@ -1574,6 +1582,7 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
         return Some(hook);
     }
     match spell_id {
+        17364 | 115356 | 60103 | 187874 => Some(enhancement_strikes::on_strike),
         feral_frenzy::FERAL | feral_frenzy::FRANTIC => Some(feral_frenzy::begin),
         feral_frenzy::FRANTIC_CHILD => Some(feral_frenzy::energize_frantic),
         xuens_battlegear::SCK => Some(xuens_battlegear::capture_sck_parent),
