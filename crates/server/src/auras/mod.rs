@@ -772,6 +772,12 @@ fn build_effect(
     } else {
         crate::spell_cast::effects::modded_base_points(world, caster, spell, effect)
     };
+    // A cast's scripted damage multiplier persists in its actual periodic payload.
+    let amount = if effect.aura == PERIODIC_DAMAGE_AURA {
+        amount * spell.cast_damage_multiplier.unwrap_or(1.0)
+    } else {
+        amount
+    };
     let amount = scripts::snapshot_periodic_amount(world, caster, spell, effect, amount);
     let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
     let base_period_ms = periodic_base_interval_ms(spell, effect);
