@@ -238,7 +238,6 @@ pub mod test_harness;
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use bevy::ecs::system::SystemState;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::casting::{CastState, CastTickResult, CastType};
@@ -1716,11 +1715,9 @@ pub(crate) fn caster_knows_spell(world: &mut World, caster: Entity, spell_id: u3
     {
         return true;
     }
-    let mut known = SystemState::<Query<&KnownSpells>>::new(world);
-    let known = known
-        .get(world)
-        .expect("plain component query always validates");
-    crate::class_progression::knows_spell(&known, caster, spell_id)
+    // SimC76f8118 sc_rogue.cpp10272–10273: selected Thistle Tea grants its cast
+    // action. Use the selection resolver here too; raw spellbook IDs omit grants.
+    knowledge::resolve_actor_action(world, caster, spell_id).is_ok()
         || taught_by_known_spell(world, caster, spell_id)
         || crate::auras::overrides::grants_spell(world, caster, spell_id)
         || world.get::<KnownSpells>(caster).is_some_and(|known| {
@@ -2642,6 +2639,8 @@ fn execute_cast_with_primary(
     let plan = plan_targets(world, caster, &prepared, explicit, false)?;
     prepared.cast_policy_context =
         scripts::snapshot_hit_policies(world, caster, &prepared, &plan, &costs);
+    let consumed_damage =
+        scripts::capture_consumed_damage_modifier(world, caster, &mut prepared, true);
     let spell = &prepared;
     if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
         debug!(caster = ?caster, spell_id = spell.id, explicit = ?explicit, plan = ?plan, "Cast execution target plan");
@@ -2701,6 +2700,7 @@ fn execute_cast_with_primary(
     let previous_efflo_summons = efflorescence::read_previous_summons(world, caster, spell.id);
     scripts::spawn_ravager_field(world, caster, spell, explicit, 0);
     missiles::launch(world, caster, spell, plan, 0);
+    scripts::finish_scripted_launch(world, caster, spell, consumed_damage, 0, true);
     efflorescence::initialize_new_summons(world, caster, previous_efflo_summons);
     scripts::refund_execute(world, caster, spell, explicit, &costs);
     scripts::consume_phalanx(world, caster, spell, explicit);
@@ -2709,6 +2709,7 @@ fn execute_cast_with_primary(
     }
     if !spell.cast_parent_owns_modifier_charges {
         spell_mods::consume_charges(world, caster, spell);
+        scripts::consume_maelstrom_weapon(world, caster, spell);
         scripts::apply_echo_policies(world, caster, spell);
         scripts::after_foreground_spender(world, caster, spell, spell.cast_primary_target);
         scripts::roll_selected_ret_divine_purpose(world, caster, spell);
@@ -3249,7 +3250,12 @@ fn run_hit_scripts(
 ) {
     let hook = scripts::on_hit(spell.id);
     let context_hook = scripts::on_hit_with_context(spell.id);
-    if hook.is_none() && context_hook.is_none() && spell.cast_policy_context.is_none() {
+    let damage_hook = scripts::on_enemy_damage_hit_with_context(spell.id);
+    if hook.is_none()
+        && context_hook.is_none()
+        && damage_hook.is_none()
+        && spell.cast_policy_context.is_none()
+    {
         return;
     }
     let ctx = EffectCtx {
@@ -3258,6 +3264,11 @@ fn run_hit_scripts(
         depth,
         dest: None,
         chain_multiplier: 1.0,
+    };
+    let damage_units = if damage_hook.is_some() {
+        enemy_damage_hit_units(world, &ctx)
+    } else {
+        Vec::new()
     };
     for unit in hit_units(plan) {
         if world.get_entity(unit).is_err() {
@@ -3269,8 +3280,35 @@ fn run_hit_scripts(
         if let Some(hook) = context_hook {
             hook(world, &ctx, unit);
         }
+        if let Some(hook) = damage_hook
+            && damage_units.contains(&unit)
+        {
+            hook(world, &ctx, unit);
+        }
         scripts::apply_hit_policies(world, &ctx, unit);
     }
+}
+
+/// Use actual damage TargetInfos, not the union of damage and aura recipients.
+/// SimC76f8118 sc_paladin.cpp1436–1456 rolls Judgment mastery on enemy impacts.
+fn enemy_damage_hit_units(world: &World, ctx: &EffectCtx) -> Vec<Entity> {
+    let frame = world
+        .get_resource::<ResolvingHits>()
+        .and_then(|hits| hits.0.last())
+        .filter(|frame| {
+            frame.caster == ctx.caster && frame.spell_id == ctx.spell.id && frame.depth == ctx.depth
+        });
+    let Some(frame) = frame else {
+        return Vec::new();
+    };
+    frame
+        .damage
+        .iter()
+        .map(|(unit, _)| *unit)
+        .filter(|&unit| {
+            targets::relation_matches(world, ctx.caster, unit, targets::Relation::Enemy)
+        })
+        .collect()
 }
 
 /// Direct damage of the spells resolving now, gathered per unit for their hit events
@@ -3624,6 +3662,11 @@ fn plan_triggered_spell(
     explicit: Option<Entity>,
     depth: u8,
 ) -> Result<TargetPlan, CastFailure> {
+    // TC a352b1fa Spell.cpp4243–4255 resolves the explicit GUID before launch;
+    // a deferred proc may retain a unit that has since despawned, not a live target.
+    if explicit.is_some_and(|target| world.get_entity(target).is_err()) {
+        return Err(CastFailure::InvalidTarget);
+    }
     druid_transform::before_cast(world, caster, spell, depth)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
     // CheckTarget's TARGETS_DEAD is independent of BAD_TARGETS/relation bypass.
@@ -3647,6 +3690,8 @@ fn launch_triggered_spell(
 ) -> bool {
     let mut prepared = spell.clone();
     prepared.cast_primary_target = explicit;
+    let consumed_damage =
+        scripts::capture_consumed_damage_modifier(world, caster, &mut prepared, false);
     let spell = &prepared;
     match plan_triggered_spell(world, caster, spell, explicit, depth) {
         Ok(mut plan) => {
@@ -3662,6 +3707,7 @@ fn launch_triggered_spell(
             scripts::on_cast(world, caster, spell.id, depth);
             scripts::spawn_ravager_field(world, caster, spell, explicit, depth);
             missiles::launch(world, caster, spell, plan, depth);
+            scripts::finish_scripted_launch(world, caster, spell, consumed_damage, depth, false);
             scripts::apply_triggered_cast_policies(world, caster, spell, depth);
             druid_transform::after_cast(world, caster, spell);
             true
@@ -3714,11 +3760,14 @@ fn execute_costed_trigger(
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
     prepared.cast_primary_target = primary_target;
     let plan = plan_targets(world, caster, &prepared, explicit, true)?;
+    let consumed_damage =
+        scripts::capture_consumed_damage_modifier(world, caster, &mut prepared, false);
     scripts::before_ret_damage_cast(world, caster, &prepared, depth);
     scripts::on_cast(world, caster, prepared.id, depth);
     take_cast_resources(world, caster, &prepared, &costs);
     crate::achievement::record_spell_cast(world, caster, prepared.id);
     missiles::launch(world, caster, &prepared, plan, depth);
+    scripts::finish_scripted_launch(world, caster, &prepared, consumed_damage, depth, false);
     druid_transform::after_cast(world, caster, &prepared);
     Ok(())
 }

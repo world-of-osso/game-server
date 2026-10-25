@@ -69,8 +69,7 @@ pub const PROC_MAIN_HAND_WEAPON_SWING: u32 = 0x400000;
 pub const PROC_OFF_HAND_WEAPON_SWING: u32 = 0x800000;
 pub const PROC_DEATH: u32 = 0x0100_0000;
 pub const PROC_TAKE_HELPFUL_PERIODIC: u32 = 0x8000_0000;
-/// `ProcTypeMask_1` (TrinityCore `ProcFlags2`).
-pub const PROC2_CAST_SUCCESSFUL: u32 = 0x4;
+pub use crate::spell_info::PROC2_CAST_SUCCESSFUL;
 /// TC a352b1fa SpellMgr.h:191, recipient-side knockback event.
 pub const PROC2_KNOCKBACK: u32 = 0x2;
 
@@ -385,16 +384,7 @@ fn effect_checks_proc(aura: &AuraInstance, effect: &AuraEffectState, event: &Aur
     event.damage > 0.0 && event.spell_id != Some(aura.spell_id)
 }
 
-/// Existing scripted definitions: Chi-action Dance rolls (SimC monk383–392)
-/// and INUNDATE_NATIVE_SUCCESSFUL_UTILITY_CASTS include successful utility casts.
-pub(crate) fn scripted_proc_mask(id: u32) -> Option<[u32; 2]> {
-    match id {
-        crate::spell_cast::scripts::DANCE_OF_CHIJI | scripts::INUNDATE => {
-            Some([0, PROC2_CAST_SUCCESSFUL])
-        }
-        _ => None,
-    }
-}
+pub(crate) use crate::spell_info::scripted_proc_mask;
 
 fn proc_mask(world: &World, aura: &AuraInstance) -> [u32; 2] {
     let options = world
