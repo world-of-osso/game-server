@@ -714,6 +714,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     // Extend existing parent lifecycle entries rather than replacing their hooks.
     crate::spell_cast::scripts::register_xuens_battlegear(&mut scripts);
     crate::spell_cast::scripts::register_channel_policies(&mut scripts);
+    crate::spell_cast::scripts::register_elemental_policies(&mut scripts);
 }
 
 /// TC spell_rogue.cpp spell_rog_stealth: 1784's own rows carry no MOD_STEALTH;

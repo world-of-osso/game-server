@@ -2639,6 +2639,8 @@ fn execute_cast_with_primary(
     let plan = plan_targets(world, caster, &prepared, explicit, false)?;
     prepared.cast_policy_context =
         scripts::snapshot_hit_policies(world, caster, &prepared, &plan, &costs);
+    let consumed_damage =
+        scripts::capture_consumed_damage_modifier(world, caster, &mut prepared, true);
     let spell = &prepared;
     if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
         debug!(caster = ?caster, spell_id = spell.id, explicit = ?explicit, plan = ?plan, "Cast execution target plan");
@@ -2698,6 +2700,7 @@ fn execute_cast_with_primary(
     let previous_efflo_summons = efflorescence::read_previous_summons(world, caster, spell.id);
     scripts::spawn_ravager_field(world, caster, spell, explicit, 0);
     missiles::launch(world, caster, spell, plan, 0);
+    scripts::finish_scripted_launch(world, caster, spell, consumed_damage, 0, true);
     efflorescence::initialize_new_summons(world, caster, previous_efflo_summons);
     scripts::refund_execute(world, caster, spell, explicit, &costs);
     scripts::consume_phalanx(world, caster, spell, explicit);
@@ -3659,6 +3662,11 @@ fn plan_triggered_spell(
     explicit: Option<Entity>,
     depth: u8,
 ) -> Result<TargetPlan, CastFailure> {
+    // TC a352b1fa Spell.cpp4243–4255 resolves the explicit GUID before launch;
+    // a deferred proc may retain a unit that has since despawned, not a live target.
+    if explicit.is_some_and(|target| world.get_entity(target).is_err()) {
+        return Err(CastFailure::InvalidTarget);
+    }
     druid_transform::before_cast(world, caster, spell, depth)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
     // CheckTarget's TARGETS_DEAD is independent of BAD_TARGETS/relation bypass.
@@ -3682,6 +3690,8 @@ fn launch_triggered_spell(
 ) -> bool {
     let mut prepared = spell.clone();
     prepared.cast_primary_target = explicit;
+    let consumed_damage =
+        scripts::capture_consumed_damage_modifier(world, caster, &mut prepared, false);
     let spell = &prepared;
     match plan_triggered_spell(world, caster, spell, explicit, depth) {
         Ok(mut plan) => {
@@ -3697,6 +3707,7 @@ fn launch_triggered_spell(
             scripts::on_cast(world, caster, spell.id, depth);
             scripts::spawn_ravager_field(world, caster, spell, explicit, depth);
             missiles::launch(world, caster, spell, plan, depth);
+            scripts::finish_scripted_launch(world, caster, spell, consumed_damage, depth, false);
             scripts::apply_triggered_cast_policies(world, caster, spell, depth);
             druid_transform::after_cast(world, caster, spell);
             true
@@ -3749,11 +3760,14 @@ fn execute_costed_trigger(
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
     prepared.cast_primary_target = primary_target;
     let plan = plan_targets(world, caster, &prepared, explicit, true)?;
+    let consumed_damage =
+        scripts::capture_consumed_damage_modifier(world, caster, &mut prepared, false);
     scripts::before_ret_damage_cast(world, caster, &prepared, depth);
     scripts::on_cast(world, caster, prepared.id, depth);
     take_cast_resources(world, caster, &prepared, &costs);
     crate::achievement::record_spell_cast(world, caster, prepared.id);
     missiles::launch(world, caster, &prepared, plan, depth);
+    scripts::finish_scripted_launch(world, caster, &prepared, consumed_damage, depth, false);
     druid_transform::after_cast(world, caster, &prepared);
     Ok(())
 }
