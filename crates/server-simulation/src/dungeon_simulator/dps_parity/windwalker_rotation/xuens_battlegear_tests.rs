@@ -1,9 +1,9 @@
 //! SIMC_WW_XUENS_BATTLEGEAR_FOF_RECOVERY: actual casts, impacts and running timers.
 //! No aura/stack/power/stat/crit grants, clock rewinds or coefficient changes.
 use super::*;
-use crate::spell_cast::powers::{PowerType, power_value};
+use crate::spell_cast::powers::power_value;
 use crate::spell_cast::test_harness::{ObservedCombatEvents, ObservedSelectedTargets};
-use shared::components::Position;
+use shared::components::{Position, PowerType};
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 use std::collections::HashSet;
 

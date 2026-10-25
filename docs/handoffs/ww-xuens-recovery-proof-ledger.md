@@ -24,4 +24,6 @@ Exact excerpts, raw rows, source hashes and absence scope: `game-engine/data/dia
 
 The tests earn Chi through actual Tiger Palm, earn RWK through native Combo Breaker/Blackout Kick, cast real FoF to create its timer, and observe native outcomes without changing crit/stats/powers/coefficients. Unselected125017 is removed from the declared profile before native progression. A read-only test-support observer records actual impact-resolution TargetInfo order, including misses; it changes no selection, defense or combat outcome. It is not a gameplay policy implementation. Millisecond cooldown projection permits at most2ms comparison tolerance.
 
+Initial ccb16df6b compiler attempt stopped at a test-only private PowerType import (E0603); no native case executed and this is not RED evidence. After that job exited, origin/master3f897bd38 was merged, including the production cooldown_query reader fix. The test imports shared::components::PowerType; production code must never depend on test-gated native_apl. The lead's full gate now includes plain `cargo check -p server --bins` in addition to test-support evidence.
+
 No production recovery implementation precedes genuine native RED. Full lead gate and broader WW numerical parity remain separate/open. No worker push or spawned agents.
