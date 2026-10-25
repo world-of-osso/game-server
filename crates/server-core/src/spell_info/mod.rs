@@ -33,6 +33,8 @@ pub use class_data::MAX_LEVEL;
 pub use class_data::load_class_spells;
 pub use class_data::{ClassInfo, ClassSpells, SpecInfo};
 pub use immunity::SpellImmunityDefinition;
+#[cfg(any(test, feature = "test-support"))]
+pub use load::load_spell_store;
 pub use proc_definition::{DANCE_OF_CHIJI, INUNDATE, PROC2_CAST_SUCCESSFUL, scripted_proc_mask};
 pub use trait_data::load_trait_tree_by_id;
 pub use trait_data::{
