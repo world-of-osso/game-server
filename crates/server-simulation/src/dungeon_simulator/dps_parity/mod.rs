@@ -16,6 +16,7 @@ mod engagement_tests;
 mod enhancement_mechanics_tests;
 mod enhancement_operand_tests;
 mod enhancement_rotation;
+mod enhancement_strike_tests;
 mod enhancement_tests;
 mod equipment_input_tests;
 mod equipped_set_tests;

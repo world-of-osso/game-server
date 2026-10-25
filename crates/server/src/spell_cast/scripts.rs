@@ -37,12 +37,15 @@ pub(super) use elemental::{
 };
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
+mod enhancement_strikes;
+pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
 mod essence_burst;
 mod maelstrom_weapon;
 pub(crate) use maelstrom_weapon::{consume as consume_maelstrom_weapon, snapshots_modifier};
 pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
     maelstrom_weapon::register(scripts);
     enhancement_imbues::register(scripts);
+    enhancement_strikes::register(scripts);
 }
 mod policies;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
@@ -734,7 +737,8 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         batch10::ARCANE_SURGE => Some(batch10::apply_surge),
         batch9::CONSECRATION => Some(batch9::spawn_consecration),
         batch8::DEMONBOLT => Some(batch8::demonbolt),
-        batch8::CRASH_LIGHTNING => Some(batch8::crash_lightning),
+        batch8::CRASH_LIGHTNING => Some(enhancement_strikes::after_crash),
+        188196 | 188443 | 452201 => Some(enhancement_strikes::after_lightning),
         batch8::ARCANE_BARRAGE => Some(batch8::arcane_barrage),
         batch3::FLASH_HEAL => Some(batch3::flash_heal),
         batch3::PRAYER_OF_HEALING => Some(batch4::prayer),
@@ -1552,6 +1556,7 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
         return Some(hook);
     }
     match spell_id {
+        17364 | 115356 | 60103 | 187874 => Some(enhancement_strikes::on_strike),
         xuens_battlegear::SCK => Some(xuens_battlegear::capture_sck_parent),
         windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
         voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),
