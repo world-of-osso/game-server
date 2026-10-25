@@ -13,6 +13,11 @@ const DEADLY_INSTANT: u32 = 113780;
 const VENOMOUS_WOUNDS: u32 = 79134;
 const VENOMOUS_BLEEDS: &[u32] = &[703, 1943];
 const DISPEL_POISON: u8 = 4;
+const KINGSBANE: u32 = 385627;
+const KINGSBANE_RAMP: u32 = 394095;
+// SimC76f8118 sc_rogue.cpp2974–3083: lethal direct poison payloads;
+// Deadly's periodic ticks are not impact callbacks.
+const LETHAL_POISON_HITS: &[u32] = &[113780, 315585, 8680, 383414];
 
 #[derive(Component)]
 struct VenomousRemainder(f64);
@@ -96,6 +101,38 @@ fn apply_deadly_poison(
         spell_cast::cast_triggered(world, caster, DEADLY_INSTANT, Some(target), 1);
     }
     spell_cast::cast_triggered(world, caster, dot, Some(target), 1);
+}
+
+/// SimC76f8118 sc_rogue.cpp2948–2954/4975/11155–11156: every
+/// positive lethal poison impact against the owned Kingsbane grants a native
+/// ramp stack. Its lifetime ends with that dot, never with a later poison hit.
+pub(crate) fn after_poison_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    if !LETHAL_POISON_HITS.contains(&ctx.spell.id) {
+        return;
+    }
+    let deadline = world.get::<ActiveAuras>(target).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == KINGSBANE && aura.caster == ctx.caster)
+            .map(|aura| aura.expires_at)
+    });
+    let Some(deadline) = deadline else { return };
+    spell_cast::cast_triggered(
+        world,
+        ctx.caster,
+        KINGSBANE_RAMP,
+        Some(ctx.caster),
+        ctx.depth + 1,
+    );
+    if let Some(mut auras) = world.get_mut::<ActiveAuras>(ctx.caster) {
+        for aura in auras
+            .auras
+            .iter_mut()
+            .filter(|aura| aura.spell_id == KINGSBANE_RAMP && aura.caster == ctx.caster)
+        {
+            aura.expires_at = deadline;
+        }
+    }
 }
 
 // The native periodic-hit producer below owns this proc before aura expiry.

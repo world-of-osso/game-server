@@ -1998,6 +1998,9 @@ fn deal_source_damage_and_report(
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::finish(world, ctx, target, &damage, &event);
     log_event(world, event);
+    if !periodic && amount > 0.0 {
+        crate::auras::rogue::after_poison_hit(world, ctx, target);
+    }
     if periodic {
         crate::auras::rogue::after_bleed_tick(world, ctx, target);
     }

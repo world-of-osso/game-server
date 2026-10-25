@@ -224,6 +224,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Measurement
 
+- Each positive lethal poison direct impact against the caster's own active Kingsbane385627 grants one native394095 ramp stack. Periodic poison ticks, other casters and unmarked targets do not grant stacks. Native ramp amounts/cap and periodic modifiers determine damage; ramp expiry stays at the owned dot deadline (SimC76f8118 `sc_rogue.cpp2948–2954,4975,11155–11156`).
+
 - Venomous Wounds returns native Energy after a successful owned Garrote/Rupture tick on an owned poisoned target. Its native refund is divided by the same bleed's active poisoned-target count raised to the native diminishing exponent. Keep fractional gains until a whole Energy is earned. Resolve before the producing aura expires; do not count other Rogues' dots or roll the deferred proc again.
 
 - Earned Instant Poison315584 coating procs dispatch their native effect0 child315585 to the actual hostile proc recipient for every Rogue specialization. Native chances, modifiers and damage remain authoritative (SimC76f8118 `sc_rogue.cpp3021–3025`).
