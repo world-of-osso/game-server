@@ -969,6 +969,14 @@ pub(super) fn expire_summons(world: &mut World) {
         .map(|(entity, _, _)| entity)
         .collect();
     for entity in expired {
+        if world
+            .get::<SummonedCreature>(entity)
+            .unwrap()
+            .expires_at
+            .is_some_and(|expiry| now >= expiry)
+        {
+            super::scripts::elemental_ancestors::on_expire(world, entity);
+        }
         let summon = world.get::<SummonedCreature>(entity).unwrap();
         if summon.spell_id == 104317
             && summon.expires_at.is_some_and(|expiry| now >= expiry)
@@ -984,6 +992,7 @@ pub(super) fn expire_summons(world: &mut World) {
 }
 
 pub(crate) fn despawn_summon(world: &mut World, entity: Entity) {
+    super::scripts::elemental_ancestors::on_despawn(world, entity);
     if let Some(summon) = world.get::<SummonedCreature>(entity) {
         if summon.spell_id == DANCING_RUNE_WEAPON {
             let owner = summon.owner;

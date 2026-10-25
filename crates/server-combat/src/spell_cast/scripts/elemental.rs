@@ -237,7 +237,13 @@ fn missing_buffs(world: &World, caster: Entity) -> Vec<u32> {
 
 // SimC76f8118 sc_shaman.cpp7545–7577: uniformly choose an absent buff;
 // when all three are active, refresh one. Native118522/173183/173184 own values.
-fn grant_blast_buff(world: &mut World, caster: Entity, spell: u32, before: bool, depth: u8) {
+pub(super) fn grant_blast_buff(
+    world: &mut World,
+    caster: Entity,
+    spell: u32,
+    before: bool,
+    depth: u8,
+) {
     if !BUFF_RULES.contains(&(spell, before)) || !selected(world, caster, ELEMENTAL_BLAST) {
         return;
     }
