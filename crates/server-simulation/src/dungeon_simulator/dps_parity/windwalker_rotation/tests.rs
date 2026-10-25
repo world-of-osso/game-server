@@ -204,6 +204,9 @@ fn log_zenith_priority_probe(run: &mut super::super::Run, rotation: &Rotation, f
 fn literal_ww_native_zenith_target_if_preserves_enemy_context_and_self_aura() {
     const ZENITH: u32 = 1249625;
     let mut run = super::super::prepare_measurement(269, 1).unwrap();
+    // target_if reads explicit fixture TTD/boss role; native setup does not install it.
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    super::super::install_fixture_lifetimes(&mut run, started_at);
     let mut rotation = run.windwalker_rotation.take().unwrap();
     let prepared = Prepared::read(
         run.app.world_mut(),
