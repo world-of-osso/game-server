@@ -54,9 +54,11 @@ mod elemental_ascendance;
 pub(super) use echo_policies::after_cast as apply_echo_policies;
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
+mod enhancement_modes;
 mod enhancement_strikes;
 mod enhancement_tempest;
 mod enhancement_tier;
+mod evoker_tier;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
 mod essence_burst;
 mod feral_frenzy;
@@ -66,6 +68,7 @@ pub(crate) use maelstrom_weapon::consume as consume_maelstrom_weapon;
 pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
     maelstrom_weapon::register(scripts);
     enhancement_imbues::register(scripts);
+    enhancement_modes::register(scripts);
     enhancement_strikes::register(scripts);
     enhancement_tier::register(scripts);
 }
@@ -150,6 +153,10 @@ pub(crate) use unbroken_rhythm::register_unbroken_rhythm;
 mod windwalker;
 mod windwalker_children;
 pub use windwalker::last_combo_action;
+mod windwalker_dual_threat;
+pub(crate) use windwalker_dual_threat::{
+    read_replacement as white_impact_replacement, roll_replacement as replace_white_impact,
+};
 mod windwalker_flurry;
 pub(crate) fn after_melee_hit(
     world: &mut World,
@@ -662,6 +669,11 @@ pub(crate) fn rake_bleed_snapshot(world: &World, caster: Entity, amount: f32) ->
     batch7::rake_initial_damage(world, caster, caster, amount)
 }
 
+/// SimC76f8118 sc_monk.cpp2048: Dual Threat's spell child cannot miss.
+pub(crate) fn ignores_hit_avoidance(spell: u32) -> bool {
+    spell == windwalker_dual_threat::DAMAGE
+}
+
 pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
@@ -669,6 +681,7 @@ pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
         return Some(hook);
     }
     match spell_id {
+        windwalker_dual_threat::DAMAGE => Some(windwalker_dual_threat::damage),
         windwalker_children::JADEFIRE => Some(windwalker_children::jadefire_damage),
         windwalker_children::RWK_DAMAGE => Some(windwalker_children::rushing_wind_damage),
         super::elemental_overload::LIGHTNING_OVERLOAD
@@ -799,6 +812,7 @@ pub fn after_cast(spell_id: u32) -> impl Iterator<Item = AfterCastHook> {
         .chain(batch9::after_cast_hook(spell_id))
         .chain(aura_rolls::hook(spell_id))
         .chain(resource_values::after_cast_hook(spell_id))
+        .chain(evoker_tier::hook(spell_id))
 }
 
 fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
