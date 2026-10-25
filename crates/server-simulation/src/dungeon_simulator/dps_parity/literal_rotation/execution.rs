@@ -137,6 +137,28 @@ impl Prepared {
             actions.into_iter().chain([repeated]),
             &mut prepared,
         )?;
+        if let Some(potion) = world
+            .get::<super::super::profile_effects::Potion>(actor)
+            .copied()
+        {
+            let name = "potion".to_owned();
+            prepared.declared.insert(name.clone());
+            let state = native_readiness(
+                world,
+                actor,
+                potion.0.on_use.spell_id,
+                actor,
+                Some(potion.0),
+                after_channel,
+            )?;
+            record_probe(
+                &mut prepared,
+                (name, None),
+                false,
+                state,
+                Execution::Item(potion.0, actor),
+            );
+        }
         for item in equipment.uses() {
             read_item(world, actor, &targets, item, &mut prepared)?;
         }
@@ -637,20 +659,31 @@ pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Re
             result
                 .map_err(|reason| format!("selected native literal spell{id} rejected: {reason:?}"))
         }
-        Execution::Item(item, target) => crate::spell_cast::cast_item_spell(
-            world,
-            actor,
-            item.on_use.spell_id,
-            Some(target),
-            item.on_use.cooldown,
-            item.item_level,
-            Some(item.item_id),
-        )
-        .map_err(|reason| {
-            format!(
-                "selected native literal item{} rejected: {reason:?}",
-                item.item_id
+        Execution::Item(item, target) => {
+            crate::spell_cast::cast_item_spell(
+                world,
+                actor,
+                item.on_use.spell_id,
+                Some(target),
+                item.on_use.cooldown,
+                item.item_level,
+                Some(item.item_id),
             )
-        }),
+            .map_err(|reason| {
+                format!(
+                    "selected native literal item{} rejected: {reason:?}",
+                    item.item_id
+                )
+            })?;
+            if world
+                .get::<super::super::profile_effects::Potion>(actor)
+                .is_some_and(|potion| potion.0.item_id == item.item_id)
+            {
+                world
+                    .entity_mut(actor)
+                    .remove::<super::super::profile_effects::Potion>();
+            }
+            Ok(())
+        }
     }
 }

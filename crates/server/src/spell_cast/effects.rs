@@ -441,7 +441,7 @@ fn scales_with_spell_damage(effect: &SpellEffect) -> bool {
 /// `SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS`. Item-level spells instead
 /// use RandPropPoints at the casting item's effective level. Not modelled:
 /// the target's level of `SPELL_ATTR8_USE_TARGETS_LEVEL_FOR_SPELL_SCALING` and the casting item's
-/// level multipliers of classes -6 and -7.
+/// level multiplier of class -6.
 fn calc_base_value(world: &World, caster: Entity, spell: &SpellInfo, effect: &SpellEffect) -> f32 {
     let attribute = |index: usize| spell.misc.as_ref().map_or(0, |misc| misc.attributes[index]);
     let level = world
@@ -496,7 +496,12 @@ fn item_spell_scaling_value(world: &World, spell: &SpellInfo, effect: &SpellEffe
         -9 => 1,
         _ => 2,
     };
-    let value = row[column] * effect.coefficient;
+    let mut value = row[column] * effect.coefficient;
+    if effect.scaling_class == -7 {
+        // SimC76f8118 spell_data.cpp424–441: special scale7 applies the native
+        // trinket combat-rating multiplier to its item budget before rounding.
+        value *= tables.rating_multiplier[usize::from(level) - 1][2];
+    }
     if value > 0.0 && value < 1.0 {
         1.0
     } else {

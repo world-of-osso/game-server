@@ -47,8 +47,10 @@ mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
 pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
+mod midnight_items;
 pub(crate) mod prayer_of_mending;
 mod protection_items;
+pub(crate) use midnight_items::register as register_midnight_items;
 mod ret_damage;
 pub(super) use ret_damage::{
     after_periodic_damage as after_ret_periodic_damage, before_cast as before_ret_damage_cast,
@@ -131,6 +133,10 @@ pub(super) fn after_direct_damage(
     windwalker_flurry::after_direct_damage(world, ctx, critical);
     policies::after_damage(world, ctx);
     ret_damage::after_direct_damage(world, ctx, target, critical);
+    // SimC76f8118 unique_gear_midnight.cpp6351–6355: perfected Guillotine impacts apply Venomfang.
+    if ctx.spell.id == 1306624 {
+        midnight_items::apply_perfected_venom(world, ctx.caster, target);
+    }
     match ctx.spell.id {
         xuens_battlegear::RSK_DAMAGE | xuens_battlegear::RWK_DAMAGE => {
             xuens_battlegear::reduce_fof_on_critical_impact(world, ctx, target, critical);
