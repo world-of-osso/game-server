@@ -3,6 +3,93 @@ use server::simc_apl::Facts;
 
 #[test]
 #[ignore = "requires private native260 profile/traits and player actor"]
+fn outlaw_dispatch_does_not_produce_its_own_fang_strike_window() {
+    use shared::components::PowerType;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(260, 1).unwrap();
+    engage(&mut run);
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1296589),
+        "native four-piece source must be equipped"
+    );
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 1301405));
+    {
+        let mut powers = run
+            .app
+            .world_mut()
+            .get_mut::<crate::spell_cast::powers::PowerPools>(run.actor)
+            .unwrap();
+        let energy = powers.get_mut(PowerType::Energy).unwrap();
+        energy.current = energy.max;
+        powers.get_mut(PowerType::ComboPoints).unwrap().current = 4.0;
+    }
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(2098, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(2098)
+                && event.amount > 0)
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 1301405),
+        "Dispatch and its automatic swings must not rearm the Sinister Strike/Ambush tier window"
+    );
+}
+
+#[test]
+#[ignore = "requires private native260 profile/traits and player actor"]
+fn outlaw_roll_the_bones_applies_one_exclusive_native_state() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(260, 1).unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(1214909, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let auras = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap();
+    let states: Vec<_> = auras
+        .iter()
+        .filter(|aura| {
+            aura.caster == run.actor
+                && [1214933, 1214934, 1214935, 1214937].contains(&aura.spell_id)
+        })
+        .collect();
+    assert_eq!(
+        states.len(),
+        1,
+        "a real native roll must earn exactly one of the four pinned states"
+    );
+    let container = auras
+        .iter()
+        .find(|aura| aura.spell_id == 1214909 && aura.caster == run.actor)
+        .unwrap();
+    assert!(
+        (states[0].expires_at.unwrap() - container.expires_at.unwrap()).abs() < 0.001,
+        "the earned state must have the native roll container's deadline"
+    );
+}
+
+#[test]
+#[ignore = "requires private native260 profile/traits and player actor"]
 fn outlaw_literal_uses_the_known_roll_the_bones_action() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(260, 1).unwrap();

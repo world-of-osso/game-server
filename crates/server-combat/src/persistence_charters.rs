@@ -92,6 +92,13 @@ fn write_state(txn: &WriteTransaction, state: &CharterState) {
         .expect("write guild charter state");
 }
 
+/// Disband releases the actual guild name in the same membership-deletion transaction.
+pub(crate) fn delete_guild_name_in(transaction: &WriteTransaction, name: &str) {
+    let mut state = read_state_in(transaction);
+    state.manager.release_name(name);
+    write_state(transaction, &state);
+}
+
 /// Initialize once from authentic existing memberships, without inventing legacy dates.
 pub(crate) fn initialize(db: &Database) {
     let txn = db.begin_write().expect("initialize guild charter state");
