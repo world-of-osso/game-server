@@ -679,6 +679,7 @@ fn auto_attack_unit(
         &mut params.units.p0(),
         attacker_entity,
         dt,
+        params.forms.as_deref(),
         params.spells.as_deref(),
     ) else {
         return;
@@ -709,6 +710,7 @@ fn auto_attack_unit(
         expertise_pct: snapshot.expertise_pct,
         creature: snapshot.creature,
         authored_attack_time: snapshot.authored_attack_time,
+        form_attack_time: snapshot.form_attack_time,
         creature_flags: snapshot.creature_flags.as_ref(),
         temp_summoner: snapshot.temp_summoner,
         hunter_owner_ap: params.hunter_pets.get(attacker_entity).ok().map(|pet| {
@@ -780,6 +782,7 @@ struct SwingSnapshot {
     expertise_pct: f32,
     creature: bool,
     authored_attack_time: Option<CreatureAttackTime>,
+    form_attack_time: Option<crate::auras::shapeshift::FormAttackTiming>,
     creature_flags: Option<crate::zones::CreatureFlagsExtra>,
     temp_summoner: Option<Entity>,
 }
@@ -830,6 +833,7 @@ fn snapshot_attacker(
     attackers: &mut AutoAttackers,
     entity: Entity,
     dt: Duration,
+    forms: Option<&crate::auras::shapeshift::ShapeshiftForms>,
     spells: Option<&crate::spell_info::SpellStore>,
 ) -> Option<SwingSnapshot> {
     let (
@@ -863,6 +867,9 @@ fn snapshot_attacker(
         expertise_pct: crate::auras::combat_stats::expertise_reduction(auras, !creature),
         creature,
         authored_attack_time: attack_time.copied(),
+        form_attack_time: auras
+            .and_then(crate::auras::shapeshift::current_form)
+            .and_then(|(_, form)| forms?.attack_timing(form, !creature)),
         creature_flags: flags.copied(),
         temp_summoner: summon.map(|summon| summon.summoner),
     })
@@ -964,6 +971,7 @@ pub(crate) struct Attacker<'a> {
     /// A creature (`Npc`): it rolls the creature side of the hit table.
     pub creature: bool,
     pub authored_attack_time: Option<CreatureAttackTime>,
+    pub form_attack_time: Option<crate::auras::shapeshift::FormAttackTiming>,
     /// Actual attacker's already-cached template flags, independent of victim flags.
     pub creature_flags: Option<&'a crate::zones::CreatureFlagsExtra>,
     /// Existing TempSummon direct summoner, not player owner or recursive ancestor.
@@ -986,6 +994,14 @@ impl Attacker<'_> {
         }
     }
 
+    fn weapon_round_time(&self, weapon: &WeaponDamage) -> f32 {
+        if self.stats.is_none() || self.spirit_wolf.is_some() {
+            return weapon.speed;
+        }
+        self.form_attack_time
+            .map_or(weapon.speed, |form| form.seconds)
+    }
+
     /// Players/Spirit Wolf retain their weapon clocks; source creatures use their
     /// authored interval and TC's signed attack-time factors.
     fn swing_time(&self, weapon: &WeaponDamage) -> f32 {
@@ -996,7 +1012,8 @@ impl Attacker<'_> {
             return weapon.speed / (1.0 + self.haste_pct / 100.0).max(0.01) * slow;
         }
         if let Some(stats) = self.stats {
-            return melee::swing_time(weapon.speed, stats.haste_pct) * slow;
+            let base = self.weapon_round_time(weapon);
+            return melee::swing_time(base, stats.haste_pct) * slow;
         }
         if let Some(base) = self.authored_attack_time {
             return base.modified(self.haste_pct, self.mods);
@@ -1041,7 +1058,13 @@ fn roll_swing_base(
     }
     match attacker.stats {
         Some(stats) => melee::roll_weapon_damage(
-            melee::weapon_damage_range(weapon, stats.attack_power, stats.versatility_pct, hand),
+            melee::weapon_damage_range(
+                weapon,
+                stats.attack_power,
+                stats.versatility_pct,
+                hand,
+                attacker.form_attack_time,
+            ),
             rand::Rng::r#gen(&mut rng),
         ),
         None => creature_weapon_damage(scaling),
@@ -1738,7 +1761,7 @@ fn try_swing(
             outcome: format!("{kind:?}"),
             level_difference,
             critical_multiplier,
-            weapon_speed: weapon.speed,
+            weapon_speed: attacker.weapon_round_time(&weapon),
         };
         commands.queue(move |world: &mut World| {
             crate::test_support::healer_intake::record(world, source, target_entity, 1, raw, kind)
@@ -1798,7 +1821,7 @@ fn try_swing(
         incoming_loss,
         blocked,
         overkill: 0.0,
-        weapon_speed: weapon.speed,
+        weapon_speed: attacker.weapon_round_time(&weapon),
         npc_died: false,
         player_died: false,
         duel_defeated: false,

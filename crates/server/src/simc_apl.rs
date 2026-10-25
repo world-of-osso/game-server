@@ -33,6 +33,12 @@ pub trait ActionFacts: Facts {
         ))
     }
 
+    /// Native proxies, in source slot order, before the row condition is evaluated.
+    /// SimC76f8118 player.cpp10221–10480 expands use_items into per-item actions.
+    fn action_variants(&self, action: &Action) -> Result<Vec<Action>, String> {
+        Ok(vec![action.clone()])
+    }
+
     /// Explicit native candidate order; unsupported adapters cannot invent a target.
     fn target_ids(&self, _action: &Action) -> Result<Vec<u64>, String> {
         Err("target_if requires explicit native target candidates".into())

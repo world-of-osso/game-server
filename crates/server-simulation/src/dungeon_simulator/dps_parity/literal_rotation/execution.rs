@@ -2,6 +2,7 @@
 use super::equipment::{Equipment, ItemUse};
 use bevy::prelude::*;
 use server::simc_apl::Action;
+pub(crate) use server::spell_cast::knowledge::resolve_action;
 use shared::components::PowerType;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -83,7 +84,21 @@ impl Prepared {
                 .insert(("snapshot_stats".into(), None), Execution::Snapshot);
         }
         read_attacks(world, actor, &targets, &mut prepared.ready);
-        read_spells(world, actor, &targets, actions, &mut prepared)?;
+        // SimC76f8118 sc_hunter.cpp7909 binds native Auto Shot75.
+        // Knowledge/native admission still decide whether the actor can start it.
+        let repeated = NativeAction {
+            name: "auto_shot",
+            spell: 75,
+            talent: None,
+            self_target: false,
+        };
+        read_spells(
+            world,
+            actor,
+            &targets,
+            actions.into_iter().chain([repeated]),
+            &mut prepared,
+        )?;
         for item in equipment.uses() {
             read_item(world, actor, &targets, item, &mut prepared)?;
         }
@@ -388,6 +403,11 @@ fn read_spell(
     let Some(id) = resolve_action(world, actor, id)? else {
         return Ok(());
     };
+    // SimC76f8118 sc_hunter.cpp7269–7274: start once; native repeats
+    // own later shots. This applies to any native autorepeat, not a spell-ID branch.
+    if crate::spell_cast::test_harness::read_native_auto_repeat(world, actor, id) {
+        return Ok(());
+    }
     let targets = if self_target {
         std::slice::from_ref(&actor)
     } else {
@@ -451,11 +471,6 @@ fn talent_permits(world: &World, actor: Entity, talent: Option<u32>) -> Result<b
     Ok(traits
         .active_talent_spells()
         .any(|spell| spell.spell_id == talent))
-}
-
-pub(crate) fn resolve_action(world: &World, actor: Entity, id: u32) -> Result<Option<u32>, String> {
-    crate::spell_cast::knowledge::resolve_optional_actor_action(world, actor, id)
-        .map_err(|reason| format!("native literal action knowledge: {reason:?}"))
 }
 
 fn native_readiness(

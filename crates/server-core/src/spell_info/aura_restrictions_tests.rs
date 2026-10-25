@@ -7,6 +7,10 @@ const SCHEMA: &str = include_str!("../../../../scripts/db2_schema.sql");
 fn open_spell_database() -> Connection {
     let conn = Connection::open_in_memory().unwrap();
     conn.execute_batch(SCHEMA).unwrap();
+    // The production loader also requires TC proc provenance, separate from DB2.
+    // These restriction-only fixtures contain no explicit proc definitions.
+    conn.execute_batch("CREATE TABLE tdb_spell_proc (SpellId INTEGER PRIMARY KEY);")
+        .unwrap();
     conn
 }
 
@@ -116,6 +120,15 @@ fn aura_restrictions_loader_keeps_absent_rows_sparse_and_ignores_other_difficult
             "no difficulty0 restrictions for spell {spell_id}"
         );
     }
+}
+
+#[test]
+fn aura_restrictions_loader_rejects_unpublished_proc_source() {
+    let conn = open_spell_database();
+    conn.execute_batch("DROP TABLE tdb_spell_proc;").unwrap();
+    let error =
+        super::load::load_spell_store(&conn).expect_err("missing required proc source table");
+    assert!(error.to_string().contains("tdb_spell_proc"), "{error}");
 }
 
 #[test]

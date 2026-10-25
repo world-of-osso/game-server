@@ -49,6 +49,16 @@ pub(super) fn schedule(
     effect: &crate::spell_info::SpellEffect,
     target: Entity,
 ) {
+    let Some(child) = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(effect.trigger_spell)
+    else {
+        warn!("Queued spell {} not found", effect.trigger_spell);
+        return;
+    };
+    let Some(target) = super::effects::trigger_recipient(ctx, child, target) else {
+        return;
+    };
     let due_ms = now_ms(world).wrapping_add_signed(i64::from(effect.misc_values[0]));
     let trigger = QueuedTrigger {
         kind: QueuedCastKind::CostedTrigger,

@@ -16,6 +16,7 @@ mod class_data;
 mod immunity;
 mod load;
 pub mod positivity;
+mod proc_definition;
 mod trait_data;
 mod trait_effect_points;
 
@@ -32,11 +33,22 @@ pub use class_data::MAX_LEVEL;
 pub use class_data::load_class_spells;
 pub use class_data::{ClassInfo, ClassSpells, SpecInfo};
 pub use immunity::SpellImmunityDefinition;
+pub use proc_definition::{DANCE_OF_CHIJI, INUNDATE, PROC2_CAST_SUCCESSFUL, scripted_proc_mask};
 pub use trait_data::load_trait_tree_by_id;
 pub use trait_data::{
     COND_FLAG_GATE, COND_FLAG_SUFFICIENT, TraitCond, TraitCondType, TraitCost, TraitEdgeType,
     TraitNode, TraitNodeEntry, TraitNodeType, TraitTree,
 };
+
+/// SpellEffects IDs that apply an aura (`SpellEffect.aura` is the AuraType).
+/// 35 (party) and 65 (raid) area auras apply to their resolved targets only:
+/// there is no group backend. 27 PERSISTENT_AREA_AURA applies through its
+/// dynamic object (`spell_cast::area_aura`).
+pub const AURA_EFFECTS: [u32; 4] = [6, 27, 35, 65];
+
+pub fn is_aura_effect(effect: &SpellEffect) -> bool {
+    AURA_EFFECTS.contains(&effect.effect)
+}
 
 #[cfg(not(any(test, feature = "test-support")))]
 pub const WORLD_DB_PATH: &str = "data/world.db";
@@ -264,8 +276,17 @@ pub struct SpellPowerCost {
     pub alt_power_bar_id: u32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum ProcDefinitionSource {
+    Generated,
+    ExplicitTdb,
+    Scripted,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct SpellAuraOptions {
+    /// None disables proc generation, not stacking or charge metadata.
+    pub proc_definition_source: Option<ProcDefinitionSource>,
     /// Max stacks (`CumulativeAura`).
     pub cumulative_aura: u32,
     pub proc_category_recovery_ms: i32,

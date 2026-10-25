@@ -115,7 +115,7 @@ pub(super) fn run_periodic(world: &mut World, unit: Entity, aura: &AuraInstance,
     }
 }
 
-pub(super) const INUNDATE: u32 = 378776;
+pub(super) use crate::spell_info::INUNDATE;
 const FEEL_THE_BURN: u32 = 383391;
 const FIRE_BLAST: u32 = 108853;
 const ASPECT_OF_THE_TURTLE: u32 = 186_265;

@@ -69,8 +69,7 @@ pub const PROC_MAIN_HAND_WEAPON_SWING: u32 = 0x400000;
 pub const PROC_OFF_HAND_WEAPON_SWING: u32 = 0x800000;
 pub const PROC_DEATH: u32 = 0x0100_0000;
 pub const PROC_TAKE_HELPFUL_PERIODIC: u32 = 0x8000_0000;
-/// `ProcTypeMask_1` (TrinityCore `ProcFlags2`).
-pub const PROC2_CAST_SUCCESSFUL: u32 = 0x4;
+pub use crate::spell_info::PROC2_CAST_SUCCESSFUL;
 /// TC a352b1fa SpellMgr.h:191, recipient-side knockback event.
 pub const PROC2_KNOCKBACK: u32 = 0x2;
 
@@ -385,21 +384,17 @@ fn effect_checks_proc(aura: &AuraInstance, effect: &AuraEffectState, event: &Aur
     event.damage > 0.0 && event.spell_id != Some(aura.spell_id)
 }
 
+pub(crate) use crate::spell_info::scripted_proc_mask;
+
 fn proc_mask(world: &World, aura: &AuraInstance) -> [u32; 2] {
-    // SimC76f8118 monk383–392 rolls once on the Chi action, not its hit children.
-    if aura.spell_id == crate::spell_cast::scripts::DANCE_OF_CHIJI {
-        return [0, PROC2_CAST_SUCCESSFUL];
-    }
-    // INUNDATE_NATIVE_SUCCESSFUL_UTILITY_CASTS: its explicit list includes friendly
-    // utility casts too; native harmful-hit masks do not express successful casts.
-    if aura.spell_id == scripts::INUNDATE {
-        return [0, PROC2_CAST_SUCCESSFUL];
-    }
-    world
+    let options = world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(aura.spell_id))
-        .and_then(|spell| spell.aura_options.as_ref())
-        .map_or([0; 2], |options| options.proc_type_mask)
+        .and_then(|spell| spell.aura_options.as_ref());
+    let Some(options) = options.filter(|options| options.proc_definition_source.is_some()) else {
+        return [0; 2];
+    };
+    scripted_proc_mask(aura.spell_id).unwrap_or(options.proc_type_mask)
 }
 
 fn proc_matches(

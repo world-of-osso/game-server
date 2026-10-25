@@ -12,6 +12,15 @@ SPEC.loader.exec_module(PARITY)
 
 
 class ParityProfileTests(unittest.TestCase):
+    def test_multitoken_classes_keep_their_simc_option_namespace(self):
+        for actor in ("deathknight", "demonhunter"):
+            with self.subTest(actor=actor):
+                profile = PARITY.parse_profile(
+                    f'{actor}="MID2_{actor}"\n{actor}.starting_power=0\n')
+                self.assertEqual(profile.get("class"), actor)
+                self.assertEqual(profile["name"], f"MID2_{actor}")
+                self.assertEqual(profile[f"{actor}.starting_power"], "0")
+
     def test_current_tier_manifests_use_mid2_and_label_prior_tier_evoker_gap(self):
         suffixes = ["Paladin_Protection", "Warrior_Protection", "Shaman_Elemental", "Mage_Fire",
                     "Hunter_Beast_Mastery", "Monk_Windwalker", "Warlock_Demonology", "Druid_Feral"]

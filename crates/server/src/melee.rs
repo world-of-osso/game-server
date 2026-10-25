@@ -49,16 +49,47 @@ pub fn weapon_damage_range(
     attack_power: f32,
     versatility_pct: f32,
     hand: Hand,
+    form: Option<crate::auras::shapeshift::FormAttackTiming>,
 ) -> (f32, f32) {
-    let ap_bonus = attack_power / ATTACK_POWER_PER_DPS * weapon.speed;
+    let (minimum, maximum, ap_speed) = weapon_damage_terms(weapon, false, form);
+    let ap_bonus = attack_power / ATTACK_POWER_PER_DPS * ap_speed;
     let hand_pct = match hand {
         Hand::Main => 1.0,
         Hand::Off => OFF_HAND_DAMAGE_MULTIPLIER,
     };
     let scale = hand_pct * (1.0 + versatility_pct / 100.0);
+    ((minimum + ap_bonus) * scale, (maximum + ap_bonus) * scale)
+}
+
+/// TC StatSystem.cpp453–471: form weapon roll and AP speed are distinct.
+/// Keep the existing Retail AP/DPS coefficient; the form supplies only timing.
+pub(crate) fn weapon_damage_terms(
+    weapon: &WeaponDamage,
+    normalized: bool,
+    form: Option<crate::auras::shapeshift::FormAttackTiming>,
+) -> (f32, f32, f32) {
+    let speed = if normalized {
+        weapon.kind.normalized_speed()
+    } else if let Some(form) = form.filter(|form| form.use_form_ap_speed) {
+        if weapon.kind == shared::components::WeaponType::Ranged {
+            crate::auras::shapeshift::FORM_RANGED_ATTACK_SECS
+        } else {
+            form.seconds
+        }
+    } else {
+        weapon.speed
+    };
+    const MIN_FORM_AP_SPEED_SECS: f32 = 0.25;
+    let ap_speed = if form.is_some() {
+        speed.max(MIN_FORM_AP_SPEED_SECS)
+    } else {
+        speed
+    };
+    let weapon_scale = form.map_or(1.0, |form| form.seconds / ap_speed);
     (
-        (weapon.min + ap_bonus) * scale,
-        (weapon.max + ap_bonus) * scale,
+        weapon.min * weapon_scale,
+        weapon.max * weapon_scale,
+        ap_speed,
     )
 }
 
