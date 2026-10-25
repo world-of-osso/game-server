@@ -1,0 +1,337 @@
+use super::*;
+use crate::spell_cast::test_harness::Harness;
+use crate::spell_info::SpellStore;
+
+#[path = "action_extension_tests.rs"]
+mod action_extensions;
+#[path = "extension_tests.rs"]
+mod extensions;
+
+#[test]
+fn native_apl_weapon_group_reads_actual_main_hand() {
+    use shared::components::WeaponType;
+    let mut world = World::new();
+    let actor = world.spawn(crate::stats::CharacterStats::default()).id();
+    let bindings = Bindings::default();
+    let encounter = Encounter::Fixture {
+        started_at: 0.0,
+        duration: 300.0,
+        style: FightStyle::Patchwerk,
+    };
+    for (kind, expected) in [
+        (WeaponType::OneHand, 0.0),
+        (WeaponType::TwoHand, 1.0),
+        (WeaponType::Dagger, 0.0),
+    ] {
+        world
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .main_hand
+            .kind = kind;
+        let native = NativeFacts::new(&world, actor, &bindings, encounter, 1);
+        assert_eq!(native.value("main_hand.2h"), Ok(expected));
+    }
+}
+
+const TIGER_PALM: u32 = 100780;
+const BLACKOUT_KICK: u32 = 100784;
+const HIT_COMBO: u32 = 196740;
+const HIT_COMBO_BUFF: u32 = 196741;
+const PROVOKE: u32 = 115546;
+const ROLL: u32 = 109132;
+
+fn bindings() -> Bindings {
+    Bindings {
+        actions: [
+            ("tiger_palm", TIGER_PALM),
+            ("provoke", PROVOKE),
+            ("roll", ROLL),
+        ]
+        .map(|(name, id)| (name.into(), id))
+        .into(),
+        buffs: [("hit_combo".into(), HIT_COMBO_BUFF)].into(),
+        dot_refresh: Default::default(),
+        talents: [("hit_combo".into(), HIT_COMBO)].into(),
+        resources: [
+            ("energy".into(), PowerType::Energy),
+            ("chi".into(), PowerType::Chi),
+        ]
+        .into(),
+        global_cooldown_spell: TIGER_PALM,
+    }
+}
+
+fn fixture(world: &World) -> Encounter {
+    Encounter::Fixture {
+        started_at: crate::spell_cast::now(world),
+        duration: 300.0,
+        style: FightStyle::Patchwerk,
+    }
+}
+
+fn monk() -> (Harness, Entity) {
+    let (mut h, actor) = crate::followers::kit_tests::at_level(227734, 35, |app| {
+        app.add_plugins(crate::stats::StatsPlugin);
+    });
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(shared::components::Health {
+            current: 100_000_000.0,
+            max: 100_000_000.0,
+        });
+    (h, actor)
+}
+
+fn cast(h: &mut Harness, actor: Entity, spell: u32, target: Entity) {
+    use crate::spell_cast::CastFailure;
+    for _ in 0..1200 {
+        match crate::spell_cast::creature_cast(h.app.world_mut(), actor, spell, Some(target), false)
+        {
+            Ok(()) => {
+                h.advance(3);
+                return;
+            }
+            Err(
+                CastFailure::OnGlobalCooldown
+                | CastFailure::InProgress
+                | CastFailure::NotEnoughPower(_),
+            ) => h.advance(1),
+            Err(reason) => panic!("native spell{spell} failed: {reason:?}"),
+        }
+    }
+    panic!("native spell{spell} never became ready");
+}
+
+fn action(name: &str) -> Action {
+    Action {
+        source_row: None,
+        name: name.into(),
+        target: None,
+        options: BTreeMap::new(),
+    }
+}
+
+#[test]
+fn native_apl_facts_follow_earned_buff_stacks_resources_and_repeat_removal() {
+    let (mut h, actor) = monk();
+    let b = bindings();
+    let clock = fixture(h.app.world());
+    let target = h.npc;
+    cast(&mut h, actor, TIGER_PALM, target);
+    let f = NativeFacts::new(h.app.world(), actor, &b, clock, 1);
+    assert_eq!(f.value("buff.hit_combo.up").unwrap(), 1.0);
+    assert_eq!(f.value("buff.hit_combo.stack").unwrap(), 1.0);
+    assert!(f.value("buff.hit_combo.remains").unwrap() > 0.0);
+    let (chi, max_chi) =
+        crate::spell_cast::powers::power_value(h.app.world(), actor, PowerType::Chi).unwrap();
+    assert!(chi > 0.0);
+    assert_eq!(f.value("chi").unwrap(), f64::from(chi));
+    assert_eq!(f.value("chi.max").unwrap(), f64::from(max_chi));
+    assert_eq!(f.value("chi.deficit").unwrap(), f64::from(max_chi - chi));
+    cast(&mut h, actor, BLACKOUT_KICK, target);
+    assert_eq!(
+        NativeFacts::new(h.app.world(), actor, &b, clock, 1)
+            .value("buff.hit_combo.stack")
+            .unwrap(),
+        2.0
+    );
+    cast(&mut h, actor, BLACKOUT_KICK, target);
+    let f = NativeFacts::new(h.app.world(), actor, &b, clock, 1);
+    assert_eq!(f.value("buff.hit_combo.up").unwrap(), 0.0);
+    assert_eq!(f.value("buff.hit_combo.stack").unwrap(), 0.0);
+    assert_eq!(f.value("buff.hit_combo.remains").unwrap(), 0.0);
+}
+
+#[test]
+fn native_apl_facts_read_selected_traits_without_promoting_learned_utility_to_talent() {
+    use crate::class_progression::{KnownSpells, TraitLoadout};
+    use crate::spell_info::ClassSpells;
+    use crate::trait_config::{Purchase, TraitContext, build_config, starter_purchases};
+    let (mut h, actor) = monk();
+    let profile = h
+        .app
+        .world()
+        .get::<crate::followers::Follower>(actor)
+        .unwrap()
+        .profile
+        .clone();
+    let classes = h.app.world().resource::<ClassSpells>();
+    let class = classes
+        .classes
+        .iter()
+        .find(|class| class.class_id == profile.class_id)
+        .unwrap();
+    let context = TraitContext {
+        spec_id: 269,
+        level: 35,
+    };
+    let purchases = starter_purchases(&class.traits, context).unwrap();
+    let allocated: Vec<_> = build_config(&class.traits, context, &purchases)
+        .unwrap()
+        .into_iter()
+        .map(|entry| Purchase {
+            node_id: entry.node_id,
+            entry_id: entry.entry_id,
+            ranks: entry.total(),
+        })
+        .collect();
+    let (known, traits) =
+        crate::class_progression::evaluate_reference_traits(classes, &profile, 35, &allocated)
+            .unwrap();
+    let selected = traits
+        .active_talent_spells()
+        .next()
+        .expect("native35 starter has selected talents")
+        .spell_id;
+    assert!(
+        known.contains(PROVOKE),
+        "real native utility is learned separately from talents"
+    );
+    h.app.world_mut().entity_mut(actor).insert((known, traits));
+    h.advance(4);
+    assert!(h.app.world().get::<TraitLoadout>(actor).is_some());
+    assert!(
+        h.app
+            .world()
+            .get::<KnownSpells>(actor)
+            .unwrap()
+            .contains(PROVOKE)
+    );
+    let b = Bindings {
+        talents: [
+            ("selected_native".into(), selected),
+            ("learned_utility".into(), PROVOKE),
+        ]
+        .into(),
+        ..Default::default()
+    };
+    let f = NativeFacts::new(h.app.world(), actor, &b, fixture(h.app.world()), 1);
+    assert_eq!(f.value("talent.selected_native").unwrap(), 1.0);
+    assert_eq!(f.value("talent.learned_utility").unwrap(), 0.0);
+}
+
+#[test]
+fn native_apl_facts_read_native_cooldown_and_bind_control_action_gcd() {
+    let (mut h, actor) = monk();
+    let b = bindings();
+    let clock = fixture(h.app.world());
+    let target = h.npc;
+    cast(&mut h, actor, PROVOKE, target);
+    let native = h.app.world().resource::<SpellStore>().get(PROVOKE).unwrap();
+    let duration = f64::from(native.cooldowns.as_ref().unwrap().recovery_ms) / 1000.0;
+    let f = NativeFacts::new(h.app.world(), actor, &b, clock, 1);
+    let remains = f.value("cooldown.provoke.remains").unwrap();
+    assert!(remains > 0.0 && remains <= duration);
+    assert_eq!(f.value("cooldown.provoke.duration").unwrap(), duration);
+    assert_eq!(f.value("cooldown.provoke.up").unwrap(), 0.0);
+    assert_eq!(
+        f.value_for(&action("call_action_list"), "gcd").unwrap(),
+        0.0
+    );
+    assert!(f.value_for(&action("tiger_palm"), "gcd").unwrap() > 0.0);
+    assert!(f.value("gcd").unwrap_err().contains("action"));
+    h.advance((duration * 20.0).ceil() as usize + 2);
+    let f = NativeFacts::new(h.app.world(), actor, &b, clock, 1);
+    assert_eq!(f.value("cooldown.provoke.remains").unwrap(), 0.0);
+    assert_eq!(f.value("cooldown.provoke.up").unwrap(), 1.0);
+}
+
+#[test]
+fn native_apl_facts_read_real_roll_charge_count_and_recharge_clock() {
+    let (mut h, actor) = monk();
+    let b = bindings();
+    let clock = fixture(h.app.world());
+    let categories = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(ROLL)
+        .unwrap()
+        .categories
+        .as_ref()
+        .unwrap();
+    let max = f64::from(categories.max_charges);
+    assert!(max > 0.0);
+    cast(&mut h, actor, ROLL, actor);
+    let f = NativeFacts::new(h.app.world(), actor, &b, clock, 1);
+    assert_eq!(f.value("cooldown.roll.charges").unwrap(), max - 1.0);
+    assert!(f.value("cooldown.roll.full_recharge_time").unwrap() > 0.0);
+}
+
+#[test]
+fn native_apl_facts_fixture_clock_and_unavailable_dungeon_ttd_are_explicit() {
+    let (mut h, actor) = monk();
+    let b = bindings();
+    let clock = fixture(h.app.world());
+    let expires_at = h.app.world().resource::<Time>().elapsed() + Duration::from_secs(300);
+    h.app.world_mut().entity_mut(h.npc).insert(FixtureTarget {
+        expires_at,
+        lifetime: Duration::from_secs(300),
+        is_boss: true,
+    });
+    h.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::networking::CombatTarget(Some(h.npc)));
+    h.advance(40);
+    let f = NativeFacts::new(h.app.world(), actor, &b, clock, 3);
+    let elapsed = f.value("time").unwrap();
+    assert!((elapsed - 2.0).abs() < 0.001);
+    assert!((f.value("fight_remains").unwrap() + elapsed - 300.0).abs() < 0.001);
+    assert_eq!(
+        f.value("target.time_to_die").unwrap(),
+        f.value("fight_remains").unwrap()
+    );
+    assert_eq!(f.value("active_enemies").unwrap(), 3.0);
+    assert_eq!(f.value("fight_style.patchwerk").unwrap(), 1.0);
+    assert_eq!(f.value("fight_style.dungeonslice").unwrap(), 0.0);
+    let dungeon = NativeFacts::new(
+        h.app.world(),
+        actor,
+        &b,
+        Encounter::Dungeon { started_at: 0.0 },
+        3,
+    );
+    assert!(
+        dungeon
+            .value("target.time_to_die")
+            .unwrap_err()
+            .contains("unavailable")
+    );
+    assert!(
+        dungeon
+            .value("fight_remains")
+            .unwrap_err()
+            .contains("unavailable")
+    );
+    assert!(
+        f.value("buff.missing_alias.up")
+            .unwrap_err()
+            .contains("unknown")
+    );
+}
+
+#[test]
+fn native_apl_facts_convert_real_charge_rage_using_native_display_modifier() {
+    use crate::spell_cast::test_harness::harness_with;
+    use shared::components::Position;
+    const CHARGE: u32 = 100;
+    let mut h = harness_with(Vec::new(), &[CHARGE], 1, true).unwrap();
+    h.app.world_mut().get_mut::<Position>(h.npc).unwrap().x = 20.0;
+    let actor = h.caster;
+    let target = h.npc;
+    cast(&mut h, actor, CHARGE, target);
+    let b = Bindings {
+        resources: [("rage".into(), PowerType::Rage)].into(),
+        ..Default::default()
+    };
+    let f = NativeFacts::new(h.app.world(), actor, &b, fixture(h.app.world()), 1);
+    let (raw, _) =
+        crate::spell_cast::powers::power_value(h.app.world(), actor, PowerType::Rage).unwrap();
+    assert!(
+        raw >= 200.0,
+        "ordinary native Charge must earn its real200 raw Rage"
+    );
+    assert_eq!(f.value("rage").unwrap(), f64::from(raw) / 10.0);
+}

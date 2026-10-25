@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-HELPER = ROOT / 'crates/server/tests/fixtures/prepare_class_summon_db.py'
+HELPER = ROOT / 'crates/server-combat/tests/fixtures/prepare_class_summon_db.py'
 spec = importlib.util.spec_from_file_location('prepare_class_summon_db', HELPER)
 prepare_class = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(prepare_class)
