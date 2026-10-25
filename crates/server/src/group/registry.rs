@@ -18,7 +18,7 @@ use shared::protocol::{
 };
 
 pub type CharacterId = u64;
-pub type GroupId = u64;
+pub use server_map_rules::maps::GroupId;
 
 /// A player currently in the world.
 #[derive(Clone, Debug, PartialEq)]

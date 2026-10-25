@@ -1,7 +1,7 @@
 //! Durable owned combat fields. Journal identity/level/XP stay in account_pet_journals.
 use redb::{Database, ReadableTable, TableDefinition};
 use serde::{Deserialize, Serialize};
-use server::pet_battle::{Catalog, calculate_stats};
+use server_pet_battle::pet_battle::{Catalog, calculate_stats};
 use shared::pet_battle::{OwnedPet, PetJournal};
 use std::collections::BTreeMap;
 

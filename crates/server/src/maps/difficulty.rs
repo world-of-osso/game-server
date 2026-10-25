@@ -12,6 +12,7 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use redb::{Database, ReadableDatabase, TableDefinition};
+pub use server_map_rules::maps::{DungeonDifficulty, ServerClock};
 use shared::components::Player;
 use shared::protocol::{
     DungeonDifficultySet, InstanceChannel, InstanceInfo, InstanceReset, InstanceResetFailed,
@@ -20,7 +21,7 @@ use shared::protocol::{
 };
 
 use super::instances::{InstanceResetResult, Now};
-use super::store::{DIFFICULTY_NORMAL, InstanceType, MapStore};
+use super::store::{InstanceType, MapStore};
 use super::{InMap, InstanceManager};
 use crate::auth::InWorld;
 use crate::group::GroupRegistry;
@@ -31,40 +32,10 @@ use crate::persistence::{ClientId, GameDatabase};
 pub(crate) const CHARACTER_DUNGEON_DIFFICULTY: TableDefinition<u64, u32> =
     TableDefinition::new("character_dungeon_difficulty");
 
-/// `Player::m_dungeonDifficulty`.
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct DungeonDifficulty(pub u32);
-
-impl Default for DungeonDifficulty {
-    fn default() -> Self {
-        Self(DIFFICULTY_NORMAL)
-    }
-}
-
 /// Characters whose dungeon difficulty their group set (`Group::AddMember`,
 /// `Group::SetDungeonDifficultyID`), applied by [`apply_difficulty_changes`].
 #[derive(Resource, Debug, Default)]
 pub struct DifficultyChanges(pub Vec<(u64, u32)>);
-
-/// The wall clock of instance locks and auction expiry (`GameTime::GetSystemTime`), shifted by
-/// `offset_secs` (`game-server-admin clock-advance`) or pinned by tests.
-#[derive(Resource, Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct ServerClock {
-    pub offset_secs: i64,
-    pub fixed_unix: Option<i64>,
-}
-
-impl ServerClock {
-    pub fn unix(&self) -> i64 {
-        let system = self.fixed_unix.unwrap_or_else(|| {
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .expect("system time after 1970")
-                .as_secs() as i64
-        });
-        system + self.offset_secs
-    }
-}
 
 /// Both clocks `InstanceManager` needs.
 pub(crate) fn now(world: &World) -> Now {

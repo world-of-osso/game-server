@@ -9,9 +9,8 @@
 
 mod area_triggers;
 pub(crate) mod difficulty;
-pub(crate) mod graveyard;
-pub mod instances;
-pub(crate) mod locks;
+pub use server_map_rules::maps::{InMap, WorldLocation, instances};
+pub(crate) use server_map_rules::maps::{graveyard, locks};
 mod login;
 pub(crate) mod persistence;
 pub(crate) mod raid;
@@ -20,7 +19,7 @@ pub(crate) mod transfer;
 pub(crate) mod units;
 
 use bevy::prelude::*;
-use shared::components::{Player, Position};
+use shared::components::Player;
 
 pub use difficulty::{DungeonDifficulty, ServerClock};
 pub use instances::{HOSTED_CONTINENTS, InstanceManager};
@@ -28,41 +27,6 @@ pub(crate) use login::LoginMaps;
 pub(crate) use raid::RaidDifficulty;
 pub use store::MapStore;
 pub(crate) use transfer::{MapTransfer, TeleportOptions, teleport_to};
-
-/// The map copy an entity is in.
-#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct InMap {
-    pub map_id: u32,
-    pub instance_id: u32,
-}
-
-impl InMap {
-    /// A world map (continent): its only copy is instance 0.
-    pub const fn continent(map_id: u32) -> Self {
-        Self {
-            map_id,
-            instance_id: 0,
-        }
-    }
-}
-
-/// A point on a map in WoW coordinates, orientation in radians (TrinityCore
-/// `WorldLocation`).
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct WorldLocation {
-    pub map_id: u32,
-    pub position: Vec3,
-    pub orientation: f32,
-}
-
-impl WorldLocation {
-    /// The server (Bevy-space) position of this location.
-    pub fn bevy_position(&self) -> Position {
-        let (x, y, z) =
-            crate::terrain_height::wow_to_bevy(self.position.x, self.position.y, self.position.z);
-        Position { x, y, z }
-    }
-}
 
 /// The map id a player is saved on: its map, or the destination of the transfer it is
 /// in (TrinityCore saves `m_teleport_dest` before the world port ack).

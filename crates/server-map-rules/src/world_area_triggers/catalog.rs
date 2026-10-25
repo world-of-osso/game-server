@@ -8,7 +8,7 @@ use super::WorldAreaTrigger;
 use crate::maps::WorldLocation;
 
 #[derive(Debug, Clone)]
-pub(super) struct Spawn {
+pub struct Spawn {
     map_id: u32,
     difficulties: Vec<u32>,
     pub location: WorldLocation,
@@ -16,10 +16,10 @@ pub(super) struct Spawn {
 }
 
 #[derive(Debug, Default, Clone)]
-pub(crate) struct Catalog(HashMap<u32, Vec<Spawn>>);
+pub struct Catalog(HashMap<u32, Vec<Spawn>>);
 
 impl Catalog {
-    pub(super) fn spawns(&self, map_id: u32, difficulty: u32) -> Vec<Spawn> {
+    pub fn spawns(&self, map_id: u32, difficulty: u32) -> Vec<Spawn> {
         self.0
             .get(&map_id)
             .into_iter()
@@ -30,7 +30,7 @@ impl Catalog {
     }
 }
 
-pub(crate) fn load_catalog(connection: &Connection) -> rusqlite::Result<Catalog> {
+pub fn load_catalog(connection: &Connection) -> rusqlite::Result<Catalog> {
     let mut statement = connection.prepare(
         "SELECT s.SpawnId,s.AreaTriggerCreatePropertiesId,s.IsCustom,s.MapId,s.SpawnDifficulties,
          s.PosX,s.PosY,s.PosZ,s.Orientation,p.AreaTriggerId,p.IsAreatriggerCustom,
