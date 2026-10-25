@@ -294,6 +294,30 @@ pub(super) fn prepare_elemental_precombat(run: &mut Run) -> Result<(), String> {
     Ok(())
 }
 
+pub(super) fn prepare_devastation_precombat(run: &mut Run) -> Result<(), String> {
+    use super::literal_rotation::PrecombatPoll;
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let mut rotation =
+        super::devastation_rotation::Rotation::load(run.app.world(), run.actor, encounter)?;
+    // Pinned player.cpp6138–6183: source-order setup, through the first harmful precast.
+    loop {
+        match rotation.precombat_step(run.app.world_mut(), run.actor, &run.targets)? {
+            PrecombatPoll::Waiting => finish_pending_setup(run)?,
+            PrecombatPoll::Selected { action, execution } => {
+                rotation.execute_precombat(run, action, execution)?
+            }
+            PrecombatPoll::Finished => break,
+        }
+    }
+    rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
+    run.devastation_rotation = Some(rotation);
+    Ok(())
+}
+
 pub(super) fn prepare_havoc_precombat(run: &mut Run) -> Result<(), String> {
     let encounter = crate::simc_apl_native::Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),

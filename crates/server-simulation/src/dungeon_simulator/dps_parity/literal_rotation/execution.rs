@@ -630,6 +630,45 @@ fn refused_admission(
     }
 }
 
+pub(crate) fn execute_row(
+    world: &mut World,
+    actor: Entity,
+    row: &Action,
+    execution: Execution,
+) -> Result<(), String> {
+    let Some(stage) = row.options.get("empower_to") else {
+        return execute(world, actor, execution);
+    };
+    // SimC76f8118 sc_evoker.cpp3595–3599 parses empower_to;
+    // selecting a row must retain its requested stage, not the native maximum.
+    let stage = stage
+        .parse::<u8>()
+        .map_err(|_| format!("invalid empower_to={stage}"))?;
+    let Execution::Spell(spell, unit, primary) = execution else {
+        return Err("empower_to requires an ordinary native spell".into());
+    };
+    if world.get::<shared::components::Player>(actor).is_some() {
+        return Err("player literal empower dispatch is not yet qualified".into());
+    }
+    let metadata = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell)
+        .ok_or_else(|| format!("native empower spell{spell} absent"))?;
+    let destination = action_destination(world, metadata, unit)?;
+    crate::spell_cast::creature_cast_empowered_with_targets(
+        world,
+        actor,
+        spell,
+        crate::spell_cast::CastTargets {
+            unit,
+            primary,
+            destination,
+        },
+        stage,
+    )
+    .map_err(|error| format!("native empower{spell} stage{stage} rejected: {error:?}"))
+}
+
 pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<(), String> {
     match action {
         Execution::Snapshot => Err("snapshot execution belongs to the native stat recorder".into()),
