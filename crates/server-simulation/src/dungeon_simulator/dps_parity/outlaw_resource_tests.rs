@@ -84,6 +84,52 @@ fn rogue_envenom_and_dispatch_retain_paid_point_scaling() {
     }
 }
 
+#[test]
+#[ignore = "requires private native260 player profile and traits"]
+fn outlaw_killing_spree_emits_both_hands_for_effective_point_ticks() {
+    // SimC76f8118 sc_rogue.cpp4749–4838: tick-zero plus one tick per
+    // effective point; each tick independently emits the native MH and OH hits.
+    for points in [1, 5] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(260, 1).unwrap();
+        engage(&mut run);
+        fund_finisher(&mut run, points as f32);
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(51690, run.actor, Some(run.targets[0])),
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        for spell in [57841, 57842] {
+            let attempts: Vec<_> = events
+                .iter()
+                .filter(|event| {
+                    event.source == Some(run.actor.to_bits())
+                        && event.spell_id == Some(spell)
+                        && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+                })
+                .collect();
+            assert_eq!(
+                attempts.len(),
+                points + 1,
+                "native Killing Spree{spell} must emit tick-zero and {points} scheduled hand hits"
+            );
+            assert!(
+                attempts
+                    .iter()
+                    .any(|hit| hit.kind == CombatLogKind::Damage && hit.amount > 0),
+                "native Killing Spree{spell} must deal actual hand damage"
+            );
+        }
+    }
+}
+
 fn between_the_eyes_remaining(run: &Run) -> f64 {
     let bindings = crate::simc_apl_native::Bindings {
         actions: [("between_the_eyes".into(), 315341)].into(),
