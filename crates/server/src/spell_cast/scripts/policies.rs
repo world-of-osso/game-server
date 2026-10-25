@@ -54,6 +54,10 @@ enum Relationship {
         parent: u32,
         payload: u32,
     },
+    SpendSelfAuraStackAfterCast {
+        parent: u32,
+        payload: u32,
+    },
     ProcReplacement {
         spell: u32,
         aura: u32,
@@ -126,6 +130,17 @@ const CUT_TO_THE_CHASE: Relationship = Relationship::SpenderAuraExtension {
 
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
+    // SimC76f8118 sc_evoker.cpp6584–6595: one successful Disintegrate
+    // spends one earned Mass Disintegrate use, not one per secondary recipient.
+    Policy {
+        name: "SIMC_DEVASTATION_MASS_DISINTEGRATE_CONSUMER",
+        spec: 1467,
+        talent: 436335,
+        relationship: Relationship::SpendSelfAuraStackAfterCast {
+            parent: 356995,
+            payload: 436336,
+        },
+    },
     // SimC76f8118 sc_evoker.cpp6241–6245: Deep Breath's main impact
     // executes native353759; DB2 supplies its periodic damage and recipients.
     Policy {
@@ -1142,6 +1157,7 @@ fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
         | Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
         | Relationship::ApplySelfAuraAfterCast { parent: trigger, .. }
         | Relationship::ConsumeSelfAuraAfterCast { parent: trigger, .. }
+        | Relationship::SpendSelfAuraStackAfterCast { parent: trigger, .. }
         | Relationship::CounterAfterCast { parent: trigger, .. }
         | Relationship::ProcReplacement { spell: trigger, .. }
         | Relationship::CastEcho { parent: trigger, .. }
@@ -1213,6 +1229,11 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
                     crate::auras::RemoveReason::Consumed,
                     |aura| aura.spell_id == payload && aura.caster == caster,
                 );
+            }
+            Relationship::SpendSelfAuraStackAfterCast { payload, .. } => {
+                if let Some(instance) = read_counter_instance(world, caster, payload) {
+                    crate::auras::spend_stack(world, caster, instance);
+                }
             }
             Relationship::CounterAfterCast { .. } => grant_counter(world, caster, policy),
             Relationship::CastEcho { .. } => {
