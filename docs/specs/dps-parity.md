@@ -6,6 +6,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Beast Mastery literal fixture
 
+- Selected Bloodshed applies native321538 from every active owned stable pet after Bestial Wrath, including a newly summoned Nature's Ally. Each pet retains its own periodic aura, native amount and lifetime.
+
 - Native Effect188 summons a stored pet as a guardian using the authored count and lifetime without replacing the current stable pet. Selected Nature's Ally triggers native1282474 after Bestial Wrath; the guardian attacks and receives owned-pet commands. Expiry/death removes only the guardian.
 
 - Stable hunter pets inherit60% of their owner's weapon-inclusive native ranged AP under pinned SimC behavior. Native spell coefficients remain unchanged. Controlled-pet direct spells inherit the live owner's native critical chance while retaining the pet as the damage source.

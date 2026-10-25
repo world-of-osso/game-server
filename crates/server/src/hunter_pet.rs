@@ -215,6 +215,20 @@ impl PetCastFailure {
     }
 }
 
+/// Living owned stable pets, including native temporary guardians.
+pub(crate) fn active_owned_pets(world: &mut World, owner: Entity) -> Vec<Entity> {
+    world
+        .query::<(Entity, &HunterPet)>()
+        .iter(world)
+        .filter(|(unit, pet)| {
+            pet.owner == owner
+                && crate::spell_cast::targets::is_alive(world, *unit)
+                && crate::spell_cast::targets::same_map(world, owner, *unit)
+        })
+        .map(|(unit, _)| unit)
+        .collect()
+}
+
 /// The pet `owner` has out (`Unit::GetPet`).
 pub fn summoned_pet(world: &World, owner: Entity) -> Option<Entity> {
     world
