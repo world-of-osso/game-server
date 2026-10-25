@@ -1,5 +1,5 @@
 //! Explicit native proc families constrain dispatch, including an empty aura mask.
-use super::procs::{self, AuraEvent, PROC_DEAL_MELEE_ABILITY};
+use crate::auras::procs::{self, AuraEvent, PROC_DEAL_MELEE_ABILITY};
 use crate::spell_cast::test_harness::harness;
 use shared::{components::PowerType, protocol::CombatLogKind};
 
