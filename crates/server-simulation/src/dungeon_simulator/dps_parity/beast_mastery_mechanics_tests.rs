@@ -2,6 +2,39 @@ use super::*;
 
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
+fn beast_mastery_native_pet_direct_attacks_can_crit() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
+    engage(&mut run);
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+    for spell in [83381, 49966] {
+        for _ in 0..64 {
+            crate::spell_cast::cast_triggered(
+                run.app.world_mut(),
+                pet,
+                spell,
+                Some(run.targets[0]),
+                1,
+            );
+        }
+    }
+    let combat = report::combat(run.app.world(), &run.damage_targets, 1.0);
+    for spell in [83381, 49966] {
+        let action = combat["actions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|action| action["spell_id"] == spell)
+            .unwrap();
+        assert!(
+            action["crit_hits"].as_u64().unwrap() > 0,
+            "real pet spells must inherit the owner's native critical chance: {spell}; {action}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private spec253 reference inputs and native world DB"]
 fn beast_mastery_barbed_and_cobra_arm_consumable_natures_ally() {
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
     engage(&mut run);

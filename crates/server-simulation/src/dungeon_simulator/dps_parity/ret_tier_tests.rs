@@ -3,7 +3,7 @@ use super::*;
 use crate::spell_cast::{CastFailure, test_harness::ObservedCombatEvents};
 use shared::protocol::CombatLogKind;
 
-const DIVINE_PURPOSE: u32 = 223819;
+const DIVINE_PURPOSE: u32 = 408458;
 const DIVINE_POWER: u32 = 1305230;
 const VERDICT_ARBITER: u32 = 1306161;
 const STORM_ARBITER: u32 = 1306162;

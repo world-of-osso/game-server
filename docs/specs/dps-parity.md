@@ -6,6 +6,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Beast Mastery literal fixture
 
+- Stable hunter pets inherit60% of their owner's weapon-inclusive native ranged AP under pinned SimC behavior. Native spell coefficients remain unchanged. Controlled-pet direct spells inherit the live owner's native critical chance while retaining the pet as the damage source.
+
 - Selected Nature's Ally1273126 arms native1276720 after successful Barbed Shot or Cobra Shot; successful Kill Command consumes it. Native after-cast effects must compose with these sourced policy rows, retaining Barbed Focus. Literal `.react` observes native acquisition with the pinned profile's reaction settings.
 
 - Literal precombat provisions the existing native default-duck stable policy and executes ordinary Call Pet. The pet attacks the current encounter primary through native pet control, without restoring follower rotation decisions.
@@ -35,7 +37,16 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Shared cast target context
 
+- [x] Native trigger effects whose resolved recipient is self must forward the immutable selected primary when their child requires an explicit enemy. Preserve queued effect64 delays/costs and immediate effect32 dispatch; self/friendly children retain native recipients. Native201427 must damage the selected enemy through both227518 and delayed201428 even after the live combat target changes.
+
 - [x] Native execution preserves the selected action primary separately from the spell's cast unit. A self-target spell must keep its native self cast while forwarding the actual selected hostile primary to child relationships. Preserve that context across queued requests, cast bars and missile snapshots; an absent or unknown context must not select a substitute. Apply the same contract to Player and NPC actors without spell-ID branches, damage multipliers or mutable-target fallbacks. [Proof](../handoffs/hostile-primary-proof-ledger.md).
+
+### Havoc literal rotation
+
+- [x] `SIMC_HAVOC_DEMONIC_TRANSFORMATION`: native Eye Beam198013/Abyssal Gaze452497 with selected213410/spec577 enters native162264 before channel execution, using the live native talent effect0 duration. If the actor already owns live Meta, extend it without resetting effects or tick phase. No resource grant or damage adjustment; unrelated spells do not trigger the relationship.
+
+- [x] Spec577 player measurements interpret the pinned76f8118 Havoc action lists through the shared literal driver, including source-order precombat, native selected hero tree, and native equipment facts. No replacement priority or resource grants.
+- [ ] Per-action Demonsurge availability tracks successful source-defined Meta/Demonic casts and individual uses; these virtual APL predicates do not fabricate native Demonsurge damage. Missing soul-fragment pickups and inventory potions remain named gaps.
 
 ### Ret Dawnlight policies
 
@@ -48,11 +59,11 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Ret Divine Purpose producer
 
-- [ ] `SIMC_RET_DIVINE_PURPOSE_TRIGGER`: only validated selected408459 may roll its actual native effect0 amount after an ordinary HolyPower-cost cast (including a zero final cost). Trigger native223819 after the old cast's modifier charges are consumed. Aura-only unselected actors, non-HolyPower actions and full-mask background casts do not qualify. TC registers older223817; the selected408459 relationship is explicitly pinned SimC-derived. No chance, resource or coefficient override. [Proof ledger](../handoffs/ret-paladin-parity-proof-ledger.md#ret-mid2-tier-relationship-source-policy).
+- [ ] `SIMC_RET_DIVINE_PURPOSE_TRIGGER`: only validated selected408459 may roll its actual native effect0 amount after an ordinary HolyPower-cost cast (including a zero final cost). Trigger native Ret408458 after the old cast's modifier charges are consumed (SimC76f8118 `sc_paladin.cpp4342`); generic223819 is not its replacement. Aura-only unselected actors, non-HolyPower actions and full-mask background casts do not qualify, except the explicitly sourced Empyrean Legacy Storm producer. TC registers older223817; the selected408459 relationship is explicitly pinned SimC-derived. No chance, resource or coefficient override. [Proof ledger](../handoffs/ret-paladin-parity-proof-ledger.md#ret-mid2-tier-relationship-source-policy).
 
 ### Ret MID2 tier relationship
 
-- [ ] `SIMC_RET_TIER_MID2_DIVINE_PURPOSE_RELATIONSHIP`: consuming actual foreground Divine Purpose223819 with native2062 two-piece grants native Divine Power1305230. Four-piece arms the spender's native Verdict/Storm/Light Arbiter kind only when none is pending; the same kind preserves it, a different kind consumes it and casts native1306923 at the preserved hostile primary, not a self-centered spender's cast unit. Native gear eligibility, effects, coefficients and durations remain authoritative. No fabricated DB2 trigger edges. Natural Divine Purpose generation, Empyrean Legacy background consumption and Hammer of Light runtime qualification remain separate open cases. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#ret-mid2-tier-relationship-source-policy).
+- [ ] `SIMC_RET_TIER_MID2_DIVINE_PURPOSE_RELATIONSHIP`: consuming actual foreground Divine Purpose408458 with native2062 two-piece grants native Divine Power1305230. Four-piece arms the spender's native Verdict/Storm/Light Arbiter kind only when none is pending; the same kind preserves it, a different kind consumes it and casts native1306923 at the preserved hostile primary, not a self-centered spender's cast unit. Native gear eligibility, effects, coefficients and durations remain authoritative. No fabricated DB2 trigger edges. Hammer of Light runtime qualification remains a separate open case. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#ret-mid2-tier-relationship-source-policy).
 
 ### Ret Storm root supply and secondary relationships
 
@@ -141,6 +152,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [ ] `SIMC_RET_EMPYREAN_LEGACY_RELATIONSHIP`: actual Avenging Wrath31884/454351 grants native387178 only for validated selected387170. Actual FV/TV consumes it and schedules zero-delay free background53385 at1+native387170 effect1 percent. Preserve native coefficients, area selectors and flight. Only this background may consume opposite-kind Arbiter without consuming Divine Purpose or its proc charge. Suppress metadata-only every-cast grant/any-hit charge consumption only for this policy's driver/buff; other proc dispatch is unchanged. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#empyrean-legacy-relationship-policy).
 
+- Legacy Storm also rolls selected native Divine Purpose after consuming an opposite Arbiter kind and before Second Sunrise. It can grant fresh Purpose without consuming or classifying existing Purpose; echoes and Tempest cannot inherit this producer (`sc_paladin_retribution.cpp576–602`; `sc_paladin.hpp1665–1726`).
+
 ### Proc recipients
 
 - Triggered native casts resolve their explicit unit identity before planning or launch. A queued proc whose enemy has despawned must reject that cast, not recreate combat references or select a substitute. Native300s Enhancement3T add retirement is the regression boundary (TC `Spell.cpp4243–4255`).
@@ -152,6 +165,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Periodic auras and GroundPulses fields with native `SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC` (Attributes5 `0x2000`) apply caster spell haste after the native period spell modifiers, truncating to integer milliseconds. Their unchanged duration admits the resulting extra ticks. Unflagged auras retain their native period. Source: TC a352b1fa `SpellAuraEffects.cpp999–1012`.
 
 ### Measurement
+
+- Earned Deadly Poison coating procs apply their native effect0 DoT to the actual proc recipient. A repeat while that caster's poison is still ticking also deals the sourced instant poison hit. Other casters' poisons do not enable that instant. Native proc admission/chance, damage and durations remain authoritative.
 
 - A successful harmful Player ability carrying the native melee-combat-start flag starts weapon swings at its retained hostile primary. An existing weapon victim and swing timers remain unchanged. Fixture engagement does not inject the missing attack; no ability whitelist or damage multiplier substitutes for the native flag.
 
@@ -177,6 +192,8 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 - [ ] Compare SimC70391 and native70448 effect rows before attributing a coefficient mismatch to a server bug. Rotation/decision edits remain lead-owned.
 - [x] `SIMC_PARITY_ALLOCATIONS` applies to every explicit parity actor, preserving exact selected reference allocations. Pinned SimC76f8118 `player.cpp2696–2860` decodes node selections without parent-edge or currency-gate validation; the test-only native allocation builder skips those two checks. Pinned `player.cpp2775–2779` also exempts allocated HERO-tree nodes from specialization gates, including native98931/entry122279 Mass Eruption on spec1467. Only hero availability/visibility/rank-allowed spec predicates are exempt; granted-rank amounts and all other predicates remain native. Subtract granted ranks from the original exported totals under that same fixture policy, so newly eligible grants cannot duplicate an allocated rank. Node/entry membership, rank, non-hero specialization, level, choice, selected subtree and total currency budget checks remain. Production `build_config` remains strict. Spec251 uses a real player because no native follower profile exists; its former `SIMC_PROFILE_NOT_NATIVE_LEGAL` scoring exclusion is retired. Do not drop selected nodes, invent follower rows or edit official profiles/exports.
 - [ ] Cover every non-initial native70448 player specialization (40 rows with ClassID1–13/OrderIndex<4), not merely the first follower cohort66/73/105/257/262/63/253/1467/269/266/103. Current pinned sources have29 baseMID2 profiles and11 native follower-harness profiles; absent harness profiles do not imply absent server class support. Missing shipped healer references remain explicit HPS/BiS gaps, never synthetic profiles. Report first-three and all-spec summaries to the lead.
+
+Final30s sustained-damage qualification compares cumulative damage to every measured target identity, including retired waves. Engagement samples still inspect only current live opponents; add retirement must not subtract earlier damage and produce a false no-output failure.
 
 ### Per-spell oracle diagnostics
 
