@@ -28,6 +28,39 @@ fn execute_ready(run: &Run) -> bool {
 
 #[test]
 #[ignore = "requires exact Fury72 native player inputs"]
+fn fury_execute_consumes_one_sudden_death_stack() {
+    let _seed_scope = crate::random::seed_scope(70_448);
+    let mut run = super::super::prepare_measurement(72, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    // Isolate consumption from a fresh foreground RPPM grant on this Execute.
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 29725,
+    );
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 52437, Some(actor), 1);
+    let stacks = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 52437)
+            .map_or(0, |aura| aura.stacks)
+    };
+    assert_eq!(stacks(&run), 1, "native Sudden Death applied");
+    cast_native(&mut run, 280735, target);
+    assert_eq!(
+        stacks(&run),
+        0,
+        "ordinary Execute consumes one Sudden Death stack"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fury72 native player inputs"]
 fn fury_sudden_death_foreground_special_grants_buff_and_resets_execute() {
     let _seed_scope = crate::random::seed_scope(70_448);
     let mut run = super::super::prepare_measurement(72, 1).unwrap();

@@ -4,6 +4,12 @@
 use crate::random as rand;
 
 mod after_cast_auras;
+mod bouncing_projectiles;
+mod cast_relationships;
+pub(crate) use cast_relationships::register as register_cast_relationships;
+pub(super) use cast_relationships::{
+    after_cast as apply_cast_relationships, ignores_cooldown as relationship_ignores_cooldown,
+};
 mod batch10;
 mod batch11;
 mod batch12;
@@ -26,6 +32,7 @@ mod batch8;
 mod batch9;
 mod cast_grants;
 mod cast_resets;
+mod execution_counters;
 mod foreground_procs;
 pub(super) use foreground_procs::after_foreground_special;
 mod chrono_flame;
@@ -35,10 +42,7 @@ mod elemental;
 pub(crate) use elemental::register as register_elemental_policies;
 mod elemental_ascendance;
 pub(super) use echo_policies::after_cast as apply_echo_policies;
-pub(super) use elemental::{
-    after_launch as finish_scripted_launch,
-    capture_damage_modifier as capture_consumed_damage_modifier,
-};
+pub(super) use elemental::capture_damage_modifier as capture_consumed_damage_modifier;
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
 mod enhancement_strikes;
@@ -47,7 +51,7 @@ mod essence_burst;
 mod feral_frenzy;
 pub(crate) use feral_frenzy::register as register_feral_frenzy;
 mod maelstrom_weapon;
-pub(crate) use maelstrom_weapon::{consume as consume_maelstrom_weapon, snapshots_modifier};
+pub(crate) use maelstrom_weapon::consume as consume_maelstrom_weapon;
 pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
     maelstrom_weapon::register(scripts);
     enhancement_imbues::register(scripts);
@@ -55,6 +59,7 @@ pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScri
 }
 mod policies;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
+pub(super) use policies::check_cast as check_policy_cast;
 pub(crate) use policies::register_channel_policies;
 pub(super) use policies::{
     after_impacts as after_impact_policies,
@@ -139,6 +144,18 @@ pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havo
 pub(crate) use batch20::proc_charges;
 pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
+pub(super) fn finish_scripted_launch(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    consumed: Option<u32>,
+    depth: u8,
+    foreground: bool,
+) {
+    elemental::after_launch(world, caster, spell, consumed, depth, foreground);
+    execution_counters::after_launch(world, caster, spell.id);
+}
+
 /// TC OnCast runs once after successful checks, before spending and launch.
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
     cast_grants::on_cast(world, caster, spell_id, depth);
@@ -225,6 +242,9 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
 }
 /// Native per-unit scripts replace the default effect handler before dispatch.
 pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+    if let Some(hook) = bouncing_projectiles::hook(spell, index) {
+        return Some(hook);
+    }
     if (spell, index) == (super::toy_coyote::DESPAWN, 0) {
         return Some(super::toy_coyote::despawn);
     }
@@ -267,6 +287,11 @@ use crate::auras::mount::{FLIGHT_STYLE_STEADY, FlightStyle, set_flight_style};
 use crate::spell_info::SpellInfo;
 
 /// Frostbolt: its effects are TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE) only.
+/// Sourced consumers retain native modifier amounts through projectile impact.
+pub(crate) fn snapshots_modifier(id: u32) -> bool {
+    maelstrom_weapon::snapshots_modifier(id) || cast_relationships::snapshots_modifier(id)
+}
+
 const FROSTBOLT: u32 = 116;
 /// Chilled: APPLY_AURA MOD_DECREASE_SPEED 33 (-50%, 8 s).
 const CHILLED: u32 = 205_708;
