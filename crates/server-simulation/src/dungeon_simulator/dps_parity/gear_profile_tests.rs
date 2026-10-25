@@ -275,3 +275,85 @@ fn ret_gear_profile_native_expansion_traits_apply() {
         );
     }
 }
+
+#[test]
+#[ignore = "real269 profile and native consumable catalogs"]
+fn ww_gear_profile_blood_knights_grants_native_haste() {
+    let mut run = super::prepare_measurement(269, 1).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1235110),
+        "configured Blood Knights2 flask must apply its real native aura"
+    );
+    assert!(
+        !run.gaps
+            .iter()
+            .any(|gap| gap == "CONSUMABLE_UNMODELED:flask=flask_of_the_blood_knights_2")
+    );
+    let before = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .ratings
+        .haste;
+    let actor = run.actor;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1235110 && aura.caster == actor,
+    );
+    run.app.update();
+    let after = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .ratings
+        .haste;
+    assert!(
+        before > after,
+        "native flask must grant derived haste: before={before}, after={after}"
+    );
+}
+
+#[test]
+#[ignore = "real269 profile and native consumable catalogs"]
+fn ww_gear_profile_harandar_grants_native_primary_stat() {
+    let mut run = super::prepare_measurement(269, 1).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1232585),
+        "configured Harandar Celebration must apply its real native food aura"
+    );
+    assert!(
+        !run.gaps
+            .iter()
+            .any(|gap| gap == "CONSUMABLE_UNMODELED:food=harandar_celebration")
+    );
+    let before = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .primary
+        .agility;
+    let actor = run.actor;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1232585 && aura.caster == actor,
+    );
+    run.app.update();
+    let after = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .primary
+        .agility;
+    assert!(
+        before > after,
+        "native food must grant derived primary stat: before={before}, after={after}"
+    );
+}
