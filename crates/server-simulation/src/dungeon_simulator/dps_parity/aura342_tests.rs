@@ -32,7 +32,10 @@ fn cast_speed(run: &mut Run) {
     let actor = run.actor;
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, SPEED, Some(actor), false)
         .expect("ordinary native451298 catalog cast");
-    run.app.update();
+    // Stat folding and resource regeneration are ordered across native frames.
+    for _ in 0..3 {
+        run.app.update();
+    }
     let aura = run
         .app
         .world()
