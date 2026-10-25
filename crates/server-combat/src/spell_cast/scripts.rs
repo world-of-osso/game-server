@@ -60,6 +60,7 @@ pub(super) use echo_policies::after_cast as apply_echo_policies;
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
 mod enhancement_modes;
+mod enhancement_nova;
 mod enhancement_rod;
 pub(super) use enhancement_rod::after_resolution as after_resolved_hits;
 pub(crate) use enhancement_rod::snapshot_rod_amount;
