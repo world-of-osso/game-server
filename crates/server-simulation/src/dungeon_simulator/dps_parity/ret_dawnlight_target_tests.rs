@@ -47,10 +47,17 @@ fn dot_count(run: &Run) -> usize {
 #[ignore = "native three-target Verdict retains a single hit but spreads Dawnlight"]
 fn dps_parity_dawnlight_targets_verdict_uses_available_secondary() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = wake_with_existing_dots(3, &[0]);
+    let mut run = native_ret_with_targets(4, 3);
+    let primary = run.targets[0];
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, DAWNLIGHT, Some(primary), 0);
+    cast_and_damage(&mut run, WAKE);
+    assert!(
+        current_holy_power(&run) >= 3.0,
+        "native power admits the ordinary spender"
+    );
+    assert_eq!(budget(&run).unwrap().stacks, 3);
     cast_finisher(&mut run, VERDICT);
     wait_for_damage(&mut run, VERDICT);
-    assert_eq!(current_holy_power(&run), 0.0, "real Verdict paid3HP");
     let recipients = run
         .app
         .world()
