@@ -69,7 +69,10 @@ pub(in crate::spell_cast) fn after_resolution(world: &mut World, ctx: &EffectCtx
     let selected: Vec<Entity> = actual_targets
         .iter()
         .copied()
-        .filter(|target| targets::is_hostile(world, ctx.caster, *target))
+        // SimC6546–6564 uses the actual attackable chain list, including neutral enemies.
+        .filter(|target| {
+            targets::relation_matches(world, ctx.caster, *target, targets::Relation::Enemy)
+        })
         .collect();
     let damage: f32 = super::super::resolving_damage(world, ctx)
         .expect("native Conductive Energy retains its resolved damage")
