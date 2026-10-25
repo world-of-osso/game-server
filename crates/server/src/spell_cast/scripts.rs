@@ -760,6 +760,7 @@ fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
         batch8::DEMONBOLT => Some(batch8::demonbolt),
         batch8::CRASH_LIGHTNING => Some(enhancement_strikes::after_crash),
         188196 | 188443 | 452201 => Some(enhancement_strikes::after_lightning),
+        17364 | 115356 | 60103 => Some(enhancement_strikes::grant_elemental_assault),
         batch8::ARCANE_BARRAGE => Some(batch8::arcane_barrage),
         batch3::FLASH_HEAL => Some(batch3::flash_heal),
         batch3::PRAYER_OF_HEALING => Some(batch4::prayer),
