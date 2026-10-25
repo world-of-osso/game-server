@@ -11,10 +11,11 @@ use super::{
         execution::{Execution, Prepared},
     },
 };
-use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
+use crate::simc_apl_native::{Bindings, Encounter, NativeFacts, reaction};
 use bevy::prelude::*;
 use serde_json::{Value, json};
 use server::simc_apl::{Action, ActionFacts, Facts, Program};
+use std::collections::BTreeSet;
 
 pub(super) struct Rotation {
     driver: Driver,
@@ -22,6 +23,18 @@ pub(super) struct Rotation {
     equipment: Equipment,
     encounter: Encounter,
     first_ams_cast: f64,
+    tracked_targets: BTreeSet<Entity>,
+}
+
+fn reaction_settings() -> reaction::ReactionSettings {
+    // Pinned251.reference.single.json player fields; player.cpp1017–1020.
+    reaction::ReactionSettings {
+        mean: 0.25,
+        stddev: 0.05,
+        offset: 0.1,
+        nu: 0.15,
+        maximum: 1.4,
+    }
 }
 
 impl Rotation {
@@ -50,6 +63,8 @@ impl Rotation {
             })
             .transpose()?
             .unwrap_or(20.0);
+        // Killing Machine, Rime and Frostbane react to actual acquisition.
+        reaction::configure(world, actor, reaction_settings(), &[51124, 59052, 1229310])?;
         literal_rotation::capture_fixture(world, actor, encounter)?;
         Ok(Self {
             driver: Driver::new(read_program(profile)?),
@@ -57,7 +72,18 @@ impl Rotation {
             equipment,
             encounter,
             first_ams_cast,
+            tracked_targets: BTreeSet::new(),
         })
+    }
+
+    fn configure_targets(&mut self, world: &mut World, targets: &[Entity]) -> Result<(), String> {
+        for &target in targets {
+            if self.tracked_targets.insert(target) {
+                // Razorice and Trollbane retain real acquisition on every add wave.
+                reaction::configure(world, target, reaction_settings(), &[51714, 444826])?;
+            }
+        }
+        Ok(())
     }
 
     fn read_prepared(
@@ -83,6 +109,7 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<PrecombatPoll, String> {
+        self.configure_targets(world, targets)?;
         let prepared = self.read_prepared(world, actor, targets, self.driver.snapshot.is_none())?;
         let facts = FrostFacts {
             native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
@@ -123,6 +150,7 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
+        self.configure_targets(world, targets)?;
         let prepared = self.read_prepared(world, actor, targets, false)?;
         let facts = FrostFacts {
             native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())

@@ -44,6 +44,12 @@ fn cast(run: &mut Run, spell: u32) {
 fn frost_obliteration_frost_strike_earns_killing_machine() {
     let _seed = crate::random::seed_scope(251);
     let mut run = super::super::prepare_literal(251, 1).unwrap();
+    let encounter = Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let rotation = Rotation::load(run.app.world_mut(), run.actor, &run.profile, encounter).unwrap();
     super::super::engage(&mut run);
     cast(&mut run, 49020);
     cast(&mut run, 49020);
@@ -52,10 +58,18 @@ fn frost_obliteration_frost_strike_earns_killing_machine() {
     assert!(auras::has_aura(run.app.world(), actor, 281238));
     assert!(auras::has_aura(run.app.world(), actor, 51271));
     clear_proc(&mut run, 51124);
-    cast(&mut run, 49143);
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49143, Some(target), false)
+        .unwrap();
     assert!(
         auras::has_aura(run.app.world(), actor, 51124),
         "successful Frost Strike during actual Pillar must earn native Killing Machine"
+    );
+    let facts = NativeFacts::new(run.app.world(), actor, &rotation.bindings, encounter, 1);
+    assert_eq!(
+        facts.value("buff.killing_machine.react").unwrap(),
+        1.0,
+        "a predictable Obliteration proc reacts at acquisition without advancing time"
     );
 }
 
