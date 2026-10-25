@@ -3547,14 +3547,21 @@ fn push_hit_events(
 }
 
 /// SimC76f8118 sc_rogue.cpp2685–2687,7863–7872: a successful flagged attack
-/// starts weapon swings once. Native Attributes1 bit9 owns eligibility; retain
-/// the cast's actual hostile primary and any already-running weapon victim/timers.
+/// starts weapon swings once. SimC76f8118 sc_hunter.cpp7236–7246 selects Auto Shot,
+/// not melee, for ranged weapons. The native flag does not select weapon mode.
+/// Retain the actual hostile primary and any running weapon victim/timers.
 fn start_spell_melee_attack(world: &mut World, caster: Entity, spell: &SpellInfo) {
     const MELEE_COMBAT_START: u32 = 0x200;
     let flagged = attributes(spell, 1) & MELEE_COMBAT_START != 0;
     let player = world.get::<Player>(caster).is_some();
     let attacking = world.get::<crate::combat::AutoAttack>(caster).is_some();
     if !flagged || !player || attacking {
+        return;
+    }
+    let ranged_weapon = world
+        .get::<crate::stats::CharacterStats>(caster)
+        .is_some_and(|stats| stats.main_hand.kind == shared::components::WeaponType::Ranged);
+    if ranged_weapon {
         return;
     }
     let Some(target) = spell.cast_primary_target else {

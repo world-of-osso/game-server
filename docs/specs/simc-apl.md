@@ -21,6 +21,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] Deliver Player literal spells through ordinary Player requests with the selected explicit target, rechecking knowledge and rejecting expired identities rather than redirecting. Preserve selected and AA targets; retain native creature dispatch for WW followers.
 - [x] Native cursor actions supply the selected cast target's position during both readiness and ordinary Player/NPC dispatch. Keep destination, native unit and action-primary identities separate, and retain the point through cast time and flight; ordinary unit actions do not invent a destination.
 - [x] `retarget_auto_attack` changes only the running AA victim, preserving both swing timers and the actor's selection. An already-running AA must not restart onto the primary target.
+- [x] A flagged ranged-weapon Player cast must not start melee swings. Native attack-start flags retain the actual equipped weapon mode; the Hunter literal driver starts ranged repeats through Auto Shot.
 - [ ] Expose target-specific readonly resource-limited admission for a chosen power pool. Compare that pool's native maximum locally; never grant or temporarily replace resources. Preserve other pools, health and every other native cast constraint; an unaffordable maximum cannot qualify.
 - [x] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.
 

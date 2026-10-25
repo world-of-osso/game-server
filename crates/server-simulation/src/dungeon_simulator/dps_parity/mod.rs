@@ -779,8 +779,6 @@ fn marksmanship_literal_fixture_casts_reference_actions() {
     let report = measure(254, 1).expect("native Marksmanship fixture");
     assert_eq!(report["driver"], "LITERAL_SIMC_MARKSMANSHIP_76f8118");
     let actions = report["combat"]["actions"].as_array().unwrap();
-    // Native Trueshot is currently replaced by an incorrectly procced Chakram;
-    // its mechanics are a separate parity fix, not an APL rewrite.
     for spell in [75, 19434, 257044] {
         assert!(
             actions.iter().any(|action| action["spell_id"] == spell),
