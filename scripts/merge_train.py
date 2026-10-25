@@ -533,6 +533,50 @@ def run(_args):
             time.sleep(30)
 
 
+def status(_args):
+    """Print the train's throughput metrics as JSON (read-only)."""
+    now = time.time()
+
+    def ages(directory):
+        times = [p.stat().st_mtime for p in directory.glob("*.json")]
+        return {"count": len(times), "oldest_minutes": round((now - min(times)) / 60, 1) if times else None}
+
+    cycles = []
+    logs = sorted(LOGS.glob("cycle-*.log"), key=lambda p: p.stat().st_mtime)
+    for start, log in enumerate(logs[-4:]):
+        text = log.read_text(errors="replace")
+        begun = time.mktime(time.strptime(log.name[6:21], "%Y%m%dT%H%M%S"))
+        cycles.append({"log": log.name, "minutes": round((log.stat().st_mtime - begun) / 60, 1),
+                       "checks": text.count("$ cargo check"), "push_races": text.count("push raced")})
+    results = sorted(RESULTS.glob("*.json"), key=lambda p: p.stat().st_mtime)[-30:]
+    outcome = {}
+    for path in results:
+        entry = json.loads(path.read_text())
+        state = entry["status"].split(" ")[0]
+        if state == "rejected":
+            reason = entry.get("reason", "")
+            state = next((name for key, name in (("superseded", "rejected: superseded"),
+                                                  ("merge conflict", "rejected: merge conflict"),
+                                                  ("check or fmt", "rejected: check/fmt"),
+                                                  ("tests failed", "rejected: tests failed"),
+                                                  ("RED", "rejected: RED gate")) if key in reason),
+                         "rejected: other")
+            if state == "rejected: tests failed" and not entry["land"]:
+                state = "probe RED (expected)"
+        outcome[state] = outcome.get(state, 0) + 1
+    git("fetch", "-q", "origin", check=False)
+    landed = git("log", "-1", "--format=%ct %h %s", "--invert-grep", "--grep=^merge train",
+                 "--grep=^AGENTS", "origin/master", check=False).stdout.split(" ", 2)
+    report = {"unit": subprocess.run(["systemctl", "--user", "is-active", "merge-train"], text=True,
+                                     capture_output=True).stdout.strip(),
+              "queue": ages(QUEUE), "running": ages(RUNNING),
+              "cycles": cycles[:-1], "current_cycle": cycles[-1] if cycles else None,
+              "last_30_results": outcome,
+              "last_landing": {"minutes_ago": round((now - int(landed[0])) / 60, 1), "commit": landed[1],
+                               "subject": landed[2].strip()} if len(landed) == 3 else None}
+    print(json.dumps(report, indent=2))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -551,6 +595,7 @@ def main():
     w.add_argument("id")
     w.set_defaults(func=wait)
     sub.add_parser("run").set_defaults(func=run)
+    sub.add_parser("status", help="throughput metrics for the periodic bottleneck check").set_defaults(func=status)
     args = parser.parse_args()
     args.func(args)
 
