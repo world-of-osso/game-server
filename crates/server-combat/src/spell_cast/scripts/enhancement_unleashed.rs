@@ -87,12 +87,7 @@ pub(in crate::spell_cast) fn update(world: &mut World) {
     }
 }
 
-fn select_current_pack(
-    world: &mut World,
-    caster: Entity,
-    primary: Entity,
-    depth: u8,
-) -> Vec<Entity> {
+fn select_current_pack(world: &mut World, caster: Entity, primary: Entity) -> Vec<Entity> {
     let root = world
         .resource::<SpellStore>()
         .get(CRASH)
@@ -104,7 +99,7 @@ fn select_current_pack(
         .find(|effect| effect.index == 0)
         .expect("native Crash Lightning effect0");
     // SimC6113–6115 reevaluates the root's actual target list for each pulse, not only its original hits.
-    targets::select_targets(world, caster, Some(primary), &root, effect, depth, false)
+    targets::select_targets(world, caster, Some(primary), &root, effect, 0, false)
         .unwrap_or_else(|target| panic!("native Unleashed root selector {target}"))
 }
 
@@ -112,7 +107,7 @@ fn cast_pack_pulse(world: &mut World, caster: Entity, primary: Entity, multiplie
     if !targets::is_alive(world, caster) {
         return;
     }
-    let pack = select_current_pack(world, caster, primary, depth);
+    let pack = select_current_pack(world, caster, primary);
     let mut payload = world
         .resource::<SpellStore>()
         .get(DAMAGE)
