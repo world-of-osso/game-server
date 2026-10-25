@@ -303,7 +303,6 @@ fn frost_literal_empower_rune_weapon_uses_hostile_primary() {
     );
 }
 
-
 pub(super) fn prepare_driver(run: &mut Run) -> Result<Box<dyn super::SpecDriver>, String> {
     let encounter = Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
@@ -333,7 +332,12 @@ impl super::SpecDriver for Rotation {
         "LITERAL_SIMC_FROST_76f8118"
     }
 
-    fn drive(&mut self, world: &mut World, actor: Entity, targets: &[Entity]) -> Result<(), String> {
+    fn drive(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
         self.drive(world, actor, targets)
     }
 
