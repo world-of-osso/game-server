@@ -29,6 +29,8 @@ mod cast_resets;
 mod execution_counters;
 mod foreground_procs;
 mod impact_procs;
+mod periodic_attacks;
+pub(crate) use periodic_attacks::after_periodic_trigger;
 pub(super) fn after_foreground_special(world: &mut World, caster: Entity, spell: &SpellInfo) {
     foreground_procs::after_foreground_special(world, caster, spell);
     execution_counters::consume_after_foreground_cast(world, caster, spell.id);

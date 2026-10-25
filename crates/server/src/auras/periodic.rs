@@ -61,6 +61,7 @@ struct Tick {
     aura_type: u32,
     amount: f32,
     scheduled_at: f64,
+    ordinal: u64,
     misc: i32,
     trigger_spell: u32,
 }
@@ -95,6 +96,7 @@ fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Ve
                     aura_type: effect.aura_type,
                     amount: effect.amount * stacks,
                     scheduled_at,
+                    ordinal: effect.periodic_ticks,
                     misc: effect.misc_values[0],
                     trigger_spell: effect.trigger_spell,
                 });
@@ -295,6 +297,13 @@ fn run_trigger_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &T
     // Additive OnEffectPeriodic still precedes default or registered emission.
     // This also preserves script-only triggers such as Mirror Image1264098.
     run_scripted_tick(world, unit, spell, tick);
+    crate::spell_cast::scripts::after_periodic_trigger(
+        world,
+        tick.caster,
+        spell.id,
+        tick.effect_index,
+        tick.ordinal,
+    );
     if let Some(run) = crate::spell_cast::scripts::periodic_trigger(spell.id, tick.effect_index) {
         let aura = world
             .get::<ActiveAuras>(unit)

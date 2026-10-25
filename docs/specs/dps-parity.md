@@ -128,6 +128,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Fury player parity
 
+- Selected Unhinged386628 casts a free background native attack on odd Bladestorm scheduled ticks, excluding tick0. Arms71 uses Mortal Strike12294; Fury72 resolves Bloodthirst23881 through its live native overrides (Bloodbath during Recklessness). Preserve the native talent effect1 damage multiplier and ordinary parent pulses (`sc_warrior.cpp3257–3275,3313–3335`).
+
 - Slayer's Strike445579 uses one actor-wide PRD attempt counter, native Slayer's Dominance444767 chance (effect0 Fury, effect1 Arms), and its native ICD. Only pinned eligible landed impacts roll; autos never roll, and only Cleave rolls per target (`sc_warrior.cpp1651–1661,1693–1703`). Native spell payloads supply all damage.
 
 - Arms/Fury ordinary Execute consumes one live Sudden Death52437 stack after its foreground producer roll. A consumed stack grants native Imminent Demise445606 when both native passives29725/444769 are selected; background casts do not consume it (`sc_warrior.cpp4347–4352,4547–4554`).

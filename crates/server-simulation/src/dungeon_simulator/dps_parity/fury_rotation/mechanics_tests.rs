@@ -166,4 +166,18 @@ fn fury_unhinged_bladestorm_ticks_execute_actual_bloodthirst_variant() {
             .any(|action| action["spell_id"] == 335096 && action["hits"].as_u64().unwrap_or(0) > 0),
         "selected Unhinged must execute native Bloodbath during Recklessness: {combat}"
     );
+    let hits = |spell: u32| {
+        combat["actions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|action| action["spell_id"] == spell)
+            .map(|action| action["hits"].as_u64().unwrap())
+            .sum::<u64>()
+    };
+    assert_eq!(
+        hits(335096),
+        hits(50622) / 2,
+        "one Bloodbath per odd Bladestorm tick, not every tick or every impact"
+    );
 }
