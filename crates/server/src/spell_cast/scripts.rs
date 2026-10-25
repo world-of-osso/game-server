@@ -4,6 +4,7 @@
 use crate::random as rand;
 
 mod after_cast_auras;
+mod aura_rolls;
 mod bouncing_projectiles;
 mod cast_relationships;
 pub(crate) use cast_relationships::register as register_cast_relationships;
@@ -762,6 +763,7 @@ pub fn after_cast(spell_id: u32) -> impl Iterator<Item = AfterCastHook> {
     native_after_cast(spell_id)
         .into_iter()
         .chain(policies::after_cast_hook(spell_id))
+        .chain(aura_rolls::hook(spell_id))
 }
 
 fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
