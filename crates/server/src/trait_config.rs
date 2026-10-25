@@ -127,6 +127,35 @@ pub fn build_config(
     Ok(entries)
 }
 
+/// SIMC_PARITY_ALLOCATIONS: pinned player.cpp2696–2860 decodes allocations
+/// without validating parent edges or currency gates. Only parity fixtures use
+/// this policy; native membership, ranks, spec, choice, subtree and budget remain.
+#[cfg(any(test, feature = "test-support"))]
+pub fn build_simc_fixture_config(
+    tree: &TraitTree,
+    ctx: TraitContext,
+    purchases: &[Purchase],
+) -> Result<Vec<ConfigEntry>, String> {
+    let mut fixture = tree.clone();
+    for node in &mut fixture.nodes {
+        node.parents.clear();
+        node.conds.retain(is_not_currency_gate);
+        for entry in &mut node.entries {
+            entry.conds.retain(is_not_currency_gate);
+        }
+    }
+    for group in &mut fixture.groups {
+        group.conds.retain(is_not_currency_gate);
+    }
+    build_config(&fixture, ctx, purchases)
+}
+
+#[cfg(any(test, feature = "test-support"))]
+fn is_not_currency_gate(cond: &TraitCond) -> bool {
+    let targets_node = cond.node_group_id != 0 || cond.node_id != 0 || cond.node_entry_id != 0;
+    cond.currency_id == 0 || !targets_node
+}
+
 /// TraitMgr::InitializeStarterBuildTraitConfig: visit authored OrderIndex rows,
 /// use the first node entry for ID zero, buy eligible cumulative ranks only.
 /// Normal eligibility is needed as authored apex rows can be affordable before level81.
