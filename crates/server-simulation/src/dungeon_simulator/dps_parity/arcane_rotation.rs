@@ -290,17 +290,9 @@ impl<'a> ArcaneFacts<'a> {
         }
     }
 
-    fn previous_gcd_matches(&self, alias: &str) -> Result<bool, String> {
-        let spell = self
-            .bindings
-            .actions
-            .get(alias)
-            .ok_or_else(|| format!("unknown Arcane history action {alias}"))?;
-        // SimC76f8118 player.cpp7397–7400 records foreground GCD actions at
-        // queue time, including a native cast still in progress, not off-GCD casts.
+    fn foreground_gcd_actions(&self) -> Vec<u32> {
         let store = self.world.resource::<crate::spell_info::SpellStore>();
-        let gcd_actions: Vec<_> = self
-            .bindings
+        self.bindings
             .actions
             .values()
             .copied()
@@ -312,7 +304,18 @@ impl<'a> ArcaneFacts<'a> {
                         .is_some_and(|cooldown| cooldown.start_recovery_ms > 0)
                 })
             })
-            .collect();
+            .collect()
+    }
+
+    fn previous_gcd_matches(&self, alias: &str) -> Result<bool, String> {
+        let spell = self
+            .bindings
+            .actions
+            .get(alias)
+            .ok_or_else(|| format!("unknown Arcane history action {alias}"))?;
+        // SimC76f8118 player.cpp7397–7400 records foreground GCD actions at
+        // queue time, including a native cast still in progress, not off-GCD casts.
+        let gcd_actions = self.foreground_gcd_actions();
         let previous = if let Some(cast) = self
             .world
             .get::<shared::casting::CastState>(self.actor)

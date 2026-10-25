@@ -1,3 +1,7 @@
+## 2026-10-25 — Arcane literal player fixture
+
+[Arcane62](systems/simc-apl.md#arcane-fixture-62) executes supplied profile rows through shared literal control with native class admission and no concurrent AssistedCombat. The300s ST controller regression passes; numerical parity remains open.
+
 ## 2026-10-25 — Shared literal channel execution
 
 [Shared APL machinery](systems/simc-apl.md#source-row-clocks-and-channel-control): source-row deadlines, channel query/execution API, readiness-before-condition and off-GCD call traversal. Native child admission remains unchanged.

@@ -1,3 +1,4 @@
+- [Arcane literal fixture](systems/simc-apl.md#arcane-fixture-62) — supplied profile rows and native class readiness; ST controller regression passes, numerical parity remains separate.
 - [Elemental literal fixture](systems/simc-apl.md#elemental-fixture-262) — exact profile rows, native Maelstrom/spell admission and named-action target counts; numerical parity remains separate.
 - [Form combat clocks](systems/auras.md#form-combat-clocks--2026-10-23) — all7authored timing rows, native Cat/Bear timed RED and unshifted control; generic cadence/weapon terms retained; reconciliation qualification pending.
 - [All-DPS parity census — 2026-10-25](investigations/dps-parity-census-2026-10-25.md) — eight measured specs, seventeen exact fixture failures, two missing references at master210df12e3; no surrogate followers.
