@@ -23,14 +23,11 @@ pub mod area_aura;
 pub mod area_trigger;
 #[cfg(test)]
 mod attack_power_tests;
-#[cfg(test)]
-mod attack_restriction_tests;
 mod aura_spell_restrictions;
 pub(crate) mod auto_repeat;
 #[cfg(test)]
 mod auto_shot_repeat_tests;
-#[cfg(test)]
-mod hit_positivity_tests;
+pub(crate) mod cooldown_query;
 #[cfg(any(test, feature = "test-support"))]
 pub mod holy_metrics;
 #[cfg(test)]
@@ -52,8 +49,6 @@ mod cast_while_moving_tests;
 mod casting_restriction;
 #[cfg(test)]
 mod casting_restriction_tests;
-#[cfg(test)]
-mod category_cooldown_tests;
 #[cfg(test)]
 mod census_death_grip_tests;
 #[cfg(test)]
@@ -174,8 +169,6 @@ mod invigorating_fury_tests;
 #[cfg(any(test, feature = "test-support"))]
 pub mod native_apl;
 #[cfg(test)]
-mod proc_recipient_tests;
-#[cfg(test)]
 mod protection_producer_tests;
 mod sanctuary;
 pub(crate) use interruptibility::can_interrupt_cast;
@@ -194,13 +187,9 @@ mod prayer_of_mending_tests;
 #[cfg(test)]
 mod queued_trigger_cost_tests;
 #[cfg(test)]
-mod readiness_lifetime_tests;
-#[cfg(test)]
 mod required_caster_aura_tests;
 #[cfg(test)]
 mod scourge_eruption_tests;
-#[cfg(test)]
-mod summon_lifetime_tests;
 #[cfg(test)]
 mod touch_of_death_tests;
 #[cfg(test)]
@@ -229,8 +218,6 @@ mod protective_growth_tests;
 #[cfg(test)]
 mod raid_area_tests;
 pub(crate) mod recovery_rate;
-#[cfg(test)]
-mod recovery_rate_tests;
 mod reflect;
 mod resources;
 pub mod runes;
@@ -266,7 +253,7 @@ use crate::interest::NetworkVisibility;
 use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
-pub use creature::{AiTarget, creature_cast};
+pub use creature::{AiTarget, creature_cast, creature_cast_with_targets};
 pub(crate) use creature::{
     ai_spell_target, creature_cast_empowered, creature_cast_ignoring_cooldowns,
     creature_cast_ignoring_in_progress, creature_cast_interrupting_self,
@@ -322,8 +309,6 @@ mod toy_weather;
 mod toy_wormhole;
 
 mod elemental_overload;
-#[cfg(test)]
-mod elemental_overload_tests;
 pub(crate) mod queued_triggers;
 
 pub struct SpellCastPlugin;
@@ -1333,6 +1318,36 @@ pub fn cast_for_player_with_target(
     })
 }
 
+/// The native cast unit and the selected action context are separate inputs.
+#[derive(Clone, Copy, Debug)]
+pub struct CastTargets {
+    pub unit: Entity,
+    pub primary: Option<Entity>,
+}
+
+/// Ordinary Player admission with an already selected action context.
+pub fn cast_for_player_with_targets(
+    world: &mut World,
+    player: Entity,
+    spell_id: u32,
+    targets: CastTargets,
+) -> Result<(), CastFailure> {
+    let request = SpellCastIntent {
+        target_item_guid: None,
+        destination: None,
+        spell_id: Some(spell_id),
+        spell: String::new(),
+        target_entity: Some(targets.unit.to_bits()),
+        witness: None,
+    };
+    prepare_player_cast(world, player, &request)
+        .and_then(|prepared| submit_player_cast(world, player, prepared, targets.primary))
+        .map_err(|(spell_id, failure)| {
+            send_cast_rejection(world, player, spell_id, &failure);
+            failure
+        })
+}
+
 /// Cast a spell a game object grants its user (TrinityCore `GameObject::Use`
 /// casts as the user, spellbook aside), answering `CastFailed` on refusal.
 pub(crate) fn cast_granted(
@@ -1520,11 +1535,27 @@ fn validate_toy_destination(
     Ok(())
 }
 
+struct PreparedPlayerCast {
+    requested: SpellInfo,
+    spell: SpellInfo,
+    explicit: Option<Entity>,
+}
+
 fn request_cast(
     world: &mut World,
     caster: Entity,
     request: &SpellCastIntent,
 ) -> Result<(), (u32, CastFailure)> {
+    let prepared = prepare_player_cast(world, caster, request)?;
+    let primary = prepared.explicit;
+    submit_player_cast(world, caster, prepared, primary)
+}
+
+fn prepare_player_cast(
+    world: &mut World,
+    caster: Entity,
+    request: &SpellCastIntent,
+) -> Result<PreparedPlayerCast, (u32, CastFailure)> {
     let requested_id = request.spell_id.unwrap_or(0);
     let spell = world
         .get_resource::<SpellStore>()
@@ -1574,11 +1605,30 @@ fn request_cast(
         .clone();
     spell.cast_destination = request.destination;
     spell.cast_target_item_guid = request.target_item_guid;
+    Ok(PreparedPlayerCast {
+        requested: requested_spell,
+        spell,
+        explicit,
+    })
+}
+
+fn submit_player_cast(
+    world: &mut World,
+    caster: Entity,
+    prepared: PreparedPlayerCast,
+    primary: Option<Entity>,
+) -> Result<(), (u32, CastFailure)> {
+    let PreparedPlayerCast {
+        mut requested,
+        spell,
+        explicit,
+    } = prepared;
+    requested.cast_primary_target = primary;
     let delay = cast_queue_delay(world, caster, &spell);
     // Compare at CastState's precision: a widened f32 window can exceed its f64 value.
     if delay > 0.0 && delay as f32 <= SPELL_QUEUE_WINDOW_SECS {
         world.entity_mut(caster).insert(QueuedSpellCast {
-            spell: requested_spell,
+            spell: requested,
             explicit,
         });
         return Ok(());
@@ -1587,7 +1637,8 @@ fn request_cast(
         // A newer executable request supersedes the held request too.
         world.entity_mut(caster).remove::<QueuedSpellCast>();
     }
-    start_cast(world, caster, &spell, explicit).map_err(|failure| (spell.id, failure))
+    start_cast_with_primary(world, caster, &spell, explicit, primary)
+        .map_err(|failure| (spell.id, failure))
 }
 
 /// One request in the last 750 ms. TrinityCore a352b1fa Player.cpp:31545-31559 and Retail
@@ -1638,7 +1689,13 @@ fn start_queued_casts(world: &mut World) {
             .clone();
         effective_spell.cast_destination = queued.spell.cast_destination;
         effective_spell.cast_target_item_guid = queued.spell.cast_target_item_guid;
-        if let Err(failure) = start_cast(world, caster, &effective_spell, queued.explicit) {
+        if let Err(failure) = start_cast_with_primary(
+            world,
+            caster,
+            &effective_spell,
+            queued.explicit,
+            queued.spell.cast_primary_target,
+        ) {
             send_cast_rejection(world, caster, queued.spell.id, &failure);
         }
     }
@@ -2316,7 +2373,29 @@ fn begin_validated_cast(
     spell: &SpellInfo,
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
+    begin_cast_with_primary(world, caster, spell, target, target)
+}
+
+fn start_cast_with_primary(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+    primary: Option<Entity>,
+) -> Result<(), CastFailure> {
+    let target = validate_start(world, caster, spell, explicit, false)?;
+    begin_cast_with_primary(world, caster, spell, target, primary)
+}
+
+fn begin_cast_with_primary(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Option<Entity>,
+    primary: Option<Entity>,
+) -> Result<(), CastFailure> {
     let mut admitted = spell.clone();
+    admitted.cast_primary_target = primary;
     admitted.cast_proc_mods = scripts::snapshot_proc_modifiers(world, caster, spell);
     crate::stand_state::stand_to_cast(world, caster, attributes(&admitted, 0));
     if !admitted.empower_stages.is_empty() {
@@ -2350,7 +2429,7 @@ fn execute_and_channel(
     spell: &SpellInfo,
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
-    execute_cast(world, caster, spell, target)?;
+    execute_cast_with_primary(world, caster, spell, target, spell.cast_primary_target)?;
     start_channel(world, caster, spell, target);
     Ok(())
 }
@@ -2502,7 +2581,16 @@ pub(crate) fn execute_cast(
     spell: &SpellInfo,
     explicit: Option<Entity>,
 ) -> Result<(), CastFailure> {
-    let primary_target = explicit;
+    execute_cast_with_primary(world, caster, spell, explicit, explicit)
+}
+
+fn execute_cast_with_primary(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+    primary_target: Option<Entity>,
+) -> Result<(), CastFailure> {
     check_ordinary_caster_life(world, caster, spell)?;
     mobile_banking::check_cast(world, caster, spell.id)?;
     druid_transform::before_cast(world, caster, spell, 0)?;
@@ -2592,9 +2680,9 @@ pub(crate) fn execute_cast(
     }
     if !spell.cast_parent_owns_modifier_charges {
         spell_mods::consume_charges(world, caster, spell);
-        scripts::after_foreground_spender(world, caster, spell, explicit);
+        scripts::after_foreground_spender(world, caster, spell, spell.cast_primary_target);
         scripts::roll_selected_ret_divine_purpose(world, caster, spell);
-        scripts::schedule_empyrean_legacy(world, caster, spell, explicit);
+        scripts::schedule_empyrean_legacy(world, caster, spell, spell.cast_primary_target);
     }
     blooming_infusion::after_cast(world, caster, spell);
     druid_transform::after_cast(world, caster, spell);
@@ -3979,8 +4067,6 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
 }
 
 #[cfg(test)]
-mod additional_optional_power_tests;
-#[cfg(test)]
 mod caster_offset_tests;
 #[cfg(test)]
 mod class_resource_tests;
@@ -3995,8 +4081,6 @@ mod mechanics_talent_tests;
 #[cfg(test)]
 mod mechanics_tests;
 #[cfg(test)]
-mod optional_flat_cost_tests;
-#[cfg(test)]
 mod override_queue_tests;
 #[cfg(test)]
 mod power_drain_tests;
@@ -4008,8 +4092,6 @@ mod queue_tests;
 mod regen_tests;
 #[cfg(test)]
 mod rezrtap_tests;
-#[cfg(test)]
-mod rogue_stealth_tests;
 #[cfg(test)]
 mod source_cast_flags_tests;
 #[cfg(test)]

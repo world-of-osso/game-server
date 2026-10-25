@@ -1,4 +1,5 @@
 //! Gameplay-world bindings for the engine-free pinned SimC APL evaluator.
+pub mod reaction;
 use bevy::prelude::*;
 use server::simc_apl::{Action, ActionFacts, Facts};
 use shared::components::PowerType;
@@ -175,7 +176,7 @@ impl<'a> NativeFacts<'a> {
         spell: &crate::spell_info::SpellInfo,
         property: &str,
     ) -> Result<f64, String> {
-        crate::spell_cast::native_apl::cooldown_value(self.world, self.actor, spell, property)
+        crate::spell_cast::cooldown_query::cooldown_value(self.world, self.actor, spell, property)
     }
 
     pub fn equipment_proc_cooldown(
@@ -497,6 +498,13 @@ impl<'a> NativeFacts<'a> {
                 .map(|aura| f64::from(aura.stacks))
                 .fold(0.0, f64::max)),
             "remains" => Ok(buff_remaining(&active, now)),
+            "react" => reaction::reacted_stacks(self.world, self.actor, id, &active),
+            "duration" => Ok(f64::from(crate::auras::fresh_duration_ms(
+                self.world,
+                self.actor,
+                self.actor,
+                self.spell(id)?,
+            )) / 1000.0),
             "at_max_stacks" => Ok(bool_value(
                 active
                     .iter()
@@ -566,10 +574,13 @@ impl<'a> NativeFacts<'a> {
             "in_flight" | "in_flight_remains" => {
                 crate::spell_cast::native_apl::flight_value(self.world, self.actor, spell, property)
             }
-            "usable_in" => crate::spell_cast::native_apl::cooldown_value(
+            "usable_in" => crate::spell_cast::cooldown_query::cooldown_value(
                 self.world, self.actor, spell, "remains",
             ),
             "ready" => crate::spell_cast::native_apl::action_ready(self.world, self.actor, spell),
+            "execute_time" => Ok(crate::spell_cast::native_apl::execute_time(
+                self.world, self.actor, spell,
+            )),
             _ => Err(format!("unknown native APL action property {property}")),
         }
     }
@@ -586,7 +597,9 @@ impl<'a> NativeFacts<'a> {
         let spell = self.action_spell(&action.name)?;
         match name {
             "charges" | "charges_fractional" | "full_recharge_time" => {
-                crate::spell_cast::native_apl::cooldown_value(self.world, self.actor, spell, name)
+                crate::spell_cast::cooldown_query::cooldown_value(
+                    self.world, self.actor, spell, name,
+                )
             }
             "execute_time" => Ok(crate::spell_cast::native_apl::execute_time(
                 self.world, self.actor, spell,

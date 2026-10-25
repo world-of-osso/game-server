@@ -11,7 +11,8 @@ pub(crate) enum Execution {
     Snapshot,
     AutoAttack(Entity),
     RetargetAutoAttack(Entity),
-    Spell(u32, Entity),
+    // Spell, native cast unit, and selected action primary (not inferred from that unit).
+    Spell(u32, Entity, Option<Entity>),
     Item(ItemUse, Entity),
     Composite(Vec<Execution>),
 }
@@ -210,7 +211,11 @@ fn read_composite_plan(
         if !native_readiness(world, actor, spell, target, None)?.ready {
             return Ok(None);
         }
-        pending.push(Execution::Spell(spell, target));
+        pending.push(Execution::Spell(
+            spell,
+            target,
+            (candidate != actor).then_some(candidate),
+        ));
     }
     Ok((!pending.is_empty()).then_some(Execution::Composite(pending)))
 }
@@ -290,7 +295,8 @@ fn record_target_contexts(
     name: &str,
     contexts: &[Entity],
     state: NativeReadiness,
-    execution: &Execution,
+    spell: u32,
+    cast_unit: Entity,
 ) {
     for &candidate in contexts {
         record_probe(
@@ -298,7 +304,7 @@ fn record_target_contexts(
             (name.into(), Some(candidate)),
             false,
             state,
-            execution.clone(),
+            Execution::Spell(spell, cast_unit, Some(candidate)),
         );
     }
 }
@@ -390,16 +396,25 @@ fn read_spell(
     };
     for (index, &target) in targets.iter().enumerate() {
         let state = native_readiness(world, actor, id, target, None)?;
-        let execution = Execution::Spell(id, target);
         record_probe(
             prepared,
             (name.into(), Some(target)),
-            index == 0,
+            !self_target && index == 0,
             state,
-            execution.clone(),
+            Execution::Spell(id, target, (!self_target).then_some(target)),
         );
-        let contexts = if self_target { enemies } else { &[] };
-        record_target_contexts(prepared, name, contexts, state, &execution);
+        if self_target {
+            // The default context is the same first native candidate used by
+            // ordinary actions. An explicit context retains its own identity.
+            record_probe(
+                prepared,
+                (name.into(), None),
+                false,
+                state,
+                Execution::Spell(id, target, enemies.first().copied()),
+            );
+            record_target_contexts(prepared, name, enemies, state, id, target);
+        }
     }
     Ok(())
 }
@@ -525,11 +540,15 @@ pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Re
             attack.victim = target;
             Ok(())
         }
-        Execution::Spell(id, target) => {
+        Execution::Spell(id, target, primary) => {
+            let targets = crate::spell_cast::CastTargets {
+                unit: target,
+                primary,
+            };
             let result = if world.get::<shared::components::Player>(actor).is_some() {
-                crate::spell_cast::cast_for_player_with_target(world, actor, id, Some(target))
+                crate::spell_cast::cast_for_player_with_targets(world, actor, id, targets)
             } else {
-                crate::spell_cast::creature_cast(world, actor, id, Some(target), false)
+                crate::spell_cast::creature_cast_with_targets(world, actor, id, targets)
             };
             result
                 .map_err(|reason| format!("selected native literal spell{id} rejected: {reason:?}"))

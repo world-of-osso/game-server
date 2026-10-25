@@ -40,7 +40,7 @@ pub(super) fn start_configured_native_pet(run: &mut Run) -> Result<(), String> {
     super::literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
-        super::literal_rotation::execution::Execution::Spell(action.spell, run.actor),
+        super::literal_rotation::execution::Execution::Spell(action.spell, run.actor, None),
     )
 }
 

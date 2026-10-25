@@ -283,7 +283,7 @@ fn literal_precombat_options_require_while_casting_permission_without_interrupti
     execution::execute(
         run.app.world_mut(),
         run.actor,
-        Execution::Spell(PYROBLAST, run.targets[0]),
+        Execution::Spell(PYROBLAST, run.targets[0], Some(run.targets[0])),
     )
     .unwrap();
     let before = run

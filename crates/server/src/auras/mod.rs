@@ -185,6 +185,7 @@ pub fn aura_now(world: &World) -> f64 {
     world.resource::<Time<Virtual>>().elapsed_secs_f64()
 }
 
+#[cfg(any(test, feature = "test-support"))]
 /// Actual native equipment proc timer; reading never starts or retimes a proc.
 pub(crate) fn equipment_proc_cooldown_remaining(
     world: &World,
@@ -1100,8 +1101,12 @@ pub(crate) fn set_self_cast_stacks(
         return false;
     };
     aura.stacks = stacks.min(aura.max_stacks.max(1));
+    #[cfg(any(test, feature = "test-support"))]
+    let source = aura.clone();
     auras.dirty = true;
     drop(auras);
+    #[cfg(any(test, feature = "test-support"))]
+    crate::simc_apl_native::reaction::applied(world, unit, &source);
     auras_changed(world, unit);
     true
 }
@@ -1213,6 +1218,8 @@ pub(crate) fn apply_aura_with_spell(
         .expect("aura just stored");
     #[cfg(any(test, feature = "test-support"))]
     observations::applied(world, &aura, observed_previous);
+    #[cfg(any(test, feature = "test-support"))]
+    crate::simc_apl_native::reaction::applied(world, target, &aura);
     if kind == CombatLogKind::AuraApplied {
         crate::achievement::record_gain_aura(world, target, aura.spell_id);
         crate::quest::record_gain_aura(world, target, spell.id);
@@ -1541,6 +1548,8 @@ fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason
     shapeshift::remove_form_boosts(world, unit, aura);
     #[cfg(any(test, feature = "test-support"))]
     observations::removed(world, unit, aura, reason);
+    #[cfg(any(test, feature = "test-support"))]
+    crate::simc_apl_native::reaction::removed(world, unit, aura.instance_id);
     world_state::on_removed(world, unit, aura);
     scripts::run_remove(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
@@ -1689,6 +1698,8 @@ pub(crate) fn spend_stack(world: &mut World, unit: Entity, instance_id: u32) {
         point_mods::recalculate(world, unit, &source);
         #[cfg(any(test, feature = "test-support"))]
         observations::spent_stack(world, unit, observed.0, observed.1);
+        #[cfg(any(test, feature = "test-support"))]
+        crate::simc_apl_native::reaction::stacks_changed(world, unit, instance_id, source.stacks);
         auras_changed(world, unit);
     }
 }
