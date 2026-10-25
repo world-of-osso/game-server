@@ -72,13 +72,9 @@ struct DisconnectQuery<'w, 's> {
     query: Query<'w, 's, DisconnectData, With<ClientOf>>,
 }
 
-/// Links a connection entity to its spawned player entity.
-#[derive(Component, Debug)]
-pub struct PlayerLink(pub Entity);
+pub use server_core::session_state::PlayerLink;
 
-/// The entity this player is currently targeting in combat.
-#[derive(Component, Debug, Default)]
-pub struct CombatTarget(pub Option<Entity>);
+pub use server_core::session_state::CombatTarget;
 
 /// Turn a predicted player without moving it or restarting an ongoing fall.
 /// The matching epoch rejects pre-turn input until the client adopts ForcedFacing.
@@ -102,10 +98,7 @@ pub(crate) fn face_player(world: &mut World, player: Entity, yaw: f32) {
         .insert(shared::components::ForcedFacing { epoch, yaw });
 }
 
-/// Whether the player's newest input requests translation. Server-only; a
-/// blocking cast freezes `Position`, so casts read intent instead.
-#[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct Moving(pub bool);
+pub use server_core::session_state::Moving;
 
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub(crate) struct FallTracker {
@@ -194,10 +187,7 @@ pub struct ChatHistoryEntry {
     pub recipients: Vec<String>,
 }
 
-/// Marks an entity for deferred despawn (next frame), allowing lightyear to process
-/// the removal of Replicate/NetworkVisibility before the entity disappears.
-#[derive(Component)]
-pub(crate) struct PendingDespawn;
+pub use server_core::session_state::PendingDespawn;
 
 pub struct ServerNetworkPlugin;
 

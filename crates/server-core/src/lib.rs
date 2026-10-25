@@ -1,5 +1,6 @@
 //! Shared server records and immutable catalogs, below gameplay execution.
 pub mod catalog_data;
+pub mod session_state;
 pub mod spell_info;
 #[cfg(any(test, feature = "test-support"))]
 pub mod test_data;
