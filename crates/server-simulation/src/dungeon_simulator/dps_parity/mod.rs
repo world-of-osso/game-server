@@ -49,6 +49,8 @@ mod literal_ranged_attack_tests;
 pub(crate) mod literal_rotation;
 mod marksmanship_fact_tests;
 mod marksmanship_mechanics_tests;
+mod outlaw_cleave_tests;
+mod outlaw_resource_tests;
 mod outlaw_tests;
 mod owner_cooldown_tests;
 mod pack_tactics_tests;

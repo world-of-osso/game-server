@@ -156,7 +156,9 @@ fn matching<'a>(
 // Tidal Waves/Backdraft/Surge of Light stacks are also next-spell uses.
 // SimC76f8118 sc_evoker.cpp6485/6595: Mass Disintegrate stacks are uses,
 // not a multiplier on its native additional-target amount.
-const STACKED_NEXT_SPELL_USES: &[u32] = &[53390, 117828, 116768, 325202, 114255, 436336];
+// Native1265871 suppresses points stacking (effect attribute0x40); tier uses
+// do not multiply its ordinary damage modifier (sc_evoker.cpp10850–10856).
+const STACKED_NEXT_SPELL_USES: &[u32] = &[53390, 117828, 116768, 325202, 114255, 436336, 1265871];
 
 fn stacked_amount(aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
     let stacks = if STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) {

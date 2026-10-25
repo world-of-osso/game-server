@@ -68,7 +68,7 @@ pub struct ChargedSpellModifier {
     pub amount: f32,
 }
 
-/// Ordinary launch inputs retained for explicit resource-spender hit policies.
+/// Ordinary launch inputs retained for explicit resource-dependent cast/hit policies.
 #[derive(Debug, Clone)]
 pub struct CastPolicyContext {
     /// Effective launch values, retained independently of later resource changes.
