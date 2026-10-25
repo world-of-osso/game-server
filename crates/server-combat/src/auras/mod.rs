@@ -276,6 +276,36 @@ impl AuraEffectState {
     }
 }
 
+/// Source-qualified initial phase on a newly applied native periodic effect.
+/// Later ticks retain the same native interval and ordinal clock.
+pub(crate) fn randomize_initial_periodic_phase(
+    world: &mut World,
+    unit: Entity,
+    instance: u32,
+    index: u8,
+) {
+    let now = aura_now(world);
+    let mut auras = world
+        .get_mut::<ActiveAuras>(unit)
+        .expect("applied periodic aura owner");
+    let aura = auras
+        .get_mut(instance)
+        .expect("applied periodic aura instance");
+    let effect = aura
+        .effects
+        .iter_mut()
+        .find(|effect| effect.index == index)
+        .expect("source-qualified periodic effect");
+    assert!(
+        effect.period_ms > 0 && effect.next_tick_index == 1 && effect.periodic_ticks == 0,
+        "random initial phase requires a new non-tick-zero periodic effect"
+    );
+    // SimC76f8118 sc_mage.cpp5572–5574: interval *= rng.real(); timespan
+    // truncates to milliseconds, while subsequent intervals remain unchanged.
+    let delay_ms = (crate::random::random::<f64>() * f64::from(effect.period_ms)).floor();
+    effect.periodic_started_at = now + (delay_ms - f64::from(effect.period_ms)) / 1000.0;
+}
+
 /// Proc timers (TrinityCore `Aura` proc fields).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ProcTimers {
