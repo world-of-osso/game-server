@@ -26,8 +26,8 @@ pub(super) fn install(world: &mut World, actor: Entity, profile: &Profile) -> Re
             ("flask", "flask_of_the_blood_knights_2") => apply_item(world, actor, 241324, &db)?,
             ("augmentation", "void_touched") => apply_item(world, actor, 259085, &db)?,
             ("food", "royal_roast") => server::consumables::apply(world, actor, 1294727, None)?,
-            // SimC76f8118 unique_gear_midnight.cpp6395: feast token -> primary buff.
-            ("food", "harandar_celebration") => {
+            // SimC76f8118 unique_gear_midnight.cpp6395/6398: both feasts share this buff.
+            ("food", "harandar_celebration" | "silvermoon_parade") => {
                 server::consumables::apply(world, actor, 1232585, None)?
             }
             ("potion", "potion_of_recklessness_2") => {
@@ -125,7 +125,7 @@ pub(super) fn supported(kind: &str, value: &str) -> bool {
             | ("flask", "flask_of_the_blood_knights_2")
             | ("augmentation", "void_touched")
             | ("food", "royal_roast")
-            | ("food", "harandar_celebration")
+            | ("food", "harandar_celebration" | "silvermoon_parade")
             | ("potion", "potion_of_recklessness_2")
     ) || (kind == "temporary_enchant"
         && value.split('/').all(|e| {
