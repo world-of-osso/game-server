@@ -651,6 +651,9 @@ mod guild_ranks_tests;
 #[cfg(test)]
 #[path = "guild_leadership_transfer_tests.rs"]
 mod guild_leadership_transfer_tests;
+#[cfg(test)]
+#[path = "guild_disband_tests.rs"]
+mod guild_disband_tests;
 
 #[cfg(test)]
 mod tests {
