@@ -6677,6 +6677,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "server-runtime"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "server-simulation"
 version = "0.1.0"
 dependencies = [
