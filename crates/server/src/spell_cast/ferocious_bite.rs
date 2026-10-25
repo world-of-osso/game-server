@@ -12,19 +12,15 @@ use crate::{
 
 const FEROCIOUS_BITE: u32 = 22_568;
 const INCARNATION: u32 = 102_543;
+const SABER_JAWS: u32 = 421_432;
 const BURN_EFFECT: u8 = 1;
 
-fn incarnation_multiplier(world: &World, caster: Entity) -> f32 {
+fn read_aura_multiplier(world: &World, caster: Entity, spell: u32, index: u8) -> f32 {
     let amount = world
         .get::<ActiveAuras>(caster)
-        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == INCARNATION))
-        .and_then(|aura| {
-            aura.effects
-                .iter()
-                .find(|effect| effect.index == BURN_EFFECT)
-        })
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == spell))
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == index))
         .map_or(0.0, |effect| effect.amount);
-    // Native70448 effect1 is a trigger, so no such aura effect exists there.
     1.0 + amount / 100.0
 }
 
@@ -35,7 +31,7 @@ fn extra_energy_cap(world: &World, caster: Entity, source: &SpellInfo) -> f32 {
         .find(|effect| effect.index == BURN_EFFECT)
         .expect("native Ferocious Bite requires its Energy-burn effect");
     let maximum = effects::modded_base_points(world, caster, source, burn)
-        * incarnation_multiplier(world, caster);
+        * read_aura_multiplier(world, caster, INCARNATION, BURN_EFFECT);
     assert!(
         maximum > 0.0,
         "native Ferocious Bite requires a positive extra-Energy cap"
@@ -72,7 +68,10 @@ pub(super) fn snapshot<'s>(
     let energy =
         powers::power_value(world, caster, PowerType::Energy).map_or(0.0, |(current, _)| current);
     let mut spell = source.clone();
-    spell.cast_damage_multiplier = Some(1.0 + energy.min(maximum) / maximum);
+    // SimC76f8118 sc_druid.cpp4358–4401: Saber Jaws augments only the excess-Energy term.
+    let excess = energy.min(maximum) / maximum;
+    let saber = read_aura_multiplier(world, caster, SABER_JAWS, 0);
+    spell.cast_damage_multiplier = Some(1.0 + excess * saber);
     Cow::Owned(spell)
 }
 
@@ -85,7 +84,7 @@ pub(super) fn burn_limit(
     amount: f32,
 ) -> f32 {
     if spell.id == FEROCIOUS_BITE && effect_index == BURN_EFFECT {
-        amount * incarnation_multiplier(world, caster)
+        amount * read_aura_multiplier(world, caster, INCARNATION, BURN_EFFECT)
     } else {
         amount
     }
