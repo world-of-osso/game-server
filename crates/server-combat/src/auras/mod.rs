@@ -1669,7 +1669,7 @@ pub fn set_owned_duration(
 }
 
 /// Extend existing finite auras owned by this caster without restarting ticks.
-pub(crate) fn extend_owned_duration(
+pub fn extend_owned_duration(
     world: &mut World,
     caster: Entity,
     target: Entity,
