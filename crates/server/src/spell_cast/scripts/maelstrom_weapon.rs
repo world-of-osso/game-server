@@ -40,7 +40,6 @@ pub(super) fn register(scripts: &mut AuraScripts) {
 }
 
 fn check_melee(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
-    eprintln!("MW candidate: {event:?}");
     event.damage > 0.0 && !event.periodic && !auras::has_aura(world, aura.caster, GHOST_WOLF)
 }
 
@@ -53,12 +52,7 @@ fn earn_melee_stack(
     generate(world, caster, 1);
 }
 
-#[track_caller]
 pub(super) fn generate(world: &mut World, caster: Entity, count: u8) {
-    eprintln!(
-        "MW generation: count={count}, caller={}",
-        std::panic::Location::caller()
-    );
     if !auras::has_aura(world, caster, PASSIVE) {
         return;
     }
