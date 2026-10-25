@@ -7,6 +7,7 @@ mod assassination_energy_tests;
 mod assassination_hero_tests;
 mod assassination_knowledge_tests;
 mod assassination_mechanics_tests;
+mod assassination_poison_mechanics_tests;
 mod assassination_poison_tests;
 mod assassination_seal_fate_tests;
 mod aura342_tests;
