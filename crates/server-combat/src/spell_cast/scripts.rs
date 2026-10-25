@@ -1734,6 +1734,9 @@ pub(super) fn on_hit_with_context(world: &World, spell_id: u32) -> Option<Contex
 
 /// Damage-only impact scripts do not receive caster buffs or other aura recipients.
 pub(super) fn on_enemy_damage_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
+    if crate::auras::rogue::LETHAL_POISON_HITS.contains(&spell_id) {
+        return Some(rogue_children::poison_hit);
+    }
     match spell_id {
         20271 | 406957 | 24275 | 1279408 => Some(ret_damage::judgment_mastery),
         _ => None,

@@ -22,7 +22,7 @@ const KINGSBANE: u32 = 385627;
 const KINGSBANE_RAMP: u32 = 394095;
 // SimC76f8118 sc_rogue.cpp2974–3083: lethal direct poison payloads;
 // Deadly's periodic ticks are not impact callbacks.
-const LETHAL_POISON_HITS: &[u32] = &[113780, 315585, 8680, 383414];
+pub(crate) const LETHAL_POISON_HITS: &[u32] = &[113780, 315585, 8680, 383414];
 
 #[derive(Component)]
 struct VenomousRemainder(f64);
@@ -120,9 +120,6 @@ fn apply_deadly_poison(
 /// positive lethal poison impact against the owned Kingsbane grants a native
 /// ramp stack. Its lifetime ends with that dot, never with a later poison hit.
 pub(crate) fn after_poison_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
-    if !LETHAL_POISON_HITS.contains(&ctx.spell.id) {
-        return;
-    }
     let deadline = world.get::<ActiveAuras>(target).and_then(|auras| {
         auras
             .iter()

@@ -81,6 +81,22 @@ pub(super) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     spell_cast::launch_triggered_spell(world, ctx.caster, &child, Some(target), ctx.depth + 1);
 }
 
+// Use the actual positive TargetInfo before expiry, not a deferred proc event.
+// Each sourced lethal poison has one direct damage effect; absorbs grant no ramp.
+pub(super) fn poison_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    let positive = world
+        .get_resource::<spell_cast::ResolvingHits>()
+        .and_then(|hits| hits.0.last())
+        .filter(|frame| {
+            frame.caster == ctx.caster && frame.spell_id == ctx.spell.id && frame.depth == ctx.depth
+        })
+        .and_then(|frame| frame.damage.iter().find(|(unit, _)| *unit == target))
+        .is_some_and(|(_, damage)| *damage > 0.0);
+    if positive {
+        auras::rogue::after_poison_hit(world, ctx, target);
+    }
+}
+
 fn tick_implacable(world: &mut World, caster: Entity, _aura: &AuraInstance, index: u8) {
     if index != 1 {
         return;

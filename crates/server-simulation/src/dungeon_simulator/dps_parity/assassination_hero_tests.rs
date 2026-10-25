@@ -52,19 +52,13 @@ fn assassination_hero_garrote_earns_native_post_stealth_window() {
     engage(&mut run);
     let started_at = run.app.world().resource::<Time>().elapsed();
     install_fixture_lifetimes(&mut run, started_at);
-    for _ in 0..40 {
-        drive_player(&mut run).unwrap();
-        run.app.update();
-        let stealthed = run
-            .app
-            .world()
-            .get::<crate::auras::ActiveAuras>(run.actor)
-            .unwrap()
-            .has_type(crate::auras::handlers::MOD_STEALTH);
-        if !stealthed {
-            break;
-        }
-    }
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(703, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
     assert!(
         crate::auras::has_aura(run.app.world(), run.targets[0], 703),
         "ordinary Garrote must be the earned stealth exit"

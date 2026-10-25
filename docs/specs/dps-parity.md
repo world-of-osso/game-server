@@ -251,33 +251,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Spec1467 follower measurements execute all89 preserved MID1 `76f8118` APL rows through shared `literal_rotation`; retain the named missing-MID2 reference gap and complete exported allocations.
 - `empower_to` selects the real native release stage while retaining the selected hostile primary independently of self casts. Fire Breath dot facts observe native357209 owned by that actor. Disintegrate uses the shared channel decision seam, including action-bound `ticks_remain`.
 
-### Seal Fate critical-hit producer
-
-- Selected native14190 rolls effect0's live chance on actual critical ComboPoint-builder damage, including both native Mutilate hands and Fan of Knives' scripted builder. Dispatch its native effect1 child14189 once per eligible critical impact. White swings, noncritical hits, periodic ticks and the explicitly excluded Pistol Shot, Shuriken Toss and Poisoned Knife do not qualify; the deferred generic proc cannot roll the same source again. Native child amounts and resource caps remain unchanged (SimC76f8118 `sc_rogue.cpp2178–2180,4471–4473,5137–5138,7921–7937`).
-
-### Swift Slasher auto-attack speed
-
-- With owned381988 and active owned315496, add the live attack-haste percentage scaled by381988 effect1 to SnD's native attack-speed bonus. Keep ordinary haste and the native342 multiplier; replace only the SnD factor in the melee swing snapshot, without changing aura amounts, duration, extension, cast/GCD clocks or ranged timing. Assassination and Outlaw use the same native path (SimC76f8118 `sc_rogue.cpp9140–9148,11280–11282`).
-
-### Improved Garrote
-
-- With selected381632, ordinary Garrote snapshots392401 effect1's native bonus while actually stealthed or during the native post-stealth window. Ending the last actual stealth aura grants392401; native duration and cooldown modifier remain authoritative. The applied bleed keeps its bonus after stealth and the window end. Both admission and recovery storage use zero Garrote recovery during actual stealth and the window, including the first stealth cast before the exit buff exists; retain real GCDs and costs (SimC76f8118 `sc_rogue.cpp4550–4561,4604–4609,7351–7378,11121–11133`).
-
-### Assassination native damage children
-
-- Successful Rupture with selected381627 applies native381628 at the captured effective ComboPoint multiplier, minimum1, without another resource payment. Native coefficients, tick cadence and duration remain unchanged (SimC76f8118 `sc_rogue.cpp5257–5264,6200–6203`).
-- Successful Kingsbane with selected1265387 starts native1265787. Each native effect1 periodic tick dispatches1265794 and1265795 at the retained impacted target. Target loss does not select a replacement; removing the driver clears its target (SimC76f8118 `sc_rogue.cpp4891–4905,4954–4958`).
-
-### Assassination Deathstalker lifecycle
-
-- Native Garrote establishes one caster-owned457129 mark with selected457052 effect0 stacks, transferring it off the previous target without refreshing an existing mark on the same target. Actual ComboPoint spenders meeting the native effect1 threshold consume one stack and deal457157 damage.
-- Depleting a mark with selected457058 grants native457280 after1ms, including its native Energy effect. A maximum-ComboPoint Envenom snapshots its native damage/critical bonus, reapplies the native mark count and consumes Darkest Night. Lower-ComboPoint casts neither consume marks nor Darkest Night while it is active. Scope is spec259; other Rogue specs are unchanged. Source: SimC76f8118 `sc_rogue.cpp2435–2440,2569–2574,4599,8732–8817`. Quietus Celeris, mark-target death, Unshakeable Drive's delayed stack consumer, Mass Casualty and Hunt Them Down remain separate gaps.
-
 ### Measurement
-
-- Ordinary Envenom snapshots Amplifying Poison's native bonus when the recipient has at least the coating's native threshold of caster-owned383414 stacks. Consume exactly that threshold before the cast generates poison; preserve other casters' stacks and sub-threshold state (SimC76f8118 `sc_rogue.cpp4281–4310`).
-
-- Each positive lethal poison direct impact against the caster's own active Kingsbane385627 grants one native394095 ramp stack. Periodic poison ticks, other casters and unmarked targets do not grant stacks. Native ramp amounts/cap and periodic modifiers determine damage; ramp expiry stays at the owned dot deadline (SimC76f8118 `sc_rogue.cpp2948–2954,4975,11155–11156`).
 
 - Venomous Wounds returns native Energy after a successful owned Garrote/Rupture tick on an owned poisoned target. Its native refund is divided by the same bleed's active poisoned-target count raised to the native diminishing exponent. Keep fractional gains until a whole Energy is earned. Resolve before the producing aura expires; do not count other Rogues' dots or roll the deferred proc again.
 
@@ -287,7 +261,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - A successful harmful Player ability carrying the native melee-combat-start flag starts weapon swings at its retained hostile primary. An existing weapon victim and swing timers remain unchanged. Fixture engagement does not inject the missing attack; no ability whitelist or damage multiplier substitutes for the native flag.
 
-- Spec259 player fixtures execute the profile's literal pinned Assassination action rows through the shared APL evaluator, not AssistedCombat or follower-kit priorities. `apply_poison` uses the selected native coating casts in source order and waits for each real cast before the next precombat row. Production follower decisions remain unchanged.
+- Spec259 player fixtures execute the profile's literal pinned Assassination action rows through the shared APL evaluator, not AssistedCombat or follower-kit priorities. `apply_poison` uses the selected native coating casts in source order and waits for each real cast before the next precombat row. Production follower decisions remain unchanged. See [Rogue mechanic requirements](rogue-parity.md).
 
 - Parity opponents face away from the actual actor at initial spawn, engagement after warmup, and add replacement, matching the reference's `position=back`. Preserve pack positions and native attack geometry/defenses. Rear position excludes parry, not NPC dodge. Player and class-parity actors also receive the pinned SimC baseline7.5% expertise in both weapon-spell and ordinary-swing dodge/parry calculations (`player.cpp1622`); native target defense values and ordinary NPC expertise remain unchanged.
 
