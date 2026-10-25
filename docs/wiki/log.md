@@ -1,3 +1,7 @@
+## 2026-10-25 — Literal spec registration
+
+[Shared literal fixture machinery](systems/simc-apl.md#shared-literal-fixture-machinery): one sorted driver table replaces per-spec shared seams; spec modules own preparation and reports. Literal selection defaults to both actor identities.
+
 ## 2026-10-25 — Rogue literal state and effective resources
 
 [Rogue fixture](systems/simc-apl.md#rogue-literal-fixture-and-effective-resource-values): native RtB action binding, Fang Strike effective-point snapshots independent of zero payment, owned one-use consumption and shared native Cut to the Chase. Native regressions qualify those state boundaries; producer-event rules and numerical parity remain separate.

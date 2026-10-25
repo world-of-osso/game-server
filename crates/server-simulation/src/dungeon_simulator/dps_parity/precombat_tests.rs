@@ -116,7 +116,9 @@ fn literal_precombat_ww_snapshot_exists_before_engagement_and_fight_time() {
             target
         ));
     }
-    let rotation = run.windwalker_rotation.as_ref().unwrap();
+    let rotation = (run.spec_driver.as_ref().unwrap().as_ref() as &dyn std::any::Any)
+        .downcast_ref::<windwalker_rotation::Rotation>()
+        .unwrap();
     assert!(rotation.report()["native_precombat_snapshot"].is_object());
     let action = server::simc_apl::Action {
         source_row: None,
