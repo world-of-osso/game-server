@@ -4,6 +4,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+- The native encounter fixture faces the actor toward its actual primary before engagement, so source-qualified frontal attacks can reach the pack. Keep native directional selectors, widths and radii unchanged.
+
 ### Literal spec drivers
 
 - Register each literal spec once, in spec-ID order. Adding a spec changes only its own rotation module and its registration line, not shared fields, initialization, dispatch, reporting or preparation branches.
@@ -75,6 +77,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [ ] Equipment stats resolve native70448 ItemBonus, ItemSparse, RandPropPoints and Midnight scaling/configuration tables, including stat allocation, sockets and enchant/gem effects. Physical-resistance enchants (type4/school0) contribute scaled, truncated, minimum-one armor, preserving their independent primary effects (TC a352b1fa Player.cpp13509–13531). Other resistance schools remain explicit gaps. Unsupported effects are named gaps, never invented stats.
 - [x] The native-table producer preserves signed values, replaces only the requested table, supports repeated imports and rolls back a duplicate-ID failure without losing the prior table.
 - [x] Shipped profile manifests preserve exact item IDs, bonus lists, item-level overrides, enchants, gems, crafted stats, talents, consumables and action text. Missing item IDs fail explicitly. Temporary enchant declarations apply only to equipped slots; an empty off hand is inactive.
+- Native class actors use live `CharacterStats` melee crit even with NPC identity. Native Hunter pets inherit their current owner's crit; preserve their own applicable bonuses and target modifiers. Generic no-stats creatures retain native template/base crit. Do not replace class/owner crit with generic creature5% or suppress it through a generic NPC `NO_CRIT` flag (SimC76f8118 `player.cpp5125–5134`, `pet.cpp217–220`).
 - Ordinary native haste auras multiply with converted rating haste and each other: `(1 + rating%) × Π(1 + aura%) − 1`. Retain native aura amounts/stacks, non-stacking selection, independent Crusade and autoattack-only342 factors. Native WW1205 rating plus5% ordinary haste yields33.7557%; no coefficient or rating adjustment (SimC76f8118 `player.cpp4982–4995`).
 - `flask_of_the_blood_knights_2` applies native haste. `harandar_celebration` and `silvermoon_parade` share the native primary-stat food buff. Flask quality uses native item level; food uses native food scaling. `blooming_feast` grants only the highest native secondary rating, selected after gear/passive initialization and before configured pet casts. Do not import reference stat amounts.
 - [x] Native fixture equipment honors `redirected_base_stats`: use the donor item's native ItemSparse stat types/allocations with the original profile's item level and bonuses. Keep original equipped identity, tier/effects, armor and weapon inputs; never mutate catalogs or import reference stat values. Unknown/malformed donors fail explicitly; pinned explicit0 means no redirect. Non-redirected slots remain unchanged. Pinned76f8118 `item.cpp35–57` supplies option semantics; native70448 supplies amounts.
@@ -263,6 +266,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Venomous Wounds returns native Energy after a successful owned Garrote/Rupture tick on an owned poisoned target. Its native refund is divided by the same bleed's active poisoned-target count raised to the native diminishing exponent. Keep fractional gains until a whole Energy is earned. Resolve before the producing aura expires; do not count other Rogues' dots or roll the deferred proc again.
 
+- Earned Instant Poison315584 coating procs dispatch their native effect0 child315585 to the actual hostile proc recipient for every Rogue specialization. Native chances, modifiers and damage remain authoritative (SimC76f8118 `sc_rogue.cpp3021–3025`).
+
 - Earned Deadly Poison coating procs apply their native effect0 DoT to the actual proc recipient. A repeat while that caster's poison is still ticking also deals the sourced instant poison hit. Other casters' poisons do not enable that instant. Native proc admission/chance, damage and durations remain authoritative.
 
 - A successful harmful Player ability carrying the native melee-combat-start flag starts weapon swings at its retained hostile primary. An existing weapon victim and swing timers remain unchanged. Fixture engagement does not inject the missing attack; no ability whitelist or damage multiplier substitutes for the native flag.
@@ -368,6 +373,7 @@ Equipped native MID2 Enhancement two-piece1296627 makes real Voltaic Blaze apply
 
 - [x] Spec254 uses a real Player with exact reference gear/traits and unchanged pinned `hunter_marksmanship.simc` source through shared `literal_rotation`. It does not require a nonexistent follower profile or use AssistedCombat priorities.
 - [x] Execute source precombat, preserve native cooldowns/overrides and item admission, and start ranged attacks through native75. Report the literal driver and native stat snapshot. Missing potion inventory and external providers remain explicit gaps, not fabricated effects.
+- Sentinel's Mark `.react` clocks belong to each actual recipient. Configure the exact pinned254 reference player reaction settings before acquisition for initial targets and replacement waves; never infer acquisition at query time. Keep the literal action rows unchanged.
 - [ ] Qualify remaining residual damage and both full-duration DPS references before claiming parity. Controller execution alone does not qualify native mechanics.
 
 ### Marksmanship native cast relationships
