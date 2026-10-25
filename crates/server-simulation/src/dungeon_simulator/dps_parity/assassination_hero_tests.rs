@@ -4,6 +4,41 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "requires prepared259 private native DB and player actor"]
+fn assassination_hero_garrote_window_allows_real_sequential_target_spread() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(259, 3).unwrap();
+    engage(&mut run);
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
+    let started = crate::spell_cast::now(run.app.world());
+    for target in run.targets.clone() {
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(703, target, Some(target)),
+        )
+        .expect("actual Improved Garrote must permit another target after only the real GCD");
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let aura = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 703 && aura.caster == run.actor);
+        assert!(
+            aura.is_some(),
+            "the native Garrote must actually land on{target:?}"
+        );
+    }
+    assert!(
+        crate::spell_cast::now(run.app.world()) - started < 6.0,
+        "three actual GCDs must not wait for the ordinary native six-second recovery"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared259 private native DB and player actor"]
 fn assassination_hero_garrote_earns_native_post_stealth_window() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(259, 1).unwrap();
