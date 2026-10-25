@@ -666,6 +666,18 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     commands: Commands<'w, 's>,
 }
 
+/// Live owner crit for a native Hunter pet (SimC76f8118 pet.cpp217–220).
+pub fn read_pet_owner_critical_chance(world: &World, unit: Entity) -> Option<f32> {
+    world.get::<crate::hunter_pet_stats::HunterInheritedStats>(unit)?;
+    let owner = world.get::<crate::hunter_pet::HunterPet>(unit)?.owner;
+    Some(
+        world
+            .get::<CharacterStats>(owner)
+            .expect("native pet owner requires CharacterStats for inherited crit")
+            .crit_pct,
+    )
+}
+
 /// Process auto-attacks: tick timers, deal damage when in range and timer ready.
 pub(crate) fn auto_attack_system(world: &mut World) {
     let attackers: Vec<Entity> = world
@@ -675,14 +687,15 @@ pub(crate) fn auto_attack_system(world: &mut World) {
     for attacker in attackers {
         // Apply this attacker's commands before the next attacker reads mitigation.
         // In particular, consuming Ardent also removes its30% damage reduction now.
+        let owner_crit = read_pet_owner_critical_chance(world, attacker);
         world
-            .run_system_cached_with(auto_attack_unit, attacker)
+            .run_system_cached_with(auto_attack_unit, (attacker, owner_crit))
             .expect("auto-attack unit system must have its registered resources");
     }
 }
 
 fn auto_attack_unit(
-    In(attacker_entity): In<Entity>,
+    In((attacker_entity, owner_crit)): In<(Entity, Option<f32>)>,
     time: Res<Time>,
     mut params: AutoAttackParams,
 ) {
@@ -746,7 +759,7 @@ fn auto_attack_unit(
             crate::hunter_pet_stats::owner_bonus_attack_power(owner, modifiers)
         }),
         // SimC76f8118 pet.cpp217–220: read live owner crit, not template base5%.
-        hunter_owner_crit_pct: hunter_owner.map(|(owner, _)| owner.crit_pct),
+        hunter_owner_crit_pct: owner_crit,
         spirit_wolf: params.spirit_wolves.get(attacker_entity).ok().map(|wolf| {
             let (owner, _) = params
                 .owner_stats
