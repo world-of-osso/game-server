@@ -1,5 +1,7 @@
 //! Thin Frost player adapter over the shared literal SimC evaluator and dispatch.
 mod bindings;
+#[cfg(test)]
+mod proc_tests;
 use super::{
     Run,
     inputs::Profile,
