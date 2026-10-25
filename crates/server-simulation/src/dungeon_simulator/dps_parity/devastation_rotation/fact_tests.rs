@@ -37,6 +37,7 @@ fn devastation_fire_breath_facts_follow_actual_release() {
         crate::spell_cast::CastTargets {
             unit: run.actor,
             primary: Some(run.targets[0]),
+            destination: None,
         },
         1,
     )

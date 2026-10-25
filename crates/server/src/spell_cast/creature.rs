@@ -102,6 +102,7 @@ pub fn creature_cast_empowered_with_targets(
         )));
     }
     spell.cast_empower_to = Some(stage);
+    spell.cast_destination = targets.destination;
     super::start_cast_with_primary(world, caster, &spell, explicit, targets.primary)
 }
 

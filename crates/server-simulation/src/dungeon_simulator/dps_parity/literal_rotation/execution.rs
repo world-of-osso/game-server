@@ -650,11 +650,20 @@ pub(crate) fn execute_row(
     if world.get::<shared::components::Player>(actor).is_some() {
         return Err("player literal empower dispatch is not yet qualified".into());
     }
+    let metadata = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell)
+        .ok_or_else(|| format!("native empower spell{spell} absent"))?;
+    let destination = action_destination(world, metadata, unit)?;
     crate::spell_cast::creature_cast_empowered_with_targets(
         world,
         actor,
         spell,
-        crate::spell_cast::CastTargets { unit, primary },
+        crate::spell_cast::CastTargets {
+            unit,
+            primary,
+            destination,
+        },
         stage,
     )
     .map_err(|error| format!("native empower{spell} stage{stage} rejected: {error:?}"))
