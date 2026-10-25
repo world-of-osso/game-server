@@ -45,6 +45,9 @@
 ## 2026-10-25 — Shared profile gear effects
 
 [Character stats](systems/character-stats.md#shared-profile-effects--2026-10-25): native consumables, independent temporary enchants, reference racial identity, Omnium entry resolution, Heart/Venomfang/fire relationships and neutral proc recipients. Values remain native; SimC supplies behavior.
+## 2026-10-25 — Demonology literal controller and alternative Tyrant
+
+[Demonology](investigations/demonology-dps-parity.md): exact exported APL through shared literal execution; actual Imp/Tyrant facts and precombat default pet. Source-policy data binds Antoran Burning Cleave, its hasted two-second repeat GCD and the base Tyrant owner-SP inheritance. Native coefficients and dungeon follower kits are unchanged. Numerical parity remains open.
 
 ## 2026-10-25 — All-DPS parity census
 

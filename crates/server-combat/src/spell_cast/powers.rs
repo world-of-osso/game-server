@@ -510,6 +510,7 @@ type RegenQuery<'w, 's> = Query<
         Option<&'static UnitFlags>,
         Option<&'static PetFocusRegen>,
         Option<&'static crate::hunter_pet::HunterPet>,
+        Option<&'static super::guardian::GuardianActor>,
     ),
     Without<GridDormant>,
 >;
@@ -528,10 +529,10 @@ fn read_owner_focus_rates(
     units
         .iter()
         .filter_map(
-            |(unit, pools, _, auras, combat, mods, stats, death, npc, flags, _, _)| {
+            |(unit, pools, _, auras, combat, mods, stats, death, npc, flags, _, _, guardian)| {
                 let pool = pools.get(PowerType::Focus)?;
                 let stats = stats?;
-                if !read_creature_power_regeneration(npc, flags, data)
+                if !read_creature_power_regeneration(npc, flags, data, guardian)
                     || death.is_some_and(|death| death.state != shared::death::DeathState::Alive)
                 {
                     return Some((unit, 0.0));
@@ -578,15 +579,28 @@ pub(crate) fn regenerate_powers(
     let dt = time.delta_secs();
     let now = time.elapsed_secs_f64();
     let owner_focus_rates = read_owner_focus_rates(&units, &table, world_data.as_deref(), now);
-    for (unit, mut pools, mana, auras, combat, mods, stats, death, npc, flags, pet_focus, pet) in
-        &mut units
+    for (
+        unit,
+        mut pools,
+        mana,
+        auras,
+        combat,
+        mods,
+        stats,
+        death,
+        npc,
+        flags,
+        pet_focus,
+        pet,
+        guardian,
+    ) in &mut units
     {
         // TC Player::GetPowerRegen: aura94 selects combat rates, not combat state.
         let aura_interrupts_regen = npc.is_none()
             && auras.is_some_and(|auras| auras.has_type(crate::auras::handlers::INTERRUPT_REGEN));
         let auras = auras
             .filter(|auras| auras.has_type(crate::auras::handlers::TRIGGER_SPELL_ON_POWER_AMOUNT));
-        if !read_creature_power_regeneration(npc, flags, world_data.as_deref()) {
+        if !read_creature_power_regeneration(npc, flags, world_data.as_deref(), guardian) {
             continue;
         }
         if death.is_some_and(|death| death.state != shared::death::DeathState::Alive) {
@@ -739,6 +753,7 @@ fn unit_power_regen_enabled(world: &World, unit: Entity) -> bool {
         world.get::<Npc>(unit),
         world.get::<UnitFlags>(unit),
         world.get_resource::<WorldData>(),
+        world.get::<super::guardian::GuardianActor>(unit),
     ) && !world
         .get::<crate::death::PlayerDeathState>(unit)
         .is_some_and(|death| death.state != shared::death::DeathState::Alive)
@@ -808,7 +823,11 @@ fn read_creature_power_regeneration(
     npc: Option<&Npc>,
     flags: Option<&UnitFlags>,
     data: Option<&WorldData>,
+    guardian: Option<&super::guardian::GuardianActor>,
 ) -> bool {
+    if guardian.is_some_and(|guardian| !guardian.regenerates_power) {
+        return false;
+    }
     let Some(npc) = npc else {
         return true;
     };
