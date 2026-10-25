@@ -2,9 +2,23 @@
 
 Server-side aura runtime in `crates/server/src/auras/`: aura instances on active units, periodic effects, procs, spell and stat modifiers, removal and `UnitAuras` replication. See [auras](../wiki/systems/auras.md).
 
+## Unit form display power
+
+Form display-power reconciliation applies to every native Unit, not only Player entities. Native NPC Cat Form selects its existing Energy pool so the real Ferocious Bite22568 power-burn effect can consume it. Player Cat behavior remains unchanged; NPC caster forms such as Moonkin retain their native Mana display. Form/aura/native-class precedence is preserved. Reconciliation must not add Player identity, fabricate pools, reseed resources or change separately justified player-client synchronization.
+
+TC a352b1fa `SpellAuraEffects.cpp:2049–2056` and `Unit.cpp:5779–5827`; controls in `crates/server/src/spell_cast/form_display_power_tests.rs` include authentic Ralia/Crenna NPC initialization, actual native22568 effect1 dispatch and player Cat. The burn control isolates the real effect path; it does not certify full finisher damage or proc eligibility.
+
 ## Explicit proc provenance
 
 Import the audited effective public TC `spell_proc` IDs into `tdb_spell_proc(SpellId PRIMARY KEY)` only after every pinned base/update source matches its SHA-256. Reject duplicate/incomplete IDs before publication. Replace presence transactionally without changing retained rows' later value columns or unrelated tables; errors leave prior data intact. Presence alone must not overlay chance, flags, cooldown or charges. The later full proc importer owns those values. Runtime requires the provenance table; absence is a load error, not permission to treat every definition as generated. After complete spell assembly, identify explicit TDB, registered scripted, generated or absent definitions. Only generated definitions use TC a352b1fa SpellMgr1888–1903 refusal: CAN_PROC_FROM_PROCS, no relevant family mask, chance≥100, no positive PPM/cooldown/charges, relevant dealt-event flags and an actual trigger. Refusal must retain raw aura/stack/charge metadata and prevent proc dispatch even during actor bootstrap. Explicit48484, scripted Dance/Inundate and generated391875's authored100ms cooldown remain eligible. See [Feral/source ledger](../handoffs/feral-source-census.md).
+
+## Event-time proc candidates
+
+- [ ] Pin each event's actor/target aura instance identities when the event is raised. Deferred processing must not proc or spend charges on an aura applied after that event, even in the same cast/tick.
+- [ ] An aura already present at a subsequent event remains eligible under unchanged native masks, chance, cooldown and charge rules. Removed/replaced instances cannot be substituted by another application of the same spell.
+- [ ] Every emitter, including real melee swings, uses the shared event entry point; no spell-ID exception, metadata override or invented same-cast/castId rule.
+
+TC a352b1fa `Unit.cpp10611–10670` collects current candidates synchronously. Native453758 Leydrinker self-application and subsequent133 Fireball are the non-Ret boundary/control; this does not qualify Leydrinker talent availability. [Source/proof](../handoffs/aura-proc-event-candidates-proof-ledger.md).
 
 ## Firestarter direct critical strikes
 

@@ -1,10 +1,28 @@
 # Spell Casting
 
+## Bounded Storm echo policy
+
+`echo_policies.rs` stores `EchoPolicy` rows: name, spec, selected talent, root/payload IDs and native effect indices. `SIMC_RET_SECOND_SUNRISE_STORM_ECHO` is explicitly approved because pinned SimC76f8118 Ret495–638 supplies a relationship absent from TC/native child fields. Only ordinary53385 enters generic foreground dispatch. The actual selected primary is mandatory; no target substitution. Runtime reads owned live431474 chance/effectiveness, then shared proc code reuses that aura's native internal cooldown. A queued full-trigger native child carries the observed effectiveness, has no extra resource payment and cannot recursively enter the foreground hook. No200ms timer is introduced.
+
+Native4442 raw15/30 plus1258011 effect modifiers5/20 produce effective20/50. The parent reports guide15/30 from Maxroll12.1.5/Skycoach; that source conflict is recorded, not resolved by tuning native data. [Contract](../../specs/dps-parity.md#ret-storm-root-supply-and-secondary-relationships), [strict RED and capability ledger](../../handoffs/ret-storm-gap-proof-ledger.md). Native positive/no-Hero RED→GREEN and actual root1.0/echo0.5 damage are recorded there. HoW, Tempest, Empyrean/other background-source eligibility and full parity remain separate.
+
 ## Selected primary across self casts — 2026-10-24
 
 The shared literal execution carries the native cast unit and selected action primary separately. `CastTargets` supplies both to ordinary Player/NPC admission; existing spell snapshots retain the primary through queued requests and cast bars. Foreground child relationships use that snapshot, not the explicit self-cast unit or a later mutable combat target. Missing context does not choose another target. Native target selectors, values, payment and flight remain unchanged.
 
 The actual Ret self-cast boundary failed with child target=caster and passes with target=hostile plus real damage; four scoped native cases pass at ec5f0f3f3. [Contract](../../specs/dps-parity.md#shared-cast-target-context); [full proof and remaining controls](../../handoffs/hostile-primary-proof-ledger.md). The older Zenith control has an identical lifetime/role fixture failure on plain master3f; it is not repaired in this branch. NPC and actual Player child-primary assertions, Player/queue/composite controls and both post-D3 compiler gates now pass within the linked ledger’s exact scope. The parent’s full gate and new DPS measurements remain separate.
+
+## Dawnlight named hit policies — 2026-10-24
+
+`spell_cast/scripts/policies.rs` stores `Policy { name, spec, talent, relationship }` rows. `Relationship::CounterAfterCast` reads a selected talent’s live native effect and casts a native counter; `Relationship::SpenderHit` binds a resource pool, counter and native payload. Specific Dawnlight IDs occur in policy data, not core spell-ID conditionals. The [contract](../../specs/dps-parity.md#ret-dawnlight-policies) explicitly names the two SimC relationships because TC/DB2/TDB do not encode them.
+
+Ordinary native launch stores applicable resource pools (including zero final cost) and the actual selected primary/list in `SpellInfo.cast_policy_context`. Triggered catalog clones have no context. Logical first-hit dispatch checks the live owned counter, native payload target admission and live owned periodic state: refresh on one target, choose the first unticking actual target in an area list, or spend nothing if all tick. Native stack loss does not refresh duration. Native3, maximum6 and431380 payload/timing remain unchanged.
+
+[Ordered source/RED/GREEN ledger](../../handoffs/dawnlight-generic-proof-ledger.md) records strict producer then consumer failures before implementation, native payload/negative controls and15scoped native passes at28bf70027. Literal self-target caller integration still depends on hp1109; secondary Avatar/AoE, Player-policy and full DPS parity remain outside this proof. Both requested test-target/plain-production compiler gates and fmt pass in that ledger; parent full integration remains separate.
+
+## Xuen's Battlegear impact context — 2026-10-24
+
+`HitFrame.selected` stores actual resolving TargetInfo Entity IDs, including misses, in native order. Its matching-frame slice is distinct from original-request `cast_primary_target`; neither is mutable CombatTarget. Class scripts use the first native TargetInfo for the approved RSK/RWK critical-recovery policy and the full list for unique SCK impact membership. The generic direct-damage callback carries actual target/crit without core spell IDs; after master7b integration its single wrapper forwards Flurry once before Xuen's class consumer. Strict native6RED/6controlsPASS→f188c66c1 native13GREEN41.09s, retainedFlurry6GREEN23.72s and plain production --binsPASS87.49s/0warnings. Full lead gate remains separate. [Policy, TC/DB2 absence and proof](../../handoffs/ww-xuens-recovery-proof-ledger.md).
 
 ## Rake actual-stealth eligibility — 2026-10-24
 

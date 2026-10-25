@@ -1,11 +1,13 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
 mod active_enemy_tests;
+mod aura342_tests;
 mod barbed_budget_tests;
 mod composite_precombat_tests;
 mod dummy_reference_tests;
 mod elemental_ascendance_tests;
 mod engagement_tests;
 mod equipment_input_tests;
+mod equipped_set_tests;
 mod feral_tests;
 mod firestarter_tests;
 mod haste_tests;
@@ -28,11 +30,16 @@ mod preparation;
 mod profile_initialization;
 mod rake_stealth_tests;
 mod report;
+mod ret_dawnlight_consumer_tests;
+mod ret_dawnlight_target_tests;
+mod ret_dawnlight_tests;
 mod ret_empyrean_tests;
 mod ret_purpose_tests;
+mod ret_resonance_phase_tests;
 #[cfg(test)]
 mod ret_rotation;
 mod ret_sentence_tests;
+mod ret_storm_gap_tests;
 mod ret_tier_tests;
 mod ret_toll_control_tests;
 mod ret_toll_tests;
@@ -40,6 +47,7 @@ mod ret_wake_tests;
 mod shared_fact_extension_tests;
 pub(crate) mod single_spell;
 mod snakeskin_tests;
+mod warrior_stat_tests;
 mod windwalker_rotation;
 use crate::simc_apl_native::{FixtureAdds, FixtureTarget};
 use bevy::prelude::*;
@@ -51,6 +59,7 @@ const TICKS: u32 = 6_000;
 const ADD_WAVE_TICKS: u32 = 600;
 const LAST_30S_START: u32 = TICKS - ADD_WAVE_TICKS;
 const DUMMY_ENTRY: u32 = 31_146;
+const DUMMY_LATERAL_STEP: f32 = 0.5;
 const FIGHT_DURATION: Duration = Duration::from_secs(300);
 const ADD_LIFETIME: Duration = Duration::from_secs(30);
 // SimC76f8118 raid_event.cpp2700–2701: equal cooldown/duration adds10ms.
@@ -69,11 +78,18 @@ struct Run {
 }
 
 fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, String> {
+    // Keep the reference's three-target pack in front without changing native cones.
+    let lateral_step = index.div_ceil(2) as f32 * DUMMY_LATERAL_STEP;
+    let lateral = if index.is_multiple_of(2) {
+        lateral_step
+    } else {
+        -lateral_step
+    };
     let target = crate::zones::summon_creature(
         app.world_mut(),
         actor,
         DUMMY_ENTRY,
-        [1.5, index as f32, 0.0, std::f32::consts::PI],
+        [1.5, lateral, 0.0, std::f32::consts::PI],
     )
     .ok_or("native training dummy31146 could not spawn")?;
     if app

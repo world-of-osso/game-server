@@ -1,5 +1,9 @@
 # Dungeon simulator
 
+## Frontal parity pack —2026-10-24
+
+The [shared parity constructor](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/mod.rs) uses symmetric half-yard lateral steps for all classes and replacement waves. The primary remains1.5yd away; the first two adds are at±0.5yd, within±18.435°. Old `[1.5,index,0]` placement put the third at53.13°/2.5yd, correctly outside native FoF's60° cone and TC's2yd close boundary. Correct the harness, never the gameplay cone. Real FoF recipient and Mage/Monk fixture regressions reach genuine two-RED12.83s before the change, then two-GREEN13.92s at26c83dd27; actual FoF now reaches all three identities, compile18.84s/zero warnings. Once-only controlled3T remeasurement and lead integration remain pending. [Contract](../../specs/dps-parity.md), [source/proof ledger](../../handoffs/parity-frontal-pack-proof-ledger.md).
+
 ## Hunter pet intrinsic/owner stats —2026-10-22
 
 The [survivability contract](../../specs/dps-parity.md#hunter-pet-survivability) follows TC Pet.cpp847–925/StatSystem1187–1310, not mixed SimC stats. `hunter_pet_stats` derives native ExpectedStat create health×template modifier, base armor level×50,30% owner Stamina truncated before×10 bonusHP and70% owner armor. Hunter spawn installs armor and inherited-health bookkeeping; owner CharacterStats changes apply only inherited HP deltas and clamp current on shrink without healing (TC Unit.cpp10070–10093). Other pet categories are unchanged; pet_levelstats/intrinsic primary stats remain absent, no fake TC fallback values are imported.
@@ -55,6 +59,8 @@ Azure requests ten runs but finishes with **nine process panics/missing reports 
 ## Native DPS frozen source view —2026-10-22
 
 Startup readers use absolute worldDB aliases, so environment/cwd alone cannot freeze their source. `scripts/dps_parity_native.py` runs the compiled fixture in a bubblewrap read-only snapshot mount over the resolved startup path, with no unsandboxed alternate path. The process regression observed mutable data before the fix, then frozen/read-only bytes with unchanged host/snapshot files. Atc04ecc5b9, using isolated protocol2abc7fa (the then-landed canonical/master protocol), all five native controls pass158.48s: Human1, source file identity, full health clock/add replacement, explicit player rule gap and real-player gear/spawn. Locked all-target server check passes28.85s and formatting passes, with no warnings. The first post-merge native run had2passes/3startup failures because common and optional-pet paths registered PetControlPlugin twice; the existing sibling harness-only fix597d30ded was reused as c04ecc5b9, preserving one common registration. This changes no production pet mechanics. The Human adapter now requires native row1, matching pinned SimC; row33 is ThinHuman rather than another valid Human match.
+
+For the fast ST+3T measurement command (test profile, counts in parallel, about 19 s), see [the DPS parity spec](../../specs/dps-parity.md#implementation-inventory).
 
 The frozen-view continuation atc04ecc5b9 attempted exactly eight authorized single-target player cases, with unchanged input hashes and stable prepared snapshot throughout. All eight fail qualification; no repeat of the earlier10 positive-output cases was performed.
 

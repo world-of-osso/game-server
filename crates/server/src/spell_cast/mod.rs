@@ -28,10 +28,14 @@ pub(crate) mod auto_repeat;
 #[cfg(test)]
 mod auto_shot_repeat_tests;
 pub(crate) mod cooldown_query;
+#[cfg(test)]
+mod form_display_power_tests;
 #[cfg(any(test, feature = "test-support"))]
 pub mod holy_metrics;
 #[cfg(test)]
 mod holy_words_tests;
+#[cfg(test)]
+mod mastery_base_tests;
 #[cfg(test)]
 mod trait_effect_points_tests;
 pub(crate) use aura_spell_restrictions::check_target as check_target_aura_restrictions;
@@ -2613,8 +2617,10 @@ fn execute_cast_with_primary(
     let mut launch_modifiers = spell_mods::snapshot_charged_modifiers(world, caster, &prepared);
     launch_modifiers.extend(scripts::pyroclasm_damage_modifier(world, caster, &prepared));
     prepared.cast_charge_mods = Some(launch_modifiers);
+    let plan = plan_targets(world, caster, &prepared, explicit, false)?;
+    prepared.cast_policy_context =
+        scripts::snapshot_hit_policies(world, caster, &prepared, &plan, &costs);
     let spell = &prepared;
-    let plan = plan_targets(world, caster, spell, explicit, false)?;
     if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
         debug!(caster = ?caster, spell_id = spell.id, explicit = ?explicit, plan = ?plan, "Cast execution target plan");
     }
@@ -2680,6 +2686,7 @@ fn execute_cast_with_primary(
     }
     if !spell.cast_parent_owns_modifier_charges {
         spell_mods::consume_charges(world, caster, spell);
+        scripts::apply_echo_policies(world, caster, spell);
         scripts::after_foreground_spender(world, caster, spell, spell.cast_primary_target);
         scripts::roll_selected_ret_divine_purpose(world, caster, spell);
         scripts::schedule_empyrean_legacy(world, caster, spell, spell.cast_primary_target);
@@ -2993,6 +3000,15 @@ fn resolve_effects(
     plan: &TargetPlan,
     depth: u8,
 ) {
+    let selected = selected_units(plan);
+    #[cfg(any(test, feature = "test-support"))]
+    {
+        if let Some(mut observed) =
+            world.get_resource_mut::<test_harness::ObservedSelectedTargets>()
+        {
+            observed.0.push((caster, spell.id, selected.clone()));
+        }
+    }
     // Distinct hit units after missile/defense filtering, before effect dispatch.
     for unit in hit_units(plan) {
         crate::achievement::record_targeted_spell_hit(world, caster, unit, spell.id);
@@ -3009,6 +3025,7 @@ fn resolve_effects(
             caster,
             spell_id: spell.id,
             depth,
+            selected,
             damage: Vec::new(),
             healing: Vec::new(),
             blocked: plan
@@ -3208,7 +3225,7 @@ fn run_hit_scripts(
 ) {
     let hook = scripts::on_hit(spell.id);
     let context_hook = scripts::on_hit_with_context(spell.id);
-    if hook.is_none() && context_hook.is_none() {
+    if hook.is_none() && context_hook.is_none() && spell.cast_policy_context.is_none() {
         return;
     }
     let ctx = EffectCtx {
@@ -3228,6 +3245,7 @@ fn run_hit_scripts(
         if let Some(hook) = context_hook {
             hook(world, &ctx, unit);
         }
+        scripts::apply_hit_policies(world, &ctx, unit);
     }
 }
 
@@ -3243,9 +3261,20 @@ struct HitFrame {
     caster: Entity,
     spell_id: u32,
     depth: u8,
+    /// Native TargetInfo order, including misses before defense filtering.
+    selected: Vec<Entity>,
     damage: Vec<(Entity, f32)>,
     healing: Vec<(Entity, f32)>,
     blocked: HashSet<Entity>,
+}
+
+/// Actual resolving TargetInfos, not mutable combat focus or only successful hits.
+/// The first entry owns native primary impact even when it misses.
+pub(super) fn resolving_targets<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w [Entity]> {
+    let frame = world.get_resource::<ResolvingHits>()?.0.last()?;
+    let matches =
+        frame.caster == ctx.caster && frame.spell_id == ctx.spell.id && frame.depth == ctx.depth;
+    matches.then_some(frame.selected.as_slice())
 }
 
 /// Read the innermost matching hit's block result; nested casts own their frame.

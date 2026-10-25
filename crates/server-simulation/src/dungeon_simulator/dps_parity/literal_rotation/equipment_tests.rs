@@ -67,6 +67,83 @@ fn read_facts(world: &World, actor: Entity, names: &[&str]) -> Vec<Result<f64, S
         .collect()
 }
 
+fn equip_reference_profile(world: &mut World, spec: u32) -> Entity {
+    use crate::dungeon_simulator::dps_parity::inputs;
+    let path = inputs::directory()
+        .unwrap()
+        .join(format!("{spec}.profile.json"));
+    let profile: inputs::Profile = inputs::read_json(&path).unwrap();
+    assert_eq!(profile.spec_id, spec);
+    let actor = world.spawn(crate::class_progression::ActiveSpec(spec)).id();
+    inputs::equip(world, actor, &profile).unwrap();
+    actor
+}
+
+#[test]
+#[ignore = "exact native Dev/Fire/Assassination profile instances; passive and bonus-derived levels"]
+fn literal_equipment_native_profile_item_levels_include_passive_and_bonus_instances() {
+    let mut world = load_world();
+    // Exact reference gear: Dev249343/249346 at289, Fire273796/270167 at334,
+    // Assassin270168 at344 and270175 bonuses13662/13848 resolving344.
+    let observations: Vec<_> = [(1467, 289.0), (63, 334.0), (259, 344.0)]
+        .into_iter()
+        .map(|(spec, level)| {
+            let actor = equip_reference_profile(&mut world, spec);
+            (
+                spec,
+                read_facts(&world, actor, &["trinket.1.ilvl", "trinket.2.ilvl"]),
+                vec![Ok(level), Ok(level)],
+            )
+        })
+        .collect();
+    for (spec, actual, expected) in observations {
+        assert_eq!(actual, expected, "real native profile{spec}");
+    }
+}
+
+#[test]
+#[ignore = "real native profiles; pinned buff.default_value is distinct from stat magnitude"]
+fn literal_equipment_native_profile_proc_default_values_follow_unset_buff_semantics() {
+    let mut world = load_world();
+    // Pinned item custom stat buffs do not set buff.default_value. The item
+    // expression takes max(0, matching defaults), not their native stat amounts.
+    let observations: Vec<_> = [1467, 63, 259]
+        .into_iter()
+        .map(|spec| {
+            let actor = equip_reference_profile(&mut world, spec);
+            (
+                spec,
+                read_facts(
+                    &world,
+                    actor,
+                    &[
+                        "trinket.1.proc.any_dps.default_value",
+                        "trinket.2.proc.any_dps.default_value",
+                    ],
+                ),
+            )
+        })
+        .collect();
+    for (spec, actual) in observations {
+        assert_eq!(actual, vec![Ok(0.0), Ok(0.0)], "real native profile{spec}");
+    }
+}
+
+#[test]
+#[ignore = "unqualified native script default must stay named rather than inventing a value"]
+fn literal_equipment_native_unqualified_proc_default_value_is_explicit() {
+    let mut world = load_world();
+    let actor = equip(&mut world, 193701, 270173);
+    let actual = read_facts(&world, actor, &["trinket.1.proc.any_dps.default_value"]);
+    assert!(
+        actual[0]
+            .as_ref()
+            .unwrap_err()
+            .contains("NATIVE_ITEM_PROC_DEFAULT_VALUE_UNSOURCED"),
+        "unqualified native script must identify its missing default-value source: {actual:?}"
+    );
+}
+
 #[test]
 #[ignore = "requires private native ItemEffect/spell catalog; source facts only"]
 fn literal_equipment_native_stat_and_cooldown_matrix() {
@@ -257,6 +334,231 @@ fn literal_equipment_native_set_facts_follow_original_piece_counts_and_spec() {
         "foreign spec cannot receive Paladin set"
     );
     assert!(read_facts(&world, actor, &["set_bonus.unknown_tier_4pc"])[0].is_err());
+}
+
+#[test]
+#[ignore = "actual Fire2060 four-piece profile; pinned long and short tier spellings"]
+fn literal_equipment_native_fire_tier_long_and_short_aliases_share_threshold_state() {
+    let mut world = load_world();
+    let actor = equip_reference_profile(&mut world, 63);
+    let original = world.get::<EquippedItems>(actor).unwrap().clone();
+    let pieces = [271562, 271567, 271565, 271563];
+    for (count, expected) in [(4, [1.0, 1.0]), (1, [0.0, 0.0]), (2, [1.0, 0.0])] {
+        let mut equipped = original.clone();
+        equipped
+            .items
+            .retain(|(_, _, id)| !pieces.contains(id) || pieces[..count].contains(id));
+        world.entity_mut(actor).insert(equipped);
+        assert_eq!(
+            read_facts(
+                &world,
+                actor,
+                &[
+                    "set_bonus.midnight_season_2_2pc",
+                    "set_bonus.midnight_season_2_4pc",
+                    "set_bonus.mid2_2pc",
+                    "set_bonus.mid2_4pc",
+                ],
+            ),
+            expected
+                .into_iter()
+                .chain(expected)
+                .map(Ok)
+                .collect::<Vec<_>>(),
+            "actual Fire2060 original pieces{count} select1296583/1296584",
+        );
+    }
+    world.entity_mut(actor).insert(original);
+    world
+        .entity_mut(actor)
+        .insert(crate::class_progression::ActiveSpec(71));
+    assert_eq!(
+        read_facts(&world, actor, &["set_bonus.midnight_season_2_2pc"]),
+        vec![Ok(0.0)],
+        "native spec selection remains authoritative",
+    );
+    assert!(read_facts(&world, actor, &["set_bonus.unqualified_fire_alias_2pc"])[0].is_err());
+}
+
+#[test]
+#[ignore = "native on-use damage effects versus passive and stat-only real trinkets"]
+fn literal_equipment_native_has_use_damage_follows_on_use_effects() {
+    let mut world = load_world();
+    // Lightning55039 is direct SCHOOL_DAMAGE; Caber99915 triggers99938 damage.
+    // Dragonfire408671→408675 ends in aura42/Trigger0, not native damage.
+    // Jewel215206 is rating-only, AraKara443541 passive, Guillotine1291728 passive.
+    for (item, expected) in [
+        (41121, 1.0),
+        (70141, 1.0),
+        (202610, 0.0),
+        (137462, 0.0),
+        (219314, 0.0),
+    ] {
+        let actor = equip(&mut world, item, 270173);
+        assert_eq!(
+            read_facts(
+                &world,
+                actor,
+                &["trinket.1.has_use_damage", "trinket.2.has_use_damage"]
+            ),
+            vec![Ok(expected), Ok(0.0)],
+            "native item{item} versus passive270173",
+        );
+    }
+}
+
+fn item_cooldown_harness(item: u32) -> crate::spell_cast::test_harness::Harness {
+    let mut source = load_world();
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[], 1).unwrap();
+    h.app.insert_resource(
+        source
+            .remove_resource::<crate::spell_info::SpellStore>()
+            .unwrap(),
+    );
+    h.app.insert_resource(
+        source
+            .remove_resource::<crate::item_proc_data::ItemProcInputs>()
+            .unwrap(),
+    );
+    h.app
+        .insert_resource(source.remove_resource::<ItemTemplates>().unwrap());
+    h.app.insert_resource(
+        source
+            .remove_resource::<crate::item_stats::ItemScalingTables>()
+            .unwrap(),
+    );
+    h.app
+        .insert_resource(source.remove_resource::<NativeItemInstances>().unwrap());
+    let temporary = equip(h.app.world_mut(), item, 270173);
+    let equipment = h
+        .app
+        .world_mut()
+        .entity_mut(temporary)
+        .take::<EquippedItems>()
+        .unwrap();
+    let modifiers = h
+        .app
+        .world_mut()
+        .entity_mut(temporary)
+        .take::<EquippedItemModifiers>()
+        .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((equipment, modifiers));
+    h.app.world_mut().entity_mut(temporary).despawn();
+    h
+}
+
+fn cast_native_item(h: &mut crate::spell_cast::test_harness::Harness, target: Entity) {
+    let equipment = Equipment::load(h.app.world(), h.caster, &mut Bindings::default()).unwrap();
+    let item = equipment.slots["trinket1"].on_use.unwrap();
+    crate::spell_cast::cast_item_spell(
+        h.app.world_mut(),
+        h.caster,
+        item.on_use.spell_id,
+        Some(target),
+        item.on_use.cooldown,
+        item.item_level,
+        Some(item.item_id),
+    )
+    .expect("actual native item cast, no fabricated history");
+}
+
+#[test]
+#[ignore = "native Jewel137462 three-charge category1631 consumed by real item cast"]
+fn literal_equipment_native_fractional_charges_follow_real_item_category_recharge() {
+    let mut h = item_cooldown_harness(137462);
+    let caster = h.caster;
+    let initial = read_facts(
+        h.app.world(),
+        caster,
+        &["trinket.1.cooldown.charges_fractional"],
+    );
+    cast_native_item(&mut h, caster);
+    assert_eq!(initial, vec![Ok(3.0)]);
+    let after = read_facts(
+        h.app.world(),
+        caster,
+        &["trinket.1.cooldown.charges_fractional"],
+    );
+    assert_eq!(after, vec![Ok(2.0)]);
+    h.advance(200); // Native manual50ms clock: ten seconds of authored20s recharge.
+    let half = read_facts(
+        h.app.world(),
+        caster,
+        &["trinket.1.cooldown.charges_fractional"],
+    )[0]
+    .clone()
+    .unwrap();
+    assert!((half - 2.5).abs() < 0.01, "native partial recharge: {half}");
+    h.advance(200);
+    assert_eq!(
+        read_facts(
+            h.app.world(),
+            caster,
+            &["trinket.1.cooldown.charges_fractional"]
+        ),
+        vec![Ok(3.0)]
+    );
+}
+
+#[test]
+#[ignore = "native Lightning41121 single-charge on-use cooldown consumed by real item cast"]
+fn literal_equipment_native_fractional_single_charge_tracks_elapsed_cooldown() {
+    let mut h = item_cooldown_harness(41121);
+    let caster = h.caster;
+    let target = h.npc;
+    let initial = read_facts(
+        h.app.world(),
+        caster,
+        &["trinket.1.cooldown.charges_fractional"],
+    );
+    cast_native_item(&mut h, target);
+    h.advance(100); // Five seconds elapsed in the native spell/category cooldown.
+    let remains = read_facts(h.app.world(), caster, &["trinket.1.cooldown.remains"])[0]
+        .clone()
+        .unwrap();
+    let duration = read_facts(h.app.world(), caster, &["trinket.1.cooldown.duration"])[0]
+        .clone()
+        .unwrap();
+    assert!(
+        remains > 0.0 && remains < duration,
+        "real running timer{remains}/{duration}"
+    );
+    let bindings = Bindings::default();
+    let native = NativeFacts::new(
+        h.app.world(),
+        caster,
+        &bindings,
+        Encounter::Fixture {
+            started_at: 0.0,
+            duration: 300.0,
+            style: FightStyle::Patchwerk,
+        },
+        1,
+    );
+    let equipment = Equipment::load(h.app.world(), caster, &mut Bindings::default()).unwrap();
+    let spell = &equipment.slots["trinket1"].metadata.cooldowns[0].spell;
+    let native_progress = native
+        .cooldown_for_spell(spell, "charges_fractional")
+        .unwrap();
+    assert!(
+        (native_progress - (1.0 - remains / duration)).abs() < 0.000001,
+        "existing native helper must expose fractional progress{native_progress}"
+    );
+    assert_eq!(initial, vec![Ok(1.0)]);
+    let fraction = read_facts(
+        h.app.world(),
+        caster,
+        &["trinket.1.cooldown.charges_fractional"],
+    )[0]
+    .clone()
+    .unwrap();
+    assert!(
+        (fraction - (1.0 - remains / duration)).abs() < 0.000001,
+        "native single-charge progress{fraction}"
+    );
 }
 
 fn scope_trigger_catalog(world: &mut World, remove_child: bool, cycle: bool) {

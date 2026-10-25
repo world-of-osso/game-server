@@ -64,7 +64,7 @@ pub(super) fn on_cast(
 /// Player::GetAttackBySlot (Player.cpp9666–9674): a ranged main hand sets the
 /// RANGED_ATTACK base time, divided by haste (Unit::ApplyAttackTimePercentMod).
 fn ranged_attack_secs(world: &World, caster: Entity) -> f32 {
-    world
+    let attack_time = world
         .get::<CharacterStats>(caster)
         .map_or(BASE_ATTACK_SECS, |stats| {
             let base = if crate::auras::shapeshift::attack_timing(world, caster).is_some() {
@@ -75,7 +75,11 @@ fn ranged_attack_secs(world: &World, caster: Entity) -> f32 {
                 BASE_ATTACK_SECS
             };
             crate::melee::swing_time(base, stats.haste_pct)
-        })
+        });
+    let speed = world
+        .get::<crate::auras::AuraStatMods>(caster)
+        .map_or(1.0, |mods| mods.melee_ranged_attack_time_mult);
+    attack_time * speed
 }
 
 /// CancelCast/CastStop also interrupt CURRENT_AUTOREPEAT_SPELL (Unit.cpp1191–1196,

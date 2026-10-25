@@ -1,6 +1,62 @@
+## 2026-10-24 — Action-permitting channel melee
+
+[Source/proof](../handoffs/channel-melee-proof-ledger.md): TC channel allow-actions bit0x1 avoids UNIT_STATE_CASTING; generic melee wrongly treated every CastState as blocking. ActualSCK1.5s/ready0ns/zero-white gives genuine1RED, FoF/normalVivify/noncast3controlsPASS11.67s at1d196cead. Preserve spell permissions, both timer clocks, crowd-control and victim avoidance; no class IDs or scalar changes. Generic gate implementationdb543b270 committed before4GREEN27.56s; actual active-channel SCK white0→1, all three controls unchanged, compiler405.74s/zero warnings. Lead broad/plain-bin gate remains separate; no300s rerun.
+## 2026-10-24 — Xuen merge reconciliation on mastera804
+
+[Reconciliation proof](../handoffs/ww-xuens-recovery-proof-ledger.md#mastera804-reconciliation--native23-green): frozen36eeb2339 merged, not rebased, onto exacta804 atd54c1b64d. Preserve SCK periodic snapshot, four-argument Xuen/Flurry callback and both additive wiki sections. Same binary passes13Xuen38.93s,6Flurry50.16s and4SCK24.48s; compiler582.99s/zero warnings, fmt/diff pass, conflict-region readability has no findings. Lead re-gate/new merged-source plain --bins remains separate; no300s rerun.
+
+## 2026-10-24 — Native Unit form display power
+
+[Unit display power](systems/auras.md#native-unit-form-display-power--2026-10-24): a Player-only return left actual NPC Cat on Mana and native22568 burn unchanged100→100. The Unit metadata fix preserves resource contents/identity and player synchronization. NPC Cat/burn plus player Cat/caster-NPC controls are qualified within the once-only retained power/shapeshift scope; missing real fixture sidecar failures were corrected and retried alone. [Proof](../handoffs/form-display-power-proof-ledger.md) records203 unique passes, separate check and private input identity; parent gate and numerical Feral parity remain separate.
+
+## 2026-10-24 — Generic aura342 attack timers
+
+[Source/proof and72-spell census](../handoffs/aura342-attack-timers-proof-ledger.md): TC SpellAuraEffects414/4517–4528 changes only BASE/OFF/RANGED clocks. Actual451298 yields3RED16.17s ataae8bb251: cast1106→802ms, Energy17.41→24.01, actual swing reset2.274→1.649 instead of1.42125s. Separate342 attack-time product removes spell/resource haste pollution; ranged shares342 but not melee-only319. Stale Dance level55 haste premise is explicitly corrected, no data/ID exceptions. GREEN/lead gate pending; Momentum separate.
+
+## 2026-10-24 — Event-time aura proc candidates
+
+- Ret Storm: [source qualification and strict RED contract](../handoffs/ret-storm-gap-proof-ledger.md) separates native Aura361, source406833 resource counter and Second Sunrise/Tempest; tests committed before genuine RED, then generic Aura361 and approved bounded Sunrise runtime GREEN with native amounts/hostile primary/background controls; core hand-order1/retained62melee cases pass; both compiler checks once/PASS/zero warnings, parent full gate separate.
+
+[Source/proof](../handoffs/aura-proc-event-candidates-proof-ledger.md): TC synchronous candidate collection; native Leydrinker RED→GREEN, generic identity snapshot and shared melee routing.168PASS/3input-dependent failures,2 reproduced on base; Ret AfterCast producer phase1RED/2controlsPASS→3GREEN46.93s. Parent fullgate pending; no spell-ID or metadata override.
+## 2026-10-24 — Generic mastery initialization qualification
+
+[Production RED and per-test ledger](../handoffs/generic-mastery-initialization-proof.md): at5d1c30c81 ordinary created/leveled player and passive reapply PASS, actual follower missing114585 FAIL. Explicit universal race mask was rejected for source-neutral race0, dropping skill183's native base. e587f83a7 fixes learning and TC known-active-spec gating without an implicit base. Pinned1fb0230ad merged in dd3f387ce. All19 new sa1089 failures now PASS across d96bfa968/faea69f47, with only authorized fixture setup corrections; new follower exact aura-total/restricted-language controls pass. Two-crate test check once PASS2m47s/zero warnings; fmt PASS. e4126a743 retained; no push, deployment or full-suite claim.
+
+## 2026-10-24 — Native item use-damage and fractional charges
+
+[Equipment facts](../handoffs/equipment-facts-proof-ledger.md#on-use-damage-and-fractional-charges--2026-10-24): real native3RED14.66s at561bc8066; generic ON_USE damage/leech/weapon/periodic effects and native timer/category fraction implemented ef0b1c851, no item-ID list. Real Jewel137462 cast verifies3→2→2.5→3 charges, Lightning41121 cast verifies single-charge elapsed progress; corrected the existing binary ordinary scalar without changing timers. Both charge+retained13 cases PASS38.23s; Dragonfire fixture's supposed damage edge disproved (aura42/Trigger0), explicit metadata gap retained and positive-child Caber70141 substituted. Corrected damage case1PASS5.25s atb228ec5c9:16unique valid proofs, not one16GREEN command. Requested two-crate check exactly once PASS2m14s/zero warnings, fmt PASS. Frozen native/source/binary ledger in engine `equipment-use-damage-charges-b6487f59a/`; Feral adapter and broad integration remain separate.
+
+## 2026-10-24 — Source-derived long/short set-tier aliases
+
+[Fire shared Equipment correction](../handoffs/equipment-facts-proof-ledger.md#long-tier-spelling-correction--2026-10-24): original2060 gear at8b6f2d103 has shortmid2=1/1 but longmidnight_season_2 unknown (genuineRED18.32s). Project both pinned `set_opt_name` and `Tier` columns, preserving original151 short pairs plus151 long pairs from1183 rows; no invented alias map or activation change. At03fa77956 native13/13 Equipment controls PASS36.28s, both-package check PASS29.36s/zero warnings, fmt PASS. Exact source+native-root/profile/binary receipts in engine `equipment-facts-f36aa1a72/fire-tier-*`; full Fire adapter/process acceptance remains separate.
+
+## 2026-10-24 — Native profile trinket ilvl and buff default facts
+
+[Equipment fact ledger](../handoffs/equipment-facts-proof-ledger.md#native-instance-ilvl-and-procdefault_value--2026-10-24): strict real Dev/Fire/Assassin profiles at278c7feec reproduce three genuine REDs12.61s. b0ce2e2b5 reads passive/on-use original instance ilvl through the native producer (289/334/344, including270175 bonus-derived344) and binds exact sourced pinned buff.default_value semantics, never stat magnitudes. Qualified unset defaults aggregate0; unknown native script roots stay named UNSOURCED. Native12/12 Equipment controls PASS36.90s, both-package check PASS2.76s/no warnings, fmt PASS. Frozen inputs/source/binary hashes and full receipts in engine diagnostics `native-spell-diff-2026-10-23/equipment-facts-f36aa1a72/`; no proc-execution, adapter completeness or DPS claim.
+
+## 2026-10-24 — Consolidated equipped sets and Warrior/mastery replacement
+
+[Equipped-set proof](systems/character-stats.md#native-equipped-set-auras--2026-10-23): merged landed rt master5d39f490a into Warrior/mastery tip atfb65c93c6, retaining one ItemProcInputs catalog/ItemSet-owned reconciler and rt's native skill/subtree selectors/tests. cf7c76c71 restores cross-crate predicate visibility and removes a stale relocated-test import after first check's five E0603 errors. Repaired both-package --tests check PASS24.49s, zero warnings; native lifecycle2 + Warrior policy4 PASS6/6 in31.34s (compile11m16s), same native amounts/AP/armor. Exact receipts/hashes in engine diagnostics `native-spell-diff-2026-10-23/consolidated-fb65c93c6/`; no new fact implementation, full DPS, deployment or parent acceptance claim.
+
+## 2026-10-23 — Generic native equipped-set activation
+
+[Equipped sets](systems/character-stats.md#native-equipped-set-auras--2026-10-23): post-split b84957a9e actual Arms2067 two-piece and Prot own2pc two genuine REDs29.67s; shared equipment aura schedule had no ItemSetSpell activation. Normal native membership/threshold/spec and legacy-inactive selection now feed set-owned auras in that production seam, with active-spec and unequip reconciliation. No spell-ID cases; approved13-skill/one-subtree named gaps are listed completely. Source/live-path inspection is read-only; installed Sakuin artifact markers differ, no deployment/equip smoke claim. At778524924 (production8171bf2aa) native lifecycle2GREEN30.66s, retained policy4GREEN27.23s and Arms1GREEN16.91s; both-package --tests check0/90.70s, zero warnings. Prot-control fixture now reads native membership (Legs was wrongly retained alongside Head), no production change for that correction. Earned2pc source1.818181634 matches oracle; damage27631, native AP/armor/mastery unchanged.
+
+## 2026-10-23 — Named Warrior strength/AP policies
+
+[Warrior policies](systems/character-stats.md#named-warrior-strengthap-policies--2026-10-23): TC a352b1fa lacks the class scripts/core handlers; lead explicitly approves pinned SimC relationships with native384124 ranked amounts10/4 and424742 effect5 amount3. Four actual reference Player REDs23.48s at e5cc1ef32 cover Arms/Protection strength and sheet/weapon AP. One source binding and existing native stat calculation solve Vanguard feedback without copying SimC double armor; no data/coefficients changed. At98093ec85 policy4GREEN19.13s, retained mastery1GREEN8.20s/stats-filter21GREEN9.07s and actual Arms MS1GREEN10.79s; no compiler warnings. Native mastery605 now matches oracle; actual set predicate true/original four members retained but1296643 absent, missing activation rather than input gap. [Source/current-factor ledger](investigations/arms-spell-factors.md).
+
+## 2026-10-23 — Generic mastery base and Arms factor ledger
+
+[Generic mastery](systems/character-stats.md#generic-mastery-base--2026-10-23): native zero-rating Arms Player114585 aura3188 produces16 at9215bc7fc, genuine RED10.95s on a fresh canonical snapshot. Remove only the duplicate hardcoded8 per TC UpdateMastery; rating/coefficient handling unchanged. At0576893d7 three-class unlearn/relearn1GREEN14.73s and stats-filter21GREEN8.35s, no compiler warnings; parent gate separate. [Historical Arms ledger](investigations/arms-spell-factors.md) exactly reconstructs AP3597.85vs4126/source1.799109vs1.818182, explicitly distinguishes SimC's double Reinforced Plates armor, and requires fresh post-redirect gear/tier qualification.
+
 ## 2026-10-24 — Selected primary across self casts
 
 [Native cast contexts](systems/spell-casting.md#selected-primary-across-self-casts--2026-10-24) keep explicit cast unit and selected action primary distinct through shared execution and native snapshots. Actual self-cast Ret child-target RED50.92s→four native GREEN60.88s at ec5f0f3f3; no spell-ID branch, multiplier or target fallback. The linked ledger now records NPC/Player assertions, Player/queue/composite controls and passing post-D3 test-target/plain-bin compiler checks. Full parent integration and numerical parity remain separate. The older Zenith lifetime/role assertion also fails on exact plain master3f and remains outside this fix.
+
+## 2026-10-24 — Shared parity frontal pack
+
+[Source/proof](../handoffs/parity-frontal-pack-proof-ledger.md): old third dummy53.13°/2.5yd lies outside correct native60°cone/min2 boundary. Actual native FoF2/3 identities and common Mage/Monk layout give two genuine REDs12.83s at1496b0e0d, compile441.33s/zero warnings. Shared symmetric0/−0.5/+0.5 placement preserves primary1.5yd and all gameplay/gating code; two native GREEN13.92s at26c83dd27, compile18.84s/zero warnings. Once-only controlled3T remeasurement/lead integration pending.
 
 ## 2026-10-24 — Generic health aura-state qualification
 
@@ -12,9 +68,16 @@
 ## 2026-10-24 — Shared native APL buff facts takeover
 
 [Exact source/proof ledger](../handoffs/shared-buff-facts-proof-ledger.md): isolated shared duration/react/named-time work from dead14781's Evoker branch onto requested1466a4ca7. Real TF5217, Omen16864→135700 proc/stack/refresh/expiry/reacquisition and rated cast/channel controls reach genuine RED before implementation. Native-cap precondition corrects an old fixture's stack-gain-as-overcap assumption; fiveGREEN22.44s atd5b83f217, requested server/simulation/spell-tests check once0/1m45s/no warnings. Explicit source reaction distribution, cfg-only lifecycle hooks, no query-side duration reconstruction or Evoker implementation. Lead full gate remains separate.
+## 2026-10-24 — Xuen FoF recovery strict RED and consumer
+
+[Named-policy ledger](../handoffs/ww-xuens-recovery-proof-ledger.md): f0ab339b6 actual6RED/6controlsPASS36.52s precedes implementation; real RSK/RWK critical and SCK1/3/6 budgets fail, native noncrit/secondary-only/no-hit/unselected/no-timer controls pass. Native TargetInfo/natural-end hooks keep policy IDs in scripts. Current master7b integrated atf188c66c1:13GREEN41.09s plus retainedFlurry6GREEN23.72s, compile496s/0warnings, plain --binsPASS87.49s/0warnings. Full-duration channel completion differs from interrupted ChannelEnded; real stop-cast control gives0. TC/DB2 absence retained; full lead gate separate, no numerical-parity claim.
 ## 2026-10-24 — Native Flurry core earning/release
 
 [Bounded ledger](../handoffs/ww-flurry-proof-ledger.md): ec4b89338 actual white/ordinary451839 earning and natural FoF children3 genuine RED/3controlsPASS41.86s. Selected native counts/critical multiplier/cap and class-owned release are implemented;150ms child spacing explicitly cites SimC76f8118 sc_monk.cpp779–781. Generic impact callbacks carry actual native provenance without class IDs. At172da6nativeGREEN25.97s/compile0warnings. Same tested binary/fresh CURRENT backup EACH300s100439.5467ST/134000.8433three-target (−51.3477%/−64.4144%);450617 and451250 both really damage. Native1H/offhand and natural Dual Threat producer remain unqualified; other releases/SCK/recovery stay outside this slice, full lead gate and broader parity remain open.
+
+## 2026-10-24 — Dawnlight named hit policies
+
+[Explicit policies](systems/spell-casting.md#dawnlight-named-hit-policies--2026-10-24) replace neither DB2 nor TDB: named Wake production and foreground-spender consumption use native values and generic dispatch. Producer strict RED→3GREEN precedes consumer strict RED→native15GREEN69.75s at28bf70027, including native refresh/area/all-ticking/free-cost/immune controls and retained tier behavior. Native3/max6/431380 remain authoritative; no core ID branch or primary fallback. Combined test-target/plain-bin checks each ran once/PASS with fmt/zero warnings. Literal hp1109 integration, secondary effects, parent full gate and full parity remain separate.
 
 ## 2026-10-24 — Byte-identical public spell remainder
 
@@ -4475,3 +4538,8 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 - 2026-10-23: [[server-crates]] records five stable catalog modules extracted with unchanged data/logic, canonical imports and updated generator destinations; no test relocations or measured speedup claim.
 - 2026-10-23: [[server-crates]] moves main module declarations/App assembly into the existing lib and keeps a five-line bin; library-artifact source-view test replaces old binary artifact selection. Full suite/census and paired measurements remain pending.
 - 2026-10-23: [[server-crates]] records test-only simulator consumer, canonical graph/receipt/marker support and explicit test-support mode; 44-file move is content-identical, API/cfg wiring awaits compiler/full-suite proof. Seven graph cases have explicit core-prefix migration.
+
+- 2026-10-25: Moved canonical map identity/metadata/locks/admission and32independent cases below server as the first structural prerequisite. Native transfer/PvP/housing/script integration tests remain server-owned; original core cache decorator preserved. Check and fmt pass with zero warnings; all32moved tests pass with exact names.
+- 2026-10-25: Extracted canonical pet_battle production and235cases (230enabled/five existing ignored) into server-pet-battle, with source hashes and exact ownership mapping. Direct server imports replace the old module; no reverse dependency or compatibility shim. Full-suite gate remains lead-owned.
+
+- 2026-10-25: Pet split proof atd1e3d6cf6: workspace/all-target check and fmt pass; leaf230PASS/5existingignored, exact235runtime names and33source hashes preserved; touched-server77PASS/8ignored plus required-ground-env exact retry1PASS. Zero warnings, no assertion/code change for retry, no full suite/push. Original failed receipts retained.

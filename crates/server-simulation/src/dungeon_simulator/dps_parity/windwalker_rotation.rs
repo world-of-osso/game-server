@@ -184,6 +184,8 @@ impl Rotation {
 }
 
 #[cfg(test)]
+mod channel_melee_tests;
+#[cfg(test)]
 mod flurry_tests;
 #[cfg(test)]
 mod tests;
@@ -195,3 +197,5 @@ mod wdp_children_tests;
 mod wdp_duration_tests;
 #[cfg(test)]
 mod wdp_window_tests;
+#[cfg(test)]
+mod xuens_battlegear_tests;

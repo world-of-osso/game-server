@@ -9,7 +9,10 @@ use shared::components::{Health, PowerType};
 use shared::protocol::CombatLogKind;
 
 pub(super) fn prepare(entry: u32) -> (Harness, Entity) {
-    let (mut h, caster) = at_level(entry, 90, |_| {});
+    // TC Player.cpp30545 CanUseMastery: project learned mastery auras through real stats.
+    let (mut h, caster) = at_level(entry, 90, |app| {
+        app.add_plugins(crate::stats::StatsPlugin);
+    });
     h.app.world_mut().get_mut::<Health>(h.npc).unwrap().max = 1_000_000_000.0;
     h.app.world_mut().get_mut::<Health>(h.npc).unwrap().current = 1_000_000_000.0;
     (h, caster)
@@ -654,7 +657,10 @@ fn proc_fidelity_262_native_lava_burst_without_mastery_has_no_overload() {
 }
 
 fn prepare_unselected_overload_root(root: u32) -> (Harness, Entity) {
-    let (mut h, caster) = at_level(209053, 70, |_| {});
+    // TC Player.cpp30545 CanUseMastery: project learned mastery auras through real stats.
+    let (mut h, caster) = at_level(209053, 70, |app| {
+        app.add_plugins(crate::stats::StatsPlugin);
+    });
     let mut health = h.app.world_mut().get_mut::<Health>(h.npc).unwrap();
     health.max = 1_000_000_000.0;
     health.current = health.max;

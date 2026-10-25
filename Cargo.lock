@@ -6595,6 +6595,8 @@ dependencies = [
  "serde",
  "serde_json",
  "server-catalog",
+ "server-map-rules",
+ "server-pet-battle",
  "shared",
  "tempfile",
  "tokio",
@@ -6622,6 +6624,24 @@ dependencies = [
  "rusqlite",
  "server",
  "shared",
+]
+
+[[package]]
+name = "server-map-rules"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bitcode",
+ "rusqlite",
+ "shared",
+]
+
+[[package]]
+name = "server-pet-battle"
+version = "0.1.0"
+dependencies = [
+ "rusqlite",
+ "serde_json",
 ]
 
 [[package]]

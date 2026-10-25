@@ -26,10 +26,14 @@ mod batch8;
 mod batch9;
 mod chrono_flame;
 mod clearcasting;
+mod echo_policies;
 mod elemental_ascendance;
+pub(super) use echo_policies::after_foreground_cast as apply_echo_policies;
 pub(crate) mod empower_evoker;
 mod essence_burst;
+mod policies;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
+pub(super) use policies::{on_hit as apply_hit_policies, snapshot as snapshot_hit_policies};
 mod germination;
 mod giantkiller;
 pub(super) use giantkiller::multiplier as giantkiller_multiplier;
@@ -45,6 +49,7 @@ mod ret_empyrean;
 pub(crate) use ret_empyrean::owns_empyrean_proc;
 pub(super) use ret_empyrean::schedule_empyrean_legacy;
 mod ret_purpose;
+mod ret_resonance;
 pub(super) use ret_purpose::roll_selected_ret_divine_purpose;
 mod ret_tier;
 mod ret_toll;
@@ -62,8 +67,9 @@ mod unbroken_rhythm;
 pub(crate) use unbroken_rhythm::register_unbroken_rhythm;
 mod windwalker;
 mod windwalker_flurry;
-pub(super) use windwalker_flurry::after_direct_damage;
 pub(crate) use windwalker_flurry::after_melee_hit;
+mod xuens_battlegear;
+pub(crate) use xuens_battlegear::register_xuens_battlegear;
 
 mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
@@ -106,9 +112,26 @@ pub(crate) fn periodic_trigger(
     }
 }
 
+/// Resolved native direct-damage outcome; class IDs and policy stay in scripts.
+pub(super) fn after_direct_damage(
+    world: &mut World,
+    ctx: &super::effects::EffectCtx,
+    target: Entity,
+    critical: bool,
+) {
+    windwalker_flurry::after_direct_damage(world, ctx, critical);
+    match ctx.spell.id {
+        xuens_battlegear::RSK_DAMAGE | xuens_battlegear::RWK_DAMAGE => {
+            xuens_battlegear::reduce_fof_on_critical_impact(world, ctx, target, critical);
+        }
+        _ => {}
+    }
+}
+
 /// OnEffectHit runs once per effect without replacing generic or aura dispatch.
 pub(super) fn on_cast_effect(spell: u32, index: u8) -> Option<super::effects::CastEffectHandler> {
     match (spell, index) {
+        (xuens_battlegear::SCK_TICK, 0) => Some(xuens_battlegear::record_sck_impacts),
         (crate::scripted_ai::azure_vault::ERUPTING_FISSURE, 0) => {
             Some(crate::scripted_ai::azure_vault::cast_fissure_selector)
         }
@@ -615,10 +638,14 @@ pub(super) use empower_evoker::damage_bonus as empower_damage_bonus;
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
+    if let Some(hook) = policies::after_cast_hook(spell_id) {
+        return Some(hook);
+    }
     if let Some(hook) = after_cast_auras::hook(spell_id) {
         return Some(hook);
     }
     match spell_id {
+        ret_resonance::TOLL => Some(ret_resonance::grant_after_toll),
         windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
         windwalker::FISTS_OF_FURY => Some(windwalker_flurry::release),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
@@ -1468,6 +1495,7 @@ pub(super) type ContextHitHook = fn(&mut World, &super::effects::EffectCtx, Enti
 
 pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
     match spell_id {
+        xuens_battlegear::SCK => Some(xuens_battlegear::capture_sck_parent),
         windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
         voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),
         ret_toll::ROOT => Some(ret_toll::cast_child),

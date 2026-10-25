@@ -1859,7 +1859,7 @@ fn deal_source_damage_and_report(
     factor_capture::finish(world, ctx, target, &damage, &event);
     log_event(world, event);
     if !periodic && !resolved_source {
-        super::scripts::after_direct_damage(world, ctx, crit);
+        super::scripts::after_direct_damage(world, ctx, target, crit);
     }
     if !periodic && !resolved_source && ctx.depth == 0 {
         super::scripts::record_fire_hit(world, ctx.caster, ctx.spell, crit);

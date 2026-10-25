@@ -306,6 +306,16 @@ fn dps_parity_player_single_spell_mortal_strike_records_real_factors() {
         },
     )
     .expect("actual shared-dispatch Mortal Strike");
+    eprintln!(
+        "native Arms2pc1296643: eligible={:?}, aura_present={}, equipped={:?}",
+        crate::item_proc_data::has_equipped_bonus(run.app.world(), run.actor, 1296643),
+        crate::auras::has_aura(run.app.world(), run.actor, 1296643),
+        run.app
+            .world()
+            .get::<crate::stats::EquippedItems>(run.actor)
+            .unwrap()
+            .items
+    );
     let output =
         std::path::PathBuf::from(std::env::var_os("DPS_SPELL_OUTPUT").expect("DPS_SPELL_OUTPUT"))
             .with_file_name("71.mortal_strike.player.json");

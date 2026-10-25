@@ -8,7 +8,7 @@ use std::path::Path;
 
 use bevy::prelude::*;
 use rusqlite::Connection;
-use shared::components::{Player, PowerType};
+use shared::components::{Npc, Player, PowerType};
 
 use super::handlers::MOD_SHAPESHIFT;
 use super::{ActiveAuras, AuraInstance, RemoveReason};
@@ -174,12 +174,25 @@ fn display_power(form: Option<i32>, class_display: Option<PowerType>) -> Option<
     }
 }
 
-/// `Player::InitDataForForm` → `UpdateDisplayPower`: the display power leads `order`,
-/// the rest follow in ascending DB ID (`PowerTypeTable::class_powers`).
-pub(super) fn reconcile_display_power(world: &mut World, unit: Entity) {
-    let Some(class) = world.get::<Player>(unit).map(|player| player.class) else {
-        return;
+fn read_unit_class_power(world: &World, unit: Entity) -> Option<PowerType> {
+    let class = if let Some(player) = world.get::<Player>(unit) {
+        player.class
+    } else if let Some(follower) = world.get::<crate::followers::Follower>(unit) {
+        follower.profile.class_id
+    } else {
+        let npc = world.get::<Npc>(unit)?;
+        world
+            .get_resource::<crate::world_data::WorldData>()?
+            .templates
+            .get(&npc.template_id)?
+            .unit_class
     };
+    world.get_resource::<PowerTypeTable>()?.display_power(class)
+}
+
+/// TC SpellAuraEffects2049–2056 updates display power for players and NPCs.
+/// The selected native power leads `order`; existing pool values are untouched.
+pub(super) fn reconcile_display_power(world: &mut World, unit: Entity) {
     let form = world
         .get::<ActiveAuras>(unit)
         .and_then(current_form)
@@ -191,11 +204,7 @@ pub(super) fn reconcile_display_power(world: &mut World, unit: Entity) {
             .filter(|effect| effect.aura_type == super::handlers::MOD_POWER_DISPLAY)
             .find_map(|effect| PowerType::from_db(effect.misc_values[0]))
     });
-    let class_display = aura_display.or_else(|| {
-        world
-            .get_resource::<PowerTypeTable>()
-            .and_then(|table| table.display_power(class))
-    });
+    let class_display = aura_display.or_else(|| read_unit_class_power(world, unit));
     let Some(display) = display_power(form, class_display) else {
         return;
     };
