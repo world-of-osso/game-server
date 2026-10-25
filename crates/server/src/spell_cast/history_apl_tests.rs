@@ -27,7 +27,7 @@ fn prev_gcd_deep_breath_alias_matches_native_base_and_selected_override() {
             .unwrap()
             .clone();
         let mut history = super::SpellHistory::default();
-        history.record_successful_cast(&spell);
+        history.record_successful_cast(&spell, super::now(h.app.world()));
         h.app.world_mut().entity_mut(h.caster).insert(history);
         let facts = NativeFacts::new(h.app.world(), h.caster, &bindings, encounter, 1);
         assert_eq!(

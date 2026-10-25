@@ -387,3 +387,78 @@ fn ww_gear_profile_silvermoon_parade_applies_same_native_food() {
             .any(|gap| gap == "CONSUMABLE_UNMODELED:food=silvermoon_parade")
     );
 }
+
+#[test]
+#[ignore = "real profile equipment/traits and native selector-food catalog"]
+fn ww_gear_profile_blooming_feast_chooses_highest_secondary() {
+    let _seed = crate::random::seed_scope(70448);
+    let (mut profile, traits) = super::read_reference(269).unwrap();
+    profile
+        .consumables
+        .insert("food".into(), "blooming_feast".into());
+    let identity = super::inputs::read_actor(&profile).unwrap();
+    let mut run = super::prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+    let actor = run.actor;
+    let food = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1232091 && aura.caster == actor)
+        .expect("Blooming Feast must apply its real native selector-food buff");
+    let granted = food
+        .effects
+        .iter()
+        .find(|effect| effect.aura_type == 189 && effect.amount > 0.0)
+        .expect("selector food must grant a real native secondary amount")
+        .misc_values[0];
+    let with_food = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .ratings;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1232091 && aura.caster == actor,
+    );
+    run.app.update();
+    let without_food = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .ratings;
+    let ratings = [
+        (1792, without_food.crit, with_food.crit),
+        (917504, without_food.haste, with_food.haste),
+        (33554432, without_food.mastery, with_food.mastery),
+        (1879048192, without_food.versatility, with_food.versatility),
+    ];
+    let expected = ratings.iter().max_by(|a, b| a.1.total_cmp(&b.1)).unwrap().0;
+    assert_eq!(
+        granted, expected,
+        "food must select the actual equipped highest secondary"
+    );
+    for (mask, before, after) in ratings {
+        if mask == expected {
+            assert!(
+                after > before,
+                "selected native rating must really increase"
+            );
+        } else {
+            assert!(
+                (after - before).abs() < 0.01,
+                "unselected rating{mask} changed: {before}->{after}"
+            );
+        }
+    }
+    assert!(
+        !run.gaps
+            .iter()
+            .any(|gap| gap == "CONSUMABLE_UNMODELED:food=blooming_feast")
+    );
+}

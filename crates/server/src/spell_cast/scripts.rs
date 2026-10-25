@@ -68,8 +68,12 @@ pub(super) use policies::{
     has_impact_policy, on_hit as apply_hit_policies, snapshot as snapshot_hit_policies,
 };
 pub(crate) use policies::{
-    extends_reapplication, filter_secondary_targets, owns_policy_proc, register_lifecycle_policies,
+    extends_reapplication, filter_secondary_targets, register_lifecycle_policies,
 };
+
+pub(crate) fn owns_policy_proc(spell: u32) -> bool {
+    policies::owns_policy_proc(spell) || melee_reset::owns_proc(spell)
+}
 mod germination;
 mod giantkiller;
 pub(super) use giantkiller::multiplier as giantkiller_multiplier;
@@ -78,6 +82,8 @@ pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
+#[cfg(any(test, feature = "test-support"))]
+pub(super) use hot_streak::triggers_hot_streak;
 pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 mod melee_reset;
