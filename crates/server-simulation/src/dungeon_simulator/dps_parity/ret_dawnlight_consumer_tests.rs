@@ -128,21 +128,31 @@ fn dps_parity_dawnlight_consumer_native_payload_control_ticks() {
 fn dps_parity_dawnlight_consumer_background_verdict_keeps_earned_budget() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = wake_budget();
-    crate::spell_cast::cast_triggered(
-        run.app.world_mut(),
-        run.actor,
-        FINAL_VERDICT,
-        Some(run.targets[0]),
-        0,
-    );
-    wait_for_damage(&mut run, FINAL_VERDICT);
-    assert_eq!(
-        current_holy_power(&run),
-        3.0,
-        "full-mask background is not a paid cast"
-    );
-    assert_eq!(budget(&run).unwrap().stacks, 3);
-    assert!(owned_dot(&run).is_none());
+    // The first native attempt legitimately dodges at this seed. Observe a
+    // successful background hit without changing defense, RNG or spell data.
+    for _ in 0..8 {
+        crate::spell_cast::cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            FINAL_VERDICT,
+            Some(run.targets[0]),
+            0,
+        );
+        for _ in 0..4 {
+            run.app.update();
+        }
+        assert_eq!(
+            current_holy_power(&run),
+            3.0,
+            "background casts do not pay power"
+        );
+        assert_eq!(budget(&run).unwrap().stacks, 3);
+        assert!(owned_dot(&run).is_none());
+        if damage(&run, FINAL_VERDICT) > 0 {
+            return;
+        }
+    }
+    panic!("no successful native background hit in bounded attempts");
 }
 
 #[test]

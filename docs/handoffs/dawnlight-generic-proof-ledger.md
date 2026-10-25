@@ -18,10 +18,12 @@ Pinned `sc_paladin.hpp1512–1535` applies Dawnlight only on a successful foregr
 |---|---|---|
 |Producer|Actual selected Wake damages/earns3HP then arms native3, not max6|29a75ec42 genuine missing431522 RED67.06s after raw/live count, real Wake damage and3HP prerequisites pass;2negative controls PASS|
 |NoWake/noHero|Native Judgment or legal unspent Hero points cannot manufacture budget|NoWake/noHero2PASS in the strict producer RED run; unchanged producer suite3GREEN40.94s at60f30134b|
-|Consumer|Actual Wake budget3 followed by funded foreground hit applies owned431380/tick and reduces3→2|Not reached; producer must be GREEN first|
-|Background/target selection|Sourced exclusions and once-per-cast/native recipient behavior|Consumer-stage proof pending|
+|Consumer|Actual Wake budget3 followed by funded foreground hit applies owned431380/tick and reduces3→2|de01f4c4b genuine missing-owned431380 RED after budget3, real paid3HP and actual FV damage; native payload/noWake2PASS|
+|Background/target selection|Sourced exclusions and once-per-cast/native recipient behavior|Initial background prerequisite legitimately Dodge; exact native receipt retained, bounded real attempts now require a hit without data/RNG changes; target-selection proof pending|
 
 Producer implementation ports the previously approved Ret behavior into `scripts/policies.rs`: explicit named data owns the selected spec/talent/parent/counter/effect relationship; generic lookup/selection/native-count execution contains no hardcoded spell-ID branch. Native triggered aura application retains its maximum6. At60f30134b the unchanged producer suite is **3/3GREEN40.94s**, warning-free1m06s compile (`producer-green-v1.*`): native3/max6 and both negatives pass. Consumer code remains absent; its tests are added only after this producer GREEN.
+
+Consumer `consumer-red-v1.*` reaches the strict positive boundary in50.02s suite runtime; it also records one background-control setup failure, not a consumer RED. `background-receipt-v1.*` proves that attempt was native Miss(Dodge), not zero payload or missing admission. The corrected control retains all budget/power/no-DoT assertions after each real background attempt and requires a positive hit within8attempts. Native payload control proves real431380 periodic damage without a numeric shim. Consumer production code remains absent at this receipt.
 
 Producer RED receipt: engine `dawnlight-generic-7b/producer-red-v1.{log,proof.json}`; zero warnings, compile1m14s. The failure is the actual missing budget, not a raw2/live3 oracle or admission error.
 

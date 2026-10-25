@@ -18,7 +18,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Ret Dawnlight policies
 
-- [ ] `SIMC_RET_DAWNLIGHT_WAKE_PRODUCER`: selected spec70 Dawnlight431377 plus actual ordinary Wake255937 produces native counter431522 from the live modified talent effect0. Native raw2 plus specialization+1 supplies3; retain the native maximum6, not an initial6. No consumer is implied by the producer proof.
+- [x] `SIMC_RET_DAWNLIGHT_WAKE_PRODUCER`: selected spec70 Dawnlight431377 plus actual ordinary Wake255937 produces native counter431522 from the live modified talent effect0. Native raw2 plus specialization+1 supplies3; retain the native maximum6, not an initial6. No consumer is implied by the producer proof.
 - [ ] `SIMC_RET_DAWNLIGHT_SPENDER_CONSUMER`: an eligible successful foreground HolyPower spender applies native431380 on the sourced target and consumes one actual431522 use. Retain native periodic payload, amounts, timing and stack cap. Pinned SimC76f8118 `sc_paladin.hpp1512–1535` owns the missing consumer relationship; `sc_paladin_retribution.cpp846–876` owns Wake production. TC has no script and DB2/TDB have no child edge/proc row. Both are explicit named policy-table entries with generic execution, never fabricated native metadata or core spell-ID branches. [Source and ordered proof](../handoffs/dawnlight-generic-proof-ledger.md).
 
 ### Ret reference knowledge
