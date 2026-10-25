@@ -4,7 +4,7 @@ use crate::auras::ActiveAuras;
 use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
 use server::simc_apl::Facts;
 
-fn cast(run: &mut Run, spell: u32, target: Entity) {
+pub(super) fn cast(run: &mut Run, spell: u32, target: Entity) {
     for _ in 0..1200 {
         match crate::spell_cast::creature_cast(
             run.app.world_mut(),
@@ -181,7 +181,11 @@ fn enhancement_real_maelstrom_spending_earns_tempest_within_native_deck() {
             .unwrap()
             .contains(454009)
     );
-    engage(&mut run);
+    earn_tempest_by_spending(&mut run);
+}
+
+pub(super) fn earn_tempest_by_spending(run: &mut Run) {
+    engage(run);
     let target = run.targets[0];
     literal_rotation::execution::execute(
         run.app.world_mut(),
@@ -192,23 +196,7 @@ fn enhancement_real_maelstrom_spending_earns_tempest_within_native_deck() {
     let mut spent = 0;
     let mut earned = false;
     for _ in 0..20000 {
-        let available = stacks(&run);
-        if available >= 5 {
-            match crate::spell_cast::creature_cast(
-                run.app.world_mut(),
-                run.actor,
-                188196,
-                Some(target),
-                false,
-            ) {
-                Ok(()) => spent += u32::from(available),
-                Err(
-                    crate::spell_cast::CastFailure::OnGlobalCooldown
-                    | crate::spell_cast::CastFailure::InProgress,
-                ) => {}
-                Err(reason) => panic!("native earned-resource Bolt: {reason:?}"),
-            }
-        }
+        spent += try_spend_native_maelstrom(run, target);
         run.app.update();
         earned = crate::auras::has_aura(run.app.world(), run.actor, 454015);
         if earned || spent >= 100 {
@@ -223,4 +211,32 @@ fn enhancement_real_maelstrom_spending_earns_tempest_within_native_deck() {
         earned,
         "actual MW spending must earn Tempest before the first100-card deck ends: spent={spent}"
     );
+}
+
+fn try_spend_native_maelstrom(run: &mut Run, target: Entity) -> u32 {
+    let available = stacks(run);
+    if available < 5 {
+        return 0;
+    }
+    match crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        188196,
+        Some(target),
+        false,
+    ) {
+        Ok(()) => {
+            let remaining = stacks(run);
+            assert!(
+                remaining < available,
+                "real instant Bolt must spend its admitted MW"
+            );
+            u32::from(available - remaining)
+        }
+        Err(
+            crate::spell_cast::CastFailure::OnGlobalCooldown
+            | crate::spell_cast::CastFailure::InProgress,
+        ) => 0,
+        Err(reason) => panic!("native earned-resource Bolt: {reason:?}"),
+    }
 }

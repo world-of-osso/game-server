@@ -4,6 +4,11 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+### Shared Spellslinger producers
+
+- Selected Splintering Sorcery443739 emits the native specialization payload (Arcane443763/Frost443722) after native Arcane Blast, Prismatic Bolt, Frostbolt, Flurry and Glacial Spike executions. Signature Spell supplies its authored extra conjures. All queued recipients retain the actual hostile primary; individual launches are staggered100ms as pinned `sc_mage.cpp7324–7361` specifies.
+- Each native Ray of Frost damage tick conjures the native Splinterstorm effect2 amount, then opens/refreshes native1247908. Conjures during an earned Splinterstorm/Arcane Surge window use the selected native doubling chance. Native spell records retain damage coefficients.
+
 ### Frost Mage literal fixture
 
 - Spec64 captures the native player before setup and executes the unchanged exported76f8118 Frost action rows through shared `Program`/`Driver`/`Prepared`/`Equipment`, not AssistedCombat4512.
@@ -309,6 +314,8 @@ Enhancement native melee procs generate the real344179 counter and187881 modifie
 Native Enhancement strike roots dispatch one195592 Crash payload per actual landed root while their Crash buff is active, not one per weapon child. Selected1262713 uses native async1252415 rather than187878; payload stacks multiply its total damage before native-recipient splitting. Thorim invokes the actual last foreground LB/CL choice (initially LB), overridden by an earned Tempest proc, and spends its real MW modifiers on that background cast. Windstrike always invokes; Stormstrike requires Doom Winds; Crash requires Doom Winds or Ascendance. Foreground Tempest requires actual454015 and consumes that proc. Sources: pinned SimC `sc_shaman.cpp4536–4598,5597–5689,6102–6105,10041–10049,12554–12600,12758–12763`.
 
 Native Enhancement Static Accumulation384437 ticks generate real MW stacks at their native amount/period. Selected Elemental Assault210853 grants its modified native effect1 stack count on ordinary strike/Lava Lash roots, including misses. Each actual consumed MW stack reduces running Strike/Lava Lash recharge by Elemental Tempo1250364 effect2 milliseconds. Descending Skies1264688 admits only actual Ascendance casts; Awakening Storms455129 admits only Strike roots, preserving native proc chance/RPPM and payload. Sources: pinned SimC `sc_shaman.cpp5225,5605–5610,10280–10283,11780–11787,12023–12039,12249–12261,12838–12847`.
+
+Selected Ride the Lightning289874 emits native211094 once per actual Strike/Lava Lash execution, using its native chain targets. This background variant neither benefits from nor spends MW. Real Tempest casts spend one454015 stack, preserving the other earned proc; Thorim spends its current Tempest proc before its MW consumption can earn a new one.
 
 Actual Enhancement MW consumption draws Tempest's pinned two-success100-card deck once per consumed stack, preserving greater-than10-card success spacing within and across decks. At most one native454015 proc is granted per spell. It does not substitute a Bernoulli roll or the talent's unused displayed chance for SimC's explicit deck parameters.
 
