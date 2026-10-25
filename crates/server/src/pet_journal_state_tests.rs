@@ -1,5 +1,5 @@
 use crate::pet_journal_state::{OwnedPetBattleState, load_states, save_states};
-use server::pet_battle::Catalog;
+use server_pet_battle::pet_battle::Catalog;
 use shared::pet_battle::{PetJournal, PetQuality};
 use std::collections::BTreeMap;
 

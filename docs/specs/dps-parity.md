@@ -104,6 +104,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Measurement
 
+- [x] Auto-attacks remain eligible during native channels with `SPELL_ATTR5_ALLOW_ACTIONS_DURING_CHANNEL`. Normal casts and other channels block swings without discarding attack intent or timer progress. Preserve crowd-control blocking, victim avoidance and spell-native permissions; no class/ability whitelist.
 - [ ] Native aura342 modifies BASE/OFF/RANGED attack timers only, using its signed multiplicative attack-time factor. It must not change spell haste, cast time, GCD or resource regeneration. Preserve melee-only319 and the native scope of other haste types; no spell-ID exceptions. All current342 users are inventoried in the [source/proof ledger](../handoffs/aura342-attack-timers-proof-ledger.md).
 - [x] Native harmful spells retain selected enemies independently of effect-hit outcomes: every non-EVADE miss (including immunity) creates the caster's launch combat reference, while the target engages only at native projectile arrival. Missed effects still deal no damage/apply no hit effects; evade targets create no reference (TC a352b1fa Spell.cpp8538/2763).
 
