@@ -22,6 +22,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Shared Rogue operands expose the native combo-point spend capacity and Energy deficit/time-to-max excluding temporary capacity, while retaining permanent talent capacity.
 - Roll the Bones resolves the native specialization action1214909; the obsolete315508 talent endpoint must not suppress it as unknown.
 - A finisher affected by earned Fang Strike snapshots maximum native combo-point capacity for its resource-dependent values, even when actual payment is zero. Consume that Fang Strike use after the successful ordinary cast. Match affected actions through the native aura's family mask, not a finisher-ID branch.
+- Learned Cut to the Chase extends or starts owned native Slice and Dice only after the pinned eligible finisher lands. Freeze effective combo points before payment; use native51667 seconds per point and315496 base duration, capped at the maximum-point pandemic duration. Dispatch, Envenom, Eviscerate and Coup de Grace are the pinned consumers.
 
 ### Equipment
 
