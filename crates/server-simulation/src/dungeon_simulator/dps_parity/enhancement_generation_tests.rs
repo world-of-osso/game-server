@@ -166,3 +166,61 @@ fn enhancement_elemental_tempo_reduces_running_strike_recharge_per_spent_stack()
         full_recharge(&run)
     );
 }
+
+#[test]
+#[ignore = "native263 reference inputs and private world database"]
+fn enhancement_real_maelstrom_spending_earns_tempest_within_native_deck() {
+    // SimC76f8118 sc_shaman.cpp11764/12173–12191/13057–13067:
+    // two successes in100 cards; real spent stacks draw cards, not a fabricated power resource.
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(263, 1).unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(run.actor)
+            .unwrap()
+            .contains(454009)
+    );
+    engage(&mut run);
+    let target = run.targets[0];
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::AutoAttack(target),
+    )
+    .unwrap();
+    let mut spent = 0;
+    let mut earned = false;
+    for _ in 0..20000 {
+        let available = stacks(&run);
+        if available >= 5 {
+            match crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                run.actor,
+                188196,
+                Some(target),
+                false,
+            ) {
+                Ok(()) => spent += u32::from(available),
+                Err(
+                    crate::spell_cast::CastFailure::OnGlobalCooldown
+                    | crate::spell_cast::CastFailure::InProgress,
+                ) => {}
+                Err(reason) => panic!("native earned-resource Bolt: {reason:?}"),
+            }
+        }
+        run.app.update();
+        earned = crate::auras::has_aura(run.app.world(), run.actor, 454015);
+        if earned || spent >= 100 {
+            break;
+        }
+    }
+    assert!(
+        spent >= 100 || earned,
+        "real melee must fund a full native deck: spent={spent}"
+    );
+    assert!(
+        earned,
+        "actual MW spending must earn Tempest before the first100-card deck ends: spent={spent}"
+    );
+}
