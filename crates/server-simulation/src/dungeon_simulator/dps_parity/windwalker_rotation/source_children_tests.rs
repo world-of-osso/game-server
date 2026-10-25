@@ -37,18 +37,24 @@ fn hits(run: &Run, spell: u32) -> usize {
         .count()
 }
 
-fn rsk_cooldown(run: &Run) -> f64 {
-    let world = run.app.world();
-    let spell = world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(RSK)
+fn rsk_cooldown(run: &mut Run) -> f64 {
+    let mut rotation = run.windwalker_rotation.take().unwrap();
+    let action = Action {
+        name: "rising_sun_kick".into(),
+        target: None,
+        options: Default::default(),
+    };
+    let remaining = rotation
+        .value_for(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &action,
+            "cooldown.rising_sun_kick.full_recharge_time",
+        )
         .unwrap();
-    world
-        .get::<crate::spell_cast::SpellHistory>(run.actor)
-        .map_or(0.0, |history| {
-            history.remaining_cooldown_ms(spell, crate::spell_cast::history_now(world)) as f64
-                / 1000.0
-        })
+    run.windwalker_rotation = Some(rotation);
+    remaining
 }
 
 #[test]
@@ -96,7 +102,7 @@ fn literal_ww_native_source_children_zenith_stomp_and_rsk_reset() {
     let mut run = prepare();
     super::tests::cast(&mut run, RSK);
     assert!(
-        rsk_cooldown(&run) > 1.0,
+        rsk_cooldown(&mut run) > 1.0,
         "ordinary RSK really spends its cooldown"
     );
     super::tests::cast(&mut run, ZENITH);
@@ -105,7 +111,7 @@ fn literal_ww_native_source_children_zenith_stomp_and_rsk_reset() {
         "Zenith must actually dispatch its selected Stomp child"
     );
     assert!(
-        rsk_cooldown(&run) <= 0.002,
+        rsk_cooldown(&mut run) <= 0.002,
         "Zenith resets actual RSK recovery"
     );
 }
