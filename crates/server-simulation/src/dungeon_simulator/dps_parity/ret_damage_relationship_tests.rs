@@ -138,6 +138,41 @@ fn ret_damage_paid_storm_produces_tempest_damage() {
 }
 
 #[test]
+#[ignore = "native70448 Tempest must hit the complete ordinary Storm pack"]
+fn ret_damage_tempest_hits_every_storm_recipient() {
+    let mut run = native_ret(3);
+    ret_purpose_tests::earn_finisher_power(&mut run, 53385);
+    ret_tier_tests::cast_finisher(&mut run, 53385);
+    ticks(&mut run, 30);
+    let recipients = |spell| {
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(spell)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .filter_map(|event| event.target)
+            .collect::<std::collections::BTreeSet<_>>()
+    };
+    let storm = recipients(53385);
+    assert_eq!(
+        storm.len(),
+        3,
+        "ordinary native Storm hits the actual three-target pack"
+    );
+    assert_eq!(
+        recipients(224239),
+        storm,
+        "Tempest must hit the same native area, not only the explicit primary"
+    );
+}
+
+#[test]
 #[ignore = "opt-in native parity inputs"]
 fn ret_damage_critical_storm_applies_sun_sear() {
     let mut run = native_ret(1);

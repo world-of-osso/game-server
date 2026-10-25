@@ -71,6 +71,18 @@ struct Policy {
 
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
+    // SimC76f8118 sc_monk.cpp3970–3998: selected Zenith Stomp fires on Zenith.
+    Policy {
+        name: "SIMC_WW_ZENITH_STOMP_CHILD",
+        spec: 269,
+        talent: 1272694,
+        relationship: Relationship::HitPayload {
+            parent: 1249625,
+            payload: 1272696,
+            self_target: false,
+            primary_only: false,
+        },
+    },
     // SimC76f8118 sc_warrior.cpp3685–3686: Cleave applies the selected Rend
     // periodic payload on each landed target; native388539 owns all values.
     Policy {
@@ -367,6 +379,7 @@ fn end_channel_policy(
             crate::spell_cast::cast_triggered(world, unit, channel.speed, Some(unit), 1);
         }
     }
+    super::windwalker_children::channel_ended(world, unit, aura, reason);
 }
 
 pub(crate) fn extends_reapplication(world: &World, caster: Entity, payload: u32) -> bool {

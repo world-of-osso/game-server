@@ -262,6 +262,7 @@ pub(crate) use creature::{
     creature_cast_ignoring_in_progress, creature_cast_interrupting_self,
 };
 use effects::{EffectCtx, UnhandledEffects};
+pub use scripts::last_combo_action;
 use targets::{Dest, Relation};
 
 /// `SpellInterruptFlags::Movement`.
@@ -1015,7 +1016,35 @@ pub(crate) fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i
     if base <= 0 {
         return base;
     }
-    modify(world, caster, spell, SpellModOp::Duration, base as f32).round() as i32
+    let duration = modify(world, caster, spell, SpellModOp::Duration, base as f32);
+    haste_channel_duration_ms(world, caster, spell, duration.max(0.0).round() as u32) as i32
+}
+
+/// SimC76f8118 action.cpp4390–4420 hastes channel duration with its ticks.
+/// TC Object.cpp1816–1838/Spell.cpp3264–3266/4010–4017 share this for aura/cast state.
+pub(crate) fn haste_channel_duration_ms(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    duration: u32,
+) -> u32 {
+    if !is_channeled(spell) || attributes(spell, 5) & 0x2000 == 0 {
+        return duration;
+    }
+    let modded = modify(
+        world,
+        caster,
+        spell,
+        SpellModOp::ChangeCastTime,
+        duration as f32,
+    );
+    let haste = world
+        .get::<CharacterStats>(caster)
+        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+    let slow = world
+        .get::<crate::auras::AuraStatMods>(caster)
+        .map_or(1.0, |mods| mods.attack_cast_time_mult);
+    (modded / haste.max(0.01) * slow).max(0.0) as u32
 }
 
 /// Effects that have a handler, apply an aura or run a script hook; only
@@ -3668,7 +3697,8 @@ fn plan_triggered_spell(
         return Err(CastFailure::InvalidTarget);
     }
     druid_transform::before_cast(world, caster, spell, depth)?;
-    aura_spell_restrictions::check_caster(world, caster, spell)?;
+    // FULL_MASK includes IGNORE_CASTER_AURASTATE (TC Spell.cpp5873–5890).
+    // Ordinary and costed-trigger paths retain their caster requirements.
     // CheckTarget's TARGETS_DEAD is independent of BAD_TARGETS/relation bypass.
     // Non-unit objects have no Health and do not take this unit-only check.
     let target_dead = explicit
