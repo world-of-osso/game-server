@@ -189,6 +189,8 @@ The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native speci
 
 Spec263 parity executes the pinned MID2 Enhancement action rows through the shared literal evaluator, using native action admission, equipment and aura/target facts. A real player uses this driver without loading AssistedCombat diagnostic inputs; no follower profile is fabricated. Windfury/Flametongue setup occurs only in precombat. Thorim's LB/CL choice follows successful foreground LB/CL/Tempest dispatch and Tempest target count. This selects actions; it does not certify the underlying Enhancement proc, counter or damage mechanics.
 
+Enhancement native melee procs generate the real344179 counter and187881 modifier together. Foreground affected spells snapshot their native modifiers at launch and consume up to the live187880 effect1 limit; expiry removes the modifier. Voltaic Blaze grants its native effect1 stack count once per execution. Windfury/Flametongue setup resolves the native weapon-enchant payload for the equipped hand; eligible landed melee runs native proc chance/modifiers and25504/10444 damage, without recursive Windfury procs. Sources: pinned SimC `sc_shaman.cpp2640–2675,3039–3055,10123–10125,10919–11023,11870–11988`.
+
 ### Shared literal snapshot operands
 
 `action.<alias>.damage` reads the proposed target's native direct school-damage snapshot, including current power, modifiers, mitigation and expected crit, without casting or sampling RNG. Weapon-damage predictions remain explicit errors. Action cooldown/duration and bare `ticking` retain action context. `pet.<summon alias>.active` reads actual living, unexpired, same-map owned summons; absent summons are inactive.
