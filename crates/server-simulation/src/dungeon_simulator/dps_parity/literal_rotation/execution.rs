@@ -557,6 +557,7 @@ fn native_readiness(
         .get(id)
         .cloned()
         .ok_or_else(|| format!("native literal spell{id} absent"))?;
+    spell.cast_destination = action_destination(world, &spell, target)?;
     if let Some(item) = item {
         spell.cast_item_level = Some(item.item_level);
         spell.cast_retail_item_id = Some(item.item_id);
@@ -592,6 +593,27 @@ fn native_readiness(
     }
 }
 
+/// TC InitExplicitTargets (Spell.cpp666–678): a cursor action supplies HasDst.
+/// The literal selected unit provides that point; native range/LOS still admit it.
+fn action_destination(
+    world: &World,
+    spell: &crate::spell_info::SpellInfo,
+    target: Entity,
+) -> Result<Option<[f32; 3]>, String> {
+    let cursor = spell.effects.iter().any(|effect| {
+        effect
+            .implicit_targets
+            .iter()
+            .any(|id| matches!(id, 87 | 138))
+    });
+    if !cursor {
+        return Ok(None);
+    }
+    crate::spell_cast::targets::position(world, target)
+        .map(|point| Some(point.to_array()))
+        .ok_or_else(|| format!("native literal cursor target {target:?} lacks a position"))
+}
+
 fn refused_admission(
     id: u32,
     reason: crate::spell_cast::CastFailure,
@@ -606,6 +628,45 @@ fn refused_admission(
             limited: None,
         }),
     }
+}
+
+pub(crate) fn execute_row(
+    world: &mut World,
+    actor: Entity,
+    row: &Action,
+    execution: Execution,
+) -> Result<(), String> {
+    let Some(stage) = row.options.get("empower_to") else {
+        return execute(world, actor, execution);
+    };
+    // SimC76f8118 sc_evoker.cpp3595–3599 parses empower_to;
+    // selecting a row must retain its requested stage, not the native maximum.
+    let stage = stage
+        .parse::<u8>()
+        .map_err(|_| format!("invalid empower_to={stage}"))?;
+    let Execution::Spell(spell, unit, primary) = execution else {
+        return Err("empower_to requires an ordinary native spell".into());
+    };
+    if world.get::<shared::components::Player>(actor).is_some() {
+        return Err("player literal empower dispatch is not yet qualified".into());
+    }
+    let metadata = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell)
+        .ok_or_else(|| format!("native empower spell{spell} absent"))?;
+    let destination = action_destination(world, metadata, unit)?;
+    crate::spell_cast::creature_cast_empowered_with_targets(
+        world,
+        actor,
+        spell,
+        crate::spell_cast::CastTargets {
+            unit,
+            primary,
+            destination,
+        },
+        stage,
+    )
+    .map_err(|error| format!("native empower{spell} stage{stage} rejected: {error:?}"))
 }
 
 pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<(), String> {
@@ -647,9 +708,14 @@ pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Re
             Ok(())
         }
         Execution::Spell(id, target, primary) => {
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(id)
+                .ok_or_else(|| format!("native literal spell{id} absent"))?;
             let targets = crate::spell_cast::CastTargets {
                 unit: target,
                 primary,
+                destination: action_destination(world, spell, target)?,
             };
             let result = if world.get::<shared::components::Player>(actor).is_some() {
                 crate::spell_cast::cast_for_player_with_targets(world, actor, id, targets)

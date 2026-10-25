@@ -6,7 +6,7 @@ use shared::components::PowerType;
 use shared::protocol::CombatLogKind;
 
 const PURPOSE_TALENT: u32 = 408459;
-const PURPOSE: u32 = 223819;
+const PURPOSE: u32 = 408458;
 const FINAL_VERDICT: u32 = 383328;
 const JUDGMENT: u32 = 20271;
 const TEMPLARS_VERDICT: u32 = 85256;
@@ -151,7 +151,7 @@ pub(super) fn earn_finisher_power(run: &mut Run, finisher: u32) {
 }
 
 #[test]
-#[ignore = "selected native408459 must produce223819 from naturally funded ordinary spenders"]
+#[ignore = "selected native408459 must produce408458 from naturally funded ordinary spenders"]
 fn dps_parity_ret_purpose_selected_native_holy_power_casts_produce_real_proc() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = native_ret_in_melee();
