@@ -410,7 +410,6 @@ fn check_inundate_proc(
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     crate::spell_cast::scripts::register_feral_frenzy(&mut scripts);
-    crate::spell_cast::scripts::register_arcane(&mut scripts);
     scripts.0.insert(
         1236994,
         AuraScript {
@@ -683,6 +682,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         crate::spell_cast::scripts::RAPID_FIRE,
         AuraScript {
             on_periodic: Some(crate::spell_cast::scripts::cast_rapid_fire_tick),
+            on_natural_end: Some(crate::spell_cast::scripts::finish_rapid),
             ..Default::default()
         },
     );
@@ -723,6 +723,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
             ..Default::default()
         },
     );
+    crate::spell_cast::scripts::register_arcane(&mut scripts);
     // Extend existing parent lifecycle entries rather than replacing their hooks.
     crate::spell_cast::scripts::register_xuens_battlegear(&mut scripts);
     crate::spell_cast::scripts::register_channel_policies(&mut scripts);
