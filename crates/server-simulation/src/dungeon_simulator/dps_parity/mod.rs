@@ -617,6 +617,14 @@ fn advance_fixture_frame(
     Ok(())
 }
 
+fn capture_engagement(run: &Run) -> Value {
+    let mut sample = report::engagement(run.app.world(), run.actor, &run.targets);
+    // The last add retirement is270.09s, inside the final30s qualification window.
+    // Keep live target inspection, but never subtract a retired wave's earned damage.
+    sample["damage_to_targets"] = json!(report::total_damage(run.app.world(), &run.damage_targets));
+    sample
+}
+
 fn advance_combat(run: &mut Run) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>), String> {
     advance_combat_observed(run, |_| {})
 }
@@ -649,7 +657,7 @@ fn advance_combat_observed(
         )?);
     }
     let mut buffs = BTreeMap::new();
-    let mut samples = vec![report::engagement(run.app.world(), run.actor, &run.targets)];
+    let mut samples = vec![capture_engagement(run)];
     observe(run);
     drive_player(run)?;
     let frame = FIGHT_DURATION / TICKS;
@@ -664,7 +672,7 @@ fn advance_combat_observed(
         )?;
         report::sample_buffs(run.app.world(), run.actor, &mut buffs);
         if matches!(tick, 1 | 20 | LAST_30S_START | TICKS) {
-            samples.push(report::engagement(run.app.world(), run.actor, &run.targets));
+            samples.push(capture_engagement(run));
         }
     }
     let seconds = run
