@@ -70,6 +70,32 @@ fn ret_damage_judgment_produces_mastery_highlords_judgment() {
         damage(&run, 383921) > 0,
         "real Judgment impacts must roll Highlord's Judgment with native mastery"
     );
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.actor.to_bits())
+                && event.spell_id == Some(20271)
+                && matches!(
+                    event.kind,
+                    CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                )),
+        "native Judgment must also resolve its real caster-aura recipient"
+    );
+    let self_hits = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.actor.to_bits())
+                && event.spell_id == Some(383921)
+                && event.kind == CombatLogKind::Damage
+        })
+        .count();
+    assert_eq!(
+        self_hits, 0,
+        "caster-aura recipients are not enemy damage impacts"
+    );
 }
 
 #[test]
