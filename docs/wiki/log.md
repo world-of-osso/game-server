@@ -1,3 +1,7 @@
+## 2026-10-25 — Elemental literal fixture
+
+[Elemental262](systems/simc-apl.md#elemental-fixture-262): exact profile actions use the shared literal evaluator and native dispatch, with precombat, selected Swiftness replacement and named-action target counts. Native regression tests cover controller activation and live candidates. Numerical DPS and guardian/proc qualification remain separate.
+
 ## 2026-10-25 — All-DPS parity census
 
 [Census](investigations/dps-parity-census-2026-10-25.md): current canonical private database, master210df12e3, official followers and player-mode attempts for missing followers. Eight measured specs, seventeen exact fixture failures, two missing references. No surrogate profiles or mechanics changes.

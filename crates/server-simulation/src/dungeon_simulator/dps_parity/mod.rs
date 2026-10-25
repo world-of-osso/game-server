@@ -5,6 +5,8 @@ mod barbed_budget_tests;
 mod composite_precombat_tests;
 mod dummy_reference_tests;
 mod elemental_ascendance_tests;
+mod elemental_rotation;
+mod elemental_rotation_tests;
 mod engagement_tests;
 mod enhancement_operand_tests;
 mod equipment_input_tests;
@@ -80,6 +82,7 @@ struct Run {
     player_rotation: Option<player_rotation::PlayerRotation>,
     windwalker_rotation: Option<windwalker_rotation::Rotation>,
     ret_rotation: Option<ret_rotation::Rotation>,
+    elemental_rotation: Option<elemental_rotation::Rotation>,
 }
 
 fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, String> {
@@ -242,7 +245,7 @@ fn prepare_literal_reference(
 fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
     let (profile, traits) = read_reference(spec_id)?;
     let identity = inputs::read_actor(&profile)?;
-    if matches!(spec_id, 70 | 269)
+    if matches!(spec_id, 70 | 262 | 269)
         && matches!(
             &identity,
             crate::followers::simulator::ParityActor::Follower
@@ -251,6 +254,8 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
         if spec_id == 70 {
             preparation::prepare_ret_precombat(&mut run)?;
+        } else if spec_id == 262 {
+            preparation::prepare_elemental_precombat(&mut run)?;
         } else {
             preparation::prepare_windwalker_precombat(&mut run)?;
         }
@@ -324,6 +329,7 @@ fn spawn_reference(
         player_rotation: None,
         windwalker_rotation: None,
         ret_rotation: None,
+        elemental_rotation: None,
     })
 }
 
@@ -551,6 +557,9 @@ fn drive_player(run: &mut Run) -> Result<(), String> {
     if let Some(rotation) = &mut run.ret_rotation {
         rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
     }
+    if let Some(rotation) = &mut run.elemental_rotation {
+        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    }
     Ok(())
 }
 
@@ -566,7 +575,7 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     Ok(
         json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "actor_kind": if run.player_rotation.is_some() { "player" } else { "follower" },
-        "driver": if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "driver": if run.elemental_rotation.is_some() { "LITERAL_SIMC_ELEMENTAL_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
         "windwalker_rotation": run.windwalker_rotation.as_ref().map(|rotation| rotation.report()),
         "ret_rotation": run.ret_rotation.as_ref().map(|rotation| rotation.report()),
         "assisted_decisions": run.player_rotation.as_ref().map_or(0, |rotation| rotation.decisions),
