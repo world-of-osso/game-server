@@ -34,6 +34,9 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 ## Shared profile and action facts
 
+- `buff.<alias>.last_trigger` retains the last successful native application or refresh across removal, relative to the encounter clock. An unused buff returns the pinned minimum-time sentinel; acquisition must be configured before application.
+- `potion.<name>` matches the configured native potion option case-insensitively, including its exact quality or the name without a final underscore/digit. `cooldown.potion.remains` reads the actual potion spell and ItemEffect category history, not a synthetic timer.
+
 - [x] Action-bound `ticks` reads scheduled periodic ticks from the current native channel, not cast-bar progress or damage-event totals. Public `auras::paid_periodic_ticks` returns the maximum per-effect paid count for the actual caster/target/spell application. SimC `tick_zero` damage does not advance this counter; ordinary scheduled ticks do. Reads do not advance state, and absent auras return zero.
 
 - [x] Native profile effects accept pinned Shadow Omnium tokens `rune_of_unleashed_fire`, `rune_of_selfmending`, `rune_of_lingering`, `rune_of_critical_power` and `rune_of_overload`, plus numeric TraitNodeEntry IDs. Optional ranks remain ignored like pinned SimC; native trait definitions supply the applied spell and all amounts. Unknown tokens or missing native entries fail explicitly.

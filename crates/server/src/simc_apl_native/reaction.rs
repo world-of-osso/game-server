@@ -52,6 +52,7 @@ struct BuffReactions {
     settings: ReactionSettings,
     spells: BTreeSet<u32>,
     deadlines: BTreeMap<u32, Vec<f64>>,
+    last_triggers: BTreeMap<u32, f64>,
 }
 
 /// Configure before tracked buffs exist: a late query cannot reconstruct acquisition.
@@ -76,6 +77,7 @@ pub fn configure(
         settings,
         spells,
         deadlines: BTreeMap::new(),
+        last_triggers: BTreeMap::new(),
     });
     Ok(())
 }
@@ -88,6 +90,9 @@ pub(crate) fn applied(world: &mut World, target: Entity, aura: &crate::auras::Au
     if !reactions.spells.contains(&aura.spell_id) {
         return;
     }
+    // SimC76f8118 buff.cpp2179–2189: every successful trigger, including
+    // an overcap refresh, updates the clock; removal does not reset it.
+    reactions.last_triggers.insert(aura.spell_id, now);
     let settings = reactions.settings;
     let deadlines = reactions.deadlines.entry(aura.instance_id).or_default();
     let stacks = usize::from(aura.stacks.max(1));
@@ -111,6 +116,18 @@ pub(crate) fn stacks_changed(world: &mut World, target: Entity, instance: u32, s
     {
         deadlines.truncate(usize::from(stacks));
     }
+}
+
+pub(super) fn last_trigger(
+    world: &World,
+    actor: Entity,
+    spell: u32,
+) -> Result<Option<f64>, String> {
+    let reactions = world
+        .get::<BuffReactions>(actor)
+        .filter(|policy| policy.spells.contains(&spell))
+        .ok_or("NATIVE_BUFF_TRIGGER_UNAVAILABLE: configure before native acquisition")?;
+    Ok(reactions.last_triggers.get(&spell).copied())
 }
 
 pub(super) fn reacted_stacks(

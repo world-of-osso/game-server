@@ -32,7 +32,13 @@ pub(super) fn install(world: &mut World, actor: Entity, profile: &Profile) -> Re
             }
             ("potion", "potion_of_recklessness_2") => {
                 let item = super::literal_rotation::equipment::ItemUse::consumable(world, 241288)?;
-                world.entity_mut(actor).insert(Potion(item));
+                world.entity_mut(actor).insert((
+                    Potion(item),
+                    crate::simc_apl_native::ConfiguredPotion {
+                        name: value.clone(),
+                        on_use: item.on_use,
+                    },
+                ));
             }
             ("temporary_enchant", _) => install_oils(world, actor, value)?,
             _ => {} // Report retains every unsupported token explicitly.
