@@ -197,6 +197,12 @@ Spec263 parity executes the pinned MID2 Enhancement action rows through the shar
 
 `action.<alias>.damage` reads the proposed target's native direct school-damage snapshot, including current power, modifiers, mitigation and expected crit, without casting or sampling RNG. Weapon-damage predictions remain explicit errors. Action cooldown/duration and bare `ticking` retain action context. `pet.<summon alias>.active` reads actual living, unexpired, same-map owned summons; absent summons are inactive.
 
+## Marksmanship literal controller
+
+- [x] Spec254 uses a real Player with exact reference gear/traits and unchanged pinned `hunter_marksmanship.simc` source through shared `literal_rotation`. It does not require a nonexistent follower profile or use AssistedCombat priorities.
+- [x] Execute source precombat, preserve native cooldowns/overrides and item admission, and start ranged attacks through native75. Report the literal driver and native stat snapshot. Missing potion inventory and external providers remain explicit gaps, not fabricated effects.
+- [ ] Qualify Trueshot/Chakram, Precise Shots, ground payloads and residual damage before claiming DPS parity. Controller execution alone does not qualify their native mechanics.
+
 ## Tests asserting this spec
 
 - `scripts/tests/test_item_instance_data.py` — concrete signed rows, idempotence, unrelated-table retention and duplicate-ID rollback.

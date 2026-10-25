@@ -21,6 +21,7 @@ mod howl_tests;
 mod inputs;
 pub(crate) mod literal_rotation;
 mod marksmanship_fact_tests;
+mod marksmanship_rotation;
 mod owner_cooldown_tests;
 mod pack_tactics_tests;
 mod periodic_crit_tests;
@@ -87,6 +88,7 @@ struct Run {
     player_rotation: Option<player_rotation::PlayerRotation>,
     windwalker_rotation: Option<windwalker_rotation::Rotation>,
     ret_rotation: Option<ret_rotation::Rotation>,
+    marksmanship_rotation: Option<marksmanship_rotation::Rotation>,
     assassination_rotation: Option<assassination_rotation::Rotation>,
     enhancement_rotation: Option<enhancement_rotation::Rotation>,
 }
@@ -267,6 +269,11 @@ fn prepare_literal_reference(
 fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
     let (profile, traits) = read_reference(spec_id)?;
     let identity = inputs::read_actor(&profile)?;
+    if spec_id == 254 {
+        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
+        preparation::prepare_marksmanship_precombat(&mut run)?;
+        return Ok(run);
+    }
     if spec_id == 259 {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
         prepare_assassination_precombat(&mut run)?;
@@ -399,6 +406,7 @@ fn spawn_reference(
         player_rotation: None,
         windwalker_rotation: None,
         ret_rotation: None,
+        marksmanship_rotation: None,
         assassination_rotation: None,
         enhancement_rotation: None,
     })
@@ -578,7 +586,8 @@ fn advance_combat_observed(
         .elapsed_secs_f64();
     let started_at = run.app.world().resource::<Time>().elapsed();
     install_fixture_lifetimes(run, started_at);
-    if run.assassination_rotation.is_none()
+    if run.marksmanship_rotation.is_none()
+        && run.assassination_rotation.is_none()
         && run.enhancement_rotation.is_none()
         && run
             .app
@@ -624,6 +633,9 @@ fn advance_combat_observed(
 }
 
 fn drive_player(run: &mut Run) -> Result<(), String> {
+    if let Some(rotation) = &mut run.marksmanship_rotation {
+        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    }
     if let Some(rotation) = &mut run.assassination_rotation {
         rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
     }
@@ -655,9 +667,10 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
         json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "actor_kind": if run.app.world().get::<shared::components::Player>(run.actor).is_some() { "player" } else { "follower" },
         "enhancement_rotation": run.enhancement_rotation.as_ref().map(|rotation| rotation.report()),
-        "driver": if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "driver": if run.marksmanship_rotation.is_some() { "LITERAL_SIMC_MARKSMANSHIP_76f8118" } else if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
         "windwalker_rotation": run.windwalker_rotation.as_ref().map(|rotation| rotation.report()),
         "ret_rotation": run.ret_rotation.as_ref().map(|rotation| rotation.report()),
+        "marksmanship_rotation": run.marksmanship_rotation.as_ref().map(|rotation| rotation.report()),
         "assisted_decisions": run.player_rotation.as_ref().map_or(0, |rotation| rotation.decisions),
         "wall_seconds": started.elapsed().as_secs_f64(), "seed": 70448, "combat": combat,
         "target_health_policy": {"name": "SIMC_FIXED_TIME_TARGET_HEALTH", "clock": "per_target_lifetime",
@@ -669,6 +682,22 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
         "buff_uptime_pct": buff_uptimes, "engagement_samples": engagement_samples, "gaps": run.gaps,
         "reference_race": run.profile.race, "server_build": 70448, "simc_build": 70391}),
     )
+}
+
+#[test]
+#[ignore = "requires private spec254 exact profile and selected traits"]
+fn marksmanship_literal_fixture_casts_reference_actions() {
+    let report = measure(254, 1).expect("native Marksmanship fixture");
+    assert_eq!(report["driver"], "LITERAL_SIMC_MARKSMANSHIP_76f8118");
+    let actions = report["combat"]["actions"].as_array().unwrap();
+    // Native Trueshot is currently replaced by an incorrectly procced Chakram;
+    // its mechanics are a separate parity fix, not an APL rewrite.
+    for spell in [75, 19434, 257044] {
+        assert!(
+            actions.iter().any(|action| action["spell_id"] == spell),
+            "literal Auto Shot/Aimed Shot/Rapid Fire must actually execute: {spell}"
+        );
+    }
 }
 
 #[test]

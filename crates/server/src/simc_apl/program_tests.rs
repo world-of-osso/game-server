@@ -80,6 +80,45 @@ fn simc_apl_channel_priority_stops_at_exact_source_row() {
     );
 }
 
+#[test]
+fn simc_apl_off_gcd_call_preserves_each_childs_native_readiness() {
+    let facts = BTreeMap::<String, f64>::new();
+    for value in ["0", "1"] {
+        let call = format!("call_action_list,name=cooldowns,use_off_gcd={value}");
+        let program = Program::parse(&[
+            ("default", call.as_str()),
+            ("cooldowns", "hardcast"),
+            ("cooldowns", "instant,use_off_gcd=1"),
+        ])
+        .unwrap();
+        let mut state = program.state();
+        // A held native GCD admits the child instant, not the earlier hardcast.
+        let selected = program
+            .select("default", &facts, &mut state, |action| {
+                Ok(action.options.get("use_off_gcd").map(String::as_str) == Some("1"))
+            })
+            .unwrap()
+            .unwrap();
+        assert_eq!(selected.name, "instant");
+        assert!(
+            program
+                .select("default", &facts, &mut state, |_| Ok(false))
+                .unwrap()
+                .is_none()
+        );
+    }
+    assert!(
+        Program::parse(&[
+            (
+                "default",
+                "call_action_list,name=cooldowns,use_off_gcd=maybe"
+            ),
+            ("cooldowns", "instant")
+        ])
+        .is_err()
+    );
+}
+
 fn facts(rows: &[(&str, f64)]) -> BTreeMap<String, f64> {
     rows.iter()
         .map(|&(key, value)| (key.into(), value))
