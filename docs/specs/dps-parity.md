@@ -4,6 +4,14 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+### Beast Mastery literal fixture
+
+- Selected Nature's Ally1273126 arms native1276720 after successful Barbed Shot or Cobra Shot; successful Kill Command consumes it. Native after-cast effects must compose with these sourced policy rows, retaining Barbed Focus. Literal `.react` observes native acquisition with the pinned profile's reaction settings.
+
+- Literal precombat provisions the existing native default-duck stable policy and executes ordinary Call Pet. The pet attacks the current encounter primary through native pet control, without restoring follower rotation decisions.
+
+- Spec253 keeps the requested native actor identity and disables follower-kit decisions before setup. Its pinned76f8118 `hunter_beast_mastery.simc` rows run through the shared `Program`/`Driver`/`Prepared`/`Equipment` path, including native pet summon, snapshot, Auto Shot and target-scored Barbed Shot. Native70448 supplies spell values, readiness, resources and damage; the adapter does not substitute reference damage.
+
 ### Equipment
 
 - `trinket.N.has_use_damage` requires an actual native on-use ItemEffect whose spell/reachable native trigger effects deal direct, weapon or periodic damage/leech. Passive-only or stat-only trinkets are false; no item-ID lists or guessed script damage.
@@ -17,7 +25,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [ ] Instances retain bonus lists, an optional explicit item level, permanent enchant and gem item IDs by GUID, with backward-compatible redb storage. Crafted stat selections survive where the profile specifies them. A pre-existing database without the additive modifier table loads as unmodified gear; unrelated storage errors and malformed modifier bytes still fail explicitly.
 - [ ] Equipment stats resolve native70448 ItemBonus, ItemSparse, RandPropPoints and Midnight scaling/configuration tables, including stat allocation, sockets and enchant/gem effects. Physical-resistance enchants (type4/school0) contribute scaled, truncated, minimum-one armor, preserving their independent primary effects (TC a352b1fa Player.cpp13509–13531). Other resistance schools remain explicit gaps. Unsupported effects are named gaps, never invented stats.
 - [x] The native-table producer preserves signed values, replaces only the requested table, supports repeated imports and rolls back a duplicate-ID failure without losing the prior table.
-- [x] Shipped profile manifests preserve exact item IDs, bonus lists, item-level overrides, enchants, gems, crafted stats, talents, consumables and action text. Missing item IDs fail explicitly.
+- [x] Shipped profile manifests preserve exact item IDs, bonus lists, item-level overrides, enchants, gems, crafted stats, talents, consumables and action text. Missing item IDs fail explicitly. Temporary enchant declarations apply only to equipped slots; an empty off hand is inactive.
 - [x] Native fixture equipment honors `redirected_base_stats`: use the donor item's native ItemSparse stat types/allocations with the original profile's item level and bonuses. Keep original equipped identity, tier/effects, armor and weapon inputs; never mutate catalogs or import reference stat values. Unknown/malformed donors fail explicitly; pinned explicit0 means no redirect. Non-redirected slots remain unchanged. Pinned76f8118 `item.cpp35–57` supplies option semantics; native70448 supplies amounts.
 - [x] Reference selection uses MID2 for the eight available DPS/tank profiles and prior-tier MID1 for Evoker, labelled `SIMC_DEVASTATION_MID2_PROFILE_ABSENT`; it never silently substitutes another tier.
 - [ ] Native base-item, bonus-added and enchant equip spells use the production aura path; unequipping an item or removing a modifier removes only its owned equip aura and linked child. Item-level changes replace stale aura amounts. Native LINKED/LINKED_2 zero amounts preserve child BP0; nonzero parent amounts override child BP0, with matching removal (TrinityCore a352b1fa `SpellAuraEffects.cpp5299–5335`).
@@ -70,6 +78,11 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Critical ordinary/Legacy Storm and HoW impacts apply native431414 Sun Sear. Each actual Dawnlight tick produces431911 Sun's Avatar with native area/cap values. Critical still-ticking403695 extends its owned duration by native446663 effect0 without resetting tick phase.
 - Divine Arbiter1306923 uses its native first damage effect on the primary and its native second effect on other recipients, never both on the primary. Spell coefficients remain native70448 values.
 
+### Ret Crusade
+
+- Selected1253598 makes31884 start at1 stack and cap at10. Foreground Holy Power consumers add their actual paid amount, or the native base HP equivalent when Divine Purpose, Empyrean Power or Shining Light makes them free. Pinned Hammer of Light grants9. Legacy, echo and Tempest background actions do not add stacks; no HP is granted or altered.
+- Native1253598 effect0 supplies haste per stack, multiplying existing haste. Base Wrath effect amounts, including crit and damage, ignore stack count. Stack gains and reapplications preserve the active Wrath expiry (`sc_paladin.cpp3644–3651,3911,4617–4618,4647–4648`; `sc_paladin.hpp1541–1555,1614–1623`).
+
 ### Ret Divine Toll relationship
 
 - [ ] `SIMC_RET_DIVINE_TOLL_RELATIONSHIP`: selected spec70 normal375576 hits dispatch native406957, or1279408 while actual1277026 mode is active, once per real hostile target. Native effect0 cap and effect1 area geometry/admission bound recipients; preserve existing combat-only implicit admission and count the explicit primary once. Native child coefficients and parent effect5 percentage remain authoritative; no invented DB2 trigger edge. Child funding, Resonance, Exaction and Divine Hammer remain separate qualifications. [Source/proof](../handoffs/ret-qualified-sentence-wake-toll-proof-ledger.md).
@@ -104,7 +117,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Fury player parity
 
 - [x] Spec72 uses `--actor player` and the complete pinned MID2 Fury APL through shared `literal_rotation`. Capture literal control before native setup, execute ordered precombat and submit normal native casts. Do not invent a follower profile. Native overrides select Reckless Abandon and Unrelenting Onslaught variants; native stats, costs, coefficients and trait legality remain authoritative.
-- [ ] Fury Deep Wounds1261060 accepts only actual Execute main-hand280849 impacts; Whirlwind cannot grant it (SimC76f8118 `sc_warrior.cpp4452–4456`). Preserve native262115 damage and periodic behavior.
+- [x] Fury Deep Wounds1261060 accepts only actual Execute main-hand280849 impacts; Whirlwind cannot grant it (SimC76f8118 `sc_warrior.cpp4452–4456`). Preserve native262115 damage and rolling periodic behavior; do not alter Arms71 producers.
 - [ ] Anger Management152278 reduces running Fury Avatar/Recklessness cooldowns from actual paid Rage, using native PowerType display units and effect2's Rage-per-second divisor; free background casts do not contribute (`sc_warrior.cpp1450–1455,1506–1517`).
 - [ ] Selected Unhinged386628 dispatches the live native Bloodthirst variant on odd Bladestorm227847/446035 effect0 ticks, including catch-up ticks, using the actual selected hostile target (`sc_warrior.cpp3257–3268,3316–3334`).
 
@@ -139,6 +152,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Periodic auras and GroundPulses fields with native `SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC` (Attributes5 `0x2000`) apply caster spell haste after the native period spell modifiers, truncating to integer milliseconds. Their unchanged duration admits the resulting extra ticks. Unflagged auras retain their native period. Source: TC a352b1fa `SpellAuraEffects.cpp999–1012`.
 
 ### Measurement
+
+- A successful harmful Player ability carrying the native melee-combat-start flag starts weapon swings at its retained hostile primary. An existing weapon victim and swing timers remain unchanged. Fixture engagement does not inject the missing attack; no ability whitelist or damage multiplier substitutes for the native flag.
 
 - Spec259 player fixtures execute the profile's literal pinned Assassination action rows through the shared APL evaluator, not AssistedCombat or follower-kit priorities. `apply_poison` uses the selected native coating casts in source order and waits for each real cast before the next precombat row. Production follower decisions remain unchanged.
 

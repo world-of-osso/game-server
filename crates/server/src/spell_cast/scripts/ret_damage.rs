@@ -336,11 +336,10 @@ pub(super) fn area_plan(
     explicit: Option<Entity>,
 ) -> TargetPlan {
     let target = explicit.expect("Ret damage child requires its actual primary");
-    let effect = &spell.effects[0];
     let (radius, cap) = match spell.id {
-        LIGHT_WITHIN => (targets::radius(effect, 0), 8.0),
+        LIGHT_WITHIN => (damage_area_radius(spell), 8.0),
         431911 => (
-            targets::radius(effect, 1),
+            damage_area_radius(spell),
             super::script_effect_value(world, caster, AVATAR_TALENT, 5),
         ),
         TEMPEST => {
@@ -348,7 +347,9 @@ pub(super) fn area_plan(
                 .resource::<SpellStore>()
                 .get(STORM)
                 .expect("Tempest requires native Divine Storm");
-            (targets::effect_radius(&storm.effects[0]), 0.0)
+            // SimC76f8118 Ret468–493: Tempest is unlimited area damage.
+            // Native Storm owns its radius, independently of target slot.
+            (damage_area_radius(storm), 0.0)
         }
         _ => unreachable!("only registered Ret area children"),
     };
@@ -371,6 +372,26 @@ pub(super) fn area_plan(
         blocked_units: Vec::new(),
         prevent_hit_script: false,
     }]
+}
+
+/// Damage effects can place their native area radius in either target slot.
+fn damage_area_radius(spell: &SpellInfo) -> f32 {
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.effect == 2)
+        .expect("native area child retains its damage effect");
+    let radius = effect
+        .radius
+        .iter()
+        .flatten()
+        .next()
+        .expect("native area damage effect retains its radius");
+    if radius.radius > 0.0 {
+        radius.radius
+    } else {
+        radius.radius_max
+    }
 }
 
 pub(super) fn exclude_primary_cleave(

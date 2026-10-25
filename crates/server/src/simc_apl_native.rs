@@ -540,7 +540,15 @@ impl<'a> NativeFacts<'a> {
             .classes
             .iter()
             .flat_map(|class| &class.traits.sub_trees)
-            .find(|tree| tree.name.to_ascii_lowercase().replace(' ', "_") == alias)
+            // SimC76f8118 trait_data.cpp225–236 / util.cpp3250–3276:
+            // display-name hyphens are removed (native Fel-Scarred → felscarred).
+            .find(|tree| {
+                tree.name
+                    .to_ascii_lowercase()
+                    .replace(' ', "_")
+                    .replace('-', "")
+                    == alias
+            })
             .ok_or_else(|| format!("unknown native APL hero tree {alias}"))?;
         let traits = self
             .world
@@ -792,10 +800,12 @@ impl<'a> NativeFacts<'a> {
 
     fn gcd(&self, action: &Action, operand: &str) -> Result<f64, String> {
         let control = matches!(action.name.as_str(), "variable" | "call_action_list");
-        if control && matches!(operand, "gcd" | "gcd.min" | "gcd.remains") {
+        if control && matches!(operand, "gcd" | "gcd.min") {
             return Ok(0.0);
         }
-        let spell = if operand == "gcd.max" {
+        // SimC76f8118 action.cpp3795–3808 reads player.gcd_ready even for
+        // item/control rows, which have no native action-spell alias.
+        let spell = if matches!(operand, "gcd.max" | "gcd.remains") {
             self.spell(self.bindings.global_cooldown_spell)?
         } else {
             let id = bound_spell(&self.bindings.actions, &action.name, "action")?;
@@ -805,10 +815,43 @@ impl<'a> NativeFacts<'a> {
     }
 }
 
+impl NativeFacts<'_> {
+    fn previous_gcd(&self, operand: &str) -> Result<f64, String> {
+        // SimC76f8118 action.cpp3900–3936: 1-based foreground GCD history.
+        let (index, alias) = operand
+            .split_once('.')
+            .ok_or_else(|| format!("invalid native prev_gcd operand {operand}"))?;
+        let index = index
+            .parse::<usize>()
+            .ok()
+            .filter(|index| *index > 0)
+            .ok_or_else(|| format!("native prev_gcd requires a positive index: {operand}"))?;
+        let requested = bound_spell(&self.bindings.actions, alias, "previous action")?;
+        let resolved =
+            crate::spell_cast::knowledge::resolve_action(self.world, self.actor, requested)?;
+        let previous = self
+            .world
+            .get::<crate::spell_cast::SpellHistory>(self.actor)
+            .and_then(|history| history.previous_gcd_cast(index));
+        let previous = previous
+            .map(|spell| {
+                // Compare alias endpoints: a selected native override and its base
+                // action share one APL identity (e.g. Deep Breath357210/433874).
+                crate::spell_cast::knowledge::resolve_action(self.world, self.actor, spell)
+            })
+            .transpose()?
+            .flatten();
+        Ok(bool_value(resolved.is_some() && resolved == previous))
+    }
+}
+
 impl Facts for NativeFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
         if let Some(value) = self.targeted_value(name, None) {
             return value;
+        }
+        if let Some(operand) = name.strip_prefix("prev_gcd.") {
+            return self.previous_gcd(operand);
         }
         if let Some(property) = name.strip_prefix("raid_event.pull.") {
             // SimC76f8118 raid_event.cpp3068–3141: no configured event.
@@ -849,7 +892,9 @@ impl Facts for NativeFacts<'_> {
                 .ok_or_else(|| "tick_time requires an active native channel".into()),
             "expected_combat_length" => self.expected_combat_length(),
             "fight_remains" => self.remaining(name),
-            "active_enemies" => Ok(self.active_enemies as f64),
+            // SimC76f8118 action.cpp3886–3896: without distance targeting,
+            // bare spell_targets uses active_enemies, including recurring adds.
+            "active_enemies" | "spell_targets" => Ok(self.active_enemies as f64),
             "spell_haste" => self.spell_haste(),
             "movement.distance" => self.movement_distance(),
             "movement.remains" => self.movement_value("remains"),

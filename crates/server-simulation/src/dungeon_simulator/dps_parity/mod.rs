@@ -3,9 +3,15 @@ mod active_enemy_tests;
 mod arms_rotation;
 mod arms_tests;
 mod assassination_knowledge_tests;
+mod assassination_mechanics_tests;
 mod assassination_rotation;
 mod aura342_tests;
 mod barbed_budget_tests;
+#[cfg(test)]
+mod beast_mastery_mechanics_tests;
+#[cfg(test)]
+mod beast_mastery_pet_tests;
+mod beast_mastery_rotation;
 mod composite_precombat_tests;
 mod dummy_reference_tests;
 mod elemental_ascendance_tests;
@@ -20,11 +26,13 @@ mod enhancement_strike_tests;
 mod enhancement_tests;
 mod equipment_input_tests;
 mod equipped_set_tests;
+mod feral_native_tests;
 mod feral_tests;
 mod firestarter_tests;
 mod fury_rotation;
 mod gear_profile_tests;
 mod haste_tests;
+mod havoc_fact_tests;
 mod health_aura_state_tests;
 mod howl_tests;
 mod inputs;
@@ -49,9 +57,11 @@ mod rake_stealth_tests;
 mod report;
 mod ret_auto_proc_tests;
 mod ret_batch_tests;
+mod ret_crusade_tests;
 mod ret_damage_relationship_tests;
 mod ret_damage_tests;
 mod ret_dawnlight_consumer_tests;
+mod ret_dawnlight_remainder_tests;
 mod ret_dawnlight_target_tests;
 mod ret_dawnlight_tests;
 mod ret_empyrean_tests;
@@ -101,6 +111,7 @@ struct Run {
     ret_rotation: Option<ret_rotation::Rotation>,
     elemental_rotation: Option<elemental_rotation::Rotation>,
     marksmanship_rotation: Option<marksmanship_rotation::Rotation>,
+    beast_mastery_rotation: Option<beast_mastery_rotation::Rotation>,
     assassination_rotation: Option<assassination_rotation::Rotation>,
     enhancement_rotation: Option<enhancement_rotation::Rotation>,
     arms_rotation: Option<arms_rotation::Rotation>,
@@ -288,6 +299,11 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
         fury_rotation::prepare_precombat(&mut run)?;
         return Ok(run);
     }
+    if spec_id == 253 {
+        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
+        preparation::prepare_beast_mastery_precombat(&mut run)?;
+        return Ok(run);
+    }
     if spec_id == 254 {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
         preparation::prepare_marksmanship_precombat(&mut run)?;
@@ -434,6 +450,7 @@ fn spawn_reference(
         ret_rotation: None,
         elemental_rotation: None,
         marksmanship_rotation: None,
+        beast_mastery_rotation: None,
         assassination_rotation: None,
         enhancement_rotation: None,
         arms_rotation: None,
@@ -664,6 +681,9 @@ fn advance_combat_observed(
 }
 
 fn drive_player(run: &mut Run) -> Result<(), String> {
+    if let Some(rotation) = &mut run.beast_mastery_rotation {
+        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    }
     if let Some(rotation) = &mut run.marksmanship_rotation {
         rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
     }
@@ -708,11 +728,12 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
         "actor_kind": if run.app.world().get::<shared::components::Player>(run.actor).is_some() { "player" } else { "follower" },
         "enhancement_rotation": run.enhancement_rotation.as_ref().map(|rotation| rotation.report()),
         "arms_rotation": run.arms_rotation.as_ref().map(|rotation| rotation.report()),
-        "driver": if run.arms_rotation.is_some() { "LITERAL_SIMC_ARMS_76f8118" } else if run.fury_rotation.is_some() { "LITERAL_SIMC_FURY_76f8118" } else if run.elemental_rotation.is_some() { "LITERAL_SIMC_ELEMENTAL_76f8118" } else if run.marksmanship_rotation.is_some() { "LITERAL_SIMC_MARKSMANSHIP_76f8118" } else if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "driver": if run.beast_mastery_rotation.is_some() { "LITERAL_SIMC_BEAST_MASTERY_76f8118" } else if run.arms_rotation.is_some() { "LITERAL_SIMC_ARMS_76f8118" } else if run.fury_rotation.is_some() { "LITERAL_SIMC_FURY_76f8118" } else if run.elemental_rotation.is_some() { "LITERAL_SIMC_ELEMENTAL_76f8118" } else if run.marksmanship_rotation.is_some() { "LITERAL_SIMC_MARKSMANSHIP_76f8118" } else if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
         "fury_rotation": run.fury_rotation.as_ref().map(|rotation| rotation.report()),
         "windwalker_rotation": run.windwalker_rotation.as_ref().map(|rotation| rotation.report()),
         "ret_rotation": run.ret_rotation.as_ref().map(|rotation| rotation.report()),
         "marksmanship_rotation": run.marksmanship_rotation.as_ref().map(|rotation| rotation.report()),
+        "beast_mastery_rotation": run.beast_mastery_rotation.as_ref().map(|rotation| rotation.report()),
         "assisted_decisions": run.player_rotation.as_ref().map_or(0, |rotation| rotation.decisions),
         "wall_seconds": started.elapsed().as_secs_f64(), "seed": 70448, "combat": combat,
         "target_health_policy": {"name": "SIMC_FIXED_TIME_TARGET_HEALTH", "clock": "per_target_lifetime",
@@ -724,6 +745,32 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
         "buff_uptime_pct": buff_uptimes, "engagement_samples": engagement_samples, "gaps": run.gaps,
         "reference_race": run.profile.race, "server_build": 70448, "simc_build": 70391}),
     )
+}
+
+#[test]
+#[ignore = "requires private spec253 exact profile and selected traits"]
+fn beast_mastery_literal_fixture_casts_reference_actions() {
+    let mut run = prepare_measurement(253, 1).expect("native BM fixture");
+    assert!(
+        run.app
+            .world()
+            .get::<literal_rotation::LiteralParityFixture>(run.actor)
+            .is_some(),
+        "BM must suppress follower kit decisions before setup and execute the literal source"
+    );
+    engage(&mut run);
+    for _ in 0..200 {
+        run.app.update();
+        drive_player(&mut run).expect("literal BM decision");
+    }
+    let combat = report::combat(run.app.world(), &run.damage_targets, 10.0);
+    let actions = combat["actions"].as_array().unwrap();
+    for spell in [75, 217200] {
+        assert!(
+            actions.iter().any(|action| action["spell_id"] == spell),
+            "literal Auto Shot/Barbed Shot must execute: {spell}; {combat}"
+        );
+    }
 }
 
 #[test]

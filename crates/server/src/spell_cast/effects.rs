@@ -1955,6 +1955,7 @@ fn deal_source_damage_and_report(
     factor_capture::finish(world, ctx, target, &damage, &event);
     log_event(world, event);
     if periodic && !resolved_source {
+        super::scripts::apply_periodic_damage_policies(world, ctx, target, amount);
         super::scripts::after_ret_periodic_damage(world, ctx, target, crit);
     }
     if !periodic && !resolved_source {
