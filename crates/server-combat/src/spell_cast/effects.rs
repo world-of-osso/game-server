@@ -2027,6 +2027,7 @@ fn deal_source_damage_and_report(
     }
     if hot_streak_hit {
         super::scripts::record_fire_hit(world, ctx.caster, ctx.spell, crit, guaranteed_crit);
+        super::scripts::fire_meteorite_hit(world, ctx, target);
     }
     if periodic && ctx.spell.id == super::scripts::FLAME_SHOCK {
         super::scripts::roll_flame_shock_tick(world, ctx.caster);

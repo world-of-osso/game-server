@@ -92,6 +92,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Fire literal fixture
 
+- A selected Spellfire Sphere success also produces native Glorious Incandescence without another roll (`sc_mage.cpp7316–7319`). An actual Fire Blast hit with that aura launches the native Glorious count of Meteorite missiles, staggered75ms; native449560 supplies travel and449569 supplies impact (`2003–2012,4577–4580,4802–4808`). Queued destination casts retain their selected target and destination.
+
 - The shipped Fire fixture applies the pinned default five initial Sphere applications through native casting, retaining the native three-stack cap (`sc_mage.cpp366,6893–6894`). Selected Codex spends stored spheres on Phoenix invocation (`1249–1253`). Native Heating Up survives noncritical hits during its first200ms (`2196–2210`).
 
 - Admitted Hot Streak spends produce selected Fired Up and Spellfire Spheres before damage, then selected Mana Cascade after consumption (SimC76f8118 `sc_mage.cpp2406–2430`). Sphere generation uses the pinned eleven-attempt capped PRD with native effect2 chance (`6633–6636,7310–7320`); Fired Up uses the pinned Combustion curve and otherwise native chance, recharge reduction and duration extension (`7200–7224`). Memory of Al'ar produces native Hyperthermia when the Combustion/Phoenix lifetime ends; its duration comes from the selected native talent (`1268–1275`).

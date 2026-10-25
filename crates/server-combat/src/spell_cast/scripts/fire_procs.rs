@@ -11,6 +11,9 @@ const FIRED_UP: u32 = 1257350;
 const SPHERES_TALENT: u32 = 448601;
 const SPHERE: u32 = 448604;
 const SPHERE_CAP: u32 = 11;
+const GLORIOUS_TALENT: u32 = 449394;
+const GLORIOUS: u32 = 451073;
+const METEORITE_MISSILE: u32 = 449560;
 const CASCADE_TALENT: u32 = 449293;
 const CASCADE: u32 = 449314;
 const MEMORY: u32 = 449619;
@@ -120,6 +123,42 @@ fn roll_spellfire_sphere(world: &mut World, caster: Entity) {
     }
     state.sphere_attempts = 0;
     super::super::cast_triggered(world, caster, SPHERE, Some(caster), 1);
+    // SimC76f8118 sc_mage.cpp7316–7319: the same Sphere success produces
+    // selected Glorious Incandescence; it has no second independent roll.
+    if selected(world, caster, GLORIOUS_TALENT) {
+        super::super::cast_triggered(world, caster, GLORIOUS, Some(caster), 1);
+    }
+}
+
+/// SimC76f8118 sc_mage.cpp4577–4580/2003–2012: a Fire Blast hit with
+/// Glorious launches the native count, staggered75ms; native449560 supplies travel.
+pub(crate) fn fire_meteorite_hit(
+    world: &mut World,
+    ctx: &super::super::effects::EffectCtx,
+    target: Entity,
+) {
+    if ctx.spell.id != 108853
+        || !auras::has_aura(world, ctx.caster, GLORIOUS)
+        || !selected(world, ctx.caster, GLORIOUS_TALENT)
+    {
+        return;
+    }
+    let Some(position) = world.get::<shared::components::Position>(target).copied() else {
+        return;
+    };
+    let count = super::script_effect_value(world, ctx.caster, GLORIOUS_TALENT, 0).max(0.0) as u32;
+    for ordinal in 0..count {
+        super::super::queued_triggers::schedule_destination_trigger(
+            world,
+            ctx,
+            super::super::queued_triggers::DestinationTrigger {
+                target,
+                spell_id: METEORITE_MISSILE,
+                delay_ms: ordinal * 75,
+                destination: [position.x, position.y, position.z],
+            },
+        );
+    }
 }
 
 pub(crate) fn register(scripts: &mut auras::scripts::AuraScripts) {
