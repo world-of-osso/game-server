@@ -775,6 +775,7 @@ pub fn after_cast(spell_id: u32) -> impl Iterator<Item = AfterCastHook> {
         .into_iter()
         .chain(policies::after_cast_hook(spell_id))
         .chain(spellslinger::after_cast_hook(spell_id))
+        .chain(batch9::after_cast_hook(spell_id))
         .chain(aura_rolls::hook(spell_id))
 }
 
