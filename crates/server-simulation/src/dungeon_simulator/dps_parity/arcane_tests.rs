@@ -16,13 +16,17 @@ fn stacks(run: &Run, spell: u32) -> u8 {
         .map_or(0, |aura| aura.stacks)
 }
 
-fn cast(run: &mut Run, spell: u32) {
+fn start_cast(run: &mut Run, spell: u32) {
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
         literal_rotation::execution::Execution::Spell(spell, run.targets[0], Some(run.targets[0])),
     )
     .unwrap_or_else(|error| panic!("ordinary Arcane{spell}: {error}"));
+}
+
+fn cast(run: &mut Run, spell: u32) {
+    start_cast(run, spell);
     preparation::finish_pending_setup(run).unwrap();
 }
 
@@ -58,6 +62,10 @@ fn arcane_batch_surge_guarantees_clearcasting() {
 fn arcane_batch_missiles_ticks_generate_damage_salvo_and_cumulative_power() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(62, 1).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1296582),
+        "native gear must really enable the MID2 four-piece producer"
+    );
     grant(&mut run, 263725, 1);
     cast(&mut run, 5143);
     let hits = run
@@ -109,13 +117,16 @@ fn arcane_batch_barrage_consumes_salvo_and_rolls_native_orb_and_prismatic() {
         if prism && orb {
             break;
         }
-        cast(&mut run, 44425);
+        start_cast(&mut run, 44425);
+        // Observe the execution boundary before later Infused Splinter impacts
+        // can earn new Salvo during the GCD.
         assert_eq!(
             stacks(&run, 1242974),
             3,
             "Barrage consumes Salvo, then native Polished Focus refunds three"
         );
         prism |= stacks(&run, 1295942) > 0;
+        preparation::finish_pending_setup(&mut run).unwrap();
         orb |= run
             .app
             .world()

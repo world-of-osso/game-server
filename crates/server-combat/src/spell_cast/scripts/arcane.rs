@@ -104,7 +104,11 @@ fn grant_salvo(world: &mut World, caster: Entity, count: u32) {
         .get(SALVO)
         .and_then(|spell| spell.aura_options.as_ref())
         .map_or(0, |options| options.cumulative_aura);
-    if u32::from(stacks(world, caster, SALVO)) == cap && u32::from(before) < cap {
+    // sc_mage.cpp6404–6406: reaching the cap cannot grant unselected Intuition.
+    if selected(world, caster, 1223798)
+        && u32::from(stacks(world, caster, SALVO)) == cap
+        && u32::from(before) < cap
+    {
         grant(world, caster, 1223797, 1);
     }
 }
@@ -149,7 +153,10 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
 
 fn generate_missiles_tick(world: &mut World, caster: Entity) {
     // sc_mage.cpp3154–3180: once per tick execution, never once per hit target.
-    grant(world, caster, CUMULATIVE, 1);
+    // sc_mage.cpp6389–6391: only the earned native MID2 four-piece enables it.
+    if auras::has_aura(world, caster, 1296582) {
+        grant(world, caster, CUMULATIVE, 1);
+    }
     grant_salvo(world, caster, 1);
     if roll(talent_value(world, caster, 461257, 0)) {
         let count = talent_value(world, caster, 461257, 1) as u32;
