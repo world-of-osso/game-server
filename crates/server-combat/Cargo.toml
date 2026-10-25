@@ -1,0 +1,77 @@
+[package]
+name = "server-combat"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+server-core = { path = "../server-core" }
+server-admin = { path = "../server-admin" }
+server-catalog = { path = "../server-catalog" }
+server-follower-policy = { path = "../server-follower-policy" }
+server-map-rules = { path = "../server-map-rules" }
+server-pet-battle = { path = "../server-pet-battle" }
+# Only explicit fixture consumers enable these; ordinary server builds stay unchanged.
+blake3 = { version = "1.8", optional = true }
+tempfile = { version = "3", optional = true }
+game-engine-core = { git = "ssh://git@github.com/world-of-osso/game-engine.git", rev = "88b78756cbb16759290e0f7df30e2c26417c7f1f", default-features = false, optional = true }
+# Projected runtime ground metadata; renderer-only modules stay disabled.
+wow-chunk = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false }
+wow-adt = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false }
+wow-wmo = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false }
+# Static seat offsets only; activation tracks and rendering data are not needed by vehicles.
+wow-m2 = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false, features = ["attachments"] }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "186134ff880f1a6a7b754e4ce43456d775a44caf" }
+# Read-only packet iteration and exact send-stage ordering for diagnostic census only.
+lightyear_link = { version = "0.28", optional = true, features = ["test_utils"] }
+lightyear_transport = { version = "0.28", optional = true }
+# Baked line-of-sight tiles and eye points (docs/specs/line-of-sight.md).
+# Reuse the authored M2 collision parser for live arena GO hulls.
+los = { path = "../los", features = ["bake"] }
+# Tiled offline navigation queries; no runtime geometry extraction.
+navigation = { path = "../navigation" }
+bevy = { version = "0.19", default-features = false, features = [
+    "bevy_log", "bevy_state",
+] }
+lightyear = { version = "0.28", features = ["server", "netcode", "replication", "udp"] }
+# Initialize interest visibility at the actual replication-client lifecycle boundary.
+bevy_replicon = { version = "0.41.1", default-features = false, features = ["server"] }
+redb = "3"
+serde = { version = "1", features = ["derive"] }
+bitcode = "0.6"
+uuid = { version = "1", features = ["v4"] }
+argon2 = "0.5"
+rand = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread"] }
+peercred-ipc = { git = "https://github.com/Osso/peercred-ipc.git", tag = "v0.2.0" }
+rusqlite = { version = "0.35", features = ["bundled"] }
+serde_json = "1"
+# Installed AdventureJournal CSV, including quoted localized text; no ad-hoc parser.
+csv = "1.4"
+# Local wall clock for the game time (GameTime::GetWowTime).
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+
+[features]
+test-support = ["server-core/test-support", "server-map-rules/test-support", "dep:blake3", "dep:tempfile", "dep:game-engine-core"]
+# Private debug-peer harness; release builds reject it and deploy never enables it.
+native-proof-hold-persistence = []
+# Diagnostic: log per-system wall time every 10 s (enables Bevy system spans).
+system-timings = ["bevy/trace", "dep:lightyear_link", "dep:lightyear_transport"]
+
+[dev-dependencies]
+server-core = { path = "../server-core", features = ["test-support"] }
+server-follower-policy = { path = "../server-follower-policy", features = ["test-support"] }
+server-map-rules = { path = "../server-map-rules", features = ["test-support"] }
+# Content-address frozen fixture inputs; already present in the workspace graph.
+blake3 = "1.8"
+# Frozen engine-free AssistedCombat catalog/predicates; parity reuses authored decisions verbatim.
+game-engine-core = { git = "ssh://git@github.com/world-of-osso/game-engine.git", rev = "88b78756cbb16759290e0f7df30e2c26417c7f1f", default-features = false }
+# Measure publication bytes with the exact codec used by Lightyear messages.
+lightyear_serde = "0.28"
+# Bake concrete collision fixtures for fleeing's real Detour path boundary.
+navigation = { path = "../navigation", features = ["bake"] }
+# Real local M2/MDDF collision-floor fixtures.
+los = { path = "../los", features = ["bake"] }
+# Exercise pre-world replication and auth traffic against a real local client.
+lightyear = { version = "0.28", features = ["client"] }
+tempfile = "3"

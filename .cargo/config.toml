@@ -1,3 +1,7 @@
+[net]
+# Reuse the SSH authentication/configuration used by the repository's Git commands.
+git-fetch-with-cli = true
+
 [env]
 # Always build the pinned Recast source, never an unversioned host library.
 RECAST_VENDOR = { value = "true", force = true }

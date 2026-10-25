@@ -19,6 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import shutil
 import subprocess
@@ -223,13 +224,17 @@ def split_test(test):
     i = test.index("--") if "--" in test else len(test)
     cargo_args, binary_args, filters = [], list(test[i + 1:]), []
     takes_value = False
+    previous = None
     for arg in test[:i]:
         if takes_value:
-            cargo_args.append(arg)
+            # Gameplay tests moved from `server` to `server-combat` (b316f4d9b); `server` keeps
+            # only binaries and site export, so old submissions are retargeted.
+            cargo_args.append("server-combat" if previous in ("-p", "--package") and arg == "server" else arg)
             takes_value = False
         elif arg.startswith("-"):
             cargo_args.append(arg)
             takes_value = arg in CARGO_VALUE_FLAGS
+            previous = arg
         else:
             filters.append(arg)
     return cargo_args, "--", filters + binary_args
@@ -272,7 +277,9 @@ def run_executable(entry, test, executable, cwd, entry_log):
                          stderr=subprocess.STDOUT, check=False)
     with entry_log.open("a") as f:
         f.write(f"\n$ {shlex.join(command)}\n{out.stdout}")
-    return out.returncode
+    ran = sum(int(m) for m in re.findall(r"test result: \w+\. (\d+) passed; (?:\d+) failed", out.stdout))
+    ran += sum(int(m) for m in re.findall(r"test result: \w+\. \d+ passed; (\d+) failed", out.stdout))
+    return out.returncode, ran
 
 
 def run_tests(entries, log):
@@ -289,12 +296,19 @@ def run_tests(entries, log):
             else:
                 jobs += [(entry, test, exe, cwd, entry_log) for exe, cwd in found]
     with ThreadPoolExecutor(TEST_PARALLEL) as pool:
-        codes = list(pool.map(lambda job: (job[0]["id"], run_executable(*job)), jobs))
-    failing = broken | {entry_id for entry_id, code in codes if code}
+        codes = list(pool.map(lambda job: ((job[0]["id"], tuple(job[1])), run_executable(*job)), jobs))
+    failing = broken | {key[0] for key, (code, _) in codes if code}
+    # A --test that runs no test at all (a stale filter or package) is a failure, not a pass.
+    ran = {}
+    for key, (_, count) in codes:
+        ran[key] = ran.get(key, 0) + count
+    empty = {e["id"] for e in entries for t in e["tests"]
+             if e["id"] not in broken and ran.get((e["id"], tuple(t)), 0) == 0}
     passed, failed = [], []
     for entry in entries:
-        if entry["id"] in failing:
-            entry["reason"] = f"tests failed; see {entry['test_log']}"
+        if entry["id"] in failing or entry["id"] in empty:
+            entry["reason"] = (f"tests failed; see {entry['test_log']}" if entry["id"] in failing
+                               else f"tests failed: a --test ran 0 tests (stale filter or package?); see {entry['test_log']}")
             failed.append(entry)
         else:
             passed.append(entry)

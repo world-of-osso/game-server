@@ -91,6 +91,8 @@ impl GuildProfileTextRequest for SetGuildInfo {
 
 #[path = "guild_charters.rs"]
 pub(crate) mod charters;
+#[path = "guild_disband.rs"]
+mod disband;
 #[path = "guild_invites.rs"]
 mod guild_invites;
 #[path = "guild_ranks.rs"]
@@ -648,6 +650,9 @@ mod guild_online_zone_tests;
 #[path = "guild_ranks_tests.rs"]
 mod guild_ranks_tests;
 
+#[cfg(test)]
+#[path = "guild_disband_tests.rs"]
+mod guild_disband_tests;
 #[cfg(test)]
 #[path = "guild_leadership_transfer_tests.rs"]
 mod guild_leadership_transfer_tests;
