@@ -1,10 +1,22 @@
 //! TC a352b1fa spell_evoker.cpp322–350: one native talent roll per completed cast.
 //! Dragonrage guarantee: native70448 375087s2; SimC76f8118 sc_evoker.cpp5625.
-use crate::random as rand;
+use super::combat;
+use combat::random as rand;
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_cast::scripts::AfterCastHook;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::NativeAfterCast(hook)];
+
+fn hook(spell: u32) -> Option<AfterCastHook> {
+    match spell {
+        AZURE_STRIKE | LIVING_FLAME => Some(roll_essence_burst),
+        _ => None,
+    }
+}
 use bevy::prelude::*;
 
-use crate::auras::{ActiveAuras, has_aura};
-use crate::spell_info::SpellInfo;
+use combat::auras::{ActiveAuras, has_aura};
+use combat::spell_info::SpellInfo;
 
 pub(super) const AZURE_STRIKE: u32 = 362969;
 pub(super) const LIVING_FLAME: u32 = 361469;
@@ -23,12 +35,12 @@ pub(super) fn roll_essence_burst(world: &mut World, caster: Entity, spell: &Spel
         return;
     };
     let chance = if has_aura(world, caster, DRAGONRAGE) {
-        super::script_effect_value(world, caster, DRAGONRAGE, 1)
+        combat::spell_cast::scripts::script_effect_value(world, caster, DRAGONRAGE, 1)
     } else {
         chance
     };
     if rand::random::<f32>() * 100.0 < chance {
-        crate::spell_cast::cast_triggered(world, caster, ESSENCE_BURST, Some(caster), 1);
+        combat::spell_cast::cast_triggered(world, caster, ESSENCE_BURST, Some(caster), 1);
     }
 }
 
