@@ -6594,6 +6594,7 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+ "server-admin",
  "server-catalog",
  "server-core",
  "server-follower-policy",
@@ -6607,6 +6608,16 @@ dependencies = [
  "wow-chunk",
  "wow-m2",
  "wow-wmo",
+]
+
+[[package]]
+name = "server-admin"
+version = "0.1.0"
+dependencies = [
+ "peercred-ipc",
+ "serde",
+ "shared",
+ "tokio",
 ]
 
 [[package]]

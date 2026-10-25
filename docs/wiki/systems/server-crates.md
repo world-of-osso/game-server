@@ -89,6 +89,10 @@ Completed prerequisites: map rules and follower budget policy. Next: shared cycl
 These are historical module walls, not additive gate savings. Heavy toy/follower/encounter tests execute real spells and auras; traits alone do not make that coverage safe to skip. Shared types must have one lower owner, never a re-export of the whole core.
 
 
+## Admin transport boundary (2026-10-25)
+
+`server-admin` owns the existing admin request/response records, equipment administration records, and concrete peercred socket read/write task. `server` retains dispatch and ECS queries, and re-exports the canonical records for existing consumers. Socket selection, ownership checks, protocol values and the two socket tests are unchanged. This moves the concrete serde/rmp monomorphizations below gameplay instead of leaving a generic socket entry point in the hot crate. The baseline LLVM profile associates 295,433 IR lines with `admin_types`; this is not a measured wall-time saving.
+
 ## Sources
 
 - `crates/server-catalog/{Cargo.toml,src/lib.rs}`, `crates/server-simulation/{Cargo.toml,src/lib.rs}` — package/dependency ownership.

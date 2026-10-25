@@ -1,6 +1,9 @@
 ## 2026-10-25 — Spell data crate foundation
 
 [Server boundaries](systems/server-crates.md#spell-data-foundation-2026-10-25): move canonical spell data, loaders and immutable fixture cache into `server-core`; keep native gameplay integration tests in `server`. Algorithms and numeric data are unchanged. Hot-gameplay ownership and paired edit timings remain separate work.
+## 2026-10-25 — Admin protocol and transport crate
+
+[Server boundaries](systems/server-crates.md#admin-transport-boundary-2026-10-25): `server-admin` compiles the existing concrete IPC codecs and socket task below gameplay. Native dispatch stays in `server`; wire data and socket tests are unchanged.
 
 ## 2026-10-25 — All-DPS parity census
 

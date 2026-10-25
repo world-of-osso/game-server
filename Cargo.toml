@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/server-core", "crates/server-follower-policy", "crates/server-map-rules", "crates/server-pet-battle", "crates/server-spell-tests", "crates/server-combat-tests", "crates/server-simulation", "crates/server-catalog", "crates/server", "crates/client", "crates/integration-tests", "crates/los", "crates/navigation"]
+members = ["crates/server-admin", "crates/server-core", "crates/server-follower-policy", "crates/server-map-rules", "crates/server-pet-battle", "crates/server-spell-tests", "crates/server-combat-tests", "crates/server-simulation", "crates/server-catalog", "crates/server", "crates/client", "crates/integration-tests", "crates/los", "crates/navigation"]
 exclude = ["vendor/bevy_replicon", "vendor/lightyear_replication", "vendor/recastnavigation-sys"]
 
 [workspace.package]
@@ -22,6 +22,10 @@ opt-level = 2
 debug = 1
 
 [profile.test.package.server-core]
+opt-level = 2
+debug = 1
+
+[profile.test.package.server-admin]
 opt-level = 2
 debug = 1
 
