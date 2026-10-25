@@ -29,7 +29,16 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] Treat pool_resource,for_next=1 as control, never an executable spell. If the next source action is ready, continue; otherwise wait only when the requested resource at maximum admits it. Propagate waiting through called lists without leaking lower-priority actions. Preserve native target/condition/other-resource constraints through readonly adapter maximum admission and a local fact view. Qualify only resource= and for_next=1; unsupported controls/options fail explicitly.
 - [x] max_energy=1 reads adapter-owned action-bound maximum_energy and current Energy; it must not use actor energy.max or a hardcoded spell cost. Missing threshold, primary resource or maximum-admission metadata errors explicitly. Source-owned native cost/cap/modifier qualification remains separate.
 
+## Shared profile and action facts
+
+- [x] `hero_tree.<alias>` reads the selected native hero subtree, not allocated inactive nodes. Unknown aliases fail explicitly.
+- [x] `buff.<alias>.max_stack` reads the fresh native modified stack limit before a proc exists. Named and contextual `cost`/`cast_time` read current native power modifiers/display units and cast time, without requiring affordability or including GCD occupancy.
+- [x] Literal `auto_shot` starts learned native75 once; its native repeat owns subsequent shots. Literal player engagement does not inject melee attacks before source execution.
+- [x] Target `health` reads the selected native current pool; `retarget` enumerates actual candidates without a spell definition. Target `debuff.react` uses recipient acquisition deadlines and caster-owned aura filtering. Fixture-only absent pull events report zero remaining time and the source no-next-event sentinel.
+
 ## Equipped use_items
+
+- [x] Evaluate each equipped proxy's condition before selecting its native use. `this_trinket` and `other_trinket` resolve relative to that candidate, preserving source slot order, exclusions and actual cooldown admission.
 
 - [x] Select the first native-ready equipped on-use item in Equipment slot order per source decision, not an immediate batch. Preserve slots= ordering/restriction, check_existing=0|1 and explicit use_item source exclusions; named precombat uses must not suppress later proxies. Preserve native/shared cooldowns and original Action.options; unknown options/metadata fail explicitly rather than silently disabling the action. [Native proof scope](../handoffs/use-items-proof-ledger.md).
 

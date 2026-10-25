@@ -790,6 +790,16 @@ fn build_effect(
     }
 }
 
+/// Fresh native stack limit, including the caster's MaxAuraStacks modifiers.
+pub(crate) fn fresh_max_stacks(world: &World, caster: Entity, spell: &SpellInfo) -> u8 {
+    let maximum = spell
+        .aura_options
+        .as_deref()
+        .map_or(0.0, |options| options.cumulative_aura as f32);
+    spell_mods::modify(world, caster, spell, SpellModOp::MaxAuraStacks, maximum).clamp(0.0, 255.0)
+        as u8
+}
+
 fn build_instance(
     world: &World,
     application: &AuraApplication,
@@ -799,10 +809,7 @@ fn build_instance(
     let caster = application.caster;
     let passive = is_passive(spell);
     let options = spell.aura_options.as_deref();
-    let max_stacks = options.map_or(0.0, |options| options.cumulative_aura as f32);
-    let max_stacks =
-        spell_mods::modify(world, caster, spell, SpellModOp::MaxAuraStacks, max_stacks);
-    let max_stacks = max_stacks.clamp(0.0, 255.0) as u8;
+    let max_stacks = fresh_max_stacks(world, caster, spell);
     let charges = options.map_or(0.0, |options| options.proc_charges.max(0) as f32);
     let charges = crate::spell_cast::scripts::proc_charges(world, caster, spell, charges);
     let charges = spell_mods::modify(world, caster, spell, SpellModOp::ProcCharges, charges);
