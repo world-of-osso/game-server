@@ -18,7 +18,7 @@ struct View {
 #[derive(Resource, Default)]
 struct NextSweep(u64);
 
-pub(crate) struct CraftingOrdersPlugin;
+pub struct CraftingOrdersPlugin;
 impl Plugin for CraftingOrdersPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<super::catalog::OrderCatalog>()

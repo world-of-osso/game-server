@@ -16,6 +16,12 @@ const RIP: u32 = 1079;
 const RAKE: u32 = 155722;
 
 #[derive(Clone, Copy)]
+enum RollingBudget {
+    PerTick,
+    NativeDuration(u32),
+}
+
+#[derive(Clone, Copy)]
 enum DurationCarry {
     Pandemic,
     Extend,
@@ -28,14 +34,18 @@ pub(super) fn prepare_application(
     new: &mut AuraInstance,
     spell: &SpellInfo,
 ) {
-    let rolling = spell
-        .misc
-        .as_ref()
-        .is_some_and(|misc| misc.attributes[10] & ROLLING_PERIODIC != 0);
+    let fresh_duration_ms = new.duration_ms;
+    let sourced_rolling =
+        crate::spell_cast::scripts::rolls_reapplication(world, new.caster, new.spell_id);
+    let rolling = sourced_rolling
+        || spell
+            .misc
+            .as_ref()
+            .is_some_and(|misc| misc.attributes[10] & ROLLING_PERIODIC != 0);
     if rolling {
         settle_previous_ticks(world, target, new);
     }
-    prepare_periodic_phase(world, target, new, spell);
+    prepare_periodic_phase(world, target, new, spell, sourced_rolling);
     if crate::spell_cast::scripts::extends_reapplication(world, new.caster, new.spell_id) {
         carry_duration(world, target, new, DurationCarry::Extend);
     }
@@ -50,7 +60,13 @@ pub(super) fn prepare_application(
     }
     preserve_expiry(world, target, new, spell);
     if rolling {
-        roll_remaining_periodic(world, target, new);
+        let budget = if sourced_rolling {
+            carry_rolling_duration(world, target, new);
+            RollingBudget::NativeDuration(fresh_duration_ms)
+        } else {
+            RollingBudget::PerTick
+        };
+        roll_remaining_periodic(world, target, new, budget);
     }
     super::ret_crusade::preserve_refresh_duration(world, target, new);
 }
@@ -127,6 +143,7 @@ fn prepare_periodic_phase(
     target: Entity,
     new: &mut AuraInstance,
     spell: &SpellInfo,
+    sourced_rolling: bool,
 ) {
     let stacking = spell
         .aura_options
@@ -136,7 +153,9 @@ fn prepare_periodic_phase(
         .misc
         .as_ref()
         .is_some_and(|misc| misc.attributes[13] & PERIODIC_REFRESH_EXTENDS_DURATION != 0);
-    if !spell.cast_dont_reset_periodic_timer && !stacking && !pandemic {
+    let native_preserves_phase = spell.cast_dont_reset_periodic_timer || stacking || pandemic;
+    let preserve_phase = native_preserves_phase || sourced_rolling;
+    if !preserve_phase {
         return;
     }
     let Some(old) = previous(world, target, new) else {
@@ -156,9 +175,37 @@ fn prepare_periodic_phase(
     }
 }
 
-/// TC a352b1fa SpellAuraEffects.cpp832–849: add the same caster/spell/effect's
-/// unpaid amount over the new scheduled ticks; never divide the fresh effect amount.
-fn roll_remaining_periodic(world: &World, target: Entity, new: &mut AuraInstance) {
+/// SimC76f8118 action.cpp4614–4617: a rolling refresh adds the pending
+/// full tick's remaining time to the fresh duration, unless only a partial tick remains.
+fn carry_rolling_duration(world: &World, target: Entity, new: &mut AuraInstance) {
+    let Some(old) = previous(world, target, new) else {
+        return;
+    };
+    let Some(expiry) = old.expires_at else {
+        return;
+    };
+    let Some(periodic) = old
+        .effects
+        .iter()
+        .find(|effect| remaining_ticks(effect.next_tick_at(), expiry, effect.period_ms) > 0)
+    else {
+        return;
+    };
+    let now = aura_now(world);
+    let pending_ms = ((periodic.next_tick_at() - now).max(0.0) * 1000.0).round() as u32;
+    new.duration_ms += pending_ms;
+    new.expires_at = Some(now + f64::from(new.duration_ms) / 1000.0);
+}
+
+/// Native per-tick carry: TC a352b1fa SpellAuraEffects.cpp832–849.
+/// Source-qualified coefficient rolling: SimC76f8118 action.cpp4995–5016
+/// shares old unpaid + fresh native duration budget across the new schedule.
+fn roll_remaining_periodic(
+    world: &World,
+    target: Entity,
+    new: &mut AuraInstance,
+    budget: RollingBudget,
+) {
     let Some(old) = previous(world, target, new) else {
         return;
     };
@@ -176,7 +223,14 @@ fn roll_remaining_periodic(world: &World, target: Entity, new: &mut AuraInstance
         let unpaid = remaining_ticks(prior.next_tick_at(), old_expiry, prior.period_ms);
         let future = remaining_ticks(fresh.next_tick_at(), new_expiry, fresh.period_ms);
         if future > 0 {
-            fresh.amount += prior.amount * old.stack_multiplier() * unpaid as f32 / future as f32;
+            let unpaid_budget = prior.amount * old.stack_multiplier() * unpaid as f32;
+            fresh.amount = match budget {
+                RollingBudget::PerTick => fresh.amount + unpaid_budget / future as f32,
+                RollingBudget::NativeDuration(duration) => {
+                    let fresh_ticks = duration as f32 / fresh.period_ms as f32;
+                    (fresh.amount * fresh_ticks + unpaid_budget) / future as f32
+                }
+            };
         }
     }
 }

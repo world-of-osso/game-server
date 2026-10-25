@@ -209,7 +209,7 @@ pub(crate) fn read_watched_renown(
     })
 }
 
-pub(crate) struct RenownPlugin;
+pub struct RenownPlugin;
 impl Plugin for RenownPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, receive_requests);

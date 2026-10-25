@@ -34,7 +34,7 @@ struct PassengerOrigin {
     display: u32,
 }
 
-pub(crate) struct VehiclePlugin;
+pub struct VehiclePlugin;
 impl Plugin for VehiclePlugin {
     fn build(&self, app: &mut App) {
         // Diagnose missing ground before loading vehicle attachments from the same cache.

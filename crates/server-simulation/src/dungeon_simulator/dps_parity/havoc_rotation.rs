@@ -150,3 +150,42 @@ impl Rotation {
                 "NATIVE_HAVOC_PER_ABILITY_QUALIFICATION_OPEN", "NATIVE_DEMONSURGE_DAMAGE_UNQUALIFIED"]})
     }
 }
+
+pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let mut rotation = Rotation::load(run.app.world_mut(), run.actor, encounter)?;
+    while rotation.precombat_step(run.app.world_mut(), run.actor, &run.targets)? {
+        super::preparation::finish_pending_setup(run)?;
+    }
+    rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
+    run.gaps.retain(|gap| {
+        !gap.starts_with("NATIVE_ASSISTED_COMBAT_70448_VS_SIMC_APL")
+            && !gap.starts_with("NATIVE_FOLLOWER_KIT_VS_SIMC_APL")
+    });
+    Ok(Box::new(rotation))
+}
+
+pub(super) const REPORT_KEY: Option<&str> = Some("havoc_rotation");
+
+impl super::SpecDriver for Rotation {
+    fn label(&self) -> &'static str {
+        "LITERAL_SIMC_HAVOC_76f8118"
+    }
+
+    fn drive(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
+        self.drive(world, actor, targets)
+    }
+
+    fn report(&self) -> serde_json::Value {
+        self.report()
+    }
+}
