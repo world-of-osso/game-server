@@ -278,7 +278,8 @@ fn observe_rwk(primary_critical: bool) {
         "xuen_rwk",
         64,
     ));
-    for attempt in 0..8 {
+    // Keep advancing the same native trajectory; never reroll/reset an outcome.
+    for attempt in 0..32 {
         wait_fof_ready(&mut run);
         earn_rwk(&mut run);
         prime_fof(&mut run);
@@ -473,9 +474,12 @@ fn literal_ww_native_xuen_recovery_does_not_start_cooldown() {
     let mut run = prepare(1, true);
     earn_chi(&mut run, 2.0);
     assert_eq!(remaining(&run), 0.0);
-    let target = run.targets[0];
-    cast(&mut run, SCK, target);
-    finish_sck(&mut run);
+    let (_, unique, damage) = sample_sck(&mut run, false);
+    assert_eq!(unique, 1);
+    assert!(
+        damage > 1,
+        "real repeated SCK impacts without an existing FoF timer"
+    );
     assert_eq!(remaining(&run), 0.0);
 }
 

@@ -16,13 +16,15 @@ Exact excerpts, raw rows, source hashes and absence scope: `game-engine/data/dia
 
 | Boundary | Current proof |
 |---|---|
-| Actual primary normal RSK and inherited RWK critical; exactly one native4000ms reduction | Strict native RED pending |
-| Actual noncrit, secondary-only crit and unselected normal RSK | Native controls pending |
-| Real SCK repeated impacts on1/3/6 distinct actors; native500ms per actor/max2500 | Strict native RED pending |
-| No-target SCK, unselected SCK and absent FoF timer | Native controls pending |
-| Later no-hit parent must not reuse an earlier unique set | Strict native RED/control pending |
+| Actual primary normal RSK and inherited RWK critical; exactly one native4000ms reduction | f8af512e0 genuine2RED: actual0/1ms projected rounding versus4000ms |
+| Actual noncrit, secondary-only crit and unselected normal RSK | Noncrit/unselected PASS; secondary-only joint-outcome sampling still pending |
+| Real SCK repeated impacts on1/3/6 distinct actors; native500ms per actor/max2500 | f8af512e0 genuine3RED: actual0 versus500/1500/2500ms |
+| No-target SCK, unselected SCK and absent FoF timer | f8af512e0 three controls PASS; absent-timer case strengthened to assert repeated real impacts |
+| Later no-hit parent must not reuse an earlier unique set | f8af512e0 genuineRED at first500ms recovery precondition; later no-reuse assertion not reached yet |
 
 The tests earn Chi through actual Tiger Palm, earn RWK through native Combo Breaker/Blackout Kick, cast real FoF to create its timer, and observe native outcomes without changing crit/stats/powers/coefficients. Unselected125017 is removed from the declared profile before native progression. A read-only test-support observer records actual impact-resolution TargetInfo order, including misses; it changes no selection, defense or combat outcome. It is not a gameplay policy implementation. Millisecond cooldown projection permits at most2ms comparison tolerance.
+
+At f8af512e0 the native suite produced six genuine recovery REDs/five controls PASS plus one sampling-premise failure in52.95s; compile615.53s/zero warnings. Source data and actual outcomes are under `native-ww-xuen-red-f8af512e0/`. d9a66e6b8 records each of eight real earned RWK trajectories and their native critical factors: focus chance50.7174%, primary noncrit occurred twice but never with a secondary critical. This is not a gameplay RED. The bound now permits32 continuing native cycles without resetting the clock/RNG/resources or altering any stats, and that control is retested before implementation. Its diagnostic receipt is `native-ww-xuen-secondary-d9a66e6b8/`.
 
 Initial ccb16df6b compiler attempt stopped at a test-only private PowerType import (E0603); no native case executed and this is not RED evidence. After that job exited, origin/master3f897bd38 was merged, including the production cooldown_query reader fix. The test imports shared::components::PowerType; production code must never depend on test-gated native_apl. The lead's full gate now includes plain `cargo check -p server --bins` in addition to test-support evidence.
 
