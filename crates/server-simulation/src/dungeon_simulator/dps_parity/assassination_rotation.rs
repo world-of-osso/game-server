@@ -275,6 +275,41 @@ impl<'a> RogueFacts<'a> {
     }
 }
 impl RogueFacts<'_> {
+    fn base_energy_deficit(&self) -> Result<f64, String> {
+        // SimC76f8118 sc_rogue.cpp9822–9832 subtracts temporary capacity,
+        // not permanent talent capacity. Native max-power auras own the values.
+        let now = crate::spell_cast::now(self.world);
+        let temporary: f64 = self
+            .world
+            .get::<crate::auras::ActiveAuras>(self.actor)
+            .into_iter()
+            .flat_map(|auras| auras.iter())
+            .filter(|aura| !aura.passive && aura.expires_at.is_some_and(|at| at > now))
+            .flat_map(|aura| aura.effects.iter().map(move |effect| (aura, effect)))
+            .filter(|(_, effect)| {
+                matches!(effect.aura_type, 35 | 418)
+                    && effect.misc_values[0] == PowerType::Energy as i32
+            })
+            .map(|(aura, effect)| f64::from(effect.amount) * f64::from(aura.stacks.max(1)))
+            .sum();
+        let multiplier = self
+            .world
+            .get::<crate::auras::AuraStatMods>(self.actor)
+            .map_or(1.0, |mods| {
+                mods.max_power_multiplier(PowerType::Energy as i32)
+            });
+        let display = self
+            .world
+            .resource::<crate::spell_cast::powers::PowerTypeTable>()
+            .get(PowerType::Energy)
+            .ok_or("native Energy metadata absent")?
+            .display_modifier;
+        Ok((self.native.value("energy.max")?
+            - self.native.value("energy")?
+            - temporary * f64::from(multiplier) / f64::from(display))
+        .max(0.0))
+    }
+
     fn weapon_is_dagger(&self, slot: shared::protocol::EquipmentSlot) -> Result<f64, String> {
         let items = self
             .world
@@ -339,6 +374,15 @@ impl RogueFacts<'_> {
 impl Facts for RogueFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
         match name {
+            // sc_rogue.cpp1258–1264/9634–9636: spend limit follows native
+            // base combo-point capacity plus selected Stratagem capacity.
+            "cp_max_spend" => self.native.value("combo_points.max"),
+            "energy.base_deficit" => self.base_energy_deficit(),
+            // sc_rogue.cpp9835–9908: base deficit divided by current regeneration.
+            // Native aura110 includes Adrenaline Rush in the sampled rate.
+            "energy.base_time_to_max" => {
+                Ok(self.base_energy_deficit()? / self.native.value("energy.regen")?)
+            }
             "stealthed.rogue" => Ok(f64::from(u8::from(stealthed(self.world, self.actor)))),
             "spell_targets.fan_of_knives" => Ok(self.targets.len() as f64),
             "main_hand.dagger" => self.weapon_is_dagger(shared::protocol::EquipmentSlot::MainHand),
