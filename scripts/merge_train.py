@@ -425,50 +425,56 @@ def red_twin(entry):
     return entry | {"id": f"{entry['id']}-red", "commit": entry["red"], "land": False}
 
 
+def land(entries, log):
+    """Build exactly these entries on master, push the passing ones, then measure them."""
+    master = push(entries, log) if entries else None
+    if master:
+        for entry in entries:
+            if entry.get("status") != "rejected":
+                entry["status"] = f"landed in {master}"
+        measure_then_write([e for e in entries if e["status"].startswith("landed")], log)
+
+
+def run_probes(probes, gated, log):
+    """Probes and the RED twins of gated landings share one tree that is never pushed.
+    Returns the gated landings whose RED was observed."""
+    twins = {e["id"]: red_twin(e) for e in gated}
+    passed, failed = build_and_test(probes + list(twins.values()), log)
+    for entry in passed:
+        entry["status"] = "probe passed"
+    for entry in failed:
+        entry["status"] = "rejected"
+    real = [e for e in passed + failed if not e["id"].endswith("-red")]
+    write_results([e for e in real if e["status"] != "probe passed"])
+    measure_then_write([e for e in real if e["status"] == "probe passed"], log)
+    outcome = {e["id"]: e for e in passed + failed}
+    proven = []
+    for entry in gated:
+        twin = outcome.get(twins[entry["id"]]["id"])
+        if twin is None:  # deferred with the probe tree; retry the pair next cycle
+            (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
+            continue
+        entry["red_log"] = twin.get("test_log")
+        if twin["status"] == "rejected" and "tests failed" in twin.get("reason", ""):
+            proven.append(entry)
+            continue
+        entry["status"] = "rejected"
+        entry["reason"] = ("RED not observed: tests pass without the fix" if twin["status"] != "rejected"
+                           else f"RED commit does not build: {twin.get('reason', '')[:500]}")
+        write_results([entry])
+    return proven
+
+
 def cycle():
     entries = take_queue()
     log = LOGS / f"cycle-{time.strftime('%Y%m%dT%H%M%S')}.log"
     wait_for_capacity()
-    landing = [e for e in entries if e["land"]]
     probes = [e for e in entries if not e["land"]]
-    # Phase 1: probes and RED twins share one tree; it is never pushed.
-    twins = {e["id"]: red_twin(e) for e in landing if e.get("red")}
-    if probes or twins:
-        passed, failed = build_and_test(probes + list(twins.values()), log)
-        for entry in passed:
-            entry["status"] = "probe passed"
-        for entry in failed:
-            entry["status"] = "rejected"
-        real = [e for e in passed + failed if not e["id"].endswith("-red")]
-        write_results([e for e in real if e["status"] != "probe passed"])
-        measure_then_write([e for e in real if e["status"] == "probe passed"], log)
-        outcome = {e["id"]: e for e in passed + failed}
-        for entry in list(landing):
-            twin = twins.get(entry["id"])
-            if twin is None:
-                continue
-            twin = outcome.get(twin["id"])
-            if twin is None:  # deferred with its probe tree; retry the pair next cycle
-                landing.remove(entry)
-                (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
-                continue
-            entry["red_log"] = twin.get("test_log")
-            if twin["status"] != "rejected" or "tests failed" not in twin.get("reason", ""):
-                entry["status"] = "rejected"
-                entry["reason"] = ("RED not observed: tests pass without the fix" if twin["status"] != "rejected"
-                                   else f"RED commit does not build: {twin.get('reason', '')[:500]}")
-                landing.remove(entry)
-                write_results([entry])
-    # Phase 2: exactly the landing entries on master; this tree is what gets pushed.
-    if not landing:
-        return
-    master = push(landing, log)
-    if master:
-        for entry in landing:
-            if entry.get("status") != "rejected":
-                entry["status"] = f"landed in {master}"
-        landed = [e for e in landing if e["status"].startswith("landed")]
-        measure_then_write(landed, log)
+    gated = [e for e in entries if e["land"] and e.get("red")]
+    # Plain landings go first: a slow probe bisect must not hold them back.
+    land([e for e in entries if e["land"] and not e.get("red")], log)
+    if probes or gated:
+        land(run_probes(probes, gated, log), log)
 
 
 def requeue():
