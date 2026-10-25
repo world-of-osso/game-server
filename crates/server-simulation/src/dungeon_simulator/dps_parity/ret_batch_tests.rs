@@ -36,9 +36,11 @@ fn dps_parity_ret_batch_dawnlight_two_real_spenders_extend() {
         .unwrap()
         .expires_at
         .unwrap();
+    // SimC hpp1492–1496 extends300ms before the spender reapplies Dawnlight.
+    let impact_extension = 0.3;
     assert!(
-        (expiry - old - fresh).abs() < 0.001,
-        "old={old}, fresh={fresh}, actual={expiry}"
+        (expiry - old - fresh - impact_extension).abs() < 0.001,
+        "old={old}, fresh={fresh}, impact={impact_extension}, actual={expiry}"
     );
 }
 

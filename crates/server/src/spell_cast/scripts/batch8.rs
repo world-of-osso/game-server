@@ -23,7 +23,6 @@ pub(super) const PROVOKE_AREA: u32 = 118635;
 const BLACK_OX_STATUE: u32 = 61146;
 const HASTY_PROVOCATION: u32 = 328670;
 const DEMONBOLT_ENERGIZE: u32 = 280127;
-const CRASH_LIGHTNING_BUFF: u32 = 187878;
 const KEG_SMASH: u32 = 121253;
 const BREATH_BURN: u32 = 123725;
 const INCINERATE_ENERGIZE: u32 = 244670;
@@ -120,11 +119,6 @@ pub(super) fn provoke_plan(
 pub(super) fn demonbolt(world: &mut World, caster: Entity, spell: &SpellInfo) {
     spell_cast::cast_triggered(world, caster, DEMONBOLT_ENERGIZE, Some(caster), 1);
     spell_cast::guardian::core::consume_core(world, caster, spell);
-}
-///Current Mainline187874 unconditionally names187878d for its enhancement.
-///The older TDB script's two-target condition is not in this Retail tooltip.
-pub(super) fn crash_lightning(world: &mut World, caster: Entity, _spell: &SpellInfo) {
-    spell_cast::cast_triggered(world, caster, CRASH_LIGHTNING_BUFF, Some(caster), 1);
 }
 ///Only this Monk's Keg Smash enables the named burn/reduced damage child.
 pub(super) fn breath_of_fire(world: &mut World, caster: Entity, target: Entity, depth: u8) {

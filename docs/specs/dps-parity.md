@@ -143,6 +143,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [ ] `SIMC_RET_EMPYREAN_LEGACY_RELATIONSHIP`: actual Avenging Wrath31884/454351 grants native387178 only for validated selected387170. Actual FV/TV consumes it and schedules zero-delay free background53385 at1+native387170 effect1 percent. Preserve native coefficients, area selectors and flight. Only this background may consume opposite-kind Arbiter without consuming Divine Purpose or its proc charge. Suppress metadata-only every-cast grant/any-hit charge consumption only for this policy's driver/buff; other proc dispatch is unchanged. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#empyrean-legacy-relationship-policy).
 
+- Legacy Storm also rolls selected native Divine Purpose after consuming an opposite Arbiter kind and before Second Sunrise. It can grant fresh Purpose without consuming or classifying existing Purpose; echoes and Tempest cannot inherit this producer (`sc_paladin_retribution.cpp576–602`; `sc_paladin.hpp1665–1726`).
+
 ### Proc recipients
 
 - Triggered native casts resolve their explicit unit identity before planning or launch. A queued proc whose enemy has despawned must reject that cast, not recreate combat references or select a substitute. Native300s Enhancement3T add retirement is the regression boundary (TC `Spell.cpp4243–4255`).
@@ -154,6 +156,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Periodic auras and GroundPulses fields with native `SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC` (Attributes5 `0x2000`) apply caster spell haste after the native period spell modifiers, truncating to integer milliseconds. Their unchanged duration admits the resulting extra ticks. Unflagged auras retain their native period. Source: TC a352b1fa `SpellAuraEffects.cpp999–1012`.
 
 ### Measurement
+
+- Earned Deadly Poison coating procs apply their native effect0 DoT to the actual proc recipient. A repeat while that caster's poison is still ticking also deals the sourced instant poison hit. Other casters' poisons do not enable that instant. Native proc admission/chance, damage and durations remain authoritative.
 
 - A successful harmful Player ability carrying the native melee-combat-start flag starts weapon swings at its retained hostile primary. An existing weapon victim and swing timers remain unchanged. Fixture engagement does not inject the missing attack; no ability whitelist or damage multiplier substitutes for the native flag.
 
@@ -179,6 +183,8 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 - [ ] Compare SimC70391 and native70448 effect rows before attributing a coefficient mismatch to a server bug. Rotation/decision edits remain lead-owned.
 - [x] `SIMC_PARITY_ALLOCATIONS` applies to every explicit parity actor, preserving exact selected reference allocations. Pinned SimC76f8118 `player.cpp2696–2860` decodes node selections without parent-edge or currency-gate validation; the test-only native allocation builder skips those two checks. Pinned `player.cpp2775–2779` also exempts allocated HERO-tree nodes from specialization gates, including native98931/entry122279 Mass Eruption on spec1467. Only hero availability/visibility/rank-allowed spec predicates are exempt; granted-rank amounts and all other predicates remain native. Subtract granted ranks from the original exported totals under that same fixture policy, so newly eligible grants cannot duplicate an allocated rank. Node/entry membership, rank, non-hero specialization, level, choice, selected subtree and total currency budget checks remain. Production `build_config` remains strict. Spec251 uses a real player because no native follower profile exists; its former `SIMC_PROFILE_NOT_NATIVE_LEGAL` scoring exclusion is retired. Do not drop selected nodes, invent follower rows or edit official profiles/exports.
 - [ ] Cover every non-initial native70448 player specialization (40 rows with ClassID1–13/OrderIndex<4), not merely the first follower cohort66/73/105/257/262/63/253/1467/269/266/103. Current pinned sources have29 baseMID2 profiles and11 native follower-harness profiles; absent harness profiles do not imply absent server class support. Missing shipped healer references remain explicit HPS/BiS gaps, never synthetic profiles. Report first-three and all-spec summaries to the lead.
+
+Final30s sustained-damage qualification compares cumulative damage to every measured target identity, including retired waves. Engagement samples still inspect only current live opponents; add retirement must not subtract earlier damage and produce a false no-output failure.
 
 ### Per-spell oracle diagnostics
 
@@ -234,7 +240,9 @@ The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native speci
 
 Spec263 parity executes the pinned MID2 Enhancement action rows through the shared literal evaluator, using native action admission, equipment and aura/target facts. A real player uses this driver without loading AssistedCombat diagnostic inputs; no follower profile is fabricated. Windfury/Flametongue setup occurs only in precombat. Thorim's LB/CL choice follows successful foreground LB/CL/Tempest dispatch and Tempest target count. This selects actions; it does not certify the underlying Enhancement proc, counter or damage mechanics.
 
-Enhancement native melee procs generate the real344179 counter and187881 modifier together. Foreground affected spells snapshot their native modifiers at launch and consume up to the live187880 effect1 limit; expiry removes the modifier. Voltaic Blaze grants its native effect1 stack count once per execution. Windfury/Flametongue setup resolves the native weapon-enchant payload for the equipped hand; eligible landed melee runs native proc chance/modifiers and25504/10444 damage, without recursive Windfury procs. Sources: pinned SimC `sc_shaman.cpp2640–2675,3039–3055,10123–10125,10919–11023,11870–11988`.
+Enhancement native melee procs generate the real344179 counter and187881 modifier together. Foreground affected spells snapshot their native modifiers at launch and consume up to the live187880 effect1 limit; expiry removes the modifier. Voltaic Blaze grants its native effect1 stack count once per execution. Windfury/Flametongue setup resolves the native weapon-enchant payload for the equipped hand; eligible landed melee runs native proc chance/modifiers and25504/10444 damage, without recursive Windfury procs. The third attack uses native390288 Unruly Winds, not384355 Elemental Weapons. Sources: pinned SimC `sc_shaman.cpp2640–2675,3039–3055,10123–10125,10919–11023,11870–11988`.
+
+Native Enhancement strike roots dispatch one195592 Crash payload per actual landed root while their Crash buff is active, not one per weapon child. Selected1262713 uses native async1252415 rather than187878; payload stacks multiply its total damage before native-recipient splitting. Thorim invokes the actual last foreground LB/CL choice (initially LB), overridden by an earned Tempest proc, and spends its real MW modifiers on that background cast. Windstrike always invokes; Stormstrike requires Doom Winds; Crash requires Doom Winds or Ascendance. Foreground Tempest requires actual454015 and consumes that proc. Sources: pinned SimC `sc_shaman.cpp4536–4598,5597–5689,6102–6105,10041–10049,12554–12600,12758–12763`.
 
 ### Shared literal snapshot operands
 
