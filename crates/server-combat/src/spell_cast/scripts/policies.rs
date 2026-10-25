@@ -13,515 +13,15 @@ use crate::class_progression::KnownSpells;
 use crate::spell_cast::{CostPool, PlannedEffect, TargetPlan, effects::EffectCtx, targets};
 use crate::spell_info::{CastDamageRole, CastPolicyContext, SpellInfo, SpellStore};
 
-#[derive(Clone, Copy)]
-struct ChannelMomentum {
-    channel: u32,
-    damage: u32,
-    stacks: u32,
-    speed: u32,
-    haste_effect: u8,
-}
-
-#[derive(Clone, Copy)]
-enum Relationship {
-    OwnedPetSpellAfterCast {
-        parent: u32,
-        payload: u32,
-    },
-    TriggerPrimaryAfterCast {
-        parent: u32,
-        payload: u32,
-    },
-    SpenderPeriodicExtension {
-        resource: PowerType,
-        payload: u32,
-        impact_effect: u8,
-        area_parent: u32,
-        area_effect: u8,
-    },
-    PeriodicSplash {
-        parent: u32,
-        payload: u32,
-        magnitude_spell: u32,
-        percent_effect: u8,
-        cap_effect: u8,
-        radius_slot: u8,
-    },
-    ApplySelfAuraAfterCast {
-        parent: u32,
-        payload: u32,
-    },
-    ConsumeSelfAuraAfterCast {
-        parent: u32,
-        payload: u32,
-    },
-    SpendSelfAuraStackAfterCast {
-        parent: u32,
-        payload: u32,
-    },
-    ProcReplacement {
-        spell: u32,
-        aura: u32,
-        triggers: &'static [(u32, u8)],
-        mean_chance: f64,
-    },
-    ChannelMomentum(ChannelMomentum),
-    ReapplicationExtend {
-        payload: u32,
-    },
-    LinkedAura {
-        parent: u32,
-        payload: u32,
-    },
-    CounterEchoAfterCast {
-        parent: u32,
-        counter: u32,
-        payload: u32,
-        effectiveness_effect: u8,
-    },
-    CastEcho {
-        parent: u32,
-        payload: u32,
-        required_auras: &'static [u32],
-        effectiveness_effect: u8,
-    },
-    SecondaryEffect {
-        parent: u32,
-        effect: u8,
-        cap_effect: u8,
-    },
-    HitPayload {
-        parent: u32,
-        payload: u32,
-        self_target: bool,
-        primary_only: bool,
-    },
-    CounterAfterCast {
-        parent: u32,
-        counter: u32,
-        count_effect: u8,
-    },
-    SpenderAuraExtension {
-        resource: PowerType,
-        parents: &'static [u32],
-        payload: u32,
-        seconds_effect: u8,
-    },
-    SpenderHit {
-        resource: PowerType,
-        counter: u32,
-        payload: u32,
-    },
-}
-
-struct Policy {
-    name: &'static str,
-    spec: u32,
-    talent: u32,
-    relationship: Relationship,
-}
-
-// sc_rogue.cpp3787/4386/4439/6891 call the shared8704–8716 extension.
-const CUT_TO_THE_CHASE: Relationship = Relationship::SpenderAuraExtension {
-    resource: PowerType::ComboPoints,
-    parents: &[2098, 32645, 196819, 441776],
-    payload: 315496,
-    seconds_effect: 0,
+use crate::spell_cast::script_registry::{
+    self, ChannelMomentum, Policy, Relationship, SpellScriptRegistry,
 };
 
-// Missing edges are explicit SimC policies, never invented DB2/TDB records.
-const POLICIES: &[Policy] = &[
-    // SimC76f8118 sc_evoker.cpp5592–5599: starting Eternity Surge grants
-    // selected Azure Sweep. Native1265871 supplies its action override and damage mod.
-    Policy {
-        name: "SIMC_DEVASTATION_SURGE_AZURE_SWEEP",
-        spec: 1467,
-        talent: 1265867,
-        relationship: Relationship::ApplySelfAuraAfterCast {
-            parent: 359073,
-            payload: 1265871,
-        },
-    },
-    Policy {
-        name: "SIMC_DEVASTATION_SURGE_VARIANT_AZURE_SWEEP",
-        spec: 1467,
-        talent: 1265867,
-        relationship: Relationship::ApplySelfAuraAfterCast {
-            parent: 382411,
-            payload: 1265871,
-        },
-    },
-    // SimC76f8118 sc_evoker.cpp6584–6595: one successful Disintegrate
-    // spends one earned Mass Disintegrate use, not one per secondary recipient.
-    Policy {
-        name: "SIMC_DEVASTATION_MASS_DISINTEGRATE_CONSUMER",
-        spec: 1467,
-        talent: 436335,
-        relationship: Relationship::SpendSelfAuraStackAfterCast {
-            parent: 356995,
-            payload: 436336,
-        },
-    },
-    // SimC76f8118 sc_evoker.cpp6241–6245: Deep Breath's main impact
-    // executes native353759; DB2 supplies its periodic damage and recipients.
-    Policy {
-        name: "SIMC_DEVASTATION_DEEP_BREATH_PAYLOAD",
-        spec: 1467,
-        talent: 357210,
-        relationship: Relationship::TriggerPrimaryAfterCast {
-            parent: 357210,
-            payload: 353759,
-        },
-    },
-    Policy {
-        name: "SIMC_DEVASTATION_MANEUVERABLE_DEEP_BREATH_PAYLOAD",
-        spec: 1467,
-        talent: 433871,
-        relationship: Relationship::TriggerPrimaryAfterCast {
-            parent: 433874,
-            payload: 353759,
-        },
-    },
-    // SimC76f8118 sc_hunter.cpp6702–6703: selected Nature's Ally spawns
-    // through its native Effect188 record; native1282474 supplies count/lifetime.
-    Policy {
-        name: "SIMC_BM_WRATH_NATURES_ALLY_SUMMON",
-        spec: 253,
-        talent: 1273043,
-        relationship: Relationship::TriggerPrimaryAfterCast {
-            parent: 19574,
-            payload: 1282474,
-        },
-    },
-    // SimC76f8118 sc_hunter.cpp6746–6750: every active stable pet applies
-    // Bloodshed after the summon above. Native321538 owns the periodic payload.
-    Policy {
-        name: "SIMC_BM_WRATH_BLOODSHED",
-        spec: 253,
-        talent: 1272099,
-        relationship: Relationship::OwnedPetSpellAfterCast {
-            parent: 19574,
-            payload: 321538,
-        },
-    },
-    // SimC76f8118 sc_hunter.cpp5089/4972,3843–3846: successful Barbed/Cobra
-    // arms selected Nature's Ally; native1276720 owns its value and lifetime.
-    Policy {
-        name: "SIMC_BM_BARBED_NATURES_ALLY",
-        spec: 253,
-        talent: 1273126,
-        relationship: Relationship::ApplySelfAuraAfterCast {
-            parent: 217200,
-            payload: 1276720,
-        },
-    },
-    Policy {
-        name: "SIMC_BM_COBRA_NATURES_ALLY",
-        spec: 253,
-        talent: 1273126,
-        relationship: Relationship::ApplySelfAuraAfterCast {
-            parent: 193455,
-            payload: 1276720,
-        },
-    },
-    // SimC76f8118 sc_hunter.cpp6633: consume only after Kill Command executes.
-    Policy {
-        name: "SIMC_BM_KILL_COMMAND_NATURES_ALLY",
-        spec: 253,
-        talent: 1273126,
-        relationship: Relationship::ConsumeSelfAuraAfterCast {
-            parent: 34026,
-            payload: 1276720,
-        },
-    },
-    // SimC76f8118 sc_monk.cpp3970–3998: selected Zenith Stomp fires on Zenith.
-    Policy {
-        name: "SIMC_WW_ZENITH_STOMP_CHILD",
-        spec: 269,
-        talent: 1272694,
-        relationship: Relationship::HitPayload {
-            parent: 1249625,
-            payload: 1272696,
-            self_target: false,
-            primary_only: false,
-        },
-    },
-    // SimC76f8118 sc_warrior.cpp3565–3581: Heroic Strike requires and consumes
-    // the actual Master of Warfare proc; its payload and costs stay native.
-    Policy {
-        name: "SIMC_ARMS_MASTER_OF_WARFARE_REPLACEMENT",
-        spec: 71,
-        talent: 1269314,
-        relationship: Relationship::ProcReplacement {
-            spell: 1269383,
-            aura: 1269391,
-            // Parent hits are foreground; Execute's native costed damage child is depth1.
-            triggers: &[(12294, 0), (7384, 0), (1464, 0), (260798, 1)],
-            // sc_warrior.cpp1666: explicitly15%, not the native101 script sentinel.
-            mean_chance: 0.15,
-        },
-    },
-    // SimC76f8118 sc_warrior.cpp3685–3686: Cleave applies the selected Rend
-    // periodic payload on each landed target; native388539 owns all values.
-    Policy {
-        name: "SIMC_ARMS_CLEAVE_REND",
-        spec: 71,
-        talent: 772,
-        relationship: Relationship::HitPayload {
-            parent: 845,
-            payload: 388539,
-            self_target: false,
-            primary_only: false,
-        },
-    },
-    // SimC76f8118 sc_warrior.cpp4452–4456: only Fury Execute main-hand
-    // applies Deep Wounds. Native262115 retains its coefficient and rolling pool.
-    Policy {
-        name: "SIMC_FURY_EXECUTE_DEEP_WOUNDS",
-        spec: 72,
-        talent: 1261060,
-        relationship: Relationship::HitPayload {
-            parent: 280849,
-            payload: 262115,
-            self_target: false,
-            primary_only: false,
-        },
-    },
-    // Momentum Boost tooltip: https://warcraft.wiki.gg/wiki/Momentum_Boost
-    // SimC76f8118 sc_monk.cpp1699–1704/1730–1734/1839–1841: haste damage,
-    // FoF-only stacks, reset and native60%/8s speed on end (also dot.cpp75–81).
-    Policy {
-        name: "SIMC_WW_MOMENTUM_BOOST",
-        spec: 269,
-        talent: 451294,
-        relationship: Relationship::ChannelMomentum(ChannelMomentum {
-            channel: 113656,
-            damage: 117418,
-            stacks: 451297,
-            speed: 451298,
-            haste_effect: 0,
-        }),
-    },
-    // SimC76f8118 sc_paladin.hpp1492–1496/1581–1594: every spender
-    // impact extends owned Dawnlight; primary Storm adds its multi-DoT bonus.
-    Policy {
-        name: "SIMC_RET_ENDLESS_GLEAM",
-        spec: 70,
-        talent: 1263787,
-        relationship: Relationship::SpenderPeriodicExtension {
-            resource: PowerType::HolyPower,
-            payload: 431380,
-            impact_effect: 1,
-            area_parent: 53385,
-            area_effect: 2,
-        },
-    },
-    // SimC76f8118 sc_paladin.cpp2990–2998/3048–3053: resolved tick
-    // times native percent, secondaries only; source also uses effect1 for cap.
-    Policy {
-        name: "SIMC_RET_DAWNLIGHT_PERIODIC_SPLASH",
-        spec: 70,
-        talent: 431377,
-        relationship: Relationship::PeriodicSplash {
-            parent: 431380,
-            payload: 431399,
-            magnitude_spell: 431581,
-            percent_effect: 0,
-            cap_effect: 0,
-            radius_slot: 1,
-        },
-    },
-    // SimC76f8118 sc_paladin.cpp3016–3026: DOT_EXTEND;
-    // source note: "per bolas test Aug 21 2024". Native duration/phase stay owned.
-    Policy {
-        name: "SIMC_RET_DAWNLIGHT_REAPPLICATION_EXTEND",
-        spec: 70,
-        talent: 431377,
-        relationship: Relationship::ReapplicationExtend { payload: 431380 },
-    },
-    // SimC76f8118 sc_paladin.cpp314–315: Hammer mode follows wings.
-    Policy {
-        name: "SIMC_RET_WRATH_HAMMER_MODE",
-        spec: 70,
-        talent: 1241288,
-        relationship: Relationship::LinkedAura {
-            parent: 31884,
-            payload: 1277026,
-        },
-    },
-    Policy {
-        name: "SIMC_RET_BACKGROUND_WRATH_HAMMER_MODE",
-        spec: 70,
-        talent: 1241288,
-        relationship: Relationship::LinkedAura {
-            parent: 454351,
-            payload: 1277026,
-        },
-    },
-    // SimC76f8118 sc_paladin.cpp1571–1575,1633–1642,1738–1743:
-    // only foreground Judgment/HoW spends one native Resonance stack; its
-    // background echo must not classify/consume another stack.
-    Policy {
-        name: "SIMC_RET_RESONANCE_JUDGMENT",
-        spec: 70,
-        talent: 384027,
-        relationship: Relationship::CounterEchoAfterCast {
-            parent: 20271,
-            counter: 1266308,
-            payload: 20271,
-            effectiveness_effect: 1,
-        },
-    },
-    Policy {
-        name: "SIMC_RET_RESONANCE_HAMMER",
-        spec: 70,
-        talent: 384027,
-        relationship: Relationship::CounterEchoAfterCast {
-            parent: 24275,
-            counter: 1266308,
-            payload: 24275,
-            effectiveness_effect: 1,
-        },
-    },
-    // SimC76f8118 sc_paladin.cpp1745–1748; Ret1126–1127:
-    // HoW during wings mirrors BoJ at native talent effectiveness and ICD.
-    Policy {
-        name: "SIMC_RET_WALK_INTO_LIGHT",
-        spec: 70,
-        talent: 1263782,
-        relationship: Relationship::CastEcho {
-            parent: 24275,
-            payload: 184575,
-            required_auras: &[31884, 454351],
-            effectiveness_effect: 2,
-        },
-    },
-    Policy {
-        name: "SIMC_RET_TOLL_WALK_INTO_LIGHT",
-        spec: 70,
-        talent: 1263782,
-        relationship: Relationship::CastEcho {
-            parent: 1279408,
-            payload: 184575,
-            required_auras: &[31884, 454351],
-            effectiveness_effect: 2,
-        },
-    },
-    // SimC76f8118 sc_paladin.cpp1481–1486,1550–1564,1689–1698:
-    // primary uses effect1; Blessed Champion adds only secondary recipients.
-    Policy {
-        name: "SIMC_RET_JUDGMENT_SECONDARIES",
-        spec: 70,
-        talent: 403010,
-        relationship: Relationship::SecondaryEffect {
-            parent: 20271,
-            effect: 2,
-            cap_effect: 0,
-        },
-    },
-    Policy {
-        name: "SIMC_RET_HAMMER_SECONDARIES",
-        spec: 70,
-        talent: 403010,
-        relationship: Relationship::SecondaryEffect {
-            parent: 24275,
-            effect: 2,
-            cap_effect: 3,
-        },
-    },
-    // SimC76f8118 sc_paladin.cpp1502–1521,1580–1590: Toll Judgment earns HP.
-    Policy {
-        name: "SIMC_RET_TOLL_JUDGMENT_HOLY_POWER",
-        spec: 70,
-        talent: 315867,
-        relationship: Relationship::HitPayload {
-            parent: 406957,
-            payload: 220637,
-            self_target: true,
-            primary_only: true,
-        },
-    },
-    // SimC76f8118 sc_paladin.cpp888–916: each successful primary strike
-    // grants the native406834 effect0, independently of the old stack counter.
-    Policy {
-        name: "SIMC_RET_CRUSADING_STRIKE_HOLY_POWER",
-        spec: 70,
-        talent: 404542,
-        relationship: Relationship::HitPayload {
-            parent: 408385,
-            payload: 406834,
-            self_target: true,
-            primary_only: true,
-        },
-    },
-    // SimC76f8118 sc_paladin_retribution.cpp432–436: BoJ impact applies
-    // Expurgation. Native404358 carries the secondary BoJ target damage.
-    Policy {
-        name: "SIMC_RET_BLADE_EXPURGATION",
-        spec: 70,
-        talent: 383344,
-        relationship: Relationship::HitPayload {
-            parent: 184575,
-            payload: 383346,
-            self_target: false,
-            primary_only: false,
-        },
-    },
-    Policy {
-        name: "SIMC_RET_BLADE_SECONDARY_EXPURGATION",
-        spec: 70,
-        talent: 383344,
-        relationship: Relationship::HitPayload {
-            parent: 404358,
-            payload: 383346,
-            self_target: false,
-            primary_only: false,
-        },
-    },
-    // sc_paladin_retribution.cpp846–876; native raw2 + specialization1 wins.
-    Policy {
-        name: "SIMC_RET_DAWNLIGHT_WAKE_PRODUCER",
-        spec: 70,
-        talent: 431377,
-        relationship: Relationship::CounterAfterCast {
-            parent: 255937,
-            counter: 431522,
-            count_effect: 0,
-        },
-    },
-    // sc_paladin.hpp1512–1535: successful foreground first hit, one use.
-    Policy {
-        name: "SIMC_RET_DAWNLIGHT_SPENDER_CONSUMER",
-        spec: 70,
-        talent: 431377,
-        relationship: Relationship::SpenderHit {
-            resource: PowerType::HolyPower,
-            counter: 431522,
-            payload: 431380,
-        },
-    },
-    Policy {
-        name: "SIMC_ROGUE_CUT_TO_THE_CHASE",
-        spec: 259,
-        talent: 51667,
-        relationship: CUT_TO_THE_CHASE,
-    },
-    Policy {
-        name: "SIMC_ROGUE_CUT_TO_THE_CHASE",
-        spec: 260,
-        talent: 51667,
-        relationship: CUT_TO_THE_CHASE,
-    },
-    Policy {
-        name: "SIMC_ROGUE_CUT_TO_THE_CHASE",
-        spec: 261,
-        talent: 51667,
-        relationship: CUT_TO_THE_CHASE,
-    },
-];
-
-fn spender_extensions(spell: &SpellInfo) -> impl Iterator<Item = &'static Policy> + '_ {
-    POLICIES.iter().filter(move |policy| {
+fn spender_extensions<'a>(
+    world: &World,
+    spell: &'a SpellInfo,
+) -> impl Iterator<Item = &'static Policy> + 'a + use<'a> {
+    script_registry::policies(world).filter(move |policy| {
         let Relationship::SpenderPeriodicExtension { resource, .. } = policy.relationship else {
             return false;
         };
@@ -533,12 +33,12 @@ fn spender_extensions(spell: &SpellInfo) -> impl Iterator<Item = &'static Policy
     })
 }
 
-pub(in crate::spell_cast) fn has_impact_policy(spell: &SpellInfo) -> bool {
-    spender_extensions(spell).next().is_some()
+pub(in crate::spell_cast) fn has_impact_policy(world: &World, spell: &SpellInfo) -> bool {
+    spender_extensions(world, spell).next().is_some()
 }
 
 pub(in crate::spell_cast) fn before_impact(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
-    for policy in spender_extensions(ctx.spell) {
+    for policy in spender_extensions(world, ctx.spell) {
         if selected(world, ctx.caster, policy) {
             extend_spender_impact(world, ctx.caster, target, policy);
         }
@@ -571,7 +71,7 @@ pub(in crate::spell_cast) fn after_impacts(
     if ctx.spell.cast_damage_role != CastDamageRole::Primary {
         return;
     }
-    for policy in spender_extensions(ctx.spell) {
+    for policy in spender_extensions(world, ctx.spell) {
         let Relationship::SpenderPeriodicExtension { area_parent, .. } = policy.relationship else {
             continue;
         };
@@ -627,8 +127,8 @@ fn read_extension_ms(world: &World, caster: Entity, policy: &Policy, effect: u8)
     Some(amount.round() as u32)
 }
 
-fn splash_policies(parent: u32) -> impl Iterator<Item = &'static Policy> {
-    POLICIES.iter().filter(move |policy| {
+fn splash_policies(world: &World, parent: u32) -> impl Iterator<Item = &'static Policy> + use<> {
+    script_registry::policies(world).filter(move |policy| {
         matches!(policy.relationship,
         Relationship::PeriodicSplash { parent: id, .. } if id == parent)
     })
@@ -640,7 +140,7 @@ pub(in crate::spell_cast) fn after_periodic_damage(
     target: Entity,
     amount: f32,
 ) {
-    for policy in splash_policies(ctx.spell.id) {
+    for policy in splash_policies(world, ctx.spell.id) {
         if !selected(world, ctx.caster, policy) {
             continue;
         }
@@ -687,15 +187,18 @@ fn cast_periodic_splash(
     )
 }
 
-fn splash_policy(payload: u32) -> Option<&'static Policy> {
-    POLICIES.iter().find(|policy| {
+fn splash_policy(world: &World, payload: u32) -> Option<&'static Policy> {
+    script_registry::policies(world).find(|policy| {
         matches!(policy.relationship,
         Relationship::PeriodicSplash { payload: id, .. } if id == payload)
     })
 }
 
-pub(super) fn target_plan_hook(spell: u32) -> Option<(targets::Relation, super::TargetPlanHook)> {
-    splash_policy(spell).map(|_| {
+pub(super) fn target_plan_hook(
+    world: &World,
+    spell: u32,
+) -> Option<(targets::Relation, super::TargetPlanHook)> {
+    splash_policy(world, spell).map(|_| {
         (
             targets::Relation::Enemy,
             splash_target_plan as super::TargetPlanHook,
@@ -704,7 +207,7 @@ pub(super) fn target_plan_hook(spell: u32) -> Option<(targets::Relation, super::
 }
 
 fn read_splash_geometry(world: &World, caster: Entity, spell: &SpellInfo) -> (f32, f32) {
-    let policy = splash_policy(spell.id).expect("registered periodic splash policy");
+    let policy = splash_policy(world, spell.id).expect("registered periodic splash policy");
     let Relationship::PeriodicSplash {
         magnitude_spell,
         cap_effect,
@@ -760,17 +263,22 @@ fn splash_target_plan(
     }]
 }
 
-fn channel_policies() -> impl Iterator<Item = (&'static Policy, ChannelMomentum)> {
-    POLICIES
-        .iter()
+fn channel_policies(
+    registry: &SpellScriptRegistry,
+) -> impl Iterator<Item = (&'static Policy, ChannelMomentum)> + use<> {
+    registry
+        .policies()
         .filter_map(|policy| match policy.relationship {
             Relationship::ChannelMomentum(channel) => Some((policy, channel)),
             _ => None,
         })
 }
 
-pub(crate) fn register_channel_policies(scripts: &mut crate::auras::scripts::AuraScripts) {
-    for (policy, channel) in channel_policies() {
+pub(crate) fn register_channel_policies(
+    scripts: &mut crate::auras::scripts::AuraScripts,
+    registry: &SpellScriptRegistry,
+) {
+    for (policy, channel) in channel_policies(registry) {
         // The synchronous damage consumer owns this producer, not broad DB2 masks.
         scripts.0.entry(policy.talent).or_default().check_proc = Some(block_metadata_proc);
         scripts.0.entry(channel.channel).or_default().on_remove = Some(end_channel_policy);
@@ -786,8 +294,8 @@ fn block_metadata_proc(
 }
 
 pub(super) fn after_damage(world: &mut World, ctx: &EffectCtx<'_>) {
-    for (policy, channel) in
-        channel_policies().filter(|(_, channel)| channel.damage == ctx.spell.id)
+    for (policy, channel) in channel_policies(world.resource::<SpellScriptRegistry>())
+        .filter(|(_, channel)| channel.damage == ctx.spell.id)
     {
         if selected(world, ctx.caster, policy) {
             crate::spell_cast::cast_triggered(
@@ -801,15 +309,15 @@ pub(super) fn after_damage(world: &mut World, ctx: &EffectCtx<'_>) {
     }
 }
 
-pub(super) fn damage_hook(spell: u32) -> Option<super::DamageAmountHook> {
-    channel_policies()
+pub(super) fn damage_hook(world: &World, spell: u32) -> Option<super::DamageAmountHook> {
+    channel_policies(world.resource::<SpellScriptRegistry>())
         .any(|(_, channel)| channel.damage == spell)
         .then_some(channel_haste_damage)
 }
 
 fn channel_haste_damage(world: &World, caster: Entity, _target: Entity, amount: f32) -> f32 {
-    let Some((policy, channel)) =
-        channel_policies().find(|(policy, _)| selected(world, caster, policy))
+    let Some((policy, channel)) = channel_policies(world.resource::<SpellScriptRegistry>())
+        .find(|(policy, _)| selected(world, caster, policy))
     else {
         return amount;
     };
@@ -828,8 +336,8 @@ fn end_channel_policy(
     aura: &crate::auras::AuraInstance,
     reason: crate::auras::RemoveReason,
 ) {
-    for (policy, channel) in
-        channel_policies().filter(|(_, channel)| channel.channel == aura.spell_id)
+    for (policy, channel) in channel_policies(world.resource::<SpellScriptRegistry>())
+        .filter(|(_, channel)| channel.channel == aura.spell_id)
     {
         if unit != aura.caster || !selected(world, unit, policy) {
             continue;
@@ -848,15 +356,18 @@ fn end_channel_policy(
 }
 
 pub(crate) fn extends_reapplication(world: &World, caster: Entity, payload: u32) -> bool {
-    POLICIES.iter().any(|policy| {
+    script_registry::policies(world).any(|policy| {
         let matches_payload = matches!(policy.relationship,
             Relationship::ReapplicationExtend { payload: id } if id == payload);
         matches_payload && selected(world, caster, policy)
     })
 }
 
-pub(crate) fn register_lifecycle_policies(scripts: &mut crate::auras::scripts::AuraScripts) {
-    for policy in POLICIES {
+pub(crate) fn register_lifecycle_policies(
+    scripts: &mut crate::auras::scripts::AuraScripts,
+    registry: &SpellScriptRegistry,
+) {
+    for policy in registry.policies() {
         if let Relationship::LinkedAura { parent, .. } = policy.relationship {
             scripts.0.insert(
                 parent,
@@ -871,7 +382,7 @@ pub(crate) fn register_lifecycle_policies(scripts: &mut crate::auras::scripts::A
 }
 
 fn apply_linked_aura(world: &mut World, unit: Entity, aura: &crate::auras::AuraInstance) {
-    for policy in POLICIES {
+    for policy in script_registry::policies(world) {
         let Relationship::LinkedAura { parent, payload } = policy.relationship else {
             continue;
         };
@@ -888,7 +399,7 @@ fn remove_linked_aura(
     aura: &crate::auras::AuraInstance,
     reason: crate::auras::RemoveReason,
 ) {
-    for policy in POLICIES {
+    for policy in script_registry::policies(world) {
         let Relationship::LinkedAura { parent, payload } = policy.relationship else {
             continue;
         };
@@ -908,7 +419,7 @@ pub(crate) fn filter_secondary_targets(
     primary: Option<Entity>,
     units: &mut Vec<Entity>,
 ) {
-    for policy in POLICIES {
+    for policy in script_registry::policies(world) {
         let Relationship::SecondaryEffect {
             parent,
             effect: index,
@@ -958,7 +469,7 @@ pub(in crate::spell_cast) fn after_triggered_cast(
     super::resource_values::apply_producers(world, caster, spell);
     // SimC's common HoW execute also mirrors on Toll/Resonance/Sunrise.
     // Counter consumers remain foreground-only, so same-ID echoes cannot recurse.
-    for policy in producers(spell.id) {
+    for policy in producers(world, spell.id) {
         if matches!(policy.relationship, Relationship::CastEcho { .. })
             && selected(world, caster, policy)
         {
@@ -1076,11 +587,11 @@ fn launch_scaled_payload(
 
 // CastEcho owns its source event predicate and the native shared ICD. Raw
 // CAST_SUCCESSFUL hints must not consume that ICD on unrelated/self phases.
-pub(crate) fn owns_policy_proc(spell: u32) -> bool {
+pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
     if super::execution_counters::owns_proc(spell) || super::impact_procs::owns_proc(spell) {
         return true;
     }
-    POLICIES.iter().any(|policy| match policy.relationship {
+    script_registry::policies(world).any(|policy| match policy.relationship {
         Relationship::ProcReplacement { aura, .. } => policy.talent == spell || aura == spell,
         Relationship::CastEcho { .. } => policy.talent == spell,
         Relationship::CounterEchoAfterCast { counter, .. } => counter == spell,
@@ -1088,19 +599,19 @@ pub(crate) fn owns_policy_proc(spell: u32) -> bool {
     })
 }
 
-fn hit_payloads(parent: u32) -> impl Iterator<Item = &'static Policy> {
-    POLICIES.iter().filter(move |policy| {
+fn hit_payloads(world: &World, parent: u32) -> impl Iterator<Item = &'static Policy> + use<> {
+    script_registry::policies(world).filter(move |policy| {
         matches!(policy.relationship,
             Relationship::HitPayload { parent: id, .. } if id == parent)
     })
 }
 
-pub(super) fn hit_hook(parent: u32) -> Option<super::ContextHitHook> {
-    let replacement = POLICIES.iter().any(|policy| {
+pub(super) fn hit_hook(world: &World, parent: u32) -> Option<super::ContextHitHook> {
+    let replacement = script_registry::policies(world).any(|policy| {
         matches!(policy.relationship, Relationship::ProcReplacement { triggers, .. }
             if triggers.iter().any(|(spell, _)| *spell == parent))
     });
-    (replacement || hit_payloads(parent).next().is_some() || pet_sets::has_hit(parent))
+    (replacement || hit_payloads(world, parent).next().is_some() || pet_sets::has_hit(parent))
         .then_some(cast_hit_payload as super::ContextHitHook)
 }
 
@@ -1108,7 +619,7 @@ fn cast_hit_payload(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     // Self auras can resolve before a hostile missile; that local phase's
     // first TargetInfo is not the original action primary.
     let primary = ctx.spell.cast_primary_target;
-    for policy in hit_payloads(ctx.spell.id) {
+    for policy in hit_payloads(world, ctx.spell.id) {
         let Relationship::HitPayload {
             payload,
             self_target,
@@ -1132,7 +643,7 @@ fn cast_hit_payload(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
 struct ReplacementProcAttempts(std::collections::HashMap<&'static str, u32>);
 
 fn produce_replacement_proc(world: &mut World, ctx: &EffectCtx<'_>) {
-    for policy in POLICIES {
+    for policy in script_registry::policies(world) {
         let Relationship::ProcReplacement {
             aura,
             triggers,
@@ -1176,8 +687,11 @@ fn roll_replacement_proc(
     success
 }
 
-fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
-    POLICIES.iter().filter(move |policy| {
+fn producers(world: &World, parent: u32) -> impl Iterator<Item = &'static Policy> + use<> {
+    script_registry::policies(world).filter(move |policy| {
+        if let Relationship::SpenderCooldownRefund { parents, .. } = policy.relationship {
+            return parents.contains(&parent);
+        }
         matches!(policy.relationship,
         Relationship::OwnedPetSpellAfterCast { parent: trigger, .. }
         | Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
@@ -1191,14 +705,18 @@ fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     })
 }
 
-fn consumers(
-    resources: &[(PowerType, f32)],
+fn consumers<'a>(
+    world: &World,
+    resources: &'a [(PowerType, f32)],
     parent: u32,
-) -> impl Iterator<Item = &'static Policy> + '_ {
-    POLICIES.iter().filter(move |policy| {
+) -> impl Iterator<Item = &'static Policy> + 'a + use<'a> {
+    script_registry::policies(world).filter(move |policy| {
         let resource = match policy.relationship {
             Relationship::SpenderHit { resource, .. } => resource,
             Relationship::SpenderAuraExtension {
+                resource, parents, ..
+            }
+            | Relationship::SpenderCooldownRefund {
                 resource, parents, ..
             } if parents.contains(&parent) => resource,
             _ => return false,
@@ -1207,8 +725,8 @@ fn consumers(
     })
 }
 
-pub(super) fn after_cast_hook(parent: u32) -> Option<AfterCastHook> {
-    (producers(parent).next().is_some() || pet_sets::has_cast(parent))
+pub(super) fn after_cast_hook(world: &World, parent: u32) -> Option<AfterCastHook> {
+    (producers(world, parent).next().is_some() || pet_sets::has_cast(parent))
         .then_some(apply_after_cast as AfterCastHook)
 }
 
@@ -1224,7 +742,7 @@ fn selected(world: &World, caster: Entity, policy: &Policy) -> bool {
 }
 
 fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    for policy in producers(spell.id) {
+    for policy in producers(world, spell.id) {
         if !selected(world, caster, policy) {
             continue;
         }
@@ -1260,6 +778,9 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
                     crate::auras::spend_stack(world, caster, instance);
                 }
             }
+            Relationship::SpenderCooldownRefund { .. } => {
+                refund_spender_cooldowns(world, caster, spell, policy)
+            }
             Relationship::CounterAfterCast { .. } => grant_counter(world, caster, policy),
             Relationship::CastEcho { .. } => {
                 let depth = super::super::next_trigger_depth(world);
@@ -1273,6 +794,63 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
         }
     }
     pet_sets::after_cast(world, caster, spell);
+}
+
+fn refund_spender_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo, policy: &Policy) {
+    let Relationship::SpenderCooldownRefund {
+        resource,
+        cooldowns,
+        tenths_effect,
+        bonus_states,
+        bonus_spell,
+        bonus_effect,
+        ..
+    } = policy.relationship
+    else {
+        return;
+    };
+    let Some(context) = &spell.cast_policy_context else {
+        warn!(
+            policy = policy.name,
+            spell = spell.id,
+            "Native spender cooldown refund lacks launch resources"
+        );
+        return;
+    };
+    let Some(&(_, points)) = context
+        .resources
+        .iter()
+        .find(|&&(power, _)| power == resource)
+    else {
+        warn!(
+            policy = policy.name,
+            spell = spell.id,
+            "Native spender refund resource is absent"
+        );
+        return;
+    };
+    if points <= 0.0 {
+        return;
+    }
+    // sc_rogue.cpp8286–8294: native tenths of a second per effective point;
+    // the high roll states amplify it using native Jackpot effect3.
+    let per_point = super::script_effect_value(world, caster, policy.talent, tenths_effect) / 10.0;
+    let mut seconds = f64::from(points * per_point);
+    if bonus_states
+        .iter()
+        .any(|&aura| crate::auras::has_aura(world, caster, aura))
+    {
+        seconds *= 1.0
+            + f64::from(super::script_effect_value(
+                world,
+                caster,
+                bonus_spell,
+                bonus_effect,
+            )) / 100.0;
+    }
+    for &cooldown in cooldowns {
+        super::reduce_cooldown(world, caster, cooldown, seconds);
+    }
 }
 
 fn cast_owned_pet_payload(world: &mut World, caster: Entity, spell: &SpellInfo, payload: u32) {
@@ -1296,7 +874,7 @@ pub(crate) fn check_cast(
     caster: Entity,
     spell: &SpellInfo,
 ) -> Result<(), crate::spell_cast::CastFailure> {
-    for policy in POLICIES {
+    for policy in script_registry::policies(world) {
         let Relationship::ProcReplacement {
             spell: replacement,
             aura,
@@ -1383,11 +961,22 @@ pub(in crate::spell_cast) fn snapshot(
         })
         .collect::<Vec<_>>();
     if spell.cast_parent_owns_modifier_charges
-        || !consumers(&resources, spell.id).any(|policy| selected(world, caster, policy))
+        || !consumers(world, &resources, spell.id).any(|policy| selected(world, caster, policy))
     {
         return None;
     }
-    let targets = capture_primary_targets(caster, spell, plan)?;
+    let needs_hit_targets = consumers(world, &resources, spell.id).any(|policy| {
+        selected(world, caster, policy)
+            && !matches!(
+                policy.relationship,
+                Relationship::SpenderCooldownRefund { .. }
+            )
+    });
+    let targets = if needs_hit_targets {
+        capture_primary_targets(caster, spell, plan)?
+    } else {
+        Vec::new()
+    };
     Some(Box::new(CastPolicyContext { resources, targets }))
 }
 
@@ -1428,7 +1017,7 @@ pub(in crate::spell_cast) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, hit:
     if context.targets.first() != Some(&hit) {
         return;
     }
-    for policy in consumers(&context.resources, ctx.spell.id) {
+    for policy in consumers(world, &context.resources, ctx.spell.id) {
         if !selected(world, ctx.caster, policy) {
             continue;
         }

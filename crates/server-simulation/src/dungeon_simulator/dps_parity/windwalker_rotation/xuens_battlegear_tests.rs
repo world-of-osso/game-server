@@ -29,7 +29,7 @@ fn prepare(count: usize, selected: bool) -> Run {
     let identity = super::super::inputs::read_actor(&profile).unwrap();
     let mut run =
         super::super::prepare_literal_reference(profile, &traits, count, identity).unwrap();
-    super::super::preparation::prepare_windwalker_precombat(&mut run).unwrap();
+    run.spec_driver = Some(super::prepare_driver(&mut run).unwrap());
     run.app.init_resource::<ObservedSelectedTargets>();
     assert_eq!(
         crate::auras::has_aura(run.app.world(), run.actor, TALENT),

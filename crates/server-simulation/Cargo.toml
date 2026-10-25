@@ -7,6 +7,7 @@ rust-version.workspace = true
 # This package has no production code or normal dependency enabling fixture behavior.
 [dev-dependencies]
 server-combat = { path = "../server-combat", features = ["test-support"] }
+server-spell-scripts = { path = "../server-spell-scripts", features = ["test-support"] }
 bevy = { version = "0.19", default-features = false, features = ["bevy_log", "bevy_state"] }
 shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "186134ff880f1a6a7b754e4ce43456d775a44caf" }
 serde = { version = "1", features = ["derive"] }

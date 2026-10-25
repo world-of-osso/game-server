@@ -42,7 +42,9 @@ fn hits(run: &Run, spell: u32) -> usize {
 }
 
 fn rsk_cooldown(run: &mut Run) -> f64 {
-    let rotation = run.windwalker_rotation.take().unwrap();
+    let rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>)
+        .downcast::<Rotation>()
+        .unwrap();
     let action = Action {
         name: "rising_sun_kick".into(),
         source_row: None,
@@ -58,7 +60,7 @@ fn rsk_cooldown(run: &mut Run) -> f64 {
             "cooldown.rising_sun_kick.full_recharge_time",
         )
         .unwrap();
-    run.windwalker_rotation = Some(rotation);
+    run.spec_driver = Some(rotation);
     remaining
 }
 

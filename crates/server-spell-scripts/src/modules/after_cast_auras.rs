@@ -1,16 +1,21 @@
 //! Source-qualified after-cast passives; payloads come from their native aura42.
 //! SimC76f8118 sc_warrior.cpp7229/8427: Shield Wall triggers learned Last Stand.
+use super::combat;
+use combat::spell_cast::script_registry::SpellScriptHook;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::NativeAfterCast(hook)];
+
 use bevy::prelude::*;
 
-use super::AfterCastHook;
-use crate::auras::{ActiveAuras, handlers::PROC_TRIGGER_SPELL};
-use crate::spell_info::SpellInfo;
+use combat::auras::{ActiveAuras, handlers::PROC_TRIGGER_SPELL};
+use combat::spell_cast::scripts::AfterCastHook;
+use combat::spell_info::SpellInfo;
 
 const SHIELD_WALL: u32 = 871;
 const LAST_STAND: u32 = 1243659;
 const CONDITIONAL_AURA_TRIGGERS: &[(u32, u32)] = &[(SHIELD_WALL, LAST_STAND)];
 
-pub(super) fn hook(spell: u32) -> Option<AfterCastHook> {
+fn hook(spell: u32) -> Option<AfterCastHook> {
     CONDITIONAL_AURA_TRIGGERS
         .iter()
         .any(|(cast, _)| *cast == spell)
@@ -42,7 +47,7 @@ fn read_children(world: &World, caster: Entity, spell: u32) -> Vec<(u32, u32)> {
 
 fn apply(world: &mut World, caster: Entity, spell: &SpellInfo) {
     for (learned, child) in read_children(world, caster, spell.id) {
-        if !crate::spell_cast::try_cast_triggered(world, caster, child, Some(caster), 1) {
+        if !combat::spell_cast::try_cast_triggered(world, caster, child, Some(caster), 1) {
             warn!(
                 ?caster,
                 parent = spell.id,
