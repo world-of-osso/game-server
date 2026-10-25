@@ -88,6 +88,7 @@ mod ret_toll_tests;
 mod ret_trigger_resource_tests;
 mod ret_wake_tests;
 mod shadow_rotation;
+mod shadow_slam_tests;
 mod shadow_tests;
 mod shared_fact_extension_tests;
 pub(crate) mod single_spell;
