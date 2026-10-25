@@ -34,6 +34,47 @@ pub(crate) fn rolls_reapplication(world: &World, caster: Entity, payload: u32) -
     })
 }
 
+/// SimC76f8118 sc_warrior.cpp3249–3254/3335–3340: a landed main-hand
+/// Bladestorm tick casts one native off-hand area only for dual-wielding Fury.
+/// Native50622 effect1 selects SRC_CASTER, not a unit, so the per-unit generic
+/// effect64 launch does not dispatch it. This cast hook owns that effect once.
+pub(super) fn cast_bladestorm_offhand(
+    world: &mut World,
+    ctx: &crate::spell_cast::effects::EffectCtx,
+    effect: &crate::spell_info::SpellEffect,
+) {
+    if !is_dual_wielding_fury(world, ctx.caster) {
+        return;
+    }
+    let landed = world
+        .resource::<crate::spell_cast::ResolvingHits>()
+        .0
+        .last()
+        .is_some_and(|frame| !frame.damage.is_empty());
+    if !landed {
+        return;
+    }
+    if !crate::spell_cast::try_cast_triggered(
+        world,
+        ctx.caster,
+        effect.trigger_spell,
+        Some(ctx.caster),
+        ctx.depth + 1,
+    ) {
+        warn!(caster = ?ctx.caster, "Native Bladestorm off-hand area refused");
+    }
+}
+
+fn is_dual_wielding_fury(world: &World, caster: Entity) -> bool {
+    let fury = world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 72);
+    let dual = world
+        .get::<crate::stats::CharacterStats>(caster)
+        .is_some_and(|stats| stats.off_hand.is_some());
+    fury && dual
+}
+
 struct PeriodicAttack {
     parents: &'static [u32],
     effect: u8,

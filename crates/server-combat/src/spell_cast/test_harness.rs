@@ -624,7 +624,7 @@ pub fn harness_with(
 }
 
 /// `harness_with` plus the plugins `add_plugins` adds before the app is finished.
-pub(crate) fn harness_with_plugins(
+pub fn harness_with_plugins(
     extra: Vec<SpellInfo>,
     ids: &[u32],
     class: u8,
