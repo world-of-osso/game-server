@@ -222,6 +222,120 @@ fn arcane_touch_consumed_cumulative_power_survives_blast_projectile() {
 }
 
 #[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_area_barrage_uses_real_charges_for_secondary_targets() {
+    let mut run = prepare_literal(62, 3).unwrap();
+    cast(&mut run, 321507);
+    cast(&mut run, 44425);
+    for target in &run.targets {
+        let hits = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(44425)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .count();
+        assert_eq!(
+            hits, 1,
+            "charged Barrage hits each native selected recipient once"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_area_prismatic_splash_excludes_its_primary() {
+    let mut run = prepare_literal(62, 3).unwrap();
+    grant(&mut run, 1295942, 1);
+    cast(&mut run, 1295924);
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    for (index, target) in run.targets.iter().enumerate() {
+        let splash_hits = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(1295939)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .count();
+        assert_eq!(
+            splash_hits,
+            usize::from(index != 0),
+            "only secondary enemies take Prismatic splash"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_area_orb_parent_delivers_one_bolt_to_each_native_enemy() {
+    let mut run = prepare_literal(62, 3).unwrap();
+    cast(&mut run, 153626);
+    for target in &run.targets {
+        let hits = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(153640)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .count();
+        assert_eq!(
+            hits, 1,
+            "each ordinary Orb impacts every selected native enemy once"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_area_overpowered_missiles_never_double_hits_primary_per_tick() {
+    let mut run = prepare_literal(62, 3).unwrap();
+    grant(&mut run, 263725, 1);
+    grant(&mut run, 1277009, 1);
+    cast(&mut run, 5143);
+    let hits: Vec<_> = run
+        .targets
+        .iter()
+        .map(|target| {
+            run.app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.source == Some(run.actor.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(7268)
+                        && event.kind == CombatLogKind::Damage
+                })
+                .count()
+        })
+        .collect();
+    assert!(hits[0] >= 4, "actual full channel must deliver its ticks");
+    assert_eq!(
+        hits[0], hits[1],
+        "primary has exactly one full hit, not full plus cleave"
+    );
+    assert_eq!(
+        hits[1], hits[2],
+        "both nearby secondary recipients receive each cleave"
+    );
+}
+
+#[test]
 #[ignore = "merge-train shared PRD regression"]
 fn arcane_batch_clearcasting_prd_uses_the_pinned_coefficient_cap() {
     let constant = crate::random::accumulated_proc_constant(0.12, 13);
