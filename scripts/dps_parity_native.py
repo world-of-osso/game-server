@@ -35,13 +35,14 @@ def main(arguments: Sequence[str]) -> None:
         raise ValueError("provide a compiled native parity test executable")
     root = Path(__file__).resolve().parents[1]
     executable = Path(arguments[0]).resolve(strict=True)
+    target = Path(os.environ.get("CARGO_TARGET_DIR", root / "target")).resolve(strict=True)
     if (
         not executable.name.startswith("server_simulation-")
-        or not executable.is_relative_to(root / "target")
+        or not executable.is_relative_to(target)
         or not os.access(executable, os.X_OK)
     ):
         raise ValueError(
-            "only this checkout's executable server_simulation-* test binaries are allowed"
+            "only executable server_simulation-* test binaries in the selected Cargo target are allowed"
         )
     prepared_value = os.environ.get("DPS_PARITY_WORLD_DB")
     if prepared_value is None:
