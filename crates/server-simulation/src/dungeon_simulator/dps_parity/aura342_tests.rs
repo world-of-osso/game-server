@@ -1,4 +1,4 @@
-//! Actual native342 cast and ordinary white clocks; producer policy is separate.
+//! Native haste composition and independent342 cast/white clocks.
 use super::*;
 use crate::auras::ActiveAuras;
 use crate::spell_cast::powers::PowerPools;
@@ -6,6 +6,52 @@ use crate::spell_cast::test_harness::ObservedCombatEvents;
 use crate::stats::CharacterStats;
 use shared::components::PowerType;
 use shared::protocol::CombatLogKind;
+
+#[test]
+#[ignore = "native WW1205 haste rating and ordinary5% aura multiply before attack/cast clocks"]
+fn literal_native_haste_ww_rating_multiplies_ordinary_aura() {
+    let mut run = prepare_measurement(269, 1).unwrap();
+    let world = run.app.world();
+    let stats = world.get::<CharacterStats>(run.actor).unwrap();
+    let modifiers = world.get::<crate::stats::StatModifiers>(run.actor).unwrap();
+    assert_eq!(stats.ratings.haste, 1205.0, "actual native profile rating");
+    assert_eq!(modifiers.haste_pct, 5.0, "actual ordinary native aura");
+    // SimC76f8118 player.cpp4982–4995 multiplies rating and aura haste.
+    let expected = 33.755_68;
+    eprintln!(
+        "NATIVE_HASTE rating={} aura={} derived={} expected={expected}",
+        stats.ratings.haste, modifiers.haste_pct, stats.haste_pct
+    );
+    assert!(
+        (stats.haste_pct - expected).abs() < 0.0001,
+        "native1205 rating +5% aura must produce33.7557%, not additive32.3864%"
+    );
+    let actor = run.actor;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 26297, Some(actor), false)
+        .expect("ordinary native Troll Berserking cast");
+    for _ in 0..3 {
+        run.app.update();
+    }
+    let world = run.app.world();
+    let racial = world
+        .get::<ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 26297)
+        .unwrap();
+    let racial_haste = racial
+        .effects
+        .iter()
+        .find(|effect| effect.aura_type == 193)
+        .expect("native Berserking ordinary haste effect")
+        .amount;
+    let expected_stacked = (1.0 + expected / 100.0) * (1.0 + racial_haste / 100.0) * 100.0 - 100.0;
+    let boosted = world.get::<CharacterStats>(actor).unwrap().haste_pct;
+    assert!(
+        (boosted - expected_stacked).abs() < 0.0001,
+        "native racial haste must multiply the existing rating/aura factors: {boosted} vs {expected_stacked}"
+    );
+}
 
 const SPEED: u32 = 451298;
 const CAST_PROBE: u32 = 116;
