@@ -425,6 +425,20 @@ fn arcane_splinter_infused_hits_generate_native_salvo_without_missiles() {
 }
 
 #[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_splinter_missiles_spends_one_clearcasting_stack_not_the_whole_bank() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(62, 1).unwrap();
+    grant(&mut run, 263725, 3);
+    assert_eq!(stacks(&run, 263725), 3, "native Improved Clearcasting cap");
+    cast(&mut run, 5143);
+    assert!(
+        stacks(&run, 263725) >= 2,
+        "one Missiles spends one use; its independent proc may refill at most one"
+    );
+}
+
+#[test]
 #[ignore = "merge-train shared PRD regression"]
 fn arcane_batch_clearcasting_prd_uses_the_pinned_coefficient_cap() {
     let constant = crate::random::accumulated_proc_constant(0.12, 13);
