@@ -31,6 +31,7 @@ mod feral_native_tests;
 mod feral_tests;
 mod fire_gap_tests;
 mod fire_literal_tests;
+mod fire_nova_native_tests;
 mod firestarter_tests;
 mod frost_mage_tests;
 mod gear_profile_tests;
