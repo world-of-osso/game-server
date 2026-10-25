@@ -1,10 +1,11 @@
 //! Literal pinned MM source; decisions use the shared evaluator and native execution.
 mod bindings;
 use super::literal_rotation::{self, Driver, equipment::Equipment, execution::Prepared};
-use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
+use crate::simc_apl_native::{Bindings, Encounter, NativeFacts, reaction};
 use bevy::prelude::*;
 use serde_json::{Value, json};
 use server::simc_apl::{Action, ActionFacts, Facts, Program};
+use std::collections::BTreeSet;
 
 pub(super) struct Rotation {
     driver: Driver,
@@ -12,6 +13,7 @@ pub(super) struct Rotation {
     equipment: Equipment,
     encounter: Encounter,
     potion: String,
+    tracked_targets: BTreeSet<Entity>,
 }
 
 fn program() -> Result<Program, String> {
@@ -49,12 +51,31 @@ impl Rotation {
             bindings,
             equipment,
             encounter,
+            tracked_targets: BTreeSet::new(),
             potion: profile
                 .consumables
                 .get("potion")
                 .ok_or("MM profile potion option missing")?
                 .clone(),
         })
+    }
+
+    fn configure_targets(&mut self, world: &mut World, targets: &[Entity]) -> Result<(), String> {
+        for &target in targets {
+            if self.tracked_targets.insert(target) {
+                // SimC76f8118 buff.cpp481–500: .react tracks the actual debuff
+                // owner before acquisition, including replacement-wave entities.
+                // Exact254.reference.single.json player fields; player.cpp1017–1020.
+                reaction::configure(world, target, reaction::ReactionSettings {
+                    mean: 0.25,
+                    stddev: 0.05,
+                    offset: 0.1,
+                    nu: 0.15,
+                    maximum: 1.4,
+                }, &[1253601])?;
+            }
+        }
+        Ok(())
     }
 
     pub fn start_combat_at(&mut self, started_at: f64) {
@@ -97,6 +118,7 @@ impl Rotation {
         targets: &[Entity],
         list: &str,
     ) -> Result<bool, String> {
+        self.configure_targets(world, targets)?;
         let prepared = Prepared::read(
             world,
             actor,
