@@ -362,7 +362,24 @@ def take_queue():
         target = RUNNING / path.name
         path.rename(target)
         entries.append(json.loads(target.read_text()))
-    return sorted(entries, key=lambda e: e["submitted"])
+    return drop_superseded(sorted(entries, key=lambda e: e["submitted"]))
+
+
+def drop_superseded(entries):
+    """A landing entry whose commit is an ancestor of a later landing entry from the same
+    owner is a stale version of it (owners resubmit after fixing compile errors)."""
+    landing = [e for e in entries if e["land"]]
+    stale = []
+    for old in landing:
+        for new in landing:
+            if new["submitted"] > old["submitted"] and new["owner"] == old["owner"] \
+                    and new["commit"] != old["commit"] \
+                    and git("merge-base", "--is-ancestor", old["commit"], new["commit"], check=False).returncode == 0:
+                old["status"], old["reason"] = "rejected", f"superseded by {new['id']}"
+                stale.append(old)
+                break
+    write_results(stale)
+    return [e for e in entries if e not in stale]
 
 
 def build_and_test(entries, log):
@@ -371,6 +388,10 @@ def build_and_test(entries, log):
     tree, rejected = build_checked(entries, log)
     deferred = [e for e in rejected if e.pop("defer", False)]
     rejected = [e for e in rejected if e not in deferred]
+    # Owners get conflicts and check failures now, not when the whole cycle ends.
+    for entry in rejected:
+        entry["status"] = "rejected"
+    write_results([e for e in rejected if not e["id"].endswith("-red")])
     for entry in deferred:
         del entry["reason"]
         queued = RUNNING / f"{entry['id']}.json"
