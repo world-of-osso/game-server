@@ -2,7 +2,7 @@
 
 ## Natural-completion hook — 2026-10-24
 
-`AuraScript.on_natural_end` runs after final due ticks on explicit full-duration timed-channel completion, or after on_remove for ordinary duration expiry. `ChannelEnded` alone is not a completion predicate: interruption uses it too. Existing removal reasons and independent on_remove consumers stay unchanged. Registrations extend the existing parent entry without replacing other lifecycle consumers. Xuen's class script uses this for its actual SCK aura instance/unique impacted Entity set, clears that set and reduces only existing FoF recovery using native budgets; independent Unbroken Rhythm on_remove cleanup remains separate. [Exact named policy, native channel-end cause and pending GREEN](../../handoffs/ww-xuens-recovery-proof-ledger.md).
+`AuraScript.on_natural_end` runs after final due ticks on explicit full-duration timed-channel completion, or after on_remove for ordinary duration expiry. `ChannelEnded` alone is not a completion predicate: interruption uses it too. Existing removal reasons and independent on_remove consumers stay unchanged. Registrations extend the existing parent entry without replacing other lifecycle consumers. Xuen's class script uses this for its actual SCK aura instance/unique impacted Entity set, clears that set and reduces only existing FoF recovery using native budgets; independent Unbroken Rhythm on_remove cleanup remains separate. Native f188c66c1 thirteen cases plus six retained Flurry controls and plain production --bins pass. [Exact named policy, native channel-end cause and proof](../../handoffs/ww-xuens-recovery-proof-ledger.md).
 
 ## Ret Sentence and Toll relationships — 2026-10-24
 

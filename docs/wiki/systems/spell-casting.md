@@ -2,7 +2,7 @@
 
 ## Xuen's Battlegear impact context — 2026-10-24
 
-`HitFrame.selected` stores actual resolving TargetInfo Entity IDs, including misses, in native order. Its matching-frame slice is distinct from original-request `cast_primary_target`; neither is mutable CombatTarget. Class scripts use the first native TargetInfo for the approved RSK/RWK critical-recovery policy and the full list for unique SCK impact membership. The generic direct-damage callback carries actual target/crit without core spell IDs; after master7b integration its single wrapper forwards Flurry once before Xuen's class consumer. Strict native6RED/6controlsPASS precedes implementation; GREEN/full gate remain pending. [Policy, TC/DB2 absence and proof](../../handoffs/ww-xuens-recovery-proof-ledger.md).
+`HitFrame.selected` stores actual resolving TargetInfo Entity IDs, including misses, in native order. Its matching-frame slice is distinct from original-request `cast_primary_target`; neither is mutable CombatTarget. Class scripts use the first native TargetInfo for the approved RSK/RWK critical-recovery policy and the full list for unique SCK impact membership. The generic direct-damage callback carries actual target/crit without core spell IDs; after master7b integration its single wrapper forwards Flurry once before Xuen's class consumer. Strict native6RED/6controlsPASS→f188c66c1 native13GREEN41.09s, retainedFlurry6GREEN23.72s and plain production --binsPASS87.49s/0warnings. Full lead gate remains separate. [Policy, TC/DB2 absence and proof](../../handoffs/ww-xuens-recovery-proof-ledger.md).
 
 ## Rake actual-stealth eligibility — 2026-10-24
 

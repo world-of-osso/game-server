@@ -1,8 +1,8 @@
 # Windwalker source census (in progress)
 
-## Xuen FoF recovery named policy — f0ab339b6 strict RED
+## Xuen FoF recovery named policy — f188c66c1 native GREEN
 
-`SIMC_WW_XUENS_BATTLEGEAR_FOF_RECOVERY`: approved conditional primary RSK/RWK critical and unique SCK-expiry consumers, native392993 effect1/3/4 budgets4000/500/2500ms. TC/DB2 conditional relationship is absent, not inferred from generic proc flags. Actual native6RED/6controlsPASS36.52s precedes class implementation; native TargetInfo context and expiry-only seam preserve other consumers. GREEN and lead full gate pending; no broad numerical claim. [Exact source/coverage ledger](ww-xuens-recovery-proof-ledger.md).
+`SIMC_WW_XUENS_BATTLEGEAR_FOF_RECOVERY`: approved conditional primary RSK/RWK critical and unique SCK-expiry consumers, native392993 effect1/3/4 budgets4000/500/2500ms. TC/DB2 conditional relationship is absent, not inferred from generic proc flags. Actual native6RED/6controlsPASS36.52s→integrated f188c66c1 native13GREEN41.09s plus retainedFlurry6GREEN23.72s. Native TargetInfo context and explicit natural channel completion preserve other consumers; actual interruption gives0. Plain production --bins passes87.49s/0warnings, fmt passes. Lead full gate remains separate; no broad numerical claim. [Exact source/coverage ledger](ww-xuens-recovery-proof-ledger.md).
 
 Verified2026-10-24 (current WDP receipts; older sections retain their named revisions). Native DB2/TC precede SimC76f8118; no parity claim. Shared native-book helper belongs to14752. `follower_spec_kit` membership below is **not** proof of native KnownSpells membership; selected reference traits are installed separately by `dps_parity::inputs::install_traits`.
 
