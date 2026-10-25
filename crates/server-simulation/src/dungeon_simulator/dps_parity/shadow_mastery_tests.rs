@@ -19,7 +19,7 @@ fn mastery_amount(run: &Run) -> f64 {
 }
 
 fn apply_three_owned_dots(run: &mut Run) {
-    for (spell_id, effect_mask) in [(589, 1), (34914, 1), (335467, 1 << 2)] {
+    for (spell_id, effect_mask) in [(589, 1 << 1), (34914, 1 << 1), (335467, 1 << 2)] {
         crate::auras::apply_aura(
             run.app.world_mut(),
             &AuraApplication {
@@ -30,11 +30,10 @@ fn apply_three_owned_dots(run: &mut Run) {
                 source: AuraSource::Cast,
             },
         );
-        assert!(crate::auras::has_aura(
-            run.app.world(),
-            run.targets[0],
-            spell_id
-        ));
+        assert!(
+            crate::auras::has_aura(run.app.world(), run.targets[0], spell_id),
+            "native owned DoT{spell_id} must be applied before the cast"
+        );
     }
 }
 

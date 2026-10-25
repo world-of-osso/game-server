@@ -82,7 +82,7 @@ fn shadow_slam_delays_native_damage_and_vt_then_hits_each_nearby_enemy_once() {
     );
     for &target in &run.targets[..3] {
         assert_eq!(hits.iter().filter(|&&hit| hit == target).count(), 1);
-        assert!(owned_amount(&run, target, VT, 0) > 0.0);
+        assert!(owned_amount(&run, target, VT, 1) > 0.0);
     }
     assert!(!crate::auras::has_aura(run.app.world(), far, VT));
     assert!(!hits.contains(&far));
@@ -169,7 +169,7 @@ fn shadow_slam_prioritizes_missing_vt_with_native_cap_without_capping_damage() {
                 caster: actor,
                 target,
                 spell_id: VT,
-                effect_mask: 1,
+                effect_mask: 1 << 1,
                 source: AuraSource::Cast,
             },
         );
