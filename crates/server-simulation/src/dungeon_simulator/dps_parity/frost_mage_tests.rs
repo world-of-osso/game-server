@@ -143,6 +143,50 @@ fn spellslinger_native_arcane_and_frost_casts_conjure_their_own_splinters() {
     }
 }
 
+#[test]
+#[ignore = "requires private native70448 DB and exact Frost64 inputs"]
+fn spellslinger_native_ray_ticks_conjure_splinters_and_open_splinterstorm() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(64, 1).unwrap();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        205021,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let hits = |spell| {
+        events
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(spell)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .count()
+    };
+    let ticks = hits(205021);
+    assert!(
+        ticks > 0,
+        "native Ray must really tick before testing its producer"
+    );
+    assert!(
+        hits(443722) >= ticks,
+        "each selected Ray tick must conjure its native Splinter"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1247908),
+        "native Ray must leave its earned Splinterstorm window"
+    );
+}
+
 use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
