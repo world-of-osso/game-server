@@ -45,6 +45,10 @@ mod havoc_rotation;
 mod havoc_tests;
 mod health_aura_state_tests;
 mod howl_tests;
+#[cfg(test)]
+mod hunter_bloodshed_tests;
+#[cfg(test)]
+mod hunter_focus_tests;
 mod inputs;
 mod literal_ranged_attack_tests;
 pub(crate) mod literal_rotation;
