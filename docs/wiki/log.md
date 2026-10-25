@@ -4510,3 +4510,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0â
 - 2026-10-25: Ranked server extraction candidates at53d0e1ce1 using file-module ownership and crate/server import edges; independent pet_battle235, simc_apl49, item_instance20, race_class11, level_scaling10. Added graph evidence; historical timings remain non-causal observations.
 
 - 2026-10-25: Analyzed five heavy modules by historical wall, real native fixture dependencies and minimum production cycle cuts. Full native domains cannot safely skip generic spell/combat edits; map/lock, follower scalar policy and Toy Box data cuts need subset-time qualification. Added exact conservative transitive paths and separated earlier/fixed timing receipts.
+
+- 2026-10-25: User set structural independence as extraction priority: finish pet pilot, then map identity/rules/locks/admission, follower budget policy, shared cycle-breaking types and larger domains. Recorded ordering without changing the historical timing limits or native-coverage requirements.
