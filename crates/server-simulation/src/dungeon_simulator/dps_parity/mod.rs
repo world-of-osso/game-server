@@ -64,6 +64,7 @@ mod ret_dawnlight_remainder_tests;
 mod ret_dawnlight_target_tests;
 mod ret_dawnlight_tests;
 mod ret_empyrean_tests;
+mod ret_proc_rate_tests;
 mod ret_purpose_tests;
 mod ret_resonance_phase_tests;
 mod ret_resource_tests;
