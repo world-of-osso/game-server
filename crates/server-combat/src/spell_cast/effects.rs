@@ -2006,6 +2006,7 @@ fn deal_source_damage_and_report(
         crate::auras::rogue::after_bleed_tick(world, ctx, target);
     }
     if periodic && !resolved_source {
+        super::scripts::apply_mm_explosive_tick(world, ctx, target, amount);
         super::scripts::apply_periodic_damage_policies(world, ctx, target, amount);
         super::scripts::after_ret_periodic_damage(world, ctx, target, crit);
     }

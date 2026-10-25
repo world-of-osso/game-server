@@ -87,7 +87,8 @@ fn select_trick_targets(
 
 /// sc_hunter.cpp5833–5836/3632–3637: consume after the last Rapid tick,
 /// never at channel launch, and never while the actual Volley is active.
-pub(crate) fn finish_rapid(world: &mut World, caster: Entity, _aura: &AuraInstance) {
+pub(crate) fn finish_rapid(world: &mut World, _target: Entity, aura: &AuraInstance) {
+    let caster = aura.caster;
     if selected(world, caster, TRICK_SHOTS) && !auras::has_aura(world, caster, VOLLEY) {
         decrement(world, caster, TRICK_BUFF);
     }

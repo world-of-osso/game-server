@@ -8,6 +8,8 @@ mod aura_rolls;
 mod bouncing_projectiles;
 mod cast_relationships;
 mod marksmanship;
+mod marksmanship_explosive;
+pub(super) use marksmanship_explosive::after_tick as apply_mm_explosive_tick;
 mod marksmanship_sentinel;
 pub(crate) use cast_relationships::register as register_cast_relationships;
 pub(super) use cast_relationships::{
@@ -951,6 +953,9 @@ pub(super) type TargetPlanHook =
 
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
+    if let Some(hook) = marksmanship_explosive::target_plan(spell_id) {
+        return Some(hook);
+    }
     if let Some(hook) = marksmanship::target_plan(spell_id) {
         return Some(hook);
     }

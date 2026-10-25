@@ -358,6 +358,8 @@ Equipped native MID2 Enhancement two-piece1296627 makes real Voltaic Blaze apply
 - Selected Feathered Frenzy Trueshot force-produces an owned Sentinel's Mark at the selected hostile primary. Actual Precise spenders roll the native mark chance; Aimed impact consumes a mark into Lunar Storm's native count and payload at the pinned150ms spacing. A mark grants Moon's Blessing's native Aimed recharge reduction.
 - Actual Rapid Fire damage banks Sanctified Armaments with native residual values and carry. An Aimed critical impact applies Blood Fletching's native mark after1ms; later direct/periodic damage triggers its native bleed payload without recursive self-triggers or armor mitigation.
 - `hunter_followup_tests` covers real recharge, repeating Auto Shots, forced mark consumption and both native damage producers.
+- Each actual Explosive Shot primary tick feeds native212680 secondary-only cleave at the root's native excluded-share percentage and reduced-AoE cap. The equipped MID2 four-piece reduces running Aimed and Rapid recovery by its native effect2 milliseconds once per primary tick, never per cleave recipient.
+- A target-carried Rapid Fire channel consumes its caster's earned Trick Shots on natural completion outside actual Volley; the channel's recipient is not its owner. `hunter_explosive_tests` covers actual cleave recipients, both real recharge clocks and this ownership boundary.
 
 ## Tests asserting this spec
 
