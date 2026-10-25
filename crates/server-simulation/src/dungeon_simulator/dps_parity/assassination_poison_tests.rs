@@ -40,20 +40,24 @@ fn rogue_kingsbane_earned_poison_hits_stack_native_ramp_until_dot_ends() {
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
-    let ticks: Vec<_> = events
+    let all_ticks: Vec<_> = events
         .iter()
         .filter(|event| {
             event.source == Some(run.actor.to_bits())
                 && event.spell_id == Some(385627)
                 && event.kind == CombatLogKind::Damage
                 && event.periodic
-                && !event.crit
         })
         .collect();
+    let ticks: Vec<_> = all_ticks.iter().filter(|event| !event.crit).collect();
     assert!(ticks.len() > 3, "actual Kingsbane ticks required");
     assert!(
         ticks.iter().map(|tick| tick.amount).max().unwrap() > ticks[0].amount * 2,
-        "the actual periodic damage must use the earned ramp, not only display stacks"
+        "the actual periodic damage must use the earned ramp, not only display stacks: ticks(amount,crit)={:?}, peak_stacks={peak_stacks}",
+        all_ticks
+            .iter()
+            .map(|tick| (tick.amount, tick.crit))
+            .collect::<Vec<_>>()
     );
 }
 use super::*;
