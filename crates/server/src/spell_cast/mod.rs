@@ -2686,6 +2686,7 @@ fn execute_cast_with_primary(
     }
     if !spell.cast_parent_owns_modifier_charges {
         spell_mods::consume_charges(world, caster, spell);
+        scripts::apply_echo_policies(world, caster, spell);
         scripts::after_foreground_spender(world, caster, spell, spell.cast_primary_target);
         scripts::roll_selected_ret_divine_purpose(world, caster, spell);
         scripts::schedule_empyrean_legacy(world, caster, spell, spell.cast_primary_target);

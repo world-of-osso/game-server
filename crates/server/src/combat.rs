@@ -40,6 +40,8 @@ pub const AUTO_ATTACK_INTERVAL: f32 = 2.0;
 const UNIT_MISS_CHANCE_PCT: f32 = 5.0;
 /// Signed attacker dodge modifier (`Unit::GetUnitDodgeChance`, Unit.cpp2775).
 const MOD_ENEMY_DODGE: u32 = 251;
+/// TC Unit::AttackerStateUpdate reads native per-hand replacement spells.
+const OVERRIDE_AUTOATTACK_WITH_MELEE_SPELL: u32 = 361;
 /// Non-player expertise (`Unit::GetUnitDodgeChance`/`GetUnitParryChance`).
 /// A swing of one hand pushes the other hand's timer to at least this
 /// (`ATTACK_DISPLAY_DELAY`, Unit.h:643; Unit::AttackerStateUpdate, Unit.cpp:2203-2230).
@@ -731,6 +733,10 @@ fn auto_attack_unit(
                 sight: &params.sight,
                 armor_constants: params.armor_constants.as_deref(),
                 spells: params.spells.as_deref(),
+                melee_override: match hand {
+                    Hand::Main => snapshot.attack_spells[0],
+                    Hand::Off => snapshot.attack_spells[1],
+                },
                 creature_types: crate::unit_creature_type::CreatureTypes {
                     races: params.race_types.as_deref(),
                     forms: params.forms.as_deref(),
@@ -760,6 +766,7 @@ struct SwingSnapshot {
     auto_attack: AutoAttack,
     position: Position,
     mods: Option<AuraStatMods>,
+    attack_spells: [Option<u32>; 2],
     stats: Option<CharacterStats>,
     haste_pct: f32,
     enemy_dodge_pct: f32,
@@ -768,6 +775,30 @@ struct SwingSnapshot {
     authored_attack_time: Option<CreatureAttackTime>,
     creature_flags: Option<crate::zones::CreatureFlagsExtra>,
     temp_summoner: Option<Entity>,
+}
+
+fn read_melee_override(auras: Option<&crate::auras::ActiveAuras>, hand: Hand) -> Option<u32> {
+    let mut effects = auras?
+        .iter()
+        .flat_map(|aura| &aura.effects)
+        .filter(|effect| effect.aura_type == OVERRIDE_AUTOATTACK_WITH_MELEE_SPELL);
+    let spell = match hand {
+        Hand::Main => effects.next()?.trigger_spell,
+        Hand::Off => {
+            effects
+                .find(|effect| effect.misc_values[0] != 0)?
+                .misc_values[0] as u32
+        }
+    };
+    (spell != 0).then_some(spell)
+}
+
+fn queue_melee_override(commands: &mut Commands, caster: Entity, target: Entity, spell: u32) {
+    commands.queue(move |world: &mut World| {
+        if !crate::spell_cast::try_cast_triggered(world, caster, spell, Some(target), 1) {
+            warn!(?caster, ?target, spell, "Native melee override refused");
+        }
+    });
 }
 
 fn snapshot_attacker(
@@ -794,6 +825,10 @@ fn snapshot_attacker(
         auto_attack: auto_attack.clone(),
         position: *position,
         mods: mods.cloned(),
+        attack_spells: [
+            read_melee_override(auras, Hand::Main),
+            read_melee_override(auras, Hand::Off),
+        ],
         stats: stats.cloned(),
         haste_pct: stat_mods.map_or(0.0, |mods| mods.haste_pct),
         enemy_dodge_pct: auras.map_or(0.0, |auras| auras.modifier(MOD_ENEMY_DODGE)),
@@ -949,6 +984,7 @@ pub(crate) struct SwingContext<'a, 'w, 's> {
     summon_modifiers: &'a crate::auras::summon_damage::SummonDamageModifiers<'w, 's>,
     pub armor_constants: Option<&'a ArmorConstants>,
     spells: Option<&'a crate::spell_info::SpellStore>,
+    melee_override: Option<u32>,
     sight: &'a SwingSight<'w, 's>,
     creature_types: crate::unit_creature_type::CreatureTypes<'a>,
 }
@@ -1549,6 +1585,14 @@ fn try_swing(
         context.sight.send_blocked_swing(commands, attacker.entity);
         return None;
     }
+    let pet_time = context
+        .summon_modifiers
+        .pet_melee_time_multiplier(attacker.entity);
+    reset_swing_timers(auto_attack, hand, attacker.swing_time(&weapon) * pet_time);
+    if let Some(spell) = context.melee_override {
+        queue_melee_override(commands, attacker.entity, target_entity, spell);
+        return None;
+    }
     let unit = |entity| {
         context.scaling.get(entity).map_or(
             UnitScaling::from_item((None, None, None)),
@@ -1716,10 +1760,6 @@ fn try_swing(
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
     // Commit health-sensitive limits and real rescue children in swing order.
     let incoming_loss = health_loss(training_dummy, scaled_loss);
-    let pet_time = context
-        .summon_modifiers
-        .pet_melee_time_multiplier(attacker.entity);
-    reset_swing_timers(auto_attack, hand, attacker.swing_time(&weapon) * pet_time);
     let outcome = SwingOutcome {
         hand,
         kind,
@@ -2561,6 +2601,9 @@ mod npc_general_crit_tests;
 #[cfg(test)]
 #[path = "combat_npc_victim_block_tests.rs"]
 mod npc_victim_block_tests;
+#[cfg(test)]
+#[path = "combat_override_tests.rs"]
+mod override_tests;
 #[cfg(test)]
 #[path = "combat_tests.rs"]
 mod tests;
