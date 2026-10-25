@@ -81,6 +81,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True,
                         help="directory holding <spec>.profile.json/selected traits; receives reports")
     parser.add_argument("--jobs", type=int, help="Cargo jobs for the build step")
+    parser.add_argument("--executable", help="already built server_simulation test executable; skips the build")
     args = parser.parse_args()
     counts = [int(count) for count in args.targets.split(",")]
     if not counts or any(count not in (1, 3) for count in counts):
@@ -89,7 +90,7 @@ def main():
     args.output = args.output.resolve(strict=True)
 
     started = time.monotonic()
-    executable = build_executable(args.jobs)
+    executable = args.executable or build_executable(args.jobs)
     built = time.monotonic()
     with ThreadPoolExecutor(max_workers=len(counts)) as pool:
         results = dict(zip(counts, pool.map(lambda count: measure_count(executable, args, count), counts)))
