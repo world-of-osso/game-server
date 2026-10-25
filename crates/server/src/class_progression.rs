@@ -699,34 +699,11 @@ pub fn evaluate_player_reference_traits(
     let spec = resolve_spec(class, level, spec_id)
         .filter(|spec| spec.spec_id == spec_id)
         .ok_or("reference specialization is not available to this class and level")?;
-    let purchases = reference_purchases(&class.traits, ctx, allocated);
-    let entries = crate::trait_config::build_simc_fixture_config(&class.traits, ctx, &purchases)?;
+    let entries = crate::trait_config::build_simc_fixture_config(&class.traits, ctx, allocated)?;
     let traits = build_trait_loadout(class, Some(spec), ctx, entries);
     let spells = compute_known_spells(class, identity.race, level, Some(spec), &traits);
     let known = KnownSpells::fixture(spells.iter().map(|spell| spell.spell_id).collect());
     Ok((known, traits))
-}
-
-#[cfg(any(test, feature = "test-support"))]
-fn reference_purchases(
-    tree: &crate::spell_info::TraitTree,
-    ctx: TraitContext,
-    allocated: &[Purchase],
-) -> Vec<Purchase> {
-    let grants = granted_entries(tree, ctx);
-    allocated
-        .iter()
-        .map(|entry| {
-            let granted = grants
-                .iter()
-                .find(|grant| grant.node_id == entry.node_id && grant.entry_id == entry.entry_id)
-                .map_or(0, |grant| grant.granted);
-            Purchase {
-                ranks: entry.ranks.saturating_sub(granted),
-                ..*entry
-            }
-        })
-        .collect()
 }
 
 /// `(SpecializationSpells.OverridesSpellID, SpellID)` of the spec spells learned at
