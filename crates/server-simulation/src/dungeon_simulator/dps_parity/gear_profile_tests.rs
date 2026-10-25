@@ -357,3 +357,33 @@ fn ww_gear_profile_harandar_grants_native_primary_stat() {
         "native food must grant derived primary stat: before={before}, after={after}"
     );
 }
+
+#[test]
+#[ignore = "real profile equipment/traits and native food catalog"]
+fn ww_gear_profile_silvermoon_parade_applies_same_native_food() {
+    let (mut profile, traits) = super::read_reference(269).unwrap();
+    profile
+        .consumables
+        .insert("food".into(), "silvermoon_parade".into());
+    let identity = super::inputs::read_actor(&profile).unwrap();
+    let run = super::prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+    let food = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1232585 && aura.caster == run.actor)
+        .expect("Silvermoon Parade must apply the shared native primary-food buff");
+    assert!(
+        food.effects.iter().any(|effect| effect.aura_type == 29
+            && effect.misc_values[0] == -2
+            && effect.amount > 0.0),
+        "shared food must contain a real native primary-stat amount"
+    );
+    assert!(
+        !run.gaps
+            .iter()
+            .any(|gap| gap == "CONSUMABLE_UNMODELED:food=silvermoon_parade")
+    );
+}
