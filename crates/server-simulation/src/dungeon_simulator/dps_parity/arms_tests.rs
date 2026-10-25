@@ -71,6 +71,99 @@ fn arms_literal_reference_earns_heroic_without_starving_mortal_strike() {
     }
 }
 
+#[test]
+#[ignore = "private current native DB and exact spec71 inputs"]
+fn arms_execute_damage_scales_with_paid_rage_and_free_proc_is_full_strength() {
+    let (half_damage, half_paid) = cast_arms_execute_at_rage(200.0, false);
+    let (full_damage, full_paid) = cast_arms_execute_at_rage(400.0, false);
+    let (free_damage, free_paid) = cast_arms_execute_at_rage(400.0, true);
+    assert!(half_paid > 0.0 && full_paid > half_paid);
+    assert_eq!(free_paid, 0.0, "the actual Sudden Death cast is free");
+    assert!(
+        (full_damage / half_damage - full_paid / half_paid).abs() < 0.01,
+        "Execute must scale with actual paid Rage: half={half_damage}/{half_paid}, full={full_damage}/{full_paid}"
+    );
+    // Native9491 caps at400 raw Rage (20+20 displayed); free retains that maximum.
+    assert!(
+        (free_damage / full_damage - 400.0 / full_paid).abs() < 0.01,
+        "free Execute must retain full damage: free={free_damage}, full={full_damage}/{full_paid}"
+    );
+}
+
+fn cast_arms_execute_at_rage(rage: f32, sudden_death: bool) -> (f64, f64) {
+    use super::literal_rotation::execution::{Execution, execute};
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::{Health, PowerType};
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(71, 1).unwrap();
+    engage(&mut run);
+    let target = run.targets[0];
+    {
+        let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+        health.current = health.max * 0.1;
+    }
+    run.app
+        .world_mut()
+        .get_mut::<PowerPools>(run.actor)
+        .unwrap()
+        .get_mut(PowerType::Rage)
+        .unwrap()
+        .current = rage;
+    if sudden_death {
+        crate::spell_cast::cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            52437,
+            Some(run.actor),
+            1,
+        );
+    }
+    execute(
+        run.app.world_mut(),
+        run.actor,
+        Execution::Spell(163201, target, Some(target)),
+    )
+    .unwrap();
+    read_execute_damage_and_paid_rage(&run, rage)
+}
+
+fn read_execute_damage_and_paid_rage(run: &Run, initial_rage: f32) -> (f64, f64) {
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let damage: f64 = events
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(260798)
+                && event.source == Some(run.actor.to_bits())
+                && event.kind == CombatLogKind::Damage
+        })
+        .map(|event| f64::from(event.amount))
+        .sum();
+    let refund: f64 = events
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(163201)
+                && event.target == Some(run.actor.to_bits())
+                && event.kind == CombatLogKind::Energize
+        })
+        .map(|event| f64::from(event.amount))
+        .sum();
+    let remaining = run
+        .app
+        .world()
+        .get::<PowerPools>(run.actor)
+        .unwrap()
+        .get(PowerType::Rage)
+        .unwrap()
+        .current;
+    assert!(
+        damage > 0.0,
+        "the native Execute damage child must really land"
+    );
+    (damage, f64::from(initial_rage - remaining) + refund)
+}
+
 fn prepare_arms_with_native_rage() -> Run {
     use super::literal_rotation::execution::{Execution, execute};
     let mut run = prepare_measurement(71, 1).unwrap();
