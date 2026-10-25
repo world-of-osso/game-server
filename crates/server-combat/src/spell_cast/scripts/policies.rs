@@ -131,26 +131,6 @@ const CUT_TO_THE_CHASE: Relationship = Relationship::SpenderAuraExtension {
 
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
-    // SimC76f8118 sc_evoker.cpp5592–5599: starting Eternity Surge grants
-    // selected Azure Sweep. Native1265871 supplies its action override and damage mod.
-    Policy {
-        name: "SIMC_DEVASTATION_SURGE_AZURE_SWEEP",
-        spec: 1467,
-        talent: 1265867,
-        relationship: Relationship::ApplySelfAuraAfterCast {
-            parent: 359073,
-            payload: 1265871,
-        },
-    },
-    Policy {
-        name: "SIMC_DEVASTATION_SURGE_VARIANT_AZURE_SWEEP",
-        spec: 1467,
-        talent: 1265867,
-        relationship: Relationship::ApplySelfAuraAfterCast {
-            parent: 382411,
-            payload: 1265871,
-        },
-    },
     // SimC76f8118 sc_evoker.cpp6584–6595: one successful Disintegrate
     // spends one earned Mass Disintegrate use, not one per secondary recipient.
     Policy {

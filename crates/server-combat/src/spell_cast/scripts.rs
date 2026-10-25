@@ -49,6 +49,7 @@ mod enhancement_imbues;
 mod enhancement_strikes;
 mod enhancement_tempest;
 mod enhancement_tier;
+mod evoker_tier;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
 mod essence_burst;
 mod feral_frenzy;
@@ -790,6 +791,7 @@ pub fn after_cast(spell_id: u32) -> impl Iterator<Item = AfterCastHook> {
         .chain(batch9::after_cast_hook(spell_id))
         .chain(aura_rolls::hook(spell_id))
         .chain(resource_values::after_cast_hook(spell_id))
+        .chain(evoker_tier::hook(spell_id))
 }
 
 fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
