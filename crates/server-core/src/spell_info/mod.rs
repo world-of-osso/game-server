@@ -14,12 +14,8 @@
 mod aura_restrictions_tests;
 mod class_data;
 mod immunity;
-#[cfg(test)]
-mod immunity_tests;
 mod load;
 pub mod positivity;
-#[cfg(test)]
-pub(crate) mod serverside_tests;
 mod trait_data;
 mod trait_effect_points;
 
@@ -31,12 +27,12 @@ use rusqlite::Connection;
 use serde::Serialize;
 use shared::components::PowerType;
 
-pub(crate) use class_data::MAX_LEVEL;
+pub use class_data::MAX_LEVEL;
 #[cfg(any(test, feature = "test-support"))]
-pub(crate) use class_data::load_class_spells;
+pub use class_data::load_class_spells;
 pub use class_data::{ClassInfo, ClassSpells, SpecInfo};
 pub use immunity::SpellImmunityDefinition;
-pub(crate) use trait_data::load_trait_tree_by_id;
+pub use trait_data::load_trait_tree_by_id;
 pub use trait_data::{
     COND_FLAG_GATE, COND_FLAG_SUFFICIENT, TraitCond, TraitCondType, TraitCost, TraitEdgeType,
     TraitNode, TraitNodeEntry, TraitNodeType, TraitTree,
@@ -49,7 +45,7 @@ pub const WORLD_DB_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data
 
 /// One already matched charged spell modifier, retained by its launched cast.
 #[derive(Debug, Clone)]
-pub(crate) struct ChargedSpellModifier {
+pub struct ChargedSpellModifier {
     /// Actual native source of the already matched modifier, not a live-aura guess.
     pub aura_spell_id: u32,
     pub op: i32,
@@ -59,7 +55,7 @@ pub(crate) struct ChargedSpellModifier {
 
 /// Ordinary launch inputs retained for explicit resource-spender hit policies.
 #[derive(Debug, Clone)]
-pub(crate) struct CastPolicyContext {
+pub struct CastPolicyContext {
     pub powers: Vec<PowerType>,
     pub targets: Vec<Entity>,
 }
@@ -83,56 +79,56 @@ pub struct SpellInfo {
     pub cast_item_level: Option<u16>,
     /// Source SPELLVALUE_AURA_STACK on this cast, retained through missile snapshots.
     #[serde(skip)]
-    pub(crate) cast_aura_stacks: Option<u8>,
+    pub cast_aura_stacks: Option<u8>,
     /// Source CastSpellExtraArgs::OriginalCaster, not the actual casting unit.
     #[serde(skip)]
-    pub(crate) cast_original_caster: Option<Entity>,
+    pub cast_original_caster: Option<Entity>,
     /// Retail item actually used by this cast; delayed casts credit only on execution.
     #[serde(skip)]
     pub cast_retail_item_id: Option<u32>,
     /// Request's original primary unit, retained through native launch/flight/hit.
     /// Read-only to hit scripts; never inferred from an effect's self/area recipients.
     #[serde(skip)]
-    pub(crate) cast_primary_target: Option<Entity>,
+    pub cast_primary_target: Option<Entity>,
     /// Sourced ordinary-hit policy inputs; triggered catalog clones keep None.
     #[serde(skip)]
-    pub(crate) cast_policy_context: Option<Box<CastPolicyContext>>,
+    pub cast_policy_context: Option<Box<CastPolicyContext>>,
     /// Per-cast ground point; preserved in queued/cast snapshots, never DB2 metadata.
     #[serde(skip)]
-    pub(crate) cast_destination: Option<[f32; 3]>,
+    pub cast_destination: Option<[f32; 3]>,
     /// Owned bag GUID on this cast's queued/active snapshot.
     #[serde(skip)]
-    pub(crate) cast_target_item_guid: Option<u64>,
+    pub cast_target_item_guid: Option<u64>,
     /// Source TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD (0x2), on per-cast clones only.
     /// CheckCast skips SpellHistory::IsReady; HandleCooldowns does no writes.
     #[serde(skip)]
-    pub(crate) cast_ignore_cooldowns: bool,
+    pub cast_ignore_cooldowns: bool,
     /// TC TRIGGERED_DONT_RESET_PERIODIC_TIMER (0x20000), included in FULL_MASK.
     #[serde(skip)]
-    pub(crate) cast_dont_reset_periodic_timer: bool,
+    pub cast_dont_reset_periodic_timer: bool,
     /// Native Maelstrom launch helpers leave modifier-charge consumption to their parent.
     #[serde(skip)]
-    pub(crate) cast_parent_owns_modifier_charges: bool,
+    pub cast_parent_owns_modifier_charges: bool,
     /// Successful-launch consumed modifiers (charges or scripted stacks).
     /// None means not yet snapshotted.
     #[serde(skip)]
-    pub(crate) cast_charge_mods: Option<Vec<ChargedSpellModifier>>,
+    pub cast_charge_mods: Option<Vec<ChargedSpellModifier>>,
     /// Script-owned cast-time proc instances that actually modified admission.
     /// Retained through hardcasts/missiles; triggered casts do not acquire markers.
     #[serde(skip)]
-    pub(crate) cast_proc_mods: Vec<u32>,
+    pub cast_proc_mods: Vec<u32>,
     /// Whether this ordinary cast had positive cast time at admission, not its DB2 base.
     #[serde(skip)]
-    pub(crate) cast_was_hardcast: bool,
+    pub cast_was_hardcast: bool,
     /// NPC-selected release rank; None holds for explicit release or native max hold.
     #[serde(skip)]
-    pub(crate) cast_empower_to: Option<u8>,
+    pub cast_empower_to: Option<u8>,
     /// Completed native empower stage passed into release spell/effect snapshots.
     #[serde(skip)]
-    pub(crate) cast_empower_level: Option<u8>,
+    pub cast_empower_level: Option<u8>,
     /// Scripted effectiveness on this cast's damage only, retained through flight.
     #[serde(skip)]
-    pub(crate) cast_damage_multiplier: Option<f32>,
+    pub cast_damage_multiplier: Option<f32>,
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,
@@ -409,7 +405,7 @@ pub struct SpellStore {
 
 impl SpellInfo {
     /// TC SpellInfo.cpp:1842–1857: cast eligibility, not aura persistence after death.
-    pub(crate) fn allows_dead_target(&self) -> bool {
+    pub fn allows_dead_target(&self) -> bool {
         const ALLOW_DEAD_TARGET: u32 = 0x0000_0001;
         // TARGET_FLAG_CORPSE_ENEMY | TARGET_FLAG_UNIT_DEAD | TARGET_FLAG_CORPSE_ALLY.
         const DEAD_TARGET_FLAGS: u32 = 0x0000_0200 | 0x0000_0400 | 0x0000_8000;
@@ -464,13 +460,13 @@ impl SpellStore {
 
     /// Keep native trait curves when a harness scopes the spell records.
     #[cfg(any(test, feature = "test-support"))]
-    pub(crate) fn fixture_from_catalog(spells: Vec<SpellInfo>, catalog: &Self) -> Self {
+    pub fn fixture_from_catalog(spells: Vec<SpellInfo>, catalog: &Self) -> Self {
         let mut store = Self::fixture(spells);
         store.trait_effect_points = catalog.trait_effect_points.clone();
         store
     }
 
-    pub(crate) fn trait_base_points(
+    pub fn trait_base_points(
         &self,
         definition_id: u32,
         rank: u32,

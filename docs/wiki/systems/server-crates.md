@@ -2,6 +2,12 @@
 
 Verified: 2026-10-24. Stable catalog code has one implementation in `server-catalog`; gameplay modules and their tests now belong to the existing `server` library, with a thin executable.
 
+## Spell data foundation (2026-10-25)
+
+`server-core` owns canonical spell records, `SpellStore`, DB2/server-side loaders, trait records, positivity, `CatalogData`, and the immutable fixture cache. `server::spell_info` re-exports these exact types and retains the native immunity and server-side spell integration tests. Gameplay, aura execution and cast dispatch remain in `server`; there is no second catalog or cache. Both test-support features select the same copy-on-write representation. Data-only tests keep their module names in `server-core`, with the existing opt2/debug1 test profile.
+
+This is a dependency foundation, not a completed hot-gameplay split. Baseline LLVM output associates 174,925 IR lines with spell data (including generics); that attribution is not a compile-time saving estimate.
+
 ## Current ownership
 
 - `crates/server-catalog`: generated character/spell/XP tables, six generated achievement lookups and their immutable records, pure faction-template reactions, and DB2 source-build validation/reading. Its only dependency is the existing rusqlite version/connection type; no Bevy plugin or runtime initialization.

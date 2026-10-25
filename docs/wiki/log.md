@@ -1,3 +1,7 @@
+## 2026-10-25 — Spell data crate foundation
+
+[Server boundaries](systems/server-crates.md#spell-data-foundation-2026-10-25): move canonical spell data, loaders and immutable fixture cache into `server-core`; keep native gameplay integration tests in `server`. Algorithms and numeric data are unchanged. Hot-gameplay ownership and paired edit timings remain separate work.
+
 ## 2026-10-25 — All-DPS parity census
 
 [Census](investigations/dps-parity-census-2026-10-25.md): current canonical private database, master210df12e3, official followers and player-mode attempts for missing followers. Eight measured specs, seventeen exact fixture failures, two missing references. No surrogate profiles or mechanics changes.
