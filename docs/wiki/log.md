@@ -1,3 +1,7 @@
+## 2026-10-25 — All-DPS parity census
+
+[Census](investigations/dps-parity-census-2026-10-25.md): current canonical private database, master210df12e3, official followers and player-mode attempts for missing followers. Eight measured specs, seventeen exact fixture failures, two missing references. No surrogate profiles or mechanics changes.
+
 ## 2026-10-24 — Xuen merge reconciliation on mastera804
 
 [Reconciliation proof](../handoffs/ww-xuens-recovery-proof-ledger.md#mastera804-reconciliation--native23-green): frozen36eeb2339 merged, not rebased, onto exacta804 atd54c1b64d. Preserve SCK periodic snapshot, four-argument Xuen/Flurry callback and both additive wiki sections. Same binary passes13Xuen38.93s,6Flurry50.16s and4SCK24.48s; compiler582.99s/zero warnings, fmt/diff pass, conflict-region readability has no findings. Lead re-gate/new merged-source plain --bins remains separate; no300s rerun.
