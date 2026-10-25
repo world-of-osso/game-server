@@ -396,7 +396,7 @@ Flame Shock's literal action uses learned native470411, whose costed trigger cas
 
 Elemental Overload callbacks are instant background actions that can execute during a foreground hardcast without replacing its cast state. Native child damage, resource costs and aura/target checks remain authoritative; effect160 ordinary forced casts remain unchanged (SimC76f8118 `sc_shaman.cpp`4846–4847).
 
-Stormkeeper grants its native effect4 count of next-spell uses, bounded by the native stack cap. Each use carries one native modifier amount, not a stack-multiplied bonus. A successful foreground root spends one use; its background overload does not spend another (`sc_shaman.cpp`8759).
+Stormkeeper grants its native effect4 count of next-spell uses, bounded by the native stack cap. Retain the native single proc charge; do not represent the same uses again as extra charges. Each use carries one native modifier amount, not a stack-multiplied bonus. A successful foreground root spends one use; its background overload does not spend another (`sc_shaman.cpp`8759).
 
 Native445624 supplies actual221177 Ancestors and their native lifetime after selected Stormkeeper or Ancestral Swiftness. Successful foreground spells command each living owned Ancestor once with native447419/447425 children at the retained primary. Background overloads do not command them. Native owner spell power and crit are inherited; Ancestor Lava Burst is guaranteed critical and scales with inherited crit (`sc_shaman.cpp`4342–4441,6358,7856,8163–8166,8758). Natural expiry allows selected Final Calling465717; cancellation does not. Routine Communication, Ancient Fellowship and remaining pet effect inheritance still require qualification.
 
