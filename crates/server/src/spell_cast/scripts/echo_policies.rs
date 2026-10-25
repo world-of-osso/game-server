@@ -7,8 +7,8 @@
 use bevy::prelude::*;
 
 use crate::auras::{ActiveAuras, procs};
-use crate::class_progression::TraitLoadout;
-use crate::spell_info::{ActiveSpec, SpellInfo};
+use crate::class_progression::{ActiveSpec, TraitLoadout};
+use crate::spell_info::SpellInfo;
 
 struct EchoPolicy {
     name: &'static str,
@@ -60,7 +60,11 @@ fn read_live_values(world: &World, caster: Entity, policy: &EchoPolicy) -> Optio
     ))
 }
 
-pub(super) fn after_foreground_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+pub(in crate::spell_cast) fn after_foreground_cast(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+) {
     if spell.cast_parent_owns_modifier_charges {
         return;
     }
