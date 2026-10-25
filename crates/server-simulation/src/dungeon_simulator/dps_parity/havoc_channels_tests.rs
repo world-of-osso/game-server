@@ -38,6 +38,43 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_first_blood_splits_native_primary_and_secondary_strikes() {
+    let _seed = crate::random::seed_scope(70_448);
+    for (parent, primary_strikes, secondary_strikes) in [
+        (188499, [391374, 391378], [199552, 200685]),
+        (210152, [393055, 393054], [210153, 210155]),
+    ] {
+        let mut run = prepare_literal(577, 3).unwrap();
+        havoc_tests::earn_havoc_fury(&mut run, 120.0);
+        if parent == 210152 {
+            cast(&mut run, 191427, false);
+            preparation::finish_pending_setup(&mut run).unwrap();
+        }
+        cast(&mut run, parent, true);
+        advance(&mut run, 50);
+        let primary = run.targets[0].to_bits();
+        for (spell, count) in [(primary_strikes[0], 3), (primary_strikes[1], 1)] {
+            let hits = damage(&run, Some(spell));
+            assert_eq!(hits.len(), count, "First Blood child {spell}: {hits:?}");
+            assert!(hits.iter().all(|hit| hit.target == Some(primary)));
+        }
+        for (spell, per_target) in [(secondary_strikes[0], 3), (secondary_strikes[1], 1)] {
+            let hits = damage(&run, Some(spell));
+            assert!(hits.iter().all(|hit| hit.target != Some(primary)));
+            for target in &run.targets[1..] {
+                assert_eq!(
+                    hits.iter()
+                        .filter(|hit| hit.target == Some(target.to_bits()))
+                        .count(),
+                    per_target
+                );
+            }
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_eye_beam_ticks_damage_every_native_frontal_enemy() {
     let _seed = crate::random::seed_scope(70_448);
     for count in [1, 3] {
