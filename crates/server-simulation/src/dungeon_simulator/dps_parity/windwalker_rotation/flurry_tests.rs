@@ -140,10 +140,31 @@ fn literal_ww_native_dual_threat_replaces_eligible_white_impacts() {
             .active_talent_spells()
             .any(|spell| spell.spell_id == 451823)
     );
+    assert!(
+        run.app
+            .world()
+            .get::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .off_hand
+            .is_none()
+    );
     start_white(&mut run);
     for _ in 0..1200 {
+        let before = events(&run).len();
         run.app.update();
-        let swings = events(&run)
+        let observed = events(&run);
+        let impacts = observed[before..]
+            .iter()
+            .filter(|event| {
+                (event.spell_id.is_none() || event.spell_id == Some(DUAL_THREAT))
+                    && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+            })
+            .count();
+        assert!(
+            impacts <= 1,
+            "actual single-weapon attempt must replace white damage, not add a second impact"
+        );
+        let swings = observed
             .into_iter()
             .filter(|event| {
                 (event.spell_id.is_none() || event.spell_id == Some(DUAL_THREAT))
@@ -195,13 +216,15 @@ fn literal_ww_native_flurry_white_earns_native_charges_and_caps() {
         let before = events(&run).len();
         run.app.update();
         for event in &events(&run)[before..] {
-            if event.spell_id.is_none() && event.kind == CombatLogKind::Damage {
+            if (event.spell_id.is_none() || event.spell_id == Some(DUAL_THREAT))
+                && event.kind == CombatLogKind::Damage
+            {
                 critical |= event.crit;
                 expected = (expected + earned_per_hit(&run, event.crit)).min(cap(&run));
                 assert_eq!(
                     charges(&run),
                     expected,
-                    "real selected white impact must earn native451021"
+                    "real white or replacing Dual Threat impact must earn native451021 once"
                 );
             }
         }
