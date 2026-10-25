@@ -303,7 +303,7 @@ fn prepare_literal_reference(
         style: crate::simc_apl_native::FightStyle::Patchwerk,
     };
     literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter)?;
-    preparation::warm_up_reference(&mut run)?;
+    preparation::consume_profile_food(&mut run)?;
     Ok(run)
 }
 
@@ -417,8 +417,9 @@ fn prepare_reference(
     identity: crate::followers::simulator::ParityActor,
 ) -> Result<Run, String> {
     let mut run = spawn_reference(profile, traits, count, identity)?;
+    preparation::consume_profile_food(&mut run)?;
     preparation::start_configured_native_pet(&mut run)?;
-    preparation::warm_up_reference(&mut run)?;
+    preparation::finish_pending_setup(&mut run)?;
     Ok(run)
 }
 
