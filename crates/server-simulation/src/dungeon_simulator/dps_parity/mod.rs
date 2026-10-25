@@ -6,6 +6,8 @@ mod assassination_knowledge_tests;
 mod assassination_rotation;
 mod aura342_tests;
 mod barbed_budget_tests;
+#[cfg(test)]
+mod beast_mastery_pet_tests;
 mod beast_mastery_rotation;
 mod composite_precombat_tests;
 mod dummy_reference_tests;
