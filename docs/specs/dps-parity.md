@@ -328,6 +328,8 @@ Native Enhancement strike roots dispatch one195592 Crash payload per actual land
 
 Native Enhancement Static Accumulation384437 ticks generate real MW stacks at their native amount/period. Selected Elemental Assault210853 grants its modified native effect1 stack count on ordinary strike/Lava Lash roots, including misses. Each actual consumed MW stack reduces running Strike/Lava Lash recharge by Elemental Tempo1250364 effect2 milliseconds. Descending Skies1264688 admits only actual Ascendance casts; Awakening Storms455129 admits only Strike roots, preserving native proc chance/RPPM and payload. Sources: pinned SimC `sc_shaman.cpp5225,5605–5610,10280–10283,11780–11787,12023–12039,12249–12261,12838–12847`.
 
+Actual466772 Doom Winds emits native469270 area damage on application and its native periodic effect2 ticks. It requires the caster's real living selected target; a missing/dead selected identity suppresses the pulse rather than selecting a substitute. Native destination/area geometry and damage metadata remain authoritative.
+
 Selected Ride the Lightning289874 emits native211094 once per actual Strike/Lava Lash execution, using its native chain targets. This background variant neither benefits from nor spends MW. Real Tempest casts spend one454015 stack, preserving the other earned proc; Thorim spends its current Tempest proc before its MW consumption can earn a new one.
 
 Actual Enhancement MW consumption draws Tempest's pinned two-success100-card deck once per consumed stack, preserving greater-than10-card success spacing within and across decks. At most one native454015 proc is granted per spell. It does not substitute a Bernoulli roll or the talent's unused displayed chance for SimC's explicit deck parameters.
