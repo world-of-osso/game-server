@@ -87,10 +87,13 @@ fn read_native_probability(
         .chance_effects
         .iter()
         .find(|(allowed, _)| *allowed == spec)?;
-    let now = crate::spell_cast::now(world);
-    let aura = world.get::<ActiveAuras>(caster)?.iter().find(|aura| {
-        aura.spell_id == policy.passive && aura.caster == caster && now >= aura.proc.next_ready_at
-    })?;
+    let aura = world
+        .get::<ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.spell_id == policy.passive && aura.caster == caster)?;
+    if !procs::policy_proc_ready(world, caster, aura.instance_id) {
+        return None;
+    }
     let chance = aura
         .effects
         .iter()
