@@ -6,6 +6,7 @@ pub(crate) mod equipment;
 pub(crate) mod execution;
 #[cfg(test)]
 mod gating_tests;
+mod item_context;
 #[cfg(test)]
 mod precombat_poll_tests;
 #[cfg(test)]
@@ -108,6 +109,12 @@ impl Driver {
         if self.selected_precombat && self.precombat_harmful_executed {
             return Ok(None);
         }
+        let item_context = item_context::ItemContext {
+            facts,
+            equipment,
+            program: &self.program,
+        };
+        let facts: &dyn ActionFacts = &item_context;
         let mut usable = |action: &Action| {
             Ok(prepared.permits_row(action)?
                 && facts.target_ready(action)?

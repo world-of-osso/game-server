@@ -667,8 +667,8 @@ fn collect_npc_starter_spells(
         .collect()
 }
 
-/// Evaluate allocated reference ranks through native grants, budgets and overrides.
-/// A failed config is an explicit measurement gap, never a default-loadout fallback.
+/// Evaluate parity allocations through native grants, budgets and overrides.
+/// SimC fixture allocation rules are separate from strict production validation.
 #[cfg(any(test, feature = "test-support"))]
 pub fn evaluate_reference_traits(
     classes: &ClassSpells,
@@ -696,14 +696,15 @@ pub fn evaluate_player_reference_traits(
 ) -> Result<(KnownSpells, TraitLoadout), String> {
     let class = class_info(classes, identity.class).ok_or("reference class absent")?;
     let ctx = TraitContext { spec_id, level };
+    let spec = resolve_spec(class, level, spec_id)
+        .filter(|spec| spec.spec_id == spec_id)
+        .ok_or("reference specialization is not available to this class and level")?;
     let purchases = reference_purchases(&class.traits, ctx, allocated);
-    build_config(&class.traits, ctx, &purchases)?;
-    let evaluated = evaluate(classes, identity, level, spec_id, |_| purchases);
-    if evaluated.traits_reset || evaluated.spec.0 != spec_id {
-        return Err("native reference progression reset or changed requested spec".into());
-    }
-    let known = KnownSpells::fixture(evaluated.known.iter().map(|spell| spell.spell_id).collect());
-    Ok((known, evaluated.traits))
+    let entries = crate::trait_config::build_simc_fixture_config(&class.traits, ctx, &purchases)?;
+    let traits = build_trait_loadout(class, Some(spec), ctx, entries);
+    let spells = compute_known_spells(class, identity.race, level, Some(spec), &traits);
+    let known = KnownSpells::fixture(spells.iter().map(|spell| spell.spell_id).collect());
+    Ok((known, traits))
 }
 
 #[cfg(any(test, feature = "test-support"))]
