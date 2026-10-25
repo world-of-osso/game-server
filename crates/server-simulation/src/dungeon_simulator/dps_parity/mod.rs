@@ -62,6 +62,7 @@ spec_drivers! {
     70 => ret_rotation,
     71 => arms_rotation,
     72 => fury_rotation,
+    252 => unholy_rotation,
     253 => beast_mastery_rotation,
     254 => marksmanship_rotation,
     258 => shadow_rotation,
