@@ -42,6 +42,8 @@ mod howl_tests;
 mod hunter_bloodshed_tests;
 #[cfg(test)]
 mod hunter_focus_tests;
+#[cfg(test)]
+mod hunter_stomp_tests;
 mod inputs;
 pub(crate) mod literal_rotation;
 mod marksmanship_fact_tests;
