@@ -29,7 +29,9 @@ mod cast_resets;
 mod execution_counters;
 mod foreground_procs;
 mod impact_procs;
+mod paid_cooldowns;
 mod periodic_attacks;
+pub(super) use paid_cooldowns::after_payment as after_paid_resources;
 pub(crate) use periodic_attacks::after_periodic_trigger;
 pub(super) fn after_foreground_special(world: &mut World, caster: Entity, spell: &SpellInfo) {
     foreground_procs::after_foreground_special(world, caster, spell);

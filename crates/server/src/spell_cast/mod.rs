@@ -3891,6 +3891,7 @@ fn take_cast_resources(
         return;
     }
     spend_costs(world, caster, costs);
+    scripts::after_paid_resources(world, caster, costs);
     scripts::empower_gargoyles(world, caster, costs);
     crate::profession::take_reagents(world, caster, spell);
 }
