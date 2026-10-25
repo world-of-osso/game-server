@@ -54,6 +54,7 @@ mod elemental_ascendance;
 pub(super) use echo_policies::after_cast as apply_echo_policies;
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
+mod enhancement_modes;
 mod enhancement_strikes;
 mod enhancement_tempest;
 mod enhancement_tier;
@@ -66,6 +67,7 @@ pub(crate) use maelstrom_weapon::consume as consume_maelstrom_weapon;
 pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
     maelstrom_weapon::register(scripts);
     enhancement_imbues::register(scripts);
+    enhancement_modes::register(scripts);
     enhancement_strikes::register(scripts);
     enhancement_tier::register(scripts);
 }
