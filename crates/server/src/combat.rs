@@ -31,6 +31,8 @@ use std::collections::VecDeque;
 
 /// Melee attack range in yards.
 const MELEE_RANGE: f32 = 5.0;
+/// TC SharedDefines.h621: these channels do not set UNIT_STATE_CASTING.
+const SPELL_ATTR5_ALLOW_ACTIONS_DURING_CHANNEL: u32 = 0x0000_0001;
 /// Attack's spell ID for the existing owner spell-error channel.
 const ATTACK_SPELL_ID: u32 = 6603;
 /// Default unit attack time and existing ExpectedStat damage normalization.
@@ -528,7 +530,7 @@ type AutoAttackers<'w, 's> = Query<
 /// (`UNIT_STATE_CASTING`, `UNIT_STATE_CANNOT_AUTOATTACK`).
 type SwingState<'a> = (
     Option<&'a crate::stats::StatModifiers>,
-    Has<shared::casting::CastState>,
+    Option<&'a shared::casting::CastState>,
     Option<&'a crate::auras::ActiveAuras>,
 );
 
@@ -671,7 +673,12 @@ fn auto_attack_unit(
     let mut redirect_health = HashMap::new();
     // Release the attacker's read of ActiveAuras before mutating the victim's
     // absorb capacity. A player can be both an attacker and a victim.
-    let Some(mut snapshot) = snapshot_attacker(&mut params.units.p0(), attacker_entity, dt) else {
+    let Some(mut snapshot) = snapshot_attacker(
+        &mut params.units.p0(),
+        attacker_entity,
+        dt,
+        params.spells.as_deref(),
+    ) else {
         return;
     };
     let target_entity = snapshot.auto_attack.victim;
@@ -770,10 +777,29 @@ struct SwingSnapshot {
     temp_summoner: Option<Entity>,
 }
 
+/// TC Unit.cpp3107–3120/2166–2180: cast bars and melee-blocking state differ.
+fn cast_blocks_auto_attack(
+    cast: Option<&shared::casting::CastState>,
+    spells: Option<&crate::spell_info::SpellStore>,
+) -> bool {
+    let Some(cast) = cast else {
+        return false;
+    };
+    if cast.cast_type != shared::casting::CastType::Channel {
+        return true;
+    }
+    let allows_actions = spells
+        .and_then(|spells| spells.get(cast.spell_id))
+        .and_then(|spell| spell.misc.as_ref())
+        .is_some_and(|misc| misc.attributes[5] & SPELL_ATTR5_ALLOW_ACTIONS_DURING_CHANNEL != 0);
+    !allows_actions
+}
+
 fn snapshot_attacker(
     attackers: &mut AutoAttackers,
     entity: Entity,
     dt: Duration,
+    spells: Option<&crate::spell_info::SpellStore>,
 ) -> Option<SwingSnapshot> {
     let (
         _,
@@ -781,13 +807,15 @@ fn snapshot_attacker(
         position,
         mods,
         stats,
-        (stat_mods, casting, auras),
+        (stat_mods, cast, auras),
         (creature, flags, summon, attack_time),
     ) = attackers.get_mut(entity).ok()?;
     auto_attack.timer = auto_attack.timer.saturating_sub(dt);
     auto_attack.off_hand_timer = auto_attack.off_hand_timer.saturating_sub(dt);
     // Unit::DoMeleeAttackIfReady: timers run even while casting or controlled.
-    if casting || auras.is_some_and(|auras| auras.cannot_auto_attack()) {
+    if cast_blocks_auto_attack(cast, spells)
+        || auras.is_some_and(|auras| auras.cannot_auto_attack())
+    {
         return None;
     }
     Some(SwingSnapshot {

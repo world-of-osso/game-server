@@ -1,3 +1,7 @@
+## 2026-10-24 — Action-permitting channel melee
+
+[Source/proof](../handoffs/channel-melee-proof-ledger.md): TC channel allow-actions bit0x1 avoids UNIT_STATE_CASTING; generic melee wrongly treated every CastState as blocking. ActualSCK1.5s/ready0ns/zero-white gives genuine1RED, FoF/normalVivify/noncast3controlsPASS11.67s at1d196cead. Preserve spell permissions, both timer clocks, crowd-control and victim avoidance; no class IDs or scalar changes. Generic gate implementation committed before GREEN, which remains pending.
+
 ## 2026-10-24 — Event-time aura proc candidates
 
 [Source/proof](../handoffs/aura-proc-event-candidates-proof-ledger.md): TC synchronous candidate collection; native Leydrinker RED→GREEN, generic identity snapshot and shared melee routing.168PASS/3input-dependent failures,2 reproduced on base; Ret AfterCast producer phase1RED/2controlsPASS→3GREEN46.93s. Parent fullgate pending; no spell-ID or metadata override.

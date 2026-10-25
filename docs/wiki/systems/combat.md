@@ -36,6 +36,12 @@ Selecting a unit never attacks it. TrinityCore `HandleSetSelectionOpcode` (MiscH
 
 Tests: `combat_tests/attack_requests.rs` (selection neither swings nor enters combat; swing, echo, first-swing combat; stop; switch keeps the timer; friendly, corpse, uninteractible and unknown refusals; victim death; Polymorph).
 
+## Action-permitting channels —2026-10-24
+
+TC a352b1fa `Unit.cpp3107–3120` does not set `UNIT_STATE_CASTING` for channels with `SPELL_ATTR5_ALLOW_ACTIONS_DURING_CHANNEL` (SharedDefines.h621, bit0x1); `DoMeleeAttackIfReady2166–2180` checks that state, not cast-bar presence. The melee snapshot now reads actual `CastState` and native `SpellStore` permissions. Normal casts and nonallowing channels still block, both hand timers keep advancing, and crowd-control/victim-avoidance paths remain unchanged. Native SCK101546 has0x2201; FoF113656 lacks the allow-actions bit. No core spell IDs or cast/timer/stat changes are introduced.
+
+Real SCK with a naturally ready0ns attack timer stays active1.5s yet produces zero white deliveries before the correction: genuine RED plus three controlsPASS11.67s at1d196cead. Vivify's normal-cast control waits for its genuinely earned20s instant-cast proc to expire; it does not remove that aura or change stats. GREEN is pending. [Contract](../../specs/dps-parity.md), [source/proof ledger](../../handoffs/channel-melee-proof-ledger.md).
+
 ## Combat State
 
 `combat_refs.rs` is TrinityCore's `CombatManager` (Combat/CombatManager.h:27-46): each pair of units fighting holds a reference, and `CombatStatus` is whether a unit holds any. Swings, spell damage, `.damage`, threat (`add_threat`) and a creature's attack call `set_in_combat_with(a, b)`; `combat_stop` (death, evade, map transfer, duel end) ends every reference of the unit on both sides, so the units it fought leave combat at once unless they fight something else.
