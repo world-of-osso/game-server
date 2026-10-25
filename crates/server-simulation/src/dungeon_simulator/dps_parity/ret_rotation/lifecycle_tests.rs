@@ -5,6 +5,23 @@ use bevy::prelude::*;
 use shared::protocol::CombatLogKind;
 
 #[test]
+#[ignore = "actual Blade of Justice must apply Expurgation and release the APL cooldown gate"]
+fn dps_parity_ret_literal_boj_applies_expurgation() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::ret_tier_tests::native_ret(4);
+    super::super::ret_dawnlight_tests::cast_and_damage(&mut run, 184575);
+    assert!(
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.targets[0])
+            .is_some_and(|auras| auras
+                .iter()
+                .any(|aura| aura.spell_id == 383346 && aura.caster == run.actor)),
+        "successful native BoJ must apply owned Expurgation for dot.expurgation.ticking"
+    );
+}
+
+#[test]
 #[ignore = "native Ret measurement must naturally cast Wake and a HolyPower spender within30s"]
 fn dps_parity_ret_literal_native_first_30s_reaches_wake_and_spender() {
     let _seed = crate::random::seed_scope(70448);
