@@ -49,8 +49,9 @@ fn beast_mastery_natures_ally_guardian_attacks_and_expires_without_replacing_pet
             .unwrap()
             .iter()
             .any(|action| action["actor"] == guardian.to_bits()
+                && action["spell_id"].is_null()
                 && action["damage"].as_u64().unwrap() > 0),
-        "real guardian must attack during its native lifetime: {combat}"
+        "guardian must perform native white swings; commanded KC or Bloodshed cannot mask an idle pet: {combat}"
     );
     assert!(
         combat["actions"]
