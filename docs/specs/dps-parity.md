@@ -217,6 +217,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Proc recipients
 
+- Explicit `tdb_spell_proc` family names and all four family-mask words constrain native spell-event dispatch, replacing generated aura-effect family predicates. Family0 is unrestricted; a nonzero family must match, and a nonzero mask requires any intersecting word. Native197147 Festering Wound must proc from eligible Festering Strike, never unrelated Frost Strike or another melee family. Generated proc definitions retain their existing masks (TC `SpellMgr.cpp`555–560 / `SpellInfo.cpp`1974–1984).
+
 - Triggered native casts resolve their explicit unit identity before planning or launch. A queued proc whose enemy has despawned must reject that cast, not recreate combat references or select a substitute. Native300s Enhancement3T add retirement is the regression boundary (TC `Spell.cpp4243–4255`).
 
 - [ ] Default aura-trigger dispatch uses the actual nullable proc action recipient, never substitutes the aura owner. A child whose native explicit selector requires an enemy cannot target its own caster or a missing recipient; skip it instead of inventing a target. Native implicit-caster buff children remain valid. Named item callbacks use the same recipient predicate before RPPM admission and dispatch. CastSuccess keeps TC's null actionTarget; do not replace it with the spell's unrelated explicit target. Reflection/other explicit triggered casts retain their separate rules. [Ret source/proof ledger](../handoffs/ret-paladin-parity-proof-ledger.md#generic-proc-recipient-self-damage).
