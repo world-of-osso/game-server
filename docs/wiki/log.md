@@ -1,6 +1,6 @@
 ## 2026-10-24 — Action-permitting channel melee
 
-[Source/proof](../handoffs/channel-melee-proof-ledger.md): TC channel allow-actions bit0x1 avoids UNIT_STATE_CASTING; generic melee wrongly treated every CastState as blocking. ActualSCK1.5s/ready0ns/zero-white gives genuine1RED, FoF/normalVivify/noncast3controlsPASS11.67s at1d196cead. Preserve spell permissions, both timer clocks, crowd-control and victim avoidance; no class IDs or scalar changes. Generic gate implementation committed before GREEN, which remains pending.
+[Source/proof](../handoffs/channel-melee-proof-ledger.md): TC channel allow-actions bit0x1 avoids UNIT_STATE_CASTING; generic melee wrongly treated every CastState as blocking. ActualSCK1.5s/ready0ns/zero-white gives genuine1RED, FoF/normalVivify/noncast3controlsPASS11.67s at1d196cead. Preserve spell permissions, both timer clocks, crowd-control and victim avoidance; no class IDs or scalar changes. Generic gate implementationdb543b270 committed before4GREEN27.56s; actual active-channel SCK white0→1, all three controls unchanged, compiler405.74s/zero warnings. Lead broad/plain-bin gate remains separate; no300s rerun.
 
 ## 2026-10-24 — Event-time aura proc candidates
 
