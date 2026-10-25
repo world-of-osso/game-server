@@ -264,9 +264,6 @@ impl Rotation {
 struct ArcaneFacts<'a> {
     native: NativeFacts<'a>,
     equipment: &'a Equipment,
-    world: &'a World,
-    actor: Entity,
-    bindings: &'a Bindings,
     potion: &'a str,
 }
 impl<'a> ArcaneFacts<'a> {
@@ -283,51 +280,8 @@ impl<'a> ArcaneFacts<'a> {
             native: NativeFacts::new(world, actor, bindings, encounter, targets.len())
                 .with_targets(targets.first().copied(), targets),
             equipment,
-            world,
-            actor,
-            bindings,
             potion,
         }
-    }
-
-    fn foreground_gcd_actions(&self) -> Vec<u32> {
-        let store = self.world.resource::<crate::spell_info::SpellStore>();
-        self.bindings
-            .actions
-            .values()
-            .copied()
-            .filter(|id| {
-                store.get(*id).is_some_and(|spell| {
-                    spell
-                        .cooldowns
-                        .as_ref()
-                        .is_some_and(|cooldown| cooldown.start_recovery_ms > 0)
-                })
-            })
-            .collect()
-    }
-
-    fn previous_gcd_matches(&self, alias: &str) -> Result<bool, String> {
-        let spell = self
-            .bindings
-            .actions
-            .get(alias)
-            .ok_or_else(|| format!("unknown Arcane history action {alias}"))?;
-        // SimC76f8118 player.cpp7397–7400 records foreground GCD actions at
-        // queue time, including a native cast still in progress, not off-GCD casts.
-        let gcd_actions = self.foreground_gcd_actions();
-        let previous = if let Some(cast) = self
-            .world
-            .get::<shared::casting::CastState>(self.actor)
-            .filter(|cast| gcd_actions.contains(&cast.spell_id))
-        {
-            Some(cast.spell_id)
-        } else {
-            self.world
-                .get::<crate::spell_cast::SpellHistory>(self.actor)
-                .and_then(|history| history.last_cast_in(&gcd_actions))
-        };
-        Ok(previous == Some(*spell))
     }
 }
 impl Facts for ArcaneFacts<'_> {
@@ -339,9 +293,6 @@ impl Facts for ArcaneFacts<'_> {
             return Ok(f64::from(
                 self.potion == alias || self.potion.strip_suffix("_2") == Some(alias),
             ));
-        }
-        if let Some(alias) = name.strip_prefix("prev_gcd.1.") {
-            return self.previous_gcd_matches(alias).map(f64::from);
         }
         if name.starts_with("equipped.")
             || name.starts_with("set_bonus.")
