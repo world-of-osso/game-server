@@ -28,6 +28,7 @@ mod equipped_set_tests;
 mod feral_native_tests;
 mod feral_tests;
 mod firestarter_tests;
+mod frost_mage_tests;
 mod fury_rotation;
 mod gear_profile_tests;
 mod haste_tests;
