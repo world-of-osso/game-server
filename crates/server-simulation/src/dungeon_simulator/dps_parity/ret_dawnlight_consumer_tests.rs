@@ -11,14 +11,18 @@ const FINAL_VERDICT: u32 = 383328;
 const DAWNLIGHT: u32 = 431380;
 
 fn owned_dot(run: &Run) -> Option<&crate::auras::AuraInstance> {
+    owned_dot_at(run, run.targets[0])
+}
+
+pub(super) fn owned_dot_at(run: &Run, target: Entity) -> Option<&crate::auras::AuraInstance> {
     run.app
         .world()
-        .get::<crate::auras::ActiveAuras>(run.targets[0])?
+        .get::<crate::auras::ActiveAuras>(target)?
         .iter()
         .find(|aura| aura.spell_id == DAWNLIGHT && aura.caster == run.actor)
 }
 
-fn damage(run: &Run, spell: u32) -> i64 {
+pub(super) fn damage(run: &Run, spell: u32) -> i64 {
     run.app
         .world()
         .resource::<ObservedCombatEvents>()
@@ -34,7 +38,7 @@ fn damage(run: &Run, spell: u32) -> i64 {
         .sum()
 }
 
-fn wait_for_damage(run: &mut Run, spell: u32) {
+pub(super) fn wait_for_damage(run: &mut Run, spell: u32) {
     for _ in 0..200 {
         run.app.update();
         if damage(run, spell) > 0 {

@@ -28,6 +28,7 @@ mod profile_initialization;
 mod rake_stealth_tests;
 mod report;
 mod ret_dawnlight_consumer_tests;
+mod ret_dawnlight_target_tests;
 mod ret_dawnlight_tests;
 mod ret_empyrean_tests;
 mod ret_purpose_tests;

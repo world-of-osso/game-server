@@ -13,6 +13,10 @@ const DIVINE_STORM: u32 = 53385;
 const SET_PIECES: &[u32] = &[271465, 271463, 271468, 271466, 271464];
 
 pub(super) fn native_ret(piece_count: usize) -> Run {
+    native_ret_with_targets(piece_count, 1)
+}
+
+pub(super) fn native_ret_with_targets(piece_count: usize, count: usize) -> Run {
     let (mut profile, traits) = read_reference(70).unwrap();
     profile.equipment.retain(|item| {
         SET_PIECES
@@ -23,7 +27,7 @@ pub(super) fn native_ret(piece_count: usize) -> Run {
     let mut run = prepare_reference(
         profile,
         &traits,
-        1,
+        count,
         crate::followers::simulator::ParityActor::Follower,
     )
     .unwrap();
@@ -47,7 +51,7 @@ pub(super) fn has(run: &Run, spell: u32) -> bool {
     crate::auras::has_aura(run.app.world(), run.actor, spell)
 }
 
-fn grant_native_purpose(run: &mut Run) {
+pub(super) fn grant_native_purpose(run: &mut Run) {
     // Isolate the consumption relationship, not the independent random producer.
     crate::spell_cast::cast_triggered(
         run.app.world_mut(),
