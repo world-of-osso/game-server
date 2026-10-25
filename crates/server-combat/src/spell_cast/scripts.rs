@@ -150,6 +150,10 @@ pub(crate) use unbroken_rhythm::register_unbroken_rhythm;
 mod windwalker;
 mod windwalker_children;
 pub use windwalker::last_combo_action;
+mod windwalker_dual_threat;
+pub(crate) use windwalker_dual_threat::{
+    read_replacement as white_impact_replacement, roll_replacement as replace_white_impact,
+};
 mod windwalker_flurry;
 pub(crate) fn after_melee_hit(
     world: &mut World,
@@ -662,6 +666,11 @@ pub(crate) fn rake_bleed_snapshot(world: &World, caster: Entity, amount: f32) ->
     batch7::rake_initial_damage(world, caster, caster, amount)
 }
 
+/// SimC76f8118 sc_monk.cpp2048: Dual Threat's spell child cannot miss.
+pub(crate) fn ignores_hit_avoidance(spell: u32) -> bool {
+    spell == windwalker_dual_threat::DAMAGE
+}
+
 pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 
 pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
@@ -669,6 +678,7 @@ pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
         return Some(hook);
     }
     match spell_id {
+        windwalker_dual_threat::DAMAGE => Some(windwalker_dual_threat::damage),
         windwalker_children::JADEFIRE => Some(windwalker_children::jadefire_damage),
         windwalker_children::RWK_DAMAGE => Some(windwalker_children::rushing_wind_damage),
         super::elemental_overload::LIGHTNING_OVERLOAD
