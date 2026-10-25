@@ -5,6 +5,7 @@ mod barbed_budget_tests;
 mod composite_precombat_tests;
 mod dummy_reference_tests;
 mod elemental_ascendance_tests;
+mod enhancement_operand_tests;
 mod engagement_tests;
 mod equipment_input_tests;
 mod equipped_set_tests;
@@ -37,7 +38,7 @@ mod ret_dawnlight_tests;
 mod ret_empyrean_tests;
 mod ret_purpose_tests;
 mod ret_resonance_phase_tests;
-#[cfg(test)]
+mod ret_resource_tests;
 mod ret_rotation;
 mod ret_sentence_tests;
 mod ret_storm_gap_tests;
@@ -48,6 +49,7 @@ mod ret_wake_tests;
 mod shared_fact_extension_tests;
 pub(crate) mod single_spell;
 mod snakeskin_tests;
+mod trigger_primary_tests;
 mod warrior_stat_tests;
 mod windwalker_rotation;
 use crate::simc_apl_native::{FixtureAdds, FixtureTarget};
@@ -76,6 +78,7 @@ struct Run {
     gaps: Vec<String>,
     player_rotation: Option<player_rotation::PlayerRotation>,
     windwalker_rotation: Option<windwalker_rotation::Rotation>,
+    ret_rotation: Option<ret_rotation::Rotation>,
 }
 
 fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, String> {
@@ -238,14 +241,18 @@ fn prepare_literal_reference(
 fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
     let (profile, traits) = read_reference(spec_id)?;
     let identity = inputs::read_actor(&profile)?;
-    if spec_id == 269
+    if matches!(spec_id, 70 | 269)
         && matches!(
             &identity,
             crate::followers::simulator::ParityActor::Follower
         )
     {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
-        preparation::prepare_windwalker_precombat(&mut run)?;
+        if spec_id == 70 {
+            preparation::prepare_ret_precombat(&mut run)?;
+        } else {
+            preparation::prepare_windwalker_precombat(&mut run)?;
+        }
         Ok(run)
     } else {
         prepare_reference(profile, &traits, count, identity)
@@ -315,6 +322,7 @@ fn spawn_reference(
         gaps,
         player_rotation: None,
         windwalker_rotation: None,
+        ret_rotation: None,
     })
 }
 
@@ -539,6 +547,9 @@ fn drive_player(run: &mut Run) -> Result<(), String> {
     if let Some(rotation) = &mut run.windwalker_rotation {
         rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
     }
+    if let Some(rotation) = &mut run.ret_rotation {
+        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    }
     Ok(())
 }
 
@@ -554,8 +565,9 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     Ok(
         json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "actor_kind": if run.player_rotation.is_some() { "player" } else { "follower" },
-        "driver": if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "driver": if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
         "windwalker_rotation": run.windwalker_rotation.as_ref().map(|rotation| rotation.report()),
+        "ret_rotation": run.ret_rotation.as_ref().map(|rotation| rotation.report()),
         "assisted_decisions": run.player_rotation.as_ref().map_or(0, |rotation| rotation.decisions),
         "wall_seconds": started.elapsed().as_secs_f64(), "seed": 70448, "combat": combat,
         "target_health_policy": {"name": "SIMC_FIXED_TIME_TARGET_HEALTH", "clock": "per_target_lifetime",

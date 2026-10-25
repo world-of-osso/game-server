@@ -1,7 +1,10 @@
 //! Real data files tests read. A missing file fails the test instead of letting it pass
 //! without testing anything; a test that may run without the data is `#[ignore]`d.
 
-use std::path::{Path, PathBuf};
+#[cfg(test)]
+pub(crate) use server_map_rules::test_data::require;
+pub use server_map_rules::test_data::world_db_path;
+use std::path::PathBuf;
 use std::sync::OnceLock;
 
 pub(crate) mod catalog_cache;
@@ -158,11 +161,6 @@ fn prepared_class_fixture_remains_read_only_and_app_mutations_are_isolated() {
     assert_eq!(next.world_data().templates[&17252].name, original);
 }
 
-/// `data/world.db` of this checkout.
-pub fn world_db_path() -> PathBuf {
-    require(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"))
-}
-
 /// Independent lazy terrain cache backed by the same read-only source maps as the fixture.
 #[cfg(test)]
 pub(crate) fn ground_map() -> crate::ground::GroundMap {
@@ -202,19 +200,6 @@ pub fn install_native_collision(app: &mut bevy::prelude::App) -> Result<(), Stri
     app.insert_resource(crate::ground::GroundMap::new(&assets, wdts));
     app.insert_resource(los);
     Ok(())
-}
-
-/// `path`, panicking with how to provide it when it does not exist.
-pub(crate) fn require(path: PathBuf) -> PathBuf {
-    assert!(
-        path.exists(),
-        "{} not found: tests need the real data files. In a worktree, link the canonical \
-         data/ with `python3 /syncthing/Sync/Projects/world-of-osso/game-engine/scripts/agent/\
-         link-worktree-data.py <canonical checkout> <worktree>` (or symlink data/ to the \
-         canonical checkout's data/).",
-        path.display()
-    );
-    path
 }
 
 /// Full idle population across diverse layouts, as in the live world's optional components.

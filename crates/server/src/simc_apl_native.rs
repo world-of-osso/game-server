@@ -600,9 +600,27 @@ impl<'a> NativeFacts<'a> {
         self.spell(id)
     }
 
-    fn action_property(&self, alias: &str, property: &str) -> Result<f64, String> {
+    fn action_property(
+        &self,
+        alias: &str,
+        property: &str,
+        action: Option<&Action>,
+    ) -> Result<f64, String> {
         let spell = self.action_spell(alias)?;
         match property {
+            // SimC76f8118 action.cpp3502-3503: snapshot one target and average crit.
+            "damage" => crate::spell_cast::effects::expected_direct_damage(
+                self.world,
+                self.actor,
+                self.selected_target(action)?,
+                spell,
+            )
+            .map(f64::from),
+            // SimC76f8118 action.cpp3287-3288 and dot.cpp448 expose metadata, not remains.
+            "cooldown" => self.cooldown_for_spell(spell, "duration"),
+            "duration" => Ok(f64::from(crate::auras::fresh_duration_ms(
+                self.world, self.actor, self.actor, spell,
+            )) / 1000.0),
             "in_flight" | "in_flight_remains" => {
                 crate::spell_cast::native_apl::flight_value(self.world, self.actor, spell, property)
             }
@@ -645,6 +663,28 @@ impl<'a> NativeFacts<'a> {
         Ok(f64::from(amount) / f64::from(display))
     }
 
+    fn pet(&self, operand: &str) -> Result<f64, String> {
+        let (alias, property) = split_property(operand, "pet")?;
+        let spell = bound_spell(&self.bindings.actions, alias, "pet summon")?;
+        self.spell(spell)?;
+        if property != "active" {
+            return Err(format!("unknown native APL pet property {property}"));
+        }
+        let now = crate::spell_cast::now(self.world);
+        // SimC76f8118 player.cpp12458-12460: active reads an actual awake owned pet.
+        Ok(bool_value(self.world.iter_entities().any(|entity| {
+            entity
+                .get::<crate::spell_cast::summon::SummonedCreature>()
+                .is_some_and(|summon| {
+                    summon.owner == self.actor
+                        && summon.spell_id == spell
+                        && summon.expires_at.is_none_or(|expires| expires > now)
+                        && crate::spell_cast::targets::is_alive(self.world, entity.id())
+                        && crate::spell_cast::targets::same_map(self.world, self.actor, entity.id())
+                })
+        })))
+    }
+
     fn spell_haste(&self) -> Result<f64, String> {
         let stats = self
             .world
@@ -664,8 +704,15 @@ impl<'a> NativeFacts<'a> {
             "execute_time" => Ok(crate::spell_cast::native_apl::execute_time(
                 self.world, self.actor, spell,
             )),
-            "cast_time" | "cost" => self.action_property(&action.name, name),
+            "cast_time" | "cost" => self.action_property(&action.name, name, Some(action)),
             "ticks_remain" => self.ticks_remaining(spell.id),
+            // SimC76f8118 dot.cpp540: ticking refers to this proposed action's dot.
+            "ticking" => {
+                let target = self.selected_target(Some(action))?;
+                Ok(bool_value(
+                    !self.read_owned_auras(target, spell.id).is_empty(),
+                ))
+            }
             _ => Err(format!("unknown native APL contextual property {name}")),
         }
     }
@@ -775,7 +822,7 @@ impl Facts for NativeFacts<'_> {
             "movement.remains" => self.movement_value("remains"),
             "movement.speed" => self.movement_value("speed"),
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "charges_fractional"
-            | "full_recharge_time" | "execute_time" | "ticks_remain" => {
+            | "full_recharge_time" | "execute_time" | "ticks_remain" | "ticking" => {
                 Err(format!("native APL {name} requires action context"))
             }
             _ => {
@@ -793,7 +840,10 @@ impl Facts for NativeFacts<'_> {
                 }
                 if let Some(value) = name.strip_prefix("action.") {
                     let (alias, property) = split_property(value, "action")?;
-                    return self.action_property(alias, property);
+                    return self.action_property(alias, property, None);
+                }
+                if let Some(value) = name.strip_prefix("pet.") {
+                    return self.pet(value);
                 }
                 if let Some(value) = name.strip_prefix("fight_style.") {
                     return self.fight_style(value);
@@ -830,10 +880,16 @@ impl ActionFacts for NativeFacts<'_> {
         if let Some(value) = self.targeted_value(name, Some(action)) {
             return value;
         }
+        if let Some(value) = name.strip_prefix("action.") {
+            let (alias, property) = split_property(value, "action")?;
+            return self.action_property(alias, property, Some(action));
+        }
         match name {
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" => self.gcd(action, name),
             "charges" | "charges_fractional" | "full_recharge_time" | "execute_time"
-            | "cast_time" | "cost" | "ticks_remain" => self.contextual_property(action, name),
+            | "cast_time" | "cost" | "ticks_remain" | "ticking" => {
+                self.contextual_property(action, name)
+            }
             _ => self.value(name),
         }
     }
