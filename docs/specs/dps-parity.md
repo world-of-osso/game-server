@@ -128,6 +128,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Fury player parity
 
+- Slayer's Strike445579 uses one actor-wide PRD attempt counter, native Slayer's Dominance444767 chance (effect0 Fury, effect1 Arms), and its native ICD. Only pinned eligible landed impacts roll; autos never roll, and only Cleave rolls per target (`sc_warrior.cpp1651–1661,1693–1703`). Native spell payloads supply all damage.
+
 - Arms/Fury ordinary Execute consumes one live Sudden Death52437 stack after its foreground producer roll. A consumed stack grants native Imminent Demise445606 when both native passives29725/444769 are selected; background casts do not consume it (`sc_warrior.cpp4347–4352,4547–4554`).
 
 - Native Sudden Death29725 rolls its own RPPM and ICD once per foreground Warrior special execution, not on autos or background impacts; a success grants52437 and resets Execute. Selected Imminent Demise444769 independently counts Slayer's Strike445579 executions, including background ones; its native effect0 threshold grants Sudden Death and resets Execute without rolling the ordinary producer's ICD (SimC76f8118 `sc_warrior.cpp1710–1718,2428–2435`).
