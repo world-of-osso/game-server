@@ -1,5 +1,55 @@
 use super::*;
 
+fn deep_wounds_ticks(run: &Run) -> usize {
+    run.app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.kind == shared::protocol::CombatLogKind::Damage
+                && event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(262115)
+                && event.periodic
+        })
+        .count()
+}
+
+#[test]
+#[ignore = "requires exact Fury72 native player inputs"]
+fn fury_deep_wounds_rolling_refresh_keeps_next_tick_and_adds_full_native_duration() {
+    let _seed_scope = crate::random::seed_scope(70_448);
+    let mut run = super::super::prepare_literal(72, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 262115, Some(target), 1);
+    for _ in 0..140 {
+        run.app.update();
+    }
+    assert_eq!(
+        deep_wounds_ticks(&run),
+        6,
+        "fresh native6s/1s Deep Wounds pays six ticks"
+    );
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 262115, Some(target), 1);
+    for _ in 0..10 {
+        run.app.update();
+    }
+    let before = deep_wounds_ticks(&run);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 262115, Some(target), 1);
+    for _ in 0..160 {
+        run.app.update();
+    }
+    // SimC76f8118 action.cpp4614–4617/4995–5016: DOT_ROLLING carries
+    // time-to-next-full-tick plus a fresh native duration, sharing the old+new budget.
+    assert_eq!(
+        deep_wounds_ticks(&run) - before,
+        7,
+        "mid-period rolling refresh retains the pending tick plus six new native ticks"
+    );
+}
+
 fn cast_native(run: &mut Run, spell: u32, target: Entity) {
     super::super::literal_rotation::execution::execute(
         run.app.world_mut(),
