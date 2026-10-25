@@ -118,6 +118,50 @@ pub(crate) fn stacks_changed(world: &mut World, target: Entity, instance: u32, s
     }
 }
 
+fn active_instances(world: &World, actor: Entity, spell: u32) -> Vec<u32> {
+    let now = crate::spell_cast::now(world);
+    let Some(auras) = world.get::<crate::auras::ActiveAuras>(actor) else {
+        return Vec::new();
+    };
+    auras
+        .iter()
+        .filter(|aura| {
+            aura.spell_id == spell
+                && aura.caster == actor
+                && aura.expires_at.is_none_or(|at| at > now)
+        })
+        .map(|aura| aura.instance_id)
+        .collect()
+}
+
+/// SimC76f8118 buff.cpp3001–3004: prediction makes existing acquired stacks react now.
+pub(crate) fn predict(world: &mut World, actor: Entity, spell: u32) {
+    let instances = active_instances(world, actor, spell);
+    let now = crate::spell_cast::now(world);
+    if let Some(mut reactions) = world.get_mut::<BuffReactions>(actor) {
+        for instance in instances {
+            if let Some(deadlines) = reactions.deadlines.get_mut(&instance) {
+                deadlines.fill(now);
+            }
+        }
+    }
+}
+
+pub(crate) fn has_observed_reaction(world: &World, actor: Entity, spell: u32) -> bool {
+    let Some(reactions) = world.get::<BuffReactions>(actor) else {
+        return false;
+    };
+    let now = crate::spell_cast::now(world);
+    active_instances(world, actor, spell)
+        .iter()
+        .any(|instance| {
+            reactions
+                .deadlines
+                .get(instance)
+                .is_some_and(|deadlines| deadlines.iter().any(|at| *at <= now))
+        })
+}
+
 pub(super) fn last_trigger(
     world: &World,
     actor: Entity,
