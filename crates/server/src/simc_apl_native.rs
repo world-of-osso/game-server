@@ -251,6 +251,17 @@ impl<'a> NativeFacts<'a> {
                 .map(|health| f64::from(health.current))
                 .ok_or("native target lacks Health".into()),
             "health.pct" => self.target_health_pct(target),
+            // SimC76f8118 player.cpp11813–11814: query the actual target's live shield.
+            "has_absorb" => Ok(bool_value(
+                self.world
+                    .get::<crate::auras::ActiveAuras>(target)
+                    .is_some_and(|auras| {
+                        crate::auras::forecast::has_absorb(
+                            auras,
+                            crate::spell_cast::now(self.world),
+                        )
+                    }),
+            )),
             "debuff.casting.up" => Ok(bool_value(
                 self.world
                     .get::<shared::casting::CastState>(target)
@@ -708,6 +719,17 @@ impl<'a> NativeFacts<'a> {
         })))
     }
 
+    fn main_hand_is_two_handed(&self) -> Result<f64, String> {
+        // SimC76f8118 player.cpp12001–12004: actual equipped weapon group.
+        let stats = self
+            .world
+            .get::<crate::stats::CharacterStats>(self.actor)
+            .ok_or("native APL actor lacks derived weapon stats")?;
+        Ok(bool_value(
+            stats.main_hand.kind == shared::components::WeaponType::TwoHand,
+        ))
+    }
+
     fn spell_haste(&self) -> Result<f64, String> {
         let stats = self
             .world
@@ -914,6 +936,7 @@ impl Facts for NativeFacts<'_> {
             // bare spell_targets uses active_enemies, including recurring adds.
             "active_enemies" | "spell_targets" => Ok(self.active_enemies as f64),
             "spell_haste" => self.spell_haste(),
+            "main_hand.2h" => self.main_hand_is_two_handed(),
             "movement.distance" => self.movement_distance(),
             "movement.remains" => self.movement_value("remains"),
             "movement.speed" => self.movement_value("speed"),
