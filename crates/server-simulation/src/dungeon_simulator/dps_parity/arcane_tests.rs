@@ -112,8 +112,8 @@ fn arcane_batch_barrage_consumes_salvo_and_rolls_native_orb_and_prismatic() {
         cast(&mut run, 44425);
         assert_eq!(
             stacks(&run, 1242974),
-            0,
-            "Barrage consumes Salvo outside Arcane Soul"
+            3,
+            "Barrage consumes Salvo, then native Polished Focus refunds three"
         );
         prism |= stacks(&run, 1295942) > 0;
         orb |= run
