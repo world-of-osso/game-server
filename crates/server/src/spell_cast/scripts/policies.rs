@@ -9,7 +9,17 @@ use crate::spell_cast::{CostPool, TargetPlan, effects::EffectCtx, targets};
 use crate::spell_info::{CastPolicyContext, SpellInfo, SpellStore};
 
 #[derive(Clone, Copy)]
+struct ChannelMomentum {
+    channel: u32,
+    damage: u32,
+    stacks: u32,
+    speed: u32,
+    haste_effect: u8,
+}
+
+#[derive(Clone, Copy)]
 enum Relationship {
+    ChannelMomentum(ChannelMomentum),
     CounterAfterCast {
         parent: u32,
         counter: u32,
@@ -31,6 +41,21 @@ struct Policy {
 
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
+    // Momentum Boost tooltip: https://warcraft.wiki.gg/wiki/Momentum_Boost
+    // SimC76f8118 sc_monk.cpp1699–1704/1730–1734/1839–1841: haste damage,
+    // FoF-only stacks, reset and native60%/8s speed on end (also dot.cpp75–81).
+    Policy {
+        name: "SIMC_WW_MOMENTUM_BOOST",
+        spec: 269,
+        talent: 451294,
+        relationship: Relationship::ChannelMomentum(ChannelMomentum {
+            channel: 113656,
+            damage: 117418,
+            stacks: 451297,
+            speed: 451298,
+            haste_effect: 0,
+        }),
+    },
     // sc_paladin_retribution.cpp846–876; native raw2 + specialization1 wins.
     Policy {
         name: "SIMC_RET_DAWNLIGHT_WAKE_PRODUCER",
@@ -54,6 +79,92 @@ const POLICIES: &[Policy] = &[
         },
     },
 ];
+
+fn channel_policies() -> impl Iterator<Item = (&'static Policy, ChannelMomentum)> {
+    POLICIES
+        .iter()
+        .filter_map(|policy| match policy.relationship {
+            Relationship::ChannelMomentum(channel) => Some((policy, channel)),
+            _ => None,
+        })
+}
+
+pub(crate) fn register_channel_policies(scripts: &mut crate::auras::scripts::AuraScripts) {
+    for (policy, channel) in channel_policies() {
+        // The synchronous damage consumer owns this producer, not broad DB2 masks.
+        scripts.0.entry(policy.talent).or_default().check_proc = Some(block_metadata_proc);
+        scripts.0.entry(channel.channel).or_default().on_remove = Some(end_channel_policy);
+    }
+}
+
+fn block_metadata_proc(
+    _world: &World,
+    _aura: &crate::auras::AuraInstance,
+    _event: &crate::auras::procs::AuraEvent,
+) -> bool {
+    false
+}
+
+pub(super) fn after_damage(world: &mut World, ctx: &EffectCtx<'_>) {
+    for (policy, channel) in
+        channel_policies().filter(|(_, channel)| channel.damage == ctx.spell.id)
+    {
+        if selected(world, ctx.caster, policy) {
+            crate::spell_cast::cast_triggered(
+                world,
+                ctx.caster,
+                channel.stacks,
+                Some(ctx.caster),
+                ctx.depth + 1,
+            );
+        }
+    }
+}
+
+pub(super) fn damage_hook(spell: u32) -> Option<super::DamageAmountHook> {
+    channel_policies()
+        .any(|(_, channel)| channel.damage == spell)
+        .then_some(channel_haste_damage)
+}
+
+fn channel_haste_damage(world: &World, caster: Entity, _target: Entity, amount: f32) -> f32 {
+    let Some((policy, channel)) =
+        channel_policies().find(|(policy, _)| selected(world, caster, policy))
+    else {
+        return amount;
+    };
+    let percent = super::script_effect_value(world, caster, policy.talent, channel.haste_effect);
+    let haste = world
+        .get::<crate::stats::CharacterStats>(caster)
+        .expect("selected class damage policy requires native stats")
+        .haste_pct;
+    let bonus = haste / 100.0 * percent / 100.0;
+    amount * (1.0 + bonus)
+}
+
+fn end_channel_policy(
+    world: &mut World,
+    unit: Entity,
+    aura: &crate::auras::AuraInstance,
+    reason: crate::auras::RemoveReason,
+) {
+    for (policy, channel) in
+        channel_policies().filter(|(_, channel)| channel.channel == aura.spell_id)
+    {
+        if unit != aura.caster || !selected(world, unit, policy) {
+            continue;
+        }
+        crate::auras::remove_auras(world, unit, crate::auras::RemoveReason::Consumed, |buff| {
+            buff.caster == unit && buff.spell_id == channel.stacks
+        });
+        if matches!(
+            reason,
+            crate::auras::RemoveReason::ChannelEnded | crate::auras::RemoveReason::Expired
+        ) {
+            crate::spell_cast::cast_triggered(world, unit, channel.speed, Some(unit), 1);
+        }
+    }
+}
 
 fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
