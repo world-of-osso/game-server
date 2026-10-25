@@ -6,7 +6,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 - [x] Interpret numeric truth, OR/AND/NOT, arithmetic and comparisons with pinned SimC precedence. Single `%` divides; `%%` is modulo. `>?` takes the minimum and `<?` takes the maximum, below sums and above comparisons; ties and unordered comparisons preserve the left operand, as pinned C++ std::min/max.
 - [ ] Read explicit native facts for buff stacks/remains/up, cooldown remains/charges/duration, resources, talents, equipment/trinkets, target count/TTD, fight remains, raid-event adds, dots/debuffs and gcd. Unknown operands fail explicitly, including in otherwise inactive condition branches; never silently become false.
-- [ ] Share native equipment identities/stat-buff metadata, on-use vs proc cooldown sources and native tier facts across spec adapters. Reject unknown item/tier operands; preserve original IDs and trinket1→trinket2→other use order.
+- [ ] Share native equipment identities/stat-buff metadata, on-use vs proc cooldown sources and native tier facts across spec adapters. Reject unknown native stat/tier metadata; preserve original IDs and trinket1→trinket2→other use order.
 - [x] Bind action-dependent facts (`combo_strike`, plain `gcd`, action minimum GCD) to each source row, including variable/call control actions. An actor-wide value is not equivalent.
 - [x] Execute declared variables using source `value`, `setif`, `value_else`, `reset` and numeric `default` semantics. Variable `target_if` selects the native candidate before its condition and assignment, without retargeting later actions.
 - [x] Preserve literal action order and conditional `call_action_list` decisions; native castability selects the first usable action. An exhausted child list returns control to its caller.
@@ -19,6 +19,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] Sample native cast readiness independently for each action/target pair. A self-target NativeAction with target_if retains the selected enemy as its scoring context but maps admitted readiness and dispatch to its actual self target; unknown explicit contexts remain unready, never use default admission as fallback. Harmful precasts use the actor's actual selected enemy when combat candidates have not yet been supplied.
 - [x] Permit adapter-declared action target_ready predicates for each selected candidate. A veto leaves the action declared but unavailable to literal selection; it never rewrites the row or changes native cast admission. Ret Rebuke requires actual target casting state, not inferred reaction timing.
 - [x] Deliver Player literal spells through ordinary Player requests with the selected explicit target, rechecking knowledge and rejecting expired identities rather than redirecting. Preserve selected and AA targets; retain native creature dispatch for WW followers.
+- [x] Native cursor actions supply the selected cast target's position during both readiness and ordinary Player/NPC dispatch. Keep destination, native unit and action-primary identities separate, and retain the point through cast time and flight; ordinary unit actions do not invent a destination.
 - [x] `retarget_auto_attack` changes only the running AA victim, preserving both swing timers and the actor's selection. An already-running AA must not restart onto the primary target.
 - [ ] Expose target-specific readonly resource-limited admission for a chosen power pool. Compare that pool's native maximum locally; never grant or temporarily replace resources. Preserve other pools, health and every other native cast constraint; an unaffordable maximum cannot qualify.
 - [x] Evaluate concrete default WW and Ret source lines, including resource/buff stacks, Execution Sentence and trinket synchronization.
@@ -41,6 +42,8 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] Target `health` reads the selected native current pool; `retarget` enumerates actual candidates without a spell definition. Target `debuff.react` uses recipient acquisition deadlines and caster-owned aura filtering. Fixture-only absent pull events report zero remaining time and the source no-next-event sentinel.
 
 ## Equipped use_items
+
+- [x] Named equipment matching is case-insensitive. A name with no equipped match makes `equipped.<name>` false and a named `use_item` unavailable, without repairing literal spellings or fabricating item metadata (SimC76f8118 `player.cpp9873–9884,11974–11993`).
 
 - [x] Evaluate each equipped proxy's condition before selecting its native use. `this_trinket` and `other_trinket` resolve relative to that candidate, preserving source slot order, exclusions and actual cooldown admission.
 
