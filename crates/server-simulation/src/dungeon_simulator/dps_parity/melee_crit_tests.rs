@@ -5,7 +5,8 @@ use crate::spell_cast::test_harness::ObservedCombatEvents;
 use crate::stats::CharacterStats;
 use shared::protocol::CombatLogKind;
 
-const REQUIRED_ATTEMPTS: usize = 128;
+// Real2.07s swings include DT replacements;100 retained whites fit the300s fixture.
+const REQUIRED_ATTEMPTS: usize = 100;
 // This distinguishes native class crit plus its actual white-only aura from NPC base5%.
 // Seeded native outcomes remain stochastic; do not rewrite stats or hit results.
 const SAMPLING_TOLERANCE_PCT: f32 = 12.0;
@@ -33,7 +34,9 @@ fn observe_white_crit(run: &mut Run, source: Entity) -> (usize, f32) {
             );
         }
     }
-    panic!("native source {source:?} did not deliver128 actual white attempts in300s");
+    panic!(
+        "native source {source:?} did not deliver{REQUIRED_ATTEMPTS} actual white attempts in300s"
+    );
 }
 
 fn assert_critical_rate(run: &mut Run, source: Entity, expected: f32) {
