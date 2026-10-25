@@ -32,6 +32,11 @@ pub use assisted_parity::{
     read_facts as read_assisted_parity_facts, read_request_window as read_assisted_request_window,
 };
 
+/// Actual ranged-repeat identity; querying it never starts or resets its timer.
+pub fn read_native_auto_repeat(world: &World, caster: Entity, spell: u32) -> bool {
+    super::auto_repeat::active(world, caster, spell)
+}
+
 /// Opt-in actual server combat events, including ownerless NPC self-events.
 /// Captured before owner routing; never changes production delivery or ownership.
 #[derive(Resource, Default)]
