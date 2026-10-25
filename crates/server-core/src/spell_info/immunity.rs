@@ -24,7 +24,7 @@ pub struct SpellImmunityDefinition {
 
 impl SpellImmunityDefinition {
     /// This batch consumes mechanic/effect fields; other nonzero fields stay gaps.
-    pub(crate) fn has_unmodeled_fields(&self) -> bool {
+    pub fn has_unmodeled_fields(&self) -> bool {
         self.school_mask != 0
             || self.dispel_type_mask != 0
             || !self.auras.is_empty()

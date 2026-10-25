@@ -238,7 +238,6 @@ pub mod test_harness;
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use bevy::ecs::system::SystemState;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::casting::{CastState, CastTickResult, CastType};
@@ -1716,11 +1715,9 @@ pub(crate) fn caster_knows_spell(world: &mut World, caster: Entity, spell_id: u3
     {
         return true;
     }
-    let mut known = SystemState::<Query<&KnownSpells>>::new(world);
-    let known = known
-        .get(world)
-        .expect("plain component query always validates");
-    crate::class_progression::knows_spell(&known, caster, spell_id)
+    // SimC76f8118 sc_rogue.cpp10272–10273: selected Thistle Tea grants its cast
+    // action. Use the selection resolver here too; raw spellbook IDs omit grants.
+    knowledge::resolve_actor_action(world, caster, spell_id).is_ok()
         || taught_by_known_spell(world, caster, spell_id)
         || crate::auras::overrides::grants_spell(world, caster, spell_id)
         || world.get::<KnownSpells>(caster).is_some_and(|known| {
@@ -2712,6 +2709,7 @@ fn execute_cast_with_primary(
     }
     if !spell.cast_parent_owns_modifier_charges {
         spell_mods::consume_charges(world, caster, spell);
+        scripts::consume_maelstrom_weapon(world, caster, spell);
         scripts::apply_echo_policies(world, caster, spell);
         scripts::after_foreground_spender(world, caster, spell, spell.cast_primary_target);
         scripts::roll_selected_ret_divine_purpose(world, caster, spell);
@@ -3252,7 +3250,12 @@ fn run_hit_scripts(
 ) {
     let hook = scripts::on_hit(spell.id);
     let context_hook = scripts::on_hit_with_context(spell.id);
-    if hook.is_none() && context_hook.is_none() && spell.cast_policy_context.is_none() {
+    let damage_hook = scripts::on_enemy_damage_hit_with_context(spell.id);
+    if hook.is_none()
+        && context_hook.is_none()
+        && damage_hook.is_none()
+        && spell.cast_policy_context.is_none()
+    {
         return;
     }
     let ctx = EffectCtx {
@@ -3261,6 +3264,11 @@ fn run_hit_scripts(
         depth,
         dest: None,
         chain_multiplier: 1.0,
+    };
+    let damage_units = if damage_hook.is_some() {
+        enemy_damage_hit_units(world, &ctx)
+    } else {
+        Vec::new()
     };
     for unit in hit_units(plan) {
         if world.get_entity(unit).is_err() {
@@ -3272,8 +3280,35 @@ fn run_hit_scripts(
         if let Some(hook) = context_hook {
             hook(world, &ctx, unit);
         }
+        if let Some(hook) = damage_hook
+            && damage_units.contains(&unit)
+        {
+            hook(world, &ctx, unit);
+        }
         scripts::apply_hit_policies(world, &ctx, unit);
     }
+}
+
+/// Use actual damage TargetInfos, not the union of damage and aura recipients.
+/// SimC76f8118 sc_paladin.cpp1436–1456 rolls Judgment mastery on enemy impacts.
+fn enemy_damage_hit_units(world: &World, ctx: &EffectCtx) -> Vec<Entity> {
+    let frame = world
+        .get_resource::<ResolvingHits>()
+        .and_then(|hits| hits.0.last())
+        .filter(|frame| {
+            frame.caster == ctx.caster && frame.spell_id == ctx.spell.id && frame.depth == ctx.depth
+        });
+    let Some(frame) = frame else {
+        return Vec::new();
+    };
+    frame
+        .damage
+        .iter()
+        .map(|(unit, _)| *unit)
+        .filter(|&unit| {
+            targets::relation_matches(world, ctx.caster, unit, targets::Relation::Enemy)
+        })
+        .collect()
 }
 
 /// Direct damage of the spells resolving now, gathered per unit for their hit events
