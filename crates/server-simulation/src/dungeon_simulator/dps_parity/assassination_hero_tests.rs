@@ -4,6 +4,65 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "requires prepared259 private native DB and player actor"]
+fn assassination_hero_garrote_earns_native_post_stealth_window() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(259, 1).unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .has_type(crate::auras::handlers::MOD_STEALTH)
+    );
+    engage(&mut run);
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
+    for _ in 0..40 {
+        drive_player(&mut run).unwrap();
+        run.app.update();
+        let stealthed = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .has_type(crate::auras::handlers::MOD_STEALTH);
+        if !stealthed {
+            break;
+        }
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.targets[0], 703),
+        "ordinary Garrote must be the earned stealth exit"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 392401),
+        "leaving real stealth must grant the native Improved Garrote window"
+    );
+    for _ in 0..200 {
+        run.app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 392401),
+        "native window must expire without a new stealth exit"
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(703)
+                && event.kind == CombatLogKind::Damage
+                && event.periodic
+                && event.amount > 0)
+    );
+}
+
+#[test]
+#[ignore = "requires prepared259 private native DB and player actor"]
 fn assassination_hero_native_rupture_and_kingsbane_children_deal_damage() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(259, 1).unwrap();
