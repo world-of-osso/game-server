@@ -725,6 +725,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     crate::spell_cast::scripts::register_xuens_battlegear(&mut scripts);
     crate::spell_cast::scripts::register_channel_policies(&mut scripts);
     crate::spell_cast::scripts::register_elemental_policies(&mut scripts);
+    crate::spell_cast::scripts::register_cast_relationships(&mut scripts);
 }
 
 /// TC spell_rogue.cpp spell_rog_stealth: 1784's own rows carry no MOD_STEALTH;

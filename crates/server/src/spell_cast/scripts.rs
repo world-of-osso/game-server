@@ -4,6 +4,12 @@
 use crate::random as rand;
 
 mod after_cast_auras;
+mod bouncing_projectiles;
+mod cast_relationships;
+pub(crate) use cast_relationships::register as register_cast_relationships;
+pub(super) use cast_relationships::{
+    after_cast as apply_cast_relationships, ignores_cooldown as relationship_ignores_cooldown,
+};
 mod batch10;
 mod batch11;
 mod batch12;
@@ -42,7 +48,7 @@ mod essence_burst;
 mod feral_frenzy;
 pub(crate) use feral_frenzy::register as register_feral_frenzy;
 mod maelstrom_weapon;
-pub(crate) use maelstrom_weapon::{consume as consume_maelstrom_weapon, snapshots_modifier};
+pub(crate) use maelstrom_weapon::consume as consume_maelstrom_weapon;
 pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
     maelstrom_weapon::register(scripts);
     enhancement_imbues::register(scripts);
@@ -214,6 +220,9 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
 }
 /// Native per-unit scripts replace the default effect handler before dispatch.
 pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+    if let Some(hook) = bouncing_projectiles::hook(spell, index) {
+        return Some(hook);
+    }
     if (spell, index) == (super::toy_coyote::DESPAWN, 0) {
         return Some(super::toy_coyote::despawn);
     }
@@ -256,6 +265,11 @@ use crate::auras::mount::{FLIGHT_STYLE_STEADY, FlightStyle, set_flight_style};
 use crate::spell_info::SpellInfo;
 
 /// Frostbolt: its effects are TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE) only.
+/// Sourced consumers retain native modifier amounts through projectile impact.
+pub(crate) fn snapshots_modifier(id: u32) -> bool {
+    maelstrom_weapon::snapshots_modifier(id) || cast_relationships::snapshots_modifier(id)
+}
+
 const FROSTBOLT: u32 = 116;
 /// Chilled: APPLY_AURA MOD_DECREASE_SPEED 33 (-50%, 8 s).
 const CHILLED: u32 = 205_708;
