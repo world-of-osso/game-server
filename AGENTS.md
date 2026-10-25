@@ -7,7 +7,7 @@ Bevy 0.19 authoritative game server for the WoW project (Lightyear 0.28 networki
 - Fix = one behavioral test failing before and passing after, then `cargo check --locked --workspace --all-targets`, `cargo fmt --check`, the touched tests, commit. No proof ledgers, receipt JSON, census files, control batteries or fidelity escalation.
 - DPS parity: SimC (pinned in `docs/specs/dps-parity.md`) decides behavior; native data supplies values. Match SimC without asking; cite the SimC line in a code comment. Measure with `scripts/dps_parity_measure.py` after every fix.
 - Fix adjacent issues on the critical path directly; mention them in the report. No approval round-trips.
-- Agents merge `origin/master` and push their own parity work straight to `master` after the checks above; retry on push races. No full-suite gate before landing. Full workspace suites are suspended until every DPS spec is within parity; run only the touched tests.
+- Agents do not run cargo, capacity admission or pushes. Run `cargo fmt`, commit, then `python3 /home/osso/.worktrees/train/merge_train.py submit --commit <sha> --test '<cargo test args>' [--land] [--measure spec=N:world_db=PATH:output=DIR:actor=player:targets=1,3]` and `... wait <id>`. The train merges every queued commit onto `origin/master` in one tree, runs one check, fmt and each entry's tests, pushes `--land` entries that pass, and runs measurements from one executable. Without `--land` the entry is a probe (RED proof, unlanded measurement): it is tested but never pushed; a RED proof shows as `rejected: tests failed` with its log. Submit several tests in one entry. Full workspace suites are suspended until every DPS spec is within parity.
 
 ## Wiki
 
