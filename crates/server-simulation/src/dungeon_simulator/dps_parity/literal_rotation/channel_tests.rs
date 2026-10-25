@@ -343,3 +343,78 @@ fn literal_chain_recasts_ready_channel_at_penultimate_native_tick() {
     }
     assert!(chained, "chain must start a second actual native cast");
 }
+
+#[test]
+#[ignore = "requires native62 Player/private profile"]
+fn literal_early_chain_if_without_chain_recasts_with_native_gcd_guard() {
+    let (mut run, equipment, bindings, encounter) = fixture();
+    let clearcasting = crate::auras::AuraApplication {
+        caster: run.actor,
+        target: run.actor,
+        spell_id: 263725,
+        effect_mask: u32::MAX,
+        source: crate::auras::AuraSource::Cast,
+    };
+    crate::auras::apply_aura(run.app.world_mut(), &clearcasting);
+    let mut driver = start_driver(
+        &mut run,
+        &equipment,
+        &bindings,
+        encounter,
+        &[("default", "arcane_missiles,early_chain_if=1")],
+    );
+    crate::auras::apply_aura(run.app.world_mut(), &clearcasting);
+    let proposed = Action {
+        source_row: None,
+        name: "arcane_missiles".into(),
+        target: None,
+        options: Default::default(),
+    };
+    let mut restarted = false;
+    for _ in 0..200 {
+        run.app.update();
+        let Some(decision) = read_decision(&mut run, &mut driver, &equipment, &bindings, encounter)
+        else {
+            continue;
+        };
+        assert!(matches!(decision, ChannelDecision::Chain(_, _)));
+        let cast = run
+            .app
+            .world()
+            .get::<shared::casting::CastState>(run.actor)
+            .unwrap();
+        assert!(cast.elapsed > 0.0);
+        assert!(
+            cast.elapsed < cast.duration,
+            "restart must precede natural channel completion"
+        );
+        let timing = (
+            cast.elapsed,
+            cast.duration - cast.elapsed,
+            cast.channel_tick_interval,
+        );
+        let facts = NativeFacts::new(run.app.world(), run.actor, &bindings, encounter, 1);
+        assert_eq!(
+            facts.value_for(&proposed, "gcd.remains").unwrap(),
+            0.0,
+            "early chaining respects native GCD; elapsed/remaining/period={timing:?}"
+        );
+        driver
+            .execute_channel_decision(run.app.world_mut(), run.actor, decision)
+            .unwrap();
+        assert_eq!(
+            run.app
+                .world()
+                .get::<shared::casting::CastState>(run.actor)
+                .unwrap()
+                .elapsed,
+            0.0
+        );
+        restarted = true;
+        break;
+    }
+    assert!(
+        restarted,
+        "early_chain_if alone must restart a ready native channel"
+    );
+}
