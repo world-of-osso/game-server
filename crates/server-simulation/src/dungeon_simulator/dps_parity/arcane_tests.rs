@@ -335,6 +335,95 @@ fn arcane_area_overpowered_missiles_never_double_hits_primary_per_tick() {
     );
 }
 
+fn splinter_hits(run: &Run) -> usize {
+    run.app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(443763)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count()
+}
+
+fn finish_splinter_flight(run: &mut Run) {
+    let end = crate::spell_cast::now(run.app.world()) + 3.0;
+    while crate::spell_cast::now(run.app.world()) < end {
+        run.app.update();
+    }
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_splinter_touch_conjures_signature_spell_count() {
+    let mut run = prepare_literal(62, 1).unwrap();
+    cast(&mut run, 321507);
+    finish_splinter_flight(&mut run);
+    assert!(
+        splinter_hits(&run) >= 4,
+        "selected native Signature Spell grants four Touch Splinters"
+    );
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_splinter_barrage_converts_spent_salvo_through_force_of_will() {
+    let mut run = prepare_literal(62, 1).unwrap();
+    grant(&mut run, 1242974, 20);
+    cast(&mut run, 44425);
+    finish_splinter_flight(&mut run);
+    assert!(
+        splinter_hits(&run) >= 4,
+        "native Force of Will conjures one Splinter per five spent Salvo"
+    );
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_splinter_orb_uses_selected_splintering_orbs() {
+    let mut run = prepare_literal(62, 1).unwrap();
+    cast(&mut run, 153626);
+    finish_splinter_flight(&mut run);
+    assert!(
+        splinter_hits(&run) >= 2,
+        "ordinary selected Orb impact conjures two native Splinters"
+    );
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_splinter_surge_uses_native_splinterstorm_count() {
+    let mut run = prepare_literal(62, 1).unwrap();
+    cast(&mut run, 365350);
+    finish_splinter_flight(&mut run);
+    assert!(
+        splinter_hits(&run) >= 8,
+        "ordinary selected Surge conjures native Splinterstorm eight"
+    );
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_splinter_infused_hits_generate_native_salvo_without_missiles() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(62, 1).unwrap();
+    cast(&mut run, 321507);
+    cast(&mut run, 365350);
+    finish_splinter_flight(&mut run);
+    assert!(
+        splinter_hits(&run) >= 12,
+        "real Signature/Splinterstorm impacts precede the proc check"
+    );
+    assert!(
+        stacks(&run, 1242974) > 0,
+        "selected Infused Splinters rolls native Salvo on actual Splinter hits"
+    );
+}
+
 #[test]
 #[ignore = "merge-train shared PRD regression"]
 fn arcane_batch_clearcasting_prd_uses_the_pinned_coefficient_cap() {
