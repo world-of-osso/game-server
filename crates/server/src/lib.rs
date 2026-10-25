@@ -44,6 +44,7 @@ mod collection;
 pub mod combat;
 pub mod combat_refs;
 pub mod conditions;
+pub mod consumables;
 mod crafting_orders;
 pub mod creature_aggro;
 pub mod creature_ai;

@@ -520,6 +520,8 @@ type AutoAttackers<'w, 's> = Query<
         SwingState<'static>,
         (
             Has<Npc>,
+            Has<shared::components::Player>,
+            Has<crate::followers::Follower>,
             Option<&'static crate::zones::CreatureFlagsExtra>,
             Option<&'static crate::zones::TempSummon>,
             Option<&'static CreatureAttackTime>,
@@ -679,6 +681,7 @@ fn auto_attack_unit(
         &mut params.units.p0(),
         attacker_entity,
         dt,
+        params.forms.as_deref(),
         params.spells.as_deref(),
     ) else {
         return;
@@ -709,6 +712,7 @@ fn auto_attack_unit(
         expertise_pct: snapshot.expertise_pct,
         creature: snapshot.creature,
         authored_attack_time: snapshot.authored_attack_time,
+        form_attack_time: snapshot.form_attack_time,
         creature_flags: snapshot.creature_flags.as_ref(),
         temp_summoner: snapshot.temp_summoner,
         hunter_owner_ap: params.hunter_pets.get(attacker_entity).ok().map(|pet| {
@@ -780,6 +784,7 @@ struct SwingSnapshot {
     expertise_pct: f32,
     creature: bool,
     authored_attack_time: Option<CreatureAttackTime>,
+    form_attack_time: Option<crate::auras::shapeshift::FormAttackTiming>,
     creature_flags: Option<crate::zones::CreatureFlagsExtra>,
     temp_summoner: Option<Entity>,
 }
@@ -830,6 +835,7 @@ fn snapshot_attacker(
     attackers: &mut AutoAttackers,
     entity: Entity,
     dt: Duration,
+    forms: Option<&crate::auras::shapeshift::ShapeshiftForms>,
     spells: Option<&crate::spell_info::SpellStore>,
 ) -> Option<SwingSnapshot> {
     let (
@@ -839,7 +845,7 @@ fn snapshot_attacker(
         mods,
         stats,
         (stat_mods, cast, auras),
-        (creature, flags, summon, attack_time),
+        (creature, player, parity_actor, flags, summon, attack_time),
     ) = attackers.get_mut(entity).ok()?;
     auto_attack.timer = auto_attack.timer.saturating_sub(dt);
     auto_attack.off_hand_timer = auto_attack.off_hand_timer.saturating_sub(dt);
@@ -860,9 +866,16 @@ fn snapshot_attacker(
         stats: stats.cloned(),
         haste_pct: stat_mods.map_or(0.0, |mods| mods.haste_pct),
         enemy_dodge_pct: auras.map_or(0.0, |auras| auras.modifier(MOD_ENEMY_DODGE)),
-        expertise_pct: crate::auras::combat_stats::expertise_reduction(auras, !creature),
+        expertise_pct: crate::auras::combat_stats::class_actor_expertise_reduction(
+            auras,
+            player,
+            parity_actor,
+        ),
         creature,
         authored_attack_time: attack_time.copied(),
+        form_attack_time: auras
+            .and_then(crate::auras::shapeshift::current_form)
+            .and_then(|(_, form)| forms?.attack_timing(form, !creature)),
         creature_flags: flags.copied(),
         temp_summoner: summon.map(|summon| summon.summoner),
     })
@@ -959,11 +972,12 @@ pub(crate) struct Attacker<'a> {
     pub haste_pct: f32,
     /// Signed attacker aura251 sum, snapshotted before mutating victim auras.
     pub enemy_dodge_pct: f32,
-    /// Signed NPC aura240/4 reduction; players do not use this expertise path.
+    /// Native aura240/4 reduction plus the player/class-parity baseline expertise.
     pub expertise_pct: f32,
     /// A creature (`Npc`): it rolls the creature side of the hit table.
     pub creature: bool,
     pub authored_attack_time: Option<CreatureAttackTime>,
+    pub form_attack_time: Option<crate::auras::shapeshift::FormAttackTiming>,
     /// Actual attacker's already-cached template flags, independent of victim flags.
     pub creature_flags: Option<&'a crate::zones::CreatureFlagsExtra>,
     /// Existing TempSummon direct summoner, not player owner or recursive ancestor.
@@ -986,6 +1000,14 @@ impl Attacker<'_> {
         }
     }
 
+    fn weapon_round_time(&self, weapon: &WeaponDamage) -> f32 {
+        if self.stats.is_none() || self.spirit_wolf.is_some() {
+            return weapon.speed;
+        }
+        self.form_attack_time
+            .map_or(weapon.speed, |form| form.seconds)
+    }
+
     /// Players/Spirit Wolf retain their weapon clocks; source creatures use their
     /// authored interval and TC's signed attack-time factors.
     fn swing_time(&self, weapon: &WeaponDamage) -> f32 {
@@ -996,7 +1018,8 @@ impl Attacker<'_> {
             return weapon.speed / (1.0 + self.haste_pct / 100.0).max(0.01) * slow;
         }
         if let Some(stats) = self.stats {
-            return melee::swing_time(weapon.speed, stats.haste_pct) * slow;
+            let base = self.weapon_round_time(weapon);
+            return melee::swing_time(base, stats.haste_pct) * slow;
         }
         if let Some(base) = self.authored_attack_time {
             return base.modified(self.haste_pct, self.mods);
@@ -1041,7 +1064,13 @@ fn roll_swing_base(
     }
     match attacker.stats {
         Some(stats) => melee::roll_weapon_damage(
-            melee::weapon_damage_range(weapon, stats.attack_power, stats.versatility_pct, hand),
+            melee::weapon_damage_range(
+                weapon,
+                stats.attack_power,
+                stats.versatility_pct,
+                hand,
+                attacker.form_attack_time,
+            ),
             rand::Rng::r#gen(&mut rng),
         ),
         None => creature_weapon_damage(scaling),
@@ -1738,7 +1767,7 @@ fn try_swing(
             outcome: format!("{kind:?}"),
             level_difference,
             critical_multiplier,
-            weapon_speed: weapon.speed,
+            weapon_speed: attacker.weapon_round_time(&weapon),
         };
         commands.queue(move |world: &mut World| {
             crate::test_support::healer_intake::record(world, source, target_entity, 1, raw, kind)
@@ -1798,7 +1827,7 @@ fn try_swing(
         incoming_loss,
         blocked,
         overkill: 0.0,
-        weapon_speed: weapon.speed,
+        weapon_speed: attacker.weapon_round_time(&weapon),
         npc_died: false,
         player_died: false,
         duel_defeated: false,

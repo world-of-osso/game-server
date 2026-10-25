@@ -119,6 +119,7 @@ fn literal_precombat_ww_snapshot_exists_before_engagement_and_fight_time() {
     let rotation = run.windwalker_rotation.as_ref().unwrap();
     assert!(rotation.report()["native_precombat_snapshot"].is_object());
     let action = server::simc_apl::Action {
+        source_row: None,
         name: "tiger_palm".into(),
         target: None,
         options: Default::default(),
@@ -196,6 +197,7 @@ fn literal_precombat_stops_after_the_first_ready_harmful_native_action() {
     )
     .unwrap();
     let blackout = Action {
+        source_row: None,
         name: "blackout_kick".into(),
         target: None,
         options: Default::default(),

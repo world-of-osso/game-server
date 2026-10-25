@@ -1,3 +1,10 @@
+## 2026-10-25 — Elemental literal fixture
+
+[Elemental262](systems/simc-apl.md#elemental-fixture-262): exact profile actions use the shared literal evaluator and native dispatch, with precombat, selected Swiftness replacement and named-action target counts. Native regression tests cover controller activation and live candidates. Numerical DPS and guardian/proc qualification remain separate.
+## 2026-10-25 — Shared profile gear effects
+
+[Character stats](systems/character-stats.md#shared-profile-effects--2026-10-25): native consumables, independent temporary enchants, reference racial identity, Omnium entry resolution, Heart/Venomfang/fire relationships and neutral proc recipients. Values remain native; SimC supplies behavior.
+
 ## 2026-10-25 — All-DPS parity census
 
 [Census](investigations/dps-parity-census-2026-10-25.md): current canonical private database, master210df12e3, official followers and player-mode attempts for missing followers. Eight measured specs, seventeen exact fixture failures, two missing references. No surrogate profiles or mechanics changes.
@@ -365,9 +372,13 @@ Merged current master4a2deb367 into native-spell-diff. Resolution retains owner-
 
 Pinned SimC76f8118 selects timed adds on a run row but its child Mortal Strike still waits for main health<80% (first60.056s on main, not6s on adds). `player.cpp2467–2476` only changes active lists. Earlier24/24GREEN included a wrong inherited-child oracle; packet withdrawn before landing per lead. Corrected23PASS/1 genuineRED at2d6a66259 →24/24GREEN atad720fc3c (28.61s compile/0compiler warnings/0ignored): shared target inheritance state deleted; ordinary target min/max and non-returning runs retained. [Proof ledger](../handoffs/shared-run-target-proof-ledger.md).
 
+## 2026-10-23 — Form combat timing
+
+[Form clocks](systems/auras.md#form-combat-clocks--2026-10-23): actual native Cat/Bear intervals1.85s fail source/haste0.909/2.272s while unshifted control passes (564caae3b,10.82s). Generic all7row clock/AP-time handling follows TC; preserve Xuen1ms, existingAP/DPS6 and normal equipment timing. Native timing and all-form weapon-term matrix GREEN pending; no invented DamageVariance scalar.
+
 ## 2026-10-23 — Explicit proc provenance importer
 
-[Proc source presence](systems/auras.md#explicit-proc-source-presence--2026-10-23) consumes the audited1291effective TC IDs, verifies8pinned source files, and transactionally publishes presence only. Later numeric columns remain separately owned; no refusal guard or chance/mask overlay is included. Focused CLI RED recorded before implementation; qualification follows the committed producer.
+[Proc source presence](systems/auras.md#explicit-proc-source-presence--2026-10-23) consumes the audited1291effective TC IDs, verifies8pinned source files, and transactionally publishes presence only. Later numeric columns remain separately owned; no refusal guard or chance/mask overlay is included. Focused CLI RED→5/5GREEN1.31s; exact1291private IDs imported after8source hashes verified. Separate native refusal RED at92d89f8c1 observes unsafe Savage during actor bootstrap; explicit InfectedWounds passes, Frantic's initial-absence control is corrected to preserve its legitimate bootstrap proc. Generated/ExplicitTdb/Scripted runtime provenance and generic TC refusal at682b31e1c:3/3nativeGREEN10.34s +Dance1PASS6.98s +Inundate3PASS9.50s, zero compiler warnings. Parent canonical publication1291rows precedes separatepv1065 integration gate. No numeric overlays.
 
 ## 2026-10-23 — Feral baseline and action-knowledge census
 
