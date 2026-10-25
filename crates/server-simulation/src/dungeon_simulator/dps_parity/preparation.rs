@@ -212,6 +212,37 @@ pub(super) fn prepare_enhancement_precombat(run: &mut Run) -> Result<(), String>
     Ok(())
 }
 
+pub(super) fn prepare_arcane_precombat(run: &mut Run) -> Result<(), String> {
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let mut rotation = super::arcane_rotation::Rotation::load(
+        run.app.world_mut(),
+        run.actor,
+        &run.profile,
+        encounter,
+    )?;
+    loop {
+        match rotation.precombat(run.app.world_mut(), run.actor, &run.targets)? {
+            super::literal_rotation::PrecombatPoll::Waiting => finish_pending_setup(run)?,
+            super::literal_rotation::PrecombatPoll::Selected { action, execution } => {
+                rotation.execute(run.app.world_mut(), run.actor, action, execution)?;
+                finish_pending_setup(run)?;
+            }
+            super::literal_rotation::PrecombatPoll::Finished => break,
+        }
+    }
+    rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
+    run.arcane_rotation = Some(rotation);
+    run.gaps.retain(|gap| {
+        !gap.starts_with("NATIVE_ASSISTED_COMBAT_70448_VS_SIMC_APL")
+            && !gap.starts_with("NATIVE_FOLLOWER_KIT_VS_SIMC_APL")
+    });
+    Ok(())
+}
+
 pub(super) fn prepare_elemental_precombat(run: &mut Run) -> Result<(), String> {
     let encounter = crate::simc_apl_native::Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
