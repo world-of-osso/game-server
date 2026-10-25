@@ -68,7 +68,7 @@ pub(crate) use ret_crusade::after_spender as add_ret_crusade_spender_stacks;
 mod ret_sentence;
 pub(crate) use ret_sentence::track_cast as track_ret_sentence_cast;
 pub(crate) mod reward_mods;
-mod rogue;
+pub(crate) mod rogue;
 #[cfg(test)]
 mod rolling_periodic_tests;
 pub mod scripts;

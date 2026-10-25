@@ -11,6 +11,9 @@
 //! Pet bar/AI: pet_control.rs. Not modelled: full pet base stats, stable slots beyond
 //! the five active ones, hunter pet death, and pets across map transfers.
 
+mod guardians;
+pub(crate) use guardians::{EFFECT_SUMMON_STABLED_PET_AS_GUARDIAN, effect_summon_stabled_pet};
+
 use crate::random as rand;
 use std::collections::HashMap;
 
@@ -86,6 +89,7 @@ impl Plugin for HunterPetPlugin {
                 FixedUpdate,
                 persist_changed_pet_health.after(crate::combat::auto_attack_system),
             )
+            .add_systems(Update, guardians::remove_expired_guardians)
             .add_systems(FixedUpdate, remove_ownerless_pets)
             .add_systems(
                 FixedUpdate,
@@ -1076,14 +1080,14 @@ fn restore_pet_stable(
 /// A pet whose owner left the world (logout: `Player::RemovePet(PET_SAVE_AS_CURRENT)`)
 /// or no longer has it out leaves the world; its slot stays as saved.
 fn remove_ownerless_pets(
-    pets: Query<(Entity, &HunterPet)>,
+    pets: Query<(Entity, &HunterPet, Option<&guardians::StabledPetGuardian>)>,
     owners: Query<&PetStable, Without<crate::networking::PendingDespawn>>,
     mut commands: Commands,
 ) {
-    for (pet, hunter_pet) in &pets {
+    for (pet, hunter_pet, guardian) in &pets {
         let still_out = owners
             .get(hunter_pet.owner)
-            .is_ok_and(|stable| stable.summoned == Some(pet));
+            .is_ok_and(|stable| stable.summoned == Some(pet) || guardian.is_some());
         if !still_out {
             commands.entity(pet).despawn();
         }
