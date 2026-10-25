@@ -53,6 +53,7 @@ pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScri
 }
 mod policies;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
+pub(super) use policies::check_cast as check_policy_cast;
 pub(crate) use policies::register_channel_policies;
 pub(super) use policies::{
     after_impacts as after_impact_policies,

@@ -42,6 +42,12 @@ enum Relationship {
         parent: u32,
         payload: u32,
     },
+    ProcReplacement {
+        spell: u32,
+        aura: u32,
+        triggers: &'static [(u32, u8)],
+        mean_chance: f64,
+    },
     ChannelMomentum(ChannelMomentum),
     ReapplicationExtend {
         payload: u32,
@@ -134,6 +140,21 @@ const POLICIES: &[Policy] = &[
             payload: 1272696,
             self_target: false,
             primary_only: false,
+        },
+    },
+    // SimC76f8118 sc_warrior.cpp3565–3581: Heroic Strike requires and consumes
+    // the actual Master of Warfare proc; its payload and costs stay native.
+    Policy {
+        name: "SIMC_ARMS_MASTER_OF_WARFARE_REPLACEMENT",
+        spec: 71,
+        talent: 1269314,
+        relationship: Relationship::ProcReplacement {
+            spell: 1269383,
+            aura: 1269391,
+            // Parent hits are foreground; Execute's native costed damage child is depth1.
+            triggers: &[(12294, 0), (7384, 0), (1464, 0), (260798, 1)],
+            // sc_warrior.cpp1666: explicitly15%, not the native101 script sentinel.
+            mean_chance: 0.15,
         },
     },
     // SimC76f8118 sc_warrior.cpp3685–3686: Cleave applies the selected Rend
@@ -934,6 +955,7 @@ fn launch_scaled_payload(
 // CAST_SUCCESSFUL hints must not consume that ICD on unrelated/self phases.
 pub(crate) fn owns_policy_proc(spell: u32) -> bool {
     POLICIES.iter().any(|policy| match policy.relationship {
+        Relationship::ProcReplacement { aura, .. } => policy.talent == spell || aura == spell,
         Relationship::CastEcho { .. } => policy.talent == spell,
         Relationship::CounterEchoAfterCast { counter, .. } => counter == spell,
         _ => false,
@@ -948,9 +970,12 @@ fn hit_payloads(parent: u32) -> impl Iterator<Item = &'static Policy> {
 }
 
 pub(super) fn hit_hook(parent: u32) -> Option<super::ContextHitHook> {
-    hit_payloads(parent)
-        .next()
-        .map(|_| cast_hit_payload as super::ContextHitHook)
+    let replacement = POLICIES.iter().any(|policy| {
+        matches!(policy.relationship, Relationship::ProcReplacement { triggers, .. }
+            if triggers.iter().any(|(spell, _)| *spell == parent))
+    });
+    (replacement || hit_payloads(parent).next().is_some())
+        .then_some(cast_hit_payload as super::ContextHitHook)
 }
 
 fn cast_hit_payload(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
@@ -973,6 +998,55 @@ fn cast_hit_payload(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
         let recipient = if self_target { ctx.caster } else { target };
         super::super::cast_triggered(world, ctx.caster, payload, Some(recipient), ctx.depth + 1);
     }
+    produce_replacement_proc(world, ctx);
+}
+
+#[derive(Component, Default)]
+struct ReplacementProcAttempts(std::collections::HashMap<&'static str, u32>);
+
+fn produce_replacement_proc(world: &mut World, ctx: &EffectCtx<'_>) {
+    for policy in POLICIES {
+        let Relationship::ProcReplacement {
+            aura,
+            triggers,
+            mean_chance,
+            ..
+        } = policy.relationship
+        else {
+            continue;
+        };
+        let matching_hit = triggers.contains(&(ctx.spell.id, ctx.depth));
+        let proc_available =
+            selected(world, ctx.caster, policy) && !crate::auras::has_aura(world, ctx.caster, aura);
+        if !matching_hit || !proc_available {
+            continue;
+        }
+        if roll_replacement_proc(world, ctx.caster, policy.name, mean_chance) {
+            super::super::cast_triggered(world, ctx.caster, aura, Some(ctx.caster), ctx.depth + 1);
+        }
+    }
+}
+
+fn roll_replacement_proc(
+    world: &mut World,
+    caster: Entity,
+    name: &'static str,
+    mean_chance: f64,
+) -> bool {
+    if world.get::<ReplacementProcAttempts>(caster).is_none() {
+        world
+            .entity_mut(caster)
+            .insert(ReplacementProcAttempts::default());
+    }
+    let mut state = world.get_mut::<ReplacementProcAttempts>(caster).unwrap();
+    let attempts = state.0.entry(name).or_default();
+    *attempts += 1;
+    let chance = crate::random::accumulated_proc_constant(mean_chance) * f64::from(*attempts);
+    let success = crate::random::random::<f64>() < chance;
+    if success {
+        *attempts = 0;
+    }
+    success
 }
 
 fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
@@ -981,6 +1055,7 @@ fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
         Relationship::ApplySelfAuraAfterCast { parent: trigger, .. }
         | Relationship::ConsumeSelfAuraAfterCast { parent: trigger, .. }
         | Relationship::CounterAfterCast { parent: trigger, .. }
+        | Relationship::ProcReplacement { spell: trigger, .. }
         | Relationship::CastEcho { parent: trigger, .. }
         | Relationship::CounterEchoAfterCast { parent: trigger, .. } if trigger == parent)
     })
@@ -1020,7 +1095,8 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
                 let depth = super::super::next_trigger_depth(world);
                 super::super::cast_triggered(world, caster, payload, Some(caster), depth);
             }
-            Relationship::ConsumeSelfAuraAfterCast { payload, .. } => {
+            Relationship::ConsumeSelfAuraAfterCast { payload, .. }
+            | Relationship::ProcReplacement { aura: payload, .. } => {
                 crate::auras::remove_auras(
                     world,
                     caster,
@@ -1040,6 +1116,30 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             _ => unreachable!("after-cast policy iterator"),
         }
     }
+}
+
+pub(crate) fn check_cast(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), crate::spell_cast::CastFailure> {
+    for policy in POLICIES {
+        let Relationship::ProcReplacement {
+            spell: replacement,
+            aura,
+            ..
+        } = policy.relationship
+        else {
+            continue;
+        };
+        if spell.id != replacement || !selected(world, caster, policy) {
+            continue;
+        }
+        if !crate::auras::has_aura(world, caster, aura) {
+            return Err(crate::spell_cast::CastFailure::CasterAuraState);
+        }
+    }
+    Ok(())
 }
 
 fn read_counter_amount(world: &World, caster: Entity, policy: &Policy, effect: u8) -> Option<u8> {
