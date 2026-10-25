@@ -101,9 +101,12 @@ pub(crate) fn owns_policy_proc(spell: u32) -> bool {
 mod germination;
 mod giantkiller;
 pub(super) use giantkiller::multiplier as giantkiller_multiplier;
+mod fire_procs;
 mod havoc;
 pub(crate) mod holy_priest;
 mod hot_streak;
+pub(super) use fire_procs::before_hot_streak_launch;
+pub(crate) use fire_procs::register as register_fire_procs;
 mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
 pub(super) use hot_streak::triggers_hot_streak;
