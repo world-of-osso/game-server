@@ -1170,6 +1170,95 @@ fn roll_periodic_heal_crit(
     )
 }
 
+/// SimC76f8118 action.cpp3214-3260: one-target direct snapshot, average crit,
+/// mitigation, and no cast, proc, resource spend or random sample.
+/// The native pipeline supplies every coefficient and source/target multiplier.
+pub(crate) fn expected_direct_damage(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> Result<f32, String> {
+    if spell.effects.iter().any(|effect| {
+        matches!(
+            effect.effect,
+            EFFECT_WEAPON_DAMAGE | EFFECT_WEAPON_PERCENT_DAMAGE | EFFECT_NORMALIZED_WEAPON_DMG
+        )
+    }) {
+        return Err(format!(
+            "native APL weapon damage prediction unavailable for spell{}",
+            spell.id
+        ));
+    }
+    let ctx = EffectCtx {
+        caster,
+        spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    let chance = crit_chance(world, caster, target, spell).clamp(0.0, 100.0) / 100.0;
+    Ok(spell
+        .effects
+        .iter()
+        .filter(|effect| effect.effect == EFFECT_SCHOOL_DAMAGE)
+        .map(|effect| expected_school_damage(world, &ctx, effect, target, chance))
+        .sum())
+}
+
+fn expected_school_damage(
+    world: &World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+    chance: f32,
+) -> f32 {
+    let amount = scaled_amount(world, ctx.caster, ctx.spell, effect)
+        + super::scripts::empower_damage_bonus(world, ctx.caster, ctx.spell);
+    let critical = critical_damage_amount(
+        world,
+        ctx.caster,
+        ctx.caster,
+        ctx.spell,
+        amount,
+        uses_weapon_crit_bonus_order(ctx.spell),
+    );
+    let damage = DamageInput {
+        amount: amount + chance * (critical - amount),
+        crit: false,
+        periodic: false,
+        resolved_source: false,
+        effect: Some(effect),
+        bonus_caster: ctx.caster,
+    };
+    let amount = damage_before_mitigation(world, ctx, target, &damage);
+    expected_damage_after_mitigation(world, ctx, effect, target, amount)
+}
+
+fn expected_damage_after_mitigation(
+    world: &World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+    amount: f32,
+) -> f32 {
+    let amount = crate::auras::area_avoidance::reduce_damage(
+        world,
+        target,
+        ctx.spell,
+        Some(effect),
+        false,
+        amount,
+    );
+    let ignores_mitigation =
+        super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS != 0;
+    if !ignores_mitigation && reduced_by_armor(ctx.spell) {
+        armor_reduced(world, ctx.caster, target, amount, ctx.spell)
+    } else {
+        amount
+    }
+}
+
 fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let amount = with_variance(
         scaled_amount(world, ctx.caster, ctx.spell, effect),
@@ -2496,7 +2585,27 @@ fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     };
     spell.cast_destination = ctx.spell.cast_destination;
     spell.cast_item_level = ctx.spell.cast_item_level;
-    super::launch_triggered_spell(world, ctx.caster, &spell, Some(target), depth);
+    let target = trigger_recipient(ctx, &spell, target);
+    super::launch_triggered_spell(world, ctx.caster, &spell, target, depth);
+}
+
+pub(super) fn trigger_recipient(
+    ctx: &EffectCtx,
+    child: &SpellInfo,
+    target: Entity,
+) -> Option<Entity> {
+    // SimC76f8118 sc_demon_hunter.cpp7588–7591 retains the parent's enemy
+    // for both strikes. TC a352b1fa SpellEffects.cpp680–683 uses the original
+    // cast unit on the launch path, not the self recipient of the trigger effect.
+    let needs_enemy = matches!(
+        super::targets::explicit_requirement(child.effects.iter()),
+        Some(super::targets::Relation::Enemy)
+    );
+    if target == ctx.caster && needs_enemy {
+        ctx.primary_target()
+    } else {
+        Some(target)
+    }
 }
 
 /// 140 FORCE_CAST (`Spell::EffectForceCast`, SpellEffects.cpp:791-849): the target casts

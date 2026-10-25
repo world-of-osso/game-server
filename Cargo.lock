@@ -6595,6 +6595,7 @@ dependencies = [
  "serde",
  "serde_json",
  "server-catalog",
+ "server-follower-policy",
  "server-map-rules",
  "server-pet-battle",
  "shared",
@@ -6625,6 +6626,10 @@ dependencies = [
  "server",
  "shared",
 ]
+
+[[package]]
+name = "server-follower-policy"
+version = "0.1.0"
 
 [[package]]
 name = "server-map-rules"
