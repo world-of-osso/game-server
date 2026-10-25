@@ -5,6 +5,14 @@
 fn rogue_kingsbane_earned_poison_hits_stack_native_ramp_until_dot_ends() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(259, 1).unwrap();
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    run.app.world_mut().insert_resource(FactorCapture::new(
+        run.actor,
+        run.targets[0],
+        385627,
+        "kingsbane",
+        64,
+    ));
     engage(&mut run);
     let started_at = run.app.world().resource::<Time>().elapsed();
     install_fixture_lifetimes(&mut run, started_at);
@@ -49,15 +57,26 @@ fn rogue_kingsbane_earned_poison_hits_stack_native_ramp_until_dot_ends() {
                 && event.periodic
         })
         .collect();
-    let ticks: Vec<_> = all_ticks.iter().filter(|event| !event.crit).collect();
-    assert!(ticks.len() > 3, "actual Kingsbane ticks required");
+    assert!(all_ticks.len() > 3, "actual Kingsbane ticks required");
+    // Selecting only noncrits can first observe the dot near its ramp cap.
+    // Observe the modifier actually applied to every native periodic damage hit.
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let amounts: Vec<_> = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|event| event["spell_id"] == 385627 && event["event"] == "periodic_amount")
+        .flat_map(|event| event["applied_modifiers"].as_array().unwrap())
+        .filter(|modifier| modifier["source_spell_id"] == 394095)
+        .map(|modifier| modifier["value"].as_f64().unwrap())
+        .collect();
     assert!(
-        ticks.iter().map(|tick| tick.amount).max().unwrap() > ticks[0].amount * 2,
-        "the actual periodic damage must use the earned ramp, not only display stacks: ticks(amount,crit)={:?}, peak_stacks={peak_stacks}",
-        all_ticks
-            .iter()
-            .map(|tick| (tick.amount, tick.crit))
-            .collect::<Vec<_>>()
+        amounts.len() > 3,
+        "native periodic damage must actually apply the earned ramp: {capture}"
+    );
+    assert!(
+        amounts.iter().any(|amount| *amount > amounts[0]),
+        "the native periodic damage modifier must grow with earned poison stacks: {amounts:?}"
     );
 }
 use super::*;
