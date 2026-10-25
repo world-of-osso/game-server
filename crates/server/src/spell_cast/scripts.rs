@@ -61,6 +61,9 @@ mod touch_of_death;
 mod unbroken_rhythm;
 pub(crate) use unbroken_rhythm::register_unbroken_rhythm;
 mod windwalker;
+mod windwalker_flurry;
+pub(super) use windwalker_flurry::after_direct_damage;
+pub(crate) use windwalker_flurry::after_melee_hit;
 
 mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
@@ -617,6 +620,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     }
     match spell_id {
         windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
+        windwalker::FISTS_OF_FURY => Some(windwalker_flurry::release),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
         prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {

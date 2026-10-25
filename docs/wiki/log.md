@@ -1,6 +1,14 @@
 ## 2026-10-24 — Unbroken Rhythm SCK snapshot
 
 [Source/proof](../handoffs/ww-sck-snapshot-proof-ledger.md): b288 native earned-buff consumption and60% damage2RED/2controlsPASS14.65s. Parent-hit snapshot/ordinary consumption plus emission-bound effectiveness7331708ee4GREEN17.43s, compile0warnings. Four real earned ticks retain1.6 (first38167 before armor/27714 actual); both no-earned/later-parent4-tick controls remain1.0 while native producer re-earns. Requested master4996 merge b2aeff202 retains4GREEN19.23s/compile0warnings/fmt0; full gate separate. Native1296624 producer/107270 NOT_A_PROC eligibility and damage data stay unchanged;322729's same-child edge is not globally boosted. Other slices/full gate/numerical parity remain separate.
+## 2026-10-24 — Native Flurry core earning/release
+
+[Bounded ledger](../handoffs/ww-flurry-proof-ledger.md): ec4b89338 actual white/ordinary451839 earning and natural FoF children3 genuine RED/3controlsPASS41.86s. Selected native counts/critical multiplier/cap and class-owned release are implemented;150ms child spacing explicitly cites SimC76f8118 sc_monk.cpp779–781. Generic impact callbacks carry actual native provenance without class IDs. At172da6nativeGREEN25.97s/compile0warnings. Same tested binary/fresh CURRENT backup EACH300s100439.5467ST/134000.8433three-target (−51.3477%/−64.4144%);450617 and451250 both really damage. Native1H/offhand and natural Dual Threat producer remain unqualified; other releases/SCK/recovery stay outside this slice, full lead gate and broader parity remain open.
+
+## 2026-10-24 — Byte-identical public spell remainder
+
+[D3](systems/server-crates.md#public-spell-remainder-d3):11pure file moves retain54case names/flags (51enabled/3existing ignored), extending the existing consumer to229cases without body/seam/new-package-or-version/API changes. Existing rusqlite0.35/bundled and canonical random import are dev-only consumer wiring. Housekeeping only; exact inventory, combined compiler proof, full gate and matched timing remain distinct.
+
 ## 2026-10-24 — Movement remains/speed scalars
 
 [Native movement predicates](systems/simc-apl.md#configured-movement-distance): three unknown-operand REDs/four distance controls PASS→all7GREEN0.00s atf3c760d3a, two-package test-target check146s/fmtPASS/zero warnings. Speed reads native run/aura modifiers even idle; positive-distance remains divides by live speed, explicit no-event zero stays0. Parent deferred scheduling because no pinned moving reference exists: MOVEMENT_EVENT_SCHEDULING_UNREFERENCED, no unpaired selector/timer added.

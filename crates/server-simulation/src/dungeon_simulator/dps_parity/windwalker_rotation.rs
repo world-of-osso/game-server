@@ -184,6 +184,8 @@ impl Rotation {
 }
 
 #[cfg(test)]
+mod flurry_tests;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod unbroken_rhythm_tests;
