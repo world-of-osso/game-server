@@ -13,7 +13,6 @@
 
 use std::collections::HashMap;
 use std::path::Path;
-use std::time::Duration;
 
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
@@ -477,57 +476,22 @@ pub(super) fn update_max_powers(
     }
 }
 
-/// TC CreatureData.h423 / Pet.cpp64,671-687: hunter Focus ticks from spawn,
-/// including while full. Player Focus and other pet powers use their existing path.
+/// SimC76f8118 sc_hunter.cpp2355–2360: main-pet Focus inherits the owner's
+/// native continuous rate. Stable guardians disable regeneration (cpp2232–2234).
 #[derive(Component)]
-pub(crate) struct PetFocusRegen {
-    remaining: Duration,
+pub(crate) enum PetFocusRegen {
+    Owner,
+    Disabled,
 }
 
-impl Default for PetFocusRegen {
-    fn default() -> Self {
-        Self {
-            remaining: Self::INTERVAL,
-        }
-    }
-}
+const OWNER_FOCUS_REGEN_MULTIPLIER: f32 = 1.25;
 
-impl PetFocusRegen {
-    const INTERVAL: Duration = Duration::from_secs(4);
-    /// Creature.cpp964-969, normal RATE_POWER_FOCUS=1.
-    const FOCUS_PER_TICK: f32 = 24.0;
-
-    fn advance(&mut self, delta: Duration) -> bool {
-        if self.remaining > delta {
-            self.remaining -= delta;
-            return false;
-        }
-        // Carry the phase, but do not replay missed ticks after a large lag.
-        self.remaining = match (self.remaining + Self::INTERVAL).checked_sub(delta) {
-            Some(remaining) if remaining.is_zero() => Duration::from_millis(1),
-            Some(remaining) => remaining,
-            None => Self::INTERVAL,
-        };
-        true
-    }
-}
-
-fn regenerate_pet_focus(
-    pools: &mut PowerPools,
-    timer: &mut PetFocusRegen,
-    delta: Duration,
-    multiplier: f32,
-) {
-    let tick = timer.advance(delta);
-    let Some(pool) = pools.get_mut(PowerType::Focus) else {
-        return;
-    };
-    // Discrete authoritative updates, not continuous client prediction.
-    pool.regen_per_sec = 0.0;
-    if tick {
-        let amount = (PetFocusRegen::FOCUS_PER_TICK * multiplier).trunc();
-        pool.current = (pool.current + amount).clamp(0.0, pool.max);
-    }
+fn regenerate_pet_focus(pools: &mut PowerPools, delta: f32, rate: f32) {
+    let pool = pools
+        .get_mut(PowerType::Focus)
+        .expect("native Hunter pet Focus pool");
+    pool.current = (pool.current + rate * delta).clamp(0.0, pool.max);
+    pool.regen_per_sec = if pool.current == pool.max { 0.0 } else { rate };
 }
 
 type RegenQuery<'w, 's> = Query<
@@ -544,10 +508,54 @@ type RegenQuery<'w, 's> = Query<
         Option<&'static crate::death::PlayerDeathState>,
         Option<&'static Npc>,
         Option<&'static UnitFlags>,
-        Option<&'static mut PetFocusRegen>,
+        Option<&'static PetFocusRegen>,
+        Option<&'static crate::hunter_pet::HunterPet>,
     ),
     Without<GridDormant>,
 >;
+
+/// Sample owners before mutable pool updates, so pet rates do not depend on
+/// entity iteration order or the owner's current resource cap.
+fn read_owner_focus_rates(
+    units: &RegenQuery<'_, '_>,
+    table: &PowerTypeTable,
+    data: Option<&WorldData>,
+    now: f64,
+) -> HashMap<Entity, f32> {
+    let Some(info) = table.get(PowerType::Focus) else {
+        return HashMap::new();
+    };
+    units
+        .iter()
+        .filter_map(
+            |(unit, pools, _, auras, combat, mods, stats, death, npc, flags, _, _)| {
+                let pool = pools.get(PowerType::Focus)?;
+                let stats = stats?;
+                if !read_creature_power_regeneration(npc, flags, data)
+                    || death.is_some_and(|death| death.state != shared::death::DeathState::Alive)
+                {
+                    return Some((unit, 0.0));
+                }
+                let in_combat = combat.is_some_and(|status| status.0);
+                let interrupted = in_combat
+                    || (npc.is_none()
+                        && auras.is_some_and(|auras| {
+                            auras.has_type(crate::auras::handlers::INTERRUPT_REGEN)
+                        }));
+                let elapsed = if in_combat {
+                    0
+                } else {
+                    ((now - pools.out_of_combat_since) * 1000.0) as u32
+                };
+                let rates = modified_regen_rates(info, mods, Some(stats));
+                let rate =
+                    potential_regen_step(pool.current, pool.max, &rates, interrupted, elapsed)
+                        .map_or(0.0, |(rate, _)| rate);
+                Some((unit, rate))
+            },
+        )
+        .collect()
+}
 
 /// Out of combat: `RegenPeace` after `RegenInterruptTimeMS` since leaving
 /// combat. Negative rates decay toward `CenterPower` and positive rates fill
@@ -569,7 +577,8 @@ pub(crate) fn regenerate_powers(
     };
     let dt = time.delta_secs();
     let now = time.elapsed_secs_f64();
-    for (unit, mut pools, mana, auras, combat, mods, stats, death, npc, flags, pet_focus) in
+    let owner_focus_rates = read_owner_focus_rates(&units, &table, world_data.as_deref(), now);
+    for (unit, mut pools, mana, auras, combat, mods, stats, death, npc, flags, pet_focus, pet) in
         &mut units
     {
         // TC Player::GetPowerRegen: aura94 selects combat rates, not combat state.
@@ -583,16 +592,22 @@ pub(crate) fn regenerate_powers(
         if death.is_some_and(|death| death.state != shared::death::DeathState::Alive) {
             continue;
         }
-        let regen_mult = |power: PowerType| mods.map_or(1.0, |mods| mods.power_regen(power as i32));
         let has_pet_focus = pet_focus.is_some();
-        if let Some(mut timer) = pet_focus {
+        if let Some(policy) = pet_focus {
+            let rate = match policy {
+                PetFocusRegen::Disabled => 0.0,
+                PetFocusRegen::Owner => {
+                    let owner = pet
+                        .expect("inherited Focus requires a native owned pet")
+                        .owner;
+                    owner_focus_rates
+                        .get(&owner)
+                        .expect("Hunter pet owner requires native Focus regeneration")
+                        * OWNER_FOCUS_REGEN_MULTIPLIER
+                }
+            };
             let old = pools.get(PowerType::Focus).map(|pool| pool.current);
-            regenerate_pet_focus(
-                &mut pools,
-                &mut timer,
-                time.delta(),
-                regen_mult(PowerType::Focus),
-            );
+            regenerate_pet_focus(&mut pools, dt, rate);
             if let (Some(old), Some(pool)) = (old, pools.get(PowerType::Focus)) {
                 crate::auras::power_amount_trigger::queue_regenerated(
                     &mut commands,
@@ -749,14 +764,24 @@ fn read_regen_phase(world: &World, unit: Entity, pools: &PowerPools) -> (bool, u
 
 #[cfg(any(test, feature = "test-support"))]
 /// Raw potential continuous regen, independent of the pool's cap and applied cache.
-/// Discrete pet Focus and rune cooldowns have separate native producers.
+/// Pet Focus reads its owner's rate; rune cooldowns have a separate producer.
 /// Reading this fact never advances clocks, grants power or updates wire state.
 pub(crate) fn potential_power_regen(world: &World, unit: Entity, power: PowerType) -> Option<f32> {
     let pools = world.get::<PowerPools>(unit)?;
-    if power == PowerType::Runes
-        || (power == PowerType::Focus && world.get::<PetFocusRegen>(unit).is_some())
-    {
+    if power == PowerType::Runes {
         return None;
+    }
+    if power == PowerType::Focus
+        && let Some(policy) = world.get::<PetFocusRegen>(unit)
+    {
+        return match policy {
+            PetFocusRegen::Disabled => Some(0.0),
+            PetFocusRegen::Owner => {
+                let pet = world.get::<crate::hunter_pet::HunterPet>(unit)?;
+                potential_power_regen(world, pet.owner, power)
+                    .map(|rate| rate * OWNER_FOCUS_REGEN_MULTIPLIER)
+            }
+        };
     }
     let info = world.get_resource::<PowerTypeTable>()?.get(power)?;
     let (current, maximum) = power_value(world, unit, power)?;

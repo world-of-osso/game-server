@@ -930,7 +930,7 @@ fn spawn_pet(
         pet.insert((armor, inherited));
     }
     if power == PowerType::Focus {
-        pet.insert(PetFocusRegen::default());
+        pet.insert(PetFocusRegen::Owner);
     }
     if companion {
         pet.insert(crate::followers::FollowerReach(
