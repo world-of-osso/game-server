@@ -2660,6 +2660,7 @@ fn execute_cast_with_primary(
         crate::achievement::record_item_use(world, caster, item);
     }
     // TC Spell.cpp3843–3869: OnCast precedes TakePower and SendSpellGo.
+    scripts::before_ret_damage_cast(world, caster, spell, 0);
     scripts::on_cast(world, caster, spell.id, 0);
     take_cast_resources(world, caster, spell, &costs);
     start_cooldowns(world, caster, spell);
@@ -3657,9 +3658,11 @@ fn launch_triggered_spell(
                 observed.0.push((caster, spell.id, explicit));
             }
             crate::achievement::record_spell_cast(world, caster, spell.id);
+            scripts::before_ret_damage_cast(world, caster, spell, depth);
             scripts::on_cast(world, caster, spell.id, depth);
             scripts::spawn_ravager_field(world, caster, spell, explicit, depth);
             missiles::launch(world, caster, spell, plan, depth);
+            scripts::apply_triggered_cast_policies(world, caster, spell, depth);
             druid_transform::after_cast(world, caster, spell);
             true
         }
@@ -3711,6 +3714,7 @@ fn execute_costed_trigger(
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
     prepared.cast_primary_target = primary_target;
     let plan = plan_targets(world, caster, &prepared, explicit, true)?;
+    scripts::before_ret_damage_cast(world, caster, &prepared, depth);
     scripts::on_cast(world, caster, prepared.id, depth);
     take_cast_resources(world, caster, &prepared, &costs);
     crate::achievement::record_spell_cast(world, caster, prepared.id);

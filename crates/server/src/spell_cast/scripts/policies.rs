@@ -27,6 +27,12 @@ enum Relationship {
         parent: u32,
         payload: u32,
     },
+    CounterEchoAfterCast {
+        parent: u32,
+        counter: u32,
+        payload: u32,
+        effectiveness_effect: u8,
+    },
     CastEcho {
         parent: u32,
         payload: u32,
@@ -105,6 +111,31 @@ const POLICIES: &[Policy] = &[
         relationship: Relationship::LinkedAura {
             parent: 454351,
             payload: 1277026,
+        },
+    },
+    // SimC76f8118 sc_paladin.cpp1571–1575,1633–1642,1738–1743:
+    // only foreground Judgment/HoW spends one native Resonance stack; its
+    // background echo must not classify/consume another stack.
+    Policy {
+        name: "SIMC_RET_RESONANCE_JUDGMENT",
+        spec: 70,
+        talent: 384027,
+        relationship: Relationship::CounterEchoAfterCast {
+            parent: 20271,
+            counter: 1266308,
+            payload: 20271,
+            effectiveness_effect: 1,
+        },
+    },
+    Policy {
+        name: "SIMC_RET_RESONANCE_HAMMER",
+        spec: 70,
+        talent: 384027,
+        relationship: Relationship::CounterEchoAfterCast {
+            parent: 24275,
+            counter: 1266308,
+            payload: 24275,
+            effectiveness_effect: 1,
         },
     },
     // SimC76f8118 sc_paladin.cpp1745–1748; Ret1126–1127:
@@ -414,14 +445,53 @@ fn filter_policy_secondaries(
     units.truncate(cap as usize);
 }
 
-fn cast_echo(world: &mut World, caster: Entity, spell: &SpellInfo, policy: &Policy) {
-    let Relationship::CastEcho {
-        payload,
-        required_auras,
-        effectiveness_effect,
-        ..
-    } = policy.relationship
-    else {
+pub(in crate::spell_cast) fn after_triggered_cast(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    depth: u8,
+) {
+    // SimC's common HoW execute also mirrors on Toll/Resonance/Sunrise.
+    // Counter consumers remain foreground-only, so same-ID echoes cannot recurse.
+    for policy in producers(spell.id) {
+        if matches!(policy.relationship, Relationship::CastEcho { .. })
+            && selected(world, caster, policy)
+        {
+            cast_echo(world, caster, spell, policy, depth.saturating_add(1));
+        }
+    }
+}
+
+fn cast_counter_echo(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    policy: &Policy,
+    depth: u8,
+) {
+    let Relationship::CounterEchoAfterCast { counter, .. } = policy.relationship else {
+        return;
+    };
+    let Some(target) = spell.cast_primary_target else {
+        warn!(
+            policy = policy.name,
+            "Native counter echo primary unavailable"
+        );
+        return;
+    };
+    let Some(instance) = read_counter_instance(world, caster, counter) else {
+        return;
+    };
+    if !crate::auras::procs::try_policy_proc(world, caster, instance, 100.0) {
+        return;
+    }
+    if launch_scaled_payload(world, caster, target, policy, depth) {
+        crate::auras::spend_stack(world, caster, instance);
+    }
+}
+
+fn cast_echo(world: &mut World, caster: Entity, spell: &SpellInfo, policy: &Policy, depth: u8) {
+    let Relationship::CastEcho { required_auras, .. } = policy.relationship else {
         return;
     };
     let Some(target) = spell.cast_primary_target else {
@@ -431,9 +501,7 @@ fn cast_echo(world: &mut World, caster: Entity, spell: &SpellInfo, policy: &Poli
     if !try_echo_proc(world, caster, policy, required_auras) {
         return;
     }
-    let effectiveness =
-        super::script_effect_value(world, caster, policy.talent, effectiveness_effect);
-    launch_scaled_payload(world, caster, target, policy, payload, effectiveness);
+    launch_scaled_payload(world, caster, target, policy, depth);
 }
 
 fn try_echo_proc(
@@ -458,20 +526,39 @@ fn try_echo_proc(
     crate::auras::procs::try_policy_proc(world, caster, instance, 100.0)
 }
 
+fn read_echo_payload(world: &World, caster: Entity, policy: &Policy) -> (u32, f32) {
+    let (payload, source, effect) = match policy.relationship {
+        Relationship::CastEcho {
+            payload,
+            effectiveness_effect,
+            ..
+        } => (payload, policy.talent, effectiveness_effect),
+        Relationship::CounterEchoAfterCast {
+            counter,
+            payload,
+            effectiveness_effect,
+            ..
+        } => (payload, counter, effectiveness_effect),
+        _ => unreachable!("scaled echo policy"),
+    };
+    let effectiveness = super::script_effect_value(world, caster, source, effect);
+    (payload, effectiveness / 100.0)
+}
+
 fn launch_scaled_payload(
     world: &mut World,
     caster: Entity,
     target: Entity,
     policy: &Policy,
-    payload: u32,
-    effectiveness: f32,
-) {
-    let depth = super::super::next_trigger_depth(world);
+    depth: u8,
+) -> bool {
+    let (payload, multiplier) = read_echo_payload(world, caster, policy);
     let Some(mut child) = super::super::load_triggered_spell(world, payload, depth) else {
-        return;
+        return false;
     };
-    child.cast_damage_multiplier = Some(effectiveness / 100.0);
-    if !super::super::launch_triggered_spell(world, caster, &child, Some(target), depth) {
+    child.cast_damage_multiplier = Some(multiplier);
+    let accepted = super::super::launch_triggered_spell(world, caster, &child, Some(target), depth);
+    if !accepted {
         warn!(
             policy = policy.name,
             ?caster,
@@ -479,13 +566,16 @@ fn launch_scaled_payload(
             "Native cast echo refused"
         );
     }
+    accepted
 }
 
 // CastEcho owns its source event predicate and the native shared ICD. Raw
 // CAST_SUCCESSFUL hints must not consume that ICD on unrelated/self phases.
 pub(crate) fn owns_policy_proc(spell: u32) -> bool {
-    POLICIES.iter().any(|policy| {
-        policy.talent == spell && matches!(policy.relationship, Relationship::CastEcho { .. })
+    POLICIES.iter().any(|policy| match policy.relationship {
+        Relationship::CastEcho { .. } => policy.talent == spell,
+        Relationship::CounterEchoAfterCast { counter, .. } => counter == spell,
+        _ => false,
     })
 }
 
@@ -528,7 +618,8 @@ fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
         matches!(policy.relationship,
         Relationship::CounterAfterCast { parent: trigger, .. }
-        | Relationship::CastEcho { parent: trigger, .. } if trigger == parent)
+        | Relationship::CastEcho { parent: trigger, .. }
+        | Relationship::CounterEchoAfterCast { parent: trigger, .. } if trigger == parent)
     })
 }
 
@@ -563,7 +654,14 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
         }
         match policy.relationship {
             Relationship::CounterAfterCast { .. } => grant_counter(world, caster, policy),
-            Relationship::CastEcho { .. } => cast_echo(world, caster, spell, policy),
+            Relationship::CastEcho { .. } => {
+                let depth = super::super::next_trigger_depth(world);
+                cast_echo(world, caster, spell, policy, depth);
+            }
+            Relationship::CounterEchoAfterCast { .. } => {
+                let depth = super::super::next_trigger_depth(world);
+                cast_counter_echo(world, caster, spell, policy, depth);
+            }
             _ => unreachable!("after-cast policy iterator"),
         }
     }
