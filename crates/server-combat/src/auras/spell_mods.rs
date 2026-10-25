@@ -156,7 +156,9 @@ fn matching<'a>(
 // Tidal Waves/Backdraft/Surge of Light stacks are also next-spell uses.
 // SimC76f8118 sc_evoker.cpp6485/6595: Mass Disintegrate stacks are uses,
 // not a multiplier on its native additional-target amount.
-const STACKED_NEXT_SPELL_USES: &[u32] = &[53390, 117828, 116768, 325202, 114255, 436336];
+// SimC76f8118 sc_mage.cpp1852–1853/3242: Clearcasting stacks are
+// independent uses too: one Missiles spends one, without multiplying its -100% cost.
+const STACKED_NEXT_SPELL_USES: &[u32] = &[53390, 117828, 116768, 325202, 114255, 436336, 263725];
 
 fn stacked_amount(aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
     let stacks = if STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) {
