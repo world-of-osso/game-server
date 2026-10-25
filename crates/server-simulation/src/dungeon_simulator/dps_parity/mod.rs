@@ -4,6 +4,7 @@ mod arms_rotation;
 mod arms_tests;
 mod assassination_knowledge_tests;
 mod assassination_mechanics_tests;
+mod assassination_poison_tests;
 mod assassination_rotation;
 mod aura342_tests;
 mod barbed_budget_tests;
@@ -22,6 +23,7 @@ mod engagement_tests;
 mod enhancement_mechanics_tests;
 mod enhancement_operand_tests;
 mod enhancement_rotation;
+mod enhancement_strike_tests;
 mod enhancement_tests;
 mod equipment_input_tests;
 mod equipped_set_tests;
@@ -32,6 +34,8 @@ mod fury_rotation;
 mod gear_profile_tests;
 mod haste_tests;
 mod havoc_fact_tests;
+mod havoc_rotation;
+mod havoc_tests;
 mod health_aura_state_tests;
 mod howl_tests;
 mod inputs;
@@ -61,6 +65,7 @@ mod ret_crusade_tests;
 mod ret_damage_relationship_tests;
 mod ret_damage_tests;
 mod ret_dawnlight_consumer_tests;
+mod ret_dawnlight_remainder_tests;
 mod ret_dawnlight_target_tests;
 mod ret_dawnlight_tests;
 mod ret_empyrean_tests;
@@ -75,6 +80,8 @@ mod ret_toll_control_tests;
 mod ret_toll_tests;
 mod ret_trigger_resource_tests;
 mod ret_wake_tests;
+mod shadow_rotation;
+mod shadow_tests;
 mod shared_fact_extension_tests;
 pub(crate) mod single_spell;
 mod snakeskin_tests;
@@ -113,8 +120,10 @@ struct Run {
     beast_mastery_rotation: Option<beast_mastery_rotation::Rotation>,
     assassination_rotation: Option<assassination_rotation::Rotation>,
     enhancement_rotation: Option<enhancement_rotation::Rotation>,
+    havoc_rotation: Option<havoc_rotation::Rotation>,
     arms_rotation: Option<arms_rotation::Rotation>,
     fury_rotation: Option<fury_rotation::Rotation>,
+    shadow_rotation: Option<shadow_rotation::Rotation>,
 }
 
 fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, String> {
@@ -293,6 +302,11 @@ fn prepare_literal_reference(
 fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
     let (profile, traits) = read_reference(spec_id)?;
     let identity = inputs::read_actor(&profile)?;
+    if spec_id == 577 {
+        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
+        preparation::prepare_havoc_precombat(&mut run)?;
+        return Ok(run);
+    }
     if spec_id == 72 {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
         fury_rotation::prepare_precombat(&mut run)?;
@@ -321,6 +335,11 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
     if spec_id == 71 {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
         preparation::prepare_arms_precombat(&mut run)?;
+        return Ok(run);
+    }
+    if spec_id == 258 {
+        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
+        preparation::prepare_shadow_precombat(&mut run)?;
         Ok(run)
     } else if matches!(spec_id, 70 | 262 | 269)
         && matches!(
@@ -452,8 +471,10 @@ fn spawn_reference(
         beast_mastery_rotation: None,
         assassination_rotation: None,
         enhancement_rotation: None,
+        havoc_rotation: None,
         arms_rotation: None,
         fury_rotation: None,
+        shadow_rotation: None,
     })
 }
 
@@ -616,6 +637,14 @@ fn advance_fixture_frame(
     Ok(())
 }
 
+fn capture_engagement(run: &Run) -> Value {
+    let mut sample = report::engagement(run.app.world(), run.actor, &run.targets);
+    // The last add retirement is270.09s, inside the final30s qualification window.
+    // Keep live target inspection, but never subtract a retired wave's earned damage.
+    sample["damage_to_targets"] = json!(report::total_damage(run.app.world(), &run.damage_targets));
+    sample
+}
+
 fn advance_combat(run: &mut Run) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>), String> {
     advance_combat_observed(run, |_| {})
 }
@@ -648,7 +677,7 @@ fn advance_combat_observed(
         )?);
     }
     let mut buffs = BTreeMap::new();
-    let mut samples = vec![report::engagement(run.app.world(), run.actor, &run.targets)];
+    let mut samples = vec![capture_engagement(run)];
     observe(run);
     drive_player(run)?;
     let frame = FIGHT_DURATION / TICKS;
@@ -663,7 +692,7 @@ fn advance_combat_observed(
         )?;
         report::sample_buffs(run.app.world(), run.actor, &mut buffs);
         if matches!(tick, 1 | 20 | LAST_30S_START | TICKS) {
-            samples.push(report::engagement(run.app.world(), run.actor, &run.targets));
+            samples.push(capture_engagement(run));
         }
     }
     let seconds = run
@@ -680,6 +709,9 @@ fn advance_combat_observed(
 }
 
 fn drive_player(run: &mut Run) -> Result<(), String> {
+    if let Some(rotation) = &mut run.havoc_rotation {
+        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    }
     if let Some(rotation) = &mut run.beast_mastery_rotation {
         rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
     }
@@ -710,6 +742,9 @@ fn drive_player(run: &mut Run) -> Result<(), String> {
     if let Some(rotation) = &mut run.arms_rotation {
         rotation.step(run.app.world_mut(), run.actor, &run.targets, false)?;
     }
+    if let Some(rotation) = &mut run.shadow_rotation {
+        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    }
     Ok(())
 }
 
@@ -726,13 +761,15 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
         json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "actor_kind": if run.app.world().get::<shared::components::Player>(run.actor).is_some() { "player" } else { "follower" },
         "enhancement_rotation": run.enhancement_rotation.as_ref().map(|rotation| rotation.report()),
+        "havoc_rotation": run.havoc_rotation.as_ref().map(|rotation| rotation.report()),
         "arms_rotation": run.arms_rotation.as_ref().map(|rotation| rotation.report()),
-        "driver": if run.beast_mastery_rotation.is_some() { "LITERAL_SIMC_BEAST_MASTERY_76f8118" } else if run.arms_rotation.is_some() { "LITERAL_SIMC_ARMS_76f8118" } else if run.fury_rotation.is_some() { "LITERAL_SIMC_FURY_76f8118" } else if run.elemental_rotation.is_some() { "LITERAL_SIMC_ELEMENTAL_76f8118" } else if run.marksmanship_rotation.is_some() { "LITERAL_SIMC_MARKSMANSHIP_76f8118" } else if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "driver": if run.shadow_rotation.is_some() { "LITERAL_SIMC_SHADOW_76f8118" } else if run.havoc_rotation.is_some() { "LITERAL_SIMC_HAVOC_76f8118" } else if run.beast_mastery_rotation.is_some() { "LITERAL_SIMC_BEAST_MASTERY_76f8118" } else if run.arms_rotation.is_some() { "LITERAL_SIMC_ARMS_76f8118" } else if run.fury_rotation.is_some() { "LITERAL_SIMC_FURY_76f8118" } else if run.elemental_rotation.is_some() { "LITERAL_SIMC_ELEMENTAL_76f8118" } else if run.marksmanship_rotation.is_some() { "LITERAL_SIMC_MARKSMANSHIP_76f8118" } else if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
         "fury_rotation": run.fury_rotation.as_ref().map(|rotation| rotation.report()),
         "windwalker_rotation": run.windwalker_rotation.as_ref().map(|rotation| rotation.report()),
         "ret_rotation": run.ret_rotation.as_ref().map(|rotation| rotation.report()),
         "marksmanship_rotation": run.marksmanship_rotation.as_ref().map(|rotation| rotation.report()),
         "beast_mastery_rotation": run.beast_mastery_rotation.as_ref().map(|rotation| rotation.report()),
+        "shadow_rotation": run.shadow_rotation.as_ref().map(|rotation| rotation.report()),
         "assisted_decisions": run.player_rotation.as_ref().map_or(0, |rotation| rotation.decisions),
         "wall_seconds": started.elapsed().as_secs_f64(), "seed": 70448, "combat": combat,
         "target_health_policy": {"name": "SIMC_FIXED_TIME_TARGET_HEALTH", "clock": "per_target_lifetime",

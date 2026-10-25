@@ -54,6 +54,7 @@ pub(in crate::spell_cast) fn before_cast(
     };
     if spell.id == BLADE {
         schedule_light_within(world, caster, spell, target, depth);
+        consume_art_of_war(world, caster, spell);
         cast_consecrated_blade(world, caster);
     }
     if spell.id == STORM && selected(world, caster, TEMPEST_TALENT) {
@@ -98,6 +99,44 @@ fn schedule_light_within(
             aura.spell_id == 402916
         });
     }
+}
+
+fn consume_art_of_war(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    let instance = world.get::<ActiveAuras>(caster).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == 406086 && aura.caster == caster)
+            .map(|aura| aura.instance_id)
+    });
+    let Some(instance) = instance else {
+        return;
+    };
+    // sc_paladin.cpp3921; buff.cpp2821–2868: even the zero-valued modifier
+    // consumes on Blade, with the native buff's independent consumption ICD.
+    let Some(aura) = auras::procs::start_policy_proc(world, caster, instance) else {
+        return;
+    };
+    if selected(world, caster, 1261113) {
+        auras::spend_stack(world, caster, instance);
+        if aura.stacks > 1 {
+            restore_blade_after_launch(world, caster, spell);
+        }
+    } else {
+        auras::remove_instance(world, caster, instance, RemoveReason::Consumed);
+    }
+}
+
+fn restore_blade_after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    let category = spell
+        .categories
+        .as_ref()
+        .expect("native Blade charge category")
+        .charge_category;
+    // Ret399–405: a remaining Art of War stack resets ONE charge. Defer until
+    // the admitted foreground cast has consumed its charge, not before launch.
+    world.commands().queue(move |world: &mut World| {
+        spell_cast::restore_charges(world, caster, category, 1);
+    });
 }
 
 #[derive(Component)]

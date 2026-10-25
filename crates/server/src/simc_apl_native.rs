@@ -251,6 +251,17 @@ impl<'a> NativeFacts<'a> {
                 .map(|health| f64::from(health.current))
                 .ok_or("native target lacks Health".into()),
             "health.pct" => self.target_health_pct(target),
+            // SimC76f8118 player.cpp11813–11814: query the actual target's live shield.
+            "has_absorb" => Ok(bool_value(
+                self.world
+                    .get::<crate::auras::ActiveAuras>(target)
+                    .is_some_and(|auras| {
+                        crate::auras::forecast::has_absorb(
+                            auras,
+                            crate::spell_cast::now(self.world),
+                        )
+                    }),
+            )),
             "debuff.casting.up" => Ok(bool_value(
                 self.world
                     .get::<shared::casting::CastState>(target)
@@ -708,6 +719,17 @@ impl<'a> NativeFacts<'a> {
         })))
     }
 
+    fn main_hand_is_two_handed(&self) -> Result<f64, String> {
+        // SimC76f8118 player.cpp12001–12004: actual equipped weapon group.
+        let stats = self
+            .world
+            .get::<crate::stats::CharacterStats>(self.actor)
+            .ok_or("native APL actor lacks derived weapon stats")?;
+        Ok(bool_value(
+            stats.main_hand.kind == shared::components::WeaponType::TwoHand,
+        ))
+    }
+
     fn spell_haste(&self) -> Result<f64, String> {
         let stats = self
             .world
@@ -729,6 +751,7 @@ impl<'a> NativeFacts<'a> {
             )),
             "cast_time" | "cost" => self.action_property(&action.name, name, Some(action)),
             "ticks_remain" => self.ticks_remaining(spell.id),
+            "ticks" => self.elapsed_ticks(spell.id),
             // SimC76f8118 dot.cpp540: ticking refers to this proposed action's dot.
             "ticking" => {
                 let target = self.selected_target(Some(action))?;
@@ -738,6 +761,23 @@ impl<'a> NativeFacts<'a> {
             }
             _ => Err(format!("unknown native APL contextual property {name}")),
         }
+    }
+
+    fn elapsed_ticks(&self, spell: u32) -> Result<f64, String> {
+        let Some(cast) = self
+            .world
+            .get::<shared::casting::CastState>(self.actor)
+            .filter(|cast| {
+                cast.spell_id == spell && cast.cast_type == shared::casting::CastType::Channel
+            })
+        else {
+            return Ok(0.0);
+        };
+        let target = Entity::try_from_bits(cast.target)
+            .ok_or("native channel ticks has an invalid actual cast target")?;
+        // SimC76f8118 dot.cpp434–438 exposes the dot's current_tick. The live
+        // aura scheduler, not the separately paced cast bar, owns that count.
+        Ok(crate::auras::paid_periodic_ticks(self.world, self.actor, target, spell) as f64)
     }
 
     fn ticks_remaining(&self, spell: u32) -> Result<f64, String> {
@@ -800,10 +840,12 @@ impl<'a> NativeFacts<'a> {
 
     fn gcd(&self, action: &Action, operand: &str) -> Result<f64, String> {
         let control = matches!(action.name.as_str(), "variable" | "call_action_list");
-        if control && matches!(operand, "gcd" | "gcd.min" | "gcd.remains") {
+        if control && matches!(operand, "gcd" | "gcd.min") {
             return Ok(0.0);
         }
-        let spell = if operand == "gcd.max" {
+        // SimC76f8118 action.cpp3795–3808 reads player.gcd_ready even for
+        // item/control rows, which have no native action-spell alias.
+        let spell = if matches!(operand, "gcd.max" | "gcd.remains") {
             self.spell(self.bindings.global_cooldown_spell)?
         } else {
             let id = bound_spell(&self.bindings.actions, &action.name, "action")?;
@@ -813,10 +855,43 @@ impl<'a> NativeFacts<'a> {
     }
 }
 
+impl NativeFacts<'_> {
+    fn previous_gcd(&self, operand: &str) -> Result<f64, String> {
+        // SimC76f8118 action.cpp3900–3936: 1-based foreground GCD history.
+        let (index, alias) = operand
+            .split_once('.')
+            .ok_or_else(|| format!("invalid native prev_gcd operand {operand}"))?;
+        let index = index
+            .parse::<usize>()
+            .ok()
+            .filter(|index| *index > 0)
+            .ok_or_else(|| format!("native prev_gcd requires a positive index: {operand}"))?;
+        let requested = bound_spell(&self.bindings.actions, alias, "previous action")?;
+        let resolved =
+            crate::spell_cast::knowledge::resolve_action(self.world, self.actor, requested)?;
+        let previous = self
+            .world
+            .get::<crate::spell_cast::SpellHistory>(self.actor)
+            .and_then(|history| history.previous_gcd_cast(index));
+        let previous = previous
+            .map(|spell| {
+                // Compare alias endpoints: a selected native override and its base
+                // action share one APL identity (e.g. Deep Breath357210/433874).
+                crate::spell_cast::knowledge::resolve_action(self.world, self.actor, spell)
+            })
+            .transpose()?
+            .flatten();
+        Ok(bool_value(resolved.is_some() && resolved == previous))
+    }
+}
+
 impl Facts for NativeFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
         if let Some(value) = self.targeted_value(name, None) {
             return value;
+        }
+        if let Some(operand) = name.strip_prefix("prev_gcd.") {
+            return self.previous_gcd(operand);
         }
         if let Some(property) = name.strip_prefix("raid_event.pull.") {
             // SimC76f8118 raid_event.cpp3068–3141: no configured event.
@@ -861,11 +936,12 @@ impl Facts for NativeFacts<'_> {
             // bare spell_targets uses active_enemies, including recurring adds.
             "active_enemies" | "spell_targets" => Ok(self.active_enemies as f64),
             "spell_haste" => self.spell_haste(),
+            "main_hand.2h" => self.main_hand_is_two_handed(),
             "movement.distance" => self.movement_distance(),
             "movement.remains" => self.movement_value("remains"),
             "movement.speed" => self.movement_value("speed"),
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "charges_fractional"
-            | "full_recharge_time" | "execute_time" | "ticks_remain" | "ticking" => {
+            | "full_recharge_time" | "execute_time" | "ticks_remain" | "ticks" | "ticking" => {
                 Err(format!("native APL {name} requires action context"))
             }
             _ => {
@@ -930,7 +1006,7 @@ impl ActionFacts for NativeFacts<'_> {
         match name {
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" => self.gcd(action, name),
             "charges" | "charges_fractional" | "full_recharge_time" | "execute_time"
-            | "cast_time" | "cost" | "ticks_remain" | "ticking" => {
+            | "cast_time" | "cost" | "ticks_remain" | "ticks" | "ticking" => {
                 self.contextual_property(action, name)
             }
             _ => self.value(name),

@@ -9,7 +9,10 @@ use crate::world_data::{CreatureTemplate, WorldData};
 
 const OWNER_STAMINA_FRACTION: f32 = 0.30;
 const OWNER_ARMOR_FRACTION: f32 = 0.70;
-const OWNER_RANGED_AP_FRACTION: f32 = 0.22;
+// SimC76f8118 sc_hunter.cpp2107–2112: stable pets inherit60% of owner AP.
+// This runtime inheritance policy replaces the legacy TC22%; native spell AP
+// coefficients still supply each ability's own value (including Kill Command83381).
+const OWNER_RANGED_AP_FRACTION: f32 = 0.6;
 const HEALTH_PER_BONUS_STAMINA: f32 = 10.0;
 const BASE_ARMOR_PER_LEVEL: f32 = 50.0;
 
@@ -19,7 +22,7 @@ pub(crate) struct HunterInheritedStats {
     bonus_health: f32,
 }
 
-/// TC Guardian1344/1389: weapon-inclusive total RAP, then integer pet AP.
+/// Weapon-inclusive native owner RAP, then integer inherited pet AP.
 /// Shared by actual melee and ability damage; intrinsic pet AP is unqualified.
 pub(crate) fn owner_bonus_attack_power(
     owner: &CharacterStats,
