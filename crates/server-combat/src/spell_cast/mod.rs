@@ -3146,8 +3146,12 @@ fn resolve_effects(
         crate::achievement::record_targeted_spell_hit(world, caster, unit, spell.id);
     }
     for effect in &spell.effects {
-        let consumed_data =
-            effect.effect == 77 && scripts::consumes_effect_value(spell.id, effect.index);
+        let consumed_data = effect.effect == 77
+            && scripts::consumes_effect_value(
+                *world.resource::<script_registry::SpellScriptRegistry>(),
+                spell.id,
+                effect.index,
+            );
         if !selects_targets(
             *world.resource::<script_registry::SpellScriptRegistry>(),
             spell,
@@ -3345,7 +3349,7 @@ fn hit_units(plan: &TargetPlan) -> Vec<Entity> {
 }
 
 /// TargetInfo includes misses; named plans that skip defense selection retain their units.
-fn selected_units(plan: &[PlannedEffect]) -> Vec<Entity> {
+pub fn selected_units(plan: &[PlannedEffect]) -> Vec<Entity> {
     let selected = plan
         .iter()
         .flat_map(|effect| effect.selected_units.iter().chain(&effect.units));
@@ -3826,7 +3830,7 @@ pub fn load_triggered_spell(world: &World, spell_id: u32, depth: u8) -> Option<S
     spell
 }
 
-fn plan_triggered_spell(
+pub fn plan_triggered_spell(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,

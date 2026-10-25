@@ -19,6 +19,9 @@
 //! - `CheckTarget`: before native target checks; first error stops admission.
 //! - `AutoRepeat`: after the actual Auto Shot launch.
 //! - `EarlyAuraRegistration`: startup aura scripts, before native registration.
+//! - `ConsumedEffectValues`: classifies script-read effect77 data, without dispatch.
+//! - `LaunchDelay`: first explicit override, otherwise retain the native delay.
+//! - `DotMasteryMultiplier`: factors at the original Shadow Weaving damage boundary.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
 
@@ -52,6 +55,8 @@ pub type DamageAmountLookup = fn(u32) -> Option<DamageAmountHook>;
 pub type AutoRepeatHook = fn(&mut World, Entity, Entity);
 pub type CriticalChanceHook = fn(&World, Entity, Entity, u32) -> Option<f32>;
 pub type AuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
+pub type LaunchDelayLookup = fn(u32) -> Option<f32>;
+pub type DotMasteryMultiplierHook = fn(&World, Entity, Entity, u32) -> f32;
 
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
@@ -75,6 +80,9 @@ pub enum SpellScriptHook {
     AutoRepeat(AutoRepeatHook),
     CriticalChance(CriticalChanceHook),
     EarlyAuraRegistration(AuraRegistrationHook),
+    ConsumedEffectValues(&'static [(u32, u8)]),
+    LaunchDelay(LaunchDelayLookup),
+    DotMasteryMultiplier(DotMasteryMultiplierHook),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -104,6 +112,13 @@ impl SpellScriptRegistry {
                 register(scripts);
             }
         }
+    }
+
+    pub fn consumes_effect_value(self, spell: u32, index: u8) -> bool {
+        self.hooks().any(|hook| match hook {
+            SpellScriptHook::ConsumedEffectValues(values) => values.contains(&(spell, index)),
+            _ => false,
+        })
     }
 
     pub fn policies(self) -> impl Iterator<Item = &'static Policy> {
@@ -314,6 +329,28 @@ pub fn critical_chance(world: &World, caster: Entity, target: Entity, spell: u32
             SpellScriptHook::CriticalChance(run) => run(world, caster, target, spell),
             _ => None,
         })
+}
+
+pub fn launch_delay(world: &World, spell: u32, native: f32) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::LaunchDelay(lookup) => lookup(spell),
+            _ => None,
+        })
+        .unwrap_or(native)
+}
+
+pub fn dot_mastery_multiplier(world: &World, caster: Entity, target: Entity, spell: u32) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(|hook| match hook {
+            SpellScriptHook::DotMasteryMultiplier(run) => Some(run(world, caster, target, spell)),
+            _ => None,
+        })
+        .product()
 }
 
 #[cfg(test)]

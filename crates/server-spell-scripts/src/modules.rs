@@ -64,6 +64,7 @@ register_modules! {
     ret_toll: (280, "modules/ret_toll.rs"),
     retribution: (60, "modules/retribution.rs"),
     rogue: (70, "modules/rogue.rs"),
+    shadow_priest: (290, "modules/shadow_priest.rs"),
     snakeskin_quiver: (230, "modules/snakeskin_quiver.rs"),
     touch_of_death: (240, "modules/touch_of_death.rs"),
     voltaic_blaze: (250, "modules/voltaic_blaze.rs"),

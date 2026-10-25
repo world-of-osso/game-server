@@ -128,10 +128,6 @@ pub(super) use resource_values::{
     consume_sources as consume_resource_value_sources, effective_value as effective_resource_value,
 };
 mod scourge_strike;
-mod shadow_priest;
-pub(super) use shadow_priest::{
-    launch_delay as scripted_launch_delay, weaving_multiplier as shadow_weaving_multiplier,
-};
 mod soul_of_the_forest;
 mod swiftmend;
 pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direct_multiplier;
@@ -469,14 +465,15 @@ pub(super) fn relocate_destination(
 
 /// Source scripts read these77 values without registering an effect hit hook.
 /// This classifies consumed data only; it must not select targets or dispatch a no-op.
-pub(super) fn consumes_effect_value(spell_id: u32, effect_index: u8) -> bool {
+pub(super) fn consumes_effect_value(
+    registry: script_registry::SpellScriptRegistry,
+    spell_id: u32,
+    effect_index: u8,
+) -> bool {
     // TC a352b1fa spell_priest.cpp4483-4487: CalcDamage reads execute bonus E3.
     // spell_shaman.cpp1015-1027: OnHit reads knockdown chance E1.
-    // SimC76f8118 sc_priest_shadow.cpp1733–1739: Slam E2 supplies the VT cap.
-    matches!(
-        (spell_id, effect_index),
-        (32_379, 3) | (77_478, 1) | (shadow_priest::SLAM, 2)
-    )
+    matches!((spell_id, effect_index), (32_379, 3) | (77_478, 1))
+        || registry.consumes_effect_value(spell_id, effect_index)
 }
 
 pub fn on_effect_hit(
@@ -491,7 +488,6 @@ pub fn on_effect_hit(
         (crate::scripted_ai::orator::TERRORIZE_SELECTOR, 0) => {
             Some(crate::scripted_ai::orator::terrorize_hit)
         }
-        (shadow_priest::SLAM, 0) => Some(shadow_priest::slam_impact),
         (49_576, 0) => Some(death_grip),
         (108_199, 1) => Some(cast_subduing_grasp),
         (20_538, 0) => Some(hate_to_zero),

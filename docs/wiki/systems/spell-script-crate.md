@@ -28,6 +28,10 @@ Elemental Ascendance uses ordinary hit lookup; Voltaic Blaze owns effect-hit loo
 
 Feral/Frantic Frenzy and periodic Icicle counters register their complete native aura lifecycle callbacks through `EarlyAuraRegistration`, at the original start of aura-script registration. Their effect IDs, per-entity state, target ownership and scheduled children live downstream. Divine Toll's target cap and contextual child dispatch also live downstream and use the existing area-filter and contextual-hit slots.
 
+## Shadow launch and mastery
+
+Shadow's complete module owns Tentacle Slam's effect-hit dispatch, consumed effect77 data, 500 ms launch override, and Shadow Weaving's target-owned-DoT multiplier. Combat retains its native delay when no module registers an override. The mastery factor stays at the original bonus-caster damage boundary, separate from Giantkiller's factor position.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.

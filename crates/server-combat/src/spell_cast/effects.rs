@@ -1638,8 +1638,12 @@ fn damage_source_amount(
         let giantkiller =
             super::script_registry::target_damage_multiplier(world, ctx.caster, target, ctx.spell);
         let ret_damage = super::scripts::ret_damage_multiplier(world, ctx, target, periodic);
-        let shadow_weaving =
-            super::scripts::shadow_weaving_multiplier(world, bonus_caster, target, ctx.spell.id);
+        let shadow_weaving = super::script_registry::dot_mastery_multiplier(
+            world,
+            bonus_caster,
+            target,
+            ctx.spell.id,
+        );
         #[cfg(any(test, feature = "test-support"))]
         factor_capture::record_done(
             world,
