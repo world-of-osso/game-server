@@ -149,6 +149,7 @@ pub(crate) fn cast_rapid_fire_tick(
     if index != 1 {
         return;
     }
+    super::begin_rapid_tick(world, aura.caster);
     spell_cast::cast_triggered(world, aura.caster, RAPID_FIRE_SHOT, Some(unit), 1);
     spell_cast::cast_triggered(world, aura.caster, RAPID_FIRE_FOCUS, Some(aura.caster), 1);
 }
