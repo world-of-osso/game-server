@@ -1685,6 +1685,10 @@ fn damage_taken(world: &World, ctx: &EffectCtx, target: Entity, damage: &DamageI
     }
 }
 
+fn cast_damage_multiplier(spell: &SpellInfo) -> f32 {
+    spell.cast_damage_multiplier.unwrap_or(1.0) * spell.cast_periodic_fraction.unwrap_or(1.0)
+}
+
 /// Source amount followed by the native recipient reduction and authored cast multiplier.
 pub(super) fn damage_before_mitigation(
     world: &World,
@@ -1694,7 +1698,7 @@ pub(super) fn damage_before_mitigation(
 ) -> f32 {
     (damage_source_amount(world, ctx, target, damage)
         * damage_taken(world, ctx, target, damage)
-        * ctx.spell.cast_damage_multiplier.unwrap_or(1.0))
+        * cast_damage_multiplier(ctx.spell))
     .max(0.0)
 }
 
@@ -1842,7 +1846,7 @@ fn deal_source_damage_and_report(
         return 0.0;
     }
     let target_multiplier = damage_taken(world, ctx, target, &damage);
-    let cast_multiplier = ctx.spell.cast_damage_multiplier.unwrap_or(1.0);
+    let cast_multiplier = cast_damage_multiplier(ctx.spell);
     let unrounded = (source_amount * target_multiplier * cast_multiplier).max(0.0);
     let amount = unrounded.round();
     #[cfg(any(test, feature = "test-support"))]
@@ -2131,7 +2135,8 @@ pub fn apply_heal(
         * super::scripts::soul_of_the_forest_direct_multiplier(
             world, ctx.caster, ctx.spell, periodic,
         );
-    let amount = (modded_amount(world, ctx, amount, periodic) * done * taken * named)
+    let fraction = ctx.spell.cast_periodic_fraction.unwrap_or(1.0);
+    let amount = (modded_amount(world, ctx, amount, periodic) * done * taken * named * fraction)
         .max(0.0)
         .round();
     // TC SpellAuraEffects.cpp5893–5897: healing bonuses precede the tick roll.
