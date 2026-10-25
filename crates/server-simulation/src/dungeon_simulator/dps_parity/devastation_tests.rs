@@ -140,6 +140,8 @@ fn devastation_literal_measurement_executes_reference_deep_breath() {
         literal_rotation::execution::resolve_action(run.app.world(), run.actor, 357210)
             .unwrap()
             .expect("selected Devastation actor knows Deep Breath");
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
     engage(&mut run);
     for _ in 0..240 {
         drive_player(&mut run).unwrap();

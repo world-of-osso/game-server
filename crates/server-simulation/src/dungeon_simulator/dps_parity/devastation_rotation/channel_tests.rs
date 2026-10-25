@@ -53,6 +53,9 @@ fn devastation_adapter_interrupts_channel_for_a_ready_higher_row() {
                 && event.spell_id == Some(362969)
                 && event.kind == shared::protocol::CombatLogKind::CastSuccess
         }),
-        "the higher ready Azure Strike must execute before Disintegrate's natural end"
+        "the higher ready Azure Strike must execute before Disintegrate's natural end; duration={duration}, elapsed={}, cast={:?}, decisions={}, events={events:?}",
+        crate::spell_cast::now(run.app.world()) - started_at,
+        run.app.world().get::<shared::casting::CastState>(run.actor),
+        rotation.driver.decisions,
     );
 }
