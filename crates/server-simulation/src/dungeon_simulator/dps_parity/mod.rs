@@ -47,6 +47,7 @@ mod ret_wake_tests;
 mod shared_fact_extension_tests;
 pub(crate) mod single_spell;
 mod snakeskin_tests;
+mod trigger_primary_tests;
 mod warrior_stat_tests;
 mod windwalker_rotation;
 use crate::simc_apl_native::{FixtureAdds, FixtureTarget};
