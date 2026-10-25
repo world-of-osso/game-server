@@ -484,14 +484,29 @@ def land(entries, log):
 
 
 def run_probes(probes, gated, log):
-    """Probes and the RED twins of gated landings share one tree that is never pushed.
+    """Probes, then the RED twins of gated landings, each in a tree that is never pushed.
     Returns the gated landings whose RED was observed."""
-    twins = {e["id"]: red_twin(e) for e in gated}
-    passed, failed = build_and_test(probes + list(twins.values()), log)
-    for entry in passed:
+    # A RED twin must not share a tree with another commit that contains its fix (an owner's
+    # later probe usually does), so twins get their own tree. A twin that itself contains
+    # another gated entry's fix waits for the next cycle.
+    def contains_fix(twin, entry):
+        return any(other is not entry and git("merge-base", "--is-ancestor", other["commit"], twin["commit"],
+                                              check=False).returncode == 0 for other in gated)
+    twins = {}
+    for entry in list(gated):
+        twin = red_twin(entry)
+        if contains_fix(twin, entry):
+            gated.remove(entry)
+            (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
+        else:
+            twins[entry["id"]] = twin
+    passed, failed = build_and_test(probes, log) if probes else ([], [])
+    twin_passed, twin_failed = build_and_test(list(twins.values()), log) if twins else ([], [])
+    for entry in passed + twin_passed:
         entry["status"] = "probe passed"
-    for entry in failed:
+    for entry in failed + twin_failed:
         entry["status"] = "rejected"
+    passed, failed = passed + twin_passed, failed + twin_failed
     real = [e for e in passed + failed if not e["id"].endswith("-red")]
     write_results([e for e in real if e["status"] != "probe passed"])
     measure_then_write([e for e in real if e["status"] == "probe passed"], log)
