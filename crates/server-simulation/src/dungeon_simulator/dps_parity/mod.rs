@@ -8,6 +8,8 @@ mod dummy_reference_tests;
 mod elemental_ascendance_tests;
 mod engagement_tests;
 mod enhancement_operand_tests;
+mod enhancement_rotation;
+mod enhancement_tests;
 mod equipment_input_tests;
 mod equipped_set_tests;
 mod feral_tests;
@@ -33,6 +35,8 @@ mod preparation;
 mod profile_initialization;
 mod rake_stealth_tests;
 mod report;
+mod ret_batch_tests;
+mod ret_damage_tests;
 mod ret_dawnlight_consumer_tests;
 mod ret_dawnlight_target_tests;
 mod ret_dawnlight_tests;
@@ -81,6 +85,7 @@ struct Run {
     windwalker_rotation: Option<windwalker_rotation::Rotation>,
     ret_rotation: Option<ret_rotation::Rotation>,
     assassination_rotation: Option<assassination_rotation::Rotation>,
+    enhancement_rotation: Option<enhancement_rotation::Rotation>,
 }
 
 fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, String> {
@@ -95,7 +100,7 @@ fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, Str
         app.world_mut(),
         actor,
         DUMMY_ENTRY,
-        [1.5, lateral, 0.0, std::f32::consts::PI],
+        [1.5, lateral, 0.0, 0.0],
     )
     .ok_or("native training dummy31146 could not spawn")?;
     if app
@@ -105,6 +110,7 @@ fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, Str
     {
         return Err("native31146 lacks its actual training-dummy script".into());
     }
+    face_dummy_away_from_actor(app.world_mut(), actor, target);
     // SIMC_FIXED_TIME_TARGET_HEALTH owns this fixture's current health. Source31146
     // has RegenHealth=1; its ordinary two-second heal must not alter phase gates.
     // Keep the template, script, flags and damage handling unchanged.
@@ -112,6 +118,21 @@ fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, Str
         .entity_mut(target)
         .remove::<crate::spell_cast::powers::CreatureHealthRegenTimer>();
     Ok(target)
+}
+
+// SimC76f8118 attack.cpp277–279: position=back excludes frontal parries.
+// Keep the native pack positions/cones; change only the opponent's facing.
+fn face_dummy_away_from_actor(world: &mut World, actor: Entity, target: Entity) {
+    use shared::components::{Position, Rotation};
+    let actor = *world.get::<Position>(actor).expect("parity actor position");
+    let target_position = *world
+        .get::<Position>(target)
+        .expect("parity dummy position");
+    let orientation = (actor.z - target_position.z).atan2(target_position.x - actor.x);
+    world
+        .get_mut::<Rotation>(target)
+        .expect("parity dummy rotation")
+        .y = orientation + std::f32::consts::FRAC_PI_2;
 }
 
 fn spawn_targets(app: &mut App, actor: Entity, count: usize) -> Result<Vec<Entity>, String> {
@@ -248,7 +269,11 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
         prepare_assassination_precombat(&mut run)?;
         return Ok(run);
     }
-    if matches!(spec_id, 70 | 269)
+    if spec_id == 263 {
+        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
+        preparation::prepare_enhancement_precombat(&mut run)?;
+        Ok(run)
+    } else if matches!(spec_id, 70 | 269)
         && matches!(
             &identity,
             crate::followers::simulator::ParityActor::Follower
@@ -367,6 +392,7 @@ fn spawn_reference(
         windwalker_rotation: None,
         ret_rotation: None,
         assassination_rotation: None,
+        enhancement_rotation: None,
     })
 }
 
@@ -390,6 +416,9 @@ fn engage_fixture_opponents(run: &mut Run) {
 }
 
 fn engage(run: &mut Run) {
+    for &target in &run.targets {
+        face_dummy_away_from_actor(run.app.world_mut(), run.actor, target);
+    }
     let owner = fixture_player(run);
     let world = run.app.world_mut();
     // A player selects its target directly; a follower retains its quiet controller.
@@ -542,6 +571,7 @@ fn advance_combat_observed(
     let started_at = run.app.world().resource::<Time>().elapsed();
     install_fixture_lifetimes(run, started_at);
     if run.assassination_rotation.is_none()
+        && run.enhancement_rotation.is_none()
         && run
             .app
             .world()
@@ -598,6 +628,9 @@ fn drive_player(run: &mut Run) -> Result<(), String> {
     if let Some(rotation) = &mut run.ret_rotation {
         rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
     }
+    if let Some(rotation) = &mut run.enhancement_rotation {
+        rotation.step(run.app.world_mut(), run.actor, &run.targets, "default")?;
+    }
     Ok(())
 }
 
@@ -613,7 +646,8 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     Ok(
         json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "actor_kind": if run.app.world().get::<shared::components::Player>(run.actor).is_some() { "player" } else { "follower" },
-        "driver": if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "enhancement_rotation": run.enhancement_rotation.as_ref().map(|rotation| rotation.report()),
+        "driver": if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
         "windwalker_rotation": run.windwalker_rotation.as_ref().map(|rotation| rotation.report()),
         "ret_rotation": run.ret_rotation.as_ref().map(|rotation| rotation.report()),
         "assisted_decisions": run.player_rotation.as_ref().map_or(0, |rotation| rotation.decisions),
@@ -853,6 +887,7 @@ fn dps_parity_fixture_add_health_and_ttd_follow_each_summon_lifetime() {
                 .unwrap();
             let native_pct = f64::from(health.current) * 100.0 / f64::from(health.max);
             let action = Action {
+                source_row: None,
                 name: "auto_attack".into(),
                 target: Some(target.to_bits()),
                 options: Default::default(),

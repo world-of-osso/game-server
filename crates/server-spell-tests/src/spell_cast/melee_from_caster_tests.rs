@@ -27,6 +27,7 @@ fn native_swing_range(h: &Harness) -> RangeInclusive<f32> {
         stats.attack_power,
         stats.versatility_pct,
         Hand::Main,
+        crate::auras::shapeshift::attack_timing(h.app.world(), h.caster),
     );
     min.trunc()..=max.trunc()
 }

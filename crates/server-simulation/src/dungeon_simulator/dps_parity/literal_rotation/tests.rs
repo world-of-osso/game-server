@@ -437,6 +437,7 @@ fn literal_player_resource_query_preserves_actual_pools() {
             .clone();
         let prepared = prepare_palm(&mut run, &equipment);
         let action = Action {
+            source_row: None,
             name: "tiger_palm".into(),
             target: Some(target.to_bits()),
             options: Default::default(),
@@ -510,6 +511,7 @@ fn literal_player_resource_query_does_not_fill_other_powers() {
     )
     .unwrap();
     let action = Action {
+        source_row: None,
         name: "blackout_kick".into(),
         target: Some(run.targets[0].to_bits()),
         options: Default::default(),
