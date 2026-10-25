@@ -541,14 +541,14 @@ def cycle():
     probes = [e for e in entries if not e["land"]]
     gated = [e for e in entries if e["land"] and e.get("red")]
     plain = [e for e in entries if e["land"] and not e.get("red")]
-    # Plain landings go first: a slow probe bisect must not hold them back.
-    mark_phase(log, "1/3 plain landings", plain)
-    land(plain, log)
+    # Proven RED-gated entries land in the same build as plain ones: landing plain entries
+    # first moved master under the gated ones, which then conflicted with this cycle's own landings.
+    proven = []
     if probes or gated:
-        mark_phase(log, "2/3 probes and RED twins", probes + gated)
+        mark_phase(log, "1/2 probes and RED twins", probes + gated)
         proven = run_probes(probes, gated, log)
-        mark_phase(log, "3/3 RED-gated landings", proven)
-        land(proven, log)
+    mark_phase(log, "2/2 landings", plain + proven)
+    land(plain + proven, log)
     (HOME / "current.json").unlink(missing_ok=True)
 
 
