@@ -63,6 +63,30 @@ fn tyrant_admission_note(run: &mut Run, tyrant: Entity) -> String {
 }
 
 #[test]
+#[ignore = "requires private266 inputs; inherited follower minion attack permission"]
+fn demonology_follower_minion_can_attack_native_neutral_dummy() {
+    let (run, tyrant) = prepare_antoran_tyrant();
+    let target = run.targets[0];
+    let world = run.app.world();
+    assert!(world.get::<shared::components::Player>(run.actor).is_none());
+    assert!(crate::spell_cast::targets::relation_matches(
+        world,
+        run.actor,
+        target,
+        crate::spell_cast::targets::Relation::Enemy,
+    ));
+    assert!(
+        crate::spell_cast::targets::relation_matches(
+            world,
+            tyrant,
+            target,
+            crate::spell_cast::targets::Relation::Enemy,
+        ),
+        "a real follower minion must inherit its controller's neutral-target attack permission"
+    );
+}
+
+#[test]
 #[ignore = "requires private266 inputs; actual native alternative Tyrant root"]
 fn demonology_antoran_tyrant_repeats_burning_cleave() {
     let _seed = crate::random::seed_scope(70448);
