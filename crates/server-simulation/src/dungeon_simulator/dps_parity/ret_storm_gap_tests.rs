@@ -1,5 +1,5 @@
 //! Distinct Storm-gap boundaries: native Aura361 and sourced Second Sunrise.
-use super::ret_purpose_tests::current_holy_power;
+use super::ret_purpose_tests::{current_holy_power, earn_finisher_power};
 use super::ret_tier_tests::{has, native_ret};
 use super::*;
 use crate::spell_cast::{
@@ -53,7 +53,12 @@ fn cast_ordinary(run: &mut Run, spell: u32, unit: Entity) {
         match result {
             Ok(()) => return,
             Err(CastFailure::OnGlobalCooldown | CastFailure::InProgress) => run.app.update(),
-            Err(reason) => panic!("ordinary native {spell} failed: {reason:?}"),
+            Err(reason) => panic!(
+                "ordinary native {spell} failed: {reason:?}; Wake damage={}, Storm damage={}, HolyPower={}",
+                damage(run, Some(WAKE)),
+                damage(run, Some(STORM)),
+                current_holy_power(run)
+            ),
         }
     }
     panic!("ordinary native {spell} never became ready");
@@ -73,9 +78,10 @@ fn cast_funded_storms(run: &mut Run, count: usize) -> usize {
     let mut paid = 0;
     let target = run.targets[0];
     let actor = run.actor;
+    cast_ordinary(run, WAKE, target);
+    wait_for_funding(run);
     for _ in 0..count {
-        cast_ordinary(run, WAKE, target);
-        wait_for_funding(run);
+        earn_finisher_power(run, STORM);
         let before = current_holy_power(run);
         cast_ordinary(run, STORM, actor);
         paid += usize::from(before - current_holy_power(run) >= 3.0);
