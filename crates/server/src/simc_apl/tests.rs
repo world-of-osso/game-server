@@ -15,6 +15,41 @@ fn evaluate(source: &str, rows: &[(&str, f64)]) -> f64 {
 }
 
 #[test]
+fn simc_apl_minmax_operators_preserve_source_precedence_and_shadow_target_cap() {
+    // SimC76f8118 expressions.cpp130–145/413–416/1104–1106:
+    // >? is minimum, <? is maximum; both bind below sums and above comparisons.
+    for (source, expected) in [
+        ("3>?12", 3.0),
+        ("18>?12", 12.0),
+        ("3<?12", 12.0),
+        ("18<?12", 18.0),
+        ("10+5>?12*2", 15.0),
+        ("2+3<?4*2", 8.0),
+        ("3>?12=3", 1.0),
+        ("18<?12=18", 1.0),
+    ] {
+        assert_eq!(evaluate(source, &[]), expected, "{source}");
+    }
+    // expressions.cpp213–226 uses std::min/max: unordered comparisons keep left.
+    for source in ["(0%0)>?12", "(0%0)<?12"] {
+        assert!(evaluate(source, &[]).is_nan(), "{source}");
+    }
+    for source in ["12>?(0%0)", "12<?(0%0)"] {
+        assert_eq!(evaluate(source, &[]), 12.0, "{source}");
+    }
+    // apl_priest.cpp aoe_variables: cap actual candidates, not a fixed pack size.
+    for (targets, expected) in [(1.0, 1.0), (3.0, 3.0), (20.0, 12.0)] {
+        assert_eq!(
+            evaluate(
+                "spell_targets.vampiric_touch>?12",
+                &[("spell_targets.vampiric_touch", targets)]
+            ),
+            expected
+        );
+    }
+}
+
+#[test]
 fn simc_apl_floor_rounds_down_preserves_grouping_and_binds_inner_facts() {
     for (literal, expected) in [
         ("floor(2.95)", 2.0),
