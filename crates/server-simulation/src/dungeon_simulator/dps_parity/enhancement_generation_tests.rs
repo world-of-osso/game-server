@@ -20,6 +20,7 @@ fn cast(run: &mut Run, spell: u32, target: Entity) {
             Err(
                 crate::spell_cast::CastFailure::OnGlobalCooldown
                 | crate::spell_cast::CastFailure::OnCooldown
+                | crate::spell_cast::CastFailure::NoCharges
                 | crate::spell_cast::CastFailure::InProgress,
             ) => run.app.update(),
             Err(reason) => panic!("native generation fixture {spell}: {reason:?}"),
