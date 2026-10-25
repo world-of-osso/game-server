@@ -10,6 +10,10 @@ use crate::spell_info::{CastPolicyContext, SpellInfo, SpellStore};
 
 #[derive(Clone, Copy)]
 enum Relationship {
+    ResourceOnPrimaryHit {
+        parent: u32,
+        payload: u32,
+    },
     CounterAfterCast {
         parent: u32,
         counter: u32,
@@ -31,6 +35,17 @@ struct Policy {
 
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
+    // SimC76f8118 sc_paladin.cpp888–916: each successful primary strike
+    // grants the native406834 effect0, independently of the old stack counter.
+    Policy {
+        name: "SIMC_RET_CRUSADING_STRIKE_HOLY_POWER",
+        spec: 70,
+        talent: 404542,
+        relationship: Relationship::ResourceOnPrimaryHit {
+            parent: 408385,
+            payload: 406834,
+        },
+    },
     // sc_paladin_retribution.cpp846–876; native raw2 + specialization1 wins.
     Policy {
         name: "SIMC_RET_DAWNLIGHT_WAKE_PRODUCER",
@@ -54,6 +69,36 @@ const POLICIES: &[Policy] = &[
         },
     },
 ];
+
+fn hit_resources(parent: u32) -> impl Iterator<Item = &'static Policy> {
+    POLICIES.iter().filter(move |policy| {
+        matches!(policy.relationship,
+            Relationship::ResourceOnPrimaryHit { parent: id, .. } if id == parent)
+    })
+}
+
+pub(super) fn hit_hook(parent: u32) -> Option<super::ContextHitHook> {
+    hit_resources(parent)
+        .next()
+        .map(|_| grant_hit_resource as super::ContextHitHook)
+}
+
+fn grant_hit_resource(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    if super::super::resolving_targets(world, ctx).and_then(|targets| targets.first())
+        != Some(&target)
+    {
+        return;
+    }
+    for policy in hit_resources(ctx.spell.id) {
+        if !selected(world, ctx.caster, policy) {
+            continue;
+        }
+        let Relationship::ResourceOnPrimaryHit { payload, .. } = policy.relationship else {
+            unreachable!("resource-hit policy iterator");
+        };
+        super::super::cast_triggered(world, ctx.caster, payload, Some(ctx.caster), ctx.depth + 1);
+    }
+}
 
 fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
