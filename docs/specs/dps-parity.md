@@ -65,7 +65,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Ret damage children and mastery
 
 - Blade snapshots Art of War/Righteous Cause before consumption and schedules native1261160 after350ms, with native1261159 primary effectiveness and reduced AoE beyond8. Selected stacking1261113 consumes one Righteous Cause stack. Learned404834 also produces native26573 Consecration with the pinned10s producer ICD.
-- Judgment-family impacts roll383921 from native mastery effect3, Boundless Judgment and Highlord's Wrath values. Ordinary24275 participates; background same-ID24275 does not. Highlord's Wrath enhances only the hidden native mastery whitelist; never duplicate already-applied base mastery.
+- Judgment-family enemy damage impacts roll383921 from native mastery effect3, Boundless Judgment and Highlord's Wrath values. Caster/self-aura recipients never enter the damage-only hit hook. Ordinary24275 participates; background same-ID24275 does not. Highlord's Wrath enhances only the hidden native mastery whitelist; never duplicate already-applied base mastery.
 - Storm produces224239 Tempest, or a53385 Tempest for a Sunrise echo, at native383396 effectiveness. Retained primary/echo/secondary cast roles prevent recursive children and extra resource consumption.
 - Critical ordinary/Legacy Storm and HoW impacts apply native431414 Sun Sear. Each actual Dawnlight tick produces431911 Sun's Avatar with native area/cap values. Critical still-ticking403695 extends its owned duration by native446663 effect0 without resetting tick phase.
 - Divine Arbiter1306923 uses its native first damage effect on the primary and its native second effect on other recipients, never both on the primary. Spell coefficients remain native70448 values.
