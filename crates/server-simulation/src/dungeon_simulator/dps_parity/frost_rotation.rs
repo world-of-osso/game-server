@@ -270,6 +270,7 @@ fn frost_literal_empower_rune_weapon_uses_hostile_primary() {
         .unwrap();
     let action = Action {
         name: "empower_rune_weapon".into(),
+        source_row: None,
         target: None,
         options: Default::default(),
     };
