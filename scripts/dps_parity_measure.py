@@ -25,6 +25,11 @@ def build_executable(jobs):
     command = [sys.executable, str(ROOT / "scripts/build-host.py"), "--build-host", "native",
                "--test", "-p", "server-simulation", "--lib", "--no-run",
                "--message-format=json-render-diagnostics"]
+    # Native build-host supplies a checkout-local environment default. Cargo's
+    # explicit option preserves a caller-selected shared dependency pool.
+    target = os.environ.get("CARGO_TARGET_DIR")
+    if target is not None:
+        command += ["--target-dir", str(Path(target).resolve())]
     if jobs is not None:
         command += ["-j", str(jobs)]
     result = subprocess.run(command, cwd=ROOT, stdout=subprocess.PIPE, text=True, check=False)

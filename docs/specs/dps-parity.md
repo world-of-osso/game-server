@@ -59,7 +59,16 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Ret Execution Sentence accumulation
 
-- [ ] `SIMC_RET_EXECUTION_SENTENCE_ACCUMULATION`: actual nonphysical outgoing damage contributes only to343527 instances cast by that actor on the actual damaged target. Exclude any Physical school bit, including hybrids; retain native effect1 percentage. TC expiry-only removal casts387113 with accumulated BP0 through partial-trigger admission, never FULL_MASK; cancellation must not discharge. No fabricated proc flags/chance: native343527 has no SpellAuraOptions, effective TDB has no row, and TC skips generation without flags. Exact controlled-pet owner routing remains separately unqualified; arbitrary summon attribution is forbidden. [Source/proof](../handoffs/ret-qualified-sentence-wake-toll-proof-ledger.md).
+- Actual343527 launches native1260251 damage/gather effects at its hostile primary. Own nonphysical damage to any owned1260251-marked recipient contributes to that caster's primary343527 pool, excluding every Physical school bit, including hybrids. Native effect1 owns the stored percentage; no fabricated proc flags/chance.
+- Expiry alone casts387113 with stored BP0 through partial-trigger admission, never FULL_MASK; cancellation must not discharge. SimC Ret35–75 applies normal source/target multipliers after adding stored damage, overriding only native multiplier-suppression flags while retaining native no-crit. Exact controlled-pet attribution remains unqualified. [Existing expiry-admission qualification](../handoffs/ret-qualified-sentence-wake-toll-proof-ledger.md).
+
+### Ret damage children and mastery
+
+- Blade snapshots Art of War/Righteous Cause before consumption and schedules native1261160 after350ms, with native1261159 primary effectiveness and reduced AoE beyond8. Selected stacking1261113 consumes one Righteous Cause stack. Learned404834 also produces native26573 Consecration with the pinned10s producer ICD.
+- Judgment-family impacts roll383921 from native mastery effect3, Boundless Judgment and Highlord's Wrath values. Ordinary24275 participates; background same-ID24275 does not. Highlord's Wrath enhances only the hidden native mastery whitelist; never duplicate already-applied base mastery.
+- Storm produces224239 Tempest, or a53385 Tempest for a Sunrise echo, at native383396 effectiveness. Retained primary/echo/secondary cast roles prevent recursive children and extra resource consumption.
+- Critical ordinary/Legacy Storm and HoW impacts apply native431414 Sun Sear. Each actual Dawnlight tick produces431911 Sun's Avatar with native area/cap values. Critical still-ticking403695 extends its owned duration by native446663 effect0 without resetting tick phase.
+- Divine Arbiter1306923 uses its native first damage effect on the primary and its native second effect on other recipients, never both on the primary. Spell coefficients remain native70448 values.
 
 ### Ret Divine Toll relationship
 
@@ -86,6 +95,13 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [ ] Hunter pet ability damage inherits the same integer22% owner total RAP source as melee, including equipped weapon AP; native1264355 damage qualifies the actual effect boundary before the shared input changes. Ability coefficients/variance and native target geometry stay unchanged.
 - [ ] Intrinsic pet AP/weapon damage remains an explicit unqualified gap; do not invent pet_levelstats or import TC's fake primary stats/approximate weapon range. SimC stable_pet60% ownerAP is named divergence `HUNTER_PET_SIMC_OWNER_AP_DIFF`, not mixed with TC22% RAP. Contribution proofs do not certify total pet DPS or Azure survival.
 
+### Fury player parity
+
+- [x] Spec72 uses `--actor player` and the complete pinned MID2 Fury APL through shared `literal_rotation`. Capture literal control before native setup, execute ordered precombat and submit normal native casts. Do not invent a follower profile. Native overrides select Reckless Abandon and Unrelenting Onslaught variants; native stats, costs, coefficients and trait legality remain authoritative.
+- [ ] Fury Deep Wounds1261060 accepts only actual Execute main-hand280849 impacts; Whirlwind cannot grant it (SimC76f8118 `sc_warrior.cpp4452–4456`). Preserve native262115 damage and periodic behavior.
+- [ ] Anger Management152278 reduces running Fury Avatar/Recklessness cooldowns from actual paid Rage, using native PowerType display units and effect2's Rage-per-second divisor; free background casts do not contribute (`sc_warrior.cpp1450–1455,1506–1517`).
+- [ ] Selected Unhinged386628 dispatches the live native Bloodthirst variant on odd Bladestorm227847/446035 effect0 ticks, including catch-up ticks, using the actual selected hostile target (`sc_warrior.cpp3257–3268,3316–3334`).
+
 ### Literal precombat execution
 
 - [ ] Explicit literal controller handoff occurs before any native setup/warmup frames. Nonliteral fixtures retain native kit behavior; literal fixtures cannot acquire kit-cast precombat auras absent from their APL. Never delete those auras afterward to conceal a late handoff. Accepted Encounter::Fixture capture retires the actor's native FollowOwner while preserving Follower/NPC identity and native literal AA chase; rejected Dungeon capture leaves owner-follow behavior unchanged.
@@ -93,6 +109,14 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [ ] Run native cast completion and GCD progression out of combat before explicit fixture CombatRefs engagement and the measured300s clock; Prowl5215 must meet native OOC readiness. Native-controller fixtures also finish their existing setup cast/GCD before pull. Demo ST must deal first native damage within10s after pull without add-wave or recurring re-engagement. No FULL_MASK, cast-time skips, resource resets or grants.
 - [ ] Initialize profile-declared class start pools/default pet before precombat, using native pool units and configured profile values. Class resource tokens resolve through native PowerType metadata/display units, not a spec-specific reset. Current pinned Warlock profiles declare soul_shards0 and sayaad/felguard/imp. Precasts build resources naturally; summon_pet runs once and no-ops when the requested native pet already exists. Demo's Felguard must exist at pull.
 - [ ] Harmful precasts use the shared target-aware Prepared enemy seam, preserving exact selected identities and normal cast permission. Pool_resource uses the GREEN readiness-only requested-pool query, never live resource mutation.
+
+### Literal action readiness and channels
+
+- [x] Ordinary native action/item readiness precedes its `if` expression. Unavailable actions do not bind unreachable item/buff conditions; unsupported operands on an available action remain explicit errors (SimC76f8118 `action.cpp2578–2583,2619–2620`).
+- [x] `line_cd` belongs to the exact literal source row, independently of spell cooldowns, targets, and identical neighboring rows. Only a successful execution starts it.
+- [x] `action.<alias>.channeling` reads the actual matching native channel. `cancel_action` can cancel during casting/GCD. At native channel ticks, `interrupt_if`/`interrupt` requires a genuinely ready higher-priority action; `interrupt_immediate` bypasses only the GCD guard, and `interrupt_global` selects root versus current-list priority scope. `chain` rechecks the same source row at the penultimate tick and recasts only without a higher-priority ready action. Readiness probes do not mutate powers, casts or recovery clocks (SimC76f8118 `dot.cpp707–735,815–869,980–994`).
+
+- [x] `early_chain_if` works without `chain=1`: after a paid native channel tick, a true expression and ready GCD may re-execute the same ready source row before its penultimate tick, but never ahead of a ready higher-priority action (SimC76f8118 `dot.cpp841–845`).
 
 ### Empyrean Legacy relationship
 
@@ -102,7 +126,15 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [ ] Default aura-trigger dispatch uses the actual nullable proc action recipient, never substitutes the aura owner. A child whose native explicit selector requires an enemy cannot target its own caster or a missing recipient; skip it instead of inventing a target. Native implicit-caster buff children remain valid. Named item callbacks use the same recipient predicate before RPPM admission and dispatch. CastSuccess keeps TC's null actionTarget; do not replace it with the spell's unrelated explicit target. Reflection/other explicit triggered casts retain their separate rules. [Ret source/proof ledger](../handoffs/ret-paladin-parity-proof-ledger.md#generic-proc-recipient-self-damage).
 
+### Native periodic spell haste
+
+- Periodic auras and GroundPulses fields with native `SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC` (Attributes5 `0x2000`) apply caster spell haste after the native period spell modifiers, truncating to integer milliseconds. Their unchanged duration admits the resulting extra ticks. Unflagged auras retain their native period. Source: TC a352b1fa `SpellAuraEffects.cpp999–1012`.
+
 ### Measurement
+
+- Spec259 player fixtures execute the profile's literal pinned Assassination action rows through the shared APL evaluator, not AssistedCombat or follower-kit priorities. `apply_poison` uses the selected native coating casts in source order and waits for each real cast before the next precombat row. Production follower decisions remain unchanged.
+
+- Parity opponents face away from the actual actor at initial spawn, engagement after warmup, and add replacement, matching the reference's `position=back`. Preserve pack positions and native attack geometry/defenses. Rear position excludes parry, not NPC dodge. Player and class-parity actors also receive the pinned SimC baseline7.5% expertise in both weapon-spell and ordinary-swing dodge/parry calculations (`player.cpp1622`); native target defense values and ordinary NPC expertise remain unchanged.
 
 - [x] Auto-attacks remain eligible during native channels with `SPELL_ATTR5_ALLOW_ACTIONS_DURING_CHANNEL`. Normal casts and other channels block swings without discarding attack intent or timer progress. Preserve crowd-control blocking, victim avoidance and spell-native permissions; no class/ability whitelist.
 - [ ] Native aura342 modifies BASE/OFF/RANGED attack timers only, using its signed multiplicative attack-time factor. It must not change spell haste, cast time, GCD or resource regeneration. Preserve melee-only319 and the native scope of other haste types; no spell-ID exceptions. All current342 users are inventoried in the [source/proof ledger](../handoffs/aura342-attack-timers-proof-ledger.md).
@@ -115,12 +147,12 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 - [x] The shared three-target parity fixture places the primary and both adds inside a60° frontal arc for every class, including replacement waves. Preserve the primary's existing distance, actual target identities and native spell cones/radii. A three-target reference assumes all three are geometrically eligible; never widen gameplay cones to compensate for fixture placement. This is a harness correction, not a gameplay parity fix.
 - [ ] All specified fixture opponents begin each initial/replacement wave with active mutual CombatRefs to the fixture player/controller, using the ordinary combat-reference API. Passive31146 keeps its native no-ThreatTable template and passivity; follower fresh-pack/AOE_HITS_ONLY_IN_COMBAT_UNITS policy is unchanged. Native73/63/103 must actually cast an authored min_enemies≥2 AoE entry in the three-target fixture.
 - [ ] Harness-only `SIMC_FIXED_TIME_TARGET_HEALTH` keeps the main target on the global linear100→0% fixed300s clock. Recurring adds use their own30s remaining lifetime for health percentage and per-target TTD, with30.01s starts and nine actual10ms absent intervals across300s (pinned76f8118 `sc_enemy.cpp1053–1101`, `raid_event.cpp2700–2701`). Every wave restarts its phase; main remains a boss and ENEMY_ADDs do not, using explicit fixture metadata without mutating31146 templates. Production training-dummy damage remains inert. Report actual native clock/lifetimes/health, preserve historical receipts and remeasure all3T parity owners after landing; never fabricate timing or change references.
-- [ ] Reports compare primary/crit/haste/mastery/versatility/AP/SP first, then action counts/average hit/damage share and buff uptimes. Native receipts include actual damage/hits per measurement target, retaining retired and zero-output target identities, so multiple-target output is not inferred from spawn count. Flag every delta>5% and classify stats/gear, coefficients, missing proc/aura or rotation/decision.
+- [ ] Reports compare primary/crit/haste/mastery/versatility/AP/SP first, then action counts/average hit/damage share and buff uptimes. Each ability separately counts actual misses, dodges and parries against measured targets, including abilities with no successful damage. Native receipts include actual damage/hits per measurement target, retaining retired and zero-output target identities, so multiple-target output is not inferred from spawn count. Flag every delta>5% and classify stats/gear, coefficients, missing proc/aura or rotation/decision.
 - [x] Receipts expose measured actor and actual controlled-pet raw current/max pools and last native regeneration rates at existing state samples, plus before/after actor pools and final pet pools. Source/recipient/spell-attributed Energize receipts retain logged integer amount, overflow, effective gain and count. They never infer power type from ambiguous effects or label snapshots/logged grants as integrated realized regeneration; capped gains remain distinguishable from requested amounts.
 - [x] SimC action normalization includes direct and periodic amounts without double-counting parent compound totals.
 - [x] Stat comparison accepts identically-unitized attribute/stat maps, flags strictly greater than5% differences, distinguishes absent and zero-reference measurements, and rejects nonfinite inputs.
 - [ ] Compare SimC70391 and native70448 effect rows before attributing a coefficient mismatch to a server bug. Rotation/decision edits remain lead-owned.
-- [ ] Native DB2 trait legality takes precedence over SimC selections. Under `SIMC_PROFILE_TRAIT_EDGE_DIVERGENCE`, derive native-only inputs by repeatedly dropping selected nodes whose native required-parent alternatives are all unfilled; never add parents or edit official profiles/exports. Record each dropped node, edge IDs, closure iteration and SimC affected-channel DPS. Preserve strict validation and report independent unverified-rule boundaries; neither missing-parent closure nor channel attribution permits a predicate bypass. Stop at other native legality constraints rather than rebuilding a profile:251 is `SIMC_PROFILE_NOT_NATIVE_LEGAL`, a reference gap excluded from scoring after three orphan omissions expose the node76076/condition19531 row-spend gate;1480 retains only its108144 omission and independent rule80974/type54 boundary.
+- [x] `SIMC_PARITY_ALLOCATIONS` applies to every explicit parity actor, preserving exact selected reference allocations. Pinned SimC76f8118 `player.cpp2696–2860` decodes node selections without parent-edge or currency-gate validation; the test-only native allocation builder skips those two checks while retaining node/entry membership, rank, specialization, level, choice, selected subtree and total currency budget checks. Production `build_config` remains strict. Spec251 uses a real player because no native follower profile exists; its former `SIMC_PROFILE_NOT_NATIVE_LEGAL` scoring exclusion is retired. Do not drop selected nodes, invent follower rows or edit official profiles/exports.
 - [ ] Cover every non-initial native70448 player specialization (40 rows with ClassID1–13/OrderIndex<4), not merely the first follower cohort66/73/105/257/262/63/253/1467/269/266/103. Current pinned sources have29 baseMID2 profiles and11 native follower-harness profiles; absent harness profiles do not imply absent server class support. Missing shipped healer references remain explicit HPS/BiS gaps, never synthetic profiles. Report first-three and all-spec summaries to the lead.
 
 ### Per-spell oracle diagnostics
@@ -173,9 +205,24 @@ It builds the `server-simulation` test executable with Cargo's `test` profile (s
 
 The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native specialization metadata selects class identity, the prepared database resolves the reference race, and ordinary player power/stat/passive systems initialize the actor. Human uses the pinned SimC `util::race_id(RACE_HUMAN)=1` and requires that exact native row:70448 also labels ThinHuman33 "Human", so a display-name match must not choose it or reject a valid Human1 profile. Other absent/ambiguous identities fail explicitly. Strict reference traits use that player's actual race/spec identity. No follower profile or persistent character is fabricated. Player rotation execution uses the test-only `game-engine-core` dependency pinned to9ef2efe2d317b837d352fe8c5227086a4fdcd490, reusing `CooldownAssistCatalog::recommend` and `assisted_combat::evaluate_rule` unchanged. `DPS_PARITY_ASSISTED_DB2` must name the frozen70448 seven-table CSV directory. Native known spells/overrides, powers/runes, auras, target health, pet state, cooldown/charge clocks and ordinary target admission supply facts; the latter is explicitly labelled as the range-fact boundary rather than claiming identical client geometry. The50ms driver submits normal `cast_for_player` requests only inside the existing native queue window. An unknown potentially applicable rule stops the attempt and writes exact facts/rule IDs/native event evidence to `<spec>.player.assisted-gap.json`; missing metadata or cast refusal remains an explicit error. No alternate priority is substituted. Parity authority is the pinned literal SimC APL through shared `literal_rotation` and the owning spec adapter. Native AssistedCombat/one-button execution is diagnostic only, not a substitute parity rotation. AssistedCombatRule conditions11/12 remain named unverified numeric/predictive gaps; do not guess their semantics or derive a parity DPS band from a stopped diagnostic attempt. Arms adapter/FIRST/target route is owned by14775 and requires its exact qualified fixture/tips.
 
+### Enhancement fixture driver
+
+Spec263 parity executes the pinned MID2 Enhancement action rows through the shared literal evaluator, using native action admission, equipment and aura/target facts. A real player uses this driver without loading AssistedCombat diagnostic inputs; no follower profile is fabricated. Windfury/Flametongue setup occurs only in precombat. Thorim's LB/CL choice follows successful foreground LB/CL/Tempest dispatch and Tempest target count. This selects actions; it does not certify the underlying Enhancement proc, counter or damage mechanics.
+
+### Shared literal snapshot operands
+
+`action.<alias>.damage` reads the proposed target's native direct school-damage snapshot, including current power, modifiers, mitigation and expected crit, without casting or sampling RNG. Weapon-damage predictions remain explicit errors. Action cooldown/duration and bare `ticking` retain action context. `pet.<summon alias>.active` reads actual living, unexpired, same-map owned summons; absent summons are inactive.
+
+## Marksmanship literal controller
+
+- [x] Spec254 uses a real Player with exact reference gear/traits and unchanged pinned `hunter_marksmanship.simc` source through shared `literal_rotation`. It does not require a nonexistent follower profile or use AssistedCombat priorities.
+- [x] Execute source precombat, preserve native cooldowns/overrides and item admission, and start ranged attacks through native75. Report the literal driver and native stat snapshot. Missing potion inventory and external providers remain explicit gaps, not fabricated effects.
+- [ ] Qualify Trueshot/Chakram, Precise Shots, ground payloads and residual damage before claiming DPS parity. Controller execution alone does not qualify their native mechanics.
+
 ## Tests asserting this spec
 
 - `scripts/tests/test_item_instance_data.py` — concrete signed rows, idempotence, unrelated-table retention and duplicate-ID rollback.
+- `crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_operand_tests.rs` — native direct-damage/crit snapshots, racial metadata, selected-target ticking and owned summon lifetime/life filtering.
 - `scripts/tests/test_dps_parity.py` — exact item identities/modifiers, reference-tier selection, missing-ID rejection, selected-talent metadata, direct/periodic action accounting and finite/missing/zero-reference stat comparisons.
 - `crates/server/src/item_instance.rs::tests` — two passing item-level budget/weapon-damage and invalid-level regressions.
 - `crates/server/src/item_instance/{bonuses,store}.rs::tests` — six native allocation/configuration/socket/crafted-stat and durable-reopen/owner-transfer/rollback regressions. Owned inventory hydration/projection is additionally proved at the persistence/Stats boundary.
@@ -186,11 +233,26 @@ The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native speci
 
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/power_tests.rs` — opt-in native253/Duck/Cobra/grant owner/pet snapshots and grouped capped gains, plus native66 authoritative Mana serialization. Genuine receipt RED2 precedes implementation; current14e20fbca GREEN3/3 (110.93s), retained six source/parallel controls, all-target check/fmt pass. Snapshot rates/logged integer gains do not certify integrated realized regeneration or resource mechanics parity.
 
+## Shared profile gear effects
+
+- Reference followers retain NPC identity but use the declared native race for base stats and validated racial spell knowledge. Native player/pet aura effect202 must apply owner racial effects.
+- Aura189 rating buffs must change derived native ratings through their real masks. Item spell scaling class−7 includes its native trinket combat-rating multiplier before rounding. Declared Magisters flask, Void-Touched augmentation, Royal Roast, Recklessness potion and Thalassian Phoenix Oil quality2 use native item/enchant/spell values. Oil coexists with permanent enchants. Potion selects the current highest positive/lowest negative secondary and is available once per encounter; unsupported tokens remain named gaps.
+- Expansion tokens resolve native TraitNodeEntry identities, independent of class talents. Item scripts supply SimC relationships for Heart Morsels/stacking stats, asynchronous Venomfang/expiry bursts and perfected Guillotine poison, plus Omnium fire/lingering/secondary runes. Native proc rates, scaling and recipients remain authoritative; neutral attackable targets must not be rejected as non-hostile factions.
+
+[Implementation](../wiki/systems/character-stats.md#shared-profile-effects--2026-10-25).
+
 ## Known gaps (current cycle)
 
 - [ ] Remaining profile bonus options, equip-spell aura/proc lifecycle and complete instance-movement qualification; basic Stats derivation and additive persistence have targeted GREEN proof.
 - [ ] Real300s server dummy execution and equal-gear parity reports.
 - [ ] Shipped105/257 healer BiS/HPS references are absent upstream.
+
+## Elemental Shaman fixture (262)
+
+- The follower measurement uses the exact profile action rows through the shared literal SimC evaluator, native readiness and native spell execution. The production follower kit is unchanged.
+- Precombat rows complete native casts and GCDs before engagement. Ancestral Swiftness replaces Nature's Swiftness when its talent is active (SimC76f8118 `sc_shaman.cpp`8132–8137).
+- Per-ability native output includes actual critical-hit count and damage, plus separate critical and noncritical mean damage. Zero critical hits produce a zero mean, not inferred criticals.
+- Score 262 ST against `262.reference.single.json` and 3T against `262.reference-fixed.three.json`. The original `262.reference.three.json` has the known Patchwerk add-event error and is not a three-target reference.
 
 ## Out of scope
 

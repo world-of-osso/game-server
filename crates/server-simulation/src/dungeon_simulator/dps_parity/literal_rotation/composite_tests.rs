@@ -141,6 +141,7 @@ fn assert_native_steps_ready(
 ) {
     for step in steps {
         let action = Action {
+            source_row: None,
             name: step.name.into(),
             target: None,
             options: Default::default(),
@@ -251,6 +252,7 @@ fn literal_composite_one_unknown_selected_step_cannot_be_silently_omitted() {
     let prepared = prepare(&mut run, &equipment, "apply_poison", &STEPS);
     assert_native_steps_ready(&prepared, &equipment, &STEPS[..3], run.actor);
     let absent = Action {
+        source_row: None,
         name: STEPS[3].name.into(),
         target: None,
         options: Default::default(),

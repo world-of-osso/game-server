@@ -71,6 +71,7 @@ fn prepare_native(run: &mut Run, equipment: &Equipment) -> Prepared {
 
 fn action(name: &str) -> Action {
     Action {
+        source_row: None,
         name: name.into(),
         target: None,
         options: Default::default(),

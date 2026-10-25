@@ -18,6 +18,7 @@ mod immunity;
 mod immunity_tests;
 mod load;
 pub mod positivity;
+mod proc_definition;
 #[cfg(test)]
 pub(crate) mod serverside_tests;
 mod trait_data;
@@ -62,6 +63,15 @@ pub(crate) struct ChargedSpellModifier {
 pub(crate) struct CastPolicyContext {
     pub powers: Vec<PowerType>,
     pub targets: Vec<Entity>,
+}
+
+/// Source-qualified damage children retain their role through launch and flight.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) enum CastDamageRole {
+    #[default]
+    Primary,
+    Echo,
+    Secondary,
 }
 
 /// One spell's DB2 data at DifficultyID 0. Sparse tables are boxed so the
@@ -133,6 +143,8 @@ pub struct SpellInfo {
     /// Scripted effectiveness on this cast's damage only, retained through flight.
     #[serde(skip)]
     pub(crate) cast_damage_multiplier: Option<f32>,
+    #[serde(skip)]
+    pub(crate) cast_damage_role: CastDamageRole,
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,
@@ -268,8 +280,17 @@ pub struct SpellPowerCost {
     pub alt_power_bar_id: u32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum ProcDefinitionSource {
+    Generated,
+    ExplicitTdb,
+    Scripted,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct SpellAuraOptions {
+    /// None disables proc generation, not stacking or charge metadata.
+    pub proc_definition_source: Option<ProcDefinitionSource>,
     /// Max stacks (`CumulativeAura`).
     pub cumulative_aura: u32,
     pub proc_category_recovery_ms: i32,

@@ -33,6 +33,23 @@ pub(crate) struct ItemUse {
     stat_buff: bool,
 }
 
+impl ItemUse {
+    pub(crate) fn consumable(world: &World, item_id: u32) -> Result<Self, String> {
+        let template = world
+            .resource::<ItemTemplates>()
+            .get(ItemDefinitionSource::Retail, item_id)
+            .ok_or_else(|| format!("native consumable item{item_id} absent"))?;
+        Ok(Self {
+            item_id,
+            on_use: template
+                .on_use
+                .ok_or("native consumable has no on-use spell")?,
+            item_level: template.scaling.item_level,
+            stat_buff: true,
+        })
+    }
+}
+
 struct Slot {
     item_id: u32,
     item_level: u16,
@@ -109,6 +126,13 @@ impl Equipment {
     }
 
     fn requested_use_items_slots(&self, action: &Action) -> Result<Vec<&str>, String> {
+        if let Some(slot) = action.options.get("slot") {
+            return self
+                .slots
+                .get_key_value(slot)
+                .map(|(slot, _)| vec![slot.as_str()])
+                .ok_or_else(|| format!("unknown native item proxy slot {slot}"));
+        }
         let Some(slots) = action.options.get("slots") else {
             return Ok(self.uses().map(|(slot, _)| slot).collect());
         };

@@ -341,6 +341,7 @@ fn native_avoidance_upper(h: &Harness, player: Entity, target: Entity) -> f64 {
         stats.attack_power,
         stats.versatility_pct,
         crate::melee::Hand::Main,
+        None,
     );
     // Even worst source armor85% and block30% leave a positive native hit.
     assert!((minimum.trunc() * 0.15 * 0.7).trunc() >= 1.0);

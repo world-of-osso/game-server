@@ -6,6 +6,8 @@ mod catalog;
 #[cfg(test)]
 mod darkflame_drop_tests;
 mod empower_policy;
+#[cfg(test)]
+mod form_combat_tests;
 mod hazards;
 #[cfg(test)]
 mod healer_benchmark_profile_tests;
@@ -64,9 +66,7 @@ mod positioning;
 mod pull_admission;
 #[cfg(test)]
 mod pull_admission_tests;
-mod pull_budget;
-#[cfg(test)]
-mod pull_budget_tests;
+use server_follower_policy::followers::pull_budget;
 #[cfg(test)]
 mod pull_corner_tests;
 #[cfg(test)]

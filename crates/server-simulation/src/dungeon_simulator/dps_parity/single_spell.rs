@@ -57,6 +57,7 @@ fn read_probe_execution(
         false,
     )?;
     let action = Action {
+        source_row: None,
         name: probe.action.into(),
         options: Default::default(),
         target: None,

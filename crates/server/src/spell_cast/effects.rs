@@ -441,7 +441,7 @@ fn scales_with_spell_damage(effect: &SpellEffect) -> bool {
 /// `SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS`. Item-level spells instead
 /// use RandPropPoints at the casting item's effective level. Not modelled:
 /// the target's level of `SPELL_ATTR8_USE_TARGETS_LEVEL_FOR_SPELL_SCALING` and the casting item's
-/// level multipliers of classes -6 and -7.
+/// level multiplier of class -6.
 fn calc_base_value(world: &World, caster: Entity, spell: &SpellInfo, effect: &SpellEffect) -> f32 {
     let attribute = |index: usize| spell.misc.as_ref().map_or(0, |misc| misc.attributes[index]);
     let level = world
@@ -496,7 +496,12 @@ fn item_spell_scaling_value(world: &World, spell: &SpellInfo, effect: &SpellEffe
         -9 => 1,
         _ => 2,
     };
-    let value = row[column] * effect.coefficient;
+    let mut value = row[column] * effect.coefficient;
+    if effect.scaling_class == -7 {
+        // SimC76f8118 spell_data.cpp424–441: special scale7 applies the native
+        // trinket combat-rating multiplier to its item budget before rounding.
+        value *= tables.rating_multiplier[usize::from(level) - 1][2];
+    }
     if value > 0.0 && value < 1.0 {
         1.0
     } else {
@@ -779,12 +784,9 @@ fn weapon_hit(world: &World, caster: Entity, normalized: bool) -> f32 {
     let weapon = world
         .get::<CharacterStats>(caster)
         .map_or(WeaponDamage::UNARMED, |stats| stats.main_hand);
-    let speed = if normalized {
-        weapon.kind.normalized_speed()
-    } else {
-        weapon.speed
-    };
-    let roll = weapon.min + rand::random::<f32>() * (weapon.max - weapon.min);
+    let form = crate::auras::shapeshift::attack_timing(world, caster);
+    let (minimum, maximum, speed) = crate::melee::weapon_damage_terms(&weapon, normalized, form);
+    let roll = minimum + rand::random::<f32>() * (maximum - minimum);
     roll + attack_power / crate::melee::ATTACK_POWER_PER_DPS * speed
 }
 
@@ -1170,6 +1172,95 @@ fn roll_periodic_heal_crit(
     )
 }
 
+/// SimC76f8118 action.cpp3214-3260: one-target direct snapshot, average crit,
+/// mitigation, and no cast, proc, resource spend or random sample.
+/// The native pipeline supplies every coefficient and source/target multiplier.
+pub(crate) fn expected_direct_damage(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> Result<f32, String> {
+    if spell.effects.iter().any(|effect| {
+        matches!(
+            effect.effect,
+            EFFECT_WEAPON_DAMAGE | EFFECT_WEAPON_PERCENT_DAMAGE | EFFECT_NORMALIZED_WEAPON_DMG
+        )
+    }) {
+        return Err(format!(
+            "native APL weapon damage prediction unavailable for spell{}",
+            spell.id
+        ));
+    }
+    let ctx = EffectCtx {
+        caster,
+        spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    let chance = crit_chance(world, caster, target, spell).clamp(0.0, 100.0) / 100.0;
+    Ok(spell
+        .effects
+        .iter()
+        .filter(|effect| effect.effect == EFFECT_SCHOOL_DAMAGE)
+        .map(|effect| expected_school_damage(world, &ctx, effect, target, chance))
+        .sum())
+}
+
+fn expected_school_damage(
+    world: &World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+    chance: f32,
+) -> f32 {
+    let amount = scaled_amount(world, ctx.caster, ctx.spell, effect)
+        + super::scripts::empower_damage_bonus(world, ctx.caster, ctx.spell);
+    let critical = critical_damage_amount(
+        world,
+        ctx.caster,
+        ctx.caster,
+        ctx.spell,
+        amount,
+        uses_weapon_crit_bonus_order(ctx.spell),
+    );
+    let damage = DamageInput {
+        amount: amount + chance * (critical - amount),
+        crit: false,
+        periodic: false,
+        resolved_source: false,
+        effect: Some(effect),
+        bonus_caster: ctx.caster,
+    };
+    let amount = damage_before_mitigation(world, ctx, target, &damage);
+    expected_damage_after_mitigation(world, ctx, effect, target, amount)
+}
+
+fn expected_damage_after_mitigation(
+    world: &World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+    amount: f32,
+) -> f32 {
+    let amount = crate::auras::area_avoidance::reduce_damage(
+        world,
+        target,
+        ctx.spell,
+        Some(effect),
+        false,
+        amount,
+    );
+    let ignores_mitigation =
+        super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS != 0;
+    if !ignores_mitigation && reduced_by_armor(ctx.spell) {
+        armor_reduced(world, ctx.caster, target, amount, ctx.spell)
+    } else {
+        amount
+    }
+}
+
 fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let amount = with_variance(
         scaled_amount(world, ctx.caster, ctx.spell, effect),
@@ -1524,6 +1615,7 @@ fn damage_source_amount(
         let combo = super::scripts::combo_strikes_multiplier(world, bonus_caster, ctx.spell.id);
         let giantkiller =
             super::scripts::giantkiller_multiplier(world, ctx.caster, target, ctx.spell);
+        let ret_damage = super::scripts::ret_damage_multiplier(world, ctx, target, periodic);
         #[cfg(any(test, feature = "test-support"))]
         factor_capture::record_done(
             world,
@@ -1537,9 +1629,10 @@ fn damage_source_amount(
                 ("mechanic_damage", mechanic),
                 ("combo_strikes", combo),
                 ("giantkiller", giantkiller),
+                ("ret_damage", ret_damage),
             ],
         );
-        school_done * versatility * summon * creature * mechanic * combo * giantkiller
+        school_done * versatility * summon * creature * mechanic * combo * giantkiller * ret_damage
     };
     let bonus_ctx = EffectCtx {
         caster: bonus_caster,
@@ -1861,6 +1954,9 @@ fn deal_source_damage_and_report(
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::finish(world, ctx, target, &damage, &event);
     log_event(world, event);
+    if periodic && !resolved_source {
+        super::scripts::after_ret_periodic_damage(world, ctx, target, crit);
+    }
     if !periodic && !resolved_source {
         super::scripts::after_direct_damage(world, ctx, target, crit);
     }
@@ -2496,10 +2592,27 @@ fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     };
     spell.cast_destination = ctx.spell.cast_destination;
     spell.cast_item_level = ctx.spell.cast_item_level;
-    // SimC76f8118 sc_demon_hunter.cpp: Annihilation's child strikes retain
-    // the selected enemy even though the native parent casts on self.
-    spell.cast_primary_target = ctx.primary_target();
-    super::launch_triggered_spell(world, ctx.caster, &spell, Some(target), depth);
+    let target = trigger_recipient(ctx, &spell, target);
+    super::launch_triggered_spell(world, ctx.caster, &spell, target, depth);
+}
+
+pub(super) fn trigger_recipient(
+    ctx: &EffectCtx,
+    child: &SpellInfo,
+    target: Entity,
+) -> Option<Entity> {
+    // SimC76f8118 sc_demon_hunter.cpp7588–7591 retains the parent's enemy
+    // for both strikes. TC a352b1fa SpellEffects.cpp680–683 uses the original
+    // cast unit on the launch path, not the self recipient of the trigger effect.
+    let needs_enemy = matches!(
+        super::targets::explicit_requirement(child.effects.iter()),
+        Some(super::targets::Relation::Enemy)
+    );
+    if target == ctx.caster && needs_enemy {
+        ctx.primary_target()
+    } else {
+        Some(target)
+    }
 }
 
 /// 140 FORCE_CAST (`Spell::EffectForceCast`, SpellEffects.cpp:791-849): the target casts

@@ -169,6 +169,11 @@ fn read_ground_pulses(world: &World, ctx: &EffectCtx) -> GroundPulses {
         ),
         _ => unreachable!("only registered ground pulse spells"),
     };
+    // Native0x2000 uses the same periodic interval for fields and auras.
+    // SimC76f8118 sc_paladin.cpp509–512 qualifies Consecration's ground cadence.
+    let period_ms =
+        crate::auras::periodic_interval_ms(world, ctx.caster, ctx.spell, (period * 1000.0) as u32);
+    let period = f64::from(period_ms) / 1000.0;
     GroundPulses {
         caster: ctx.caster,
         root: ctx.spell.id,

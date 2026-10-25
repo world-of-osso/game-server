@@ -64,7 +64,7 @@ impl Program {
             lists: BTreeMap::new(),
             defaults: BTreeMap::new(),
         };
-        for &(list, literal) in lines {
+        for (source_row, &(list, literal)) in lines.iter().enumerate() {
             if list.is_empty() {
                 return Err("APL list name is empty".into());
             }
@@ -72,8 +72,9 @@ impl Program {
             if literal.is_empty() {
                 continue;
             }
-            let rule = parse_rule(literal, &mut program.defaults)
+            let mut rule = parse_rule(literal, &mut program.defaults)
                 .map_err(|error| format!("APL list {list} row {literal:?}: {error}"))?;
+            rule.action.source_row = Some(source_row);
             program
                 .lists
                 .get_mut(list)
@@ -124,8 +125,65 @@ impl Program {
             usable: &mut usable,
             stack: Vec::new(),
             pooling: false,
+            stop_before: None,
         };
         self.select_list(list, &mut selection)
+    }
+
+    /// SimC76f8118 dot.cpp980–994: search only before the active channel row,
+    /// in its own list unless interrupt_global selects the root list.
+    pub fn select_before(
+        &self,
+        root: &str,
+        active: &Action,
+        global: bool,
+        facts: &dyn ActionFacts,
+        variables: &mut Variables,
+        mut usable: impl FnMut(&Action) -> Result<bool, String>,
+    ) -> Result<Option<Action>, String> {
+        let row = active
+            .source_row
+            .ok_or("channel action has no source row")?;
+        let own_list = self
+            .actions()
+            .find(|(_, action)| action.source_row == Some(row))
+            .map(|(list, _)| list)
+            .ok_or("channel source row missing from program")?;
+        let list = if global { root } else { own_list };
+        let mut selection = Selection {
+            facts,
+            variables,
+            usable: &mut usable,
+            stack: Vec::new(),
+            pooling: false,
+            stop_before: Some(row),
+        };
+        self.select_list(list, &mut selection)
+    }
+
+    /// Recheck exactly one source row without scanning lower-priority actions.
+    pub fn select_row(
+        &self,
+        row: usize,
+        facts: &dyn ActionFacts,
+        variables: &mut Variables,
+        mut usable: impl FnMut(&Action) -> Result<bool, String>,
+    ) -> Result<Option<Action>, String> {
+        let rule = self
+            .lists
+            .values()
+            .flatten()
+            .find(|rule| rule.action.source_row == Some(row))
+            .ok_or("APL source row is absent")?;
+        let mut selection = Selection {
+            facts,
+            variables,
+            usable: &mut usable,
+            stack: Vec::new(),
+            pooling: false,
+            stop_before: None,
+        };
+        bind_ready_target(rule, &mut selection)
     }
 
     /// Consume top-level rows once; combat selection remains a priority scan.
@@ -147,6 +205,7 @@ impl Program {
             usable: &mut usable,
             stack: vec![list.to_owned()],
             pooling: false,
+            stop_before: None,
         };
         while let Some(rule) = rules.get(*cursor) {
             if matches!(
@@ -194,6 +253,10 @@ impl Program {
         selection: &mut Selection<'_>,
     ) -> Result<Option<Action>, String> {
         for (index, rule) in rules.iter().enumerate() {
+            if rule.action.source_row == selection.stop_before && selection.stop_before.is_some() {
+                selection.pooling = true;
+                return Ok(None);
+            }
             let Some(action) = bind_ready_target(rule, selection)? else {
                 continue;
             };
@@ -268,6 +331,7 @@ struct Selection<'a> {
     usable: &'a mut dyn FnMut(&Action) -> Result<bool, String>,
     stack: Vec<String>,
     pooling: bool,
+    stop_before: Option<usize>,
 }
 
 fn bind_ready_target(rule: &Rule, selection: &mut Selection<'_>) -> Result<Option<Action>, String> {
@@ -281,7 +345,7 @@ fn bind_ready_target(rule: &Rule, selection: &mut Selection<'_>) -> Result<Optio
     let Some(action) = bind_target(rule, selection)? else {
         return Ok(None);
     };
-    Ok(rule_ready(rule, &action, selection)?.then_some(action))
+    bind_ready_variant(rule, &action, selection)
 }
 
 fn bind_cycle_target(
@@ -294,6 +358,20 @@ fn bind_cycle_target(
     let limit = if limit > 0 { limit } else { candidates.len() };
     for target in candidates.into_iter().take(limit) {
         action.target = Some(target);
+        if let Some(action) = bind_ready_variant(rule, &action, selection)? {
+            return Ok(Some(action));
+        }
+    }
+    Ok(None)
+}
+
+fn bind_ready_variant(
+    rule: &Rule,
+    action: &Action,
+    selection: &mut Selection<'_>,
+) -> Result<Option<Action>, String> {
+    // SimC76f8118 player.cpp10221–10480: each equipped proxy owns its if context.
+    for action in selection.facts.action_variants(action)? {
         if rule_ready(rule, &action, selection)? {
             return Ok(Some(action));
         }
@@ -302,13 +380,14 @@ fn bind_cycle_target(
 }
 
 fn rule_ready(rule: &Rule, action: &Action, selection: &mut Selection<'_>) -> Result<bool, String> {
-    if !condition_passes(rule, action, selection)? {
+    // SimC76f8118 action.cpp2578–2583/2619–2620: native action readiness
+    // precedes if_expr. Unavailable spells/items do not bind their conditions.
+    if matches!(&rule.body, Body::Action)
+        && (!pooling::options_ready(action, selection)? || !(selection.usable)(action)?)
+    {
         return Ok(false);
     }
-    if matches!(&rule.body, Body::Action) {
-        return Ok(pooling::options_ready(action, selection)? && (selection.usable)(action)?);
-    }
-    Ok(true)
+    condition_passes(rule, action, selection)
 }
 
 fn condition_passes(
@@ -444,6 +523,7 @@ fn parse_rule(literal: &str, defaults: &mut BTreeMap<String, f64>) -> Result<Rul
         .map(|source| Expression::parse(&source))
         .transpose()?;
     let action = Action {
+        source_row: None,
         name: name.to_owned(),
         target: None,
         options,
@@ -457,9 +537,22 @@ fn parse_rule(literal: &str, defaults: &mut BTreeMap<String, f64>) -> Result<Rul
         "variable" => parse_variable(&action.options, defaults)?,
         "pool_resource" => pooling::parse(&action)?,
         "call_action_list" => {
-            if action.options.keys().any(|key| key != "name") {
+            if action
+                .options
+                .keys()
+                .any(|key| !matches!(key.as_str(), "name" | "use_off_gcd"))
+            {
                 return Err("unsupported call_action_list option".into());
             }
+            if action
+                .options
+                .get("use_off_gcd")
+                .is_some_and(|value| !matches!(value.as_str(), "0" | "1"))
+            {
+                return Err("call_action_list use_off_gcd must be0|1".into());
+            }
+            // SimC76f8118 action.cpp4648–4661: parsing is followed by unconditional
+            // off-GCD/while-casting control permission. Child readiness is separate.
             Body::Call(required_option(&action.options, "name")?)
         }
         "run_action_list" => {

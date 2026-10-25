@@ -72,6 +72,139 @@ impl Equipment {
     }
 }
 
+#[test]
+#[ignore = "requires private native world DB and exact Frost reference allocations"]
+fn dps_parity_simc_frost_allocations_keep_production_validation_strict() {
+    let mut app = super::super::runtime::build_app();
+    install_reference_catalogs(&mut app).unwrap();
+    let classes = app.world().resource::<crate::spell_info::ClassSpells>();
+    use crate::trait_config::{Purchase, TraitContext, build_config};
+    let identity = shared::components::Player {
+        name: "FrostParity".into(),
+        class: 6,
+        race: 1,
+        appearance: Default::default(),
+    };
+    // Exact active allocations from pinned MID2_Death_Knight_Frost.simc.
+    let allocations = [
+        (76033, 96161, 2),
+        (76045, 96173, 1),
+        (76061, 96190, 1),
+        (76069, 96198, 2),
+        (76073, 96202, 1),
+        (76076, 96205, 1),
+        (76079, 96208, 2),
+        (76081, 96210, 1),
+        (76085, 96214, 1),
+        (76091, 96220, 1),
+        (76093, 96222, 1),
+        (76096, 96225, 1),
+        (76098, 96228, 1),
+        (76099, 96229, 1),
+        (76101, 96231, 1),
+        (76106, 96236, 1),
+        (76108, 96238, 1),
+        (76109, 96239, 1),
+        (76110, 96240, 1),
+        (76112, 96242, 1),
+        (76113, 96243, 1),
+        (76114, 96244, 1),
+        (76115, 96245, 1),
+        (76116, 96246, 1),
+        (76117, 96247, 1),
+        (76118, 96248, 1),
+        (76121, 96252, 1),
+        (76122, 96253, 2),
+        (76123, 96254, 1),
+        (95032, 117629, 1),
+        (95034, 117631, 1),
+        (95036, 117633, 1),
+        (95043, 117640, 1),
+        (95057, 117654, 1),
+        (95058, 117655, 1),
+        (95061, 117658, 1),
+        (95062, 117659, 1),
+        (95068, 117665, 1),
+        (99821, 123324, 1),
+        (101929, 125874, 1),
+        (101930, 125875, 1),
+        (101931, 125876, 1),
+        (101933, 125878, 1),
+        (102009, 126017, 1),
+        (106790, 131618, 1),
+        (109258, 133362, 1),
+        (109733, 135991, 1),
+        (109734, 135992, 1),
+        (110400, 136968, 1),
+        (110400, 136967, 2),
+        (110400, 136966, 1),
+    ];
+    let purchases: Vec<_> = allocations
+        .into_iter()
+        .map(|(node_id, entry_id, ranks)| Purchase {
+            node_id,
+            entry_id,
+            ranks,
+        })
+        .collect();
+    let evaluate = |purchases: &[Purchase], spec| {
+        crate::class_progression::evaluate_player_reference_traits(
+            classes, &identity, spec, 90, purchases,
+        )
+    };
+    let (known, traits) = evaluate(&purchases, 251).expect("literal SimC allocation fixture");
+    assert!(known.contains(49020), "native Obliterate remains learned");
+    assert!(
+        traits
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 51271)
+    );
+    let tree = &classes
+        .classes
+        .iter()
+        .find(|class| class.class_id == 6)
+        .unwrap()
+        .traits;
+    let context = TraitContext {
+        spec_id: 251,
+        level: 90,
+    };
+    let grants = crate::trait_config::granted_entries(tree, context);
+    let native_purchases: Vec<_> = purchases
+        .iter()
+        .map(|purchase| {
+            let granted = grants
+                .iter()
+                .find(|entry| {
+                    entry.node_id == purchase.node_id && entry.entry_id == purchase.entry_id
+                })
+                .map_or(0, |entry| entry.granted);
+            Purchase {
+                ranks: purchase.ranks.saturating_sub(granted),
+                ..*purchase
+            }
+        })
+        .collect();
+    let error = build_config(tree, context, &native_purchases).unwrap_err();
+    assert!(
+        error.contains("requires"),
+        "production graph/gates stay strict: {error}"
+    );
+    let mut bad = purchases.clone();
+    bad[0].entry_id = 1;
+    assert!(
+        evaluate(&bad, 251).is_err(),
+        "entry membership stays native"
+    );
+    bad = purchases.clone();
+    bad[0].ranks = 100;
+    assert!(evaluate(&bad, 251).is_err(), "rank limits stay native");
+    assert!(
+        evaluate(&purchases, 252).is_err(),
+        "spec restrictions stay native"
+    );
+}
+
 #[derive(Deserialize)]
 pub(super) struct AllocatedTrait {
     pub node_id: u32,
@@ -105,7 +238,7 @@ pub(super) fn read_actor(
     }
 }
 
-fn read_reference_race(name: &str) -> Result<u8, String> {
+pub(super) fn read_reference_race(name: &str) -> Result<u8, String> {
     let path = std::env::var_os("DPS_PARITY_WORLD_DB").ok_or("DPS_PARITY_WORLD_DB absent")?;
     let db =
         rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
@@ -245,6 +378,7 @@ pub(super) fn equip(world: &mut World, unit: Entity, profile: &Profile) -> Resul
         crate::stats::EquippedItemModifiers {
             items: modifiers,
             base_stat_redirects,
+            ..Default::default()
         },
     ));
     Ok(())
@@ -287,15 +421,29 @@ pub(super) fn install_traits(
         let follower = world
             .get::<crate::followers::Follower>(unit)
             .ok_or("reference actor is neither player nor follower")?;
-        (
-            follower.profile.spec_id,
+        let evaluated = if let Some(race) = world.get::<server::test_support::ReferenceRace>(unit) {
+            let identity = shared::components::Player {
+                name: String::new(),
+                class: follower.profile.class_id,
+                race: race.0,
+                appearance: Default::default(),
+            };
+            crate::class_progression::evaluate_player_reference_traits(
+                classes,
+                &identity,
+                follower.profile.spec_id,
+                level,
+                &purchases,
+            )
+        } else {
             crate::class_progression::evaluate_reference_traits(
                 classes,
                 &follower.profile,
                 level,
                 &purchases,
-            ),
-        )
+            )
+        };
+        (follower.profile.spec_id, evaluated)
     };
     let (known, traits) =
         evaluated.map_err(|reason| format!("NATIVE_REFERENCE_TRAIT_CONFIG_REJECTED: {reason}"))?;

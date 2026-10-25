@@ -4,12 +4,13 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 ## What it must do
 
-- [x] Interpret numeric truth, OR/AND/NOT, arithmetic and comparisons with pinned SimC precedence. Single `%` divides; `%%` is modulo.
+- [x] Interpret numeric truth, OR/AND/NOT, arithmetic and comparisons with pinned SimC precedence. Single `%` divides; `%%` is modulo. `>?` takes the minimum and `<?` takes the maximum, below sums and above comparisons; ties and unordered comparisons preserve the left operand, as pinned C++ std::min/max.
 - [ ] Read explicit native facts for buff stacks/remains/up, cooldown remains/charges/duration, resources, talents, equipment/trinkets, target count/TTD, fight remains, raid-event adds, dots/debuffs and gcd. Unknown operands fail explicitly, including in otherwise inactive condition branches; never silently become false.
 - [ ] Share native equipment identities/stat-buff metadata, on-use vs proc cooldown sources and native tier facts across spec adapters. Reject unknown item/tier operands; preserve original IDs and trinket1→trinket2→other use order.
 - [x] Bind action-dependent facts (`combo_strike`, plain `gcd`, action minimum GCD) to each source row, including variable/call control actions. An actor-wide value is not equivalent.
 - [x] Execute declared variables using source `value`, `setif`, `value_else`, `reset` and numeric `default` semantics.
 - [x] Preserve literal action order and conditional `call_action_list` decisions; native castability selects the first usable action. An exhausted child list returns control to its caller.
+- [x] Accept `call_action_list,use_off_gcd=0|1`. The control remains off-GCD/while-casting as in pinned `action.cpp4648–4661`; each child still requires its own native readiness and row permissions. Invalid boolean values fail explicitly.
 - [x] Implement conditional `run_action_list` switches that never resume the caller after child exhaustion; reject unknown lists.
 - [x] Select explicit native targets with `target_if=min/max:<expr>` before the row's `if`; preserve native tie order. Unknown target operands/adapters fail explicitly.
 - [x] Bare/explicit FIRST target_if selects the first native eligible match before row if/readiness; failure after that choice does not become cycle selection. Preserve pinned single-target versus multi-target numeric truth behavior, backed by actual binary probes.
@@ -29,7 +30,16 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] Treat pool_resource,for_next=1 as control, never an executable spell. If the next source action is ready, continue; otherwise wait only when the requested resource at maximum admits it. Propagate waiting through called lists without leaking lower-priority actions. Preserve native target/condition/other-resource constraints through readonly adapter maximum admission and a local fact view. Qualify only resource= and for_next=1; unsupported controls/options fail explicitly.
 - [x] max_energy=1 reads adapter-owned action-bound maximum_energy and current Energy; it must not use actor energy.max or a hardcoded spell cost. Missing threshold, primary resource or maximum-admission metadata errors explicitly. Source-owned native cost/cap/modifier qualification remains separate.
 
+## Shared profile and action facts
+
+- [x] `hero_tree.<alias>` reads the selected native hero subtree, not allocated inactive nodes. Unknown aliases fail explicitly.
+- [x] `buff.<alias>.max_stack` reads the fresh native modified stack limit before a proc exists. Named and contextual `cost`/`cast_time` read current native power modifiers/display units and cast time, without requiring affordability or including GCD occupancy.
+- [x] Literal `auto_shot` starts learned native75 once; its native repeat owns subsequent shots. Literal player engagement does not inject melee attacks before source execution.
+- [x] Target `health` reads the selected native current pool; `retarget` enumerates actual candidates without a spell definition. Target `debuff.react` uses recipient acquisition deadlines and caster-owned aura filtering. Fixture-only absent pull events report zero remaining time and the source no-next-event sentinel.
+
 ## Equipped use_items
+
+- [x] Evaluate each equipped proxy's condition before selecting its native use. `this_trinket` and `other_trinket` resolve relative to that candidate, preserving source slot order, exclusions and actual cooldown admission.
 
 - [x] Select the first native-ready equipped on-use item in Equipment slot order per source decision, not an immediate batch. Preserve slots= ordering/restriction, check_existing=0|1 and explicit use_item source exclusions; named precombat uses must not suppress later proxies. Preserve native/shared cooldowns and original Action.options; unknown options/metadata fail explicitly rather than silently disabling the action. [Native proof scope](../handoffs/use-items-proof-ledger.md).
 
