@@ -1,12 +1,17 @@
 //! Source-backed cast procs using native chance, amount and buff records.
+use super::combat;
+use combat::spell_cast::script_registry::SpellScriptHook;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::OnCast(on_cast)];
+
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, PowerType};
 
-use crate::spell_cast::{
+use combat::spell_cast::{
     self,
     effects::{self, EffectCtx},
 };
-use crate::spell_info::SpellStore;
+use combat::spell_info::SpellStore;
 
 struct CastGrant {
     spec: u32,
@@ -33,23 +38,33 @@ const GRANTS: &[CastGrant] = &[
     },
 ];
 
-pub(super) fn on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+fn on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
     for grant in GRANTS.iter().filter(|grant| grant.parents.contains(&spell)) {
         let matching_spec = world
             .get::<ActiveSpec>(caster)
             .is_some_and(|spec| spec.0 == grant.spec);
-        if matching_spec && crate::auras::has_aura(world, caster, grant.talent) {
+        if matching_spec && combat::auras::has_aura(world, caster, grant.talent) {
             roll_grant(world, caster, grant, depth);
         }
     }
 }
 
 fn roll_grant(world: &mut World, caster: Entity, grant: &CastGrant, depth: u8) {
-    let chance = super::script_effect_value(world, caster, grant.talent, grant.chance_effect);
-    if crate::random::random::<f32>() * 100.0 >= chance {
+    let chance = combat::spell_cast::scripts::script_effect_value(
+        world,
+        caster,
+        grant.talent,
+        grant.chance_effect,
+    );
+    if combat::random::random::<f32>() * 100.0 >= chance {
         return;
     }
-    let amount = super::script_effect_value(world, caster, grant.talent, grant.amount_effect);
+    let amount = combat::spell_cast::scripts::script_effect_value(
+        world,
+        caster,
+        grant.talent,
+        grant.amount_effect,
+    );
     let spell = world
         .resource::<SpellStore>()
         .get(grant.talent)

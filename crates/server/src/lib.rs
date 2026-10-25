@@ -4,6 +4,13 @@ extern crate self as server;
 
 pub use server_combat::*;
 
+/// Public combat API with the complete native script fixture assembly.
+pub mod spell_cast {
+    pub use server_combat::spell_cast::*;
+    #[cfg(any(test, feature = "test-support"))]
+    pub use server_spell_scripts::test_support as test_harness;
+}
+
 mod calendar;
 mod frame_stats;
 mod inspect;
@@ -55,6 +62,7 @@ fn log_plugin() -> bevy::log::LogPlugin {
 }
 
 fn add_game_plugins(app: &mut App) {
+    app.add_plugins(server_spell_scripts::SpellScriptsPlugin);
     app.add_plugins(shared::ProtocolPlugin)
         .add_plugins(PersistencePlugin)
         .add_plugins(AchievementPlugin)

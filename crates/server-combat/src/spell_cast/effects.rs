@@ -823,7 +823,7 @@ fn reduced_by_armor(spell: &SpellInfo) -> bool {
             .effects
             .iter()
             .any(|effect| effect.mechanic == MECHANIC_BLEED);
-    spell.school_mask() & 1 != 0 && !bleed
+    spell.school_mask() & 1 != 0 && !bleed && !super::scripts::sentinel_ignores_armor(spell.id)
 }
 
 /// The target's armor against the caster: a creature's own armor at the
@@ -1622,7 +1622,7 @@ fn damage_source_amount(
     let amount = if resolved_source {
         amount
     } else {
-        super::scripts::damage_amount(ctx.spell.id)
+        super::scripts::damage_amount(world, ctx.spell.id)
             .map_or(amount, |modify| modify(world, ctx.caster, target, amount))
     };
     let done = if resolved_source || ignores_caster_damage_modifiers(ctx.spell) {
@@ -2009,10 +2009,15 @@ fn deal_source_damage_and_report(
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::finish(world, ctx, target, &damage, &event);
     log_event(world, event);
+    if !resolved_source {
+        super::scripts::apply_marksman_residual(world, ctx, target, crit, amount);
+        super::scripts::apply_sentinel_damage(world, ctx, target, crit, amount);
+    }
     if periodic {
         crate::auras::rogue::after_bleed_tick(world, ctx, target);
     }
     if periodic && !resolved_source {
+        super::scripts::apply_mm_explosive_tick(world, ctx, target, amount);
         super::scripts::apply_periodic_damage_policies(world, ctx, target, amount);
         super::scripts::after_ret_periodic_damage(world, ctx, target, crit);
     }
