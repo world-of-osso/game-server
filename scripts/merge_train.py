@@ -211,11 +211,28 @@ def test_executables(entry, test, entry_log):
     return found
 
 
+# Cargo test options that take a value; any other bare word before `--` is the TESTNAME filter.
+CARGO_VALUE_FLAGS = {"-p", "--package", "-F", "--features", "--config", "--test", "--bin", "--example",
+                     "--bench", "--target", "--target-dir", "-j", "--jobs", "--manifest-path", "--profile",
+                     "--message-format", "--exclude", "--color", "-Z"}
+
+
 def split_test(test):
-    if "--" in test:
-        i = test.index("--")
-        return test[:i], "--", test[i + 1:]
-    return test, "--", []
+    """Split `--test` args into (cargo args, "--", test binary args). Cargo forwards its
+    positional TESTNAME filter to the binaries, so it moves to the binary args."""
+    i = test.index("--") if "--" in test else len(test)
+    cargo_args, binary_args, filters = [], list(test[i + 1:]), []
+    takes_value = False
+    for arg in test[:i]:
+        if takes_value:
+            cargo_args.append(arg)
+            takes_value = False
+        elif arg.startswith("-"):
+            cargo_args.append(arg)
+            takes_value = arg in CARGO_VALUE_FLAGS
+        else:
+            filters.append(arg)
+    return cargo_args, "--", filters + binary_args
 
 
 def config_overrides(cargo_args):
@@ -352,12 +369,13 @@ def build_and_test(entries, log):
     """Check (bisecting failures) and test entries on master. Returns (passed, rejected);
     entries that only conflict with other queued entries go back to the queue."""
     tree, rejected = build_checked(entries, log)
-    for entry in [e for e in rejected if e.get("defer")]:
-        del entry["defer"], entry["reason"]
+    deferred = [e for e in rejected if e.pop("defer", False)]
+    rejected = [e for e in rejected if e not in deferred]
+    for entry in deferred:
+        del entry["reason"]
         queued = RUNNING / f"{entry['id']}.json"
         if queued.exists():  # RED twins have no queue file; their entry is requeued by cycle()
             queued.rename(QUEUE / queued.name)
-    rejected = [e for e in rejected if not e.get("defer")]
     passed, failed = run_tests(tree, log)
     return passed, rejected + failed
 
