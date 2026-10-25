@@ -3,6 +3,22 @@ use super::*;
 
 #[test]
 #[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_exact_magisters_token_applies_native_mastery_flask() {
+    let run = prepare_literal(103, 1).expect("exact selected Feral profile");
+    let stats = report::stats(run.app.world(), run.actor);
+    let mastery = stats["ratings"]["mastery"].as_f64().unwrap();
+    assert!(
+        (mastery - 1424.0).abs() < 1.0,
+        "native gear1259 plus quality2 Magisters165 must produce the exact-profile mastery rating, got{mastery}"
+    );
+    assert!(
+        !run.gaps.iter().any(|gap| gap.contains("flask=magisters_2")),
+        "the applied native flask must not remain reported as unsupported"
+    );
+}
+
+#[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
 fn feral_prev_gcd_tracks_successful_foreground_gcd_casts_only() {
     use server::simc_apl::Facts;
     let mut run = prepare_literal(103, 1).unwrap();
