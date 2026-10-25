@@ -198,6 +198,81 @@ fn demonology_antoran_tyrant_inherits_same_owner_sp_as_base_tyrant() {
     );
 }
 
+#[test]
+#[ignore = "requires private266 inputs; native guardian critical chance"]
+fn demonology_guardian_inherits_owner_critical_chance() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let (mut run, tyrant) = prepare_antoran_tyrant();
+    let expected = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .crit_pct;
+    assert!(expected > 0.0);
+    run.app.world_mut().insert_resource(FactorCapture::new(
+        tyrant,
+        run.targets[0],
+        1264093,
+        "burning_cleave",
+        1,
+    ));
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let result = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "result" && event["spell_id"] == 1264093)
+        .expect("actual Burning Cleave must resolve damage");
+    let chance = result["factors"]["crit"].as_f64().unwrap() * 100.0;
+    // SimC76f8118 pet.cpp217–220: guardians inherit owner critical chance.
+    assert!(
+        (chance - f64::from(expected)).abs() < 0.01,
+        "native guardian crit{chance} must inherit owner crit{expected}"
+    );
+}
+
+#[test]
+#[ignore = "requires private266 inputs; native guardian cast haste"]
+fn demonology_guardian_fel_firebolt_inherits_owner_cast_haste() {
+    let mut run = prepare_literal(266, 1).unwrap();
+    let imp = summon_native_guardian(&mut run, 104317);
+    let world = run.app.world();
+    let haste = world
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .haste_pct;
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(104318)
+        .unwrap();
+    let base_ms = spell.misc.as_ref().unwrap().cast_time.unwrap().base_ms;
+    assert!(haste > 0.0 && base_ms > 0);
+    let expected_ms = (base_ms as f32 / (1.0 + haste / 100.0)).round();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        imp,
+        104318,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("native Fel Firebolt must start an ordinary cast");
+    let cast = run
+        .app
+        .world()
+        .get::<shared::casting::CastState>(imp)
+        .unwrap();
+    // SimC76f8118 pet.cpp222–226: guardians inherit owner spell cast speed.
+    assert!(
+        (cast.duration * 1000.0 - expected_ms).abs() < 1.0,
+        "actual guardian cast{}ms must inherit owner haste{haste}: expected{expected_ms}ms",
+        cast.duration * 1000.0
+    );
+}
+
 fn summon_native_guardian(run: &mut Run, root: u32) -> Entity {
     crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, root, Some(run.actor), true)
         .expect("native triggered guardian summon must be admitted");
