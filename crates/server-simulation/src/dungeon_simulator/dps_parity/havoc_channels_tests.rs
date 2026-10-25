@@ -135,6 +135,9 @@ fn havoc_eye_beam_ticks_damage_every_native_frontal_enemy() {
     for count in [1, 3] {
         let mut run = prepare_literal(577, count).unwrap();
         havoc_tests::earn_havoc_fury(&mut run, 30.0);
+        run.app
+            .world_mut()
+            .init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
         cast(&mut run, 198013, false);
         eprintln!(
             "Eye Beam initial: {}",
@@ -147,8 +150,8 @@ fn havoc_eye_beam_ticks_damage_every_native_frontal_enemy() {
             damage(&run, Some(1287949)),
             run.app
                 .world()
-                .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
-                .0,
+                .get_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+                .map(|casts| &casts.0),
             report::engagement(run.app.world(), run.actor, &run.targets)
         );
         for target in &run.targets {
