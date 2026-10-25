@@ -25,6 +25,8 @@ fn fixture() -> (Harness, Entity) {
             PRESCIENCE_BUFF,
             SHIFTING_SANDS,
             MASTERY,
+            // TC Player.cpp30545 CanUseMastery gates the spec; skill183 supplies base aura114585.
+            114585,
             ELEMENTAL_BLAST_MASTERY,
             DAMAGE,
             HEAL,

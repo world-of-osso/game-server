@@ -48,6 +48,79 @@ fn create_with_kit(db: &redb::Database, name: &str, race: u8, class: u8) -> Opti
     Some(created.unwrap().0)
 }
 
+#[test]
+fn native_mastery_created_player_level_up_and_passive_reapply() {
+    const BASE_MASTERY: u32 = 114585;
+    let db = temp_database();
+    let character = create_with_kit(&db, "Masteryprobe", HUMAN, WARRIOR).unwrap();
+    let mut app = setup_app(db, class_spells().unwrap());
+    let player = spawn_player(&mut app, character, HUMAN, WARRIOR, 1);
+    advance(&mut app);
+    assert!(
+        app.world()
+            .get::<KnownSpells>(player)
+            .unwrap()
+            .contains(BASE_MASTERY)
+    );
+    app.world_mut().entity_mut(player).insert(Level(90));
+    advance(&mut app);
+    let known: Vec<_> = app
+        .world()
+        .get::<KnownSpells>(player)
+        .unwrap()
+        .iter()
+        .collect();
+    assert!(known.contains(&BASE_MASTERY));
+    let spec = *app.world().get::<ActiveSpec>(player).unwrap();
+    let mut h =
+        crate::spell_cast::test_harness::harness_with(Vec::new(), &known, WARRIOR, true).unwrap();
+    h.app.insert_resource(class_spells().unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((Level(90), spec));
+    h.advance(6);
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        h.caster,
+        BASE_MASTERY
+    ));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::stats::CharacterStats>(h.caster)
+            .unwrap()
+            .mastery_points,
+        8.0
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == BASE_MASTERY,
+    );
+    crate::auras::sync_passives(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::AuraSource::KnownSpell,
+        &known,
+    );
+    h.advance(6);
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        h.caster,
+        BASE_MASTERY
+    ));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::stats::CharacterStats>(h.caster)
+            .unwrap()
+            .mastery_points,
+        8.0
+    );
+}
+
 fn known_ids(classes: &ClassSpells, race: u8, class_id: u8, level: u8, spec: u32) -> Vec<u32> {
     let player = Player {
         name: "Probe".into(),
