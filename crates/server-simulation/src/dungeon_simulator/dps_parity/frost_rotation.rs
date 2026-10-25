@@ -199,6 +199,26 @@ fn dps_parity_frost_player_executes_literal_profile() {
     assert!(combat["dps"].as_f64().unwrap() > 0.0);
 }
 
+#[test]
+#[ignore = "requires exact251 profile and private native Omnium catalogs"]
+fn frost_named_and_numeric_expansion_entries_apply_native_auras() {
+    const NAMED: &str = "rune_of_unleashed_fire/rune_of_lynxlike_reflexes/rune_of_lingering/rune_of_burning_haste/rune_of_overload";
+    const NUMERIC: &str = "136822/136823/136817/136821/136814";
+    for tokens in [NAMED, NUMERIC] {
+        let (mut profile, traits) = super::read_reference(251).unwrap();
+        assert_eq!(profile.omnium_talents.as_deref(), Some(NAMED));
+        profile.omnium_talents = Some(tokens.into());
+        let identity = super::inputs::read_actor(&profile).unwrap();
+        let run = super::prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+        for spell in [1279599, 1279605, 1287555, 1279610, 1279614] {
+            assert!(
+                crate::auras::has_aura(run.app.world(), run.actor, spell),
+                "{tokens}: native Omnium aura{spell} missing"
+            );
+        }
+    }
+}
+
 struct FrostFacts<'a> {
     native: NativeFacts<'a>,
     equipment: &'a Equipment,
