@@ -1443,7 +1443,6 @@ dependencies = [
  "petgraph",
  "postcard",
  "serde",
- "server-runtime",
  "smallbitvec",
  "smallvec",
  "typeid",
@@ -3165,6 +3164,17 @@ dependencies = [
  "memchr",
  "pin-project-lite",
  "slab",
+]
+
+[[package]]
+name = "game-engine-core"
+version = "0.1.0"
+source = "git+ssh://git@github.com/world-of-osso/game-engine.git?rev=88b78756cbb16759290e0f7df30e2c26417c7f1f#88b78756cbb16759290e0f7df30e2c26417c7f1f"
+dependencies = [
+ "bincode",
+ "log",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -6580,7 +6590,7 @@ dependencies = [
  "blake3",
  "chrono",
  "csv",
- "game-engine-core",
+ "game-engine-core 0.1.0 (git+ssh://git@github.com/world-of-osso/game-engine.git?rev=9ef2efe2d317b837d352fe8c5227086a4fdcd490)",
  "image 0.24.9",
  "image-blp",
  "lightyear",
@@ -6597,6 +6607,7 @@ dependencies = [
  "serde_json",
  "server-admin",
  "server-catalog",
+ "server-combat",
  "server-core",
  "server-follower-policy",
  "server-map-rules",
@@ -6627,6 +6638,46 @@ name = "server-catalog"
 version = "0.1.0"
 dependencies = [
  "rusqlite",
+]
+
+[[package]]
+name = "server-combat"
+version = "0.1.0"
+dependencies = [
+ "argon2",
+ "bevy",
+ "bevy_replicon",
+ "bitcode",
+ "blake3",
+ "chrono",
+ "csv",
+ "game-engine-core 0.1.0 (git+ssh://git@github.com/world-of-osso/game-engine.git?rev=88b78756cbb16759290e0f7df30e2c26417c7f1f)",
+ "lightyear",
+ "lightyear_link",
+ "lightyear_serde",
+ "lightyear_transport",
+ "los",
+ "navigation",
+ "peercred-ipc",
+ "rand 0.8.5",
+ "redb",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "server-admin",
+ "server-catalog",
+ "server-core",
+ "server-follower-policy",
+ "server-map-rules",
+ "server-pet-battle",
+ "shared",
+ "tempfile",
+ "tokio",
+ "uuid",
+ "wow-adt",
+ "wow-chunk",
+ "wow-m2",
+ "wow-wmo",
 ]
 
 [[package]]
@@ -6678,23 +6729,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "server-runtime"
-version = "0.1.0"
-dependencies = [
- "bevy",
-]
-
-[[package]]
 name = "server-simulation"
 version = "0.1.0"
 dependencies = [
  "bevy",
  "blake3",
- "game-engine-core",
+ "game-engine-core 0.1.0 (git+ssh://git@github.com/world-of-osso/game-engine.git?rev=88b78756cbb16759290e0f7df30e2c26417c7f1f)",
  "rusqlite",
  "serde",
  "serde_json",
- "server",
+ "server-combat",
  "shared",
  "tempfile",
 ]

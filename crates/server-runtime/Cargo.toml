@@ -1,9 +1,0 @@
-[package]
-name = "server-runtime"
-version = "0.1.0"
-edition.workspace = true
-rust-version.workspace = true
-
-[dependencies]
-# Canonical ECS queues shared by headless gameplay and native transport adapters.
-bevy = { version = "0.19", default-features = false }

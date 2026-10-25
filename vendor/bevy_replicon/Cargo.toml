@@ -57,7 +57,6 @@ client_diagnostics = ["client"]
 default = [
     "client",
     "server",
-    "world_serialization",
 ]
 scene = ["bevy/bevy_world_serialization"]
 server = []
@@ -67,9 +66,6 @@ world_serialization = ["bevy/bevy_world_serialization"]
 [lib]
 name = "bevy_replicon"
 path = "src/lib.rs"
-
-[dependencies.server-runtime]
-path = "../../crates/server-runtime"
 
 [dependencies.bevy]
 version = "0.19"
