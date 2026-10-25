@@ -19,11 +19,12 @@ fn assert_native_proc(h: &Harness, passive: u32, chance: u32, mask: u32) {
 
 #[test]
 fn hit_positivity_native_harmful_proc_on_neutral_attackable_target() {
-    // Native Master of the Elements16166: guaranteed harmful-spell proc260734.
+    // Native Recurring Power34749 guarantees harmful-spell proc34747.
+    // MOTE is not a generic proc: its selected-Elemental policy owns acquisition.
     // Native Lava Burst51505 launches its actual damage child285452.
-    let mut h = harness(Vec::new(), &[16166, 260734, 51505, 285452], 7).unwrap();
+    let mut h = harness(Vec::new(), &[34749, 34747, 51505, 285452], 7).unwrap();
     h.advance(3);
-    assert_native_proc(&h, 16166, 101, 0x10000);
+    assert_native_proc(&h, 34749, 100, 0x10000);
     // FactionTemplate7 "Creature", native Northshire neutral creature faction.
     h.app
         .world_mut()
@@ -37,7 +38,7 @@ fn hit_positivity_native_harmful_proc_on_neutral_attackable_target() {
         super::targets::Relation::Enemy,
     ));
     eprintln!("HIT_POSITIVITY_NATIVE target_faction=7 hostile=false attackable=true");
-    assert!(!has_aura(h.app.world(), h.caster, 260734));
+    assert!(!has_aura(h.app.world(), h.caster, 34747));
     let before = h.health(h.npc);
     h.cast_and_deliver(51505, Some(h.npc));
     h.advance(160);
@@ -49,7 +50,7 @@ fn hit_positivity_native_harmful_proc_on_neutral_attackable_target() {
             && event.target == Some(h.npc.to_bits())
     }));
     assert!(
-        has_aura(h.app.world(), h.caster, 260734),
+        has_aura(h.app.world(), h.caster, 34747),
         "native harmful proc must fire on a neutral attackable target"
     );
 }
