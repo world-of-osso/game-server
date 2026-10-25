@@ -368,7 +368,7 @@ Equipped native MID2 Enhancement two-piece1296627 makes real Voltaic Blaze apply
 
 ## Elemental Shaman fixture (262)
 
-- The follower measurement uses the exact profile action rows through the shared literal SimC evaluator, native readiness and native spell execution. The production follower kit is unchanged.
+- Both Player and follower measurements use the exact profile action rows through the shared literal SimC evaluator, native readiness and native spell execution. Player measurements must not also run AssistedCombat; the production follower kit is unchanged.
 - Precombat rows complete native casts and GCDs before engagement. Ancestral Swiftness replaces Nature's Swiftness when its talent is active (SimC76f8118 `sc_shaman.cpp`8132–8137).
 - Per-ability native output includes actual critical-hit count and damage, plus separate critical and noncritical mean damage. Zero critical hits produce a zero mean, not inferred criticals.
 - Score 262 ST against `262.reference.single.json` and 3T against `262.reference-fixed.three.json`. The original `262.reference.three.json` has the known Patchwerk add-event error and is not a three-target reference.

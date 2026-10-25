@@ -383,11 +383,16 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
         preparation::prepare_arms_precombat(&mut run)?;
         return Ok(run);
     }
+    if spec_id == 262 {
+        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
+        preparation::prepare_elemental_precombat(&mut run)?;
+        return Ok(run);
+    }
     if spec_id == 258 {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
         preparation::prepare_shadow_precombat(&mut run)?;
         Ok(run)
-    } else if matches!(spec_id, 70 | 262 | 269 | 1467)
+    } else if matches!(spec_id, 70 | 269 | 1467)
         && matches!(
             &identity,
             crate::followers::simulator::ParityActor::Follower
@@ -396,8 +401,6 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
         if spec_id == 70 {
             preparation::prepare_ret_precombat(&mut run)?;
-        } else if spec_id == 262 {
-            preparation::prepare_elemental_precombat(&mut run)?;
         } else if spec_id == 1467 {
             preparation::prepare_devastation_precombat(&mut run)?;
         } else {
