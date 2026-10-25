@@ -911,7 +911,12 @@ const SPELL_ATTR2_CANT_CRIT: u32 = 0x2000_0000;
 
 /// CritChance mods and script values precede the victim's melee crit modifier.
 fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
-    crit_chance_from_owner(world, caster, target, spell, caster)
+    // SimC76f8118 engine/player/pet.cpp217–220: controlled pets inherit the
+    // live owner's melee/spell crit. Scripts and target modifiers keep the pet.
+    let owner = world
+        .get::<crate::hunter_pet::HunterPet>(caster)
+        .map_or(caster, |pet| pet.owner);
+    crit_chance_from_owner(world, caster, target, spell, owner)
 }
 
 fn crit_chance_from_owner(
@@ -1359,7 +1364,13 @@ fn modded_amount(world: &World, ctx: &EffectCtx, amount: f32, periodic: bool) ->
     } else {
         SpellModOp::HealingAndDamage
     };
-    spell_mods::modify(world, ctx.caster, ctx.spell, op, amount)
+    // SimC76f8118 sc_hunter.cpp2537–2545/2776–2786: pet abilities read
+    // their owner's matching talent/buff effects. Native masks and amounts
+    // decide applicability; the pet remains the actual damage caster.
+    let owner = world
+        .get::<crate::hunter_pet::HunterPet>(ctx.caster)
+        .map_or(ctx.caster, |pet| pet.owner);
+    spell_mods::modify(world, owner, ctx.spell, op, amount)
 }
 
 fn stat_mods(world: &World, unit: Entity) -> Option<&AuraStatMods> {

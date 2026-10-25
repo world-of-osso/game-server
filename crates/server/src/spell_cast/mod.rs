@@ -2002,6 +2002,7 @@ fn validate_start_with_policy(
     casting_restriction::check_cast(world, caster, spell)?;
     shapeshift::check_cast(world, caster, spell)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
+    scripts::check_enhancement_cast(world, caster, spell)?;
     if let Some(block) = crate::auras::cast_blocker(world, caster, spell) {
         return Err(CastFailure::CrowdControlled(block));
     }
@@ -2675,6 +2676,7 @@ fn execute_cast_with_primary(
     druid_transform::before_cast(world, caster, spell, 0)?;
     casting_restriction::check_cast(world, caster, spell)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
+    scripts::check_enhancement_cast(world, caster, spell)?;
     toy_area::check_cast(world, caster, spell.id)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
@@ -2772,6 +2774,7 @@ fn execute_cast_with_primary(
         scripts::roll_selected_ret_divine_purpose(world, caster, spell);
         scripts::schedule_empyrean_legacy(world, caster, spell, spell.cast_primary_target);
     }
+    scripts::after_foreground_special(world, caster, spell);
     blooming_infusion::after_cast(world, caster, spell);
     druid_transform::after_cast(world, caster, spell);
     // Spell::finish (Spell.cpp:4448-4450): some spells stop the caster's auto-attack.
