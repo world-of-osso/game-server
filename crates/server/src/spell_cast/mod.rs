@@ -3593,7 +3593,8 @@ fn plan_triggered_spell(
     depth: u8,
 ) -> Result<TargetPlan, CastFailure> {
     druid_transform::before_cast(world, caster, spell, depth)?;
-    aura_spell_restrictions::check_caster(world, caster, spell)?;
+    // FULL_MASK includes IGNORE_CASTER_AURASTATE (TC Spell.cpp5873–5890).
+    // Ordinary and costed-trigger paths retain their caster requirements.
     // CheckTarget's TARGETS_DEAD is independent of BAD_TARGETS/relation bypass.
     // Non-unit objects have no Health and do not take this unit-only check.
     let target_dead = explicit
