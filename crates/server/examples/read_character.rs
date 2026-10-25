@@ -1,5 +1,5 @@
 use redb::{ReadableDatabase, TableDefinition};
-#[path = "../src/character_data.rs"]
+#[path = "../../server-combat/src/character_data.rs"]
 mod character_data;
 
 const CHARACTERS: TableDefinition<u64, &[u8]> = TableDefinition::new("characters");

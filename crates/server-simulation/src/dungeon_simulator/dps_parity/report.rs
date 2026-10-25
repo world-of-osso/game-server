@@ -36,11 +36,7 @@ pub(super) fn engagement(world: &World, actor: Entity, targets: &[Entity]) -> Va
     let events = &world
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
-    let damage: i64 = events
-        .iter()
-        .filter(|event| is_target_damage(event, targets))
-        .map(|event| i64::from(event.amount))
-        .sum();
+    let damage = total_damage(world, targets);
     json!({"actor": inspect(actor), "owner": owner.map(inspect), "targets": target_states,
         "damage_to_targets": damage,
         "actor_is_player": world.get::<shared::components::Player>(actor).is_some(),
@@ -48,6 +44,16 @@ pub(super) fn engagement(world: &World, actor: Entity, targets: &[Entity]) -> Va
         "first_events": events.iter().take(16).collect::<Vec<_>>(),
         "powers": power_snapshot(world, actor),
         "pet_powers": crate::hunter_pet::summoned_pet(world, actor).map(|pet| power_snapshot(world, pet))})
+}
+
+pub(super) fn total_damage(world: &World, targets: &[Entity]) -> i64 {
+    world
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| is_target_damage(event, targets))
+        .map(|event| i64::from(event.amount))
+        .sum()
 }
 
 fn is_target_damage(event: &shared::protocol::CombatLogEvent, targets: &[Entity]) -> bool {

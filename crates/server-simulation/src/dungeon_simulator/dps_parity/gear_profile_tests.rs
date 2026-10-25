@@ -275,3 +275,190 @@ fn ret_gear_profile_native_expansion_traits_apply() {
         );
     }
 }
+
+#[test]
+#[ignore = "real269 profile and native consumable catalogs"]
+fn ww_gear_profile_blood_knights_grants_native_haste() {
+    let mut run = super::prepare_measurement(269, 1).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1235110),
+        "configured Blood Knights2 flask must apply its real native aura"
+    );
+    assert!(
+        !run.gaps
+            .iter()
+            .any(|gap| gap == "CONSUMABLE_UNMODELED:flask=flask_of_the_blood_knights_2")
+    );
+    let before = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .ratings
+        .haste;
+    let actor = run.actor;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1235110 && aura.caster == actor,
+    );
+    run.app.update();
+    let after = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .ratings
+        .haste;
+    assert!(
+        before > after,
+        "native flask must grant derived haste: before={before}, after={after}"
+    );
+}
+
+#[test]
+#[ignore = "real269 profile and native consumable catalogs"]
+fn ww_gear_profile_harandar_grants_native_primary_stat() {
+    let mut run = super::prepare_measurement(269, 1).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1232585),
+        "configured Harandar Celebration must apply its real native food aura"
+    );
+    assert!(
+        !run.gaps
+            .iter()
+            .any(|gap| gap == "CONSUMABLE_UNMODELED:food=harandar_celebration")
+    );
+    let before = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .primary
+        .agility;
+    let actor = run.actor;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1232585 && aura.caster == actor,
+    );
+    run.app.update();
+    let after = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .primary
+        .agility;
+    assert!(
+        before > after,
+        "native food must grant derived primary stat: before={before}, after={after}"
+    );
+}
+
+#[test]
+#[ignore = "real profile equipment/traits and native food catalog"]
+fn ww_gear_profile_silvermoon_parade_applies_same_native_food() {
+    let (mut profile, traits) = super::read_reference(269).unwrap();
+    profile
+        .consumables
+        .insert("food".into(), "silvermoon_parade".into());
+    let identity = super::inputs::read_actor(&profile).unwrap();
+    let run = super::prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+    let food = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1232585 && aura.caster == run.actor)
+        .expect("Silvermoon Parade must apply the shared native primary-food buff");
+    assert!(
+        food.effects.iter().any(|effect| effect.aura_type == 29
+            && effect.misc_values[0] == -2
+            && effect.amount > 0.0),
+        "shared food must contain a real native primary-stat amount"
+    );
+    assert!(
+        !run.gaps
+            .iter()
+            .any(|gap| gap == "CONSUMABLE_UNMODELED:food=silvermoon_parade")
+    );
+}
+
+#[test]
+#[ignore = "real profile equipment/traits and native selector-food catalog"]
+fn ww_gear_profile_blooming_feast_chooses_highest_secondary() {
+    let _seed = crate::random::seed_scope(70448);
+    let (mut profile, traits) = super::read_reference(269).unwrap();
+    profile
+        .consumables
+        .insert("food".into(), "blooming_feast".into());
+    let identity = super::inputs::read_actor(&profile).unwrap();
+    let mut run = super::prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+    let actor = run.actor;
+    let food = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1232091 && aura.caster == actor)
+        .expect("Blooming Feast must apply its real native selector-food buff");
+    let granted = food
+        .effects
+        .iter()
+        .find(|effect| effect.aura_type == 189 && effect.amount > 0.0)
+        .expect("selector food must grant a real native secondary amount")
+        .misc_values[0];
+    let with_food = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .ratings;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1232091 && aura.caster == actor,
+    );
+    run.app.update();
+    let without_food = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .ratings;
+    let ratings = [
+        (1792, without_food.crit, with_food.crit),
+        (917504, without_food.haste, with_food.haste),
+        (33554432, without_food.mastery, with_food.mastery),
+        (1879048192, without_food.versatility, with_food.versatility),
+    ];
+    let expected = ratings.iter().max_by(|a, b| a.1.total_cmp(&b.1)).unwrap().0;
+    assert_eq!(
+        granted, expected,
+        "food must select the actual equipped highest secondary"
+    );
+    for (mask, before, after) in ratings {
+        if mask == expected {
+            assert!(
+                after > before,
+                "selected native rating must really increase"
+            );
+        } else {
+            assert!(
+                (after - before).abs() < 0.01,
+                "unselected rating{mask} changed: {before}->{after}"
+            );
+        }
+    }
+    assert!(
+        !run.gaps
+            .iter()
+            .any(|gap| gap == "CONSUMABLE_UNMODELED:food=blooming_feast")
+    );
+}

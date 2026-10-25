@@ -8,6 +8,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [ ] Read explicit native facts for buff stacks/remains/up, cooldown remains/charges/duration, resources, talents, equipment/trinkets, target count/TTD, fight remains, raid-event adds, dots/debuffs and gcd. Unknown operands fail explicitly, including in otherwise inactive condition branches; never silently become false.
 - [ ] Share native equipment identities/stat-buff metadata, on-use vs proc cooldown sources and native tier facts across spec adapters. Reject unknown native stat/tier metadata; preserve original IDs and trinket1→trinket2→other use order.
 - [x] Bind action-dependent facts (`combo_strike`, plain `gcd`, action minimum GCD) to each source row, including variable/call control actions. An actor-wide value is not equivalent.
+- [x] `gcd.remains` reads the actor's actual global GCD clock, including item and control rows without action-spell aliases; it reaches zero on native expiry (pinned `action.cpp3795–3808`).
 - [x] Execute declared variables using source `value`, `setif`, `value_else`, `reset` and numeric `default` semantics. Variable `target_if` selects the native candidate before its condition and assignment, without retargeting later actions.
 - [x] Preserve literal action order and conditional `call_action_list` decisions; native castability selects the first usable action. An exhausted child list returns control to its caller.
 - [x] Accept `call_action_list,use_off_gcd=0|1`. The control remains off-GCD/while-casting as in pinned `action.cpp4648–4661`; each child still requires its own native readiness and row permissions. Invalid boolean values fail explicitly.
@@ -34,6 +35,11 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 ## Shared profile and action facts
 
+- `buff.<alias>.last_trigger` retains the last successful native application or refresh across removal, relative to the encounter clock. An unused buff returns the pinned minimum-time sentinel; acquisition must be configured before application.
+- `potion.<name>` matches the configured native potion option case-insensitively, including its exact quality or the name without a final underscore/digit. `cooldown.potion.remains` reads the actual potion spell and ItemEffect category history, not a synthetic timer.
+
+- [x] Action-bound `ticks` reads scheduled periodic ticks from the current native channel, not cast-bar progress or damage-event totals. Public `auras::paid_periodic_ticks` returns the maximum per-effect paid count for the actual caster/target/spell application. SimC `tick_zero` damage does not advance this counter; ordinary scheduled ticks do. Reads do not advance state, and absent auras return zero.
+
 - [x] Native profile effects accept pinned Shadow Omnium tokens `rune_of_unleashed_fire`, `rune_of_selfmending`, `rune_of_lingering`, `rune_of_critical_power` and `rune_of_overload`, plus numeric TraitNodeEntry IDs. Optional ranks remain ignored like pinned SimC; native trait definitions supply the applied spell and all amounts. Unknown tokens or missing native entries fail explicitly.
 
 - [x] `hero_tree.<alias>` reads the selected native hero subtree, not allocated inactive nodes. Remove display-name hyphens as pinned SimC does (`Fel-Scarred` → `felscarred`); unknown aliases fail explicitly.
@@ -42,7 +48,12 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] Literal `auto_shot` starts learned native75 once; its native repeat owns subsequent shots. Literal player engagement does not inject melee attacks before source execution.
 - [x] Target `health` reads the selected native current pool; `retarget` enumerates actual candidates without a spell definition. Target `debuff.react` uses recipient acquisition deadlines and caster-owned aura filtering. Fixture-only absent pull events report zero remaining time and the source no-next-event sentinel.
 
+- [x] `action.<alias>.executing` and `execute_remains` read only the matching native cast/channel; inactive or different spells return0. `action.<alias>.last_used` reads the latest successful ordinary completion relative to the encounter epoch; cast requests, failed casts and triggered children do not advance it. Unused actions retain the pinned negative minimum-time sentinel.
+- [x] Action-bound `cooldown_react` requires the real spell/category/charge cooldown to be ready, including Fire Blast's short recovery while spare charges remain. Current native explicit resets do not impose a reaction-required delay.
+
 ## Equipped use_items
+
+- `trinket.<name>.<property>` resolves the original equipped trinket slot case-insensitively, sharing numeric-slot property reads. An absent named trinket evaluates to zero (pinned `unique_gear.cpp4245–4261`).
 
 - [x] Named equipment matching is case-insensitive. A name with no equipped match makes `equipped.<name>` false and a named `use_item` unavailable, without repairing literal spellings or fabricating item metadata (SimC76f8118 `player.cpp9873–9884,11974–11993`).
 

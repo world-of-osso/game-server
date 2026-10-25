@@ -21,6 +21,16 @@
 
 `Program::parse` takes `(list, literal)` rows; an empty literal declares an intentionally empty list. `Program::select` updates variables and returns an `Action` with its non-`if` options intact. Bare `target_if=<expr>`, explicit `target_if=first:<expr>` and `target_if=min/max:<expr>` are interpreted by Program using explicit `ActionFacts::target_ids(&Action)` per-action eligible order and action-bound facts; the selected identity is returned in `Action.target`, separately from preserved literal options. FIRST selects the first matching candidate before ordinary if/readiness and does not cycle on subsequent refusal; pinned single>0 versus multi!=0 is preserved. `cycle_targets=1` without target_if iterates native order when global active_enemies>1; positive max_cycle_targets caps examined candidates, zero/negative is unlimited. Disabled/single-global-target actions retain their default context; exhaustion leaks no target. target_if takes precedence over cycling. Untargeted actions retain the caller's native current target. Native adapters must honor that identity in readiness/dispatch; actor-only adapters return an explicit target-candidate error. Native target dispatch stays caller-owned; the shared literal Driver handles the qualified channel and item options below. Unsupported expression syntax, control options and variable operations fail explicitly.
 
+## Native execution and last-use facts
+
+Named `action.<alias>.executing` and `execute_remains` read the matching native `CastState`. `last_used` reads the simulation timestamp stored beside the existing successful-cast sequence in `SpellHistory`; it subtracts the encounter epoch without clamping prepull timestamps. Native requests and triggered children never update that ordinary-success record. An unused action returns pinned `timespan_t::min()` in seconds (`action.cpp2032,3609–3669`). Action-bound `cooldown_react` reads actual native cooldown readiness (`action.cpp3375–3377`); current explicit native resets have no reaction-required delay. Native tests cover real cast completion/progress and Fire Blast recovery with remaining charges.
+
+## Fire fixture adapter
+
+`dps_parity/fire_rotation` supplies native action/buff/talent identities and the Fire-only `firestarter.active`, `scorch_execute.active` and `hot_streak_spells_in_flight` facts. It passes the profile's unchanged source rows to the shared evaluator. Native recipient health and Heat Shimmer supply execute gates; the missile reader counts caster-owned Hot Streak producers using the same eligibility predicate as native impacts (pinned `sc_mage.cpp2280–2295,6988–7010`). Fixture capture disables the follower kit before setup; shared precombat polling completes real casts/GCDs before the300s combat clock. This does not change ordinary dungeon AI or qualify damage parity by itself.
+
+Flamestrike's selected talent ID supplies both the fact and dispatch binding. Shared cast-relationship tables express the selected Meteor→Pyroclasm grant and the native MID2 hardcast crit condition. The latter reads the admitted modifier snapshot, not a proc aura already consumed before impact. Native hit handling retains its pre-damage guaranteed-crit fact and updates only configured reaction observations; ordinary gameplay does not acquire a synthetic reaction policy. Existing Hot Streak is preserved on wasted critical hits.
+
 ## Expected combat length
 
 `expected_combat_length` reads the existing `Encounter::Fixture.duration`, validated positive+finite. It is not elapsed/fight-remains, a300literal or an extra stored field. Dungeon and invalid fixture values return EXPECTED_COMBAT_LENGTH_UNAVAILABLE; proposed-action forwarding uses the same configured value. Four minimal-world cases at88095009c give4genuineRED0.02s;991b7fcde (landed master924638aba base) yields4/4GREEN0.00s/14m24compile/0warnings. Tests enabled attribute-only afterward; no DB/profile/suite rerun. [Exact proof](../../handoffs/expected-combat-length-proof-ledger.md).
@@ -81,6 +91,12 @@ Clock-aware `preparation::execute_precombat_plan` now consumes selected native p
 
 `Driver::poll_precombat` returns Waiting/Selected original Action+Execution/Finished. Actual native Player63 Arcane Intellect GCD/cursor and Pyroblast/while-casting row controls first produce2RED at85a3a1c20. Prepared now samples CastState plus native GCD; busy polling cannot consume variables/rows, direct busy precombat select fails explicitly, and use_while_casting supplements native admission. Caller advances real App frames and starts its fight epoch after setup; final flight remains native782 state, not a timer. At3d32d68bf actual Fire2GREEN27.11s plus23 relevant simulation regressions pass:1459→55342→real11366/2.337s, setup5.35s, native flight still1/0.142s at Finished. [Exact proof/exclusions](../../handoffs/shared-precombat-poll-proof-ledger.md#current-green-scope--3d32d68bf); full Fire adapter/facts remain open.
 
+## Havoc fixture (577)
+
+`havoc_rotation` embeds the pinned76f8118 action rows and uses shared Driver/Prepared execution. Metamorphosis191427 retains the selected enemy as its native cursor destination; declaring it self-targeted loses the required ground point. Adapter-only per-action Demonsurge flags do not produce native explosion damage, and soul-fragment pickups remain unmodeled.
+
+`SIMC_HAVOC_DEMONIC_TRANSFORMATION` runs before native Eye Beam/Gaze channel execution. Selected213410 supplies the native duration for162264; an existing owned Meta is extended without replacing effects or restarting its phase. The [native tests](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/havoc_tests.rs) cover source casts, cursor admission, first transformation and extension. Numerical parity remains open. [Contract](../../specs/dps-parity.md#havoc-literal-rotation).
+
 ## Elemental fixture (262)
 
 `dps_parity::elemental_rotation` parses the exact profile's `actions` into the shared `Program`. Its bindings supply native spell identities and Maelstrom; shared equipment facts, target selection, readiness and execution remain authoritative. Capture precedes native warmup, ordered precombat completes before engagement, and ordinary followers keep their native kit. Wind Shear requires an actual casting target. Ancestral Swiftness disables the Nature's Swiftness source row when its selected talent is active (SimC76f8118 `sc_shaman.cpp`8132–8137).
@@ -122,6 +138,9 @@ For an active channel, sample `Prepared::read_after_channel`, build live action-
 `call_action_list` retains its literal option values but is interpreter control, not an executable spell. Off-GCD traversal never changes a child's own Prepared admission. See the [behavior contract](../../specs/simc-apl.md) and [channel requirements](../../specs/dps-parity.md#literal-action-readiness-and-channels).
 
 ## Sources
+
+- [Havoc adapter](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/havoc_rotation.rs) — literal source rows and virtual action predicates.
+- [Demonic policy](../../../crates/server/src/spell_cast/scripts/havoc.rs) — pinned relationship with native payload and duration.
 
 - Pinned SimC76f8118 `engine/sim/expressions.cpp:22–154,333–440,1081–1130` — lexer, arithmetic/boolean decisions and precedence.
 - `engine/action/variable.cpp:19–133` — defaults and variable construction; `engine/player/action_variable.cpp:19–26` — initial values.
