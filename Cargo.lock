@@ -6612,6 +6612,7 @@ dependencies = [
  "server-follower-policy",
  "server-map-rules",
  "server-pet-battle",
+ "server-spell-scripts",
  "shared",
  "tempfile",
  "tokio",
@@ -6739,8 +6740,18 @@ dependencies = [
  "serde",
  "serde_json",
  "server-combat",
+ "server-spell-scripts",
  "shared",
  "tempfile",
+]
+
+[[package]]
+name = "server-spell-scripts"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "server-combat",
+ "shared",
 ]
 
 [[package]]

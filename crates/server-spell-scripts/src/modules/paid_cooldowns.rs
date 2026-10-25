@@ -1,7 +1,12 @@
 //! Native paid-resource cooldown relationships, never inferred from cast counts.
-use crate::auras::ActiveAuras;
-use crate::spell_cast::CostPool;
+use super::combat;
+use combat::spell_cast::script_registry::SpellScriptHook;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterPayment(after_payment)];
+
 use bevy::prelude::*;
+use combat::auras::ActiveAuras;
+use combat::spell_cast::CostPool;
 use shared::components::{ActiveSpec, PowerType};
 
 struct PaidCooldown {
@@ -24,13 +29,9 @@ const POLICIES: &[PaidCooldown] = &[
     },
 ];
 
-pub(in crate::spell_cast) fn after_payment(
-    world: &mut World,
-    caster: Entity,
-    costs: &[(CostPool, f32)],
-) {
+fn after_payment(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
     for policy in POLICIES {
-        let paid = super::super::resources::spent(costs, policy.resource);
+        let paid = combat::spell_cast::spent(costs, policy.resource);
         if paid <= 0.0 {
             continue;
         }
@@ -38,7 +39,7 @@ pub(in crate::spell_cast) fn after_payment(
             continue;
         };
         for cooldown in policy.cooldowns {
-            super::reduce_cooldown(world, caster, *cooldown, seconds);
+            combat::spell_cast::scripts::reduce_cooldown(world, caster, *cooldown, seconds);
         }
     }
 }
@@ -51,7 +52,7 @@ fn read_reduction(
 ) -> Option<f64> {
     let divisor = read_native_divisor(world, caster, policy)?;
     let units = world
-        .resource::<crate::spell_cast::powers::PowerTypeTable>()
+        .resource::<combat::spell_cast::powers::PowerTypeTable>()
         .get(policy.resource)
         .expect("native paid-resource display units")
         .display_modifier;
