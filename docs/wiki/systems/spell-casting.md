@@ -4,7 +4,7 @@
 
 The shared literal execution carries the native cast unit and selected action primary separately. `CastTargets` supplies both to ordinary Player/NPC admission; existing spell snapshots retain the primary through queued requests and cast bars. Foreground child relationships use that snapshot, not the explicit self-cast unit or a later mutable combat target. Missing context does not choose another target. Native target selectors, values, payment and flight remain unchanged.
 
-The actual Ret self-cast boundary failed with child target=caster and passes with target=hostile plus real damage; four scoped native cases pass at ec5f0f3f3. [Contract](../../specs/dps-parity.md#shared-cast-target-context); [full proof and remaining controls](../../handoffs/hostile-primary-proof-ledger.md). The older Zenith control has an identical lifetime/role fixture failure on plain master3f; it is not repaired in this branch. Broader Player/queue gates and new DPS measurements remain separate.
+The actual Ret self-cast boundary failed with child target=caster and passes with target=hostile plus real damage; four scoped native cases pass at ec5f0f3f3. [Contract](../../specs/dps-parity.md#shared-cast-target-context); [full proof and remaining controls](../../handoffs/hostile-primary-proof-ledger.md). The older Zenith control has an identical lifetime/role fixture failure on plain master3f; it is not repaired in this branch. NPC and actual Player child-primary assertions, Player/queue/composite controls and both post-D3 compiler gates now pass within the linked ledger’s exact scope. The parent’s full gate and new DPS measurements remain separate.
 
 ## Rake actual-stealth eligibility — 2026-10-24
 
