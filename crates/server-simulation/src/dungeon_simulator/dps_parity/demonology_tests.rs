@@ -32,6 +32,54 @@ fn prepare_antoran_tyrant() -> (Run, Entity) {
     (run, actor)
 }
 
+#[test]
+#[ignore = "requires private266 inputs; actual Tyrant cooldown expected-remains facts"]
+fn demonology_tyrant_expected_cooldown_uses_native_elapsed_time() {
+    use server::simc_apl::Facts;
+    let (mut run, _) = prepare_antoran_tyrant();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let world = run.app.world();
+    let bindings = crate::simc_apl_native::Bindings {
+        actions: [("summon_demonic_tyrant".into(), 265187)].into(),
+        ..Default::default()
+    };
+    let facts = crate::simc_apl_native::NativeFacts::new(
+        world,
+        run.actor,
+        &bindings,
+        crate::simc_apl_native::Encounter::Fixture {
+            started_at: crate::spell_cast::now(world),
+            duration: 300.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        },
+        1,
+    );
+    let read = |property: &str| {
+        facts
+            .value(&format!("cooldown.summon_demonic_tyrant.{property}"))
+            .unwrap()
+    };
+    let duration = read("duration");
+    let remains = read("remains");
+    let started = world
+        .get::<crate::spell_cast::SpellHistory>(run.actor)
+        .unwrap()
+        .last_successful_cast_at(265187)
+        .unwrap();
+    let elapsed = crate::spell_cast::now(world) - started;
+    assert!(remains > 0.0 && remains < duration);
+    let expected = remains * elapsed / (duration - remains);
+    assert!((read("remains_expected") - expected).abs() < 1e-8);
+    assert_eq!(read("remains_guess"), read("remains_expected"));
+    assert_eq!(
+        read("remains"),
+        remains,
+        "fact reads cannot advance native timers"
+    );
+}
+
 fn tyrant_admission_note(run: &mut Run, tyrant: Entity) -> String {
     let spell = run
         .app
