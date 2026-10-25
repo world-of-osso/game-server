@@ -20,6 +20,10 @@ MM Explosive owns a downstream target-plan lookup and primary-periodic-damage ca
 
 Germination's redirect runs before a planned aura application; a consumed application stops at the first redirect. Ret Divine Purpose runs after foreground Crusade spender stacks and at the corresponding background Storm callback, before Legacy/echo dispatch. The policy still reads actual Holy Power cost-pool presence, selected traits, and native aura chance downstream.
 
+## Hit and admission stages
+
+Elemental Ascendance uses ordinary hit lookup; Voltaic Blaze owns effect-hit lookup, contextual impact, target limiting and guaranteed critical chance. Touch of Death owns admission and damage amount; Snakeskin Quiver rolls after actual Auto Shot launch. Target handling copies the installed registry so a moved effect-hit callback is still recognized when selecting effect targets, not only when executing impacts. Combat retains native lookup order around each registry boundary.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.

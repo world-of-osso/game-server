@@ -54,9 +54,8 @@ mod chrono_flame;
 mod clearcasting;
 mod echo_policies;
 mod elemental;
-pub(crate) use elemental::register as register_elemental_policies;
-mod elemental_ascendance;
 pub(super) use echo_policies::after_cast as apply_echo_policies;
+pub(crate) use elemental::register as register_elemental_policies;
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
 mod enhancement_modes;
@@ -138,13 +137,10 @@ mod shadow_priest;
 pub(super) use shadow_priest::{
     launch_delay as scripted_launch_delay, weaving_multiplier as shadow_weaving_multiplier,
 };
-mod snakeskin_quiver;
-pub(super) use snakeskin_quiver::roll_snakeskin_cobra;
 mod soul_of_the_forest;
 mod swiftmend;
 pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direct_multiplier;
 pub(crate) use soul_of_the_forest::snapshot_amount as snapshot_soul_of_the_forest;
-mod touch_of_death;
 mod unbroken_rhythm;
 pub(crate) use unbroken_rhythm::register_unbroken_rhythm;
 mod windwalker;
@@ -167,7 +163,6 @@ pub(crate) fn after_melee_hit(
 mod xuens_battlegear;
 pub(crate) use xuens_battlegear::register_xuens_battlegear;
 
-mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
 pub(crate) use windwalker::{
     DANCE_OF_CHIJI, after_dance_cast_event, apply_mystic_touch_after_hit, check_dance_proc,
@@ -489,12 +484,18 @@ pub(super) fn consumes_effect_value(spell_id: u32, effect_index: u8) -> bool {
     )
 }
 
-pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
+pub fn on_effect_hit(
+    registry: script_registry::SpellScriptRegistry,
+    spell_id: u32,
+    effect_index: u8,
+) -> Option<EffectHitHook> {
+    if let Some(hook) = registry.effect_hit(spell_id, effect_index) {
+        return Some(hook);
+    }
     match (spell_id, effect_index) {
         (crate::scripted_ai::orator::TERRORIZE_SELECTOR, 0) => {
             Some(crate::scripted_ai::orator::terrorize_hit)
         }
-        (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::cast_damage),
         (shadow_priest::SLAM, 0) => Some(shadow_priest::slam_impact),
         (49_576, 0) => Some(death_grip),
         (108_199, 1) => Some(cast_subduing_grasp),
@@ -622,6 +623,9 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
 /// TC a352b1fa spell_mage.cpp:804-815 overrides Fire Blast's crit chance
 /// to 100%; Retail108853 tooltip explicitly renders `${$s1*2}`.
 pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32) -> Option<f32> {
+    if let Some(chance) = script_registry::critical_chance(world, caster, target, spell_id) {
+        return Some(chance);
+    }
     match spell_id {
         FIREBALL | hot_streak::PYROBLAST => firestarter_crit(world, caster, target),
         batch17::REGROWTH => batch17::regrowth_crit(world, caster, target),
@@ -646,7 +650,7 @@ pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32)
         }
         batch3::SCORCH => batch3::scorch_crit(world, caster, target),
         batch12::GARGOYLE_STRIKE => batch12::gargoyle_crit(world, caster),
-        FIRE_BLAST | batch5::CHAOS_BOLT | voltaic_blaze::DAMAGE => Some(100.0),
+        FIRE_BLAST | batch5::CHAOS_BOLT => Some(100.0),
         batch5::LAVA_BURST_DAMAGE | super::elemental_overload::LAVA_OVERLOAD_DAMAGE => {
             batch5::lava_burst_crit(world, caster, target)
         }
@@ -681,6 +685,9 @@ pub fn damage_amount(world: &World, spell_id: u32) -> Option<DamageAmountHook> {
     if let Some(hook) = policies::damage_hook(world, spell_id) {
         return Some(hook);
     }
+    if let Some(hook) = script_registry::damage_amount(world, spell_id) {
+        return Some(hook);
+    }
     match spell_id {
         windwalker_dual_threat::DAMAGE => Some(windwalker_dual_threat::damage),
         windwalker_children::JADEFIRE => Some(windwalker_children::jadefire_damage),
@@ -693,7 +700,6 @@ pub fn damage_amount(world: &World, spell_id: u32) -> Option<DamageAmountHook> {
             Some(super::elemental_overload::scale_damage)
         }
         crate::auras::agony::AGONY => Some(crate::auras::agony::tick_damage),
-        touch_of_death::TOUCH_OF_DEATH => Some(touch_of_death::damage),
         batch13::SHADOW_WORD_DEATH => Some(batch13::death_execute),
         batch11::SINISTER_STRIKE => Some(batch11::sinister_damage),
         batch3::SHRED => Some(batch11::shred_damage),
@@ -822,7 +828,7 @@ fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
     }
     match spell_id {
         33757 | 318038 => Some(enhancement_imbues::apply),
-        voltaic_blaze::ROOT => Some(maelstrom_weapon::grant_voltaic_blaze),
+        470057 => Some(maelstrom_weapon::grant_voltaic_blaze),
         windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
         windwalker::FISTS_OF_FURY => Some(windwalker_children::fof_executed),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
@@ -901,13 +907,19 @@ fn cast_invigorating_fury_heal(world: &mut World, caster: Entity, _spell: &Spell
 /// Receives live target state, the spell and its explicit target.
 pub type AreaTargetFilter = fn(&World, &SpellInfo, Option<Entity>, &mut Vec<Entity>);
 
-pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetFilter> {
+pub fn area_target_filter(
+    world: &World,
+    spell_id: u32,
+    effect_index: u8,
+) -> Option<AreaTargetFilter> {
+    if let Some(hook) = script_registry::area_filter(world, spell_id, effect_index) {
+        return Some(hook);
+    }
     if let Some(filter) = prayer_of_mending::area_filter(spell_id, effect_index) {
         return Some(filter);
     }
     match (spell_id, effect_index) {
         (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
-        (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::limit_targets),
         (ret_toll::ROOT, 1) => Some(ret_toll::limit_area),
         (1306923, 1) => Some(ret_damage::exclude_primary_cleave),
         (145_110, 0) => Some(pick_yseras_gift_group_target),
@@ -1120,11 +1132,7 @@ pub fn check_target(
     spell_id: u32,
     target: Entity,
 ) -> Result<(), super::CastFailure> {
-    if spell_id == touch_of_death::TOUCH_OF_DEATH
-        && !touch_of_death::target_allowed(world, caster, target)
-    {
-        return Err(super::CastFailure::InvalidTarget);
-    }
+    script_registry::check_target(world, caster, spell_id, target)?;
     if spell_id == chrono_flame::CHRONO_FLAMES {
         return chrono_flame::check_children(world);
     }
@@ -1701,13 +1709,15 @@ pub(super) fn on_hit_with_context(world: &World, spell_id: u32) -> Option<Contex
     if let Some(hook) = policies::hit_hook(world, spell_id) {
         return Some(hook);
     }
+    if let Some(hook) = script_registry::context_hit(world, spell_id) {
+        return Some(hook);
+    }
     match spell_id {
         17364 | 115356 | 60103 | 187874 => Some(enhancement_strikes::on_strike),
         feral_frenzy::FERAL | feral_frenzy::FRANTIC => Some(feral_frenzy::begin),
         feral_frenzy::FRANTIC_CHILD => Some(feral_frenzy::energize_frantic),
         xuens_battlegear::SCK => Some(xuens_battlegear::capture_sck_parent),
         windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
-        voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),
         ret_toll::ROOT => Some(ret_toll::cast_child),
         343527 => Some(ret_damage::sentence_init),
         77_478 => Some(batch9::cast_earthquake_knockdown),
@@ -1723,9 +1733,11 @@ pub(super) fn on_enemy_damage_hit_with_context(spell_id: u32) -> Option<ContextH
     }
 }
 
-pub fn on_hit(spell_id: u32) -> Option<HitHook> {
+pub fn on_hit(world: &World, spell_id: u32) -> Option<HitHook> {
+    if let Some(hook) = script_registry::hit(world, spell_id) {
+        return Some(hook);
+    }
     match spell_id {
-        elemental_ascendance::ASCENDANCE => Some(elemental_ascendance::cast_entry),
         windwalker_children::ZENITH => Some(windwalker_children::zenith_hit),
         100780 => Some(windwalker::tiger_palm_hit),
         100784 => Some(windwalker::blackout_kick_hit),

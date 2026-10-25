@@ -13,6 +13,11 @@
 //! - `AfterSpenderStacks`: after foreground Crusade stacks and the corresponding
 //!   background Storm callback; before Empyrean Legacy or echo policy dispatch.
 //! - `AuraRedirect`: first redirect consumes application before native aura dispatch.
+//! - `EffectHit`, `Hit`, `AreaFilter`, `CriticalChance`: first matching callback,
+//!   before the retained native lookup. Target handling uses the same registry copy.
+//! - `ContextHit` and `DamageAmount`: first match after generic policy lookup.
+//! - `CheckTarget`: before native target checks; first error stops admission.
+//! - `AutoRepeat`: after the actual Auto Shot launch.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
 
@@ -33,6 +38,18 @@ pub type AuraRedirectHook = fn(&mut World, Entity, Entity, u32, u8) -> bool;
 pub type AfterCastLookup = fn(u32) -> Option<AfterCastHook>;
 pub type OnCastHook = fn(&mut World, Entity, u32, u8);
 pub type AfterPaymentHook = fn(&mut World, Entity, &[(CostPool, f32)]);
+pub type HitHook = fn(&mut World, Entity, Entity, u8);
+pub type EffectHitLookup = fn(u32, u8) -> Option<HitHook>;
+pub type HitLookup = fn(u32) -> Option<HitHook>;
+pub type ContextHitHook = fn(&mut World, &EffectCtx<'_>, Entity);
+pub type ContextHitLookup = fn(u32) -> Option<ContextHitHook>;
+pub type AreaTargetFilter = fn(&World, &SpellInfo, Option<Entity>, &mut Vec<Entity>);
+pub type AreaFilterLookup = fn(u32, u8) -> Option<AreaTargetFilter>;
+pub type CheckTargetHook = fn(&World, Entity, u32, Entity) -> Result<(), super::CastFailure>;
+pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
+pub type DamageAmountLookup = fn(u32) -> Option<DamageAmountHook>;
+pub type AutoRepeatHook = fn(&mut World, Entity, Entity);
+pub type CriticalChanceHook = fn(&World, Entity, Entity, u32) -> Option<f32>;
 
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
@@ -47,6 +64,14 @@ pub enum SpellScriptHook {
     TargetDamageMultiplier(TargetDamageMultiplierHook),
     AfterSpenderStacks(AfterCastHook),
     AuraRedirect(AuraRedirectHook),
+    EffectHit(EffectHitLookup),
+    Hit(HitLookup),
+    ContextHit(ContextHitLookup),
+    AreaFilter(AreaFilterLookup),
+    CheckTarget(CheckTargetHook),
+    DamageAmount(DamageAmountLookup),
+    AutoRepeat(AutoRepeatHook),
+    CriticalChance(CriticalChanceHook),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -61,6 +86,13 @@ impl SpellScriptRegistry {
 
     fn hooks(self) -> impl Iterator<Item = &'static SpellScriptHook> {
         self.modules.iter().flat_map(|module| module.iter())
+    }
+
+    pub fn effect_hit(self, spell: u32, index: u8) -> Option<HitHook> {
+        self.hooks().find_map(|hook| match hook {
+            SpellScriptHook::EffectHit(lookup) => lookup(spell, index),
+            _ => None,
+        })
     }
 
     pub fn policies(self) -> impl Iterator<Item = &'static Policy> {
@@ -198,6 +230,78 @@ pub fn aura_redirect(
         .any(|hook| match hook {
             SpellScriptHook::AuraRedirect(run) => run(world, caster, target, spell, depth),
             _ => false,
+        })
+}
+
+pub fn hit(world: &World, spell: u32) -> Option<HitHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::Hit(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn context_hit(world: &World, spell: u32) -> Option<ContextHitHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::ContextHit(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn area_filter(world: &World, spell: u32, index: u8) -> Option<AreaTargetFilter> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::AreaFilter(lookup) => lookup(spell, index),
+            _ => None,
+        })
+}
+
+pub fn check_target(
+    world: &World,
+    caster: Entity,
+    spell: u32,
+    target: Entity,
+) -> Result<(), super::CastFailure> {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::CheckTarget(run) = hook {
+            run(world, caster, spell, target)?;
+        }
+    }
+    Ok(())
+}
+
+pub fn damage_amount(world: &World, spell: u32) -> Option<DamageAmountHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::DamageAmount(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn auto_repeat(world: &mut World, caster: Entity, target: Entity) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AutoRepeat(run) = hook {
+            run(world, caster, target);
+        }
+    }
+}
+
+pub fn critical_chance(world: &World, caster: Entity, target: Entity, spell: u32) -> Option<f32> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::CriticalChance(run) => run(world, caster, target, spell),
+            _ => None,
         })
 }
 
