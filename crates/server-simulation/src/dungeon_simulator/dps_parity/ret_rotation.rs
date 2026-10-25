@@ -32,6 +32,7 @@ const ACTIONS: &[(&str, u32, bool)] = &[
 
 const BUFFS: &[(&str, u32)] = &[
     ("avenging_wrath", 31884),
+    ("hammer_of_wrath", 1277026),
     ("divine_arbiter_verdict", 1306161),
     ("empyrean_legacy", 387178),
     ("divine_arbiter_divine_storm", 1306162),
@@ -137,6 +138,13 @@ impl Facts for RetFacts<'_> {
 
 impl ActionFacts for RetFacts<'_> {
     fn target_ready(&self, action: &Action) -> Result<bool, String> {
+        // SimC76f8118 sc_paladin.cpp1537–1540: Judgment is replaced during Hammer mode.
+        if action.name == "judgment" {
+            return self
+                .native
+                .value("buff.hammer_of_wrath.up")
+                .map(|up| up == 0.0);
+        }
         // SimC76f8118 sc_paladin.cpp1956–1962: action policy, not cast permission.
         if action.name == "rebuke" {
             return self
@@ -174,3 +182,5 @@ mod lifecycle_tests;
 mod readiness_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod wrath_gate_tests;

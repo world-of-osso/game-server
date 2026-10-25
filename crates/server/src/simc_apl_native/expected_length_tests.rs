@@ -68,6 +68,7 @@ fn native_expected_combat_length_action_context_uses_same_configured_fixture() {
     let bindings = Bindings::default();
     let facts = NativeFacts::new(&world, actor, &bindings, fixture(215.75), 0);
     let action = Action {
+        source_row: None,
         name: "fireball".into(),
         target: None,
         options: Default::default(),

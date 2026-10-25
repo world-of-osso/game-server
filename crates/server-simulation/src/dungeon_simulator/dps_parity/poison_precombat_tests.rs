@@ -3,6 +3,45 @@ use super::*;
 use shared::protocol::CombatLogKind;
 
 #[test]
+#[ignore = "requires prepared259 exact profile/traits and private native DB"]
+fn assassination_literal_driver_applies_coatings_and_uses_the_profile() {
+    let mut run = prepare_measurement(259, 1).unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<literal_rotation::LiteralParityFixture>(run.actor)
+            .is_some(),
+        "spec259 must not run the follower kit instead of its literal profile"
+    );
+    for spell in [2823, 3408, 381664, 381637] {
+        assert!(
+            crate::auras::has_aura(run.app.world(), run.actor, spell),
+            "selected coating{spell}"
+        );
+    }
+    engage(&mut run);
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
+    for _ in 0..100 {
+        drive_player(&mut run).unwrap();
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(703)
+                && event.kind == CombatLogKind::CastSuccess),
+        "literal opener must execute Garrote"
+    );
+}
+
+#[test]
 #[ignore = "requires prepared259/current native view and DPS_PARITY_ACTOR=player; four native1500ms coatings"]
 fn native_poison_precombat_completes_every_selected_coating_before_pull() {
     let _seed = crate::random::seed_scope(70448);

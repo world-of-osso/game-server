@@ -40,6 +40,7 @@ fn encounter(world: &World) -> Encounter {
 
 fn action(target: Option<Entity>) -> Action {
     Action {
+        source_row: None,
         name: "colossus_smash".into(),
         target: target.map(Entity::to_bits),
         options: Default::default(),
@@ -88,6 +89,7 @@ fn native_target_context_candidates_keep_native_order_and_range() {
     );
     b.actions.insert("mortal_strike".into(), MORTAL_STRIKE);
     let proposed = Action {
+        source_row: None,
         name: "mortal_strike".into(),
         ..action(None)
     };
