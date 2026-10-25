@@ -92,13 +92,25 @@ fn stacks(world: &World, caster: Entity, spell: u32) -> u8 {
         .map_or(0, |aura| aura.stacks)
 }
 
-fn grant_salvo(world: &mut World, caster: Entity, count: u32) {
+fn grant_salvo(world: &mut World, caster: Entity, count: u32, chance: f32) {
     // sc_mage.cpp7242–7264: talent-gated stacking, native cap and Intuition.
     if !selected(world, caster, SALVO_TALENT) || count == 0 {
         return;
     }
+    if !roll(chance) {
+        return;
+    }
     let before = stacks(world, caster, SALVO);
     grant(world, caster, SALVO, count);
+    // sc_mage.cpp7254–7255: only deterministic acquisitions are predicted.
+    if chance >= 100.0 {
+        #[cfg(any(test, feature = "test-support"))]
+        crate::simc_apl_native::reaction::predict(world, caster, SALVO);
+    }
+    grant_intuition_at_cap(world, caster, before);
+}
+
+fn grant_intuition_at_cap(world: &mut World, caster: Entity, before: u8) {
     let cap = world
         .resource::<SpellStore>()
         .get(SALVO)
@@ -157,15 +169,14 @@ fn generate_missiles_tick(world: &mut World, caster: Entity) {
     if auras::has_aura(world, caster, 1296582) {
         grant(world, caster, CUMULATIVE, 1);
     }
-    grant_salvo(world, caster, 1);
-    if roll(talent_value(world, caster, 461257, 0)) {
-        let count = talent_value(world, caster, 461257, 1) as u32;
-        grant_salvo(world, caster, count);
-    }
+    grant_salvo(world, caster, 1, 100.0);
+    let crystal_chance = talent_value(world, caster, 461257, 0);
+    let crystal_count = talent_value(world, caster, 461257, 1) as u32;
+    grant_salvo(world, caster, crystal_count, crystal_chance);
     if auras::has_aura(world, caster, 1277009) {
         let count = talent_value(world, caster, 1244329, 1) as u32
             + u32::from(selected(world, caster, 1260616));
-        grant_salvo(world, caster, count);
+        grant_salvo(world, caster, count, 100.0);
     }
     if roll(talent_value(world, caster, 461248, 0)) {
         spell_cast::cast_triggered(world, caster, 461524, Some(caster), 1);
@@ -201,7 +212,7 @@ fn launch_orb(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
         }
     }
     let salvo = talent_value(world, caster, EXPANDED_MIND, 1) as u32;
-    grant_salvo(world, caster, salvo);
+    grant_salvo(world, caster, salvo, 100.0);
 }
 
 pub(in crate::spell_cast) fn after_foreground(
@@ -221,23 +232,34 @@ pub(in crate::spell_cast) fn after_foreground(
             let count = talent_value(world, caster, 470021, 0) as u32;
             conjure_at_primary(world, caster, spell, count);
             if selected(world, caster, 1243507) {
-                grant_clearcasting(world, caster);
+                trigger_clearcasting(world, caster, 100.0, true);
             }
         }
-        365350 => grant_clearcasting(world, caster), // sc_mage.cpp3363
+        365350 => trigger_clearcasting(world, caster, 100.0, true), // sc_mage.cpp3363
         30451 | 1295924 => finish_filler(world, caster, spell.id),
         44425 => finish_barrage(world, caster, spell),
         _ => {}
     }
 }
 
-fn grant_clearcasting(world: &mut World, caster: Entity) {
+fn trigger_clearcasting(world: &mut World, caster: Entity, chance: f32, allow_predict: bool) {
     // sc_mage.cpp7363–7406: successful Clearcasting also grants Brainstorm
     // and rolls Overpowered; an active Missiles channel banks that proc.
+    if !roll(chance) {
+        return;
+    }
     grant(world, caster, CLEARCASTING, 1);
+    if chance >= 100.0 && allow_predict {
+        #[cfg(any(test, feature = "test-support"))]
+        crate::simc_apl_native::reaction::predict(world, caster, CLEARCASTING);
+    }
     if selected(world, caster, 461261) {
         grant(world, caster, 461531, 1);
     }
+    roll_overpowered_missiles(world, caster);
+}
+
+fn roll_overpowered_missiles(world: &mut World, caster: Entity) {
     if !roll(talent_value(world, caster, 1244329, 0)) {
         return;
     }
@@ -299,7 +321,8 @@ fn roll_clearcasting(world: &mut World, caster: Entity) {
         attempts.0 = 0;
     }
     if success {
-        grant_clearcasting(world, caster);
+        // sc_mage.cpp1860: accumulated-random acquisitions are not predicted.
+        trigger_clearcasting(world, caster, 100.0, false);
     }
 }
 
@@ -314,23 +337,21 @@ pub(super) fn after_splinter_hit(world: &mut World, ctx: &EffectCtx) {
         return;
     }
     // sc_mage.cpp5406–5407: Infused Splinters rolls once per actual impact.
-    if roll(talent_value(world, ctx.caster, 1261080, 0)) {
-        let count = talent_value(world, ctx.caster, 1261080, 2) as u32;
-        grant_salvo(world, ctx.caster, count);
-    }
+    let chance = talent_value(world, ctx.caster, 1261080, 0);
+    let count = talent_value(world, ctx.caster, 1261080, 2) as u32;
+    grant_salvo(world, ctx.caster, count, chance);
 }
 
 fn finish_filler(world: &mut World, caster: Entity, spell: u32) {
     // sc_mage.cpp2860/2866/2942–2950: native grant amounts, then clear spent buffs.
     let effect = if spell == 30451 { 0 } else { 2 };
     let salvo = talent_value(world, caster, EXPANDED_MIND, effect) as u32;
-    grant_salvo(world, caster, salvo);
+    grant_salvo(world, caster, salvo, 100.0);
     expire(world, caster, CUMULATIVE);
     if spell == 1295924 {
         expire(world, caster, PRISMATIC);
-        if roll(talent_value(world, caster, 1295944, 0)) {
-            grant_clearcasting(world, caster);
-        }
+        let chance = talent_value(world, caster, 1295944, 0);
+        trigger_clearcasting(world, caster, chance, true);
     }
 }
 
@@ -385,6 +406,6 @@ fn finish_barrage(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let threshold = talent_value(world, caster, 1261082, 0);
     if threshold > 0.0 && f32::from(old_salvo) >= threshold {
         let refund = talent_value(world, caster, 1261082, 1) as u32;
-        grant_salvo(world, caster, refund);
+        grant_salvo(world, caster, refund, 100.0);
     }
 }

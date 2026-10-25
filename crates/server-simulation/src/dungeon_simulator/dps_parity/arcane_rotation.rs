@@ -85,6 +85,25 @@ fn bindings() -> Bindings {
     }
 }
 
+fn configure_reactions(
+    world: &mut World,
+    actor: Entity,
+    bindings: &Bindings,
+) -> Result<(), String> {
+    use crate::simc_apl_native::reaction::{ReactionSettings, configure};
+    // SimC76f8118 player.cpp1017–1020/1225–1226: pinned profile defaults.
+    let settings = ReactionSettings {
+        mean: 0.25,
+        stddev: 0.05,
+        offset: 0.1,
+        nu: 0.15,
+        maximum: 1.4,
+    };
+    let tracked =
+        ["clearcasting", "arcane_salvo", "overpowered_missiles"].map(|alias| bindings.buffs[alias]);
+    configure(world, actor, settings, &tracked)
+}
+
 fn actions() -> impl Iterator<Item = NativeAction<'static>> {
     ACTIONS
         .iter()
@@ -135,6 +154,7 @@ impl Rotation {
         encounter: Encounter,
     ) -> Result<Self, String> {
         let mut bindings = bindings();
+        configure_reactions(world, actor, &bindings)?;
         let equipment = Equipment::load(world, actor, &mut bindings)?;
         let rotation = Self {
             driver: Driver::new(program(profile)?),
