@@ -263,6 +263,7 @@ pub(crate) use creature::{
     creature_cast_ignoring_in_progress, creature_cast_interrupting_self,
 };
 use effects::{EffectCtx, UnhandledEffects};
+pub use scripts::last_combo_action;
 use targets::{Dest, Relation};
 
 /// `SpellInterruptFlags::Movement`.
