@@ -93,6 +93,7 @@ pub(crate) fn filter_secondary_targets(
 ) {
     policies::filter_secondary_targets(world, caster, spell, effect, primary, units);
     havoc::filter_dance_targets(world, caster, spell, primary, units);
+    midnight_items::filter_font_targets(spell, primary, units);
 }
 
 pub(super) fn apply_periodic_damage_policies(
@@ -103,6 +104,7 @@ pub(super) fn apply_periodic_damage_policies(
 ) {
     policies::after_periodic_damage(world, ctx, target, amount);
     spellslinger::after_periodic_damage(world, ctx, target);
+    midnight_items::after_periodic_damage(world, ctx, target);
 }
 
 pub(crate) fn owns_policy_proc(spell: u32) -> bool {
@@ -695,6 +697,7 @@ pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
         return Some(hook);
     }
     match spell_id {
+        midnight_items::FONT_SPLATTER => Some(midnight_items::splatter_damage),
         391374 | 391378 | 393055 | 393054 => Some(havoc::first_blood_damage),
         windwalker_dual_threat::DAMAGE => Some(windwalker_dual_threat::damage),
         windwalker_children::JADEFIRE => Some(windwalker_children::jadefire_damage),

@@ -47,6 +47,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Equipment
 
+- Font of Venomous Rage1297908's actual item-use channel snapshots native1297911 effect0 divided by its native base tick count (including the authored initial tick). Each channel damage tick launches native1307222 at the retained primary, with native1297911 effect1 per tick; its area excludes that primary and follows pinned reduced-AoE8 semantics. Native item level, role expression, channel timing and damage pipeline remain authoritative (SimC76f8118 unique_gear_midnight.cpp3803–3859).
+
 - `trinket.N.has_stat.<stat>` and `has_buff.<stat>` use the same native item stat-buff existence query, including `any_dps`; direct-damage-only items are false.
 - `trinket.N.has_use_damage` requires an actual native on-use ItemEffect whose spell/reachable native trigger effects deal direct, weapon or periodic damage/leech. Passive-only or stat-only trinkets are false; no item-ID lists or guessed script damage.
 - `trinket.N.cooldown.charges_fractional` reads native charge-category state or ordinary spell/category timers; fractional progress uses authored/resolved recharge duration, never a synthetic cooldown. Aggregate multiple item cooldown sources with pinned max semantics; no cooldown sources returns0.
