@@ -21,7 +21,7 @@ use shared::protocol::{
 };
 
 use super::instances::{InstanceResetResult, Now};
-use super::store::{DIFFICULTY_NORMAL, InstanceType, MapStore};
+use super::store::{InstanceType, MapStore};
 use super::{InMap, InstanceManager};
 use crate::auth::InWorld;
 use crate::group::GroupRegistry;

@@ -2,6 +2,7 @@
 //! Stormwind City and its exit trigger 503.
 
 use server_map_rules::maps::test_fixtures::*;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use bevy::ecs::system::RunSystemOnce;
@@ -13,7 +14,7 @@ use shared::components::{Health, MovementControl, Player, Position, Rotation};
 use shared::death::{Corpse, DeathState};
 use shared::protocol::*;
 
-use super::instances::{INSTANCE_UNLOAD_DELAY_SECS, InstanceEntrant};
+use super::instances::INSTANCE_UNLOAD_DELAY_SECS;
 use super::store::MapStore;
 use super::*;
 use crate::auth::{Authenticated, InWorld, SentTiles};

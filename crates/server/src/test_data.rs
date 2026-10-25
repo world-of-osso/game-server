@@ -1,6 +1,7 @@
 //! Real data files tests read. A missing file fails the test instead of letting it pass
 //! without testing anything; a test that may run without the data is `#[ignore]`d.
 
+#[cfg(test)]
 pub(crate) use server_map_rules::test_data::require;
 pub use server_map_rules::test_data::world_db_path;
 use std::path::PathBuf;

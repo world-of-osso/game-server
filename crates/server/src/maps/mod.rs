@@ -19,7 +19,7 @@ pub(crate) mod transfer;
 pub(crate) mod units;
 
 use bevy::prelude::*;
-use shared::components::{Player, Position};
+use shared::components::Player;
 
 pub use difficulty::{DungeonDifficulty, ServerClock};
 pub use instances::{HOSTED_CONTINENTS, InstanceManager};
