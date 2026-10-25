@@ -970,7 +970,7 @@ External resources, tooling, data sources, development workflow.
 
 ## systems/
 
-- [Shared SimC APL](systems/simc-apl.md) — literal expressions/variables/calls; corrected source-backed run/target24GREEN atad720fc3c (old inherited-child oracle withdrawn). Native Player/target admission1WW controlPASS/6RED at4f91688e8 →7GREEN27.17s at e99b879e8 after hp1026.
+- [Shared SimC APL](systems/simc-apl.md) — literal expressions, variables, list/target selection, source-row clocks and paid-tick channel decisions; native facts and cast admission stay caller-owned.
 
 - [Native weapon AP](systems/character-stats.md#native-weapon-attack-power--2026-10-23) — actual Tiger Palm91vs358–377 RED→four native GREEN13.89s; raw item-table AP, attack-type selection and aura366/unequip; parent integration gate pending.
 
