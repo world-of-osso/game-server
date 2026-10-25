@@ -72,6 +72,7 @@ fn dps_parity_ret_dawnlight_remainder_storm_extends_each_owned_dot() {
         CastTargets {
             unit: run.actor,
             primary: Some(run.targets[0]),
+            destination: None,
         },
     )
     .unwrap();
