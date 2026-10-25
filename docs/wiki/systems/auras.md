@@ -95,6 +95,8 @@ Actual repeated-Word pool integration, PvP scaling and effectiveness stay separa
 
 ## Native rolling periodic refresh — 2026-10-22
 
+This is the default native per-tick mode. The source-qualified [Warrior Deep Wounds contract](../../specs/dps-parity.md#fury-player-parity) selects a separate reapplication budget through `scripts::rolls_reapplication`; the source policy does not change Barbed, Echo, Ignite or leech defaults.
+
 `refresh::prepare_application(world,target,new,spell)` reads native Attr10
 `ROLLING_PERIODIC` and owns the single shared carry pass. It settles already-due
 old ticks once, then matches same caster/spell/source/effect index/aura type and

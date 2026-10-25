@@ -1,4 +1,5 @@
 //! Explicit missing-script policies; native spell records still own payloads.
+pub(super) mod pet_sets;
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, PowerType};
 use std::collections::HashSet;
@@ -99,6 +100,15 @@ enum Relationship {
         parent: u32,
         counter: u32,
         count_effect: u8,
+    },
+    SpenderCooldownRefund {
+        resource: PowerType,
+        parents: &'static [u32],
+        cooldowns: &'static [u32],
+        tenths_effect: u8,
+        bonus_states: &'static [u32],
+        bonus_spell: u32,
+        bonus_effect: u8,
     },
     SpenderAuraExtension {
         resource: PowerType,
@@ -496,6 +506,23 @@ const POLICIES: &[Policy] = &[
         spec: 261,
         talent: 51667,
         relationship: CUT_TO_THE_CHASE,
+    },
+    // SimC76f8118 sc_rogue.cpp3771/3836/4810/6034/6890 call8284–8305.
+    Policy {
+        name: "SIMC_OUTLAW_RESTLESS_BLADES",
+        spec: 260,
+        talent: 79096,
+        relationship: Relationship::SpenderCooldownRefund {
+            resource: PowerType::ComboPoints,
+            parents: &[2098, 315341, 51690, 315496, 441776],
+            cooldowns: &[
+                13750, 315341, 13877, 271877, 195457, 381989, 51690, 1214909, 2983,
+            ],
+            tenths_effect: 0,
+            bonus_states: &[1214935, 1214937],
+            bonus_spell: 1214937,
+            bonus_effect: 3,
+        },
     },
 ];
 
@@ -934,6 +961,7 @@ pub(in crate::spell_cast) fn after_triggered_cast(
     spell: &SpellInfo,
     depth: u8,
 ) {
+    super::resource_values::apply_producers(world, caster, spell);
     // SimC's common HoW execute also mirrors on Toll/Resonance/Sunrise.
     // Counter consumers remain foreground-only, so same-ID echoes cannot recurse.
     for policy in producers(spell.id) {
@@ -1055,6 +1083,9 @@ fn launch_scaled_payload(
 // CastEcho owns its source event predicate and the native shared ICD. Raw
 // CAST_SUCCESSFUL hints must not consume that ICD on unrelated/self phases.
 pub(crate) fn owns_policy_proc(spell: u32) -> bool {
+    if super::execution_counters::owns_proc(spell) || super::impact_procs::owns_proc(spell) {
+        return true;
+    }
     POLICIES.iter().any(|policy| match policy.relationship {
         Relationship::ProcReplacement { aura, .. } => policy.talent == spell || aura == spell,
         Relationship::CastEcho { .. } => policy.talent == spell,
@@ -1075,7 +1106,7 @@ pub(super) fn hit_hook(parent: u32) -> Option<super::ContextHitHook> {
         matches!(policy.relationship, Relationship::ProcReplacement { triggers, .. }
             if triggers.iter().any(|(spell, _)| *spell == parent))
     });
-    (replacement || hit_payloads(parent).next().is_some())
+    (replacement || hit_payloads(parent).next().is_some() || pet_sets::has_hit(parent))
         .then_some(cast_hit_payload as super::ContextHitHook)
 }
 
@@ -1100,6 +1131,7 @@ fn cast_hit_payload(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
         super::super::cast_triggered(world, ctx.caster, payload, Some(recipient), ctx.depth + 1);
     }
     produce_replacement_proc(world, ctx);
+    pet_sets::on_hit(world, ctx);
 }
 
 #[derive(Component, Default)]
@@ -1152,6 +1184,9 @@ fn roll_replacement_proc(
 
 fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
+        if let Relationship::SpenderCooldownRefund { parents, .. } = policy.relationship {
+            return parents.contains(&parent);
+        }
         matches!(policy.relationship,
         Relationship::OwnedPetSpellAfterCast { parent: trigger, .. }
         | Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
@@ -1174,6 +1209,9 @@ fn consumers(
             Relationship::SpenderHit { resource, .. } => resource,
             Relationship::SpenderAuraExtension {
                 resource, parents, ..
+            }
+            | Relationship::SpenderCooldownRefund {
+                resource, parents, ..
             } if parents.contains(&parent) => resource,
             _ => return false,
         };
@@ -1182,9 +1220,8 @@ fn consumers(
 }
 
 pub(super) fn after_cast_hook(parent: u32) -> Option<AfterCastHook> {
-    producers(parent)
-        .next()
-        .map(|_| apply_after_cast as AfterCastHook)
+    (producers(parent).next().is_some() || pet_sets::has_cast(parent))
+        .then_some(apply_after_cast as AfterCastHook)
 }
 
 fn selected(world: &World, caster: Entity, policy: &Policy) -> bool {
@@ -1235,6 +1272,9 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
                     crate::auras::spend_stack(world, caster, instance);
                 }
             }
+            Relationship::SpenderCooldownRefund { .. } => {
+                refund_spender_cooldowns(world, caster, spell, policy)
+            }
             Relationship::CounterAfterCast { .. } => grant_counter(world, caster, policy),
             Relationship::CastEcho { .. } => {
                 let depth = super::super::next_trigger_depth(world);
@@ -1246,6 +1286,64 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             }
             _ => unreachable!("after-cast policy iterator"),
         }
+    }
+    pet_sets::after_cast(world, caster, spell);
+}
+
+fn refund_spender_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo, policy: &Policy) {
+    let Relationship::SpenderCooldownRefund {
+        resource,
+        cooldowns,
+        tenths_effect,
+        bonus_states,
+        bonus_spell,
+        bonus_effect,
+        ..
+    } = policy.relationship
+    else {
+        return;
+    };
+    let Some(context) = &spell.cast_policy_context else {
+        warn!(
+            policy = policy.name,
+            spell = spell.id,
+            "Native spender cooldown refund lacks launch resources"
+        );
+        return;
+    };
+    let Some(&(_, points)) = context
+        .resources
+        .iter()
+        .find(|&&(power, _)| power == resource)
+    else {
+        warn!(
+            policy = policy.name,
+            spell = spell.id,
+            "Native spender refund resource is absent"
+        );
+        return;
+    };
+    if points <= 0.0 {
+        return;
+    }
+    // sc_rogue.cpp8286–8294: native tenths of a second per effective point;
+    // the high roll states amplify it using native Jackpot effect3.
+    let per_point = super::script_effect_value(world, caster, policy.talent, tenths_effect) / 10.0;
+    let mut seconds = f64::from(points * per_point);
+    if bonus_states
+        .iter()
+        .any(|&aura| crate::auras::has_aura(world, caster, aura))
+    {
+        seconds *= 1.0
+            + f64::from(super::script_effect_value(
+                world,
+                caster,
+                bonus_spell,
+                bonus_effect,
+            )) / 100.0;
+    }
+    for &cooldown in cooldowns {
+        super::reduce_cooldown(world, caster, cooldown, seconds);
     }
 }
 
@@ -1361,7 +1459,18 @@ pub(in crate::spell_cast) fn snapshot(
     {
         return None;
     }
-    let targets = capture_primary_targets(caster, spell, plan)?;
+    let needs_hit_targets = consumers(&resources, spell.id).any(|policy| {
+        selected(world, caster, policy)
+            && !matches!(
+                policy.relationship,
+                Relationship::SpenderCooldownRefund { .. }
+            )
+    });
+    let targets = if needs_hit_targets {
+        capture_primary_targets(caster, spell, plan)?
+    } else {
+        Vec::new()
+    };
     Some(Box::new(CastPolicyContext { resources, targets }))
 }
 

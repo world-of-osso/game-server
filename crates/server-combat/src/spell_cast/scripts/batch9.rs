@@ -64,6 +64,98 @@ pub(super) struct GroundPulses {
     depth: u8,
 }
 
+struct SourcedPulse {
+    root: u32,
+    child: u32,
+    activation_ms: u32,
+    period_ms: u32,
+}
+
+// SimC76f8118 sc_mage.cpp4181–4186/4197–4206: Orb activates after
+// at least500ms and pulses every500ms. Native84714 duration supplies15s;
+// native84721 supplies the radius, coefficients and damage modifiers.
+const SOURCED_PULSES: &[SourcedPulse] = &[SourcedPulse {
+    root: 84714,
+    child: 84721,
+    activation_ms: 500,
+    period_ms: 500,
+}];
+
+pub(super) fn after_cast_hook(spell: u32) -> Option<super::AfterCastHook> {
+    SOURCED_PULSES
+        .iter()
+        .any(|row| row.root == spell)
+        .then_some(spawn_sourced_pulses)
+}
+
+fn spawn_sourced_pulses(world: &mut World, caster: Entity, spell: &crate::spell_info::SpellInfo) {
+    let source = SOURCED_PULSES
+        .iter()
+        .find(|row| row.root == spell.id)
+        .expect("registered sourced pulse");
+    let Some(center) = spell
+        .cast_primary_target
+        .and_then(|target| targets::position(world, target))
+    else {
+        warn!(
+            spell = spell.id,
+            "Sourced ground pulse lacks its native action primary"
+        );
+        return;
+    };
+    let pulses = read_sourced_pulses(world, caster, spell, source, center);
+    let map = *world
+        .get::<crate::maps::InMap>(caster)
+        .expect("ground pulse owner map");
+    world.spawn((
+        pulses,
+        shared::components::Position {
+            x: center.x,
+            y: center.y,
+            z: center.z,
+        },
+        map,
+    ));
+}
+
+fn read_sourced_pulses(
+    world: &World,
+    caster: Entity,
+    spell: &crate::spell_info::SpellInfo,
+    source: &SourcedPulse,
+    center: Vec3,
+) -> GroundPulses {
+    let child = world
+        .resource::<SpellStore>()
+        .get(source.child)
+        .expect("native sourced pulse child");
+    let effect = child
+        .effects
+        .first()
+        .expect("native sourced pulse damage effect");
+    let now = crate::auras::aura_now(world);
+    let duration = f64::from(spell_cast::duration_ms(world, caster, spell)) / 1000.0;
+    let delay = spell_cast::missiles::destination_delay_ms(world, caster, spell, center)
+        .max(u64::from(source.activation_ms));
+    let first = now + delay as f64 / 1000.0;
+    let period = f64::from(source.period_ms) / 1000.0;
+    GroundPulses {
+        caster,
+        root: spell.id,
+        child: source.child,
+        cast_damage_multiplier: spell.cast_damage_multiplier,
+        radius: targets::effect_radius(effect),
+        cap: 0,
+        relation: targets::Relation::Enemy,
+        // The common scheduler includes its last tick. An immediate first
+        // pulse plus native duration/period therefore ends one period earlier.
+        expires_at: first + duration - period,
+        next_tick: first,
+        period,
+        depth: 1,
+    }
+}
+
 /// TC areatrigger_sha_earthquake::AddStunnedTarget: one set per actual field.
 #[derive(Component, Default)]
 struct EarthquakeStunnedTargets(HashSet<Entity>);

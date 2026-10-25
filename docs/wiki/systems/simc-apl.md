@@ -51,6 +51,8 @@ Pinned SimC76f8118 `player.cpp12146–12148` reads `current.distance_to_move`, n
 
 ## Shared literal fixture machinery
 
+The [parity harness](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/mod.rs) stores one `Option<Box<dyn SpecDriver>>`. Its sorted `spec_drivers!` table declares each rotation module and registers its factory, actor predicate and optional report key. Each module owns preparation, combat dispatch and report label. `supports_actor` defaults to both Player and Follower; overrides must be explicit. Elemental and Devastation no longer have Follower-only selection. Ret and Windwalker explicitly opt out for Player because their existing loaders require native follower fixtures. Shared preparation retains only native setup machinery. Existing report keys, including inactive nulls, remain unchanged. See the [contract](../../specs/dps-parity.md#literal-spec-drivers).
+
 After the explicit target-candidate interpreter landed, WW's count-only adapter rejected actual ST/3T runs atd45fe30e8 with `target_if requires explicit native target candidates`. WW now carries the actual supplied entity slice into target_ids; shared pd1035 Prepared/Execution preserves selected identities. This integration is not a first-target fallback, and per-fixture TTD still follows one global fixed-time clock. Same-binary ff8ba4206 actual300s ST/3T now pass the target seam at47064.44/81373.16, still−77.20%/−78.39% versus the requested reference, NOT parity; [exact failures/current receipts](../../handoffs/ww-source-census.md).
 
 `dungeon_simulator::dps_parity::literal_rotation` owns reusable native item/readiness/execution state; WW source/bindings/facts remain spec-local. Post-extraction original5GREEN at3e71b8aa2; FoF facing reproduction then5GREEN/1RED19.49s→6GREEN39.89s at0e34d8666. Native auto-attack must also put an existing CreatureState into Pursuing: native chase supplies facing, otherwise117418's native cone misses despite valid periodic metadata. No synthetic facing or FoF effect change; [proof and300s gaps](../../handoffs/ww-source-census.md#fof-literal-controller-root-cause). Player spells use the ordinary `SpellCastIntent`/`request_cast` path with an explicit target; NPC/follower spells retain `creature_cast`. A stale explicit Player target fails `NoTarget`, never becomes the primary target. Seven real native Human/WW cases at4f91688e8 produce1WW controlPASS/6genuine assertionRED →7GREEN27.17s at e99b879e8 after hp1026 (18m08 compile/0compiler warnings). [Scoped proof](../../handoffs/literal-player-dispatch-proof-ledger.md). The profile's Troll race is not asserted to be Human: the native actor is explicitly created/asserted as Human1. Readiness cannot authorize a later no-longer-known Player cast.
@@ -137,8 +139,19 @@ For an active channel, sample `Prepared::read_after_channel`, build live action-
 
 `call_action_list` retains its literal option values but is interpreter control, not an executable spell. Off-GCD traversal never changes a child's own Prepared admission. See the [behavior contract](../../specs/simc-apl.md) and [channel requirements](../../specs/dps-parity.md#literal-action-readiness-and-channels).
 
+## Rogue literal fixture and effective resource values
+
+The Outlaw adapter passes the profile's complete rows through the shared evaluator. Roll the Bones binds specialization action1214909, not the obsolete315508 trait endpoint. Shared Rogue facts retain action context for GCD queries and read permanent Energy capacity separately from temporary increases. These bindings do not establish numerical DPS parity.
+
+`CastPolicyContext.resources` stores `(PowerType, effective_value)` pairs at launch. Actual payment remains separate. `resource_values.rs` matches an earned Fang Strike aura through its native family mask, snapshots the native combo-point maximum even for a free finisher, and consumes the one-use window after ordinary execution. Multiplying damage by paid cost had produced zero-damage Dispatch casts.
+
+The shared spender-hit policy starts or extends native Slice and Dice after an eligible primary hit. Cut to the Chase reads native51667 seconds per effective point and315496 base duration; its cap follows the pinned maximum-point pandemic formula. Native producer-event qualification remains separate from value snapshots and consumption.
+
 ## Sources
 
+- [Outlaw adapter](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/outlaw_rotation.rs) — literal rows and native action bindings.
+- [Effective resource policies](../../../crates/server-combat/src/spell_cast/scripts/resource_values.rs) — pinned `sc_rogue.cpp1926,2021–2027` and native family-mask/pool data.
+- [Spender hit policies](../../../crates/server-combat/src/spell_cast/scripts/policies.rs) — pinned `sc_rogue.cpp3787,4386,4439,6891,8704–8716` and native aura amounts/duration.
 - [Havoc adapter](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/havoc_rotation.rs) — literal source rows and virtual action predicates.
 - [Demonic policy](../../../crates/server/src/spell_cast/scripts/havoc.rs) — pinned relationship with native payload and duration.
 
