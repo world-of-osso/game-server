@@ -195,6 +195,85 @@ fn devastation_mass_disintegrate_native_chain_and_consumption() {
 
 #[test]
 #[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_mid1_two_piece_sweep_bonus_is_primary_only() {
+    let damage = |with_tier: bool| {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(1467, 3).unwrap();
+        engage(&mut run);
+        let primary = run.targets[0];
+        crate::spell_cast::creature_cast_empowered_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            359073,
+            crate::spell_cast::CastTargets {
+                unit: primary,
+                primary: Some(primary),
+                destination: None,
+            },
+            1,
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 1264821));
+        if !with_tier {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 1264821,
+            );
+        }
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            1265872,
+            crate::spell_cast::CastTargets {
+                unit: primary,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        run.targets
+            .iter()
+            .map(|target| {
+                events
+                    .iter()
+                    .find(|event| {
+                        event.source == Some(run.actor.to_bits())
+                            && event.target == Some(target.to_bits())
+                            && event.spell_id == Some(1265872)
+                            && event.kind == shared::protocol::CombatLogKind::Damage
+                            && event.amount > 0
+                    })
+                    .expect("ordinary earned Sweep must really damage each native recipient")
+                    .amount
+            })
+            .collect::<Vec<_>>()
+    };
+    let baseline = damage(false);
+    let tier = damage(true);
+    for index in 0..3 {
+        // Native1264821 effect0 supplies50% to all; sc_evoker.cpp5691–5698
+        // applies native effect1's extra100% only to the selected primary.
+        let multiplier = if index == 0 { 3.0 } else { 1.5 };
+        let expected = f64::from(baseline[index]) * multiplier;
+        assert!(
+            (f64::from(tier[index]) - expected).abs() <= 3.0,
+            "native tier Sweep recipient{index}: actual{}, baseline{}, expected{expected}",
+            tier[index],
+            baseline[index]
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
 fn devastation_eternity_surge_earns_native_azure_sweep_action() {
     let mut run = prepare_literal(1467, 3).unwrap();
     engage(&mut run);

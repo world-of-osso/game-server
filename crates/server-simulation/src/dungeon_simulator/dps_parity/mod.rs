@@ -69,6 +69,7 @@ spec_drivers! {
     260 => outlaw_rotation,
     262 => elemental_rotation,
     263 => enhancement_rotation,
+    266 => demonology_rotation,
     269 => windwalker_rotation,
     577 => havoc_rotation,
     1467 => devastation_rotation,
@@ -288,7 +289,7 @@ fn literal_spec_selection_applies_to_player_and_follower() {
 #[test]
 fn literal_follower_only_specs_explicitly_preserve_their_actor_restriction() {
     use crate::followers::simulator::ParityActor;
-    for spec_id in [70, 269] {
+    for spec_id in [70, 266, 269] {
         assert!(measurement_driver(spec_id, &ParityActor::Follower).is_some());
         assert!(measurement_driver(spec_id, &ParityActor::Player { race: 1 }).is_none());
     }
@@ -331,6 +332,7 @@ fn spawn_reference(
     let copy = super::runtime::create_copy(&mut app);
     // Origin-centered parity fixtures have no frozen dungeon geometry.
     app.world_mut().remove_resource::<super::Space>();
+    crate::simc_apl_native::install_open_arena(app.world_mut());
     let level = profile
         .level
         .parse()
