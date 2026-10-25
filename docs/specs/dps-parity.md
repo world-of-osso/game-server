@@ -128,8 +128,6 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Fury player parity
 
-- Selected Unhinged386628 casts a free background native attack on odd Bladestorm scheduled ticks, excluding tick0. Arms71 uses Mortal Strike12294; Fury72 resolves Bloodthirst23881 through its live native overrides (Bloodbath during Recklessness). Preserve the native talent effect1 damage multiplier and ordinary parent pulses (`sc_warrior.cpp3257–3275,3313–3335`).
-
 - Slayer's Strike445579 uses one actor-wide PRD attempt counter, native Slayer's Dominance444767 chance (effect0 Fury, effect1 Arms), and its native ICD. Only pinned eligible landed impacts roll; autos never roll, and only Cleave rolls per target (`sc_warrior.cpp1651–1661,1693–1703`). Native spell payloads supply all damage.
 
 - Arms/Fury ordinary Execute consumes one live Sudden Death52437 stack after its foreground producer roll. A consumed stack grants native Imminent Demise445606 when both native passives29725/444769 are selected; background casts do not consume it (`sc_warrior.cpp4347–4352,4547–4554`).
@@ -139,7 +137,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [x] Spec72 uses `--actor player` and the complete pinned MID2 Fury APL through shared `literal_rotation`. Capture literal control before native setup, execute ordered precombat and submit normal native casts. Do not invent a follower profile. Native overrides select Reckless Abandon and Unrelenting Onslaught variants; native stats, costs, coefficients and trait legality remain authoritative.
 - [x] Fury Deep Wounds1261060 accepts only actual Execute main-hand280849 impacts; Whirlwind cannot grant it (SimC76f8118 `sc_warrior.cpp4452–4456`). Preserve native262115 damage and rolling periodic behavior; do not alter Arms71 producers.
 - [ ] Anger Management152278 reduces running Fury Avatar/Recklessness cooldowns from actual paid Rage, using native PowerType display units and effect2's Rage-per-second divisor; free background casts do not contribute (`sc_warrior.cpp1450–1455,1506–1517`).
-- [ ] Selected Unhinged386628 dispatches the live native Bloodthirst variant on odd Bladestorm227847/446035 effect0 ticks, including catch-up ticks, using the actual selected hostile target (`sc_warrior.cpp3257–3268,3316–3334`).
+- [ ] Selected Unhinged386628 dispatches Arms71 Mortal Strike12294 or Fury72's live native Bloodthirst23881 variant on odd Bladestorm227847/446035 effect0 ticks, including catch-up ticks and excluding tick0, using the actual selected hostile target and native effect1 damage multiplier. Preserve ordinary parent pulses (`sc_warrior.cpp3257–3275,3313–3335`).
+- Frenzy335077 grants one335082 stack per final Rampage201363 execution, not per impact or arbitrary melee event. Its native passive effect0 supplies each stack's value (`sc_warrior.cpp5581–5588,8411,9616`). Source-owned proc policies must prevent the broad native proc hint from independently firing the same aura or consuming its ICD.
 
 ### Shadow Priest literal parity controller
 

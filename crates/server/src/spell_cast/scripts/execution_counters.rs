@@ -33,6 +33,30 @@ struct ConsumedCounter {
     counter: u32,
 }
 
+struct ValuedExecution {
+    action: u32,
+    passive: u32,
+    payload: u32,
+    value_effect: u8,
+}
+
+const VALUED_EXECUTIONS: &[ValuedExecution] = &[
+    // SimC76f8118 sc_warrior.cpp5581–5588/8411/9616: only final Rampage
+    // execution grants Frenzy; its selected passive supplies the child's value.
+    ValuedExecution {
+        action: 201363,
+        passive: 335077,
+        payload: 335082,
+        value_effect: 0,
+    },
+];
+
+pub(super) fn owns_proc(spell: u32) -> bool {
+    VALUED_EXECUTIONS
+        .iter()
+        .any(|execution| execution.passive == spell)
+}
+
 const CONSUMERS: &[ConsumedCounter] = &[
     // SimC76f8118 sc_warrior.cpp4347–4352/4547–4554: Execute consumes
     // one SD stack after base execution, then grants selected Imminent Demise.
@@ -86,6 +110,7 @@ pub(super) fn consume_after_foreground_cast(world: &mut World, caster: Entity, a
 }
 
 pub(super) fn after_launch(world: &mut World, caster: Entity, action: u32) {
+    grant_valued_execution_auras(world, caster, action);
     for counter in COUNTERS.iter().filter(|counter| counter.action == action) {
         let Some(threshold) = read_threshold(world, caster, counter) else {
             continue;
@@ -96,6 +121,42 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, action: u32) {
                 caster,
                 counter.buff,
                 counter.resets,
+            );
+        }
+    }
+}
+
+fn grant_valued_execution_auras(world: &mut World, caster: Entity, action: u32) {
+    for execution in VALUED_EXECUTIONS
+        .iter()
+        .filter(|execution| execution.action == action)
+    {
+        let value = world.get::<ActiveAuras>(caster).and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == execution.passive && aura.caster == caster)
+                .and_then(|aura| {
+                    aura.effects
+                        .iter()
+                        .find(|effect| effect.index == execution.value_effect)
+                })
+                .map(|effect| effect.amount)
+        });
+        let Some(value) = value else {
+            continue;
+        };
+        if !crate::spell_cast::cast_triggered_with_effect0_amount(
+            world,
+            caster,
+            execution.payload,
+            Some(caster),
+            1,
+            value,
+        ) {
+            warn!(
+                ?caster,
+                payload = execution.payload,
+                "Native valued execution aura refused"
             );
         }
     }

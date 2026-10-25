@@ -29,6 +29,10 @@ const PROCS: &[ImpactProc] = &[
     },
 ];
 
+pub(super) fn owns_proc(spell: u32) -> bool {
+    PROCS.iter().any(|policy| policy.passive == spell)
+}
+
 #[derive(Component, Default)]
 struct ImpactProcAttempts(BTreeMap<u32, u32>);
 
