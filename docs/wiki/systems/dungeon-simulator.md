@@ -56,6 +56,8 @@ Azure requests ten runs but finishes with **nine process panics/missing reports 
 
 Startup readers use absolute worldDB aliases, so environment/cwd alone cannot freeze their source. `scripts/dps_parity_native.py` runs the compiled fixture in a bubblewrap read-only snapshot mount over the resolved startup path, with no unsandboxed alternate path. The process regression observed mutable data before the fix, then frozen/read-only bytes with unchanged host/snapshot files. Atc04ecc5b9, using isolated protocol2abc7fa (the then-landed canonical/master protocol), all five native controls pass158.48s: Human1, source file identity, full health clock/add replacement, explicit player rule gap and real-player gear/spawn. Locked all-target server check passes28.85s and formatting passes, with no warnings. The first post-merge native run had2passes/3startup failures because common and optional-pet paths registered PetControlPlugin twice; the existing sibling harness-only fix597d30ded was reused as c04ecc5b9, preserving one common registration. This changes no production pet mechanics. The Human adapter now requires native row1, matching pinned SimC; row33 is ThinHuman rather than another valid Human match.
 
+For the fast ST+3T measurement command (test profile, counts in parallel, about 19 s), see [the DPS parity spec](../../specs/dps-parity.md#implementation-inventory).
+
 The frozen-view continuation atc04ecc5b9 attempted exactly eight authorized single-target player cases, with unchanged input hashes and stable prepared snapshot throughout. All eight fail qualification; no repeat of the earlier10 positive-output cases was performed.
 
 | Specs | Observed boundary | Proof level |
