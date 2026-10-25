@@ -290,3 +290,38 @@ fn literal_ww_native_sck_snapshot_later_parent_does_not_reuse_old_bonus() {
     let factors = assert_tick_damage(&run, 1.0, before);
     write_factor_receipt("sck-later-parent-snapshot", &factors);
 }
+
+#[test]
+#[ignore = "real equipped MID2 FoF-only builder and RSK consumption"]
+fn literal_ww_native_unbroken_source_fof_only_and_rsk_consumption() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(269, 1).unwrap();
+    let started = run.app.world().resource::<Time>().elapsed();
+    super::super::install_fixture_lifetimes(&mut run, started);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, PRODUCER));
+    for _ in 0..3 {
+        super::tests::cast(&mut run, 100780);
+    }
+    assert!(
+        buff(&run).is_none(),
+        "TP must not earn the FoF-execute-only tier buff"
+    );
+    super::tests::cast(&mut run, 113656);
+    for _ in 0..200 {
+        if !crate::auras::has_aura(run.app.world(), run.actor, 113656) {
+            break;
+        }
+        run.app.update();
+    }
+    assert_eq!(
+        buff(&run)
+            .expect("actual FoF executions earn native tier stacks")
+            .stacks,
+        6
+    );
+    super::tests::cast(&mut run, 107428);
+    assert!(
+        buff(&run).is_none(),
+        "actual RSK damage consumes its earned tier buff"
+    );
+}
