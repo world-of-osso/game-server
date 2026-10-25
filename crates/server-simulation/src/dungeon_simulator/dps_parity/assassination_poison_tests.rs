@@ -1,4 +1,61 @@
 //! Native coating procs must produce their sourced damage through real attacks.
+
+#[test]
+#[ignore = "requires prepared259 private native DB and player actor"]
+fn rogue_kingsbane_earned_poison_hits_stack_native_ramp_until_dot_ends() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(259, 1).unwrap();
+    engage(&mut run);
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
+    let mut peak_stacks = 0;
+    for _ in 0..800 {
+        drive_player(&mut run).unwrap();
+        run.app.update();
+        if let Some(auras) = run.app.world().get::<crate::auras::ActiveAuras>(run.actor) {
+            for aura in auras.iter().filter(|aura| aura.spell_id == 394095) {
+                peak_stacks = peak_stacks.max(aura.stacks);
+                let dot = run
+                    .app
+                    .world()
+                    .get::<crate::auras::ActiveAuras>(run.targets[0])
+                    .unwrap()
+                    .iter()
+                    .find(|dot| dot.spell_id == 385627 && dot.caster == run.actor)
+                    .expect("Kingsbane ramp cannot outlive its owned dot");
+                assert_eq!(aura.expires_at, dot.expires_at);
+            }
+        }
+    }
+    assert!(
+        peak_stacks > 5,
+        "earned lethal poison hits must stack native394095, got {peak_stacks}"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 394095),
+        "ramp must end with Kingsbane rather than persist to the next cast"
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let ticks: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(385627)
+                && event.kind == CombatLogKind::Damage
+                && event.periodic
+                && !event.crit
+        })
+        .collect();
+    assert!(ticks.len() > 3, "actual Kingsbane ticks required");
+    assert!(
+        ticks.iter().map(|tick| tick.amount).max().unwrap() > ticks[0].amount * 2,
+        "the actual periodic damage must use the earned ramp, not only display stacks"
+    );
+}
 use super::*;
 use shared::protocol::CombatLogKind;
 
