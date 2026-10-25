@@ -1,5 +1,10 @@
+//! Static source records only; live spawning remains in server.
+mod catalog;
+use bevy::prelude::*;
+pub use catalog::{Catalog, Spawn, load_catalog};
+
 #[derive(Component, Debug, Clone)]
-pub(crate) struct WorldAreaTrigger {
+pub struct WorldAreaTrigger {
     pub spawn_id: u64,
     pub create_properties_id: u32,
     pub create_properties_custom: bool,
@@ -13,5 +18,3 @@ pub(crate) struct WorldAreaTrigger {
     pub phase_id: u32,
     pub phase_group: u32,
 }
-
-

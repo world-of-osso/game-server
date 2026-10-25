@@ -259,7 +259,7 @@ pub struct AreaTriggerTeleport {
 impl AreaTriggerShape {
     /// `ShapeType` 0 (sphere) or 1 (box) from the `AreaTrigger.db2` columns `Radius` and
     /// `Box_length/width/height/yaw`; other shapes are not modelled.
-    pub(crate) fn from_db2(
+    pub fn from_db2(
         shape_type: u32,
         radius: f32,
         [length, width, height, yaw]: [f32; 4],
@@ -324,7 +324,7 @@ pub struct MapStore {
     /// Unambiguous CASC journal → TDB map/display joins: (map, creature) → encounter bit.
     pub raid_creature_encounters: HashMap<(u32, u32), u32>,
     pub area_triggers: HashMap<u32, Vec<AreaTriggerTeleport>>,
-    pub(crate) world_area_triggers: crate::world_area_triggers::Catalog,
+    pub world_area_triggers: crate::world_area_triggers::Catalog,
     pub safe_locs: HashMap<u32, WorldLocation>,
     /// Nonzero WorldSafeLocs.TransportSpawnId: location coordinates are ship-relative.
     pub safe_loc_transports: HashMap<u32, u32>,
@@ -493,13 +493,6 @@ impl MapStore {
 }
 
 pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
-    #[cfg(any(test, feature = "test-support"))]
-    return crate::test_data::catalog_cache::load_connection(conn, || read_map_store(conn));
-    #[cfg(not(any(test, feature = "test-support")))]
-    read_map_store(conn)
-}
-
-fn read_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
     let safe_locs = load_safe_locs(conn)?;
     Ok(MapStore {
         maps: load_maps(conn)?,

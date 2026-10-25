@@ -1,9 +1,8 @@
 //! World-static AreaTriggers, separate from DB2 portals and spell-owned fields.
 //! TC a352b1fa AreaTrigger.cpp363–376: authored spawns have duration -1 and no caster.
-mod catalog;
+pub(crate) use server_map_rules::world_area_triggers::WorldAreaTrigger;
 
 use bevy::prelude::*;
-pub(crate) use catalog::{Catalog, load_catalog};
 use shared::components::Rotation;
 
 use crate::maps::{InMap, MapStore};
@@ -17,7 +16,7 @@ pub(crate) fn spawn_map(world: &mut World, map: InMap, difficulty: u32) {
         .world_area_triggers
         .spawns(map.map_id, population);
     for spawn in spawns {
-        let area = spawn.area;
+        let area: WorldAreaTrigger = spawn.area;
         trace!(spawn = area.spawn_id, properties = area.create_properties_id,
             custom = area.create_properties_custom, entry = area.template_id,
             template_custom = area.template_custom, visual = ?area.visual_spell,

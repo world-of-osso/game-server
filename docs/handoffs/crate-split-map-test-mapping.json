@@ -1,0 +1,300 @@
+{
+  "base": "9b198909465d014ba78f232817a5b2ce4286ba1c",
+  "pure_move": "45a4924f9",
+  "total": 32,
+  "enabled": 32,
+  "ignored": 0,
+  "should_panic": 0,
+  "cases": [
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::world_population_expansion_maps_admit_players_without_dungeon_copies",
+      "new_name": "maps::tests::world_population_expansion_maps_admit_players_without_dungeon_copies",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "ce7d055466b988dc3ce82633d8d40b1acd34e46a14f48b5a3252d695bbf58d24"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::arena_roster_reservation_admits_only_its_own_map_copy",
+      "new_name": "maps::tests::arena_roster_reservation_admits_only_its_own_map_copy",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "74b27387fe0a74ceb8c8d0774559570de076c975f688676815c7a5055c473813"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::housing_map_rows_keep_authored_identity_without_public_admission",
+      "new_name": "maps::tests::housing_map_rows_keep_authored_identity_without_public_admission",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "c99386809c9d662947156010316c89ee94f88ba5185ed0c2804fc61bfcfa7188"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::housing_copies_require_authority_and_isolate_properties_without_difficulty",
+      "new_name": "maps::tests::housing_copies_require_authority_and_isolate_properties_without_difficulty",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "db1d7e87ac5a1acc20148f839a9bdc5549fdeef9c63b9b9bdcb4881652a3c138"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::stockade_entrance_trigger_leads_to_its_arrival_point_and_the_exit_back",
+      "new_name": "maps::tests::stockade_entrance_trigger_leads_to_its_arrival_point_and_the_exit_back",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "f4bb5fb84799de65bbd8205b804eddcf09956c9b29efedea7a125831db46927e"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::a_stockade_death_releases_to_the_stockade_graveyard_in_stormwind",
+      "new_name": "maps::tests::a_stockade_death_releases_to_the_stockade_graveyard_in_stormwind",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "1cfd0442f6469700aed91aa0c9817f23a5bcaa05bd298e43fd93be646d52df00"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::group_members_share_a_stockade_copy_and_a_solo_player_gets_its_own",
+      "new_name": "maps::tests::group_members_share_a_stockade_copy_and_a_solo_player_gets_its_own",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "f3c0dcc32508e123dcf0e0b6f1ddbc6b4bfed8dc0bd1edebed631872f9554a52"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::warsong_rosters_share_only_their_reserved_copy_without_dungeon_locks",
+      "new_name": "maps::tests::warsong_rosters_share_only_their_reserved_copy_without_dungeon_locks",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "ed2e3f9de5ac1a3a7e465abd24d6a8b52088b96fbc9af61cd65a58bb0597d967"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::a_full_stockade_copy_refuses_the_sixth_player_and_a_stranger_to_its_group",
+      "new_name": "maps::tests::a_full_stockade_copy_refuses_the_sixth_player_and_a_stranger_to_its_group",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "e2383f044fb5d7cb9ab60989d5fba23a4831886a8be955a93ba0ee5458be4851"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::an_empty_copy_unloads_after_thirty_minutes_and_comes_back_fresh",
+      "new_name": "maps::tests::an_empty_copy_unloads_after_thirty_minutes_and_comes_back_fresh",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "30296835856cdced88df163b7f8cee36a2bc208091483eb86fc62179b8835774"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::world_maps_without_npc_data_are_not_hosted",
+      "new_name": "maps::tests::world_maps_without_npc_data_are_not_hosted",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "634d678a5b109f410176bffa678528de57121c84da575f780a90b512c13a5b76"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::a_level_one_player_may_enter_a_dungeon_without_a_level_condition",
+      "new_name": "maps::tests::a_level_one_player_may_enter_a_dungeon_without_a_level_condition",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "477e88b8d15321b505d6acfd99e5431b76385b0642d52a03ff4a3be6018b39a7"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::grim_batol_offers_three_difficulties_and_the_stockade_downscales_to_normal",
+      "new_name": "maps::tests::grim_batol_offers_three_difficulties_and_the_stockade_downscales_to_normal",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "5c4f9b91ef29396f47ae5b7bae6c479c0e519deae964685d81aeffb6c9faa482"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::a_heroic_copy_is_created_at_heroic_and_normal_is_another_copy",
+      "new_name": "maps::tests::a_heroic_copy_is_created_at_heroic_and_normal_is_another_copy",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "b9a95c968c5338bea00c03b1f6c704ff4faeac446222b6237ce06921fd59b261"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::an_expired_lock_resets_its_empty_copy",
+      "new_name": "maps::tests::an_expired_lock_resets_its_empty_copy",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "e0c1d7c743edeb13f4f3eb71b9906b37612f7f3de91e346ad5ee1dd490c2e92a"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::a_difficulty_change_resets_and_forgets_the_players_unlocked_copies",
+      "new_name": "maps::tests::a_difficulty_change_resets_and_forgets_the_players_unlocked_copies",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "80ceaf9ed4994af5d30c71ef8550b73f79dda61850d4b8a01bcea8d05901e8a0"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::raid_entry_legacy_raid_copy_and_weekly_bind_resume",
+      "new_name": "maps::tests::raid_entry_legacy_raid_copy_and_weekly_bind_resume",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "d4c0263022e23c49394923f0100485aa98ba355fa16e5d37f474ecb2a168bf80"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::raid_entry_current_requires_raid_but_legacy_allows_solo_and_resolves_separate_selections",
+      "new_name": "maps::tests::raid_entry_current_requires_raid_but_legacy_allows_solo_and_resolves_separate_selections",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "538cb4baf9107b2a52f858af2fa6220793d04f185bc126287cdea325171b858c"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::raid_entry_weekly_reset_is_expired_at_tuesday_1500_not_a_second_later",
+      "new_name": "maps::tests::raid_entry_weekly_reset_is_expired_at_tuesday_1500_not_a_second_later",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "48bfa439d24d66e680922d6721bb08cb2e2b0e2cece843974ce5d26bed903dd0"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::raid_entry_legacy_flexible_lock_uses_encounters_not_one_instance_id",
+      "new_name": "maps::tests::raid_entry_legacy_flexible_lock_uses_encounters_not_one_instance_id",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "1299016d52fd0bfb5d1eeb420756374464579c7edb5b19b2f5119bf018fbd449"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::raid_entry_extended_copy_does_not_expire_at_its_original_weekly_reset",
+      "new_name": "maps::tests::raid_entry_extended_copy_does_not_expire_at_its_original_weekly_reset",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "0f6f4c70b99fbbe1baa9518cacbfe7e3b8a4ba814aed70511500a0d863614149"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::tests::raid_entry_flexible_saved_player_can_join_equal_progress_but_not_unkilled_encounters",
+      "new_name": "maps::tests::raid_entry_flexible_saved_player_can_join_equal_progress_but_not_unkilled_encounters",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "0c1ad53f2e5e08ed3ba1756442f7dc127e323c3fe4c23ad89306349c7a2cd505"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::locks::tests::daily_and_weekly_resets_fall_on_retail_reset_hour",
+      "new_name": "maps::locks::tests::daily_and_weekly_resets_fall_on_retail_reset_hour",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "683024f67c044e444f3da5059c2680ca7ac92dd8901d157eef6968b7dcdfc0ba"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::locks::tests::a_normal_dungeon_never_locks",
+      "new_name": "maps::locks::tests::a_normal_dungeon_never_locks",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "47d2beba468e9c13d483f69b1ed89ba39caa62ac09c8c076274afeecf4d4c5b3"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::locks::tests::a_new_heroic_copy_locks_its_owner_only_temporarily_until_a_boss_dies",
+      "new_name": "maps::locks::tests::a_new_heroic_copy_locks_its_owner_only_temporarily_until_a_boss_dies",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "c3815f2ee62e52ff767d9fae1d01cabc7b9dfbc40045e547b8fd1e9c9492c834"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::locks::tests::a_heroic_boss_kill_saves_the_player_to_that_copy_until_the_daily_reset",
+      "new_name": "maps::locks::tests::a_heroic_boss_kill_saves_the_player_to_that_copy_until_the_daily_reset",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "d8265cb0485aac61497f6cd6ed9ea35752906672451546f45429d30a35adbd63"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::locks::tests::a_kill_after_the_reset_starts_a_fresh_lock",
+      "new_name": "maps::locks::tests::a_kill_after_the_reset_starts_a_fresh_lock",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "205c0171e45c841b913b50a3d3a275526b132691e5448a4a25af017deacd87bf"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::locks::tests::an_extended_lock_lasts_one_more_period_and_survives_its_reset",
+      "new_name": "maps::locks::tests::an_extended_lock_lasts_one_more_period_and_survives_its_reset",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "f7c554e54b32b6852d89e0bcdd0b0b6f338a409026996e8b1df97e4bdff87b5e"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::locks::tests::mythic_encounter_locks_record_kills_without_binding_to_a_copy",
+      "new_name": "maps::locks::tests::mythic_encounter_locks_record_kills_without_binding_to_a_copy",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "77c1e188c428e012d75fe1276ad68a05953772468661ddd41f8393e1384927f0"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::locks::tests::gm_reset_expires_unused_locks_at_the_last_reset",
+      "new_name": "maps::locks::tests::gm_reset_expires_unused_locks_at_the_last_reset",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "8b42e1efebfbde4ebad5c5117ad28ceba54cd4d24f10cb90ee50503d76ee51c3"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "maps::locks::tests::saved_locks_round_trip_without_temporary_locks",
+      "new_name": "maps::locks::tests::saved_locks_round_trip_without_temporary_locks",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "1382038175a698b4008970de34832edf1ea98598f067a2e8cbdd0ba7a9befea1"
+    },
+    {
+      "old_package": "server",
+      "new_package": "server-map-rules",
+      "old_name": "terrain_height::tests::wow_bevy_coordinate_round_trip",
+      "new_name": "terrain_height::tests::wow_bevy_coordinate_round_trip",
+      "ignored": false,
+      "should_panic": false,
+      "source_sha256": "87566a87c7a7c535016b8f1babc19ba874a238ccae4be3d3f7b314c9a429eaa6"
+    }
+  ],
+  "retained_in_server": "All native map transfer/PvP/housing/death/spawn/script integration tests; module paths and flags unchanged. Only22 independent root map tests,9lock tests and1coordinate test move.",
+  "fixture_ownership": "Existing immutable map_store/entrant/at/close constants/helpers and world_db_path/require have one lower feature-gated owner; core reuses them. Core retains its unchanged catalog-cache decorator over the lower decoder. All relative asset paths stay at workspace/crates/<package> depth."
+}

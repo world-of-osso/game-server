@@ -1,3 +1,5 @@
+use super::*;
+
 #[test]
 fn wow_bevy_coordinate_round_trip() {
     let cases = [
@@ -22,4 +24,3 @@ fn wow_bevy_coordinate_round_trip() {
         );
     }
 }
-

@@ -12,6 +12,7 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use redb::{Database, ReadableDatabase, TableDefinition};
+pub use server_map_rules::maps::{DungeonDifficulty, ServerClock};
 use shared::components::Player;
 use shared::protocol::{
     DungeonDifficultySet, InstanceChannel, InstanceInfo, InstanceReset, InstanceResetFailed,

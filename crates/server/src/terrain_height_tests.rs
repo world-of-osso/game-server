@@ -218,7 +218,6 @@ fn height_at_chunk_boundary_edges() {
     assert!((map.height_at(min_x, corner_y).unwrap() - 50.0).abs() < 0.01);
 }
 
-
 #[test]
 fn multiple_chunks_loaded_and_routed_correctly() {
     // Two adjacent chunks with different base heights

@@ -19,10 +19,10 @@ use std::collections::{HashMap, HashSet};
 use bevy::prelude::*;
 use shared::protocol::TransferAbortReason;
 
+use super::GroupId;
 use super::InMap;
 use super::locks::{InstanceLocks, LockData, NormalInstanceLock, next_reset_time};
 use super::store::{InstanceType, MapDifficulty, MapStore};
-use crate::group::GroupId;
 
 #[path = "housing.rs"]
 mod housing;

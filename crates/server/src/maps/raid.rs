@@ -7,6 +7,7 @@ use crate::group::GroupRegistry;
 use crate::persistence::{ClientId, GameDatabase};
 use bevy::prelude::*;
 use redb::{Database, ReadableDatabase, TableDefinition};
+pub use server_map_rules::maps::RaidDifficulty;
 use shared::components::Player;
 use shared::protocol::{RaidDifficultySet, SetRaidDifficulty};
 

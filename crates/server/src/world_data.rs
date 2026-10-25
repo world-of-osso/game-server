@@ -770,6 +770,8 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<CreatureSpawn> {
     })
 }
 
+pub(crate) use server_map_rules::world_data::parse_spawn_difficulties;
+
 /// 0 in a spawn override column means the template's value.
 fn nonzero(value: i64) -> Option<u32> {
     (value != 0).then_some(value as u32)

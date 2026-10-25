@@ -1,3 +1,7 @@
+use super::store::DIFFICULTY_NORMAL;
+use bevy::prelude::*;
+use shared::components::Position;
+
 /// The map copy an entity is in.
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct InMap {
@@ -33,7 +37,6 @@ impl WorldLocation {
     }
 }
 
-
 /// `Player::m_dungeonDifficulty`.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DungeonDifficulty(pub u32);
@@ -43,7 +46,6 @@ impl Default for DungeonDifficulty {
         Self(DIFFICULTY_NORMAL)
     }
 }
-
 
 /// The wall clock of instance locks and auction expiry (`GameTime::GetSystemTime`), shifted by
 /// `offset_secs` (`game-server-admin clock-advance`) or pinned by tests.
@@ -65,7 +67,6 @@ impl ServerClock {
     }
 }
 
-
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, bitcode::Encode, bitcode::Decode)]
 pub struct RaidDifficulty {
     pub primary: u32,
@@ -79,5 +80,3 @@ impl Default for RaidDifficulty {
         }
     }
 }
-
-

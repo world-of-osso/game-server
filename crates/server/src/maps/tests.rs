@@ -1,7 +1,7 @@
 //! Map transfers and dungeon copies on real world.db data: the Stormwind Stockade (map 34), its entrance area trigger 101 in
 //! Stormwind City and its exit trigger 503.
 
-use std::sync::OnceLock;
+use server_map_rules::maps::test_fixtures::*;
 use std::time::Duration;
 
 use bevy::ecs::system::RunSystemOnce;
@@ -22,19 +22,10 @@ use crate::group::{GroupRegistry, OnlineMember, OnlineView};
 use crate::networking::{CombatTarget, PlayerLink};
 use crate::persistence::ClientId;
 
-
-
-/// `areatrigger_teleport` 101 "Stormwind Jail Entrance Target": its AreaTrigger box
-/// center in Stormwind City.
-/// `world_safe_locs` 3599 inside the Stockade.
-/// `world_safe_locs` 3618 "Stormwind Low Prison Exit Target".
 /// Area trigger 503's box center inside the Stockade.
 const STOCKADE_EXIT_TRIGGER: Vec3 = Vec3::new(48.0937, 0.933267, -13.7769);
-/// `world_safe_locs` 1854 "Stormwind Stockade, GY", the graveyard of zone 717.
 /// Ratchet, Northern Barrens (Kalimdor).
 const RATCHET: Vec3 = Vec3::new(-956.0, -3754.0, 5.0);
-
-
 
 #[test]
 fn housing_wire_purchase_waits_for_arrival_and_restores_admission_after_database_reopen() {
@@ -367,7 +358,6 @@ fn housing_harness(db: redb::Database) -> Harness {
     .unwrap()
 }
 
-
 #[path = "tests_battleground_nodes.rs"]
 mod battleground_nodes;
 #[path = "tests_skirmish_requeue.rs"]
@@ -514,7 +504,6 @@ fn arathi_authored_capture_points_are_loadable_and_usable() {
     assert!(points.0.iter().all(|point| point.info.is_usable()));
 }
 
-
 fn wow(position: &Position) -> Vec3 {
     let (x, y, z) = crate::terrain_height::bevy_to_wow(position.x, position.y, position.z);
     Vec3::new(x, y, z)
@@ -524,23 +513,6 @@ fn bevy(wow: Vec3) -> Position {
     let (x, y, z) = crate::terrain_height::wow_to_bevy(wow.x, wow.y, wow.z);
     Position { x, y, z }
 }
-
-
-
-/// 2026-09-27 12:00 UTC (a Sunday): the instance-lock clock of these tests.
-
-/// A Normal-difficulty entrant; a grouped one's leader is character 1.
-
-/// Elapsed seconds `elapsed` on Sunday noon.
-
-
-
-
-
-
-/// The Culling of Stratholme (595) Normal: MapDifficulty 91's conditions (40817, 43808)
-/// carry no ContentTuning, so no level is required.
-
 
 // --- App-level transfers ---
 
@@ -3322,7 +3294,6 @@ fn releasing_in_the_stockade_resurrects_the_player_at_the_stockade_graveyard() {
 
 // --- Difficulties and instance locks (Grim Batol, map 670) ---
 
-/// `Difficulty.db2` Heroic and (five-player) Mythic.
 /// `areatrigger_teleport` 6179 "Grim Batol Entrance" box center in the Twilight Highlands.
 const GRIM_BATOL_ENTRANCE_TRIGGER: Vec3 = Vec3::new(-4042.39, -3444.45, 295.0);
 /// `world_safe_locs` 3957 inside Grim Batol.
@@ -3331,10 +3302,6 @@ const GRIM_BATOL_ARRIVAL: Vec3 = Vec3::new(-624.155, -189.365, 272.04);
 const UMBRISS: u32 = 39625;
 const TROGG_DWELLER: u32 = 39450;
 const EASTERN_KINGDOMS: InMap = InMap::continent(0);
-/// 2026-09-27 15:00 UTC: the daily reset after `SUNDAY_NOON`.
-
-
-
 
 #[test]
 fn a_heroic_kill_locks_the_player_to_its_copy_which_comes_back_with_the_boss_dead() {
@@ -3396,8 +3363,6 @@ fn a_heroic_kill_locks_the_player_to_its_copy_which_comes_back_with_the_boss_dea
     assert!(normal.created);
     assert_eq!(instances.initial_done_bosses(normal.map), 0);
 }
-
-
 
 impl Harness {
     fn enter_grim_batol(&mut self, who: &Traveler) {
@@ -3613,9 +3578,6 @@ fn only_a_group_leader_sets_the_groups_difficulty_for_every_member() {
     );
 }
 
-
-
-
 #[test]
 #[ignore = "needs RAID_WORLD_DB: a prepared raid world.db copy (docs/specs, raid-entry)"]
 fn raid_entry_authentic_lucifron_death_saves_only_players_of_his_copy() {
@@ -3719,8 +3681,6 @@ fn raid_entry_authentic_lucifron_death_saves_only_players_of_his_copy() {
     );
     assert_eq!(entries, vec![12118]);
 }
-
-
 
 #[test]
 fn raid_entry_only_leader_sets_raid_selections_over_the_real_message_receiver_outside_instances() {

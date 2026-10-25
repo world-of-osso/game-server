@@ -9,9 +9,8 @@
 
 mod area_triggers;
 pub(crate) mod difficulty;
-pub(crate) mod graveyard;
-pub mod instances;
-pub(crate) mod locks;
+pub use server_map_rules::maps::{InMap, WorldLocation, instances};
+pub(crate) use server_map_rules::maps::{graveyard, locks};
 mod login;
 pub(crate) mod persistence;
 pub(crate) mod raid;

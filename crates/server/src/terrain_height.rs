@@ -1,3 +1,5 @@
+pub(crate) use server_map_rules::terrain_height::{bevy_to_wow, wow_to_bevy};
+
 /// Yards per MCNK chunk side (100/3).
 const CHUNK_SIZE: f32 = 100.0 / 3.0;
 /// Distance between outer grid vertices.
