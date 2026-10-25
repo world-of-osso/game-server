@@ -1,32 +1,27 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
 mod active_enemy_tests;
-mod arms_rotation;
 mod arms_tests;
 mod assassination_energy_tests;
 mod assassination_knowledge_tests;
 mod assassination_mechanics_tests;
 mod assassination_poison_tests;
-mod assassination_rotation;
 mod aura342_tests;
 mod barbed_budget_tests;
 #[cfg(test)]
 mod beast_mastery_mechanics_tests;
 #[cfg(test)]
 mod beast_mastery_pet_tests;
-mod beast_mastery_rotation;
 mod composite_precombat_tests;
-mod devastation_rotation;
 mod devastation_tests;
+mod driver_tests;
 mod dummy_reference_tests;
 mod elemental_ascendance_tests;
 mod elemental_mechanics_tests;
-mod elemental_rotation;
 mod elemental_rotation_tests;
 mod engagement_tests;
 mod enhancement_generation_tests;
 mod enhancement_mechanics_tests;
 mod enhancement_operand_tests;
-mod enhancement_rotation;
 mod enhancement_strike_tests;
 mod enhancement_tests;
 mod equipment_input_tests;
@@ -35,22 +30,21 @@ mod feral_native_tests;
 mod feral_tests;
 mod fire_gap_tests;
 mod fire_literal_tests;
-mod fire_rotation;
 mod firestarter_tests;
-mod frost_mage_rotation;
 mod frost_mage_tests;
-mod fury_rotation;
 mod gear_profile_tests;
 mod haste_tests;
 mod havoc_fact_tests;
-mod havoc_rotation;
 mod havoc_tests;
 mod health_aura_state_tests;
 mod howl_tests;
 #[cfg(test)]
 mod hunter_bloodshed_tests;
+mod hunter_cadence_tests;
+mod hunter_explosive_tests;
 #[cfg(test)]
 mod hunter_focus_tests;
+mod hunter_followup_tests;
 #[cfg(test)]
 mod hunter_melee_tests;
 #[cfg(test)]
@@ -60,8 +54,8 @@ mod literal_ranged_attack_tests;
 pub(crate) mod literal_rotation;
 mod marksmanship_fact_tests;
 mod marksmanship_mechanics_tests;
-mod marksmanship_rotation;
-mod outlaw_rotation;
+mod outlaw_cleave_tests;
+mod outlaw_resource_tests;
 mod outlaw_tests;
 mod owner_cooldown_tests;
 mod pack_tactics_tests;
@@ -94,7 +88,6 @@ mod ret_proc_rate_tests;
 mod ret_purpose_tests;
 mod ret_resonance_phase_tests;
 mod ret_resource_tests;
-mod ret_rotation;
 mod ret_sentence_tests;
 mod ret_storm_gap_tests;
 mod ret_tier_tests;
@@ -104,7 +97,6 @@ mod ret_trigger_resource_tests;
 mod ret_wake_tests;
 mod rogue_finisher_tests;
 mod shadow_mastery_tests;
-mod shadow_rotation;
 mod shadow_slam_tests;
 mod shadow_tests;
 mod shaman263_proc_tests;
@@ -115,7 +107,6 @@ mod snakeskin_tests;
 mod trigger_primary_tests;
 mod warrior_proc_tests;
 mod warrior_stat_tests;
-mod windwalker_rotation;
 use crate::simc_apl_native::{FixtureAdds, FixtureTarget};
 use bevy::prelude::*;
 use serde_json::{Value, json};
@@ -132,6 +123,64 @@ const ADD_LIFETIME: Duration = Duration::from_secs(30);
 // SimC76f8118 raid_event.cpp2700–2701: equal cooldown/duration adds10ms.
 const ADD_INTERVAL: Duration = Duration::from_millis(30_010);
 
+trait SpecDriver: std::any::Any {
+    fn supports_actor(_identity: &crate::followers::simulator::ParityActor) -> bool
+    where
+        Self: Sized,
+    {
+        true
+    }
+
+    fn drive(&mut self, world: &mut World, actor: Entity, targets: &[Entity])
+    -> Result<(), String>;
+    fn label(&self) -> &'static str;
+    fn report(&self) -> Value {
+        Value::Null
+    }
+}
+
+type PrepareDriver = fn(&mut Run) -> Result<Box<dyn SpecDriver>, String>;
+
+struct SpecRegistration {
+    spec_id: u32,
+    prepare: PrepareDriver,
+    supports_actor: fn(&crate::followers::simulator::ParityActor) -> bool,
+    report_key: Option<&'static str>,
+}
+
+// Register a spec only here and in its own module. The table is sorted by spec ID.
+// Until rustfmt traverses macro-declared modules, format changed rotation files
+// directly with `rustfmt --edition 2024` as well as running `cargo fmt`.
+macro_rules! spec_drivers {
+    ($($spec_id:literal => $module:ident,)*) => {
+        $(mod $module;)*
+        const DRIVERS: &[SpecRegistration] = &[$(SpecRegistration {
+            spec_id: $spec_id,
+            prepare: $module::prepare_driver,
+            supports_actor: <$module::Rotation as SpecDriver>::supports_actor,
+            report_key: $module::REPORT_KEY,
+        },)*];
+    };
+}
+
+spec_drivers! {
+    63 => fire_rotation,
+    64 => frost_mage_rotation,
+    70 => ret_rotation,
+    71 => arms_rotation,
+    72 => fury_rotation,
+    253 => beast_mastery_rotation,
+    254 => marksmanship_rotation,
+    258 => shadow_rotation,
+    259 => assassination_rotation,
+    260 => outlaw_rotation,
+    262 => elemental_rotation,
+    263 => enhancement_rotation,
+    269 => windwalker_rotation,
+    577 => havoc_rotation,
+    1467 => devastation_rotation,
+}
+
 struct Run {
     app: App,
     actor: Entity,
@@ -141,21 +190,7 @@ struct Run {
     profile: inputs::Profile,
     gaps: Vec<String>,
     player_rotation: Option<player_rotation::PlayerRotation>,
-    windwalker_rotation: Option<windwalker_rotation::Rotation>,
-    ret_rotation: Option<ret_rotation::Rotation>,
-    devastation_rotation: Option<devastation_rotation::Rotation>,
-    elemental_rotation: Option<elemental_rotation::Rotation>,
-    marksmanship_rotation: Option<marksmanship_rotation::Rotation>,
-    beast_mastery_rotation: Option<beast_mastery_rotation::Rotation>,
-    assassination_rotation: Option<assassination_rotation::Rotation>,
-    outlaw_rotation: Option<outlaw_rotation::Rotation>,
-    enhancement_rotation: Option<enhancement_rotation::Rotation>,
-    havoc_rotation: Option<havoc_rotation::Rotation>,
-    arms_rotation: Option<arms_rotation::Rotation>,
-    fury_rotation: Option<fury_rotation::Rotation>,
-    frost_mage_rotation: Option<frost_mage_rotation::Rotation>,
-    fire_rotation: Option<fire_rotation::Rotation>,
-    shadow_rotation: Option<shadow_rotation::Rotation>,
+    spec_driver: Option<Box<dyn SpecDriver>>,
 }
 
 fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, String> {
@@ -331,119 +366,51 @@ fn prepare_literal_reference(
     Ok(run)
 }
 
+fn measurement_driver(
+    spec_id: u32,
+    identity: &crate::followers::simulator::ParityActor,
+) -> Option<&'static SpecRegistration> {
+    let index = DRIVERS
+        .binary_search_by_key(&spec_id, |driver| driver.spec_id)
+        .ok()?;
+    let driver = &DRIVERS[index];
+    (driver.supports_actor)(identity).then_some(driver)
+}
+
+#[test]
+fn literal_spec_selection_applies_to_player_and_follower() {
+    use crate::followers::simulator::ParityActor;
+    for spec_id in [63, 64, 71, 72, 253, 254, 258, 259, 260, 262, 263, 577, 1467] {
+        for identity in [ParityActor::Player { race: 1 }, ParityActor::Follower] {
+            assert!(
+                measurement_driver(spec_id, &identity).is_some(),
+                "spec {spec_id}"
+            );
+        }
+    }
+    assert!(measurement_driver(0, &ParityActor::Player { race: 1 }).is_none());
+    assert!(measurement_driver(0, &ParityActor::Follower).is_none());
+}
+
+#[test]
+fn literal_follower_only_specs_explicitly_preserve_their_actor_restriction() {
+    use crate::followers::simulator::ParityActor;
+    for spec_id in [70, 269] {
+        assert!(measurement_driver(spec_id, &ParityActor::Follower).is_some());
+        assert!(measurement_driver(spec_id, &ParityActor::Player { race: 1 }).is_none());
+    }
+}
+
 fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
     let (profile, traits) = read_reference(spec_id)?;
     let identity = inputs::read_actor(&profile)?;
-    if spec_id == 64 {
+    if let Some(driver) = measurement_driver(spec_id, &identity) {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
-        preparation::prepare_frost_mage_precombat(&mut run)?;
-        return Ok(run);
-    }
-    if spec_id == 63 {
-        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
-        preparation::prepare_fire_precombat(&mut run)?;
-        return Ok(run);
-    }
-    if spec_id == 577 {
-        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
-        preparation::prepare_havoc_precombat(&mut run)?;
-        return Ok(run);
-    }
-    if spec_id == 72 {
-        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
-        fury_rotation::prepare_precombat(&mut run)?;
-        return Ok(run);
-    }
-    if spec_id == 253 {
-        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
-        preparation::prepare_beast_mastery_precombat(&mut run)?;
-        return Ok(run);
-    }
-    if spec_id == 254 {
-        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
-        preparation::prepare_marksmanship_precombat(&mut run)?;
-        return Ok(run);
-    }
-    if spec_id == 260 {
-        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
-        outlaw_rotation::prepare_precombat(&mut run)?;
-        return Ok(run);
-    }
-    if spec_id == 259 {
-        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
-        prepare_assassination_precombat(&mut run)?;
-        return Ok(run);
-    }
-    if spec_id == 263 {
-        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
-        preparation::prepare_enhancement_precombat(&mut run)?;
-        return Ok(run);
-    }
-    if spec_id == 71 {
-        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
-        preparation::prepare_arms_precombat(&mut run)?;
-        return Ok(run);
-    }
-    if spec_id == 258 {
-        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
-        preparation::prepare_shadow_precombat(&mut run)?;
-        Ok(run)
-    } else if matches!(spec_id, 70 | 262 | 269 | 1467)
-        && matches!(
-            &identity,
-            crate::followers::simulator::ParityActor::Follower
-        )
-    {
-        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
-        if spec_id == 70 {
-            preparation::prepare_ret_precombat(&mut run)?;
-        } else if spec_id == 262 {
-            preparation::prepare_elemental_precombat(&mut run)?;
-        } else if spec_id == 1467 {
-            preparation::prepare_devastation_precombat(&mut run)?;
-        } else {
-            preparation::prepare_windwalker_precombat(&mut run)?;
-        }
+        run.spec_driver = Some((driver.prepare)(&mut run)?);
         Ok(run)
     } else {
         prepare_reference(profile, &traits, count, identity)
     }
-}
-
-fn prepare_assassination_precombat(run: &mut Run) -> Result<(), String> {
-    use literal_rotation::PrecombatPoll;
-    let encounter = crate::simc_apl_native::Encounter::Fixture {
-        started_at: crate::spell_cast::now(run.app.world()),
-        duration: 300.0,
-        style: crate::simc_apl_native::FightStyle::Patchwerk,
-    };
-    let source = run
-        .profile
-        .options
-        .get("actions")
-        .and_then(Value::as_array)
-        .ok_or("Assassination profile lacks literal action rows")?
-        .iter()
-        .map(|row| {
-            row.as_str()
-                .ok_or("Assassination action row must be a string")
-        })
-        .collect::<Result<Vec<_>, _>>()?
-        .join("\n");
-    let mut rotation =
-        assassination_rotation::Rotation::load(run.app.world_mut(), run.actor, encounter, &source)?;
-    loop {
-        match rotation.poll_precombat(run.app.world_mut(), run.actor, &run.targets)? {
-            PrecombatPoll::Waiting => preparation::finish_pending_setup(run)?,
-            PrecombatPoll::Selected { action, execution } => {
-                preparation::execute_precombat_plan(run, &mut rotation.driver, action, execution)?
-            }
-            PrecombatPoll::Finished => break,
-        }
-    }
-    rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
-    run.assassination_rotation = Some(rotation);
-    Ok(())
 }
 
 fn prepare_reference(
@@ -514,21 +481,7 @@ fn spawn_reference(
         profile,
         gaps,
         player_rotation: None,
-        windwalker_rotation: None,
-        ret_rotation: None,
-        devastation_rotation: None,
-        elemental_rotation: None,
-        marksmanship_rotation: None,
-        beast_mastery_rotation: None,
-        assassination_rotation: None,
-        outlaw_rotation: None,
-        enhancement_rotation: None,
-        havoc_rotation: None,
-        arms_rotation: None,
-        fury_rotation: None,
-        frost_mage_rotation: None,
-        fire_rotation: None,
-        shadow_rotation: None,
+        spec_driver: None,
     })
 }
 
@@ -763,55 +716,36 @@ fn advance_combat_observed(
 }
 
 fn drive_player(run: &mut Run) -> Result<(), String> {
-    if let Some(rotation) = &mut run.frost_mage_rotation {
-        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
-    }
-    if let Some(rotation) = &mut run.fire_rotation {
-        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
-    }
-    if let Some(rotation) = &mut run.havoc_rotation {
-        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
-    }
-    if let Some(rotation) = &mut run.beast_mastery_rotation {
-        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
-    }
-    if let Some(rotation) = &mut run.marksmanship_rotation {
-        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
-    }
-    if let Some(rotation) = &mut run.outlaw_rotation {
-        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
-    }
-    if let Some(rotation) = &mut run.assassination_rotation {
-        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
-    }
-    if let Some(rotation) = &mut run.fury_rotation {
-        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    if let Some(driver) = &mut run.spec_driver {
+        driver.drive(run.app.world_mut(), run.actor, &run.targets)?;
     }
     if let Some(rotation) = &mut run.player_rotation {
         rotation.drive(run.app.world_mut(), run.actor, run.targets[0])?;
     }
-    if let Some(rotation) = &mut run.windwalker_rotation {
-        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
-    }
-    if let Some(rotation) = &mut run.devastation_rotation {
-        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
-    }
-    if let Some(rotation) = &mut run.ret_rotation {
-        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
-    }
-    if let Some(rotation) = &mut run.elemental_rotation {
-        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
-    }
-    if let Some(rotation) = &mut run.enhancement_rotation {
-        rotation.step(run.app.world_mut(), run.actor, &run.targets, "default")?;
-    }
-    if let Some(rotation) = &mut run.arms_rotation {
-        rotation.step(run.app.world_mut(), run.actor, &run.targets, false)?;
-    }
-    if let Some(rotation) = &mut run.shadow_rotation {
-        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
-    }
     Ok(())
+}
+
+fn driver_report(run: &Run) -> serde_json::Map<String, Value> {
+    let mut output = serde_json::Map::new();
+    for registration in DRIVERS {
+        if let Some(key) = registration.report_key {
+            let report = run
+                .spec_driver
+                .as_ref()
+                .filter(|_| registration.spec_id == run.profile.spec_id)
+                .map_or(Value::Null, |driver| driver.report());
+            output.insert(key.into(), report);
+        }
+    }
+    let label = if let Some(driver) = &run.spec_driver {
+        driver.label()
+    } else if run.player_rotation.is_some() {
+        "NATIVE_ASSISTED_COMBAT_70448"
+    } else {
+        "NATIVE_FOLLOWER_KIT"
+    };
+    output.insert("driver".into(), json!(label));
+    output
 }
 
 fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
@@ -825,19 +759,6 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     let combat = report::combat(run.app.world(), &run.damage_targets, seconds);
     let mut output = json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "actor_kind": if run.app.world().get::<shared::components::Player>(run.actor).is_some() { "player" } else { "follower" },
-        "enhancement_rotation": run.enhancement_rotation.as_ref().map(|rotation| rotation.report()),
-        "havoc_rotation": run.havoc_rotation.as_ref().map(|rotation| rotation.report()),
-        "arms_rotation": run.arms_rotation.as_ref().map(|rotation| rotation.report()),
-        "devastation_rotation": run.devastation_rotation.as_ref().map(|rotation| rotation.report()),
-        "frost_mage_rotation": run.frost_mage_rotation.as_ref().map(|rotation| rotation.report()),
-        "driver": if run.frost_mage_rotation.is_some() { "LITERAL_SIMC_FROST_MAGE_76f8118" } else if run.devastation_rotation.is_some() { "LITERAL_SIMC_DEVASTATION_76f8118" } else if run.fire_rotation.is_some() { "LITERAL_SIMC_FIRE_76f8118" } else if run.shadow_rotation.is_some() { "LITERAL_SIMC_SHADOW_76f8118" } else if run.havoc_rotation.is_some() { "LITERAL_SIMC_HAVOC_76f8118" } else if run.beast_mastery_rotation.is_some() { "LITERAL_SIMC_BEAST_MASTERY_76f8118" } else if run.arms_rotation.is_some() { "LITERAL_SIMC_ARMS_76f8118" } else if run.fury_rotation.is_some() { "LITERAL_SIMC_FURY_76f8118" } else if run.elemental_rotation.is_some() { "LITERAL_SIMC_ELEMENTAL_76f8118" } else if run.marksmanship_rotation.is_some() { "LITERAL_SIMC_MARKSMANSHIP_76f8118" } else if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
-        "fire_rotation": run.fire_rotation.as_ref().map(|rotation| rotation.report()),
-        "fury_rotation": run.fury_rotation.as_ref().map(|rotation| rotation.report()),
-        "windwalker_rotation": run.windwalker_rotation.as_ref().map(|rotation| rotation.report()),
-        "ret_rotation": run.ret_rotation.as_ref().map(|rotation| rotation.report()),
-        "marksmanship_rotation": run.marksmanship_rotation.as_ref().map(|rotation| rotation.report()),
-        "beast_mastery_rotation": run.beast_mastery_rotation.as_ref().map(|rotation| rotation.report()),
-        "shadow_rotation": run.shadow_rotation.as_ref().map(|rotation| rotation.report()),
         "assisted_decisions": run.player_rotation.as_ref().map_or(0, |rotation| rotation.decisions),
         "wall_seconds": started.elapsed().as_secs_f64(), "seed": 70448, "combat": combat,
         "target_health_policy": {"name": "SIMC_FIXED_TIME_TARGET_HEALTH", "clock": "per_target_lifetime",
@@ -848,9 +769,7 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
         "target_waves": run.target_waves, "pet": report::pet(run.app.world(), run.actor, &run.damage_targets),
         "buff_uptime_pct": buff_uptimes, "engagement_samples": engagement_samples, "gaps": run.gaps,
         "reference_race": run.profile.race, "server_build": 70448, "simc_build": 70391});
-    if run.outlaw_rotation.is_some() {
-        output["driver"] = json!("LITERAL_SIMC_OUTLAW_76f8118");
-    }
+    output.as_object_mut().unwrap().extend(driver_report(&run));
     Ok(output)
 }
 

@@ -5,15 +5,12 @@ use bevy::prelude::*;
 use shared::components::PowerType;
 
 use super::{CostPool, powers};
-use crate::spell_info::{SpellDuration, SpellInfo};
+use crate::spell_info::{SpellDuration, SpellEffect, SpellInfo};
 
 // Native Massacre281001 overrides163201 to281000; both trigger260798.
 pub(in crate::spell_cast) const EXECUTE_PARENTS: &[u32] = &[163201, 281000];
-const ENVENOM: u32 = 32645;
+const ROGUE_SPELL_FAMILY: u32 = 8;
 const FEROCIOUS_BITE: u32 = 22568;
-const BLACK_POWDER: u32 = 319175;
-const DISPATCH: u32 = 2098;
-const EVISCERATE: u32 = 196819;
 const ARCANE_BARRAGE: u32 = 44425;
 const ARCANE_BLAST: u32 = 30451;
 const ARCANE_CHARGE: u32 = 36032;
@@ -44,7 +41,7 @@ pub(super) fn additional_optional_cost(
         .sum()
 }
 
-pub(super) fn spent(costs: &[(CostPool, f32)], power: PowerType) -> f32 {
+pub fn spent(costs: &[(CostPool, f32)], power: PowerType) -> f32 {
     costs
         .iter()
         .filter_map(|(pool, amount)| match pool {
@@ -60,9 +57,24 @@ fn scale_effect(spell: &mut SpellInfo, index: u8, multiplier: f32) {
         .iter_mut()
         .find(|effect| effect.index == index)
         .expect("resource formula requires catalog effect");
+    scale_effect_values(effect, multiplier);
+}
+
+fn scale_effect_values(effect: &mut SpellEffect, multiplier: f32) {
     effect.base_points *= multiplier;
     effect.bonus_coefficient *= multiplier;
     effect.bonus_coefficient_from_ap *= multiplier;
+}
+
+fn is_rogue_finisher(spell: &SpellInfo) -> bool {
+    spell
+        .class_options
+        .as_ref()
+        .is_some_and(|options| options.spell_class_set == ROGUE_SPELL_FAMILY)
+        && spell
+            .power_costs
+            .iter()
+            .any(|cost| cost.power_type == PowerType::ComboPoints as i32)
 }
 
 fn snapshot_duration(duration: &mut SpellDuration, combo: f32) {
@@ -138,6 +150,16 @@ pub(super) fn snapshot(
             snapshot_duration(duration, combo);
         }
     }
+    // SimC76f8118 sc_rogue.cpp2320–2334 scales every direct Rogue
+    // finisher by its frozen effective points, not a list of action IDs.
+    if is_rogue_finisher(&spell) {
+        for effect in &mut spell.effects {
+            if matches!(effect.effect, 2 | 9 | 31 | 58 | 121) {
+                scale_effect_values(effect, combo);
+            }
+        }
+        return spell;
+    }
     let multiplier = match spell.id {
         id if EXECUTE_PARENTS.contains(&id) => {
             let rage_multiplier = execute_damage_multiplier(world, caster, &spell, costs);
@@ -145,8 +167,6 @@ pub(super) fn snapshot(
                 Some(spell.cast_damage_multiplier.unwrap_or(1.0) * rage_multiplier);
             return spell;
         }
-        // Native descriptions explicitly multiply m1 by combo points spent.
-        ENVENOM | BLACK_POWDER | DISPATCH | EVISCERATE => combo,
         // SimC76f8118 sc_druid.cpp4358–4371,4400–4401: Bite's coefficient
         // already represents maximum CP; free casts retain that full coefficient.
         FEROCIOUS_BITE if combo > 0.0 => {

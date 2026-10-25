@@ -397,8 +397,9 @@ def drop_superseded(entries):
         for new in landing:
             if new["submitted"] <= old["submitted"]:
                 continue
-            # The same commit twice (any owner) is one landing; keep the newest request.
-            if new["commit"] == old["commit"] or new["owner"] == old["owner"] \
+            # The same commit with the same tests (any owner) is one landing; keep the newest.
+            same = new["commit"] == old["commit"]
+            if same and new["tests"] == old["tests"] or not same and new["owner"] == old["owner"] \
                     and git("merge-base", "--is-ancestor", old["commit"], new["commit"], check=False).returncode == 0:
                 old["status"], old["reason"] = "rejected", f"superseded by {new['id']}"
                 stale.append(old)
@@ -483,14 +484,29 @@ def land(entries, log):
 
 
 def run_probes(probes, gated, log):
-    """Probes and the RED twins of gated landings share one tree that is never pushed.
+    """Probes, then the RED twins of gated landings, each in a tree that is never pushed.
     Returns the gated landings whose RED was observed."""
-    twins = {e["id"]: red_twin(e) for e in gated}
-    passed, failed = build_and_test(probes + list(twins.values()), log)
-    for entry in passed:
+    # A RED twin must not share a tree with another commit that contains its fix (an owner's
+    # later probe usually does), so twins get their own tree. A twin that itself contains
+    # another gated entry's fix waits for the next cycle.
+    def contains_fix(twin, entry):
+        return any(other is not entry and git("merge-base", "--is-ancestor", other["commit"], twin["commit"],
+                                              check=False).returncode == 0 for other in gated)
+    twins = {}
+    for entry in list(gated):
+        twin = red_twin(entry)
+        if contains_fix(twin, entry):
+            gated.remove(entry)
+            (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
+        else:
+            twins[entry["id"]] = twin
+    passed, failed = build_and_test(probes, log) if probes else ([], [])
+    twin_passed, twin_failed = build_and_test(list(twins.values()), log) if twins else ([], [])
+    for entry in passed + twin_passed:
         entry["status"] = "probe passed"
-    for entry in failed:
+    for entry in failed + twin_failed:
         entry["status"] = "rejected"
+    passed, failed = passed + twin_passed, failed + twin_failed
     real = [e for e in passed + failed if not e["id"].endswith("-red")]
     write_results([e for e in real if e["status"] != "probe passed"])
     measure_then_write([e for e in real if e["status"] == "probe passed"], log)
@@ -525,14 +541,14 @@ def cycle():
     probes = [e for e in entries if not e["land"]]
     gated = [e for e in entries if e["land"] and e.get("red")]
     plain = [e for e in entries if e["land"] and not e.get("red")]
-    # Plain landings go first: a slow probe bisect must not hold them back.
-    mark_phase(log, "1/3 plain landings", plain)
-    land(plain, log)
+    # Proven RED-gated entries land in the same build as plain ones: landing plain entries
+    # first moved master under the gated ones, which then conflicted with this cycle's own landings.
+    proven = []
     if probes or gated:
-        mark_phase(log, "2/3 probes and RED twins", probes + gated)
+        mark_phase(log, "1/2 probes and RED twins", probes + gated)
         proven = run_probes(probes, gated, log)
-        mark_phase(log, "3/3 RED-gated landings", proven)
-        land(proven, log)
+    mark_phase(log, "2/2 landings", plain + proven)
+    land(plain + proven, log)
     (HOME / "current.json").unlink(missing_ok=True)
 
 

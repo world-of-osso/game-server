@@ -1,6 +1,5 @@
 //! Thin spec260 bindings; the shared Program and native spell engine own execution.
 use super::{
-    Run,
     assassination_rotation::{RogueFacts, stealthed},
     inputs::Profile,
     literal_rotation::{
@@ -220,7 +219,7 @@ impl Rotation {
     }
 }
 
-pub(super) fn prepare_precombat(run: &mut Run) -> Result<(), String> {
+pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {
     let encounter = Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
         duration: 300.0,
@@ -241,8 +240,24 @@ pub(super) fn prepare_precombat(run: &mut Run) -> Result<(), String> {
         duration: 300.0,
         style: FightStyle::Patchwerk,
     };
-    run.outlaw_rotation = Some(rotation);
-    Ok(())
+    Ok(Box::new(rotation))
+}
+
+pub(super) const REPORT_KEY: Option<&str> = None;
+
+impl super::SpecDriver for Rotation {
+    fn label(&self) -> &'static str {
+        "LITERAL_SIMC_OUTLAW_76f8118"
+    }
+
+    fn drive(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
+        self.drive(world, actor, targets)
+    }
 }
 
 struct OutlawFacts<'a> {
