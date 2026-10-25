@@ -23,6 +23,7 @@ import shlex
 import subprocess
 import sys
 import time
+import tomllib
 import uuid
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -123,6 +124,10 @@ def merge(entries, log):
         result = git("merge", "--no-ff", "--no-edit", "-q", entry["commit"], check=False)
         if result.returncode:
             git("merge", "--abort", check=False)
+            # Clean against master means it only collides with another queued entry:
+            # retry next cycle, after that entry lands or is rejected.
+            entry["defer"] = git("merge-tree", "--write-tree", "origin/master", entry["commit"],
+                                 check=False).returncode == 0
             entry["reason"] = f"merge conflict:\n{result.stdout}{result.stderr}"
             conflicted.append(entry)
         else:
@@ -178,15 +183,98 @@ def build_checked(entries, log):
     return good, rejected
 
 
+TEST_PARALLEL = 8
+
+
+def test_executables(entry, test, entry_log):
+    """Build (under Cargo's lock) and list the test executables for one --test.
+    Returns [(executable, cwd)] or None when the build fails."""
+    cargo_args, _, _ = split_test(test)
+    out = subprocess.run(
+        [str(AGENT_RUN), "merge-train", "cargo", "test", "--locked", "--no-run",
+         "--message-format=json-render-diagnostics", *cargo_args],
+        cwd=TREE, env=base_env() | test_env(entry, test), text=True, capture_output=True, check=False)
+    with entry_log.open("a") as f:
+        f.write(f"\n$ cargo test --no-run {shlex.join(cargo_args)}\n{out.stderr}")
+    if out.returncode:
+        return None
+    found = []
+    for line in out.stdout.splitlines():
+        if line.startswith("{"):
+            message = json.loads(line)
+            if message.get("reason") == "compiler-artifact" and message.get("executable") \
+                    and message["profile"]["test"]:
+                found.append((message["executable"], str(Path(message["manifest_path"]).parent)))
+    return found
+
+
+def split_test(test):
+    if "--" in test:
+        i = test.index("--")
+        return test[:i], "--", test[i + 1:]
+    return test, "--", []
+
+
+def config_overrides(cargo_args):
+    """Env and runner from `--config` TOML snippets, which Cargo would apply when it ran the tests."""
+    env, runner = {}, None
+    for i, arg in enumerate(cargo_args[:-1]):
+        if arg != "--config":
+            continue
+        try:
+            table = tomllib.loads(cargo_args[i + 1])
+        except tomllib.TOMLDecodeError:
+            continue
+        for key, value in table.get("env", {}).items():
+            # `force`/`relative` arrive as separate snippets without a value.
+            if not isinstance(value, dict):
+                env[key] = value
+            elif "value" in value:
+                env[key] = value["value"]
+        for target in table.get("target", {}).values():
+            if "runner" in target:
+                runner = target["runner"]
+    if isinstance(runner, str):
+        runner = shlex.split(runner)
+    return env, runner
+
+
+def run_executable(entry, test, executable, cwd, entry_log):
+    """Run one test binary outside Cargo, so entries run in parallel without its build lock."""
+    env = base_env() | test_env(entry, test)
+    runner = shlex.split(env.pop(RUNNER, ""))
+    config_env, config_runner = config_overrides(split_test(test)[0])
+    env |= config_env
+    runner = config_runner or runner
+    _, _, test_args = split_test(test)
+    command = [*runner, executable, *test_args]
+    out = subprocess.run(command, cwd=cwd, env=env, text=True, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, check=False)
+    with entry_log.open("a") as f:
+        f.write(f"\n$ {shlex.join(command)}\n{out.stdout}")
+    return out.returncode
+
+
 def run_tests(entries, log):
-    passed, failed = [], []
+    # Build every entry's test binaries first (serialized by Cargo), then run them all in parallel.
+    jobs, broken = [], set()
     for entry in entries:
         entry_log = LOGS / f"{entry['id']}.tests.log"
-        codes = [cargo(entry_log, "test", "--locked", *test, env=test_env(entry, test))
-                 for test in entry["tests"]]
+        entry_log.unlink(missing_ok=True)
         entry["test_log"] = str(entry_log)
-        if any(codes):
-            entry["reason"] = f"tests failed; see {entry_log}"
+        for test in entry["tests"]:
+            found = test_executables(entry, test, entry_log)
+            if found is None:
+                broken.add(entry["id"])
+            else:
+                jobs += [(entry, test, exe, cwd, entry_log) for exe, cwd in found]
+    with ThreadPoolExecutor(TEST_PARALLEL) as pool:
+        codes = list(pool.map(lambda job: (job[0]["id"], run_executable(*job)), jobs))
+    failing = broken | {entry_id for entry_id, code in codes if code}
+    passed, failed = [], []
+    for entry in entries:
+        if entry["id"] in failing:
+            entry["reason"] = f"tests failed; see {entry['test_log']}"
             failed.append(entry)
         else:
             passed.append(entry)
@@ -270,6 +358,11 @@ def cycle():
     wait_for_capacity()
     # One tree with every entry: probes get their test results from it.
     tree, rejected = build_checked(entries, log)
+    deferred = [e for e in rejected if e.get("defer")]
+    rejected = [e for e in rejected if not e.get("defer")]
+    for entry in deferred:
+        del entry["defer"], entry["reason"]
+        (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
     tested, failed = run_tests(tree, log)
     for entry in rejected + failed:
         entry["status"] = "rejected"

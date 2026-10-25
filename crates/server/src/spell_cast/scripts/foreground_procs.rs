@@ -51,23 +51,23 @@ pub(in crate::spell_cast) fn after_foreground_special(
         });
         if let Some(instance) = instance {
             if procs::try_native_policy_proc(world, caster, instance) {
-                grant_buff_and_reset(world, caster, policy);
+                grant_buff_and_reset_actions(world, caster, policy.buff, policy.resets);
             }
         }
     }
 }
 
-fn grant_buff_and_reset(world: &mut World, caster: Entity, policy: &ForegroundProc) {
-    if !crate::spell_cast::try_cast_triggered(world, caster, policy.buff, Some(caster), 1) {
-        warn!(
-            ?caster,
-            passive = policy.passive,
-            buff = policy.buff,
-            "Native foreground proc buff refused"
-        );
+pub(super) fn grant_buff_and_reset_actions(
+    world: &mut World,
+    caster: Entity,
+    buff: u32,
+    resets: &[u32],
+) {
+    if !crate::spell_cast::try_cast_triggered(world, caster, buff, Some(caster), 1) {
+        warn!(?caster, buff, "Native proc buff refused");
         return;
     }
-    for action in policy.resets {
+    for action in resets {
         let spell = world
             .resource::<SpellStore>()
             .get(*action)

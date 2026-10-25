@@ -76,7 +76,7 @@ pub(super) fn command_pet(world: &mut World, caster: Entity, target: Entity, dep
 }
 
 /// 70391 spell34026 names83381; SimC76f8118 executes that attack on the owned pet.
-///Animal Companion, charging and the other talent consumers are separate paths.
+///Every active owned stable pet, including native guardians, receives the command.
 pub(super) fn command_beast(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     const BEAST_COMMAND_DAMAGE: u32 = 83381;
     cast_pet_command(world, caster, target, BEAST_COMMAND_DAMAGE, depth);
@@ -114,7 +114,18 @@ pub(super) fn wild_thrash(world: &mut World, caster: Entity, target: Entity, dep
 }
 
 fn cast_pet_command(world: &mut World, caster: Entity, target: Entity, spell: u32, depth: u8) {
-    if let Some(pet) = crate::hunter_pet::summoned_pet(world, caster) {
+    // SimC76f8118 sc_hunter.cpp6585–6588: main, companion and Nature's Ally.
+    let pets: Vec<_> = world
+        .query::<(Entity, &crate::hunter_pet::HunterPet)>()
+        .iter(world)
+        .filter(|(unit, pet)| {
+            pet.owner == caster
+                && targets::is_alive(world, *unit)
+                && targets::same_map(world, caster, *unit)
+        })
+        .map(|(unit, _)| unit)
+        .collect();
+    for pet in pets {
         cast_owned_pet_command(world, caster, pet, target, spell, depth);
     }
 }
