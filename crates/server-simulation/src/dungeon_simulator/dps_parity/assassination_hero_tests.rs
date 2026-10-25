@@ -4,6 +4,64 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "requires prepared259 private native DB and player actor"]
+fn assassination_hero_native_rupture_and_kingsbane_children_deal_damage() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(259, 1).unwrap();
+    engage(&mut run);
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
+    for _ in 0..800 {
+        drive_player(&mut run).unwrap();
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let kingsbane = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(385627)
+                && event.kind == CombatLogKind::CastSuccess
+        })
+        .count();
+    assert!(
+        kingsbane > 0,
+        "the real literal Kingsbane must execute first"
+    );
+    for child in [1265794, 1265795] {
+        let damage: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id == Some(child)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .collect();
+        assert_eq!(
+            damage.len(),
+            kingsbane * 5,
+            "each Kingsbane must deliver its five native Implacable child hits for{child}"
+        );
+    }
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(381628)
+                && event.kind == CombatLogKind::Damage
+                && event.periodic
+                && event.amount > 0),
+        "native Rupture must apply the selected Internal Bleeding payload"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared259 private native DB and player actor"]
 fn assassination_hero_mark_depletion_earns_darkest_night_and_critical_envenom() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(259, 1).unwrap();
