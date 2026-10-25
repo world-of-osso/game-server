@@ -87,6 +87,8 @@ struct TileSource {
 /// Ground geometry of every map players have visited.
 #[derive(Resource, Default)]
 pub struct GroundMap {
+    /// Explicit qualification-arena geometry, not a missing-map fallback.
+    flat_arena_height: Option<f32>,
     data_dir: PathBuf,
     /// `Map.db2` WdtFileDataID by map id.
     wdts: HashMap<u32, u32>,
@@ -98,9 +100,19 @@ pub struct GroundMap {
 }
 
 impl GroundMap {
+    /// A declared flat encounter floor, independent of production map assets.
+    pub fn flat_arena(height: f32) -> Self {
+        assert!(height.is_finite(), "arena floor must be finite");
+        Self {
+            flat_arena_height: Some(height),
+            ..default()
+        }
+    }
+
     /// Maps load lazily from `data_dir` (`terrain/<fdid>.wdt|adt`, `models/<fdid>.wmo`).
     pub fn new(data_dir: &Path, wdts: HashMap<u32, u32>) -> Self {
         Self {
+            flat_arena_height: None,
             data_dir: data_dir.to_path_buf(),
             wdts,
             maps: HashMap::new(),
@@ -265,6 +277,9 @@ impl GroundMap {
     }
 
     fn sample_ground_at(&mut self, map_id: u32, feet: Vec3, walkable_only: bool) -> GroundProbe {
+        if let Some(height) = self.flat_arena_height {
+            return GroundProbe::Supported(height);
+        }
         if !self.maps.contains_key(&map_id) {
             let loaded = self.open_map(map_id);
             self.maps.insert(map_id, loaded);

@@ -56,6 +56,8 @@ mod echo_policies;
 mod elemental;
 pub(crate) use elemental::register as register_elemental_policies;
 mod elemental_ascendance;
+mod guardian_impacts;
+mod stacking_summons;
 pub(super) use echo_policies::after_cast as apply_echo_policies;
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
@@ -494,6 +496,9 @@ pub(super) fn consumes_effect_value(spell_id: u32, effect_index: u8) -> bool {
 }
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
+    if let Some(hook) = guardian_impacts::hit_hook(spell_id, effect_index) {
+        return Some(hook);
+    }
     match (spell_id, effect_index) {
         (crate::scripted_ai::orator::TERRORIZE_SELECTOR, 0) => {
             Some(crate::scripted_ai::orator::terrorize_hit)
@@ -824,6 +829,9 @@ fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
     if let Some(hook) = script_registry::native_after_cast(world, spell_id) {
         return Some(hook);
     }
+    if let Some(hook) = stacking_summons::hook(spell_id) {
+        return Some(hook);
+    }
     match spell_id {
         33757 | 318038 => Some(enhancement_imbues::apply),
         voltaic_blaze::ROOT => Some(maelstrom_weapon::grant_voltaic_blaze),
@@ -962,6 +970,9 @@ pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, Tar
     }
     if let Some(hook) = policies::target_plan_hook(world, spell_id) {
         return Some(hook);
+    }
+    if let Some(hook) = guardian_impacts::plan_hook(spell_id) {
+        return Some((Relation::Enemy, hook));
     }
     match spell_id {
         1261160 | 224239 | 431911 => Some((Relation::Enemy, ret_damage::area_plan)),
