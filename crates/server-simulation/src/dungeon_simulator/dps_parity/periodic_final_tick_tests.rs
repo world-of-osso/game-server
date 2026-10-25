@@ -82,6 +82,14 @@ fn periodic_ticks(run: &Run, spell: u32, target: Entity, kind: &CombatLogKind) -
 
 fn assert_expiry_ticks(run: &mut Run, spell: u32, target: Entity, kind: CombatLogKind) -> f64 {
     let (expected, fraction) = read_tick_expectations(run, spell, target);
+    let pending =
+        crate::auras::remaining_periodic_ticks(run.app.world(), run.actor, target, spell).unwrap();
+    let paid = periodic_ticks(run, spell, target, &kind);
+    assert_eq!(
+        pending as usize + paid,
+        expected as usize,
+        "remaining-tick facts must include the final partial event"
+    );
     for _ in 0..1600 {
         run.app.update();
         if !crate::auras::has_aura(run.app.world(), target, spell) {
