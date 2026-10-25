@@ -19,6 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import shutil
 import subprocess
@@ -223,13 +224,17 @@ def split_test(test):
     i = test.index("--") if "--" in test else len(test)
     cargo_args, binary_args, filters = [], list(test[i + 1:]), []
     takes_value = False
+    previous = None
     for arg in test[:i]:
         if takes_value:
-            cargo_args.append(arg)
+            # Gameplay tests moved from `server` to `server-combat` (b316f4d9b); `server` keeps
+            # only binaries and site export, so old submissions are retargeted.
+            cargo_args.append("server-combat" if previous in ("-p", "--package") and arg == "server" else arg)
             takes_value = False
         elif arg.startswith("-"):
             cargo_args.append(arg)
             takes_value = arg in CARGO_VALUE_FLAGS
+            previous = arg
         else:
             filters.append(arg)
     return cargo_args, "--", filters + binary_args
@@ -272,7 +277,9 @@ def run_executable(entry, test, executable, cwd, entry_log):
                          stderr=subprocess.STDOUT, check=False)
     with entry_log.open("a") as f:
         f.write(f"\n$ {shlex.join(command)}\n{out.stdout}")
-    return out.returncode
+    ran = sum(int(m) for m in re.findall(r"test result: \w+\. (\d+) passed; (?:\d+) failed", out.stdout))
+    ran += sum(int(m) for m in re.findall(r"test result: \w+\. \d+ passed; (\d+) failed", out.stdout))
+    return out.returncode, ran
 
 
 def run_tests(entries, log):
@@ -289,12 +296,19 @@ def run_tests(entries, log):
             else:
                 jobs += [(entry, test, exe, cwd, entry_log) for exe, cwd in found]
     with ThreadPoolExecutor(TEST_PARALLEL) as pool:
-        codes = list(pool.map(lambda job: (job[0]["id"], run_executable(*job)), jobs))
-    failing = broken | {entry_id for entry_id, code in codes if code}
+        codes = list(pool.map(lambda job: ((job[0]["id"], tuple(job[1])), run_executable(*job)), jobs))
+    failing = broken | {key[0] for key, (code, _) in codes if code}
+    # A --test that runs no test at all (a stale filter or package) is a failure, not a pass.
+    ran = {}
+    for key, (_, count) in codes:
+        ran[key] = ran.get(key, 0) + count
+    empty = {e["id"] for e in entries for t in e["tests"]
+             if e["id"] not in broken and ran.get((e["id"], tuple(t)), 0) == 0}
     passed, failed = [], []
     for entry in entries:
-        if entry["id"] in failing:
-            entry["reason"] = f"tests failed; see {entry['test_log']}"
+        if entry["id"] in failing or entry["id"] in empty:
+            entry["reason"] = (f"tests failed; see {entry['test_log']}" if entry["id"] in failing
+                               else f"tests failed: a --test ran 0 tests (stale filter or package?); see {entry['test_log']}")
             failed.append(entry)
         else:
             passed.append(entry)
@@ -303,21 +317,22 @@ def run_tests(entries, log):
 
 def push(entries, log):
     """Build, test and push master plus the entries. Failing entries are rejected and the
-    rest rebuilt; a push race rebuilds on the new master."""
+    rest rebuilt; a push race rebuilds on the new master. Returns (master, pushed entries);
+    entries deferred back to the queue are in neither."""
     while entries:
         tree, rejected = build_and_test(entries, log)
         if rejected:
-            for entry in rejected:
-                entry["status"] = "rejected"
-            write_results(rejected)
             entries = tree
             continue
+        if not tree:
+            break
         result = git("push", "origin", "HEAD:master", check=False)
         if result.returncode == 0:
-            return git("rev-parse", "HEAD").stdout.strip()
+            return git("rev-parse", "HEAD").stdout.strip(), tree
+        entries = tree
         with log.open("a") as out:
             out.write(f"push raced, rebuilding:\n{result.stderr}\n")
-    return None
+    return None, []
 
 
 def parity_executable(log):
@@ -362,7 +377,27 @@ def take_queue():
         target = RUNNING / path.name
         path.rename(target)
         entries.append(json.loads(target.read_text()))
-    return sorted(entries, key=lambda e: e["submitted"])
+    return drop_superseded(sorted(entries, key=lambda e: e["submitted"]))
+
+
+def drop_superseded(entries):
+    """A landing entry whose commit is an ancestor of a later landing entry from the same
+    owner is a stale version of it (owners resubmit after fixing compile errors); a
+    resubmitted identical commit is a duplicate."""
+    landing = [e for e in entries if e["land"]]
+    stale = []
+    for old in landing:
+        for new in landing:
+            if new["submitted"] <= old["submitted"]:
+                continue
+            # The same commit twice (any owner) is one landing; keep the newest request.
+            if new["commit"] == old["commit"] or new["owner"] == old["owner"] \
+                    and git("merge-base", "--is-ancestor", old["commit"], new["commit"], check=False).returncode == 0:
+                old["status"], old["reason"] = "rejected", f"superseded by {new['id']}"
+                stale.append(old)
+                break
+    write_results(stale)
+    return [e for e in entries if e not in stale]
 
 
 def build_and_test(entries, log):
@@ -371,12 +406,19 @@ def build_and_test(entries, log):
     tree, rejected = build_checked(entries, log)
     deferred = [e for e in rejected if e.pop("defer", False)]
     rejected = [e for e in rejected if e not in deferred]
+    # Owners get conflicts and check failures now, not when the whole cycle ends.
+    for entry in rejected:
+        entry["status"] = "rejected"
+    write_results([e for e in rejected if not e["id"].endswith("-red")])
     for entry in deferred:
         del entry["reason"]
         queued = RUNNING / f"{entry['id']}.json"
         if queued.exists():  # RED twins have no queue file; their entry is requeued by cycle()
             queued.rename(QUEUE / queued.name)
     passed, failed = run_tests(tree, log)
+    for entry in failed:
+        entry["status"] = "rejected"
+    write_results([e for e in failed if not e["id"].endswith("-red")])
     return passed, rejected + failed
 
 
@@ -427,12 +469,10 @@ def red_twin(entry):
 
 def land(entries, log):
     """Build exactly these entries on master, push the passing ones, then measure them."""
-    master = push(entries, log) if entries else None
-    if master:
-        for entry in entries:
-            if entry.get("status") != "rejected":
-                entry["status"] = f"landed in {master}"
-        measure_then_write([e for e in entries if e["status"].startswith("landed")], log)
+    master, pushed = push(entries, log)
+    for entry in pushed:
+        entry["status"] = f"landed in {master}"
+    measure_then_write(pushed, log)
 
 
 def run_probes(probes, gated, log):
@@ -507,6 +547,50 @@ def run(_args):
             time.sleep(30)
 
 
+def status(_args):
+    """Print the train's throughput metrics as JSON (read-only)."""
+    now = time.time()
+
+    def ages(directory):
+        times = [p.stat().st_mtime for p in directory.glob("*.json")]
+        return {"count": len(times), "oldest_minutes": round((now - min(times)) / 60, 1) if times else None}
+
+    cycles = []
+    logs = sorted(LOGS.glob("cycle-*.log"), key=lambda p: p.stat().st_mtime)
+    for start, log in enumerate(logs[-4:]):
+        text = log.read_text(errors="replace")
+        begun = time.mktime(time.strptime(log.name[6:21], "%Y%m%dT%H%M%S"))
+        cycles.append({"log": log.name, "minutes": round((log.stat().st_mtime - begun) / 60, 1),
+                       "checks": text.count("$ cargo check"), "push_races": text.count("push raced")})
+    results = sorted(RESULTS.glob("*.json"), key=lambda p: p.stat().st_mtime)[-30:]
+    outcome = {}
+    for path in results:
+        entry = json.loads(path.read_text())
+        state = entry["status"].split(" ")[0]
+        if state == "rejected":
+            reason = entry.get("reason", "")
+            state = next((name for key, name in (("superseded", "rejected: superseded"),
+                                                  ("merge conflict", "rejected: merge conflict"),
+                                                  ("check or fmt", "rejected: check/fmt"),
+                                                  ("tests failed", "rejected: tests failed"),
+                                                  ("RED", "rejected: RED gate")) if key in reason),
+                         "rejected: other")
+            if state == "rejected: tests failed" and not entry["land"]:
+                state = "probe RED (expected)"
+        outcome[state] = outcome.get(state, 0) + 1
+    git("fetch", "-q", "origin", check=False)
+    landed = git("log", "-1", "--format=%ct %h %s", "--invert-grep", "--grep=^merge train",
+                 "--grep=^AGENTS", "origin/master", check=False).stdout.split(" ", 2)
+    report = {"unit": subprocess.run(["systemctl", "--user", "is-active", "merge-train"], text=True,
+                                     capture_output=True).stdout.strip(),
+              "queue": ages(QUEUE), "running": ages(RUNNING),
+              "cycles": cycles[:-1], "current_cycle": cycles[-1] if cycles else None,
+              "last_30_results": outcome,
+              "last_landing": {"minutes_ago": round((now - int(landed[0])) / 60, 1), "commit": landed[1],
+                               "subject": landed[2].strip()} if len(landed) == 3 else None}
+    print(json.dumps(report, indent=2))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -525,6 +609,7 @@ def main():
     w.add_argument("id")
     w.set_defaults(func=wait)
     sub.add_parser("run").set_defaults(func=run)
+    sub.add_parser("status", help="throughput metrics for the periodic bottleneck check").set_defaults(func=status)
     args = parser.parse_args()
     args.func(args)
 

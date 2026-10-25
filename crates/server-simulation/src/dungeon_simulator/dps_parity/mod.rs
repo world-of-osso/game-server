@@ -2,6 +2,7 @@
 mod active_enemy_tests;
 mod arms_rotation;
 mod arms_tests;
+mod assassination_energy_tests;
 mod assassination_knowledge_tests;
 mod assassination_mechanics_tests;
 mod assassination_poison_tests;
@@ -14,12 +15,15 @@ mod beast_mastery_mechanics_tests;
 mod beast_mastery_pet_tests;
 mod beast_mastery_rotation;
 mod composite_precombat_tests;
+mod devastation_rotation;
+mod devastation_tests;
 mod dummy_reference_tests;
 mod elemental_ascendance_tests;
 mod elemental_mechanics_tests;
 mod elemental_rotation;
 mod elemental_rotation_tests;
 mod engagement_tests;
+mod enhancement_generation_tests;
 mod enhancement_mechanics_tests;
 mod enhancement_operand_tests;
 mod enhancement_rotation;
@@ -29,7 +33,12 @@ mod equipment_input_tests;
 mod equipped_set_tests;
 mod feral_native_tests;
 mod feral_tests;
+mod fire_gap_tests;
+mod fire_literal_tests;
+mod fire_rotation;
 mod firestarter_tests;
+mod frost_mage_rotation;
+mod frost_mage_tests;
 mod fury_rotation;
 mod gear_profile_tests;
 mod haste_tests;
@@ -45,10 +54,13 @@ mod hunter_focus_tests;
 #[cfg(test)]
 mod hunter_stomp_tests;
 mod inputs;
+mod literal_ranged_attack_tests;
 pub(crate) mod literal_rotation;
 mod marksmanship_fact_tests;
 mod marksmanship_mechanics_tests;
 mod marksmanship_rotation;
+mod outlaw_rotation;
+mod outlaw_tests;
 mod owner_cooldown_tests;
 mod pack_tactics_tests;
 mod periodic_crit_tests;
@@ -76,6 +88,7 @@ mod ret_dawnlight_remainder_tests;
 mod ret_dawnlight_target_tests;
 mod ret_dawnlight_tests;
 mod ret_empyrean_tests;
+mod ret_proc_rate_tests;
 mod ret_purpose_tests;
 mod ret_resonance_phase_tests;
 mod ret_resource_tests;
@@ -87,8 +100,13 @@ mod ret_toll_control_tests;
 mod ret_toll_tests;
 mod ret_trigger_resource_tests;
 mod ret_wake_tests;
+mod rogue_finisher_tests;
+mod shadow_mastery_tests;
 mod shadow_rotation;
+mod shadow_slam_tests;
 mod shadow_tests;
+mod shaman263_proc_tests;
+mod shaman263_tier_tests;
 mod shared_fact_extension_tests;
 pub(crate) mod single_spell;
 mod snakeskin_tests;
@@ -123,14 +141,18 @@ struct Run {
     player_rotation: Option<player_rotation::PlayerRotation>,
     windwalker_rotation: Option<windwalker_rotation::Rotation>,
     ret_rotation: Option<ret_rotation::Rotation>,
+    devastation_rotation: Option<devastation_rotation::Rotation>,
     elemental_rotation: Option<elemental_rotation::Rotation>,
     marksmanship_rotation: Option<marksmanship_rotation::Rotation>,
     beast_mastery_rotation: Option<beast_mastery_rotation::Rotation>,
     assassination_rotation: Option<assassination_rotation::Rotation>,
+    outlaw_rotation: Option<outlaw_rotation::Rotation>,
     enhancement_rotation: Option<enhancement_rotation::Rotation>,
     havoc_rotation: Option<havoc_rotation::Rotation>,
     arms_rotation: Option<arms_rotation::Rotation>,
     fury_rotation: Option<fury_rotation::Rotation>,
+    frost_mage_rotation: Option<frost_mage_rotation::Rotation>,
+    fire_rotation: Option<fire_rotation::Rotation>,
     shadow_rotation: Option<shadow_rotation::Rotation>,
 }
 
@@ -303,13 +325,23 @@ fn prepare_literal_reference(
         style: crate::simc_apl_native::FightStyle::Patchwerk,
     };
     literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter)?;
-    preparation::warm_up_reference(&mut run)?;
+    preparation::consume_profile_food(&mut run)?;
     Ok(run)
 }
 
 fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
     let (profile, traits) = read_reference(spec_id)?;
     let identity = inputs::read_actor(&profile)?;
+    if spec_id == 64 {
+        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
+        preparation::prepare_frost_mage_precombat(&mut run)?;
+        return Ok(run);
+    }
+    if spec_id == 63 {
+        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
+        preparation::prepare_fire_precombat(&mut run)?;
+        return Ok(run);
+    }
     if spec_id == 577 {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
         preparation::prepare_havoc_precombat(&mut run)?;
@@ -328,6 +360,11 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
     if spec_id == 254 {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
         preparation::prepare_marksmanship_precombat(&mut run)?;
+        return Ok(run);
+    }
+    if spec_id == 260 {
+        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
+        outlaw_rotation::prepare_precombat(&mut run)?;
         return Ok(run);
     }
     if spec_id == 259 {
@@ -349,7 +386,7 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
         preparation::prepare_shadow_precombat(&mut run)?;
         Ok(run)
-    } else if matches!(spec_id, 70 | 262 | 269)
+    } else if matches!(spec_id, 70 | 262 | 269 | 1467)
         && matches!(
             &identity,
             crate::followers::simulator::ParityActor::Follower
@@ -360,6 +397,8 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
             preparation::prepare_ret_precombat(&mut run)?;
         } else if spec_id == 262 {
             preparation::prepare_elemental_precombat(&mut run)?;
+        } else if spec_id == 1467 {
+            preparation::prepare_devastation_precombat(&mut run)?;
         } else {
             preparation::prepare_windwalker_precombat(&mut run)?;
         }
@@ -412,8 +451,9 @@ fn prepare_reference(
     identity: crate::followers::simulator::ParityActor,
 ) -> Result<Run, String> {
     let mut run = spawn_reference(profile, traits, count, identity)?;
+    preparation::consume_profile_food(&mut run)?;
     preparation::start_configured_native_pet(&mut run)?;
-    preparation::warm_up_reference(&mut run)?;
+    preparation::finish_pending_setup(&mut run)?;
     Ok(run)
 }
 
@@ -474,14 +514,18 @@ fn spawn_reference(
         player_rotation: None,
         windwalker_rotation: None,
         ret_rotation: None,
+        devastation_rotation: None,
         elemental_rotation: None,
         marksmanship_rotation: None,
         beast_mastery_rotation: None,
         assassination_rotation: None,
+        outlaw_rotation: None,
         enhancement_rotation: None,
         havoc_rotation: None,
         arms_rotation: None,
         fury_rotation: None,
+        frost_mage_rotation: None,
+        fire_rotation: None,
         shadow_rotation: None,
     })
 }
@@ -717,6 +761,12 @@ fn advance_combat_observed(
 }
 
 fn drive_player(run: &mut Run) -> Result<(), String> {
+    if let Some(rotation) = &mut run.frost_mage_rotation {
+        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    }
+    if let Some(rotation) = &mut run.fire_rotation {
+        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    }
     if let Some(rotation) = &mut run.havoc_rotation {
         rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
     }
@@ -724,6 +774,9 @@ fn drive_player(run: &mut Run) -> Result<(), String> {
         rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
     }
     if let Some(rotation) = &mut run.marksmanship_rotation {
+        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    }
+    if let Some(rotation) = &mut run.outlaw_rotation {
         rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
     }
     if let Some(rotation) = &mut run.assassination_rotation {
@@ -736,6 +789,9 @@ fn drive_player(run: &mut Run) -> Result<(), String> {
         rotation.drive(run.app.world_mut(), run.actor, run.targets[0])?;
     }
     if let Some(rotation) = &mut run.windwalker_rotation {
+        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    }
+    if let Some(rotation) = &mut run.devastation_rotation {
         rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
     }
     if let Some(rotation) = &mut run.ret_rotation {
@@ -765,13 +821,15 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     let started = Instant::now();
     let (seconds, buff_uptimes, engagement_samples) = advance_combat(&mut run)?;
     let combat = report::combat(run.app.world(), &run.damage_targets, seconds);
-    Ok(
-        json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
+    let mut output = json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "actor_kind": if run.app.world().get::<shared::components::Player>(run.actor).is_some() { "player" } else { "follower" },
         "enhancement_rotation": run.enhancement_rotation.as_ref().map(|rotation| rotation.report()),
         "havoc_rotation": run.havoc_rotation.as_ref().map(|rotation| rotation.report()),
         "arms_rotation": run.arms_rotation.as_ref().map(|rotation| rotation.report()),
-        "driver": if run.shadow_rotation.is_some() { "LITERAL_SIMC_SHADOW_76f8118" } else if run.havoc_rotation.is_some() { "LITERAL_SIMC_HAVOC_76f8118" } else if run.beast_mastery_rotation.is_some() { "LITERAL_SIMC_BEAST_MASTERY_76f8118" } else if run.arms_rotation.is_some() { "LITERAL_SIMC_ARMS_76f8118" } else if run.fury_rotation.is_some() { "LITERAL_SIMC_FURY_76f8118" } else if run.elemental_rotation.is_some() { "LITERAL_SIMC_ELEMENTAL_76f8118" } else if run.marksmanship_rotation.is_some() { "LITERAL_SIMC_MARKSMANSHIP_76f8118" } else if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "devastation_rotation": run.devastation_rotation.as_ref().map(|rotation| rotation.report()),
+        "frost_mage_rotation": run.frost_mage_rotation.as_ref().map(|rotation| rotation.report()),
+        "driver": if run.frost_mage_rotation.is_some() { "LITERAL_SIMC_FROST_MAGE_76f8118" } else if run.devastation_rotation.is_some() { "LITERAL_SIMC_DEVASTATION_76f8118" } else if run.fire_rotation.is_some() { "LITERAL_SIMC_FIRE_76f8118" } else if run.shadow_rotation.is_some() { "LITERAL_SIMC_SHADOW_76f8118" } else if run.havoc_rotation.is_some() { "LITERAL_SIMC_HAVOC_76f8118" } else if run.beast_mastery_rotation.is_some() { "LITERAL_SIMC_BEAST_MASTERY_76f8118" } else if run.arms_rotation.is_some() { "LITERAL_SIMC_ARMS_76f8118" } else if run.fury_rotation.is_some() { "LITERAL_SIMC_FURY_76f8118" } else if run.elemental_rotation.is_some() { "LITERAL_SIMC_ELEMENTAL_76f8118" } else if run.marksmanship_rotation.is_some() { "LITERAL_SIMC_MARKSMANSHIP_76f8118" } else if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "fire_rotation": run.fire_rotation.as_ref().map(|rotation| rotation.report()),
         "fury_rotation": run.fury_rotation.as_ref().map(|rotation| rotation.report()),
         "windwalker_rotation": run.windwalker_rotation.as_ref().map(|rotation| rotation.report()),
         "ret_rotation": run.ret_rotation.as_ref().map(|rotation| rotation.report()),
@@ -787,8 +845,11 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
         "targets_before": targets, "targets_after": target_snapshot(&run),
         "target_waves": run.target_waves, "pet": report::pet(run.app.world(), run.actor, &run.damage_targets),
         "buff_uptime_pct": buff_uptimes, "engagement_samples": engagement_samples, "gaps": run.gaps,
-        "reference_race": run.profile.race, "server_build": 70448, "simc_build": 70391}),
-    )
+        "reference_race": run.profile.race, "server_build": 70448, "simc_build": 70391});
+    if run.outlaw_rotation.is_some() {
+        output["driver"] = json!("LITERAL_SIMC_OUTLAW_76f8118");
+    }
+    Ok(output)
 }
 
 #[test]
@@ -823,8 +884,6 @@ fn marksmanship_literal_fixture_casts_reference_actions() {
     let report = measure(254, 1).expect("native Marksmanship fixture");
     assert_eq!(report["driver"], "LITERAL_SIMC_MARKSMANSHIP_76f8118");
     let actions = report["combat"]["actions"].as_array().unwrap();
-    // Native Trueshot is currently replaced by an incorrectly procced Chakram;
-    // its mechanics are a separate parity fix, not an APL rewrite.
     for spell in [75, 19434, 257044] {
         assert!(
             actions.iter().any(|action| action["spell_id"] == spell),
