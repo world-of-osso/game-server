@@ -57,6 +57,8 @@ mod hunter_focus_tests;
 mod hunter_melee_tests;
 #[cfg(test)]
 mod hunter_stomp_tests;
+#[cfg(test)]
+mod hunter_wrath_tests;
 mod inputs;
 mod literal_ranged_attack_tests;
 pub(crate) mod literal_rotation;
