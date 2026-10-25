@@ -102,6 +102,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [ ] Default aura-trigger dispatch uses the actual nullable proc action recipient, never substitutes the aura owner. A child whose native explicit selector requires an enemy cannot target its own caster or a missing recipient; skip it instead of inventing a target. Native implicit-caster buff children remain valid. Named item callbacks use the same recipient predicate before RPPM admission and dispatch. CastSuccess keeps TC's null actionTarget; do not replace it with the spell's unrelated explicit target. Reflection/other explicit triggered casts retain their separate rules. [Ret source/proof ledger](../handoffs/ret-paladin-parity-proof-ledger.md#generic-proc-recipient-self-damage).
 
+### Native periodic spell haste
+
+- Periodic auras with native `SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC` (Attributes5 `0x2000`) apply caster spell haste after the native period spell modifiers, truncating to integer milliseconds. Their unchanged duration admits the resulting extra ticks. Unflagged auras retain their native period. Source: TC a352b1fa `SpellAuraEffects.cpp999–1012`.
+
 ### Measurement
 
 - [x] Auto-attacks remain eligible during native channels with `SPELL_ATTR5_ALLOW_ACTIONS_DURING_CHANNEL`. Normal casts and other channels block swings without discarding attack intent or timer progress. Preserve crowd-control blocking, victim avoidance and spell-native permissions; no class/ability whitelist.

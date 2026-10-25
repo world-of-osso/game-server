@@ -740,6 +740,32 @@ fn periodic_base_interval_ms(spell: &SpellInfo, effect: &SpellEffect) -> u32 {
     }
 }
 
+/// TC a352b1fa SpellAuraEffects.cpp999–1012: period mods precede spell haste;
+/// the aura duration is unchanged, so the shorter period admits more ticks.
+/// SimC76f8118 sc_paladin_retribution.cpp747–750 uses this for Truth's Wake.
+fn periodic_interval_ms(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> u32 {
+    const SPELL_HASTE_AFFECTS_PERIODIC: u32 = 0x2000;
+    let base = periodic_base_interval_ms(spell, effect);
+    if base == 0 {
+        return 0;
+    }
+    let period = spell_mods::modify(world, caster, spell, SpellModOp::Period, base as f32);
+    let period = if attributes(spell, 5) & SPELL_HASTE_AFFECTS_PERIODIC != 0 {
+        let haste = world
+            .get::<crate::stats::CharacterStats>(caster)
+            .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+        period / haste.max(0.01)
+    } else {
+        period
+    };
+    period.max(1.0) as u32
+}
+
 fn build_effect(
     world: &World,
     caster: Entity,
@@ -756,19 +782,7 @@ fn build_effect(
     };
     let amount = scripts::snapshot_periodic_amount(world, caster, spell, effect, amount);
     let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
-    let base_period_ms = periodic_base_interval_ms(spell, effect);
-    let period_ms = if base_period_ms > 0 {
-        spell_mods::modify(
-            world,
-            caster,
-            spell,
-            SpellModOp::Period,
-            base_period_ms as f32,
-        )
-        .max(1.0) as u32
-    } else {
-        0
-    };
+    let period_ms = periodic_interval_ms(world, caster, spell, effect);
     AuraEffectState {
         index: effect.index,
         immunity: effect.immunity.clone(),
