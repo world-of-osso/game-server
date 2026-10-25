@@ -186,6 +186,13 @@ fn literal_ww_native_dual_threat_replaces_eligible_white_impacts() {
         );
         assert!(
             swings
+                .iter()
+                .filter(|event| event.spell_id == Some(DUAL_THREAT))
+                .all(|event| event.kind == CombatLogKind::Damage && event.amount > 0),
+            "actual Dual Threat child cannot roll white/spell avoidance against the native dummy"
+        );
+        assert!(
+            swings
                 .windows(2)
                 .all(|pair| pair[0].spell_id != Some(DUAL_THREAT)
                     || pair[1].spell_id != Some(DUAL_THREAT)),
