@@ -17,8 +17,9 @@ pub fn apply(
         .cloned()
         .ok_or_else(|| format!("native consumable spell{id} absent"))?;
     spell.cast_item_level = item_level;
-    if id == 1294727 {
-        // unique_gear_midnight.cpp112–139,6397: Royal Roast uses food coefficient1219179 effect2.
+    if matches!(id, 1294727 | 1232585) {
+        // SimC76f8118 unique_gear_midnight.cpp115–139/6395–6396:
+        // Royal Roast and Harandar use native food coefficient1219179 effect2.
         let coeff = world
             .resource::<SpellStore>()
             .get(1219179)
