@@ -2657,6 +2657,7 @@ fn execute_cast_with_primary(
         crate::achievement::record_item_use(world, caster, item);
     }
     // TC Spell.cpp3843–3869: OnCast precedes TakePower and SendSpellGo.
+    scripts::before_ret_damage_cast(world, caster, spell, 0);
     scripts::on_cast(world, caster, spell.id, 0);
     take_cast_resources(world, caster, spell, &costs);
     start_cooldowns(world, caster, spell);
@@ -3509,6 +3510,8 @@ pub(super) fn cast_triggered_with_item_level(
 #[derive(Default)]
 pub(crate) struct TriggeredSpellOverrides {
     pub effect0_amount: Option<f32>,
+    pub item_level: Option<u16>,
+    pub effect_mask: Option<u32>,
     pub aura_stacks: Option<u8>,
     pub original_caster: Option<Entity>,
     /// Authored background-action lifetime, e.g. native Whirling Blade's amount.
@@ -3528,6 +3531,12 @@ pub(crate) fn cast_triggered_with_overrides(
     };
     spell.cast_aura_stacks = values.aura_stacks;
     spell.cast_original_caster = values.original_caster;
+    spell.cast_item_level = values.item_level;
+    if let Some(mask) = values.effect_mask {
+        spell
+            .effects
+            .retain(|effect| mask & (1 << effect.index) != 0);
+    }
     if let Some(milliseconds) = values.duration_ms {
         let Some(duration) = spell.misc.as_mut().and_then(|misc| misc.duration.as_mut()) else {
             warn!("Triggered spell {spell_id} skipped: duration override has no native duration");
@@ -3646,9 +3655,11 @@ fn launch_triggered_spell(
                 observed.0.push((caster, spell.id, explicit));
             }
             crate::achievement::record_spell_cast(world, caster, spell.id);
+            scripts::before_ret_damage_cast(world, caster, spell, depth);
             scripts::on_cast(world, caster, spell.id, depth);
             scripts::spawn_ravager_field(world, caster, spell, explicit, depth);
             missiles::launch(world, caster, spell, plan, depth);
+            scripts::apply_triggered_cast_policies(world, caster, spell, depth);
             druid_transform::after_cast(world, caster, spell);
             true
         }
@@ -3700,6 +3711,7 @@ fn execute_costed_trigger(
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
     prepared.cast_primary_target = primary_target;
     let plan = plan_targets(world, caster, &prepared, explicit, true)?;
+    scripts::before_ret_damage_cast(world, caster, &prepared, depth);
     scripts::on_cast(world, caster, prepared.id, depth);
     take_cast_resources(world, caster, &prepared, &costs);
     crate::achievement::record_spell_cast(world, caster, prepared.id);

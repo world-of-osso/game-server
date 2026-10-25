@@ -13,6 +13,7 @@ pub(super) struct Channel {
     root: String,
     interrupt: bool,
     interrupt_if: Option<Expression>,
+    early_chain_if: Option<Expression>,
     immediate: bool,
     global: bool,
     chain: bool,
@@ -34,9 +35,16 @@ impl Channel {
             .get("interrupt_if")
             .map(|text| Expression::parse(text))
             .transpose()?;
+        let early_chain_if = action
+            .options
+            .get("early_chain_if")
+            .map(|text| Expression::parse(text))
+            .transpose()?;
         let interrupt = flag(action, "interrupt")?;
         let chain = flag(action, "chain")?;
-        if !interrupt && interrupt_if.is_none() && !chain {
+        let watches_channel =
+            interrupt || interrupt_if.is_some() || chain || early_chain_if.is_some();
+        if !watches_channel {
             return Ok(None);
         }
         Ok(Some(Self {
@@ -45,6 +53,7 @@ impl Channel {
             root: root.into(),
             interrupt,
             interrupt_if,
+            early_chain_if,
             immediate: flag(action, "interrupt_immediate")?,
             global: flag(action, "interrupt_global")?,
             chain,
@@ -66,6 +75,9 @@ impl Channel {
     }
 
     fn requests_interruption(&self, facts: &dyn ActionFacts) -> Result<bool, String> {
+        if self.interrupt {
+            return Ok(true);
+        }
         let expression = self
             .interrupt_if
             .as_ref()
@@ -77,15 +89,31 @@ impl Channel {
             })
             .transpose()?
             .is_some_and(|value| value != 0.0);
-        let gcd_ready = facts.value_for(&self.action, "gcd.remains")? <= 0.0;
-        Ok((self.interrupt || expression) && (gcd_ready || self.immediate))
+        Ok(expression)
     }
 
-    fn requests_chain(&self, cast: &CastState) -> bool {
+    fn interrupt_ready(&self, facts: &dyn ActionFacts) -> Result<bool, String> {
+        let gcd_ready = facts.value_for(&self.action, "gcd.remains")? <= 0.0;
+        Ok(gcd_ready || self.immediate)
+    }
+
+    fn requests_chain(&self, cast: &CastState, facts: &dyn ActionFacts) -> Result<bool, String> {
         // Native cast timers are rounded to milliseconds, like SimC timespan.
         let remaining_ms = ((cast.duration - cast.elapsed) * 1000.0).round() as i64;
         let interval_ms = (cast.channel_tick_interval * 1000.0).round() as i64;
-        self.chain && remaining_ms <= interval_ms
+        if self.chain && remaining_ms <= interval_ms {
+            return Ok(true);
+        }
+        // SimC76f8118 dot.cpp841–845: early_chain_if is independent of chain=1,
+        // but requires a paid tick (observe_tick) and the actual ready GCD.
+        let Some(expression) = &self.early_chain_if else {
+            return Ok(false);
+        };
+        let early = expression.evaluate(&BoundAction {
+            facts,
+            action: &self.action,
+        })? != 0.0;
+        Ok(early && facts.value_for(&self.action, "gcd.remains")? <= 0.0)
     }
 }
 
@@ -138,17 +166,27 @@ impl Driver {
         if !channel.observe_tick(cast)? {
             return Ok(None);
         }
-        let interrupt = channel.requests_interruption(facts)?;
-        let higher = self.has_higher_priority(channel, facts, prepared, equipment)?;
-        // dot.cpp734: interrupt_if alone is insufficient. A higher-priority
-        // action must actually be ready; immediate bypasses only the GCD guard.
-        if higher && interrupt {
-            return Ok(Some(Decision::Cancel));
+        // dot.cpp729–734: first evaluate the interrupt request and GCD guard;
+        // neither grants permission without a genuinely ready higher action.
+        if channel.requests_interruption(facts)? {
+            let ready = channel.interrupt_ready(facts)?;
+            if self.has_higher_priority(channel, facts, prepared, equipment)? && ready {
+                return Ok(Some(Decision::Cancel));
+            }
         }
-        if higher || !channel.requests_chain(cast) {
+        if !channel.requests_chain(cast, facts)? {
             return Ok(None);
         }
-        self.prepare_chain(channel, facts, prepared, equipment)
+        let decision = self.prepare_chain(channel, facts, prepared, equipment)?;
+        if decision.is_none() {
+            return Ok(None);
+        }
+        // dot.cpp845: current-row native readiness precedes the priority scan.
+        if self.has_higher_priority(channel, facts, prepared, equipment)? {
+            self.pending_line = None;
+            return Ok(None);
+        }
+        Ok(decision)
     }
 
     fn has_higher_priority(

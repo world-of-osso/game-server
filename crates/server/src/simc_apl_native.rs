@@ -452,9 +452,14 @@ impl<'a> NativeFacts<'a> {
         }
         if !matches!(
             property,
-            "exists" | "remains" | "in" | "cooldown" | "duration"
+            "exists" | "remains" | "in" | "cooldown" | "duration" | "distance"
         ) {
             return Err(format!("unknown native movement-event property {property}"));
+        }
+        // SimC76f8118 raid_event.cpp3068–3077: absent events return zero for
+        // distance, independently of actor/target separation or movement state.
+        if property == "distance" {
+            return Ok(0.0);
         }
         // This explicit dummy fixture configures no movement raid event.
         fixture_add_value(None, property, self.world.resource::<Time>().elapsed())
@@ -821,6 +826,17 @@ impl Facts for NativeFacts<'_> {
         }
         if let Some(alias) = name.strip_prefix("active_dot.") {
             return self.active_dot(alias);
+        }
+        // SimC76f8118 action.cpp3817–3896: this named action's available
+        // targets, not the currently proposed action's target count.
+        if let Some(alias) = name.strip_prefix("spell_targets.") {
+            let action = Action {
+                name: alias.to_owned(),
+                source_row: None,
+                target: None,
+                options: Default::default(),
+            };
+            return self.target_ids(&action).map(|targets| targets.len() as f64);
         }
         match name {
             "time" => Ok(self.elapsed()),

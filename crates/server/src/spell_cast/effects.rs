@@ -441,7 +441,7 @@ fn scales_with_spell_damage(effect: &SpellEffect) -> bool {
 /// `SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS`. Item-level spells instead
 /// use RandPropPoints at the casting item's effective level. Not modelled:
 /// the target's level of `SPELL_ATTR8_USE_TARGETS_LEVEL_FOR_SPELL_SCALING` and the casting item's
-/// level multipliers of classes -6 and -7.
+/// level multiplier of class -6.
 fn calc_base_value(world: &World, caster: Entity, spell: &SpellInfo, effect: &SpellEffect) -> f32 {
     let attribute = |index: usize| spell.misc.as_ref().map_or(0, |misc| misc.attributes[index]);
     let level = world
@@ -496,7 +496,12 @@ fn item_spell_scaling_value(world: &World, spell: &SpellInfo, effect: &SpellEffe
         -9 => 1,
         _ => 2,
     };
-    let value = row[column] * effect.coefficient;
+    let mut value = row[column] * effect.coefficient;
+    if effect.scaling_class == -7 {
+        // SimC76f8118 spell_data.cpp424–441: special scale7 applies the native
+        // trinket combat-rating multiplier to its item budget before rounding.
+        value *= tables.rating_multiplier[usize::from(level) - 1][2];
+    }
     if value > 0.0 && value < 1.0 {
         1.0
     } else {
@@ -1610,6 +1615,7 @@ fn damage_source_amount(
         let combo = super::scripts::combo_strikes_multiplier(world, bonus_caster, ctx.spell.id);
         let giantkiller =
             super::scripts::giantkiller_multiplier(world, ctx.caster, target, ctx.spell);
+        let ret_damage = super::scripts::ret_damage_multiplier(world, ctx, target, periodic);
         #[cfg(any(test, feature = "test-support"))]
         factor_capture::record_done(
             world,
@@ -1623,9 +1629,10 @@ fn damage_source_amount(
                 ("mechanic_damage", mechanic),
                 ("combo_strikes", combo),
                 ("giantkiller", giantkiller),
+                ("ret_damage", ret_damage),
             ],
         );
-        school_done * versatility * summon * creature * mechanic * combo * giantkiller
+        school_done * versatility * summon * creature * mechanic * combo * giantkiller * ret_damage
     };
     let bonus_ctx = EffectCtx {
         caster: bonus_caster,
@@ -1947,6 +1954,9 @@ fn deal_source_damage_and_report(
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::finish(world, ctx, target, &damage, &event);
     log_event(world, event);
+    if periodic && !resolved_source {
+        super::scripts::after_ret_periodic_damage(world, ctx, target, crit);
+    }
     if !periodic && !resolved_source {
         super::scripts::after_direct_damage(world, ctx, target, crit);
     }

@@ -24,7 +24,7 @@ const CLASS_SKILL_LINES: [(u8, u32); 13] = [
     (12, 1848),
     (13, 2810),
 ];
-pub(crate) const MAX_LEVEL: u32 = 90;
+pub const MAX_LEVEL: u32 = 90;
 /// SkillLineAbilityAcquireMethod::NeverLearned (TrinityCore DBCEnums.h).
 const ACQUIRE_NEVER_LEARNED: u32 = 3;
 /// SPELL_ATTR0_PASSIVE in `spell_misc.Attributes_0`.
@@ -172,7 +172,7 @@ pub struct SpecSpell {
     pub passive: bool,
 }
 
-pub(crate) fn load_class_spells(conn: &Connection) -> rusqlite::Result<ClassSpells> {
+pub fn load_class_spells(conn: &Connection) -> rusqlite::Result<ClassSpells> {
     let classes = CLASS_SKILL_LINES
         .iter()
         .map(|&(class_id, skill_line)| {
