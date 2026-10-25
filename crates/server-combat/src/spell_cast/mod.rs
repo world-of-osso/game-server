@@ -157,6 +157,8 @@ mod excluded_caster_type_tests;
 mod expel_harm_tests;
 #[cfg(test)]
 mod fel_devastation_tests;
+mod ferocious_bite;
+pub use ferocious_bite::read_maximum_energy as read_ferocious_bite_maximum_energy;
 #[cfg(test)]
 mod full_trigger_dead_target_tests;
 pub mod guardian;
@@ -3114,6 +3116,8 @@ fn resolve_effects(
     plan: &TargetPlan,
     depth: u8,
 ) {
+    let prepared = ferocious_bite::snapshot(world, caster, spell);
+    let spell = prepared.as_ref();
     let selected = selected_units(plan);
     #[cfg(any(test, feature = "test-support"))]
     {
@@ -3930,6 +3934,7 @@ fn take_cast_resources(
         return;
     }
     spend_costs(world, caster, costs);
+    scripts::after_paid_resources(world, caster, costs);
     scripts::empower_gargoyles(world, caster, costs);
     crate::profession::take_reagents(world, caster, spell);
 }
