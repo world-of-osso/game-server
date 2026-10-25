@@ -41,6 +41,10 @@ pub struct ObservedCombatEvents(pub Vec<CombatLogEvent>);
 #[derive(Resource, Default)]
 pub struct ObservedTriggeredCasts(pub Vec<(Entity, u32, Option<Entity>)>);
 
+/// Actual impact-resolution TargetInfo order, including misses; read-only opt-in.
+#[derive(Resource, Default)]
+pub struct ObservedSelectedTargets(pub Vec<(Entity, u32, Vec<Entity>)>);
+
 pub fn collect_swings(
     h: &mut Harness,
     attacker: Entity,

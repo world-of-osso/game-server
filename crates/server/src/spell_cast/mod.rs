@@ -2999,6 +2999,15 @@ fn resolve_effects(
     plan: &TargetPlan,
     depth: u8,
 ) {
+    let selected = selected_units(plan);
+    #[cfg(any(test, feature = "test-support"))]
+    {
+        if let Some(mut observed) =
+            world.get_resource_mut::<test_harness::ObservedSelectedTargets>()
+        {
+            observed.0.push((caster, spell.id, selected.clone()));
+        }
+    }
     // Distinct hit units after missile/defense filtering, before effect dispatch.
     for unit in hit_units(plan) {
         crate::achievement::record_targeted_spell_hit(world, caster, unit, spell.id);
@@ -3015,6 +3024,7 @@ fn resolve_effects(
             caster,
             spell_id: spell.id,
             depth,
+            selected,
             damage: Vec::new(),
             healing: Vec::new(),
             blocked: plan
@@ -3250,9 +3260,20 @@ struct HitFrame {
     caster: Entity,
     spell_id: u32,
     depth: u8,
+    /// Native TargetInfo order, including misses before defense filtering.
+    selected: Vec<Entity>,
     damage: Vec<(Entity, f32)>,
     healing: Vec<(Entity, f32)>,
     blocked: HashSet<Entity>,
+}
+
+/// Actual resolving TargetInfos, not mutable combat focus or only successful hits.
+/// The first entry owns native primary impact even when it misses.
+pub(super) fn resolving_targets<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w [Entity]> {
+    let frame = world.get_resource::<ResolvingHits>()?.0.last()?;
+    let matches =
+        frame.caster == ctx.caster && frame.spell_id == ctx.spell.id && frame.depth == ctx.depth;
+    matches.then_some(frame.selected.as_slice())
 }
 
 /// Read the innermost matching hit's block result; nested casts own their frame.

@@ -1,3 +1,7 @@
+## 2026-10-24 — Xuen merge reconciliation on mastera804
+
+[Reconciliation proof](../handoffs/ww-xuens-recovery-proof-ledger.md#mastera804-reconciliation--native23-green): frozen36eeb2339 merged, not rebased, onto exacta804 atd54c1b64d. Preserve SCK periodic snapshot, four-argument Xuen/Flurry callback and both additive wiki sections. Same binary passes13Xuen38.93s,6Flurry50.16s and4SCK24.48s; compiler582.99s/zero warnings, fmt/diff pass, conflict-region readability has no findings. Lead re-gate/new merged-source plain --bins remains separate; no300s rerun.
+
 ## 2026-10-24 — Native Unit form display power
 
 [Unit display power](systems/auras.md#native-unit-form-display-power--2026-10-24): a Player-only return left actual NPC Cat on Mana and native22568 burn unchanged100→100. The Unit metadata fix preserves resource contents/identity and player synchronization. NPC Cat/burn plus player Cat/caster-NPC controls are qualified within the once-only retained power/shapeshift scope; missing real fixture sidecar failures were corrected and retried alone. [Proof](../handoffs/form-display-power-proof-ledger.md) records203 unique passes, separate check and private input identity; parent gate and numerical Feral parity remain separate.
@@ -55,6 +59,9 @@
 ## 2026-10-24 — Shared native APL buff facts takeover
 
 [Exact source/proof ledger](../handoffs/shared-buff-facts-proof-ledger.md): isolated shared duration/react/named-time work from dead14781's Evoker branch onto requested1466a4ca7. Real TF5217, Omen16864→135700 proc/stack/refresh/expiry/reacquisition and rated cast/channel controls reach genuine RED before implementation. Native-cap precondition corrects an old fixture's stack-gain-as-overcap assumption; fiveGREEN22.44s atd5b83f217, requested server/simulation/spell-tests check once0/1m45s/no warnings. Explicit source reaction distribution, cfg-only lifecycle hooks, no query-side duration reconstruction or Evoker implementation. Lead full gate remains separate.
+## 2026-10-24 — Xuen FoF recovery strict RED and consumer
+
+[Named-policy ledger](../handoffs/ww-xuens-recovery-proof-ledger.md): f0ab339b6 actual6RED/6controlsPASS36.52s precedes implementation; real RSK/RWK critical and SCK1/3/6 budgets fail, native noncrit/secondary-only/no-hit/unselected/no-timer controls pass. Native TargetInfo/natural-end hooks keep policy IDs in scripts. Current master7b integrated atf188c66c1:13GREEN41.09s plus retainedFlurry6GREEN23.72s, compile496s/0warnings, plain --binsPASS87.49s/0warnings. Full-duration channel completion differs from interrupted ChannelEnded; real stop-cast control gives0. TC/DB2 absence retained; full lead gate separate, no numerical-parity claim.
 ## 2026-10-24 — Native Flurry core earning/release
 
 [Bounded ledger](../handoffs/ww-flurry-proof-ledger.md): ec4b89338 actual white/ordinary451839 earning and natural FoF children3 genuine RED/3controlsPASS41.86s. Selected native counts/critical multiplier/cap and class-owned release are implemented;150ms child spacing explicitly cites SimC76f8118 sc_monk.cpp779–781. Generic impact callbacks carry actual native provenance without class IDs. At172da6nativeGREEN25.97s/compile0warnings. Same tested binary/fresh CURRENT backup EACH300s100439.5467ST/134000.8433three-target (−51.3477%/−64.4144%);450617 and451250 both really damage. Native1H/offhand and natural Dual Threat producer remain unqualified; other releases/SCK/recovery stay outside this slice, full lead gate and broader parity remain open.

@@ -14,6 +14,10 @@ Ordinary native launch stores applicable resource pools (including zero final co
 
 [Ordered source/RED/GREEN ledger](../../handoffs/dawnlight-generic-proof-ledger.md) records strict producer then consumer failures before implementation, native payload/negative controls and15scoped native passes at28bf70027. Literal self-target caller integration still depends on hp1109; secondary Avatar/AoE, Player-policy and full DPS parity remain outside this proof. Both requested test-target/plain-production compiler gates and fmt pass in that ledger; parent full integration remains separate.
 
+## Xuen's Battlegear impact context — 2026-10-24
+
+`HitFrame.selected` stores actual resolving TargetInfo Entity IDs, including misses, in native order. Its matching-frame slice is distinct from original-request `cast_primary_target`; neither is mutable CombatTarget. Class scripts use the first native TargetInfo for the approved RSK/RWK critical-recovery policy and the full list for unique SCK impact membership. The generic direct-damage callback carries actual target/crit without core spell IDs; after master7b integration its single wrapper forwards Flurry once before Xuen's class consumer. Strict native6RED/6controlsPASS→f188c66c1 native13GREEN41.09s, retainedFlurry6GREEN23.72s and plain production --binsPASS87.49s/0warnings. Full lead gate remains separate. [Policy, TC/DB2 absence and proof](../../handoffs/ww-xuens-recovery-proof-ledger.md).
+
 ## Rake actual-stealth eligibility — 2026-10-24
 
 TC `spell_dru_rake2040–2078` checks actual stealth, not legacy231052/405834 aura presence. Rake's shared predicate follows that boundary and native1822 effect3 amounts; Shred's separate predicate and persistent multiplier fields stay unchanged. [Contract](../../specs/player-damage.md#what-it-must-do); [focused source, fixture ordering and gate proof](../../handoffs/feral-rake-stealth-proof-ledger.md). Native Mark of the Wild legitimately interrupts Prowl; isolated comparisons own ordinary buffs before stealth, never bypass interrupt flags or GCD.
