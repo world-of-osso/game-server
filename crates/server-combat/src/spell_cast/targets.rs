@@ -427,7 +427,7 @@ fn radius_slot(effect: &SpellEffect, slot: usize) -> usize {
     usize::from(slot == 1 && effect.radius[1].is_some())
 }
 
-pub(super) fn radius(effect: &SpellEffect, slot: usize) -> f32 {
+pub fn radius(effect: &SpellEffect, slot: usize) -> f32 {
     effect.radius[radius_slot(effect, slot)].map_or(0.0, |radius| {
         if radius.radius > 0.0 {
             radius.radius
@@ -1609,7 +1609,7 @@ pub fn effect_radius(effect: &SpellEffect) -> f32 {
 
 /// Living units within `radius` of `center` matching `relation`, nearest
 /// first, capped by `max_targets` (0 = no cap).
-pub(crate) fn area_units(
+pub fn area_units(
     world: &mut World,
     caster: Entity,
     center: Vec3,

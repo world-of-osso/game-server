@@ -3,8 +3,12 @@
 use bevy::prelude::*;
 use shared::components::Health;
 
-use crate::auras::{ActiveAuras, has_aura};
-use crate::spell_info::SpellInfo;
+use super::combat;
+use combat::auras::{ActiveAuras, has_aura};
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_info::SpellInfo;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::TargetDamageMultiplier(multiplier)];
 
 const EVOKER_FAMILY: u32 = 224;
 const GIANTKILLER: u32 = 362980;
@@ -33,12 +37,7 @@ fn receives_full_mastery(world: &World, caster: Entity, spell: u32) -> bool {
     has_aura(world, caster, TYRANNY) && full_damage
 }
 
-pub(in crate::spell_cast) fn multiplier(
-    world: &World,
-    caster: Entity,
-    target: Entity,
-    spell: &SpellInfo,
-) -> f32 {
+fn multiplier(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
     if spell
         .class_options
         .as_ref()
