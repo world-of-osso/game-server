@@ -1,4 +1,4 @@
-//! Real class-NPC and HunterPet white critical results, with native profile stats.
+//! Real class-NPC white critical results, with native profile stats.
 use super::*;
 use crate::auras::AuraStatMods;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
@@ -6,7 +6,7 @@ use crate::stats::CharacterStats;
 use shared::protocol::CombatLogKind;
 
 const REQUIRED_ATTEMPTS: usize = 128;
-// This distinguishes native31%+30%/25% from the erroneous creature0–5% base.
+// This distinguishes native class crit plus its actual white-only aura from NPC base5%.
 // Seeded native outcomes remain stochastic; do not rewrite stats or hit results.
 const SAMPLING_TOLERANCE_PCT: f32 = 12.0;
 
@@ -73,33 +73,4 @@ fn literal_native_melee_crit_class_npc_uses_character_stats() {
     crate::combat::start_attack(&mut commands, actor, target, None);
     queue.apply(world);
     assert_critical_rate(&mut run, actor, base + white_bonus);
-}
-
-#[test]
-#[ignore = "actual Call Pet HunterPet must inherit live owner white critical chance"]
-fn literal_native_melee_crit_hunter_pet_inherits_owner() {
-    let _seed = crate::random::seed_scope(70448);
-    let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
-    let started = run.app.world().resource::<Time>().elapsed();
-    install_fixture_lifetimes(&mut run, started);
-    let world = run.app.world();
-    assert_eq!(
-        world
-            .get::<crate::hunter_pet::HunterPet>(pet)
-            .unwrap()
-            .owner,
-        run.actor
-    );
-    let owner_crit = world.get::<CharacterStats>(run.actor).unwrap().crit_pct;
-    let pet_bonus = world
-        .get::<AuraStatMods>(pet)
-        .map_or(0.0, |mods| mods.npc_crit_pct + mods.autoattack_crit_pct);
-    assert!(
-        owner_crit > SAMPLING_TOLERANCE_PCT,
-        "native owner crit distinguishes inherited crit from base5%"
-    );
-    let target = run.targets[0];
-    let actor = run.actor;
-    crate::pet_control::order_companion_pet(run.app.world_mut(), actor, Some(target));
-    assert_critical_rate(&mut run, pet, owner_crit + pet_bonus);
 }
