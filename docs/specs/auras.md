@@ -2,6 +2,12 @@
 
 Server-side aura runtime in `crates/server/src/auras/`: aura instances on active units, periodic effects, procs, spell and stat modifiers, removal and `UnitAuras` replication. See [auras](../wiki/systems/auras.md).
 
+## Unit form display power
+
+Form display-power reconciliation applies to every native Unit, not only Player entities. Native NPC Cat Form selects its existing Energy pool so the real Ferocious Bite22568 power-burn effect can consume it. Player Cat behavior remains unchanged; NPC caster forms such as Moonkin retain their native Mana display. Form/aura/native-class precedence is preserved. Reconciliation must not add Player identity, fabricate pools, reseed resources or change separately justified player-client synchronization.
+
+TC a352b1fa `SpellAuraEffects.cpp:2049–2056` and `Unit.cpp:5779–5827`; controls in `crates/server/src/spell_cast/form_display_power_tests.rs` include authentic Ralia/Crenna NPC initialization, actual native22568 effect1 dispatch and player Cat. The burn control isolates the real effect path; it does not certify full finisher damage or proc eligibility.
+
 ## Explicit proc provenance
 
 Import the audited effective public TC `spell_proc` IDs into `tdb_spell_proc(SpellId PRIMARY KEY)` only after every pinned base/update source matches its SHA-256. Reject duplicate/incomplete IDs before publication. Replace presence transactionally without changing retained rows' later value columns or unrelated tables; errors leave prior data intact. Presence alone must not overlay chance, flags, cooldown or charges. The later full proc importer owns those values. See [Feral/source ledger](../handoffs/feral-source-census.md).
