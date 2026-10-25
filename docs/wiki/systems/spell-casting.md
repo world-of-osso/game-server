@@ -1,5 +1,11 @@
 # Spell Casting
 
+## Secondary residual source snapshots — 2026-10-25
+
+`spell_cast/scripts/secondary_copies.rs` stores the eligible attack IDs, active aura, native fraction/cap indices, payload and range. Spell hits and committed white swings supply their pre-target amount with the original critical bonus; the policy removes primary-only creature modifiers and resolves each secondary through `deal_copied_damage`, applying its own creature modifier and mitigation once. The source primary is excluded before capping; copied payloads cannot recursively enter the policy.
+
+Blade Flurry binds13877→22482, with native Dancing Steel target additions and the Nimble Flurry/Flawless Form condition. Source: pinned SimC76f8118 `sc_rogue.cpp2068–2105,3884–3905,8061–8087`; [behavior contract](../../specs/dps-parity.md#outlaw-literal-fixture). Native transfer RED→GREEN is landed; initial-strike payload selection and other missing Outlaw producers are separate.
+
 ## Native Warrior execution relationships — 2026-10-25
 
 The [Fury/Warrior contract](../../specs/dps-parity.md#fury-player-parity) is implemented as source-qualified rows, not spell-ID branches in the shared cast engine. Native70448 supplies effects, probabilities, ICDs, resource units and payloads; SimC76f8118 supplies execution boundaries.

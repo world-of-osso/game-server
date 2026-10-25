@@ -1,3 +1,7 @@
+## 2026-10-25 — Secondary residual sources
+
+[Secondary copies](systems/spell-casting.md#secondary-residual-source-snapshots--2026-10-25) retain pre-target critical source damage and resolve native Blade Flurry against capped secondary enemies. The transfer boundary passed native RED→GREEN; initial strike and other producers remain separate.
+
 ## 2026-10-25 — Literal spec registration
 
 [Shared literal fixture machinery](systems/simc-apl.md#shared-literal-fixture-machinery): one sorted driver table replaces per-spec shared seams; spec modules own preparation and reports. Literal selection defaults to both actor identities.
