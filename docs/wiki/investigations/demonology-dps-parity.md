@@ -46,6 +46,12 @@ The shared cooldown query implements pinned `cooldown.cpp603–615` expected-rem
 
 Pinned `pets.cpp701/875–882` disables regeneration for actual Wild Imps. The normal player-controlled power path otherwise grants native Energy regeneration, which can prevent exhaustion and the associated Core grant. Actual104317/55659 guardian initialization now records the source's no-regeneration policy; both runtime regeneration and APL potential-regeneration facts use it. Native pool size and Fel Firebolt costs are unchanged. Train qualification is pending.
 
+## Guardian secondary stats
+
+Actual native Fel Firebolt used2000ms despite the owner's19.45591% haste; the source expectation is1674ms. Executing `GuardianActor` units now resolve their actual `SummonedCreature` owner for spell haste, with one timing reader shared by cast/GCD/channel/duration calculations. Spell-specific modifiers remain on the guardian. Native pool/stat identities are not copied or changed. GREEN qualification is pending.
+
+Actual Burning Cleave separately observed zero critical chance against the owner's35.065216%. That remains open until the shared owner-critical-chance helper lands; the follow-up must extend that helper rather than create a second critical-chance path.
+
 ## Dominion and guardian execution
 
 The source-policy table also binds native Dreadbite271971, Greater Felbolt1277116 and the four Dominion actions. Dreadstalker AP inheritance1.06769 and Imp Lord SP2.75 are validated in pinned `pets.cpp`; the unvalidated Dreadstalker SP1.3 and Imp Lord AP1.375 are not imported. A fresh Imp Lord starts with200 Energy and waits for125 before casting. Native SpellPower retains the40-Energy cost; native regeneration remains in control.

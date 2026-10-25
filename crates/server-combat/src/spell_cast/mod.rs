@@ -1033,6 +1033,15 @@ fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base
     spell_mods::modify(world, caster, spell, op, base)
 }
 
+// SimC76f8118 pet.cpp222–226: native guardians inherit owner spell haste
+// and cast speed, while spell-specific modifiers remain on the actual caster.
+fn spell_haste_multiplier(world: &World, caster: Entity) -> f32 {
+    let owner = guardian::stat_owner(world, caster).unwrap_or(caster);
+    world
+        .get::<CharacterStats>(owner)
+        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0)
+}
+
 /// Cast time after ChangeCastTime mods, divided by `1 + CharacterStats.haste_pct`
 /// (haste auras fold in through `StatModifiers`).
 pub fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
@@ -1044,9 +1053,7 @@ pub fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
     if base == 0 {
         return 0;
     }
-    let haste = world
-        .get::<CharacterStats>(caster)
-        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+    let haste = spell_haste_multiplier(world, caster);
     let modded = modify(
         world,
         caster,
@@ -1093,9 +1100,7 @@ pub(crate) fn haste_channel_duration_ms(
         SpellModOp::ChangeCastTime,
         duration as f32,
     );
-    let haste = world
-        .get::<CharacterStats>(caster)
-        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+    let haste = spell_haste_multiplier(world, caster);
     let slow = world
         .get::<crate::auras::AuraStatMods>(caster)
         .map_or(1.0, |mods| mods.attack_cast_time_mult);
@@ -2606,9 +2611,7 @@ fn haste_regen_gcd_ms(world: &World, caster: Entity, spell: &SpellInfo, gcd_ms: 
     {
         return gcd_ms;
     }
-    let haste = world
-        .get::<CharacterStats>(caster)
-        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+    let haste = spell_haste_multiplier(world, caster);
     ((gcd_ms as f32 / haste.max(0.01)) as u32).clamp(MIN_GCD_MS, MAX_GCD_MS)
 }
 
@@ -3974,9 +3977,7 @@ fn haste_regen_cooldown_ms(world: &World, caster: Entity, spell: &SpellInfo, dur
     ) {
         return duration;
     }
-    let haste = world
-        .get::<CharacterStats>(caster)
-        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+    let haste = spell_haste_multiplier(world, caster);
     // Native Duration(int64(...)) truncates fractional milliseconds.
     (duration / haste.max(0.01)).trunc()
 }

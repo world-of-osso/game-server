@@ -315,6 +315,15 @@ pub(crate) struct GuardianActor {
     ready_at: f64,
 }
 
+/// Actual executing guardians read their owner's live secondary stats.
+/// SimC76f8118 pet.cpp217–226; no creature template or class identity changes.
+pub(crate) fn stat_owner(world: &World, actor: Entity) -> Option<Entity> {
+    world.get::<GuardianActor>(actor)?;
+    world
+        .get::<SummonedCreature>(actor)
+        .map(|summon| summon.owner)
+}
+
 pub(super) fn initialize(world: &mut World, actor: Entity) {
     let summon = world.get::<SummonedCreature>(actor).unwrap();
     // Mainline49206 uses pet-title3238, but is a temporary Gargoyle actor.
