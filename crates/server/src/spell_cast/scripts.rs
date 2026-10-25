@@ -26,6 +26,7 @@ mod batch8;
 mod batch9;
 mod cast_grants;
 mod cast_resets;
+mod execution_counters;
 mod foreground_procs;
 pub(super) use foreground_procs::after_foreground_special;
 mod chrono_flame;
@@ -35,10 +36,7 @@ mod elemental;
 pub(crate) use elemental::register as register_elemental_policies;
 mod elemental_ascendance;
 pub(super) use echo_policies::after_cast as apply_echo_policies;
-pub(super) use elemental::{
-    after_launch as finish_scripted_launch,
-    capture_damage_modifier as capture_consumed_damage_modifier,
-};
+pub(super) use elemental::capture_damage_modifier as capture_consumed_damage_modifier;
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
 mod enhancement_strikes;
@@ -139,6 +137,18 @@ pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havo
 pub(crate) use batch20::proc_charges;
 pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
+pub(super) fn finish_scripted_launch(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    consumed: Option<u32>,
+    depth: u8,
+    foreground: bool,
+) {
+    elemental::after_launch(world, caster, spell, consumed, depth, foreground);
+    execution_counters::after_launch(world, caster, spell.id);
+}
+
 /// TC OnCast runs once after successful checks, before spending and launch.
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
     cast_grants::on_cast(world, caster, spell_id, depth);
