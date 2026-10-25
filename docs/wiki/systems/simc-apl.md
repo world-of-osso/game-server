@@ -87,6 +87,8 @@ Shared expressions support `>?` minimum and `<?` maximum, with precedence below 
 
 Shared `NativeFacts` resolves `spell_targets.<action>` from that named action's living native candidates, independent of the proposed action (SimC76f8118 `action.cpp`3817–3896). `elemental_rotation_tests` covers profile spender/Ascendance/Swiftness casts and actual one/three/dead-target counts. These controller tests do not certify numerical DPS parity or missing guardian/proc mechanics.
 
+`spell_cast::scripts::elemental` supplies the missing MOTE and Elemental Blast relationships. Normal Lava Burst grants MOTE through native16166 effect0; its broad generated HIT proc is blocked because it otherwise re-grants a new MOTE instance on Lightning Bolt immediately after consumption. MOTE reads the earned native dummy amount and stores it in the existing per-cast damage multiplier; successful foreground casts consume that exact aura instance, while Flame Shock also consumes on triggered casts. Periodic aura amounts and ground fields preserve that cast multiplier after the aura is gone. Native overloads can read a live MOTE but never spend it. Elemental Blast chooses an inactive native stat buff; once all three are active, it refreshes one. The overload grants its buff before execution, the ordinary/background root afterward. `elemental_mechanics_tests` exercises actual aura consumption, missile/DoT/field damage and missing-buff selection.
+
 262 scoring uses `262.reference.single.json` and `262.reference-fixed.three.json`; the original three-target file has the Patchwerk add-event error. See the [parity spec](../../specs/dps-parity.md#elemental-shaman-fixture-262).
 
 ## Literal native row eligibility — qualified controls
