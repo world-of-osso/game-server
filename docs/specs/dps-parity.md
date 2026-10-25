@@ -95,7 +95,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Fire literal fixture
 
-- A selected Spellfire Sphere success also produces native Glorious Incandescence without another roll (`sc_mage.cpp7316–7319`). An actual Fire Blast hit with that aura launches the native Glorious count of Meteorite missiles, staggered75ms; native449560 supplies travel and449569 supplies impact (`2003–2012,4577–4580,4802–4808`). Queued destination casts retain their selected target and destination.
+- A selected Spellfire Sphere success also produces native Glorious Incandescence without another roll (`sc_mage.cpp7316–7319`). Only Fire Blast may consume its native charge; Pyroblast and other harmful spells preserve it. An actual Fire Blast hit with that aura launches the native Glorious count of Meteorite missiles, staggered75ms; native449560 supplies travel and449569 supplies impact (`2003–2012,4577–4580,4802–4808`). Queued destination casts retain their selected target and destination.
 
 - The shipped Fire fixture applies the pinned default five initial Sphere applications through native casting, retaining the native three-stack cap (`sc_mage.cpp366,6893–6894`). Selected Codex spends stored spheres on Phoenix invocation (`1249–1253`). Native Heating Up survives noncritical hits during its first200ms (`2196–2210`).
 

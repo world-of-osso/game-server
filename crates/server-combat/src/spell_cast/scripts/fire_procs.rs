@@ -177,6 +177,23 @@ pub(crate) fn register(scripts: &mut auras::scripts::AuraScripts) {
             ..Default::default()
         },
     );
+    scripts.0.insert(
+        GLORIOUS,
+        auras::scripts::AuraScript {
+            check_proc: Some(check_glorious_fire_blast),
+            ..Default::default()
+        },
+    );
+}
+
+fn check_glorious_fire_blast(
+    _world: &World,
+    _aura: &AuraInstance,
+    event: &auras::procs::AuraEvent,
+) -> bool {
+    // SimC76f8118 sc_mage.cpp4577–4580: only Fire Blast spends this
+    // charge; the broad native harmful-spell mask also matches Pyroblast.
+    event.spell_id == Some(108853)
 }
 
 fn reset_combustion_procs(world: &mut World, caster: Entity, _aura: &AuraInstance) {
