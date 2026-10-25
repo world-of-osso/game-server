@@ -241,6 +241,97 @@ fn frost_mage_native_frozen_orb_pays_thirty_delayed_area_pulses() {
     );
 }
 
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62/Frost64 inputs"]
+fn spellslinger_native_impacts_reduce_actual_specialization_orb_recharge() {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    use server::simc_apl::Facts;
+    for (spec, orb, source, payload, effect) in
+        [(62, 153626, 30451, 443763, 0), (64, 84714, 116, 443722, 1)]
+    {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(spec, 1).unwrap();
+        let bindings = Bindings {
+            actions: [("orb".into(), orb)].into(),
+            ..default()
+        };
+        let encounter = Encounter::Fixture {
+            started_at: 0.0,
+            duration: 300.0,
+            style: FightStyle::Patchwerk,
+        };
+        let recharge = |run: &Run| {
+            NativeFacts::new(run.app.world(), run.actor, &bindings, encounter, 1)
+                .value("cooldown.orb.full_recharge_time")
+                .unwrap()
+        };
+        let unit = if spec == 64 {
+            run.actor
+        } else {
+            run.targets[0]
+        };
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(orb, unit, Some(run.targets[0])),
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let before = recharge(&run);
+        assert!(
+            before > 0.0,
+            "native spec{spec} Orb recharge must really run"
+        );
+        let started = crate::spell_cast::now(run.app.world());
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            source,
+            Some(run.targets[0]),
+            false,
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let hits = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(payload)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .count();
+        assert!(
+            hits > 0,
+            "native Splinters must land before checking their cooldown consumer"
+        );
+        let native_ms = run
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(444986)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|row| row.index == effect)
+            .unwrap()
+            .base_points;
+        let elapsed = crate::spell_cast::now(run.app.world()) - started;
+        let reduction = before - recharge(&run) - elapsed;
+        assert!(
+            (reduction - hits as f64 * f64::from(native_ms) / 1000.0).abs() < 0.005,
+            "spec{spec}: {hits} actual Splinter impacts must reduce native recharge; got{reduction}"
+        );
+    }
+}
+
 use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
