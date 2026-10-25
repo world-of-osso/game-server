@@ -94,10 +94,7 @@ impl WwFacts<'_> {
         if !COMBO_HISTORY.contains(&id) || matches!(id, 467307 | 1217413) {
             return Ok(0.0);
         }
-        let previous = self
-            .world
-            .get::<crate::spell_cast::SpellHistory>(self.actor)
-            .and_then(|history| history.last_cast_in(COMBO_HISTORY));
+        let previous = crate::spell_cast::last_combo_action(self.world, self.actor);
         Ok(boolean(previous != Some(id)))
     }
 }

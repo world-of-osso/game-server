@@ -21,7 +21,7 @@ const ACTIONS: &[(&str, u32, bool, Option<u32>)] = &[
     ("spiritwalkers_grace", 79206, true, Some(79206)),
     ("wind_shear", 57994, false, Some(57994)),
     ("voltaic_blaze", 470057, false, Some(470057)),
-    ("tempest", 454009, false, Some(454009)),
+    ("tempest", 452201, false, Some(454009)),
     ("frost_shock", 196840, false, Some(196840)),
     ("blood_fury", 33702, true, None),
     ("berserking", 26297, true, None),
