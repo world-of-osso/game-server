@@ -18,6 +18,8 @@ mod composite_precombat_tests;
 mod devastation_rotation;
 mod devastation_tests;
 mod dummy_reference_tests;
+#[cfg(test)]
+mod elemental_ancestor_tests;
 mod elemental_ascendance_tests;
 mod elemental_cadence_tests;
 mod elemental_mechanics_tests;
