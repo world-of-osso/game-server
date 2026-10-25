@@ -84,7 +84,7 @@ fn load_native_spell(spell_id: u32, include_immunities: bool) -> super::SpellInf
     if include_immunities {
         insert_native_immunity_definitions(&conn);
     }
-    super::load::load_spell_store(&conn)
+    super::load_spell_store(&conn)
         .unwrap()
         .get(spell_id)
         .unwrap()

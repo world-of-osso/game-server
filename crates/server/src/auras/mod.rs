@@ -63,7 +63,10 @@ pub(crate) mod power_amount_trigger;
 mod proc_mask_tests;
 pub mod procs;
 mod refresh;
+mod ret_crusade;
+pub(crate) use ret_crusade::after_spender as add_ret_crusade_spender_stacks;
 mod ret_sentence;
+pub(crate) use ret_sentence::track_cast as track_ret_sentence_cast;
 pub(crate) mod reward_mods;
 #[cfg(test)]
 mod rolling_periodic_tests;
@@ -104,12 +107,7 @@ pub(crate) use unit_state::{orb_deception_display, supports_zero_entry_costume};
 /// SPELL_AURA_PERIODIC_DAMAGE.
 pub const PERIODIC_DAMAGE_AURA: u32 = handlers::PERIODIC_DAMAGE;
 
-/// SpellEffects IDs that apply an aura (`SpellEffect.aura` is the AuraType).
-/// 35 (party) and 65 (raid) area auras apply to their resolved targets only:
-/// there is no group backend. 27 PERSISTENT_AREA_AURA applies through its
-/// dynamic object (`spell_cast::area_aura`).
-// SimC76f8118 data_enums.hh881: native202 applies an aura to its resolved owner/pet recipients.
-pub const AURA_EFFECTS: [u32; 5] = [6, 27, 35, 65, 202];
+pub use crate::spell_info::{AURA_EFFECTS, is_aura_effect};
 
 const ATTR0_PASSIVE: u32 = 0x40;
 const ATTR4_NOT_IN_ARENA_OR_RATED_BATTLEGROUND: u32 = 0x0001_0000;
@@ -356,7 +354,11 @@ impl AuraInstance {
     }
 
     pub(crate) fn stack_multiplier(&self) -> f32 {
-        f32::from(self.stacks.max(1))
+        if ret_crusade::ignores_effect_stacks(self.spell_id) {
+            1.0
+        } else {
+            f32::from(self.stacks.max(1))
+        }
     }
 
     fn view(&self, now: f64) -> AuraView {
@@ -630,10 +632,6 @@ fn passive_map_allowed(world: &World, unit: Entity, spell: &SpellInfo) -> bool {
     }
 }
 
-pub fn is_aura_effect(effect: &SpellEffect) -> bool {
-    AURA_EFFECTS.contains(&effect.effect)
-}
-
 /// Every aura effect index of `spell` as an `AuraApplication` mask.
 pub fn aura_effect_mask(spell: &SpellInfo) -> u32 {
     spell
@@ -689,7 +687,8 @@ fn duration_ms(world: &World, application: &AuraApplication, spell: &SpellInfo) 
     );
     let extension = scripts::self_regrowth_duration_bonus(world, application);
     let duration = (duration + extension).max(0.0) as u32;
-    mechanic_duration::modify_duration(world, application, spell, duration)
+    let duration = mechanic_duration::modify_duration(world, application, spell, duration);
+    crate::spell_cast::haste_channel_duration_ms(world, application.caster, spell, duration)
 }
 
 /// Fresh resolved-spell duration through the ordinary caster/target modifier path.
@@ -744,14 +743,13 @@ fn periodic_base_interval_ms(spell: &SpellInfo, effect: &SpellEffect) -> u32 {
 /// TC a352b1fa SpellAuraEffects.cpp999–1012: period mods precede spell haste;
 /// the aura duration is unchanged, so the shorter period admits more ticks.
 /// SimC76f8118 sc_paladin_retribution.cpp747–750 uses this for Truth's Wake.
-fn periodic_interval_ms(
+pub(crate) fn periodic_interval_ms(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
-    effect: &SpellEffect,
+    base: u32,
 ) -> u32 {
     const SPELL_HASTE_AFFECTS_PERIODIC: u32 = 0x2000;
-    let base = periodic_base_interval_ms(spell, effect);
     if base == 0 {
         return 0;
     }
@@ -781,9 +779,16 @@ fn build_effect(
     } else {
         crate::spell_cast::effects::modded_base_points(world, caster, spell, effect)
     };
+    // A cast's scripted damage multiplier persists in its actual periodic payload.
+    let amount = if effect.aura == PERIODIC_DAMAGE_AURA {
+        amount * spell.cast_damage_multiplier.unwrap_or(1.0)
+    } else {
+        amount
+    };
     let amount = scripts::snapshot_periodic_amount(world, caster, spell, effect, amount);
     let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
-    let period_ms = periodic_interval_ms(world, caster, spell, effect);
+    let base_period_ms = periodic_base_interval_ms(spell, effect);
+    let period_ms = periodic_interval_ms(world, caster, spell, base_period_ms);
     AuraEffectState {
         index: effect.index,
         immunity: effect.immunity.clone(),
@@ -807,6 +812,9 @@ fn build_effect(
 
 /// Fresh native stack limit, including the caster's MaxAuraStacks modifiers.
 pub(crate) fn fresh_max_stacks(world: &World, caster: Entity, spell: &SpellInfo) -> u8 {
+    if let Some(maximum) = ret_crusade::maximum_stacks(world, caster, spell) {
+        return maximum;
+    }
     let maximum = spell
         .aura_options
         .as_deref()

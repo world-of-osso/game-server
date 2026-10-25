@@ -54,11 +54,12 @@ fn install_oils(world: &mut World, actor: Entity, value: &str) -> Result<(), Str
             continue;
         }
         let slot = super::inputs::slot(slot)?;
-        if !world
+        let equipped = world
             .get::<crate::stats::EquippedItems>(actor)
-            .is_some_and(|e| e.items.iter().any(|(s, _, _)| *s == slot))
-        {
-            return Err("temporary enchant has no equipped weapon".into());
+            .ok_or("temporary enchant owner lacks native equipment")?;
+        // SimC76f8118 item.cpp2237–2245: inactive slots do not initialize enchants.
+        if !equipped.items.iter().any(|(s, _, _)| *s == slot) {
+            continue;
         }
         // SimC76f8118 temporary_enchant.inc116 binds quality2 to native enchant8052.
         oils.push((slot, 8052));
@@ -82,13 +83,33 @@ fn install_expansion(
     // unique_gear.cpp3677–3705: numeric tokens are TraitNodeEntry IDs, not nodes or class talents.
     for entry in entries.split('/') {
         let (entry, _) = entry.split_once(':').unwrap_or((entry, "1"));
-        let entry: u32 = entry
-            .parse()
-            .map_err(|e| format!("native expansion entry: {e}"))?;
+        let entry = resolve_expansion_entry(entry)?;
         let spell: u32 = db.query_row("SELECT d.SpellID FROM trait_node_entry e JOIN trait_definition d ON d.ID=e.TraitDefinitionID WHERE e.ID=?1",[entry],|r|r.get(0)).map_err(|e| format!("native expansion entry{entry}: {e}"))?;
         server::consumables::apply(world, actor, spell, None)?;
     }
     Ok(())
+}
+
+// SimC76f8118 unique_gear.cpp3681–3698 resolves tokenized expansion names or
+// numeric TraitNodeEntry IDs. These identities are native70448 Omnium tree1186.
+const NAMED_EXPANSION_ENTRIES: &[(&str, u32)] = &[
+    ("rune_of_unleashed_fire", 136822),
+    ("rune_of_selfmending", 136819),
+    ("rune_of_lingering", 136817),
+    ("rune_of_critical_power", 136815),
+    ("rune_of_overload", 136814),
+];
+
+fn resolve_expansion_entry(token: &str) -> Result<u32, String> {
+    if let Some((_, entry)) = NAMED_EXPANSION_ENTRIES
+        .iter()
+        .find(|(name, _)| name.eq_ignore_ascii_case(token))
+    {
+        return Ok(*entry);
+    }
+    token
+        .parse()
+        .map_err(|error| format!("native expansion entry {token:?}: {error}"))
 }
 
 pub(super) fn supported(kind: &str, value: &str) -> bool {

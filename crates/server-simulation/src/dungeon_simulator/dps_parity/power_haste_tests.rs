@@ -585,3 +585,34 @@ fn native_class_actor_baseline_expertise_cancels_dummy_dodge_for_swings_and_spel
         "SimC player.cpp1622 baseline7.5% expertise cancels native dummy dodge"
     );
 }
+
+#[test]
+fn native_haste_periodic_ground_field_uses_the_same_hasted_interval_as_auras() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(vec![], &[26573, 81297], 2).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .haste_pct = 50.0;
+    h.cast_and_deliver(26573, None);
+    h.advance(14);
+    let pulses = h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(81297)
+                && event.target == Some(h.npc.to_bits())
+                && event.kind == CombatLogKind::Damage
+        })
+        .count();
+    assert_eq!(
+        pulses, 1,
+        "native0x2000 field must pulse at666ms, before its unmodified1s interval"
+    );
+}

@@ -1615,6 +1615,7 @@ fn damage_source_amount(
         let combo = super::scripts::combo_strikes_multiplier(world, bonus_caster, ctx.spell.id);
         let giantkiller =
             super::scripts::giantkiller_multiplier(world, ctx.caster, target, ctx.spell);
+        let ret_damage = super::scripts::ret_damage_multiplier(world, ctx, target, periodic);
         #[cfg(any(test, feature = "test-support"))]
         factor_capture::record_done(
             world,
@@ -1628,9 +1629,10 @@ fn damage_source_amount(
                 ("mechanic_damage", mechanic),
                 ("combo_strikes", combo),
                 ("giantkiller", giantkiller),
+                ("ret_damage", ret_damage),
             ],
         );
-        school_done * versatility * summon * creature * mechanic * combo * giantkiller
+        school_done * versatility * summon * creature * mechanic * combo * giantkiller * ret_damage
     };
     let bonus_ctx = EffectCtx {
         caster: bonus_caster,
@@ -1952,6 +1954,9 @@ fn deal_source_damage_and_report(
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::finish(world, ctx, target, &damage, &event);
     log_event(world, event);
+    if periodic && !resolved_source {
+        super::scripts::after_ret_periodic_damage(world, ctx, target, crit);
+    }
     if !periodic && !resolved_source {
         super::scripts::after_direct_damage(world, ctx, target, crit);
     }

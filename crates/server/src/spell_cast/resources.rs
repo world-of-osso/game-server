@@ -8,6 +8,7 @@ use super::{CostPool, powers};
 use crate::spell_info::{SpellDuration, SpellInfo};
 
 const ENVENOM: u32 = 32645;
+const FEROCIOUS_BITE: u32 = 22568;
 const BLACK_POWDER: u32 = 319175;
 const DISPATCH: u32 = 2098;
 const EVISCERATE: u32 = 196819;
@@ -101,6 +102,13 @@ pub(super) fn snapshot(
     let multiplier = match spell.id {
         // Native descriptions explicitly multiply m1 by combo points spent.
         ENVENOM | BLACK_POWDER | DISPATCH | EVISCERATE => combo,
+        // SimC76f8118 sc_druid.cpp4358–4371,4400–4401: Bite's coefficient
+        // already represents maximum CP; free casts retain that full coefficient.
+        FEROCIOUS_BITE if combo > 0.0 => {
+            let (_, maximum) = powers::power_value(world, caster, PowerType::ComboPoints)
+                .expect("native Bite requires a combo-point pool");
+            combo / maximum
+        }
         ARCANE_BARRAGE => barrage_multiplier(world, caster),
         ARCANE_BLAST => super::scripts::blast_multiplier(world, caster, 0),
         _ => return spell,

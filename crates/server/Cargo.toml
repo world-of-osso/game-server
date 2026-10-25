@@ -5,6 +5,8 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+server-core = { path = "../server-core" }
+server-admin = { path = "../server-admin" }
 server-catalog = { path = "../server-catalog" }
 server-follower-policy = { path = "../server-follower-policy" }
 server-map-rules = { path = "../server-map-rules" }
@@ -53,7 +55,7 @@ image = { version = "0.24.9", default-features = false, features = ["png"] }
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 
 [features]
-test-support = ["server-map-rules/test-support", "dep:blake3", "dep:tempfile", "dep:game-engine-core"]
+test-support = ["server-core/test-support", "server-map-rules/test-support", "dep:blake3", "dep:tempfile", "dep:game-engine-core"]
 # Private debug-peer harness; release builds reject it and deploy never enables it.
 native-proof-hold-persistence = []
 # Diagnostic: log per-system wall time every 10 s (enables Bevy system spans).
@@ -72,12 +74,11 @@ name = "game-server-site-export"
 path = "src/bin/site_export.rs"
 
 [dev-dependencies]
+server-core = { path = "../server-core", features = ["test-support"] }
 server-follower-policy = { path = "../server-follower-policy", features = ["test-support"] }
 server-map-rules = { path = "../server-map-rules", features = ["test-support"] }
 # Content-address frozen fixture inputs; already present in the workspace graph.
 blake3 = "1.8"
-# Exercise actual SQLite read authorization when proving cache I/O reuse.
-rusqlite = { version = "0.35", features = ["hooks"] }
 # Frozen engine-free AssistedCombat catalog/predicates; parity reuses authored decisions verbatim.
 game-engine-core = { git = "ssh://git@github.com/world-of-osso/game-engine.git", rev = "9ef2efe2d317b837d352fe8c5227086a4fdcd490" }
 # Measure publication bytes with the exact codec used by Lightyear messages.
