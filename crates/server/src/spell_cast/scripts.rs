@@ -165,6 +165,7 @@ pub(super) fn finish_scripted_launch(
 ) {
     elemental::after_launch(world, caster, spell, consumed, depth, foreground);
     execution_counters::after_launch(world, caster, spell.id);
+    unbroken_rhythm::after_launch(world, caster, spell.id);
     enhancement_tier::after_launch(world, caster, spell, depth);
 }
 
