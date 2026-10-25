@@ -19,6 +19,14 @@ fn assert_native_slayers_strike(spec: u32, action: u32) {
     let _seed_scope = crate::random::seed_scope(70_448);
     let mut run = super::prepare_literal(spec, 1).expect("actual selected Slayer player profile");
     super::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    super::literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        super::literal_rotation::execution::Execution::AutoAttack(target),
+    )
+    .unwrap();
     for _ in 0..400 {
         run.app.update();
     }

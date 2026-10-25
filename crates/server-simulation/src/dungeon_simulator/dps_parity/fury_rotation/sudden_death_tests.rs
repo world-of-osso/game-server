@@ -33,6 +33,13 @@ fn fury_execute_consumes_one_sudden_death_stack() {
     let mut run = super::super::prepare_measurement(72, 1).unwrap();
     let actor = run.actor;
     let target = run.targets[0];
+    // Isolate consumption from a fresh foreground RPPM grant on this Execute.
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 29725,
+    );
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 52437, Some(actor), 1);
     let stacks = |run: &Run| {
         run.app
