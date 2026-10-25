@@ -15,6 +15,7 @@ mod beast_mastery_mechanics_tests;
 mod beast_mastery_pet_tests;
 mod beast_mastery_rotation;
 mod composite_precombat_tests;
+mod conductive_energy_tests;
 mod devastation_rotation;
 mod devastation_tests;
 mod dummy_reference_tests;
