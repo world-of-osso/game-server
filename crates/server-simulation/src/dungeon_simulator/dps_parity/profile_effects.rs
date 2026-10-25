@@ -21,7 +21,9 @@ pub(super) fn install(world: &mut World, actor: Entity, profile: &Profile) -> Re
         // SimC76f8118 generated consumable/temporary_enchant bindings supply identities only.
         // Native ItemSparse/ItemEffect/SpellItemEnchantment supply all values and quality scaling.
         match (kind.as_str(), value.as_str()) {
-            ("flask", "flask_of_the_magisters_2") => apply_item(world, actor, 241322, &db)?,
+            ("flask", "flask_of_the_magisters_2" | "magisters_2") => {
+                apply_item(world, actor, 241322, &db)?
+            }
             // SimC76f8118 consumable.cpp40–59/item_data.inc175834: quality2 identity.
             ("flask", "flask_of_the_blood_knights_2") => apply_item(world, actor, 241324, &db)?,
             ("augmentation", "void_touched") => apply_item(world, actor, 259085, &db)?,
@@ -142,7 +144,7 @@ fn resolve_expansion_entry(token: &str) -> Result<u32, String> {
 pub(super) fn supported(kind: &str, value: &str) -> bool {
     matches!(
         (kind, value),
-        ("flask", "flask_of_the_magisters_2")
+        ("flask", "flask_of_the_magisters_2" | "magisters_2")
             | ("flask", "flask_of_the_blood_knights_2")
             | ("augmentation", "void_touched")
             | ("food", "royal_roast")
