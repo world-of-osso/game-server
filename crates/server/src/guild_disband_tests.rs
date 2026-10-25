@@ -23,6 +23,82 @@ fn members(db: &redb::Database) -> (u64, u64, u64) {
     (ids[0], ids[1], ids[2])
 }
 
+fn seed_metadata(db: &redb::Database, member: u64, former: u64, foreign: u64) {
+    let transaction = db.begin_write().unwrap();
+    seed_bank_usage(&transaction, &[(member, 7), (former, 7), (foreign, 8)]);
+    seed_guild_identity(&transaction);
+    seed_bank_log(&transaction);
+    for (guild_id, member) in [(7, "Master"), (8, "Foreign")] {
+        crate::guild_news::append_in(
+            &transaction,
+            guild_id,
+            GuildNewsKind::ItemLooted {
+                member: member.into(),
+                item_id: 2589,
+            },
+            101,
+            false,
+        );
+    }
+    transaction.commit().unwrap();
+}
+
+fn seed_bank_usage(transaction: &redb::WriteTransaction, members: &[(u64, u32)]) {
+    for &(id, guild_id) in members {
+        let usage = crate::persistence::banks::GuildBankUsage {
+            guild_id,
+            day: 20_000,
+            tab_withdrawals: vec![2],
+            copper_withdrawn: 10_000,
+        };
+        transaction
+            .open_table(crate::persistence::banks::GUILD_BANK_USAGE)
+            .unwrap()
+            .insert(id, bitcode::encode(&usage).as_slice())
+            .unwrap();
+    }
+}
+
+fn seed_guild_identity(transaction: &redb::WriteTransaction) {
+    let design = shared::guild_creation::GuildTabardDesign {
+        icon: 1,
+        icon_color: 1,
+        border: 1,
+        border_color: 1,
+        background_color: 1,
+    };
+    transaction
+        .open_table(crate::persistence::guild_tabards::DESIGNS)
+        .unwrap()
+        .insert(7, serde_json::to_vec(&design).unwrap().as_slice())
+        .unwrap();
+    transaction
+        .open_table(crate::persistence::charters::CREATED_AT)
+        .unwrap()
+        .insert(7, 1_728_600_000)
+        .unwrap();
+}
+
+fn seed_bank_log(transaction: &redb::WriteTransaction) {
+    let logs = crate::persistence::banks::GuildBankLogs {
+        tabs: vec![],
+        money: vec![crate::persistence::banks::GuildBankLogData {
+            kind: crate::persistence::banks::GuildBankLogKindData::DepositMoney,
+            actor: "Master".into(),
+            item_id: 0,
+            item_name: String::new(),
+            count: 0,
+            copper: 735_121,
+            time: 100,
+        }],
+    };
+    transaction
+        .open_table(crate::persistence::banks::GUILD_BANK_LOGS)
+        .unwrap()
+        .insert(7, bitcode::encode(&logs).as_slice())
+        .unwrap();
+}
+
 #[test]
 fn guild_disband_refuses_unguilded_nonmaster_and_foreign_without_mutation() {
     let db = temp_database();
@@ -61,6 +137,15 @@ fn guild_disband_deletes_offline_members_bank_and_profile_atomically_after_reope
     bank.tabs
         .push(crate::bank_storage::BankTabData::new("Supplies".into()));
     save_guild(&db, 7, &bank);
+    let mut foreign_bank = load_guild(&db, 8);
+    foreign_bank.money = 43_210;
+    save_guild(&db, 8, &foreign_bank);
+    let (former, _) = create_character(&db, 2, "Former", 1, 1).unwrap();
+    set_character_guild_by_id(&db, former, 7, "Disband Guild").unwrap();
+    save_guild_member_rank(&db, former, 4);
+    seed_metadata(&db, member, former, foreign);
+    apply_rank_request(&db, 7, former, GuildRankRequest::Leave).unwrap();
+    let inventory_before = crate::persistence::load_inventory(&db, master);
     crate::persistence_character::save_guild_profile(
         &db,
         7,
@@ -119,7 +204,42 @@ fn guild_disband_deletes_offline_members_bank_and_profile_atomically_after_reope
             .is_empty()
     );
     assert!(crate::persistence_character::load_guild_public_note(&db, member).is_empty());
+    assert_eq!(load_guild(&db, 8), foreign_bank);
+    assert_eq!(
+        crate::persistence::load_inventory(&db, master),
+        inventory_before
+    );
     let read = db.begin_read().unwrap();
+    for definition in [
+        crate::persistence::banks::GUILD_BANK_LOGS,
+        crate::persistence::guild_tabards::DESIGNS,
+    ] {
+        assert!(
+            read.open_table(definition)
+                .unwrap()
+                .get(7)
+                .unwrap()
+                .is_none()
+        );
+    }
+    for definition in [crate::guild_event_log::EVENTS, crate::guild_news::NEWS] {
+        let table = read.open_table(definition).unwrap();
+        assert!(table.get(7).unwrap().is_none());
+        assert!(table.get(8).unwrap().is_some());
+    }
+    assert!(
+        read.open_table(crate::persistence::charters::CREATED_AT)
+            .unwrap()
+            .get(7)
+            .unwrap()
+            .is_none()
+    );
+    let usage = read
+        .open_table(crate::persistence::banks::GUILD_BANK_USAGE)
+        .unwrap();
+    assert!(usage.get(member).unwrap().is_none());
+    assert!(usage.get(former).unwrap().is_none());
+    assert!(usage.get(foreign).unwrap().is_some());
     assert!(
         read.open_table(crate::persistence::banks::GUILDS)
             .unwrap()
