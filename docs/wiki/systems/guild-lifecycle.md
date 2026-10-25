@@ -6,7 +6,7 @@ Server-authoritative guild lifecycle events are distinct from [bank logs](banks.
 
 The existing authenticated `GuildRankRequest` handler accepts the appended unit `Disband` only from current rank0. `guild_disband.rs` opens one write transaction, enumerates stored members (including offline characters), deletes guild-owned rows and invitations/usage scoped to that guild, and releases the charter manager's name reservation before commit. The normal previous-member recipient loop sends empty rank snapshots and removes membership/design components. The destroyed event/news histories are removed, not replaced with invented quit events. Player inventory and other guilds remain outside deletion.
 
-[Server contract](../../specs/guild-ranks.md#confirmed-guild-disband) and [client/source contract](../../../../game-engine/docs/specs/guild-disband.md) own requirements. Behavioral server RED reached four missing-wire failures after correcting a test-only import; GREEN and real native acceptance remain pending.
+[Server contract](../../specs/guild-ranks.md#confirmed-guild-disband) and [client/source contract](../../../../game-engine/docs/specs/guild-disband.md) own requirements. Behavioral server RED reached four missing-wire failures after correcting a test-only import. Four server disband controls now pass; combined actual native action and fresh server/client readback pass in both skins. The linked client contract owns frozen artifact/capture provenance.
 
 ## Storage and query
 
