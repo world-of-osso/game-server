@@ -95,6 +95,20 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
 }
 
+fn read_counter_amount(world: &World, caster: Entity, policy: &Policy, effect: u8) -> Option<u8> {
+    let count = super::script_effect_value(world, caster, policy.talent, effect);
+    if !count.is_finite() || !(1.0..=f32::from(u8::MAX)).contains(&count) {
+        warn!(
+            policy = policy.name,
+            ?caster,
+            count,
+            "Native policy counter amount invalid"
+        );
+        return None;
+    }
+    Some(count as u8)
+}
+
 fn grant_counter(world: &mut World, caster: Entity, policy: &Policy) {
     let Relationship::CounterAfterCast {
         counter,
@@ -104,16 +118,13 @@ fn grant_counter(world: &mut World, caster: Entity, policy: &Policy) {
     else {
         return;
     };
-    let count = super::script_effect_value(world, caster, policy.talent, count_effect);
-    if !count.is_finite() || !(1.0..=f32::from(u8::MAX)).contains(&count) {
-        warn!(
-            policy = policy.name,
-            ?caster,
-            count,
-            "Native policy counter amount invalid"
-        );
+    let Some(count) = read_counter_amount(world, caster, policy, count_effect) else {
         return;
-    }
+    };
+    launch_counter(world, caster, policy, counter, count);
+}
+
+fn launch_counter(world: &mut World, caster: Entity, policy: &Policy, counter: u32, count: u8) {
     let Some(mut spell) = world.resource::<SpellStore>().get(counter).cloned() else {
         warn!(
             policy = policy.name,
@@ -122,7 +133,7 @@ fn grant_counter(world: &mut World, caster: Entity, policy: &Policy) {
         );
         return;
     };
-    spell.cast_aura_stacks = Some(count as u8);
+    spell.cast_aura_stacks = Some(count);
     if !super::super::launch_triggered_spell(world, caster, &spell, Some(caster), 1) {
         warn!(
             policy = policy.name,
@@ -153,6 +164,15 @@ pub(in crate::spell_cast) fn snapshot(
     {
         return None;
     }
+    let targets = capture_primary_targets(caster, spell, plan)?;
+    Some(Box::new(CastPolicyContext { powers, targets }))
+}
+
+fn capture_primary_targets(
+    caster: Entity,
+    spell: &SpellInfo,
+    plan: &TargetPlan,
+) -> Option<Vec<Entity>> {
     let Some(primary) = spell.cast_primary_target else {
         warn!(
             ?caster,
@@ -171,10 +191,11 @@ pub(in crate::spell_cast) fn snapshot(
         );
         return None;
     }
-    let targets = std::iter::once(primary)
-        .chain(selected.into_iter().filter(|&target| target != primary))
-        .collect();
-    Some(Box::new(CastPolicyContext { powers, targets }))
+    Some(
+        std::iter::once(primary)
+            .chain(selected.into_iter().filter(|&target| target != primary))
+            .collect(),
+    )
 }
 
 pub(in crate::spell_cast) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, hit: Entity) {
@@ -191,6 +212,14 @@ pub(in crate::spell_cast) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, hit:
     }
 }
 
+fn read_counter_instance(world: &World, caster: Entity, counter: u32) -> Option<u32> {
+    world
+        .get::<ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.spell_id == counter && aura.caster == caster && aura.stacks > 0)
+        .map(|aura| aura.instance_id)
+}
+
 fn consume_on_hit(world: &mut World, caster: Entity, policy: &Policy, context: &CastPolicyContext) {
     let Relationship::SpenderHit {
         counter, payload, ..
@@ -198,12 +227,7 @@ fn consume_on_hit(world: &mut World, caster: Entity, policy: &Policy, context: &
     else {
         return;
     };
-    let Some(instance) = world.get::<ActiveAuras>(caster).and_then(|auras| {
-        auras
-            .iter()
-            .find(|aura| aura.spell_id == counter && aura.caster == caster && aura.stacks > 0)
-            .map(|aura| aura.instance_id)
-    }) else {
+    let Some(instance) = read_counter_instance(world, caster, counter) else {
         return;
     };
     let Some(targets) = read_payload_targets(world, caster, policy, payload, &context.targets)
