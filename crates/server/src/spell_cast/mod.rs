@@ -2001,6 +2001,7 @@ fn validate_start_with_policy(
     shapeshift::check_cast(world, caster, spell)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
     scripts::check_enhancement_cast(world, caster, spell)?;
+    scripts::check_policy_cast(world, caster, spell)?;
     if let Some(block) = crate::auras::cast_blocker(world, caster, spell) {
         return Err(CastFailure::CrowdControlled(block));
     }
@@ -2095,7 +2096,7 @@ fn validate_history(
     {
         return Err(CastFailure::OnGlobalCooldown);
     }
-    if spell.cast_ignore_cooldowns {
+    if spell.cast_ignore_cooldowns || scripts::relationship_ignores_cooldown(world, caster, spell) {
         return Ok(());
     }
     if history.on_cooldown(spell, now) {
@@ -2675,6 +2676,7 @@ fn execute_cast_with_primary(
     casting_restriction::check_cast(world, caster, spell)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
     scripts::check_enhancement_cast(world, caster, spell)?;
+    scripts::check_policy_cast(world, caster, spell)?;
     toy_area::check_cast(world, caster, spell.id)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
@@ -2765,6 +2767,8 @@ fn execute_cast_with_primary(
     }
     if !spell.cast_parent_owns_modifier_charges {
         spell_mods::consume_charges(world, caster, spell);
+        // Spend admitted modifiers before an ordinary cast grants its next window.
+        scripts::apply_cast_relationships(world, caster, spell);
         scripts::consume_maelstrom_weapon(world, caster, spell);
         scripts::apply_echo_policies(world, caster, spell);
         scripts::after_foreground_spender(world, caster, spell, spell.cast_primary_target);
@@ -3987,7 +3991,7 @@ fn cooldown_recovery_ms(world: &World, caster: Entity, spell: &SpellInfo, base: 
 fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // SpellHistory::HandleCooldowns returns before consuming a charge or starting
     // a clock when source flag 0x2 is set. The cast's GCD remains independent.
-    if spell.cast_ignore_cooldowns {
+    if spell.cast_ignore_cooldowns || scripts::relationship_ignores_cooldown(world, caster, spell) {
         return;
     }
     let now = history_now(world);
