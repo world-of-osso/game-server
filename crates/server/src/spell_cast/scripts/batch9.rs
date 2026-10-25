@@ -11,6 +11,8 @@ use std::collections::HashSet;
 pub(super) const HEALING_RAIN: u32 = 73920;
 const RAVAGER: u32 = 228920;
 const RAVAGER_DAMAGE: u32 = 156287;
+const VOLLEY: u32 = 260243;
+const VOLLEY_DAMAGE: u32 = 260247;
 const SIGIL_OF_FLAME: u32 = 204596;
 const SIGIL_FLAME_DAMAGE: u32 = 204598;
 pub(super) const RAIN_OF_FIRE: u32 = 5740;
@@ -39,7 +41,8 @@ pub(in crate::spell_cast) fn cast_effect(spell_id: u32, index: u8) -> Option<Cas
         | (EARTHQUAKE | EARTHQUAKE_TARGET, 2)
         | (EMERALD_BLOSSOM, 0)
         | (RAIN_OF_FIRE, 1)
-        | (SIGIL_OF_FLAME, 0) => Some(spawn_ground_pulses),
+        | (SIGIL_OF_FLAME, 0)
+        | (VOLLEY, 0) => Some(spawn_ground_pulses),
         (VOID_STEP, 0) => Some(teleport_void_step),
         _ => None,
     }
@@ -103,6 +106,15 @@ fn read_ground_pulses(world: &World, ctx: &EffectCtx) -> GroundPulses {
             0,
             targets::Relation::Enemy,
             f64::from(ctx.spell.effects[2].aura_period_ms) / 1000.0,
+        ),
+        // SimC76f8118 sc_hunter.cpp6990–6998: a target-centered field,
+        // native root duration/effect1 period and native260247 damage payload.
+        VOLLEY => (
+            VOLLEY_DAMAGE,
+            targets::effect_radius(&ctx.spell.effects[0]),
+            0,
+            targets::Relation::Enemy,
+            f64::from(ctx.spell.effects[1].aura_period_ms) / 1000.0,
         ),
         // RAVAGER_NATIVE_PULSES: SimC76f8118 sc_warrior.cpp5967–5977.
         // Native156287 targetB radius14=8yd; native228920 effect1 period=2000ms.
@@ -265,6 +277,7 @@ pub(crate) fn ground_pulse_radius(world: &World, caster: Entity, spell_id: u32) 
     if !matches!(
         spell_id,
         CONSECRATION
+            | VOLLEY
             | RAVAGER
             | EARTHQUAKE
             | EARTHQUAKE_TARGET

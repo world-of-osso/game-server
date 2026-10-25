@@ -166,6 +166,24 @@ impl Facts for MmFacts<'_> {
 }
 
 impl ActionFacts for MmFacts<'_> {
+    fn target_ready(&self, action: &Action) -> Result<bool, String> {
+        // SimC76f8118 sc_hunter.cpp4452–4455 requires the real enabler;
+        // trueshot_t6883–6914 retains its own cooldown, not its bar replacement's.
+        const SOURCE_READINESS: &[(&str, &str)] = &[
+            ("moonlight_chakram", "buff.moonlight_chakram.up"),
+            ("trueshot", "cooldown.trueshot.ready"),
+        ];
+        for (_, fact) in SOURCE_READINESS
+            .iter()
+            .filter(|(name, _)| *name == action.name)
+        {
+            if self.native.value(fact)? == 0.0 {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+
     fn target_ids(&self, action: &Action) -> Result<Vec<u64>, String> {
         self.native.target_ids(action)
     }

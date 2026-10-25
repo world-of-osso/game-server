@@ -1,7 +1,7 @@
 //! Periodic aura effects. Each effect with a period ticks at
 //! `applied + k × period` while `≤ expiry`, so a 16 s aura with a 2 s period
-//! ticks 8 times; a refresh keeps the tick phase. Amounts are the per-stack
-//! amount × stacks.
+//! ticks 8 times; a refresh keeps the tick phase. Damage/healing also pay the
+//! elapsed fraction of a final incomplete interval at natural expiry.
 //!
 //! Tick sources: the aura caster deals the tick. PERIODIC_TRIGGER_SPELL casts
 //! `EffectTriggerSpell` from the caster at the aura's unit, as a triggered
@@ -60,9 +60,40 @@ struct Tick {
     effect_index: u8,
     aura_type: u32,
     amount: f32,
+    fraction: f32,
     scheduled_at: f64,
     misc: i32,
     trigger_spell: u32,
+}
+
+/// SimC76f8118 dot.cpp1154–1170/action.cpp5223: final damage/healing is fractional.
+/// TC a352b1fa SharedDefines.h defines no final-partial selector attribute.
+/// Trigger, dummy and resource periods remain discrete.
+fn supports_partial_tick(aura_type: u32) -> bool {
+    matches!(
+        aura_type,
+        PERIODIC_DAMAGE | PERIODIC_DAMAGE_PERCENT | PERIODIC_LEECH | PERIODIC_HEAL | OBS_MOD_HEALTH
+    )
+}
+
+fn next_due_tick(effect: &super::AuraEffectState, expiry: f64, now: f64) -> Option<(f64, f32)> {
+    const TIME_EPSILON: f64 = 1e-6;
+    let full_tick_at = effect.next_tick_at();
+    let final_partial = full_tick_at > expiry + TIME_EPSILON;
+    if final_partial && !supports_partial_tick(effect.aura_type) {
+        return None;
+    }
+    let scheduled_at = full_tick_at.min(expiry);
+    if scheduled_at > now {
+        return None;
+    }
+    let fraction = if final_partial {
+        let period = f64::from(effect.period_ms) / 1000.0;
+        (1.0 - (full_tick_at - expiry) / period).max(0.0)
+    } else {
+        1.0
+    };
+    (fraction > TIME_EPSILON).then_some((scheduled_at, fraction as f32))
 }
 
 /// Ticks due by `now` of every aura on `unit`, or of aura instance `only`.
@@ -77,15 +108,14 @@ fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Ve
         .iter_mut()
         .filter(|aura| only.is_none_or(|instance| aura.instance_id == instance))
     {
-        let expiry = aura.expires_at.unwrap_or(f64::INFINITY) + 1e-6;
+        let expiry = aura.expires_at.unwrap_or(f64::INFINITY);
         let stacks = aura.stack_multiplier();
         for effect in aura
             .effects
             .iter_mut()
             .filter(|effect| effect.period_ms > 0)
         {
-            while effect.next_tick_at() <= now && effect.next_tick_at() <= expiry {
-                let scheduled_at = effect.next_tick_at();
+            while let Some((scheduled_at, fraction)) = next_due_tick(effect, expiry, now) {
                 effect.pay_periodic_tick();
                 ticks.push(Tick {
                     instance_id: aura.instance_id,
@@ -94,6 +124,7 @@ fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Ve
                     effect_index: effect.index,
                     aura_type: effect.aura_type,
                     amount: effect.amount * stacks,
+                    fraction,
                     scheduled_at,
                     misc: effect.misc_values[0],
                     trigger_spell: effect.trigger_spell,
@@ -189,13 +220,14 @@ fn run_ticks(world: &mut World, unit: Entity, ticks: Vec<Tick>) {
         if end_aura_at_full_health(world, unit, &tick) {
             continue;
         }
-        let Some(spell) = world
+        let Some(mut spell) = world
             .get_resource::<SpellStore>()
             .and_then(|store| store.get(tick.spell_id))
             .cloned()
         else {
             continue;
         };
+        spell.cast_periodic_fraction = Some(tick.fraction);
         run_tick(world, unit, &spell, &tick);
         end_aura_at_full_health(world, unit, &tick);
     }
@@ -238,7 +270,12 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
             let advance_agony = agony_tick && !super::is_immune(world, unit, spell.school_mask());
             effects::deal_effect_damage(world, &ctx, effect, unit, tick.amount, false, true);
             if spell.id == super::ignite::IGNITE && tick.effect_index == 0 {
-                super::ignite::trigger_intensifying_flame(world, tick.caster, unit, tick.amount);
+                super::ignite::trigger_intensifying_flame(
+                    world,
+                    tick.caster,
+                    unit,
+                    tick.amount * tick.fraction,
+                );
             }
             if advance_agony {
                 super::agony::advance_stack(world, unit, tick.instance_id);
