@@ -187,12 +187,13 @@ pub(crate) fn consume_procs_and_roll_pyroclasm(
 }
 
 fn roll_pyroclasm(world: &mut World, caster: Entity) {
-    if !crate::auras::has_aura(world, caster, PYROCLASM_TALENT) {
-        return;
-    }
-    // SimC76f8118 sc_mage.cpp6446: read live talent Effect1. Native MID2
-    //1296584 modifies label5947 after the talent aura's cached amount was made.
-    let chance = super::script_effect_value(world, caster, PYROCLASM_TALENT, 0);
+    // SimC76f8118 sc_mage.cpp6446: chance belongs to talent269650.
+    // Native MID2's label5947 modifies buff269651, not talent label5949.
+    let chance = world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == PYROCLASM_TALENT))
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+        .map_or(0.0, |effect| effect.amount);
     if chance > 0.0 && rand::random::<f32>() * 100.0 < chance {
         crate::spell_cast::cast_triggered(world, caster, PYROCLASM, Some(caster), 1);
     }

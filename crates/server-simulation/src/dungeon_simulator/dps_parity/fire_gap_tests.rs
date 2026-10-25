@@ -195,49 +195,31 @@ fn fire_batch_fuel_the_fire_rolls_once_for_a_three_target_flamestrike() {
 
 #[test]
 #[ignore = "requires exact Fire63 inputs and private70448 DB"]
-fn fire_batch_mid2_four_piece_increases_native_pyroclasm_proc_chance() {
-    let _seed = crate::random::seed_scope(70_448);
+fn fire_batch_mid2_four_piece_modifies_pyroclasm_payload_not_talent_chance() {
     let mut run = prepare_literal(63, 1).unwrap();
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 1296584));
-    let target = run.targets[0];
-    let mut procs = 0;
-    for _ in 0..128 {
-        for spell in [269651, 48107, 48108] {
-            let instances: Vec<_> = run
-                .app
-                .world()
-                .get::<ActiveAuras>(run.actor)
-                .unwrap()
-                .iter()
-                .filter(|aura| aura.spell_id == spell)
-                .map(|aura| aura.instance_id)
-                .collect();
-            for instance in instances {
-                crate::auras::remove_instance(
-                    run.app.world_mut(),
-                    run.actor,
-                    instance,
-                    crate::auras::RemoveReason::Consumed,
-                );
-            }
-        }
-        crate::spell_cast::cast_triggered(
-            run.app.world_mut(),
-            run.actor,
-            48108,
-            Some(run.actor),
-            1,
-        );
-        start_native(&mut run, 11366, target);
-        procs += u32::from(stacks(&run, 269651) > 0);
-        preparation::finish_pending_setup(&mut run).unwrap();
-        for _ in 0..20 {
-            run.app.update();
-        }
-    }
-    assert!(
-        procs > 32,
-        "MID2 adds native25 points to the15% chance: {procs}/128"
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 269651, Some(run.actor), 1);
+    let auras = run.app.world().get::<ActiveAuras>(run.actor).unwrap();
+    let amount = |spell| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == spell)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount
+    };
+    assert_eq!(
+        amount(269650),
+        15.0,
+        "talent label5949 keeps its native15% chance"
+    );
+    assert_eq!(
+        amount(269651),
+        255.0,
+        "buff label5947 gets230+25 native damage points"
     );
 }
 
