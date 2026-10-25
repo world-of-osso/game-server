@@ -21,7 +21,7 @@ pub(crate) fn effect_summon_stabled_pet(world: &mut World, ctx: &EffectCtx, effe
         return;
     };
     let count =
-        crate::spell_cast::effects::roll_base_points(world, ctx.caster, ctx.spell, effect) as u32;
+        crate::spell_cast::effects::modded_base_points(world, ctx.caster, ctx.spell, effect) as u32;
     let duration = crate::spell_cast::duration_ms(world, ctx.caster, ctx.spell);
     let expires_at =
         (duration > 0).then(|| crate::auras::aura_now(world) + f64::from(duration) / 1000.0);
