@@ -800,10 +800,12 @@ impl<'a> NativeFacts<'a> {
 
     fn gcd(&self, action: &Action, operand: &str) -> Result<f64, String> {
         let control = matches!(action.name.as_str(), "variable" | "call_action_list");
-        if control && matches!(operand, "gcd" | "gcd.min" | "gcd.remains") {
+        if control && matches!(operand, "gcd" | "gcd.min") {
             return Ok(0.0);
         }
-        let spell = if operand == "gcd.max" {
+        // SimC76f8118 action.cpp3795–3808 reads player.gcd_ready even for
+        // item/control rows, which have no native action-spell alias.
+        let spell = if matches!(operand, "gcd.max" | "gcd.remains") {
             self.spell(self.bindings.global_cooldown_spell)?
         } else {
             let id = bound_spell(&self.bindings.actions, &action.name, "action")?;
