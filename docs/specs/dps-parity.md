@@ -251,7 +251,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Assassination Deathstalker lifecycle
 
 - Native Garrote establishes one caster-owned457129 mark with selected457052 effect0 stacks, transferring it off the previous target without refreshing an existing mark on the same target. Actual ComboPoint spenders meeting the native effect1 threshold consume one stack and deal457157 damage.
-- Depleting a mark with selected457058 grants native457280 after1ms, including its native Energy effect. A maximum-ComboPoint Envenom snapshots its native damage/critical bonus, reapplies the native mark count and consumes Darkest Night. Lower-ComboPoint casts neither consume marks nor Darkest Night while it is active. Scope is spec259; other Rogue specs are unchanged. Source: SimC76f8118 `sc_rogue.cpp2435–2440,2569–2574,4599,8732–8817`. Quietus Celeris, mark-target death, Mass Casualty and Hunt Them Down remain separate gaps.
+- Depleting a mark with selected457058 grants native457280 after1ms, including its native Energy effect. A maximum-ComboPoint Envenom snapshots its native damage/critical bonus, reapplies the native mark count and consumes Darkest Night. Lower-ComboPoint casts neither consume marks nor Darkest Night while it is active. Scope is spec259; other Rogue specs are unchanged. Source: SimC76f8118 `sc_rogue.cpp2435–2440,2569–2574,4599,8732–8817`. Quietus Celeris, mark-target death, Unshakeable Drive's delayed stack consumer, Mass Casualty and Hunt Them Down remain separate gaps.
 
 ### Measurement
 

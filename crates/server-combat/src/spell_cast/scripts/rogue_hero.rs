@@ -42,10 +42,10 @@ fn combo_points(spell: &SpellInfo) -> f32 {
 fn native_amount(world: &World, caster: Entity, spell: u32, index: u8) -> f32 {
     world
         .get::<ActiveAuras>(caster)
-        .unwrap()
+        .expect("selected Deathstalker caster retains its auras")
         .iter()
         .find(|aura| aura.spell_id == spell && aura.caster == caster)
-        .unwrap()
+        .expect("selected Deathstalker source aura")
         .effects
         .iter()
         .find(|effect| effect.index == index)
@@ -149,7 +149,6 @@ fn spend_mark(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
         return;
     };
     auras::spend_stack(world, target, instance);
-    spell_cast::cast_triggered(world, ctx.caster, 1248775, Some(ctx.caster), ctx.depth + 1);
     spell_cast::cast_triggered(world, ctx.caster, MARK_DAMAGE, Some(target), ctx.depth + 1);
     if owned_mark(world, ctx.caster, target).is_none()
         && auras::has_aura(world, ctx.caster, DARKEST_TALENT)
