@@ -1,9 +1,10 @@
 //! Real authenticated dispatch, durable deletion and online membership refresh.
+use super::guild_ranks::snapshot;
 use super::*;
 use crate::persistence::banks::{load_guild, save_guild, save_guild_member_rank};
 use crate::persistence::{create_tables, temp_database};
 use crate::persistence_character::{create_character, set_character_guild_by_id};
-use redb::{ReadableDatabase, ReadableTable};
+use redb::ReadableDatabase;
 use shared::protocol::*;
 
 fn request() -> GuildRankRequest {
@@ -140,6 +141,25 @@ fn guild_disband_deletes_offline_members_bank_and_profile_atomically_after_reope
 }
 
 #[test]
+fn guild_disband_requires_an_authenticated_connection() {
+    let mut h = crate::bank_test_harness::harness().unwrap();
+    let master = h.character_id;
+    set_character_guild_by_id(h.db(), master, 7, "Disband Guild").unwrap();
+    save_guild_member_rank(h.db(), master, 0);
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .remove::<crate::auth::Authenticated>();
+    h.send::<GuildRankRequest, GuildChannel>(request());
+    assert_eq!(
+        crate::persistence::load_character_guild(h.db(), master)
+            .unwrap()
+            .guild_id,
+        7
+    );
+}
+
+#[test]
 fn guild_disband_authenticated_request_refreshes_both_online_clients() {
     let mut h = crate::bank_test_harness::harness().unwrap();
     let master = h.character_id;
@@ -170,19 +190,6 @@ fn guild_disband_authenticated_request_refreshes_both_online_clients() {
             },
         ));
     }
-    h.app
-        .world_mut()
-        .entity_mut(h.connection)
-        .remove::<crate::auth::Authenticated>();
-    h.send::<GuildRankRequest, GuildChannel>(request());
-    assert_eq!(
-        crate::persistence_character::list_guild_members(h.db(), 7).len(),
-        2
-    );
-    h.app
-        .world_mut()
-        .entity_mut(h.connection)
-        .insert(crate::auth::Authenticated { account_id: 1 });
     h.take::<GuildRanksState>();
     h.take_for::<GuildRanksState>(peer);
     h.send_from::<GuildRankRequest, GuildChannel>(peer, request());
