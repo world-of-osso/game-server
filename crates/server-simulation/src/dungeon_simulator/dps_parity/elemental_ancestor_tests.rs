@@ -86,6 +86,74 @@ fn elemental_ancestor_echo_is_owned_damage_and_not_an_overload_recursion() {
     );
 }
 
+fn ancestor_lava_damage(keep_fury: bool) -> (f64, f64, f64) {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = fixture();
+    let ancestor = stormkeeper(&mut run);
+    let fury = own_aura(&run, 60188).expect("selected native Elemental Fury");
+    let bonus = fury
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .amount;
+    let instance = fury.instance_id;
+    if !keep_fury {
+        crate::auras::remove_instance(
+            run.app.world_mut(),
+            run.actor,
+            instance,
+            crate::auras::RemoveReason::Consumed,
+        );
+    }
+    run.app
+        .world_mut()
+        .resource_mut::<ObservedCombatEvents>()
+        .0
+        .clear();
+    cast(&mut run, 188196);
+    let hit = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .find(|event| {
+            event.source == Some(ancestor.to_bits())
+                && event.spell_id == Some(447419)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .expect("actual Ancestor Lava Burst");
+    assert!(hit.crit);
+    let variance = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(447419)
+        .unwrap()
+        .effects[0]
+        .variance;
+    (f64::from(hit.amount), f64::from(bonus), f64::from(variance))
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile with native445624 template closure"]
+fn elemental_ancestor_lava_critical_bonus_uses_live_native_elemental_fury() {
+    // SimC76f8118 sc_shaman.cpp11468–11469 explicitly adds the three
+    // Ancestor spells to native Elemental Fury effect1's critical bonus.
+    let (ordinary, _, variance) = ancestor_lava_damage(false);
+    let (empowered, percent, _) = ancestor_lava_damage(true);
+    assert!(percent > 0.0);
+    let expected = ordinary * (2.0 + percent / 100.0) / 2.0;
+    let spread = variance / 2.0;
+    let ratio = (1.0 + spread) / (1.0 - spread);
+    assert!(
+        empowered >= expected / ratio - 3.0 && empowered <= expected * ratio + 3.0,
+        "live Fury{percent}% critical bonus: ordinary{ordinary}, empowered{empowered}, expected{expected}, native variance{variance}"
+    );
+}
+
 #[test]
 #[ignore = "requires private262 native DB/profile with native445624 template closure"]
 fn elemental_ancestor_chain_echo_reaches_native_pack_and_expires() {
