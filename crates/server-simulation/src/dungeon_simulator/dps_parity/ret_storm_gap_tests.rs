@@ -224,7 +224,7 @@ fn dps_parity_ret_storm_gap_selected_sunrise_launches_real_echo() {
     let events = capture["events"].as_array().unwrap();
     let amounts = events
         .iter()
-        .filter(|event| event["event"] == "direct_amount");
+        .filter(|event| event["event"] == "direct_amount" && event["spell_id"] == STORM);
     let mut root_hits = 0;
     let mut echo_hits = 0;
     for event in amounts {
