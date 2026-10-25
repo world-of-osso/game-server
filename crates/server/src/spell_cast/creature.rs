@@ -64,7 +64,8 @@ pub fn creature_cast_with_targets(
     spell_id: u32,
     targets: super::CastTargets,
 ) -> Result<(), CastFailure> {
-    let (spell, explicit) = load_creature_cast(world, caster, spell_id, Some(targets.unit))?;
+    let (mut spell, explicit) = load_creature_cast(world, caster, spell_id, Some(targets.unit))?;
+    spell.cast_destination = targets.destination;
     super::start_cast_with_primary(world, caster, &spell, explicit, targets.primary)
 }
 

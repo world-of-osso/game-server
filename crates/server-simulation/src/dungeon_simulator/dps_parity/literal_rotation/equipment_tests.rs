@@ -4,6 +4,9 @@ use crate::simc_apl_native::{Encounter, FightStyle};
 use shared::item_data::ItemDefinitionSource;
 use std::path::PathBuf;
 
+#[path = "ground_target_tests.rs"]
+mod ground_target_tests;
+
 pub(super) fn load_world() -> World {
     let path = PathBuf::from(std::env::var_os("DPS_PARITY_WORLD_DB").expect("private native DB"));
     let db =

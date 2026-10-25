@@ -49,6 +49,7 @@ fn cast_ordinary(run: &mut Run, spell: u32, unit: Entity) {
             CastTargets {
                 unit,
                 primary: Some(run.targets[0]),
+                destination: None,
             },
         );
         match result {
