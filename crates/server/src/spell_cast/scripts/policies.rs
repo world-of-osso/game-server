@@ -1,5 +1,5 @@
 //! Explicit missing-script policies; native spell records still own payloads.
-mod pet_sets;
+pub(super) mod pet_sets;
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, PowerType};
 

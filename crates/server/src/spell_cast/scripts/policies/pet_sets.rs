@@ -5,6 +5,11 @@ use crate::spell_cast::{self, effects::EffectCtx};
 use crate::spell_info::{SpellInfo, SpellStore};
 use bevy::prelude::*;
 
+const COBRA_SHOT: u32 = 193455;
+const COBRA_FANG: u32 = 1299389;
+const COBRA_FANG_SET: u32 = 1296632;
+const BEAST_CLEAVE: u32 = 268877;
+
 struct StompCast {
     parent: u32,
     spec: u32,
@@ -35,8 +40,8 @@ struct PetHitAura {
 // owner's Cobra Fang. Native1299389 supplies its amount and stack cap.
 const HITS: &[PetHitAura] = &[PetHitAura {
     parent: 201754,
-    set: 1296632,
-    aura: 1299389,
+    set: COBRA_FANG_SET,
+    aura: COBRA_FANG,
 }];
 
 fn owns_set(world: &World, owner: Entity, spell: u32) -> bool {
@@ -47,6 +52,50 @@ fn owns_set(world: &World, owner: Entity, spell: u32) -> bool {
                 && matches!(aura.source, AuraSource::ItemSet(_))
         })
     })
+}
+
+/// SimC76f8118 sc_hunter.cpp4983–4985/5024–5025 snapshots the earned
+/// stacks before execute4970 expires them. Native aura effect1 owns the boost.
+pub(crate) fn capture_cobra_damage(world: &World, caster: Entity, spell: &mut SpellInfo) {
+    if spell.id != COBRA_SHOT
+        || !owns_set(world, caster, COBRA_FANG_SET)
+        || crate::auras::has_aura(world, caster, BEAST_CLEAVE)
+    {
+        return;
+    }
+    let now = spell_cast::now(world);
+    let Some(aura) = world.get::<ActiveAuras>(caster).and_then(|auras| {
+        auras.iter().find(|aura| {
+            aura.spell_id == COBRA_FANG
+                && aura.caster == caster
+                && aura.expires_at.is_none_or(|at| at > now)
+        })
+    }) else {
+        return;
+    };
+    let percent = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("native Cobra Fang damage effect1")
+        .amount
+        * f32::from(aura.stacks);
+    spell.cast_damage_multiplier =
+        Some(spell.cast_damage_multiplier.unwrap_or(1.0) * (1.0 + percent / 100.0));
+}
+
+/// SimC76f8118 sc_hunter.cpp4970 consumes the current earned aura after a
+/// successful Cobra launch, even while the native missile is still in flight.
+pub(crate) fn finish_cobra(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if spell.id != COBRA_SHOT || !owns_set(world, caster, COBRA_FANG_SET) {
+        return;
+    }
+    crate::auras::remove_auras(
+        world,
+        caster,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == COBRA_FANG && aura.caster == caster,
+    );
 }
 
 pub(super) fn has_cast(parent: u32) -> bool {
