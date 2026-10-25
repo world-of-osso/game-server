@@ -6,6 +6,8 @@ mod barbed_budget_tests;
 mod composite_precombat_tests;
 mod dummy_reference_tests;
 mod elemental_ascendance_tests;
+mod elemental_rotation;
+mod elemental_rotation_tests;
 mod engagement_tests;
 mod enhancement_operand_tests;
 mod enhancement_rotation;
@@ -39,6 +41,7 @@ mod profile_initialization;
 mod rake_stealth_tests;
 mod report;
 mod ret_batch_tests;
+mod ret_damage_relationship_tests;
 mod ret_damage_tests;
 mod ret_dawnlight_consumer_tests;
 mod ret_dawnlight_target_tests;
@@ -88,6 +91,7 @@ struct Run {
     player_rotation: Option<player_rotation::PlayerRotation>,
     windwalker_rotation: Option<windwalker_rotation::Rotation>,
     ret_rotation: Option<ret_rotation::Rotation>,
+    elemental_rotation: Option<elemental_rotation::Rotation>,
     marksmanship_rotation: Option<marksmanship_rotation::Rotation>,
     assassination_rotation: Option<assassination_rotation::Rotation>,
     enhancement_rotation: Option<enhancement_rotation::Rotation>,
@@ -283,7 +287,7 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
         preparation::prepare_enhancement_precombat(&mut run)?;
         Ok(run)
-    } else if matches!(spec_id, 70 | 269)
+    } else if matches!(spec_id, 70 | 262 | 269)
         && matches!(
             &identity,
             crate::followers::simulator::ParityActor::Follower
@@ -292,6 +296,8 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
         let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
         if spec_id == 70 {
             preparation::prepare_ret_precombat(&mut run)?;
+        } else if spec_id == 262 {
+            preparation::prepare_elemental_precombat(&mut run)?;
         } else {
             preparation::prepare_windwalker_precombat(&mut run)?;
         }
@@ -406,6 +412,7 @@ fn spawn_reference(
         player_rotation: None,
         windwalker_rotation: None,
         ret_rotation: None,
+        elemental_rotation: None,
         marksmanship_rotation: None,
         assassination_rotation: None,
         enhancement_rotation: None,
@@ -648,6 +655,9 @@ fn drive_player(run: &mut Run) -> Result<(), String> {
     if let Some(rotation) = &mut run.ret_rotation {
         rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
     }
+    if let Some(rotation) = &mut run.elemental_rotation {
+        rotation.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    }
     if let Some(rotation) = &mut run.enhancement_rotation {
         rotation.step(run.app.world_mut(), run.actor, &run.targets, "default")?;
     }
@@ -667,7 +677,7 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
         json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "actor_kind": if run.app.world().get::<shared::components::Player>(run.actor).is_some() { "player" } else { "follower" },
         "enhancement_rotation": run.enhancement_rotation.as_ref().map(|rotation| rotation.report()),
-        "driver": if run.marksmanship_rotation.is_some() { "LITERAL_SIMC_MARKSMANSHIP_76f8118" } else if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "driver": if run.elemental_rotation.is_some() { "LITERAL_SIMC_ELEMENTAL_76f8118" } else if run.marksmanship_rotation.is_some() { "LITERAL_SIMC_MARKSMANSHIP_76f8118" } else if run.assassination_rotation.is_some() { "LITERAL_SIMC_ASSASSINATION_76f8118" } else if run.enhancement_rotation.is_some() { "LITERAL_SIMC_ENHANCEMENT_76f8118" } else if run.ret_rotation.is_some() { "LITERAL_SIMC_RETRIBUTION_76f8118" } else if run.windwalker_rotation.is_some() { "LITERAL_SIMC_WINDWALKER_76f8118" } else if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
         "windwalker_rotation": run.windwalker_rotation.as_ref().map(|rotation| rotation.report()),
         "ret_rotation": run.ret_rotation.as_ref().map(|rotation| rotation.report()),
         "marksmanship_rotation": run.marksmanship_rotation.as_ref().map(|rotation| rotation.report()),

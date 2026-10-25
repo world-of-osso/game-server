@@ -79,6 +79,16 @@ Clock-aware `preparation::execute_precombat_plan` now consumes selected native p
 
 `Driver::poll_precombat` returns Waiting/Selected original Action+Execution/Finished. Actual native Player63 Arcane Intellect GCD/cursor and Pyroblast/while-casting row controls first produce2RED at85a3a1c20. Prepared now samples CastState plus native GCD; busy polling cannot consume variables/rows, direct busy precombat select fails explicitly, and use_while_casting supplements native admission. Caller advances real App frames and starts its fight epoch after setup; final flight remains native782 state, not a timer. At3d32d68bf actual Fire2GREEN27.11s plus23 relevant simulation regressions pass:1459→55342→real11366/2.337s, setup5.35s, native flight still1/0.142s at Finished. [Exact proof/exclusions](../../handoffs/shared-precombat-poll-proof-ledger.md#current-green-scope--3d32d68bf); full Fire adapter/facts remain open.
 
+## Elemental fixture (262)
+
+`dps_parity::elemental_rotation` parses the exact profile's `actions` into the shared `Program`. Its bindings supply native spell identities and Maelstrom; shared equipment facts, target selection, readiness and execution remain authoritative. Capture precedes native warmup, ordered precombat completes before engagement, and ordinary followers keep their native kit. Wind Shear requires an actual casting target. Ancestral Swiftness disables the Nature's Swiftness source row when its selected talent is active (SimC76f8118 `sc_shaman.cpp`8132–8137).
+
+Shared expressions support `>?` minimum and `<?` maximum, with precedence below addition and above comparisons (SimC76f8118 `expressions.cpp`135–145,1104–1106). Elemental's Maelstrom predicate therefore caps Chain Lightning's target contribution at five without rewriting its source rows.
+
+Shared `NativeFacts` resolves `spell_targets.<action>` from that named action's living native candidates, independent of the proposed action (SimC76f8118 `action.cpp`3817–3896). `elemental_rotation_tests` covers profile spender/Ascendance/Swiftness casts and actual one/three/dead-target counts. These controller tests do not certify numerical DPS parity or missing guardian/proc mechanics.
+
+262 scoring uses `262.reference.single.json` and `262.reference-fixed.three.json`; the original three-target file has the Patchwerk add-event error. See the [parity spec](../../specs/dps-parity.md#elemental-shaman-fixture-262).
+
 ## Literal native row eligibility — qualified controls
 
 [Native row-gating packet](../../handoffs/literal-row-gating-proof-ledger.md) reaches4RED/1GREEN atd49f4951c. Prepared now samples actual Moving and active native GCD; Driver honors moving0/1 and explicit off-GCD row permission without changing native cast admission. Configured movement.distance remains a named unavailable gap, never zero. All five gate controls pass at96b572797; Ele item activation remains unqualified.

@@ -11,6 +11,15 @@ use crate::spell_info::SpellStore;
 const SENTENCE: u32 = 343527;
 const EXPLOSION: u32 = 387113;
 const PHYSICAL_SCHOOL: u32 = 1;
+const INITIAL_DAMAGE: u32 = 1260251;
+
+#[derive(Component)]
+struct SentenceTarget(Entity);
+
+/// SimC owns one caster-side accumulation pool; the primary owns its expiry.
+pub(crate) fn track_cast(world: &mut World, caster: Entity, target: Entity) {
+    world.entity_mut(caster).insert(SentenceTarget(target));
+}
 
 pub(crate) fn register(scripts: &mut AuraScripts) {
     scripts.0.insert(
@@ -28,11 +37,29 @@ pub(crate) fn record_damage(world: &mut World, event: &AuraEvent) {
     if event.damage <= 0.0 || !qualifies_school(world, event.spell_id) {
         return;
     }
-    let Some(target) = event.target else {
+    let Some(damaged_target) = event.target else {
+        return;
+    };
+    let Some(&SentenceTarget(primary)) = world.get::<SentenceTarget>(event.actor) else {
         return;
     };
     let now = crate::spell_cast::now(world);
-    let Some(mut auras) = world.get_mut::<ActiveAuras>(target) else {
+    // SimC sc_paladin.cpp3597–3603 gathers from every marked recipient. The
+    // init hit itself marks before impact in SimC; native effect0 precedes aura1.
+    let gathered = event.spell_id == Some(INITIAL_DAMAGE)
+        || world
+            .get::<ActiveAuras>(damaged_target)
+            .is_some_and(|auras| {
+                auras.iter().any(|aura| {
+                    aura.spell_id == INITIAL_DAMAGE
+                        && aura.caster == event.actor
+                        && aura.expires_at.is_none_or(|expiry| now <= expiry)
+                })
+            });
+    if !gathered {
+        return;
+    }
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(primary) else {
         return;
     };
     for aura in auras.auras.iter_mut().filter(|aura| {
@@ -70,6 +97,12 @@ fn discharge_on_expiry(
     aura: &AuraInstance,
     reason: RemoveReason,
 ) {
+    if world
+        .get::<SentenceTarget>(aura.caster)
+        .is_some_and(|primary| primary.0 == target)
+    {
+        world.entity_mut(aura.caster).remove::<SentenceTarget>();
+    }
     if reason != RemoveReason::Expired {
         return;
     }
