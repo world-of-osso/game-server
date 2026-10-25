@@ -13,6 +13,8 @@ const DEADLY_INSTANT: u32 = 113780;
 const VENOMOUS_WOUNDS: u32 = 79134;
 const VENOMOUS_BLEEDS: &[u32] = &[703, 1943];
 const DISPEL_POISON: u8 = 4;
+const IMPROVED_GARROTE: u32 = 381632;
+const GARROTE_WINDOW: u32 = 392401;
 const KINGSBANE: u32 = 385627;
 const KINGSBANE_RAMP: u32 = 394095;
 // SimC76f8118 sc_rogue.cpp2974–3083: lethal direct poison payloads;
@@ -136,9 +138,64 @@ pub(crate) fn after_poison_hit(world: &mut World, ctx: &EffectCtx<'_>, target: E
     }
 }
 
+pub(crate) fn prepare_cast(
+    world: &mut World,
+    caster: Entity,
+    target: Option<Entity>,
+    spell: &mut SpellInfo,
+) {
+    prepare_garrote(world, caster, spell);
+    prepare_envenom(world, caster, target, spell);
+}
+
+/// SimC76f8118 sc_rogue.cpp4550–4561: preserve the native Improved
+/// Garrote bonus in the applied bleed, rather than reading stealth on each tick.
+fn prepare_garrote(world: &World, caster: Entity, spell: &mut SpellInfo) {
+    if spell.id != 703 || !super::has_aura(world, caster, IMPROVED_GARROTE) {
+        return;
+    }
+    let stealthed = world
+        .get::<ActiveAuras>(caster)
+        .is_some_and(|auras| auras.has_type(super::handlers::MOD_STEALTH));
+    if !stealthed && !super::has_aura(world, caster, GARROTE_WINDOW) {
+        return;
+    }
+    let window = world
+        .resource::<SpellStore>()
+        .get(GARROTE_WINDOW)
+        .expect("selected Improved Garrote requires its native window");
+    let effect = window
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("native Improved Garrote damage bonus");
+    let bonus = spell_cast::effects::modded_base_points(world, caster, window, effect);
+    spell.cast_damage_multiplier =
+        Some(spell.cast_damage_multiplier.unwrap_or(1.0) * (1.0 + bonus / 100.0));
+}
+
+/// sc_rogue.cpp7351–7378/11121–11133: ending the last real stealth
+/// aura starts the native window; re-entering stealth does not start a timer.
+pub(super) fn after_stealth_removed(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if !aura
+        .effects
+        .iter()
+        .any(|effect| effect.aura_type == super::handlers::MOD_STEALTH)
+        || !super::has_aura(world, unit, IMPROVED_GARROTE)
+    {
+        return;
+    }
+    let stealthed = world
+        .get::<ActiveAuras>(unit)
+        .is_some_and(|auras| auras.has_type(super::handlers::MOD_STEALTH));
+    if !stealthed {
+        spell_cast::cast_triggered(world, unit, GARROTE_WINDOW, Some(unit), 1);
+    }
+}
+
 /// SimC76f8118 sc_rogue.cpp4281–4310: snapshot the native Amplifying
 /// bonus and consume the owned threshold before this cast can generate poison.
-pub(crate) fn prepare_envenom(
+fn prepare_envenom(
     world: &mut World,
     caster: Entity,
     target: Option<Entity>,

@@ -235,6 +235,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Spec1467 follower measurements execute all89 preserved MID1 `76f8118` APL rows through shared `literal_rotation`; retain the named missing-MID2 reference gap and complete exported allocations.
 - `empower_to` selects the real native release stage while retaining the selected hostile primary independently of self casts. Fire Breath dot facts observe native357209 owned by that actor. Disintegrate uses the shared channel decision seam, including action-bound `ticks_remain`.
 
+### Improved Garrote
+
+- With selected381632, ordinary Garrote snapshots392401 effect1's native bonus while actually stealthed or during the native post-stealth window. Ending the last actual stealth aura grants392401; native duration and cooldown modifier remain authoritative. The applied bleed keeps its bonus after stealth and the window end (SimC76f8118 `sc_rogue.cpp4550–4561,7351–7378,11121–11133`).
+
 ### Assassination native damage children
 
 - Successful Rupture with selected381627 applies native381628 at the captured effective ComboPoint multiplier, minimum1, without another resource payment. Native coefficients, tick cadence and duration remain unchanged (SimC76f8118 `sc_rogue.cpp5257–5264,6200–6203`).

@@ -54,6 +54,7 @@ pub(super) fn run_remove(
     aura: &AuraInstance,
     reason: super::RemoveReason,
 ) {
+    super::rogue::after_stealth_removed(world, unit, aura);
     let Some(script) = script(world, aura.spell_id) else {
         return;
     };
