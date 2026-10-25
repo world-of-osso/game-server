@@ -127,6 +127,54 @@ fn earned_per_hit(run: &Run, critical: bool) -> u8 {
     (base * if critical { 1.0 + crit_bonus } else { 1.0 }) as u8
 }
 
+#[test]
+#[ignore = "actual selected Dual Threat replaces native white impacts without consecutive procs"]
+fn literal_ww_native_dual_threat_replaces_eligible_white_impacts() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare(true);
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(run.actor)
+            .unwrap()
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 451823)
+    );
+    start_white(&mut run);
+    for _ in 0..1200 {
+        run.app.update();
+        let swings = events(&run)
+            .into_iter()
+            .filter(|event| {
+                (event.spell_id.is_none() || event.spell_id == Some(DUAL_THREAT))
+                    && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+            })
+            .collect::<Vec<_>>();
+        if swings.len() < 20 {
+            continue;
+        }
+        assert!(
+            swings.first().unwrap().spell_id.is_none(),
+            "first impact must remain white"
+        );
+        assert!(
+            swings
+                .iter()
+                .any(|event| event.spell_id == Some(DUAL_THREAT)),
+            "selected native Dual Threat must actually replace a white impact"
+        );
+        assert!(
+            swings
+                .windows(2)
+                .all(|pair| pair[0].spell_id != Some(DUAL_THREAT)
+                    || pair[1].spell_id != Some(DUAL_THREAT)),
+            "replacement gate must forbid consecutive Dual Threat impacts"
+        );
+        return;
+    }
+    panic!("actual native swing ordering never reached twenty attempts");
+}
+
 fn start_white(run: &mut Run) {
     let world = run.app.world_mut();
     let mut queue = bevy::ecs::world::CommandQueue::default();
