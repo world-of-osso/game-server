@@ -101,6 +101,15 @@ enum Relationship {
         counter: u32,
         count_effect: u8,
     },
+    SpenderCooldownRefund {
+        resource: PowerType,
+        parents: &'static [u32],
+        cooldowns: &'static [u32],
+        tenths_effect: u8,
+        bonus_states: &'static [u32],
+        bonus_spell: u32,
+        bonus_effect: u8,
+    },
     SpenderAuraExtension {
         resource: PowerType,
         parents: &'static [u32],
@@ -131,26 +140,6 @@ const CUT_TO_THE_CHASE: Relationship = Relationship::SpenderAuraExtension {
 
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
-    // SimC76f8118 sc_evoker.cpp5592–5599: starting Eternity Surge grants
-    // selected Azure Sweep. Native1265871 supplies its action override and damage mod.
-    Policy {
-        name: "SIMC_DEVASTATION_SURGE_AZURE_SWEEP",
-        spec: 1467,
-        talent: 1265867,
-        relationship: Relationship::ApplySelfAuraAfterCast {
-            parent: 359073,
-            payload: 1265871,
-        },
-    },
-    Policy {
-        name: "SIMC_DEVASTATION_SURGE_VARIANT_AZURE_SWEEP",
-        spec: 1467,
-        talent: 1265867,
-        relationship: Relationship::ApplySelfAuraAfterCast {
-            parent: 382411,
-            payload: 1265871,
-        },
-    },
     // SimC76f8118 sc_evoker.cpp6584–6595: one successful Disintegrate
     // spends one earned Mass Disintegrate use, not one per secondary recipient.
     Policy {
@@ -517,6 +506,23 @@ const POLICIES: &[Policy] = &[
         spec: 261,
         talent: 51667,
         relationship: CUT_TO_THE_CHASE,
+    },
+    // SimC76f8118 sc_rogue.cpp3771/3836/4810/6034/6890 call8284–8305.
+    Policy {
+        name: "SIMC_OUTLAW_RESTLESS_BLADES",
+        spec: 260,
+        talent: 79096,
+        relationship: Relationship::SpenderCooldownRefund {
+            resource: PowerType::ComboPoints,
+            parents: &[2098, 315341, 51690, 315496, 441776],
+            cooldowns: &[
+                13750, 315341, 13877, 271877, 195457, 381989, 51690, 1214909, 2983,
+            ],
+            tenths_effect: 0,
+            bonus_states: &[1214935, 1214937],
+            bonus_spell: 1214937,
+            bonus_effect: 3,
+        },
     },
 ];
 
@@ -1178,6 +1184,9 @@ fn roll_replacement_proc(
 
 fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
+        if let Relationship::SpenderCooldownRefund { parents, .. } = policy.relationship {
+            return parents.contains(&parent);
+        }
         matches!(policy.relationship,
         Relationship::OwnedPetSpellAfterCast { parent: trigger, .. }
         | Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
@@ -1199,6 +1208,9 @@ fn consumers(
         let resource = match policy.relationship {
             Relationship::SpenderHit { resource, .. } => resource,
             Relationship::SpenderAuraExtension {
+                resource, parents, ..
+            }
+            | Relationship::SpenderCooldownRefund {
                 resource, parents, ..
             } if parents.contains(&parent) => resource,
             _ => return false,
@@ -1260,6 +1272,9 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
                     crate::auras::spend_stack(world, caster, instance);
                 }
             }
+            Relationship::SpenderCooldownRefund { .. } => {
+                refund_spender_cooldowns(world, caster, spell, policy)
+            }
             Relationship::CounterAfterCast { .. } => grant_counter(world, caster, policy),
             Relationship::CastEcho { .. } => {
                 let depth = super::super::next_trigger_depth(world);
@@ -1273,6 +1288,63 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
         }
     }
     pet_sets::after_cast(world, caster, spell);
+}
+
+fn refund_spender_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo, policy: &Policy) {
+    let Relationship::SpenderCooldownRefund {
+        resource,
+        cooldowns,
+        tenths_effect,
+        bonus_states,
+        bonus_spell,
+        bonus_effect,
+        ..
+    } = policy.relationship
+    else {
+        return;
+    };
+    let Some(context) = &spell.cast_policy_context else {
+        warn!(
+            policy = policy.name,
+            spell = spell.id,
+            "Native spender cooldown refund lacks launch resources"
+        );
+        return;
+    };
+    let Some(&(_, points)) = context
+        .resources
+        .iter()
+        .find(|&&(power, _)| power == resource)
+    else {
+        warn!(
+            policy = policy.name,
+            spell = spell.id,
+            "Native spender refund resource is absent"
+        );
+        return;
+    };
+    if points <= 0.0 {
+        return;
+    }
+    // sc_rogue.cpp8286–8294: native tenths of a second per effective point;
+    // the high roll states amplify it using native Jackpot effect3.
+    let per_point = super::script_effect_value(world, caster, policy.talent, tenths_effect) / 10.0;
+    let mut seconds = f64::from(points * per_point);
+    if bonus_states
+        .iter()
+        .any(|&aura| crate::auras::has_aura(world, caster, aura))
+    {
+        seconds *= 1.0
+            + f64::from(super::script_effect_value(
+                world,
+                caster,
+                bonus_spell,
+                bonus_effect,
+            )) / 100.0;
+    }
+    for &cooldown in cooldowns {
+        super::reduce_cooldown(world, caster, cooldown, seconds);
+    }
 }
 
 fn cast_owned_pet_payload(world: &mut World, caster: Entity, spell: &SpellInfo, payload: u32) {
@@ -1387,7 +1459,18 @@ pub(in crate::spell_cast) fn snapshot(
     {
         return None;
     }
-    let targets = capture_primary_targets(caster, spell, plan)?;
+    let needs_hit_targets = consumers(&resources, spell.id).any(|policy| {
+        selected(world, caster, policy)
+            && !matches!(
+                policy.relationship,
+                Relationship::SpenderCooldownRefund { .. }
+            )
+    });
+    let targets = if needs_hit_targets {
+        capture_primary_targets(caster, spell, plan)?
+    } else {
+        Vec::new()
+    };
     Some(Box::new(CastPolicyContext { resources, targets }))
 }
 

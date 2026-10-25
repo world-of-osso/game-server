@@ -47,8 +47,11 @@ mod foreground_procs;
 mod impact_procs;
 mod paid_cooldowns;
 mod periodic_attacks;
+mod secondary_copies;
 pub(super) use paid_cooldowns::after_payment as after_paid_resources;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
+pub(crate) use secondary_copies::after_melee as after_melee_residual;
+pub(super) use secondary_copies::after_spell as after_spell_residual;
 pub(super) fn after_foreground_special(world: &mut World, caster: Entity, spell: &SpellInfo) {
     foreground_procs::after_foreground_special(world, caster, spell);
     execution_counters::consume_after_foreground_cast(world, caster, spell.id);
@@ -66,6 +69,7 @@ mod enhancement_modes;
 mod enhancement_strikes;
 mod enhancement_tempest;
 mod enhancement_tier;
+mod evoker_tier;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
 mod essence_burst;
 mod feral_frenzy;
@@ -827,6 +831,7 @@ pub fn after_cast(spell_id: u32) -> impl Iterator<Item = AfterCastHook> {
         .chain(batch9::after_cast_hook(spell_id))
         .chain(aura_rolls::hook(spell_id))
         .chain(resource_values::after_cast_hook(spell_id))
+        .chain(evoker_tier::hook(spell_id))
 }
 
 fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
