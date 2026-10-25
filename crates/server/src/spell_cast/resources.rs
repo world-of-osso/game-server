@@ -7,6 +7,8 @@ use shared::components::PowerType;
 use super::{CostPool, powers};
 use crate::spell_info::{SpellDuration, SpellInfo};
 
+// Native Massacre281001 overrides163201 to281000; both trigger260798.
+pub(in crate::spell_cast) const EXECUTE_PARENTS: &[u32] = &[163201, 281000];
 const ENVENOM: u32 = 32645;
 const FEROCIOUS_BITE: u32 = 22568;
 const BLACK_POWDER: u32 = 319175;
@@ -74,6 +76,37 @@ fn snapshot_duration(duration: &mut SpellDuration, combo: f32) {
     duration.per_resource_ms = 0;
 }
 
+/// SimC76f8118 sc_warrior.cpp4212–4238: full/free damage is2× the native
+/// coefficient; paid casts scale by paid Rage / native base+optional maximum.
+fn execute_damage_multiplier(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    costs: &[(CostPool, f32)],
+) -> f32 {
+    let paid = spent(costs, PowerType::Rage);
+    if paid == 0.0 {
+        return 2.0;
+    }
+    let rage_costs = spell
+        .power_costs
+        .iter()
+        .filter(|cost| cost.power_type == PowerType::Rage as i32);
+    let maximum = rage_costs
+        .filter(|cost| {
+            cost.required_aura_spell_id == 0
+                || crate::auras::has_aura(world, caster, cost.required_aura_spell_id)
+        })
+        .map(|cost| (cost.mana_cost + cost.optional_cost) as f32)
+        .reduce(f32::max)
+        .expect("Execute paid Rage without an applicable native cost row");
+    assert!(
+        maximum > 0.0,
+        "Execute native Rage maximum must be positive"
+    );
+    2.0 * paid.min(maximum) / maximum
+}
+
 fn barrage_multiplier(world: &World, caster: Entity) -> f32 {
     let (charges, _) = powers::power_value(world, caster, PowerType::ArcaneCharges)
         .expect("Arcane Barrage requires charges");
@@ -100,6 +133,12 @@ pub(super) fn snapshot(
         }
     }
     let multiplier = match spell.id {
+        id if EXECUTE_PARENTS.contains(&id) => {
+            let rage_multiplier = execute_damage_multiplier(world, caster, &spell, costs);
+            spell.cast_damage_multiplier =
+                Some(spell.cast_damage_multiplier.unwrap_or(1.0) * rage_multiplier);
+            return spell;
+        }
         // Native descriptions explicitly multiply m1 by combo points spent.
         ENVENOM | BLACK_POWDER | DISPATCH | EVISCERATE => combo,
         // SimC76f8118 sc_druid.cpp4358–4371,4400–4401: Bite's coefficient
