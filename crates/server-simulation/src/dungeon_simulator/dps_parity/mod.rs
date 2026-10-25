@@ -47,9 +47,9 @@ mod havoc_rotation;
 mod havoc_tests;
 mod health_aura_state_tests;
 mod howl_tests;
-mod hunter_cadence_tests;
 #[cfg(test)]
 mod hunter_bloodshed_tests;
+mod hunter_cadence_tests;
 #[cfg(test)]
 mod hunter_focus_tests;
 mod inputs;

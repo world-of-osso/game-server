@@ -6,11 +6,14 @@ use crate::random as rand;
 mod after_cast_auras;
 mod bouncing_projectiles;
 mod cast_relationships;
+mod marksmanship;
 pub(crate) use cast_relationships::register as register_cast_relationships;
 pub(super) use cast_relationships::{
     after_cast as apply_cast_relationships, guarantees_crit as relationship_guarantees_crit,
     ignores_cooldown as relationship_ignores_cooldown,
 };
+pub(super) use marksmanship::apply_residual as apply_marksman_residual;
+pub(crate) use marksmanship::finish_rapid;
 mod batch10;
 mod batch11;
 mod batch12;
@@ -918,6 +921,9 @@ pub(super) type TargetPlanHook =
 
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
+    if let Some(hook) = marksmanship::target_plan(spell_id) {
+        return Some(hook);
+    }
     if let Some(hook) = policies::target_plan_hook(spell_id) {
         return Some(hook);
     }

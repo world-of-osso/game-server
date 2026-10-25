@@ -337,6 +337,10 @@ Equipped native MID2 Enhancement two-piece1296627 makes real Voltaic Blaze apply
 - [x] Actual Aimed Shot and selected No Scope Rapid Fire produce native Precise Shots. Real spenders consume it, preserve its damage through projectile arrival and trigger selected Stargazer.
 - [x] Selected Unstable Trigger permits exactly one native-duration, Focus-free Explosive Shot recast inside its existing cooldown; that recast does not create another window.
 - [x] Volley delivers its native-duration periodic payload at the selected ground point to every actual in-radius target; all magnitudes remain native-data driven.
+- Selected Stalk and Strike grants native Lock and Load on Chakram. Rapid Fire fills native Bulletstorm uses and Aimed Shot spends one. The native70448 Bulletstorm maximum is authoritative, even when different from the reference build.
+- Volley grants Trick Shots for its field duration. Aimed Shot and Rapid Fire ticks hit actual nearby secondary targets with native Trick Shots limits and secondary percentages. Outside Volley, Aimed Shot consumes one use at launch and Rapid Fire at channel completion.
+- Master Marksman banks actual critical Hunter damage into native269576 with its native period, duration and rolling unpaid carry. Selected Blood Fletching supplies the Aimed Shot share; neither producer invents a coefficient.
+- `hunter_cadence_tests` exercises the four native cast, stack, critical-damage and real-recipient boundaries.
 
 ## Tests asserting this spec
 
