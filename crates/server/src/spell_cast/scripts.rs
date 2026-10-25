@@ -30,7 +30,14 @@ mod echo_policies;
 mod elemental_ascendance;
 pub(super) use echo_policies::after_foreground_cast as apply_echo_policies;
 pub(crate) mod empower_evoker;
+mod enhancement_imbues;
 mod essence_burst;
+mod maelstrom_weapon;
+pub(crate) use maelstrom_weapon::{consume as consume_maelstrom_weapon, snapshots_modifier};
+pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
+    maelstrom_weapon::register(scripts);
+    enhancement_imbues::register(scripts);
+}
 mod policies;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 pub(crate) use policies::register_channel_policies;
@@ -629,11 +636,13 @@ pub(super) fn snapshot_proc_modifiers(
     auras
         .iter()
         .filter(|aura| {
-            matches!(aura.spell_id, hot_streak::HOT_STREAK | lava_surge::PROC)
-                && aura.effects.iter().any(|effect| {
-                    effect.misc_values[0] == crate::auras::SpellModOp::ChangeCastTime as i32
-                        && crate::auras::spell_mods::class_mask_affects(aura, effect, spell)
-                })
+            matches!(
+                aura.spell_id,
+                hot_streak::HOT_STREAK | lava_surge::PROC | maelstrom_weapon::MODIFIER
+            ) && aura.effects.iter().any(|effect| {
+                effect.misc_values[0] == crate::auras::SpellModOp::ChangeCastTime as i32
+                    && crate::auras::spell_mods::class_mask_affects(aura, effect, spell)
+            })
         })
         .map(|aura| aura.instance_id)
         .collect()
@@ -669,6 +678,8 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         return Some(hook);
     }
     match spell_id {
+        33757 | 318038 => Some(enhancement_imbues::apply),
+        voltaic_blaze::ROOT => Some(maelstrom_weapon::grant_voltaic_blaze),
         ret_resonance::TOLL => Some(ret_resonance::grant_after_toll),
         windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
         windwalker::FISTS_OF_FURY => Some(windwalker_flurry::release),

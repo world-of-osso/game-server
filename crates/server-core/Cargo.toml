@@ -1,0 +1,25 @@
+[package]
+name = "server-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+bevy = { version = "0.19", default-features = false, features = ["bevy_log", "bevy_state"] }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "186134ff880f1a6a7b754e4ce43456d775a44caf" }
+rusqlite = { version = "0.35", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+# The existing immutable fixture cache hashes database content, not paths alone.
+blake3 = { version = "1.8", optional = true }
+# Canonical workspace asset paths; do not introduce a second path resolver.
+server-map-rules = { path = "../server-map-rules", optional = true }
+
+[features]
+test-support = ["dep:blake3", "dep:server-map-rules", "server-map-rules/test-support"]
+
+[dev-dependencies]
+blake3 = "1.8"
+server-map-rules = { path = "../server-map-rules", features = ["test-support"] }
+rusqlite = { version = "0.35", features = ["hooks"] }
+serde_json = "1"
+tempfile = "3"
