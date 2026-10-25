@@ -242,6 +242,50 @@ fn read_decision(
 
 #[test]
 #[ignore = "requires native62 Player/private profile"]
+fn literal_channel_condition_reads_current_program_variables() {
+    let (mut run, equipment, bindings, encounter) = fixture();
+    let mut driver = start_driver(
+        &mut run,
+        &equipment,
+        &bindings,
+        encounter,
+        &[
+            ("default", "variable,name=interrupt_at,value=1"),
+            ("default", "arcane_blast,if=time>=variable.interrupt_at"),
+            (
+                "default",
+                "evocation,interrupt_if=time>=variable.interrupt_at,interrupt_immediate=1,interrupt_global=1",
+            ),
+        ],
+    );
+    let mut interrupted = false;
+    for _ in 0..80 {
+        run.app.update();
+        if let Some(decision) =
+            read_decision(&mut run, &mut driver, &equipment, &bindings, encounter)
+        {
+            assert!(matches!(decision, ChannelDecision::Cancel));
+            driver
+                .execute_channel_decision(run.app.world_mut(), run.actor, decision)
+                .unwrap();
+            interrupted = true;
+            break;
+        }
+    }
+    assert!(
+        interrupted,
+        "owned variable1 must permit native higher-priority interruption"
+    );
+    assert!(
+        run.app
+            .world()
+            .get::<shared::casting::CastState>(run.actor)
+            .is_none()
+    );
+}
+
+#[test]
+#[ignore = "requires native62 Player/private profile"]
 fn literal_interrupt_if_requires_higher_priority_native_readiness() {
     for global in [false, true] {
         let (mut run, equipment, bindings, encounter) = fixture();

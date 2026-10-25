@@ -265,7 +265,23 @@ fn arcane_area_prismatic_splash_excludes_its_primary() {
     let mut run = prepare_literal(62, 3).unwrap();
     grant(&mut run, 1295942, 1);
     cast(&mut run, 1295924);
+    // Native1295924 has a2.5s cast and40yd/s flight. Completing its cast/GCD
+    // does not deliver the parent missile or the impact-triggered splash yet.
+    finish_projectile_flight(&mut run);
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let primary_hits = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(1295924)
+                && event.kind == CombatLogKind::Damage
+        })
+        .count();
+    assert_eq!(
+        primary_hits, 1,
+        "real Prismatic primary impact must precede splash checks"
+    );
     for (index, target) in run.targets.iter().enumerate() {
         let splash_hits = events
             .iter()
@@ -361,7 +377,7 @@ fn splinter_hits(run: &Run) -> usize {
         .count()
 }
 
-fn finish_splinter_flight(run: &mut Run) {
+fn finish_projectile_flight(run: &mut Run) {
     let end = crate::spell_cast::now(run.app.world()) + 3.0;
     while crate::spell_cast::now(run.app.world()) < end {
         run.app.update();
@@ -373,7 +389,7 @@ fn finish_splinter_flight(run: &mut Run) {
 fn arcane_splinter_touch_conjures_signature_spell_count() {
     let mut run = prepare_literal(62, 1).unwrap();
     cast(&mut run, 321507);
-    finish_splinter_flight(&mut run);
+    finish_projectile_flight(&mut run);
     assert!(
         splinter_hits(&run) >= 4,
         "selected native Signature Spell grants four Touch Splinters"
@@ -386,7 +402,7 @@ fn arcane_splinter_barrage_converts_spent_salvo_through_force_of_will() {
     let mut run = prepare_literal(62, 1).unwrap();
     grant(&mut run, 1242974, 20);
     cast(&mut run, 44425);
-    finish_splinter_flight(&mut run);
+    finish_projectile_flight(&mut run);
     assert!(
         splinter_hits(&run) >= 4,
         "native Force of Will conjures one Splinter per five spent Salvo"
@@ -398,7 +414,7 @@ fn arcane_splinter_barrage_converts_spent_salvo_through_force_of_will() {
 fn arcane_splinter_orb_uses_selected_splintering_orbs() {
     let mut run = prepare_literal(62, 1).unwrap();
     cast(&mut run, 153626);
-    finish_splinter_flight(&mut run);
+    finish_projectile_flight(&mut run);
     assert!(
         splinter_hits(&run) >= 2,
         "ordinary selected Orb impact conjures two native Splinters"
@@ -410,7 +426,7 @@ fn arcane_splinter_orb_uses_selected_splintering_orbs() {
 fn arcane_splinter_surge_uses_native_splinterstorm_count() {
     let mut run = prepare_literal(62, 1).unwrap();
     cast(&mut run, 365350);
-    finish_splinter_flight(&mut run);
+    finish_projectile_flight(&mut run);
     assert!(
         splinter_hits(&run) >= 8,
         "ordinary selected Surge conjures native Splinterstorm eight"
@@ -424,7 +440,7 @@ fn arcane_splinter_infused_hits_generate_native_salvo_without_missiles() {
     let mut run = prepare_literal(62, 1).unwrap();
     cast(&mut run, 321507);
     cast(&mut run, 365350);
-    finish_splinter_flight(&mut run);
+    finish_projectile_flight(&mut run);
     assert!(
         splinter_hits(&run) >= 12,
         "real Signature/Splinterstorm impacts precede the proc check"
