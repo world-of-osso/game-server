@@ -12,6 +12,7 @@ fn native_bm_pet_white_swings_read_live_owner_critical_chance() {
         .unwrap()
         .crit_pct = 100.0;
     engage(&mut run);
+    crate::pet_control::order_companion_pet(run.app.world_mut(), run.actor, Some(run.targets[0]));
     for _ in 0..200 {
         run.app.update();
     }
