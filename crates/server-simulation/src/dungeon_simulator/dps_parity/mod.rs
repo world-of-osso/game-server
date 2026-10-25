@@ -35,6 +35,7 @@ mod havoc_fact_tests;
 mod health_aura_state_tests;
 mod howl_tests;
 mod inputs;
+mod literal_ranged_attack_tests;
 pub(crate) mod literal_rotation;
 mod marksmanship_fact_tests;
 mod marksmanship_mechanics_tests;
