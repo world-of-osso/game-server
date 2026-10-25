@@ -165,6 +165,13 @@ fn assert_native_accumulation(run: &Run, initial: f32, start: usize) {
 fn dps_parity_ret_sentence_native_accumulation_excludes_actual_white_damage() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = funded_sentence();
+    // Isolate physical whites from the profile's native Aura361 replacement.
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.effects.iter().any(|effect| effect.aura_type == 361),
+    );
     let initial = counter(&run);
     let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
     damage_during_sentence(&mut run);

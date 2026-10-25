@@ -33,6 +33,7 @@ mod profile_initialization;
 mod rake_stealth_tests;
 mod report;
 mod ret_batch_tests;
+mod ret_damage_relationship_tests;
 mod ret_damage_tests;
 mod ret_dawnlight_consumer_tests;
 mod ret_dawnlight_target_tests;
