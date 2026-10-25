@@ -222,6 +222,11 @@ pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::Spec
 pub(super) const REPORT_KEY: Option<&str> = Some("windwalker_rotation");
 
 impl super::SpecDriver for Rotation {
+    fn supports_actor(identity: &crate::followers::simulator::ParityActor) -> bool {
+        // Rotation::load requires the existing native spec269 follower fixture.
+        matches!(identity, crate::followers::simulator::ParityActor::Follower)
+    }
+
     fn label(&self) -> &'static str {
         "LITERAL_SIMC_WINDWALKER_76f8118"
     }
