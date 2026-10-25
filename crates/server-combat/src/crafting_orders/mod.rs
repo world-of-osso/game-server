@@ -13,7 +13,7 @@ pub(crate) use cast::{
 pub(crate) use catalog::load_catalog;
 #[cfg(test)]
 pub(crate) use rules::{PlaceOrder, browse, cancel, claim, expire, place, release};
-pub(crate) use runtime::CraftingOrdersPlugin;
+pub use runtime::CraftingOrdersPlugin;
 pub(crate) use store::all;
 
 #[derive(Debug, Clone, PartialEq, bitcode::Encode, bitcode::Decode)]

@@ -173,7 +173,7 @@ fn handle_delete(
 }
 
 /// Process character selection and world entry.
-pub fn process_select_character(
+pub(crate) fn process_select_character(
     mut receivers: Query<
         (
             Entity,
