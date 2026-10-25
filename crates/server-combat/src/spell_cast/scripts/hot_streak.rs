@@ -106,19 +106,16 @@ pub(crate) fn roll_flamestrike_hot_streak(world: &mut World, caster: Entity, cha
     apply_hot_streak_outcome(world, caster, crit, chance >= 100.0);
 }
 
-pub(super) fn admitted_hot_streak(world: &World, caster: Entity, spell: &SpellInfo) -> Option<u32> {
-    world
+fn consume_admitted_hot_streak(world: &mut World, caster: Entity, spell: &SpellInfo) -> bool {
+    let instance = world
         .get::<ActiveAuras>(caster)
         .and_then(|auras| {
             auras.iter().find(|aura| {
                 aura.spell_id == HOT_STREAK && spell.cast_proc_mods.contains(&aura.instance_id)
             })
         })
-        .map(|aura| aura.instance_id)
-}
-
-fn consume_admitted_hot_streak(world: &mut World, caster: Entity, spell: &SpellInfo) -> bool {
-    let Some(instance) = admitted_hot_streak(world, caster, spell) else {
+        .map(|aura| aura.instance_id);
+    let Some(instance) = instance else {
         return false;
     };
     remove_instance(world, caster, instance, RemoveReason::Consumed);
@@ -166,11 +163,9 @@ pub(crate) fn consume_procs_and_roll_pyroclasm(
             crate::auras::spend_stack(world, caster, instance);
         }
     }
-    let spent_hot_streak = consume_admitted_hot_streak(world, caster, spell);
-    if spent_hot_streak {
+    if consume_admitted_hot_streak(world, caster, spell) {
         roll_pyroclasm(world, caster);
     }
-    super::fire_procs::after_hot_streak_cast(world, caster, spent_hot_streak);
 }
 
 fn roll_pyroclasm(world: &mut World, caster: Entity) {

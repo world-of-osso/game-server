@@ -306,7 +306,10 @@ fn count_earned_fire_proc(spell: u32) -> usize {
         .filter(|event| {
             event.source == Some(run.actor.to_bits())
                 && event.spell_id == Some(spell)
-                && event.kind == CombatLogKind::CastSuccess
+                && matches!(
+                    event.kind,
+                    CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                )
         })
         .count()
 }
