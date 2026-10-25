@@ -94,6 +94,38 @@ fn wait_for_damage(run: &mut Run, spell: u32) {
 }
 
 #[test]
+#[ignore = "native Legacy Storms must exercise the selected Divine Purpose chance"]
+fn dps_parity_ret_empyrean_background_storm_can_generate_divine_purpose() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = fixture(true);
+    let verdict = resolved_verdict(&run);
+    let mut background_grants = 0;
+    for _ in 0..32 {
+        earn_finisher_power(&mut run, verdict);
+        crate::spell_cast::cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            AVENGING_WRATH,
+            Some(run.actor),
+            1,
+        );
+        let target = run.targets[0];
+        cast_ready(&mut run, verdict, target);
+        // The foreground roll is finished, but Legacy is still queued. Only
+        // the real background consumer may grant Purpose during these ticks.
+        let before = applications(&run, PURPOSE);
+        for _ in 0..30 {
+            run.app.update();
+        }
+        background_grants += applications(&run, PURPOSE) - before;
+    }
+    assert!(
+        background_grants > 0,
+        "32 real Legacy Storms must roll native Divine Purpose after foreground completion; got{background_grants} grants"
+    );
+}
+
+#[test]
 #[ignore = "native Legacy Storms must exercise the selected Second Sunrise chance"]
 fn dps_parity_ret_empyrean_background_storm_can_echo_second_sunrise() {
     let _seed = crate::random::seed_scope(70448);
