@@ -5,6 +5,51 @@ use crate::auras::ActiveAuras;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
+fn damage_hits(run: &Run, spell: u32, target: Entity) -> usize {
+    let expected_route = (
+        Some(run.actor.to_bits()),
+        Some(target.to_bits()),
+        Some(spell),
+    );
+    run.app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            let actual_route = (event.source, event.target, event.spell_id);
+            let dealt_damage = event.kind == CombatLogKind::Damage && event.amount > 0;
+            actual_route == expected_route && dealt_damage
+        })
+        .count()
+}
+
+#[test]
+#[ignore = "native263 reference inputs and private world database"]
+fn shaman263_static_accumulation_stops_when_its_last_real_mode_expires() {
+    // SimC76f8118 sc_shaman.cpp12840–12860: mode lifetime, not raw Static's15s, owns this aura.
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(263, 1).unwrap();
+    let actor = run.actor;
+    cast(&mut run, 384352, actor);
+    assert!(crate::auras::has_aura(run.app.world(), actor, 466772));
+    assert!(crate::auras::has_aura(run.app.world(), actor, 384437));
+    for _ in 0..1200 {
+        if !crate::auras::has_aura(run.app.world(), actor, 466772) {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 466772),
+        "real mode must finish its native lifetime"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 384437),
+        "Static cannot keep generating after its last actual mode ends"
+    );
+}
+
 fn tempest_procs(run: &Run) -> u8 {
     run.app
         .world()
@@ -62,24 +107,41 @@ fn shaman263_real_strike_dispatches_ride_the_lightning_to_native_chain_targets()
     for _ in 0..60 {
         run.app.update();
     }
-    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
     for &target in &run.targets {
-        let expected_route = (
-            Some(run.actor.to_bits()),
-            Some(target.to_bits()),
-            Some(211094),
-        );
-        let hits = events
-            .iter()
-            .filter(|event| {
-                let actual_route = (event.source, event.target, event.spell_id);
-                let dealt_damage = event.kind == CombatLogKind::Damage && event.amount > 0;
-                actual_route == expected_route && dealt_damage
-            })
-            .count();
         assert_eq!(
-            hits, 1,
+            damage_hits(&run, 211094, target),
+            1,
             "one real Strike emits one native Ride the Lightning bounce per actual target"
+        );
+    }
+}
+
+#[test]
+#[ignore = "native263 reference inputs and private world database"]
+fn shaman263_real_doom_winds_emits_its_native_area_pulse_on_apply_and_periodically() {
+    // SimC76f8118 sc_shaman.cpp8782–8790/12848–12869: actual mode aura owns these ticks.
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(263, 3).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    cast(&mut run, 384352, actor);
+    assert!(crate::auras::has_aura(run.app.world(), actor, 466772));
+    let initial: Vec<usize> = run
+        .targets
+        .iter()
+        .map(|&target| damage_hits(&run, 469270, target))
+        .collect();
+    assert!(
+        initial.iter().all(|hits| *hits > 0),
+        "actual Doom Winds applies its native area damage immediately"
+    );
+    for _ in 0..40 {
+        run.app.update();
+    }
+    for (&target, before) in run.targets.iter().zip(initial) {
+        assert!(
+            damage_hits(&run, 469270, target) > before,
+            "native mode period must emit another real area pulse"
         );
     }
 }

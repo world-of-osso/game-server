@@ -99,7 +99,7 @@ pub fn deliver_forced_disconnects(
 }
 
 /// Process login requests from pending-auth connections.
-pub fn process_login_requests(
+pub(crate) fn process_login_requests(
     mut receivers: Query<(Entity, &mut MessageReceiver<LoginRequest>)>,
     db: Option<Res<GameDatabase>>,
     mut connected: ResMut<ConnectedAccounts>,

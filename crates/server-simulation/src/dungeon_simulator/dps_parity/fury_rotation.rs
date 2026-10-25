@@ -236,7 +236,7 @@ impl Rotation {
     }
 }
 
-pub(super) fn prepare_precombat(run: &mut Run) -> Result<(), String> {
+pub(super) fn prepare_driver(run: &mut Run) -> Result<Box<dyn super::SpecDriver>, String> {
     let encounter = Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
         duration: 300.0,
@@ -271,6 +271,22 @@ pub(super) fn prepare_precombat(run: &mut Run) -> Result<(), String> {
     };
     run.gaps
         .retain(|gap| gap != "NATIVE_ASSISTED_COMBAT_70448_VS_SIMC_APL");
-    run.fury_rotation = Some(rotation);
-    Ok(())
+    Ok(Box::new(rotation))
 }
+
+pub(super) const REPORT_KEY: Option<&str> = Some("fury_rotation");
+
+impl super::SpecDriver for Rotation {
+    fn label(&self) -> &'static str {
+        "LITERAL_SIMC_FURY_76f8118"
+    }
+
+    fn drive(&mut self, world: &mut World, actor: Entity, targets: &[Entity]) -> Result<(), String> {
+        self.drive(world, actor, targets)
+    }
+
+    fn report(&self) -> serde_json::Value {
+        self.report()
+    }
+}
+

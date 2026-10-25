@@ -34,7 +34,7 @@ fn prepare(selected: bool) -> Run {
     }
     let identity = super::super::inputs::read_actor(&profile).unwrap();
     let mut run = super::super::prepare_literal_reference(profile, &traits, 1, identity).unwrap();
-    super::super::preparation::prepare_windwalker_precombat(&mut run).unwrap();
+    run.spec_driver = Some(super::prepare_driver(&mut run).unwrap());
     let applied = run
         .app
         .world()
@@ -127,6 +127,82 @@ fn earned_per_hit(run: &Run, critical: bool) -> u8 {
     (base * if critical { 1.0 + crit_bonus } else { 1.0 }) as u8
 }
 
+#[test]
+#[ignore = "actual selected Dual Threat replaces native white impacts without consecutive procs"]
+fn literal_ww_native_dual_threat_replaces_eligible_white_impacts() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare(true);
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(run.actor)
+            .unwrap()
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 451823)
+    );
+    assert!(
+        run.app
+            .world()
+            .get::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .off_hand
+            .is_none()
+    );
+    start_white(&mut run);
+    for _ in 0..1200 {
+        let before = events(&run).len();
+        run.app.update();
+        let observed = events(&run);
+        let impacts = observed[before..]
+            .iter()
+            .filter(|event| {
+                (event.spell_id.is_none() || event.spell_id == Some(DUAL_THREAT))
+                    && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+            })
+            .count();
+        assert!(
+            impacts <= 1,
+            "actual single-weapon attempt must replace white damage, not add a second impact"
+        );
+        let swings = observed
+            .into_iter()
+            .filter(|event| {
+                (event.spell_id.is_none() || event.spell_id == Some(DUAL_THREAT))
+                    && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+            })
+            .collect::<Vec<_>>();
+        if swings.len() < 20 {
+            continue;
+        }
+        assert!(
+            swings.first().unwrap().spell_id.is_none(),
+            "first impact must remain white"
+        );
+        assert!(
+            swings
+                .iter()
+                .any(|event| event.spell_id == Some(DUAL_THREAT)),
+            "selected native Dual Threat must actually replace a white impact"
+        );
+        assert!(
+            swings
+                .iter()
+                .filter(|event| event.spell_id == Some(DUAL_THREAT))
+                .all(|event| event.kind == CombatLogKind::Damage && event.amount > 0),
+            "actual Dual Threat child cannot roll white/spell avoidance against the native dummy"
+        );
+        assert!(
+            swings
+                .windows(2)
+                .all(|pair| pair[0].spell_id != Some(DUAL_THREAT)
+                    || pair[1].spell_id != Some(DUAL_THREAT)),
+            "replacement gate must forbid consecutive Dual Threat impacts"
+        );
+        return;
+    }
+    panic!("actual native swing ordering never reached twenty attempts");
+}
+
 fn start_white(run: &mut Run) {
     let world = run.app.world_mut();
     let mut queue = bevy::ecs::world::CommandQueue::default();
@@ -147,13 +223,15 @@ fn literal_ww_native_flurry_white_earns_native_charges_and_caps() {
         let before = events(&run).len();
         run.app.update();
         for event in &events(&run)[before..] {
-            if event.spell_id.is_none() && event.kind == CombatLogKind::Damage {
+            if (event.spell_id.is_none() || event.spell_id == Some(DUAL_THREAT))
+                && event.kind == CombatLogKind::Damage
+            {
                 critical |= event.crit;
                 expected = (expected + earned_per_hit(&run, event.crit)).min(cap(&run));
                 assert_eq!(
                     charges(&run),
                     expected,
-                    "real selected white impact must earn native451021"
+                    "real white or replacing Dual Threat impact must earn native451021 once"
                 );
             }
         }
@@ -196,7 +274,7 @@ fn literal_ww_native_flurry_fof_releases_earned_charges_and_native_children() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare(true);
     super::super::engage(&mut run);
-    let mut rotation = run.windwalker_rotation.take().unwrap();
+    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>).downcast::<Rotation>().unwrap();
     let mut earned_before_cast = None;
     for _ in 0..6000 {
         let before = charges(&run);
@@ -266,7 +344,7 @@ fn literal_ww_native_flurry_missed_white_does_not_earn_charges() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare(true);
     super::super::engage(&mut run);
-    let mut rotation = run.windwalker_rotation.take().unwrap();
+    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>).downcast::<Rotation>().unwrap();
     for _ in 0..6000 {
         let before = charges(&run);
         let count = events(&run).len();
