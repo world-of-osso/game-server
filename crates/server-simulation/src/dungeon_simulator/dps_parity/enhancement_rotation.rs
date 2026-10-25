@@ -31,6 +31,13 @@ impl Rotation {
             return Err("literal Enhancement requires an explicit spec263 fixture".into());
         }
         let mut bindings = bindings::build();
+        // SimC12758–12763: the selected apex uses its own native async Crash aura.
+        if world
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .is_some_and(|known| known.contains(1262713))
+        {
+            bindings.buffs.insert("crash_lightning".into(), 1252415);
+        }
         let equipment = Equipment::load(world, actor, &mut bindings)?;
         let liquid_luster = profile
             .consumables

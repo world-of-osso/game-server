@@ -37,6 +37,7 @@ fn assassination_selected_thistle_tea_grant_casts_for_player() {
         crate::spell_cast::CastTargets {
             unit: run.targets[0],
             primary: Some(run.targets[0]),
+            destination: None,
         },
     );
     assert!(
