@@ -928,6 +928,12 @@ fn record_swing(
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), target_entity);
     let landed = !outcome.immune && !outcome.kind.avoided();
     if landed {
+        crate::spell_cast::scripts::after_melee_residual(
+            world,
+            attacker_entity,
+            target_entity,
+            outcome.residual_source,
+        );
         crate::spell_cast::scripts::after_melee_hit(
             world,
             attacker_entity,
@@ -1078,7 +1084,6 @@ pub(crate) struct SwingContext<'a, 'w, 's> {
 /// multipliers × target physical damage taken (`AuraStatMods`, Unit::MeleeDamageBonusDone/Taken).
 struct SwingDamage {
     amount: f32,
-    #[cfg(any(test, feature = "test-support"))]
     raw: f32,
 }
 
@@ -1116,7 +1121,7 @@ fn swing_damage(
     scaling: &UnitScaling,
     taken: f32,
     additional_mult: f32,
-    #[cfg(any(test, feature = "test-support"))] source_mult: f32,
+    source_mult: f32,
 ) -> SwingDamage {
     let base = roll_swing_base(attacker, weapon, hand, scaling);
     // TC Guardian::UpdateDamagePhysical1423: owner-derived AP is additive
@@ -1128,7 +1133,6 @@ fn swing_damage(
     let base = base + owner_bonus;
     SwingDamage {
         amount: apply_swing_multipliers(base, attacker.mods, taken, additional_mult),
-        #[cfg(any(test, feature = "test-support"))]
         raw: base
             * attacker.mods.map_or(1.0, |mods| {
                 mods.damage_done(1) * mods.autoattack_damage_mult
@@ -1561,6 +1565,8 @@ struct SwingOutcome {
     kind: MeleeOutcome,
     immune: bool,
     absorbed: f32,
+    /// Landed source before victim multipliers, armor, block, absorption or scaling.
+    residual_source: f32,
     damage: f32,
     /// `damage` in the target's health units (level scaling).
     scaled_loss: f32,
@@ -1709,7 +1715,6 @@ fn try_swing(
         attacker.entity,
         raw_armor,
     );
-    #[cfg(any(test, feature = "test-support"))]
     let source_multiplier = context.summon_modifiers.multiplier(attacker.entity) * versus;
     let swing = swing_damage(
         attacker,
@@ -1722,7 +1727,6 @@ fn try_swing(
                 .summon_modifiers
                 .taken_multiplier(attacker.entity, avoidance.1.as_deref())
             * versus,
-        #[cfg(any(test, feature = "test-support"))]
         source_multiplier,
     );
     let armored = armor_mitigated(
@@ -1858,11 +1862,19 @@ fn try_swing(
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
     // Commit health-sensitive limits and real rescue children in swing order.
     let incoming_loss = health_loss(training_dummy, scaled_loss);
+    let raw = if versus > 0.0 {
+        swing.raw / versus
+    } else {
+        0.0
+    };
+    let residual_source =
+        melee::outcome_damage(raw, kind, level_difference, 0.0).0 * critical_multiplier;
     let outcome = SwingOutcome {
         hand,
         kind,
         immune,
         absorbed,
+        residual_source,
         damage,
         scaled_loss,
         incoming_loss,
@@ -2361,11 +2373,23 @@ pub fn replay_healer_hit(
     );
     let damage = crate::level_scaling::damage_dealt(&attacker_scaling, &target, amount);
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
+    let versus = world
+        .get::<AuraStatMods>(attacker)
+        .filter(|mods| mods.has_damage_done_versus())
+        .map_or(1.0, |mods| {
+            mods.damage_done_versus(crate::unit_creature_type::mask(
+                crate::unit_creature_type::get(world, victim),
+            ))
+        });
+    let raw = if versus > 0.0 { hit.raw / versus } else { 0.0 };
+    let residual_source =
+        melee::outcome_damage(raw, kind, level_difference, 0.0).0 * critical_multiplier;
     let mut outcome = SwingOutcome {
         hand,
         kind,
         immune,
         absorbed,
+        residual_source,
         damage,
         scaled_loss,
         incoming_loss: health_loss(world.get::<TrainingDummy>(victim).is_some(), scaled_loss),

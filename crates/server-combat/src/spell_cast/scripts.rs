@@ -39,8 +39,11 @@ mod foreground_procs;
 mod impact_procs;
 mod paid_cooldowns;
 mod periodic_attacks;
+mod secondary_copies;
 pub(super) use paid_cooldowns::after_payment as after_paid_resources;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
+pub(crate) use secondary_copies::after_melee as after_melee_residual;
+pub(super) use secondary_copies::after_spell as after_spell_residual;
 pub(super) fn after_foreground_special(world: &mut World, caster: Entity, spell: &SpellInfo) {
     foreground_procs::after_foreground_special(world, caster, spell);
     execution_counters::consume_after_foreground_cast(world, caster, spell.id);
