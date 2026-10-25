@@ -6,6 +6,10 @@
 //!   spellslinger and batch9, and before resource-value hooks.
 //! - `OnCast`: all modules run before havoc, combo tracking and elemental launch.
 //! - `AfterPayment`: all modules run after successful payment and before gargoyles.
+//! - `AfterResourceValues`: all matching modules run after resource-value hooks.
+//! - `TargetPlan`: first matching module wins before combat's native target plans.
+//! - `PeriodicPrimaryDamage`: all modules run at the Explosive primary-tick boundary.
+//! - `TargetDamageMultiplier`: factors run at the Giantkiller damage boundary.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
 
@@ -14,7 +18,13 @@ pub use policy::{ChannelMomentum, Policy, Relationship};
 
 use bevy::prelude::*;
 
-use super::{CostPool, scripts::AfterCastHook};
+use super::{CostPool, TargetPlan, effects::EffectCtx, scripts::AfterCastHook, targets::Relation};
+use crate::spell_info::SpellInfo;
+
+pub type TargetPlanHook = fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> TargetPlan;
+pub type TargetPlanLookup = fn(u32) -> Option<(Relation, TargetPlanHook)>;
+pub type PeriodicPrimaryDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, f32);
+pub type TargetDamageMultiplierHook = fn(&World, Entity, Entity, &SpellInfo) -> f32;
 
 pub type AfterCastLookup = fn(u32) -> Option<AfterCastHook>;
 pub type OnCastHook = fn(&mut World, Entity, u32, u8);
@@ -27,6 +37,10 @@ pub enum SpellScriptHook {
     AuraRollAfterCast(AfterCastLookup),
     OnCast(OnCastHook),
     AfterPayment(AfterPaymentHook),
+    AfterResourceValues(AfterCastLookup),
+    TargetPlan(TargetPlanLookup),
+    PeriodicPrimaryDamage(PeriodicPrimaryDamageHook),
+    TargetDamageMultiplier(TargetDamageMultiplierHook),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -103,6 +117,58 @@ pub fn after_payment(world: &mut World, caster: Entity, costs: &[(CostPool, f32)
             run(world, caster, costs);
         }
     }
+}
+
+pub fn after_resource_values(
+    world: &World,
+    spell: u32,
+) -> impl Iterator<Item = AfterCastHook> + use<> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(move |hook| match hook {
+            SpellScriptHook::AfterResourceValues(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn target_plan(world: &World, spell: u32) -> Option<(Relation, TargetPlanHook)> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::TargetPlan(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn periodic_primary_damage(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    amount: f32,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::PeriodicPrimaryDamage(run) = hook {
+            run(world, ctx, target, amount);
+        }
+    }
+}
+
+pub fn target_damage_multiplier(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(|hook| match hook {
+            SpellScriptHook::TargetDamageMultiplier(run) => Some(run(world, caster, target, spell)),
+            _ => None,
+        })
+        .product()
 }
 
 #[cfg(test)]
