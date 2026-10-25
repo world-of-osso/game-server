@@ -36,6 +36,10 @@ mod dance_rppm_tests;
 #[path = "proc_event_candidate_tests.rs"]
 mod event_candidate_tests;
 
+#[cfg(test)]
+#[path = "proc_family_tests.rs"]
+mod family_tests;
+
 use crate::random as rand;
 use bevy::prelude::*;
 use std::collections::HashSet;
