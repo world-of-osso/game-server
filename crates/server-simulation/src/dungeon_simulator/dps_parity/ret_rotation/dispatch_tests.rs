@@ -11,6 +11,7 @@ use shared::protocol::CombatLogKind;
 
 fn action(name: &str) -> Action {
     Action {
+        source_row: None,
         name: name.into(),
         target: None,
         options: Default::default(),

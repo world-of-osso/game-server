@@ -32,6 +32,7 @@ fn dps_parity_ret_literal_native_casting_target_selects_and_receives_rebuke() {
     let mut bindings = bindings();
     let equipment = Equipment::load(run.app.world(), run.actor, &mut bindings).unwrap();
     let probe = Action {
+        source_row: None,
         name: "rebuke".into(),
         target: None,
         options: Default::default(),

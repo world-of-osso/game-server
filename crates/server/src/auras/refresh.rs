@@ -35,6 +35,9 @@ pub(super) fn prepare_application(
         settle_previous_ticks(world, target, new);
     }
     prepare_periodic_phase(world, target, new, spell);
+    if crate::spell_cast::scripts::extends_reapplication(world, new.caster, new.spell_id) {
+        carry_duration(world, target, new, DurationCarry::Extend);
+    }
     match new.spell_id {
         IGNORE_PAIN => accumulate_ignore_pain(world, target, new),
         RIP | RAKE => carry_duration(world, target, new, DurationCarry::Pandemic),

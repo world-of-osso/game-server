@@ -9,6 +9,16 @@ use super::CastFailure;
 use crate::class_progression::{KnownSpells, TraitLoadout};
 use crate::spell_info::SpellStore;
 
+/// Controller selection treats unknown/unavailable endpoints as ordinary fallthrough.
+/// Kept in the server library so qualification crates never become its dependency.
+pub fn resolve_action(world: &World, actor: Entity, id: u32) -> Result<Option<u32>, String> {
+    match resolve_actor_action(world, actor, id) {
+        Ok(resolved) => Ok(Some(resolved)),
+        Err(CastFailure::UnknownSpell | CastFailure::NotKnown) => Ok(None),
+        Err(reason) => Err(format!("native literal action knowledge: {reason:?}")),
+    }
+}
+
 /// Resolve a known spell, selected visible action or sourced parent action.
 /// NPC identity never bypasses this controller-level knowledge check.
 pub fn resolve_actor_action(

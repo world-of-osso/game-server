@@ -59,6 +59,7 @@ fn select(
 
 fn assert_native_ready(name: &str, prepared: &Prepared, equipment: &Equipment) {
     let action = Action {
+        source_row: None,
         name: name.into(),
         target: None,
         options: Default::default(),
