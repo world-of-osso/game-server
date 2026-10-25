@@ -23,6 +23,7 @@ mod enhancement_rotation;
 mod enhancement_tests;
 mod equipment_input_tests;
 mod equipped_set_tests;
+mod feral_native_tests;
 mod feral_tests;
 mod firestarter_tests;
 mod fury_rotation;
