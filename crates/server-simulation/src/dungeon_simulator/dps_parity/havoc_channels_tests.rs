@@ -38,6 +38,61 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_font_of_venomous_rage_channels_native_primary_and_secondary_damage() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 3).unwrap();
+    let mut bindings = server::simc_apl_native::Bindings::default();
+    let equipment =
+        literal_rotation::equipment::Equipment::load(run.app.world(), run.actor, &mut bindings)
+            .unwrap();
+    let item = equipment
+        .uses()
+        .map(|(_, item)| item)
+        .find(|item| item.on_use.spell_id == 1297908)
+        .expect("equipped native Font on-use");
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Item(item, run.targets[0]),
+    )
+    .unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<shared::casting::CastState>(run.actor)
+            .is_some_and(|cast| cast.cast_type == shared::casting::CastType::Channel)
+    );
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let primary = run.targets[0].to_bits();
+    let ticks = damage(&run, Some(1297908));
+    assert!(
+        !ticks.is_empty(),
+        "native Font equip values must produce channel damage"
+    );
+    assert!(
+        ticks
+            .iter()
+            .all(|tick| tick.periodic && tick.target == Some(primary))
+    );
+    let splatter = damage(&run, Some(1307222));
+    assert!(
+        splatter.iter().all(|hit| hit.target != Some(primary)),
+        "Venom Splatter must exclude the selected primary"
+    );
+    for target in &run.targets[1..] {
+        assert_eq!(
+            splatter
+                .iter()
+                .filter(|hit| hit.target == Some(target.to_bits()))
+                .count(),
+            ticks.len(),
+            "one native splatter per channel tick and secondary"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_first_blood_splits_native_primary_and_secondary_strikes() {
     let _seed = crate::random::seed_scope(70_448);
     for (parent, primary_strikes, secondary_strikes) in [
