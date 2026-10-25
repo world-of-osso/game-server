@@ -57,6 +57,17 @@ pub fn creature_cast(
     Ok(())
 }
 
+/// Ordinary NPC cast with a separate selected action context.
+pub fn creature_cast_with_targets(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    targets: super::CastTargets,
+) -> Result<(), CastFailure> {
+    let (spell, explicit) = load_creature_cast(world, caster, spell_id, Some(targets.unit))?;
+    super::start_cast_with_primary(world, caster, &spell, explicit, targets.primary)
+}
+
 /// Ordinary NPC empower admission with an explicitly selected release stage.
 pub(crate) fn creature_cast_empowered(
     world: &mut World,

@@ -47,7 +47,7 @@ pub(super) fn has(run: &Run, spell: u32) -> bool {
     crate::auras::has_aura(run.app.world(), run.actor, spell)
 }
 
-fn grant_native_purpose(run: &mut Run) {
+pub(super) fn grant_native_purpose(run: &mut Run) {
     // Isolate the consumption relationship, not the independent random producer.
     crate::spell_cast::cast_triggered(
         run.app.world_mut(),

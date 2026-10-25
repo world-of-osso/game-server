@@ -25,6 +25,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [ ] Instance-sensitive stack merging must not weaken catalog-based unique-equipped restrictions; different enchants do not permit a duplicate unique item.
 - [ ] Selected-talent metadata preserves SimC's allocated node IDs, entry IDs and ranks, including each entry of a tiered node. `active_ranks` separately records official `find_talent_spell(entry).rank()`: pinned player.cpp11357 keeps allocated hero traits but disables them when their control tree is inactive. Native application uses positive effective ranks without deleting inactive allocation metadata or bypassing native DB2 spec constraints. Missing effective-rank metadata fails explicitly, never defaults to all-active or a default build. The pinned debug log consumes tiered ranks before printing, so metadata comes from actual `player_traits` via the separate diagnostic CLI wrapper, not that log.
 
+### Shared cast target context
+
+- [x] Native execution preserves the selected action primary separately from the spell's cast unit. A self-target spell must keep its native self cast while forwarding the actual selected hostile primary to child relationships. Preserve that context across queued requests, cast bars and missile snapshots; an absent or unknown context must not select a substitute. Apply the same contract to Player and NPC actors without spell-ID branches, damage multipliers or mutable-target fallbacks. [Proof](../handoffs/hostile-primary-proof-ledger.md).
+
 ### Ret reference knowledge
 
 - [ ] `RET_HAMMER_OF_WRATH_KNOWN_FROM_SELECTED_TALENT_SIMC` permits action24275 only on explicitly prepared spec70 parity/reference actors whose validated active TraitLoadout includes1241288 (including native granted roots). Ordinary native player/follower spellbooks and NeverLearned rules remain unchanged. Removing eligibility must not retain the exception; other specs receive no grant. [Source/proof ledger](../handoffs/ret-paladin-parity-proof-ledger.md#explicit-hammer-of-wrath-knowledge-policy).
@@ -35,7 +39,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Ret MID2 tier relationship
 
-- [ ] `SIMC_RET_TIER_MID2_DIVINE_PURPOSE_RELATIONSHIP`: consuming actual foreground Divine Purpose223819 with native2062 two-piece grants native Divine Power1305230. Four-piece arms the spender's native Verdict/Storm/Light Arbiter kind only when none is pending; the same kind preserves it, a different kind consumes it and casts native1306923 at the actual cast target. Native gear eligibility, effects, coefficients and durations remain authoritative. No fabricated DB2 trigger edges. Natural Divine Purpose generation, Empyrean Legacy background consumption and Hammer of Light runtime qualification remain separate open cases. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#ret-mid2-tier-relationship-source-policy).
+- [ ] `SIMC_RET_TIER_MID2_DIVINE_PURPOSE_RELATIONSHIP`: consuming actual foreground Divine Purpose223819 with native2062 two-piece grants native Divine Power1305230. Four-piece arms the spender's native Verdict/Storm/Light Arbiter kind only when none is pending; the same kind preserves it, a different kind consumes it and casts native1306923 at the preserved hostile primary, not a self-centered spender's cast unit. Native gear eligibility, effects, coefficients and durations remain authoritative. No fabricated DB2 trigger edges. Natural Divine Purpose generation, Empyrean Legacy background consumption and Hammer of Light runtime qualification remain separate open cases. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#ret-mid2-tier-relationship-source-policy).
 
 ### Ret Execution Sentence accumulation
 
