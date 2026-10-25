@@ -25,7 +25,7 @@ struct Actor {
     character: u64,
 }
 
-pub(crate) struct HousingPlugin;
+pub struct HousingPlugin;
 impl Plugin for HousingPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, load_catalog)

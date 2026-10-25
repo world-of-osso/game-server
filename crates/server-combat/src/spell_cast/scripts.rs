@@ -36,7 +36,15 @@ mod cast_grants;
 mod cast_resets;
 mod execution_counters;
 mod foreground_procs;
-pub(super) use foreground_procs::after_foreground_special;
+mod impact_procs;
+mod paid_cooldowns;
+mod periodic_attacks;
+pub(super) use paid_cooldowns::after_payment as after_paid_resources;
+pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
+pub(super) fn after_foreground_special(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    foreground_procs::after_foreground_special(world, caster, spell);
+    execution_counters::consume_after_foreground_cast(world, caster, spell.id);
+}
 mod chrono_flame;
 mod clearcasting;
 mod echo_policies;
@@ -237,6 +245,7 @@ pub(super) fn after_direct_damage(
     windwalker_flurry::after_direct_damage(world, ctx, critical);
     melee_reset::roll_replacement_hit(world, ctx, target, critical);
     policies::after_damage(world, ctx);
+    impact_procs::after_damage(world, ctx, target);
     ret_damage::after_direct_damage(world, ctx, target, critical);
     // SimC76f8118 unique_gear_midnight.cpp6351–6355: perfected Guillotine impacts apply Venomfang.
     if ctx.spell.id == 1306624 {
