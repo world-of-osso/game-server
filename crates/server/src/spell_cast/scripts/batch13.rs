@@ -11,7 +11,6 @@ pub(super) const MORTAL_STRIKE: u32 = 12294;
 const MORTAL_WOUNDS: u32 = 115804;
 pub(super) const REND: u32 = 772;
 const REND_BLEED: u32 = 388539;
-const EXECUTE: u32 = 163201;
 const EXECUTE_RANK: u32 = 316405;
 pub(super) const SHADOW_WORD_DEATH: u32 = 32379;
 const DEATHSPEAKER: u32 = 364675;
@@ -50,26 +49,37 @@ fn apply_owned_aura(world: &mut World, caster: Entity, target: Entity, spell_id:
 }
 
 pub(super) fn effect_handler(spell: u32, index: u8) -> Option<effects::EffectHandler> {
-    ((spell, index) == (EXECUTE, 0)).then_some(cast_execute_damage)
+    (index == 0 && spell_cast::resources::EXECUTE_PARENTS.contains(&spell))
+        .then_some(cast_execute_damage)
 }
 
 /// TC spell_warr_execute::HandleExecuteCast prevents default effect64 and casts
 /// the authored damage child directly (spell_warrior.cpp:779–801).
+/// SimC76f8118 sc_warrior.cpp4335–4337 likewise executes the damage child inline;
+/// native Massacre uses the same contract and must retain the paid-Rage snapshot.
 fn cast_execute_damage(
     world: &mut World,
     ctx: &effects::EffectCtx,
     effect: &crate::spell_info::SpellEffect,
     target: Entity,
 ) {
-    spell_cast::cast_costed_trigger_with_context(
-        world,
-        ctx.caster,
-        effect.trigger_spell,
-        Some(target),
-        ctx.depth + 1,
-        ctx.spell.cast_item_level,
-        ctx.spell.cast_destination,
-    );
+    let depth = ctx.depth + 1;
+    let Some(mut child) = spell_cast::load_triggered_spell(world, effect.trigger_spell, depth)
+    else {
+        return;
+    };
+    child.cast_item_level = ctx.spell.cast_item_level;
+    child.cast_destination = ctx.spell.cast_destination;
+    child.cast_damage_multiplier = ctx.spell.cast_damage_multiplier;
+    if let Err(failure) =
+        spell_cast::execute_costed_trigger(world, ctx.caster, &child, Some(target), depth)
+    {
+        warn!(
+            spell_id = child.id,
+            ?failure,
+            "Execute damage child refused"
+        );
+    }
 }
 
 ///163201 and its260798 damage child both have native Speed0. Refund after that
@@ -81,14 +91,16 @@ pub(in crate::spell_cast) fn refund_execute(
     explicit: Option<Entity>,
     costs: &[(CostPool, f32)],
 ) {
-    if spell.id != EXECUTE || !crate::auras::has_aura(world, caster, EXECUTE_RANK) {
+    if !spell_cast::resources::EXECUTE_PARENTS.contains(&spell.id)
+        || !crate::auras::has_aura(world, caster, EXECUTE_RANK)
+    {
         return;
     }
     if !explicit.is_some_and(|target| targets::is_alive(world, target)) {
         return;
     }
     let spent = spell_cast::resources::spent(costs, PowerType::Rage);
-    let percent = script_effect_value(world, caster, EXECUTE, 1);
+    let percent = script_effect_value(world, caster, spell.id, 1);
     let amount = spent * percent / 100.0;
     let ctx = effects::EffectCtx {
         caster,

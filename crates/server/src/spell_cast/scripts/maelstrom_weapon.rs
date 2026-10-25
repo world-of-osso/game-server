@@ -24,6 +24,13 @@ pub(super) fn register(scripts: &mut AuraScripts) {
         },
     );
     scripts.0.insert(
+        384437,
+        AuraScript {
+            on_periodic: Some(generate_static_accumulation),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         COUNTER,
         AuraScript {
             on_remove: Some(remove_modifier),
@@ -60,12 +67,27 @@ pub(super) fn grant_voltaic_blaze(world: &mut World, caster: Entity, spell: &Spe
     // SimC sc_shaman.cpp10123–10125: once on execute, not per hit or Maelstrom power.
     let count = super::script_effect_value(world, caster, spell.id, 1) as u8;
     generate(world, caster, count);
+    super::enhancement_tier::apply_burning_core(world, caster, spell);
 }
 
 fn remove_modifier(world: &mut World, caster: Entity, aura: &AuraInstance, _reason: RemoveReason) {
     auras::remove_auras(world, caster, RemoveReason::Consumed, |child| {
         child.spell_id == MODIFIER && child.caster == aura.caster
     });
+}
+
+fn generate_static_accumulation(world: &mut World, caster: Entity, aura: &AuraInstance, index: u8) {
+    // SimC76f8118 sc_shaman.cpp12838–12847: actual mode-owned ticks earn the selected talent's stacks.
+    if index != 0 || !auras::has_aura(world, caster, 384411) {
+        return;
+    }
+    let count = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == index)
+        .expect("native Static Accumulation tick amount")
+        .amount as u8;
+    generate(world, caster, count);
 }
 
 pub(crate) fn snapshots_modifier(id: u32) -> bool {
@@ -91,12 +113,26 @@ pub(crate) fn consume(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }) else {
         return;
     };
-    let remaining = counter.stacks.saturating_sub(limit);
+    let spent = counter.stacks.min(limit);
+    let remaining = counter.stacks - spent;
     if remaining == 0 {
         auras::remove_instance(world, caster, counter.instance_id, RemoveReason::Consumed);
+    } else {
+        retain_stacks(world, caster, remaining);
+    }
+    reduce_tempo_recharge(world, caster, spent);
+}
+
+fn reduce_tempo_recharge(world: &mut World, caster: Entity, spent: u8) {
+    // SimC76f8118 sc_shaman.cpp11780–11787: each actual spent stack reduces both native clocks.
+    const ELEMENTAL_TEMPO: u32 = 1250364;
+    if spent == 0 || !auras::has_aura(world, caster, ELEMENTAL_TEMPO) {
         return;
     }
-    retain_stacks(world, caster, remaining);
+    let milliseconds = super::script_effect_value(world, caster, ELEMENTAL_TEMPO, 2);
+    let seconds = f64::from(milliseconds) * f64::from(spent) / 1000.0;
+    super::reduce_cooldown(world, caster, 17364, seconds);
+    super::reduce_cooldown(world, caster, 60103, seconds);
 }
 
 fn retain_stacks(world: &mut World, caster: Entity, remaining: u8) {

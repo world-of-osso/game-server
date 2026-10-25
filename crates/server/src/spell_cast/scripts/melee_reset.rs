@@ -32,6 +32,12 @@ const RESETS: &[MeleeReset] = &[
     },
 ];
 
+/// SimC76f8118 sc_paladin.cpp999–1014: only a repeating landed auto may
+/// attempt this passive. Raw Dummy proc hints must not spend its native ICD.
+pub(super) fn owns_proc(spell: u32) -> bool {
+    RESETS.iter().any(|reset| reset.passive == spell)
+}
+
 pub(crate) fn roll_white_hit(world: &mut World, caster: Entity, critical: bool) {
     for reset in RESETS {
         roll_reset(world, caster, reset, critical);

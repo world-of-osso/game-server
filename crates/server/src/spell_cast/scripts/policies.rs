@@ -1,9 +1,13 @@
 //! Explicit missing-script policies; native spell records still own payloads.
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, PowerType};
+use std::collections::HashSet;
 
 use super::AfterCastHook;
-use crate::auras::ActiveAuras;
+use crate::auras::{
+    ActiveAuras,
+    spell_mods::{self, SpellModOp},
+};
 use crate::class_progression::KnownSpells;
 use crate::spell_cast::{CostPool, PlannedEffect, TargetPlan, effects::EffectCtx, targets};
 use crate::spell_info::{CastDamageRole, CastPolicyContext, SpellInfo, SpellStore};
@@ -19,6 +23,14 @@ struct ChannelMomentum {
 
 #[derive(Clone, Copy)]
 enum Relationship {
+    OwnedPetSpellAfterCast {
+        parent: u32,
+        payload: u32,
+    },
+    TriggerPrimaryAfterCast {
+        parent: u32,
+        payload: u32,
+    },
     SpenderPeriodicExtension {
         resource: PowerType,
         payload: u32,
@@ -41,6 +53,12 @@ enum Relationship {
     ConsumeSelfAuraAfterCast {
         parent: u32,
         payload: u32,
+    },
+    ProcReplacement {
+        spell: u32,
+        aura: u32,
+        triggers: &'static [(u32, u8)],
+        mean_chance: f64,
     },
     ChannelMomentum(ChannelMomentum),
     ReapplicationExtend {
@@ -111,6 +129,28 @@ const POLICIES: &[Policy] = &[
         talent: 1261060,
         relationship: Relationship::ReapplicationRolling { payload: 262115 },
     },
+    // SimC76f8118 sc_hunter.cpp6702–6703: selected Nature's Ally spawns
+    // through its native Effect188 record; native1282474 supplies count/lifetime.
+    Policy {
+        name: "SIMC_BM_WRATH_NATURES_ALLY_SUMMON",
+        spec: 253,
+        talent: 1273043,
+        relationship: Relationship::TriggerPrimaryAfterCast {
+            parent: 19574,
+            payload: 1282474,
+        },
+    },
+    // SimC76f8118 sc_hunter.cpp6746–6750: every active stable pet applies
+    // Bloodshed after the summon above. Native321538 owns the periodic payload.
+    Policy {
+        name: "SIMC_BM_WRATH_BLOODSHED",
+        spec: 253,
+        talent: 1272099,
+        relationship: Relationship::OwnedPetSpellAfterCast {
+            parent: 19574,
+            payload: 321538,
+        },
+    },
     // SimC76f8118 sc_hunter.cpp5089/4972,3843–3846: successful Barbed/Cobra
     // arms selected Nature's Ally; native1276720 owns its value and lifetime.
     Policy {
@@ -151,6 +191,21 @@ const POLICIES: &[Policy] = &[
             payload: 1272696,
             self_target: false,
             primary_only: false,
+        },
+    },
+    // SimC76f8118 sc_warrior.cpp3565–3581: Heroic Strike requires and consumes
+    // the actual Master of Warfare proc; its payload and costs stay native.
+    Policy {
+        name: "SIMC_ARMS_MASTER_OF_WARFARE_REPLACEMENT",
+        spec: 71,
+        talent: 1269314,
+        relationship: Relationship::ProcReplacement {
+            spell: 1269383,
+            aura: 1269391,
+            // Parent hits are foreground; Execute's native costed damage child is depth1.
+            triggers: &[(12294, 0), (7384, 0), (1464, 0), (260798, 1)],
+            // sc_warrior.cpp1666: explicitly15%, not the native101 script sentinel.
+            mean_chance: 0.15,
         },
     },
     // SimC76f8118 sc_warrior.cpp3685–3686: Cleave applies the selected Rend
@@ -962,6 +1017,7 @@ pub(crate) fn owns_policy_proc(spell: u32) -> bool {
         return true;
     }
     POLICIES.iter().any(|policy| match policy.relationship {
+        Relationship::ProcReplacement { aura, .. } => policy.talent == spell || aura == spell,
         Relationship::CastEcho { .. } => policy.talent == spell,
         Relationship::CounterEchoAfterCast { counter, .. } => counter == spell,
         _ => false,
@@ -976,9 +1032,12 @@ fn hit_payloads(parent: u32) -> impl Iterator<Item = &'static Policy> {
 }
 
 pub(super) fn hit_hook(parent: u32) -> Option<super::ContextHitHook> {
-    hit_payloads(parent)
-        .next()
-        .map(|_| cast_hit_payload as super::ContextHitHook)
+    let replacement = POLICIES.iter().any(|policy| {
+        matches!(policy.relationship, Relationship::ProcReplacement { triggers, .. }
+            if triggers.iter().any(|(spell, _)| *spell == parent))
+    });
+    (replacement || hit_payloads(parent).next().is_some())
+        .then_some(cast_hit_payload as super::ContextHitHook)
 }
 
 fn cast_hit_payload(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
@@ -1001,14 +1060,66 @@ fn cast_hit_payload(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
         let recipient = if self_target { ctx.caster } else { target };
         super::super::cast_triggered(world, ctx.caster, payload, Some(recipient), ctx.depth + 1);
     }
+    produce_replacement_proc(world, ctx);
+}
+
+#[derive(Component, Default)]
+struct ReplacementProcAttempts(std::collections::HashMap<&'static str, u32>);
+
+fn produce_replacement_proc(world: &mut World, ctx: &EffectCtx<'_>) {
+    for policy in POLICIES {
+        let Relationship::ProcReplacement {
+            aura,
+            triggers,
+            mean_chance,
+            ..
+        } = policy.relationship
+        else {
+            continue;
+        };
+        let matching_hit = triggers.contains(&(ctx.spell.id, ctx.depth));
+        let proc_available =
+            selected(world, ctx.caster, policy) && !crate::auras::has_aura(world, ctx.caster, aura);
+        if !matching_hit || !proc_available {
+            continue;
+        }
+        if roll_replacement_proc(world, ctx.caster, policy.name, mean_chance) {
+            super::super::cast_triggered(world, ctx.caster, aura, Some(ctx.caster), ctx.depth + 1);
+        }
+    }
+}
+
+fn roll_replacement_proc(
+    world: &mut World,
+    caster: Entity,
+    name: &'static str,
+    mean_chance: f64,
+) -> bool {
+    if world.get::<ReplacementProcAttempts>(caster).is_none() {
+        world
+            .entity_mut(caster)
+            .insert(ReplacementProcAttempts::default());
+    }
+    let mut state = world.get_mut::<ReplacementProcAttempts>(caster).unwrap();
+    let attempts = state.0.entry(name).or_default();
+    *attempts += 1;
+    let chance = crate::random::accumulated_proc_constant(mean_chance) * f64::from(*attempts);
+    let success = crate::random::random::<f64>() < chance;
+    if success {
+        *attempts = 0;
+    }
+    success
 }
 
 fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
         matches!(policy.relationship,
-        Relationship::ApplySelfAuraAfterCast { parent: trigger, .. }
+        Relationship::OwnedPetSpellAfterCast { parent: trigger, .. }
+        | Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
+        | Relationship::ApplySelfAuraAfterCast { parent: trigger, .. }
         | Relationship::ConsumeSelfAuraAfterCast { parent: trigger, .. }
         | Relationship::CounterAfterCast { parent: trigger, .. }
+        | Relationship::ProcReplacement { spell: trigger, .. }
         | Relationship::CastEcho { parent: trigger, .. }
         | Relationship::CounterEchoAfterCast { parent: trigger, .. } if trigger == parent)
     })
@@ -1044,11 +1155,25 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             continue;
         }
         match policy.relationship {
+            Relationship::OwnedPetSpellAfterCast { payload, .. } => {
+                cast_owned_pet_payload(world, caster, spell, payload);
+            }
+            Relationship::TriggerPrimaryAfterCast { payload, .. } => {
+                let depth = super::super::next_trigger_depth(world);
+                super::super::cast_triggered(
+                    world,
+                    caster,
+                    payload,
+                    spell.cast_primary_target,
+                    depth,
+                );
+            }
             Relationship::ApplySelfAuraAfterCast { payload, .. } => {
                 let depth = super::super::next_trigger_depth(world);
                 super::super::cast_triggered(world, caster, payload, Some(caster), depth);
             }
-            Relationship::ConsumeSelfAuraAfterCast { payload, .. } => {
+            Relationship::ConsumeSelfAuraAfterCast { payload, .. }
+            | Relationship::ProcReplacement { aura: payload, .. } => {
                 crate::auras::remove_auras(
                     world,
                     caster,
@@ -1068,6 +1193,46 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             _ => unreachable!("after-cast policy iterator"),
         }
     }
+}
+
+fn cast_owned_pet_payload(world: &mut World, caster: Entity, spell: &SpellInfo, payload: u32) {
+    let Some(target) = spell.cast_primary_target else {
+        warn!(
+            ?caster,
+            spell = spell.id,
+            payload,
+            "Owned-pet payload lacks selected primary"
+        );
+        return;
+    };
+    let depth = super::super::next_trigger_depth(world);
+    for pet in crate::hunter_pet::active_owned_pets(world, caster) {
+        super::super::cast_triggered(world, pet, payload, Some(target), depth);
+    }
+}
+
+pub(crate) fn check_cast(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), crate::spell_cast::CastFailure> {
+    for policy in POLICIES {
+        let Relationship::ProcReplacement {
+            spell: replacement,
+            aura,
+            ..
+        } = policy.relationship
+        else {
+            continue;
+        };
+        if spell.id != replacement || !selected(world, caster, policy) {
+            continue;
+        }
+        if !crate::auras::has_aura(world, caster, aura) {
+            return Err(crate::spell_cast::CastFailure::CasterAuraState);
+        }
+    }
+    Ok(())
 }
 
 fn read_counter_amount(world: &World, caster: Entity, policy: &Policy, effect: u8) -> Option<u8> {
@@ -1182,7 +1347,7 @@ pub(in crate::spell_cast) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, hit:
     }
     for policy in consumers(&context.powers) {
         if selected(world, ctx.caster, policy) {
-            consume_on_hit(world, ctx.caster, policy, context);
+            consume_on_hit(world, ctx, policy);
         }
     }
 }
@@ -1195,7 +1360,8 @@ fn read_counter_instance(world: &World, caster: Entity, counter: u32) -> Option<
         .map(|aura| aura.instance_id)
 }
 
-fn consume_on_hit(world: &mut World, caster: Entity, policy: &Policy, context: &CastPolicyContext) {
+fn consume_on_hit(world: &mut World, ctx: &EffectCtx<'_>, policy: &Policy) {
+    let caster = ctx.caster;
     let Relationship::SpenderHit {
         counter, payload, ..
     } = policy.relationship
@@ -1205,11 +1371,7 @@ fn consume_on_hit(world: &mut World, caster: Entity, policy: &Policy, context: &
     let Some(instance) = read_counter_instance(world, caster, counter) else {
         return;
     };
-    let Some(targets) = read_payload_targets(world, caster, policy, payload, &context.targets)
-    else {
-        return;
-    };
-    let Some(target) = choose_target(world, caster, payload, &targets) else {
+    let Some(target) = read_spender_payload_target(world, ctx, policy, payload) else {
         return;
     };
     if !super::super::try_cast_triggered(world, caster, payload, Some(target), 1) {
@@ -1222,6 +1384,53 @@ fn consume_on_hit(world: &mut World, caster: Entity, policy: &Policy, context: &
         return;
     }
     crate::auras::spend_stack(world, caster, instance);
+}
+
+fn read_spender_payload_target(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    policy: &Policy,
+    payload: u32,
+) -> Option<Entity> {
+    let context = ctx.spell.cast_policy_context.as_ref()?;
+    let available = read_available_targets(world, ctx, &context.targets)?;
+    let targets = read_payload_targets(world, ctx.caster, policy, payload, &available)?;
+    choose_target(world, ctx.caster, payload, &targets)
+}
+
+/// SimC76f8118 action.cpp1738–1780/hpp1512–1535: target_list includes
+/// available enemies even when a single-target spender impacts only its primary.
+fn read_available_targets(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    original: &[Entity],
+) -> Option<Vec<Entity>> {
+    let Some(center) = targets::position(world, ctx.caster) else {
+        warn!(caster = ?ctx.caster, spell = ctx.spell.id, "Native policy caster position unavailable");
+        return None;
+    };
+    let available = query_available_enemies(world, ctx, center);
+    // Original selected units stay first, including the immutable primary.
+    let mut seen = HashSet::new();
+    Some(
+        original
+            .iter()
+            .copied()
+            .chain(available)
+            .filter(|unit| seen.insert(*unit))
+            .collect(),
+    )
+}
+
+fn query_available_enemies(world: &mut World, ctx: &EffectCtx<'_>, center: Vec3) -> Vec<Entity> {
+    let (min, max) = targets::spell_range(ctx.spell, true);
+    let max = spell_mods::modify(world, ctx.caster, ctx.spell, SpellModOp::Range, max);
+    targets::area_units(world, ctx.caster, center, max, targets::Relation::Enemy, 0)
+        .into_iter()
+        .filter(|&unit| {
+            targets::position(world, unit).is_some_and(|position| position.distance(center) >= min)
+        })
+        .collect()
 }
 
 fn read_payload_targets(

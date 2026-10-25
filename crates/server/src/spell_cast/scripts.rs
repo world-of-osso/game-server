@@ -4,6 +4,12 @@
 use crate::random as rand;
 
 mod after_cast_auras;
+mod bouncing_projectiles;
+mod cast_relationships;
+pub(crate) use cast_relationships::register as register_cast_relationships;
+pub(super) use cast_relationships::{
+    after_cast as apply_cast_relationships, ignores_cooldown as relationship_ignores_cooldown,
+};
 mod batch10;
 mod batch11;
 mod batch12;
@@ -48,19 +54,22 @@ pub(super) use elemental::capture_damage_modifier as capture_consumed_damage_mod
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
 mod enhancement_strikes;
+mod enhancement_tier;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
 mod essence_burst;
 mod feral_frenzy;
 pub(crate) use feral_frenzy::register as register_feral_frenzy;
 mod maelstrom_weapon;
-pub(crate) use maelstrom_weapon::{consume as consume_maelstrom_weapon, snapshots_modifier};
+pub(crate) use maelstrom_weapon::consume as consume_maelstrom_weapon;
 pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
     maelstrom_weapon::register(scripts);
     enhancement_imbues::register(scripts);
     enhancement_strikes::register(scripts);
+    enhancement_tier::register(scripts);
 }
 mod policies;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
+pub(super) use policies::check_cast as check_policy_cast;
 pub(crate) use policies::register_channel_policies;
 pub(super) use policies::{
     after_impacts as after_impact_policies,
@@ -69,9 +78,13 @@ pub(super) use policies::{
     has_impact_policy, on_hit as apply_hit_policies, snapshot as snapshot_hit_policies,
 };
 pub(crate) use policies::{
-    extends_reapplication, filter_secondary_targets, owns_policy_proc, register_lifecycle_policies,
+    extends_reapplication, filter_secondary_targets, register_lifecycle_policies,
     rolls_reapplication,
 };
+
+pub(crate) fn owns_policy_proc(spell: u32) -> bool {
+    policies::owns_policy_proc(spell) || melee_reset::owns_proc(spell)
+}
 mod germination;
 mod giantkiller;
 pub(super) use giantkiller::multiplier as giantkiller_multiplier;
@@ -80,6 +93,8 @@ pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
+#[cfg(any(test, feature = "test-support"))]
+pub(super) use hot_streak::triggers_hot_streak;
 pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 mod melee_reset;
@@ -103,6 +118,8 @@ mod ret_toll;
 pub(super) use ret_tier::after_foreground_spender;
 pub(crate) use ret_tier::owns_arbiter_charge;
 mod scourge_strike;
+mod shadow_priest;
+pub(super) use shadow_priest::launch_delay as scripted_launch_delay;
 mod snakeskin_quiver;
 pub(super) use snakeskin_quiver::roll_snakeskin_cobra;
 mod soul_of_the_forest;
@@ -156,6 +173,7 @@ pub(super) fn finish_scripted_launch(
 ) {
     elemental::after_launch(world, caster, spell, consumed, depth, foreground);
     execution_counters::after_launch(world, caster, spell.id);
+    enhancement_tier::after_launch(world, caster, spell, depth);
 }
 
 /// TC OnCast runs once after successful checks, before spending and launch.
@@ -245,6 +263,9 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
 }
 /// Native per-unit scripts replace the default effect handler before dispatch.
 pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+    if let Some(hook) = bouncing_projectiles::hook(spell, index) {
+        return Some(hook);
+    }
     if (spell, index) == (super::toy_coyote::DESPAWN, 0) {
         return Some(super::toy_coyote::despawn);
     }
@@ -287,6 +308,11 @@ use crate::auras::mount::{FLIGHT_STYLE_STEADY, FlightStyle, set_flight_style};
 use crate::spell_info::SpellInfo;
 
 /// Frostbolt: its effects are TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE) only.
+/// Sourced consumers retain native modifier amounts through projectile impact.
+pub(crate) fn snapshots_modifier(id: u32) -> bool {
+    maelstrom_weapon::snapshots_modifier(id) || cast_relationships::snapshots_modifier(id)
+}
+
 const FROSTBOLT: u32 = 116;
 /// Chilled: APPLY_AURA MOD_DECREASE_SPEED 33 (-50%, 8 s).
 const CHILLED: u32 = 205_708;
@@ -417,7 +443,11 @@ pub(super) fn relocate_destination(
 pub(super) fn consumes_effect_value(spell_id: u32, effect_index: u8) -> bool {
     // TC a352b1fa spell_priest.cpp4483-4487: CalcDamage reads execute bonus E3.
     // spell_shaman.cpp1015-1027: OnHit reads knockdown chance E1.
-    matches!((spell_id, effect_index), (32_379, 3) | (77_478, 1))
+    // SimC76f8118 sc_priest_shadow.cpp1733–1739: Slam E2 supplies the VT cap.
+    matches!(
+        (spell_id, effect_index),
+        (32_379, 3) | (77_478, 1) | (shadow_priest::SLAM, 2)
+    )
 }
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
@@ -426,6 +456,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
             Some(crate::scripted_ai::orator::terrorize_hit)
         }
         (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::cast_damage),
+        (shadow_priest::SLAM, 0) => Some(shadow_priest::slam_impact),
         (49_576, 0) => Some(death_grip),
         (108_199, 1) => Some(cast_subduing_grasp),
         (20_538, 0) => Some(hate_to_zero),
@@ -784,6 +815,7 @@ fn native_after_cast(spell_id: u32) -> Option<AfterCastHook> {
         batch8::DEMONBOLT => Some(batch8::demonbolt),
         batch8::CRASH_LIGHTNING => Some(enhancement_strikes::after_crash),
         188196 | 188443 | 452201 => Some(enhancement_strikes::after_lightning),
+        17364 | 115356 | 60103 => Some(enhancement_strikes::grant_elemental_assault),
         batch8::ARCANE_BARRAGE => Some(batch8::arcane_barrage),
         batch3::FLASH_HEAL => Some(batch3::flash_heal),
         batch3::PRAYER_OF_HEALING => Some(batch4::prayer),

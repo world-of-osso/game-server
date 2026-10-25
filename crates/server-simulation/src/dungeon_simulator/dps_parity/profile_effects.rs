@@ -25,20 +25,41 @@ pub(super) fn install(world: &mut World, actor: Entity, profile: &Profile) -> Re
             // SimC76f8118 consumable.cpp40–59/item_data.inc175834: quality2 identity.
             ("flask", "flask_of_the_blood_knights_2") => apply_item(world, actor, 241324, &db)?,
             ("augmentation", "void_touched") => apply_item(world, actor, 259085, &db)?,
-            ("food", "royal_roast") => server::consumables::apply(world, actor, 1294727, None)?,
-            // SimC76f8118 unique_gear_midnight.cpp6395/6398: both feasts share this buff.
-            ("food", "harandar_celebration" | "silvermoon_parade") => {
-                server::consumables::apply(world, actor, 1232585, None)?
-            }
+            // Food selectors require the composed native equipment/consumable ratings.
+            ("food", _) => {}
             ("potion", "potion_of_recklessness_2") => {
                 let item = super::literal_rotation::equipment::ItemUse::consumable(world, 241288)?;
-                world.entity_mut(actor).insert(Potion(item));
+                world.entity_mut(actor).insert((
+                    Potion(item),
+                    crate::simc_apl_native::ConfiguredPotion {
+                        name: value.clone(),
+                        on_use: item.on_use,
+                    },
+                ));
             }
             ("temporary_enchant", _) => install_oils(world, actor, value)?,
             _ => {} // Report retains every unsupported token explicitly.
         }
     }
     Ok(())
+}
+
+pub(super) fn install_food(
+    world: &mut World,
+    actor: Entity,
+    profile: &Profile,
+) -> Result<(), String> {
+    let Some(food) = profile.consumables.get("food") else {
+        return Ok(());
+    };
+    // SimC76f8118 unique_gear_midnight.cpp6388/6395–6398: native food identities.
+    let spell = match food.as_str() {
+        "royal_roast" => 1294727,
+        "harandar_celebration" | "silvermoon_parade" => 1232585,
+        "blooming_feast" => 1232091,
+        _ => return Ok(()), // Disabled/unsupported tokens retain their report semantics.
+    };
+    server::consumables::apply(world, actor, spell, None)
 }
 
 fn item_spell(db: &Connection, item: u32) -> Result<(u32, u16), String> {
@@ -125,7 +146,10 @@ pub(super) fn supported(kind: &str, value: &str) -> bool {
             | ("flask", "flask_of_the_blood_knights_2")
             | ("augmentation", "void_touched")
             | ("food", "royal_roast")
-            | ("food", "harandar_celebration" | "silvermoon_parade")
+            | (
+                "food",
+                "harandar_celebration" | "silvermoon_parade" | "blooming_feast"
+            )
             | ("potion", "potion_of_recklessness_2")
     ) || (kind == "temporary_enchant"
         && value.split('/').all(|e| {

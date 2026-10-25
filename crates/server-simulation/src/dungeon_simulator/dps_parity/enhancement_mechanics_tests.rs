@@ -96,7 +96,14 @@ fn enhancement_voltaic_blaze_grants_native_maelstrom_weapon_instead_of_zero_powe
         points,
     ) as u8;
     cast(&mut run, VOLTAIC_BLAZE);
-    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<shared::casting::CastState>(run.actor)
+            .is_none(),
+        "Voltaic Blaze grants its stacks on its native instant execution"
+    );
+    // Measure this execute before a later frame can earn unrelated real melee procs.
     assert_eq!(stacks(&run), native_amount);
 }
 

@@ -730,8 +730,11 @@ pub(super) fn select_targets_and_destination(
     if !selected_any && effect.implicit_targets == [0, 0] {
         units.push(explicit.unwrap_or(caster));
     }
+    // TC a352b1fa AddUnitTarget merges selectors by unit, preserving first selection.
+    // SimC76f8118 sc_priest_shadow.cpp1680–1715: Slam16+134 yields [a,b,c,a,b,c].
+    let mut seen = std::collections::HashSet::new();
+    units.retain(|unit| seen.insert(*unit));
     units = limit_spell_targets(spell, caster, units, 0);
-    units.dedup();
     Ok((units, destination))
 }
 
