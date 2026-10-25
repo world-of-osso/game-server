@@ -12,7 +12,7 @@ The [Fury/Warrior contract](../../specs/dps-parity.md#fury-player-parity) is imp
 
 `periodic_attacks::ROLLING_REAPPLICATIONS` stores payload, selected passive and eligible specs. `scripts::rolls_reapplication` selects the [Deep Wounds exception](auras.md#native-rolling-periodic-refresh--2026-10-22) from those rows, independently of the shared cast-policy registry. Neither its budget nor duration rule is inferred for other spells from the native rolling flag alone.
 
-Sources: `crates/server/src/spell_cast/{mod.rs,scripts.rs,scripts/}`, `crates/server/src/auras/{procs.rs,periodic.rs,refresh.rs}`, and native fixtures under `crates/server-simulation/src/dungeon_simulator/dps_parity/{fury_rotation,warrior_proc_tests.rs}`. Exact SimC source lines are recorded beside each policy row. Runtime acceptance is tracked separately from this implementation description.
+Sources: `crates/server-combat/src/spell_cast/{mod.rs,scripts.rs,scripts/}`, `crates/server-combat/src/auras/{procs.rs,periodic.rs,refresh.rs}`, and native fixtures under `crates/server-simulation/src/dungeon_simulator/dps_parity/{fury_rotation,warrior_proc_tests.rs}`. Exact SimC source lines are recorded beside each policy row. Runtime acceptance is tracked separately from this implementation description.
 
 ## Bounded Storm echo policy
 

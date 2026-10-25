@@ -73,8 +73,8 @@ This is shared aura execution, not an Echo/Ignite proc or learned-spell grant.
 - [ ] Qualify actual12654 producer integration separately; its flag uses the same shared path, but the Ignite producer belongs to another slice.
 
 Generic native boundary assertions:
-`crates/server/src/auras/rolling_periodic_tests.rs`; native Echo/ownership assertions:
-`crates/server/src/followers/holy_policy_native_tests/echo_of_light.rs`.
+`crates/server-combat/src/auras/rolling_periodic_tests.rs`; native Echo/ownership assertions:
+`crates/server-combat/src/followers/holy_policy_native_tests/echo_of_light.rs`.
 Existing Barbed and335467 regressions remain required controls. This does not
 certify all native flagged spell producers or change periodic-clock ownership.
 

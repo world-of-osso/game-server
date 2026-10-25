@@ -5,7 +5,7 @@ use shared::components::ActiveSpec;
 
 use crate::auras::procs::AuraEvent;
 use crate::auras::scripts::{AuraScript, AuraScripts};
-use crate::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
+use crate::auras::{self, ActiveAuras, AuraInstance};
 use crate::class_progression::KnownSpells;
 use crate::spell_cast::{self, effects::EffectCtx, targets};
 use crate::spell_info::{SpellInfo, SpellStore};
@@ -16,6 +16,8 @@ const CRASH_STACKS: u32 = 1252415;
 const CRASH_DAMAGE: u32 = 195592;
 const STORM_UNLEASHED: u32 = 1262713;
 const THORIM: u32 = 384444;
+const RIDE_THE_LIGHTNING: u32 = 289874;
+const RIDE_DAMAGE: u32 = 211094;
 const DOOM_WINDS: u32 = 466772;
 const ASCENDANCE: u32 = 114051;
 const BOLT: u32 = 188196;
@@ -142,6 +144,37 @@ pub(super) fn on_strike(world: &mut World, ctx: &EffectCtx, target: Entity) {
     }
 }
 
+pub(super) fn cast_ride_the_lightning(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    depth: u8,
+) {
+    // SimC76f8118 sc_shaman.cpp5278/5647/5690/12532–12551: one linked CL per strike execution.
+    let strike = matches!(spell.id, 17364 | 115356 | 60103);
+    let selected =
+        strike && enhancement(world, caster) && learned(world, caster, RIDE_THE_LIGHTNING);
+    if !selected {
+        return;
+    }
+    let Some(target) = spell.cast_primary_target else {
+        return;
+    };
+    let mut payload = world
+        .resource::<SpellStore>()
+        .get(RIDE_DAMAGE)
+        .expect("native Ride the Lightning payload")
+        .clone();
+    // SimC6587–6597: this background variant never benefits from or spends MW.
+    payload.cast_charge_mods = Some(
+        auras::spell_mods::snapshot_charged_modifiers(world, caster, &payload)
+            .into_iter()
+            .filter(|modifier| modifier.aura_spell_id != super::maelstrom_weapon::MODIFIER)
+            .collect(),
+    );
+    spell_cast::launch_triggered_spell(world, caster, &payload, Some(target), depth + 1);
+}
+
 fn crash_stacks(world: &World, caster: Entity) -> u8 {
     world.get::<ActiveAuras>(caster).map_or(0, |auras| {
         auras
@@ -204,8 +237,9 @@ fn invoke_thorim(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     ));
     if spell_cast::launch_triggered_spell(world, caster, &payload, Some(target), depth + 1) {
         // SimC2626–2629 makes this background variant an explicit MW consumer.
-        super::maelstrom_weapon::consume(world, caster, &payload);
+        // SimC9966: spend this proc before MW spending can earn the next one.
         consume_tempest(world, caster, selected);
+        super::maelstrom_weapon::consume(world, caster, &payload);
     }
 }
 
@@ -223,9 +257,16 @@ fn consume_tempest(world: &mut World, caster: Entity, spell: u32) {
     if spell != TEMPEST {
         return;
     }
-    auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
-        aura.spell_id == TEMPEST_PROC && aura.caster == caster
+    // SimC9966 decrements one earned charge, not the entire native two-stack aura.
+    let instance = world.get::<ActiveAuras>(caster).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == TEMPEST_PROC && aura.caster == caster)
+            .map(|aura| aura.instance_id)
     });
+    if let Some(instance) = instance {
+        auras::spend_stack(world, caster, instance);
+    }
 }
 
 pub(super) fn after_lightning(world: &mut World, caster: Entity, spell: &SpellInfo) {
