@@ -1,5 +1,6 @@
 //! Explicit missing-script policies; native spell records still own payloads.
 pub(super) mod pet_sets;
+mod pet_wrath;
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, PowerType};
 use std::collections::HashSet;
@@ -24,6 +25,9 @@ struct ChannelMomentum {
 
 #[derive(Clone, Copy)]
 enum Relationship {
+    OwnedPetWrathAfterCast {
+        parent: u32,
+    },
     ReduceCooldownAfterCast {
         parent: u32,
         cooldown: u32,
@@ -177,6 +181,14 @@ const POLICIES: &[Policy] = &[
             parent: 19574,
             payload: 1282474,
         },
+    },
+    // SimC76f8118 sc_hunter.cpp6710–6728: native pet buffs precede
+    // Bloodshed; Apex retains its sourced buff and strike delays.
+    Policy {
+        name: "SIMC_BM_WRATH_PET_EFFECTS",
+        spec: 253,
+        talent: 19574,
+        relationship: Relationship::OwnedPetWrathAfterCast { parent: 19574 },
     },
     // SimC76f8118 sc_hunter.cpp6746–6750: every active stable pet applies
     // Bloodshed after the summon above. Native321538 owns the periodic payload.
@@ -1172,7 +1184,8 @@ fn roll_replacement_proc(
 fn producers(parent: u32) -> impl Iterator<Item = &'static Policy> {
     POLICIES.iter().filter(move |policy| {
         matches!(policy.relationship,
-        Relationship::ReduceCooldownAfterCast { parent: trigger, .. }
+        Relationship::OwnedPetWrathAfterCast { parent: trigger }
+        | Relationship::ReduceCooldownAfterCast { parent: trigger, .. }
         | Relationship::OwnedPetSpellAfterCast { parent: trigger, .. }
         | Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
         | Relationship::ApplySelfAuraAfterCast { parent: trigger, .. }
@@ -1223,6 +1236,9 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             continue;
         }
         match policy.relationship {
+            Relationship::OwnedPetWrathAfterCast { .. } => {
+                pet_wrath::after_cast(world, caster, spell)
+            }
             Relationship::ReduceCooldownAfterCast {
                 cooldown,
                 milliseconds_effect,

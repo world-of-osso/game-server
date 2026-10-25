@@ -8,6 +8,10 @@ pub(super) struct StabledPetGuardian {
     expires_at: Option<f64>,
 }
 
+pub(crate) fn is_stabled_guardian(world: &World, pet: Entity) -> bool {
+    world.get::<StabledPetGuardian>(pet).is_some()
+}
+
 pub(crate) fn effect_summon_stabled_pet(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
     // SimC76f8118 sc_hunter.cpp6702–6703: Nature's Ally uses the stable-pet
     // body, with its native summon duration. No alternate creature identity.

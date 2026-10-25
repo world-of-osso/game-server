@@ -12,7 +12,9 @@
 //! the five active ones, hunter pet death, and pets across map transfers.
 
 mod guardians;
-pub(crate) use guardians::{EFFECT_SUMMON_STABLED_PET_AS_GUARDIAN, effect_summon_stabled_pet};
+pub(crate) use guardians::{
+    EFFECT_SUMMON_STABLED_PET_AS_GUARDIAN, effect_summon_stabled_pet, is_stabled_guardian,
+};
 
 use crate::random as rand;
 use std::collections::HashMap;
