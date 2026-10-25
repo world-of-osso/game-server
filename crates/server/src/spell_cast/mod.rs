@@ -3622,6 +3622,11 @@ fn plan_triggered_spell(
     explicit: Option<Entity>,
     depth: u8,
 ) -> Result<TargetPlan, CastFailure> {
+    // TC a352b1fa Spell.cpp4243–4255 resolves the explicit GUID before launch;
+    // a deferred proc may retain a unit that has since despawned, not a live target.
+    if explicit.is_some_and(|target| world.get_entity(target).is_err()) {
+        return Err(CastFailure::InvalidTarget);
+    }
     druid_transform::before_cast(world, caster, spell, depth)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
     // CheckTarget's TARGETS_DEAD is independent of BAD_TARGETS/relation bypass.
