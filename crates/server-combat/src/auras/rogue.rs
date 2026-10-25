@@ -135,6 +135,57 @@ pub(crate) fn after_poison_hit(world: &mut World, ctx: &EffectCtx<'_>, target: E
     }
 }
 
+/// SimC76f8118 sc_rogue.cpp4281–4310: snapshot the native Amplifying
+/// bonus and consume the owned threshold before this cast can generate poison.
+pub(crate) fn prepare_envenom(
+    world: &mut World,
+    caster: Entity,
+    target: Option<Entity>,
+    spell: &mut SpellInfo,
+) {
+    if spell.id != 32645 {
+        return;
+    }
+    let Some(target) = target else { return };
+    let Some((bonus, threshold)) = read_amplifying_values(world, caster) else {
+        return;
+    };
+    assert!(
+        threshold > 0,
+        "Amplifying Poison requires a positive native threshold"
+    );
+    let instance = world.get::<ActiveAuras>(target).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| {
+                aura.spell_id == 383414 && aura.caster == caster && aura.stacks >= threshold
+            })
+            .map(|aura| aura.instance_id)
+    });
+    let Some(instance) = instance else { return };
+    spell.cast_damage_multiplier =
+        Some(spell.cast_damage_multiplier.unwrap_or(1.0) * (1.0 + bonus / 100.0));
+    for _ in 0..threshold {
+        super::spend_stack(world, target, instance);
+    }
+}
+
+fn read_amplifying_values(world: &World, caster: Entity) -> Option<(f32, u8)> {
+    let coating = world
+        .get::<ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.spell_id == 381664 && aura.caster == caster)?;
+    let amount = |index| {
+        coating
+            .effects
+            .iter()
+            .find(|effect| effect.index == index)
+            .expect("Amplifying Poison retains its native bonus and threshold")
+            .amount
+    };
+    Some((amount(0), amount(1) as u8))
+}
+
 // The native periodic-hit producer below owns this proc before aura expiry.
 // Queued generic proc dispatch runs after expiry and cannot recover that count.
 fn block_deferred_wounds(_world: &World, _aura: &AuraInstance, _event: &procs::AuraEvent) -> bool {

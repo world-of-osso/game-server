@@ -2720,6 +2720,7 @@ fn execute_cast_with_primary(
     let plan = plan_targets(world, caster, &prepared, explicit, false)?;
     prepared.cast_policy_context =
         scripts::snapshot_hit_policies(world, caster, &prepared, &plan, &costs);
+    crate::auras::rogue::prepare_envenom(world, caster, explicit, &mut prepared);
     let consumed_damage =
         scripts::capture_consumed_damage_modifier(world, caster, &mut prepared, true);
     let spell = &prepared;
@@ -3904,6 +3905,7 @@ fn execute_costed_trigger(
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
     prepared.cast_primary_target = primary_target;
     let plan = plan_targets(world, caster, &prepared, explicit, true)?;
+    crate::auras::rogue::prepare_envenom(world, caster, explicit, &mut prepared);
     let consumed_damage =
         scripts::capture_consumed_damage_modifier(world, caster, &mut prepared, false);
     scripts::before_ret_damage_cast(world, caster, &prepared, depth);
