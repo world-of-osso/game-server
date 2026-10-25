@@ -18,6 +18,10 @@ mod cast_grants;
 mod cast_resets;
 #[path = "modules/devastation.rs"]
 mod devastation;
+#[path = "modules/essence_burst.rs"]
+mod essence_burst;
+#[path = "modules/havoc.rs"]
+mod havoc;
 #[path = "modules/paid_cooldowns.rs"]
 mod paid_cooldowns;
 #[path = "modules/retribution.rs"]
@@ -45,4 +49,6 @@ pub const MODULES: &[&[SpellScriptHook]] = &[
     aura_rolls::HOOKS,
     cast_grants::HOOKS,
     paid_cooldowns::HOOKS,
+    essence_burst::HOOKS,
+    havoc::HOOKS,
 ];
