@@ -100,6 +100,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [x] `line_cd` belongs to the exact literal source row, independently of spell cooldowns, targets, and identical neighboring rows. Only a successful execution starts it.
 - [x] `action.<alias>.channeling` reads the actual matching native channel. `cancel_action` can cancel during casting/GCD. At native channel ticks, `interrupt_if`/`interrupt` requires a genuinely ready higher-priority action; `interrupt_immediate` bypasses only the GCD guard, and `interrupt_global` selects root versus current-list priority scope. `chain` rechecks the same source row at the penultimate tick and recasts only without a higher-priority ready action. Readiness probes do not mutate powers, casts or recovery clocks (SimC76f8118 `dot.cpp707–735,815–869,980–994`).
 
+- [x] `early_chain_if` works without `chain=1`: after a paid native channel tick, a true expression and ready GCD may re-execute the same ready source row before its penultimate tick, but never ahead of a ready higher-priority action (SimC76f8118 `dot.cpp841–845`).
+
 ### Empyrean Legacy relationship
 
 - [ ] `SIMC_RET_EMPYREAN_LEGACY_RELATIONSHIP`: actual Avenging Wrath31884/454351 grants native387178 only for validated selected387170. Actual FV/TV consumes it and schedules zero-delay free background53385 at1+native387170 effect1 percent. Preserve native coefficients, area selectors and flight. Only this background may consume opposite-kind Arbiter without consuming Divine Purpose or its proc charge. Suppress metadata-only every-cast grant/any-hit charge consumption only for this policy's driver/buff; other proc dispatch is unchanged. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#empyrean-legacy-relationship-policy).
@@ -113,6 +115,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Periodic auras with native `SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC` (Attributes5 `0x2000`) apply caster spell haste after the native period spell modifiers, truncating to integer milliseconds. Their unchanged duration admits the resulting extra ticks. Unflagged auras retain their native period. Source: TC a352b1fa `SpellAuraEffects.cpp999–1012`.
 
 ### Measurement
+
+- Spec259 player fixtures execute the profile's literal pinned Assassination action rows through the shared APL evaluator, not AssistedCombat or follower-kit priorities. `apply_poison` uses the selected native coating casts in source order and waits for each real cast before the next precombat row. Production follower decisions remain unchanged.
 
 - Parity opponents face away from the actual actor at initial spawn, engagement after warmup, and add replacement, matching the reference's `position=back`. Preserve pack positions and native attack geometry/defenses. Rear position excludes parry, not NPC dodge. Player and class-parity actors also receive the pinned SimC baseline7.5% expertise in both weapon-spell and ordinary-swing dodge/parry calculations (`player.cpp1622`); native target defense values and ordinary NPC expertise remain unchanged.
 
@@ -185,6 +189,10 @@ It builds the `server-simulation` test executable with Cargo's `test` profile (s
 
 The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native specialization metadata selects class identity, the prepared database resolves the reference race, and ordinary player power/stat/passive systems initialize the actor. Human uses the pinned SimC `util::race_id(RACE_HUMAN)=1` and requires that exact native row:70448 also labels ThinHuman33 "Human", so a display-name match must not choose it or reject a valid Human1 profile. Other absent/ambiguous identities fail explicitly. Strict reference traits use that player's actual race/spec identity. No follower profile or persistent character is fabricated. Player rotation execution uses the test-only `game-engine-core` dependency pinned to9ef2efe2d317b837d352fe8c5227086a4fdcd490, reusing `CooldownAssistCatalog::recommend` and `assisted_combat::evaluate_rule` unchanged. `DPS_PARITY_ASSISTED_DB2` must name the frozen70448 seven-table CSV directory. Native known spells/overrides, powers/runes, auras, target health, pet state, cooldown/charge clocks and ordinary target admission supply facts; the latter is explicitly labelled as the range-fact boundary rather than claiming identical client geometry. The50ms driver submits normal `cast_for_player` requests only inside the existing native queue window. An unknown potentially applicable rule stops the attempt and writes exact facts/rule IDs/native event evidence to `<spec>.player.assisted-gap.json`; missing metadata or cast refusal remains an explicit error. No alternate priority is substituted. Parity authority is the pinned literal SimC APL through shared `literal_rotation` and the owning spec adapter. Native AssistedCombat/one-button execution is diagnostic only, not a substitute parity rotation. AssistedCombatRule conditions11/12 remain named unverified numeric/predictive gaps; do not guess their semantics or derive a parity DPS band from a stopped diagnostic attempt. Arms adapter/FIRST/target route is owned by14775 and requires its exact qualified fixture/tips.
 
+### Enhancement fixture driver
+
+Spec263 parity executes the pinned MID2 Enhancement action rows through the shared literal evaluator, using native action admission, equipment and aura/target facts. A real player uses this driver without loading AssistedCombat diagnostic inputs; no follower profile is fabricated. Windfury/Flametongue setup occurs only in precombat. Thorim's LB/CL choice follows successful foreground LB/CL/Tempest dispatch and Tempest target count. This selects actions; it does not certify the underlying Enhancement proc, counter or damage mechanics.
+
 ### Shared literal snapshot operands
 
 `action.<alias>.damage` reads the proposed target's native direct school-damage snapshot, including current power, modifiers, mitigation and expected crit, without casting or sampling RNG. Weapon-damage predictions remain explicit errors. Action cooldown/duration and bare `ticking` retain action context. `pet.<summon alias>.active` reads actual living, unexpired, same-map owned summons; absent summons are inactive.
@@ -202,6 +210,14 @@ The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native speci
 - `crates/server/src/stats_instance_tests.rs` — actual StatsPlugin modifier-only change on native chest 271468/enchant 7987; genuine RED missed +50 Strength before consumer wiring; subsequent native GREEN and unchanged legacy Arcane control passed.
 
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/power_tests.rs` — opt-in native253/Duck/Cobra/grant owner/pet snapshots and grouped capped gains, plus native66 authoritative Mana serialization. Genuine receipt RED2 precedes implementation; current14e20fbca GREEN3/3 (110.93s), retained six source/parallel controls, all-target check/fmt pass. Snapshot rates/logged integer gains do not certify integrated realized regeneration or resource mechanics parity.
+
+## Shared profile gear effects
+
+- Reference followers retain NPC identity but use the declared native race for base stats and validated racial spell knowledge. Native player/pet aura effect202 must apply owner racial effects.
+- Aura189 rating buffs must change derived native ratings through their real masks. Item spell scaling class−7 includes its native trinket combat-rating multiplier before rounding. Declared Magisters flask, Void-Touched augmentation, Royal Roast, Recklessness potion and Thalassian Phoenix Oil quality2 use native item/enchant/spell values. Oil coexists with permanent enchants. Potion selects the current highest positive/lowest negative secondary and is available once per encounter; unsupported tokens remain named gaps.
+- Expansion tokens resolve native TraitNodeEntry identities, independent of class talents. Item scripts supply SimC relationships for Heart Morsels/stacking stats, asynchronous Venomfang/expiry bursts and perfected Guillotine poison, plus Omnium fire/lingering/secondary runes. Native proc rates, scaling and recipients remain authoritative; neutral attackable targets must not be rejected as non-hostile factions.
+
+[Implementation](../wiki/systems/character-stats.md#shared-profile-effects--2026-10-25).
 
 ## Known gaps (current cycle)
 
