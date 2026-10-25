@@ -1,3 +1,6 @@
+## 2026-10-24 — Action-permitting channel melee
+
+[Source/proof](../handoffs/channel-melee-proof-ledger.md): TC channel allow-actions bit0x1 avoids UNIT_STATE_CASTING; generic melee wrongly treated every CastState as blocking. ActualSCK1.5s/ready0ns/zero-white gives genuine1RED, FoF/normalVivify/noncast3controlsPASS11.67s at1d196cead. Preserve spell permissions, both timer clocks, crowd-control and victim avoidance; no class IDs or scalar changes. Generic gate implementationdb543b270 committed before4GREEN27.56s; actual active-channel SCK white0→1, all three controls unchanged, compiler405.74s/zero warnings. Lead broad/plain-bin gate remains separate; no300s rerun.
 ## 2026-10-24 — Xuen merge reconciliation on mastera804
 
 [Reconciliation proof](../handoffs/ww-xuens-recovery-proof-ledger.md#mastera804-reconciliation--native23-green): frozen36eeb2339 merged, not rebased, onto exacta804 atd54c1b64d. Preserve SCK periodic snapshot, four-argument Xuen/Flurry callback and both additive wiki sections. Same binary passes13Xuen38.93s,6Flurry50.16s and4SCK24.48s; compiler582.99s/zero warnings, fmt/diff pass, conflict-region readability has no findings. Lead re-gate/new merged-source plain --bins remains separate; no300s rerun.
