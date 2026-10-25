@@ -397,8 +397,8 @@ def drop_superseded(entries):
         for new in landing:
             if new["submitted"] <= old["submitted"]:
                 continue
-            # The same commit twice (any owner) is one landing; keep the newest request.
-            if new["commit"] == old["commit"] or new["owner"] == old["owner"] \
+            # The same commit with the same tests (any owner) is one landing; keep the newest.
+            if new["commit"] == old["commit"] and new["tests"] == old["tests"] or new["owner"] == old["owner"] \
                     and git("merge-base", "--is-ancestor", old["commit"], new["commit"], check=False).returncode == 0:
                 old["status"], old["reason"] = "rejected", f"superseded by {new['id']}"
                 stale.append(old)
