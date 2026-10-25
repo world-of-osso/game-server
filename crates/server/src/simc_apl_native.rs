@@ -175,7 +175,7 @@ impl<'a> NativeFacts<'a> {
         spell: &crate::spell_info::SpellInfo,
         property: &str,
     ) -> Result<f64, String> {
-        crate::spell_cast::native_apl::cooldown_value(self.world, self.actor, spell, property)
+        crate::spell_cast::cooldown_query::cooldown_value(self.world, self.actor, spell, property)
     }
 
     pub fn equipment_proc_cooldown(
@@ -566,7 +566,7 @@ impl<'a> NativeFacts<'a> {
             "in_flight" | "in_flight_remains" => {
                 crate::spell_cast::native_apl::flight_value(self.world, self.actor, spell, property)
             }
-            "usable_in" => crate::spell_cast::native_apl::cooldown_value(
+            "usable_in" => crate::spell_cast::cooldown_query::cooldown_value(
                 self.world, self.actor, spell, "remains",
             ),
             "ready" => crate::spell_cast::native_apl::action_ready(self.world, self.actor, spell),
@@ -586,7 +586,9 @@ impl<'a> NativeFacts<'a> {
         let spell = self.action_spell(&action.name)?;
         match name {
             "charges" | "charges_fractional" | "full_recharge_time" => {
-                crate::spell_cast::native_apl::cooldown_value(self.world, self.actor, spell, name)
+                crate::spell_cast::cooldown_query::cooldown_value(
+                    self.world, self.actor, spell, name,
+                )
             }
             "execute_time" => Ok(crate::spell_cast::native_apl::execute_time(
                 self.world, self.actor, spell,
