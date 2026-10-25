@@ -86,6 +86,13 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [ ] Hunter pet ability damage inherits the same integer22% owner total RAP source as melee, including equipped weapon AP; native1264355 damage qualifies the actual effect boundary before the shared input changes. Ability coefficients/variance and native target geometry stay unchanged.
 - [ ] Intrinsic pet AP/weapon damage remains an explicit unqualified gap; do not invent pet_levelstats or import TC's fake primary stats/approximate weapon range. SimC stable_pet60% ownerAP is named divergence `HUNTER_PET_SIMC_OWNER_AP_DIFF`, not mixed with TC22% RAP. Contribution proofs do not certify total pet DPS or Azure survival.
 
+### Fury player parity
+
+- [x] Spec72 uses `--actor player` and the complete pinned MID2 Fury APL through shared `literal_rotation`. Capture literal control before native setup, execute ordered precombat and submit normal native casts. Do not invent a follower profile. Native overrides select Reckless Abandon and Unrelenting Onslaught variants; native stats, costs, coefficients and trait legality remain authoritative.
+- [ ] Fury Deep Wounds1261060 accepts only actual Execute main-hand280849 impacts; Whirlwind cannot grant it (SimC76f8118 `sc_warrior.cpp4452–4456`). Preserve native262115 damage and periodic behavior.
+- [ ] Anger Management152278 reduces running Fury Avatar/Recklessness cooldowns from actual paid Rage, using native PowerType display units and effect2's Rage-per-second divisor; free background casts do not contribute (`sc_warrior.cpp1450–1455,1506–1517`).
+- [ ] Selected Unhinged386628 dispatches the live native Bloodthirst variant on odd Bladestorm227847/446035 effect0 ticks, including catch-up ticks, using the actual selected hostile target (`sc_warrior.cpp3257–3268,3316–3334`).
+
 ### Literal precombat execution
 
 - [ ] Explicit literal controller handoff occurs before any native setup/warmup frames. Nonliteral fixtures retain native kit behavior; literal fixtures cannot acquire kit-cast precombat auras absent from their APL. Never delete those auras afterward to conceal a late handoff. Accepted Encounter::Fixture capture retires the actor's native FollowOwner while preserving Follower/NPC identity and native literal AA chase; rejected Dungeon capture leaves owner-follow behavior unchanged.

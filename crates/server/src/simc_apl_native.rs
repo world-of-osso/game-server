@@ -452,9 +452,14 @@ impl<'a> NativeFacts<'a> {
         }
         if !matches!(
             property,
-            "exists" | "remains" | "in" | "cooldown" | "duration"
+            "exists" | "remains" | "in" | "cooldown" | "duration" | "distance"
         ) {
             return Err(format!("unknown native movement-event property {property}"));
+        }
+        // SimC76f8118 raid_event.cpp3068–3077: absent events return zero for
+        // distance, independently of actor/target separation or movement state.
+        if property == "distance" {
+            return Ok(0.0);
         }
         // This explicit dummy fixture configures no movement raid event.
         fixture_add_value(None, property, self.world.resource::<Time>().elapsed())
