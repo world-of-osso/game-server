@@ -63,6 +63,7 @@ mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
 pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
+mod melee_reset;
 mod midnight_items;
 pub(crate) mod prayer_of_mending;
 mod protection_items;
@@ -94,7 +95,15 @@ mod unbroken_rhythm;
 pub(crate) use unbroken_rhythm::register_unbroken_rhythm;
 mod windwalker;
 mod windwalker_flurry;
-pub(crate) use windwalker_flurry::after_melee_hit;
+pub(crate) fn after_melee_hit(
+    world: &mut World,
+    caster: Entity,
+    hand: crate::melee::Hand,
+    critical: bool,
+) {
+    windwalker_flurry::after_melee_hit(world, caster, hand, critical);
+    melee_reset::roll_white_hit(world, caster, critical);
+}
 mod xuens_battlegear;
 pub(crate) use xuens_battlegear::register_xuens_battlegear;
 
@@ -148,6 +157,7 @@ pub(super) fn after_direct_damage(
     critical: bool,
 ) {
     windwalker_flurry::after_direct_damage(world, ctx, critical);
+    melee_reset::roll_replacement_hit(world, ctx, target, critical);
     policies::after_damage(world, ctx);
     ret_damage::after_direct_damage(world, ctx, target, critical);
     // SimC76f8118 unique_gear_midnight.cpp6351–6355: perfected Guillotine impacts apply Venomfang.
