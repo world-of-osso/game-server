@@ -3239,7 +3239,7 @@ fn selected_units(plan: &[PlannedEffect]) -> Vec<Entity> {
         .collect()
 }
 
-/// The spell's `OnHit` script on every unit it landed on (`Spell::DoSpellHitOnUnit`).
+/// Source impact policies include misses; native OnHit retains successful-unit admission.
 fn run_hit_scripts(
     world: &mut World,
     caster: Entity,
@@ -3249,7 +3249,9 @@ fn run_hit_scripts(
 ) {
     let hook = scripts::on_hit(spell.id);
     let context_hook = scripts::on_hit_with_context(spell.id);
-    if hook.is_none() && context_hook.is_none() && spell.cast_policy_context.is_none() {
+    let native_hooks = hook.is_some() || context_hook.is_some();
+    let policies = spell.cast_policy_context.is_some() || scripts::has_impact_policy(spell);
+    if !native_hooks && !policies {
         return;
     }
     let ctx = EffectCtx {
@@ -3259,18 +3261,48 @@ fn run_hit_scripts(
         dest: None,
         chain_multiplier: 1.0,
     };
-    for unit in hit_units(plan) {
+    dispatch_impact_scripts(world, &ctx, plan, hook, context_hook);
+}
+
+fn dispatch_impact_scripts(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    plan: &TargetPlan,
+    hook: Option<scripts::HitHook>,
+    context_hook: Option<scripts::ContextHitHook>,
+) {
+    let selected = selected_units(plan);
+    let hits = plan
+        .iter()
+        .flat_map(|effect| &effect.units)
+        .copied()
+        .collect::<HashSet<_>>();
+    for &unit in &selected {
         if world.get_entity(unit).is_err() {
             continue;
         }
-        if let Some(hook) = hook {
-            hook(world, caster, unit, depth);
+        scripts::before_impact_policies(world, ctx, unit);
+        if hits.contains(&unit) {
+            run_unit_hit_scripts(world, ctx, unit, hook, context_hook);
         }
-        if let Some(hook) = context_hook {
-            hook(world, &ctx, unit);
-        }
-        scripts::apply_hit_policies(world, &ctx, unit);
     }
+    scripts::after_impact_policies(world, ctx, &selected);
+}
+
+fn run_unit_hit_scripts(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    unit: Entity,
+    hook: Option<scripts::HitHook>,
+    context_hook: Option<scripts::ContextHitHook>,
+) {
+    if let Some(hook) = hook {
+        hook(world, ctx.caster, unit, ctx.depth);
+    }
+    if let Some(hook) = context_hook {
+        hook(world, ctx, unit);
+    }
+    scripts::apply_hit_policies(world, ctx, unit);
 }
 
 /// Direct damage of the spells resolving now, gathered per unit for their hit events
