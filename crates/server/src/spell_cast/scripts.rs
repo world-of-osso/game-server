@@ -39,6 +39,8 @@ pub(super) use elemental::{
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
 mod essence_burst;
+mod feral_frenzy;
+pub(crate) use feral_frenzy::register as register_feral_frenzy;
 mod maelstrom_weapon;
 pub(crate) use maelstrom_weapon::{consume as consume_maelstrom_weapon, snapshots_modifier};
 pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
@@ -1562,6 +1564,8 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
         return Some(hook);
     }
     match spell_id {
+        feral_frenzy::FERAL | feral_frenzy::FRANTIC => Some(feral_frenzy::begin),
+        feral_frenzy::FRANTIC_CHILD => Some(feral_frenzy::energize_frantic),
         xuens_battlegear::SCK => Some(xuens_battlegear::capture_sck_parent),
         windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
         voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),

@@ -87,6 +87,16 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
+        // SimC76f8118 sc_hunter.cpp1706–1711: an awake pet schedules its
+        // melee independently. Literal capture replaces follower AI's attack order.
+        if let Some(pet) = crate::hunter_pet::summoned_pet(world, actor) {
+            let current = world
+                .get::<crate::networking::CombatTarget>(pet)
+                .and_then(|target| target.0);
+            if current != targets.first().copied() {
+                crate::pet_control::order_companion_pet(world, actor, targets.first().copied());
+            }
+        }
         self.step(world, actor, targets, "default").map(|_| ())
     }
 
