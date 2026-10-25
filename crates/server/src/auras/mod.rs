@@ -105,12 +105,7 @@ pub(crate) use unit_state::{orb_deception_display, supports_zero_entry_costume};
 /// SPELL_AURA_PERIODIC_DAMAGE.
 pub const PERIODIC_DAMAGE_AURA: u32 = handlers::PERIODIC_DAMAGE;
 
-/// SpellEffects IDs that apply an aura (`SpellEffect.aura` is the AuraType).
-/// 35 (party) and 65 (raid) area auras apply to their resolved targets only:
-/// there is no group backend. 27 PERSISTENT_AREA_AURA applies through its
-/// dynamic object (`spell_cast::area_aura`).
-// SimC76f8118 data_enums.hh881: native202 applies an aura to its resolved owner/pet recipients.
-pub const AURA_EFFECTS: [u32; 5] = [6, 27, 35, 65, 202];
+pub use crate::spell_info::{AURA_EFFECTS, is_aura_effect};
 
 const ATTR0_PASSIVE: u32 = 0x40;
 const ATTR4_NOT_IN_ARENA_OR_RATED_BATTLEGROUND: u32 = 0x0001_0000;
@@ -631,10 +626,6 @@ fn passive_map_allowed(world: &World, unit: Entity, spell: &SpellInfo) -> bool {
     }
 }
 
-pub fn is_aura_effect(effect: &SpellEffect) -> bool {
-    AURA_EFFECTS.contains(&effect.effect)
-}
-
 /// Every aura effect index of `spell` as an `AuraApplication` mask.
 pub fn aura_effect_mask(spell: &SpellInfo) -> u32 {
     spell
@@ -690,7 +681,8 @@ fn duration_ms(world: &World, application: &AuraApplication, spell: &SpellInfo) 
     );
     let extension = scripts::self_regrowth_duration_bonus(world, application);
     let duration = (duration + extension).max(0.0) as u32;
-    mechanic_duration::modify_duration(world, application, spell, duration)
+    let duration = mechanic_duration::modify_duration(world, application, spell, duration);
+    crate::spell_cast::haste_channel_duration_ms(world, application.caster, spell, duration)
 }
 
 /// Fresh resolved-spell duration through the ordinary caster/target modifier path.
@@ -780,6 +772,12 @@ fn build_effect(
         crate::spell_cast::effects::scaled_amount(world, caster, spell, effect)
     } else {
         crate::spell_cast::effects::modded_base_points(world, caster, spell, effect)
+    };
+    // A cast's scripted damage multiplier persists in its actual periodic payload.
+    let amount = if effect.aura == PERIODIC_DAMAGE_AURA {
+        amount * spell.cast_damage_multiplier.unwrap_or(1.0)
+    } else {
+        amount
     };
     let amount = scripts::snapshot_periodic_amount(world, caster, spell, effect, amount);
     let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);

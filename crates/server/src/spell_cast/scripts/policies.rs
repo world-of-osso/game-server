@@ -86,6 +86,31 @@ struct Policy {
 
 // Missing edges are explicit SimC policies, never invented DB2/TDB records.
 const POLICIES: &[Policy] = &[
+    // SimC76f8118 sc_monk.cpp3970–3998: selected Zenith Stomp fires on Zenith.
+    Policy {
+        name: "SIMC_WW_ZENITH_STOMP_CHILD",
+        spec: 269,
+        talent: 1272694,
+        relationship: Relationship::HitPayload {
+            parent: 1249625,
+            payload: 1272696,
+            self_target: false,
+            primary_only: false,
+        },
+    },
+    // SimC76f8118 sc_warrior.cpp3685–3686: Cleave applies the selected Rend
+    // periodic payload on each landed target; native388539 owns all values.
+    Policy {
+        name: "SIMC_ARMS_CLEAVE_REND",
+        spec: 71,
+        talent: 772,
+        relationship: Relationship::HitPayload {
+            parent: 845,
+            payload: 388539,
+            self_target: false,
+            primary_only: false,
+        },
+    },
     // Momentum Boost tooltip: https://warcraft.wiki.gg/wiki/Momentum_Boost
     // SimC76f8118 sc_monk.cpp1699–1704/1730–1734/1839–1841: haste damage,
     // FoF-only stacks, reset and native60%/8s speed on end (also dot.cpp75–81).
@@ -502,11 +527,19 @@ fn read_splash_geometry(world: &World, caster: Entity, spell: &SpellInfo) -> (f3
 }
 
 fn soft_cap_multiplier(count: usize, cap: f32) -> f32 {
-    if cap > 0.0 && count as f32 > cap {
-        (cap / count.min(20) as f32).sqrt()
+    // SimC76f8118 action.cpp1562–1579; max_aoe_enemies defaults to20.
+    const MAX_AOE_ENEMIES: usize = 20;
+    let reduced = if cap > 0.0 && count as f32 > cap {
+        (cap / count.min(MAX_AOE_ENEMIES) as f32).sqrt()
     } else {
         1.0
-    }
+    };
+    let capped = if count > MAX_AOE_ENEMIES {
+        MAX_AOE_ENEMIES as f32 / count as f32
+    } else {
+        1.0
+    };
+    reduced * capped
 }
 
 fn splash_target_plan(
@@ -617,6 +650,7 @@ fn end_channel_policy(
             crate::spell_cast::cast_triggered(world, unit, channel.speed, Some(unit), 1);
         }
     }
+    super::windwalker_children::channel_ended(world, unit, aura, reason);
 }
 
 pub(crate) fn extends_reapplication(world: &World, caster: Entity, payload: u32) -> bool {
