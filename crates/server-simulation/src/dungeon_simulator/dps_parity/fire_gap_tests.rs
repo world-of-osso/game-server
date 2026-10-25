@@ -138,6 +138,133 @@ fn fire_gap_mid2_pyroclasm_hardcasts_crit_after_proc_consumption() {
     );
 }
 
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_batch_meteor_continues_during_a_new_pyroblast_hardcast() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    start_native(&mut run, 153561, target);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    start_native(&mut run, 11366, target);
+    assert!(
+        run.app
+            .world()
+            .get::<shared::casting::CastState>(run.actor)
+            .is_some()
+    );
+    for _ in 0..140 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(153564)
+                    && event.kind == CombatLogKind::CastSuccess
+            }),
+        "an already scheduled Meteor must launch while another spell is casting"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_batch_fuel_the_fire_rolls_once_for_a_three_target_flamestrike() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 3).unwrap();
+    let target = run.targets[0];
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 190319, Some(run.actor), 1);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 48108, Some(run.actor), 1);
+    start_native(&mut run, 2120, target);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert_eq!(
+        stacks(&run, 48107),
+        1,
+        "Combustion guarantees the one independent Fuel roll"
+    );
+    assert_eq!(
+        stacks(&run, 48108),
+        0,
+        "three recipients must not make three Hot Streak rolls"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_batch_mid2_four_piece_increases_native_pyroclasm_proc_chance() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1296584));
+    let target = run.targets[0];
+    let mut procs = 0;
+    for _ in 0..128 {
+        for spell in [269651, 48107, 48108] {
+            let instances: Vec<_> = run
+                .app
+                .world()
+                .get::<ActiveAuras>(run.actor)
+                .unwrap()
+                .iter()
+                .filter(|aura| aura.spell_id == spell)
+                .map(|aura| aura.instance_id)
+                .collect();
+            for instance in instances {
+                crate::auras::remove_instance(
+                    run.app.world_mut(),
+                    run.actor,
+                    instance,
+                    crate::auras::RemoveReason::Consumed,
+                );
+            }
+        }
+        crate::spell_cast::cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            48108,
+            Some(run.actor),
+            1,
+        );
+        start_native(&mut run, 11366, target);
+        procs += u32::from(stacks(&run, 269651) > 0);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..20 {
+            run.app.update();
+        }
+    }
+    assert!(
+        procs > 32,
+        "MID2 adds native25 points to the15% chance: {procs}/128"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_batch_mana_cascade_uses_effect_two_haste() {
+    let mut run = prepare_literal(63, 1).unwrap();
+    let before = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .haste_pct;
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 449314, Some(run.actor), 1);
+    run.app.update();
+    let after = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .haste_pct;
+    assert!(
+        (after - before - 0.5).abs() < 0.01,
+        "one native stack supplies0.5% haste: {before} -> {after}"
+    );
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {
