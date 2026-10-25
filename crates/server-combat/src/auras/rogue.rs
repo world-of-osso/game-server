@@ -156,16 +156,21 @@ pub(crate) fn prepare_cast(
     prepare_envenom(world, caster, target, spell);
 }
 
-/// SimC76f8118 sc_rogue.cpp4550–4561: preserve the native Improved
-/// Garrote bonus in the applied bleed, rather than reading stealth on each tick.
-fn prepare_garrote(world: &World, caster: Entity, spell: &mut SpellInfo) {
-    if spell.id != 703 || !super::has_aura(world, caster, IMPROVED_GARROTE) {
-        return;
+/// SimC76f8118 sc_rogue.cpp4550–4561/4604–4609: the actual stealth
+/// and post-stealth window govern both the bleed bonus and zero recovery.
+pub(crate) fn improved_garrote_active(world: &World, caster: Entity, spell: u32) -> bool {
+    if spell != 703 || !super::has_aura(world, caster, IMPROVED_GARROTE) {
+        return false;
     }
     let stealthed = world
         .get::<ActiveAuras>(caster)
         .is_some_and(|auras| auras.has_type(super::handlers::MOD_STEALTH));
-    if !stealthed && !super::has_aura(world, caster, GARROTE_WINDOW) {
+    stealthed || super::has_aura(world, caster, GARROTE_WINDOW)
+}
+
+// Keep the bonus in the applied bleed instead of reading stealth on each tick.
+fn prepare_garrote(world: &World, caster: Entity, spell: &mut SpellInfo) {
+    if !improved_garrote_active(world, caster, spell.id) {
         return;
     }
     let window = world

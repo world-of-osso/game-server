@@ -257,7 +257,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Improved Garrote
 
-- With selected381632, ordinary Garrote snapshots392401 effect1's native bonus while actually stealthed or during the native post-stealth window. Ending the last actual stealth aura grants392401; native duration and cooldown modifier remain authoritative. The applied bleed keeps its bonus after stealth and the window end (SimC76f8118 `sc_rogue.cpp4550–4561,7351–7378,11121–11133`).
+- With selected381632, ordinary Garrote snapshots392401 effect1's native bonus while actually stealthed or during the native post-stealth window. Ending the last actual stealth aura grants392401; native duration and cooldown modifier remain authoritative. The applied bleed keeps its bonus after stealth and the window end. Both admission and recovery storage use zero Garrote recovery during actual stealth and the window, including the first stealth cast before the exit buff exists; retain real GCDs and costs (SimC76f8118 `sc_rogue.cpp4550–4561,4604–4609,7351–7378,11121–11133`).
 
 ### Assassination native damage children
 
