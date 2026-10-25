@@ -2,8 +2,12 @@
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
-use crate::auras::ActiveAuras;
-use crate::class_progression::KnownSpells;
+use super::combat;
+use combat::auras::ActiveAuras;
+use combat::spell_cast::script_registry::SpellScriptHook;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::OnCast(before_cast)];
+use combat::class_progression::KnownSpells;
 
 struct TransformPolicy {
     name: &'static str,
@@ -30,8 +34,12 @@ pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32, depth: 
     if !DEMONIC.parents.contains(&spell) || !selected(world, caster) {
         return;
     }
-    let duration =
-        super::script_effect_value(world, caster, DEMONIC.talent, DEMONIC.duration_effect);
+    let duration = combat::spell_cast::scripts::script_effect_value(
+        world,
+        caster,
+        DEMONIC.talent,
+        DEMONIC.duration_effect,
+    );
     if !duration.is_finite() || duration <= 0.0 || duration > u32::MAX as f32 {
         error!(
             policy = DEMONIC.name,
@@ -53,7 +61,7 @@ fn selected(world: &World, caster: Entity) -> bool {
 }
 
 fn transform_or_extend(world: &mut World, caster: Entity, milliseconds: u32, depth: u8) {
-    let now = crate::auras::aura_now(world);
+    let now = combat::auras::aura_now(world);
     let active = world.get::<ActiveAuras>(caster).is_some_and(|auras| {
         auras.iter().any(|aura| {
             aura.spell_id == DEMONIC.payload
@@ -62,7 +70,7 @@ fn transform_or_extend(world: &mut World, caster: Entity, milliseconds: u32, dep
         })
     });
     if active {
-        crate::auras::extend_owned_duration(
+        combat::auras::extend_owned_duration(
             world,
             caster,
             caster,
@@ -71,14 +79,20 @@ fn transform_or_extend(world: &mut World, caster: Entity, milliseconds: u32, dep
         );
         return;
     }
-    if !super::super::try_cast_triggered(world, caster, DEMONIC.payload, Some(caster), depth + 1) {
+    if !combat::spell_cast::try_cast_triggered(
+        world,
+        caster,
+        DEMONIC.payload,
+        Some(caster),
+        depth + 1,
+    ) {
         error!(
             policy = DEMONIC.name,
             "Native Demonic transformation refused"
         );
         return;
     }
-    if !crate::auras::set_owned_duration(world, caster, caster, DEMONIC.payload, milliseconds) {
+    if !combat::auras::set_owned_duration(world, caster, caster, DEMONIC.payload, milliseconds) {
         error!(
             policy = DEMONIC.name,
             "Native Demonic transformation aura absent"

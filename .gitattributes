@@ -1,1 +1,2 @@
 docs/wiki/log.md merge=union
+crates/server-simulation/src/dungeon_simulator/dps_parity/module_list.in merge=union

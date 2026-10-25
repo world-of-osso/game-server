@@ -67,7 +67,6 @@ mod enhancement_tempest;
 mod enhancement_tier;
 mod evoker_tier;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
-mod essence_burst;
 mod feral_frenzy;
 pub(crate) use feral_frenzy::register as register_feral_frenzy;
 mod maelstrom_weapon;
@@ -114,7 +113,6 @@ mod germination;
 mod giantkiller;
 pub(super) use giantkiller::multiplier as giantkiller_multiplier;
 mod fire_procs;
-mod havoc;
 pub(crate) mod holy_priest;
 mod hot_streak;
 pub(crate) use fire_procs::register as register_fire_procs;
@@ -232,7 +230,6 @@ pub(super) fn finish_scripted_launch(
 /// TC OnCast runs once after successful checks, before spending and launch.
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
     script_registry::on_cast(world, caster, spell_id, depth);
-    havoc::before_cast(world, caster, spell_id, depth);
     windwalker::scripted_combo_cast(world, caster, spell_id, depth);
     elemental::before_launch(world, caster, spell_id, depth);
     match spell_id {
@@ -847,9 +844,6 @@ fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
         windwalker::FISTS_OF_FURY => Some(windwalker_children::fof_executed),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
         prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
-        essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
-            Some(essence_burst::roll_essence_burst)
-        }
         hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE | hot_streak::NATIVE_FLAMESTRIKE => {
             Some(hot_streak::consume_procs_and_roll_pyroclasm)
         }
