@@ -18,7 +18,7 @@ const CHAIN: u32 = 188443;
 const RIDE_CHAIN: u32 = 211094;
 const TEMPEST: u32 = 452201;
 
-fn native_coefficient(world: &World) -> f32 {
+fn read_native_coefficient(world: &World) -> f32 {
     world
         .resource::<SpellStore>()
         .get(ROD_VALUES)
@@ -33,13 +33,13 @@ fn native_coefficient(world: &World) -> f32 {
 pub(crate) fn snapshot_rod_amount(world: &World, spell: &SpellInfo, index: u8, amount: f32) -> f32 {
     // SimC2243–2244 sets the debuff value from its11478 native coefficient, including refreshes.
     if (spell.id, index) == (ROD, 0) {
-        native_coefficient(world)
+        read_native_coefficient(world)
     } else {
         amount
     }
 }
 
-fn selected(world: &World, caster: Entity) -> bool {
+fn has_conductive_energy(world: &World, caster: Entity) -> bool {
     let enhancement = world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == 263);
@@ -61,7 +61,7 @@ pub(in crate::spell_cast) fn after_resolution(world: &mut World, ctx: &EffectCtx
     if !matches!(ctx.spell.id, BOLT | CHAIN | RIDE_CHAIN | TEMPEST) {
         return;
     }
-    if !selected(world, ctx.caster) {
+    if !has_conductive_energy(world, ctx.caster) {
         return;
     }
     let actual_targets = super::super::resolving_targets(world, ctx)
@@ -122,7 +122,7 @@ fn mirror_existing_rods(world: &mut World, ctx: &EffectCtx, damage: f32) {
             (owned && alive).then_some(unit)
         })
         .collect();
-    let amount = damage * native_coefficient(world) / 100.0;
+    let amount = damage * read_native_coefficient(world) / 100.0;
     for target in rods {
         // Native197568 cannot crit and ignores caster damage modifiers; target modifiers remain native.
         spell_cast::cast_triggered_with_effect0_amount(
