@@ -24,7 +24,7 @@ pub(super) fn hook(spell: u32) -> Option<AfterCastHook> {
 
 /// SIMC_DEVASTATION_MID1_SWEEP_PRIMARY: sc_evoker.cpp5691–5698.
 /// Native effect0 already modifies all recipients; effect1 is primary-only.
-pub(super) fn damage_multiplier(
+pub(in crate::spell_cast) fn damage_multiplier(
     world: &World,
     caster: Entity,
     target: Entity,
