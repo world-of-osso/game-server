@@ -80,6 +80,36 @@ fn equip_reference_profile(world: &mut World, spec: u32) -> Entity {
 }
 
 #[test]
+#[ignore = "requires private native item catalogs; real Arcane reference trinkets"]
+fn literal_equipment_absent_named_membership_and_use_are_unavailable() {
+    let mut world = load_world();
+    let actor = equip(&mut world, 250215, 281215);
+    let membership = read_facts(
+        &world,
+        actor,
+        &[
+            "equipped.250215",
+            "equipped.freightrunners_flask",
+            "equipped.FREIGHTRUNNERS_FLASK",
+            "equipped.ever_collapsing_void_fissure",
+        ],
+    );
+    let mut bindings = Bindings::default();
+    let equipment = Equipment::load(&world, actor, &mut bindings).unwrap();
+    let absent = Action {
+        source_row: None,
+        name: "use_item".into(),
+        target: None,
+        options: [("name".into(), "ever_collapsing_void_fissure".into())].into(),
+    };
+    let named_use = equipment.slot_for_action(&absent);
+    assert_eq!(
+        (membership, named_use),
+        (vec![Ok(1.0), Ok(1.0), Ok(1.0), Ok(0.0)], Ok(None))
+    );
+}
+
+#[test]
 #[ignore = "exact native Dev/Fire/Assassination profile instances; passive and bonus-derived levels"]
 fn literal_equipment_native_profile_item_levels_include_passive_and_bonus_instances() {
     let mut world = load_world();
