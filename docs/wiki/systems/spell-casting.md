@@ -1,5 +1,16 @@
 # Spell Casting
 
+## Marksmanship native relationships — 2026-10-25
+
+The [Marksmanship contract](../../specs/dps-parity.md#marksmanship-native-cast-relationships) separates native70448 values from pinned SimC76f8118 execution relationships. Runtime scripts live in `crates/server-combat/src/spell_cast/scripts/`.
+
+- `cast_relationships.rs` grants Stalk and Strike's Lock and Load, fills Bulletstorm to its actual native maximum, and spends one earned use. Native70448 has one Bulletstorm use; do not import the reference build's stack limit.
+- `marksmanship.rs` plans Aimed/Rapid secondary recipients and banks critical damage into native Master Marksman. Volley can earn Trick Shots without the separate talent. Rapid Fire's target-carried channel must spend its caster's buff, not the recipient's. Recharge reductions occur on tick execution; the final projectile can arrive after channel completion.
+- `marksmanship_sentinel.rs` owns actual target marks, delayed Blood Fletching acquisition, Lunar Storm dispatch and Sanctified Armaments residuals. Native rolling-periodic handling retains unpaid damage. The applying Aimed critical hit precedes Blood Fletching's1ms mark callback.
+- `marksmanship_explosive.rs` converts each actual primary tick into native secondary-only cleave and applies equipped MID2 cooldown reductions once, independently of recipient count.
+
+Sources: the named runtime modules and `hunter_{cadence,followup,explosive}_tests.rs` under `crates/server-simulation/src/dungeon_simulator/dps_parity/`. Numerical parity requires a separate complete300s measurement; passing relationship tests alone does not establish it.
+
 ## Native Warrior execution relationships — 2026-10-25
 
 The [Fury/Warrior contract](../../specs/dps-parity.md#fury-player-parity) is implemented as source-qualified rows, not spell-ID branches in the shared cast engine. Native70448 supplies effects, probabilities, ICDs, resource units and payloads; SimC76f8118 supplies execution boundaries.
