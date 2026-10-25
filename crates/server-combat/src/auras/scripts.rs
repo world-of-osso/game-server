@@ -111,7 +111,7 @@ pub(super) fn check_proc(
     {
         return false;
     }
-    if crate::spell_cast::scripts::owns_policy_proc(aura.spell_id) {
+    if crate::spell_cast::scripts::owns_policy_proc(world, aura.spell_id) {
         return false;
     }
     // SIMC_RET_TIER_MID2_DIVINE_PURPOSE_RELATIONSHIP owns these charges;
@@ -410,7 +410,10 @@ fn check_inundate_proc(
     utility_cast && in_combat
 }
 
-pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+pub(super) fn register_class_scripts(
+    mut scripts: ResMut<AuraScripts>,
+    registry: Res<crate::spell_cast::script_registry::SpellScriptRegistry>,
+) {
     crate::spell_cast::scripts::register_feral_frenzy(&mut scripts);
     crate::spell_cast::scripts::register_periodic_counters(&mut scripts);
     scripts.0.insert(
@@ -421,7 +424,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     crate::spell_cast::scripts::register_midnight_items(&mut scripts);
-    crate::spell_cast::scripts::register_lifecycle_policies(&mut scripts);
+    crate::spell_cast::scripts::register_lifecycle_policies(&mut scripts, &registry);
     crate::spell_cast::scripts::register_wdp_relationship(&mut scripts);
     crate::spell_cast::scripts::register_unbroken_rhythm(&mut scripts);
     scripts.0.insert(
@@ -728,7 +731,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     );
     // Extend existing parent lifecycle entries rather than replacing their hooks.
     crate::spell_cast::scripts::register_xuens_battlegear(&mut scripts);
-    crate::spell_cast::scripts::register_channel_policies(&mut scripts);
+    crate::spell_cast::scripts::register_channel_policies(&mut scripts, &registry);
     crate::spell_cast::scripts::register_elemental_policies(&mut scripts);
     crate::spell_cast::scripts::register_cast_relationships(&mut scripts);
 }
