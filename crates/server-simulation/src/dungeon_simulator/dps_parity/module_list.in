@@ -42,6 +42,7 @@ mod fixture_facing_tests;
 mod frost_mage_tests;
 mod gear_profile_tests;
 mod haste_tests;
+mod havoc_channels_tests;
 mod havoc_fact_tests;
 mod havoc_tests;
 mod health_aura_state_tests;

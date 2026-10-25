@@ -31,6 +31,7 @@ const DEMONIC: TransformPolicy = TransformPolicy {
 };
 
 pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    combat::spell_cast::scripts::before_havoc_cast(world, caster, spell, depth);
     if !DEMONIC.parents.contains(&spell) || !selected(world, caster) {
         return;
     }
@@ -48,6 +49,24 @@ pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32, depth: 
         return;
     }
     transform_or_extend(world, caster, duration as u32, depth);
+    combat::spell_cast::scripts::arm_havoc_demonic(world, caster);
+    // SimC76f8118 sc_demon_hunter.cpp4051–4057: add the hasted channel
+    // duration after Meta has supplied its native haste, not another flat grant.
+    let parent = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(spell)
+        .expect("native Eye Beam/Gaze parent")
+        .clone();
+    let channel = combat::spell_cast::duration_ms(world, caster, &parent);
+    if channel > 0 {
+        combat::auras::extend_owned_duration(
+            world,
+            caster,
+            caster,
+            &[DEMONIC.payload],
+            channel as u32,
+        );
+    }
 }
 
 fn selected(world: &World, caster: Entity) -> bool {

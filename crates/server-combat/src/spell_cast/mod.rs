@@ -1070,7 +1070,7 @@ pub fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
 }
 
 /// Channel duration after Duration mods.
-pub(crate) fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
+pub fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
     let base = spell
         .misc
         .as_ref()

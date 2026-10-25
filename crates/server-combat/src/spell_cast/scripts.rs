@@ -95,9 +95,19 @@ pub(super) use policies::{
     before_impact as before_impact_policies, has_impact_policy, on_hit as apply_hit_policies,
     snapshot as snapshot_hit_policies,
 };
-pub(crate) use policies::{
-    extends_reapplication, filter_secondary_targets, register_lifecycle_policies,
-};
+pub(crate) use policies::{extends_reapplication, register_lifecycle_policies};
+
+pub(crate) fn filter_secondary_targets(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: u8,
+    primary: Option<Entity>,
+    units: &mut Vec<Entity>,
+) {
+    policies::filter_secondary_targets(world, caster, spell, effect, primary, units);
+    midnight_items::filter_font_targets(spell, primary, units);
+}
 
 pub(super) fn apply_periodic_damage_policies(
     world: &mut World,
@@ -107,6 +117,7 @@ pub(super) fn apply_periodic_damage_policies(
 ) {
     policies::after_periodic_damage(world, ctx, target, amount);
     spellslinger::after_periodic_damage(world, ctx, target);
+    midnight_items::after_periodic_damage(world, ctx, target);
 }
 
 pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
@@ -116,6 +127,11 @@ pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
         || frost::owns_proc(spell)
 }
 mod germination;
+mod havoc;
+pub(crate) use havoc::{apply_havoc_damage_policies, is_eye_beam_channel, register_havoc};
+pub use havoc::{
+    arm_demonic as arm_havoc_demonic, before_cast as before_havoc_cast, havoc_demonsurge_available,
+};
 pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
@@ -700,6 +716,7 @@ pub fn damage_amount(world: &World, spell_id: u32) -> Option<DamageAmountHook> {
         return Some(hook);
     }
     match spell_id {
+        midnight_items::FONT_SPLATTER => Some(midnight_items::splatter_damage),
         windwalker_dual_threat::DAMAGE => Some(windwalker_dual_threat::damage),
         windwalker_children::JADEFIRE => Some(windwalker_children::jadefire_damage),
         windwalker_children::RWK_DAMAGE => Some(windwalker_children::rushing_wind_damage),
