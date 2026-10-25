@@ -13,6 +13,8 @@ const SCOURING_FLAME: u32 = 378438;
 const ETERNITYS_SPAN: u32 = 375757;
 const ANIMOSITY: u32 = 375797;
 const DRAGONRAGE: u32 = 375087;
+const MASS_DISINTEGRATE: u32 = 436335;
+const MASS_DISINTEGRATE_BUFF: u32 = 436336;
 const BASE_FIRE_TICKS: u32 = 10;
 const CONVERTED_TICKS_PER_RANK: u32 = 3;
 
@@ -146,7 +148,25 @@ pub(super) fn release(
     // TC uses IGNORE_CAST_IN_PROGRESS, not FULL_MASK: preserve normal damage procs.
     crate::spell_cast::execute_cast(world, caster, &child, target)?;
     extend_dragonrage(world, caster);
+    grant_mass_disintegrate(world, caster);
     Ok(())
+}
+
+fn grant_mass_disintegrate(world: &mut World, caster: Entity) {
+    // SIMC_DEVASTATION_EMPOWER_MASS_DISINTEGRATE: sc_evoker.cpp4703–4704
+    // grants one native buff application after a successful empower release.
+    if !crate::auras::has_aura(world, caster, MASS_DISINTEGRATE) {
+        return;
+    }
+    if !crate::spell_cast::try_cast_triggered(
+        world,
+        caster,
+        MASS_DISINTEGRATE_BUFF,
+        Some(caster),
+        1,
+    ) {
+        warn!(?caster, "Native empower Mass Disintegrate grant refused");
+    }
 }
 
 pub(crate) fn damage_bonus(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
