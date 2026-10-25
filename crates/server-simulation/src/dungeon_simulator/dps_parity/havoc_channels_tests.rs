@@ -81,8 +81,21 @@ fn havoc_eye_beam_ticks_damage_every_native_frontal_enemy() {
         let mut run = prepare_literal(577, count).unwrap();
         havoc_tests::earn_havoc_fury(&mut run, 30.0);
         cast(&mut run, 198013, false);
+        eprintln!(
+            "Eye Beam initial: {}",
+            report::engagement(run.app.world(), run.actor, &run.targets)
+        );
         preparation::finish_pending_setup(&mut run).unwrap();
         let ticks = damage(&run, Some(198030));
+        eprintln!(
+            "Eye Beam debug: empowered={:?}, casts={:?}, state={}",
+            damage(&run, Some(1287949)),
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+                .0,
+            report::engagement(run.app.world(), run.actor, &run.targets)
+        );
         for target in &run.targets {
             assert!(
                 ticks
