@@ -449,6 +449,59 @@ fn arcane_splinter_missiles_spends_one_clearcasting_stack_not_the_whole_bank() {
     );
 }
 
+fn reacted(run: &Run, alias: &str, spell: u32) -> f64 {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    use server::simc_apl::Facts;
+    let bindings = Bindings {
+        buffs: [(alias.into(), spell)].into(),
+        ..default()
+    };
+    NativeFacts::new(
+        run.app.world(),
+        run.actor,
+        &bindings,
+        Encounter::Fixture {
+            started_at: 0.0,
+            duration: 300.0,
+            style: FightStyle::Patchwerk,
+        },
+        1,
+    )
+    .value(&format!("buff.{alias}.react"))
+    .expect("native Arcane reaction must be configured before acquisition")
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_reaction_literal_precast_predicts_its_guaranteed_salvo() {
+    let _seed = crate::random::seed_scope(70448);
+    let run = prepare_measurement(62, 1).unwrap();
+    assert!(
+        stacks(&run, 1242974) >= 2,
+        "real Expanded Mind precast must earn Salvo first"
+    );
+    assert!(
+        reacted(&run, "arcane_salvo", 1242974) >= 2.0,
+        "deterministic precast Salvo is immediately predicted, not reaction-delayed"
+    );
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_reaction_surge_predicts_its_guaranteed_clearcasting() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(62, 1).unwrap();
+    cast(&mut run, 365350);
+    assert!(
+        stacks(&run, 263725) > 0,
+        "native Surge must really grant Clearcasting first"
+    );
+    assert!(
+        reacted(&run, "clearcasting", 263725) >= 1.0,
+        "guaranteed Surge acquisition is immediately predicted"
+    );
+}
+
 #[test]
 #[ignore = "merge-train shared PRD regression"]
 fn arcane_batch_clearcasting_prd_uses_the_pinned_coefficient_cap() {
