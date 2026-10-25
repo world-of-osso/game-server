@@ -23,7 +23,7 @@ fn prepare() -> Run {
 
 fn start_white(run: &mut Run) {
     let world = run.app.world_mut();
-    let current = world.get::<crate::combat::AutoAttack>(run.actor).copied();
+    let current = world.get::<crate::combat::AutoAttack>(run.actor).cloned();
     let mut queue = bevy::ecs::world::CommandQueue::default();
     let mut commands = Commands::new(&mut queue, world);
     crate::combat::start_attack(&mut commands, run.actor, run.targets[0], current.as_ref());
