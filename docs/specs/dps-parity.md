@@ -59,7 +59,16 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Ret Execution Sentence accumulation
 
-- [ ] `SIMC_RET_EXECUTION_SENTENCE_ACCUMULATION`: actual nonphysical outgoing damage contributes only to343527 instances cast by that actor on the actual damaged target. Exclude any Physical school bit, including hybrids; retain native effect1 percentage. TC expiry-only removal casts387113 with accumulated BP0 through partial-trigger admission, never FULL_MASK; cancellation must not discharge. No fabricated proc flags/chance: native343527 has no SpellAuraOptions, effective TDB has no row, and TC skips generation without flags. Exact controlled-pet owner routing remains separately unqualified; arbitrary summon attribution is forbidden. [Source/proof](../handoffs/ret-qualified-sentence-wake-toll-proof-ledger.md).
+- Actual343527 launches native1260251 damage/gather effects at its hostile primary. Own nonphysical damage to any owned1260251-marked recipient contributes to that caster's primary343527 pool, excluding every Physical school bit, including hybrids. Native effect1 owns the stored percentage; no fabricated proc flags/chance.
+- Expiry alone casts387113 with stored BP0 through partial-trigger admission, never FULL_MASK; cancellation must not discharge. SimC Ret35–75 applies normal source/target multipliers after adding stored damage, overriding only native multiplier-suppression flags while retaining native no-crit. Exact controlled-pet attribution remains unqualified. [Existing expiry-admission qualification](../handoffs/ret-qualified-sentence-wake-toll-proof-ledger.md).
+
+### Ret damage children and mastery
+
+- Blade snapshots Art of War/Righteous Cause before consumption and schedules native1261160 after350ms, with native1261159 primary effectiveness and reduced AoE beyond8. Selected stacking1261113 consumes one Righteous Cause stack. Learned404834 also produces native26573 Consecration with the pinned10s producer ICD.
+- Judgment-family impacts roll383921 from native mastery effect3, Boundless Judgment and Highlord's Wrath values. Ordinary24275 participates; background same-ID24275 does not. Highlord's Wrath enhances only the hidden native mastery whitelist; never duplicate already-applied base mastery.
+- Storm produces224239 Tempest, or a53385 Tempest for a Sunrise echo, at native383396 effectiveness. Retained primary/echo/secondary cast roles prevent recursive children and extra resource consumption.
+- Critical ordinary/Legacy Storm and HoW impacts apply native431414 Sun Sear. Each actual Dawnlight tick produces431911 Sun's Avatar with native area/cap values. Critical still-ticking403695 extends its owned duration by native446663 effect0 without resetting tick phase.
+- Divine Arbiter1306923 uses its native first damage effect on the primary and its native second effect on other recipients, never both on the primary. Spell coefficients remain native70448 values.
 
 ### Ret Divine Toll relationship
 
@@ -112,7 +121,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Native periodic spell haste
 
-- Periodic auras with native `SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC` (Attributes5 `0x2000`) apply caster spell haste after the native period spell modifiers, truncating to integer milliseconds. Their unchanged duration admits the resulting extra ticks. Unflagged auras retain their native period. Source: TC a352b1fa `SpellAuraEffects.cpp999–1012`.
+- Periodic auras and GroundPulses fields with native `SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC` (Attributes5 `0x2000`) apply caster spell haste after the native period spell modifiers, truncating to integer milliseconds. Their unchanged duration admits the resulting extra ticks. Unflagged auras retain their native period. Source: TC a352b1fa `SpellAuraEffects.cpp999–1012`.
 
 ### Measurement
 
@@ -230,6 +239,13 @@ Spec263 parity executes the pinned MID2 Enhancement action rows through the shar
 - [ ] Remaining profile bonus options, equip-spell aura/proc lifecycle and complete instance-movement qualification; basic Stats derivation and additive persistence have targeted GREEN proof.
 - [ ] Real300s server dummy execution and equal-gear parity reports.
 - [ ] Shipped105/257 healer BiS/HPS references are absent upstream.
+
+## Elemental Shaman fixture (262)
+
+- The follower measurement uses the exact profile action rows through the shared literal SimC evaluator, native readiness and native spell execution. The production follower kit is unchanged.
+- Precombat rows complete native casts and GCDs before engagement. Ancestral Swiftness replaces Nature's Swiftness when its talent is active (SimC76f8118 `sc_shaman.cpp`8132–8137).
+- Per-ability native output includes actual critical-hit count and damage, plus separate critical and noncritical mean damage. Zero critical hits produce a zero mean, not inferred criticals.
+- Score 262 ST against `262.reference.single.json` and 3T against `262.reference-fixed.three.json`. The original `262.reference.three.json` has the known Patchwerk add-event error and is not a three-target reference.
 
 ## Out of scope
 

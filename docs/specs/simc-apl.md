@@ -10,6 +10,7 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 - [x] Bind action-dependent facts (`combo_strike`, plain `gcd`, action minimum GCD) to each source row, including variable/call control actions. An actor-wide value is not equivalent.
 - [x] Execute declared variables using source `value`, `setif`, `value_else`, `reset` and numeric `default` semantics.
 - [x] Preserve literal action order and conditional `call_action_list` decisions; native castability selects the first usable action. An exhausted child list returns control to its caller.
+- [x] Accept `call_action_list,use_off_gcd=0|1`. The control remains off-GCD/while-casting as in pinned `action.cpp4648–4661`; each child still requires its own native readiness and row permissions. Invalid boolean values fail explicitly.
 - [x] Implement conditional `run_action_list` switches that never resume the caller after child exhaustion; reject unknown lists.
 - [x] Select explicit native targets with `target_if=min/max:<expr>` before the row's `if`; preserve native tie order. Unknown target operands/adapters fail explicitly.
 - [x] Bare/explicit FIRST target_if selects the first native eligible match before row if/readiness; failure after that choice does not become cycle selection. Preserve pinned single-target versus multi-target numeric truth behavior, backed by actual binary probes.

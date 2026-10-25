@@ -65,6 +65,15 @@ pub(crate) struct CastPolicyContext {
     pub targets: Vec<Entity>,
 }
 
+/// Source-qualified damage children retain their role through launch and flight.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) enum CastDamageRole {
+    #[default]
+    Primary,
+    Echo,
+    Secondary,
+}
+
 /// One spell's DB2 data at DifficultyID 0. Sparse tables are boxed so the
 /// ~400k spells without such rows stay small.
 #[derive(Debug, Clone, Default, Serialize)]
@@ -134,6 +143,8 @@ pub struct SpellInfo {
     /// Scripted effectiveness on this cast's damage only, retained through flight.
     #[serde(skip)]
     pub(crate) cast_damage_multiplier: Option<f32>,
+    #[serde(skip)]
+    pub(crate) cast_damage_role: CastDamageRole,
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,

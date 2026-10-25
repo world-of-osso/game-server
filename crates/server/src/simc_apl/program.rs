@@ -537,9 +537,22 @@ fn parse_rule(literal: &str, defaults: &mut BTreeMap<String, f64>) -> Result<Rul
         "variable" => parse_variable(&action.options, defaults)?,
         "pool_resource" => pooling::parse(&action)?,
         "call_action_list" => {
-            if action.options.keys().any(|key| key != "name") {
+            if action
+                .options
+                .keys()
+                .any(|key| !matches!(key.as_str(), "name" | "use_off_gcd"))
+            {
                 return Err("unsupported call_action_list option".into());
             }
+            if action
+                .options
+                .get("use_off_gcd")
+                .is_some_and(|value| !matches!(value.as_str(), "0" | "1"))
+            {
+                return Err("call_action_list use_off_gcd must be0|1".into());
+            }
+            // SimC76f8118 action.cpp4648–4661: parsing is followed by unconditional
+            // off-GCD/while-casting control permission. Child readiness is separate.
             Body::Call(required_option(&action.options, "name")?)
         }
         "run_action_list" => {
