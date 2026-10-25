@@ -24,6 +24,7 @@ mod batch6;
 mod batch7;
 mod batch8;
 mod batch9;
+mod cast_resets;
 mod chrono_flame;
 mod clearcasting;
 mod echo_policies;
@@ -694,6 +695,9 @@ pub(super) use empower_evoker::damage_bonus as empower_damage_bonus;
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
+    if let Some(hook) = cast_resets::hook(spell_id) {
+        return Some(hook);
+    }
     if let Some(hook) = policies::after_cast_hook(spell_id) {
         return Some(hook);
     }
