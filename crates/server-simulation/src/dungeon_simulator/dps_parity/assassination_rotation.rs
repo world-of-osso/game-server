@@ -216,7 +216,7 @@ impl Rotation {
     }
 }
 
-fn read_coatings(world: &World, actor: Entity) -> Vec<NativeAction<'static>> {
+pub(crate) fn read_coatings(world: &World, actor: Entity) -> Vec<NativeAction<'static>> {
     let known = world.get::<crate::class_progression::KnownSpells>(actor);
     let knows = |spell| known.is_some_and(|spells| spells.contains(spell));
     // sc_rogue.cpp3196–3298: default Deadly/Crippling, then selected DTB Amplifying/Atrophic.
@@ -241,14 +241,14 @@ fn read_coatings(world: &World, actor: Entity) -> Vec<NativeAction<'static>> {
         .collect()
 }
 
-fn stealthed(world: &World, actor: Entity) -> bool {
+pub(crate) fn stealthed(world: &World, actor: Entity) -> bool {
     // sc_rogue.cpp9691–9697: BASIC | ROGUE, including Subterfuge/Shadow Dance.
     [1784, 11327, 115191, 115192, 185313]
         .into_iter()
         .any(|id| crate::auras::has_aura(world, actor, id))
 }
 
-struct RogueFacts<'a> {
+pub(crate) struct RogueFacts<'a> {
     native: NativeFacts<'a>,
     world: &'a World,
     actor: Entity,
@@ -256,7 +256,7 @@ struct RogueFacts<'a> {
     targets: &'a [Entity],
 }
 impl<'a> RogueFacts<'a> {
-    fn new(
+    pub(crate) fn new(
         world: &'a World,
         actor: Entity,
         bindings: &'a Bindings,

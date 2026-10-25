@@ -38,6 +38,7 @@ mod inputs;
 pub(crate) mod literal_rotation;
 mod marksmanship_fact_tests;
 mod marksmanship_rotation;
+mod outlaw_tests;
 mod owner_cooldown_tests;
 mod pack_tactics_tests;
 mod periodic_crit_tests;
