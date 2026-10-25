@@ -255,6 +255,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Selected native14190 rolls effect0's live chance on actual critical ComboPoint-builder damage, including both native Mutilate hands and Fan of Knives' scripted builder. Dispatch its native effect1 child14189 once per eligible critical impact. White swings, noncritical hits, periodic ticks and the explicitly excluded Pistol Shot, Shuriken Toss and Poisoned Knife do not qualify; the deferred generic proc cannot roll the same source again. Native child amounts and resource caps remain unchanged (SimC76f8118 `sc_rogue.cpp2178–2180,4471–4473,5137–5138,7921–7937`).
 
+### Swift Slasher auto-attack speed
+
+- With owned381988 and active owned315496, add the live attack-haste percentage scaled by381988 effect1 to SnD's native attack-speed bonus. Keep ordinary haste and the native342 multiplier; replace only the SnD factor in the melee swing snapshot, without changing aura amounts, duration, extension, cast/GCD clocks or ranged timing. Assassination and Outlaw use the same native path (SimC76f8118 `sc_rogue.cpp9140–9148,11280–11282`).
+
 ### Improved Garrote
 
 - With selected381632, ordinary Garrote snapshots392401 effect1's native bonus while actually stealthed or during the native post-stealth window. Ending the last actual stealth aura grants392401; native duration and cooldown modifier remain authoritative. The applied bleed keeps its bonus after stealth and the window end. Both admission and recovery storage use zero Garrote recovery during actual stealth and the window, including the first stealth cast before the exit buff exists; retain real GCDs and costs (SimC76f8118 `sc_rogue.cpp4550–4561,4604–4609,7351–7378,11121–11133`).

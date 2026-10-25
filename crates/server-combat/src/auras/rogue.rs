@@ -12,6 +12,8 @@ const INSTANT_POISON: u32 = 315584;
 const DEADLY_INSTANT: u32 = 113780;
 const VENOMOUS_WOUNDS: u32 = 79134;
 const SEAL_FATE: u32 = 14190;
+const SWIFT_SLASHER: u32 = 381988;
+const SLICE_AND_DICE: u32 = 315496;
 const VENOMOUS_BLEEDS: &[u32] = &[703, 1943];
 const DISPEL_POISON: u8 = 4;
 const IMPROVED_GARROTE: u32 = 381632;
@@ -319,6 +321,50 @@ fn is_combo_builder(spell: &SpellInfo) -> bool {
             let adds_combo = effect.effect == 80;
             (energizes_combo || adds_combo) && effect.base_points > 0.0
         })
+}
+
+/// SimC76f8118 sc_rogue.cpp9140–9148/11280–11282: Swift Slasher
+/// adds live attack haste to SnD's auto-attack bonus. The generic native342
+/// factor is already present; adjust only the melee swing snapshot, not auras.
+pub(crate) fn fold_swift_slasher(
+    modifiers: &super::AuraStatMods,
+    auras: Option<&ActiveAuras>,
+    unit: Entity,
+    haste_pct: f32,
+) -> super::AuraStatMods {
+    let mut modifiers = modifiers.clone();
+    let Some(auras) = auras else { return modifiers };
+    if let Some(factor) = swift_slasher_time_factor(auras, unit, haste_pct) {
+        modifiers.attack_time_mult *= factor;
+    }
+    modifiers
+}
+
+fn swift_slasher_time_factor(auras: &ActiveAuras, unit: Entity, haste_pct: f32) -> Option<f32> {
+    let owned = |spell| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == spell && aura.caster == unit)
+    };
+    let talent = owned(SWIFT_SLASHER)?;
+    let slice = owned(SLICE_AND_DICE)?;
+    let haste_share = talent
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("native Swift Slasher retains its haste percentage")
+        .amount
+        / 100.0;
+    let slice_bonus = slice
+        .effects
+        .iter()
+        .find(|effect| effect.aura_type == super::handlers::MOD_MELEE_RANGED_HASTE_2)
+        .expect("native Slice and Dice retains its attack-time bonus")
+        .amount
+        * slice.stack_multiplier()
+        / 100.0;
+    let generic = 1.0 + slice_bonus;
+    Some(generic / (generic + haste_pct / 100.0 * haste_share))
 }
 
 fn clear_venomous_remainder(
