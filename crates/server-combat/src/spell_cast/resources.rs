@@ -44,7 +44,7 @@ pub(super) fn additional_optional_cost(
         .sum()
 }
 
-pub(super) fn spent(costs: &[(CostPool, f32)], power: PowerType) -> f32 {
+pub fn spent(costs: &[(CostPool, f32)], power: PowerType) -> f32 {
     costs
         .iter()
         .filter_map(|(pool, amount)| match pool {
