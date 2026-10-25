@@ -190,6 +190,38 @@ fn arcane_touch_aegwynns_clearcasting_also_grants_selected_brainstorm() {
 }
 
 #[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_touch_consumed_cumulative_power_survives_blast_projectile() {
+    let damage = |count| {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(62, 1).unwrap();
+        grant(&mut run, 1296930, count);
+        cast(&mut run, 30451);
+        assert_eq!(stacks(&run, 1296930), 0, "Blast spends Cumulative Power");
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(30451)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .map(|event| event.amount)
+            .sum::<i32>()
+    };
+    let plain = damage(0);
+    let empowered = damage(8);
+    assert!(plain > 0);
+    let ratio = f64::from(empowered) / f64::from(plain);
+    assert!(
+        (ratio - 1.24).abs() < 0.002,
+        "eight native3% stacks must survive flight: {ratio}"
+    );
+}
+
+#[test]
 #[ignore = "merge-train shared PRD regression"]
 fn arcane_batch_clearcasting_prd_uses_the_pinned_coefficient_cap() {
     let constant = crate::random::accumulated_proc_constant(0.12, 13);
