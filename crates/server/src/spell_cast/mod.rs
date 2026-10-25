@@ -27,9 +27,9 @@ mod aura_spell_restrictions;
 pub(crate) mod auto_repeat;
 #[cfg(test)]
 mod auto_shot_repeat_tests;
+pub(crate) mod cooldown_query;
 #[cfg(test)]
 mod form_display_power_tests;
-pub(crate) mod cooldown_query;
 #[cfg(any(test, feature = "test-support"))]
 pub mod holy_metrics;
 #[cfg(test)]
