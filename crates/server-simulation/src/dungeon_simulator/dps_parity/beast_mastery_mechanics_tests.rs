@@ -6,25 +6,56 @@ fn beast_mastery_natures_ally_guardian_attacks_and_expires_without_replacing_pet
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
     engage(&mut run);
     let main = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
-    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(19574, run.actor, Some(run.targets[0])))
-        .expect("ordinary Bestial Wrath with selected hostile primary");
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(19574, run.actor, Some(run.targets[0])),
+    )
+    .expect("ordinary Bestial Wrath with selected hostile primary");
     preparation::finish_pending_setup(&mut run).unwrap();
-    let pets: Vec<_> = run.app.world_mut().query::<(Entity, &crate::hunter_pet::HunterPet)>()
-        .iter(run.app.world()).filter(|(_, pet)| pet.owner == run.actor)
-        .map(|(unit, _)| unit).collect();
-    assert_eq!(pets.len(), 2, "selected Nature's Ally must summon an additional real stable pet");
+    let pets: Vec<_> = run
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::hunter_pet::HunterPet)>()
+        .iter(run.app.world())
+        .filter(|(_, pet)| pet.owner == run.actor)
+        .map(|(unit, _)| unit)
+        .collect();
+    assert_eq!(
+        pets.len(),
+        2,
+        "selected Nature's Ally must summon an additional real stable pet"
+    );
     let guardian = *pets.iter().find(|&&unit| unit != main).unwrap();
-    assert_eq!(crate::hunter_pet::summoned_pet(run.app.world(), run.actor), Some(main));
-    for _ in 0..200 { run.app.update(); }
+    assert_eq!(
+        crate::hunter_pet::summoned_pet(run.app.world(), run.actor),
+        Some(main)
+    );
+    for _ in 0..200 {
+        run.app.update();
+    }
     let combat = report::combat(run.app.world(), &run.damage_targets, 10.0);
-    assert!(combat["actions"].as_array().unwrap().iter().any(|action|
-        action["actor"] == guardian.to_bits() && action["damage"].as_u64().unwrap() > 0),
-        "real guardian must attack during its native lifetime: {combat}");
-    for _ in 0..150 { run.app.update(); }
-    assert!(run.app.world().get_entity(guardian).is_err(), "native15s guardian must expire");
-    assert_eq!(crate::hunter_pet::summoned_pet(run.app.world(), run.actor), Some(main),
-        "guardian expiry must not dismiss or replace the stable's current pet");
+    assert!(
+        combat["actions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|action| action["actor"] == guardian.to_bits()
+                && action["damage"].as_u64().unwrap() > 0),
+        "real guardian must attack during its native lifetime: {combat}"
+    );
+    for _ in 0..150 {
+        run.app.update();
+    }
+    assert!(
+        run.app.world().get_entity(guardian).is_err(),
+        "native15s guardian must expire"
+    );
+    assert_eq!(
+        crate::hunter_pet::summoned_pet(run.app.world(), run.actor),
+        Some(main),
+        "guardian expiry must not dismiss or replace the stable's current pet"
+    );
 }
 
 #[test]
