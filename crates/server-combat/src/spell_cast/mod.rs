@@ -2724,6 +2724,7 @@ fn execute_cast_with_primary(
         scripts::snapshot_hit_policies(world, caster, &prepared, &plan, &costs);
     let consumed_damage =
         scripts::capture_consumed_damage_modifier(world, caster, &mut prepared, true);
+    scripts::before_hot_streak_launch(world, caster, &prepared);
     let spell = &prepared;
     if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
         debug!(caster = ?caster, spell_id = spell.id, explicit = ?explicit, plan = ?plan, "Cast execution target plan");
