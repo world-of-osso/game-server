@@ -2602,6 +2602,9 @@ mod npc_general_crit_tests;
 #[path = "combat_npc_victim_block_tests.rs"]
 mod npc_victim_block_tests;
 #[cfg(test)]
+#[path = "combat_override_tests.rs"]
+mod override_tests;
+#[cfg(test)]
 #[path = "combat_tests.rs"]
 mod tests;
 #[cfg(test)]

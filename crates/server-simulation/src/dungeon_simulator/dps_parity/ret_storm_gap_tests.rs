@@ -2,6 +2,7 @@
 use super::ret_purpose_tests::{current_holy_power, earn_finisher_power};
 use super::ret_tier_tests::{has, native_ret};
 use super::*;
+use crate::spell_cast::effects::factor_capture::FactorCapture;
 use crate::spell_cast::{
     CastFailure, CastTargets,
     test_harness::{ObservedCombatEvents, ObservedTriggeredCasts},
@@ -201,6 +202,13 @@ fn dps_parity_ret_storm_gap_selected_sunrise_launches_real_echo() {
     let mut run = native_ret(4);
     assert_live_sunrise(&run);
     run.app.init_resource::<ObservedTriggeredCasts>();
+    run.app.insert_resource(FactorCapture::new(
+        run.actor,
+        run.targets[0],
+        STORM,
+        "native_storm_and_sunrise",
+        256,
+    ));
     start_attack(&mut run);
     let paid = cast_funded_storms(&mut run, 64);
     let targets = echo_targets(&run);
@@ -211,6 +219,72 @@ fn dps_parity_ret_storm_gap_selected_sunrise_launches_real_echo() {
     assert!(
         targets.iter().all(|target| *target == Some(run.targets[0])),
         "background echo must retain the real hostile primary, not the self cast unit"
+    );
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let events = capture["events"].as_array().unwrap();
+    let amounts = events
+        .iter()
+        .filter(|event| event["event"] == "direct_amount");
+    let mut root_hits = 0;
+    let mut echo_hits = 0;
+    for event in amounts {
+        let scale = event["applied_multipliers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["factor"] == "cast_effectiveness")
+            .unwrap()["value"]
+            .as_f64()
+            .unwrap();
+        if event["native_depth"].as_u64().unwrap() == 0 {
+            assert_eq!(scale, 1.0, "root amount must remain native");
+            root_hits += 1;
+        } else {
+            assert_eq!(scale, 0.5, "actual echo damage must use live native50%");
+            echo_hits += 1;
+        }
+    }
+    assert!(
+        root_hits > 0 && echo_hits > 0,
+        "real root and echo damage required: {capture}"
+    );
+    println!(
+        "STORM_ECHO_PROOF root_hits={root_hits} echo_hits={echo_hits} paid={paid} launches={}",
+        targets.len()
+    );
+}
+
+#[test]
+#[ignore = "bounded ordinary-root Sunrise policy must not recurse from unrelated background Storms"]
+fn dps_parity_ret_storm_gap_background_sunrise_control_does_not_recurse_or_pay() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = native_ret(4);
+    assert_live_sunrise(&run);
+    run.app.init_resource::<ObservedTriggeredCasts>();
+    start_attack(&mut run);
+    let target = run.targets[0];
+    cast_ordinary(&mut run, WAKE, target);
+    wait_for_funding(&mut run);
+    let power = current_holy_power(&run);
+    for _ in 0..12 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, STORM, Some(target), 1);
+        for _ in 0..40 {
+            run.app.update();
+        }
+    }
+    assert!(
+        damage(&run, Some(STORM)) > 0,
+        "background control must actually damage"
+    );
+    assert_eq!(
+        current_holy_power(&run),
+        power,
+        "background native launches must not pay3HP"
+    );
+    assert_eq!(
+        echo_targets(&run).len(),
+        12,
+        "only the12requested native launches, no recursive child"
     );
 }
 
