@@ -61,6 +61,55 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "requires prepared259 private native DB and player actor"]
+fn rogue_envenom_consumes_earned_native_amplifying_poison_threshold() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(259, 1).unwrap();
+    engage(&mut run);
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
+    let actor = run.actor;
+    let target = run.targets[0];
+    let stacks = move |world: &World| {
+        world
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.caster == actor && aura.spell_id == 383414)
+            .map_or(0, |aura| aura.stacks)
+    };
+    for _ in 0..1600 {
+        let before = stacks(run.app.world());
+        let events_before = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        drive_player(&mut run).unwrap();
+        run.app.update();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let envenom = events[events_before..].iter().any(|event| {
+            event.source == Some(actor.to_bits())
+                && event.spell_id == Some(32645)
+                && event.kind == CombatLogKind::CastSuccess
+        });
+        if envenom && before >= 10 {
+            assert!(
+                stacks(run.app.world()) < before,
+                "ordinary Envenom must consume the earned native threshold before same-cast poison procs"
+            );
+            return;
+        }
+    }
+    panic!("rotation must earn Amplifying Poison's native threshold and cast Envenom");
+}
+
+#[test]
+#[ignore = "requires prepared259 private native DB and player actor"]
 fn rogue_instant_coating_produces_its_native_damage_on_real_attacks() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(259, 1).unwrap();
