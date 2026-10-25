@@ -4512,3 +4512,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0â
 - 2026-10-23: [[server-crates]] records test-only simulator consumer, canonical graph/receipt/marker support and explicit test-support mode; 44-file move is content-identical, API/cfg wiring awaits compiler/full-suite proof. Seven graph cases have explicit core-prefix migration.
 
 - 2026-10-25: Extracted canonical pet_battle production and235cases (230enabled/five existing ignored) into server-pet-battle, with source hashes and exact ownership mapping. Direct server imports replace the old module; no reverse dependency or compatibility shim. Full-suite gate remains lead-owned.
+
+- 2026-10-25: Pet split proof atd1e3d6cf6: workspace/all-target check and fmt pass; leaf230PASS/5existingignored, exact235runtime names and33source hashes preserved; touched-server77PASS/8ignored plus required-ground-env exact retry1PASS. Zero warnings, no assertion/code change for retry, no full suite/push. Original failed receipts retained.
