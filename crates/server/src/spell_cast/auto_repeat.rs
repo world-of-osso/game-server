@@ -37,6 +37,13 @@ impl AutoRepeat {
     }
 }
 
+#[cfg(any(test, feature = "test-support"))]
+pub(crate) fn active(world: &World, caster: Entity, spell: u32) -> bool {
+    world
+        .get::<AutoRepeat>(caster)
+        .is_some_and(|repeat| repeat.spell_id == spell)
+}
+
 /// After a successful cast: an autorepeat spell (re)starts with a full ranged timer.
 pub(super) fn on_cast(
     world: &mut World,

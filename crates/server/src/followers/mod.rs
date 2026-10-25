@@ -66,9 +66,7 @@ mod positioning;
 mod pull_admission;
 #[cfg(test)]
 mod pull_admission_tests;
-mod pull_budget;
-#[cfg(test)]
-mod pull_budget_tests;
+use server_follower_policy::followers::pull_budget;
 #[cfg(test)]
 mod pull_corner_tests;
 #[cfg(test)]

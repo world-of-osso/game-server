@@ -1,9 +1,9 @@
 //! USER project policy, not Retail coefficients. Source estimates are supplied by the
 //! shared follower planner; this module never substitutes nominal/prior-run rates.
 const OBSERVATION_SECONDS: f64 = 10.0;
-pub(super) const TANK_HP_RESERVE_FRACTION: f64 = 0.30;
+pub const TANK_HP_RESERVE_FRACTION: f64 = 0.30;
 
-pub(super) struct BudgetInput {
+pub struct BudgetInput {
     pub observation_seconds: f64,
     pub completed_fights: u32,
     pub pack_count: usize,
@@ -21,7 +21,7 @@ pub(super) struct BudgetInput {
 }
 
 #[derive(Debug, PartialEq)]
-pub(super) enum Decision {
+pub enum Decision {
     Allow {
         bootstrap: bool,
         forecast_health: Option<f64>,
@@ -30,7 +30,7 @@ pub(super) enum Decision {
 }
 
 #[derive(Debug, PartialEq)]
-pub(super) enum Reason {
+pub enum Reason {
     Invalid,
     Healer,
     FirstSinglePack,
@@ -76,7 +76,7 @@ fn measured_rates(input: &BudgetInput) -> Option<(f64, f64)> {
     (complete && valid_damage && valid_healing).then_some((damage, healing))
 }
 
-pub(super) fn evaluate(input: &BudgetInput) -> Decision {
+pub fn evaluate(input: &BudgetInput) -> Decision {
     if !valid_estimates(input) {
         return Decision::Wait(Reason::Invalid);
     }
@@ -110,8 +110,8 @@ fn forecast_health(input: &BudgetInput, damage: f64, healing: f64) -> f64 {
     input.tank_health - damage_debt + prevented
 }
 
-#[cfg(test)]
-pub(super) fn read_forecast_health(input: &BudgetInput) -> Option<(f64, f64)> {
+#[cfg(any(test, feature = "test-support"))]
+pub fn read_forecast_health(input: &BudgetInput) -> Option<(f64, f64)> {
     if !valid_estimates(input) {
         return None;
     }

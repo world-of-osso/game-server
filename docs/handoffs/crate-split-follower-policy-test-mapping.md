@@ -1,0 +1,11 @@
+# Follower policy test ownership
+
+`server` → `server-follower-policy`:5 unchanged enabled tests.
+
+```text
+followers::pull_budget_tests::tank_pull_budget_first_fight_is_one_pack_without_prior_run_rates
+followers::pull_budget_tests::tank_pull_budget_allows_stable_overlap_with_real_ten_second_capacity
+followers::pull_budget_tests::tank_pull_budget_forecast_leaves_at_least_thirty_percent_max_health
+followers::pull_budget_tests::tank_pull_budget_healer_incapacity_and_unknown_rates_never_get_nominal_capacity
+followers::pull_budget_tests::tank_pull_budget_next_unaccounted_burst_is_added_to_sustained_debt
+```
