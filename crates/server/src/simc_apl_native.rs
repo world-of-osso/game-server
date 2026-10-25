@@ -540,7 +540,15 @@ impl<'a> NativeFacts<'a> {
             .classes
             .iter()
             .flat_map(|class| &class.traits.sub_trees)
-            .find(|tree| tree.name.to_ascii_lowercase().replace(' ', "_") == alias)
+            // SimC76f8118 trait_data.cpp225–236 / util.cpp3250–3276:
+            // display-name hyphens are removed (native Fel-Scarred → felscarred).
+            .find(|tree| {
+                tree.name
+                    .to_ascii_lowercase()
+                    .replace(' ', "_")
+                    .replace('-', "")
+                    == alias
+            })
             .ok_or_else(|| format!("unknown native APL hero tree {alias}"))?;
         let traits = self
             .world
@@ -849,7 +857,9 @@ impl Facts for NativeFacts<'_> {
                 .ok_or_else(|| "tick_time requires an active native channel".into()),
             "expected_combat_length" => self.expected_combat_length(),
             "fight_remains" => self.remaining(name),
-            "active_enemies" => Ok(self.active_enemies as f64),
+            // SimC76f8118 action.cpp3886–3896: without distance targeting,
+            // bare spell_targets uses active_enemies, including recurring adds.
+            "active_enemies" | "spell_targets" => Ok(self.active_enemies as f64),
             "spell_haste" => self.spell_haste(),
             "movement.distance" => self.movement_distance(),
             "movement.remains" => self.movement_value("remains"),
