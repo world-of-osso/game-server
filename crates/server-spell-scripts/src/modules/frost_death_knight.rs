@@ -2,11 +2,23 @@
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, WeaponType};
 
-use crate::{
+use super::combat;
+use combat::{
     auras, random, spell_cast,
     spell_info::{SpellInfo, SpellStore},
     stats::CharacterStats,
 };
+
+use combat::spell_cast::script_registry::SpellScriptHook;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::OwnsPolicyProc(owns_proc),
+    SpellScriptHook::SnapshotsModifier(snapshots_modifier),
+    SpellScriptHook::AfterWhiteHit(after_white_hit),
+    SpellScriptHook::AfterElementalLaunch(after_launch),
+    SpellScriptHook::AfterQueuedTriggers(consume_due_killing_machine),
+    SpellScriptHook::AfterSpellPayment(roll_runic_empowerment),
+];
 
 const KILLING_MACHINE: u32 = 51128;
 const RIME: u32 = 59057;
@@ -84,7 +96,7 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
     // SimC76f8118 sc_death_knight.cpp10889–10900/11177–11189:
     // after Obliteration, FS/GA roll Rime's native effect2 (not effect1).
     if matches!(spell.id, 49143 | 194913) && auras::has_aura(world, caster, RIME) {
-        let chance = super::script_effect_value(world, caster, RIME, 1);
+        let chance = spell_cast::scripts::script_effect_value(world, caster, RIME, 1);
         if random::random::<f32>() * 100.0 < chance {
             trigger_native_buff(world, caster, RIME);
         }
@@ -112,8 +124,9 @@ fn consume_rime(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // SimC76f8118 sc_death_knight.cpp11637–11665: an earned Rime HB
     // adjusts ERW by native Frostbound Will effect1, then decrements Rime.
     if auras::has_aura(world, caster, FROSTBOUND_WILL) {
-        let milliseconds = super::script_effect_value(world, caster, FROSTBOUND_WILL, 0);
-        super::reduce_cooldown(
+        let milliseconds =
+            spell_cast::scripts::script_effect_value(world, caster, FROSTBOUND_WILL, 0);
+        spell_cast::scripts::reduce_cooldown(
             world,
             caster,
             EMPOWER_RUNE_WEAPON,
@@ -140,9 +153,9 @@ fn trigger_obliteration(world: &mut World, caster: Entity) {
     if auras::has_aura(world, caster, KILLING_MACHINE) {
         trigger_native_buff(world, caster, KILLING_MACHINE);
         // sc_death_knight.cpp13356–13364: guaranteed producers predict KM now.
-        crate::simc_apl_native::reaction::predict(world, caster, 51124);
+        combat::simc_apl_native::reaction::predict(world, caster, 51124);
     }
-    let chance = super::script_effect_value(world, caster, OBLITERATION, 1);
+    let chance = spell_cast::scripts::script_effect_value(world, caster, OBLITERATION, 1);
     if random::random::<f32>() * 100.0 >= chance {
         return;
     }
@@ -151,7 +164,7 @@ fn trigger_obliteration(world: &mut World, caster: Entity) {
     }
 }
 
-pub(in crate::spell_cast) fn roll_runic_empowerment(
+fn roll_runic_empowerment(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
@@ -179,7 +192,9 @@ pub(in crate::spell_cast) fn roll_runic_empowerment(
         return;
     }
     let displayed_cost = raw_cost / 10.0;
-    let chance = super::script_effect_value(world, caster, 81229, 0) / 100.0 * 0.1 * displayed_cost;
+    let chance = spell_cast::scripts::script_effect_value(world, caster, 81229, 0) / 100.0
+        * 0.1
+        * displayed_cost;
     if random::random::<f32>() < chance {
         cast_buff_stacks(world, caster, 193486, 1);
     }
@@ -226,7 +241,7 @@ fn schedule_killing_machine(world: &mut World, caster: Entity, spell: &SpellInfo
     }
 }
 
-pub(in crate::spell_cast) fn consume_due_killing_machine(world: &mut World) {
+fn consume_due_killing_machine(world: &mut World) {
     let now = auras::aura_now(world);
     let mut due = Vec::new();
     for (caster, mut pending) in world
@@ -256,7 +271,7 @@ fn cast_buff_stacks(world: &mut World, caster: Entity, spell: u32, stacks: u8) {
         spell_cast::TriggeredSpellOverrides {
             // SimC76f8118 sc_death_knight.cpp16207–16209: KS divides effect1 by10.
             effect0_amount: (spell == 1230916)
-                .then(|| super::script_effect_value(world, caster, spell, 0) / 10.0),
+                .then(|| spell_cast::scripts::script_effect_value(world, caster, spell, 0) / 10.0),
             aura_stacks: Some(stacks),
             ..Default::default()
         },
@@ -287,7 +302,7 @@ fn consume_killing_machine(world: &mut World, caster: Entity, target: Entity) {
     trigger_bonegrinder(world, caster, spent);
     schedule_arctic_assault(world, caster, target, spent);
     if auras::has_aura(world, caster, 207061) {
-        let chance = super::script_effect_value(world, caster, 207061, 0);
+        let chance = spell_cast::scripts::script_effect_value(world, caster, 207061, 0);
         for _ in 0..spent {
             if random::random::<f32>() * 100.0 < chance {
                 cast_buff_stacks(world, caster, 207062, 1);
@@ -301,7 +316,7 @@ fn extend_breath(world: &mut World, caster: Entity, spent: u8) {
         return;
     }
     // SimC76f8118 sc_death_knight.cpp13385–13389: native effect3 is milliseconds.
-    let milliseconds = super::script_effect_value(world, caster, 1249658, 2);
+    let milliseconds = spell_cast::scripts::script_effect_value(world, caster, 1249658, 2);
     auras::extend_owned_duration(
         world,
         caster,
@@ -322,7 +337,7 @@ fn trigger_bonegrinder(world: &mut World, caster: Entity, spent: u8) {
         .get::<auras::ActiveAuras>(caster)
         .and_then(|active| active.iter().find(|aura| aura.spell_id == 377101).cloned());
     if let Some(counter) = counter.filter(|aura| aura.stacks >= aura.max_stacks.saturating_sub(1)) {
-        let amount = super::script_effect_value(world, caster, 377098, 0);
+        let amount = spell_cast::scripts::script_effect_value(world, caster, 377098, 0);
         if !spell_cast::cast_triggered_with_overrides(
             world,
             caster,
@@ -351,8 +366,8 @@ fn schedule_arctic_assault(world: &mut World, caster: Entity, target: Entity, sp
     }
     // SimC76f8118 sc_death_knight.cpp11059–11076/13395–13404:
     // native GA child, native talent multiplier, consumed stack count,500ms delay.
-    let multiplier =
-        super::script_effect_value(world, caster, 456230, 0) / 100.0 * f32::from(spent);
+    let multiplier = spell_cast::scripts::script_effect_value(world, caster, 456230, 0) / 100.0
+        * f32::from(spent);
     let spell = world
         .resource::<SpellStore>()
         .get(195975)
