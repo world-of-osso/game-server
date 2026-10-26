@@ -161,6 +161,7 @@ mod profile_initialization;
 mod profile_oils;
 mod rake_stealth_tests;
 mod report;
+mod ret_aurora_tests;
 mod ret_auto_proc_tests;
 mod ret_batch_tests;
 mod ret_crusade_tests;
