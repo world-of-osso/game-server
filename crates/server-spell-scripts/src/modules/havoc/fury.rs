@@ -51,4 +51,10 @@ fn after_launch(world: &mut World, caster: Entity, spell: u32) {
     if spell == 198813 && has_talent(world, caster, 389688) {
         combat::spell_cast::cast_triggered(world, caster, 389890, Some(caster), 1);
     }
+    // SimC76f8118 sc_demon_hunter.cpp7472–7510,7673–7685: the real
+    // Annihilation off-hand execution rolls Chaos Strike's native refund.
+    // Native197125 owns chance/modifiers/ICD;193840 owns the Fury amount.
+    if spell == 201428 && combat::auras::procs::try_native_policy_proc(world, caster, 197125) {
+        combat::spell_cast::cast_triggered(world, caster, 193840, Some(caster), 1);
+    }
 }
