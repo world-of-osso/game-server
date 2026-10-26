@@ -204,6 +204,7 @@ register_modules! {
     stacking_summons: (1000, "modules/stacking_summons.rs"),
     subtlety_finishers: (2612, "modules/subtlety_finishers.rs"),
     subtlety_ancient: (2611, "modules/subtlety_ancient.rs"),
+    subtlety_secret: (2614, "modules/subtlety_secret.rs"),
     subtlety_shadow: (420, "modules/subtlety_shadow.rs"),
     subtlety_techniques: (2610, "modules/subtlety_techniques.rs"),
     survival: (2550, "modules/survival.rs"),

@@ -287,6 +287,8 @@ pub(crate) mod single_spell;
 mod snakeskin_tests;
 mod subtlety_finishers_tests;
 mod subtlety_ancient_tests;
+mod subtlety_secret_snapshot_tests;
+mod subtlety_secret_tests;
 mod subtlety_shadow_tests;
 mod subtlety_techniques_tests;
 mod spellslinger_hits_tests;
