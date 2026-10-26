@@ -1162,6 +1162,17 @@ pub(super) fn reduce_cast_pushback(world: &mut World, target: Entity) {
 /// A non-stacking aura has a single stack; zero removes it in TC and is not a
 /// stack assignment. Callers needing removal use remove_instance instead.
 pub fn set_self_cast_stacks(world: &mut World, unit: Entity, spell_id: u32, stacks: u8) -> bool {
+    set_owned_stacks(world, unit, unit, spell_id, stacks)
+}
+
+/// Set a caster-owned counter without changing its lifetime or periodic phase.
+pub fn set_owned_stacks(
+    world: &mut World,
+    caster: Entity,
+    unit: Entity,
+    spell_id: u32,
+    stacks: u8,
+) -> bool {
     assert!(stacks > 0, "zero aura stack assignment requires removal");
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return false;
@@ -1169,7 +1180,7 @@ pub fn set_self_cast_stacks(world: &mut World, unit: Entity, spell_id: u32, stac
     let Some(aura) = auras
         .auras
         .iter_mut()
-        .find(|aura| aura.spell_id == spell_id && aura.caster == unit)
+        .find(|aura| aura.spell_id == spell_id && aura.caster == caster)
     else {
         return false;
     };
@@ -1180,6 +1191,36 @@ pub fn set_self_cast_stacks(world: &mut World, unit: Entity, spell_id: u32, stac
     drop(auras);
     #[cfg(any(test, feature = "test-support"))]
     crate::simc_apl_native::reaction::applied(world, unit, &source);
+    auras_changed(world, unit);
+    true
+}
+
+/// Configure a script-owned permanent counter; preserve its periodic deadline.
+/// This changes the runtime instance, never the native catalog definition.
+pub fn make_owned_counter_permanent(
+    world: &mut World,
+    caster: Entity,
+    unit: Entity,
+    spell_id: u32,
+    maximum: u8,
+) -> bool {
+    assert!(maximum > 0, "counter maximum must be positive");
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
+        return false;
+    };
+    let Some(aura) = auras
+        .auras
+        .iter_mut()
+        .find(|aura| aura.spell_id == spell_id && aura.caster == caster)
+    else {
+        return false;
+    };
+    aura.max_stacks = maximum;
+    aura.stacks = aura.stacks.min(maximum);
+    aura.duration_ms = 0;
+    aura.expires_at = None;
+    auras.dirty = true;
+    drop(auras);
     auras_changed(world, unit);
     true
 }
@@ -1323,6 +1364,7 @@ pub(crate) fn apply_aura_with_spell(
             &aura,
         );
     }
+    crate::spell_cast::script_registry::after_aura_application(world, target, &aura);
     point_mods::recalculate(world, target, &aura);
     log_event(world, aura_event(&aura, target, kind));
     auras_changed(world, target);
@@ -2028,7 +2070,14 @@ pub fn damage_taken_multiplier(
             .iter()
             .filter(|aura| aura.caster == attacker)
             .flat_map(|aura| {
-                let stacks = aura.stack_multiplier();
+                let stacks = if crate::spell_cast::script_registry::incoming_aura_ignores_stacks(
+                    world,
+                    aura.spell_id,
+                ) {
+                    1.0
+                } else {
+                    aura.stack_multiplier()
+                };
                 aura.effects
                     .iter()
                     .filter(|effect| match effect.aura_type {
