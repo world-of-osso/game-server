@@ -273,6 +273,94 @@ fn demonology_guardian_fel_firebolt_inherits_owner_cast_haste() {
     );
 }
 
+#[test]
+#[ignore = "requires private266 inputs; native owner passive modifies Imp Energy cost"]
+fn demonology_guardian_owner_passive_reduces_fel_firebolt_cost() {
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 334591));
+    let imp = summon_native_guardian(&mut run, 104317);
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        imp,
+        104318,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("native Fel Firebolt must cast with its real Energy pool");
+    for _ in 0..100 {
+        run.app.update();
+        if run
+            .app
+            .world()
+            .get::<shared::casting::CastState>(imp)
+            .is_none()
+        {
+            break;
+        }
+    }
+    let pool = run
+        .app
+        .world()
+        .get::<crate::spell_cast::powers::PowerPools>(imp)
+        .unwrap()
+        .get(shared::components::PowerType::Energy)
+        .unwrap();
+    // SimC76f8118 sc_warlock_init.cpp34 + native334591 effect0:
+    // native20 Energy discounted20% consumes16 from the actual100 pool.
+    assert_eq!(
+        pool.current, 84.0,
+        "selected native owner passive must modify the Imp's cost"
+    );
+}
+
+#[test]
+#[ignore = "requires private266 inputs; native Imp-erator owner passive critical chance"]
+fn demonology_guardian_owner_passive_increases_fel_firebolt_crit() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 416230));
+    let expected = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .crit_pct
+        + 15.0;
+    let imp = summon_native_guardian(&mut run, 104317);
+    run.app.world_mut().insert_resource(FactorCapture::new(
+        imp,
+        run.targets[0],
+        104318,
+        "fel_firebolt",
+        1,
+    ));
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        imp,
+        104318,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("native Fel Firebolt must cast before sampling its critical chance");
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let event = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "result" && event["spell_id"] == 104318)
+        .expect("actual Fel Firebolt must damage the native dummy");
+    let chance = event["factors"]["crit"].as_f64().unwrap() * 100.0;
+    // Pinned Fel Firebolt action-effects parse native416230 effect0's15pp;
+    // this is additive to the separately qualified inherited owner crit.
+    assert!(
+        (chance - f64::from(expected)).abs() < 0.01,
+        "native Imp-erator must add15pp: observed{chance}, expected{expected}"
+    );
+}
+
 fn summon_native_guardian(run: &mut Run, root: u32) -> Entity {
     crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, root, Some(run.actor), true)
         .expect("native triggered guardian summon must be admitted");
