@@ -12,6 +12,69 @@ const BOLT: u32 = 188196;
 const LAVA: u32 = 51505;
 const BLAST: u32 = 117014;
 
+fn overload_damage(multiplier: f32) -> u64 {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = fixture();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        1219480,
+        Some(run.actor),
+        false,
+    )
+    .unwrap();
+    settle(&mut run);
+    run.app
+        .world_mut()
+        .resource_mut::<ObservedCombatEvents>()
+        .0
+        .clear();
+    let mut blast = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(BLAST)
+        .unwrap()
+        .clone();
+    blast.cast_damage_multiplier = Some(multiplier);
+    assert!(crate::spell_cast::launch_triggered_spell(
+        run.app.world_mut(),
+        run.actor,
+        &blast,
+        Some(run.targets[0]),
+        1
+    ));
+    settle(&mut run);
+    run.app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(120588)
+                && event.kind == CombatLogKind::Damage
+        })
+        .map(|event| event.amount as u64)
+        .sum()
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_fusion_overload_retains_parent_multiplier() {
+    let ordinary = overload_damage(1.0);
+    let scaled = overload_damage(0.4);
+    assert!(
+        ordinary > 0 && scaled > 0,
+        "native Ascendance produces overload damage"
+    );
+    let ratio = scaled as f64 / ordinary as f64;
+    assert!(
+        (ratio - 0.4).abs() < 0.02,
+        "native overload multiplier: {scaled}/{ordinary} = {ratio}"
+    );
+}
+
 fn cast_events(run: &Run, spell: u32) -> usize {
     run.app
         .world()
