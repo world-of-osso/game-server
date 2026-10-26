@@ -12,7 +12,7 @@ Divine Purpose supplies free foreground spenders; MID2 Arbiter uses are a separa
 
 ## Qualification
 
-Native REDb584a946f8 observed no Purpose after Wake. GREENc768cfaee3 proves ordinary Wake→free Verdict→armed use→real Storm-triggered Arbiter damage. Its three-seed supply probe produced36/33/34 successful payouts, with no expired/lost Arbiter uses. Native setup starts with zero Purpose/Arbiter uses, matching the pinned first-action state. Full Ret integration gated byd841480cd6 remains pending.
+Native REDb584a946f8 observed no Purpose after Wake. GREENc768cfaee3 proves ordinary Wake→free Verdict→armed use→real Storm-triggered Arbiter damage. Its three-seed supply probe produced36/33/34 successful payouts, with no expired/lost Arbiter uses. Native setup starts with zero Purpose/Arbiter uses, matching the pinned first-action state. Initial full gate `d841480cd6` passed 110 cases and exposed five fixture failures: four paid Dawnlight controls still selected Aurora, and the Player reset control treated queued requests as executions. Paid controls now leave Aurora legally unspent; the Player control waits for native admission before observing resets. Selected-Aurora positive coverage remains unchanged, with a separate unselected-Wake control. Full integration remains pending.
 
 The passive test observer accepts selected aura IDs; applications, charge gains and consumption are measured at native lifecycle boundaries. It does not grant buffs or change rolls.
 
