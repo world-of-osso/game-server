@@ -61,4 +61,34 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
         "actual KC Dire Command must spawn native219199 actors: commands={commands}, beasts={}",
         beasts.len()
     );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(
+            |event| event.source.is_some_and(|source| beasts.contains(&source))
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id.is_none()
+                && matches!(
+                    event.kind,
+                    shared::protocol::CombatLogKind::Damage
+                        | shared::protocol::CombatLogKind::Miss(_)
+                )
+        ),
+        "actual Dire Beasts must make native white attacks at the real primary"
+    );
+    assert!(
+        events.iter().any(
+            |event| event.source.is_some_and(|source| beasts.contains(&source))
+                && event.spell_id == Some(1232922)
+                && matches!(
+                    event.kind,
+                    shared::protocol::CombatLogKind::Damage
+                        | shared::protocol::CombatLogKind::Miss(_)
+                )
+        ),
+        "existing actual Dire Beasts must receive selected Wildspeaker commands"
+    );
 }
