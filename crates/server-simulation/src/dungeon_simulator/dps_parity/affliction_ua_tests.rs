@@ -33,7 +33,11 @@ fn affliction_ua_expiration_earns_free_native_fatal_echoes() {
     let mut echoed = false;
     for _ in 0..60 {
         crate::spell_cast::cast_triggered(run.app.world_mut(), caster, 1259790, Some(target), 0);
-        for _ in 0..180 {
+        for _ in 0..140 {
+            run.app.update();
+        }
+        crate::spell_cast::cast_triggered(run.app.world_mut(), caster, 1260269, Some(caster), 0);
+        for _ in 0..40 {
             run.app.update();
         }
         echoed = run
@@ -69,6 +73,10 @@ fn affliction_ua_expiration_earns_free_native_fatal_echoes() {
     assert!(
         crate::auras::has_aura(run.app.world(), caster, 1261125),
         "Fatal Echoes also earns Cascading Calamity when the previous UA ended"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), caster, 1260269),
+        "a background Fatal Echoes UA cannot consume Shard Instability"
     );
     let before = report::combat(run.app.world(), &run.targets, 1.0)["total_damage"]
         .as_u64()
