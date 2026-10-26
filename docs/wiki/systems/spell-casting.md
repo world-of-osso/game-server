@@ -180,7 +180,7 @@ Source: authenticated70448/read-only world.db25 effect rows; SimC76f8118 `sc_dea
 
 Pinned SimC76f8118 `action.cpp4297–4314/4397–4421` rounds channel tick time, then rebuilds duration to prevent false expiry partials. Native Ray RED2d0ea30702 observed8full ticks plus a0.012690355 expiry fraction at constant26.69281%haste. The [Frost investigation](../investigations/frost-mage-dps-parity.md#per-hit-factor-investigation--2026-10-26) records the consumer evidence. This is not a spell-specific ninth-tick filter.
 
-Code`fad33456f` passes67 native cases across all seven required families. The workspace/all-target check and formatting pass. These are probe proofs, not landing or all-spec DPS acceptance.
+Code`fad33456f` passes67 native cases across all seven required families. The workspace/all-target check and formatting pass. These are probe proofs. Corrected plain landing entryed45d940de passes34cases (Ray/Frost plus six native family controls) and lands4c9083c0c. Its first submission30283eb573 failed only Cargo inline-table CLI syntax; no behavior tests ran there. The [Frost investigation](../investigations/frost-mage-dps-parity.md) owns the first measured64 totals. All-spec acceptance remains separate.
 
 | Native family | Actual proof | Probe |
 |---|---|---|
