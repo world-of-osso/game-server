@@ -77,6 +77,7 @@ pub const EFFECT_PERSISTENT_AREA_AURA: u32 = 27;
 pub const EFFECT_ENERGIZE: u32 = 30;
 pub const EFFECT_WEAPON_PERCENT_DAMAGE: u32 = 31;
 pub const EFFECT_TRIGGER_MISSILE: u32 = 32;
+pub const EFFECT_TRIGGER_MISSILE_WITH_VALUE: u32 = 148;
 pub const EFFECT_DISPEL: u32 = 38;
 pub const EFFECT_WEAPON_DAMAGE: u32 = 58;
 pub const EFFECT_SEND_EVENT: u32 = 61;
@@ -158,6 +159,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         // Spell::EffectTriggerMissileSpell (SpellEffects.cpp:725-778): the
         // missile's spell hits the unit target synchronously.
         EFFECT_TRIGGER_MISSILE => trigger_spell,
+        EFFECT_TRIGGER_MISSILE_WITH_VALUE => super::trigger_missile_value::on_unit,
         EFFECT_SEND_EVENT => send_game_event,
         EFFECT_THREAT => add_fixed_threat,
         EFFECT_INTERRUPT_CAST => interrupt_cast,
@@ -2674,7 +2676,7 @@ pub(super) fn trigger_missile_at_destination(
     }
 }
 
-fn cast_destination_missile_child(
+pub(super) fn cast_destination_missile_child(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,

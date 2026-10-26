@@ -62,6 +62,39 @@ fn pet_prereq_native_infernal_value_missile_creates_its_actual_child_actor() {
         1,
         "actual1122 must dispatch148 into exactly one native111685/89 actor"
     );
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 111685 && aura.caster == run.actor)
+        .expect("the child's native caster-aura effect must also execute");
+    let value = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .amount;
+    assert!(
+        value > 0.0,
+        "effect148 must carry its value to every child effect, including the originally-zero aura"
+    );
+    let catalog_value = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(111685)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .base_points;
+    assert_eq!(
+        catalog_value, 0.0,
+        "per-cast values must not mutate native catalog data"
+    );
 }
 
 #[test]
