@@ -674,6 +674,107 @@ fn devastation_burnout_fire_ticks_earn_and_spend_an_actual_instant_living_flame(
     }
 }
 
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_wingleader_earned_mass_disintegrate_reduces_native_breath_recovery() {
+    for (count, selected, mass) in [
+        (1, false, true),
+        (1, true, false),
+        (1, true, true),
+        (3, true, true),
+    ] {
+        let mut run = prepare_literal(1467, count).unwrap();
+        engage(&mut run);
+        let primary = run.targets[0];
+        let milliseconds = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 441206)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount;
+        assert!(milliseconds > 0.0);
+        if !selected {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 441206,
+            );
+        }
+        for _ in 0..2 {
+            crate::spell_cast::creature_cast_with_targets(
+                run.app.world_mut(),
+                run.actor,
+                433874,
+                crate::spell_cast::CastTargets {
+                    unit: run.actor,
+                    primary: Some(primary),
+                    destination: None,
+                },
+            )
+            .unwrap();
+            preparation::finish_pending_setup(&mut run).unwrap();
+        }
+        crate::spell_cast::creature_cast_empowered_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            357208,
+            crate::spell_cast::CastTargets {
+                unit: run.actor,
+                primary: Some(primary),
+                destination: None,
+            },
+            1,
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 436336));
+        if !mass {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 436336,
+            );
+        }
+        let before = read_native_recharge_ms(&run, 433874);
+        assert!(
+            before > 10_000.0,
+            "the actual Deep Breath charge must still be recovering"
+        );
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            356995,
+            crate::spell_cast::CastTargets {
+                unit: primary,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        // SimC76f8118 sc_evoker.cpp6560–6572: native effect0 per actual recipient.
+        let reduction = before - read_native_recharge_ms(&run, 433874);
+        let expected = if selected && mass {
+            f64::from(milliseconds) * count as f64
+        } else {
+            0.0
+        };
+        assert!(
+            (reduction - expected).abs() <= 2.0,
+            "Wingleader count{count} selected={selected} mass={mass}: reduction={reduction}, expected={expected}"
+        );
+        preparation::finish_pending_setup(&mut run).unwrap();
+    }
+}
+
 fn cast_reference_empowers(run: &mut Run, primary: Entity) {
     for (spell, unit) in [(357208, run.actor), (359073, primary)] {
         crate::spell_cast::creature_cast_empowered_with_targets(
