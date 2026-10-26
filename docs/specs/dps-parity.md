@@ -214,6 +214,7 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 - [x] Native trigger effects whose resolved recipient is self must forward the immutable selected primary when their child requires an explicit enemy. Preserve queued effect64 delays/costs and immediate effect32 dispatch; self/friendly children retain native recipients. Native201427 must damage the selected enemy through both227518 and delayed201428 even after the live combat target changes.
 
+- Shared literal readiness checks each selected native enemy primary, including attackable neutral units, against native minimum/maximum range and live Range modifiers for harmful actions, even when the native cast unit is the caster. Default and target-scored contexts retain their own range result; native cast units, resource limits, cooldowns and priorities are unchanged (SimC76f8118 action.cpp2418–2430).
 - [x] Native execution preserves the selected action primary separately from the spell's cast unit. A self-target spell must keep its native self cast while forwarding the actual selected hostile primary to child relationships. Preserve that context across queued requests, cast bars, missile snapshots and periodic aura application/refresh/tick snapshots; an absent or unknown context must not select a substitute. Resolve caster-only targeting from the actual native endpoint after action replacement, not only the requested base action; ground destinations retain their declared targeting. Apply the same contract to Player and NPC actors without spell-ID branches, damage multipliers or mutable-target fallbacks. [Proof](../handoffs/hostile-primary-proof-ledger.md).
 
 ### Frost literal rotation
@@ -281,7 +282,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
-- Native Annihilation201428 off-hand execution rolls the same197125 Fury refund passive as Chaos Strike. The real passive supplies its chance, Critical Chaos modifiers and500ms internal cooldown;193840 supplies the Fury payload (SimC76f8118 sc_demon_hunter.cpp7472–7510,7673–7685). Do not omit the transformed spender's refund.
+- Selected Exergy206476 grants native208628 before Hunt370965 and Vengeful Retreat198793 execute. Refresh adds the native buff duration to its remaining time, capped at30s (SimC76f8118 sc_demon_hunter.cpp2822–2841,5501–5504,8539–8541,10010–10013).
+
+- Native Chaos Strike199547 and Annihilation201428 off-hand execution roll the same197125 Fury refund passive. No refund occurs at the parent's earlier dummy hit. The real passive supplies its chance, Critical Chaos modifiers and500ms internal cooldown;193840 supplies the Fury payload (SimC76f8118 sc_demon_hunter.cpp7472–7510,7673–7685). Do not omit the transformed spender's refund.
+- Selected Relentless Onslaught389977 rolls its native effect chance on actual landed off-hand hits. Its delayed callback uses that off-hand effect's native delay, selects Chaos Strike or Annihilation from live Meta at execution, then starts the native talent ICD. Copies use real free triggered casts and native weapon children; the live ICD prevents their off-hand hits from recursively producing copies (SimC76f8118 sc_demon_hunter.cpp7422–7446,7462–7473,7524–7532). The shared native queue retains its entity-lifetime and depth checks.
 
 - Selected Shattered Destiny388116 accumulates native base Fury for genuinely paid literal Havoc actions only while owned162264 is live. Each native effect1 threshold extends Meta by native effect0 milliseconds; preserve the remainder across casts and exclude free/background copies and pre-Meta spending. The existing frozen resource context establishes positive payment (SimC76f8118 sc_demon_hunter.cpp2529–2555).
 
@@ -294,6 +298,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Native Consuming Fire452487/456640 retains Immolation Aura258920's payload and spends only that ability's Demonsurge use. Its dummy override cannot consume Annihilation's use or omit native Immolation ticks/Fury; Fel Desolation452486 is not Death Sweep (SimC76f8118 sc_demon_hunter.cpp181–189,4784–4839).
 
+- Equipped native1296612 four-piece adds Essence Break to Cycle of Hatred: reduce its own recovery from prior stacks and earn the next native1214887 stack. While prior stacks are positive and below the native cap, Essence reduces the shared Eye/Gaze recovery once, and either beam reduces Essence recovery by native258887 effect0 milliseconds (SimC76f8118 sc_demon_hunter.cpp4033–4047,7814–7833). Without four-piece, Essence does not participate.
 - Selected Chaotic Transformation388112 resets actual Eye Beam/Gaze and Blade Dance/Death Sweep recovery on ordinary Meta191427; selected Violent Transformation452409 restores Immolation charges and Sigil recovery. Completed native Eye/Gaze grants selected343311's actual343312 haste buff, never on interruption. Selected Cycle of Hatred258887 reduces each executed beam's recovery by its prior owned1214887 stacks × native effect0 milliseconds, then grants one native stack (SimC76f8118 sc_demon_hunter.cpp4002–4005,4033–4047,4987–4998). MID2 cross-cooldown reductions remain separate.
 
 - Native Felblade232893 dispatches213243 at its actual selected primary; native child damage and effect2 Fury supply the result, not an adapter resource grant. A landed Essence Break258860 applies owned320338 after250ms. Eligible native Chaos Strike/Annihilation and Blade Dance/Death Sweep hits against that caster-owned mark dispatch1245759 at the native per-target internal cooldown (SimC76f8118 sc_demon_hunter.cpp7073–7080,7542–7550,7837–7843,7870–7893,11186).
@@ -432,6 +437,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - [x] Spec71 parity executes the exact reference manifest's action lists through the shared literal evaluator, native readiness/execution and equipment facts. Capture control before warmup, cast the source precombat Battle Stance once, and use native selected targets for Slayer/Colossus lists. When no native follower profile exists, use the real player actor; never fabricate a follower. Stockade/native follower rotations remain unchanged. Potion inventory and external Power Infusion are explicit gaps.
 
 ### Fury player parity
+
+- Selected Cruelty392931 and Wrath and Fury392936 damage modifiers apply only while native Enrage184362 is active (`sc_warrior.cpp1106,4939–4947,5099–5113,7834–7835`). Their native rank values and other effects remain unchanged.
 
 - Selected Spite383852 applies its native rank values in tenths of a percent to damage and critical damage, as specified by the native display and SimC76f8118 `sc_warrior.cpp7894–7899`; preserve its native masks and rank curves.
 

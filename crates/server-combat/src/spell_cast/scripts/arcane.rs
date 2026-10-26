@@ -228,6 +228,9 @@ pub(in crate::spell_cast) fn after_foreground(
         roll_clearcasting(world, caster);
     }
     match spell.id {
+        // SimC76f8118 sc_mage.cpp3080–3092: Intellect grants the selected
+        // Familiar; the native210126 aura owns its authored maximum Mana.
+        1459 if selected(world, caster, 205022) => grant(world, caster, 210126, 1),
         321507 => {
             let count = talent_value(world, caster, 470021, 0) as u32;
             conjure_at_primary(world, caster, spell, count);
