@@ -180,7 +180,7 @@ fn load_creature_cast(
         .and_then(|store| store.get(spell_id))
         .cloned()
         .ok_or(CastFailure::UnknownSpell)?;
-    let requirement = targets::explicit_requirement(handled_effects(&spell));
+    let requirement = targets::explicit_requirement(handled_effects(world, &spell));
     let supplied = target.or_else(|| default_scripted_target(world, caster, requirement));
     // Normalize only the redundant self object rejected by EXCLUDE_CASTER.
     // Other supplied objects still own this runtime's cast/packet/log recipient;

@@ -115,6 +115,7 @@ fn read_spell(row: &Row, lookups: &Lookups, id: u32) -> rusqlite::Result<SpellIn
         }),
         aura_options: present(SpellAuraOptions {
             proc_definition_source: None,
+            proc_family: None,
             cumulative_aura: col_u32(row, "StackAmount")?,
             proc_category_recovery_ms: col_i32(row, "ProcCooldown")?,
             proc_chance: col_u32(row, "ProcChance")?,

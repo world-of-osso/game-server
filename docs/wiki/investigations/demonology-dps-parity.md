@@ -50,7 +50,7 @@ Pinned `pets.cpp701/875–882` disables regeneration for actual Wild Imps. The n
 
 Actual native Fel Firebolt used2000ms despite the owner's19.45591% haste; the source expectation is1674ms. Executing `GuardianActor` units now resolve their actual `SummonedCreature` owner for spell haste, with one timing reader shared by cast/GCD/channel/duration calculations. Spell-specific modifiers remain on the guardian. Native pool/stat identities are not copied or changed. GREEN qualification is pending.
 
-Actual Burning Cleave separately observed zero critical chance against the owner's35.065216%. That remains open until the shared owner-critical-chance helper lands; the follow-up must extend that helper rather than create a second critical-chance path.
+Actual Burning Cleave separately observed zero critical chance against the owner's35.065216%. The landed `combat::read_pet_owner_critical_chance` helper now also resolves executing guardians through the same owner reader used for haste. Both native swings and spell critical-chance calculations consume that one helper. Existing Hunter qualification and spell-specific modifiers are retained. GREEN qualification is pending.
 
 ## Dominion and guardian execution
 

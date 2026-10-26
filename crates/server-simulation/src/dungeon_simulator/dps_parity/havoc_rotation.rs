@@ -6,7 +6,7 @@ use super::literal_rotation::{
 };
 use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
 use bevy::prelude::*;
-use facts::{DemonsurgeUses, HavocFacts};
+use facts::HavocFacts;
 use serde_json::{Value, json};
 use server::simc_apl::Program;
 
@@ -15,7 +15,6 @@ pub(super) struct Rotation {
     bindings: Bindings,
     equipment: Equipment,
     encounter: Encounter,
-    uses: DemonsurgeUses,
 }
 
 fn load_program() -> Result<Program, String> {
@@ -57,7 +56,6 @@ impl Rotation {
             bindings,
             equipment,
             encounter,
-            uses: DemonsurgeUses::default(),
         })
     }
 
@@ -81,13 +79,13 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<bool, String> {
-        self.uses.observe(world, actor);
         let prepared = self.prepare(world, actor, targets)?;
         let facts = HavocFacts {
             native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
                 .with_targets(targets.first().copied(), targets),
             equipment: &self.equipment,
-            uses: &self.uses,
+            world,
+            actor,
         };
         match self
             .driver
@@ -126,13 +124,13 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
-        self.uses.observe(world, actor);
         let prepared = self.prepare(world, actor, targets)?;
         let facts = HavocFacts {
             native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
                 .with_targets(targets.first().copied(), targets),
             equipment: &self.equipment,
-            uses: &self.uses,
+            world,
+            actor,
         };
         if let Some((action, execution)) =
             self.driver
