@@ -194,6 +194,14 @@ Code`fad33456f` passes67 native cases across all seven required families. The wo
 
 Drain Soul uses private gate choice124692 at native node72045. The original265 reference input retains91566 (Improved Shadow Bolt); it is unchanged and must not be replaced by the gate variant for DPS measurement. All-spec remeasurement remains a separate integration requirement.
 
+### Channel duration and charged-modifier snapshots
+
+SimC76f8118 `parse_effects.cpp1690–1695` maps P_CAST_TIME only to execute-time effects; `parse_effects.hpp1072–1107` keeps them separate from duration effects. `action.cpp4390–4432` uses duration/period modifiers plus haste. Cached TC a352b1fa differs: `Object.cpp1816–1838::ModSpellDurationTime` also applies ChangeCastTime. This engine follows the pinned SimC behavior, not that TC operation.
+
+Native Nightfall264571 has a−100% cast-time effect and separate−50% Period/Duration effects. Channel duration excludes the cast-time effect. Ordinary channel execution freezes charged modifiers beside its prepayment resource snapshot, before execution consumes an admitted use. The applied aura and subsequent channel bar therefore retain the same duration/period modifiers rather than recomputing the bar from depleted live auras.
+
+Full16648tree3ff583ed53 supplies the unchanged native Grasp fixture. RED417d517a80 reaches an ordinary cast with no nonzero channel state. The fixture also asserts equal one-/two-use spans, one use consumed per channel, and12damage ticks across three channels. Instant Bolt and all seven channel-family controls remain required; GREEN qualification is pending.
+
 ## Dead-caster native channel coverage — 2026-10-17
 
 Native55224 Archivist's Scan supplies cast-time row195=1100ms, duration row31=8000ms, Attr1 channel bit0x4, Attr0 AllowCastWhileDead, and a real zero-amount aura12 target stun. It has no power or target-condition rows in the owned source snapshot. This is a distinct prepare→channel lifetime boundary, not another direct cast. New concrete fixtures use actual5 and DeathPlugin-produced Dead, retain the native cast/channel clocks and require actual channel state plus an ordinary target Frostbolt refused as Stunned. The full-mask5 call used to kill a caster during its channel is the real generic-CC-exempt bool API, not an edited flag.

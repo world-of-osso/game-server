@@ -1100,8 +1100,8 @@ pub fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
     haste_channel_duration_ms(world, caster, spell, duration.max(0.0).round() as u32) as i32
 }
 
-/// SimC76f8118 action.cpp4390–4420 hastes channel duration with its ticks.
-/// TC Object.cpp1816–1838/Spell.cpp3264–3266/4010–4017 share this for aura/cast state.
+/// SimC76f8118 action.cpp4390–4432 uses duration/period mods plus haste.
+/// Cast-time mods belong only to execute time (parse_effects.cpp1690–1695).
 pub(crate) fn haste_channel_duration_ms(
     world: &World,
     caster: Entity,
@@ -1111,13 +1111,6 @@ pub(crate) fn haste_channel_duration_ms(
     if !is_channeled(spell) || attributes(spell, 5) & 0x2000 == 0 {
         return duration;
     }
-    let modded = modify(
-        world,
-        caster,
-        spell,
-        SpellModOp::ChangeCastTime,
-        duration as f32,
-    );
     let haste = spell_haste_multiplier(world, caster);
     let slow = world
         .get::<crate::auras::AuraStatMods>(caster)
@@ -1125,7 +1118,7 @@ pub(crate) fn haste_channel_duration_ms(
     // SimC76f8118 action.cpp4397–4421: preserve the original modified
     // tick count, rebuilding duration from the same rounded hasted aura period.
     // Independent duration/period truncation creates false expiry partial ticks.
-    let duration = modded * slow;
+    let duration = duration as f32 * slow;
     match crate::auras::channel_tick_timing_ms(world, caster, spell) {
         Some((original_period, hasted_period)) => {
             let ticks = duration / original_period;
@@ -2591,7 +2584,13 @@ fn execute_and_channel(
     // as their aura. SimC76f8118 sc_rogue.cpp4784–4795 freezes Killing Spree CP.
     let channel = if is_channeled(spell) {
         let costs = spell_costs(world, caster, spell)?;
-        Some(resources::snapshot(world, caster, spell, &costs))
+        let mut channel = resources::snapshot(world, caster, spell, &costs);
+        // SimC76f8118 sc_warlock_actions.cpp2145–2182/2294–2338:
+        // duration/period modifiers survive spending the admitted proc use.
+        channel.cast_charge_mods = Some(spell_mods::snapshot_charged_modifiers(
+            world, caster, &channel,
+        ));
+        Some(channel)
     } else {
         None
     };

@@ -49,6 +49,10 @@
 ## 2026-10-25 — Warlock periodic funding and target DoT facts
 
 [Warlock funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) uses the downstream critical-aware periodic callback and existing native power pipeline, qualified only on Destruction. [Target DoT duration](systems/simc-apl.md#native-target-dot-duration) reads active owned native state without pandemic carry; both have native GREEN and cross-spec controls. Numerical267 acceptance remains separate.
+## 2026-10-26 — Channel duration modifier separation
+
+[Channel snapshots](systems/spell-casting.md#channel-duration-and-charged-modifier-snapshots) separate execute-time modifiers from duration and retain the pre-consumption charged-modifier snapshot for span/period consistency. Native Grasp RED417d517a80 loses its channel state; the unchanged fixture also qualifies12ticks across three casts. SimC is authoritative; cached TC explicitly differs. GREEN remains pending.
+
 ## 2026-10-26 — Shared hasted channel rounding
 
 [Channel clocks](systems/spell-casting.md#rounded-hasted-channel-clocks--2026-10-26) share a rounded native aura/cast period and rebuild hasted duration from the original tick count. Ray's false expiry and FoF's auxiliary-control deadline have genuine REDs. Codefad33456f passes67native cases across all seven requested families, including FoF's final damage tick and Convoke's4s lifetime. No spell-ID branch or non-channel period change is added. Plain landinged45d940de passes34cases and lands4c9083c0c; [Frost](investigations/frost-mage-dps-parity.md) records the first64 measurement, still below90%. All-spec acceptance remains separate.
