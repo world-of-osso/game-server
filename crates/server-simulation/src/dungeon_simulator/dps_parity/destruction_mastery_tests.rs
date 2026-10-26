@@ -110,3 +110,70 @@ fn destruction_mastery_modifies_actual_native_conflagrate_damage() {
         "actual native mastery{mastery}: control{control}, empowered{empowered}, source range{minimum}..{maximum}, native variance{variance}"
     );
 }
+
+#[test]
+#[ignore = "requires private267 native profile and world DB"]
+fn destruction_mastery_prediction_uses_mean_without_advancing_native_rng() {
+    use server::simc_apl::Facts;
+    let mut run = prepare_literal(267, 1).unwrap();
+    let bindings = crate::simc_apl_native::Bindings {
+        actions: [("conflagrate".into(), CONFLAGRATE)].into(),
+        ..Default::default()
+    };
+    let forecast = |run: &Run| {
+        crate::simc_apl_native::NativeFacts::new(
+            run.app.world(),
+            run.actor,
+            &bindings,
+            crate::simc_apl_native::Encounter::Fixture {
+                started_at: 0.0,
+                duration: 300.0,
+                style: crate::simc_apl_native::FightStyle::Patchwerk,
+            },
+            1,
+        )
+        .with_targets(Some(run.targets[0]), &run.targets)
+        .value("action.conflagrate.damage")
+        .unwrap()
+    };
+    let next_without_forecast = {
+        let _seed = crate::random::seed_scope(70448);
+        crate::random::random::<f32>()
+    };
+    let with_mastery = {
+        let _seed = crate::random::seed_scope(70448);
+        let first = forecast(&run);
+        assert_eq!(
+            forecast(&run),
+            first,
+            "the expected snapshot must be deterministic"
+        );
+        assert_eq!(
+            crate::random::random::<f32>(),
+            next_without_forecast,
+            "read-only damage facts cannot consume native combat RNG"
+        );
+        first
+    };
+    let mastery = f64::from(
+        run.app
+            .world()
+            .get::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .mastery_pct,
+    ) / 100.0;
+    assert!(mastery > 0.0);
+    let actor = run.actor;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        RemoveReason::Dispelled,
+        |aura| aura.spell_id == MASTERY,
+    );
+    let without_mastery = forecast(&run);
+    let expected = without_mastery * (1.0 + 0.75 * mastery);
+    assert!(
+        (with_mastery - expected).abs() <= 1.0,
+        "native mastery mean: control{without_mastery}, forecast{with_mastery}, expected{expected}"
+    );
+}
