@@ -13,8 +13,20 @@ const COMBO_ACTIONS: &[u32] = &[
 ];
 const COMBO_STRIKES: u32 = 115636;
 const MASTERY_DAMAGE: &[u32] = &[
-    100780, 100784, 185099, 117418, 107270, 395519, 395521, 322109, 468179, 451767, 158221,
-    1272696, 1248815,
+    100780,
+    100784,
+    185099,
+    117418,
+    107270,
+    395519,
+    395521,
+    322109,
+    468179,
+    451767,
+    158221,
+    1272696,
+    1248815,
+    super::glory_of_the_dawn::DAMAGE,
 ];
 
 #[derive(Component)]
@@ -241,7 +253,7 @@ pub(crate) fn combo_strikes_multiplier(world: &World, caster: Entity, spell: u32
 /// TC has no script/binding and native1272415 has no class mask. The caller
 /// already proved active Combo Strikes; DB2 owns this selected talent's percent.
 fn sunfire_spiral_multiplier(world: &World, caster: Entity, spell: u32) -> f32 {
-    if !matches!(spell, 185099 | 468179) {
+    if !matches!(spell, 185099 | 468179 | super::glory_of_the_dawn::DAMAGE) {
         return 1.0;
     }
     let Some(aura) = world
