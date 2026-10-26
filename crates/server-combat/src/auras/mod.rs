@@ -35,7 +35,7 @@ mod earthen_rage;
 pub(crate) mod ebon_might;
 mod echo_of_light;
 pub(crate) mod effect_immunity;
-pub(crate) mod enhancement_power;
+pub mod enhancement_power;
 mod fear;
 mod fel_devastation;
 mod fixate;
@@ -380,6 +380,11 @@ impl AuraInstance {
     fn remaining_ms(&self, now: f64) -> u32 {
         self.expires_at
             .map_or(0, |at| ((at - now).max(0.0) * 1000.0).round() as u32)
+    }
+
+    /// Absolute deadlines of the currently stored asynchronous application stacks.
+    pub fn stack_expirations(&self) -> &[f64] {
+        &self.stack_expirations
     }
 
     pub fn stack_multiplier(&self) -> f32 {
@@ -1088,6 +1093,9 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
             .into_iter()
             .all(|supported| supported);
         if handled
+            || world
+                .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
+                .consumes_named_aura_field(aura.spell_id, effect.index)
             || scripts::consumes_named_field(aura.spell_id, effect.index)
             || crate::scripted_ai::kings_rest::handles_molten_gold_effect(aura.spell_id, effect)
         {

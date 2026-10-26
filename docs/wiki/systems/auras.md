@@ -146,6 +146,12 @@ observed procs. The lead requires a full workspace gate before landing.
 [exact proof ledger](../../handoffs/light-of-the-titans-proof-ledger.md).
 Actual repeated-Word pool integration, PvP scaling and effectiveness stay separate.
 
+## Native Pandemic duration carry — 2026-10-26
+
+`refresh::prepare_application` now selects `DurationCarry::Pandemic` from the same authored attribute used by periodic-phase preservation. Rip/Rake no longer have a separate ID route; explicit Extend policies and rolling budgets keep their existing precedence. Source: [refresh.rs](../../../crates/server-combat/src/auras/refresh.rs), SimC76f8118 `action.cpp684–685/4612/2729–2734`; [contract](../../specs/dps-parity.md#native-pandemic-duration-carry).
+
+The old phase-only handling reset actual Agony duration on refresh, explaining23 native ST applications versus17 reference applications. Native REDfe4067cd18 records expiry31.8 instead of36.3 after a real refresh within the native window. Probe165ebb927a passes102 native cases, including actual Agony carry, identical Rip/Rake carry and the charged Grasp snapshot. Its sole legacy Feral kit failure also occurs on master in c0ae0fb343; the lead approved excluding only that exact case. Merged landing gates and five-spec DPS measurements remain pending; this is not a numeric parity claim.
+
 ## Native rolling periodic refresh — 2026-10-22
 
 This is the default native per-tick mode. The source-qualified [Warrior Deep Wounds contract](../../specs/dps-parity.md#fury-player-parity) selects a separate reapplication budget through `scripts::rolls_reapplication`; the source policy does not change Barbed, Echo, Ignite or leech defaults.
@@ -356,7 +362,7 @@ Source: pinned TC a352b1fa `spell_shaman.cpp861–920`; native70448 CSV rows mat
 
 ## Prayer of Mending baseline — 2026-10-18
 
-`spell_cast/scripts/prayer_of_mending.rs` handles33076 and155793's native effect0 DUMMY and41635's on-damage proc. Root native jump count4 creates5 initial stacks; existing owned wards add the authored4 through normal refresh, capped by native max10. A proc casts real33110 from the original Priest, launches real155793 from the current holder with remaining stacks/original caster, then removes that holder's ward. The actual40yd/s missile keeps its per-cast SpellInfo clone, so delayed arrival can apply41635 with the original Priest and remaining count. Healing coefficient0.732/variance0.05 and RNG are unchanged. Ward tooltip-point/custom-visual projection and talent custom arguments are outside this baseline.
+`server-spell-scripts/src/modules/holy_runtime/prayer_of_mending.rs` handles33076 and155793's native effect0 DUMMY and41635's on-damage proc. Root native jump count4 creates5 initial stacks; existing owned wards add the authored4 through normal refresh, capped by native max10. A proc casts real33110 from the original Priest, launches real155793 from the current holder with remaining stacks/original caster, then removes that holder's ward. The actual40yd/s missile keeps its per-cast SpellInfo clone, so delayed arrival can apply41635 with the original Priest and remaining count. Healing coefficient0.732/variance0.05 and RNG are unchanged. Ward tooltip-point/custom-visual projection and talent custom arguments are outside this baseline.
 
 `SpellInfo` stores two private, non-serialized per-cast arguments: `cast_aura_stacks` and `cast_original_caster`. Aura construction consumes the stack argument before stacking/log/view publication; no post-hoc mutation of a published one-stack ward. Normal applications still request one, and Agony retains its special initial1/3 floor and refresh behavior. The triggered helper carries these arguments through existing planning and missile snapshots; old effect0-amount callers use the same helper with the two new arguments absent.
 

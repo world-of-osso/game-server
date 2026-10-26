@@ -80,6 +80,44 @@ Guardian impact target caps/child edges and successful-cast counter/summon table
 
 Hot Streak's producer table, Heating Up protection, admitted-proc consumption and Pyroclasm snapshots live downstream with Fire's Sphere/Fired Up/Cascade/Hyperthermia feedback. The same registered producer table classifies native in-flight actions and actual damage outcomes. Flamestrike still snapshots chance before consumption and rolls once after the cast. Fire feedback and Meteorites retain their separate actual-hit stages; native aura lifecycle registration remains after Ret Sentence.
 
+## Pet-set relationship tables
+
+The last class-specific table nested under generic relationship execution, pet-set Stomp/Cobra Fang rules, lives downstream. Generic policies retain only ordered relationship execution and call the registered tail handler at the original cast/first-hit boundary. Cobra Fang still snapshots before consuming damage modifiers and removes the earned aura after successful launch, after Frost callbacks and before execution counters.
+
+## Native resource and effect overrides
+
+Barbed Shot's focus children, Stormkeeper's authored use count, Feral Berserk's extra combo point, Rewind's non-raid healing factor and Enduring Torment's specialization filter live downstream. Their stages retain the original aura-creation, positive root self-energize, named-healing and effect-filter boundaries. Charge transforms preserve the native input, point bonuses add, healing factors multiply, and effect filters can only veto an effect. Unregistered stages have neutral results.
+
+## Linked Enhancement runtime
+
+Maelstrom Weapon, native weapon imbues, Doom Winds pulses, Thorim selection, spaced spending decks, Conductive Energy, Voltaic/Fire Nova, Burning Core and delayed Storm Unleashed pulses live together under the downstream Enhancement module. Their original aura-registration order, successful foreground consumption, per-cast snapshot markers, post-resolution Rod selection and tier-before-Ride launch order remain unchanged. Combat exposes its resolved-damage view and generic proc-admission snapshot helper rather than copying resolving frames or charge handling downstream.
+
+## Spellslinger conjures
+
+Spellslinger's Arcane/Frost source tables, delayed per-conjure rolls, Ray tick window and actual Orb recharge adjustment live downstream. The conjure cast handler remains after all generic relationship cast handlers and before ground-field handlers. Splinter direct damage still adjusts Orb before melee/combo feedback; Ray ticks still conjure after periodic relationships and before item feedback. This source-execution module is separate from the already-moved Splinter impact module.
+
+## Frost launch procs and delayed supply
+
+`modules/frost_runtime/` owns Frost launch-aura snapshots, Flurry's inherited child scalar, Ice Lance's native payload, Orb and cast proc producers, Augury's PRD state, and delayed Brain Freeze/Splinter callbacks. Native after-cast handling still precedes proc consumption, supply generation and generic cast policies. Launch supply remains before execution counters; delayed callbacks retain their original queued-trigger position and current-target rule. Each new stage has its own alias. The existing Spellslinger impact module is unchanged.
+
+A warm `server-simulation --no-run` touch of the moved supply source rebuilt combat, scripts and simulation in87.72s before extraction (including a package-cache wait), then only scripts and simulation in5.45s after extraction. These are compile observations, not gameplay acceptance; native Frost and registry gates run in the merge train.
+
+## Holy Words and Prayer runtime
+
+`modules/holy_runtime/` owns Surge of Light, Apotheosis charge restoration, Flash/Prayer cooldown reductions, Prayer of Healing's injured-ally plan, and Prayer of Mending's native stacks, OriginalCaster and random injured/player-priority jumps. Support aura registration stays after Abundance and before Earthen Rage. Named aura fields classify only the same authored effect indices; they do not add effects. Native registry lookups replace the original first-match cases without changing payment, flight or healing.
+
+## Shared Evoker flames
+
+`modules/evoker_flames.rs` and its Chrono leaf own Living Flame's ally/enemy children and Energizing Flame refund, plus Chrono's per-caster effective health history, native child validation and capped repeat. Health history observes each combat-log event at the original post-meter/arena slot. Effect-hit and target-validation lookup retain their original behavior. Combat exposes its existing power, versatility and fixed-heal helpers; no damage or healing calculation is duplicated.
+
+## Bounded native projectile scripts
+
+`hunter_bounces.rs` owns shared Hunter bounce policy data, native target round-robin order, delays and ramp scalars. `shadow_bolts.rs` owns Voidform's initial Volley, Volley's primary/caster plan and native50ms bolt queue. `unholy_eruption.rs` owns Scourge Strike's owned periodic snapshot reads, native pre-mitigation calculation and missing-only Virulent Plague application. They use the existing effect-handler, effect-hit and target-plan slots; already-moved spec modules are unchanged. The generic `DamageInput` and pre-mitigation helper remain in combat.
+
+## Assassination context and native children
+
+`modules/assassination_runtime/` owns Deathstalker's mark/Darkest Night cycle, Internal Bleeding's effective-CP child and Implacable's actual-target driver. Generic policy execution retains capture of paid resources and selected primary. The module requests that context, prepares earned snapshots after capture, and runs its mark then child callbacks only after the existing primary guard. Lethal poison impacts still precede ordinary enemy-hit lookups; positive damage reads the generic matching resolution view. Child aura registration remains immediately before the native Rogue aura rows. Existing downstream Assassination modules and `auras::rogue::improved_garrote_active` are unchanged.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.
@@ -94,3 +132,15 @@ The server's public native harness and simulation's harness alias install the pl
 ## See Also
 
 - [[spell-casting]] — retained execution engine and native relationships
+
+## Master integration: linked Enhancement helpers
+
+The split also owns the newly landed Doom, Stormblast, Stormflurry and Stormwell helpers under `modules/enhancement/`. Their component state moves with the existing spending and Strike callbacks. Independent registry slots preserve the pre-OnCast snapshot, actual weapon impact, weapon-child multiplier, post-Arcane launch and separately scheduled after-cast update boundaries. Unlimited Power retains its native aura-refresh implementation in combat; the downstream Maelstrom spender calls its public grant function. Arcane explicit Splinter conjures pass the original source spell through `ConjureFromSpell`, while source-free Frost requests retain `ConjureCount`.
+
+## Compile-speed qualification
+
+A warm Rogue hero leaf touch at master `f4f20505a` versus split `c9bd6c7c9`, using the same `target-check` and `agent-run`, measured `cargo build --locked -p server --bins` at 17.03 → 11.91 seconds and `cargo test --locked -p server-simulation --lib --no-run` at 23.86 → 4.93 seconds. After the split, both commands compile only scripts and their host, not combat. These are incremental compile/link times, not cold builds or gameplay timings.
+
+The all-target check is a different loop: it measured 13.82 → 12.76 seconds because combat's existing `cfg(test)` registry still includes downstream module sources. Production combat fingerprints remain unchanged, but its unit-test crate recompiles. Removing that test-only reverse coupling requires relocating script-dependent combat tests into a downstream test host; it is the next slice, not part of the runtime extraction.
+
+Master's later Tempest buffs and Arc Discharge helper also live under `modules/enhancement/`. Independent `AfterChainResolved` and `BeforePendingScriptEvents` stages preserve the actual chain-recipient snapshot and discharge-before-Frost queue order. Master's `PreservePeriodicPhase` registry predicate remains intact.
