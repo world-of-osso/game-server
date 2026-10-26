@@ -111,6 +111,7 @@ register_modules! {
     frost_modifiers: (413, "modules/frost_modifiers.rs"),
     frost_orb: (415, "modules/frost_orb.rs"),
     frost_rapid_refreezing: (417, "modules/frost_rapid_refreezing.rs"),
+    fury_enrage: (723, "modules/fury_enrage.rs"),
     fury_hack_and_slash: (721, "modules/fury_hack_and_slash.rs"),
     fury_rampaging_ruin: (720, "modules/fury_rampaging_ruin.rs"),
     fury_spite: (722, "modules/fury_spite.rs"),

@@ -422,6 +422,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Fury player parity
 
+- Selected Cruelty392931 and Wrath and Fury392936 damage modifiers apply only while native Enrage184362 is active (`sc_warrior.cpp1106,4939–4947,5099–5113,7834–7835`). Their native rank values and other effects remain unchanged.
+
 - Selected Spite383852 applies its native rank values in tenths of a percent to damage and critical damage, as specified by the native display and SimC76f8118 `sc_warrior.cpp7894–7899`; preserve its native masks and rank curves.
 
 - Hack and Slash383873 increases only the next complete Raging Blow/Crushing Blow weapon sequence. Both native delayed weapon hits retain its native bonus; the final off-hand execution consumes one stack, even though its native proc-charge count is zero (`sc_warrior.cpp5061,5227`).
