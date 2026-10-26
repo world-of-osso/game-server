@@ -35,8 +35,7 @@ fn actual_damage(root: u32, armorless: bool) -> Vec<(u32, i32)> {
     }
     let before = run.app.world().resource::<ObservedCombatEvents>().0.len();
     let selected = if root == 384352 { run.actor } else { target };
-    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, root, Some(selected), false)
-        .unwrap();
+    enhancement_generation_tests::cast(&mut run, root, selected);
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
     let damage: Vec<_> = events[before..]
         .iter()
@@ -55,7 +54,8 @@ fn actual_damage(root: u32, armorless: bool) -> Vec<(u32, i32)> {
         .collect();
     assert!(
         !damage.is_empty(),
-        "actual native root{root} must deal its weapon/area damage"
+        "actual native root{root} must deal its weapon/area damage: {:?}",
+        &events[before..]
     );
     damage
 }
