@@ -101,6 +101,7 @@ mod enhancement_unleashed_proc_tests;
 mod enhancement_unleashed_tests;
 mod equipment_input_tests;
 mod equipped_set_tests;
+mod evoker_sweep_burst_tests;
 mod feral_burst_tests;
 mod feral_convoke_tests;
 mod feral_growth_tests;
