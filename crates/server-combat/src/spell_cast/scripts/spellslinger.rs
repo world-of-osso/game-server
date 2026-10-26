@@ -108,16 +108,22 @@ fn read_count(world: &World, caster: Entity, count: Count) -> u32 {
 }
 
 pub(super) fn after_cast_hook(spell: u32) -> Option<AfterCastHook> {
-    CAST_SOURCES
-        .iter()
-        .any(|row| row.spell == spell)
-        .then_some(after_cast)
+    let conjures = CAST_SOURCES.iter().any(|row| row.spell == spell);
+    (conjures || spell == 205021).then_some(after_cast)
 }
 
 fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let Some(spec) = specialization(world, caster) else {
         return;
     };
+    if spec.spec == 64 && spell.id == 205021 {
+        open_storm_window(world, caster);
+        return;
+    }
+    conjure_cast(world, caster, spell, spec);
+}
+
+fn conjure_cast(world: &mut World, caster: Entity, spell: &SpellInfo, spec: Specialization) {
     let Some(source) = CAST_SOURCES
         .iter()
         .find(|row| row.spec == spec.spec && row.spell == spell.id)
@@ -136,6 +142,24 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
         chain_multiplier: 1.0,
     };
     conjure(world, &ctx, target, spec, count);
+}
+
+fn open_storm_window(world: &mut World, caster: Entity) {
+    // SimC76f8118 sc_mage.cpp5021: execution opens the native window once;
+    // periodic damage must not refresh it or defer its first doubling benefit.
+    if !selected(world, caster, SPLINTERSTORM) {
+        return;
+    }
+    crate::auras::apply_aura(
+        world,
+        &crate::auras::AuraApplication {
+            caster,
+            target: caster,
+            spell_id: STORM_WINDOW,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
 }
 
 pub fn conjure_count(world: &mut World, caster: Entity, target: Entity, count: u32) {
@@ -217,15 +241,13 @@ struct PeriodicSource {
     spec: u32,
     spell: u32,
     count: Count,
-    window: (u32, u32),
 }
-// SimC76f8118 sc_mage.cpp4992–4996/5021: each real Ray tick conjures
-// the native Splinterstorm amount before opening/refreshing its window.
+// SimC76f8118 sc_mage.cpp4992–4996: each real Ray tick conjures the
+// native Splinterstorm amount; only execution opens the doubling window.
 const PERIODIC_SOURCES: &[PeriodicSource] = &[PeriodicSource {
     spec: 64,
     spell: 205021,
     count: Count::Talent(SPLINTERSTORM, 2),
-    window: (SPLINTERSTORM, STORM_WINDOW),
 }];
 
 pub(super) fn after_periodic_damage(world: &mut World, ctx: &EffectCtx, target: Entity) {
@@ -240,17 +262,4 @@ pub(super) fn after_periodic_damage(world: &mut World, ctx: &EffectCtx, target: 
     };
     let count = read_count(world, ctx.caster, source.count);
     conjure(world, ctx, target, spec, count);
-    let (talent, aura) = source.window;
-    if selected(world, ctx.caster, talent) {
-        crate::auras::apply_aura(
-            world,
-            &crate::auras::AuraApplication {
-                caster: ctx.caster,
-                target: ctx.caster,
-                spell_id: aura,
-                effect_mask: u32::MAX,
-                source: crate::auras::AuraSource::Cast,
-            },
-        );
-    }
 }
