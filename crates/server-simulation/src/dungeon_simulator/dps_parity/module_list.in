@@ -24,6 +24,7 @@ mod elemental_mechanics_tests;
 mod elemental_rotation_tests;
 mod engagement_tests;
 mod enhancement_generation_tests;
+mod enhancement_incoming_scope_tests;
 mod enhancement_linked_mode_tests;
 mod enhancement_mechanics_tests;
 mod enhancement_operand_tests;
