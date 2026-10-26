@@ -70,7 +70,7 @@ mod refresh;
 mod ret_crusade;
 pub(crate) use ret_crusade::after_spender as add_ret_crusade_spender_stacks;
 mod ret_sentence;
-pub(crate) use ret_sentence::track_cast as track_ret_sentence_cast;
+pub use ret_sentence::track_cast as track_ret_sentence_cast;
 pub(crate) mod reward_mods;
 pub mod rogue;
 #[cfg(test)]
@@ -359,7 +359,7 @@ impl AuraInstance {
             .map_or(0, |at| ((at - now).max(0.0) * 1000.0).round() as u32)
     }
 
-    pub(crate) fn stack_multiplier(&self) -> f32 {
+    pub fn stack_multiplier(&self) -> f32 {
         if ret_crusade::ignores_effect_stacks(self.spell_id) {
             1.0
         } else {
