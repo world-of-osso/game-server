@@ -283,6 +283,7 @@ mod shared_oil_tests;
 pub(crate) mod single_spell;
 mod snakeskin_tests;
 mod subtlety_finishers_tests;
+mod subtlety_secret_tests;
 mod subtlety_shadow_tests;
 mod spellslinger_hits_tests;
 mod subtlety_tests;
