@@ -509,15 +509,18 @@ def run_probes(probes, gated, log):
         else:
             twins[entry["id"]] = twin
     passed, failed = build_and_test(probes, log) if probes else ([], [])
+    for entry in passed:
+        entry["status"] = "probe passed"
+    # Measure now, while the tree is still the probe tree: the RED twins below rebuild it
+    # without the probes, so a later parity executable would lack their changes.
+    measure_then_write(passed, log)
     twin_passed, twin_failed = build_and_test(list(twins.values()), log) if twins else ([], [])
-    for entry in passed + twin_passed:
+    for entry in twin_passed:
         entry["status"] = "probe passed"
     for entry in failed + twin_failed:
         entry["status"] = "rejected"
     passed, failed = passed + twin_passed, failed + twin_failed
-    real = [e for e in passed + failed if not e["id"].endswith("-red")]
-    write_results([e for e in real if e["status"] != "probe passed"])
-    measure_then_write([e for e in real if e["status"] == "probe passed"], log)
+    write_results([e for e in failed if not e["id"].endswith("-red")])
     outcome = {e["id"]: e for e in passed + failed}
     proven = []
     for entry in gated:
