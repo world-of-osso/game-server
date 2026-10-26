@@ -15,6 +15,7 @@ mod assassination_seal_fate_tests;
 mod assassination_target_tests;
 mod aura342_tests;
 mod barbed_budget_tests;
+mod bare_ttd_tests;
 #[cfg(test)]
 mod beast_mastery_mechanics_tests;
 #[cfg(test)]
