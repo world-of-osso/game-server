@@ -20,6 +20,7 @@ mod assassination_target_tests;
 mod assassination_white_tests;
 mod aura342_tests;
 mod barbed_budget_tests;
+mod bare_ttd_tests;
 #[cfg(test)]
 mod beast_mastery_mechanics_tests;
 #[cfg(test)]
