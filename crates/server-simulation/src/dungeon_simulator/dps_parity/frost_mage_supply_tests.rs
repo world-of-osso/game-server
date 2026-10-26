@@ -7,6 +7,10 @@ use shared::protocol::CombatLogKind;
 fn frost_mage_native_frostbolt_executions_supply_fingers_and_brain_freeze() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(64, 1).unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
     let mut fingers = false;
     let mut brain_freeze = false;
     for _ in 0..40 {
@@ -37,6 +41,10 @@ fn frost_mage_native_frostbolt_executions_supply_fingers_and_brain_freeze() {
 fn frost_mage_native_orb_supplies_selected_splintering_orbs_conjures() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(64, 1).unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 444256));
     literal_rotation::execution::execute(
         run.app.world_mut(),
@@ -82,6 +90,10 @@ fn frost_mage_native_orb_supplies_selected_splintering_orbs_conjures() {
 fn frost_mage_native_augury_earned_executions_conjure_extra_splinters() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(64, 1).unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 1280165));
     for _ in 0..100 {
         crate::spell_cast::cast_triggered(
