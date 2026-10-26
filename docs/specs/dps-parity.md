@@ -12,6 +12,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Register each literal spec once, in spec-ID order. Adding a spec changes only its own rotation module and its registration line, not shared fields, initialization, dispatch, reporting or preparation branches.
 - Registered literal drivers apply to both Player and Follower identities unless the spec explicitly opts out. Preserve native actor identity, ordered precombat and existing report labels and keys, including null inactive reports.
 
+### Feral Thriving Growth
+
+Actual owned Rip1079 and Rake155722 periodic damage feeds the selected439528 accumulator using native per-source amounts, native active-dot exponent and selected Feral Green Thumb1270565. Keep the pinned random initial phase, uniform increments and1000-point threshold. Success casts native439531 on the actual tick recipient; other periodic sources cannot roll it (`sc_druid.cpp2416–2448,12311–12406`). Twin Sprouts, Rampancy and Bursting Growth remain separately unqualified.
+
 ### Feral Lunar Inspiration
 
 Selected native155580 applies its owned155627 override aura, so ordinary Moonfire8921 resolves to Cat Moonfire155625. Removing the talent removes only its owned override; reapplication restores it without changing learned spells. Native Cat Form must admit the resolved ordinary cast. SimC76f8118 `sc_druid.cpp4457–4465` supplies selected155625 behavior; TC `spell_dru_lunar_inspiration1543–1567` supplies the native aura lifecycle.

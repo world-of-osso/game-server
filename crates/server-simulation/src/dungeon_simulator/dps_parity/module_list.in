@@ -44,6 +44,7 @@ mod feral_growth_tests;
 mod feral_literal_tests;
 mod feral_lunar_tests;
 mod feral_native_tests;
+mod feral_snapshot_tests;
 mod feral_tests;
 mod fire_gap_tests;
 mod fire_literal_tests;
