@@ -379,6 +379,24 @@ fn havoc_mid2_four_piece_essence_break_advances_cycle_and_reduces_native_beam_re
     cast(&mut run, 191427, false);
     preparation::finish_pending_setup(&mut run).unwrap();
     havoc_tests::earn_havoc_fury(&mut run, 30.0);
+    let gaze = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(452497)
+        .unwrap()
+        .clone();
+    let actor = run.actor;
+    let primary = run.targets[0];
+    // Hard Meta's native GCD/forced movement must finish; never clear either state.
+    for _ in 0..100 {
+        if crate::spell_cast::read_native_cast_start(run.app.world_mut(), actor, &gaze, primary)
+            .is_ok()
+        {
+            break;
+        }
+        run.app.update();
+    }
     let essence_before = cooldown_remaining(&run, 258860);
     cast(&mut run, 452497, false);
     let essence_after = cooldown_remaining(&run, 258860);
