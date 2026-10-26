@@ -52,6 +52,8 @@ fn arms_literal_reference_executes_stance_and_rend_on_three_targets() {
 fn arms_literal_reference_earns_heroic_without_starving_mortal_strike() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(71, 1).unwrap();
+    let started = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started);
     engage(&mut run);
     for _ in 0..1800 {
         drive_player(&mut run).unwrap();

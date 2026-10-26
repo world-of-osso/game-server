@@ -8,6 +8,12 @@ Shadow Dance removal replaces owned385960. Its native cap supplies the initial c
 
 Sources: `subtlety_shadow.rs` cites exact pinned lines; `subtlety_shadow_tests.rs` exercises actual Dance expiry, counter decay, unearned exclusion and three-target Storm impacts. RED probe957d26c2d3 reproduces the missing earned counter; native expiry/decay and three-recipient residual regressions pass in561fb56b0d. Numerical acceptance remains separate. The first valid literal baseline at21ea477c4 was31,988.78ST/43,305.03three-target; it is not a parity claim.
 
+## Secondary residual source snapshots — 2026-10-25
+
+`server-spell-scripts/src/modules/secondary_copies.rs` stores the eligible attack IDs, active aura, native fraction/cap indices, payload and range. Spell hits and committed white swings supply their pre-target amount with the original critical bonus; the policy removes primary-only creature modifiers and resolves each secondary through `deal_copied_damage`, applying its own creature modifier and mitigation once. The source primary is excluded before capping; copied payloads cannot recursively enter the policy.
+
+Blade Flurry binds13877→22482, with native Dancing Steel target additions and the Nimble Flurry/Flawless Form condition. Source: pinned SimC76f8118 `sc_rogue.cpp2068–2105,3884–3905,8061–8087`; [behavior contract](../../specs/dps-parity.md#outlaw-literal-fixture). Native transfer RED→GREEN is landed; initial-strike payload selection and other missing Outlaw producers are separate.
+
 ## Marksmanship native relationships — 2026-10-25
 
 The [Marksmanship contract](../../specs/dps-parity.md#marksmanship-native-cast-relationships) separates native70448 values from pinned SimC76f8118 execution relationships. Runtime MM scripts live in `crates/server-spell-scripts/src/modules/`.
@@ -1162,6 +1168,8 @@ Backstab53 unconditional `$<mult>` joins variable339: `(max(0,min(player_level-1
 Named gap `FERAL_SPIRIT_INTRINSIC_AP_SOURCE`: archive pet_levelstats has2715 rows and zero29264. TC substitutes explicitly fake Strength22; this implementation does not. Intrinsic AP, armor/stamina shares, healing/AI/chase and full legal-loadout parity remain unsupported. Native centered training-dummy RED at89645435 reaches ownerAP100→10000 with damage10→10 and power(0,0); Merged afc0e5e5/protocol62865c23 controls24/24 pass (55.15s tests), check102.286s/fmt/readability clean. Live power asserts31→3100 SP/AP; ordinary dummy stays0/0. Independent/full-stat/legal-loadout acceptance remains open. Sources and proof ledger: data/class-completeness6-2026-10-12/guardian-{owner-power-source,owner-power-proof-ledger,wolf-pet-levelstats-source}.json.
 
 ## Warlock periodic shard funding — 2026-10-25
+
+Shared Wither stack/damage rules are documented separately in [Warlock periodic counters](warlock-periodic-counters.md).
 
 The [Destruction contract](../../specs/dps-parity.md#destruction-periodic-shard-funding) runs in the downstream [destruction_periodic module](../../../crates/server-spell-scripts/src/modules/destruction_periodic.rs). Its specialization-qualified callback passes the original periodic context to `energize_unit`, preserving the shared raw pool, source attribution and overflow. Affliction uses its separate Agony module; sharing Wither does not share Destruction funding.
 

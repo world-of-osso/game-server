@@ -914,7 +914,9 @@ fn build_instance(
         expires_at,
         stacks,
         max_stacks,
-        stack_expirations: async_stacks::initial_expirations(spell, max_stacks, stacks, expires_at),
+        stack_expirations: async_stacks::initial_expirations(
+            world, spell, max_stacks, stacks, expires_at,
+        ),
         charges: charges.clamp(0.0, 255.0) as u8,
         passive,
         hidden: passive || attributes(spell, 0) & ATTR0_DO_NOT_DISPLAY != 0,
@@ -1770,6 +1772,27 @@ pub fn spend_stack(world: &mut World, unit: Entity, instance_id: u32) {
 
 pub fn remove_instance(world: &mut World, unit: Entity, instance_id: u32, reason: RemoveReason) {
     remove_auras(world, unit, reason, |aura| aura.instance_id == instance_id);
+}
+
+/// Update one existing native aura effect, then refresh its derived views.
+/// Missing/expired instances are not recreated by a periodic script callback.
+pub fn set_effect_amount(
+    world: &mut World,
+    unit: Entity,
+    instance: u32,
+    index: u8,
+    amount: f32,
+) -> bool {
+    let Some(effect) = world
+        .get_mut::<ActiveAuras>(unit)
+        .and_then(|auras| auras.into_inner().get_mut(instance))
+        .and_then(|aura| aura.effects.iter_mut().find(|effect| effect.index == index))
+    else {
+        return false;
+    };
+    effect.amount = amount;
+    auras_changed(world, unit);
+    true
 }
 
 /// Recompute the unit's `StatModifiers` and `AuraStatMods` and mark the

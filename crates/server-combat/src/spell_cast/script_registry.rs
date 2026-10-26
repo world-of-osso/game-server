@@ -100,6 +100,8 @@ pub type OnCastHook = fn(&mut World, Entity, u32, u8);
 pub type AfterPaymentHook = fn(&mut World, Entity, &[(CostPool, f32)]);
 pub type HitHook = fn(&mut World, Entity, Entity, u8);
 pub type EffectHitLookup = fn(u32, u8) -> Option<HitHook>;
+pub type EffectHandlerLookup = fn(u32, u8) -> Option<super::effects::EffectHandler>;
+pub type TargetFilterHook = fn(&World, Entity, &SpellInfo, u8, Option<Entity>, &mut Vec<Entity>);
 pub type HitLookup = fn(u32) -> Option<HitHook>;
 pub type ContextHitHook = fn(&mut World, &EffectCtx<'_>, Entity);
 pub type ContextHitLookup = fn(u32) -> Option<ContextHitHook>;
@@ -177,10 +179,13 @@ pub enum SpellScriptHook {
     AfterResourceValues(AfterCastLookup),
     TargetPlan(TargetPlanLookup),
     PeriodicPrimaryDamage(PeriodicPrimaryDamageHook),
+    CounterOnlyDotStacks(&'static [u32]),
     TargetDamageMultiplier(TargetDamageMultiplierHook),
     AfterSpenderStacks(AfterCastHook),
     AuraRedirect(AuraRedirectHook),
     EffectHit(EffectHitLookup),
+    EffectHandler(EffectHandlerLookup),
+    TargetFilter(TargetFilterHook),
     Hit(HitLookup),
     ContextHit(ContextHitLookup),
     AreaFilter(AreaFilterLookup),
@@ -190,6 +195,8 @@ pub enum SpellScriptHook {
     CriticalChance(CriticalChanceHook),
     EarlyAuraRegistration(AuraRegistrationHook),
     ConsumedEffectValues(&'static [(u32, u8)]),
+    /// Explicit source-script override of synchronous native stacking.
+    AsynchronousAuras(&'static [u32]),
     LaunchDelay(LaunchDelayLookup),
     DotMasteryMultiplier(DotMasteryMultiplierHook),
     CastTimeProcs(&'static [u32]),
@@ -217,6 +224,8 @@ pub enum SpellScriptHook {
     AfterDirectDamageBeforeItems(PeriodicDamageFinishedHook),
     LandedDamagePolicy(LandedDamageHook),
     AbilityUseAvailable(AbilityUseLookup),
+    /// Sourced foreground readiness, checked before knowledge aliases and cast admission.
+    ActionAvailable(AbilityUseLookup),
     ChannelPeriodic(ChannelPeriodicLookup),
     BeforeNativeOnCast(BeforeNativeOnCastHook),
     PrepareStoredDamage(PrepareStoredDamageHook),
@@ -268,6 +277,29 @@ impl SpellScriptRegistry {
         self.modules.iter().flat_map(|module| module.iter())
     }
 
+    pub fn effect_handler(self, spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+        self.hooks().find_map(|hook| match hook {
+            SpellScriptHook::EffectHandler(lookup) => lookup(spell, index),
+            _ => None,
+        })
+    }
+
+    pub fn filter_targets(
+        self,
+        world: &World,
+        caster: Entity,
+        spell: &SpellInfo,
+        effect: u8,
+        primary: Option<Entity>,
+        units: &mut Vec<Entity>,
+    ) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::TargetFilter(run) = hook {
+                run(world, caster, spell, effect, primary, units);
+            }
+        }
+    }
+
     pub fn effect_hit(self, spell: u32, index: u8) -> Option<HitHook> {
         self.hooks().find_map(|hook| match hook {
             SpellScriptHook::EffectHit(lookup) => lookup(spell, index),
@@ -281,6 +313,13 @@ impl SpellScriptRegistry {
                 register(scripts);
             }
         }
+    }
+
+    pub fn counter_only_dot_stacks(self, spell: u32) -> bool {
+        self.hooks().any(|hook| match hook {
+            SpellScriptHook::CounterOnlyDotStacks(spells) => spells.contains(&spell),
+            _ => false,
+        })
     }
 
     pub fn consumes_effect_value(self, spell: u32, index: u8) -> bool {
@@ -365,6 +404,16 @@ impl Default for SpellScriptRegistry {
         #[cfg(not(test))]
         Self::new(&[])
     }
+}
+
+pub(crate) fn asynchronous_aura(world: &World, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::AsynchronousAuras(spells) => spells.contains(&spell),
+            _ => false,
+        })
 }
 
 pub fn policies(world: &World) -> impl Iterator<Item = &'static Policy> + use<> {
@@ -780,6 +829,16 @@ pub fn landed_damage_policies(
             run(world, caster, target, spell, amount, periodic);
         }
     }
+}
+
+pub fn action_available(world: &World, caster: Entity, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .all(|hook| match hook {
+            SpellScriptHook::ActionAvailable(test) => test(world, caster, spell),
+            _ => true,
+        })
 }
 
 pub fn ability_use_available(world: &World, caster: Entity, spell: u32) -> bool {

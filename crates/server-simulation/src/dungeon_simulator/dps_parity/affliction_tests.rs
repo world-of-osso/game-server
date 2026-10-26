@@ -3,6 +3,121 @@ use super::*;
 
 #[test]
 #[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_wither_landed_ticks_earn_native_nightfall() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(265, 1).unwrap();
+    engage(&mut run);
+    let (caster, target) = (run.actor, run.targets[0]);
+    assert!(crate::auras::has_aura(run.app.world(), caster, 108558));
+    let mut earned = false;
+    for _ in 0..10 {
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster,
+                target,
+                spell_id: 445474,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        for _ in 0..100 {
+            run.app.update();
+        }
+        earned = crate::auras::has_aura(run.app.world(), caster, 264571);
+        if earned {
+            break;
+        }
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(445474)
+                && event.periodic
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0)
+    );
+    // SimC76f8118 init1190–1225: actual Wither replaces Corruption in this threshold stream.
+    assert!(
+        earned,
+        "actual owned Wither ticks must earn selected native Nightfall"
+    );
+    crate::spell_cast::creature_cast(run.app.world_mut(), caster, 686, Some(target), false)
+        .unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .is_none(),
+        "earned native Nightfall makes the ordinary Shadow Bolt instant"
+    );
+    for _ in 0..20 {
+        run.app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(run.app.world(), caster, 264571),
+        "the admitted instant Shadow Bolt consumes its earned Nightfall use"
+    );
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_shadow_bolt_landed_hits_earn_native_shard_instability() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(265, 1).unwrap();
+    engage(&mut run);
+    let (caster, target) = (run.actor, run.targets[0]);
+    assert!(crate::auras::has_aura(run.app.world(), caster, 1260264));
+    for _ in 0..40 {
+        crate::spell_cast::creature_cast(run.app.world_mut(), caster, 686, Some(target), false)
+            .unwrap();
+        for _ in 0..70 {
+            run.app.update();
+        }
+        if crate::auras::has_aura(run.app.world(), caster, 1260269) {
+            break;
+        }
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(686)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0)
+    );
+    // SimC76f8118 sc_warlock_actions.cpp887–890/init1242–1245: selected talent,
+    // landed Shadow Bolt, native effect1 PRD chance and actual1260269 buff.
+    assert!(
+        crate::auras::has_aura(run.app.world(), caster, 1260269),
+        "landed native Shadow Bolts must earn the selected Shard Instability buff"
+    );
+    crate::spell_cast::creature_cast(run.app.world_mut(), caster, 1259790, Some(target), false)
+        .expect("earned Instability must admit free native Unstable Affliction at zero shards");
+    for _ in 0..10 {
+        run.app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(run.app.world(), caster, 1260269),
+        "actual instant UA must consume its admitted Instability use"
+    );
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
 fn affliction_selected_malefic_grasp_projects_to_real_native_channel() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(265, 1).unwrap();

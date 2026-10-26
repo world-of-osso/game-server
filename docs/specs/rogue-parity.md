@@ -10,6 +10,8 @@ Assassination259 combat and the shared Rogue attack-speed path follow pinned Sim
 - [x] Envenom snapshots Amplifying Poison's native bonus at its native owned383414 stack threshold, then consumes exactly that threshold before generating new poison. Preserve other casters' stacks and sub-threshold state. Source: `sc_rogue.cpp4281–4310`.
 - [x] Selected14190 rolls its live effect0 chance on critical CP-builder hits, including Fan of Knives and both Mutilate hands, and casts native effect1 child14189. White swings, noncrits, periodic ticks, Pistol Shot, Shuriken Toss and Poisoned Knife do not qualify. Do not repeat the proc through deferred dispatch. Source: `sc_rogue.cpp2178–2180,4471–4473,5085–5086,5137–5138,5933–5934,6351–6352,7921–7937`.
 
+- [x] Kingsbane follows pinned default `bugs=1`: apply its extra native Potent Assassin direct bonus and extra native Implacable effect1 direct/effect2 periodic bonus, in addition to ordinary native family-mask modifiers. Read live passive amounts; preserve coefficients, costs, cadence and earned ramp. Source: `sc_rogue.cpp4921–4945`.
+
 ### Stealth and bleed children
 
 - [x] Selected381632 makes Garrote retain392401 effect1's native bonus when applied during real stealth or the native post-stealth window. Leaving the last real stealth aura grants392401. Readiness and recovery storage both use zero Garrote recovery during those windows, including the first stealth cast; preserve real costs and GCDs. Source: `sc_rogue.cpp4550–4561,4604–4609,7351–7378,11121–11133`.
@@ -20,6 +22,10 @@ Assassination259 combat and the shared Rogue attack-speed path follow pinned Sim
 
 - [x] Native Garrote establishes one owned457129 mark using selected457052 effect0 stacks. Transfer it off the previous target without refreshing the same target's existing mark. Finishers meeting effect1's native CP threshold consume one stack and deal457157 damage. Source: `sc_rogue.cpp4599,8732–8817`.
 - [x] Depletion with selected457058 grants457280 after1ms, including native Energy. A maximum-CP Envenom retains its native damage/critical bonus, reapplies the native mark count and consumes Darkest Night. Lower-CP casts consume neither marks nor Darkest Night while it is active. This lifecycle qualification is spec259-only. Source: `sc_rogue.cpp2435–2440,2569–2574,8732–8817`.
+
+- [x] Selected457054 dispatches native457193 once per landed white swing against its actual victim while that victim has the caster's own active457129 mark. Retargeting to an unmarked victim must not dispatch against another target's mark. Native payload data supplies damage. Source: `sc_rogue.cpp3411–3419,10282,10615–10618`.
+
+- [x] Selected457055 copies its native effect0 fraction of actual off-mark direct, periodic and white damage to the caster's live457129 mark through457236. Damage to the marked victim does not self-copy. Preserve the source's resolved crit/modifiers without rolling them again or recursively dispatching residual callbacks. Source: `sc_rogue.cpp6618–6631,11568–11605`.
 
 ### Shared auto-attack speed
 
@@ -47,6 +53,9 @@ Assassination259 combat and the shared Rogue attack-speed path follow pinned Sim
 
 Paths below are under `crates/server-simulation/src/dungeon_simulator/dps_parity/`:
 
+- `assassination_kingsbane_tests.rs` — actual direct/periodic damage with and without native Mastery/Implacable passives proves the pinned double-dip ratios.
+- `assassination_focus_tests.rs` — actual off-mark direct/periodic damage copies to the owned mark at the native fraction, with no self-copy or second crit.
+- `assassination_white_tests.rs` — actual landed weapon hits and marked/unmarked retargeting.
 - `assassination_target_tests.rs` — real poison recipient state/health damage and Kingsbane count exclusion.
 - `assassination_poison_mechanics_tests.rs` — earned ramp and Amplifying consumption.
 - `assassination_hero_tests.rs` — real stealth exit/spread, native children and mark cycles.
@@ -57,7 +66,7 @@ Paths below are under `crates/server-simulation/src/dungeon_simulator/dps_parity
 ## Known gaps (current cycle)
 
 - [ ] Qualify these mechanics and spec259 ST/3T output against the parent contract's ±10% band.
-- [ ] Quietus Celeris, mark-target death, Unshakeable Drive's delayed consumer, Mass Casualty and Hunt Them Down remain unqualified by this slice.
+- [ ] Quietus Celeris, mark-target death, Unshakeable Drive's delayed consumer, and Mass Casualty remain unqualified by this slice.
 
 ## Out of scope
 

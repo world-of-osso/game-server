@@ -1137,7 +1137,7 @@ fn selects_targets(
 ) -> bool {
     effects::is_handled(effect)
         || cosmetic::is_visual_only(spell)
-        || scripts::effect_handler(spell.id, effect.index).is_some()
+        || scripts::effect_handler(registry, spell.id, effect.index).is_some()
         || scripts::on_effect_hit(registry, spell.id, effect.index).is_some()
         || scripts::cast_effect(spell.id, effect.index).is_some()
         || scripts::on_cast_effect(spell.id, effect.index).is_some()
@@ -2048,6 +2048,9 @@ fn validate_start_with_policy(
     explicit: Option<Entity>,
     check: StartCheck,
 ) -> Result<Option<Entity>, CastFailure> {
+    if !script_registry::action_available(world, caster, spell.id) {
+        return Err(CastFailure::CasterAuraState);
+    }
     check_ordinary_caster_life(world, caster, spell)?;
     casting_restriction::check_cast(world, caster, spell)?;
     shapeshift::check_cast(world, caster, spell)?;
@@ -2528,6 +2531,7 @@ fn begin_cast_with_primary(
     let mut admitted = spell.clone();
     admitted.cast_primary_target = primary;
     admitted.cast_proc_mods = scripts::snapshot_proc_modifiers(world, caster, spell);
+    scripts::snapshot_frost_launch_auras(world, caster, &mut admitted);
     crate::stand_state::stand_to_cast(world, caster, attributes(&admitted, 0));
     if !admitted.empower_stages.is_empty() {
         return empower::begin(world, caster, &admitted, target);
@@ -2560,8 +2564,18 @@ fn execute_and_channel(
     spell: &SpellInfo,
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
+    // Resource-sized native channels must retain the same prepayment duration
+    // as their aura. SimC76f8118 sc_rogue.cpp4784–4795 freezes Killing Spree CP.
+    let channel = if is_channeled(spell) {
+        let costs = spell_costs(world, caster, spell)?;
+        Some(resources::snapshot(world, caster, spell, &costs))
+    } else {
+        None
+    };
     execute_cast_with_primary(world, caster, spell, target, spell.cast_primary_target)?;
-    start_channel(world, caster, spell, target);
+    if let Some(channel) = channel {
+        start_channel(world, caster, &channel, target);
+    }
     Ok(())
 }
 
@@ -3114,10 +3128,15 @@ fn plan_targets(
 
 /// Generic TRIGGER_SPELL64 runs only in LAUNCH/LAUNCH_TARGET mode
 /// (SpellEffects.cpp594–598); authored scripts keep their own hit handling.
-fn launches(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
+fn launches(world: &World, spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
     effect.effect == effects::EFFECT_TRIGGER_SPELL
         && scripts::cast_effect(spell.id, effect.index).is_none()
-        && scripts::effect_handler(spell.id, effect.index).is_none()
+        && scripts::effect_handler(
+            *world.resource::<script_registry::SpellScriptRegistry>(),
+            spell.id,
+            effect.index,
+        )
+        .is_none()
 }
 
 /// `Spell::HandleLaunchPhase` (Spell.cpp8493–8527): launch-mode effects resolve on
@@ -3132,7 +3151,7 @@ fn resolve_launch_effects(
 ) {
     for planned in plan {
         let effect = &spell.effects[planned.index];
-        if !launches(spell, effect)
+        if !launches(world, spell, effect)
             || !scripts::effect_enabled(world, caster, spell.id, effect.index)
         {
             continue;
@@ -3267,11 +3286,15 @@ fn resolve_effects(
             handler(world, &ctx, effect);
             continue;
         }
-        let handler = if launches(spell, effect) {
+        let handler = if launches(world, spell, effect) {
             None
         } else {
-            scripts::effect_handler(spell.id, effect.index)
-                .or_else(|| effects::handler(effect.effect))
+            scripts::effect_handler(
+                *world.resource::<script_registry::SpellScriptRegistry>(),
+                spell.id,
+                effect.index,
+            )
+            .or_else(|| effects::handler(effect.effect))
         };
         let hook = scripts::on_effect_hit(
             *world.resource::<script_registry::SpellScriptRegistry>(),
@@ -3530,10 +3553,7 @@ pub fn resolving_targets<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'
 }
 
 /// Actual direct damage of this native resolution, isolated from nested child casts.
-pub(super) fn resolving_damage<'w>(
-    world: &'w World,
-    ctx: &EffectCtx<'_>,
-) -> Option<&'w [(Entity, f32)]> {
+pub fn resolving_damage<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w [(Entity, f32)]> {
     Some(resolving_frame(world, ctx)?.damage.as_slice())
 }
 

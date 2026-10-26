@@ -12,11 +12,11 @@ import argparse
 import glob
 import json
 import os
+import sys
 from pathlib import Path
 
 RESULTS = Path("/home/osso/.worktrees/train/results")
-REFERENCES = Path("/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/"
-                  "dps-parity-2026-10-21/all-spec-expanded-references")
+PINNED = Path("/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21")
 TARGETS = {1: "single", 3: "three"}
 
 
@@ -36,6 +36,18 @@ def latest_outputs():
     return {spec: (output, status) for spec, (_, output, status) in best.items()}
 
 
+def reference_for(spec, count):
+    """The pinned reference: specs re-run individually keep theirs at the top level, and a
+    `-fixed` three-target run replaces that spec's original three-target reference."""
+    kind = TARGETS[count]
+    for path in (PINNED / f"{spec}.reference-fixed.{kind}.normalized.json",
+                 PINNED / f"{spec}.reference.{kind}.normalized.json",
+                 PINNED / "all-spec-expanded-references" / f"{spec}.reference.{kind}.normalized.json"):
+        if path.exists():
+            return path
+    return path
+
+
 def per_spell(actions, dps):
     """spell_id -> (dps, name) summed over actors."""
     spells = {}
@@ -51,10 +63,13 @@ def per_spell(actions, dps):
 
 def compare(spec, output, count):
     native_path = output / f"{spec}.native.{count}.json"
-    reference_path = REFERENCES / f"{spec}.reference.{TARGETS[count]}.normalized.json"
+    reference_path = reference_for(spec, count)
     if not native_path.exists() or not reference_path.exists():
         return None
-    native = json.loads(native_path.read_text())["combat"]
+    native = json.loads(native_path.read_text()).get("combat")
+    if native is None:  # the run stopped before combat (e.g. an unsupported APL expression)
+        print(f"{native_path}: no combat section, skipped", file=sys.stderr)
+        return None
     reference = json.loads(reference_path.read_text())
     ours = per_spell(native["actions"], native["dps"])
     theirs = per_spell(reference["actions"], reference["dps"])
