@@ -31,6 +31,7 @@ mod enhancement_incoming_scope_tests;
 mod enhancement_linked_mode_tests;
 mod enhancement_mechanics_tests;
 mod enhancement_operand_tests;
+mod enhancement_spending_tests;
 mod enhancement_strike_tests;
 mod enhancement_tests;
 mod enhancement_unleashed_tests;
