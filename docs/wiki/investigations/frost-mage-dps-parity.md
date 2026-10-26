@@ -24,8 +24,9 @@ Verified: 2026-10-26. Spec64 uses the literal pinned76f8118 APL and native70448 
 | Rapid Refreezing native tick clock and qualified Spike-only source | RED8455eb05e5/351688fab3 → GREENf19726f012; costed controls retained | ca856c659 |
 | Ray execution-time10s Splinterstorm window; Frost Overflowing Energy feedback | RED1f25b0f870/1b8be9a776 → GREEN208adb8ca9;27Frost/2CI/15costed controls | ca48fe12e |
 | Shared rounded channel clock and native health-period selection | Ray RED2d0ea30702/FoF REDd8c6a93202;67probe cases and34landing cases GREEN | 4c9083c0c |
+| Channel cast-time separation and charged span/period snapshot lifecycle | RED417d517a80/4145dd6cd2→72native GREEN;39landing cases | 513fe59af |
 
-Latest confirmed measurement, trained45d940de on4c9083c0c:172,980.544444 ST and263,644.423333 three-target DPS (88.1855%/88.2905% of reference). Both remain below90%:3,559.324166 ST and5,104.640590 three-target DPS are still needed. This tree includes several shared/class landings; the gain is not an isolated channel-clock effect. The earlier208adb8ca9 measurement was153,092.12/232,077.22. The ±10% goal remains open; lead owns the next combined all-spec remeasurement. Artifacts: private `parity-64/post-channel-clock/`.
+Latest confirmed measurement, train3bc2989ded on513fe59af:175,976.231111 ST and254,855.573333 three-target DPS (89.7127%/85.3473% of reference). Both remain below90%:563.637499 ST and13,893.490590 three-target DPS are still needed. Ray is8casts/64ticks on every measured seed/target count. This tree includes several shared/class landings; do not attribute its delta solely to channel changes. Earlier4c9083c0c measured172,980.544444/263,644.423333, and208adb8ca9 measured153,092.12/232,077.22. The ±10% goal remains open; lead owns the next combined all-spec remeasurement. Artifacts: private `parity-64/post-channel-casttime-64/`.
 
 ## Investigation traps and remaining work
 

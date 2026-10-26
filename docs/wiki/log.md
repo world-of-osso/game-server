@@ -2,6 +2,9 @@
 ## 2026-10-26 — Proc-mask-qualified charged modifiers
 
 [Modifier charge consumption](systems/spell-casting.md#native-proc-mask-qualified-modifier-charges-2026-10-26) now qualifies consumers against explicit native proc masks. Arcane's real consecutive paid-cast regression is paired with its tests-only RED commit in one train cycle; native qualification and seven-spec same-master comparisons remain pending. The generic rule shares the existing family matcher and changes no native values.
+## 2026-10-26 — Midnight equipped item damage
+
+[Item payloads](systems/midnight-item-damage.md) use the native driver's class−9 budget and role, preserve the Acidbrood missile, and wire Void's missing action. Actual64/62/263 equipper REDs validate positive6884/5163budgets but zero Acidbrood damage and no Void hits. Native proc children retain casting-item context; Ret stat-item code stays separate. GREEN/measurement remain pending.
 
 ## 2026-10-26 — Independent Destruction Echo
 
@@ -112,7 +115,7 @@
 [Warlock funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) uses the downstream critical-aware periodic callback and existing native power pipeline, qualified only on Destruction. [Target DoT duration](systems/simc-apl.md#native-target-dot-duration) reads active owned native state without pandemic carry; both have native GREEN and cross-spec controls. Numerical267 acceptance remains separate.
 ## 2026-10-26 — Channel duration modifier separation
 
-[Channel snapshots](systems/spell-casting.md#channel-duration-and-charged-modifier-snapshots) separate execute-time modifiers from duration and retain the pre-consumption charged-modifier snapshot for span/period consistency. Native Grasp RED417d517a80 loses its channel state; trace4145dd6cd2 additionally proves charged Period loss on rebase. Generic fixes pass72native cases, including12ticks across three casts, per-cast native haste snapshots, instant Bolt, seven channel families and the existing fractional-deadline control. SimC is authoritative; cached TC explicitly differs. Landing/measurement remain separate.
+[Channel snapshots](systems/spell-casting.md#channel-duration-and-charged-modifier-snapshots) separate execute-time modifiers from duration and retain the pre-consumption charged-modifier snapshot for span/period consistency. Native Grasp RED417d517a80 loses its channel state; trace4145dd6cd2 additionally proves charged Period loss on rebase. Generic fixes pass72native cases, including12ticks across three casts, per-cast native haste snapshots, instant Bolt, seven channel families and the existing fractional-deadline control. SimC is authoritative; cached TC explicitly differs. Plain landing3bc2989ded passes39cases and lands513fe59af; the identical-input265seed70448 Grasp runaway drops7casts/476ticks→17/63. [Frost](investigations/frost-mage-dps-parity.md) owns its still-below90% first measurement.
 
 ## 2026-10-26 — Shared hasted channel rounding
 
