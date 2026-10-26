@@ -262,6 +262,78 @@ fn havoc_annihilation_offhand_execution_can_refund_native_fury() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_exergy_real_hunt_and_retreat_grant_native_buff_before_damage_and_cap_refresh() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 206476),
+        "real selected native Exergy talent required"
+    );
+    havoc_tests::earn_havoc_fury(&mut run, 60.0);
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    cast(&mut run, 370965, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let remaining = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.caster == run.actor && aura.spell_id == 208628)
+            .expect("ordinary native Hunt/Retreat must produce the real Exergy buff")
+            .expires_at
+            .unwrap()
+            - crate::auras::aura_now(run.app.world())
+    };
+    let duration = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(208628)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
+        .duration
+        .unwrap()
+        .duration_ms as f64
+        / 1000.0;
+    assert!(
+        remaining(&run) > duration - 2.0 && remaining(&run) <= 30.0,
+        "actual native Exergy duration must survive the real Hunt launch and movement"
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let buff = events
+        .iter()
+        .position(|event| {
+            event.spell_id == Some(208628) && event.kind == CombatLogKind::AuraApplied
+        })
+        .expect("real Exergy application");
+    let hit = events
+        .iter()
+        .position(|event| event.spell_id == Some(370966) && event.kind == CombatLogKind::Damage)
+        .expect("real Hunt impact");
+    assert!(
+        buff < hit,
+        "SimC2822–2841 grants Exergy before the movement ability deals damage"
+    );
+    cast(&mut run, 198793, true);
+    assert!(
+        (remaining(&run) - 30.0).abs() < 0.001,
+        "SimC10010–10013 adds native duration to remaining Exergy, capped at30s"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_mid2_four_piece_essence_break_advances_cycle_and_reduces_native_beam_recovery() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
