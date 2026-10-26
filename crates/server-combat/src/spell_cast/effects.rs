@@ -2038,6 +2038,7 @@ fn deal_source_damage_and_report(
         periodic,
     );
     if !resolved_source {
+        super::scripts::enhancement_weapon_damage(world, ctx, target, amount);
         super::script_registry::resolved_damage(world, ctx, target, crit, amount);
     }
     if periodic {

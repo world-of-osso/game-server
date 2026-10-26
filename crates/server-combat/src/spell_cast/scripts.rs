@@ -50,6 +50,7 @@ pub(crate) use script_registry::melee_residual as after_melee_residual;
 pub(super) use script_registry::spell_residual as after_spell_residual;
 mod chrono_flame;
 pub(super) use script_registry::after_modifier_consumption as apply_echo_policies;
+mod enhancement_doom;
 mod enhancement_imbues;
 mod enhancement_modes;
 mod enhancement_nova;
@@ -57,6 +58,8 @@ mod enhancement_rod;
 pub(super) use enhancement_rod::after_resolution as after_resolved_hits;
 pub(crate) use enhancement_rod::snapshot_rod_amount;
 mod enhancement_spending;
+mod enhancement_stormblast;
+pub(super) use enhancement_stormblast::after_weapon_damage as enhancement_weapon_damage;
 mod enhancement_strikes;
 mod enhancement_tier;
 mod enhancement_unleashed;
@@ -68,6 +71,7 @@ pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScri
     maelstrom_weapon::register(scripts);
     enhancement_imbues::register(scripts);
     enhancement_modes::register(scripts);
+    enhancement_stormblast::register(scripts);
     enhancement_strikes::register(scripts);
     enhancement_tier::register(scripts);
 }
@@ -217,6 +221,7 @@ pub(super) fn finish_scripted_launch(
 
 /// TC OnCast runs once after successful checks, before spending and launch.
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
+    enhancement_stormblast::snapshot(world, caster, spell_id, depth);
     script_registry::on_cast(world, caster, spell_id, depth);
     windwalker::scripted_combo_cast(world, caster, spell_id, depth);
     script_registry::before_judgment_on_cast(world, caster, spell_id, depth);
