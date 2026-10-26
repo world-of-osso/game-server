@@ -38,6 +38,44 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_focused_hatred_scales_real_demonsurge_by_resolved_enemy_count() {
+    fn hit(count: usize, selected: bool) -> i32 {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, count).unwrap();
+        let actor = run.actor;
+        if !selected {
+            let known = run
+                .app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap();
+            let spells = known.iter().filter(|spell| *spell != 452405).collect();
+            run.app
+                .world_mut()
+                .entity_mut(actor)
+                .insert(crate::class_progression::KnownSpells::fixture(spells));
+        }
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 452416, None, 1);
+        let hits = damage(&run, Some(452416));
+        assert_eq!(
+            hits.len(),
+            count,
+            "real native Demonsurge resolves each fixture opponent"
+        );
+        hits[0].amount
+    }
+    for (count, multiplier) in [(1, 1.5), (3, 1.3)] {
+        let baseline = hit(count, false);
+        let selected = hit(count, true);
+        assert!(
+            (selected as f64 / baseline as f64 - multiplier).abs() < 0.001,
+            "selected Focused Hatred must scale real Demonsurge at {count} targets: {baseline} -> {selected}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_felblade_starts_autoattack_on_attackable_neutral_dummy() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
