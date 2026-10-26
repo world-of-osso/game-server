@@ -49,9 +49,13 @@
 ## 2026-10-25 — Warlock periodic funding and target DoT facts
 
 [Warlock funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) uses the downstream critical-aware periodic callback and existing native power pipeline, qualified only on Destruction. [Target DoT duration](systems/simc-apl.md#native-target-dot-duration) reads active owned native state without pandemic carry; both have native GREEN and cross-spec controls. Numerical267 acceptance remains separate.
+## 2026-10-26 — Shared hasted channel rounding
+
+[Channel clocks](systems/spell-casting.md#rounded-hasted-channel-clocks--2026-10-26) share a rounded native aura/cast period and rebuild hasted duration from the original tick count. Ray's false expiry and FoF's auxiliary-control deadline have genuine REDs. Codefad33456f passes67native cases across all seven requested families, including FoF's final damage tick and Convoke's4s lifetime. No spell-ID branch or non-channel period change is added. Landing/all-spec DPS acceptance remain separate.
+
 ## 2026-10-26 — Frost Mage native proc qualification
 
-[Frost Mage parity](investigations/frost-mage-dps-parity.md) records landed Deep Shatter, Brain Freeze, paid-Lance, Orb Fingers and Rapid Refreezing proofs. Latest confirmed ST/three-target measurements are77.57%/77.90% of reference; Overflowing Energy feedback passed native GREENd6ef48c03d; landing and measurement wait on an unrelated Arcane fixture control. Periodic-rule probe5ecd5357cb failed the two new feedback controls and produced no measurement.
+[Frost Mage parity](investigations/frost-mage-dps-parity.md) records landed Deep Shatter, Brain Freeze, paid-Lance, Orb Fingers and Rapid Refreezing proofs. Ray's execution-time Splinterstorm window and Frost Overflowing Energy landed viac48fe12e/train208adb8ca9 with27Frost/2CI/15costed controls GREEN; current measurements and shared-gate dependencies are recorded there. [Per-hit captures](investigations/frost-mage-dps-parity.md#per-hit-factor-investigation--2026-10-26) qualify the consumption paths and enumerate actual modifier products; a separate source-qualified Ray rounding RED2d0ea30702 observes nine positive ticks instead of eight at constant haste, with a0.012690355 expiry fraction. [Shared clock correction](systems/spell-casting.md#rounded-hasted-channel-clocks--2026-10-26) now has seven-family GREEN qualification; DPS acceptance remains separate. Periodic-rule probe5ecd5357cb failed the then-unimplemented feedback controls and produced no measurement.
 
 ## 2026-10-25 — Frost Mage native hit relationships
 
