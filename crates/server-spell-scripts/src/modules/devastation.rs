@@ -12,7 +12,13 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::PeriodicPrimaryDamage(causality_tick),
 ];
 
-fn causality_tick(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _amount: f32) {
+fn causality_tick(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    _amount: f32,
+    _crit: bool,
+) {
     const CAUSALITY: u32 = 375777;
     let primary_tick = ctx.spell.id == 356995 && ctx.spell.cast_primary_target == Some(target);
     if !primary_tick {
