@@ -3,6 +3,8 @@ use super::single_spell::{SpellProbe, capture_cast};
 use super::*;
 use crate::auras::ActiveAuras;
 use crate::spell_cast::effects::factor_capture::FactorCapture;
+use crate::spell_cast::test_harness::ObservedCombatEvents;
+use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "native Ret FV factor comparison needs exact private profile/traits"]
