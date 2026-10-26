@@ -419,6 +419,8 @@ Equipped native MID2 Enhancement two-piece1296627 makes real Voltaic Blaze apply
 
 ### Shared literal snapshot operands
 
+`target.distance` reads the actual native actor-to-selected-target spatial distance, including action-scored target overrides and later position changes. Missing native positions fail explicitly; movement-event distance remains a separate configured-event fact.
+
 `action.<alias>.damage` reads the proposed target's native direct school-damage snapshot, including current power, modifiers, mitigation and expected crit, without casting or sampling RNG. Weapon-damage predictions remain explicit errors. Action cooldown/duration and bare `ticking` retain action context. `pet.<summon alias>.active` reads actual living, unexpired, same-map owned summons; absent summons are inactive.
 
 ## Marksmanship literal controller
