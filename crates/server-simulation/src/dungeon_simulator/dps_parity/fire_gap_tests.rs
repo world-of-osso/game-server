@@ -759,6 +759,85 @@ fn fire_feedback_fevered_stack_uses_native_talent_critical_damage() {
     );
 }
 
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_meteorite_pyrocosm_impacts_reduce_active_fire_blast_recharge() {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    start_native(&mut run, 108853, target);
+    let bindings = Bindings {
+        actions: [("fire_blast".into(), 108853)].into(),
+        ..default()
+    };
+    let remaining = |run: &Run| {
+        NativeFacts::new(
+            run.app.world(),
+            run.actor,
+            &bindings,
+            Encounter::Fixture {
+                started_at: 0.0,
+                duration: 300.0,
+                style: FightStyle::Patchwerk,
+            },
+            1,
+        )
+        .value("cooldown.fire_blast.charges_fractional")
+        .unwrap()
+    };
+    let before = remaining(&run);
+    start_native(&mut run, 449569, target);
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.spell_id == Some(449569)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+        "native Meteorite actually impacts before reading recharge"
+    );
+    let after = remaining(&run);
+    assert!(
+        after > before,
+        "a native Pyrocosm meteorite impact reduces active Fire Blast recharge: {before} -> {after}"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_meteorite_pyrocosm_fireballs_launch_native_meteorites() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+    health.current = health.max * 0.5;
+    for _ in 0..24 {
+        start_native(&mut run, 133, target);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..20 {
+            run.app.update();
+        }
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(449569)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+        "selected Pyrocosm produces actual native meteorite damage from Fireball hits"
+    );
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {
