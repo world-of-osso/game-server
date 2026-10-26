@@ -93,6 +93,7 @@ register_modules! {
     elemental_ascendance: (220, "modules/elemental_ascendance.rs"),
     elemental_communication: (2620, "modules/elemental_communication.rs"),
     elemental_fusion: (2621, "modules/elemental_fusion.rs"),
+    elemental_offering: (2623, "modules/elemental_offering.rs"),
     elemental_tier: (2622, "modules/elemental_tier.rs"),
     empower_evoker: (1000, "modules/empower_evoker.rs"),
     enhancement: (1000, "modules/enhancement.rs"),
