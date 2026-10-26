@@ -117,11 +117,7 @@ fn snapshot_bolt_bonus(
     if spell.id != 686 || spell.cast_was_hardcast {
         return None;
     }
-    let aura = world.get::<ActiveAuras>(caster)?.iter().find(|aura| {
-        aura.caster == caster
-            && aura.spell_id == BUFF
-            && spell.cast_proc_mods.contains(&aura.instance_id)
-    })?;
+    let aura = find_admitted_use(world, caster, spell)?;
     let amount = aura.effects.iter().find(|effect| effect.index == 1)?.amount;
     Some(ChargedSpellModifier {
         aura_spell_id: BUFF,
@@ -131,11 +127,27 @@ fn snapshot_bolt_bonus(
     })
 }
 
+fn find_admitted_use<'a>(
+    world: &'a World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Option<&'a combat::auras::AuraInstance> {
+    let auras = world.get::<ActiveAuras>(caster)?;
+    spell
+        .cast_proc_mods
+        .iter()
+        .filter_map(|id| auras.get(*id))
+        .find(|aura| aura.caster == caster && aura.spell_id == BUFF)
+}
+
 fn consume_earned_use(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    // SimC76f8118 actions877–878/2182/2338: ordinary instant Bolt spends one
-    // admitted native modifier charge. Channels do not admit a cast-time use,
-    // so PreserveUnadmittedProcs leaves their one manual decrement here.
-    if matches!(spell.id, 198590 | 1261153) {
+    if !matches!(spell.id, 198590 | 1261153) {
+        return;
+    }
+    // SimC76f8118 actions877–878/2182/2338: exactly one execution-owned use.
+    // Native Grasp shares Bolt's cast-time mask; generic charge consumption
+    // already spends its admitted use. Drain Soul's unadmitted use is manual.
+    if find_admitted_use(world, caster, spell).is_none() {
         super::cast_relationships::decrement(world, caster, BUFF);
     }
 }
