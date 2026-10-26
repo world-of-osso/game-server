@@ -262,6 +262,7 @@ mod shared_liquid_luster_tests;
 mod shared_oil_tests;
 pub(crate) mod single_spell;
 mod snakeskin_tests;
+mod subtlety_ancient_tests;
 mod subtlety_shadow_tests;
 mod subtlety_techniques_tests;
 mod spellslinger_hits_tests;
