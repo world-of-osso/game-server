@@ -24,7 +24,7 @@ Actual owned Rip1079 and Rake155722 periodic damage feeds the selected439528 acc
 
 ### Feral Unseen attacks
 
-An actual landed primary Bite with selected1263657 rolls its native chance per frozen effective combo point. The existing cast-resource context retains those points independently of payment; the readonly Bite accessor reads its retained extra-Energy fraction, not its Saber-amplified damage effectiveness. Select an actual enemy inside the talent's native range, and preserve the chosen recipient and native CP-fraction×extra-Energy factor through the pinned400–500ms delayed Unseen1263890 impact and native1271863 bleed. Selected1263658 earns native1263939 for its native duration times the retained points (`sc_druid.cpp2776–2804,4321–4327,4891–4977`). The Unseen bleed pays one actual damage event per scheduled dot tick, using native effect0's coefficient and period. The second native periodic row is not a second SimC dot clock (`action.cpp838–865`); do not compound both rows into duplicate damage. Other registered spender consumers retain their existing resource snapshots. Greater-than-three-target Swipe and live-versus-snapshotted Tiger's Fury on Unseen remain separately unqualified.
+An actual landed primary Bite with selected1263657 rolls its native chance per frozen effective combo point. The existing cast-resource context retains those points independently of payment; the readonly Bite accessor reads its retained extra-Energy fraction, not its Saber-amplified damage effectiveness. Select an actual enemy inside the talent's native range, and preserve the chosen recipient and native CP-fraction×extra-Energy factor through the pinned400–500ms delayed Unseen1263890 impact and native1271863 bleed. Selected1263658 earns native1263939 for its native duration times the retained points (`sc_druid.cpp2776–2804,4321–4327,4891–4977`). The Unseen bleed pays one actual damage event per scheduled dot tick, using native effect0's coefficient and period. The second native periodic row is not a second SimC dot clock (`action.cpp838–865`); do not compound both rows into duplicate damage. Other registered spender consumers retain their existing resource snapshots. Selected1263660 makes actual Tiger's Fury5217 grant native1263962 at its native maximum stacks. Each eligible ordinary Cat action consumes one stack through its native ICD and emits a guaranteed Unseen attack using maximum effective combo points and full extra-Energy fraction, without granting or spending either pool (`sc_druid.cpp3745–3749,4879,11313–11316`). Apply this once per cast, not once per AoE recipient or triggered child; Cat Form alone cannot grant the uses. Greater-than-three-target Swipe and live-versus-snapshotted Tiger's Fury on Unseen remain separately unqualified.
 
 ### Feral Cat Convoke
 
@@ -375,6 +375,17 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Native77220 mastery affects only the pinned `affected_by.chaotic_energies` action set. Actual unresolved direct hits and periodic updates sample1+mastery×U(0.5,1). The source-marked Chaos Bolt, Shadowburn and Rain of Fire payload instead use selected native387275 effect0 as the lower fraction. Read native mastery values; do not adjust damage coefficients (SimC76f8118 `sc_warlock_actions.cpp480–489` and each action's explicit flags).
 - Read-only direct-damage projections use the analytic mean without advancing native RNG or casting. Already-resolved copies do not receive a second multiplier; pets, items, racials and unmarked actions receive none from this relationship.
 
+### Shared pet prerequisites
+
+- Headless native Player actors must have runtime-only native pet storage before a real summon. Do not fabricate an authenticated character, follower identity, actor or resource grant. Hunter default-record provisioning reuses that same storage.
+- Generic effect148 must forward its actual hit destination/unit, native costs and value to every child effect on the per-cast clone. Do not mutate catalog data (TC a352b1fa SpellEffects.cpp725–788).
+- Generic implicit85 is DEST_DEST_FRONT_LEFT: use native radius/direction, native caster origin when no destination is supplied, and existing collision/allowed-Z handling. Do not use spell-ID branches (TC a352b1fa Spell.cpp1690–1738).
+- Qualify the native267 summon regressions and protected255/254/253/265 probes before landing shared behavior. Pet attack lists, coefficients and class producers remain separate work.
+### Destruction guaranteed-crit damage
+
+- Selected Conflagration of Chaos387108 scales Conflagrate17962 and Shadowburn17877 damage by one plus the live caster spell-crit fraction. The ability-specific guaranteed crit is not the multiplier input. Actual damage and pure forecasts must share this rule without rerolling damage or rescaling resolved copies (SimC76f8118 actions4511–4517,4838–4844).
+- Preserve the existing Chaos Bolt crit-chance scaling; do not apply it twice. Native crit changes, not a reference-derived damage coefficient, must drive this relationship.
+
 ### Shared Hellcaller Wither counters
 
 - Native Wither445474 keeps its actual counter stacks, but its periodic damage ignores that count. An ordinary recast preserves earned stacks without adding a refresh stack; explicit native stack applications retain normal counter advancement. Preserve native coefficients, tick phase and lifetime. Both265 and267 share this rule (SimC76f8118 `sc_warlock_actions.cpp1066,1174–1186`).
@@ -571,6 +582,10 @@ The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native speci
 Native aura271 effects match both their source spell family and their effect's SpellClassMask. Burning Core1299975 affects Fire Nova only; Sentinel's Mark1253601 applies its Aimed and Wildfire bonuses independently. Unrelated spells and other families receive neither bonus. Lashing Flames retains its native Flame Shock mask. The documented Colossus Smash208086 exception continues to grant owner damage through the common Warrior target multiplier. Sources: pinned SimC `sc_shaman.cpp7010–7028`, `sc_hunter.cpp1278,1493–1494`, and `sc_warrior.cpp1723–1734`.
 
 ### Enhancement fixture driver
+
+Selected Stormwell1264762 runs a guaranteed equipped-native Windfury callback once on each landed primary Crash187874 impact, not once per AoE recipient. Preserve its native internal cooldown, payload and Unruly Winds behavior; ordinary imbue proc chances remain unchanged (SimC76f8118 `sc_shaman.cpp6141–6145`).
+
+Native Unleashed1252431 remains Magic and cannot trigger weapon imbues. A main-hand weapon pointer and `shaman_attack_t` inheritance do not override SimC's data-Melee admission check (`sc_shaman.cpp3039–3055`, pinned SpellDataDump1252431).
 
 Spec263 parity executes the pinned MID2 Enhancement action rows through the shared literal evaluator, using native action admission, equipment and aura/target facts. A real player uses this driver without loading AssistedCombat diagnostic inputs; no follower profile is fabricated. Windfury/Flametongue setup occurs only in precombat. Thorim's LB/CL choice follows successful foreground LB/CL/Tempest dispatch and Tempest target count. This selects actions; it does not certify the underlying Enhancement proc, counter or damage mechanics.
 
