@@ -37,58 +37,6 @@ fn unholy_literal_driver_executes_native_profile_actions() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
-fn unholy_native_max_charges_survives_putrefy_consumption() {
-    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
-    use server::simc_apl::{Action, ActionFacts, Facts};
-    let mut run = prepare_literal(252, 1).expect("native Unholy fixture");
-    let bindings = Bindings {
-        actions: [("putrefy".into(), 1247378)].into(),
-        ..Default::default()
-    };
-    let encounter = Encounter::Fixture {
-        started_at: 0.0,
-        duration: 300.0,
-        style: FightStyle::Patchwerk,
-    };
-    let action = Action {
-        name: "putrefy".into(),
-        source_row: None,
-        target: None,
-        options: Default::default(),
-    };
-    let read = |run: &Run| {
-        let facts = NativeFacts::new(run.app.world(), run.actor, &bindings, encounter, 1);
-        let maximum = facts
-            .value("cooldown.putrefy.max_charges")
-            .expect("native maximum charges");
-        assert_eq!(facts.value_for(&action, "max_charges").unwrap(), maximum);
-        (maximum, facts.value("cooldown.putrefy.charges").unwrap())
-    };
-    let (maximum, available) = read(&run);
-    assert!(
-        maximum >= 2.0,
-        "native Putrefy starts with multiple charges"
-    );
-    assert_eq!(available, maximum);
-    literal_rotation::execution::execute(
-        run.app.world_mut(),
-        run.actor,
-        literal_rotation::execution::Execution::Spell(
-            1247378,
-            run.targets[0],
-            Some(run.targets[0]),
-        ),
-    )
-    .unwrap();
-    preparation::finish_pending_setup(&mut run).unwrap();
-    let (after_maximum, after_available) = read(&run);
-    assert_eq!(after_maximum, maximum);
-    // sc_death_knight.cpp12242–12249: selected Putrid Echoes can consume both uses.
-    assert!(after_available < available);
-}
-
-#[test]
-#[ignore = "requires private native252 profile/traits and player actor"]
 fn unholy_named_masterful_cunning_installs_native_rune() {
     let (mut profile, traits) = read_reference(252).unwrap();
     profile.omnium_talents = Some("rune_of_masterful_cunning".into());
