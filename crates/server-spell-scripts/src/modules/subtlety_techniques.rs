@@ -10,7 +10,10 @@ use shared::components::{ActiveSpec, PowerType};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterWhiteHit(store_from_white),
-    SpellScriptHook::AfterForegroundSpecial(collect_after_builder),
+    SpellScriptHook::BeforeNativeOnCast(begin_builder),
+    SpellScriptHook::ComboPointGain(record_builder_gain),
+    SpellScriptHook::AfterForegroundSpecial(finish_builder_launch),
+    SpellScriptHook::AfterResolvedHits(collect_after_builder_hits),
     SpellScriptHook::OwnsPolicyProc(owns_proc),
 ];
 
@@ -20,12 +23,18 @@ const DANCE: u32 = 185313;
 const SHADOWCRAFT: u32 = 426594;
 const ANCIENT_ARTS: u32 = 1268939;
 const ANCIENT_ARTS_BUFF: u32 = 1269163;
-const ENERGIZE: u32 = 30;
 
 #[derive(Component)]
 struct WhiteProgress {
     hits: u32,
     ready_at: f64,
+}
+
+#[derive(Component)]
+struct BuilderGain {
+    spell: u32,
+    gained: bool,
+    launched: bool,
 }
 
 fn owns_proc(spell: u32) -> bool {
@@ -92,20 +101,55 @@ fn read_storage(world: &World, caster: Entity) -> Option<(u32, u8)> {
         .map(|aura| (aura.instance_id, aura.stacks))
 }
 
-fn collect_after_builder(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    let combo_builder = spell.effects.iter().any(|effect| {
-        effect.effect == ENERGIZE
-            && effect.misc_values[0] == PowerType::ComboPoints as i32
-            && effect.base_points > 0.0
-    });
-    if !combo_builder || !is_subtlety(world, caster) {
+fn begin_builder(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
+    if depth == 0 && is_subtlety(world, caster) {
+        world.entity_mut(caster).insert(BuilderGain {
+            spell: spell.id,
+            gained: false,
+            launched: false,
+        });
+    }
+}
+
+fn record_builder_gain(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    if depth != 0 {
         return;
     }
+    if let Some(mut pending) = world.get_mut::<BuilderGain>(caster)
+        && pending.spell == spell
+    {
+        pending.gained = true;
+    }
+}
+
+fn finish_builder_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if let Some(mut pending) = world.get_mut::<BuilderGain>(caster)
+        && pending.spell == spell.id
+    {
+        pending.launched = true;
+    }
+    collect_finished_builder(world, caster, spell.id);
+}
+
+fn collect_after_builder_hits(world: &mut World, ctx: &effects::EffectCtx<'_>) {
+    if ctx.depth == 0 {
+        collect_finished_builder(world, ctx.caster, ctx.spell.id);
+    }
+}
+
+fn collect_finished_builder(world: &mut World, caster: Entity, spell: u32) {
+    let ready = world
+        .get::<BuilderGain>(caster)
+        .is_some_and(|pending| pending.spell == spell && pending.gained && pending.launched);
+    if !ready || spell_cast::has_pending_spell_hit(world, caster, spell) {
+        return;
+    }
+    world.entity_mut(caster).remove::<BuilderGain>();
     let Some((instance, stored)) = read_storage(world, caster) else {
         return;
     };
-    // sc_rogue.cpp2705–2716: self Energize resolves before this foreground hook,
-    // including for builders whose hostile damage still has missile travel time.
+    // SimC76f8118 sc_rogue.cpp2705–2716: all ordinary per-hit grants
+    // precede storage collection, even when native hits arrive after launch.
     let (current, maximum) = powers::power_value(world, caster, PowerType::ComboPoints)
         .expect("native Rogue combo-point pool");
     let consumed = stored.min((maximum - current).max(0.0) as u8);
