@@ -54,6 +54,87 @@ fn finish_observed_channel(run: &mut Run, spell: u32) -> (f32, f64) {
     panic!("native{spell} did not complete within12s");
 }
 
+fn cast_with_native_readiness(run: &mut Run, spell: u32) {
+    use crate::spell_cast::CastFailure;
+    for _ in 0..1200 {
+        match crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            spell,
+            Some(run.targets[0]),
+            false,
+        ) {
+            Ok(()) => return,
+            Err(
+                CastFailure::OnGlobalCooldown
+                | CastFailure::InProgress
+                | CastFailure::NotEnoughPower(_),
+            ) => run.app.update(),
+            Err(reason) => panic!("native{spell} refused: {reason:?}"),
+        }
+    }
+    panic!("native{spell} never became ready through native regeneration");
+}
+
+#[test]
+#[ignore = "native269 complete FoF channel must follow damage, not auxiliary stun cadence"]
+fn shared_channel_native_fists_preserves_final_damage_tick_and_deadline() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(269, 1).unwrap();
+    remove_equipped_proc_drivers(&mut run);
+    engage(&mut run);
+    // Actual native TP earns Chi; no power, proc or haste grants.
+    cast_with_native_readiness(&mut run, 100780);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    cast_with_native_readiness(&mut run, 100780);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    cast_with_native_readiness(&mut run, 113656);
+    let damage_period = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 113656 && aura.caster == run.actor)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.trigger_spell == 117418)
+        .unwrap()
+        .period_ms;
+    let advertised = run
+        .app
+        .world()
+        .get::<CastState>(run.actor)
+        .unwrap()
+        .duration;
+    // SimC76f8118 sc_monk.cpp1789–1796: four scheduled1s ticks plus tick0.
+    // The native auxiliary166ms stun row is not the FoF damage clock.
+    assert!(
+        (advertised * 1000.0 - (4 * damage_period) as f32).abs() <= 0.1,
+        "FoF deadline must equal four rounded damage periods, not auxiliary control periods: duration{advertised}s, damage_period{damage_period}ms"
+    );
+    finish_observed_channel(&mut run, 113656);
+    let hits = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(117418)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
+    assert_eq!(
+        hits, 5,
+        "FoF retains all four scheduled native damage ticks plus its initial hit"
+    );
+}
+
 #[test]
 #[ignore = "requires exact native265 player/profile for full Drain Soul channel"]
 fn shared_channel_native_drain_soul_completes_without_rounding_partial() {
