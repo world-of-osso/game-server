@@ -2,3 +2,4 @@ crates/server-simulation/src/dungeon_simulator/dps_parity/module_list.in merge=u
 docs/specs/dps-parity.md merge=union
 docs/wiki/** merge=union
 crates/server-spell-scripts/src/modules.rs merge=union
+crates/server-combat/src/auras/stacked_next_spell_uses.in merge=union
