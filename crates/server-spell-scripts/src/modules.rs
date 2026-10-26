@@ -45,6 +45,7 @@ register_modules! {
     affliction_grasp: (2654, "modules/affliction_grasp.rs"),
     affliction_instability: (2651, "modules/affliction_instability.rs"),
     affliction_nathreza: (2655, "modules/affliction_nathreza.rs"),
+    affliction_nathreza_targets: (2659, "modules/affliction_nathreza_targets.rs"),
     affliction_nightfall: (2652, "modules/affliction_nightfall.rs"),
     affliction_presence: (2659, "modules/affliction_presence.rs"),
     affliction_procs: (2652, "modules/affliction_procs.rs"),

@@ -12,6 +12,7 @@ mod affliction_darkglare_tests;
 mod affliction_embrace_tests;
 mod affliction_empowerment_tests;
 mod affliction_grasp_tests;
+mod affliction_nathreza_targets_tests;
 mod affliction_nathreza_tests;
 mod affliction_nightfall_tests;
 mod affliction_presence_tests;
