@@ -8,6 +8,7 @@ fn policy_traversal_keeps_the_original_relationship_order() {
     assert_eq!(
         names,
         [
+            "SIMC_DEVASTATION_MELT_ARMOR_REAPPLICATION_EXTEND",
             "SIMC_DEVASTATION_MASS_DISINTEGRATE_CONSUMER",
             "SIMC_DEVASTATION_DEEP_BREATH_PAYLOAD",
             "SIMC_DEVASTATION_MANEUVERABLE_DEEP_BREATH_PAYLOAD",
