@@ -64,6 +64,15 @@ pub(super) fn register(scripts: &mut AuraScripts) {
         CRASH_STACKS,
         AuraScript {
             check_proc: Some(strike_hook_owns_payload),
+            on_stack_loss: Some(super::enhancement_mid2::expire_stacks),
+            on_remove: Some(super::enhancement_mid2::clear),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        CRASH_BUFF,
+        AuraScript {
+            on_remove: Some(super::enhancement_mid2::clear),
             ..Default::default()
         },
     );
@@ -226,7 +235,9 @@ fn cast_crash_payload(world: &mut World, caster: Entity, target: Entity, depth: 
     }
     // SimC4545/4553–4558: split total damage among native recipients, scaled by stacks.
     payload.cast_damage_multiplier = Some(
-        f32::from(stacks) / count as f32 * super::enhancement_flurry::multiplier(world, caster),
+        f32::from(stacks) / count as f32
+            * super::enhancement_flurry::multiplier(world, caster)
+            * super::enhancement_mid2::multiplier(world, caster),
     );
     spell_cast::launch_triggered_spell(world, caster, &payload, Some(target), depth + 1);
 }
