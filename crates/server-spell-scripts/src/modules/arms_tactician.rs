@@ -26,7 +26,9 @@ fn owns_proc(spell: u32) -> bool {
 fn roll_tactician(world: &mut World, caster: Entity, spell: &SpellInfo, costs: &[(CostPool, f32)]) {
     // SimC76f8118 sc_warrior.cpp1458–1471: positive paid foreground Rage,
     // native30% plus selected Brute Force's Slam/Heroic Strike bonus.
-    if world.get::<ActiveSpec>(caster).is_none_or(|spec| spec.0 != 71)
+    if world
+        .get::<ActiveSpec>(caster)
+        .is_none_or(|spec| spec.0 != 71)
         || combat::spell_cast::spent(costs, PowerType::Rage) <= 0.0
         || !combat::auras::has_aura(world, caster, TACTICIAN)
     {
@@ -46,7 +48,8 @@ fn roll_tactician(world: &mut World, caster: Entity, spell: &SpellInfo, costs: &
 
 fn read_tactician_chance(world: &World, caster: Entity, action: u32) -> f32 {
     let base = script_effect_value(world, caster, TACTICIAN, 0);
-    let brute_force = matches!(action, 1464 | 1269383) && combat::auras::has_aura(world, caster, BRUTE_FORCE);
+    let brute_force =
+        matches!(action, 1464 | 1269383) && combat::auras::has_aura(world, caster, BRUTE_FORCE);
     let bonus = if brute_force {
         script_effect_value(world, caster, BRUTE_FORCE, 0)
     } else {
@@ -57,7 +60,14 @@ fn read_tactician_chance(world: &World, caster: Entity, action: u32) -> f32 {
 
 fn restore_overpower_charge(world: &mut World, caster: Entity) {
     let action = combat::auras::overrides::resolve_spell(world, caster, OVERPOWER);
-    let spell = world.resource::<SpellStore>().get(action).expect("native Overpower action");
-    let category = spell.categories.as_ref().expect("native Overpower charge category").charge_category;
+    let spell = world
+        .resource::<SpellStore>()
+        .get(action)
+        .expect("native Overpower action");
+    let category = spell
+        .categories
+        .as_ref()
+        .expect("native Overpower charge category")
+        .charge_category;
     combat::spell_cast::restore_charges(world, caster, category, 1);
 }

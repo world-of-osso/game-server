@@ -32,11 +32,28 @@ fn snapshot_cleave_targets(world: &mut World, caster: Entity, spell: &SpellInfo,
     }
     // sc_warrior.cpp3714–3720 checks execution n_targets, not post-hit survivors.
     // Reuse native Cleave selection before its damage can kill any recipient.
-    let effect = spell.effects.iter().find(|effect| effect.index == 0).expect("native Cleave damage effect");
-    let cap = spell.target_restrictions.as_ref().map_or(0, |limits| limits.max_targets);
-    let recipients = targets::select_targets(world, caster, spell.cast_primary_target, spell, effect, cap, false)
-        .expect("admitted native Cleave has supported target selection");
-    world.entity_mut(caster).insert(CleaveRecipients(recipients.len()));
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Cleave damage effect");
+    let cap = spell
+        .target_restrictions
+        .as_ref()
+        .map_or(0, |limits| limits.max_targets);
+    let recipients = targets::select_targets(
+        world,
+        caster,
+        spell.cast_primary_target,
+        spell,
+        effect,
+        cap,
+        false,
+    )
+    .expect("admitted native Cleave has supported target selection");
+    world
+        .entity_mut(caster)
+        .insert(CleaveRecipients(recipients.len()));
 }
 
 fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo, target: Option<Entity>) {

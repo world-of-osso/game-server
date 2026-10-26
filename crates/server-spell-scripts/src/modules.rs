@@ -110,6 +110,7 @@ register_modules! {
     sweeping_strikes: (711, "modules/sweeping_strikes.rs"),
     swiftmend: (1000, "modules/swiftmend.rs"),
     touch_of_death: (240, "modules/touch_of_death.rs"),
+    unrelenting_onslaught: (714, "modules/unrelenting_onslaught.rs"),
     voltaic_blaze: (250, "modules/voltaic_blaze.rs"),
     warrior: (40, "modules/warrior.rs"),
     windwalker_momentum: (50, "modules/windwalker_momentum.rs"),

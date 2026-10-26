@@ -96,8 +96,18 @@ fn arms_anger_management_reduces_avatar_and_smash_from_actual_paid_rage() {
 #[test]
 #[ignore = "private current native DB and exact spec71 inputs"]
 fn arms_sudden_death_onslaught_reduces_bladestorm_and_applies_overwhelmed() {
+    assert_earned_onslaught(71, 163201);
+}
+
+#[test]
+#[ignore = "private current native DB and exact spec72 inputs"]
+fn fury_sudden_death_onslaught_reduces_bladestorm_and_applies_overwhelmed() {
+    assert_earned_onslaught(72, 280735);
+}
+
+fn assert_earned_onslaught(spec: u32, execute_action: u32) {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_measurement(71, 1).unwrap();
+    let mut run = prepare_measurement(spec, 1).unwrap();
     engage(&mut run);
     let actor = run.actor;
     let target = run.targets[0];
@@ -149,7 +159,7 @@ fn arms_sudden_death_onslaught_reduces_bladestorm_and_applies_overwhelmed() {
     execute(
         run.app.world_mut(),
         actor,
-        Execution::Spell(163201, target, Some(target)),
+        Execution::Spell(execute_action, target, Some(target)),
     )
     .unwrap();
     let seconds_per_stack =

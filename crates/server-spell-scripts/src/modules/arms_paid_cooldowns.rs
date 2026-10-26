@@ -23,7 +23,9 @@ fn reduce_paid_arms_cooldowns(
 ) {
     // SimC76f8118 sc_warrior.cpp1450–1455/1519–1527: Ignore Pain is
     // excluded for Arms; native effect1 divides actual displayed Rage spent.
-    if world.get::<ActiveSpec>(caster).is_none_or(|spec| spec.0 != 71)
+    if world
+        .get::<ActiveSpec>(caster)
+        .is_none_or(|spec| spec.0 != 71)
         || spell.id == IGNORE_PAIN
         || !combat::auras::has_aura(world, caster, ANGER_MANAGEMENT)
     {
@@ -47,6 +49,9 @@ fn read_reduction_seconds(world: &World, caster: Entity, paid: f32) -> f64 {
         .get(PowerType::Rage)
         .expect("native Rage display units")
         .display_modifier;
-    assert!(divisor > 0.0 && units > 0, "native Anger Management divisors must be positive");
+    assert!(
+        divisor > 0.0 && units > 0,
+        "native Anger Management divisors must be positive"
+    );
     f64::from(paid) / f64::from(units) / f64::from(divisor)
 }
