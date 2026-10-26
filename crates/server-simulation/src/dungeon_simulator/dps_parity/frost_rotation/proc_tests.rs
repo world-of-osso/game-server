@@ -222,6 +222,23 @@ fn frost_km_consumption_extends_active_breath() {
         "native Breath expiry {before} -> {after}, expected extension{expected}");
 }
 
+#[test]
+#[ignore = "native251 paid Runic Power must roll actual Runic Empowerment rune restoration"]
+fn frost_paid_runic_power_restores_native_runes() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(251);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    for _ in 0..2400 {
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.spell_id == Some(49143) && event.kind == CombatLogKind::CastSuccess), "fixture must pay native RP for actual Frost Strike");
+    assert!(events.iter().any(|event| event.spell_id == Some(193486) && event.kind == CombatLogKind::Energize && event.amount > event.overflow), "paid RP must earn effective Runic Empowerment rune restoration, not a synthetic rotation grant");
+}
+
 fn erw_full_recharge(run: &Run) -> f64 {
     let bindings = super::bindings::build();
     NativeFacts::new(
