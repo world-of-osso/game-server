@@ -96,11 +96,8 @@ fn next_pyre(world: &mut World, actor: Entity, aura: &AuraInstance, index: u8) {
     if index != 2 {
         return;
     }
-    let Some(effect) = aura.effects.iter().find(|effect| effect.index == index) else {
-        return;
-    };
     // SimC buff.cpp182/2525–2527: application is tick0; scheduled ticks1–3 also cast.
-    if effect.periodic_ticks <= 3 {
+    if combat::auras::paid_periodic_ticks(world, aura.caster, actor, FLIGHT) <= 3 {
         cast_pyre(world, actor);
     }
 }
