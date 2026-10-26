@@ -2024,6 +2024,7 @@ fn deal_source_damage_and_report(
         crate::stand_state::stand_on_damage(world, target);
     }
     crate::creature_aggro::add_school_threat(world, target, ctx.caster, amount, school);
+    super::scripts::record_arcane_touch_damage(world, ctx, target, amount);
     let mut event = log_amount(ctx, target, CombatLogKind::Damage);
     event.amount = amount as i32;
     event.blocked = blocked as i32;

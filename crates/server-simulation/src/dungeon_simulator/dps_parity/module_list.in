@@ -2,6 +2,7 @@
 // .gitattributes merges this file with merge=union so concurrent spec branches that
 // each add a module line do not conflict; a duplicate line fails to compile (E0428).
 mod active_enemy_tests;
+#[cfg(test)] mod arcane_tests;
 mod affliction_grasp_tests;
 mod affliction_nathreza_tests;
 mod affliction_tests;
@@ -102,6 +103,8 @@ mod hunter_fixture;
 #[cfg(test)]
 mod hunter_focus_tests;
 mod hunter_followup_tests;
+mod hunter_howl_cycle_tests;
+mod hunter_howl_tests;
 mod hunter_mark_mask_tests;
 mod hunter_salvo_tests;
 #[cfg(test)]
