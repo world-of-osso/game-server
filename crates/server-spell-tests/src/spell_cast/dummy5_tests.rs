@@ -58,7 +58,7 @@ fn dummy5_demons_bite_without_rank_keeps_catalog_fury() {
     assert_eq!(bite(false), 25.0);
 }
 
-fn chaos_strike(chance: u32) {
+fn chaos_strike(chance: u32) -> f32 {
     let mut proc = world_db()
         .unwrap()
         .spell_store()
@@ -73,11 +73,14 @@ fn chaos_strike(chance: u32) {
         12,
     )
     .expect("real catalog");
+    let caster = h.caster;
+    apply(&mut h, caster, caster, 197125, u32::MAX);
     h.set_power(PowerType::Fury, 50.0);
     h.cast_and_deliver(162794, Some(h.npc));
     h.advance(4);
     assert!(damage(&h, 222031, h.npc) > 0);
     assert_eq!(damage(&h, 199547, h.npc), 0, "native delay is300ms");
+    let fury_before_offhand = h.power(PowerType::Fury);
     h.advance(3);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert_eq!(
@@ -93,6 +96,15 @@ fn chaos_strike(chance: u32) {
             .filter(|e| e.spell_id == Some(193840))
             .count(),
         usize::from(chance == 100)
+    );
+    fury_before_offhand
+}
+#[test]
+fn dummy5_native_refund_waits_for_actual_chaos_strike_offhand() {
+    assert_eq!(
+        chaos_strike(100),
+        10.0,
+        "no refund before actual native off-hand execution (SimC76f8118 sc_demon_hunter.cpp7472–7510)"
     );
 }
 #[test]
