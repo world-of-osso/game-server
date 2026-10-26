@@ -128,10 +128,15 @@ fn shared_stat_items_rite_native_rating_children_use_linked_driver_value_across_
             .unwrap()
             .amount;
         assert!(amount > 0.0, "native linked BP0 owns the rank-scaled value");
-        let payloads: BTreeSet<_> = driver
+        let payloads: BTreeSet<_> = run
+            .app
+            .world()
+            .resource::<SpellStore>()
+            .get(driver.spell_id)
+            .expect("native Rite payload catalog")
             .effects
             .iter()
-            .filter(|effect| effect.aura_type == 4 && effect.trigger_spell != 0)
+            .filter(|effect| effect.aura == 4 && effect.trigger_spell != 0)
             .map(|effect| effect.trigger_spell)
             .collect();
         assert!(
