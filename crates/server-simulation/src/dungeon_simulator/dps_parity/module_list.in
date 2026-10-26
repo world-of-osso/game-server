@@ -115,6 +115,7 @@ mod shaman263_tier_tests;
 mod shared_fact_extension_tests;
 pub(crate) mod single_spell;
 mod snakeskin_tests;
+mod subtlety_tests;
 mod trigger_primary_tests;
 mod venomcursed_tests;
 mod warrior_proc_tests;
