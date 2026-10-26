@@ -1,3 +1,7 @@
+## 2026-10-25 — Frost Mage native hit relationships
+
+[Frost Mage parity](investigations/frost-mage-dps-parity.md): owned Freezing and native Shatter, primary/secondary exclusion, Controlled Instincts copied damage, Infused Splinters and root/payload report-ID traps. Native proofs and pending proc/flight boundaries are recorded separately.
+
 ## 2026-10-25 — Shared native consumable bindings
 
 [Shared profile effects](systems/character-stats.md#shared-profile-effects--2026-10-25): rune/flask/potion identities, native Liquid Luster per-stack scaling and common expiry, literal prepot aura/cooldown aging, and talent-conditioned temporary oil. Numerical parity remains measurement-gated.

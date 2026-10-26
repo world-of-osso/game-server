@@ -2,6 +2,7 @@
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
+use super::frost_mage_procs::{FINGERS, THERMAL};
 use crate::auras::{self, ActiveAuras, AuraApplication, AuraSource};
 use crate::spell_cast::{self, PlannedEffect, TargetPlan, effects::EffectCtx, targets};
 use crate::spell_info::{SpellEffect, SpellInfo};
@@ -84,14 +85,8 @@ fn shatter_owned_freezing(world: &mut World, ctx: &EffectCtx, target: Entity) {
     });
     // sc_mage.cpp4445–4473/7129–7170: use the launched missile's earned
     // Fingers/Thermal snapshot, not buffs already spent at execution.
-    let fingers = ctx
-        .spell
-        .cast_launch_auras
-        .contains(&super::frost_mage_procs::FINGERS);
-    let thermal = ctx
-        .spell
-        .cast_launch_auras
-        .contains(&super::frost_mage_procs::THERMAL);
+    let fingers = ctx.spell.cast_launch_auras.contains(&FINGERS);
+    let thermal = ctx.spell.cast_launch_auras.contains(&THERMAL);
     let base_limit = super::script_effect_value(world, ctx.caster, SHATTER, 3) as u8;
     let limit = base_limit * if thermal { 2 } else { 1 };
     let available = owned.map_or(0, |(_, stacks, _)| stacks);
