@@ -1,9 +1,20 @@
 //! Secondary residual attacks copy the landed source before recipient modifiers.
 use bevy::prelude::*;
 
-use crate::auras::ActiveAuras;
-use crate::spell_cast::{effects::EffectCtx, targets};
-use crate::spell_info::SpellStore;
+use super::combat;
+use combat::auras::ActiveAuras;
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_cast::scripts::script_effect_value;
+use combat::spell_cast::{
+    effects::{self, EffectCtx},
+    targets,
+};
+use combat::spell_info::SpellStore;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::SpellResidual(after_spell),
+    SpellScriptHook::MeleeResidual(after_melee),
+];
 
 struct SecondaryCopy {
     aura: u32,
@@ -43,12 +54,7 @@ struct CopySource {
     depth: u8,
 }
 
-pub(in crate::spell_cast) fn after_spell(
-    world: &mut World,
-    ctx: &EffectCtx,
-    primary: Entity,
-    amount: f32,
-) {
+fn after_spell(world: &mut World, ctx: &EffectCtx, primary: Entity, amount: f32) {
     copy_secondary(
         world,
         CopySource {
@@ -95,14 +101,13 @@ fn read_copy_parameters(
 ) -> Option<(f32, usize)> {
     let fraction =
         read_aura_amount(world, source.caster, policy.aura, policy.fraction_effect)? / 100.0;
-    let mut cap =
-        super::script_effect_value(world, source.caster, policy.aura, policy.target_effect);
+    let mut cap = script_effect_value(world, source.caster, policy.aura, policy.target_effect);
     let (extra_aura, extra_effect) = policy.extra_targets;
-    if crate::auras::has_aura(world, source.caster, extra_aura) {
-        cap += super::script_effect_value(world, source.caster, extra_aura, extra_effect);
+    if combat::auras::has_aura(world, source.caster, extra_aura) {
+        cap += script_effect_value(world, source.caster, extra_aura, extra_effect);
     }
     let (bonus_aura, bonus_effect) = policy.bonus_aura;
-    let bonus = if crate::auras::has_aura(world, source.caster, policy.bonus_talent) {
+    let bonus = if combat::auras::has_aura(world, source.caster, policy.bonus_talent) {
         read_aura_amount(world, source.caster, bonus_aura, bonus_effect)
             .map_or(1.0, |amount| 1.0 + amount / 100.0)
     } else {
@@ -175,12 +180,7 @@ fn deliver_secondary(
         chain_multiplier: 1.0,
     };
     for target in recipients {
-        let versus = super::super::effects::creature_type_damage_multiplier(
-            world,
-            source.caster,
-            target,
-            &spell,
-        );
-        super::super::effects::deal_copied_damage(world, &ctx, target, amount * versus);
+        let versus = effects::creature_type_damage_multiplier(world, source.caster, target, &spell);
+        effects::deal_copied_damage(world, &ctx, target, amount * versus);
     }
 }

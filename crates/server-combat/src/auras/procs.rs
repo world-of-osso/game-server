@@ -542,7 +542,7 @@ fn proc_chance(world: &mut World, unit: Entity, id: u32, now: f64) -> f32 {
     spell_mods::modify(world, unit, &spell, SpellModOp::ProcChance, chance)
 }
 
-pub(crate) fn policy_proc_ready(world: &World, unit: Entity, id: u32) -> bool {
+pub fn policy_proc_ready(world: &World, unit: Entity, id: u32) -> bool {
     let now = aura_now(world);
     world
         .get::<ActiveAuras>(unit)
@@ -552,7 +552,7 @@ pub(crate) fn policy_proc_ready(world: &World, unit: Entity, id: u32) -> bool {
 
 /// Named source policies supply their live effect chance, not fabricated proc metadata.
 /// Reuse the owning native aura's actual proc timer and DB2 internal cooldown.
-pub(crate) fn try_policy_proc(world: &mut World, unit: Entity, id: u32, chance: f32) -> bool {
+pub fn try_policy_proc(world: &mut World, unit: Entity, id: u32, chance: f32) -> bool {
     let now = aura_now(world);
     let ready = world
         .get::<ActiveAuras>(unit)
@@ -565,7 +565,7 @@ pub(crate) fn try_policy_proc(world: &mut World, unit: Entity, id: u32, chance: 
 }
 
 /// Scripted execution sources reuse native RPPM attempts and internal cooldowns.
-pub(crate) fn try_native_policy_proc(world: &mut World, unit: Entity, id: u32) -> bool {
+pub fn try_native_policy_proc(world: &mut World, unit: Entity, id: u32) -> bool {
     let now = aura_now(world);
     let ready = world
         .get::<ActiveAuras>(unit)

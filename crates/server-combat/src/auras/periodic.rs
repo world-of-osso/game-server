@@ -275,6 +275,13 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
         .iter()
         .find(|effect| effect.index == tick.effect_index)
         .expect("periodic effect belongs to its spell");
+    if tick.aura_type == PERIODIC_TRIGGER_SPELL
+        && let Some(run) =
+            crate::spell_cast::script_registry::channel_periodic(world, spell.id, tick.effect_index)
+    {
+        run(world, &ctx, unit);
+        return;
+    }
     match tick.aura_type {
         PERIODIC_DAMAGE => {
             let agony_tick = spell.id == super::agony::AGONY && tick.effect_index == 0;
@@ -319,12 +326,6 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
         ),
         PERIODIC_ENERGIZE => energize(world, &ctx, unit, tick),
         OBS_MOD_POWER => obs_mod_power(world, &ctx, unit, tick),
-        PERIODIC_TRIGGER_SPELL
-            if crate::spell_cast::scripts::is_eye_beam_channel(spell.id)
-                && tick.effect_index == 0 =>
-        {
-            crate::spell_cast::scripts::cast_eye_beam_tick(world, tick.caster, spell.id);
-        }
         PERIODIC_TRIGGER_SPELL
             if spell.id == crate::spell_cast::omor_orbital::ORBITAL_WHIP
                 && tick.effect_index == 0 =>
