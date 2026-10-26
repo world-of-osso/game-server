@@ -810,6 +810,14 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 
 - Projection qualification retains the Demonology owner's gate: `demonology_ --ignored --skip demonology_implosion_`. The excluded Implosion test is the owner's existing master RED, not a Malefic Grasp regression (same exclusion as trainsdd4e681ed7/d577e0ad22). Native Affliction cast and Frost literal opener remain required.
 
+### Affliction native Death's Embrace
+
+- Selected234876 uses its native maximum amount and health threshold to scale source-qualified damage linearly with each actual recipient's live health below that threshold (`sc_warlock_actions.cpp529–535`). Preserve pinned exclusions: direct Corruption/Wither, Shadowbolt Volley and Malefic Grasp itself are not affected; Grasp's extra DoT payloads are affected. Seed-applied UA stack suppression belongs with MID2 Seed UA integration.
+
+### Affliction native Darkglare Eye Beam
+
+- Ordinary native205231 from an actual103673 Darkglare reads its real owner and actual recipient. Each distinct owned active Agony, Corruption, Wither, Seed or UA contributes the native205180 effect2 amount; multiple UA stacks count once and foreign DoTs do not count (`sc_warlock_pets.cpp2445–2455`, `sc_warlock.cpp248–264`). Keep native guardian rows and coefficients unchanged. Nether Plating's alternate AoE chain is not selected by this MID2 fixture and is separately unqualified.
+
 ### Affliction native Darkglare Presence
 
 - Native1280663 direct/periodic masks and amounts apply only while an actual owned living103673 Darkglare remains unexpired. Actual death or expiry ends the increase; foreign summons and unmasked damage do not qualify (`sc_warlock_pets.cpp2487–2500`, `sc_warlock_actions.cpp200`). No independent buff timer or guardian-row change supplies this effect.
