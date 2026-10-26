@@ -285,9 +285,9 @@ fn live_modifiers<'a>(
     let local = world
         .get::<ActiveAuras>(caster)
         .into_iter()
-        .flat_map(|auras| matching(auras, spell, op))
-        .filter(|(aura, _)| !snapshots_periodic_modifier(aura, op))
-        .filter(|(aura, _)| {
+        .flat_map(move |auras| matching(auras, spell, op))
+        .filter(move |(aura, _)| !snapshots_periodic_modifier(aura, op))
+        .filter(move |(aura, _)| {
             spell.cast_charge_mods.is_none()
                 || (aura.charges == 0
                     && !crate::spell_cast::scripts::snapshots_modifier(aura.spell_id))
@@ -303,8 +303,8 @@ fn live_modifiers<'a>(
     let inherited = owner
         .and_then(|owner| world.get::<ActiveAuras>(owner))
         .into_iter()
-        .flat_map(|auras| matching(auras, spell, op))
-        .filter(|(aura, _)| aura.passive && aura.charges == 0 && Some(aura.caster) == owner);
+        .flat_map(move |auras| matching(auras, spell, op))
+        .filter(move |(aura, _)| aura.passive && aura.charges == 0 && Some(aura.caster) == owner);
     local.chain(inherited)
 }
 
