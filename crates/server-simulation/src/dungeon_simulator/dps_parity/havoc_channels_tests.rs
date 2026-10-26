@@ -106,15 +106,6 @@ fn havoc_annihilation_offhand_execution_can_refund_native_fury() {
             .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0
             .clear();
-        eprintln!(
-            "seed={seed} native197125 live={} known={} proc_ready={}",
-            crate::auras::has_aura(run.app.world(), run.actor, 197125),
-            run.app
-                .world()
-                .get::<crate::class_progression::KnownSpells>(run.actor)
-                .is_some_and(|known| known.contains(197125)),
-            crate::auras::procs::policy_proc_ready(run.app.world(), run.actor, 197125)
-        );
         for _ in 0..5 {
             havoc_tests::earn_havoc_fury(&mut run, 40.0);
             cast(&mut run, 201427, false);
