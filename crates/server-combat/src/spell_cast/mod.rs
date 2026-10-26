@@ -3556,10 +3556,7 @@ pub fn resolving_targets<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'
 }
 
 /// Actual direct damage of this native resolution, isolated from nested child casts.
-pub(super) fn resolving_damage<'w>(
-    world: &'w World,
-    ctx: &EffectCtx<'_>,
-) -> Option<&'w [(Entity, f32)]> {
+pub fn resolving_damage<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w [(Entity, f32)]> {
     Some(resolving_frame(world, ctx)?.damage.as_slice())
 }
 

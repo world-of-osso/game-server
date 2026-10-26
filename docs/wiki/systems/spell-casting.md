@@ -1169,6 +1169,8 @@ Named gap `FERAL_SPIRIT_INTRINSIC_AP_SOURCE`: archive pet_levelstats has2715 row
 
 ## Warlock periodic shard funding — 2026-10-25
 
+Shared Wither stack/damage rules are documented separately in [Warlock periodic counters](warlock-periodic-counters.md).
+
 The [Destruction contract](../../specs/dps-parity.md#destruction-periodic-shard-funding) runs in the downstream [destruction_periodic module](../../../crates/server-spell-scripts/src/modules/destruction_periodic.rs). Its specialization-qualified callback passes the original periodic context to `energize_unit`, preserving the shared raw pool, source attribution and overflow. Affliction uses its separate Agony module; sharing Wither does not share Destruction funding.
 
 `PeriodicPrimaryDamageHook` carries the actual critical outcome from damage resolution. Nonperiodic residual dispatch keeps its independent four-argument `SpellResidualHook`; reusing the periodic alias broke the combined migration build. Native funding, critical-roll and Affliction-exclusion tests pass, alongside MM periodic and Demonology owner-stat controls. Full267 DPS remained blocked on named action charge operands at this landing.

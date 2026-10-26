@@ -198,3 +198,5 @@ The shared spender-hit policy starts or extends native Slice and Dice after an e
 The adapter reads every exported profile row unchanged, uses the profile-selected native pet and shared channel decisions, and reads Darkglare lifetime from real owned summons. Native spells, knowledge, resources and damage stay authoritative. See [qualification contract](../../specs/dps-parity.md#affliction265-literal-fixture).
 
 Agony funding is a separate downstream module: landed native ticks advance per-owner threshold progress; native17941 supplies whole-shard amount, and losing the last Agony resets progress. It does not share Destruction fragment-per-tick funding. Numeric parity remains measurement-gated. [Source](../../../crates/server-spell-scripts/src/modules/affliction_agony.rs).
+
+Affliction Nightfall uses its own actual Corruption/Wither landed-tick threshold stream, separate from Agony shard progress. Native264571 supplies cast modifiers; additive foreground consumption preserves Shadow Bolt's existing energize script. [Source](../../../crates/server-spell-scripts/src/modules/affliction_nightfall.rs).

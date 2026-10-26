@@ -2,6 +2,7 @@
 use super::*;
 
 /// Positive, unexpired school absorption; never mutate or refill shield capacity.
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn has_absorb(auras: &ActiveAuras, now: f64) -> bool {
     auras
         .iter()
