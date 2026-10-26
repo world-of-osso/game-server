@@ -159,6 +159,7 @@ mod expel_harm_tests;
 #[cfg(test)]
 mod fel_devastation_tests;
 mod ferocious_bite;
+mod gcd_haste;
 #[cfg(test)]
 mod gcd_haste_tests;
 pub use ferocious_bite::read_maximum_energy as read_ferocious_bite_maximum_energy;
@@ -2703,6 +2704,7 @@ fn gcd_duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> u32 {
     .round() as u32;
     // Only a 750-1500 ms GCD is modified (Spell.cpp:9195-9198).
     if (MIN_GCD_MS..=MAX_GCD_MS).contains(&base_gcd_ms) {
+        let gcd_ms = gcd_haste::ordinary_spell_ms(world, caster, spell, gcd_ms);
         haste_regen_gcd_ms(world, caster, spell, gcd_ms)
     } else {
         gcd_ms
