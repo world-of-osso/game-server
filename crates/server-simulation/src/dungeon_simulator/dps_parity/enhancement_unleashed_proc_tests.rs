@@ -33,10 +33,11 @@ fn defer_white_swings(run: &mut Run) {
         });
 }
 
-fn cast_crash_with_dormant_white_swings(run: &mut Run) {
+fn cast_crash_with_dormant_white_swings(run: &mut Run) -> usize {
     let target = run.targets[0];
     defer_white_swings(run);
     for _ in 0..1200 {
+        let windfury_before = hits(run, Some(25504));
         match crate::spell_cast::creature_cast(
             run.app.world_mut(),
             run.actor,
@@ -48,7 +49,7 @@ fn cast_crash_with_dormant_white_swings(run: &mut Run) {
                 for _ in 0..6 {
                     run.app.update();
                 }
-                return;
+                return windfury_before;
             }
             Err(
                 crate::spell_cast::CastFailure::OnGlobalCooldown
@@ -108,4 +109,41 @@ fn enhancement_delayed_unleashed_hits_proc_real_flametongue_and_windfury_without
     panic!(
         "delayed Unleashed weapon hits must also roll native Windfury within eight actual Crashes"
     );
+}
+
+#[test]
+#[ignore = "native263 reference inputs and private world database"]
+fn enhancement_stormwell_primary_crash_guarantees_native_windfury_without_white_swings() {
+    // SimC76f8118 sc_shaman.cpp6141–6145: selected Stormwell guarantees one
+    // Windfury proc on the landed primary, separately from ordinary proc rolls.
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(263, 1).unwrap();
+    engage(&mut run);
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(run.actor)
+            .unwrap()
+            .contains(1264762),
+        "actual Stormwell must be selected"
+    );
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 319773));
+    for cast_index in 0..8 {
+        let roots_before = hits(&run, Some(187874));
+        let white_before = hits(&run, None);
+        let windfury_before = cast_crash_with_dormant_white_swings(&mut run);
+        assert!(
+            hits(&run, Some(187874)) > roots_before,
+            "actual Crash must land"
+        );
+        assert_eq!(
+            hits(&run, None),
+            white_before,
+            "white swings cannot supply the proc"
+        );
+        assert!(
+            hits(&run, Some(25504)) > windfury_before,
+            "selected Stormwell must guarantee Windfury for actual primary Crash {cast_index}"
+        );
+    }
 }
