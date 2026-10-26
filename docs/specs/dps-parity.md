@@ -679,7 +679,13 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 ### Affliction native Shadow of Nathreza
 
 - With selected native1261984, actual Haunt48181 effect4 pulses launch native1262710 at that Haunt's recipient. Use its native one-second clock without an initial pulse; removing the selected talent stops further apex payloads without removing Haunt (`sc_warlock.cpp41–49`). Native coefficients, direct damage modifiers and critical rolls remain unchanged.
-- Wrath of Nathreza RPPM and Desperate Soul guardians are separate, still-unqualified producers; this clock hook supplies only Shadow of Nathreza.
+- Wrath's separate RPPM and guardian lifecycle are specified below; Shadow of Nathreza remains its own native damage payload.
+
+### Affliction native Wrath of Nathreza
+
+- Selected1261992 rolls its native hasted RPPM and actual aura timers through `try_native_policy_proc` on landed Haunt impacts and real Haunt pulses. Generic spell damage cannot also roll this owned stream (`sc_warlock.cpp41–49`, `sc_warlock_actions.cpp2408–2415/5651–5662`). A newly landed Haunt replaces that caster's earlier Haunt.
+- Native1262094 imports and summons authentic Desperate Soul254505. Only its new guardian policy binds1278047 with full owner SP1.0; one actual Wrath executes around the owner's current Haunt recipient, then native expiry dismisses the soul. Other guardian policies and native damage coefficients are unchanged (`sc_warlock_pets.cpp19/2516–2563`).
+- Qualification covers ST/3T, native target selectors, one-cast lifetime, actual RPPM producers and talent removal. More-than-eight-target reduction is outside this parity fixture's scope.
 
 ### Affliction native Malefic Grasp extra ticks
 

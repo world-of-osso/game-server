@@ -30,5 +30,6 @@ fn cast_shadow(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
             Some(target),
             ctx.depth + 1,
         );
+        super::affliction_wrath::try_summon(world, ctx.caster);
     }
 }
