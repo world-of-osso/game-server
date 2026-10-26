@@ -10,6 +10,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Shared channel timing
 
 - Quantize native channel tick intervals to the nearest millisecond. A hasted channel's duration is that rounded interval times its original native modified tick count, not an independently truncated hasted duration (`action.cpp4297–4314/4397–4421`).
+- Cast-time spell modifiers must not alter a channel's duration. Channel span and period retain the pre-execution charged-modifier snapshot when the admitted use is consumed, including later tick interval recalculation; legitimate Duration/Period modifiers remain active in that snapshot. Live uncharged Period modifiers and non-channel periodic behavior remain unchanged. Instant non-channel casts retain cast-time modifier behavior.
 - The actor's channel cadence and its periodic aura use the same native effect cadence. Declared damage/healing periods own this cadence ahead of faster auxiliary control pulses; channels without declared health emissions retain their native utility/script period. Constant haste must not create an extra expiry damage event or full proc callbacks from rounding residue. Preserve tick-zero behavior and genuine fractional native tick counts.
 - Preserve non-channel periodic quantization, existing modifier/haste snapshots, and un-hasted channel lifetimes, including four-second Convoke. Do not add spell-ID branches or replace native coefficients/periods/durations.
 
@@ -133,6 +134,8 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Outlaw literal fixture
 
+- Native Main Gauche76806 rolls its authored proc chance from successful main-hand white swings and the pinned eligible special impacts, including Sinister extra attacks and Killing Spree's main hand. Emit native86392 at the actual hit recipient. Pistol Shot, Between the Eyes, off-hand whites, Spree's off hand and Main Gauche itself cannot produce it. Native mastery coefficients remain unchanged (`sc_rogue.cpp3468–3469,4726–4728,5942–6001,7948–7973`).
+
 - Pistol Shot spends one earned Opportunity use per execution, not all stacks or a stack-multiplied damage/cost bonus. An ordinary shot schedules up to native Fan the Hammer's count of remaining earned uses100ms apart, using its native damage reduction; children cannot fan. Each earned shot grants native Quick Draw points when selected. Background shots freeze charged modifiers at launch and consume their own use before impact (`sc_rogue.cpp4981–5070`).
 
 - Landed native Sinister Strike193315 rolls selected Opportunity279876 once per hit. Read native chance and the RtB extra-chance contribution; success earns native195627 stacks and dispatches197834 to the same enemy after300ms. Extra strikes cannot recursively roll Opportunity (`sc_rogue.cpp1286–1292,5942–5991,8255–8280`).
@@ -215,6 +218,8 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 - [ ] `death_knight.first_ams_cast` honors the profile delay and pinned20s default without inventing incoming damage or Runic Power.
 
 ### Fire literal fixture
+
+- Actual Heating Up→Hot Streak conversion grants selected native Brainstorm461531 (`sc_mage.cpp2154–2157,6509–6512`). Heating Up alone and wasted critical hits with Hot Streak already active do not grant it; native data owns its Intellect amount, stack cap and duration.
 
 - Fiery Rush's native permanent payload ends when its owner's Combustion ends (`sc_mage.cpp1453–1457`); its recovery-rate benefit must not persist between Combustion windows.
 
@@ -505,14 +510,17 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Shadow Priest literal parity controller
 
-- Ordinary Shadow Void Torrent263165 starts native459314 Rift at the actual hostile primary. Its hasted native driver clock skips its first travelling tick; subsequent ticks emit native447448 to enemies inside half the native447445 radius. Channel end restores full native remaining driver duration without resetting tick phase. The APL tracking fact reads459314 (SimC76f8118 `sc_priest_shadow.cpp1491–1514`, `sc_priest.cpp1606–1683/3543–3562`). Collapse and Darkening Horizon remain separately qualified.
+- Ordinary Shadow Void Torrent263165 starts native459314 Rift at the actual hostile primary. Its hasted native driver clock skips its first travelling tick; subsequent ticks emit native447448 to enemies inside half the native447445 radius. Channel end restores full native remaining driver duration without resetting tick phase. The APL tracking fact reads459314 (SimC76f8118 `sc_priest_shadow.cpp1491–1514`, `sc_priest.cpp1606–1683/3543–3562`). Collapse remains separately qualified.
 - With selected450405, actual Rift earns native450404, whose native3328092→450983 override and1602 charge-category modifier enable ordinary Void Blast without learned-spell grants. Literal Mind Blast is unavailable during actual Rift/Torrent; Rift expiry removes its override and restores Mind Blast (SimC76f8118 `sc_priest.cpp344–413`).
 
+- Each real Void Blast execute with selected449912 extends the current owned Rift by native effect2 seconds, at most effect1 times per actual Rift instance. Extend an already-earned Voidheart alongside it without resetting pending tick phase; do not carry extension counts into a later Rift (SimC76f8118 `sc_priest.cpp387–394/4358–4391`).
 - Selected Screams of the Void375767 makes every successful Madness execute, including Slam's background Madness, apply393919. Reapplication extends by the native fresh duration; native flat-label talent modifiers supply its period amount (SimC76f8118 `sc_priest_shadow.cpp1324–1327/2203–2204`).
 
 - A Madness impact (including Slam's weak Madness, not its periodic ticks) launches a native148859 or1264175 projectile to each own live VT. Native1264104 effect1 owns Void selection/effectiveness; Void launches1264177 Void Bolt at the source primary, never unrelated373279 area Void Spike (`sc_priest_shadow.cpp543–547/2468`). Preserve source-parent identity through travel so only its apparition triggers1231479 Shadeburst, with native73510 soft cap. Native407469 boosts apparition damage on own Madness; these payloads use live Shadow Weaving (SimC76f8118 `sc_priest_shadow.cpp291–549/1296/2609–2650`).
+- Selected Haunting Shadows1279355 makes each actual normal413231 or void1264176 apparition impact extend existing owned Pain589 and VT34914 by native effect1 milliseconds, without resetting periodic phase or applying absent DoTs (SimC76f8118 `sc_priest_shadow.cpp427–435`).
 - Selected Shadowy Insight375888 makes positive actual Pain589 ticks advance the pinned8% threshold, scaled by selected native Dark Thoughts effect1 and divided by own Pain count^0.9. Uniform initial phase/increments and rollover earn native375981, not manually granted charges or cast-time values. Each actual ordinary Mind Blast/Void Blast execute consumes one live Insight stack; native aura500 preserves its underlying charge while411 owns temporary capacity (`sc_priest.cpp298–316`). Pain impact is not a producer; its Insight roll precedes Tormented's tick roll (SimC76f8118 `sc_priest_shadow.cpp626–638/2052–2084/2322–2339`).
 - Selected Tormented Spirits391284 makes positive actual Pain589 hits and ticks advance its own threshold: random initial phase,13% times uniform[0,2) divided by own active Pain count^0.9, doubled for actual crits. Crossing1 earns one ordinary apparition cohort and retains overflow (SimC76f8118 `sc_priest_shadow.cpp598–645/2355–2371`, `proc_rng.cpp221–273`).
+- Each real apparition-producing cohort with own VT advances selected373273's native373276 counter once, not once per missile. At the native cap, summon actual373277/189988 Thing From Beyond; selected1264096 also emits the pinned parentless extra cohort, which cannot Shadeburst. Keep the counter capped through that nested cohort before clearing it. Thing retains native creature type15 and casts native373279 using full owner SP, actual owner target DoTs for mastery, native secondary fraction and reduced-AoE cap (SimC76f8118 `sc_priest_shadow.cpp2206–2214/2628–2632/2850–2858`, `sc_priest_pets.cpp75–86/1061–1134`).
 - Auspicious Spirits' Insanity threshold and Haunting Shadows' DoT extensions remain separate unqualified relationships; native projectile E1/E2 must not unconditionally substitute for them.
 
 - Selected Psychic Link199484 copies its native effect0 fraction of eligible landed spell/tick damage to every other recipient with the caster's live Vampiric Touch. Native199486 supplies the damage payload; the echo cannot independently crit, hit its original recipient or use foreign VT. Actual caster-self damage, including native Death backlash sharing the offensive spell ID, is not a producer (SimC76f8118 `sc_priest_shadow.cpp1521–1619/2655–2669`, `sc_priest.cpp1430–1446`).
@@ -817,6 +825,10 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 - Spec265 uses the exact exported76f8118 Affliction action rows through shared Program/Driver/Prepared/Equipment. Native player identity, spell knowledge, costs, clocks, target selection and70448 values remain authoritative.
 - Precombat summons the profile-selected pet and executes its first eligible harmful precast. Darkglare activity and remaining lifetime come from real owned summons; Malefic Grasp requires that actual pet. Channel chaining and interruptions use shared native channel decisions.
 - The fixture does not grant shards, buffs or reference damage. Numeric ST/3T parity remains separately measurement-gated.
+
+### Affliction native Shared Agony
+
+- Selected1259825 makes a successful Agony root cast one real native980 background twin on a different living enemy inside its authored radius. Randomize ties, then prefer the shortest remaining owned Agony; foreign applications do not count. The twin pays no second cost and cannot recursively create twins (`sc_warlock_actions.cpp1419–1450`, `sc_warlock.cpp1274–1320`). Native application, stacks and periodic shard funding remain unchanged.
 
 ### Affliction native Agony funding
 
