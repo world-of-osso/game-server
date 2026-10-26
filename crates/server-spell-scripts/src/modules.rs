@@ -136,6 +136,7 @@ register_modules! {
     shadow_apparitions: (2582, "modules/shadow_apparitions.rs"),
     shadow_link: (2581, "modules/shadow_link.rs"),
     shadow_priest: (290, "modules/shadow_priest.rs"),
+    shadow_rift: (2585, "modules/shadow_rift.rs"),
     shadow_screams: (2583, "modules/shadow_screams.rs"),
     shadow_torment: (2584, "modules/shadow_torment.rs"),
     shadow_volley: (2580, "modules/shadow_volley.rs"),
