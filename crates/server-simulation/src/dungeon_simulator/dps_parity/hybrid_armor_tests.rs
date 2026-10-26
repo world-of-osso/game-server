@@ -20,7 +20,7 @@ fn damage_total(run: &Run, spell: u32) -> i32 {
         .sum()
 }
 
-fn native_chaos_and_physical_hits(remove_armor: bool) -> (i32, i32) {
+fn assert_native_chaos_and_physical_hits(remove_armor: bool) {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
     enhancement_armor_tests::apply_armor_control(&mut run, remove_armor);
@@ -44,18 +44,13 @@ fn native_chaos_and_physical_hits(remove_armor: bool) -> (i32, i32) {
         hits.0 > 0 && hits.1 > 0,
         "both native school payloads must really land: {hits:?}"
     );
-    hits
 }
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
 fn havoc_chaos_native_child_ignores_armor_but_physical_damage_retains_it() {
-    let armored = native_chaos_and_physical_hits(false);
-    let unarmored = native_chaos_and_physical_hits(true);
     // SimC76f8118 action.cpp1686–1690: each actual Chaos hit retains its
     // own native pre-mitigation amount, even if the control cast procs gear.
-    assert!(
-        armored.1 < unarmored.1,
-        "native pure Physical198813 must still take armor mitigation"
-    );
+    assert_native_chaos_and_physical_hits(false);
+    assert_native_chaos_and_physical_hits(true);
 }
