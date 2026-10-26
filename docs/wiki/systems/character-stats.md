@@ -86,6 +86,14 @@ Rating units follow SimC `rating_t::init`: the game-table value is the rating ne
 
 ## Gear
 
+### Equipment proc eligibility — 2026-10-25
+
+Native equipment aura initialization could earn Venomcursed before combat. Survival255's permanent crit is correct:525 gear +42 from six gems +16 active main-hand oil =583; Serrated Tips4% gives606. Idle Venomcursed adds378 before that modifier, giving999. This is a lifecycle error, not missing or duplicate permanent gear.
+
+The equipment-source candidate gate in `auras/procs.rs` now requires a real, non-suppressed native CombatRef before chance/RPPM/recovery state changes. Ordinary class auras retain their existing eligibility. SimC76f8118 `action/action_callback.cpp79–82` supplies the combat prerequisite. Native idle regression9a4be71e84 is RED; fix9f278b6f0/38b277d91 passes workspace all-target check and awaits broad native gate/landing283a28a30a. Numerical parity and all-spec remeasurement remain open.
+
+Sources: [native proc candidate gate](../../../crates/server-combat/src/auras/procs.rs), [idle native regression](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/survival_stat_tests.rs), [real-combat Venomcursed control](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/venomcursed_tests.rs), [contract](../../specs/dps-parity.md#equipment). See also [[simc-apl]].
+
 ### Shared profile effects — 2026-10-25
 
 The parity fixture installs declared consumables and expansion effects in `dps_parity/profile_effects.rs`. Numeric Omnium tokens identify native `TraitNodeEntry` rows, not class nodes. The fixture's `ReferenceRace` supplies native base-stat race and racial knowledge without adding `Player` identity to followers. Native aura effect202 admits owner racial effects such as Dwarf59224.

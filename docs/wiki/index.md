@@ -1,3 +1,4 @@
+- [Equipment proc eligibility](systems/character-stats.md#equipment-proc-eligibility--2026-10-25) — Survival permanent606crit is correct; native idle Venomcursed produces999. Shared combat-reference gate awaits broad native qualification/landing.
 - [Warlock periodic shard funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) — downstream Destruction-only funding, actual critical context and shared native pool/overflow; Affliction remains separate.
 - [Native target DoT duration](systems/simc-apl.md#native-target-dot-duration) — owned active state and native fresh duration, independent of refreshed lifetime.
 - [Subtlety Lingering Shadow](systems/spell-casting.md#subtlety-lingering-shadow--2026-10-25) — native Dance-expiry counter, periodic decay and per-recipient residual; native RED→GREEN, numerical parity open.
