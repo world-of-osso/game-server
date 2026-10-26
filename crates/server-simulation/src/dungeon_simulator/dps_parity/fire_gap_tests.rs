@@ -594,15 +594,18 @@ fn fire_feedback_noncritical_fireball_clears_fevered_incantation() {
         );
     }
     assert_eq!(stacks(&run, 383811), 2);
-    assert!(
-        !fireball_feedback_hit(&mut run, 0.5),
-        "native noncritical precondition"
-    );
-    assert_eq!(
-        stacks(&run, 383811),
-        0,
-        "a direct noncrit clears Fevered Incantation"
-    );
+    for _ in 0..32 {
+        let crit = fireball_feedback_hit(&mut run, 0.5);
+        if !crit {
+            assert_eq!(
+                stacks(&run, 383811),
+                0,
+                "a direct noncrit clears Fevered Incantation"
+            );
+            return;
+        }
+    }
+    panic!("ordinary native Fireballs must produce a noncrit within32 casts");
 }
 
 #[test]
@@ -783,7 +786,8 @@ fn fire_meteorite_pyrocosm_impacts_reduce_active_fire_blast_recharge() {
         .unwrap()
     };
     let before = remaining(&run);
-    start_native(&mut run, 449569, target);
+    // Meteorite is a production-triggered child, not a learned player action.
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 449569, Some(target), 1);
     assert!(
         run.app
             .world()
@@ -1118,7 +1122,8 @@ fn fire_phoenix_native_casts_deal_damage_and_feed_selected_mana_cascade() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(63, 1).unwrap();
     let actor = run.actor;
-    start_native(&mut run, 448659, actor);
+    // Invocation triggers this authentic summon child; players do not learn it.
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 448659, Some(actor), 1);
     let phoenix = fire_phoenix_actor(&mut run).expect("native summon/template precondition");
     for _ in 0..100 {
         run.app.update();
