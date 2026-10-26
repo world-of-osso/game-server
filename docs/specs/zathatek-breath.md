@@ -5,7 +5,7 @@ Equipped weapon271093 follows pinned SimC76f8118 `unique_gear_midnight.cpp5233â€
 ## What it must do
 
 - [ ] Actual equipped1298023 procs deliver1305395 using its native item-level-scaled budget and native role expression. Retain generic native proc eligibility/rates and payload damage rules; do not proc before combat or recursively from its own action.
-- [ ] Each impact applies or refreshes owned1305391 after the damage. Native data supplies its percentage, stack cap and lifetime.
+- [ ] Each impact applies or refreshes owned1305391 after the damage. Driver1298023 effect1 supplies the stack percentage; native1305391 supplies its cap and lifetime. Its item-scaled effect0 is not the percentage.
 - [ ] Existing recipient stacks amplify only that caster's1305395 payload. A different recipient's stacks do not substitute; preserve ordinary damage/critical resolution.
 - [ ] Gate both actual equipped profiles259/261 and the unequipped260 negative profile without changing their equipment. Notify the lead before landing for both equipped specs' remeasurement.
 

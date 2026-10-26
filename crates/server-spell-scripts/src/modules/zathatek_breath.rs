@@ -71,13 +71,9 @@ fn amplify_payload(world: &World, caster: Entity, target: Entity, amount: f32) -
     let Some(tear) = tear else {
         return amount * role;
     };
-    let percent = tear
-        .effects
-        .iter()
-        .find(|effect| effect.index == 0)
-        .expect("native Necrotic Tear stack value")
-        .amount;
-    amount * role * (1.0 + f32::from(tear.stacks) * percent / 100.0)
+    // SimC's default_value comes from the driver. Tear effect0 is a separate
+    // item-scaled value, not the per-stack percentage.
+    amount * role * (1.0 + f32::from(tear.stacks) * tear_percent(world) / 100.0)
 }
 
 fn tear_percent(world: &World) -> f32 {
@@ -106,12 +102,6 @@ fn apply_tear(world: &mut World, ctx: &EffectCtx, target: Entity, _crit: bool, _
         .expect("native Necrotic Tear")
         .clone();
     spell.cast_item_level = Some(level);
-    spell
-        .effects
-        .iter_mut()
-        .find(|effect| effect.index == 0)
-        .expect("native Necrotic Tear amount effect")
-        .base_points = tear_percent(world);
     auras::apply_aura_with_spell(
         world,
         &AuraApplication {
