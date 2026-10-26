@@ -137,6 +137,7 @@ register_modules! {
     marksmanship_salvo: (2540, "modules/marksmanship_salvo.rs"),
     marksmanship_sentinel: (390, "modules/marksmanship_sentinel.rs"),
     melee_reset: (340, "modules/melee_reset.rs"),
+    midnight_item_damage: (1000, "modules/midnight_item_damage.rs"),
     midnight_stat_items: (1000, "modules/midnight_stat_items.rs"),
     outlaw_flurry: (2601, "modules/outlaw_flurry.rs"),
     outlaw_main_gauche: (2603, "modules/outlaw_main_gauche.rs"),

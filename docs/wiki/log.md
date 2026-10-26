@@ -1,3 +1,7 @@
+## 2026-10-26 — Midnight equipped item damage
+
+[Item payloads](systems/midnight-item-damage.md) use the native driver's class−9 budget and role, preserve the Acidbrood missile, and wire Void's missing action. Actual64/62/263 equipper REDs validate positive6884/5163budgets but zero Acidbrood damage and no Void hits. Native proc children retain casting-item context; Ret stat-item code stays separate. GREEN/measurement remain pending.
+
 ## 2026-10-26 — Independent Destruction Echo
 
 [Echo](systems/spell-casting.md#destruction-echo--2026-10-26) producer/payload native REDs become two GREEN cases in309398a397. Its value assertion used raw per-rank4, but selected rank2 and pinned reference both require8%. Corrected only the expectation; native values, coefficients and allocations unchanged. Selected-rank gate/landing pending; above8-target reduction unqualified.
