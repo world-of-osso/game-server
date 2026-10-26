@@ -52,7 +52,7 @@
 [Mage intellect](systems/character-stats.md#mage-inspired-intellect--2026-10-26) identifies the missing native2-point enhancement to Arcane Intellect, not a universal stat deficit. Base/gear/enchant/gem/food/rune totals reconcile; duplicate weapon Intellect rows explain the reference JSON gear-map undercount. Fire native RED is observed; Frost64/Affliction265 real-player gates remain pending.
 ## 2026-10-26 — Hunter's Ritual Stone native dispatch
 
-[Stone callbacks](systems/character-stats.md#hunters-ritual-stone--2026-10-26) use the discovered linked equipment root and its scaled second effect, not dummy BP0. The explicit source four-child relationship is approved; native Fire RED `d41cfc4d1c` observed no child after real300s combat. All ten equipping-profile controls and retained shared gates remain pending.
+[Stone callbacks](systems/character-stats.md#hunters-ritual-stone--2026-10-26) use the discovered linked equipment root and its scaled second effect, not dummy BP0. The explicit source four-child relationship is approved; native Fire RED `d41cfc4d1c` observed no child after real300s combat. All ten equipping-profile controls and retained shared gates pass in `c004df11f1`; source `8a34a9fd6` is verified on master. The same batch carries all ten three-seed ST/3T measurements. Native Arcane pre-pull timing and stale577 header normalization are recorded without runtime suppressions or fabricated metadata.
 
 ## 2026-10-26 — Aurora integrated; Hammer Sunrise qualification
 

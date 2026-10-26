@@ -21,7 +21,7 @@
 - [Shared pet prerequisites](systems/spell-casting.md#shared-pet-prerequisites--2026-10-26) — native runtime storage, effect148 values and destination85; protected probes pending.
 - [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counter-only and six shared lifecycle cases GREEN; numerical parity remains open.
 - [Arcane literal fixture](systems/simc-apl.md#arcane-fixture-62) — supplied profile rows and native class readiness; ST controller regression passes, numerical parity remains separate.
-- [Hunter's Ritual Stone](systems/character-stats.md#hunters-ritual-stone--2026-10-26) — native root-scaled amount, explicit source child relationship and all ten equipping profiles; native RED observed, GREEN pending.
+- [Hunter's Ritual Stone](systems/character-stats.md#hunters-ritual-stone--2026-10-26) — native root-scaled amount and explicit source child relationship; RED→GREEN on all ten equipping profiles plus retained shared gates, verified on master.
 - [Native Loa/Rite stat callbacks](systems/character-stats.md#native-loa-and-rite-stat-callbacks--2026-10-26) — native gem metadata, linked rank amount, combat admission and five-profile RED→GREEN; landed44c2b6c5d.
 - [HoW Second Sunrise](systems/spell-casting.md#how-primary-impact-extension--2026-10-26) — native successful-primary RED→GREEN, retained native gates and strict cutoff accounting; landed three-seed ST/3T within ±10%.
 - [Ret Purpose and tier supply](systems/ret-divine-purpose.md) — native Aurora Wake grant, chance producer and distinct Arbiter consumption; end-to-end RED→GREEN, landed integration and actual native Arbiter cutoff accounting.
