@@ -55,13 +55,15 @@ fn shadow_apparition_slam_madness_reaches_each_owned_vt_and_bursts_at_parent() {
                 })
                 .count()
         };
-        assert!(
-            hits(&[413231, 1264176]) > 0,
-            "native normal/void apparition must reach owned VT target{target:?}"
+        assert_eq!(
+            hits(&[413231, 1264176]),
+            1,
+            "one Madness impact sends one normal/void apparition to owned VT target{target:?}"
         );
-        assert!(
-            hits(&[1231479]) > 0,
-            "parent apparition must deliver native Shadeburst to nearby target{target:?}"
+        assert_eq!(
+            hits(&[1231479]),
+            1,
+            "only the parent apparition delivers one Shadeburst to nearby target{target:?}"
         );
     }
 }
