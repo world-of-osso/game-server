@@ -12,6 +12,14 @@ pub struct ChannelMomentum {
 
 #[derive(Clone, Copy)]
 pub enum Relationship {
+    OwnedPetWrathAfterCast {
+        parent: u32,
+    },
+    ReduceCooldownAfterCast {
+        parent: u32,
+        cooldown: u32,
+        milliseconds_effect: u8,
+    },
     OwnedPetSpellAfterCast {
         parent: u32,
         payload: u32,

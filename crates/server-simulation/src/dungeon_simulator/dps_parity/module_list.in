@@ -78,6 +78,8 @@ mod howl_tests;
 #[cfg(test)]
 mod hunter_bloodshed_tests;
 mod hunter_cadence_tests;
+mod hunter_command_tests;
+mod hunter_companion_tests;
 mod hunter_explosive_tests;
 mod hunter_facts;
 mod hunter_fixture;
@@ -90,6 +92,7 @@ mod hunter_salvo_tests;
 mod hunter_melee_tests;
 #[cfg(test)]
 mod hunter_stomp_tests;
+mod hunter_wrath_tests;
 mod inputs;
 mod item_proc_state_tests;
 mod literal_ranged_attack_tests;
