@@ -129,6 +129,12 @@ observed procs. The lead requires a full workspace gate before landing.
 [exact proof ledger](../../handoffs/light-of-the-titans-proof-ledger.md).
 Actual repeated-Word pool integration, PvP scaling and effectiveness stay separate.
 
+## Native Pandemic duration carry — 2026-10-26
+
+`refresh::prepare_application` now selects `DurationCarry::Pandemic` from the same authored attribute used by periodic-phase preservation. Rip/Rake no longer have a separate ID route; explicit Extend policies and rolling budgets keep their existing precedence. Source: [refresh.rs](../../../crates/server-combat/src/auras/refresh.rs), SimC76f8118 `action.cpp684–685/4612/2729–2734`; [contract](../../specs/dps-parity.md#native-pandemic-duration-carry).
+
+The old phase-only handling reset actual Agony duration on refresh, explaining23 native ST applications versus17 reference applications. Native REDfe4067cd18 records expiry31.8 instead of36.3 after a real refresh within the native window. Five-spec duration/damage qualification and the charged Grasp carry control remain pending; no numeric parity claim follows from this implementation alone.
+
 ## Native rolling periodic refresh — 2026-10-22
 
 This is the default native per-tick mode. The source-qualified [Warrior Deep Wounds contract](../../specs/dps-parity.md#fury-player-parity) selects a separate reapplication budget through `scripts::rolls_reapplication`; the source policy does not change Barbed, Echo, Ignite or leech defaults.

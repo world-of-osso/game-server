@@ -1,3 +1,4 @@
+- [Native Pandemic duration carry](systems/auras.md#native-pandemic-duration-carry--2026-10-26) — native Agony refresh loses4.5s in RED; attribute-driven carry replaces the Rip/Rake ID route, five-spec and charged Grasp qualification pending.
 - [Explicit non-demon guardian SP](systems/spell-casting.md#explicit-non-demon-guardian-spell-power--2026-10-26) — native Thing type15 reads its sourced full-owner-SP policy; actual Spike and protected BM/265/267 cases pass, landing pending.
 - [Haunting Shadows impact extensions](systems/spell-casting.md#haunting-shadows-impact-extensions--2026-10-26) — actual apparition impact preserves owned Pain/VT; native missing-extension RED, GREEN pending.
 - [Merged feedback grants are not casts](systems/spell-casting.md#merged-feedback-grants-are-not-casts--2026-10-26) — native queued394195 earns an unrelated+78haste through full-cast side effects; direct aura application preserves native buff values, pending three-Mage qualification.
