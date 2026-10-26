@@ -23,6 +23,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::TargetDamageMultiplier(meteor_primary_multiplier),
     SpellScriptHook::ResourceContext(&[2120, 1254851]),
     SpellScriptHook::TargetDamageMultiplier(fuel_damage_multiplier),
+    SpellScriptHook::TargetDamageMultiplier(scald_damage_multiplier),
 ];
 
 const COMBUSTION: u32 = 190319;
@@ -55,6 +56,7 @@ const HEAT_SHIMMER: u32 = 458964;
 const IGNITE: u32 = 12654;
 const SCORCH: u32 = 2948;
 const FUEL_THE_FIRE: u32 = 416094;
+const SCALD: u32 = 450746;
 
 #[derive(Component, Default)]
 struct FireProcState {
@@ -349,6 +351,38 @@ fn on_fire_cast(world: &mut World, caster: Entity, spell_id: u32, _depth: u8) {
         let reduction = script_effect_value(world, caster, PYROCOSM, 3);
         reduce_cooldown(world, caster, 108853, f64::from(reduction) / 1000.0);
     }
+}
+
+fn scald_damage_multiplier(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    let (bonus_effect, threshold) = match spell.id {
+        133 => (0, script_effect_value(world, caster, SCALD, 2)),
+        SCORCH => (1, script_effect_value(world, caster, SCORCH, 1)),
+        _ => return 1.0,
+    };
+    if !selected(world, caster, SCALD) {
+        return 1.0;
+    }
+    // SimC76f8118 sc_mage.cpp2293–2304/3866–3868/5066–5069:
+    // native Scald amounts and health gates; admitted Heat Shimmer also
+    // enables Scorch execute after that earned buff was consumed at launch.
+    let health_gate = world
+        .get::<shared::components::Health>(target)
+        .is_some_and(|health| health.current <= health.max * threshold / 100.0);
+    let shimmer = spell.id == SCORCH
+        && spell.cast_charge_mods.as_ref().is_some_and(|mods| {
+            mods.iter()
+                .any(|modifier| modifier.aura_spell_id == HEAT_SHIMMER)
+        });
+    let execute_active = health_gate || shimmer;
+    if !execute_active {
+        return 1.0;
+    }
+    1.0 + script_effect_value(world, caster, SCALD, bonus_effect) / 100.0
 }
 
 fn fuel_damage_multiplier(
