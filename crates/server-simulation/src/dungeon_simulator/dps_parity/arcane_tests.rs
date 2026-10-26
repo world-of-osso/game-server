@@ -153,7 +153,13 @@ fn normalize_charge_hit_rolls(run: &Run, amount: i32) -> f32 {
     // Divide out the observed variance and critical multiplier; never change
     // native rolls, coefficients, aura state or projectile delivery.
     let rolled_multiplier = input / scaled;
-    assert!(rolled_multiplier > 0.0);
+    assert!(
+        rolled_multiplier > 0.0,
+        "invalid native charge observation: damage={amount}, input={input}, scaled={scaled}, stats={:?}, trace={trace}",
+        run.app
+            .world()
+            .get::<crate::stats::CharacterStats>(run.actor)
+    );
     (f64::from(amount) / rolled_multiplier) as f32
 }
 
