@@ -671,7 +671,21 @@ fn driver_report(run: &Run) -> serde_json::Map<String, Value> {
 }
 
 fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
-    let _seed_scope = crate::random::seed_scope(70_448);
+    let mut reports = Vec::new();
+    for seed in multi_seed::read_seeds()? {
+        let report = measure_seed(spec_id, count, seed)?;
+        multi_seed::write_seed_report(spec_id, count, seed, &report)?;
+        eprintln!(
+            "NATIVE_SEED_DPS spec{spec_id} targets{count} seed{seed}: {}",
+            report["combat"]["dps"]
+        );
+        reports.push(report);
+    }
+    Ok(multi_seed::summarize(reports))
+}
+
+fn measure_seed(spec_id: u32, count: usize, seed: u64) -> Result<Value, String> {
+    let _seed_scope = crate::random::seed_scope(seed);
     let mut run = prepare_measurement(spec_id, count)?;
     let before = report::stats(run.app.world(), run.actor);
     let targets = target_snapshot(&run);
@@ -682,7 +696,7 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     let mut output = json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "actor_kind": if run.app.world().get::<shared::components::Player>(run.actor).is_some() { "player" } else { "follower" },
         "assisted_decisions": run.player_rotation.as_ref().map_or(0, |rotation| rotation.decisions),
-        "wall_seconds": started.elapsed().as_secs_f64(), "seed": 70448, "combat": combat,
+        "wall_seconds": started.elapsed().as_secs_f64(), "seed": seed, "combat": combat,
         "target_health_policy": {"name": "SIMC_FIXED_TIME_TARGET_HEALTH", "clock": "per_target_lifetime",
             "duration_seconds": FIGHT_DURATION.as_secs_f64(), "add_lifetime_seconds": ADD_LIFETIME.as_secs_f64(),
             "add_interval_seconds": ADD_INTERVAL.as_secs_f64(), "initial_pct": 100, "death_pct": 0},

@@ -1,3 +1,7 @@
+## 2026-10-25 — Multi-seed native measurement
+
+[Native multi-seed reports](systems/dungeon-simulator.md#multi-seed-native-dps-reports) replace the single-seed headline with default70448/1/2 means, including action damage and counts. Full per-seed reports retain native observations; first-seed buff/entity details are labelled. Native report-shape RED is observed; the changed baseline requires fresh multi-seed acceptance.
+
 ## 2026-10-25 — Warlock periodic funding and target DoT facts
 
 [Warlock funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) uses the downstream critical-aware periodic callback and existing native power pipeline, qualified only on Destruction. [Target DoT duration](systems/simc-apl.md#native-target-dot-duration) reads active owned native state without pandemic carry; both have native GREEN and cross-spec controls. Numerical267 acceptance remains separate.
@@ -14,7 +18,7 @@
 [Lingering Shadow](systems/spell-casting.md#subtlety-lingering-shadow--2026-10-25): pinned expiry/decay and native mitigated residual, downstream hooks, native RED957d26c2d3→GREEN561fb56b0d; numerical parity remains open.
 ## 2026-10-25 — Reentrant native factor capture
 
-[Native observations](systems/server-crates.md#reentrant-native-factor-observations): recipient component inserts can flush a queued same-ID Sunrise Tempest while its parent damage is still committing. Capture detaches each calculated hit before those mutations; root/echo/secondary effectiveness remains native. Strict native RED reproduced; GREEN gate pending.
+[Native observations](systems/server-crates.md#reentrant-native-factor-observations): recipient component inserts can flush a queued same-ID Sunrise Tempest while its parent damage is still committing. Capture detaches each calculated hit before those mutations; root/echo/secondary effectiveness remains native. Strict native RED reproduced, then the complete109-case Ret scope passed; capture retained64root,13Sunrise and13same-ID Tempest hits. Numerical parity remains a separate multi-seed gate.
 ## 2026-10-25 — Feral native literal takeover
 
 [Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25): source-order/player-precombat controls, native Lunar override lifecycle and selected Rip/Rake Growth are qualified. Full300s runs still refuse missing bare periodic facts; native snapshot/CP REDs are retained, with GREEN and numerical parity pending. Shared consumable work remains separate.
