@@ -93,6 +93,49 @@ fn havoc_font_of_venomous_rage_channels_native_primary_and_secondary_damage() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_annihilation_offhand_execution_can_refund_native_fury() {
+    let mut refunds = 0;
+    for seed in [70_448, 1, 2] {
+        let _seed = crate::random::seed_scope(seed);
+        let mut run = prepare_literal(577, 1).unwrap();
+        havoc_tests::earn_havoc_fury(&mut run, 160.0);
+        cast(&mut run, 191427, false);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        run.app
+            .world_mut()
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
+        for _ in 0..5 {
+            havoc_tests::earn_havoc_fury(&mut run, 40.0);
+            cast(&mut run, 201427, false);
+            preparation::finish_pending_setup(&mut run).unwrap();
+        }
+        assert!(
+            !damage(&run, Some(201428)).is_empty(),
+            "real native Annihilation off-hand execution required"
+        );
+        refunds += run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::Energize
+                    && event.spell_id == Some(193840)
+                    && event.amount > 0
+            })
+            .count();
+    }
+    assert!(
+        refunds > 0,
+        "fifteen real native Annihilations across fixed parity seeds must be eligible for the native Fury refund"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_shattered_destiny_counts_paid_native_base_fury_only_in_meta() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
