@@ -93,6 +93,43 @@ fn havoc_font_of_venomous_rage_channels_native_primary_and_secondary_damage() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_shattered_destiny_counts_paid_native_base_fury_only_in_meta() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 160.0);
+    cast(&mut run, 162794, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    cast(&mut run, 191427, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let deadline = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 162264 && aura.caster == run.actor)
+            .unwrap()
+            .expires_at
+            .unwrap()
+    };
+    let before = deadline(&run);
+    for _ in 0..3 {
+        cast(&mut run, 201427, false);
+        preparation::finish_pending_setup(&mut run).unwrap();
+    }
+    assert!(
+        !damage(&run, Some(227518)).is_empty(),
+        "real paid Annihilation strikes must land"
+    );
+    let gained = deadline(&run) - before;
+    assert!(
+        (gained - 1.0).abs() < 0.001,
+        "three native40-Fury casts must add10 native100ms extensions; pre-Meta Fury must not count, got{gained}s"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_blind_fury_native_channel_regenerates_fury_without_weapon_hits() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
