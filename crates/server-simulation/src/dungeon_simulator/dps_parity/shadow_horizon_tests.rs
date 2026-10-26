@@ -78,10 +78,23 @@ fn shadow_horizon_ordinary_void_blast_extends_actual_rift_only_to_native_cap() {
     let extension = f64::from(native(2));
     assert_eq!(cap, 3);
     assert_eq!(extension, 1.0);
+    // Earn ordinary profile Power Infusion so four real casts fit the finite
+    // Rift window. Do not reset charges, assign haste or lengthen a test aura.
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(10060, run.actor, Some(run.targets[0])),
+    )
+    .unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 10060));
     cast_and_finish(&mut run, 263165);
     let original_expiry = rift_expiry(&run);
     for cast in 1..=cap + 1 {
         cast_and_finish(&mut run, 450983);
+        eprintln!(
+            "HORIZON completed native Void Blast{cast} at{}",
+            crate::spell_cast::now(run.app.world())
+        );
         let expected = original_expiry + extension * cast.min(cap) as f64;
         assert!(
             (rift_expiry(&run) - expected).abs() < 0.001,
