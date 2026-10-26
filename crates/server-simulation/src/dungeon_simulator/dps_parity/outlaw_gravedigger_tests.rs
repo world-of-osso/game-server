@@ -89,6 +89,21 @@ fn outlaw_native_dispatch_earns_one_delayed_scoundrel_strike() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(260, 1).unwrap();
     engage(&mut run);
+    fund(&mut run, 4.0, true);
+    cast(&mut run, 2098);
+    for _ in 0..8 {
+        run.app.update();
+    }
+    assert!(
+        !run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1265918)),
+        "below-threshold Dispatch must not earn Scoundrel Strike"
+    );
     fund(&mut run, 5.0, true);
     cast(&mut run, 2098);
     for _ in 0..8 {
