@@ -437,7 +437,8 @@ fn demonology_literal_fixture_executes_profile_instead_of_native_kit() {
             .is_some(),
         "266 must hand control to the literal APL before native warmup"
     );
-    assert!(crate::hunter_pet::summoned_pet(run.app.world(), run.actor).is_some());
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor)
+        .expect("the actual configured Felguard must exist before pull");
     engage(&mut run);
     for _ in 0..400 {
         drive_player(&mut run).unwrap();
@@ -456,6 +457,20 @@ fn demonology_literal_fixture_executes_profile_instead_of_native_kit() {
             .iter()
             .any(|row| row["spell_id"] == 1276452 && row["count"].as_u64().unwrap() > 0),
         "literal priority must cast selected Grimoire: Imp Lord"
+    );
+    assert!(
+        actions.iter().any(|row| {
+            matches!(row["spell_id"].as_u64(), Some(104318 | 1264093 | 1277116))
+                && row["actor"] != run.actor.to_bits()
+                && row["damage"].as_u64().unwrap() > 0
+        }),
+        "the literal controller must let actual guardians attack its selected enemy"
+    );
+    assert!(
+        actions
+            .iter()
+            .any(|row| row["actor"] == pet.to_bits() && row["damage"].as_u64().unwrap() > 0),
+        "the literal controller must command its real Felguard, not only summon it"
     );
     assert!(
         !actions.iter().any(|row| row["spell_id"] == 702),

@@ -71,6 +71,9 @@ impl Rotation {
         targets: &[Entity],
         precombat: bool,
     ) -> Result<bool, String> {
+        if !precombat {
+            command_minions(world, actor, targets);
+        }
         let prepared = self.read_prepared(world, actor, targets)?;
         let Some((action, execution)) = self.select(world, actor, targets, precombat, &prepared)?
         else {
@@ -172,6 +175,29 @@ impl super::SpecDriver for Rotation {
     ) -> Result<(), String> {
         self.step(world, actor, targets, false)?;
         Ok(())
+    }
+}
+
+// SimC76f8118 pet.cpp66–68/143–148: awake pets use the owner's actual
+// primary enemy. Literal capture replaces the kit that normally issues orders.
+// Per-action target_if choices do not replace that default primary.
+fn command_minions(world: &mut World, actor: Entity, targets: &[Entity]) {
+    let target = targets.first().copied();
+    let current = world
+        .get::<crate::networking::CombatTarget>(actor)
+        .and_then(|target| target.0);
+    if current != target {
+        world
+            .entity_mut(actor)
+            .insert(crate::networking::CombatTarget(target));
+    }
+    if let Some(pet) = crate::hunter_pet::summoned_pet(world, actor) {
+        let current = world
+            .get::<crate::networking::CombatTarget>(pet)
+            .and_then(|target| target.0);
+        if current != target {
+            crate::pet_control::order_companion_pet(world, actor, target);
+        }
     }
 }
 
