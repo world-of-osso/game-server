@@ -10,14 +10,15 @@ Sources: the linked contract/module, `script_registry.rs`, and `destruction_peri
 
 ## Marksmanship native relationships — 2026-10-25
 
-The [Marksmanship contract](../../specs/dps-parity.md#marksmanship-native-cast-relationships) separates native70448 values from pinned SimC76f8118 execution relationships. Runtime scripts live in `crates/server-combat/src/spell_cast/scripts/`.
+The [Marksmanship contract](../../specs/dps-parity.md#marksmanship-native-cast-relationships) separates native70448 values from pinned SimC76f8118 execution relationships. Runtime MM scripts live in `crates/server-spell-scripts/src/modules/`.
 
 - `cast_relationships.rs` grants Stalk and Strike's Lock and Load, fills Bulletstorm to its actual native maximum, and spends one earned use. Native70448 has one Bulletstorm use; do not import the reference build's stack limit.
 - `marksmanship.rs` plans Aimed/Rapid secondary recipients and banks critical damage into native Master Marksman. Volley can earn Trick Shots without the separate talent. Rapid Fire's target-carried channel must spend its caster's buff, not the recipient's. Recharge reductions occur on tick execution; the final projectile can arrive after channel completion.
 - `marksmanship_sentinel.rs` owns actual target marks, delayed Blood Fletching acquisition, Lunar Storm dispatch and Sanctified Armaments residuals. Native rolling-periodic handling retains unpaid damage. The applying Aimed critical hit precedes Blood Fletching's1ms mark callback.
 - `marksmanship_explosive.rs` converts each actual primary tick into native secondary-only cleave and applies equipped MID2 cooldown reductions once, independently of recipient count.
+- `marksmanship_salvo.rs` reads the resolving Volley's native TargetInfos, applies background Explosive Shot to Salvo's capped recipients and starts the native Volley-duration internal cooldown. Background applications do not run foreground resource or Unstable Trigger producers.
 
-Sources: the named runtime modules and `hunter_{cadence,followup,explosive}_tests.rs` under `crates/server-simulation/src/dungeon_simulator/dps_parity/`. Numerical parity requires a separate complete300s measurement; passing relationship tests alone does not establish it.
+Sources: the named runtime modules and `hunter_{cadence,followup,explosive,salvo}_tests.rs` under `crates/server-simulation/src/dungeon_simulator/dps_parity/`. Numerical parity requires a separate complete300s measurement; passing relationship tests alone does not establish it.
 
 ## Native Warrior execution relationships — 2026-10-25
 

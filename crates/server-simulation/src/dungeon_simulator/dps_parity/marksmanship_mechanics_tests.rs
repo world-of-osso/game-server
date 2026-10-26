@@ -72,6 +72,23 @@ pub(super) fn owned_buff(run: &Run, spell: u32) -> bool {
 
 fn arcane_damage_after_precise_launch_expiry(precise: bool) -> (f64, f64) {
     let mut run = player(1);
+    let arcane = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(185358)
+        .unwrap()
+        .clone();
+    let live_modifier = |run: &Run| {
+        f64::from(crate::auras::spell_mods::modify(
+            run.app.world(),
+            run.actor,
+            &arcane,
+            crate::auras::spell_mods::SpellModOp::HealingAndDamage,
+            1.0,
+        ))
+    };
+    let baseline = live_modifier(&run);
     if precise {
         let spell = run
             .app
@@ -91,20 +108,9 @@ fn arcane_damage_after_precise_launch_expiry(precise: bool) -> (f64, f64) {
             },
         );
     }
-    // Read the resolved native live modifier, including selected trait adjustments.
-    let arcane = run
-        .app
-        .world()
-        .resource::<crate::spell_info::SpellStore>()
-        .get(185358)
-        .unwrap();
-    let expected = f64::from(crate::auras::spell_mods::modify(
-        run.app.world(),
-        run.actor,
-        arcane,
-        crate::auras::spell_mods::SpellModOp::HealingAndDamage,
-        1.0,
-    ));
+    // SimC76f8118 sc_hunter.cpp4121/4127–4130: snapshot the earned
+    // Precise multiplier before the successful cast consumes it.
+    let expected = live_modifier(&run) / baseline;
     let target = run.targets[0];
     run.app.world_mut().insert_resource(
         crate::spell_cast::effects::factor_capture::FactorCapture::new(
@@ -131,21 +137,42 @@ fn arcane_damage_after_precise_launch_expiry(precise: bool) -> (f64, f64) {
     );
     for _ in 0..40 {
         run.app.update();
+        let capture = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+            .export();
+        if capture["captured_hits"].as_u64() == Some(1) {
+            break;
+        }
     }
     let receipt = run
         .app
         .world()
         .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
         .export();
-    let observed = receipt["events"]
+    let event = |kind: &str| {
+        receipt["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["event"] == kind && event["spell_id"] == 185358)
+            .expect("actual Arcane Shot projectile hit")
+    };
+    let observed = event("result")["factors"]["native_spell_mod_product"]
+        .as_f64()
+        .expect("actual native damage spell-mod product");
+    // Gear procs change live modifiers during flight AND after the impact.
+    // Normalize by the other native modifiers actually applied at this hit,
+    // rather than a different frame's stats, damage variance or crit outcome.
+    let other_modifiers: f64 = event("direct_amount")["applied_modifiers"]
         .as_array()
         .unwrap()
         .iter()
-        .find(|event| event["event"] == "direct_amount")
-        .expect("actual Arcane Shot projectile hit")["factors"]["mult"]
-        .as_f64()
-        .expect("crit-normalized native hit multiplier");
-    (observed, expected)
+        .filter(|modifier| modifier["op"] == 0 && modifier["source_spell_id"] != 260242)
+        .map(|modifier| 1.0 + modifier["value"].as_f64().unwrap() / 100.0)
+        .product();
+    (observed / other_modifiers, expected)
 }
 
 #[test]
