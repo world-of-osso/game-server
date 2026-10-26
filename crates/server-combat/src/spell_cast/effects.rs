@@ -2689,6 +2689,8 @@ fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     };
     spell.cast_destination = ctx.spell.cast_destination;
     spell.cast_item_level = ctx.spell.cast_item_level;
+    spell.cast_damage_multiplier =
+        super::scripts::frost_flurry_damage_multiplier(world, ctx.caster, ctx.spell, spell.id);
     let target = trigger_recipient(ctx, &spell, target);
     super::launch_triggered_spell(world, ctx.caster, &spell, target, depth);
 }

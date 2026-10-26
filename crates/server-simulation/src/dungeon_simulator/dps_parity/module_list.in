@@ -63,6 +63,7 @@ mod fire_nova_native_tests;
 mod firestarter_tests;
 mod fixture_facing_tests;
 mod frost_mage_lance_cdr_tests;
+mod frost_mage_modifiers_tests;
 mod frost_mage_proc_tests;
 mod fixture_return_tests;
 mod frost_mage_shatter_followups_tests;
