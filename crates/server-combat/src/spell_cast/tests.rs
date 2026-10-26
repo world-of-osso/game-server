@@ -203,20 +203,21 @@ fn instant_spell_resolves_same_tick_spending_cost_and_starting_gcd_and_cooldown(
     };
     h.set_power(PowerType::Rage, 500.0);
     h.cast_and_deliver(MORTAL_STRIKE, Some(h.npc));
-    // AP coefficient 5.2012 × attack power 100 = 520, ± 2.5% variance.
-    let health_delta = 5000.0 - h.health(h.npc);
-    assert!(
-        varied(520.12).contains(&health_delta),
-        "native MS health_delta={health_delta}, spec={:?}, auras={:?}, events={:?}",
-        h.app
-            .world()
-            .get::<shared::components::ActiveSpec>(h.caster),
-        h.app
-            .world()
-            .get::<crate::auras::ActiveAuras>(h.caster)
-            .map(|auras| auras.iter().map(|aura| aura.spell_id).collect::<Vec<_>>()),
-        h.inbox.log
-    );
+    // A native white swing can land in the same receiving tick. Require the
+    // actual MS event immediately, and reconcile all damage with target health.
+    assert!(h.inbox.log.iter().any(|event| {
+        event.kind == CombatLogKind::Damage && event.spell_id == Some(MORTAL_STRIKE)
+    }));
+    let initial_damage: i32 = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage && event.target == Some(h.npc.to_bits())
+        })
+        .map(|event| event.amount)
+        .sum();
+    assert_eq!(5000.0 - h.health(h.npc), initial_damage as f32);
     assert_eq!(h.power(PowerType::Rage), 200.0, "30 rage = 300 raw spent");
     assert!(h.app.world().get::<CastState>(h.caster).is_none());
     h.advance(2);
@@ -245,14 +246,15 @@ fn instant_spell_resolves_same_tick_spending_cost_and_starting_gcd_and_cooldown(
     assert!(log.iter().any(|e| e.kind == CombatLogKind::CastSuccess));
     let damage = log
         .iter()
-        .find(|e| e.kind == CombatLogKind::Damage)
+        .find(|e| e.kind == CombatLogKind::Damage && e.spell_id == Some(MORTAL_STRIKE))
         .unwrap();
+    // Native AP coefficient5.2012 × AP100, retaining its±2.5% variance.
     assert!(
         varied(520.12).contains(&(damage.amount as f32)),
         "{damage:?}"
     );
     assert_eq!(damage.overflow, 0);
-    let health_after_hit = 5000.0 - damage.amount as f32;
+    let health_before_rejections = h.health(h.npc);
 
     h.cast_and_deliver(MORTAL_STRIKE, Some(h.npc));
     let failed = std::mem::take(&mut h.inbox.failed);
@@ -263,7 +265,25 @@ fn instant_spell_resolves_same_tick_spending_cost_and_starting_gcd_and_cooldown(
         std::mem::take(&mut h.inbox.failed)[0].reason,
         CastFailReason::OnCooldown
     );
-    assert_eq!(h.health(h.npc), health_after_hit);
+    assert!(
+        h.inbox.log.iter().all(|event| {
+            event.kind != CombatLogKind::Damage || event.spell_id != Some(MORTAL_STRIKE)
+        }),
+        "rejected MS casts cannot add another MS hit"
+    );
+    let later_damage: i32 = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage && event.target == Some(h.npc.to_bits())
+        })
+        .map(|event| event.amount)
+        .sum();
+    assert_eq!(
+        h.health(h.npc),
+        health_before_rejections - later_damage as f32
+    );
 }
 
 #[test]
