@@ -127,6 +127,23 @@ fn outlaw_killing_spree_emits_both_hands_for_effective_point_ticks() {
             preparation::finish_pending_setup(&mut run).unwrap();
             assert!(crate::auras::has_aura(run.app.world(), run.actor, 13750));
         }
+        let extra = if adrenaline {
+            let forced = if crate::auras::has_aura(run.app.world(), run.actor, 470668) {
+                crate::spell_cast::scripts::script_effect_value(
+                    run.app.world(),
+                    run.actor,
+                    470668,
+                    0,
+                )
+            } else {
+                0.0
+            };
+            crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 470347, 1)
+                + forced
+        } else {
+            0.0
+        };
+        let effective_points = points + extra as usize;
         fund_finisher(&mut run, points as f32);
         literal_rotation::execution::execute(
             run.app.world_mut(),
@@ -157,8 +174,8 @@ fn outlaw_killing_spree_emits_both_hands_for_effective_point_ticks() {
             })
             .count();
         assert_eq!(
-            returns, points,
-            "native Spree returns points only after tick-zero"
+            returns, effective_points,
+            "native Spree returns effective points only after tick-zero"
         );
         for spell in [57841, 57842] {
             let attempts: Vec<_> = events
@@ -171,8 +188,8 @@ fn outlaw_killing_spree_emits_both_hands_for_effective_point_ticks() {
                 .collect();
             assert_eq!(
                 attempts.len(),
-                points + 1,
-                "native Killing Spree{spell} must emit tick-zero and {points} scheduled hand hits"
+                effective_points + 1,
+                "native Killing Spree{spell} must emit tick-zero and {effective_points} scheduled hand hits"
             );
             assert!(
                 attempts

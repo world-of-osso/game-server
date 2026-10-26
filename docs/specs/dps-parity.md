@@ -131,6 +131,8 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Outlaw literal fixture
 
+- Selected native Rogue Supercharger470347 fills its authored count of first inactive counters in pinned470398/470406/470409/470412/470414/470415/470416 order after ordinary Adrenaline Rush, Shadow Dance or a successful Kingsbane direct impact. Eligible finishers add its native effective-point bonus and selected Forced Induction after other effective-point sources, without changing payment. Consume one highest active counter after success and open selected Echoing Reprimand470671. Slice and Dice and unselected talents do not consume or grant counters (`sc_rogue.cpp2021–2038,2215–2216,3578,4959,5576,8913–8961`).
+
 - Native Main Gauche76806 rolls its authored proc chance from successful main-hand white swings and the pinned eligible special impacts, including Sinister extra attacks and Killing Spree's main hand. Emit native86392 at the actual hit recipient. Pistol Shot, Between the Eyes, off-hand whites, Spree's off hand and Main Gauche itself cannot produce it. Native mastery coefficients remain unchanged (`sc_rogue.cpp3468–3469,4726–4728,5942–6001,7948–7973`).
 
 - Pistol Shot spends one earned Opportunity use per execution, not all stacks or a stack-multiplied damage/cost bonus. An ordinary shot schedules up to native Fan the Hammer's count of remaining earned uses100ms apart, using its native damage reduction; children cannot fan. Each earned shot grants native Quick Draw points when selected. Background shots freeze charged modifiers at launch and consume their own use before impact (`sc_rogue.cpp4981–5070`).
