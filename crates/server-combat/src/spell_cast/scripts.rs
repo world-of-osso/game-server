@@ -31,6 +31,7 @@ mod batch7;
 mod batch8;
 mod batch9;
 mod frost;
+pub(super) use frost::consume_due_killing_machine;
 mod periodic_attacks;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(super) use script_registry::after_foreground_special;

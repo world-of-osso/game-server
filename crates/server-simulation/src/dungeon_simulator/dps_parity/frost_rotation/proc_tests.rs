@@ -194,8 +194,8 @@ fn frost_km_consumption_extends_active_breath() {
     let _seed = crate::random::seed_scope(251);
     let mut run = super::super::prepare_literal(251, 1).unwrap();
     super::super::engage(&mut run);
+    cast(&mut run, 49020);
     earn_killing_machine(&mut run);
-    cast(&mut run, 47568);
     cast(&mut run, 47568);
     let actor = run.actor;
     super::super::enhancement_generation_tests::cast(&mut run, 1249658, actor);

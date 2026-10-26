@@ -370,6 +370,7 @@ impl Plugin for SpellCastPlugin {
                     start_queued_casts,
                     auto_repeat::update,
                     queued_triggers::resolve_due,
+                    scripts::consume_due_killing_machine,
                     powers::sync_unit_powers,
                     runes::sync_unit_runes,
                     assisted_costs::publish,
