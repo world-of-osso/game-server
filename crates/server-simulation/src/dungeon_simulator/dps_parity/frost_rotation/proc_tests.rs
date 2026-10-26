@@ -273,9 +273,9 @@ fn frost_km_consumption_extends_active_breath() {
         .find(|effect| effect.index == 2)
         .unwrap()
         .base_points;
-    let target = run.targets[0];
-    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49020, Some(target), false)
-        .unwrap();
+    // Setup spent all six starting runes. Wait for ordinary rune regeneration;
+    // Frozen Dominion's real Winter must not require a lucky Empowerment roll.
+    cast(&mut run, 49020);
     for _ in 0..3 {
         run.app.update();
     }
