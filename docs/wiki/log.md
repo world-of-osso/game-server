@@ -1,6 +1,9 @@
 ## 2026-10-25 — Secondary residual sources
 
 [Secondary copies](systems/spell-casting.md#secondary-residual-source-snapshots--2026-10-25) retain pre-target critical source damage and resolve native Blade Flurry against capped secondary enemies. The transfer boundary passed native RED→GREEN; initial strike and other producers remain separate.
+## 2026-10-25 — Subtlety Lingering Shadow
+
+[Lingering Shadow](systems/spell-casting.md#subtlety-lingering-shadow--2026-10-25): pinned expiry/decay and native mitigated residual, downstream hooks, native RED957d26c2d3→GREEN561fb56b0d; numerical parity remains open.
 ## 2026-10-25 — Marksmanship Salvo producer
 
 [Marksmanship](systems/spell-casting.md#marksmanship-native-relationships--2026-10-25): selected Salvo launches native capped background Explosive Shots from actual Volley recipients, with native Volley-duration internal recovery and no foreground producers.

@@ -266,9 +266,12 @@ fn dps_parity_ret_storm_gap_background_sunrise_control_does_not_recurse_or_pay()
     let target = run.targets[0];
     cast_ordinary(&mut run, WAKE, target);
     wait_for_funding(&mut run);
-    let power = current_holy_power(&run);
     for _ in 0..12 {
+        let power = current_holy_power(&run);
         crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, STORM, Some(target), 1);
+        // SimC76f8118 Ret504–507: background Storm costs zero. Compare
+        // at launch, before independent Crusading Strikes can earn more power.
+        assert_eq!(current_holy_power(&run), power);
         for _ in 0..40 {
             run.app.update();
         }
@@ -276,11 +279,6 @@ fn dps_parity_ret_storm_gap_background_sunrise_control_does_not_recurse_or_pay()
     assert!(
         damage(&run, Some(STORM)) > 0,
         "background control must actually damage"
-    );
-    assert_eq!(
-        current_holy_power(&run),
-        power,
-        "background native launches must not pay3HP"
     );
     assert_eq!(
         echo_targets(&run).len(),
