@@ -11,12 +11,16 @@ mod heroic_might;
 mod warfare;
 #[path = "arms_just_warming_up.rs"]
 mod warming;
+#[path = "arms_winding_up.rs"]
+mod winding;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(warfare::register),
     SpellScriptHook::AfterElementalLaunch(warming::after_smash),
     SpellScriptHook::AfterElementalLaunch(heroic_might::after_heroic),
     SpellScriptHook::BeforeNativeOnCast(heroic_might::before_smash),
+    SpellScriptHook::OwnsPolicyProc(winding::owns_proc),
+    SpellScriptHook::AfterElementalLaunch(winding::after_cast),
 ];
 
 fn selected(world: &World, caster: Entity, passive: u32) -> bool {
