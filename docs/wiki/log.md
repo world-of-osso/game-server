@@ -8,6 +8,9 @@
 ## 2026-10-25 — Reentrant native factor capture
 
 [Native observations](systems/server-crates.md#reentrant-native-factor-observations): recipient component inserts can flush a queued same-ID Sunrise Tempest while its parent damage is still committing. Capture detaches each calculated hit before those mutations; root/echo/secondary effectiveness remains native. Strict native RED reproduced; GREEN gate pending.
+## 2026-10-25 — Feral native literal takeover
+
+[Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25): source-order/player-precombat controls, native Lunar override lifecycle and selected Rip/Rake Growth are qualified. Full300s runs still refuse missing bare periodic facts; native snapshot/CP REDs are retained, with GREEN and numerical parity pending. Shared consumable work remains separate.
 
 ## 2026-10-25 — Marksmanship Salvo producer
 
