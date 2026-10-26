@@ -55,6 +55,28 @@ fn enhancement_linked_modes_keep_earning_maelstrom_until_the_last_real_mode_ends
     for _ in 0..40 {
         run.app.update();
     }
+    let active = run.app.world().get::<ActiveAuras>(actor).unwrap();
+    let cap = active
+        .iter()
+        .find(|aura| aura.spell_id == 344179)
+        .map(|aura| aura.max_stacks);
+    let producer = active
+        .iter()
+        .find(|aura| aura.spell_id == 384437)
+        .map(|aura| {
+            (
+                aura.expires_at,
+                aura.effects
+                    .iter()
+                    .map(|effect| (effect.index, effect.amount, effect.period_ms))
+                    .collect::<Vec<_>>(),
+            )
+        });
+    println!(
+        "LINKED_STATIC before={before} after={} cap={cap:?} now={} producer={producer:?}",
+        weapon_stacks(&run),
+        crate::spell_cast::now(run.app.world())
+    );
     assert!(
         weapon_stacks(&run) > before,
         "retained native Static ticks must still fund real MW without melee"
