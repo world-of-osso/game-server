@@ -211,6 +211,21 @@ class MasterBroken(Exception):
     pass
 
 
+def failing_paths(log, start):
+    """Source files named by errors in the log written since byte offset `start`."""
+    with log.open() as f:
+        f.seek(start)
+        text = f.read()
+    # include!()d sources are reported through `..` hops (crates/a/src/../../b/...).
+    return {os.path.normpath(p) for p in
+            re.findall(r"(?:-->|Diff in) /?(?:\S*?/game-server-land/)?(crates/\S+?\.rs)", text)}
+
+
+def touches(entry, paths):
+    changed = git("diff", "--name-only", f"origin/master...{entry['commit']}", check=False).stdout.split()
+    return bool(paths.intersection(changed))
+
+
 def build_checked(entries, log):
     """Return (tree entries that check together, rejected), with the tree checked out.
     A failing set is split in halves, so a few broken entries cost O(k log n) checks."""
@@ -236,13 +251,22 @@ def build_checked(entries, log):
             admit(candidates[:half])
             admit(candidates[half:])
 
+    checked_from = log.stat().st_size if log.exists() else 0
     if check(log):
         return merged, rejected
+    paths = failing_paths(log, checked_from)
     # A broken master rejects everything; report that instead of blaming entries.
     reset_tree()
     if not check(log):
         raise MasterBroken(f"origin/master itself fails check; see {log}")
-    admit(merged)
+    # Entries touching the files the compiler or rustfmt blamed are the likely culprits: admit
+    # the rest in one check first, so one broken entry costs ~3 checks instead of a full bisect.
+    suspects = [e for e in merged if touches(e, paths)]
+    if suspects and len(suspects) < len(merged):
+        admit([e for e in merged if e not in suspects])
+        admit(suspects)
+    else:
+        admit(merged)
     reset_tree()
     merge(good, log)
     return good, rejected
