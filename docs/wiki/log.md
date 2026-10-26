@@ -1,6 +1,6 @@
 ## 2026-10-26 — Hellcaller counter lifecycle
 
-[Shared counters](systems/warlock-periodic-counters.md#counter-lifecycle) now have a downstream producer/collapse module, additive actual-UA application binding, native periodic driver and source RNG models. Native UA/CB/collapse REDs are recorded; lifecycle GREEN and numerical parity remain pending. UA expiry callbacks remain independently owned.
+[Shared counters](systems/warlock-periodic-counters.md#counter-lifecycle) landed in `b6937d3bf310` with six native lifecycle cases GREEN and additive actual-UA application binding. The265-led probe also passes all six; independently owned Calamity/Wrath failures remain separate. Three-seed267ST94930.81/3T123087.79 are48.65%/47.94% of reference, not numerical parity. UA expiry callbacks remain independently owned.
 
 ## 2026-10-25 — Arcane literal player fixture
 

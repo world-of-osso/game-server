@@ -1,4 +1,4 @@
-- [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counter-only RED→GREEN; shared producer/collapse lifecycle implemented, native qualification pending.
+- [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counter-only RED→GREEN; shared producer/collapse lifecycle native6GREEN on265/267; numerical parity remains open.
 - [Arcane literal fixture](systems/simc-apl.md#arcane-fixture-62) — supplied profile rows and native class readiness; ST controller regression passes, numerical parity remains separate.
 - [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counters do not scale ticks or grow on refresh;265/267 actual-cast/tick RED→GREEN.
 - [Warlock periodic shard funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) — downstream Destruction-only funding, actual critical context and shared native pool/overflow; Affliction remains separate.
