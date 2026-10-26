@@ -1,3 +1,5 @@
+- [Explicit non-demon guardian SP](systems/spell-casting.md#explicit-non-demon-guardian-spell-power--2026-10-26) — native Thing type15 reads its sourced full-owner-SP policy; actual Spike and protected BM/265/267 cases pass, landing pending.
+- [Haunting Shadows impact extensions](systems/spell-casting.md#haunting-shadows-impact-extensions--2026-10-26) — actual apparition impact preserves owned Pain/VT; native missing-extension RED, GREEN pending.
 - [Merged feedback grants are not casts](systems/spell-casting.md#merged-feedback-grants-are-not-casts--2026-10-26) — native queued394195 earns an unrelated+78haste through full-cast side effects; direct aura application preserves native buff values, pending three-Mage qualification.
 - [Survival native producers](systems/spell-casting.md#survival-native-producers--2026-10-26) — Tip/Swipe/Wildfire and shared Sentinel landed;3 mark REDs→GREEN and38 real controls pass, numerical parity remains open; owned-pet strike qualification continues.
 - [Destruction guaranteed-crit damage](systems/spell-casting.md#destruction-guaranteed-crit-damage--2026-10-26) — live crit chance supplies the selected Conflagrate/Shadowburn multiplier; native RED recorded, GREEN pending.
@@ -1030,6 +1032,7 @@ External resources, tooling, data sources, development workflow.
 - [Class spell batch18](systems/spell-casting.md#eighteenth-batch-native-leech-and-reapplication) — shared native leech, named Madness/Ignore Pain reapplication, improved Backdraft uses and Obliterate branches;163 remaining Dummy roots/103 reviewed/60 underived, [all40/proof](../spell-dummy18-coverage.md); retained area/marker/redirect/source gaps.
 - [Quest GO/spell objectives](systems/game-objects.md#quest-objects-2026-10-11) — authored locks, goober use, chest quest-item loot and personal/group spell-credit events; real-data turn-in tests and retained Retail gaps.
 
+- [Arcane charge cost and cast time](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers) — actual native admission/cast-bar REDs prove duplicate36032 folds; ordinary aura modifiers replace legacy per-spell scaling.
 - [Class spell batch16](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers) — nine low-count rank/charge/heal contracts;163 remaining Dummy roots,98/65 reviewed/underived unchanged; [all40/proof](../spell-dummy16-coverage.md). No guardian edits or invented marker closures.
 - [Toy-effects12 non-summon cosmetics](systems/toys.md#toy-effects12-non-summon-cosmetics-2026-10-11) — ranked dummy handlers; source-bound sob, ghost, fist and water art; [coverage](../toy-effects12-coverage.md), retained underivable scripts/rendering.
 
