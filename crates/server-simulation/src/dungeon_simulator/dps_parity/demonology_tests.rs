@@ -417,6 +417,61 @@ fn demonology_implosion_consumes_actual_imps_and_deals_native_damage() {
     );
 }
 
+#[test]
+#[ignore = "requires private266 inputs; actual Imp Lord native attack dispatch"]
+fn demonology_imp_lord_executes_real_greater_felbolts() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        1276452,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("selected ordinary Grimoire must summon native Imp Lord");
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let lord = run
+        .app
+        .world_mut()
+        .query::<(
+            Entity,
+            &crate::spell_cast::summon::SummonedCreature,
+            &shared::components::Npc,
+        )>()
+        .iter(run.app.world())
+        .find(|(_, summon, npc)| summon.owner == run.actor && npc.template_id == 258584)
+        .map(|(unit, _, _)| unit)
+        .expect("ordinary Grimoire must create actual258584");
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let hits = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(lord.to_bits())
+                && event.spell_id == Some(1277116)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
+    // SimC76f8118 pets.cpp1672–1705: real Imp Lord repeats Greater Felbolt
+    // from200 initial Energy, paying native40 while retaining the125 gate.
+    assert!(
+        hits >= 2,
+        "actual Imp Lord must launch real Greater Felbolts: hits{hits}"
+    );
+}
+
 fn summon_native_guardian(run: &mut Run, root: u32) -> Entity {
     crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, root, Some(run.actor), true)
         .expect("native triggered guardian summon must be admitted");
