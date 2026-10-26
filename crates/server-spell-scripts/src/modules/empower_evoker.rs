@@ -2,9 +2,29 @@
 //! Every coefficient and stage duration remains native70448 metadata.
 use bevy::prelude::*;
 
-use crate::auras::ActiveAuras;
-use crate::spell_cast::CastFailure;
-use crate::spell_info::{SpellInfo, SpellStore};
+use super::combat;
+use combat::auras::ActiveAuras;
+use combat::spell_cast::script_registry::{EmpowerCompleteHook, SpellScriptHook};
+use combat::spell_cast::{self, CastFailure};
+use combat::spell_info::{SpellInfo, SpellStore};
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::EmpowerCompletion(completion),
+    SpellScriptHook::EmpowerDamageBonus(damage_bonus),
+    SpellScriptHook::EmpowerReleasePreview(release_preview),
+];
+
+fn completion(spell: u32) -> Option<EmpowerCompleteHook> {
+    matches!(spell, 357208 | 382266 | 359073 | 382411).then_some(release)
+}
+
+fn release_preview(world: &World, caster: Entity, spell: u32, rank: u8) -> Option<SpellInfo> {
+    match spell {
+        357208 | 382266 => Some(build_fire_breath_release(world, caster, rank)),
+        359073 | 382411 => Some(build_eternity_surge_release(world, caster, rank)),
+        _ => None,
+    }
+}
 
 const FIRE_DAMAGE: u32 = 357209;
 const SURGE_DAMAGE: u32 = 359077;
@@ -54,7 +74,7 @@ fn extend_dragonrage(world: &mut World, caster: Entity) {
         .get::<AnimosityProgress>(caster)
         .filter(|progress| progress.dragonrage_instance == instance)
         .map_or(1.0, |progress| progress.effectiveness);
-    crate::auras::extend_owned_duration(
+    combat::auras::extend_owned_duration(
         world,
         caster,
         caster,
@@ -77,10 +97,10 @@ fn read_native_aura_amount(world: &World, caster: Entity, spell: u32) -> f32 {
 
 fn filter_scouring_effect(world: &World, caster: Entity, child: &mut SpellInfo) {
     // TC648–675 gates the dispel; native70448 moved it to effect5 and fixes its count at2.
-    if !crate::auras::has_aura(world, caster, SCOURING_FLAME) {
+    if !combat::auras::has_aura(world, caster, SCOURING_FLAME) {
         child
             .effects
-            .retain(|effect| effect.effect != crate::spell_cast::effects::EFFECT_DISPEL);
+            .retain(|effect| effect.effect != spell_cast::effects::EFFECT_DISPEL);
     }
 }
 
@@ -120,7 +140,7 @@ fn build_eternity_surge_release(world: &World, caster: Entity, rank: u8) -> Spel
         .get(SURGE_DAMAGE)
         .expect("Eternity Surge requires native359077 release metadata")
         .clone();
-    let span = crate::auras::has_aura(world, caster, ETERNITYS_SPAN);
+    let span = combat::auras::has_aura(world, caster, ETERNITYS_SPAN);
     let targets = i32::from(rank) * if span { 2 } else { 1 };
     // SimC's recipient count is action-wide. TC741–781 shares the native
     // Dummy0 and damage1 selection: its leading Dummy must carry the cap too.
@@ -146,7 +166,7 @@ pub(super) fn release(
         _ => unreachable!("qualified empower handler registration"),
     };
     // TC uses IGNORE_CAST_IN_PROGRESS, not FULL_MASK: preserve normal damage procs.
-    crate::spell_cast::execute_cast(world, caster, &child, target)?;
+    spell_cast::execute_cast(world, caster, &child, target)?;
     extend_dragonrage(world, caster);
     grant_mass_disintegrate(world, caster);
     Ok(())
@@ -155,16 +175,10 @@ pub(super) fn release(
 fn grant_mass_disintegrate(world: &mut World, caster: Entity) {
     // SIMC_DEVASTATION_EMPOWER_MASS_DISINTEGRATE: sc_evoker.cpp4703–4704
     // grants one native buff application after a successful empower release.
-    if !crate::auras::has_aura(world, caster, MASS_DISINTEGRATE) {
+    if !combat::auras::has_aura(world, caster, MASS_DISINTEGRATE) {
         return;
     }
-    if !crate::spell_cast::try_cast_triggered(
-        world,
-        caster,
-        MASS_DISINTEGRATE_BUFF,
-        Some(caster),
-        1,
-    ) {
+    if !spell_cast::try_cast_triggered(world, caster, MASS_DISINTEGRATE_BUFF, Some(caster), 1) {
         warn!(?caster, "Native empower Mass Disintegrate grant refused");
     }
 }
@@ -178,6 +192,6 @@ pub(crate) fn damage_bonus(world: &World, caster: Entity, spell: &SpellInfo) -> 
         .iter()
         .find(|effect| effect.index == 1 && effect.aura == 3)
         .expect("native Fire Breath periodic effect1");
-    let tick = crate::spell_cast::effects::scaled_amount(world, caster, spell, periodic);
+    let tick = spell_cast::effects::scaled_amount(world, caster, spell, periodic);
     tick * (u32::from(rank - 1) * CONVERTED_TICKS_PER_RANK) as f32
 }
