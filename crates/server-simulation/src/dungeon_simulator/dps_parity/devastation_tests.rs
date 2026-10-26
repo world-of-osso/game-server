@@ -486,15 +486,21 @@ fn devastation_literal_measurement_executes_reference_deep_breath() {
                 && event.kind == shared::protocol::CombatLogKind::CastSuccess
         }),
         "Maneuverability's native caster-only endpoint must keep its self cast unit; cast targets={:?}",
-        events.iter().filter(|event| event.spell_id == Some(deep_breath)
-            && event.kind == shared::protocol::CombatLogKind::CastSuccess)
-            .map(|event| event.target).collect::<Vec<_>>()
+        events
+            .iter()
+            .filter(|event| event.spell_id == Some(deep_breath)
+                && event.kind == shared::protocol::CombatLogKind::CastSuccess)
+            .map(|event| event.target)
+            .collect::<Vec<_>>()
     );
-    assert!(events.iter().any(|event| {
-        event.source == Some(run.actor.to_bits())
-            && event.spell_id == Some(353759)
-            && event.target == Some(run.targets[0].to_bits())
-            && event.kind == shared::protocol::CombatLogKind::Damage
-            && event.amount > 0
-    }), "the self cast must retain the actual hostile primary for native Deep Breath damage");
+    assert!(
+        events.iter().any(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(353759)
+                && event.target == Some(run.targets[0].to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0
+        }),
+        "the self cast must retain the actual hostile primary for native Deep Breath damage"
+    );
 }
