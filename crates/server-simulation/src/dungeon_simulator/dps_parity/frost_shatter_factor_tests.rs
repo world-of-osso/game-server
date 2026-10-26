@@ -35,6 +35,11 @@ fn freezing(run: &Run) -> u8 {
 
 fn prepare_case(stacks: u8, buffs: &[u32]) -> Run {
     let mut run = prepare_literal(64, 3).unwrap();
+    // A real opener has already advanced past Deep Shatter's native1s update.
+    // Do not mistake its setup-time modifier for a steady-state per-hit gap.
+    for _ in 0..40 {
+        run.app.update();
+    }
     // Isolate consumption from independently earned Hand/Infused/tier followups.
     // Retain native damage, crit, stat, stack-limit and projectile definitions.
     crate::auras::remove_auras(
@@ -102,6 +107,7 @@ fn frost_shatter_factor_native_lance_consumption_and_multiplier_matrix() {
     for (label, stacks, buffs) in [
         ("ordinary_six", 6, &[][..]),
         ("fingers_six", 6, &[44544][..]),
+        ("fingers_without_freezing", 0, &[44544][..]),
         ("thermal_twelve", 12, &[1247730][..]),
         ("fingers_thermal_three", 3, &[44544, 1247730][..]),
         ("permafrost_six", 6, &[455122][..]),
@@ -110,7 +116,7 @@ fn frost_shatter_factor_native_lance_consumption_and_multiplier_matrix() {
         let mut run = prepare_case(stacks, buffs);
         let before = freezing(&run);
         let stats = report::stats(run.app.world(), run.actor);
-        let trace = capture_hit(&mut run, 30455, 1246949, label);
+        let trace = capture_hit(&mut run, 30455, 228598, label);
         println!(
             "FROST_SHATTER_FACTOR {}",
             serde_json::json!({
