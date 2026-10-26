@@ -16,13 +16,22 @@ fn destruction_imp_literal_controller_orders_actual_main_pet_firebolts() {
         .expect("literal precombat must summon its actual configured Imp");
     assert_eq!(run.app.world().get::<Npc>(imp).unwrap().template_id, 416);
     assert!(run.app.world().get::<UnitIsPet>(imp).unwrap().0);
-    let reaction = run.app.world().get::<crate::pet_control::PetCharm>(imp).unwrap().react;
+    let reaction = run
+        .app
+        .world()
+        .get::<crate::pet_control::PetCharm>(imp)
+        .unwrap()
+        .react;
     engage(&mut run);
     for _ in 0..200 {
         run.app.update();
         drive_player(&mut run).unwrap();
     }
-    let expected_identity = (Some(imp.to_bits()), Some(run.targets[0].to_bits()), Some(3110));
+    let expected_identity = (
+        Some(imp.to_bits()),
+        Some(run.targets[0].to_bits()),
+        Some(3110),
+    );
     let hits = run
         .app
         .world()
@@ -40,7 +49,11 @@ fn destruction_imp_literal_controller_orders_actual_main_pet_firebolts() {
         "literal controller must order repeated actual3110 casts from its native main Imp; hits={hits}"
     );
     assert_eq!(
-        run.app.world().get::<crate::pet_control::PetCharm>(imp).unwrap().react,
+        run.app
+            .world()
+            .get::<crate::pet_control::PetCharm>(imp)
+            .unwrap()
+            .react,
         reaction,
         "an attack order must not replace the actual saved reaction stance"
     );
