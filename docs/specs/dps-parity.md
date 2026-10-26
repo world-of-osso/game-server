@@ -224,6 +224,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Demonology literal execution and alternative Tyrant
 
+- During actual combat, the spec266 literal controller maintains its default primary enemy for native guardians and commands its existing configured pet through ordinary pet control. Per-action `target_if` recipients do not replace that default enemy. Precombat does not command attacks, and no owner auto-attack is injected (SimC76f8118 `pet.cpp66–68/143–148`).
 - [ ] Spec266 follower parity consumes every exported pinned profile action through shared literal execution, with native target/resource/trait/equipment facts, actual owned Imp/Tyrant counts and source-qualified readiness. Capture precedes warmup; normal default-pet and harmful-precast completion precede pull. Production dungeon kits are unchanged.
 - [ ] Actual native265187/250289 binds native Burning Cleave1264093 and repeats on the pinned hasted two-second GCD (SimC76f8118 `sc_warlock_pets.cpp1510–1548`). Both Tyrant variants inherit owner-SP1.0 from the same source policy. Native damage coefficients, target plans and normal cast admission remain authoritative. Tests require actual child impacts and observed formula power, not registry/source-string assertions.
 
@@ -392,6 +393,8 @@ Actual466772 Doom Winds emits native469270 area damage on application and its na
 Selected Ride the Lightning289874 emits native211094 once per actual Strike/Lava Lash execution, using its native chain targets. This background variant neither benefits from nor spends MW. Real Tempest casts spend one454015 stack, preserving the other earned proc; Thorim spends its current Tempest proc before its MW consumption can earn a new one.
 
 Actual Enhancement MW consumption draws Tempest's pinned two-success100-card deck once per consumed stack, preserving greater-than10-card success spacing within and across decks. At most one native454015 proc is granted per spell. It does not substitute a Bernoulli roll or the talent's unused displayed chance for SimC's explicit deck parameters.
+
+Selected1260666 makes actual Voltaic Blaze executions roll their native effect1 chance for Fire Nova. Each living attackable target with this caster's native188389 Flame Shock emits one333977 explosion, independently of Burning Core periodic ticks. Sources: pinned SimC `sc_shaman.cpp10126–10130,7043–7076`.
 
 Equipped native MID2 Enhancement two-piece1296627 makes real Voltaic Blaze apply1299975 Burning Core to its selected primary. Its native periodic effect dispatches333977 Fire Nova from the original caster; its caster-specific native damage modifier remains authoritative. Each Fire Nova explosion execution with equipped four-piece1296628 reduces running Crash Lightning recharge by its native effect0 milliseconds and grants1299991 Short Circuit once, not per area target.
 

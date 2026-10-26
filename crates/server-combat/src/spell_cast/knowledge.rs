@@ -98,13 +98,16 @@ fn selected_trait_action(world: &World, actor: Entity, requested: u32) -> u32 {
 /// Demoniac426115 enables264178 (sc_warlock_init.cpp249–250). Neither pair
 /// has an operative TraitDefinition visible/override link in native70448.
 fn project_known_parent(world: &World, actor: Entity, requested: u32) -> u32 {
-    if !world
-        .get::<KnownSpells>(actor)
-        .is_some_and(|known| known.contains(requested))
-    {
+    let Some(known) = world.get::<KnownSpells>(actor) else {
+        return requested;
+    };
+    if !known.contains(requested) {
         return requested;
     }
     match requested {
+        // SIMC_DEVASTATION_MANEUVERABILITY_ACTION: sc_evoker.cpp6323–6327.
+        // Native433871 effect0 names433874 but supplies no TraitDefinition override.
+        357210 if known.contains(433871) => 433874,
         114050 => 1219480,
         426115 => 264178,
         _ => requested,
