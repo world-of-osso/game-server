@@ -368,7 +368,8 @@ def foreign_failures_only(entry, failed):
             if re.search(rf"\bfn {re.escape(fn)}\b", line):
                 indent = line[:len(line) - len(line.lstrip())]
                 end = next((j for j in range(i + 1, len(text)) if text[j] == f"{indent}}}"), len(text))
-                return text[i:end + 1]
+                # The train formats the combined tree, so compare without whitespace/trailing commas.
+                return re.sub(r",(?=[)\]}])", "", re.sub(r"\s+", "", "".join(text[i:end + 1])))
         return None
 
     def foreign(name):
@@ -401,7 +402,8 @@ def run_tests(entries, log):
         if code:
             nonzero.add(key[0])
             failed_names.setdefault(key[0], set()).update(names)
-    foreign = {i for i in nonzero - broken if i in failed_names
+    # Only landings: a probe or RED twin must never turn a real failure into a pass.
+    foreign = {i for i in nonzero - broken if i in failed_names and by_id[i]["land"]
                and len(failed_names[i]) and foreign_failures_only(by_id[i], failed_names[i])
                # Every nonzero run must be explained by named failures (a panic outside a test is not).
                and all(names for key, (code, _, names) in codes if key[0] == i and code)}
