@@ -42,6 +42,7 @@ const fn order_modules<const N: usize>(
 }
 
 register_modules! {
+    affliction_agony: (2650, "modules/affliction_agony.rs"),
     after_cast_auras: (100, "modules/after_cast_auras.rs"),
     aura_rolls: (110, "modules/aura_rolls.rs"),
     beast_mastery: (20, "modules/beast_mastery.rs"),
