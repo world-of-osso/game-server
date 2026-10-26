@@ -40,7 +40,21 @@ fn assassination_doomblade_both_real_mutilate_hands_fund_native_bleed() {
         .resource_mut::<ObservedCombatEvents>()
         .0
         .clear();
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    run.app
+        .world_mut()
+        .insert_resource(FactorCapture::new(actor, target, 394021, "doomblade", 32));
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1329, Some(target), 1);
+    let initial_bleed = run
+        .app
+        .world()
+        .get::<ActiveAuras>(target)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 394021 && aura.caster == actor)
+                .cloned()
+        });
     for _ in 0..180 {
         run.app.update();
     }
@@ -82,6 +96,12 @@ fn assassination_doomblade_both_real_mutilate_hands_fund_native_bleed() {
     let actual = ticks.iter().map(|event| event.amount as f32).sum::<f32>();
     assert!(
         (actual - expected).abs() <= 6.0,
-        "both resolved hits fund the native bleed fraction and its dynamic Lethal Dose: {actual}/{expected}"
+        "both resolved hits fund the native bleed fraction and its dynamic Lethal Dose: {actual}/{expected}; fraction{fraction},dose{dose}; hands{:?}; ticks{:?}; initial{initial_bleed:?}; factors{}",
+        hands
+            .iter()
+            .map(|event| (event.spell_id, event.amount, event.crit))
+            .collect::<Vec<_>>(),
+        ticks.iter().map(|event| event.amount).collect::<Vec<_>>(),
+        run.app.world().resource::<FactorCapture>().export()
     );
 }
