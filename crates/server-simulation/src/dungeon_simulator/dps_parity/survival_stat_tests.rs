@@ -25,6 +25,14 @@ fn survival_native_idle_setup_cannot_roll_temporary_equipment_stat_procs() {
         .into_iter()
         .filter(|&spell| crate::auras::has_aura(run.app.world(), run.actor, spell))
         .collect();
+    let idle_crit = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .ratings
+        .crit;
+    assert_eq!(idle_crit, 606, "actual permanent gear and Serrated Tips crit");
     preparation::consume_profile_food(&mut run).unwrap();
     log_rating_sources(&run, "after_food");
     let driver = survival_rotation::prepare_driver(&mut run).unwrap();
