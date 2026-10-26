@@ -13,6 +13,8 @@ mod assassination_poison_tests;
 mod assassination_seal_fate_tests;
 #[cfg(test)]
 mod assassination_target_tests;
+#[cfg(test)]
+mod assassination_white_tests;
 mod aura342_tests;
 mod barbed_budget_tests;
 #[cfg(test)]
