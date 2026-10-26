@@ -58,21 +58,28 @@ pub(super) fn wait_for_damage(run: &mut Run, spell: u32) {
 
 fn wake_budget() -> Run {
     let mut run = native_ret(4);
-    assert_eq!(native_count(&run), 3.0);
-    assert!(owned_dot(&run).is_none());
-    cast_and_damage(&mut run, WAKE);
-    assert_eq!(current_holy_power(&run), 3.0);
-    let aura = budget(&run).expect("producer prerequisite must already be GREEN");
+    arm_wake_budget(&mut run);
+    run
+}
+
+fn arm_wake_budget(run: &mut Run) {
+    assert_eq!(native_count(run), 3.0);
+    assert!(owned_dot(run).is_none());
+    cast_and_damage(run, WAKE);
+    assert_eq!(current_holy_power(run), 3.0);
+    let aura = budget(run).expect("producer prerequisite must already be GREEN");
     assert_eq!(aura.stacks, 3);
     assert_eq!(aura.max_stacks, 6);
-    run
 }
 
 #[test]
 #[ignore = "strict actual Wake budget and paid foreground hit must apply native Dawnlight and spend one use"]
 fn dps_parity_dawnlight_consumer_paid_native_verdict_applies_dot_and_spends_one() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = wake_budget();
+    let mut run = native_ret(4);
+    // The paid control leaves Aurora unspent; selected Wake legitimately makes this free.
+    ret_aurora_tests::unselect_aurora(&mut run);
+    arm_wake_budget(&mut run);
     cast_finisher(&mut run, FINAL_VERDICT);
     wait_for_damage(&mut run, FINAL_VERDICT);
     assert_eq!(
