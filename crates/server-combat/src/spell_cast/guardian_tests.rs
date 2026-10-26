@@ -250,7 +250,7 @@ fn guardians_sacrifice_splits_direct_damage_and_excludes_foreign_map() {
 }
 
 // Tests load the real prepared overlay, never a substituted Imp template.
-fn spawn_darkglare(h: &mut Harness) -> Entity {
+fn spawn_native_guardian(h: &mut Harness, summon_spell: u32, entry: u32) -> Entity {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("prepared.sqlite");
     std::fs::copy(&world_db().unwrap().powers_db, &path).unwrap();
@@ -260,6 +260,8 @@ fn spawn_darkglare(h: &mut Harness) -> Entity {
         .arg(script)
         .arg("--db")
         .arg(&path)
+        .arg("--spell")
+        .arg(summon_spell.to_string())
         .output()
         .unwrap();
     assert!(
@@ -277,7 +279,7 @@ fn spawn_darkglare(h: &mut Harness) -> Entity {
     .unwrap();
     h.app
         .insert_resource(super::summon::load_summon_properties(&source).unwrap());
-    // Archive has no Darkglare spell rows: the native root description is the binding.
+    // These native roots use source-bound policies, not archive substitutes.
     h.app
         .insert_resource(super::guardian::GuardianSpells::default());
     let world = h.app.world_mut();
@@ -293,7 +295,7 @@ fn spawn_darkglare(h: &mut Harness) -> Entity {
         .get_mut::<crate::networking::CombatTarget>(h.caster)
         .unwrap()
         .0 = Some(h.npc);
-    let spell = world_db().unwrap().store.get(205180).unwrap();
+    let spell = world_db().unwrap().store.get(summon_spell).unwrap();
     let effect = spell
         .effects
         .iter()
@@ -311,9 +313,15 @@ fn spawn_darkglare(h: &mut Harness) -> Entity {
     };
     super::summon::summon_creature(world, &ctx, effect);
     world
-        .query_filtered::<Entity, With<super::summon::SummonedCreature>>()
-        .single(world)
-        .unwrap()
+        .query_filtered::<(Entity, &shared::components::Npc), With<super::summon::SummonedCreature>>()
+        .iter(world)
+        .find(|(_, npc)| npc.template_id == entry)
+        .map(|(actor, _)| actor)
+        .expect("native root creates its authentic guardian template")
+}
+
+fn spawn_darkglare(h: &mut Harness) -> Entity {
+    spawn_native_guardian(h, 205180, 103673)
 }
 
 fn build_darkglare_harness() -> Harness {
@@ -416,28 +424,32 @@ fn guardians2_darkglare_retargets_stops_and_expires_without_pet_replacement() {
 }
 
 #[test]
-fn guardians2_unbound_demon_is_not_an_imp_substitution() {
-    let mut h = harness(Vec::new(), &[111859, 3110], 9).unwrap();
-    let actor = imp(&mut h);
+fn guardians2_native_dreadstalker_never_substitutes_imp_firebolt() {
+    use shared::protocol::CombatLogKind;
+    let bite = world_db().unwrap().store.get(271971).unwrap().clone();
+    let mut h = harness(vec![bite], &[193332], 9).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let actor = spawn_native_guardian(&mut h, 193332, 98035);
     h.app
         .world_mut()
-        .entity_mut(actor)
-        .remove::<super::guardian::GuardianActor>();
-    h.app
-        .world_mut()
-        .get_mut::<shared::components::Npc>(actor)
+        .get_mut::<shared::components::Position>(h.npc)
         .unwrap()
-        .template_id = 98035;
-    h.app
-        .world_mut()
-        .get_mut::<super::summon::SummonedCreature>(actor)
-        .unwrap()
-        .spell_id = 193332;
-    super::guardian::initialize(h.app.world_mut(), actor);
+        .x = 2.0;
     h.advance(45);
-    assert_eq!(
-        h.health(h.npc),
-        5000.0,
-        "unbound Dreadstalker must not substitute Imp Firebolt"
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(271971)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "the real bound Dreadstalker must land native Dreadbite"
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits()) && event.spell_id == Some(3110)),
+        "the real Dreadstalker must never substitute Imp Firebolt"
     );
 }
