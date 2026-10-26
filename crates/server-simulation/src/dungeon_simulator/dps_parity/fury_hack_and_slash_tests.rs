@@ -14,7 +14,7 @@ struct RagingResult {
     native_bonus: f32,
 }
 
-fn cast_raging_blow(grant_hack: bool) -> RagingResult {
+fn cast_weapon_sequence(action: u32, grant_hack: bool) -> RagingResult {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(72, 1).unwrap();
     engage(&mut run);
@@ -26,6 +26,9 @@ fn cast_raging_blow(grant_hack: bool) -> RagingResult {
         actor,
         HACK_AND_SLASH
     ));
+    if action == 335097 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1719, Some(actor), 1);
+    }
     let native_bonus =
         crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, HACK_AND_SLASH, 0);
     let initial_charges = if grant_hack {
@@ -50,14 +53,19 @@ fn cast_raging_blow(grant_hack: bool) -> RagingResult {
     execute(
         run.app.world_mut(),
         actor,
-        Execution::Spell(85288, primary, Some(primary)),
+        Execution::Spell(action, primary, Some(primary)),
     )
     .unwrap();
     for _ in 0..8 {
         run.app.update();
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
-    let damage = [96103, 85384].map(|spell| {
+    let weapons = match action {
+        85288 => [96103, 85384],
+        335097 => [335098, 335100],
+        _ => panic!("not a Raging Blow weapon sequence: {action}"),
+    };
+    let damage = weapons.map(|spell| {
         events
             .iter()
             .filter(|event| {
@@ -83,27 +91,29 @@ fn cast_raging_blow(grant_hack: bool) -> RagingResult {
 
 #[test]
 #[ignore = "private current native DB and exact spec72 player inputs"]
-fn fury_hack_and_slash_is_consumed_after_both_raging_blow_weapons() {
-    let plain = cast_raging_blow(false);
-    let boosted = cast_raging_blow(true);
-    assert!(
-        !plain.hack_remaining,
-        "Raging Blow cannot produce Rampage's Hack proc: {plain:?}"
-    );
-    assert!(
-        !boosted.hack_remaining,
-        "SimC5061 consumes the next-use buff after both native weapons: {boosted:?}"
-    );
-    let multiplier = 1.0 + f64::from(boosted.native_bonus) / 100.0;
-    for (normal, buffed) in plain.damage.into_iter().zip(boosted.damage) {
-        let ratio = buffed as f64 / normal as f64;
+fn fury_hack_and_slash_is_consumed_after_both_raging_and_crushing_weapons() {
+    for action in [85288, 335097] {
+        let plain = cast_weapon_sequence(action, false);
+        let boosted = cast_weapon_sequence(action, true);
         assert!(
-            (ratio - multiplier).abs() < 0.01,
-            "both weapon hits retain the native bonus before consumption: {plain:?}, {boosted:?}"
+            !plain.hack_remaining,
+            "Raging Blow cannot produce Rampage's Hack proc: {action}, {plain:?}"
+        );
+        assert!(
+            !boosted.hack_remaining,
+            "SimC5061/5227 consumes the buff after both native weapons: {action}, {boosted:?}"
+        );
+        let multiplier = 1.0 + f64::from(boosted.native_bonus) / 100.0;
+        for (normal, buffed) in plain.damage.into_iter().zip(boosted.damage) {
+            let ratio = buffed as f64 / normal as f64;
+            assert!(
+                (ratio - multiplier).abs() < 0.01,
+                "both weapons retain the native bonus: {action}, {plain:?}, {boosted:?}"
+            );
+        }
+        assert_eq!(
+            boosted.initial_charges, 0,
+            "native next-use semantics are not proc charges"
         );
     }
-    assert_eq!(
-        boosted.initial_charges, 0,
-        "native next-use semantics are not proc charges"
-    );
 }
