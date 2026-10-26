@@ -615,7 +615,7 @@ fn level_scaled_points(
 }
 
 /// Base points (`calc_base_value`) with the caster's Points and PointsIndexN mods.
-pub(crate) fn modded_base_points(
+pub fn modded_base_points(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
@@ -939,9 +939,12 @@ fn crit_chance_from_owner(
     }
     let chance =
         super::scripts::crit_chance(world, caster, target, spell.id).unwrap_or_else(|| {
-            let base = world
-                .get::<CharacterStats>(spell_owner)
-                .map_or(0.0, |stats| stats.crit_pct);
+            let base =
+                crate::combat::read_pet_owner_critical_chance(world, caster).unwrap_or_else(|| {
+                    world
+                        .get::<CharacterStats>(spell_owner)
+                        .map_or(0.0, |stats| stats.crit_pct)
+                });
             let spell_bonus = if uses_weapon_crit_bonus_order(spell) {
                 0.0
             } else {
@@ -1643,8 +1646,12 @@ fn damage_source_amount(
         let giantkiller =
             super::script_registry::target_damage_multiplier(world, ctx.caster, target, ctx.spell);
         let ret_damage = super::scripts::ret_damage_multiplier(world, ctx, target, periodic);
-        let shadow_weaving =
-            super::scripts::shadow_weaving_multiplier(world, bonus_caster, target, ctx.spell.id);
+        let shadow_weaving = super::script_registry::dot_mastery_multiplier(
+            world,
+            bonus_caster,
+            target,
+            ctx.spell.id,
+        );
         #[cfg(any(test, feature = "test-support"))]
         factor_capture::record_done(
             world,
@@ -2014,6 +2021,14 @@ fn deal_source_damage_and_report(
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::finish(world, ctx, target, &damage, &event);
     log_event(world, event);
+    super::scripts::apply_havoc_damage_policies(
+        world,
+        ctx.caster,
+        target,
+        Some(ctx.spell.id),
+        amount,
+        periodic,
+    );
     if !resolved_source {
         super::scripts::apply_marksman_residual(world, ctx, target, crit, amount);
         super::scripts::apply_sentinel_damage(world, ctx, target, crit, amount);
@@ -2033,8 +2048,8 @@ fn deal_source_damage_and_report(
     if hot_streak_hit {
         super::scripts::record_fire_hit(world, ctx.caster, ctx.spell, crit, guaranteed_crit);
     }
-    if periodic && ctx.spell.id == super::scripts::FLAME_SHOCK {
-        super::scripts::roll_flame_shock_tick(world, ctx.caster);
+    if periodic {
+        super::script_registry::periodic_damage_finished(world, ctx);
     }
     // Proc events carry the damage in the target's health units (level scaling), which
     // breakable crowd control compares with the target's max health.

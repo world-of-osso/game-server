@@ -10,6 +10,21 @@
 //! - `TargetPlan`: first matching module wins before combat's native target plans.
 //! - `PeriodicPrimaryDamage`: all modules run at the Explosive primary-tick boundary.
 //! - `TargetDamageMultiplier`: factors run at the Giantkiller damage boundary.
+//! - `AfterSpenderStacks`: after foreground Crusade stacks and the corresponding
+//!   background Storm callback; before Empyrean Legacy or echo policy dispatch.
+//! - `AuraRedirect`: first redirect consumes application before native aura dispatch.
+//! - `EffectHit`, `Hit`, `AreaFilter`, `CriticalChance`: first matching callback,
+//!   before the retained native lookup. Target handling uses the same registry copy.
+//! - `ContextHit` and `DamageAmount`: first match after generic policy lookup.
+//! - `CheckTarget`: before native target checks; first error stops admission.
+//! - `AutoRepeat`: after the actual Auto Shot launch.
+//! - `EarlyAuraRegistration`: startup aura scripts, before native registration.
+//! - `ConsumedEffectValues`: classifies script-read effect77 data, without dispatch.
+//! - `LaunchDelay`: first explicit override, otherwise retain the native delay.
+//! - `DotMasteryMultiplier`: factors at the original Shadow Weaving damage boundary.
+//! - `CastTimeProcs` and `PreserveUnadmittedProcs`: admission markers and charged-mod
+//!   preservation; the native class mask and instance IDs still own consumption.
+//! - `PeriodicDamageFinished`: after actual periodic damage, before Ret periodic hooks.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
 
@@ -25,10 +40,27 @@ pub type TargetPlanHook = fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> 
 pub type TargetPlanLookup = fn(u32) -> Option<(Relation, TargetPlanHook)>;
 pub type PeriodicPrimaryDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, f32);
 pub type TargetDamageMultiplierHook = fn(&World, Entity, Entity, &SpellInfo) -> f32;
+pub type AuraRedirectHook = fn(&mut World, Entity, Entity, u32, u8) -> bool;
 
 pub type AfterCastLookup = fn(u32) -> Option<AfterCastHook>;
 pub type OnCastHook = fn(&mut World, Entity, u32, u8);
 pub type AfterPaymentHook = fn(&mut World, Entity, &[(CostPool, f32)]);
+pub type HitHook = fn(&mut World, Entity, Entity, u8);
+pub type EffectHitLookup = fn(u32, u8) -> Option<HitHook>;
+pub type HitLookup = fn(u32) -> Option<HitHook>;
+pub type ContextHitHook = fn(&mut World, &EffectCtx<'_>, Entity);
+pub type ContextHitLookup = fn(u32) -> Option<ContextHitHook>;
+pub type AreaTargetFilter = fn(&World, &SpellInfo, Option<Entity>, &mut Vec<Entity>);
+pub type AreaFilterLookup = fn(u32, u8) -> Option<AreaTargetFilter>;
+pub type CheckTargetHook = fn(&World, Entity, u32, Entity) -> Result<(), super::CastFailure>;
+pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
+pub type DamageAmountLookup = fn(u32) -> Option<DamageAmountHook>;
+pub type AutoRepeatHook = fn(&mut World, Entity, Entity);
+pub type CriticalChanceHook = fn(&World, Entity, Entity, u32) -> Option<f32>;
+pub type AuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
+pub type LaunchDelayLookup = fn(u32) -> Option<f32>;
+pub type DotMasteryMultiplierHook = fn(&World, Entity, Entity, u32) -> f32;
+pub type PeriodicDamageFinishedHook = fn(&mut World, &EffectCtx<'_>);
 
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
@@ -41,6 +73,23 @@ pub enum SpellScriptHook {
     TargetPlan(TargetPlanLookup),
     PeriodicPrimaryDamage(PeriodicPrimaryDamageHook),
     TargetDamageMultiplier(TargetDamageMultiplierHook),
+    AfterSpenderStacks(AfterCastHook),
+    AuraRedirect(AuraRedirectHook),
+    EffectHit(EffectHitLookup),
+    Hit(HitLookup),
+    ContextHit(ContextHitLookup),
+    AreaFilter(AreaFilterLookup),
+    CheckTarget(CheckTargetHook),
+    DamageAmount(DamageAmountLookup),
+    AutoRepeat(AutoRepeatHook),
+    CriticalChance(CriticalChanceHook),
+    EarlyAuraRegistration(AuraRegistrationHook),
+    ConsumedEffectValues(&'static [(u32, u8)]),
+    LaunchDelay(LaunchDelayLookup),
+    DotMasteryMultiplier(DotMasteryMultiplierHook),
+    CastTimeProcs(&'static [u32]),
+    PreserveUnadmittedProcs(&'static [u32]),
+    PeriodicDamageFinished(PeriodicDamageFinishedHook),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -55,6 +104,47 @@ impl SpellScriptRegistry {
 
     fn hooks(self) -> impl Iterator<Item = &'static SpellScriptHook> {
         self.modules.iter().flat_map(|module| module.iter())
+    }
+
+    pub fn effect_hit(self, spell: u32, index: u8) -> Option<HitHook> {
+        self.hooks().find_map(|hook| match hook {
+            SpellScriptHook::EffectHit(lookup) => lookup(spell, index),
+            _ => None,
+        })
+    }
+
+    pub fn register_early_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::EarlyAuraRegistration(register) = hook {
+                register(scripts);
+            }
+        }
+    }
+
+    pub fn consumes_effect_value(self, spell: u32, index: u8) -> bool {
+        self.hooks().any(|hook| match hook {
+            SpellScriptHook::ConsumedEffectValues(values) => values.contains(&(spell, index)),
+            _ => false,
+        })
+    }
+
+    pub fn is_cast_time_proc(self, spell: u32) -> bool {
+        self.hooks().any(|hook| match hook {
+            SpellScriptHook::CastTimeProcs(spells) => spells.contains(&spell),
+            _ => false,
+        })
+    }
+
+    pub fn preserve_unadmitted_proc(
+        self,
+        spell: &SpellInfo,
+        aura: &crate::auras::AuraInstance,
+    ) -> bool {
+        !spell.cast_proc_mods.contains(&aura.instance_id)
+            && self.hooks().any(|hook| match hook {
+                SpellScriptHook::PreserveUnadmittedProcs(spells) => spells.contains(&aura.spell_id),
+                _ => false,
+            })
     }
 
     pub fn policies(self) -> impl Iterator<Item = &'static Policy> {
@@ -169,6 +259,132 @@ pub fn target_damage_multiplier(
             _ => None,
         })
         .product()
+}
+
+pub fn after_spender_stacks(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterSpenderStacks(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn aura_redirect(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+    depth: u8,
+) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::AuraRedirect(run) => run(world, caster, target, spell, depth),
+            _ => false,
+        })
+}
+
+pub fn hit(world: &World, spell: u32) -> Option<HitHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::Hit(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn context_hit(world: &World, spell: u32) -> Option<ContextHitHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::ContextHit(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn area_filter(world: &World, spell: u32, index: u8) -> Option<AreaTargetFilter> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::AreaFilter(lookup) => lookup(spell, index),
+            _ => None,
+        })
+}
+
+pub fn check_target(
+    world: &World,
+    caster: Entity,
+    spell: u32,
+    target: Entity,
+) -> Result<(), super::CastFailure> {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::CheckTarget(run) = hook {
+            run(world, caster, spell, target)?;
+        }
+    }
+    Ok(())
+}
+
+pub fn damage_amount(world: &World, spell: u32) -> Option<DamageAmountHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::DamageAmount(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn auto_repeat(world: &mut World, caster: Entity, target: Entity) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AutoRepeat(run) = hook {
+            run(world, caster, target);
+        }
+    }
+}
+
+pub fn critical_chance(world: &World, caster: Entity, target: Entity, spell: u32) -> Option<f32> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::CriticalChance(run) => run(world, caster, target, spell),
+            _ => None,
+        })
+}
+
+pub fn launch_delay(world: &World, spell: u32, native: f32) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::LaunchDelay(lookup) => lookup(spell),
+            _ => None,
+        })
+        .unwrap_or(native)
+}
+
+pub fn dot_mastery_multiplier(world: &World, caster: Entity, target: Entity, spell: u32) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(|hook| match hook {
+            SpellScriptHook::DotMasteryMultiplier(run) => Some(run(world, caster, target, spell)),
+            _ => None,
+        })
+        .product()
+}
+
+pub fn periodic_damage_finished(world: &mut World, ctx: &EffectCtx<'_>) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::PeriodicDamageFinished(run) = hook {
+            run(world, ctx);
+        }
+    }
 }
 
 #[cfg(test)]

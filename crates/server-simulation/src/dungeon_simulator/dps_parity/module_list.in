@@ -14,8 +14,8 @@ mod beast_mastery_mechanics_tests;
 #[cfg(test)]
 mod beast_mastery_pet_tests;
 mod composite_precombat_tests;
-mod conductive_energy_tests;
 mod demonology_tests;
+mod conductive_energy_tests;
 mod devastation_tests;
 mod driver_tests;
 mod dummy_reference_tests;
@@ -42,6 +42,7 @@ mod fixture_facing_tests;
 mod frost_mage_tests;
 mod gear_profile_tests;
 mod haste_tests;
+mod havoc_channels_tests;
 mod havoc_fact_tests;
 mod havoc_tests;
 mod health_aura_state_tests;

@@ -5,11 +5,17 @@
 use bevy::prelude::*;
 use shared::components::PowerType;
 
-use crate::auras::ActiveAuras;
-use crate::class_progression::TraitLoadout;
-use crate::random as rand;
-use crate::spell_cast::CostPool;
-use crate::spell_info::SpellInfo;
+use super::combat;
+use combat::auras::ActiveAuras;
+use combat::class_progression::TraitLoadout;
+use combat::random as rand;
+use combat::spell_cast::CostPool;
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_info::SpellInfo;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterSpenderStacks(
+    roll_selected_ret_divine_purpose,
+)];
 
 const PURPOSE_TALENT: u32 = 408459;
 const DIVINE_PURPOSE: u32 = 408458;
@@ -35,15 +41,11 @@ fn selected_chance(world: &World, caster: Entity) -> Option<f32> {
     )
 }
 
-pub(in crate::spell_cast) fn roll_selected_ret_divine_purpose(
-    world: &mut World,
-    caster: Entity,
-    spell: &SpellInfo,
-) {
+fn roll_selected_ret_divine_purpose(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let Some(chance) = selected_chance(world, caster) else {
         return;
     };
-    let costs = match crate::spell_cast::applicable_costs(world, caster, spell) {
+    let costs = match combat::spell_cast::applicable_costs(world, caster, spell) {
         Ok(costs) => costs,
         Err(reason) => {
             warn!(
@@ -62,7 +64,7 @@ pub(in crate::spell_cast) fn roll_selected_ret_divine_purpose(
     if !has_holy_power_cost || rand::random::<f32>() * 100.0 >= chance {
         return;
     }
-    if !crate::spell_cast::try_cast_triggered(world, caster, DIVINE_PURPOSE, Some(caster), 1) {
+    if !combat::spell_cast::try_cast_triggered(world, caster, DIVINE_PURPOSE, Some(caster), 1) {
         warn!(?caster, "Ret native Divine Purpose408458 refused");
     }
 }

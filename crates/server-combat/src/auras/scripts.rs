@@ -414,8 +414,8 @@ pub(super) fn register_class_scripts(
     mut scripts: ResMut<AuraScripts>,
     registry: Res<crate::spell_cast::script_registry::SpellScriptRegistry>,
 ) {
-    crate::spell_cast::scripts::register_feral_frenzy(&mut scripts);
-    crate::spell_cast::scripts::register_periodic_counters(&mut scripts);
+    crate::spell_cast::scripts::register_havoc(&mut scripts);
+    registry.register_early_auras(&mut scripts);
     scripts.0.insert(
         1236994,
         AuraScript {
