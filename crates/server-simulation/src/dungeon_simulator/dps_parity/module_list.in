@@ -210,6 +210,7 @@ mod rogue_finisher_tests;
 mod rogue_swift_slasher_tests;
 mod rogue_vanish_tests;
 mod shadow_apparition_tests;
+mod shadow_insight_tests;
 mod shadow_link_tests;
 mod shadow_mastery_tests;
 mod shadow_rift_tests;
