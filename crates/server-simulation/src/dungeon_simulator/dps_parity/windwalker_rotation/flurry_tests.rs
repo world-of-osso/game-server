@@ -424,3 +424,37 @@ fn literal_ww_native_flurry_no_charge_fof_does_not_invent_children() {
     assert_eq!(charges(&run), 0);
     assert!(deliveries(&run, STRIKE).is_empty() && deliveries(&run, AREA).is_empty());
 }
+
+
+#[test]
+#[ignore = "a naturally critical native white must earn the selected One Versus Many bonus"]
+fn literal_ww_native_flurry_critical_white_earns_one_versus_many_bonus() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare(true);
+    let selected = run.app.world().get::<crate::class_progression::TraitLoadout>(run.actor)
+        .unwrap().active_talent_spells().any(|spell| spell.spell_id == ONE_VERSUS_MANY);
+    assert!(selected, "native selected One Versus Many prerequisite");
+    let talent = run.app.world().get::<ActiveAuras>(run.actor).unwrap()
+        .iter().find(|aura| aura.spell_id == ONE_VERSUS_MANY).unwrap();
+    let bonus = talent.effects.iter().find(|effect| effect.index == 0).unwrap().amount;
+    assert!(bonus > 0.0, "native talent must actually increase critical charge credit");
+    eprintln!("NATIVE_FLURRY_CRIT actor={:?} talent_caster={:?} bonus={bonus}",run.actor,talent.caster);
+    start_white(&mut run);
+    for _ in 0..1000 {
+        let before = charges(&run);
+        let observed = events(&run).len();
+        run.app.update();
+        let critical_white = events(&run)[observed..].iter().any(|event| {
+            event.spell_id.is_none() && event.kind == CombatLogKind::Damage && event.crit
+        });
+        if !critical_white { continue; }
+        let expected = earned_per_hit(&run, true);
+        if u16::from(before) + u16::from(expected) > u16::from(cap(&run)) { continue; }
+        let actual = charges(&run);
+        eprintln!("NATIVE_FLURRY_CRIT before={before} expected_gain={expected} actual={actual}");
+        assert_eq!(actual, before + expected,
+            "actual critical white must earn the native One Versus Many multiplier, not only normal weapon charges");
+        return;
+    }
+    panic!("fixture prerequisite: no naturally critical native white before the real charge cap");
+}
