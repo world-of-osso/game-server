@@ -115,16 +115,6 @@ pub(super) fn check_proc(
     if crate::spell_cast::scripts::owns_policy_proc(world, aura.spell_id) {
         return false;
     }
-    // SIMC_RET_TIER_MID2_DIVINE_PURPOSE_RELATIONSHIP owns these charges;
-    // only a different-kind actual spender consumes them, not arbitrary casts.
-    if crate::spell_cast::scripts::owns_arbiter_charge(aura.spell_id) {
-        return false;
-    }
-    // SIMC_RET_EMPYREAN_LEGACY_RELATIONSHIP replaces only its own driver/buff
-    // predicates: Wrath grants it, actual Verdict consumes it.
-    if crate::spell_cast::scripts::owns_empyrean_proc(aura.spell_id) {
-        return false;
-    }
     script(world, aura.spell_id)
         .and_then(|script| script.check_proc)
         .is_none_or(|check| check(world, aura, event))
