@@ -13,7 +13,7 @@ const DOT_EXPONENT: f64 = 0.9;
 
 #[derive(Component)]
 struct TormentedProgress {
-    passive: u64,
+    passive: u32,
     accumulated: f64,
 }
 
@@ -35,7 +35,7 @@ fn after_pain(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, crit: bool
     }
 }
 
-fn read_passive_instance(world: &World, caster: Entity) -> Option<u64> {
+fn read_passive_instance(world: &World, caster: Entity) -> Option<u32> {
     world
         .get::<ActiveAuras>(caster)?
         .iter()
@@ -57,7 +57,7 @@ fn count_owned_pain(world: &mut World, caster: Entity) -> usize {
         .count()
 }
 
-fn roll_progress(world: &mut World, caster: Entity, passive: u64, maximum: f64) -> bool {
+fn roll_progress(world: &mut World, caster: Entity, passive: u32, maximum: f64) -> bool {
     // SimC proc_rng.cpp221–273: random initial state, uniform increment, rollover.
     let reset = world
         .get::<TormentedProgress>(caster)
