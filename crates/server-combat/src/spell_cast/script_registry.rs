@@ -100,6 +100,8 @@ pub type AuraRedirectHook = fn(&mut World, Entity, Entity, u32, u8) -> bool;
 
 pub type AfterCastLookup = fn(u32) -> Option<AfterCastHook>;
 pub type OnCastHook = fn(&mut World, Entity, u32, u8);
+/// Actor-conditioned channel behavior supplied by a source-qualified script.
+pub type ScriptedChannelHook = fn(&World, Entity, &SpellInfo) -> bool;
 pub type AfterPaymentHook = fn(&mut World, Entity, &[(CostPool, f32)]);
 pub type PowerCostHook = fn(&World, Entity, &SpellInfo, CostPool, f32) -> f32;
 pub type HitHook = fn(&mut World, Entity, Entity, u8);
@@ -179,6 +181,7 @@ pub type SnapshotHealingAuraHook =
 pub enum SpellScriptHook {
     Policies(&'static [Policy]),
     NativeAfterCast(AfterCastLookup),
+    ScriptedChannel(ScriptedChannelHook),
     AuraRollAfterCast(AfterCastLookup),
     OnCast(OnCastHook),
     AfterPayment(AfterPaymentHook),
@@ -424,6 +427,17 @@ impl Default for SpellScriptRegistry {
         #[cfg(not(test))]
         Self::new(&[])
     }
+}
+
+pub(crate) fn scripted_channel(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    world
+        .get_resource::<SpellScriptRegistry>()
+        .is_some_and(|registry| {
+            registry.hooks().any(|hook| match hook {
+                SpellScriptHook::ScriptedChannel(test) => test(world, caster, spell),
+                _ => false,
+            })
+        })
 }
 
 pub(crate) fn requires_resource_context(world: &World, spell: u32) -> bool {

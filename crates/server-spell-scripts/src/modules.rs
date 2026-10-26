@@ -84,6 +84,7 @@ register_modules! {
     essence_burst: (140, "modules/essence_burst.rs"),
     evoker_bombardments: (1000, "modules/evoker_bombardments.rs"),
     evoker_burnout: (1000, "modules/evoker_burnout.rs"),
+    evoker_imminent: (1000, "modules/evoker_imminent.rs"),
     evoker_rising_fury: (1000, "modules/evoker_rising_fury.rs"),
     evoker_tier: (160, "modules/evoker_tier.rs"),
     execution_counters: (320, "modules/execution_counters.rs"),
