@@ -238,7 +238,7 @@ pub(super) fn after_periodic_damage(world: &mut World, ctx: &EffectCtx, target: 
                 target: ctx.caster,
                 spell_id: aura,
                 effect_mask: u32::MAX,
-                source: crate::auras::AuraSource::Cast,
+                source: combat::auras::AuraSource::Cast,
             },
         );
     }
