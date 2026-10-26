@@ -66,6 +66,7 @@ mod census_tail_tests;
 #[cfg(test)]
 mod census_three_tests;
 pub(crate) mod charge;
+mod charge_consumption;
 #[cfg(test)]
 mod charge_rate_tests;
 #[cfg(test)]
@@ -4114,6 +4115,7 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let category_ms =
         cooldown_recovery_ms(world, caster, spell, base_category_ms).saturating_sub(ready_credit);
     let mods = charge_mods(world, caster, spell);
+    let ignore_charge_cooldown = charge_consumption::is_ignored(world, caster, spell);
     let mut entity = world.entity_mut(caster);
     let mut history = entity.entry::<SpellHistory>().or_default();
     let mut history = history.get_mut();
@@ -4150,7 +4152,12 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
             .insert(category, now + category_ms as f64 / 1000.0);
     }
     let charges = history.charges_mut(spell, now, mods).map(|charges| {
-        charges.consume(now, ready_credit);
+        charge_consumption::consume_unless_ignored(
+            charges,
+            now,
+            ready_credit,
+            ignore_charge_cooldown,
+        );
         charges.spell_id = spell.id;
         charges.snapshot(now)
     });
