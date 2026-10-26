@@ -4009,6 +4009,7 @@ fn take_cast_resources(
     }
     spend_costs(world, caster, costs);
     script_registry::after_payment(world, caster, costs);
+    scripts::roll_runic_empowerment(world, caster, spell, costs);
     scripts::empower_gargoyles(world, caster, costs);
     crate::profession::take_reagents(world, caster, spell);
 }

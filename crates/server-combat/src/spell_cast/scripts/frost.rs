@@ -146,6 +146,40 @@ fn trigger_obliteration(world: &mut World, caster: Entity) {
     }
 }
 
+pub(in crate::spell_cast) fn roll_runic_empowerment(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    costs: &[(spell_cast::CostPool, f32)],
+) {
+    use shared::components::PowerType;
+    if !is_frost(world, caster) {
+        return;
+    }
+    let actual = costs.iter().find_map(|&(pool, amount)| {
+        (pool == spell_cast::CostPool::Power(PowerType::RunicPower)).then_some(amount)
+    });
+    let Some(actual) = actual else { return };
+    let base = spell
+        .power_costs
+        .iter()
+        .filter(|cost| cost.power_type == PowerType::RunicPower as i32)
+        .map(|cost| cost.mana_cost as f32)
+        .fold(0.0, f32::max);
+    // SimC76f8118 sc_death_knight.cpp13128–13146/13424–13439:
+    // max(base,actual) RP cost, native chance percent times0.1 per displayed RP.
+    // DB2 stores RP in tenths; divide by10 before applying that chance.
+    let raw_cost = actual.max(base);
+    if raw_cost <= 0.0 {
+        return;
+    }
+    let displayed_cost = raw_cost / 10.0;
+    let chance = super::script_effect_value(world, caster, 81229, 0) / 100.0 * 0.1 * displayed_cost;
+    if random::random::<f32>() < chance {
+        cast_buff_stacks(world, caster, 193486, 1);
+    }
+}
+
 #[derive(Component, Default)]
 struct PendingConsumption(Vec<(f64, Entity)>);
 
