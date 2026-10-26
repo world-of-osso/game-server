@@ -1188,39 +1188,76 @@ fn fire_execute_scald_amplifies_actual_selected_fireball_and_scorch() {
         let actor = run.actor;
         let target = run.targets[0];
         let effect_index = if spell == 133 { 0 } else { 1 };
-        let percent = run.app.world().get::<ActiveAuras>(actor).unwrap().iter()
-            .find(|aura| aura.spell_id == 450746).unwrap().effects.iter()
-            .find(|effect| effect.index == effect_index).unwrap().amount;
+        let percent = run
+            .app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 450746)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == effect_index)
+            .unwrap()
+            .amount;
         if !selected {
-            let known = run.app.world().get::<crate::class_progression::KnownSpells>(actor)
-                .unwrap().iter().filter(|id| *id != 450746).collect();
-            run.app.world_mut().entity_mut(actor)
+            let known = run
+                .app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap()
+                .iter()
+                .filter(|id| *id != 450746)
+                .collect();
+            run.app
+                .world_mut()
+                .entity_mut(actor)
                 .insert(crate::class_progression::KnownSpells::fixture(known));
-            crate::auras::remove_auras(run.app.world_mut(), actor,
-                crate::auras::RemoveReason::Consumed, |aura| aura.spell_id == 450746);
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 450746,
+            );
         }
         let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
         health.current = health.max * 0.2;
-        run.app.world_mut().get_mut::<crate::stats::CharacterStats>(actor).unwrap().crit_pct = 100.0;
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = 100.0;
         start_native(&mut run, spell, target);
         preparation::finish_pending_setup(&mut run).unwrap();
         // Hardcast completion is not Fireball impact; deliver its real missile.
         for _ in 0..40 {
             run.app.update();
         }
-        let damage = run.app.world().resource::<ObservedCombatEvents>().0.iter()
-            .find(|event| event.source == Some(actor.to_bits())
-                && event.target == Some(target.to_bits()) && event.spell_id == Some(spell)
-                && event.kind == CombatLogKind::Damage)
-            .expect("actual ordinary Fire spell impact").amount as f32;
+        let damage = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(spell)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("actual ordinary Fire spell impact")
+            .amount as f32;
         (damage, percent)
     };
     for spell in [133, 2948] {
         let baseline = hit(spell, false).0;
         let (amplified, percent) = hit(spell, true);
         let expected = baseline * (1.0 + percent / 100.0);
-        assert!((amplified / expected - 1.0).abs() < 0.001,
-            "selected native Scald amplifies actual execute{spell} by{percent}%: {baseline} -> {amplified}, expected{expected}");
+        assert!(
+            (amplified / expected - 1.0).abs() < 0.001,
+            "selected native Scald amplifies actual execute{spell} by{percent}%: {baseline} -> {amplified}, expected{expected}"
+        );
     }
 }
 
@@ -1231,20 +1268,75 @@ fn fire_execute_real_ignite_ticks_earn_selected_heat_shimmer() {
     let mut run = prepare_literal(63, 1).unwrap();
     let actor = run.actor;
     let target = run.targets[0];
+    let mut earned = false;
     for _ in 0..20 {
         start_native(&mut run, 108853, target);
         for _ in 0..220 {
             run.app.update();
+            earned = stacks(&run, 458964) > 0;
+            if earned {
+                break;
+            }
+        }
+        if earned {
+            break;
         }
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
-        && event.spell_id == Some(12654) && event.kind == CombatLogKind::Damage
-        && event.amount > 0), "actual earned Ignite tick precondition");
-    assert!(events.iter().any(|event| event.target == Some(actor.to_bits())
-        && event.spell_id == Some(458964)
-        && matches!(event.kind, CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed)),
-        "selected native Heat Shimmer must proc from actual Ignite ticks while Scorch is not casting");
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(12654)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "actual earned Ignite tick precondition"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.target == Some(actor.to_bits())
+                && event.spell_id == Some(458964)
+                && matches!(
+                    event.kind,
+                    CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                )),
+        "selected native Heat Shimmer must proc from actual Ignite ticks while Scorch is not casting"
+    );
+    assert!(
+        earned,
+        "real Heat Shimmer remains available to its consumer"
+    );
+    start_native(&mut run, 2948, target);
+    assert!(
+        run.app
+            .world()
+            .get::<shared::casting::CastState>(actor)
+            .is_none(),
+        "earned native Heat Shimmer makes ordinary Scorch instant"
+    );
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let scorch = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .find(|event| {
+            event.source == Some(actor.to_bits())
+                && event.spell_id == Some(2948)
+                && event.kind == CombatLogKind::Damage
+        })
+        .expect("ordinary earned Scorch impact");
+    assert!(
+        scorch.crit,
+        "earned Heat Shimmer guarantees Scorch crit above execute health"
+    );
+    assert_eq!(
+        stacks(&run, 458964),
+        0,
+        "the actual ordinary Scorch spends its earned Heat Shimmer"
+    );
 }
 
 fn reacted(run: &Run, name: &str) -> f64 {
