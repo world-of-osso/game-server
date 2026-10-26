@@ -24,6 +24,28 @@ const CHARGE: u32 = 100;
 const SLAM: u32 = 1464;
 const BATTLE_SHOUT: u32 = 6673;
 
+#[derive(Resource, Default)]
+struct ObservedMortalStrikePayment(Option<(f32, f32)>);
+
+fn observe_mortal_strike_payment(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    costs: &[(super::CostPool, f32)],
+) {
+    if spell.id != MORTAL_STRIKE {
+        return;
+    }
+    let paid = super::spent(costs, PowerType::Rage);
+    let remaining = world
+        .get::<super::powers::PowerPools>(caster)
+        .unwrap()
+        .get(PowerType::Rage)
+        .unwrap()
+        .current;
+    world.resource_mut::<ObservedMortalStrikePayment>().0 = Some((paid, remaining));
+}
+
 #[test]
 fn arena_exclude_caster_filters_source_36003_before_its_one_target_cap() {
     let mut h = harness(Vec::new(), &[36003], 8).unwrap();
@@ -201,6 +223,13 @@ fn instant_spell_resolves_same_tick_spending_cost_and_starting_gcd_and_cooldown(
     else {
         return;
     };
+    use super::script_registry::{SpellScriptHook, SpellScriptRegistry};
+    h.app.init_resource::<ObservedMortalStrikePayment>();
+    h.app
+        .world_mut()
+        .insert_resource(SpellScriptRegistry::new(&[&[
+            SpellScriptHook::AfterSpellPayment(observe_mortal_strike_payment),
+        ]]));
     h.set_power(PowerType::Rage, 500.0);
     h.cast_and_deliver(MORTAL_STRIKE, Some(h.npc));
     // A native white swing can land in the same receiving tick. Require the
@@ -218,7 +247,12 @@ fn instant_spell_resolves_same_tick_spending_cost_and_starting_gcd_and_cooldown(
         .map(|event| event.amount)
         .sum();
     assert_eq!(5000.0 - h.health(h.npc), initial_damage as f32);
-    assert_eq!(h.power(PowerType::Rage), 200.0, "30 rage = 300 raw spent");
+    // Observe actual payment and pool state before white swings generate Rage.
+    assert_eq!(
+        h.app.world().resource::<ObservedMortalStrikePayment>().0,
+        Some((300.0, 200.0)),
+        "30 Rage spends300 raw, leaving200 at the payment boundary"
+    );
     assert!(h.app.world().get::<CastState>(h.caster).is_none());
     h.advance(2);
     let mut cooldowns = std::mem::take(&mut h.inbox.cooldowns);
