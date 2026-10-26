@@ -56,6 +56,7 @@ const END_AT_FULL_HEALTH: &[u32] = &[1_231_418];
 struct Tick {
     instance_id: u32,
     caster: Entity,
+    cast_primary_target: Option<Entity>,
     spell_id: u32,
     effect_index: u8,
     aura_type: u32,
@@ -126,6 +127,7 @@ fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Ve
                 ticks.push(Tick {
                     instance_id: aura.instance_id,
                     caster: aura.caster,
+                    cast_primary_target: aura.cast_primary_target,
                     spell_id: aura.spell_id,
                     effect_index: effect.index,
                     aura_type: effect.aura_type,
@@ -244,6 +246,7 @@ fn run_ticks(world: &mut World, unit: Entity, ticks: Vec<Tick>) {
             continue;
         };
         spell.cast_periodic_fraction = Some(tick.fraction);
+        spell.cast_primary_target = tick.cast_primary_target;
         run_tick(world, unit, &spell, &tick);
         end_aura_at_full_health(world, unit, &tick);
     }

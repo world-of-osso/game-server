@@ -57,6 +57,7 @@ mod natures_guardian;
 #[cfg(any(test, feature = "test-support"))]
 pub mod observations;
 mod periodic;
+pub(crate) mod periodic_snapshot;
 #[cfg(test)]
 mod point_mod_tests;
 mod point_mods;
@@ -248,6 +249,8 @@ pub struct AuraEffectState {
     /// caster's Points mods, plus SP/AP coefficients for damage, heal and
     /// absorb types (`handlers::scales_with_power`).
     pub amount: f32,
+    /// Qualified factor captured at application, not reconstructed from damage.
+    pub persistent_multiplier: Option<f32>,
     pub misc_values: [i32; 2],
     pub period_ms: u32,
     pub trigger_spell: u32,
@@ -323,6 +326,8 @@ pub struct AuraInstance {
     pub source: AuraSource,
     /// Item-level snapshot of the applied aura effects.
     pub cast_item_level: Option<u16>,
+    /// Selected action primary retained for periodic hit relationships; None stays unknown.
+    cast_primary_target: Option<Entity>,
     /// Learned trait identity/rank at application, for passive relearning.
     trait_info: Option<SpellTrait>,
     pub from_player: bool,
@@ -421,6 +426,7 @@ impl AuraInstance {
         self.refresh_stacks(&new);
         self.charges = new.charges;
         self.guardian_heal_pct = new.guardian_heal_pct;
+        self.cast_primary_target = new.cast_primary_target;
         for fresh in new.effects {
             match self
                 .effects
@@ -801,6 +807,7 @@ fn build_effect(
         immunity: effect.immunity.clone(),
         aura_type: effect.aura,
         amount,
+        persistent_multiplier: periodic_snapshot::multiplier(world, caster, spell, effect),
         misc_values: effect.misc_values,
         period_ms,
         trigger_spell: effect.trigger_spell,
@@ -897,6 +904,7 @@ fn build_instance(
         caster,
         source: application.source,
         cast_item_level: spell.cast_item_level,
+        cast_primary_target: spell.cast_primary_target,
         trait_info: world
             .get::<TraitLoadout>(caster)
             .and_then(|traits| traits.spell_trait(spell.id)),

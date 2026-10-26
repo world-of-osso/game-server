@@ -1,4 +1,5 @@
 //! Gameplay-world bindings for the engine-free pinned SimC APL evaluator.
+mod periodic;
 pub mod reaction;
 use bevy::prelude::*;
 use server::simc_apl::{Action, ActionFacts, Facts};
@@ -67,14 +68,11 @@ pub struct DotRefresh {
 
 pub fn native_dot_spell(
     world: &World,
-    _caster: Entity,
+    caster: Entity,
     spell: u32,
 ) -> Result<crate::spell_info::SpellInfo, String> {
-    world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(spell)
-        .cloned()
-        .ok_or_else(|| format!("native dot spell{spell} absent"))
+    crate::spell_cast::read_resource_prepared_spell(world, caster, spell)
+        .map_err(|error| format!("native resource-prepared dot{spell}: {error:?}"))
 }
 
 #[derive(Default)]
@@ -423,6 +421,7 @@ impl<'a> NativeFacts<'a> {
             "up" | "ticking" => Ok(bool_value(!active.is_empty())),
             "down" => Ok(bool_value(active.is_empty())),
             "remains" => Ok(buff_remaining(&active, now)),
+            "pmultiplier" => self.stored_persistent_multiplier(alias, action),
             // SimC76f8118 dot.cpp448–455: inactive is0; otherwise fresh
             // composite duration, not remaining time or pandemic carry.
             "duration" => Ok(if active.is_empty() {
@@ -794,6 +793,8 @@ impl<'a> NativeFacts<'a> {
                 crate::spell_cast::cast_time_ms(self.world, self.actor, spell).max(0),
             ) / 1000.0),
             "cost" => self.action_cost(spell),
+            "persistent_multiplier" => self.live_persistent_multiplier(alias),
+            "pmultiplier" => self.stored_persistent_multiplier(alias, action),
             _ => Err(format!("unknown native APL action property {property}")),
         }
     }
@@ -1136,6 +1137,13 @@ impl ActionFacts for NativeFacts<'_> {
         }
         match name {
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" => self.gcd(action, name),
+            // SimC76f8118 action.cpp3940–3997 binds bare dot operands to
+            // this actual source action and selected recipient.
+            "refreshable" | "remains" => {
+                self.dot_value(&format!("{}.{}", action.name, name), Some(action))
+            }
+            "persistent_multiplier" => self.live_persistent_multiplier(&action.name),
+            "pmultiplier" => self.stored_persistent_multiplier(&action.name, Some(action)),
             "charges" | "max_charges" | "charges_fractional" | "full_recharge_time"
             | "execute_time" | "cast_time" | "cost" | "ticks_remain" | "ticks" | "ticking"
             | "cooldown_react" => self.contextual_property(action, name),

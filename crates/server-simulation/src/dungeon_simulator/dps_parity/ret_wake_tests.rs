@@ -33,12 +33,8 @@ fn dps_parity_ret_wake_native_damage_and_resource_share_real_cast() {
         resource, 3.0,
         "native effect1 is the source resource amount"
     );
-    literal_rotation::execution::execute(
-        run.app.world_mut(),
-        run.actor,
-        literal_rotation::execution::Execution::AutoAttack(run.targets[0]),
-    )
-    .unwrap();
+    // SimC76f8118 Ret846–876: observe Wake independently of the
+    // Crusading Strike resource producer (sc_paladin.cpp888–916).
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
         run.actor,
