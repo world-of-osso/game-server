@@ -406,6 +406,7 @@ pub(super) fn register_class_scripts(
     registry: Res<crate::spell_cast::script_registry::SpellScriptRegistry>,
 ) {
     registry.register_early_auras(&mut scripts);
+    crate::consumables::register_liquid_luster(&mut scripts);
     scripts.0.insert(
         1236994,
         AuraScript {
