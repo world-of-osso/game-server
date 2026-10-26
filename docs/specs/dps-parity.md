@@ -93,6 +93,8 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Beast Mastery literal fixture
 
+- Selected Fury of the Wyvern472550 extends an existing earned Cry471881 after successful BM Kill Command34026, including the consuming command. Native effect2 supplies each extension and effect4 the total budget. Actual Cry removal resets the budget; white-impact stack growth does not (SimC76f8118 hunter6626–6630,8279–8287).
+
 - Selected Pack Mentality472358 reduces already-running Barbed217200 and Wildfire259495 recovery once per actually consumed Howl beast. Native effects2/3 supply the times; simultaneous Wyvern/Boar consumption pays both reductions before Stampede begins. Unused clocks remain inactive (SimC76f8118 hunter3808–3811).
 
 - Each actual main-pet, companion or stable Nature's Ally white impact adds one stack to that owner's already active Wyvern Cry471881, including avoided outcomes. Preserve the native cap and the existing expiration; white impacts cannot create inactive Cry. Keep landed-hit producers and ordinary proc masks unchanged (SimC76f8118 hunter2974–3010).
@@ -452,6 +454,13 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Selected Conflagration of Chaos387108 scales Conflagrate17962 and Shadowburn17877 damage by one plus the live caster spell-crit fraction. The ability-specific guaranteed crit is not the multiplier input. Actual damage and pure forecasts must share this rule without rerolling damage or rescaling resolved copies (SimC76f8118 actions4511–4517,4838–4844).
 - Preserve the existing Chaos Bolt crit-chance scaling; do not apply it twice. Native crit changes, not a reference-derived damage coefficient, must drive this relationship.
 
+### Seed of Corruption lifecycle
+
+- Actual paid27243 snapshots its caster's native spell power times effect0 percent as the damage threshold. Its caster's actual landed damage consumes that owned threshold. Reaching zero or natural expiry queues real27285 after Seed removal, without nested explosions or catalog/coefficient changes (SimC76f8118 `sc_warlock.cpp380–405`, `sc_warlock_actions.cpp1927–1965`).
+- Reapplication extends the aura but must not move its original periodic explosion deadline. The declarative `PreservePeriodicPhase` registry policy retains that native deadline; Seed registers only27243. Without selected Sow196226, one paid cast applies one Seed, not one to each raw area recipient (`actions1800–1802`). A real27285 impact chains an owned Seed and applies background native Wither445474 for selected445465, otherwise Corruption146739, without the initial direct Wither payload or a new cost (`sc_warlock_actions.cpp1710–1773`). Preserve shared Wither counters and tick phase; do not register or replace UA1259790 lifecycle callbacks.
+- The primary prefers the original target without its caster's Seed; otherwise it selects an unseeded candidate and uses the original only if none remain. The read-only sibling helper `warlock_seed::selected_primary(world,caster)` returns that actual selection for the same successful Seed execution, before projectile/explosion. Other owned leaves reuse it without another target draw. Pinned265 bugs mode ignores seeds in flight (`actions1836–1892`). This helper does not apply UA.
+- Qualify actual threshold, expiry, refresh/original-deadline and recipient ownership, with native265 Seed and267 shared-Wither controls. Native paid-recast redirection needs its own RED→GREEN. Selected-Sow effectiveness, death/dispel and MID2 seed-applied-UA relationships remain separately qualified; do not infer them from a zero-damage periodic tick.
+
 ### Shared Hellcaller Wither counters
 
 - Native Wither445474 keeps its actual counter stacks, but its periodic damage ignores that count. An ordinary recast preserves earned stacks without adding a refresh stack; explicit native stack applications retain normal counter advancement. Preserve native coefficients, tick phase and lifetime. Both265 and267 share this rule (SimC76f8118 `sc_warlock_actions.cpp1066,1174–1186`).
@@ -663,6 +672,8 @@ Only a pure Physical school mask uses target armor. Hybrid schools, including Do
 
 ### Enhancement fixture driver
 
+Actual Tempest grants selected Storm Swell455089 and one native Arc Discharge470532 stack. Ordinary spell events must not grant Storm Swell for263. Each eligible Chain/Ride chain's final actual recipient consumes one Arc use when its native400ms ICD permits and becomes the delayed325–425ms extra chain's primary. Extra chains may self-trigger outside that ICD; normal Arc benefits from live MW without spending it, while Ride Arc neither benefits nor spends. Arc uses do not multiply its native modifier amounts (effect attributes64). Preserve native masks, values, caps and duration, and Elemental262's separate policy. Sources: pinned SimC76f8118 `sc_shaman.cpp6587–6597,6631–6643,6709–6714,9994–10007,12437–12484`.
+
 Selected384355 Elemental Weapons supplies408390's native masked direct/periodic modifiers at talent effect0 ×0.1 per actually imbued hand. Real imbue gains/removals update the bonus; zero imbues or an unlearned talent remove it. Stormblast retains its explicit sourced exception without a second generic application. Sources: pinned SimC76f8118 `sc_shaman.cpp13212–13220`; native70448 supplies values and masks.
 
 Actual Windstrike weapon children115357/115360 ignore target armor. Native Doom469270 retains its Physical/Nature school but does not use Physical armor; ordinary Physical Stormstrike children remain armor-sensitive (SimC76f8118 `sc_shaman.cpp4726`, `action.cpp1686–1689`).
@@ -813,6 +824,13 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 - `simc_apl:` selected Malefic Grasp1261149 resolves to native channel1261153 under the same sourced known-parent projection as Demoniac. Native70448 has no visible-action link. Unknown/unselected talents do not grant the channel; costs and actual channel damage stay native.
 
 - Projection qualification retains the Demonology owner's gate: `demonology_ --ignored --skip demonology_implosion_`. The excluded Implosion test is the owner's existing master RED, not a Malefic Grasp regression (same exclusion as trainsdd4e681ed7/d577e0ad22). Native Affliction cast and Frost literal opener remain required.
+
+### Affliction native Death's Embrace
+
+- Selected234876 uses its native maximum amount and health threshold to scale source-qualified damage linearly with each actual recipient's live health below that threshold (`sc_warlock_actions.cpp529–535`). Preserve pinned exclusions: direct Corruption/Wither, Shadowbolt Volley and Malefic Grasp itself are not affected; Grasp's extra DoT payloads are affected. Seed-applied UA stack suppression belongs with MID2 Seed UA integration.
+### Affliction native Darkglare Eye Beam
+
+- Ordinary native205231 from an actual103673 Darkglare reads its real owner and actual recipient. Each distinct owned active Agony, Corruption, Wither, Seed or UA contributes the native205180 effect2 amount; multiple UA stacks count once and foreign DoTs do not count (`sc_warlock_pets.cpp2445–2455`, `sc_warlock.cpp248–264`). Keep native guardian rows and coefficients unchanged. Nether Plating's alternate AoE chain is not selected by this MID2 fixture and is separately unqualified.
 
 ### Affliction native Darkglare Presence
 
