@@ -76,3 +76,70 @@ fn shadow_link_mind_blast_copies_only_to_other_owned_vampiric_touch() {
     assert!(copies[0].amount > 0);
     assert!(!copies[0].crit, "Psychic Link cannot independently crit");
 }
+
+#[test]
+#[ignore = "requires native258 Player/profile/traits"]
+fn shadow_link_never_copies_ordinary_death_self_backlash_to_single_target() {
+    let mut run = prepare_literal(258, 1).unwrap();
+    engage_fixture_opponents(&mut run);
+    let actor = run.actor;
+    let primary = run.targets[0];
+    // A wounded caster avoids generating an overheal shield before the real backlash.
+    {
+        let mut health = run
+            .app
+            .world_mut()
+            .get_mut::<shared::components::Health>(actor)
+            .unwrap();
+        health.current = health.max * 0.75;
+    }
+    cast_at(&mut run, VT, primary);
+    {
+        let mut health = run
+            .app
+            .world_mut()
+            .get_mut::<shared::components::Health>(primary)
+            .unwrap();
+        health.current = health.max * 0.1; // Execute admission; the native dummy survives.
+    }
+    run.app
+        .world_mut()
+        .resource_mut::<ObservedCombatEvents>()
+        .0
+        .clear();
+    cast_at(&mut run, 32379, primary);
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let death_damage = |target: Entity| {
+        events
+            .iter()
+            .filter(|event| {
+                let owned =
+                    event.source == Some(actor.to_bits()) && event.target == Some(target.to_bits());
+                let hit = event.spell_id == Some(32379) && event.kind == CombatLogKind::Damage;
+                owned && hit && event.amount > 0
+            })
+            .count()
+    };
+    assert_eq!(
+        death_damage(primary),
+        1,
+        "ordinary hostile Death hit landed"
+    );
+    assert_eq!(
+        death_damage(actor),
+        1,
+        "surviving dummy caused real self-backlash"
+    );
+    let copies = events
+        .iter()
+        .filter(|event| {
+            let owned_link = event.source == Some(actor.to_bits()) && event.spell_id == Some(LINK);
+            let damage = event.kind == CombatLogKind::Damage && event.amount > 0;
+            owned_link && damage
+        })
+        .count();
+    assert_eq!(
+        copies, 0,
+        "caster backlash is not a hostile Psychic Link producer"
+    );
+}
