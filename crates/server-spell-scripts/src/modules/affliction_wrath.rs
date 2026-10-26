@@ -125,19 +125,27 @@ fn select_wrath_targets(
         .iter()
         .enumerate()
         .filter(|(_, effect)| effect.effect != 0)
-        .map(|(index, effect)| {
-            let units =
-                targets::select_targets(world, caster, Some(primary), &aimed, effect, 0, false)
-                    .expect("native Wrath AoE selectors are supported");
-            spell_cast::PlannedEffect {
-                index,
-                selected_units: units.clone(),
-                units,
-                dest: targets::effect_dest(world, caster, Some(primary), effect, None),
-                chain_multipliers: Vec::new(),
-                blocked_units: Vec::new(),
-                prevent_hit_script: false,
-            }
-        })
+        .map(|(index, _)| plan_wrath_effect(world, caster, &aimed, primary, index))
         .collect()
+}
+
+fn plan_wrath_effect(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    primary: Entity,
+    index: usize,
+) -> spell_cast::PlannedEffect {
+    let effect = &spell.effects[index];
+    let units = targets::select_targets(world, caster, Some(primary), spell, effect, 0, false)
+        .expect("native Wrath AoE selectors are supported");
+    spell_cast::PlannedEffect {
+        index,
+        selected_units: units.clone(),
+        units,
+        dest: targets::effect_dest(world, caster, Some(primary), effect, None),
+        chain_multipliers: Vec::new(),
+        blocked_units: Vec::new(),
+        prevent_hit_script: false,
+    }
 }

@@ -37,7 +37,7 @@ fn affliction_wrath_native_soul_casts_once_at_haunt_and_dismisses() {
         .world()
         .get::<shared::components::Position>(owner)
         .unwrap();
-    for (target, distance) in [(selected, 100.0), (haunted, 20.0), (nearby, 21.0)] {
+    for (target, distance) in [(selected, 60.0), (haunted, 20.0), (nearby, 21.0)] {
         let mut position = run
             .app
             .world_mut()
