@@ -49,17 +49,7 @@ pub(super) fn apply_damage(
         error!("Native Ignite12654 has no positive periodic tick count");
         return;
     };
-    let inflame = world
-        .get::<ActiveAuras>(unit)
-        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 417467))
-        .map_or(0.0, |aura| {
-            aura.effects
-                .iter()
-                .find(|effect| effect.index == 0)
-                .expect("native Inflame requires effect1")
-                .amount
-        });
-    let amount = calculate_tick_amount(effect.amount, event, ticks, inflame);
+    let amount = calculate_tick_amount(effect.amount, event, ticks);
     crate::spell_cast::cast_triggered_with_effect0_amount(
         world,
         unit,
@@ -135,7 +125,7 @@ fn read_intensifying_flame_proc(world: &World, caster: Entity) -> Option<(f32, f
     Some((max_targets, percent, chance))
 }
 
-fn calculate_tick_amount(percent: f32, event: &AuraEvent, ticks: u32, inflame: f32) -> f32 {
+fn calculate_tick_amount(percent: f32, event: &AuraEvent, ticks: u32) -> f32 {
     // snapshot_proc_modifiers admits only HS/LavaSurge. The latter's native
     // cast-time mask does not affect Pyroblast/Flamestrike, so this is HS's
     // actual launch marker, even after the aura was spent or a missile flew.
@@ -144,14 +134,7 @@ fn calculate_tick_amount(percent: f32, event: &AuraEvent, ticks: u32, inflame: f
             event.spell_id,
             Some(PYROBLAST | FLAMESTRIKE | NATIVE_FLAMESTRIKE)
         );
-    // SimC76f8118 sc_mage.cpp2397–2399: Inflame multiplies only an
-    // actual admitted Hot Streak contribution, not ordinary hardcasts.
-    let percent = percent
-        * if hot_streak {
-            2.0 * (1.0 + inflame / 100.0)
-        } else {
-            1.0
-        };
+    let percent = percent * if hot_streak { 2.0 } else { 1.0 };
     // TC DamageInfo::GetDamage is uint32 before CalculatePct.
     let damage = event.damage as u32;
     damage as f32 * percent / 100.0 / ticks as f32

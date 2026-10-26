@@ -627,79 +627,69 @@ fn fire_feedback_fireball_applies_owned_controlled_destruction() {
 #[test]
 #[ignore = "requires exact Fire63 inputs and private70448 DB"]
 fn fire_feedback_hot_streak_ignite_includes_native_inflame() {
-    let _seed = crate::random::seed_scope(70_448);
-    let mut run = prepare_literal(63, 1).unwrap();
-    let target = run.targets[0];
-    // Snapshot the native input before this hit's other native proc callbacks
-    // can change mastery. Later aura state is not this contribution's input.
-    let (mastery, inflame) = {
-        let auras = run.app.world().get::<ActiveAuras>(run.actor).unwrap();
-        let amount = |spell| {
-            auras
-                .iter()
-                .find(|aura| aura.spell_id == spell)
-                .unwrap()
-                .effects
-                .iter()
-                .find(|effect| effect.index == 0)
-                .unwrap()
-                .amount
-        };
-        (amount(12846), amount(417467))
+    let contribution = |with_inflame: bool| {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(63, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        if !with_inflame {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 417467,
+            );
+        }
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 48108, Some(actor), 1);
+        start_native(&mut run, 11366, target);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let world = run.app.world();
+        let damage = world
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(11366)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("real Pyroblast impact")
+            .amount as f32;
+        let tick = world
+            .get::<ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 12654 && aura.caster == actor)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount;
+        assert!(damage > 0.0 && tick > 0.0);
+        tick / damage
     };
-    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 48108, Some(run.actor), 1);
-    start_native(&mut run, 11366, target);
-    preparation::finish_pending_setup(&mut run).unwrap();
-    let world = run.app.world();
-    let damage = world
-        .resource::<ObservedCombatEvents>()
-        .0
-        .iter()
-        .find(|event| {
-            event.source == Some(run.actor.to_bits())
-                && event.target == Some(target.to_bits())
-                && event.spell_id == Some(11366)
-                && event.kind == CombatLogKind::Damage
-        })
-        .expect("real Pyroblast impact")
-        .amount as f32;
-    let dot = world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(12654)
-        .unwrap();
-    let duration = dot.misc.as_ref().unwrap().duration.unwrap().duration_ms;
-    let period = dot
-        .effects
-        .iter()
-        .find(|effect| effect.index == 0)
-        .unwrap()
-        .aura_period_ms;
-    let ticks = duration as u32 / period;
-    assert!(
-        mastery > 0.0 && inflame > 0.0,
-        "real native Ignite mastery and selected Inflame"
-    );
-    // The combat log uses dealt-damage units; native proc amounts and the
-    // stored Ignite bank use victim-HP units (level_scaling::health_loss).
-    let attacker = crate::level_scaling::UnitScaling::of(world, run.actor);
-    let victim = crate::level_scaling::UnitScaling::of(world, target);
-    let hp_multiplier = victim.health_multiplier(&attacker);
-    let hp_damage = (damage / hp_multiplier).trunc();
-    let minimum_tick = hp_damage * mastery / 100.0 * 2.0 * (1.0 + inflame / 100.0) / ticks as f32;
-    let tick = world
-        .get::<ActiveAuras>(target)
+    let baseline = contribution(false);
+    let inflamed = contribution(true);
+    let run = prepare_literal(63, 1).unwrap();
+    let percent = run
+        .app
+        .world()
+        .get::<ActiveAuras>(run.actor)
         .unwrap()
         .iter()
-        .find(|aura| aura.spell_id == 12654 && aura.caster == run.actor)
+        .find(|aura| aura.spell_id == 417467)
         .unwrap()
         .effects
         .iter()
         .find(|effect| effect.index == 0)
         .unwrap()
         .amount;
+    let expected = baseline * (1.0 + percent / 100.0);
     assert!(
-        tick + 1.0 >= minimum_tick,
-        "Ignite must retain HS and native Inflame contributions in HP units: {tick} < {minimum_tick}; HP multiplier={hp_multiplier}; damage={damage}; mastery={mastery}; inflame={inflame}; ticks={ticks}"
+        (inflamed / expected - 1.0).abs() < 0.001,
+        "Inflame changes actual Ignite contribution by its native multiplier: {baseline} -> {inflamed}, expected{expected}"
     );
 }
 
@@ -754,7 +744,7 @@ fn fire_feedback_fevered_stack_uses_native_talent_critical_damage() {
         .amount;
     let expected = baseline * (1.0 + percent / 100.0);
     assert!(
-        (fevered - expected).abs() <= 2.0,
+        (fevered / expected - 1.0).abs() < 0.001,
         "one Fevered stack uses selected native talent damage: {baseline} -> {fevered}, expected{expected}"
     );
 }

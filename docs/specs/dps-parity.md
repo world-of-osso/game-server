@@ -130,8 +130,6 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 ### Fire literal fixture
 
-- Native Inflame multiplies Ignite contributions from actual admitted Hot Streak Pyroblast/Flamestrike only (`sc_mage.cpp2397–2399`). Use the selected talent amount; retain the normal native contribution and unpaid rolling bank.
-
 - Selected Overflowing Energy gains a native stack after noncritical Fireball/Frostfire Bolt and clears on their critical hits (`sc_mage.cpp1897–1898,3819`). Selected Fevered Incantation gains after direct Mage critical hits and clears on direct noncritical hits (`1900–1901`); apply these outcomes after the current hit batch (`5585–5605,7272–7293`). Fireball and Hot Streak-spell hits produce their caster-owned native Controlled Destruction target stack with native talent effect1×0.1 (`2457,3843,5648–5650`).
 
 - Ordinary noncritical Hot Streak producers preserve Heating Up during its first200ms (`sc_mage.cpp2196–2210`). Qualify this with an ordinary Fireball already in flight when ordinary Fire Blast earns Heating Up; triggered depth1 damage is not a Hot Streak producer.
