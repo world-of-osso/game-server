@@ -979,6 +979,9 @@ fn record_swing(
             outcome.kind == MeleeOutcome::Crit,
         );
     }
+    // SimC76f8118 hunter2974–3010 runs stable-pet impact producers on
+    // every result, independently of the landed-hit and generic proc stages.
+    crate::spell_cast::script_registry::after_white_impact(world, attacker_entity);
     // Procs default to normal and critical hits (SpellMgr::LoadSpellProcs
     // HitMask 0); dodge- and parry-triggered procs are not modelled.
     if landed {
