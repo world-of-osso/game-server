@@ -16,6 +16,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 Spec103 captures the native actor before setup and executes all74 pinned76f8118 Feral rows through shared `Program`, `Driver`, `Prepared` and `Equipment`, for either Player or Follower identity. Preserve ordered native Cat Form/Prowl precombat, the shared potion/item path, native action admission and source-recipient geometry. Do not replace missing periodic snapshot facts or damage mechanics with assisted priorities or synthetic values. Controller qualification is separate from full-duration numerical parity.
 
+Feral `buff.clearcasting.react` observes actual135700 acquisition through the shared reaction clocks configured before precombat. Use the exact pinned103 player's0.25s mean,0.05s deviation,0.1s offset,0.15s exponential term and1.4s maximum; neither buff presence nor query time substitutes for the earned reaction deadline.
+
 ### Feral Thriving Growth
 
 Actual owned Rip1079 and Rake155722 periodic damage feeds the selected439528 accumulator using native per-source amounts, native active-dot exponent and selected Feral Green Thumb1270565. Keep the pinned random initial phase, uniform increments and1000-point threshold. Success casts native439531 on the actual tick recipient; other periodic sources cannot roll it (`sc_druid.cpp2416–2448,12311–12406`). Twin Sprouts, Rampancy and Bursting Growth remain separately unqualified.
