@@ -10,7 +10,7 @@ Verified: 2026-10-26. Spec64 uses the literal pinned76f8118 APL and native70448 
 - Controlled Instincts copies the final resolved Splinter hit using native444483's specialization fraction. It excludes the hit's primary, uses the native radius and pinned `bugs=1` hard cap, and does not roll another critical hit or reapply caster modifiers. `ResolvedDamage` supplies the real source amount; no damage-dispatch signature change is needed.
 - Infused Splinters uses its native Frost chance/count on actual443722 impacts to earn owned Freezing.
 - Rapid Refreezing accrues five native200ms Icicle ticks during its1s window. Only Glacial Spike attempts the pinned accumulated proc curve; the broad native proc hint must not grant it on paid Lance/Shatter.
-- Overflowing Energy eligibility belongs to actual Frostbolt228597 and Spike228600 positive direct hits. Schedule native394195 outcomes through the existing merged buff queue; do not grant or remove stacks on Lance. Native RED1b8be9a776 proves both missing gain and expiration; the new Frost-only callback is not yet GREEN-qualified.
+- Overflowing Energy eligibility belongs to actual Frostbolt228597 and Spike228600 positive direct hits. Schedule native394195 outcomes through the existing merged buff queue; do not grant or remove stacks on Lance. Native RED1b8be9a776 proves both missing gain and expiration; GREENd6ef48c03d qualifies the Frost-only callback and Lance exclusion. Landing and measurement remain blocked by the unrelated Arcane charge-damage fixture control.
 
 ## Proven landings
 
@@ -23,7 +23,7 @@ Verified: 2026-10-26. Spec64 uses the literal pinned76f8118 APL and native70448 
 | Paid-Lance Glaciate/Force of Will and once-per-Orb-pulse Fingers | GREEN896a8e1556;22native Frost/CI cases and15costed controls | 4aba2bff2 |
 | Rapid Refreezing native tick clock and qualified Spike-only source | RED8455eb05e5/351688fab3 → GREENf19726f012; costed controls retained | ca856c659 |
 
-Latest confirmed measurement, from trainf19726f012:152,167.13 ST and232,622.16 three-target DPS (77.57%/77.90% of reference). This follows the earlier145,736.36/225,002.13 checkpoint. The ±10% goal remains open; queued changes are not measured landings.
+Latest confirmed measurement, from trainf19726f012:152,167.13 ST and232,622.16 three-target DPS (77.57%/77.90% of reference). This follows the earlier145,736.36/225,002.13 checkpoint. The ±10% goal remains open; queued changes are not measured landings. Both Ray's execution-time10s Splinterstorm window and Overflowing Energy passed all27Frost/2CI cases in d6ef48c03d. The entry was rejected on one Arcane fixture control (14other costed controls passed), so it produced no new DPS measurement; await the fixture owner's fix and resubmit.
 
 ## Investigation traps and remaining work
 
