@@ -18,7 +18,7 @@ Equipped weapon271093 follows pinned SimC76f8118 `unique_gear_midnight.cpp5233�
 
 - `crates/server-spell-scripts/src/modules/zathatek_breath.rs` — missing weapon relationship, native budget/role and owned recipient stacks.
 - `crates/server-spell-scripts/src/modules.rs` — alphabetical module registration, preserving historical dispatch positions.
-- `crates/server-combat/src/{item_proc_data.rs,auras/procs.rs}` — existing readonly role/recipient helpers exposed downstream, without behavior changes.
+- `crates/server-combat/src/{item_proc_data.rs,auras/procs.rs,auras/mod.rs}` — existing native role, recipient and aura-application helpers exposed downstream, without behavior changes.
 
 ## Tests asserting this spec
 
