@@ -1,3 +1,7 @@
+## 2026-10-26 — Fire Molten Fury execute
+
+[Fire target-versus policy](systems/simc-apl.md#fire-fixture-adapter) now reads selected native Molten Fury's health threshold and damage percentage. Actual Fire Blast RED2689→2689 instead of3092.35 is qualified; GREEN and measurement remain train-gated. No coefficient changes or generic aura303 rewrite.
+
 ## 2026-10-26 — Mage Inspired Intellect source
 
 [Mage intellect](systems/character-stats.md#mage-inspired-intellect--2026-10-26) identifies the missing native2-point enhancement to Arcane Intellect, not a universal stat deficit. Base/gear/enchant/gem/food/rune totals reconcile; duplicate weapon Intellect rows explain the reference JSON gear-map undercount. Fire/Frost REDs and the Affliction control pass all3 real-player gates; landed44a57ef9a via trainf75e88a9fa. Numerical DPS parity remains separate.
