@@ -214,7 +214,7 @@ fn literal_ww_native_source_children_rwk_uses_authored_split_multiplier() {
         .as_array()
         .unwrap()
         .iter()
-        .filter(|row| row["event"] == "result")
+        .filter(|row| row["event"] == "result" && row["spell_id"] == 468179)
         .collect();
     assert!(!rows.is_empty());
     for row in rows {

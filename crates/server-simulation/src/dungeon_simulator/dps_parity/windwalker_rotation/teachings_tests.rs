@@ -78,7 +78,11 @@ fn literal_ww_native_teachings_tp_bok_chain_and_child_recovery() {
         let offset = run.app.world().resource::<ObservedCombatEvents>().0.len();
         run.app.update();
         let cooldown_after_tick = rsk_remaining(&run);
-        let tick_events_end = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        let tick_events: Vec<_> = run.app.world().resource::<ObservedCombatEvents>().0[offset..]
+            .iter()
+            .filter(|event| event.source == Some(run.actor.to_bits()))
+            .cloned()
+            .collect();
         drive_player(&mut run).unwrap();
         let fresh: Vec<_> = run.app.world().resource::<ObservedCombatEvents>().0[offset..]
             .iter()
@@ -130,7 +134,6 @@ fn literal_ww_native_teachings_tp_bok_chain_and_child_recovery() {
         );
         // Observe recovery before the literal controller can immediately spend
         // the newly reset RSK in this same native frame.
-        let tick_events = &fresh[..tick_events_end - offset];
         let tick_child = tick_events.iter().any(|event| {
             event.spell_id == Some(CHILD) && event.kind == CombatLogKind::Damage && event.amount > 0
         });
