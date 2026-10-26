@@ -36,11 +36,14 @@ Sentinel reuses `marksmanship_sentinel.rs` for owned mark grants, consumption, L
 |---|---|
 | Tip/Swipe/Wildfire/Shrapnel | Landed455a8ad19; b899ee589e passes35 actual cases with canonical/Pack fixtures partitioned and unit cases in server-combat |
 | Sentinel force/Tip/Storm/recharge | Native0ac1974a11 has3 genuine owned-mark REDs→GREEN; landed4c9083c0c0 via bdb0b13806 with38 actual controls, including all19MM |
-| Strike as One | Native7d268c55e0 observes0 owned-pet strikes, including tipped rank3 Swipe; native-payload/ICD implementation committed, GREEN and actual-crit Sic 'Em qualification pending |
+| Strike as One/Sic 'Em | Native7d268c55e0 and actual-crit3eaa27a77d RED→GREEN; landed5a8c96626d throughb0f0f0b804 with41 actual controls. Shared policy timers require aura.instance_id, not spell ID |
+| Mongoose Fury/Stargazer | Native300s reports show0 earned uptime versus reference99.98%/99.10%; actual-cast tests64a096cde, native RED12233749ba pending |
 
-After Sentinel landing4c9083c0c0, canonical300s three-seed means are78418.654ST/140699.957three-target DPS (39.50%/44.16% reference), not numerical parity. Earlier455a8ad19 baseline was60195.31ST/104726.809three-target. Pack Leader is a mechanics control, not the canonical scoring fixture. Concurrent shared changes prevent isolated slice attribution.
+After Strike/Sic-Em landing5a8c96626d, canonical300s three-seed means are88726.483ST/145807.187three-target DPS (44.70%/45.76% reference), not numerical parity. Previous Sentinel landing4c9083c0c0 measured78418.654ST/140699.957three-target. Earlier455a8ad19 baseline was60195.31ST/104726.809three-target. Pack Leader is a mechanics control, not the canonical scoring fixture. Concurrent shared changes prevent isolated slice attribution.
 
-Sources: [shared Sentinel](../../../crates/server-spell-scripts/src/modules/marksmanship_sentinel.rs), [Tip/Swipe](../../../crates/server-spell-scripts/src/modules/survival.rs), [Wildfire](../../../crates/server-spell-scripts/src/modules/survival_wildfire.rs), [actual mark tests](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/survival_mark_tests.rs); pinned `sc_hunter.cpp1358–1372,3650–3710,6181–6188,6400–6401,7104–7107`.
+`survival_pet.rs` dispatches native1251779 from the living owned main pet. The normal path owns1251717's actual aura-instance700ms timer; raw melee proc hints cannot spend it. Tipped rank3 Swipe executes its separate native effectiveness before base impact. Actual main-pet strike crits trigger selected native Sic 'Em1253138; shared pet stats, owner crit and periodic timing remain authoritative. No synthetic pet or stat overrides.
+
+Sources: [owned-pet strikes](../../../crates/server-spell-scripts/src/modules/survival_pet.rs), [shared Sentinel](../../../crates/server-spell-scripts/src/modules/marksmanship_sentinel.rs), [Tip/Swipe](../../../crates/server-spell-scripts/src/modules/survival.rs), [Wildfire](../../../crates/server-spell-scripts/src/modules/survival_wildfire.rs), [actual mark tests](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/survival_mark_tests.rs); pinned `sc_hunter.cpp1358–1372,3650–3710,6181–6188,6400–6401,7104–7107`.
 
 ## Native Warrior execution relationships — 2026-10-25
 
