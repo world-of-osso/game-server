@@ -94,7 +94,11 @@ fn shadow_yogg_real_native_cohort_threshold_summons_owned_thing_and_actual_spike
     for cohort in 1..cap {
         slam(&mut run);
         advance(&mut run, recovery_frames);
-        eprintln!("YOGG cohort{cohort} counter{}", counter(&run));
+        assert_eq!(
+            counter(&run),
+            cohort as u8,
+            "each actual cohort retains one earned counter stack during continuous combat"
+        );
     }
     slam(&mut run);
     advance(&mut run, 120);

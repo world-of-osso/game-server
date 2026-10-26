@@ -43,7 +43,7 @@ pub(super) fn earn_cohort(world: &mut World, ctx: &EffectCtx<'_>) {
     if !counter_is_full(world, ctx.caster) {
         return;
     }
-    spell_cast::cast_triggered(world, ctx.caster, SUMMON, Some(ctx.caster), ctx.depth + 1);
+    spawn_thing(world, ctx);
     if auras::has_aura(world, ctx.caster, APEX) {
         // SimC2850–2858 defaults target=nullptr for the counter's extra cohort.
         // Keep the capped counter until this nested cohort returns: it cannot
@@ -53,6 +53,20 @@ pub(super) fn earn_cohort(world: &mut World, ctx: &EffectCtx<'_>) {
     auras::remove_auras(world, ctx.caster, RemoveReason::Consumed, |aura| {
         aura.spell_id == COUNTER && aura.caster == ctx.caster
     });
+}
+
+fn spawn_thing(world: &mut World, ctx: &EffectCtx<'_>) {
+    let depth = ctx.depth + 1;
+    let mut summon =
+        spell_cast::load_triggered_spell(world, SUMMON, depth).expect("native Thing summon");
+    // Native373277 selects the caster unit, not a destination selector. Supply
+    // that actual caster's position for effect28 (SimC pets75–86/1061–1134).
+    let position =
+        spell_cast::targets::position(world, ctx.caster).expect("actual Yogg caster position");
+    summon.cast_destination = Some(position.to_array());
+    if !spell_cast::launch_triggered_spell(world, ctx.caster, &summon, Some(ctx.caster), depth) {
+        warn!(caster = ?ctx.caster, "Native Thing From Beyond summon rejected");
+    }
 }
 
 fn increment_counter(world: &mut World, caster: Entity) {
