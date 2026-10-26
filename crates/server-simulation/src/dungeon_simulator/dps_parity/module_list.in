@@ -70,6 +70,7 @@ mod hunter_bloodshed_tests;
 mod hunter_cadence_tests;
 mod hunter_explosive_tests;
 mod hunter_facts;
+mod hunter_fixture;
 #[cfg(test)]
 mod hunter_focus_tests;
 mod hunter_followup_tests;
@@ -142,6 +143,8 @@ pub(crate) mod single_spell;
 mod snakeskin_tests;
 mod spellslinger_hits_tests;
 mod subtlety_tests;
+mod survival_sentinel_tests;
+mod survival_tests;
 mod trigger_primary_tests;
 mod venomcursed_tests;
 mod warrior_proc_tests;
