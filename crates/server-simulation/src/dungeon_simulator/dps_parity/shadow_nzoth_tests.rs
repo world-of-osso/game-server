@@ -120,6 +120,32 @@ fn shadow_nzoth_real_slam_background_madness_funds_native_target_counter() {
 
 #[test]
 #[ignore = "requires native258 Player/profile/traits"]
+fn shadow_nzoth_ordinary_funded_madness_counts_its_execution_target() {
+    let mut run = prepare_literal(258, 1).unwrap();
+    let actor = run.actor;
+    execution::execute(
+        run.app.world_mut(),
+        actor,
+        Execution::Spell(232698, actor, None),
+    )
+    .expect("ordinary profile precombat Shadowform");
+    engage(&mut run);
+    for _ in 0..3 {
+        cast_when_ready(&mut run, 1227280);
+        finish_cast(&mut run);
+    }
+    let before = counter(&run);
+    cast_when_ready(&mut run, 335467);
+    finish_cast(&mut run);
+    assert_eq!(
+        counter(&run),
+        (before + 12) % 100,
+        "ordinary Madness adds the sourced execution count to its actual target"
+    );
+}
+
+#[test]
+#[ignore = "requires native258 Player/profile/traits"]
 fn shadow_nzoth_actual_flay_ticks_cross_native_thresholds_and_roll_over() {
     let mut run = prepare_literal(258, 1).unwrap();
     engage(&mut run);
