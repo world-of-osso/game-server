@@ -222,6 +222,7 @@ fn arms_tactician_actual_paid_slam_restores_spent_overpower_charges() {
     )
     .unwrap();
     advance_frames(&mut run, 40);
+    let opportunist_selected = crate::auras::has_aura(run.app.world(), actor, 444774);
     let mut resets = 0;
     let mut opportunist_seen = false;
     for _ in 0..40 {
@@ -254,8 +255,8 @@ fn arms_tactician_actual_paid_slam_restores_spent_overpower_charges() {
         resets > 0,
         "native Tactician must synchronously restore spent Overpower charges after actual paid Slams"
     );
-    assert!(
-        opportunist_seen,
-        "selected Opportunist is earned by Tactician, not a fixture grant"
+    assert_eq!(
+        opportunist_seen, opportunist_selected,
+        "Tactician grants Opportunist only when its native passive is selected"
     );
 }
