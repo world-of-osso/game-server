@@ -3,10 +3,12 @@ use bevy::prelude::*;
 
 use super::combat;
 use combat::auras::{ActiveAuras, procs};
-use combat::spell_info::{SpellInfo, SpellStore};
 use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_info::{SpellInfo, SpellStore};
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterForegroundSpecial(after_foreground_special)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterForegroundSpecial(
+    after_foreground_special,
+)];
 
 struct ForegroundProc {
     class_set: u32,
@@ -26,11 +28,7 @@ const PROCS: &[ForegroundProc] = &[
     },
 ];
 
-fn after_foreground_special(
-    world: &mut World,
-    caster: Entity,
-    spell: &SpellInfo,
-) {
+fn after_foreground_special(world: &mut World, caster: Entity, spell: &SpellInfo) {
     const DEFENSE_MELEE: u32 = 2;
     if spell
         .categories

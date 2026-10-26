@@ -2,14 +2,14 @@
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
-use super::combat;
-use combat::spell_cast::{self, PlannedEffect, TargetPlan, effects::EffectCtx, targets};
 use super::cast_relationships::{decrement, has_talent};
+use super::combat;
+use combat::auras::scripts::{AuraScript, AuraScripts};
 use combat::auras::{self, AuraInstance};
-use combat::auras::scripts::{AuraScripts, AuraScript};
-use combat::spell_info::{SpellInfo, SpellStore};
-use combat::spell_cast::scripts::{script_effect_value, reduce_cooldown};
 use combat::spell_cast::script_registry::{SpellScriptHook, TargetPlanHook};
+use combat::spell_cast::scripts::{reduce_cooldown, script_effect_value};
+use combat::spell_cast::{self, PlannedEffect, TargetPlan, effects::EffectCtx, targets};
+use combat::spell_info::{SpellInfo, SpellStore};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::TargetPlan(target_plan),
@@ -19,11 +19,14 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 
 fn register(scripts: &mut AuraScripts) {
-    scripts.0.insert(RAPID_FIRE, AuraScript {
-        on_periodic: Some(cast_rapid_fire_tick),
-        on_natural_end: Some(finish_rapid),
-        ..Default::default()
-    });
+    scripts.0.insert(
+        RAPID_FIRE,
+        AuraScript {
+            on_periodic: Some(cast_rapid_fire_tick),
+            on_natural_end: Some(finish_rapid),
+            ..Default::default()
+        },
+    );
 }
 
 const SPEC: u32 = 254;
@@ -68,8 +71,7 @@ pub(super) fn trick_plan(
             (2, 4)
         };
         let count = script_effect_value(world, caster, TRICK_SHOTS, count_index) as usize;
-        let multiplier =
-            script_effect_value(world, caster, TRICK_SHOTS, percent_index) / 100.0;
+        let multiplier = script_effect_value(world, caster, TRICK_SHOTS, percent_index) / 100.0;
         let extras = select_trick_targets(world, caster, primary, count);
         chain_multipliers.extend(extras.iter().map(|&target| (target, multiplier)));
         units.extend(extras);
@@ -122,13 +124,7 @@ pub(crate) fn finish_rapid(world: &mut World, _target: Entity, aura: &AuraInstan
 
 /// sc_hunter.cpp8583–8626/5175–5178: actual critical damage supplies the
 /// residual pool, with Blood Fletching's native share for Aimed Shot only.
-fn apply_residual(
-    world: &mut World,
-    ctx: &EffectCtx,
-    target: Entity,
-    critical: bool,
-    damage: f32,
-) {
+fn apply_residual(world: &mut World, ctx: &EffectCtx, target: Entity, critical: bool, damage: f32) {
     if !critical
         || damage <= 0.0
         || ctx.spell.id == MASTER_BLEED

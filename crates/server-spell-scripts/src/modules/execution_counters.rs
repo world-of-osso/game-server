@@ -4,8 +4,8 @@ use std::collections::BTreeMap;
 
 use super::combat;
 use combat::auras::ActiveAuras;
-use combat::spell_info::SpellInfo;
 use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_info::SpellInfo;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterForegroundSpecial(consume_after_foreground_cast),

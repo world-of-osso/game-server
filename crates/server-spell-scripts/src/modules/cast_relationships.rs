@@ -3,9 +3,9 @@ use super::combat;
 use combat::auras::procs::{AuraEvent, PROC2_CAST_SUCCESSFUL};
 use combat::auras::{ActiveAuras, AuraInstance, RemoveReason};
 use combat::class_progression::TraitLoadout;
-use combat::spell_info::SpellInfo;
 use combat::spell_cast;
 use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_info::SpellInfo;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::LateAuraRegistration(register),
@@ -200,11 +200,7 @@ const CRIT_RULES: &[CritRule] = &[
     },
 ];
 
-fn guarantees_crit(
-    world: &World,
-    caster: Entity,
-    spell: &SpellInfo,
-) -> bool {
+fn guarantees_crit(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     spell.cast_was_hardcast
         && CRIT_RULES.iter().any(|rule| {
             rule.actions.contains(&spell.id)
@@ -294,11 +290,7 @@ fn used_modifier(spell: &SpellInfo, aura: u32) -> bool {
 }
 
 /// Ordinary native readiness and cooldown storage share this same sourced window.
-fn ignores_cooldown(
-    world: &World,
-    caster: Entity,
-    spell: &SpellInfo,
-) -> bool {
+fn ignores_cooldown(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     RULES
         .iter()
         .filter(|rule| rule.cast == spell.id && selected(world, caster, rule))

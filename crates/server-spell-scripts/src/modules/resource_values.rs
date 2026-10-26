@@ -1,11 +1,11 @@
 //! Source-qualified effective resource values, separate from actual payment.
 use super::combat;
-use combat::spell_cast::scripts::AfterCastHook;
-use combat::spell_cast;
 use combat::auras::{ActiveAuras, AuraInstance, RemoveReason, spell_mods};
 use combat::random::Rng;
-use combat::spell_info::SpellInfo;
+use combat::spell_cast;
 use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_cast::scripts::AfterCastHook;
+use combat::spell_info::SpellInfo;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResourceValueAfterCast(after_cast_hook),

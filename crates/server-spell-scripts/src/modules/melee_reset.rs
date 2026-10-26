@@ -4,9 +4,9 @@ use shared::components::ActiveSpec;
 
 use super::combat;
 use combat::auras::{ActiveAuras, procs};
+use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_cast::{self, effects::EffectCtx};
 use combat::spell_info::SpellStore;
-use combat::spell_cast::script_registry::SpellScriptHook;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterWhiteHit(roll_white_hit),

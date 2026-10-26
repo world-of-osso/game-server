@@ -3,10 +3,13 @@ use bevy::prelude::*;
 
 use super::combat;
 use combat::auras::ActiveAuras;
-use combat::spell_cast::{effects::{self, EffectCtx}, targets};
-use combat::spell_info::SpellStore;
-use combat::spell_cast::scripts::script_effect_value;
 use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_cast::scripts::script_effect_value;
+use combat::spell_cast::{
+    effects::{self, EffectCtx},
+    targets,
+};
+use combat::spell_info::SpellStore;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SpellResidual(after_spell),
@@ -51,12 +54,7 @@ struct CopySource {
     depth: u8,
 }
 
-fn after_spell(
-    world: &mut World,
-    ctx: &EffectCtx,
-    primary: Entity,
-    amount: f32,
-) {
+fn after_spell(world: &mut World, ctx: &EffectCtx, primary: Entity, amount: f32) {
     copy_secondary(
         world,
         CopySource {
@@ -103,8 +101,7 @@ fn read_copy_parameters(
 ) -> Option<(f32, usize)> {
     let fraction =
         read_aura_amount(world, source.caster, policy.aura, policy.fraction_effect)? / 100.0;
-    let mut cap =
-        script_effect_value(world, source.caster, policy.aura, policy.target_effect);
+    let mut cap = script_effect_value(world, source.caster, policy.aura, policy.target_effect);
     let (extra_aura, extra_effect) = policy.extra_targets;
     if combat::auras::has_aura(world, source.caster, extra_aura) {
         cap += script_effect_value(world, source.caster, extra_aura, extra_effect);
@@ -183,12 +180,7 @@ fn deliver_secondary(
         chain_multiplier: 1.0,
     };
     for target in recipients {
-        let versus = effects::creature_type_damage_multiplier(
-            world,
-            source.caster,
-            target,
-            &spell,
-        );
+        let versus = effects::creature_type_damage_multiplier(world, source.caster, target, &spell);
         effects::deal_copied_damage(world, &ctx, target, amount * versus);
     }
 }

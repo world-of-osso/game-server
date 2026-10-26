@@ -1,11 +1,11 @@
 //! SimC76f8118 Sentinel target marks, Lunar Storm and native residual bridges.
-use super::marksmanship::selected;
 use super::combat;
+use super::marksmanship::selected;
 use combat::auras::{self, ActiveAuras, RemoveReason};
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_cast::scripts::{reduce_cooldown, script_effect_value};
 use combat::spell_cast::{self, effects::EffectCtx, queued_triggers};
 use combat::spell_info::SpellInfo;
-use combat::spell_cast::scripts::{script_effect_value, reduce_cooldown};
-use combat::spell_cast::script_registry::SpellScriptHook;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ArmorIgnoredSpells(ARMOR_IGNORED),
@@ -44,13 +44,7 @@ pub(super) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
 }
 
-fn after_damage(
-    world: &mut World,
-    ctx: &EffectCtx,
-    target: Entity,
-    critical: bool,
-    damage: f32,
-) {
+fn after_damage(world: &mut World, ctx: &EffectCtx, target: Entity, critical: bool, damage: f32) {
     if damage <= 0.0 {
         return;
     }
@@ -163,8 +157,7 @@ fn grant_mark(world: &mut World, caster: Entity, target: Entity) {
     // sc_hunter.cpp3666/3709: a real mark immediately reduces Aimed's
     // running recovery by Moon's Blessing effect2, without restoring charges.
     if selected(world, caster, MOONS_BLESSING) {
-        let seconds =
-            f64::from(script_effect_value(world, caster, MOONS_BLESSING, 1)) / 1000.0;
+        let seconds = f64::from(script_effect_value(world, caster, MOONS_BLESSING, 1)) / 1000.0;
         reduce_cooldown(world, caster, AIMED, seconds);
     }
 }
