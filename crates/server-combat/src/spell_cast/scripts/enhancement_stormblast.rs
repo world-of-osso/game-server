@@ -106,7 +106,12 @@ pub(super) fn snapshot(world: &mut World, caster: Entity, spell: u32, depth: u8)
     }
 }
 
-pub(super) fn copy_weapon_damage(world: &mut World, ctx: &EffectCtx, target: Entity, damage: f32) {
+pub(in crate::spell_cast) fn copy_weapon_damage(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    damage: f32,
+) {
     if !matches!(ctx.spell.id, 32175 | 32176 | 115357 | 115360)
         || !selected(world, ctx.caster, STORMBLAST_TALENT)
         || !world
