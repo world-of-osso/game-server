@@ -67,8 +67,12 @@ fn native_bm_dire_summons_shortens_real_howl_clock_and_earns_next_beast() {
         (before_background - after_background - background_reduction).abs() < 0.001,
         "background Cobra must retain its shared native Dire Summons recovery"
     );
-    let deadline = after_background;
-    while crate::spell_cast::now(run.app.world()) < deadline - 0.5 {
+    // Ordinary Auto Shots can earn more Snakeskin Cobras during this wait.
+    // Follow the live clock, not the deadline captured before those recoveries.
+    while owned_howl_deadline(&run).expect("running clock before final recovery")
+        - crate::spell_cast::now(run.app.world())
+        > background_reduction
+    {
         run.app.update();
     }
     assert!(owned_howl_deadline(&run).is_some());
@@ -79,7 +83,7 @@ fn native_bm_dire_summons_shortens_real_howl_clock_and_earns_next_beast() {
         Some(run.targets[0]),
         false,
     )
-    .expect("actual Cobra shortens the final native half-second");
+    .expect("actual Cobra exhausts the remaining native recovery interval");
     assert!(
         owned_howl_deadline(&run).is_none(),
         "exhausted native Howl clock must end"
