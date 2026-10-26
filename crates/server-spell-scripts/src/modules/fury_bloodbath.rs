@@ -31,6 +31,7 @@ fn after_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool) {
             .and_then(|misc| misc.duration.as_ref())
             .expect("native Bloodbath bleed duration")
             .duration_ms;
+        let duration = u32::try_from(duration).expect("positive native Bloodbath duration");
         combat::auras::extend_owned_duration(world, ctx.caster, target, &[BLEED], duration);
     } else {
         combat::spell_cast::cast_triggered(world, ctx.caster, BLEED, Some(target), ctx.depth + 1);
