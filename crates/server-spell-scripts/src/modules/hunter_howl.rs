@@ -41,9 +41,23 @@ fn register(scripts: &mut AuraScripts) {
 }
 
 fn apply_self(world: &mut World, caster: Entity, spell: u32) {
-    if !spell_cast::try_cast_triggered(world, caster, spell, Some(caster), 1) {
-        warn!(?caster, spell, "Pack Leader native aura refused");
-    }
+    let native = world
+        .resource::<SpellStore>()
+        .get(spell)
+        .expect("selected Pack Leader requires its native buff record");
+    let effect_mask = auras::aura_effect_mask(native);
+    // SimC76f8118 sc_hunter.cpp3816/8299–8300: trigger the native buff,
+    // not the spell's unrelated destination-dummy execution.
+    auras::apply_aura(
+        world,
+        &auras::AuraApplication {
+            caster,
+            target: caster,
+            spell_id: spell,
+            effect_mask,
+            source: auras::AuraSource::Cast,
+        },
+    );
 }
 
 fn begin_combat(world: &mut World) {
