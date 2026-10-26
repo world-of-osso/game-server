@@ -68,6 +68,10 @@ fn destruction_periodic_damage_funds_real_soul_shard_pool() {
 fn destruction_literal_fixture_executes_profile_instead_of_native_kit() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(267, 1).unwrap();
+    // Mirror the300s measurement's real per-target TTD/role setup before
+    // evaluating Wither's target.time_to_die condition.
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
     assert!(
         run.app
             .world()
