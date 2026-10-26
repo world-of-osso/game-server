@@ -21,6 +21,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterFireOutcomeHit(fire_meteorite_hit),
     SpellScriptHook::OnCast(on_fire_cast),
     SpellScriptHook::TargetDamageMultiplier(meteor_primary_multiplier),
+    SpellScriptHook::ResourceContext(&[2120, 1254851]),
+    SpellScriptHook::TargetDamageMultiplier(fuel_damage_multiplier),
 ];
 
 const COMBUSTION: u32 = 190319;
@@ -44,6 +46,7 @@ const FEVERED: u32 = 383811;
 const CONTROLLED_TALENT: u32 = 383669;
 const CONTROLLED: u32 = 453268;
 const MAGE_FAMILY: u32 = 3;
+const INTENSIFYING_FLAME_DAMAGE: u32 = 419800;
 const PYROCOSM: u32 = 1260673;
 const METEORITE_IMPACT: u32 = 449569;
 const FROM_THE_ASHES: u32 = 342344;
@@ -51,6 +54,7 @@ const HEAT_SHIMMER_TALENT: u32 = 457735;
 const HEAT_SHIMMER: u32 = 458964;
 const IGNITE: u32 = 12654;
 const SCORCH: u32 = 2948;
+const FUEL_THE_FIRE: u32 = 416094;
 
 #[derive(Component, Default)]
 struct FireProcState {
@@ -201,7 +205,9 @@ pub(crate) fn fire_feedback_hit(world: &mut World, ctx: &EffectCtx, target: Enti
         .class_options
         .as_ref()
         .is_some_and(|options| options.spell_class_set == MAGE_FAMILY);
-    if !mage_spell {
+    // sc_mage.cpp2502: Intensifying Flame inherits spell_t, not mage_spell_t;
+    // its native Mage family does not make it a Fevered feedback producer.
+    if !mage_spell || ctx.spell.id == INTENSIFYING_FLAME_DAMAGE {
         return;
     }
     // sc_mage.cpp3819: Fire's Overflowing Energy eligibility is Fireball
@@ -343,6 +349,32 @@ fn on_fire_cast(world: &mut World, caster: Entity, spell_id: u32, _depth: u8) {
         let reduction = script_effect_value(world, caster, PYROCOSM, 3);
         reduce_cooldown(world, caster, 108853, f64::from(reduction) / 1000.0);
     }
+}
+
+fn fuel_damage_multiplier(
+    world: &World,
+    caster: Entity,
+    _target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    use combat::spell_cast::targets::{Relation, relation_matches};
+    if !matches!(spell.id, 2120 | 1254851) || !selected(world, caster, FUEL_THE_FIRE) {
+        return 1.0;
+    }
+    // SimC76f8118 sc_mage.cpp3904–3909: native effect2 per target,
+    // capped by effect3. Count this cast's actual admitted hostile recipients.
+    let context = spell
+        .cast_policy_context
+        .as_ref()
+        .expect("ordinary Flamestrike retains its admitted target plan");
+    let targets = context
+        .targets
+        .iter()
+        .filter(|target| relation_matches(world, caster, **target, Relation::Enemy))
+        .count() as f32;
+    let percent = script_effect_value(world, caster, FUEL_THE_FIRE, 1);
+    let cap = script_effect_value(world, caster, FUEL_THE_FIRE, 2);
+    1.0 + percent * targets.min(cap) / 100.0
 }
 
 fn meteor_primary_multiplier(
