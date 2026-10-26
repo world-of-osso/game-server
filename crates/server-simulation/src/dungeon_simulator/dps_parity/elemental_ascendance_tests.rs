@@ -115,11 +115,19 @@ fn measure_overloads(ascended: bool, targets: usize, root: u32, overload: u32) -
         false,
     )
     .unwrap();
-    assert!(run.app.world().resource::<ObservedCombatEvents>().0.iter().any(|event| {
-        event.source == Some(actor.to_bits())
-            && event.spell_id == Some(root)
-            && event.kind == CombatLogKind::CastSuccess
-    }), "actual Stormkeeper makes this root launch immediately");
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(root)
+                    && event.kind == CombatLogKind::CastSuccess
+            }),
+        "actual Stormkeeper makes this root launch immediately"
+    );
     let mut first_overload_at = None;
     for _ in 0..40 {
         run.app.update();
@@ -133,7 +141,10 @@ fn measure_overloads(ascended: bool, targets: usize, root: u32, overload: u32) -
         // SimC76f8118 sc_shaman.cpp3316–3351 schedules the400ms callback
         // before parent travel, not400ms after the parent's damage impact.
         if now - launched_at < 0.399 {
-            assert!(!overload_cast, "overload cannot execute before launch+400ms");
+            assert!(
+                !overload_cast,
+                "overload cannot execute before launch+400ms"
+            );
         }
         if overload_cast && first_overload_at.is_none() {
             first_overload_at = Some(now);
@@ -141,8 +152,10 @@ fn measure_overloads(ascended: bool, targets: usize, root: u32, overload: u32) -
     }
     let delay = first_overload_at.expect("actual delayed overload execution") - launched_at;
     let frame_seconds = run.app.world().resource::<Time>().delta_secs_f64();
-    assert!(delay >= 0.399 && delay <= 0.401 + frame_seconds,
-        "SimC launch+400ms callback, rounded to the next native frame: delay{delay}, frame{frame_seconds}");
+    assert!(
+        delay >= 0.399 && delay <= 0.401 + frame_seconds,
+        "SimC launch+400ms callback, rounded to the next native frame: delay{delay}, frame{frame_seconds}"
+    );
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
     let roots = events
         .iter()

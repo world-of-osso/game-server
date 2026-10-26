@@ -697,11 +697,8 @@ pub fn damage_amount(world: &World, spell_id: u32) -> Option<DamageAmountHook> {
         return Some(hook);
     }
     match spell_id {
-<<<<<<< HEAD
         447419 => Some(elemental_ancestors::lava_multiplier),
-=======
         midnight_items::FONT_SPLATTER => Some(midnight_items::splatter_damage),
->>>>>>> origin/master
         windwalker_dual_threat::DAMAGE => Some(windwalker_dual_threat::damage),
         windwalker_children::JADEFIRE => Some(windwalker_children::jadefire_damage),
         windwalker_children::RWK_DAMAGE => Some(windwalker_children::rushing_wind_damage),
