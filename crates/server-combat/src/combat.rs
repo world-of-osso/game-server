@@ -30,7 +30,7 @@ use shared::components::PowerType;
 use std::collections::VecDeque;
 
 /// Melee attack range in yards.
-const MELEE_RANGE: f32 = 5.0;
+pub const MELEE_RANGE: f32 = 5.0;
 /// TC SharedDefines.h621: these channels do not set UNIT_STATE_CASTING.
 const SPELL_ATTR5_ALLOW_ACTIONS_DURING_CHANNEL: u32 = 0x0000_0001;
 /// Attack's spell ID for the existing owner spell-error channel.
