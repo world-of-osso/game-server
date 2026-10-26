@@ -60,6 +60,7 @@ use crate::spell_info::SpellInfo;
 pub type TargetPlanHook = fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> TargetPlan;
 pub type TargetPlanLookup = fn(u32) -> Option<(Relation, TargetPlanHook)>;
 pub type PeriodicPrimaryDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, f32, bool);
+pub type SpellResidualHook = fn(&mut World, &EffectCtx<'_>, Entity, f32);
 pub type TargetDamageMultiplierHook = fn(&World, Entity, Entity, &SpellInfo) -> f32;
 pub type AuraRedirectHook = fn(&mut World, Entity, Entity, u32, u8) -> bool;
 
@@ -133,7 +134,7 @@ pub enum SpellScriptHook {
     TriggeredResourceProducer(AfterCastHook),
     EffectiveResourceValue(EffectiveResourceValueHook),
     ConsumeResourceValueSources(AfterCastHook),
-    SpellResidual(PeriodicPrimaryDamageHook),
+    SpellResidual(SpellResidualHook),
     MeleeResidual(MeleeResidualHook),
     LateAuraRegistration(AuraRegistrationHook),
     SuccessfulCastRelationships(AfterCastHook),
