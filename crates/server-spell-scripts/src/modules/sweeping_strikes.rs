@@ -12,7 +12,7 @@ use combat::spell_info::SpellInfo;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterForegroundSpecial(grant_uses),
     SpellScriptHook::OnCast(clear_previous_hits),
-    SpellScriptHook::AfterDirectDamageBeforeItems(record_hit),
+    SpellScriptHook::ResolvedDamage(record_hit),
     SpellScriptHook::AfterCounterLaunch(consume_landed_use),
     SpellScriptHook::TargetContextDamageMultiplier(secondary_multiplier),
 ];
@@ -59,7 +59,7 @@ fn clear_previous_hits(world: &mut World, caster: Entity, spell: u32, _: u8) {
     }
 }
 
-fn record_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool) {
+fn record_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool, _: f32) {
     if read_affected_instance(world, ctx.caster, ctx.spell).is_none() {
         return;
     }
