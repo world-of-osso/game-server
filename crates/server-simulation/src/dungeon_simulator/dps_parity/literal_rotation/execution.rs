@@ -399,9 +399,15 @@ fn filter_primary_range(
     if !state.ready && state.limited.is_none() {
         return state;
     }
-    let Some(primary) =
-        primary.filter(|&primary| crate::spell_cast::targets::is_hostile(world, actor, primary))
-    else {
+    // Native enemy selection includes attackable neutral units, not only hostile factions.
+    let Some(primary) = primary.filter(|&primary| {
+        crate::spell_cast::targets::relation_matches(
+            world,
+            actor,
+            primary,
+            crate::spell_cast::targets::Relation::Enemy,
+        )
+    }) else {
         return state;
     };
     let harmful = crate::spell_info::positivity::negative_effects(
