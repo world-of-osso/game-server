@@ -1,5 +1,6 @@
 //! Native delayed mage callbacks; read their authored recipient at execution.
-use crate::spell_cast;
+use super::combat;
+use combat::spell_cast;
 use bevy::prelude::*;
 use std::collections::{BTreeMap, VecDeque};
 
@@ -52,7 +53,7 @@ fn pop_due(world: &mut World, now: u64) -> Option<Request> {
     Some(request)
 }
 
-pub(in crate::spell_cast) fn resolve(world: &mut World) {
+pub(super) fn resolve(world: &mut World) {
     let now = (spell_cast::now(world) * 1000.0) as u64;
     while let Some(request) = pop_due(world, now) {
         if !spell_cast::targets::is_alive(world, request.caster) {
@@ -72,7 +73,7 @@ fn conjure_current_target(world: &mut World, caster: Entity, count: u32) {
     // mage.target; random target selection is commented out in this revision.
     // This is the authored target, not a fallback for a missing explicit target.
     let Some(target) = world
-        .get::<crate::networking::CombatTarget>(caster)
+        .get::<combat::networking::CombatTarget>(caster)
         .and_then(|target| target.0)
     else {
         return;

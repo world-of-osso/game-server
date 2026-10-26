@@ -1,7 +1,7 @@
 //! Frost and Spellslinger execution producers, using authored native amounts.
-use super::{AfterCastHook, script_effect_value};
-use crate::auras::{self, ActiveAuras, AuraApplication, AuraSource, procs};
-use crate::spell_info::SpellInfo;
+use super::{AfterCastHook, combat, script_effect_value};
+use combat::auras::{self, ActiveAuras, AuraApplication, AuraSource, procs};
+use combat::spell_info::SpellInfo;
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
@@ -23,7 +23,7 @@ fn frost(world: &World, caster: Entity) -> bool {
 
 fn roll_talent(world: &World, caster: Entity, talent: u32, effect: u8) -> bool {
     auras::has_aura(world, caster, talent)
-        && crate::random::random::<f32>() * 100.0
+        && combat::random::random::<f32>() * 100.0
             < script_effect_value(world, caster, talent, effect)
 }
 
@@ -133,7 +133,7 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo)
 
 fn roll_augury(world: &mut World, caster: Entity) -> bool {
     let probability = f64::from(script_effect_value(world, caster, AUGURY, 0)) / 100.0;
-    let constant = crate::random::capped_accumulated_proc_constant(probability, AUGURY_CAP);
+    let constant = combat::random::capped_accumulated_proc_constant(probability, AUGURY_CAP);
     let attempts = world
         .entity_mut(caster)
         .entry::<AuguryAttempts>()
@@ -146,7 +146,7 @@ fn roll_augury(world: &mut World, caster: Entity) -> bool {
     } else {
         constant * f64::from(attempts)
     };
-    let success = crate::random::random::<f64>() < chance;
+    let success = combat::random::random::<f64>() < chance;
     world.get_mut::<AuguryAttempts>(caster).unwrap().0 = if success { 0 } else { attempts };
     success
 }

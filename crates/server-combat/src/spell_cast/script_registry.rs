@@ -205,6 +205,13 @@ pub type AfterCastUpdateHook = fn(&mut World);
 pub type ConsumeCastModifiersHook = fn(&mut World, Entity, &SpellInfo);
 pub type AfterWeaponLaunchHook = fn(&mut World, Entity, &SpellInfo, u8);
 
+pub type SnapshotLaunchAurasHook = fn(&World, Entity, &mut SpellInfo);
+pub type TriggeredChildDamageMultiplierHook = fn(&World, Entity, &SpellInfo, u32) -> Option<f32>;
+pub type ProcAfterCastLookup = fn(u32) -> Option<AfterCastHook>;
+pub type SupplyAfterCastLookup = fn(u32) -> Option<AfterCastHook>;
+pub type ResolvePendingScriptEventsHook = fn(&mut World);
+pub type AfterLaunchProcSupplyHook = fn(&mut World, Entity, &SpellInfo);
+
 pub type ConjureCountHook = fn(&mut World, Entity, Entity, u32);
 pub type AfterPolicyCastHook = fn(&mut World, Entity, &SpellInfo);
 pub type AfterPolicyCastLookup = fn(u32) -> Option<AfterPolicyCastHook>;
@@ -316,6 +323,12 @@ pub enum SpellScriptHook {
     AfterCastUpdate(AfterCastUpdateHook),
     ConsumeCastModifiers(ConsumeCastModifiersHook),
     AfterWeaponLaunch(AfterWeaponLaunchHook),
+    SnapshotLaunchAuras(SnapshotLaunchAurasHook),
+    TriggeredChildDamageMultiplier(TriggeredChildDamageMultiplierHook),
+    ProcAfterCast(ProcAfterCastLookup),
+    SupplyAfterCast(SupplyAfterCastLookup),
+    ResolvePendingScriptEvents(ResolvePendingScriptEventsHook),
+    AfterLaunchProcSupply(AfterLaunchProcSupplyHook),
     ConjureCount(ConjureCountHook),
     AfterPolicyCast(AfterPolicyCastLookup),
     BeforeMeleeComboDamage(BeforeMeleeComboDamageHook),
@@ -1433,6 +1446,73 @@ pub fn conjure_count(world: &mut World, caster: Entity, target: Entity, count: u
     for hook in world.resource::<SpellScriptRegistry>().hooks() {
         if let SpellScriptHook::ConjureCount(run) = hook {
             run(world, caster, target, count);
+        }
+    }
+}
+
+/// Admission-time proc markers, before payment and missile flight.
+pub fn snapshot_launch_auras(world: &World, caster: Entity, spell: &mut SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::SnapshotLaunchAuras(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+/// First authored scalar for a triggered child, retaining the parent's snapshot.
+pub fn triggered_child_damage_multiplier(
+    world: &World,
+    caster: Entity,
+    parent: &SpellInfo,
+    child: u32,
+) -> Option<f32> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::TriggeredChildDamageMultiplier(run) => {
+                run(world, caster, parent, child)
+            }
+            _ => None,
+        })
+}
+
+/// Execution proc consumers run after native handlers and before supply producers.
+pub fn proc_after_cast(world: &World, spell: u32) -> impl Iterator<Item = AfterCastHook> + use<> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(move |hook| match hook {
+            SpellScriptHook::ProcAfterCast(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+/// Supply producers run before generic successful-cast policy relationships.
+pub fn supply_after_cast(world: &World, spell: u32) -> impl Iterator<Item = AfterCastHook> + use<> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(move |hook| match hook {
+            SpellScriptHook::SupplyAfterCast(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+/// Resolve script-owned delays after queued triggers and before their cleanup.
+pub fn resolve_pending_script_events(world: &mut World) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::ResolvePendingScriptEvents(run) = hook {
+            run(world);
+        }
+    }
+}
+
+/// Launch supply follows modifier consumption and precedes execution counters.
+pub fn after_launch_proc_supply(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterLaunchProcSupply(run) = hook {
+            run(world, caster, spell);
         }
     }
 }
