@@ -82,6 +82,7 @@ register_modules! {
     shadow_priest: (290, "modules/shadow_priest.rs"),
     snakeskin_quiver: (230, "modules/snakeskin_quiver.rs"),
     spellslinger_hits: (401, "modules/spellslinger_hits.rs"),
+    subtlety_shadow: (420, "modules/subtlety_shadow.rs"),
     touch_of_death: (240, "modules/touch_of_death.rs"),
     voltaic_blaze: (250, "modules/voltaic_blaze.rs"),
     warrior: (40, "modules/warrior.rs"),
