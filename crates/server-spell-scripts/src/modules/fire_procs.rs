@@ -163,12 +163,7 @@ pub(crate) fn fire_meteorite_hit(world: &mut World, ctx: &EffectCtx, target: Ent
     schedule_meteorites(world, ctx, target, count);
 }
 
-fn schedule_meteorites(
-    world: &mut World,
-    ctx: &EffectCtx,
-    target: Entity,
-    count: u32,
-) {
+fn schedule_meteorites(world: &mut World, ctx: &EffectCtx, target: Entity, count: u32) {
     let Some(position) = world.get::<shared::components::Position>(target).copied() else {
         return;
     };
@@ -228,7 +223,12 @@ fn on_fire_cast(world: &mut World, caster: Entity, spell_id: u32, _depth: u8) {
     }
 }
 
-fn meteor_primary_multiplier(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+fn meteor_primary_multiplier(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
     const METEOR_IMPACT: u32 = 351140;
     const DEEP_IMPACT: u32 = 1254857;
     if spell.id != METEOR_IMPACT || !selected(world, caster, DEEP_IMPACT) {
@@ -251,17 +251,22 @@ fn closest_meteor_target(world: &World, caster: Entity, destination: Vec3) -> Op
     use shared::components::{Health, Position};
     let map = world.get::<InMap>(caster)?;
     let mut query = world.try_query::<(Entity, &Position, &Health, &InMap)>()?;
-    query.iter(world)
+    query
+        .iter(world)
         .filter(|(entity, _, health, candidate_map)| {
-            health.current > 0.0 && *candidate_map == map
+            health.current > 0.0
+                && *candidate_map == map
                 && relation_matches(world, caster, *entity, Relation::Enemy)
         })
         .map(|(entity, position, _, _)| {
-            let distance = Vec3::new(position.x, position.y, position.z).distance_squared(destination);
+            let distance =
+                Vec3::new(position.x, position.y, position.z).distance_squared(destination);
             (entity, distance)
         })
         .min_by(|(left, left_distance), (right, right_distance)| {
-            left_distance.total_cmp(right_distance).then_with(|| left.to_bits().cmp(&right.to_bits()))
+            left_distance
+                .total_cmp(right_distance)
+                .then_with(|| left.to_bits().cmp(&right.to_bits()))
         })
         .map(|(entity, _)| entity)
 }
@@ -321,7 +326,12 @@ fn check_glorious_fire_blast(
     event.spell_id == Some(108853)
 }
 
-fn end_fiery_rush(world: &mut World, caster: Entity, _aura: &AuraInstance, reason: auras::RemoveReason) {
+fn end_fiery_rush(
+    world: &mut World,
+    caster: Entity,
+    _aura: &AuraInstance,
+    reason: auras::RemoveReason,
+) {
     // SimC76f8118 sc_mage.cpp1453–1457: the native permanent Fiery Rush
     // payload lasts only while Combustion is active; do not leave it after expiry.
     auras::remove_auras(world, caster, reason, |aura| {

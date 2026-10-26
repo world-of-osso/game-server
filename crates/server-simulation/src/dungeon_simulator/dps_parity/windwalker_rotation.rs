@@ -186,11 +186,11 @@ impl Rotation {
 #[cfg(test)]
 mod channel_melee_tests;
 #[cfg(test)]
+mod dance_breaker_tests;
+#[cfg(test)]
 mod flurry_tests;
 #[cfg(test)]
 mod glory_tests;
-#[cfg(test)]
-mod dance_breaker_tests;
 #[cfg(test)]
 mod hero_flurry_tests;
 #[cfg(test)]
