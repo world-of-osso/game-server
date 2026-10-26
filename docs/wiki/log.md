@@ -1,3 +1,7 @@
+## 2026-10-26 — Native Ignite spread
+
+[Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now copies the owned pre-hit bank through native admission, with native cap/threshold, stable bank ordering and separate new/existing target clocks. Actual Fire Blast RED0-of-1 recipients is qualified; clone lifetime and measurement gates remain pending. No direct-damage or stat scalar changed.
+
 ## 2026-10-26 — Fire Ignition contribution
 
 [Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now applies selected native Ignition's percentage only to each new Flamestrike contribution. Actual noncritical Flamestrike's unchanged tick/damage ratio has qualified RED proof; GREEN and measurement remain train-gated. Direct damage and existing unpaid bank are unchanged.
