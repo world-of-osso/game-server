@@ -69,6 +69,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Equipment
 
+- Shared named/slot on-use item selection binds native enemy/any-unit spells to the selected primary by default; ally/self payloads retain the actor. Preserve explicit target contexts, native admission, item level and cooldowns. An absent hostile primary is unavailable, never a self-target substitute (SimC76f8118 player.cpp10056–10068).
+
 - Font of Venomous Rage1297908's actual item-use channel snapshots native1297911 effect0 divided by its native base tick count (including the authored initial tick). Each channel damage tick launches native1307222 at the retained primary, with native1297911 effect1 per tick; its area excludes that primary and follows pinned reduced-AoE8 semantics. Native item level, role expression, channel timing and damage pipeline remain authoritative (SimC76f8118 unique_gear_midnight.cpp3803–3859).
 
 - `trinket.N.has_stat.<stat>` and `has_buff.<stat>` use the same native item stat-buff existence query, including `any_dps`; direct-damage-only items are false.
