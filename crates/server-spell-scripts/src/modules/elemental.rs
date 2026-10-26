@@ -181,7 +181,7 @@ fn grant_native_uses(world: &mut World, caster: Entity, spell: u32) {
     if !selected(world, caster, spell) {
         return;
     }
-    let uses = super::script_effect_value(world, caster, spell, effect) as u8;
+    let uses = spell_cast::scripts::script_effect_value(world, caster, spell, effect) as u8;
     assert!(uses > 0, "native next-spell grant must supply uses");
     let Some(aura) = world.get::<ActiveAuras>(caster).and_then(|auras| {
         auras
@@ -196,7 +196,7 @@ fn grant_native_uses(world: &mut World, caster: Entity, spell: u32) {
     };
     // Applying the native aura already contributed one stack.
     let stacks = aura.stacks.saturating_add(uses - 1);
-    crate::auras::set_self_cast_stacks(world, caster, aura_spell, stacks);
+    combat::auras::set_self_cast_stacks(world, caster, aura_spell, stacks);
 }
 
 // SimC76f8118 sc_shaman.cpp7245–7247: only normal Lava Burst earns MOTE.
