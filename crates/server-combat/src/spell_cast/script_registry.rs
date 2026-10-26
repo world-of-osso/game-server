@@ -123,6 +123,7 @@ pub type DotMasteryMultiplierHook = fn(&World, Entity, Entity, u32) -> f32;
 pub type PeriodicDamageFinishedHook = fn(&mut World, &EffectCtx<'_>);
 pub type ActionHook = fn(&mut World, Entity, u32);
 pub type WhiteHitHook = fn(&mut World, Entity, bool);
+pub type WhiteImpactHook = fn(&mut World, Entity);
 pub type DirectDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool);
 pub type OwnsProcLookup = fn(u32) -> bool;
 pub type EffectiveResourceValueHook =
@@ -222,6 +223,7 @@ pub enum SpellScriptHook {
     AfterCounterLaunch(ActionHook),
     ImpactProcDamage(ContextHitHook),
     AfterWhiteHit(WhiteHitHook),
+    AfterWhiteImpact(WhiteImpactHook),
     ReplacementDirectDamage(DirectDamageHook),
     OwnsPolicyProc(OwnsProcLookup),
     ResourceValueAfterCast(AfterCastLookup),
@@ -736,6 +738,16 @@ pub fn impact_proc_damage(world: &mut World, ctx: &EffectCtx<'_>, target: Entity
     for hook in world.resource::<SpellScriptRegistry>().hooks() {
         if let SpellScriptHook::ImpactProcDamage(run) = hook {
             run(world, ctx, target);
+        }
+    }
+}
+
+/// Every resolved white impact, including avoided or immune outcomes.
+/// Existing landed-hit producers retain their separate stage.
+pub fn after_white_impact(world: &mut World, caster: Entity) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterWhiteImpact(run) = hook {
+            run(world, caster);
         }
     }
 }
