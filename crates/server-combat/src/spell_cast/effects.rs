@@ -2046,6 +2046,9 @@ fn deal_source_damage_and_report(
     if !periodic && !resolved_source {
         super::scripts::after_spell_residual(world, ctx, target, residual_source);
         super::scripts::after_direct_damage(world, ctx, target, crit);
+        if amount > 0.0 {
+            super::scripts::fire_feedback_hit(world, ctx, target, crit);
+        }
     }
     if hot_streak_hit {
         super::scripts::record_fire_hit(world, ctx.caster, ctx.spell, crit, guaranteed_crit);

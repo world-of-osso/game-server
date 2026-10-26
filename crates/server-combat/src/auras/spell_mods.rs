@@ -215,21 +215,33 @@ fn snapshots_periodic_modifier(aura: &AuraInstance, op: SpellModOp) -> bool {
     aura.spell_id == 5217 && op == SpellModOp::PeriodicHealingAndDamage
 }
 
+fn periodic_snapshot_modifiers(world: &World, caster: Entity, spell: &SpellInfo) -> (f32, f32) {
+    let Some(auras) = world.get::<ActiveAuras>(caster) else {
+        return (0.0, 1.0);
+    };
+    let op = SpellModOp::PeriodicHealingAndDamage;
+    matching(auras, spell, op)
+        .filter(|(aura, _)| snapshots_periodic_modifier(aura, op))
+        .fold((0.0, 1.0), |sum, (aura, effect)| {
+            add_modifier(sum, stacked_amount(aura, effect), is_pct(effect.aura_type))
+        })
+}
+
+pub(crate) fn snapshot_periodic_multiplier(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    periodic_snapshot_modifiers(world, caster, spell).1
+}
+
 pub(crate) fn snapshot_periodic_amount(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
     amount: f32,
 ) -> f32 {
-    let Some(auras) = world.get::<ActiveAuras>(caster) else {
-        return amount;
-    };
-    let op = SpellModOp::PeriodicHealingAndDamage;
-    let (flat, multiplier) = matching(auras, spell, op)
-        .filter(|(aura, _)| snapshots_periodic_modifier(aura, op))
-        .fold((0.0, 1.0), |sum, (aura, effect)| {
-            add_modifier(sum, stacked_amount(aura, effect), is_pct(effect.aura_type))
-        });
+    let (flat, multiplier) = periodic_snapshot_modifiers(world, caster, spell);
     (amount + flat) * multiplier
 }
 
