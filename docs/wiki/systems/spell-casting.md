@@ -1175,6 +1175,14 @@ Backstab53 unconditional `$<mult>` joins variable339: `(max(0,min(player_level-1
 
 Named gap `FERAL_SPIRIT_INTRINSIC_AP_SOURCE`: archive pet_levelstats has2715 rows and zero29264. TC substitutes explicitly fake Strength22; this implementation does not. Intrinsic AP, armor/stamina shares, healing/AI/chase and full legal-loadout parity remain unsupported. Native centered training-dummy RED at89645435 reaches ownerAP100→10000 with damage10→10 and power(0,0); Merged afc0e5e5/protocol62865c23 controls24/24 pass (55.15s tests), check102.286s/fmt/readability clean. Live power asserts31→3100 SP/AP; ordinary dummy stays0/0. Independent/full-stat/legal-loadout acceptance remains open. Sources and proof ledger: data/class-completeness6-2026-10-12/guardian-{owner-power-source,owner-power-proof-ledger,wolf-pet-levelstats-source}.json.
 
+## Destruction guaranteed-crit damage — 2026-10-26
+
+`destruction_crit_scaling` registers the existing `DamageAmount` boundary for Conflagrate17962/Shadowburn17877 only. Selected387108 multiplies by `1 + live caster spell crit`, excluding the ability-specific guaranteed outcome. The same pure callback serves forecasts; resolved copies skip it. Existing Chaos Bolt scaling is unchanged. Source: SimC76f8118 actions4511–4517/4838–4844; [contract](../../specs/dps-parity.md#destruction-guaranteed-crit-damage).
+
+Native RED `3e1761f9b2` observes real Conflagrate critical damage42039 unchanged when native113858 increases caster crit34.95652→64.95652%; the source requires ratio1.2222938. Existing CB control passes. Aura modifiers require a real stat-update frame before admission; the first probe failed that test precondition and is not gameplay RED. CoC GREEN remains pending.
+
+The separate `destruction_mastery` actual-hit sampler and pure mean forecast landed via `632a4d9a0b` with nine native/control cases GREEN. Actual eligible hits sample native mastery bounds; read-only forecasts consume no RNG. [Current numerical status](warlock-periodic-counters.md#counter-lifecycle) remains below parity.
+
 ## Warlock periodic shard funding — 2026-10-25
 
 Shared Wither stack/damage rules are documented separately in [Warlock periodic counters](warlock-periodic-counters.md).

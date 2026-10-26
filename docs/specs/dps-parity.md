@@ -379,6 +379,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Generic effect148 must forward its actual hit destination/unit, native costs and value to every child effect on the per-cast clone. Do not mutate catalog data (TC a352b1fa SpellEffects.cpp725–788).
 - Generic implicit85 is DEST_DEST_FRONT_LEFT: use native radius/direction, native caster origin when no destination is supplied, and existing collision/allowed-Z handling. Do not use spell-ID branches (TC a352b1fa Spell.cpp1690–1738).
 - Qualify the native267 summon regressions and protected255/254/253/265 probes before landing shared behavior. Pet attack lists, coefficients and class producers remain separate work.
+### Destruction guaranteed-crit damage
+
+- Selected Conflagration of Chaos387108 scales Conflagrate17962 and Shadowburn17877 damage by one plus the live caster spell-crit fraction. The ability-specific guaranteed crit is not the multiplier input. Actual damage and pure forecasts must share this rule without rerolling damage or rescaling resolved copies (SimC76f8118 actions4511–4517,4838–4844).
+- Preserve the existing Chaos Bolt crit-chance scaling; do not apply it twice. Native crit changes, not a reference-derived damage coefficient, must drive this relationship.
 
 ### Shared Hellcaller Wither counters
 
