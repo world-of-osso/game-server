@@ -39,6 +39,7 @@ const fn order_modules<const N: usize>(
 
 register_modules! {
     affliction_agony: (2650, "modules/affliction_agony.rs"),
+    affliction_empowerment: (2658, "modules/affliction_empowerment.rs"),
     affliction_grasp: (2654, "modules/affliction_grasp.rs"),
     affliction_instability: (2651, "modules/affliction_instability.rs"),
     affliction_nathreza: (2655, "modules/affliction_nathreza.rs"),
@@ -157,6 +158,7 @@ register_modules! {
     stacking_summons: (1000, "modules/stacking_summons.rs"),
     subtlety_shadow: (420, "modules/subtlety_shadow.rs"),
     survival: (2550, "modules/survival.rs"),
+    survival_pet: (2552, "modules/survival_pet.rs"),
     survival_wildfire: (2551, "modules/survival_wildfire.rs"),
     sweeping_strikes: (711, "modules/sweeping_strikes.rs"),
     swiftmend: (1000, "modules/swiftmend.rs"),
