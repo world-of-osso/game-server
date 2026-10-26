@@ -4,7 +4,7 @@ use super::literal_rotation::execution::{self, Execution};
 use super::*;
 use crate::auras::ActiveAuras;
 use crate::spell_cast::effects::factor_capture::FactorCapture;
-use crate::spell_cast::{read_native_cast_start, CastFailure};
+use crate::spell_cast::{CastFailure, read_native_cast_start};
 use crate::spell_info::SpellStore;
 
 fn cast_when_ready(run: &mut Run, id: u32) {
@@ -123,8 +123,10 @@ fn shadow_ire_real_three_dot_window_boosts_actual_flay_then_naturally_expires() 
     );
     let earned = sample_flay_source(&mut run);
     let expected = 1.0 + f64::from(percent) / 100.0;
-    assert!((earned / baseline - expected).abs() < 0.005,
-        "real owned DoTs earn the native Ire source bonus: baseline={baseline}, earned={earned}, expected={expected}");
+    assert!(
+        (earned / baseline - expected).abs() < 0.005,
+        "real owned DoTs earn the native Ire source bonus: baseline={baseline}, earned={earned}, expected={expected}"
+    );
     for _ in 0..800 {
         if !owns_dot(&run, 335467) {
             break;
@@ -140,6 +142,8 @@ fn shadow_ire_real_three_dot_window_boosts_actual_flay_then_naturally_expires() 
         "talent marker remains learned"
     );
     let expired = sample_flay_source(&mut run);
-    assert!((expired / baseline - 1.0).abs() < 0.005,
-        "natural earned-window expiry removes bonus without removing talent: baseline={baseline}, expired={expired}");
+    assert!(
+        (expired / baseline - 1.0).abs() < 0.005,
+        "natural earned-window expiry removes bonus without removing talent: baseline={baseline}, expired={expired}"
+    );
 }
