@@ -10,6 +10,9 @@
 ## 2026-10-26 — Explicit non-demon guardian SP
 
 [Guardian spell power](systems/spell-casting.md#explicit-non-demon-guardian-spell-power--2026-10-26) now reads explicit SP policies without changing native identity, demon scaling or owner RAP. Native Yogg RED8bf69a675f reaches an owned type15 Thing but no positive Spike; actual Spike, guardian units and native BM/265/267 cases now pass; landing remains pending.
+## 2026-10-26 — Haunting Shadows impact extensions
+
+[Haunting Shadows](systems/spell-casting.md#haunting-shadows-impact-extensions--2026-10-26) uses the existing owned-duration operation for native apparition payload impacts. Actual-hit RED901d805102 proves the missing1000ms; native GREEN and landing remain pending.
 
 ## 2026-10-26 — Merged Mage feedback grants
 

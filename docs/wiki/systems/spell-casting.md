@@ -5,6 +5,11 @@
 `effects::power_stats` reads an explicit guardian SP policy after the existing demon and owner-RAP paths. Native Thing From Beyond189988 retains creature type15; its373277→373279 policy inherits full live owner SP without a demon marker or copied actor stats. Unlisted guardians keep their existing behavior.
 
 Native Yogg RED8bf69a675f has the authentic owned actor but no positive Spike damage: the former SP-policy lookup existed only in the demon branch. Native4ef1614ab5 passes23Shadow cases including all-three-target Spikes and13guardian cases (one unrelated ignored). BM Bear/Wildspeaker7c3eeb0fea passes2,265guardian7efd24bed9 passes3, and267petsf8014078a3 passes5. Landing remains pending. See the [Shadow contract](../../specs/dps-parity.md#shadow-literal-fixture).
+## Haunting Shadows impact extensions — 2026-10-26
+
+`shadow_haunting.rs` handles native413231/1264176 payload impacts. Selected1279355 extends existing same-caster Pain/VT by native effect1 milliseconds through the owned-duration operation, not aura reapplication; periodic phase and damage formulas remain unchanged. Pinned SimC76f8118 `sc_priest_shadow.cpp427–435` defines this behavior.
+
+Native isolated RED901d805102 reaches one actual travelling apparition hit but leaves Pain at16.3 rather than17.3. GREEN/landing remain pending. See the [Shadow contract](../../specs/dps-parity.md#shadow-priest-literal-parity-controller).
 
 ## Merged feedback grants are not casts — 2026-10-26
 
