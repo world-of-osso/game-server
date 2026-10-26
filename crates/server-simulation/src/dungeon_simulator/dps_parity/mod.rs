@@ -62,6 +62,7 @@ spec_drivers! {
     70 => ret_rotation,
     71 => arms_rotation,
     72 => fury_rotation,
+    103 => feral_rotation,
     251 => frost_rotation,
     253 => beast_mastery_rotation,
     254 => marksmanship_rotation,
@@ -71,7 +72,9 @@ spec_drivers! {
     261 => subtlety_rotation,
     262 => elemental_rotation,
     263 => enhancement_rotation,
+    265 => affliction_rotation,
     266 => demonology_rotation,
+    267 => destruction_rotation,
     269 => windwalker_rotation,
     577 => havoc_rotation,
     1467 => devastation_rotation,
@@ -330,6 +333,7 @@ fn spawn_reference(
 ) -> Result<Run, String> {
     let spec_id = profile.spec_id;
     let mut app = super::runtime::build_app();
+    app.add_systems(Last, melee_return::advance);
     inputs::install_reference_catalogs(&mut app)?;
     let copy = super::runtime::create_copy(&mut app);
     // Origin-centered parity fixtures have no frozen dungeon geometry.

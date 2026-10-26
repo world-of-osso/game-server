@@ -219,6 +219,8 @@ mod open_lock_tests;
 #[cfg(test)]
 mod portal_tests;
 pub mod powers;
+mod precombat_item;
+pub use precombat_item::age_precombat_item_use;
 #[cfg(test)]
 mod protective_growth_tests;
 #[cfg(test)]
@@ -3509,7 +3511,7 @@ struct HitFrame {
 
 /// Actual resolving TargetInfos, not mutable combat focus or only successful hits.
 /// The first entry owns native primary impact even when it misses.
-pub(super) fn resolving_targets<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w [Entity]> {
+pub fn resolving_targets<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w [Entity]> {
     Some(resolving_frame(world, ctx)?.selected.as_slice())
 }
 

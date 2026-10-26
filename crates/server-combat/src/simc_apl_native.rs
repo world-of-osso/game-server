@@ -257,6 +257,16 @@ impl<'a> NativeFacts<'a> {
         }
         let target = self.selected_target(action)?;
         match property {
+            // SimC76f8118 action.cpp4030–4032 exposes target.distance.
+            // Native evaluation uses the selected entities' actual geometry,
+            // not the reference profile's synthetic base-distance option.
+            "distance" => {
+                let from = crate::spell_cast::targets::position(self.world, self.actor)
+                    .ok_or("NATIVE_APL_POSITION_UNAVAILABLE: actor position missing")?;
+                let to = crate::spell_cast::targets::position(self.world, target)
+                    .ok_or("NATIVE_APL_POSITION_UNAVAILABLE: selected target position missing")?;
+                Ok(f64::from(from.distance(to)))
+            }
             // SimC76f8118 hunter_marksmanship.simc18 scores target.health;
             // the native candidate supplies its actual current pool.
             "health" => self
@@ -413,6 +423,18 @@ impl<'a> NativeFacts<'a> {
             "up" | "ticking" => Ok(bool_value(!active.is_empty())),
             "down" => Ok(bool_value(active.is_empty())),
             "remains" => Ok(buff_remaining(&active, now)),
+            // SimC76f8118 dot.cpp448–455: inactive is0; otherwise fresh
+            // composite duration, not remaining time or pandemic carry.
+            "duration" => Ok(if active.is_empty() {
+                0.0
+            } else {
+                f64::from(crate::auras::fresh_duration_ms(
+                    self.world,
+                    self.actor,
+                    target,
+                    self.spell(id)?,
+                )) / 1000.0
+            }),
             "stack" => Ok(active
                 .iter()
                 .map(|aura| f64::from(aura.stacks))
@@ -837,7 +859,7 @@ impl<'a> NativeFacts<'a> {
     fn contextual_property(&self, action: &Action, name: &str) -> Result<f64, String> {
         let spell = self.action_spell(&action.name)?;
         match name {
-            "charges" | "charges_fractional" | "full_recharge_time" => {
+            "charges" | "max_charges" | "charges_fractional" | "full_recharge_time" => {
                 crate::spell_cast::cooldown_query::cooldown_value(
                     self.world, self.actor, spell, name,
                 )
@@ -1044,10 +1066,9 @@ impl Facts for NativeFacts<'_> {
             "movement.distance" => self.movement_distance(),
             "movement.remains" => self.movement_value("remains"),
             "movement.speed" => self.movement_value("speed"),
-            "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "charges_fractional"
-            | "full_recharge_time" | "execute_time" | "ticks_remain" | "ticks" | "ticking" => {
-                Err(format!("native APL {name} requires action context"))
-            }
+            "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "max_charges"
+            | "charges_fractional" | "full_recharge_time" | "execute_time" | "ticks_remain"
+            | "ticks" | "ticking" => Err(format!("native APL {name} requires action context")),
             _ => {
                 if let Some(value) = name.strip_prefix("buff.") {
                     return self.buff(value);
@@ -1109,10 +1130,9 @@ impl ActionFacts for NativeFacts<'_> {
         }
         match name {
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" => self.gcd(action, name),
-            "charges" | "charges_fractional" | "full_recharge_time" | "execute_time"
-            | "cast_time" | "cost" | "ticks_remain" | "ticks" | "ticking" | "cooldown_react" => {
-                self.contextual_property(action, name)
-            }
+            "charges" | "max_charges" | "charges_fractional" | "full_recharge_time"
+            | "execute_time" | "cast_time" | "cost" | "ticks_remain" | "ticks" | "ticking"
+            | "cooldown_react" => self.contextual_property(action, name),
             _ => self.value(name),
         }
     }
@@ -1184,6 +1204,8 @@ mod movement_distance_tests;
 mod refresh_context_tests;
 #[cfg(test)]
 mod target_context_tests;
+#[cfg(test)]
+mod target_distance_tests;
 #[cfg(test)]
 mod target_tests;
 #[cfg(test)]
