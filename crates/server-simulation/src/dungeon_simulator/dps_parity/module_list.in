@@ -66,6 +66,7 @@ mod destruction_tests;
 mod conductive_energy_tests;
 mod cooldown_capacity_tests;
 mod devastation_bombardments_tests;
+mod devastation_imminent_tests;
 mod devastation_tests;
 mod dot_duration_tests;
 mod dk252_tests;
