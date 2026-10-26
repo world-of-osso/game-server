@@ -283,7 +283,7 @@ fn schedule_next_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: 
     let Some((caster, base, haste)) = read_periodic_timing(world, unit, tick) else {
         return;
     };
-    let period = super::periodic_interval_with_haste(world, caster, spell, base, haste);
+    let (_, period) = super::periodic_timing_with_haste(world, caster, spell, base, haste);
     let mut auras = world
         .get_mut::<ActiveAuras>(unit)
         .expect("retained periodic unit");

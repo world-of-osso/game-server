@@ -374,13 +374,13 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
             || crate::hunter_pet::is_summoned_pet_owner(world, pet.owner)
         {
             // TC StatSystem.cpp1358: controlled SUMMON_PET uses the IsPet branch.
+            // Qualified pet rows override the generic shares, not native identity.
             // Water Elemental's separate40% branch is for non-pet guardians, not56.
-            return demon_power_stats(
-                world,
-                pet.owner,
-                DEMON_OWNER_SPELL_POWER,
-                DEMON_OWNER_ATTACK_POWER,
-            );
+            let (spell_share, attack_share) = world
+                .get::<shared::components::Npc>(unit)
+                .and_then(|npc| super::guardian::controlled_pet_power_shares(npc.template_id))
+                .unwrap_or((DEMON_OWNER_SPELL_POWER, DEMON_OWNER_ATTACK_POWER));
+            return demon_power_stats(world, pet.owner, spell_share, attack_share);
         }
         return (0.0, hunter_pet_attack_power(world, pet.owner));
     }
