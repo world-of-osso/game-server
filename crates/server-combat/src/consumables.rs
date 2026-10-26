@@ -98,7 +98,8 @@ fn apply_spell(world: &mut World, actor: Entity, spell: &SpellInfo) {
     );
 }
 
-fn read_secondary_ratings(world: &World, actor: Entity) -> [(i32, f32); 4] {
+/// Native secondary rating masks and current values, in SimC stat order.
+pub fn read_secondary_ratings(world: &World, actor: Entity) -> [(i32, f32); 4] {
     let ratings = world
         .get::<crate::stats::CharacterStats>(actor)
         .expect("consumable requires native derived ratings")

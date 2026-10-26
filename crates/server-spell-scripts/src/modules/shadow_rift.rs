@@ -4,13 +4,13 @@ use super::combat;
 use bevy::prelude::*;
 use combat::auras::scripts::{AuraScript, AuraScripts};
 use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
-use combat::spell_cast::script_registry::{HitHook, SpellScriptHook, TargetPlanHook};
+use combat::spell_cast::script_registry::{SpellScriptHook, TargetPlanHook};
 use combat::spell_cast::{self, PlannedEffect, TargetPlan, targets};
 use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::ActiveSpec;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
-    SpellScriptHook::EffectHit(effect_hit),
+    SpellScriptHook::AfterAuraApplication(start_rift),
     SpellScriptHook::EarlyAuraRegistration(register),
     SpellScriptHook::TargetPlan(target_plan),
 ];
@@ -25,25 +25,25 @@ struct Rift {
     ticks: u32,
 }
 
-fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
-    (spell == TORRENT && index == 0).then_some(start_rift)
-}
-
-fn start_rift(world: &mut World, caster: Entity, primary: Entity, depth: u8) {
+fn start_rift(world: &mut World, primary: Entity, aura: &AuraInstance) {
+    let caster = aura.caster;
+    if aura.spell_id != TORRENT || primary == caster {
+        return;
+    }
     let shadow = world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == 258);
     if !shadow {
         return;
     }
-    // The actual enemy effect supplies its recipient even when no controller selected
-    // a separate cast_primary_target. Caster-side Torrent auras are not producers.
+    // Native aura effects bypass ordinary EffectHit dispatch. The stored enemy
+    // Torrent aura supplies its actual recipient before its first periodic update.
     // SimC1677–1681 expires the old window before starting the new driver clock.
     auras::remove_auras(world, caster, RemoveReason::Cancelled, |aura| {
         aura.spell_id == DRIVER && aura.caster == caster
     });
     world.entity_mut(caster).insert(Rift { primary, ticks: 0 });
-    spell_cast::cast_triggered(world, caster, DRIVER, Some(caster), depth + 1);
+    spell_cast::cast_triggered(world, caster, DRIVER, Some(caster), 1);
 }
 
 fn register(scripts: &mut AuraScripts) {
