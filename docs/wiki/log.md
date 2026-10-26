@@ -4,6 +4,9 @@
 ## 2026-10-26 — Native Seed explosion lifecycle
 
 [Seed of Corruption](systems/warlock-periodic-counters.md#seed-of-corruption-lifecycle) has genuine paid-cast threshold and expiry REDf932eaa2c1: both native boundaries occur, neither emits27285. Downstream aura-budget, original periodic tick and queued explosion dispatch preserve native damage, background Wither ownership and independently owned UA lifecycle. Probeffe97fd353 passes threshold/expiry, literal265 and UA controls; original refresh timer and no-Sow recipient count remain RED. Added parent-approved declarative phase preservation and own no-Sow recipient filter; Fire Ignite/UA gates and remeasurement remain pending.267 lifecycle/funding/Wither11controls pass; seed-applied UA belongs to16783, not this leaf. Follow-upb1856e294b reproduces actual paid-recast smart-primary failure; an owned plan now records and exposes its primary through a read-only sibling helper, with native GREEN pending and no UA caller. Core2c35357a07 then passes3/4Seed cases; the original-deadline failure exposes unreachable dummy/trigger-only `AuraScript::on_periodic`. The owned landed-damage callback now observes Seed's actual zero-damage periodic event before its amount guard; phase policy stays unchanged.
+## 2026-10-26 — Arcane charge cost and cast time
+
+[Arcane charge folds](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers) retain native aura timing/cost modifiers and remove the duplicate batch16 consumers. Native RED8fee037a92 proves real ordinary Mana admission and cast-bar failures; sparse dummy16 controls now supply the same authored effects without changing assertions. Landing proof covers the real cast bar and existing Arcane/dummy16 controls; the tight Mana admission test is retained unchanged on a separate follow-up branch for source-backed rounding/order investigation. GREEN and paired measurement remain train-gated.
 
 ## 2026-10-26 — Merged Mage feedback grants
 

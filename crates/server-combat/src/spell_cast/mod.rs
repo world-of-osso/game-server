@@ -1061,7 +1061,8 @@ fn spell_haste_multiplier(world: &World, caster: Entity) -> f32 {
 }
 
 /// Cast time after ChangeCastTime mods, divided by `1 + CharacterStats.haste_pct`
-/// (haste auras fold in through `StatModifiers`).
+/// (haste auras fold in through `StatModifiers`). Native charge effects use
+/// this fold once (SimC76f8118 sc_mage.cpp2091–2100).
 pub fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
     let base = spell
         .misc
@@ -1079,7 +1080,6 @@ pub fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
         SpellModOp::ChangeCastTime,
         base as f32,
     );
-    let modded = scripts::blast_cast_time(world, caster, spell, modded);
     let slow = world
         .get::<crate::auras::AuraStatMods>(caster)
         .map_or(1.0, |mods| mods.attack_cast_time_mult);
@@ -2470,12 +2470,13 @@ pub fn applicable_costs(
         let initial = amount_with(base);
         let school_modified =
             school_costs::modify_school_cost(world, caster, spell, cost.power_type, initial);
+        // SimC76f8118 sc_mage.cpp2850–2855: native charge cost is already
+        // included in this fold, without a second named-spell multiplier.
         let modified = match SpellModOp::power_cost(cost.order_index) {
             Some(op) => modify(world, caster, spell, op, school_modified),
             None => school_modified,
         };
         let modified = if pool == CostPool::Power(PowerType::Mana) {
-            let modified = scripts::mana_cost(world, caster, spell, modified);
             school_costs::modify_mana_cost(world, caster, modified)
         } else {
             modified
