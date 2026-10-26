@@ -52,6 +52,7 @@ mod elemental_ascendance_tests;
 mod elemental_mechanics_tests;
 mod elemental_rotation_tests;
 mod engagement_tests;
+mod enhancement_armor_tests;
 mod enhancement_doom_deck_tests;
 mod enhancement_flurry_tests;
 mod enhancement_generation_tests;
