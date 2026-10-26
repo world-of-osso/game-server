@@ -382,6 +382,11 @@ impl AuraInstance {
             .map_or(0, |at| ((at - now).max(0.0) * 1000.0).round() as u32)
     }
 
+    /// Absolute deadlines of the currently stored asynchronous application stacks.
+    pub fn stack_expirations(&self) -> &[f64] {
+        &self.stack_expirations
+    }
+
     pub fn stack_multiplier(&self) -> f32 {
         if ret_crusade::ignores_effect_stacks(self.spell_id) {
             1.0
