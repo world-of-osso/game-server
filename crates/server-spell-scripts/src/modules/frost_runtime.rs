@@ -12,6 +12,7 @@ mod frost_mage_procs;
 mod frost_mage_supply;
 
 pub const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::EffectHandler(frost_mage_procs::effect_handler),
     SpellScriptHook::OwnsPolicyProc(frost_mage_procs::owns_proc),
     SpellScriptHook::OwnsPolicyProc(frost_mage_supply::owns_proc),
     SpellScriptHook::SnapshotLaunchAuras(frost_mage_procs::snapshot_launch_auras),

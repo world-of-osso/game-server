@@ -4,12 +4,29 @@ use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
 use combat::auras::{self, ActiveAuras, AuraApplication, AuraSource};
-use combat::spell_cast;
-use combat::spell_info::{SpellInfo, SpellStore};
+use combat::spell_cast::{self, effects::{EffectCtx, EffectHandler}};
+use combat::spell_info::{SpellEffect, SpellInfo, SpellStore};
 
 pub(super) const FINGERS: u32 = 44544;
 pub(super) const THERMAL: u32 = 1247730;
 const BRAIN_FREEZE: u32 = 190446;
+
+pub(super) fn effect_handler(spell: u32, index: u8) -> Option<EffectHandler> {
+    ((spell, index) == (30455, 0)).then_some(launch_lance_payload)
+}
+
+fn launch_lance_payload(
+    world: &mut World,
+    ctx: &EffectCtx,
+    _effect: &SpellEffect,
+    target: Entity,
+) {
+    let Some(mut payload) = spell_cast::load_triggered_spell(world, 228598, ctx.depth + 1) else {
+        return;
+    };
+    payload.cast_launch_auras = ctx.spell.cast_launch_auras.clone();
+    spell_cast::launch_triggered_spell(world, ctx.caster, &payload, Some(target), ctx.depth + 1);
+}
 
 fn is_frost(world: &World, caster: Entity) -> bool {
     world

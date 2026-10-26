@@ -26,7 +26,6 @@ mod batch6;
 mod batch7;
 mod batch8;
 mod batch9;
-mod frost_mage_procs;
 pub(super) use script_registry::{
     after_queued_triggers as consume_due_killing_machine,
     after_spell_payment as roll_runic_empowerment,
@@ -287,9 +286,6 @@ pub(super) fn effect_handler(
 ) -> Option<super::effects::EffectHandler> {
     if let Some(hook) = registry.effect_handler(spell, index) {
         return Some(hook);
-    }
-    if (spell, index) == (30455, 0) {
-        return Some(frost_mage_procs::launch_lance_payload);
     }
     if let Some(hook) = bouncing_projectiles::hook(spell, index) {
         return Some(hook);
