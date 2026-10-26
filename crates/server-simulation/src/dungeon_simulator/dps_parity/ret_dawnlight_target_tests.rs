@@ -16,6 +16,8 @@ const SHIELD: u32 = 642;
 
 fn wake_with_existing_dots(count: usize, existing: &[usize]) -> Run {
     let mut run = native_ret_with_targets(4, count);
+    // Isolate funded spenders; the zero-cost control applies its own native modifier.
+    ret_aurora_tests::unselect_aurora(&mut run);
     assert_eq!(native_count(&run), 3.0);
     assert!(budget(&run).is_none());
     // Actual native payload applications model already-ticking target state.
