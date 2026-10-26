@@ -1,3 +1,4 @@
+- [Haunting Shadows impact extensions](systems/spell-casting.md#haunting-shadows-impact-extensions--2026-10-26) — actual apparition impact preserves owned Pain/VT; native missing-extension RED, GREEN pending.
 - [Merged feedback grants are not casts](systems/spell-casting.md#merged-feedback-grants-are-not-casts--2026-10-26) — native queued394195 earns an unrelated+78haste through full-cast side effects; direct aura application preserves native buff values, pending three-Mage qualification.
 - [Survival native producers](systems/spell-casting.md#survival-native-producers--2026-10-26) — Tip/Swipe/Wildfire and shared Sentinel landed;3 mark REDs→GREEN and38 real controls pass, numerical parity remains open; owned-pet strike qualification continues.
 - [Destruction guaranteed-crit damage](systems/spell-casting.md#destruction-guaranteed-crit-damage--2026-10-26) — live crit chance supplies the selected Conflagrate/Shadowburn multiplier; native RED recorded, GREEN pending.

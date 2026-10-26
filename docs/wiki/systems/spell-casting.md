@@ -1,5 +1,11 @@
 # Spell Casting
 
+## Haunting Shadows impact extensions — 2026-10-26
+
+`shadow_haunting.rs` handles native413231/1264176 payload impacts. Selected1279355 extends existing same-caster Pain/VT by native effect1 milliseconds through the owned-duration operation, not aura reapplication; periodic phase and damage formulas remain unchanged. Pinned SimC76f8118 `sc_priest_shadow.cpp427–435` defines this behavior.
+
+Native isolated RED901d805102 reaches one actual travelling apparition hit but leaves Pain at16.3 rather than17.3. GREEN/landing remain pending. See the [Shadow contract](../../specs/dps-parity.md#shadow-priest-literal-parity-controller).
+
 ## Merged feedback grants are not casts — 2026-10-26
 
 The [shared feedback contract](../../specs/dps-parity.md#shared-merged-critical-feedback) uses `queued_triggers::schedule_buff_outcome` for Arcane/Frost Overflowing Energy and Fire feedback. Gains apply the native caster-owned aura after the hit batch; clears remove only that caster's aura. Other queued spells retain their existing cast paths.
