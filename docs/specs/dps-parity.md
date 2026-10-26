@@ -866,6 +866,10 @@ Native445624 supplies actual221177 Ancestors and their native lifetime after sel
 
 Selected Routine Communication443445 draws once after an ordinary successful Lightning Bolt, Chain Lightning or Lava Burst execution. The native effect4/effect5 counts supply successes/total for a shuffled deck; reshuffle only after all cards are drawn. A successful draw summons the real native445624 Ancestor and447244 owner buff. Background builders, overloads and extra Chain recipients do not draw (`sc_shaman.cpp`6654–6658,7260–7263,7436–7438,13025–13033; `proc_rng.cpp`149–161).
 
+Selected Power of the Maelstrom191861 rolls its native chance on ordinary Lightning Bolt and Chain Lightning executions. Eligible foreground spells spend one native191877 use and, with Fusion of Elements462840, execute a free instant Elemental Blast at the native Fusion effectiveness. Its overload uses the Fusion effectiveness independently of other damage modifiers (`sc_shaman.cpp`2582,3303–3311,6660–6663,7439–7444,7599–7609,7653–7674).
+
+Equipped MID2 four-piece1296626 grants native Flowing Elements1300219 uses when Stormkeeper or Ascendance ends, buffering the overlapping grant until Ascendance ends. Eligible foreground builders spend one use and earn native Overcharge1300222, which makes the next eligible spender free (`sc_shaman.cpp`12600–12608,12636–12651,12914–12924).
+
 ## Out of scope
 
 Rotation/decision implementation belongs to the lead/rotation agents. No system install, native-table re-export, canonical data mutation or protocol change without demonstrated need. Reference SimC is the official local CLI-only source build at76f8118cf3f7f41dad20708e8328e1f4ab2deebc (embedded70391); server inputs remain70448. Durable evidence lives in `game-engine/data/diagnostics/dps-parity-2026-10-21/`.
