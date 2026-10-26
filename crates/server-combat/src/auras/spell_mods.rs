@@ -182,7 +182,7 @@ fn add_modifier((flat, mult): (f32, f32), amount: f32, percent: bool) -> (f32, f
 
 /// TC Spell.cpp8569 retains launch-target damage/healing before impact.
 /// Retain consumed modifier values without retaining or reusing their aura charge.
-pub(crate) fn snapshot_charged_modifiers(
+pub fn snapshot_charged_modifiers(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
