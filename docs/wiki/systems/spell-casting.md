@@ -1,5 +1,13 @@
 # Spell Casting
 
+## Merged feedback grants are not casts — 2026-10-26
+
+The [shared feedback contract](../../specs/dps-parity.md#shared-merged-critical-feedback) uses `queued_triggers::schedule_buff_outcome` for Arcane/Frost Overflowing Energy and Fire feedback. Gains apply the native caster-owned aura after the hit batch; clears remove only that caster's aura. Other queued spells retain their existing cast paths.
+
+The old gain path executed a full triggered spell. Its helpful spell-hit event could enter native equipment proc rolls, even before a later attack used the earned critical chance. Native RED579171b891 demonstrates an unrelated +78 haste after queued394195 versus direct aura application:1194 versus1116 rating at seed70448, with identical actual Splinter6242 critical damage and Salvo2. The paired ST trace2ef3293ef0 reproduces the resulting rotation change before the first critical benefit: Salvo3 versus5 at6.60s, then Barrage versus Blast at8.00/8.15s. This is not an APL Overflowing Energy operand; the profile has none.
+
+Sources: pinned SimC76f8118 `sc_mage.cpp7272–7293/5585–5605` calls `buff.trigger`, not another action; native `arcane_buff_outcome_tests.rs` compares the queued and direct grant through actual later damage/proc/stat outcomes. Arcane, Fire and Frost GREEN gates and numerical measurements remain pending.
+
 ## Subtlety Lingering Shadow — 2026-10-25
 
 The [Subtlety contract](../../specs/dps-parity.md#subtlety-literal-fixture) follows pinned SimC76f8118. Downstream `server-spell-scripts/src/modules/subtlety_shadow.rs` registers existing late-aura and resolved-damage callbacks; no shared Rogue operand or resource rule changes.

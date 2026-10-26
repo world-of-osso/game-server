@@ -2,6 +2,7 @@
 // .gitattributes merges this file with merge=union so concurrent spec branches that
 // each add a module line do not conflict; a duplicate line fails to compile (E0428).
 mod active_enemy_tests;
+#[cfg(test)] mod arcane_buff_outcome_tests;
 #[cfg(test)] mod arcane_feedback_tests;
 #[cfg(test)] mod arcane_orb_order_tests;
 #[cfg(test)] mod arcane_tests;
