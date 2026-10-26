@@ -39,19 +39,28 @@ fn after_white(
 }
 
 fn read_fraction(world: &World, caster: Entity) -> Option<f32> {
-    let talent = world.get::<ActiveAuras>(caster)?.iter()
+    let talent = world
+        .get::<ActiveAuras>(caster)?
+        .iter()
         .find(|aura| aura.spell_id == TALENT && aura.caster == caster)?;
-    let amount = talent.effects.iter().find(|effect| effect.index == 0)
-        .expect("native Singular Focus retains its copied fraction").amount;
+    let amount = talent
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Singular Focus retains its copied fraction")
+        .amount;
     Some(amount / 100.0)
 }
 
 fn find_owned_mark(world: &mut World, caster: Entity, source: Entity) -> Option<Entity> {
     let now = spell_cast::now(world);
-    world.query::<(Entity, &ActiveAuras)>().iter(world)
+    world
+        .query::<(Entity, &ActiveAuras)>()
+        .iter(world)
         .find_map(|(unit, auras)| {
             let marked = auras.iter().any(|aura| {
-                aura.spell_id == MARK && aura.caster == caster
+                aura.spell_id == MARK
+                    && aura.caster == caster
                     && aura.expires_at.is_none_or(|expires| expires > now)
             });
             (unit != source && marked && targets::is_alive(world, unit)).then_some(unit)
@@ -62,11 +71,24 @@ fn copy_to_mark(world: &mut World, caster: Entity, source: Entity, amount: f32, 
     if amount <= 0.0 {
         return;
     }
-    let Some(fraction) = read_fraction(world, caster) else { return };
-    let Some(target) = find_owned_mark(world, caster, source) else { return };
-    let spell = world.resource::<SpellStore>().get(DAMAGE)
-        .expect("native Singular Focus payload").clone();
-    let ctx = EffectCtx { caster, spell: &spell, depth, dest: None, chain_multiplier: 1.0 };
+    let Some(fraction) = read_fraction(world, caster) else {
+        return;
+    };
+    let Some(target) = find_owned_mark(world, caster, source) else {
+        return;
+    };
+    let spell = world
+        .resource::<SpellStore>()
+        .get(DAMAGE)
+        .expect("native Singular Focus payload")
+        .clone();
+    let ctx = EffectCtx {
+        caster,
+        spell: &spell,
+        depth,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
     // The pinned payload has callbacks=false: retain the source's crit and
     // damage modifiers, but never roll them again or recursively emit copies.
     effects::deal_copied_damage(world, &ctx, target, amount * fraction);

@@ -150,6 +150,7 @@ mod ret_trigger_resource_tests;
 mod ret_wake_tests;
 mod rogue_finisher_tests;
 mod rogue_swift_slasher_tests;
+mod shadow_link_tests;
 mod shadow_mastery_tests;
 mod shadow_slam_tests;
 mod shadow_tests;
