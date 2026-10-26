@@ -71,6 +71,7 @@ register_modules! {
     essence_burst: (140, "modules/essence_burst.rs"),
     evoker_tier: (160, "modules/evoker_tier.rs"),
     execution_counters: (320, "modules/execution_counters.rs"),
+    feral_convoke: (1033, "modules/feral_convoke.rs"),
     feral_frenzy: (260, "modules/feral_frenzy.rs"),
     feral_growth: (1031, "modules/feral_growth.rs"),
     feral_lunar: (1030, "modules/feral_lunar.rs"),
