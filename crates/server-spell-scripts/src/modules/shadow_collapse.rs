@@ -11,7 +11,15 @@ const DAMAGE: u32 = 448405;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::TargetPlan(target_plan)];
 
-pub(super) fn burst(world: &mut World, caster: Entity, primary: Entity) {
+pub(super) fn growth_multiplier(world: &World, caster: Entity, growth: u8) -> f32 {
+    if growth == 0 {
+        return 1.0;
+    }
+    let percent = spell_cast::scripts::script_effect_value(world, caster, TALENT, 2);
+    1.0 + f32::from(growth) * percent / 100.0
+}
+
+pub(super) fn burst(world: &mut World, caster: Entity, primary: Entity, growth: u8) {
     if !auras::has_aura(world, caster, TALENT) {
         return;
     }
@@ -31,7 +39,7 @@ pub(super) fn burst(world: &mut World, caster: Entity, primary: Entity) {
         return;
     }
     // split_aoe_damage divides the unchanged native payload among actual recipients.
-    damage.cast_damage_multiplier = Some(1.0 / count as f32);
+    damage.cast_damage_multiplier = Some(growth_multiplier(world, caster, growth) / count as f32);
     spell_cast::launch_planned_spell(world, caster, &damage, plan, 1);
 }
 
