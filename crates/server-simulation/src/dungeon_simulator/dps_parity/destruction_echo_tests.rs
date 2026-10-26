@@ -6,6 +6,56 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "requires private267 native player inputs"]
+fn destruction_echo_native_payload_hits_primary_once_and_each_secondary_once() {
+    // Payload prerequisite only, not producer qualification: native1265884
+    // has separate primary/secondary effects, matching actions5140–5163.
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(267, 3).unwrap();
+    engage(&mut run);
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1265884)
+        .unwrap()
+        .clone();
+    assert!(crate::spell_cast::launch_triggered_spell(
+        run.app.world_mut(),
+        run.actor,
+        &spell,
+        Some(run.targets[0]),
+        1,
+    ));
+    for _ in 0..60 {
+        run.app.update();
+    }
+    for &recipient in &run.targets {
+        let expected = (
+            Some(run.actor.to_bits()),
+            Some(recipient.to_bits()),
+            Some(1265884),
+        );
+        let hits = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                let identity = (event.source, event.target, event.spell_id);
+                let damage = event.kind == CombatLogKind::Damage;
+                identity == expected && damage && event.amount > 0
+            })
+            .count();
+        assert_eq!(
+            hits, 1,
+            "native Echo must hit each actual recipient once: {recipient:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private267 native player inputs"]
 fn destruction_echo_literal_player_earns_actual_pack_damage_and_native_vision() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(267, 3).unwrap();
