@@ -41,6 +41,7 @@ register_modules! {
     affliction_agony: (2650, "modules/affliction_agony.rs"),
     affliction_instability: (2651, "modules/affliction_instability.rs"),
     after_cast_auras: (100, "modules/after_cast_auras.rs"),
+    assassination_doomblade: (2594, "modules/assassination_doomblade.rs"),
     assassination_focus: (2592, "modules/assassination_focus.rs"),
     assassination_kingsbane: (2593, "modules/assassination_kingsbane.rs"),
     assassination_target: (2590, "modules/assassination_target.rs"),
