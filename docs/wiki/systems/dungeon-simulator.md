@@ -24,6 +24,12 @@ Native253/profile/Duck883/Cobra193455/energize1282660 tests at a8365f874 reach g
 
 Transport-free Stockade qualification runs a plain Bevy App inside the server test executable. It registers real combat, spell/aura, threat, scripted creature AI and follower systems directly. The game-server entry point, ServerPlugins and ProtocolPlugin are not used. [Contract](../../specs/dungeon-simulator.md).
 
+## Multi-seed native DPS reports
+
+`DPS_PARITY_SEEDS` selects independent native samples, defaulting to `70448,1,2`. Every sample retains its actual seed and full report in `<spec>.native.<count>.seed-<seed>.json`. The usual aggregate report lists `seed`, exposes `seed_dps`, and uses their arithmetic mean for `combat.dps`. Action damage and counts are averaged across all seeds; pooled native totals supply weighted hit averages and shares, so the unchanged gap ranker sees mean per-spell DPS. Missing actions contribute zero, not a conditional average over successful samples.
+
+`detail_seed` identifies the first sample whose buff, entity, driver and other non-action details remain in the aggregate. `combat.total_damage` is a mean and `wall_seconds` sums measured combat-loop time. Invalid seed values and unsuccessful samples fail explicitly. See [measurement contract](../../specs/dps-parity.md#measurement), [sample orchestration](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/multi_seed.rs), [accounting](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/report.rs), and the [native report regression](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/ret_multiseed_tests.rs). Single-seed historical DPS must not be compared as an unchanged baseline against these means.
+
 ## Native DPS parity adapter — 2026-10-21
 
 The [DPS contract](../../specs/dps-parity.md) uses a separate ignored300s fixture over this App and `followers::simulator`. Exact reference item instances traverse production Stats; allocated and effective SimC talent ranks remain distinct. One actual NPC follower owns the damage measurement. Its native Player controller stays outside melee range, with zero controller damage required; a missing-Health controller had its attack intent removed on the first tick and produced misleading zero/two-hit runs.
@@ -60,7 +66,7 @@ Azure requests ten runs but finishes with **nine process panics/missing reports 
 
 Startup readers use absolute worldDB aliases, so environment/cwd alone cannot freeze their source. `scripts/dps_parity_native.py` runs the compiled fixture in a bubblewrap read-only snapshot mount over the resolved startup path, with no unsandboxed alternate path. The process regression observed mutable data before the fix, then frozen/read-only bytes with unchanged host/snapshot files. Atc04ecc5b9, using isolated protocol2abc7fa (the then-landed canonical/master protocol), all five native controls pass158.48s: Human1, source file identity, full health clock/add replacement, explicit player rule gap and real-player gear/spawn. Locked all-target server check passes28.85s and formatting passes, with no warnings. The first post-merge native run had2passes/3startup failures because common and optional-pet paths registered PetControlPlugin twice; the existing sibling harness-only fix597d30ded was reused as c04ecc5b9, preserving one common registration. This changes no production pet mechanics. The Human adapter now requires native row1, matching pinned SimC; row33 is ThinHuman rather than another valid Human match.
 
-For the fast ST+3T measurement command (test profile, counts in parallel, about 19 s), see [the DPS parity spec](../../specs/dps-parity.md#implementation-inventory).
+For the ST+3T measurement command (test profile, counts in parallel, independent samples per seed), see [the DPS parity spec](../../specs/dps-parity.md#implementation-inventory).
 
 The frozen-view continuation atc04ecc5b9 attempted exactly eight authorized single-target player cases, with unchanged input hashes and stable prepared snapshot throughout. All eight fail qualification; no repeat of the earlier10 positive-output cases was performed.
 

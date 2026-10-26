@@ -37,7 +37,12 @@ fn own_stacks(world: &World, caster: Entity, spell: u32) -> u8 {
 }
 
 pub fn start(world: &mut World, caster: Entity) {
-    let usage = TRACKED
+    start_tracking(world, caster, TRACKED);
+}
+
+/// Observe selected real aura lifecycles without changing their execution or rolls.
+pub fn start_tracking(world: &mut World, caster: Entity, tracked: &[(u32, u32)]) {
+    let usage = tracked
         .iter()
         .map(|&(spell, talent)| {
             let row = ProcUsage {

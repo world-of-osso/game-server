@@ -1075,7 +1075,10 @@ impl Facts for NativeFacts<'_> {
                 .map(|cast| f64::from(cast.channel_tick_interval))
                 .ok_or_else(|| "tick_time requires an active native channel".into()),
             "expected_combat_length" => self.expected_combat_length(),
-            "fight_remains" => self.remaining(name),
+            // SimC76f8118 action.cpp4276/player.cpp11866–11895 delegates
+            // bare TTD to the actor; fixed-time player.cpp7731–7754 uses
+            // expected fight length minus elapsed, not a selected add's lifetime.
+            "fight_remains" | "time_to_die" => self.remaining(name),
             // SimC76f8118 action.cpp3886–3896: without distance targeting,
             // bare spell_targets uses active_enemies, including recurring adds.
             "active_enemies" | "spell_targets" => Ok(self.active_enemies as f64),

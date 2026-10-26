@@ -4,6 +4,16 @@
 use super::script_registry;
 use crate::random as rand;
 
+mod arcane;
+mod arcane_area;
+mod arcane_charge;
+pub(crate) use arcane_charge::modifier_amount as arcane_charge_modifier_amount;
+mod arcane_touch;
+pub(crate) use arcane::register as register_arcane;
+pub(super) use arcane::{
+    after_foreground as after_arcane_foreground, before_cast as before_arcane_cast,
+};
+pub(super) use arcane_touch::record_damage as record_arcane_touch_damage;
 mod bouncing_projectiles;
 pub(super) use script_registry::{
     guarantees_crit as relationship_guarantees_crit,
@@ -30,11 +40,20 @@ mod batch6;
 mod batch7;
 mod batch8;
 mod batch9;
+mod frost_mage_events;
+pub(super) use frost_mage_events::resolve as resolve_frost_mage_events;
+mod frost_mage_procs;
+mod frost_mage_supply;
+pub(super) use frost_mage_procs::{
+    flurry_damage_multiplier as frost_flurry_damage_multiplier,
+    snapshot_launch_auras as snapshot_frost_launch_auras,
+};
 pub(super) use script_registry::{
     after_queued_triggers as consume_due_killing_machine,
     after_spell_payment as roll_runic_empowerment,
 };
 mod periodic_attacks;
+mod shadow_volley_bolts;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(super) use script_registry::after_foreground_special;
 pub(crate) use script_registry::melee_residual as after_melee_residual;
@@ -43,6 +62,12 @@ mod chrono_flame;
 pub(in crate::spell_cast) mod elemental_ancestors;
 pub use elemental_ancestors::owner as ancestor_owner;
 pub(super) use script_registry::after_modifier_consumption as apply_echo_policies;
+mod enhancement_doom;
+mod enhancement_elemental_weapons;
+mod enhancement_flurry;
+pub(super) use enhancement_flurry::{
+    update as update_enhancement_flurry, weapon_multiplier as enhancement_flurry_weapon_multiplier,
+};
 mod enhancement_imbues;
 mod enhancement_modes;
 mod enhancement_nova;
@@ -50,7 +75,13 @@ mod enhancement_rod;
 pub(super) use enhancement_rod::after_resolution as after_resolved_hits;
 pub(crate) use enhancement_rod::snapshot_rod_amount;
 mod enhancement_spending;
+mod enhancement_stormblast;
+pub(super) use enhancement_stormblast::after_weapon_damage as enhancement_weapon_damage;
+mod enhancement_stormwell;
 mod enhancement_strikes;
+mod enhancement_tempest_buffs;
+pub(super) use enhancement_tempest_buffs::after_chain as after_enhancement_chain;
+pub(super) use enhancement_tempest_buffs::resolve_due as resolve_enhancement_discharges;
 mod enhancement_tier;
 mod enhancement_unleashed;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
@@ -59,9 +90,12 @@ mod maelstrom_weapon;
 pub(crate) use maelstrom_weapon::consume as consume_maelstrom_weapon;
 pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
     maelstrom_weapon::register(scripts);
+    enhancement_elemental_weapons::register(scripts);
     enhancement_imbues::register(scripts);
     enhancement_modes::register(scripts);
+    enhancement_stormblast::register(scripts);
     enhancement_strikes::register(scripts);
+    enhancement_tempest_buffs::register(scripts);
     enhancement_tier::register(scripts);
 }
 mod policies;
@@ -74,6 +108,7 @@ pub(super) use policies::{
     snapshot as snapshot_hit_policies,
 };
 pub(crate) use policies::{extends_reapplication, register_lifecycle_policies};
+pub use spellslinger::conjure_count as conjure_spellslinger;
 
 pub(crate) fn filter_secondary_targets(
     world: &World,
@@ -85,6 +120,9 @@ pub(crate) fn filter_secondary_targets(
 ) {
     policies::filter_secondary_targets(world, caster, spell, effect, primary, units);
     midnight_items::filter_font_targets(spell, primary, units);
+    world
+        .resource::<script_registry::SpellScriptRegistry>()
+        .filter_targets(world, caster, spell, effect, primary, units);
 }
 
 pub(super) fn apply_periodic_damage_policies(
@@ -101,6 +139,8 @@ pub(super) fn apply_periodic_damage_policies(
 
 pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
     policies::owns_policy_proc(world, spell)
+        || frost_mage_procs::owns_proc(spell)
+        || frost_mage_supply::owns_proc(spell)
 }
 pub(crate) mod holy_priest;
 pub(super) use script_registry::{
@@ -139,7 +179,9 @@ pub(crate) use windwalker_dual_threat::{
     read_replacement as white_impact_replacement, roll_replacement as replace_white_impact,
 };
 mod glory_of_the_dawn;
+mod teachings_of_the_monastery;
 mod windwalker_flurry;
+pub(crate) use windwalker_flurry::register_hero_flurry;
 pub(crate) fn after_melee_hit(
     world: &mut World,
     caster: Entity,
@@ -191,16 +233,22 @@ pub(super) fn finish_scripted_launch(
     );
     elemental_ancestors::after_launch(world, caster, spell, depth, foreground);
     script_registry::after_elemental_launch(world, caster, spell, foreground);
+    frost_mage_supply::after_launch(world, caster, spell);
     policies::pet_sets::finish_cobra(world, caster, spell);
     script_registry::after_counter_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
     glory_of_the_dawn::after_launch(world, caster, spell, depth);
+    teachings_of_the_monastery::after_launch(world, caster, spell, depth);
+    windwalker_flurry::after_launch(world, caster, spell);
     enhancement_tier::after_launch(world, caster, spell, depth);
     enhancement_strikes::cast_ride_the_lightning(world, caster, spell, depth);
+    arcane::after_launch(world, caster, spell, depth);
+    enhancement_flurry::after_launch(world, caster, spell);
 }
 
 /// TC OnCast runs once after successful checks, before spending and launch.
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
+    enhancement_stormblast::snapshot(world, caster, spell_id, depth);
     script_registry::on_cast(world, caster, spell_id, depth);
     windwalker::scripted_combo_cast(world, caster, spell_id, depth);
     script_registry::before_judgment_on_cast(world, caster, spell_id, depth);
@@ -234,6 +282,8 @@ pub(super) fn after_direct_damage(
 ) {
     script_registry::before_direct_damage_policies(world, ctx, target, critical);
     spellslinger::after_direct_damage(world, ctx);
+    arcane::after_splinter_hit(world, ctx);
+
     windwalker_flurry::after_direct_damage(world, ctx, critical);
     crate::auras::rogue::after_builder_hit(world, ctx, critical);
     script_registry::replacement_direct_damage(world, ctx, target, critical);
@@ -277,6 +327,11 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
     if (spell, index) == (super::area_trigger::meteor::METEOR, 0) {
         return Some(super::area_trigger::meteor::cast_meteor);
     }
+    if matches!((spell, index), (153564 | 449560, 2)) {
+        // SimC76f8118 sc_mage.cpp4721/4741–4744/4802–4808: one scheduled
+        // Meteor/Meteorite impact selects its area once, not once per hit unit.
+        return Some(super::effects::trigger_missile_at_destination);
+    }
     if spell == super::mobile_banking::MOBILE_BANKING && index == 0 {
         return Some(super::mobile_banking::summon_chest);
     }
@@ -291,7 +346,17 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
         .or_else(|| batch9::cast_effect(spell, index))
 }
 /// Native per-unit scripts replace the default effect handler before dispatch.
-pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+pub(super) fn effect_handler(
+    registry: script_registry::SpellScriptRegistry,
+    spell: u32,
+    index: u8,
+) -> Option<super::effects::EffectHandler> {
+    if let Some(hook) = registry.effect_handler(spell, index) {
+        return Some(hook);
+    }
+    if (spell, index) == (30455, 0) {
+        return Some(frost_mage_procs::launch_lance_payload);
+    }
     if let Some(hook) = bouncing_projectiles::hook(spell, index) {
         return Some(hook);
     }
@@ -300,6 +365,9 @@ pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::Ef
     }
     if (spell, index) == (super::toy_flag::TARGETING, 0) {
         return Some(super::toy_flag::plant);
+    }
+    if (spell, index) == (321507, 0) {
+        return Some(arcane_touch::apply);
     }
     prayer_of_mending::effect_handler(spell, index)
         .or_else(|| batch13::effect_handler(spell, index))
@@ -311,7 +379,6 @@ pub(crate) use batch13::{HAUNT, reset_haunt_on_death};
 pub(crate) use batch14::{DEATHMARK, deathmark_energy};
 pub(super) use batch15::heal_beacon;
 pub(crate) use batch15::{replace_beacon, snapshot_combustion};
-pub(super) use batch16::{blast_cast_time, blast_multiplier, mana_cost};
 pub(super) use batch17::bloom_lifebloom_before_refresh;
 pub(crate) use batch17::{
     CENARION_WARD, LIFEBLOOM, bloom_lifebloom, heal_cenarion_ward, replace_lifebloom,
@@ -320,7 +387,8 @@ pub(super) use batch21::berserk_combo_bonus;
 pub(super) use batch22::healing_multiplier;
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
-    windwalker_children::effect_enabled(spell, index)
+    arcane::effect_enabled(world, caster, spell, index)
+        && windwalker_children::effect_enabled(spell, index)
         && !(spell == 343527 && index == 4)
         && batch19::effect_enabled(world, caster, spell, index)
         && batch11::effect_enabled(world, caster, spell, index)
@@ -339,7 +407,9 @@ use crate::spell_info::SpellInfo;
 /// Frostbolt: its effects are TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE) only.
 /// Sourced consumers retain native modifier amounts through projectile impact.
 pub(crate) fn snapshots_modifier(world: &World, id: u32) -> bool {
-    maelstrom_weapon::snapshots_modifier(id) || script_registry::snapshots_modifier(world, id)
+    maelstrom_weapon::snapshots_modifier(id)
+        || script_registry::snapshots_modifier(world, id)
+        || arcane::snapshots_modifier(id)
 }
 
 const FROSTBOLT: u32 = 116;
@@ -542,7 +612,6 @@ pub fn on_effect_hit(
         (batch14::SURVIVAL_COMMAND, 0) => Some(batch14::command_pet),
         (KILL_COMMAND, 0) => Some(batch14::command_beast),
         (batch14::WILD_THRASH, 0) => Some(batch14::wild_thrash),
-        (batch14::WILDFIRE_BOMB, 2) => Some(batch14::bomb_primary),
         (batch14::CONSUME, 0) => Some(batch14::consume_fury),
         (batch13::REND, 0) => Some(batch13::apply_rend_bleed),
         (batch13::ASPECT_WILD, 0) => Some(batch13::cast_wild_primary),
@@ -572,7 +641,6 @@ pub fn on_effect_hit(
         (batch7::RAKE, 0) => Some(batch7::stun_rake),
         (batch6::SUNFIRE, 0) => Some(batch6::sunfire),
         (batch6::TEMPLARS_VERDICT, 0) => Some(batch6::verdict),
-        (batch6::ICE_LANCE, 0) => Some(batch6::ice_lance),
         (batch6::SHADOW_WORD_DEATH, 1) => Some(batch6::shadow_word_death),
         (batch5::DEMONS_BITE, 1) => Some(batch5::demons_bite),
         (batch5::CHAOS_STRIKE, 0) => Some(batch5::chaos_strike),
@@ -794,6 +862,8 @@ pub fn after_cast(world: &World, spell_id: u32) -> impl Iterator<Item = AfterCas
     // not alternate implementations (SimC76f8118 sc_hunter.cpp5083–5092).
     native_after_cast(world, spell_id)
         .into_iter()
+        .chain(frost_mage_procs::after_cast_hook(spell_id))
+        .chain(frost_mage_supply::after_cast_hook(spell_id))
         .chain(policies::after_cast_hook(world, spell_id))
         .chain(spellslinger::after_cast_hook(spell_id))
         .chain(batch9::after_cast_hook(spell_id))
@@ -943,6 +1013,9 @@ pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, Tar
         return Some(hook);
     }
     match spell_id {
+        44425 => Some((Relation::Enemy, arcane_area::barrage)),
+        7268 => Some((Relation::Enemy, arcane_area::missiles)),
+        1295939 => Some((Relation::Enemy, arcane_area::prismatic)),
         super::toy_flag::TARGETING => Some((Relation::Any, super::toy_flag::targeting_plan)),
         super::toy_flag::FLAG => Some((Relation::Any, super::toy_flag::flag_plan)),
         97372 => Some((Relation::Any, track_switch_plan)),
@@ -1699,6 +1772,13 @@ pub(super) fn on_enemy_damage_hit_with_context(
     if crate::auras::rogue::LETHAL_POISON_HITS.contains(&spell_id) {
         return Some(rogue_children::poison_hit);
     }
+    // SimC76f8118 monk883–889: only the enemy impact earns Teachings.
+    // Native TP also hits its caster with Energize; that is not another impact.
+    if spell_id == 100780 {
+        return Some(|world, ctx, target| {
+            windwalker::tiger_palm_hit(world, ctx.caster, target, ctx.depth);
+        });
+    }
     script_registry::enemy_context_hit(world, spell_id)
 }
 
@@ -1708,8 +1788,8 @@ pub fn on_hit(world: &World, spell_id: u32) -> Option<HitHook> {
     }
     match spell_id {
         windwalker_children::ZENITH => Some(windwalker_children::zenith_hit),
-        100780 => Some(windwalker::tiger_palm_hit),
         100784 => Some(windwalker::blackout_kick_hit),
+        teachings_of_the_monastery::DAMAGE => Some(teachings_of_the_monastery::blackout_hit),
         107428 | 113656 => Some(windwalker::trigger_wdp_enabler_on_hit),
         unbroken_rhythm::ROOT => Some(unbroken_rhythm::capture_and_consume),
 

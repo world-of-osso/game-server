@@ -4,12 +4,19 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
-- The native encounter fixture faces the actor toward its actual primary before engagement, so source-qualified frontal attacks can reach the pack. Keep native directional selectors, widths and radii unchanged.
+- The native encounter fixture faces the actor toward its actual primary before engagement and restores maintained melee-intent facing after forced movement finishes, including a charge that ends inside melee range. Do not turn active channels or override forced movement. Keep native directional selectors, widths and radii unchanged.
 - A fixture actor with native melee AutoAttack intent walks back into nominal melee range at its native run speed after movement abilities. Preserve forced movement ownership, native movement/cast restrictions and position=back; never suppress displacement, snap the actor or grant resources. This shared controller applies without specialization or spell-ID cases (SimC76f8118 sc_demon_hunter.cpp1559–1611).
+
+### Shared channel timing
+
+- Quantize native channel tick intervals to the nearest millisecond. A hasted channel's duration is that rounded interval times its original native modified tick count, not an independently truncated hasted duration (`action.cpp4297–4314/4397–4421`).
+- Cast-time spell modifiers must not alter a channel's duration. Channel span and period retain the pre-execution charged-modifier snapshot when the admitted use is consumed, including later tick interval recalculation; legitimate Duration/Period modifiers remain active in that snapshot. Live uncharged Period modifiers and non-channel periodic behavior remain unchanged. Instant non-channel casts retain cast-time modifier behavior.
+- The actor's channel cadence and its periodic aura use the same native effect cadence. Declared damage/healing periods own this cadence ahead of faster auxiliary control pulses; channels without declared health emissions retain their native utility/script period. Constant haste must not create an extra expiry damage event or full proc callbacks from rounding residue. Preserve tick-zero behavior and genuine fractional native tick counts.
+- Preserve non-channel periodic quantization, existing modifier/haste snapshots, and un-hasted channel lifetimes, including four-second Convoke. Do not add spell-ID branches or replace native coefficients/periods/durations.
 
 ### Literal spec drivers
 
-- Register each literal spec once, in spec-ID order. Adding a spec changes only its own rotation module and its registration line, not shared fields, initialization, dispatch, reporting or preparation branches.
+- Register each literal spec once, in spec-ID order. Adding a spec changes only its own rotation module and its registration line, not shared fields, initialization, dispatch, reporting or preparation branches. See [Arcane Mage parity](arcane-mage-parity.md) for spec62's execution contracts.
 - Registered literal drivers apply to both Player and Follower identities unless the spec explicitly opts out. Preserve native actor identity, ordered precombat and existing report labels and keys, including null inactive reports.
 
 ### Feral literal fixture
@@ -20,30 +27,60 @@ Feral `buff.clearcasting.react` observes actual135700 acquisition through the sh
 
 ### Feral Thriving Growth
 
-Actual owned Rip1079 and Rake155722 periodic damage feeds the selected439528 accumulator using native per-source amounts, native active-dot exponent and selected Feral Green Thumb1270565. Keep the pinned random initial phase, uniform increments and1000-point threshold. Success casts native439531 on the actual tick recipient; other periodic sources cannot roll it (`sc_druid.cpp2416–2448,12311–12406`). Twin Sprouts, Rampancy and Bursting Growth remain separately unqualified.
+Actual owned Rip1079 and Rake155722 periodic damage feeds the selected439528 accumulator using native per-source amounts, native active-dot exponent and selected Feral Green Thumb1270565. Keep the pinned random initial phase, uniform increments and1000-point threshold. Success casts native439531 on the actual tick recipient; other periodic sources cannot roll it (`sc_druid.cpp2416–2448,12311–12406`). Vines applications retain independent native-duration stack deadlines through the existing asynchronous-stack scheduler, following the explicit source override (`sc_druid.cpp13755–13764`); refreshing a later stack cannot extend an earlier one. Native490-flagged auras retain their existing path. Selected Bursting Growth440120 casts native440122 for every actual expired Vines application and after a landed primary Bite on this caster's ticking Vines (`sc_druid.cpp4295–4307,13755–13821`). Preserve native area recipients and coefficients. Actual Vines periodic damage independently rolls selected Rampancy1270586's native effect0 chance and dispatches440122 at native effect2 effectiveness (`sc_druid.cpp4015–4020,11982–11988`). Other ticks cannot roll it; Bite/expiry relationships remain independent. Twin Sprouts and the greater-than-five-target reduction remain separately unqualified.
+
+### Feral Unseen attacks
+
+An actual landed primary Bite with selected1263657 rolls its native chance per frozen effective combo point. The existing cast-resource context retains those points independently of payment; the readonly Bite accessor reads its retained extra-Energy fraction, not its Saber-amplified damage effectiveness. Select an actual enemy inside the talent's native range, and preserve the chosen recipient and native CP-fraction×extra-Energy factor through the pinned400–500ms delayed Unseen1263890 impact and native1271863 bleed. Selected1263658 earns native1263939 for its native duration times the retained points (`sc_druid.cpp2776–2804,4321–4327,4891–4977`). The Unseen bleed pays one actual damage event per scheduled dot tick, using native effect0's coefficient and period. The second native periodic row is not a second SimC dot clock (`action.cpp838–865`); do not compound both rows into duplicate damage. Other registered spender consumers retain their existing resource snapshots. Selected1263660 makes actual Tiger's Fury5217 grant native1263962 at its native maximum stacks. Each eligible ordinary Cat action consumes one stack through its native ICD and emits a guaranteed Unseen attack using maximum effective combo points and full extra-Energy fraction, without granting or spending either pool (`sc_druid.cpp3745–3749,4879,11313–11316`). Apply this once per cast, not once per AoE recipient or triggered child; Cat Form alone cannot grant the uses. Greater-than-three-target Swipe and live-versus-snapshotted Tiger's Fury on Unseen remain separately unqualified.
+
+### Feral Cat Convoke
+
+Selected Cat Convoke391528 dispatches one native child per actual periodic-driver tick for its native channel lifetime. Use the pinned Cat card counts/distributions, persistent exceptional deck, primary-target Bite/Frenzy and random encounter-enemy filler/off-spec selection (`sc_druid.cpp9340,9372–9385,9469–9522,9630–9674,12415`). Use native Enemy admission, not hostile reaction alone; neutral attackable encounter units remain eligible. An already-owned Rake or Cat Moonfire replaces that card with Shred or Wrath, respectively. Free child Bites retain native maximum effective combo points and extra-Energy effectiveness without granting or spending either pool; ordinary spenders keep paid snapshots. Child casts must retain Cat Form. Native aura removal clears channel state; other forms and multi-friendly-target healing remain separately unqualified.
 
 ### Feral Lunar Inspiration
 
 Selected native155580 applies its owned155627 override aura, so ordinary Moonfire8921 resolves to Cat Moonfire155625. Removing the talent removes only its owned override; reapplication restores it without changing learned spells. Native Cat Form must admit the resolved ordinary cast. SimC76f8118 `sc_druid.cpp4457–4465` supplies selected155625 behavior; TC `spell_dru_lunar_inspiration1543–1567` supplies the native aura lifecycle.
 
+### Shared merged critical feedback
+
+Native merged buff outcomes apply or clear the caster-owned aura after the hit batch, retaining native amounts, caps and duration. A grant is not another spell cast and must not emit cast/hit proc inputs or earn unrelated equipment buffs. Arcane/Frost Overflowing Energy and Fire feedback share this path (`sc_mage.cpp7272–7293/5585–5605`).
+
 ### Shared Spellslinger producers
 
 - Selected Splintering Sorcery443739 emits the native specialization payload (Arcane443763/Frost443722) after native Arcane Blast, Prismatic Bolt, Frostbolt, Flurry and Glacial Spike executions. Signature Spell supplies its authored extra conjures. All queued recipients retain the actual hostile primary; individual launches are staggered100ms as pinned `sc_mage.cpp7324–7361` specifies.
-- Each native Ray of Frost damage tick conjures the native Splinterstorm effect2 amount, then opens/refreshes native1247908. Conjures during an earned Splinterstorm/Arcane Surge window use the selected native doubling chance. Native spell records retain damage coefficients.
+- Successful native Ray of Frost execution opens selected native1247908 Splinterstorm once, before its periodic updates. Each damage tick conjures the native Splinterstorm effect3 amount without refreshing the window. Conjures during the actual earned Splinterstorm/Arcane Surge lifetime use the selected native doubling chance. Native spell records retain duration and damage coefficients (`sc_mage.cpp4992–4996/5021`).
 
 - Each actual native Splinter impact with selected Spellfrost Teachings444986 reduces the specialization's running Orb cooldown/recharge by its native effect (Arcane index0/Frost index1, milliseconds). The shared reducer updates active native spell, category and charge timers without starting inactive timers; cooldown packets retain the native category and full duration. Unrelated payloads do not reduce recharge.
 
 - Native Arcane/Frost Splinter impacts with selected Controlled Instincts copy the native specialization fraction of the real resolved hit to secondary enemies around that hit, excluding the primary and using the native target cap. Copies do not roll critical hits or reapply caster damage modifiers. Pinned default `bugs=1` uses a hard cap (`sc_mage.cpp5340–5362/5400–5403`).
 - Selected Infused Splinters rolls its native effect2 chance on actual Frost Splinter impacts and adds its native effect4 Freezing count to the owned recipient debuff (`sc_mage.cpp5380–5381/1891–1892`).
 
+- Selected Splintering Orbs schedules native effect6's count of Frost Splinter conjures, one every500ms after Orb activation. Selected Augury evaluates its native ICD at each successful Splinter execution, including failed PRD attempts, with the pinned21-attempt cap and native mean chance/count. A successful Augury conjures after100ms. Pinned null-target conjures explicitly use `mage.target` at callback execution; random selection is commented out in76f8118 (`sc_mage.cpp4181–4209/5419–5423/6638–6641/7346–7352`).
+
 ### Frost Mage native Freezing and Shatter
 
 - Actual Frostbolt228597, Flurry228354 and Glacial Spike228600 damage adds the native1246769 Freezing counts to the caster-owned1221389 debuff. Selected Frostbite adds its native count on critical Frostbolt/Spike impacts. Each actual Ray tick adds one stack (`sc_mage.cpp3947/4055/4094–4095/4248/4304–4305/4995/7105–7127`).
-- Ice Lance228598 consumes up to native1246769 effect4 stacks from that mage's own recipient debuff and launches one native1246949 payload scaled by the consumed count. Remaining owned Freezing refreshes. Effect0 hits the primary once; selected Frostbite enables effect1 on secondary enemies only, with its native reduced-AoE cap (`sc_mage.cpp4324–4342/4428/7129–7181`). Fingers of Frost/ Thermal Void launch snapshots and the associated secondary producers remain separate work.
+- Ice Lance228598 consumes up to native1246769 effect4 stacks from that mage's own recipient debuff and launches one native1246949 payload scaled by the consumed count. Remaining owned Freezing refreshes. Effect0 hits the primary once; selected Frostbite enables effect1 on secondary enemies only, with its native reduced-AoE cap (`sc_mage.cpp4324–4342/4428/7129–7181`). Ordinary Ice Lance snapshots native Fingers of Frost and Thermal Void at admission and retains them through its missile and228598 payload. Spend those buffs at execution. Earned Fingers pays the full native Shatter count without consuming recipient Freezing; earned Thermal doubles the count (`sc_mage.cpp4445–4473/7129–7170`).
+
+- Native Frozen Orb grants selected Everlasting Frost's authored Fingers count and rolls native Wintertide for Brain Freeze; guaranteed Brain Freeze restores all native Flurry charges. Selected Permafrost Lances opens its native buff. An actual Brain Freeze Flurry consumes that proc and opens selected Thermal Void (`sc_mage.cpp4186–4190/4012–4015/7430–7433`). Actual Frostbolt and Glacial Spike executions roll their native Fingers/Brain Freeze sources in pinned order; Spike also rolls native Flash Freeze. A random Brain Freeze restores one Flurry charge and delays only an already-active buff refresh by150ms. Successful Brain Freeze immediately grants selected native Brainstorm and Shifting Shards conjures (`sc_mage.cpp4085–4086/4281–4283/7412–7437`).
+
+- Actual paid Shatter rolls native Hand of Frost once using selected talent1 chance plus its native talent2 per-shattered-stack contribution. Native Hand impacts add their authored Freezing count. Selected native Hand buff defaults to one tenth of talent2 effect2 (`sc_mage.cpp7155–7159/5445/5449–5451/6458–6462`). Native MID2 two-piece rolls its effect2 chance independently for each shattered stack, earning actual205473 and enabling1222865 at the native cap (`7171–7200`).
+- Selected Hand of Frost on Ray uses the native duration/period and talent3 count to calculate its tick interval. Each tick retains the actual scheduler ordinal; Hand executes on the pinned odd/interval schedule without reconstructing ticks from damage amounts or wall time (`sc_mage.cpp5005–5013`).
+
+- Earned Brain Freeze Flurry snapshots native190446 effect2 on the real44614 execution and carries that effectiveness across the native costed228596 callback and its missile to228354. Spending or expiring the live buff cannot remove that launched benefit. Preserve native Effect64 costs, carrier speed, delay and payload coefficients (`sc_mage.cpp3957–3966/4002–4015`).
+- Deep Shatter's native periodic Dummy recalculates its zero-valued critical-damage spell modifier from native effect1's factor and current caster spell critical chance, including initial application. Keep its native spell mask and operation; do not replace Shatter coefficients (`sc_mage.cpp4365–4373`).
+
+- Actual paid Ice Lance primary stacks conjure selected native Force of Will Splinters using its effect3 stacks-per-conjure value. Selected native Glaciate effect2 milliseconds reduce running Ray recharge per shattered stack, never starting absent timers (`sc_mage.cpp4471–4481`).
+
+- Each real Frozen Orb bolt resolution that actually hits at least one unit rolls selected Everlasting Frost effect2 for one Fingers stack. Use the native resolution ledger to run this once per area pulse, not once per recipient or only when a preselected primary hits (`sc_mage.cpp4141–4147`).
+
+- Selected Overflowing Energy merges actual Frostbolt228597 and Glacial Spike228600 hit outcomes through the shared native buff-outcome queue: noncritical hits earn native394195 stacks and eligible critical hits expire them after the hit batch. Ice Lance neither produces nor consumes this state; native spell masks and stack amounts supply the Frost critical-chance benefit (`sc_mage.cpp4050/4244/1729–1730/1897–1898`).
 
 ### Frost Mage native Icicles and Glacial Spike
 
 - Selected Icicles1246832 uses its actual hasted PERIODIC_DUMMY clock to apply native205473 without a spell cast. The first native interval has the pinned random phase (`sc_mage.cpp5559–5581`); later intervals keep native timing. Reaching the actual counter cap enables1222865.
+- Only an actual native Glacial Spike execution rolls equipped MID2 four-piece Rapid Refreezing. Suppress the native broad damage proc hint for1296586 while retaining its normal damage modifier. Use pinned custom accumulated chance `0.2 + failures × 0.020116149192034555`, reset on success; Lance/Shatter and unrelated successes must not roll or grant it (`sc_mage.cpp4296–4297/6643–6646`).
+- Earned Rapid Refreezing1310248 uses its actual native200ms PERIODIC_DUMMY clock to grant one owned205473 per tick and enables1222865 at the native cap. Unlike the passive Icicles clock, its first tick is not randomized (`sc_mage.cpp6468–6471`).
 - A successful native Glacial Spike199786 dispatches native228600 to its preserved hostile primary, then consumes205473 and1222865 (`sc_mage.cpp4243–4245,4275–4279`). No reference damage or replacement coefficient is applied.
 
 ### Frost Mage native Orb
@@ -57,13 +94,35 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 ### Beast Mastery literal fixture
 
+- Selected Fury of the Wyvern472550 extends an existing earned Cry471881 after successful BM Kill Command34026, including the consuming command. Native effect2 supplies each extension and effect4 the total budget. Actual Cry removal resets the budget; white-impact stack growth does not (SimC76f8118 hunter6626–6630,8279–8287).
+
+- Selected Pack Mentality472358 reduces already-running Barbed217200 and Wildfire259495 recovery once per actually consumed Howl beast. Native effects2/3 supply the times; simultaneous Wyvern/Boar consumption pays both reductions before Stampede begins. Unused clocks remain inactive (SimC76f8118 hunter3808–3811).
+
+- Each actual main-pet, companion or stable Nature's Ally white impact adds one stack to that owner's already active Wyvern Cry471881, including avoided outcomes. Preserve the native cap and the existing expiration; white impacts cannot create inactive Cry. Keep landed-hit producers and ordinary proc masks unchanged (SimC76f8118 hunter2974–3010).
+
+- Ordinary main-pet Bite, Claw and Smack use native62762 Wild Hunt damage and cost bonuses only above its authored Focus threshold. Capture damage effectiveness before payment; at the threshold or below, ordinary cost applies. Free background basics and non-main stable bodies do not receive this main-action behavior (SimC76f8118 hunter3046–3079).
+
+- Selected Wildspeaker commands existing native Dire Beast, Dark Hound, Fenryr, Hati and Bear summons with native1232922 at the real Kill Command primary. Command dispatch precedes Howl consumption, so a Bear created by that cast cannot receive it retroactively. Stable bodies retain their separate command path (SimC76f8118 hunter3175–3189/6587–6604).
+
+- A real Howl Bear immediately casts its native Rend Flesh471999 at the consuming Kill Command's hostile primary and nearby enemies. Native effect1 supplies the bleed radius and coefficient; effect2 supplies the target cap. Each Bear uses native471993's finite lifetime for its actual471990 summon;471990's own indefinite duration must not create permanent command bodies. The Bear owns the applications and periodic damage, using its source-defined live owner ranged-AP share0.6 without changing native bleed coefficients (SimC76f8118 hunter2043–2047/2057–2060/3218–3234).
+
+- Native Aura493 triggers its authored companion spell after Call Pet; native Effect260 creates a second stable body without changing the current-pet record. The companion has white swings and owned-pet commands, no autonomous Focus spender, and ends with its main pet. NPC pet orders reach all active owned pets.
+
+- Selected Howl starts its native cooldown at combat entry and earns Wyvern, Boar and Bear readiness in order. Bestial Wrath with selected Stampede independently advances that cycle. Ordinary BM34026 and Survival259489 Kill Command consume every earned ready beast: Wyvern and Bear require actual owned native summons; Wyvern Cry follows the real Wyvern. Consuming readiness starts the native cooldown only when absent. All earned readiness and Incoming Stampede are script-owned: unrelated successful casts and triggered children cannot spend them. Only actual Kill Command consumes earned beasts; consuming Howl spends Incoming Stampede. An armed Stampede starts only after a consumed Howl and retains the selected primary, native tick-zero/periodic clock and600/900/1200ms payload delays; native201594 damages the pack without a target cap (SimC76f8118 hunter3776–3841/4864–4900/6780–6781/8240–8270/8698–8699). Bear attacks and Wildspeaker remain separately unqualified.
+
+- Selected Dire Summons472352 reduces only the owner's running Howl471877 clock after actual BM/SV Kill Command, Cobra Shot and source-qualified Survival melee Focus spenders, using native effects0/1/2/3 respectively. An exhausted clock expires through its real next-beast callback; an inactive clock stays inactive. Howl consumption precedes recovery (SimC76f8118 hunter4966/6127/6604–6624).
+
+- Selected War Orders reduces already-running Kill Command cooldown/recharge after a successful Barbed Shot by native393933 effect2's time value. It does not start a cooldown or replace native charge recovery.
+
 - Barbed Shot triggers selected native201754 Stomp from each active owned pet, followed by the native1296631 two-piece effectiveness echo. Native1296632 four-piece Stomp impacts earn the owner's actual1299389 Cobra Fang stacks. Without active Beast Cleave, Cobra Shot snapshots the native per-stack damage effect and consumes the aura on successful launch; flight retains that earned effectiveness. Only real ItemSet-owned auras admit these tier relationships.
 
 - Main-pet Focus regeneration is continuous at1.25 times the owner's native potential Focus rate, including its native haste and modifiers. It is independent of owner resource cap and entity iteration order. Stable guardians do not regenerate Focus. The legacy24-Focus-per4s path is removed.
 
+- Bestial Wrath applies native186254 to permanent owned pets after their instant strike. Nature's Ally receives native1285912 after450ms and native344572 against the selected primary after1.5s. These are queued native casts with normal caster/target lifetime checks, not synthetic damage.
+
 - Selected Bloodshed applies native321538 from every active owned stable pet after Bestial Wrath, including a newly summoned Nature's Ally. Each pet retains its own periodic aura, native amount and lifetime.
 
-- Native Effect188 summons a stored pet as a guardian using the authored count and lifetime without replacing the current stable pet. Selected Nature's Ally triggers native1282474 after Bestial Wrath; the guardian attacks and receives owned-pet commands. Expiry/death removes only the guardian.
+- Native Effect188 summons a stored pet as a guardian using the authored count and lifetime without replacing the current stable pet. Selected Nature's Ally triggers native1282474 after Bestial Wrath; the guardian receives an explicit native attack order without changing its saved stance, performs white swings and receives owned-pet commands. Commanded spells alone do not prove autonomous melee. Expiry/death removes only the guardian.
 
 - Stable hunter pets inherit60% of their owner's weapon-inclusive native ranged AP under pinned SimC behavior. Native spell coefficients remain unchanged. Controlled-pet direct spells inherit the live owner's native critical chance while retaining the pet as the damage source.
 
@@ -75,6 +134,13 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 ### Outlaw literal fixture
 
+- Native Main Gauche76806 rolls its authored proc chance from successful main-hand white swings and the pinned eligible special impacts, including Sinister extra attacks and Killing Spree's main hand. Emit native86392 at the actual hit recipient. Pistol Shot, Between the Eyes, off-hand whites, Spree's off hand and Main Gauche itself cannot produce it. Native mastery coefficients remain unchanged (`sc_rogue.cpp3468–3469,4726–4728,5942–6001,7948–7973`).
+
+- Pistol Shot spends one earned Opportunity use per execution, not all stacks or a stack-multiplied damage/cost bonus. An ordinary shot schedules up to native Fan the Hammer's count of remaining earned uses100ms apart, using its native damage reduction; children cannot fan. Each earned shot grants native Quick Draw points when selected. Background shots freeze charged modifiers at launch and consume their own use before impact (`sc_rogue.cpp4981–5070`).
+
+- Landed native Sinister Strike193315 rolls selected Opportunity279876 once per hit. Read native chance and the RtB extra-chance contribution; success earns native195627 stacks and dispatches197834 to the same enemy after300ms. Extra strikes cannot recursively roll Opportunity (`sc_rogue.cpp1286–1292,5942–5991,8255–8280`).
+- Blade Flurry13877 activation dispatches one native429951 area attack, including the primary enemy. Selected Deft Maneuvers grants its native combo-point amount once per actual activation hit. This is independent of Blade Flurry22482 secondary copies (`sc_rogue.cpp3907–3922,3993–3999`).
+
 - Spec260 preserves the requested player identity and captures literal control before setup. Execute the profile's complete action rows with shared `Program`/`Driver`/`Prepared`/`Equipment`, not AssistedCombat. The pinned profile requests Instant Poison without a nonlethal coating. Read combo points, Energy, native readiness and earned Roll the Bones states from the actor; never substitute reference damage or synthetic buffs.
 - Shared Rogue operands expose the native combo-point spend capacity and Energy deficit/time-to-max excluding temporary capacity, while retaining permanent talent capacity.
 - Native Rogue-family spells with a ComboPoints cost scale all direct damage effects by frozen effective points. Between the Eyes must not be omitted by an action-ID list; Envenom and Dispatch retain their existing point scaling. Feral Bite keeps its separate maximum-point-normalized rule.
@@ -82,6 +148,7 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 - The native four-piece source may produce Fang Strike only from Ambush or Sinister Strike, including its sourced extra attack. Read chance and payload from its native effect, rather than treating its broad101% proc hint as an unconditional damage trigger. Dispatch and white swings must not produce their own free-finisher window.
 - A finisher affected by earned Fang Strike snapshots maximum native combo-point capacity for its resource-dependent values, even when actual payment is zero. Consume that Fang Strike use after the successful ordinary cast. Match affected actions through the native aura's family mask, not a finisher-ID branch.
 - Active Blade Flurry transfers eligible landed spell/white source damage to native-capped nearby secondary enemies, never the primary. Preserve the source critical bonus before target-specific modifiers and mitigation, apply native13877 transfer fraction and learned Dancing Steel/Nimble Flurry conditions, and resolve22482 against each secondary exactly once without recopying the payload.
+- Killing Spree retains its native resource-sized channel and aura lifetime from prepayment combo points. Its native tick-zero and periodic schedule independently dispatch both hand attacks to nearby hostile enemies; only scheduled ticks after tick-zero trigger native1235074 combo-point returns. Native haste and Adrenaline Rush period/duration modifiers remain authoritative (`sc_rogue.cpp4749–4838`).
 - Learned Restless Blades reduces its pinned running spell/recharge timers after an eligible finisher using frozen effective combo points, native79096 tenths-of-seconds per point and the native high-roll-state bonus. It must not start absent cooldowns or require a hostile hit context for self-targeted Slice and Dice.
 - Learned Cut to the Chase extends or starts owned native Slice and Dice only after the pinned eligible finisher lands. Freeze effective combo points before payment; use native51667 seconds per point and315496 base duration, capped at the maximum-point pandemic duration. Dispatch, Envenom, Eviscerate and Coup de Grace are the pinned consumers.
 
@@ -112,7 +179,10 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 - [x] The native-table producer preserves signed values, replaces only the requested table, supports repeated imports and rolls back a duplicate-ID failure without losing the prior table.
 - [x] Shipped profile manifests preserve exact item IDs, bonus lists, item-level overrides, enchants, gems, crafted stats, talents, consumables and action text. Missing item IDs fail explicitly. Temporary enchant declarations apply only to equipped slots; an empty off hand is inactive.
 - Native class actors use live `CharacterStats` melee crit even with NPC identity. Native Hunter pets inherit their current owner's crit; preserve their own applicable bonuses and target modifiers. Generic no-stats creatures retain native template/base crit. Do not replace class/owner crit with generic creature5% or suppress it through a generic NPC `NO_CRIT` flag (SimC76f8118 `player.cpp5125–5134`, `pet.cpp217–220`).
+- Equipment-source aura procs require actual, non-suppressed native combat references before chance, RPPM or recovery state changes. Equipment initialization and idle aura reconciliation cannot earn temporary item buffs. Ordinary class-aura eligibility remains unchanged (SimC76f8118 `action/action_callback.cpp79–82`).
 - Venomcursed armor drivers1307906/1307923/1307928 proc their native crit/mastery/haste buffs. Both signed stat amounts come from the equipped driver's native effects1/2; retain each buff's native rating masks, lifetime and refresh behavior, and the driver's ordinary proc eligibility/RPPM. No invented stats or rate changes (SimC76f8118 `unique_gear_midnight.cpp5600–5614/6600`).
+- Loa Worshiper's Band1251904 rolls one eligible branch from native equipped gem descriptions: Capybara1252524 is always eligible; Peridot enables1252818. Capybara uses the equipped driver's second effect amount; Akilzon uses its own native item-scaled effect. Preserve unique-color weights, native rating masks, durations and item level. Other Loa gem branches remain unqualified.
+- Rite of Hash'ey1297654 dispatches native DUMMY-trigger rating children using the scaled BP0 already supplied by its linked equipped rank. The pinned default favors the current highest secondary60%, otherwise uniformly selects a native child; retain source single-callback dedup, native masks, values and lifetimes. Both item families reject precombat before proc chance/recovery changes, including the Cast-source linked Rite driver (`unique_gear_midnight.cpp614–671/995–1122`, `player.hpp827`, `action_callback.cpp79–82`).
 - Ordinary native haste auras multiply with converted rating haste and each other: `(1 + rating%) × Π(1 + aura%) − 1`. Retain native aura amounts/stacks, non-stacking selection, independent Crusade and autoattack-only342 factors. Native WW1205 rating plus5% ordinary haste yields33.7557%; no coefficient or rating adjustment (SimC76f8118 `player.cpp4982–4995`).
 - `liquid_luster_2` uses native item271887/ilvl295. Apply one real Lustrous Gleam stack immediately and another at each native six-second period, capped by native stack metadata; derive each stack's rating from the scaled driver effect. All stacks expire with the driver. Literal `pre_pot_time` ages the real aura, pays elapsed native periods, ages its actual cooldown and preserves the later combat use (SimC76f8118 `unique_gear_midnight.cpp288–366`, `consumable.cpp500–565`).
 - Temporary oil `if=` expressions read native selected talents; a false condition is modeled but inactive. `disabled` and empty consumable values produce neither effects nor `CONSUMABLE_UNMODELED` gaps.
@@ -149,17 +219,43 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 ### Fire literal fixture
 
-- Selected Overflowing Energy gains a native stack after noncritical Fireball/Frostfire Bolt and clears on their critical hits (`sc_mage.cpp1897–1898,3819`). Selected Fevered Incantation gains after direct Mage critical hits and clears on direct noncritical hits (`1900–1901`); apply these outcomes after the current hit batch (`5585–5605,7272–7293`). Fireball and Hot Streak-spell hits produce their caster-owned native Controlled Destruction target stack with native talent effect1×0.1 (`2457,3843,5648–5650`).
+- Actual Heating Up→Hot Streak conversion grants selected native Brainstorm461531 (`sc_mage.cpp2154–2157,6509–6512`). Heating Up alone and wasted critical hits with Hot Streak already active do not grant it; native data owns its Intellect amount, stack cap and duration.
+
+- Fiery Rush's native permanent payload ends when its owner's Combustion ends (`sc_mage.cpp1453–1457`); its recovery-rate benefit must not persist between Combustion windows.
+
+- An owned Controlled Destruction target stack multiplies only new Ignite contributions with its native per-stack amount (`sc_mage.cpp1945–1946`). Never rescale the unpaid existing bank or read another caster's target stacks.
+
+- Selected Deep Impact amplifies only the closest live hostile recipient to the Meteor destination, with the native talent amount (`sc_mage.cpp4664–4668`); secondary recipients retain their unmodified native coefficient.
+
+- Each admitted Meteor or earned Meteorite schedules one native impact action selecting its area once, not one complete area impact per missile recipient (`sc_mage.cpp4721,4741–4744,4802–4808`). The simulation installs the production area-field catalog, so native Meteor Burn entry/expiry and periodic damage use actual authored data.
+
+- Native Inflame multiplies actual Hot Streak Ignite contributions by its selected talent amount (`sc_mage.cpp2397–2399`). Native Pyrocosm Fireball hits roll effect2 for one real Meteorite (`3845–3846`); each Meteorite execution reduces active Fire Blast recharge by native effect4 milliseconds once, regardless of target count (`4783–4792`).
+
+- Selected Overflowing Energy gains a native stack after noncritical Fireball/Frostfire Bolt and clears on their critical hits (`sc_mage.cpp1897–1898,3819`). Selected Fevered Incantation gains after direct Mage critical hits and clears on direct noncritical hits (`1900–1901`); Intensifying Flame419800 inherits plain `spell_t`, so its native Mage family does not make its copied damage a feedback producer (`2502`). Apply these outcomes after the current hit batch (`5585–5605,7272–7293`). Fireball and Hot Streak-spell hits produce their caster-owned native Controlled Destruction target stack with native talent effect1×0.1 (`2457,3843,5648–5650`).
+
+- Fire Blast spreads the caster's pre-existing Ignite before its new contribution (`sc_mage.cpp2216–2279,4586–4590`). Use native mastery effect2 as the weaker-bank threshold and effect5 as the secondary cap after selected spell modifiers. Sort eligible hostile banks ascending, exclude the source, copy its tick amount rather than add a deposit, start a fresh clock on empty targets and clone source progress on existing targets (`dot.cpp241–332`).
+
+- Selected Ignition multiplies each new Flamestrike Ignite contribution by its native effect2 percentage (`sc_mage.cpp3896–3898`). Do not apply this to other Ignite producers or rescale the unpaid existing bank.
+
+- Selected Molten Fury amplifies actual recipient damage at or below its native effect1 health threshold by native effect2 (`sc_mage.cpp6821–6827`). This is the Mage's target-versus policy, not an unconditional damage bonus or a new globally supported aura303 implementation.
+
+- Selected Scald amplifies Fireball at or below its native effect3 health threshold by native effect1, and Scorch at or below Scorch's native effect2 threshold by Scald effect2 (`sc_mage.cpp2293–2304,3866–3868,5066–5069`). An admitted Heat Shimmer also enables Scorch execute after its buff is spent. Never apply these execute amounts to every target unconditionally.
+
+- Selected Heat Shimmer attempts the native talent RPPM at actual Ignite tick boundaries, except while Scorch is being cast (`sc_mage.cpp2557–2559,6439–6441`). Do not substitute a fixed chance or grant the buff from direct hits. Its earned buff makes ordinary Scorch instant, enables execute crit at any recipient health and is spent once after launch (`5048–5080`). Preserve the admitted native damage/cast-time values and guaranteed crit across impact.
+
+- Selected From the Ashes restores active Fire Blast recharge progress after actual eligible Fireball/Frostfire Bolt, Fire Blast, Pyroblast, Scorch and Dragon's Breath hits. Use the native talent effect1 time adjustment and native internal cooldown, including the Fire Blast charge just spent; same-frame hits cannot bypass that cooldown (`sc_mage.cpp2116–2120,3689,3821,4557,4905,5040`).
 
 - Ordinary noncritical Hot Streak producers preserve Heating Up during its first200ms (`sc_mage.cpp2196–2210`). Qualify this with an ordinary Fireball already in flight when ordinary Fire Blast earns Heating Up; triggered depth1 damage is not a Hot Streak producer.
 
 - A selected Spellfire Sphere success also produces native Glorious Incandescence without another roll (`sc_mage.cpp7316–7319`). Only Fire Blast may consume its native charge; Pyroblast and other harmful spells preserve it. An actual Fire Blast hit with that aura launches the native Glorious count of Meteorite missiles, staggered75ms; native449560 supplies travel and449569 supplies impact (`2003–2012,4577–4580,4802–4808`). Queued destination casts retain their selected target and destination.
 
-- The shipped Fire fixture applies the pinned default five initial Sphere applications through native casting, retaining the native three-stack cap (`sc_mage.cpp366,6893–6894`). Selected Codex spends stored spheres on Phoenix invocation (`1249–1253`).
+- The shipped Fire fixture applies the pinned default five initial Sphere applications through native casting, retaining the native three-stack cap (`sc_mage.cpp366,6893–6894`). Selected Codex spends stored spheres on Phoenix invocation before its first immediate action (`1249–1256`).
+
+- Selected Invocation summons authentic native Phoenix223453 through448659 for the actual Combustion lifetime, including Fired Up extensions (`sc_mage.cpp3531–3543`). It inherits live owner spell power, critical chance and haste; chooses the pinned single-target/area action pools at the native effect2 period; and spends stored Codex spheres on alternating exceptional actions (`1097–1400`). Native Ashes effects supply Cascade stacks for actual actions, including the exceptional Meteorite repeats. Import reachability must include the Invocation→summon relationship without creating templates or world spawns.
 
 - Admitted Hot Streak spends produce selected Fired Up and Spellfire Spheres before damage, then selected Mana Cascade after consumption (SimC76f8118 `sc_mage.cpp2406–2430`). Sphere generation uses the pinned eleven-attempt capped PRD with native effect2 chance (`6633–6636,7310–7320`); Fired Up uses the pinned Combustion curve and otherwise native chance, recharge reduction and duration extension (`7200–7224`). Memory of Al'ar produces native Hyperthermia when the Combustion/Phoenix lifetime ends; its duration comes from the selected native talent (`1268–1275`).
 
-- Meteor's admitted delayed continuation survives a later foreground hardcast (SimC76f8118 `sc_mage.cpp4721,4741–4744`). Flamestrike processes exactly one independent Fuel the Fire Hot Streak outcome per successful cast, not per recipient (`3913–3920`). Pyroclasm retains the native talent chance (`6446`); MID2 four-piece modifies label5947 on its buff payload, not label5949 on the chance talent. Mana Cascade haste uses native effect2×0.001 per stack, not zero-valued effect1 (`6497–6501`).
+- Meteor's admitted delayed continuation survives a later foreground hardcast (SimC76f8118 `sc_mage.cpp4721,4741–4744`). Flamestrike processes exactly one independent Fuel the Fire Hot Streak outcome per successful cast, not per recipient (`3913–3920`). Its direct damage also applies native Fuel effect2 per admitted hostile target, capped by native effect3 (`3904–3909`); count the cast's captured target plan, not the encounter's global enemy count. Pyroclasm retains the native talent chance (`6446`); MID2 four-piece modifies label5947 on its buff payload, not label5949 on the chance talent. Mana Cascade haste uses native effect2×0.001 per stack, not zero-valued effect1 (`6497–6501`).
 
 Spec63 measurements use the exact profile action rows with shared `Program`, `Driver`, `Prepared` and `Equipment`, for either native actor kind. Capture fixture control before setup frames; complete native Arcane Intellect, Mirror Image and prepull Pyroblast in source order before starting the combat clock. Fire-only facts read selected-recipient health thresholds and Heat Shimmer from native70448 data; `hot_streak_spells_in_flight` counts this caster's actual eligible missiles, using the same producer identities as native hit handling. Ordinary dungeon follower control is unchanged.
 
@@ -169,6 +265,23 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Guaranteed critical hits predict their actual Heating Up acquisition; an observed Heating Up conversion predicts Hot Streak. A critical hit with Hot Streak already active preserves and predicts it without creating Heating Up.
 
 ### Havoc literal rotation
+
+- Native Annihilation201428 off-hand execution rolls the same197125 Fury refund passive as Chaos Strike. The real passive supplies its chance, Critical Chaos modifiers and500ms internal cooldown;193840 supplies the Fury payload (SimC76f8118 sc_demon_hunter.cpp7472–7510,7673–7685). Do not omit the transformed spender's refund.
+
+- Selected Shattered Destiny388116 accumulates native base Fury for genuinely paid literal Havoc actions only while owned162264 is live. Each native effect1 threshold extends Meta by native effect0 milliseconds; preserve the remainder across casts and exclude free/background copies and pre-Meta spending. The existing frozen resource context establishes positive payment (SimC76f8118 sc_demon_hunter.cpp2529–2555).
+
+- Selected Blind Fury203550 supplies its native effect2 amount to Eye/Gaze's existing aura85 Fury regeneration effect. The ordinary native per-five-second regeneration path supplies Fury only during that actual channel, with no weapon-hit dependency or adapter credit (SimC76f8118 sc_demon_hunter.cpp9986–9993).
+
+- Hard Meta191427 adds native162264's duration to live Havoc transformation instead of discarding Demonic time. The ordinary native reapplication path retains aura effects and phase (SimC76f8118 sc_demon_hunter.cpp4984–4985).
+- Actual Hunt370965 arms selected1270898's native1271144 Empowered Eye Beam. Completed Eye/Gaze with selected1270901 earns native1271092 Eternal Hunt; channel removal consumes empowerment. An actual dance consuming Eternal Hunt expires it and resets native dance recovery after500ms, not on unrelated expiration/cancellation (SimC76f8118 sc_demon_hunter.cpp4008–4017,5555,7296–7302).
+
+- Actual Eye Beam/Gaze execution with selected452412 grants native453239 Student of Suffering. Actual Retreat damage-child198813 execution with selected389688 grants native389890 Tactical Retreat. Native periodic effects, durations and453236 energize child supply all Fury; the adapter never credits resources directly (SimC76f8118 sc_demon_hunter.cpp3339–3348,8567–8581).
+
+- Native Consuming Fire452487/456640 retains Immolation Aura258920's payload and spends only that ability's Demonsurge use. Its dummy override cannot consume Annihilation's use or omit native Immolation ticks/Fury; Fel Desolation452486 is not Death Sweep (SimC76f8118 sc_demon_hunter.cpp181–189,4784–4839).
+
+- Selected Chaotic Transformation388112 resets actual Eye Beam/Gaze and Blade Dance/Death Sweep recovery on ordinary Meta191427; selected Violent Transformation452409 restores Immolation charges and Sigil recovery. Completed native Eye/Gaze grants selected343311's actual343312 haste buff, never on interruption. Selected Cycle of Hatred258887 reduces each executed beam's recovery by its prior owned1214887 stacks × native effect0 milliseconds, then grants one native stack (SimC76f8118 sc_demon_hunter.cpp4002–4005,4033–4047,4987–4998). MID2 cross-cooldown reductions remain separate.
+
+- Native Felblade232893 dispatches213243 at its actual selected primary; native child damage and effect2 Fury supply the result, not an adapter resource grant. A landed Essence Break258860 applies owned320338 after250ms. Eligible native Chaos Strike/Annihilation and Blade Dance/Death Sweep hits against that caster-owned mark dispatch1245759 at the native per-target internal cooldown (SimC76f8118 sc_demon_hunter.cpp7073–7080,7542–7550,7837–7843,7870–7893,11186).
 
 - Selected First Blood206416 replaces Blade Dance/Death Sweep's primary with native391374/391378/393055/393054 at each authored effect64 delay. Base area strikes exclude only the immutable selected primary. The native selected talent effect0 supplies its primary damage bonus (SimC76f8118 sc_demon_hunter.cpp7040–7110,7252–7275,7324–7385).
 
@@ -193,6 +306,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - [ ] `SIMC_RET_DIVINE_PURPOSE_TRIGGER`: only validated selected408459 may roll its actual native effect0 amount after an ordinary HolyPower-cost cast (including a zero final cost). Trigger native Ret408458 after the old cast's modifier charges are consumed (SimC76f8118 `sc_paladin.cpp4342`); generic223819 is not its replacement. Aura-only unselected actors, non-HolyPower actions and full-mask background casts do not qualify, except the explicitly sourced Empyrean Legacy Storm producer. TC registers older223817; the selected408459 relationship is explicitly pinned SimC-derived. No chance, resource or coefficient override. [Proof ledger](../handoffs/ret-paladin-parity-proof-ledger.md#ret-mid2-tier-relationship-source-policy).
 
+### Ret Aurora producer
+
+- Selected439760 grants native408458 after ordinary Wake255937 execution and the sourced Dawnlight budget grant. Aurora alone owns its native internal cooldown; generic DUMMY proc hints cannot consume it. The grant is guaranteed, not another spender-chance roll, and does not create Holy Power or precombat Arbiter uses (`sc_paladin_retribution.cpp878–881`, `sc_paladin.cpp73–74`).
+
 ### Ret MID2 tier relationship
 
 - [ ] `SIMC_RET_TIER_MID2_DIVINE_PURPOSE_RELATIONSHIP`: consuming actual foreground Divine Purpose408458 with native2062 two-piece grants native Divine Power1305230. Four-piece arms the spender's native Verdict/Storm/Light Arbiter kind only when none is pending; the same kind preserves it, a different kind consumes it and casts native1306923 at the preserved hostile primary, not a self-centered spender's cast unit. Native gear eligibility, effects, coefficients and durations remain authoritative. No fabricated DB2 trigger edges. Hammer of Light runtime qualification remains a separate open case. [Source/proof](../handoffs/ret-paladin-parity-proof-ledger.md#ret-mid2-tier-relationship-source-policy).
@@ -203,6 +320,12 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - [x] `SIMC_RET_SECOND_SUNRISE_STORM_ECHO` follows the source-qualified ordinary native Storm eligibility, live chance/effectiveness and native ICD. Store the relationship as explicit policy data with generic execution. Read native4442 values at runtime, not hard-coded20/50 or guide15/30. Do not add a200ms delay. A background echo retains the actual hostile primary, has no additional Holy Power cost and does not recursively echo itself. Qualify ordinary, relevant background-source and recipient boundaries separately; do not fabricate a proc row or apply a blanket DPS multiplier. SimC's TODO200ms is not established native timing.
 - [x] Strict native tests must prove real swing damage or actual Wake funding/paid Storm damage before the missing boundary; retain unselected controls. Commit tests before RED and generic execution before GREEN.
 - [x] Report root supply, Second Sunrise, Tempest and background-source coverage separately. [Scoped native/compiler proof](../handoffs/ret-storm-gap-proof-ledger.md). Missing echo damage does not explain the full ranked Storm deficit.
+
+### Ret Hammer Second Sunrise
+
+- Ordinary HoW successful primary impacts may produce a native same-ID background echo (`sc_paladin.cpp1689–1710/1757–1783`). Missed/immune primaries, secondary recipients, background HoW and echoes do not produce it.
+- Read selected native431474 chance/effectiveness and share its native ICD with Storm. Preserve native payload damage, recipients and existing background execution relationships, including native Sun Sear from critical HoW echoes. Do not tune values, grant synthetic resources or implement the source's unverified200ms delay.
+- Native actual-combat RED→GREEN must show ordinary root damage and correctly scaled echo damage, with unselected/background controls; retain all Ret/Dawnlight gates and remeasure three-seed ST/3T.
 
 ### Ret Divine Resonance producer
 
@@ -220,6 +343,13 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Storm produces224239 Tempest, or a53385 Tempest for a Sunrise echo, at native383396 effectiveness. Retained primary/echo/secondary cast roles prevent recursive children and extra resource consumption.
 - Critical ordinary/Legacy Storm and HoW impacts apply native431414 Sun Sear. Each actual Dawnlight tick produces431911 Sun's Avatar with native area/cap values. Critical still-ticking403695 extends its owned duration by native446663 effect0 without resetting tick phase.
 - Divine Arbiter1306923 uses its native first damage effect on the primary and its native second effect on other recipients, never both on the primary. Spell coefficients remain native70448 values.
+
+### Ret Judgment target uses
+
+- Selected Greater Judgment grants native197277 initial uses on successful Judgment/HoW-family enemy impacts, including sourced background variants. Selected Lingering Radiance grants one use when owned Dawnlight ends naturally.
+- The native target effect supplies its amount, class mask, caster ownership, cap and duration. Stored uses expire independently; matching successful impacts consume one use. The damage bonus remains one native percentage regardless of use count; Tempest and Sunrise Storm do not consume uses. Unrelated incoming damage effects retain ordinary stack scaling.
+
+- Pending for the unselected Radiance choice: cancellation invokes `last_tick` (`dot.cpp75–81`), but its cancellation→Judgment relationship is not implemented.
 
 ### Ret Crusade
 
@@ -253,6 +383,31 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Arms literal controller
 
+- With selected Bloodletting383154 and Rend772, actual Mortal Strike impacts (including background Unhinged) apply native Rend388539 only below Bloodletting's native effect3 health threshold. Ordinary higher-health impacts cannot grant it (`sc_warrior.cpp3122–3123`).
+
+- Equipped MID2 Arms4pc1296644 grants native Winding Up1300670 once per Mortal Strike/Overpower execution, including background MS, preserving its native ICD/magnitude/cap. Slam-family executions (1464/1269383) cannot produce it and expire all current stacks only after their damage resolves (`sc_warrior.cpp3111–3112,5494–5495,3537–3538`).
+
+- Selected Heroic Might1269307 accumulates native-capped Heroic Strike uses separately from its active Colossus Smash window. The next CS transfers pending stacks into native1292058 for the wound's native duration and clears pending uses; Heroics after CS cannot change its current window. Native label2443 modifiers supply both spell/white-swing vulnerability amounts (`sc_warrior.cpp3571–3573,3761–3764,1729–1730`).
+
+- Selected Just Warming Up1261048 grants its native effect1 raw Rage once after completed Colossus Smash167105. AoE victims do not multiply that resource grant, and automatic swing Rage is independent (`sc_warrior.cpp3781–3782`).
+
+- Selected Master of Warfare1269306 binds the native damage/critical-damage modifier effects of its earned1269394 buff from the talent's rank values divided by10. Each actual stack applies those modifiers; the buff's separate native armor penetration is unchanged (`sc_warrior.cpp7888–7891,7902–7907`).
+
+- Equipped MID2 Arms2pc1296643 makes each Slam-family execution (1464 and inherited Heroic Strike1269383, including background Slam) launch native Concussive Slam1300660 once. Its damage excludes the original primary; native payload selection retains radius/enemy eligibility (`sc_warrior.cpp3443–3453,3534–3535,3551–3562`).
+
+- With selected Fatality383703, actual Execute damage260798 resolves native383706 against the caster-owned383704 marks. Damage scales with the actual mark stacks, cannot crit, and consumes those marks on its impact without consuming another caster's marks (`sc_warrior.cpp4251–4252,4404–4423`).
+
+- With selected Tactical Edge1261051, each completed Colossus Smash167105 grants Sudden Death52437 uses from the native talent's effect1. AoE recipients do not multiply the grant; natural Sudden Death RPPM remains independent (`sc_warrior.cpp3758–3759`).
+
+- Selected Mortal Wounds1261062 applies native Deep Wounds262115 only after an actual Mortal Strike12294 or Slam-family critical impact (Slam1464 and inherited Heroic Strike1269383), including background Unhinged/Fervor attacks. Normal hits cannot grant it. Shared1261060 remains the separate Execute producer and Fury's native relationship is unchanged (`sc_warrior.cpp3153–3154,3518–3519,3551–3562,4248–4249`).
+
+- Selected Arms Anger Management reduces only running Avatar and Colossus Smash native endpoints from actual paid Rage and native effect0's displayed-Rage divisor. Ignore Pain and zero-payment casts do not contribute (`sc_warrior.cpp1450–1455,1519–1527`). Fury's separate effect2 policy is unchanged.
+- Selected Tactician rolls its native effect0 chance once per positive foreground Rage payment. Selected Brute Force adds its native chance only for Slam/Heroic Strike. A success restores one Overpower charge and grants selected native Opportunist456120 (`sc_warrior.cpp1458–1471`).
+
+- Cleave rolls selected Reap the Storm446005 once per execution only when its native selected-recipient count meets444775 effect1's threshold, using effect2's native chance. A real Sudden Death Execute (including native Massacre281000) can dispatch selected Reap through Imminent Demise's native effect1 chance. Paid Execute alone cannot dispatch it. Reuse the native444775 internal cooldown and unchanged payload values (`sc_warrior.cpp4347–4359,4547–4559,7980–7981`).
+
+- [ ] Sweeping Strikes grants the current native effect4 use count (12 in70448). Each affected single-target attack uses the native extra-target count and secondary damage percentage; one use is consumed only when it hits at least two targets. Preserve the native primary strike, costs and cooldowns (`sc_warrior.cpp1230,1256–1273,1324–1325,5287–5294`).
+
 - [ ] Ordinary Execute163201 and native Massacre281000 snapshot actual paid Rage before taking costs. Their native260798 payload scales by twice paid/native maximum Rage; a genuinely free cast retains the full two-times multiplier. Resolve the maximum from the applicable native base-plus-optional cost row, not remaining power at child delivery. Preserve native coefficients and apply the native surviving-target refund to both parents (`sc_warrior.cpp4212–4238,4335–4348`).
 
 - [x] `SIMC_ARMS_MASTER_OF_WARFARE_REPLACEMENT`: ordinary Heroic Strike1269383 requires the actual1269391 proc and consumes it after successful execution. The source-qualified producer uses the shared PRD helper at pinned15% only for eligible foreground Mortal Strike, Overpower, Slam and Execute damage while the proc is absent; native101 metadata is a script placeholder, not a guaranteed proc. White attacks, Cleave and the consuming Heroic Strike do not produce it. Keep native proc duration, replacement payload and costs (`sc_warrior.cpp1666,3164–3168,3512–3516,3565–3581,4254–4258,5468–5472`).
@@ -262,6 +417,12 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - [x] Spec71 parity executes the exact reference manifest's action lists through the shared literal evaluator, native readiness/execution and equipment facts. Capture control before warmup, cast the source precombat Battle Stance once, and use native selected targets for Slayer/Colossus lists. When no native follower profile exists, use the real player actor; never fabricate a follower. Stockade/native follower rotations remain unchanged. Potion inventory and external Power Infusion are explicit gaps.
 
 ### Fury player parity
+
+- Hack and Slash383873 increases only the next complete Raging Blow/Crushing Blow weapon sequence. Both native delayed weapon hits retain its native bonus; the final off-hand execution consumes one stack, even though its native proc-charge count is zero (`sc_warrior.cpp5061,5227`).
+
+- Rampage184367 may schedule its native effect5 Rampaging Ruin child only with selected Rampaging Ruin1265357 and live Whirlwind85739. An unselected talent or absent Whirlwind cannot add the AoE hit. Retain the original native effect64 payload, delay, admission and damage values (`sc_warrior.cpp5727–5748,5800–5801`).
+
+- Shared Unrelenting Onslaught uses owned Executioner stacks after a genuine Sudden Death Execute to reduce the current native Bladestorm endpoint by444780 effect0 seconds per stack and apply native445836 to the actual primary using effect1 stacks per Executioner stack. Paid Execute alone does not qualify; native producers and counters remain unchanged (`sc_warrior.cpp4361–4365,4561–4565`).
 
 - Slayer's Strike445579 uses one actor-wide PRD attempt counter, native Slayer's Dominance444767 chance (effect0 Fury, effect1 Arms), and its native ICD. Only pinned eligible landed impacts roll; autos never roll, and only Cleave rolls per target (`sc_warrior.cpp1651–1661,1693–1703`). Native spell payloads supply all damage.
 
@@ -275,6 +436,53 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - A landed native Bladestorm main-hand50622 tick dispatches its native effect1 off-hand area95738 once for Fury72 with an actual off-hand weapon, not once per main-hand recipient. Arms cannot acquire that off-hand attack (`sc_warrior.cpp3249–3254,3335–3340`). Native child damage and area selectors remain authoritative.
 - [x] Selected Unhinged386628 dispatches Arms71 Mortal Strike12294 or Fury72's live native Bloodthirst23881 variant on odd Bladestorm227847/446035 effect0 ticks, including catch-up ticks and excluding tick0, using the actual selected hostile target and native effect1 damage multiplier. Preserve ordinary parent pulses (`sc_warrior.cpp3257–3275,3313–3335`).
 - Frenzy335077 grants one335082 stack per final Rampage201363 execution, not per impact or arbitrary melee event. Its native passive effect0 supplies each stack's value (`sc_warrior.cpp5581–5588,8411,9616`). Source-owned proc policies must prevent the broad native proc hint from independently firing the same aura or consuming its ICD.
+
+### Destruction Echo of Sargeras
+
+- Selected Embers1265770 advances source PRD only on real Incinerate29722 (including FnB) and Infernal Bolt434506 hits, using native label-modified chance. Selected1265774 actual Chaos Bolt/Shadowburn hits and ordinary in-combat Rain of Fire execution share its native internal cooldown. Pinned `bugs=true` uses full native Echo payload for spenders (SimC76f8118 actions450–455,4337,4605,4813,5614–5649,6039–6042; init1428–1434).
+- Native1265884 primary/secondary effects hit each recipient once; actual primary is excluded from its secondary effect. Preserve their native coefficients. Earn native1265939 through Echo and selectedII, and1305711 only from actual Echo impacts with genuine ItemSet-owned1296572. Do not replace authored label values or use the broad tier proc hint. Frozen267 selects EmbersII rank2: native Vision is8% haste/crit, matching pinned reference `default_value=0.08`, not the raw per-rank4 (init846–849). ST/3T qualification does not certify the above-eight-target reduction.
+
+### Destruction Chaotic Energies
+
+- Native77220 mastery affects only the pinned `affected_by.chaotic_energies` action set. Actual unresolved direct hits and periodic updates sample1+mastery×U(0.5,1). The source-marked Chaos Bolt, Shadowburn and Rain of Fire payload instead use selected native387275 effect0 as the lower fraction. Read native mastery values; do not adjust damage coefficients (SimC76f8118 `sc_warlock_actions.cpp480–489` and each action's explicit flags).
+- Read-only direct-damage projections use the analytic mean without advancing native RNG or casting. Already-resolved copies do not receive a second multiplier; pets, items, racials and unmarked actions receive none from this relationship.
+
+### Controlled Imp inheritance
+
+- The actual controlled Imp416 inherits live owner spell power at5.625 for SP and2.8125 for AP (SimC76f8118 `sc_warlock_pets.cpp372–375`). Preserve native3110 coefficients, UNIT_PET identity, pet orders, stance, costs and storage. Do not replace it with a guardian or fixed damage payload. Unlisted controlled pets retain their existing power policy.
+
+### Shared pet prerequisites
+
+- Headless native Player actors must have runtime-only native pet storage before a real summon. Do not fabricate an authenticated character, follower identity, actor or resource grant. Hunter default-record provisioning reuses that same storage.
+- Generic effect148 must forward its actual hit destination/unit, native costs and value to every child effect on the per-cast clone. Do not mutate catalog data (TC a352b1fa SpellEffects.cpp725–788).
+- Generic implicit85 is DEST_DEST_FRONT_LEFT: use native radius/direction, native caster origin when no destination is supplied, and existing collision/allowed-Z handling. Do not use spell-ID branches (TC a352b1fa Spell.cpp1690–1738).
+- Qualify the native267 summon regressions and protected255/254/253/265 probes before landing shared behavior. Pet attack lists, coefficients and class producers remain separate work.
+### Destruction guaranteed-crit damage
+
+- Selected Conflagration of Chaos387108 scales Conflagrate17962 and Shadowburn17877 damage by one plus the live caster spell-crit fraction. The ability-specific guaranteed crit is not the multiplier input. Actual damage and pure forecasts must share this rule without rerolling damage or rescaling resolved copies (SimC76f8118 actions4511–4517,4838–4844).
+- Preserve the existing Chaos Bolt crit-chance scaling; do not apply it twice. Native crit changes, not a reference-derived damage coefficient, must drive this relationship.
+
+### Seed of Corruption lifecycle
+
+- Actual paid27243 snapshots its caster's native spell power times effect0 percent as the damage threshold. Its caster's actual landed damage consumes that owned threshold. Reaching zero or natural expiry queues real27285 after Seed removal, without nested explosions or catalog/coefficient changes (SimC76f8118 `sc_warlock.cpp380–405`, `sc_warlock_actions.cpp1927–1965`).
+- Reapplication extends the aura but must not move its original periodic explosion deadline. The declarative `PreservePeriodicPhase` registry policy retains that native deadline; Seed registers only27243. Without selected Sow196226, one paid cast applies one Seed, not one to each raw area recipient (`actions1800–1802`). A real27285 impact chains an owned Seed and applies background native Wither445474 for selected445465, otherwise Corruption146739, without the initial direct Wither payload or a new cost (`sc_warlock_actions.cpp1710–1773`). Preserve shared Wither counters and tick phase; do not register or replace UA1259790 lifecycle callbacks.
+- The primary prefers the original target without its caster's Seed; otherwise it selects an unseeded candidate and uses the original only if none remain. The read-only sibling helper `warlock_seed::selected_primary(world,caster)` returns that actual selection for the same successful Seed execution, before projectile/explosion. Other owned leaves reuse it without another target draw. Pinned265 bugs mode ignores seeds in flight (`actions1836–1892`). This helper does not apply UA.
+- Qualify actual threshold, expiry, refresh/original-deadline and recipient ownership, with native265 Seed and267 shared-Wither controls. Native paid-recast redirection needs its own RED→GREEN. Selected-Sow effectiveness, death/dispel and MID2 seed-applied-UA relationships remain separately qualified; do not infer them from a zero-damage periodic tick.
+
+### Shared Hellcaller Wither counters
+
+- Native Wither445474 keeps its actual counter stacks, but its periodic damage ignores that count. An ordinary recast preserves earned stacks without adding a refresh stack; explicit native stack applications retain normal counter advancement. Preserve native coefficients, tick phase and lifetime. Both265 and267 share this rule (SimC76f8118 `sc_warlock_actions.cpp1066,1174–1186`).
+- Wither's counter is not an ordinary damage-stack multiplier. Other stacking DoTs keep their existing behavior; Blackened Soul producers/collapse are separate relationships.
+- Shared265/267 Hellcaller producers must use actual Chaos Bolt/Shadowburn impacts and actual UA applications, including refresh, Fatal Echoes and seed-applied UA. Do not replace UA's independently owned expiry callbacks. Grant native Malevolence stacks/buff/damage only to its caster's active Withers; preserve each Wither lifetime and tick phase.
+- Check Seeds gates on gains and Wither ticks. Blackened uses a permanent runtime counter with the native tick period, decrements Wither before damage/Mark of Xavius, consumes its separate collapse budget, and stops at Wither1 or missing Wither. Preserve source PRD/weighted-threshold behavior and native spec-specific payout buffs; do not tune damage or duplicate shard mechanics (SimC76f8118 actions1119–1149,1208–1317,1544–1565,4328–4331,4807–4810,5534–5611; init1441–1480).
+
+### Destruction main-pet engagement
+
+- The literal267 controller commands its actual configured main pet against the current encounter primary through native pet orders (SimC76f8118 `pet.cpp67–68,149`). Preserve UNIT_PET identity, saved reaction stance, native attacks, costs and lifetime; do not substitute a guardian or manufacture pet damage.
+
+### Destruction Incinerate funding
+
+- An ordinary native Incinerate29722 primary impact keeps its existing244670 base grant. Selected Diabolic Embers387173 adds its native effect0 percentage of that base; an actual critical impact adds0.1 displayed shard scaled by the same talent. Use native PowerType raw units and the shared energize/overflow pipeline, without another base grant or resource pool (SimC76f8118 `sc_warlock_actions.cpp3927–3931,4015–4025`). Unselected noncritical hits retain the native base amount. Secondary/triggered copy relationships are separate.
 
 ### Destruction periodic shard funding
 
@@ -295,7 +503,30 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Player-controlled follower minions inherit the same player-affected attack permission as their owner, without changing either NPC identity or native summon-property ownership rules. Ordinary NPC summons remain subject to NPC-versus-neutral restrictions (SimC76f8118 `pet.cpp66–68`).
 - [ ] Dreadstalker, Imp Lord and Dominion guardians execute source-bound native actions from their actual actors. Only validated source inheritance is adopted; native coefficients and power costs are unchanged. Fresh Imp Lord initialization and its125-Energy readiness gate follow pinned `pets.cpp1680–1705`; this never resets an existing owner or pet pool. Prepared private data must publish the exact native summon-root templates through the existing importer.
 
+### Shared live Period modifiers
+
+- Current native Period modifiers apply to the interval scheduled after a paid tick, never by retiming the already-pending tick. Preserve the actual per-cast native period inputs, paid ordinals, channel haste snapshots and asynchronous stack deadlines. Final partial ticks have no following schedule (SimC76f8118 `dot.cpp815–821,1109–1170`, `action.cpp4297–4315`). Ordinary DoT live-haste updates remain separate and unqualified.
+
 ### Shadow Priest literal parity controller
+
+- Ordinary Shadow Void Torrent263165 starts native459314 Rift at the actual hostile primary. Its hasted native driver clock skips its first travelling tick; subsequent ticks emit native447448 to enemies inside half the native447445 radius. Channel end restores full native remaining driver duration without resetting tick phase. The APL tracking fact reads459314 (SimC76f8118 `sc_priest_shadow.cpp1491–1514`, `sc_priest.cpp1606–1683/3543–3562`). Collapse remains separately qualified.
+- Ordinary Shadow Void Torrent263165 starts native459314 Rift at the actual hostile primary. Its hasted native driver clock skips its first travelling tick; subsequent ticks emit native447448 to enemies inside half the native447445 radius. Channel end restores full native remaining driver duration without resetting tick phase. The APL tracking fact reads459314 (SimC76f8118 `sc_priest_shadow.cpp1491–1514`, `sc_priest.cpp1606–1683/3543–3562`). Collapse and Darkening Horizon remain separately qualified.
+- With selected449880, actual Rift applies native449887 as an aura, not a helpful cast. Channel end restores its full native duration without resetting phase; actual Rift expiry removes it, then selected1266856 earns the native Touch tail. Native school/ability bonus values remain unchanged (SimC76f8118 `sc_priest.cpp1683–1685/3540–3541/3571–3576`, `sc_priest_shadow.cpp1491–1501`).
+- With selected450405, actual Rift earns native450404, whose native3328092→450983 override and1602 charge-category modifier enable ordinary Void Blast without learned-spell grants. Literal Mind Blast is unavailable during actual Rift/Torrent; Rift expiry removes its override and restores Mind Blast (SimC76f8118 `sc_priest.cpp344–413`).
+
+- Each real Void Blast execute with selected449912 extends the current owned Rift by native effect2 seconds, at most effect1 times per actual Rift instance. Extend an already-earned Voidheart alongside it without resetting pending tick phase; do not carry extension counts into a later Rift (SimC76f8118 `sc_priest.cpp387–394/4358–4391`).
+- Selected Screams of the Void375767 makes every successful Madness execute, including Slam's background Madness, apply393919. Reapplication extends by the native fresh duration; native flat-label talent modifiers supply its period amount (SimC76f8118 `sc_priest_shadow.cpp1324–1327/2203–2204`).
+
+- A Madness impact (including Slam's weak Madness, not its periodic ticks) launches a native148859 or1264175 projectile to each own live VT. Native1264104 effect1 owns Void selection/effectiveness; Void launches1264177 Void Bolt at the source primary, never unrelated373279 area Void Spike (`sc_priest_shadow.cpp543–547/2468`). Preserve source-parent identity through travel so only its apparition triggers1231479 Shadeburst, with native73510 soft cap. Native407469 boosts apparition damage on own Madness; these payloads use live Shadow Weaving (SimC76f8118 `sc_priest_shadow.cpp291–549/1296/2609–2650`).
+- Selected Haunting Shadows1279355 makes each actual normal413231 or void1264176 apparition impact extend existing owned Pain589 and VT34914 by native effect1 milliseconds, without resetting periodic phase or applying absent DoTs (SimC76f8118 `sc_priest_shadow.cpp427–435`).
+- Selected Shadowy Insight375888 makes positive actual Pain589 ticks advance the pinned8% threshold, scaled by selected native Dark Thoughts effect1 and divided by own Pain count^0.9. Uniform initial phase/increments and rollover earn native375981, not manually granted charges or cast-time values. Each actual ordinary Mind Blast/Void Blast execute consumes one live Insight stack; native aura500 preserves its underlying charge while411 owns temporary capacity (`sc_priest.cpp298–316`). Pain impact is not a producer; its Insight roll precedes Tormented's tick roll (SimC76f8118 `sc_priest_shadow.cpp626–638/2052–2084/2322–2339`).
+- Selected Tormented Spirits391284 makes positive actual Pain589 hits and ticks advance its own threshold: random initial phase,13% times uniform[0,2) divided by own active Pain count^0.9, doubled for actual crits. Crossing1 earns one ordinary apparition cohort and retains overflow (SimC76f8118 `sc_priest_shadow.cpp598–645/2355–2371`, `proc_rng.cpp221–273`).
+- Each real apparition-producing cohort with own VT advances selected373273's native373276 counter once, not once per missile. At the native cap, summon actual373277/189988 Thing From Beyond; selected1264096 also emits the pinned parentless extra cohort, which cannot Shadeburst. Keep the counter capped through that nested cohort before clearing it. Thing retains native creature type15 and casts native373279 using full owner SP, actual owner target DoTs for mastery, native secondary fraction and reduced-AoE cap (SimC76f8118 `sc_priest_shadow.cpp2206–2214/2628–2632/2850–2858`, `sc_priest_pets.cpp75–86/1061–1134`).
+- Auspicious Spirits' Insanity threshold and Haunting Shadows' DoT extensions remain separate unqualified relationships; native projectile E1/E2 must not unconditionally substitute for them.
+
+- Selected Psychic Link199484 copies its native effect0 fraction of eligible landed spell/tick damage to every other recipient with the caster's live Vampiric Touch. Native199486 supplies the damage payload; the echo cannot independently crit, hit its original recipient or use foreign VT. Actual caster-self damage, including native Death backlash sharing the offensive spell ID, is not a producer (SimC76f8118 `sc_priest_shadow.cpp1521–1619/2655–2669`, `sc_priest.cpp1430–1446`).
+
+- Voidform228260 grants1242171 uses from native effect2 after its free Volley. Ordinary1242173 consumes earned uses and cannot cast without one. Primary/secondary bolts retain native counts and the pinned50ms interval. Native1296580 grants a capped tier use after Slam in1242171 during Voidform or1279437 outside it. Voidform expiry grants selected Crushing Void and transfers earned tier uses. Literal Voidform readiness is checked before native action aliases can turn it into Volley (SimC76f8118 `sc_priest_shadow.cpp960–1079/1380–1401/1829–1846/1960–2000`).
 
 - [x] Implicit selector unions retain each unit once per effect in first-selection order; overlapping destination-area/line selectors cannot duplicate damage or use target-cap slots twice.
 
@@ -323,7 +554,11 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Native channel decision ticks use the same modified, hasted interval as the real periodic aura, not the raw DB2 period beside a hasted duration (SimC76f8118 `action.cpp4390–4420`).
 
+- Channel `interrupt_if`/`early_chain_if`, `cancel_if` and `line_cd` expressions read the same current per-driver APL variable state as ordinary row conditions. They must not route `variable.*` operands to native actor facts or create a spec-local variable copy.
+
 - [x] `early_chain_if` works without `chain=1`: after a paid native channel tick, a true expression and ready GCD may re-execute the same ready source row before its penultimate tick, but never ahead of a ready higher-priority action (SimC76f8118 `dot.cpp841–845`).
+
+- [x] Arcane62 executes its exact supplied profile action rows through shared literal control, including source-order precombat and native readiness predicates. Without an official follower profile, the fixture uses a real player; it must not run AssistedCombat concurrently, invent priorities, or change native coefficients/resources.
 
 ### Empyrean Legacy relationship
 
@@ -349,6 +584,9 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - `empower_to` selects the real native release stage while retaining the selected hostile primary independently of self casts. Fire Breath dot facts observe native357209 owned by that actor. Disintegrate uses the shared channel decision seam, including action-bound `ticks_remain`.
 
 ### Measurement
+
+- [ ] Native measurements execute an independent300s sample for every comma-separated `DPS_PARITY_SEEDS` value, default `70448,1,2`. `report.seed` lists the actual seeds, `seed_dps` retains each native DPS, and `combat.dps` is their arithmetic mean. Invalid seed lists or a failed sample fail the measurement; no sample is silently omitted.
+- [ ] `combat.actions` averages actual per-spell damage, hits and cast counts over all samples, including zero contribution when an action is absent. Shares must preserve mean per-spell DPS for unchanged `dps_parity_gaps.py` consumers. Full reports remain in `<spec>.native.<count>.seed-<seed>.json`; `detail_seed` identifies first-seed buff, entity and other unaveraged details.
 
 - Origin-centered parity arenas provide explicit open collision/LOS services for native destination selection. They have no dungeon walls or baked-eye requirement, matching pinned `action.cpp1738–1752` target selection. This fixture mode must not change production map LOS or bypass native summon/spell metadata.
 
@@ -439,7 +677,22 @@ The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native speci
 
 Native aura271 effects match both their source spell family and their effect's SpellClassMask. Burning Core1299975 affects Fire Nova only; Sentinel's Mark1253601 applies its Aimed and Wildfire bonuses independently. Unrelated spells and other families receive neither bonus. Lashing Flames retains its native Flame Shock mask. The documented Colossus Smash208086 exception continues to grant owner damage through the common Warrior target multiplier. Sources: pinned SimC `sc_shaman.cpp7010–7028`, `sc_hunter.cpp1278,1493–1494`, and `sc_warrior.cpp1723–1734`.
 
+Ret Truth's Wake403695 effect3 uses its native Consecration/Divine Hammer mask, not a universal owner-damage bonus. Its separate537 effects keep labels2511/2587; Judgment197277 keeps its native spender mask. Expurgation383346's270 Holy mask matches overlapping schools, including Radiant6. Native paired casts verify unchanged FV under Truth's Wake, the real Judgment bonus and Holy Flames on mixed-school damage; removing the former blanket271 amplifier must not be reversed to recover a DPS band.
+
+### Shared armor classification
+
+Only a pure Physical school mask uses target armor. Hybrid schools, including Doom's Physical/Nature and Havoc's Chaos children, retain their native school masks without Physical armor reduction. Native bleed mechanics and explicit spell bypasses remain unchanged (SimC76f8118 `action.cpp1686–1690`).
+
 ### Enhancement fixture driver
+
+Actual Tempest grants selected Storm Swell455089 and one native Arc Discharge470532 stack. Ordinary spell events must not grant Storm Swell for263. Each eligible Chain/Ride chain's final actual recipient consumes one Arc use when its native400ms ICD permits and becomes the delayed325–425ms extra chain's primary. Extra chains may self-trigger outside that ICD; normal Arc benefits from live MW without spending it, while Ride Arc neither benefits nor spends. Arc uses do not multiply its native modifier amounts (effect attributes64). Preserve native masks, values, caps and duration, and Elemental262's separate policy. Sources: pinned SimC76f8118 `sc_shaman.cpp6587–6597,6631–6643,6709–6714,9994–10007,12437–12484`.
+
+Selected384355 Elemental Weapons supplies408390's native masked direct/periodic modifiers at talent effect0 ×0.1 per actually imbued hand. Real imbue gains/removals update the bonus; zero imbues or an unlearned talent remove it. Stormblast retains its explicit sourced exception without a second generic application. Sources: pinned SimC76f8118 `sc_shaman.cpp13212–13220`; native70448 supplies values and masks.
+
+Actual Windstrike weapon children115357/115360 ignore target armor. Native Doom469270 retains its Physical/Nature school but does not use Physical armor; ordinary Physical Stormstrike children remain armor-sensitive (SimC76f8118 `sc_shaman.cpp4726`, `action.cpp1686–1689`).
+Selected Stormwell1264762 runs a guaranteed equipped-native Windfury callback once on each landed primary Crash187874 impact, not once per AoE recipient. Preserve its native internal cooldown, payload and Unruly Winds behavior; ordinary imbue proc chances remain unchanged (SimC76f8118 `sc_shaman.cpp6141–6145`).
+
+Native Unleashed1252431 remains Magic and cannot trigger weapon imbues. A main-hand weapon pointer and `shaman_attack_t` inheritance do not override SimC's data-Melee admission check (`sc_shaman.cpp3039–3055`, pinned SpellDataDump1252431).
 
 Spec263 parity executes the pinned MID2 Enhancement action rows through the shared literal evaluator, using native action admission, equipment and aura/target facts. A real player uses this driver without loading AssistedCombat diagnostic inputs; no follower profile is fabricated. Windfury/Flametongue setup occurs only in precombat. Thorim's LB/CL choice follows successful foreground LB/CL/Tempest dispatch and Tempest target count. This selects actions; it does not certify the underlying Enhancement proc, counter or damage mechanics.
 
@@ -453,17 +706,25 @@ Selected Enhancement Conductive Energy455123 uses the completed native hit frame
 
 Selected1252373 makes a landed native Crash Lightning root schedule native1252431 Unleashed weapon strikes at one-second intervals. Native1252373 effect1 supplies the pulse count. Each pulse reevaluates the native Crash target list and uses the pinned90% target-occupancy roll, not a damage coefficient adjustment. Each execution snapshots and consumes its own native1299991 Short Circuit stack value; overlapping executions retain independent pulse state. Sources: pinned SimC `sc_shaman.cpp1490,4519–4532,6110–6135`.
 
-Actual466772 Doom Winds emits native469270 area damage on application and its native periodic effect2 ticks. It requires the caster's real living selected target; a missing/dead selected identity suppresses the pulse rather than selecting a substitute. Native destination/area geometry and damage metadata remain authoritative.
+Actual466772 Doom Winds emits native469270 area damage on application and its native periodic effect2 ticks. It requires the caster's real living selected target; a missing/dead selected identity suppresses the pulse rather than selecting a substitute. Native destination/area geometry and damage metadata remain authoritative. Selected114051 also draws an independent three-success600-card deck per actual MW consumed outside its active aura, with greater-than10-card success spacing within and across refills. Spending while Ascendance is active neither draws nor resets the deck. A success triggers background384352, including its native466772/Static producer, without activating Ascendance or starting the ordinary Doom button cooldown. Sources: pinned SimC `sc_shaman.cpp11809–11827,13099–13110`.
+
+Actual Strike weapon children32175/32176/115357/115360 roll native201845 Stormsurge with its native chance/mastery modifiers. A proc grants201846, restores all actual Strike charges, and grants470466 when319930 Stormblast is selected. Native319930's generated every-cast grant is suppressed. An ordinary Strike snapshots previously earned470466 before consuming one Stormsurge/Stormblast stack; both real weapon children emit390287 from their resolved damage times native319930 effect0. The copy cannot crit or reapply broad caster modifiers, but retains the pinned explicit live77223 mastery and384355 Elemental Weapons multipliers plus native target modifiers. Sources: pinned SimC `sc_shaman.cpp4449–4469,4702–4711,5597–5600,12125–12147,13184–13187,13212–13220`.
+
+Selected344357 Stormflurry rolls its native effect0 chance after each actual Strike execution, including its own background repeats. A success schedules the same native Strike root after a Gaussian200±25ms delay, retaining its selected target and prior Stormblast snapshot. The repeat does not press another foreground button or spend ordinary charges/GCD/resources. Native effect1 scales its weapon children, Crash payload and Ride chain once; Stormblast copies the already-scaled weapon result. Repeats retain real weapon procs but do not grant normal-root Elemental Assault or invoke Thorim. Sources: pinned SimC `sc_shaman.cpp4545–4561,4682–4689,5540–5545,5597–5608,5647,5685–5690,6610–6613,12041–12073`.
 
 Selected Ride the Lightning289874 emits native211094 once per actual Strike/Lava Lash execution, using its native chain targets. This background variant neither benefits from nor spends MW. Real Tempest casts spend one454015 stack, preserving the other earned proc; Thorim spends its current Tempest proc before its MW consumption can earn a new one.
 
 Actual Enhancement MW consumption draws Tempest's pinned two-success100-card deck and selected1262713's five-success250-card Storm Unleashed deck once per consumed stack, preserving independent greater-than10-card success spacing within and across decks. At most one native proc per deck is granted per spell. Neither substitutes a Bernoulli roll or the talent's unused displayed chance. Native1262830 grants its extra Crash charge through411 and exempts only category2458 consumption through500. One landed Crash consumes one proc after Thorim; its free cast never appends or delays the normal recharge. Other charge categories still consume normally. Sources: pinned SimC `sc_shaman.cpp6107,11830–11845,12888–12904,13057–13098`; TC `SpellHistory.cpp843–844`.
+
+Selected454391 Unlimited Power grants one native454394 stack per actual MW-spending execution, not per spent stack. Native amount, cap and duration stay authoritative. Further stack gains preserve the first application’s expiry; after expiry, a new spend starts a fresh one-stack epoch. Sources: pinned SimC `sc_shaman.cpp11766–11770,12655–12658`.
 
 Selected1260666 makes actual Voltaic Blaze executions roll their native effect1 chance for Fire Nova. Each living attackable target with this caster's native188389 Flame Shock emits one333977 explosion, independently of Burning Core periodic ticks. Sources: pinned SimC `sc_shaman.cpp10126–10130,7043–7076`.
 
 Equipped native MID2 Enhancement two-piece1296627 makes real Voltaic Blaze apply1299975 Burning Core to its selected primary. Its native periodic effect dispatches333977 Fire Nova from the original caster; its caster-specific native damage modifier remains authoritative. Each Fire Nova explosion execution with equipped four-piece1296628 reduces running Crash Lightning recharge by its native effect0 milliseconds and grants1299991 Short Circuit once, not per area target.
 
 ### Shared literal snapshot operands
+
+Bare `time_to_die` reads the actor's fixed-time remaining fight duration. It does not inherit a `target_if` candidate's lifetime; explicit `target.time_to_die` retains that candidate's actual fixture lifetime (SimC76f8118 `action.cpp4276`, `player.cpp7731–7754,11866–11895`).
 
 Bare `refreshable`/`remains` retain the action and recipient context. Qualified Feral periodic effects store their actual persistent factor at aura application: `pmultiplier` reads that field (absent dot0), while `persistent_multiplier` reads the same fresh native producers. Refresh replaces the stored factor; later buff loss cannot rewrite it. Native fresh-dot metadata with a combo-point cost uses the ordinary pre-payment effective-point snapshot without admission or payment, including when the minimum cast cost is currently unaffordable. Do not infer snapshots from damage or substitute live factors for missing stored fields (`action.cpp3940–3997`, `dot.cpp568–573`, `sc_druid.cpp4673–4676`).
 
@@ -477,6 +738,17 @@ Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_re
 - Spec255 uses the exact pinned `hunter_survival.simc` action rows through shared `Program`, `Driver`, `Prepared` and `Equipment` with the requested native actor identity. It does not require an invented follower kit.
 - Precombat provisions the existing native default-duck stable policy and executes ordinary Call Pet, snapshot and the selected harmful precast before engagement. Native pet control supplies independent pet attacks. Shared Hunter facts supply equipment, potion and Howl observations; shared pet mechanics and live owner critical chance remain authoritative.
 - Native70448 supplies stats, damage, costs, cooldowns and selected traits. Controller coverage alone does not qualify ST/3T DPS parity; missing native relationships remain measurement-gated.
+
+### Survival native cast relationships
+
+- Actual Kill Command grants one Tip of the Spear use plus selected Primal Surge's native extra uses. Uses do not multiply the per-use damage modifier; an affected action consumes exactly one at primary impact. Source: `sc_hunter.cpp1359–1362,1407–1408,6606–6608`.
+- Ordinary Raptor Strike rolls the selected native Swipe rank's chance. An actual upgraded Raptor Swipe consumes its replacement and cannot produce itself. Source: `sc_hunter.cpp6188,6217–6236`.
+- A real Wildfire Bomb explodes around its actual primary using pinned5yd geometry, native reduced-AoE cap and native primary-only bonus. Apply the corresponding periodic payload to every actual impact recipient with the same cap/primary effectiveness. Selected Shrapnel replaces, never duplicates, the ordinary fire DoT. Keep native damage coefficients and timing. Source: `sc_hunter.cpp7030,7039–7043,7062–7068,7083–7089,7118–7120,7134`.
+
+- Actual Raptor Strike/Swipe base executions grant native Mongoose Fury259388, including its full selected effect set, native stack cap and refresh. Do not require the named talent to create the buff. Actual primary Tip consumption grants selected Stargazer1253750 before its queued mark/ordinary pet strike; retain independent native stack expiry. Native aura values supply all damage effects; do not add manual damage factors or stat changes. Source: `sc_hunter.cpp1358–1361,6149–6155,7749,7880,8160–8165,8303–8305`.
+- Actual primary Tip consumption dispatches native Strike as One1251779 from the living owned main pet and starts the existing native1251717 ICD only after execution. Actual tipped rank3 Swipe dispatches its separate strike before base execution with the rank's native second-effect effectiveness; that extra does not spend the ordinary ICD. Use the actual aura instance for the shared proc timer; raw melee hints must not spend its owned ICD. Selected Sic 'Em1253137 executes native1253138 from the same main pet only on its actual Strike as One crit. Reuse shared pet stats/crit, periodic clocks and native payloads, not a second pet engine. Source: `sc_hunter.cpp1367–1372,2875–2898,3381–3387,6181–6186,7944`.
+- Real primary impacts that consume native Tip uses queue Sentinel's distinct native Survival chance after the impact batch, so tipped Wildfire can earn a fresh mark after consuming an old one. Native Sentinel already receives Moon's Blessing through its5585 label; do not add it twice. Selected Lunar Calling adds its Survival effect during actual Takedown. MM's distinct native chance remains unchanged. Source: `sc_hunter.cpp1358–1366,3694–3709`.
+- Active Sentinel's selected Lunar Calling makes actual Takedown force an owned mark on its hostile primary. A real Wildfire explosion consumes only the caster's own marks and schedules native Lunar Storm payloads on those recipients. Shared mark grants reduce running Aimed/Wildfire recovery through the distinct native Moon's Blessing effects, without starting inactive recovery or resetting charges. Preserve existing MM producers and native values. Source: `sc_hunter.cpp3665–3667,3709–3710,3760–3773,6400–6401,7104–7107`.
 
 ## Marksmanship literal controller
 
@@ -520,6 +792,8 @@ Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_re
 ## Shared profile gear effects
 
 - Reference followers retain NPC identity but use the declared native race for base stats and validated racial spell knowledge. Native player/pet aura effect202 must apply owner racial effects.
+- Selected native Inspired Intellect458437 enhances an active Arcane Intellect1459 on that Mage by adding its native effect1 percentage points to the raid buff's amount, preserving other multipliers (`sc_mage.cpp6832–6841`). Do not apply a global intellect correction or an independent2% factor; actors without either aura are unchanged. The shared source gate covers actual Fire63, Frost64 and Affliction265 actor identities.
+
 - Aura189 rating buffs must change derived native ratings through their real masks. Item spell scaling class−7 includes its native trinket combat-rating multiplier before rounding. Declared Magisters flask, Void-Touched augmentation, Royal Roast, Recklessness potion and Thalassian Phoenix Oil quality2 use native item/enchant/spell values. Oil coexists with permanent enchants. Potion selects the current highest positive/lowest negative secondary and is available once per encounter; unsupported tokens remain named gaps.
 - Expansion tokens resolve native TraitNodeEntry identities, independent of class talents. Item scripts supply SimC relationships for Heart Morsels/stacking stats, asynchronous Venomfang/expiry bursts and perfected Guillotine poison, plus Omnium fire/lingering/secondary runes. Native proc rates, scaling and recipients remain authoritative; neutral attackable targets must not be rejected as non-hostile factions.
 
@@ -562,6 +836,10 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 - Precombat summons the profile-selected pet and executes its first eligible harmful precast. Darkglare activity and remaining lifetime come from real owned summons; Malefic Grasp requires that actual pet. Channel chaining and interruptions use shared native channel decisions.
 - The fixture does not grant shards, buffs or reference damage. Numeric ST/3T parity remains separately measurement-gated.
 
+### Affliction native Shared Agony
+
+- Selected1259825 makes a successful Agony root cast one real native980 background twin on a different living enemy inside its authored radius. Randomize ties, then prefer the shortest remaining owned Agony; foreign applications do not count. The twin pays no second cost and cannot recursively create twins (`sc_warlock_actions.cpp1419–1450`, `sc_warlock.cpp1274–1320`). Native application, stacks and periodic shard funding remain unchanged.
+
 ### Affliction native Agony funding
 
 - Only landed Agony980 ticks from Affliction265 advance its owner's threshold-RNG shard progress, with uniform initial state and rollover. Pinned increment0.370 scales by active owned Agonies to the power−2/3 and native Creeping Death timing normalization, including the pinned rank2 bug. Losing the last owned Agony resets progress.
@@ -572,6 +850,32 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 - `simc_apl:` selected Malefic Grasp1261149 resolves to native channel1261153 under the same sourced known-parent projection as Demoniac. Native70448 has no visible-action link. Unknown/unselected talents do not grant the channel; costs and actual channel damage stay native.
 
 - Projection qualification retains the Demonology owner's gate: `demonology_ --ignored --skip demonology_implosion_`. The excluded Implosion test is the owner's existing master RED, not a Malefic Grasp regression (same exclusion as trainsdd4e681ed7/d577e0ad22). Native Affliction cast and Frost literal opener remain required.
+
+### Affliction native Death's Embrace
+
+- Selected234876 uses its native maximum amount and health threshold to scale source-qualified damage linearly with each actual recipient's live health below that threshold (`sc_warlock_actions.cpp529–535`). Preserve pinned exclusions: direct Corruption/Wither, Shadowbolt Volley and Malefic Grasp itself are not affected; Grasp's extra DoT payloads are affected. Seed-applied UA stack suppression belongs with MID2 Seed UA integration.
+### Affliction native Darkglare Eye Beam
+
+- Ordinary native205231 from an actual103673 Darkglare reads its real owner and actual recipient. Each distinct owned active Agony, Corruption, Wither, Seed or UA contributes the native205180 effect2 amount; multiple UA stacks count once and foreign DoTs do not count (`sc_warlock_pets.cpp2445–2455`, `sc_warlock.cpp248–264`). Keep native guardian rows and coefficients unchanged. Nether Plating's alternate AoE chain is not selected by this MID2 fixture and is separately unqualified.
+
+### Affliction native Darkglare Presence
+
+- Native1280663 direct/periodic masks and amounts apply only while an actual owned living103673 Darkglare remains unexpired. Actual death or expiry ends the increase; foreign summons and unmasked damage do not qualify (`sc_warlock_pets.cpp2487–2500`, `sc_warlock_actions.cpp200`). No independent buff timer or guardian-row change supplies this effect.
+
+### Affliction native Unstable Empowerment
+
+- Selected MID2 four-piece1296569 earns native1305774 from actual owned UA1259790 applications. Count UA stacks globally across active living targets, not DoT instances; ignore foreign casts and cap at the native buff maximum (`sc_warlock_actions.cpp1567–1568/5673–5699`).
+- Each independent UA expiration and full removal updates the earned stack count; no remaining owned UA means no buff. Fatal Echoes updates it through its actual new application. Keep native player, pet and guardian damage effects and amounts; do not add haste or change damage coefficients (`actions5779–5780`, native1305774).
+### Affliction Nightfall uses
+
+- Native264571 stacks are independent next-spell uses, not a multiplier of its native effect amounts. One ordinary instant Shadow Bolt consumes one admitted use. A proc earned during a hardcast remains for the next action; queued cast/proc callbacks cannot consume it or spend the next stored use (`sc_warlock_actions.cpp877–878`).
+- The admitted instant Shadow Bolt retains native264571 effect1's damage bonus through missile impact after consumption. Hardcasts cannot borrow a later proc's bonus. Preserve native coefficients and the pinned Hellcaller Grasp exception; this bonus applies only to Shadow Bolt (`actions902–908/2147–2152`).
+- Drain Soul/Grasp consume one use on execution. Two uses retain the same native duration and tick-period reduction as one use; they cannot collapse the channel (`actions199/2151–2163/2182/2299–2311/2338`).
+
+### Affliction earned Shard Instability
+
+- Selected native1260264 rolls its native effect1 chance on landed Shadow Bolt and effect0 chance on actual Drain Soul/Malefic Grasp ticks, using independent accumulated-probability streams for Bolt and the shared channels. Native1260269 owns stacks, lifetime and spell modifiers.
+- Actual Unstable Affliction consumes one earned Instability use only if its cast admitted that native cast-time modifier. An effect gained during a hardcast is retained.
 ### Live item proc facts
 
 - Per-trinket `proc.any_dps.up` and `remains` observe only the actor-owned native stat-buff identities reachable from that item's effects. A multi-buff proxy returns the maximum live value, a different item cannot borrow the aura, and expiry returns zero.
@@ -583,3 +887,54 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 - Bare `health.pct` and `is_boss` retain the actor context inside target scoring. Bare `duration` reads the proposed action's captured native periodic state (zero when absent), not its cooldown or hypothetical fresh duration.
 - Spec252 runs the exact exported76f8118 Unholy action rows through shared Program/Driver/Prepared/Equipment with native player identity. Bind rune/Runic Power, disease and pet state to native70448 values; ordered precombat executes native Raise Dead. Numerical parity is separately measurement-gated.
 
+
+### Affliction native Cunning Cruelty and Ravenous Afflictions
+
+- Selected453172 shares one Cunning PRD stream across landed Shadow Bolt686 impacts and Grasp1261153/Drain Soul198590 ticks. Pinned SB-selected chance is0.50, DS-selected0.25 (`sc_warlock.hpp1066–1067`, init1232–1235). Success casts native453176 at the actual recipient; its native coefficient, missile and five-target limit remain authoritative. The talent's native value5 names that enemy count, not the proc chance.
+- Selected459440 attempts its native RPPM only on actual critical Agony980, Corruption146739, Wither445474, UA1259790 ticks or critical Grasp extra children1261166/1261176/1261158/1279686. Success applies real264571 Nightfall. Generic/noncritical events cannot also advance this owned stream; talent removal stops acquisition (`actions459–467/2004–2025`, init1227).
+- Preserve the pinned Grasp tick order: Instability, Cunning, extra DoT children. The existing primary-tick dispatch owns that order; no shared damage dispatcher changes are required. Grasp chooses only the selected Corruption/Wither child and reads actual Corruption146739, not direct172 (`actions2192–2214/2117–2131`).
+
+### Ordinary native spell GCD haste
+
+Category133 ordinary spells apply native spell haste before the independent aura417 haste-regeneration path. Preserve melee/ranged defense and ability/ranged-slot exclusions, native750–1500ms haste bounds, and exclude other base GCDs from this haste path. TC a352b1fa `Spell.cpp9209–9224` and SimC76f8118 `action.cpp648–666,1285–1315` define this behavior. The native clock gate covers representative foreground actions for all40 specs at0%,25% and150% haste; aura417 retains its separate native controls.
+### Affliction native target talents
+
+- Selected386976 Withering Bolt multiplies native Shadow Bolt686, Shadowbolt Volley453176, Grasp1261153 and Drain Soul198590 by its native percentage per distinct owned Agony980, Corruption146739, Wither445474, Seed27243 and UA1259790, up to its native effect1 cap. UA stacks count as one DoT; foreign/expired auras do not count (`sc_warlock.cpp248–264`, actions817–818/915–916/2223–2224/2368–2369).
+- Selected1312998 Impetuous Wrath uses native effects0/1 for Shadow Bolt, Grasp and Drain Soul, or2/3 for Dark Harvest1257065, choosing the enhanced effect only for the caster's own active Haunt. It does not affect Volley. Removing the passive removes its factor (`actions918–919/2226–2227/2371–2372/2452–2453`). Native coefficients and other modifier stages remain unchanged.
+
+### Affliction native Darkglare inheritance
+
+- Native205180/103673 Darkglare inherits full live owner spell power through the existing guardian policy, as base `warlock_pet_t` specifies and Darkglare retains (`sc_warlock_pets.cpp19/2424–2430`). Native205231 supplies damage coefficients and cast time; other guardian policy entries are unchanged.
+- Existing native guardian tests retain real cast timing, dynamic owner-SP changes, retargeting, expiry and persistent-pet preservation. A native265 cast must spawn103673 and land205231 with the full owner-SP term in its actual damage calculation.
+
+### Affliction native Shadow of Nathreza
+
+- With selected native1261984, actual Haunt48181 effect4 pulses launch native1262710 at that Haunt's recipient. Use its native one-second clock without an initial pulse; removing the selected talent stops further apex payloads without removing Haunt (`sc_warlock.cpp41–49`). Native coefficients, direct damage modifiers and critical rolls remain unchanged.
+- Wrath's separate RPPM and guardian lifecycle are specified below; Shadow of Nathreza remains its own native damage payload.
+
+### Affliction native Wrath of Nathreza
+
+- Selected1261992 rolls its native hasted RPPM and actual aura timers through `try_native_policy_proc` on landed Haunt impacts and real Haunt pulses. Generic spell damage cannot also roll this owned stream (`sc_warlock.cpp41–49`, `sc_warlock_actions.cpp2408–2415/5651–5662`). A newly landed Haunt replaces that caster's earlier Haunt.
+- Native1262094 imports and summons authentic Desperate Soul254505. Only its new guardian policy binds1278047 with full owner SP1.0; one actual Wrath executes around the owner's current Haunt recipient, then native expiry dismisses the soul. Other guardian policies and native damage coefficients are unchanged (`sc_warlock_pets.cpp19/2516–2563`).
+- Guardian publication preserves authentic TDB models, is idempotent across importer runs and does not create world spawns.
+- Qualification covers ST/3T, native target selectors, one-cast lifetime, actual RPPM producers and talent removal. More-than-eight-target reduction is outside this parity fixture's scope.
+
+### Affliction native Malefic Grasp extra ticks
+
+- Every landed native1261153 tick copies each ticking owned Agony, UA, Corruption or Wither base tick into its native child1261166/1261176/1261158/1279686 at the native channel effect1 fraction. Agony/UA retain actual stacks; Wither counters do not scale its copy. Children retain independent native direct modifiers and critical rolls, not the parent's resolved damage (SimC76f8118 `sc_warlock_actions.cpp136–158/2210–2214`).
+- The pinned `bugs=1` Agony child compensation is1.95, as in `sc_warlock_actions.cpp2036–2044`; it is not a replacement coefficient. Its landed impact advances the owned Agony counter without funding shards (`2052–2060`). Foreign DoTs cannot produce children.
+
+### Affliction native Cascading Calamity
+
+- A successful overlapping native1259790 application earns selected1261124's native1261125 buff. The first owned UA on a recipient does not earn it. Observe the actual stored aura through the shared application stage, including refreshes, without replacing native aura callbacks (`sc_warlock_actions.cpp1547–1550`).
+- Final-stack Fatal Echoes also earns the buff when the previous UA has ended (`1604–1606`); overlapping echoes use their normal application callback once. Native buff values and duration remain authoritative.
+
+### Affliction native Fatal Echoes
+
+- Actual native1259790 asynchronous application expirations roll selected1260229's native chance through one per-caster PRD stream. Each expired stack rolls once, including the final stack; a successful proc queues a free, fully effective native1259790 reapplication after final-aura cleanup (SimC76f8118 `sc_warlock_actions.cpp1587–1606/5757–5780`, `sc_warlock_init.cpp1248–1253`).
+- The echo retains actual target identity, cannot consume Shard Instability, and earns selected native1261125 Cascading Calamity even when no previous UA remains. Native spell coefficients, stack deadlines and costs for ordinary casts are unchanged.
+
+### Affliction native Nightfall
+
+- Landed owned Corruption146739 or Wither445474 ticks with selected108558 advance an independent uniform-initial/rollover threshold stream. Pinned base0.130 is normalized by active owned dots, native Creeping Death and selected Sataiel's Volition. This does not modify Wither stacks or damage.
+- Native264571 supplies stack cap, lifetime and cast-time modifiers. An admitted instant Shadow Bolt consumes one use; actual Drain Soul and Malefic Grasp executions consume one use. The additive foreground hook preserves native Shadow Bolt shard funding.

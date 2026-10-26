@@ -54,7 +54,7 @@ const BUFFS: &[(&str, u32)] = &[
     ("power_infusion", 10060),
     ("bloodlust", 2825),
     ("mind_devourer", 373204),
-    ("entropic_rift", 450193),
+    ("entropic_rift", 459314),
     ("crushing_void", 1279437),
     ("resonant_energy_damage", 453850),
     ("twist_of_fate", 390978),

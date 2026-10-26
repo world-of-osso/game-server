@@ -9,7 +9,6 @@ use crate::spell_info::{SpellInfo, SpellStore};
 
 pub(super) const SUNFIRE: u32 = 93402;
 pub(super) const TEMPLARS_VERDICT: u32 = 85256;
-pub(super) const ICE_LANCE: u32 = 30455;
 pub(super) const STARFIRE: u32 = 194153;
 pub(super) const KEG_SMASH: u32 = 121253;
 pub(super) const BUTCHERY: u32 = 212436;
@@ -19,7 +18,6 @@ pub(super) const STARFALL: u32 = 191034;
 const SUNFIRE_DAMAGE: u32 = 164815;
 const IMPROVED_SUNFIRE: u32 = 231050;
 const VERDICT_DAMAGE: u32 = 224266;
-const ICE_LANCE_DAMAGE: u32 = 228598;
 const WILDFIRE_BOMB: u32 = 259495;
 const FRENZY_STRIKES: u32 = 294029;
 const AETHERIAL_KINDLING: u32 = 327541;
@@ -87,11 +85,6 @@ pub(super) fn sunfire(world: &mut World, caster: Entity, target: Entity, depth: 
 ///85256 names224266s1, not that child's unknown Dummy markers.
 pub(super) fn verdict(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     launch_selected_child(world, caster, target, VERDICT_DAMAGE, &[0], depth);
-}
-
-///30455 names228598s1. Freezing/shatter remains a separate contract.
-pub(super) fn ice_lance(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    spell_cast::cast_triggered(world, caster, ICE_LANCE_DAMAGE, Some(target), depth + 1);
 }
 
 /// Keep native units, destinations and non-damage effects. Per-target multipliers

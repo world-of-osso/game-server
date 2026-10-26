@@ -1,13 +1,116 @@
+## 2026-10-26 — Independent Destruction Echo
+
+[Echo](systems/spell-casting.md#destruction-echo--2026-10-26) producer/payload native REDs become two GREEN cases in309398a397. Its value assertion used raw per-rank4, but selected rank2 and pinned reference both require8%. Corrected only the expectation; native values, coefficients and allocations unchanged. Selected-rank gate/landing pending; above8-target reduction unqualified.
+## 2026-10-26 — Tempest-owned Enhancement buffs
+
+[Tempest buffs](systems/auras.md#tempest-owned-enhancement-buffs--2026-10-26) replace263's every-spell Storm Swell grant and supply Arc's native-use/ICD-gated delayed chain from the final actual recipient. Native11ab1f1e5e→finald939eadb13 passes all30 native cases and3 decks, including final-recipient Arc after0.4s and the independently isolated Magic/Melee controls. Landed26ee488ac36ddc7b55d88f110035a1d0d60e318f. Integrated ST158810.65/3T335321.69 (82.246%/83.778%) remain below parity; no isolated-uplift claim.262 and native values remain unchanged.
+## 2026-10-26 — Native Seed explosion lifecycle
+
+[Seed of Corruption](systems/warlock-periodic-counters.md#seed-of-corruption-lifecycle) has genuine paid-cast threshold and expiry REDf932eaa2c1: both native boundaries occur, neither emits27285. Downstream aura-budget, original periodic tick and queued explosion dispatch preserve native damage, background Wither ownership and independently owned UA lifecycle. Probeffe97fd353 passes threshold/expiry, literal265 and UA controls; original refresh timer and no-Sow recipient count remain RED. Added parent-approved declarative phase preservation and own no-Sow recipient filter; Fire Ignite/UA gates and remeasurement remain pending.267 lifecycle/funding/Wither11controls pass; seed-applied UA belongs to16783, not this leaf. Follow-upb1856e294b reproduces actual paid-recast smart-primary failure; an owned plan now records and exposes its primary through a read-only sibling helper, with native GREEN pending and no UA caller. Core2c35357a07 then passes3/4Seed cases; the original-deadline failure exposes unreachable dummy/trigger-only `AuraScript::on_periodic`. The owned landed-damage callback now observes Seed's actual zero-damage periodic event before its amount guard; phase policy stays unchanged.
+## 2026-10-26 — Arcane charge cost and cast time
+
+[Arcane charge folds](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers) retain native aura timing/cost modifiers and remove the duplicate batch16 consumers. Native RED8fee037a92 proves real ordinary Mana admission and cast-bar failures; sparse dummy16 controls now supply the same authored effects without changing assertions. Landing proof covers the real cast bar and existing Arcane/dummy16 controls; the tight Mana admission test is retained unchanged on a separate follow-up branch for source-backed rounding/order investigation. GREEN and paired measurement remain train-gated.
+## 2026-10-26 — Explicit non-demon guardian SP
+
+[Guardian spell power](systems/spell-casting.md#explicit-non-demon-guardian-spell-power--2026-10-26) now reads explicit SP policies without changing native identity, demon scaling or owner RAP. Native Yogg RED8bf69a675f reaches an owned type15 Thing but no positive Spike; actual Spike, guardian units and native BM/265/267 cases now pass; landing remains pending.
+## 2026-10-26 — Haunting Shadows impact extensions
+
+[Haunting Shadows](systems/spell-casting.md#haunting-shadows-impact-extensions--2026-10-26) uses the existing owned-duration operation for native apparition payload impacts. Actual-hit RED901d805102 proves the missing1000ms; native GREEN and landing remain pending.
+## 2026-10-26 — Devastation Dragonrage windows
+
+[Native earned windows](systems/auras.md#devastation-dragonrage-earned-windows--2026-10-26) now grow Fury on native periodic ticks, freeze earned stacks during finite grace, and spend one Unbound use after each actual cast. Native selected/absent and1T/3T behavior tests pass. The pinned replacement-add3T oracle also has no Dragonrage casts; shared add facts require no change. Numerical parity remains open.
+
+## 2026-10-26 — Merged Mage feedback grants
+
+[Feedback grants](systems/spell-casting.md#merged-feedback-grants-are-not-casts--2026-10-26) distinguish native aura application from a full triggered spell. Paired native ST trace2ef3293ef0 reproduces the cast-supply loss; RED579171b891 identifies an unrelated+78haste from the old queued grant. The generic queue now applies native auras directly; three-Mage GREEN/measurements remain pending.
+## 2026-10-26 — Elemental Weapons dynamic amount
+
+[Elemental Weapons](systems/auras.md#elemental-weapons-dynamic-amount--2026-10-26) derives native408390 amounts from selected384355 and real imbued hands. Matching-input Bolt RED4db1ecbdad→GREEN5002a0bca2 gives31098/32653/34208 for0/1/2 hands;28 native cases and3 decks pass. Landed5a8c96626dc9a77bda80d51ca3fefc4627f80969. Integrated ST158135.70/3T328919.95 (81.896%/82.178%) remain below parity; no isolated uplift claim. Native masks, coefficients and proc chances are unchanged.
+## 2026-10-26 — Native Ignite spread
+
+[Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now copies the owned pre-hit bank through native admission, with native cap/threshold, stable bank ordering and separate new/existing target clocks. Actual Fire Blast RED0-of-1 recipients passes with Ignition and Controlled Destruction (3GREEN22.02s), landedb01577f7d via train792052d168. ST184739.98 is93.6857%;3T331209.35 is89.2607%, still2743.33 below the strict90% boundary. The invalid existing-target fixture is removed, not weakened; any later real-clock qualification remains separate. No direct-damage or stat scalar changed.
+
+## 2026-10-26 — Fire Ignition contribution
+
+[Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now applies selected native Ignition's percentage only to each new Flamestrike contribution. Actual noncritical Flamestrike's unchanged tick/damage ratio passed RED→GREEN atfdef43f47 (train47ab06258e). ST178387.61 is unchanged;3T308050.16 remains below band. Direct damage and existing unpaid bank are unchanged.
+
+## 2026-10-26 — Fire Molten Fury execute
+
+[Fire target-versus policy](systems/simc-apl.md#fire-fixture-adapter) now reads selected native Molten Fury's health threshold and damage percentage. Actual Fire Blast RED2689→2689 instead of3092.35 now passes; landeda0c868a8b via traina3b134bbe8. ST178387.61 is90.46% of reference;3T300096.76 is80.88%, so AoE parity remains open. No coefficient changes or generic aura303 rewrite.
+
+## 2026-10-26 — Mage Inspired Intellect source
+
+[Mage intellect](systems/character-stats.md#mage-inspired-intellect--2026-10-26) identifies the missing native2-point enhancement to Arcane Intellect, not a universal stat deficit. Base/gear/enchant/gem/food/rune totals reconcile; duplicate weapon Intellect rows explain the reference JSON gear-map undercount. Fire native RED is observed; Frost64/Affliction265 real-player gates remain pending.
+## 2026-10-26 — Aurora integrated; Hammer Sunrise qualification
+
+[Ret Purpose supply](systems/ret-divine-purpose.md#qualification) records landed 116-case integration and the final numerical boundary. [HoW Second Sunrise](systems/spell-casting.md#how-primary-impact-extension--2026-10-26) has corrected native RED evidence and a successful-primary producer using shared native values/ICD. Critical echo payloads retain native Sun Sear. GREEN integration and numerical qualification remain pending.
+
+## 2026-10-26 — Native Loa and Rite stat callbacks
+
+[Native stat callbacks](systems/character-stats.md#native-loa-and-rite-stat-callbacks--2026-10-26) use equipped gem metadata, linked rank amounts and combat admission. Native RED `f282665373` → GREEN `412af0a123`; the five-profile gate passed again before landing `44c2b6c5d`. Other-spec numerical remeasurement remains separate.
+[Mage intellect](systems/character-stats.md#mage-inspired-intellect--2026-10-26) identifies the missing native2-point enhancement to Arcane Intellect, not a universal stat deficit. Base/gear/enchant/gem/food/rune totals reconcile; duplicate weapon Intellect rows explain the reference JSON gear-map undercount. Fire/Frost REDs and the Affliction control pass all3 real-player gates; landed44a57ef9a via trainf75e88a9fa. Numerical DPS parity remains separate.
+
+## 2026-10-25 — Equipment procs before combat
+
+[Equipment proc eligibility](systems/character-stats.md#equipment-proc-eligibility--2026-10-25) records the native idle Venomcursed RED, exact permanent Survival crit606 reconciliation and shared CombatRefs gate. Workspace check and native idle606, Survival6/Venomcursed1/MM19/Assassination22 pass. Train283a28a30a did not land because Ret/WW inherited its255/player fixture. Corrected per-spec probes pass Ret107/108 and WW52/57. Plain-master controls reproduce four WW baseline failures. Minimal test-only readiness/equipment isolation fixesd8c535677 pass the two remaining exact controls ina6c3a5d1b9/e2dabf1ecb after native RED63296cfcd5/97447efaec. The unchanged proc gate landed7d8224fb5 via518f5dcf4e with all50 final native cases passing after the Focus owner's test-only timing fix. Numerical255 parity and the combined all-spec remeasurement remain open.
+## 2026-10-26 — Native Vanish lifecycle
+
+[Vanish removal ordering](systems/auras.md#vanish-removal-ordering--2026-10-26) records the observed1856 self-consumption cause, native source-attribute admission and expiry-before-last-stealth seam. Two lifecycle cases and same-code Rogue/attack controls pass;259 DPS remains below the target band. Outlaw measurement does not exercise Vanish.
+
+## 2026-10-26 — Native shared pet prerequisites
+
+[Runtime pet storage, value missiles and destination85](systems/spell-casting.md#shared-pet-prerequisites--2026-10-26) address the native failures before Destruction attack rows. The Player remains native, resource readiness is unchanged, and no authenticated identity/catalog values are fabricated. Native/protected probes remain pending.
+## 2026-10-26 — Destruction crit-chance damage
+
+[Selected Conflagrate/Shadowburn scaling](systems/spell-casting.md#destruction-guaranteed-crit-damage--2026-10-26) now uses the shared actual/predicted amount boundary and live caster spell crit. Native Conflagrate42039→42039 is genuine RED; existing CB control passes. No coefficient/reference tuning. GREEN remains pending.
+
+## 2026-10-26 — Hellcaller counter lifecycle
+
+[Shared counters](systems/warlock-periodic-counters.md#counter-lifecycle) landed in `b6937d3bf310` with six native lifecycle cases GREEN and additive actual-UA application binding. The265-led probe also passes all six; independently owned Calamity/Wrath failures remain separate. Three-seed267ST94930.81/3T123087.79 are48.65%/47.94% of reference, not numerical parity. UA expiry callbacks remain independently owned.
+
+## 2026-10-25 — Arcane literal player fixture
+
+[Arcane62](systems/simc-apl.md#arcane-fixture-62) executes supplied profile rows through shared literal control with native class admission and no concurrent AssistedCombat. The300s ST controller regression passes; numerical parity remains open.
+## 2026-10-26 — Fire native Arcane Phoenix
+
+[Fire Phoenix](systems/simc-apl.md#fire-fixture-adapter) uses authentic summon reachability, native action values, Codex ordering and Ashes stack production. Summon/action and recharge tests passed3RED→3GREEN atf73f366ad; numerical parity remains open.
+
+## 2026-10-25 — Shared Hellcaller Wither counters
+
+[Wither counters](systems/warlock-periodic-counters.md) retain actual native stacks without multiplying periodic damage or adding a stack on ordinary refresh. Native real-cast/tick2RED→2GREEN covers both265 and267, with Affliction and Destruction controls. Collapse producers and numerical parity remain separate.
+## 2026-10-25 — Multi-seed native measurement
+
+[Native multi-seed reports](systems/dungeon-simulator.md#multi-seed-native-dps-reports) replace the single-seed headline with default70448/1/2 means, including action damage and counts. Full per-seed reports retain native observations; first-seed buff/entity details are labelled. Native report-shape RED is observed; the changed baseline requires fresh multi-seed acceptance.
+
 ## 2026-10-25 — Warlock periodic funding and target DoT facts
 
 [Warlock funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) uses the downstream critical-aware periodic callback and existing native power pipeline, qualified only on Destruction. [Target DoT duration](systems/simc-apl.md#native-target-dot-duration) reads active owned native state without pandemic carry; both have native GREEN and cross-spec controls. Numerical267 acceptance remains separate.
+## 2026-10-26 — Channel duration modifier separation
 
+[Channel snapshots](systems/spell-casting.md#channel-duration-and-charged-modifier-snapshots) separate execute-time modifiers from duration and retain the pre-consumption charged-modifier snapshot for span/period consistency. Native Grasp RED417d517a80 loses its channel state; trace4145dd6cd2 additionally proves charged Period loss on rebase. Generic fixes pass72native cases, including12ticks across three casts, per-cast native haste snapshots, instant Bolt, seven channel families and the existing fractional-deadline control. SimC is authoritative; cached TC explicitly differs. Landing/measurement remain separate.
+
+## 2026-10-26 — Shared hasted channel rounding
+
+[Channel clocks](systems/spell-casting.md#rounded-hasted-channel-clocks--2026-10-26) share a rounded native aura/cast period and rebuild hasted duration from the original tick count. Ray's false expiry and FoF's auxiliary-control deadline have genuine REDs. Codefad33456f passes67native cases across all seven requested families, including FoF's final damage tick and Convoke's4s lifetime. No spell-ID branch or non-channel period change is added. Plain landinged45d940de passes34cases and lands4c9083c0c; [Frost](investigations/frost-mage-dps-parity.md) records the first64 measurement, still below90%. All-spec acceptance remains separate.
+
+## 2026-10-26 — Frost Mage native proc qualification
+
+[Frost Mage parity](investigations/frost-mage-dps-parity.md) records landed Deep Shatter, Brain Freeze, paid-Lance, Orb Fingers and Rapid Refreezing proofs. Ray's execution-time Splinterstorm window and Frost Overflowing Energy landed viac48fe12e/train208adb8ca9 with27Frost/2CI/15costed controls GREEN; current measurements and shared-gate dependencies are recorded there. [Per-hit captures](investigations/frost-mage-dps-parity.md#per-hit-factor-investigation--2026-10-26) qualify the consumption paths and enumerate actual modifier products; a separate source-qualified Ray rounding RED2d0ea30702 observes nine positive ticks instead of eight at constant haste, with a0.012690355 expiry fraction. [Shared clock correction](systems/spell-casting.md#rounded-hasted-channel-clocks--2026-10-26) now has seven-family GREEN qualification; DPS acceptance remains separate. Periodic-rule probe5ecd5357cb failed the then-unimplemented feedback controls and produced no measurement.
+
+## 2026-10-25 — Frost Mage native hit relationships
+
+[Frost Mage parity](investigations/frost-mage-dps-parity.md): owned Freezing and native Shatter, primary/secondary exclusion, Controlled Instincts copied damage, Infused Splinters and root/payload report-ID traps. Native proofs and pending proc/flight boundaries are recorded separately.
+[Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25): native Lunar/Growth, literal setup, periodic facts, reaction acquisition, independent Vines lifetimes and Bite/expiry Bursting Growth are RED→GREEN and landed. Corrected latestST147148.95=76.77%,3T184652.97=74.53%; early97.76% ST included inflated Vines. Unseen/context and Rogue spender controls await trainf087d8b30c; Rampancy/Twin Sprouts/Convoke remain open. Shared consumables stay separate.
+
+## 2026-10-25 — Secondary residual sources
+
+[Secondary copies](systems/spell-casting.md#secondary-residual-source-snapshots--2026-10-25) retain pre-target critical source damage and resolve native Blade Flurry against capped secondary enemies. The transfer boundary passed native RED→GREEN; initial strike and other producers remain separate.
 ## 2026-10-25 — Subtlety Lingering Shadow
 
 [Lingering Shadow](systems/spell-casting.md#subtlety-lingering-shadow--2026-10-25): pinned expiry/decay and native mitigated residual, downstream hooks, native RED957d26c2d3→GREEN561fb56b0d; numerical parity remains open.
 ## 2026-10-25 — Reentrant native factor capture
 
-[Native observations](systems/server-crates.md#reentrant-native-factor-observations): recipient component inserts can flush a queued same-ID Sunrise Tempest while its parent damage is still committing. Capture detaches each calculated hit before those mutations; root/echo/secondary effectiveness remains native. Strict native RED reproduced; GREEN gate pending.
+[Native observations](systems/server-crates.md#reentrant-native-factor-observations): recipient component inserts can flush a queued same-ID Sunrise Tempest while its parent damage is still committing. Capture detaches each calculated hit before those mutations; root/echo/secondary effectiveness remains native. Strict native RED reproduced, then the complete109-case Ret scope passed; capture retained64root,13Sunrise and13same-ID Tempest hits. Numerical parity remains a separate multi-seed gate.
 ## 2026-10-25 — Feral native literal takeover
 
 [Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25): source-order/player-precombat controls, native Lunar override lifecycle and selected Rip/Rake Growth are qualified. Full300s runs still refuse missing bare periodic facts; native snapshot/CP REDs are retained, with GREEN and numerical parity pending. Shared consumable work remains separate.
@@ -36,7 +139,7 @@
 [Warrior execution](systems/spell-casting.md#native-warrior-execution-relationships--2026-10-25): native timer ownership, actor-wide PRD, execution-count/valued rewards, captured periodic ordinals and paid-resource cooldown reductions. The Deep Wounds reapplication policy is explicit; other native per-tick contracts remain unchanged. Source qualification is distinct from runtime acceptance. Fury's source-only50622 slot now owns its native off-hand area once per landed main-hand tick, rather than losing it in the per-unit effect64 launcher.
 ## 2026-10-25 — Fire native binding and proc relationships
 
-[Fire63](systems/simc-apl.md#fire-fixture-adapter): selected Flamestrike, Meteor travel and Pyroclasm, native hero/Fired Up producers and capped opening spheres. MID2's label modifies the Pyroclasm payload, not its chance. Native data still supplies payloads; numerical acceptance remains separate.
+[Fire63](systems/simc-apl.md#fire-fixture-adapter): selected Flamestrike, Meteor travel and Pyroclasm, native hero/Fired Up producers and capped opening spheres. MID2's label modifies the Pyroclasm payload, not its chance. Follow-up relationships cover critical feedback, owned target stacks, Inflame, Pyrocosm and single-area Meteor/Deep Impact. The fixture installs production area-field data for Burn. Native data still supplies payloads; numerical acceptance remains separate.
 
 ## 2026-10-25 — Havoc literal fixture and Demonic
 
@@ -3117,6 +3220,8 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 
 # Wiki Log
 
+- 2026-10-26: Fire Brainstorm producer identified from native conversion RED (train1134b9ccfd); registered selected Hot Streak application→461531 with native amounts. See [Fire fixture](systems/simc-apl.md#fire-fixture-adapter); GREEN/measurement pending.
+
 -2026-10-19: Impending Victory202168→202166 then own32216 removal: five native qualifications4+1 first, pushed ignored69af7bb76→fiveRED/one control14.11s; minimal existing AfterCast/FULL-trigger/remove consumerf041d6b70→fresh ignored sixGREEN13.06s/0warnings before enabling; initial eleven-case composite then masterdfdd71578 merged d1af4b8a7→fresh targeted elevenGREEN14.64s/0warnings; lead gate pending. VICTORIOUS_KILL_PRODUCER_UNIMPLEMENTED/direct-native32216 removal-only boundary preserved. See [spell casting](systems/spell-casting.md#impending-victory-consequence--2026-10-19).
 -2026-10-19: Invigorating Fury184364+383468→385174 qualified native payload/8vs11s/defense/recovery/actual Warrior cast preservation3PASS; pushed ignored788ff0e68→3RED/3controls; existing AfterCast/limited helper consumer4a5aaa555→fresh ignored6GREEN25.43s/0warnings; enabled after GREEN, retained3qualification forms nine-case composite; lead integration pending. See [spell casting](systems/spell-casting.md#invigorating-fury-consequence--2026-10-19).
 
@@ -4633,3 +4738,20 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 Documented the first compile-boundary slice in [spell-script-crate](systems/spell-script-crate.md): all relationship-policy rows and five complete hook modules move downstream; the remaining implementations stay in combat. Dispatch order has one code-level contract.
 
 - 2026-10-25: Documented Affliction265 literal fixture and native Agony shard funding; controller RED9774→GREENfa58; funding RED4b2dc (15landed ticks,0raw shards), GREEN/measure pending.
+
+- 2026-10-25: Added Affliction native Nightfall tick threshold/consumer documentation; REDa00f81dc4b proved actual Wither ticks never earned the selected buff; GREEN/measurement pending.
+
+- 2026-10-26: [Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25) records landed Rampancy/Unseen, the duplicate-periodic correction and native Convoke16-child/free-Energy/Cat controls. Neutral31146 requires Enemy admission, not hostile reaction. Convoke landed7befa09dd. TF/Stalking producer and real-Shred consumer REDs→six native GREEN6c3a3a964f, landed59b6754f9: three-seed300s Player ST96.45%/3T93.21%. Feral pauses with remaining mechanical gaps separate from numerical acceptance.
+- 2026-10-26: Documented [Garrote stored literal multiplier](systems/auras.md#garrote-stored-literal-multiplier--2026-10-26). Native RED529a58341f reports1.0 instead of frozen1.5;99f7567ec qualifies actual cast-factor metadata and target-aware reads without damage changes. GREEN9e43191111 passes25Assassination+2Vanish;2fa55f7807 passes both existing Feral snapshot controls.
+
+- 2026-10-26: Added [Zatha'tek weapon proc](systems/zathatek-weapon.md). Actual259/261swings reproduce missing delivery; the next native damage-ratio gate distinguishes driver1298023effect1's percentage from1305391effect0's item-scaled value. Corrected4c388d2d6 passes both equipped profiles and260unequipped control in6947cb2902/3338495bc6/60d629afcd.259probe output is94.922%ST/90.963%three-target; integrated landing and all-equipper remeasurement remain pending.
+- 2026-10-26: Documented [Ret Judgment target uses](systems/ret-judgment.md): ordinary native Judgment RED6a9c30b6f8 produced no197277; downstream producer/consumer and flat incoming magnitude implemented. Probee4384f8211 reached the first successful consumption; an extra timer-cancellation assertion contradicted pinned buff.cpp2246–2289 and was removed without changing generic timers. Corrected GREEN and numerical acceptance pending.
+- 2026-10-26: Documented ordinary native spell GCD haste ordering, native eligibility/bounds and40-spec clock test scope; full-profile DPS qualification remains separate.
+- 2026-10-26: [Native spell armor](systems/combat.md#native-spell-armor--2026-10-26) records pure Physical admission and explicit Windstrike bypass. Real target-armor controls require post-scaling aura40935; live gear procs require same-hit input/output comparisons. Ret's accepted-cast HP observation preserves real3HP payment across GCD waits. Enhancement3, Chaos/Physical1 and Ret Storm-gap5 controls pass; cross-spec/all-spec numerical acceptance remains separate.
+- 2026-10-26: Documented [Ret Judgment target uses](systems/ret-judgment.md): ordinary native Judgment RED6a9c30b6f8 produced no197277; downstream producer/consumer and flat incoming magnitude implemented. Probee4384f8211 reached the first successful consumption; an extra timer-cancellation assertion contradicted pinned buff.cpp2246–2289 and was removed without changing generic timers. Corrected GREENbb564822f6 and113 native cases passed; landed261f87e51. Full-fight target amplification is observed; actor-only uptime excludes the target debuff.
+
+- 2026-10-26: Documented [Ret Purpose and tier supply](systems/ret-divine-purpose.md): selected Aurora's guaranteed Wake grant was missing; native REDb584a946f8→GREENc768cfaee3 restores real free-spender/Arbiter delivery with native ICD ownership. Full integrationd841480cd6 pending.
+- 2026-10-26: Documented [Survival native producers](systems/spell-casting.md#survival-native-producers--2026-10-26): Tip/Swipe/Wildfire landed455a8ad19 with35 real controls and partitioned hero inputs; obsolete primary-only bridge documentation now links to the native pack path. Sentinel0ac1974a11 has3 genuine owned-mark REDs; queued Tip producer/shared mark/Storm/recharge gatebdb0b13806 remains pending. Numerical parity and owned-pet Strike as One remain open.
+- 2026-10-26: [Shared Survival Sentinel](systems/spell-casting.md#survival-native-producers--2026-10-26) landed4c9083c0c0 throughbdb0b13806,3 genuine mark REDs→GREEN and all38 controls PASS. Canonical three-seed means78418.654ST/140699.957three-target are39.50%/44.16% of reference, not parity. Next native strike producer reuses the living owned pet,1251717 ICD and1251779 payload; GREEN and specific real-crit Sic 'Em RED are pending.
+- 2026-10-26: [Owned Survival strikes](systems/spell-casting.md#survival-native-producers--2026-10-26) landed5a8c96626d via b0f0f0b804: all41 native controls pass, including actual main-pet crit→Sic-Em. Source1251717 uses actual aura.instance_id and700ms policy ownership. Canonical means88726.483ST/145807.187three-target are44.70%/45.76% reference. Parent orders Mongoose259388/Stargazer1253750 next; real-cast RED12233749ba pending, no stat changes.
+- 2026-10-26: [Earned Mongoose/Stargazer](systems/spell-casting.md#survival-native-producers--2026-10-26) has2 genuine native REDs in12233749ba: actual Raptor and actual Tip consumption produce0 stacks. New full-effect applications preserve native caps/selected labels and asynchronous Stargazer lifetime; damage factors/stats remain native. GREEN and canonical remeasurement remain pending.

@@ -74,7 +74,11 @@ impl Channel {
         Ok(true)
     }
 
-    fn requests_interruption(&self, facts: &dyn ActionFacts) -> Result<bool, String> {
+    fn requests_interruption(
+        &self,
+        facts: &dyn ActionFacts,
+        variables: &Variables,
+    ) -> Result<bool, String> {
         if self.interrupt {
             return Ok(true);
         }
@@ -85,6 +89,7 @@ impl Channel {
                 expression.evaluate(&BoundAction {
                     facts,
                     action: &self.action,
+                    variables,
                 })
             })
             .transpose()?
@@ -97,7 +102,12 @@ impl Channel {
         Ok(gcd_ready || self.immediate)
     }
 
-    fn requests_chain(&self, cast: &CastState, facts: &dyn ActionFacts) -> Result<bool, String> {
+    fn requests_chain(
+        &self,
+        cast: &CastState,
+        facts: &dyn ActionFacts,
+        variables: &Variables,
+    ) -> Result<bool, String> {
         // Native cast timers are rounded to milliseconds, like SimC timespan.
         let remaining_ms = ((cast.duration - cast.elapsed) * 1000.0).round() as i64;
         let interval_ms = (cast.channel_tick_interval * 1000.0).round() as i64;
@@ -112,6 +122,7 @@ impl Channel {
         let early = expression.evaluate(&BoundAction {
             facts,
             action: &self.action,
+            variables,
         })? != 0.0;
         Ok(early && facts.value_for(&self.action, "gcd.remains")? <= 0.0)
     }
@@ -168,13 +179,13 @@ impl Driver {
         }
         // dot.cpp729–734: first evaluate the interrupt request and GCD guard;
         // neither grants permission without a genuinely ready higher action.
-        if channel.requests_interruption(facts)? {
+        if channel.requests_interruption(facts, &self.variables)? {
             let ready = channel.interrupt_ready(facts)?;
             if self.has_higher_priority(channel, facts, prepared, equipment)? && ready {
                 return Ok(Some(Decision::Cancel));
             }
         }
-        if !channel.requests_chain(cast, facts)? {
+        if !channel.requests_chain(cast, facts, &self.variables)? {
             return Ok(None);
         }
         let decision = self.prepare_chain(channel, facts, prepared, equipment)?;
@@ -260,7 +271,7 @@ impl Driver {
         let execution = prepared
             .execution_in(&action, equipment, &self.program)?
             .ok_or("ready chained action lost native execution")?;
-        self.pending_line = line_deadline(&action, facts)?;
+        self.pending_line = line_deadline(&action, facts, &self.variables)?;
         self.selected_list = channel.root.clone();
         Ok(Some(Decision::Chain(action, execution)))
     }

@@ -8,6 +8,14 @@
 
 Ordinary NPCs without `CharacterStats` still have no class-derived spell power, attack power or crit. Approved followers carry `CharacterStats` and the stat fields required by this same production query, while remaining NPCs rather than persisted players. Their absent `SheetOwner` keeps owner-only sheet fields hidden; health/mana replication remains ordinary.
 
+## Mage Inspired Intellect — 2026-10-26
+
+The local aura-stat fold replaces an earned Arcane Intellect factor with its native amount plus the selected native Inspired Intellect458437 effect1. Pinned `sc_mage.cpp6832–6841` applies this only to the Mage who owns the talent, not the raid aura's payload. Wizardry and other factors retain their existing composition. Removing either aura removes this enhancement; other intellect classes are unchanged. See the [shared profile contract](../../specs/dps-parity.md).
+
+Fire's frozen baseline is619 base +2458 base gear +91 permanent enchants +23 primary gem +50 food +25 augment rune, with no primary flask amount:3266 before percentages. Native used Wizardry1.05×Arcane Intellect1.03=3532.179; selected Inspired Intellect adds native2 percentage points to Arcane Intellect, giving1.05×1.05=3600.765. The pinned report floors this to3600. No base stat, item amount or global rounding was changed. Fire and Frost complete-profile REDs and the Affliction control now pass all3 native gates (trainf75e88a9fa, landed44a57ef9a). All use genuine actor identity; numerical DPS parity remains separate.
+
+The reference JSON gear map is not additive when an item has duplicate stat types: `report_json.cpp397–405` assigns each value to the same key. Weapon271092 has native Intellect allocations5259 and25370, yielding103+499 at ilvl344; the JSON only retains499. Summing those JSON fields alone undercounts actual gear by103. The native source diagnostic reads actual derived stats and distinguishes player identity from the approved follower's declared reference race; it does not add a Follower to players.
+
 ## Native weapon attack power — 2026-10-23
 
 `CharacterStats.weapon_attack_power` retains raw integer main/off/ranged weapon AP from unrounded item-table DPS×6, including effective instance level/quality (TC a352b1fa Player.cpp8180–8191). Sheet melee/RAP fields remain unchanged. Native coefficient selection adds max(main,ranged) weapon AP for main/ranged attacks, or adds offhand AP and halves the full offhand sum, before the appropriate AP percentage (Unit.cpp9973–10000). Damage/heal/absorb coefficients share the ranged/exclusive-offhand/main selection; equipped player and approved follower stats do not replace guardian inheritance. Aura366 derived SP/healing power now reads total main-hand AP; weapon/white-hit inputs retain bare AP to avoid double-counting.
@@ -85,6 +93,26 @@ DR is curve 21024 from SimC `item_scaling.inc` (12.0.1.66709), applied as in `pl
 Rating units follow SimC `rating_t::init`: the game-table value is the rating needed for 1%, or for 1 mastery point.
 
 ## Gear
+
+### Equipment proc eligibility — 2026-10-25
+
+Native equipment aura initialization could earn Venomcursed before combat. Survival255's permanent crit is correct:525 gear +42 from six gems +16 active main-hand oil =583; Serrated Tips4% gives606. Idle Venomcursed adds378 before that modifier, giving999. This is a lifecycle error, not missing or duplicate permanent gear.
+
+The equipment-source candidate gate in `auras/procs.rs` now requires a real, non-suppressed native CombatRef before chance/RPPM/recovery state changes. Ordinary class auras retain their existing eligibility. SimC76f8118 `action/action_callback.cpp79–82` supplies the combat prerequisite. Native idle regression9a4be71e84 is RED→GREEN in283a28a30a: actual idle crit606, with haste966/mastery1817/versatility107. That entry also passes Survival6, real-combat Venomcursed1 (all three buffs), MM19 and Assassination22. It did not land: Ret/WW inherited the wrong first-measure fixture. Corrected private per-spec probes ed70644e31 and0077255d7e pass Ret107/108 and WW52/57. Plain-master controls5d549981e8/a5c5014f91 reproduce four unrelated WW failures (three missing target lifetime/role declarations and the RWK split diagnostic). The other two cases pass after test-only fixesd8c535677: actual WW cooldown/charge waiting and a real unenchanted-weapon-only Ret mastery comparison without dynamic gear. Their isolated RED63296cfcd5/97447efaec→GREENa6c3a5d1b9/e2dabf1ecb preserve actual casts, assertions and actor identities; no production stats or readiness were changed. Fix9f278b6f0/38b277d91 passes workspace all-target check. After the Focus test owner moved its expected Mastery read after real opener setup (1c93c32637/252f16d82), the unchanged gate landed in7d8224fb5 via518f5dcf4e: Survival6/Venomcursed1/MM19/Assassination24 pass. Native255 ST55,967.996/3T66,232.737 DPS is28.19%/20.79% of reference, not numerical parity. The parent owns the combined all-spec remeasurement after the shared GCD fix.
+
+Sources: [native proc candidate gate](../../../crates/server-combat/src/auras/procs.rs), [idle native regression](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/survival_stat_tests.rs), [real-combat Venomcursed control](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/venomcursed_tests.rs), [contract](../../specs/dps-parity.md#equipment). See also [[simc-apl]].
+
+### Native Loa and Rite stat callbacks — 2026-10-26
+
+`midnight_stat_items.rs` registers production item callbacks, not parity-only stat overlays. Loa eligibility reads equipped gem descriptions from native ItemSparse.ItemNameDescriptionID. Capybara uses its equipped driver's second effect; Peridot's Akilzon buff retains its own item-scaled effects. Other Loa colors retain their selection weight but remain explicitly unqualified.
+
+Rite discovers its rating children through native DUMMY trigger effects and uses the scaled BP0 already supplied by the linked equipped rank. Both weapon copies share the native Cast-source child. Selection reads current ratings through the existing native rating-mask helper. Stat masks, amounts, duration and refresh remain native; no spell-ID stat-value overrides are used.
+
+The linked Cast-source callback applies the same combat-only admission as equipment callbacks, before chance/recovery changes. The aura-clone application API preserves source item level and native amount snapshots.
+
+Native family REDf282665373→GREEN412af0a123; landed44c2b6c5d viae320506b72 after the five-profile gate passed again. Ret/WW use genuine followers; Arms/Fire/Fury use genuine players. The SQLite gem-metadata test also passes. Other-spec numerical remeasurement is separate.
+
+Sources: [callback module](../../../crates/server-spell-scripts/src/modules/midnight_stat_items.rs), [native probes](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/midnight_stat_items_tests.rs), [contract](../../specs/dps-parity.md#equipment). Pinned `unique_gear_midnight.cpp614–671/995–1122`, `player.hpp827`, `action_callback.cpp79–82`. See also [[ret-divine-purpose]].
 
 ### Shared profile effects — 2026-10-25
 

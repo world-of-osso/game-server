@@ -25,11 +25,6 @@ fn first_finisher_damage(spec: u32, spell: u32, points: f32) -> f64 {
     let mut run = prepare_literal(spec, 1).unwrap();
     engage(&mut run);
     fund_finisher(&mut run, points);
-    run.app
-        .world_mut()
-        .get_mut::<crate::stats::CharacterStats>(run.actor)
-        .unwrap()
-        .crit_pct = 0.0;
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
@@ -50,12 +45,37 @@ fn first_finisher_damage(spec: u32, spell: u32, points: f32) -> f64 {
                 && event.spell_id == Some(spell)
         })
         .unwrap();
-    assert!(
-        !hit.crit,
-        "the point-value control excludes critical amplification"
-    );
     assert!(hit.amount > 0);
-    f64::from(hit.amount + hit.blocked + hit.absorbed + hit.resisted)
+    let amplification = if hit.crit {
+        read_native_weapon_crit_multiplier(&run, spell)
+    } else {
+        1.0
+    };
+    f64::from(hit.amount + hit.blocked + hit.absorbed + hit.resisted) / f64::from(amplification)
+}
+
+fn read_native_weapon_crit_multiplier(run: &Run, spell: u32) -> f32 {
+    let world = run.app.world();
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell)
+        .unwrap();
+    // These native Rogue finishers use weapon crit ordering (Unit.cpp1222–1237):
+    // spell-modified bonus first, then the caster's whole-hit crit modifier.
+    // Unlike writing derived crit_pct once, this remains valid through real
+    // Main Gauche/item procs that refresh the actor's computed stats.
+    let bonus = crate::auras::spell_mods::modify(
+        world,
+        run.actor,
+        spell,
+        crate::auras::SpellModOp::CritDamageAndHealing,
+        1.0,
+    );
+    let whole_hit = world
+        .get::<crate::auras::AuraStatMods>(run.actor)
+        .unwrap()
+        .critical_damage(spell.school_mask());
+    (1.0 + bonus) * whole_hit
 }
 
 #[test]
@@ -81,6 +101,86 @@ fn rogue_envenom_and_dispatch_retain_paid_point_scaling() {
             (4.5..5.5).contains(&ratio),
             "native finisher{spell} must retain five-point scaling: {one}/{five}, ratio={ratio}"
         );
+    }
+}
+
+#[test]
+#[ignore = "requires private native260 player profile and traits"]
+fn outlaw_killing_spree_emits_both_hands_for_effective_point_ticks() {
+    // SimC76f8118 sc_rogue.cpp4749–4838: tick-zero plus one tick per
+    // effective point; each tick independently emits the native MH and OH hits.
+    for (points, adrenaline) in [(1, false), (5, true)] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(260, 1).unwrap();
+        engage(&mut run);
+        if adrenaline {
+            literal_rotation::execution::execute(
+                run.app.world_mut(),
+                run.actor,
+                literal_rotation::execution::Execution::Spell(
+                    13750,
+                    run.actor,
+                    Some(run.targets[0]),
+                ),
+            )
+            .unwrap();
+            preparation::finish_pending_setup(&mut run).unwrap();
+            assert!(crate::auras::has_aura(run.app.world(), run.actor, 13750));
+        }
+        fund_finisher(&mut run, points as f32);
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(51690, run.actor, Some(run.targets[0])),
+        )
+        .unwrap();
+        assert!(
+            run.app
+                .world()
+                .get::<shared::casting::CastState>(run.actor)
+                .is_some_and(|cast| cast.spell_id == 51690
+                    && cast.cast_type == shared::casting::CastType::Channel),
+            "paid native Killing Spree must retain its resource-sized channel state"
+        );
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let returns = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(1235074)
+                    && event.kind == CombatLogKind::Energize
+            })
+            .count();
+        assert_eq!(
+            returns, points,
+            "native Spree returns points only after tick-zero"
+        );
+        for spell in [57841, 57842] {
+            let attempts: Vec<_> = events
+                .iter()
+                .filter(|event| {
+                    event.source == Some(run.actor.to_bits())
+                        && event.spell_id == Some(spell)
+                        && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+                })
+                .collect();
+            assert_eq!(
+                attempts.len(),
+                points + 1,
+                "native Killing Spree{spell} must emit tick-zero and {points} scheduled hand hits"
+            );
+            assert!(
+                attempts
+                    .iter()
+                    .any(|hit| hit.kind == CombatLogKind::Damage && hit.amount > 0),
+                "native Killing Spree{spell} must deal actual hand damage"
+            );
+        }
     }
 }
 

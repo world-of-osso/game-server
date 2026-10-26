@@ -1001,7 +1001,7 @@ pub(super) fn expire_summons(world: &mut World) {
     }
 }
 
-pub(crate) fn despawn_summon(world: &mut World, entity: Entity) {
+pub fn despawn_summon(world: &mut World, entity: Entity) {
     super::scripts::elemental_ancestors::on_despawn(world, entity);
     if let Some(summon) = world.get::<SummonedCreature>(entity) {
         if summon.spell_id == DANCING_RUNE_WEAPON {

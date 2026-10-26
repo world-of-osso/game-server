@@ -77,6 +77,7 @@ pub const EFFECT_PERSISTENT_AREA_AURA: u32 = 27;
 pub const EFFECT_ENERGIZE: u32 = 30;
 pub const EFFECT_WEAPON_PERCENT_DAMAGE: u32 = 31;
 pub const EFFECT_TRIGGER_MISSILE: u32 = 32;
+pub const EFFECT_TRIGGER_MISSILE_WITH_VALUE: u32 = 148;
 pub const EFFECT_DISPEL: u32 = 38;
 pub const EFFECT_WEAPON_DAMAGE: u32 = 58;
 pub const EFFECT_SEND_EVENT: u32 = 61;
@@ -158,6 +159,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         // Spell::EffectTriggerMissileSpell (SpellEffects.cpp:725-778): the
         // missile's spell hits the unit target synchronously.
         EFFECT_TRIGGER_MISSILE => trigger_spell,
+        EFFECT_TRIGGER_MISSILE_WITH_VALUE => super::trigger_missile_value::on_unit,
         EFFECT_SEND_EVENT => send_game_event,
         EFFECT_THREAT => add_fixed_threat,
         EFFECT_INTERRUPT_CAST => interrupt_cast,
@@ -297,6 +299,7 @@ pub fn cast_handler(effect_id: u32) -> Option<CastEffectHandler> {
         crate::hunter_pet::EFFECT_SUMMON_STABLED_PET_AS_GUARDIAN => {
             crate::hunter_pet::effect_summon_stabled_pet
         }
+        crate::hunter_pet::EFFECT_SUMMON_STABLED_PET => crate::hunter_pet::effect_summon_companion,
         crate::hunter_pet::EFFECT_RESURRECT_PET => crate::hunter_pet::effect_revive_pet,
         super::summon::EFFECT_SUMMON => super::summon::summon_creature,
         super::area_trigger::EFFECT_CREATE_AREATRIGGER => super::area_trigger::create_area_trigger,
@@ -354,6 +357,31 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
                 .unwrap_or(DEMON_OWNER_ATTACK_POWER);
             return demon_power_stats(world, summon.owner, spell_share, attack_share);
         }
+        let entry = world
+            .get::<shared::components::Npc>(unit)
+            .map(|npc| npc.template_id);
+        if let Some(share) =
+            entry.and_then(|entry| super::guardian::owner_attack_share(summon.spell_id, entry))
+        {
+            // Non-demon guardian policies inherit actual owner RAP. Demon
+            // policies above retain their separate spell-power-derived AP.
+            let owner = world
+                .get::<CharacterStats>(summon.owner)
+                .expect("owner-scaled guardian requires native CharacterStats");
+            let modifiers = world.get::<crate::stats::StatModifiers>(summon.owner);
+            let attack_power =
+                owner.total_attack_power(crate::stats::WeaponAttackType::Ranged, modifiers);
+            return (0.0, attack_power * share);
+        }
+        if let Some(share) =
+            entry.and_then(|entry| super::guardian::owner_spell_share(summon.spell_id, entry))
+        {
+            // Explicit guardian SP inheritance does not require demon identity.
+            let owner = world
+                .get::<CharacterStats>(summon.owner)
+                .expect("owner-scaled guardian requires native CharacterStats");
+            return (owner.spell_power * share, 0.0);
+        }
     }
     if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(unit) {
         if world
@@ -362,13 +390,13 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
             || crate::hunter_pet::is_summoned_pet_owner(world, pet.owner)
         {
             // TC StatSystem.cpp1358: controlled SUMMON_PET uses the IsPet branch.
+            // Qualified pet rows override the generic shares, not native identity.
             // Water Elemental's separate40% branch is for non-pet guardians, not56.
-            return demon_power_stats(
-                world,
-                pet.owner,
-                DEMON_OWNER_SPELL_POWER,
-                DEMON_OWNER_ATTACK_POWER,
-            );
+            let (spell_share, attack_share) = world
+                .get::<shared::components::Npc>(unit)
+                .and_then(|npc| super::guardian::controlled_pet_power_shares(npc.template_id))
+                .unwrap_or((DEMON_OWNER_SPELL_POWER, DEMON_OWNER_ATTACK_POWER));
+            return demon_power_stats(world, pet.owner, spell_share, attack_share);
         }
         return (0.0, hunter_pet_attack_power(world, pet.owner));
     }
@@ -824,8 +852,8 @@ pub(crate) fn versatility_multiplier(world: &World, caster: Entity) -> f32 {
 
 const MECHANIC_BLEED: u32 = 15;
 
-/// Unit::IsDamageReducedByArmor (Unit.cpp:1680-1687): physical damage of a
-/// spell without a bleed mechanic.
+/// SimC76f8118 action.cpp1686–1690: armor applies only to pure Physical
+/// damage, not hybrid schools. Native bleed and explicit bypass rules remain.
 fn reduced_by_armor(world: &World, spell: &SpellInfo) -> bool {
     let bleed = spell
         .categories
@@ -835,9 +863,7 @@ fn reduced_by_armor(world: &World, spell: &SpellInfo) -> bool {
             .effects
             .iter()
             .any(|effect| effect.mechanic == MECHANIC_BLEED);
-    spell.school_mask() & 1 != 0
-        && !bleed
-        && !super::script_registry::ignores_armor(world, spell.id)
+    spell.school_mask() == 1 && !bleed && !super::script_registry::ignores_armor(world, spell.id)
 }
 
 /// The target's armor against the caster: a creature's own armor at the
@@ -1212,6 +1238,7 @@ fn roll_periodic_heal_crit(
 /// SimC76f8118 action.cpp3214-3260: one-target direct snapshot, average crit,
 /// mitigation, and no cast, proc, resource spend or random sample.
 /// The native pipeline supplies every coefficient and source/target multiplier.
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn expected_direct_damage(
     world: &World,
     caster: Entity,
@@ -1245,6 +1272,7 @@ pub(crate) fn expected_direct_damage(
         .sum())
 }
 
+#[cfg(any(test, feature = "test-support"))]
 fn expected_school_damage(
     world: &World,
     ctx: &EffectCtx,
@@ -1254,6 +1282,8 @@ fn expected_school_damage(
 ) -> f32 {
     let amount = scaled_amount(world, ctx.caster, ctx.spell, effect)
         + super::scripts::empower_damage_bonus(world, ctx.caster, ctx.spell);
+    let amount = amount
+        * super::script_registry::expected_damage_multiplier(world, ctx.caster, target, ctx.spell);
     let critical = critical_damage_amount(
         world,
         ctx.caster,
@@ -1274,6 +1304,7 @@ fn expected_school_damage(
     expected_damage_after_mitigation(world, ctx, effect, target, amount)
 }
 
+#[cfg(any(test, feature = "test-support"))]
 fn expected_damage_after_mitigation(
     world: &World,
     ctx: &EffectCtx,
@@ -1823,8 +1854,11 @@ fn deal_damage_and_report(
     world: &mut World,
     ctx: &EffectCtx,
     target: Entity,
-    damage: DamageInput,
+    mut damage: DamageInput,
 ) -> f32 {
+    if !damage.resolved_source {
+        damage.amount *= super::script_registry::actual_damage_multiplier(world, ctx, target);
+    }
     deal_source_damage_and_report(world, ctx, target, damage, None)
 }
 
@@ -2026,6 +2060,7 @@ fn deal_source_damage_and_report(
         crate::stand_state::stand_on_damage(world, target);
     }
     crate::creature_aggro::add_school_threat(world, target, ctx.caster, amount, school);
+    super::scripts::record_arcane_touch_damage(world, ctx, target, amount);
     let mut event = log_amount(ctx, target, CombatLogKind::Damage);
     event.amount = amount as i32;
     event.blocked = blocked as i32;
@@ -2045,6 +2080,7 @@ fn deal_source_damage_and_report(
         periodic,
     );
     if !resolved_source {
+        super::scripts::enhancement_weapon_damage(world, ctx, target, amount);
         super::script_registry::resolved_damage(world, ctx, target, crit, amount);
     }
     if periodic {
@@ -2674,7 +2710,7 @@ pub(super) fn trigger_missile_at_destination(
     }
 }
 
-fn cast_destination_missile_child(
+pub(super) fn cast_destination_missile_child(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
@@ -2699,6 +2735,13 @@ fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     };
     spell.cast_destination = ctx.spell.cast_destination;
     spell.cast_item_level = ctx.spell.cast_item_level;
+    spell.cast_damage_multiplier =
+        super::scripts::frost_flurry_damage_multiplier(world, ctx.caster, ctx.spell, spell.id);
+    if let Some(multiplier) =
+        super::scripts::enhancement_flurry_weapon_multiplier(world, ctx.caster, ctx.spell, spell.id)
+    {
+        spell.cast_damage_multiplier = Some(multiplier);
+    }
     let target = trigger_recipient(ctx, &spell, target);
     super::launch_triggered_spell(world, ctx.caster, &spell, target, depth);
 }

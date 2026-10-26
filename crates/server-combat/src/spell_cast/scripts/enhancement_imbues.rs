@@ -25,6 +25,8 @@ pub(super) fn register(scripts: &mut AuraScripts) {
     scripts.0.insert(
         WINDFURY,
         AuraScript {
+            on_apply: Some(super::enhancement_elemental_weapons::refresh),
+            on_remove: Some(super::enhancement_elemental_weapons::refresh_after_remove),
             check_proc: Some(check_windfury),
             on_proc: Some(cast_windfury),
             ..Default::default()
@@ -33,6 +35,8 @@ pub(super) fn register(scripts: &mut AuraScripts) {
     scripts.0.insert(
         FLAMETONGUE,
         AuraScript {
+            on_apply: Some(super::enhancement_elemental_weapons::refresh),
+            on_remove: Some(super::enhancement_elemental_weapons::refresh_after_remove),
             check_proc: Some(check_flametongue),
             on_proc: Some(cast_flametongue),
             ..Default::default()
@@ -122,7 +126,12 @@ fn check_flametongue(world: &World, aura: &AuraInstance, event: &AuraEvent) -> b
     eligible(world, aura, event, false)
 }
 
-fn cast_windfury(world: &mut World, caster: Entity, _aura: &AuraInstance, target: Option<Entity>) {
+pub(super) fn cast_windfury(
+    world: &mut World,
+    caster: Entity,
+    _aura: &AuraInstance,
+    target: Option<Entity>,
+) {
     let Some(target) = target else {
         return;
     };

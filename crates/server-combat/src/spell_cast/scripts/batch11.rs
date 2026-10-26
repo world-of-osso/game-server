@@ -13,7 +13,6 @@ pub(super) const VOIDFORM: u32 = 228260;
 pub(super) const HAMMER_RIGHTEOUS: u32 = 53595;
 pub(super) const BLADE_JUSTICE: u32 = 184575;
 pub(super) const THRASH: u32 = 106830;
-const VOLLEY_BOLT: u32 = 1242189;
 const HAMMER_WAVE: u32 = 88263;
 const BLADE_TALENT: u32 = 403826;
 const THRASH_BLEED: u32 = 405233;
@@ -41,13 +40,13 @@ pub(in crate::spell_cast) fn effect_enabled(
 }
 
 ///228260 explicitly names1242173. The initial volley is separate from the
-///unimplemented replacement/charge contract during Voidform.
+///earned foreground uses granted by the downstream Shadow script.
 pub(super) fn initial_volley(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     spell_cast::cast_triggered(world, caster, VOID_VOLLEY, Some(target), depth + 1);
 }
 
 ///1242173s1/s3 define ten bolts at the primary and one at each nearby enemy.
-///Each uses1242189's native missile/hit path. No un-authored inter-bolt delay.
+///Each uses1242189's native missile/hit path, with sourced50ms child scheduling.
 pub(super) fn volley_plan(
     world: &mut World,
     caster: Entity,
@@ -84,63 +83,7 @@ pub(super) fn volley_plan(
     ]
 }
 
-pub(super) fn volley(world: &mut World, caster: Entity, primary: Entity, depth: u8) {
-    if depth >= spell_cast::effects::MAX_TRIGGER_DEPTH {
-        warn!("Void Volley trigger depth exhausted");
-        return;
-    }
-    let root = world
-        .resource::<SpellStore>()
-        .get(VOID_VOLLEY)
-        .expect("Volley root")
-        .clone();
-    let center = targets::position(world, primary).expect("Volley hit target position");
-    let bolt = world
-        .resource::<SpellStore>()
-        .get(VOLLEY_BOLT)
-        .expect("Volley requires1242189")
-        .clone();
-    let units = targets::area_units(
-        world,
-        caster,
-        center,
-        targets::radius(&root.effects[0], 1),
-        targets::Relation::Enemy,
-        0,
-    );
-    for unit in units {
-        let count = script_effect_value(
-            world,
-            caster,
-            VOID_VOLLEY,
-            if unit == primary { 0 } else { 2 },
-        ) as usize;
-        launch_bolts(world, caster, unit, &bolt, count, depth + 1);
-    }
-}
-
-fn launch_bolts(
-    world: &mut World,
-    caster: Entity,
-    unit: Entity,
-    bolt: &SpellInfo,
-    count: usize,
-    depth: u8,
-) {
-    for _ in 0..count {
-        let mut plan = vec![PlannedEffect {
-            index: 0,
-            units: vec![unit],
-            dest: None,
-            chain_multipliers: Vec::new(),
-            selected_units: Vec::new(),
-            blocked_units: Vec::new(),
-            prevent_hit_script: false,
-        }];
-        spell_cast::hit::remove_defended_targets(world, caster, bolt, &mut plan);
-        spell_cast::missiles::launch(world, caster, bolt, plan, depth);
-    }
-}
+pub(super) use super::shadow_volley_bolts::volley;
 
 ///53595 names88263 for all OTHER targets, only while standing in own26573.
 pub(super) fn hammer_wave(world: &mut World, caster: Entity, target: Entity, depth: u8) {
