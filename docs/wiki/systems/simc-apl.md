@@ -48,7 +48,7 @@ Registered `fire_phoenix.rs` invokes authentic Phoenix223453 with native448659. 
 
 Selected From the Ashes uses actual eligible direct-hit callbacks to restore native Fire Blast recharge progress, including the triggering Fire Blast charge. Its owner-local deadline reads the native talent ICD; it does not reset with Combustion. The native charge-progress test passed RED→GREEN at landingf73f366ad. Ordinary Fire Blast admission rejects a second same-frame cast, so that sequence cannot qualify the talent's separate ICD.
 
-Heat Shimmer production runs at actual Ignite tick completion through the existing periodic callback. It reuses the native457735 RPPM/ICD state to grant458964, and suppresses attempts while native `CastState` identifies Scorch. Native tick→buff RED is observed; earned-buff consumption and numerical acceptance remain under qualification.
+Heat Shimmer production runs at actual Ignite tick completion through the existing periodic callback. It reuses the actual457735 aura instance's RPPM/ICD state to grant458964, and suppresses attempts while native `CastState` identifies Scorch. Proc helpers take instance IDs, not spell IDs; passing457735 made every attempt return false. Scorch freezes the native buff's modifiers plus its guaranteed crit at admission, then spends one stack after launch. Native tick→buff RED is observed; the full earned-buff consumer and numerical acceptance remain under qualification.
 
 ## Expected combat length
 
