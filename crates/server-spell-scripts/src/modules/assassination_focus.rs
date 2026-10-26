@@ -5,11 +5,10 @@ use bevy::prelude::*;
 use combat::auras::ActiveAuras;
 use combat::spell_cast::{
     self,
-    effects::{self, EffectCtx},
+    effects::EffectCtx,
     script_registry::SpellScriptHook,
     targets,
 };
-use combat::spell_info::SpellStore;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResolvedDamage(after_spell),
@@ -77,19 +76,11 @@ fn copy_to_mark(world: &mut World, caster: Entity, source: Entity, amount: f32, 
     let Some(target) = find_owned_mark(world, caster, source) else {
         return;
     };
-    let spell = world
-        .resource::<SpellStore>()
-        .get(DAMAGE)
-        .expect("native Singular Focus payload")
-        .clone();
-    let ctx = EffectCtx {
-        caster,
-        spell: &spell,
-        depth,
-        dest: None,
-        chain_multiplier: 1.0,
-    };
-    // The pinned payload has callbacks=false: retain the source's crit and
-    // damage modifiers, but never roll them again or recursively emit copies.
-    effects::deal_copied_damage(world, &ctx, target, amount * fraction);
+    // sc_rogue.cpp1971–1995/2340–2350: the residual's own label3936
+    // still receives native Mastery and target-health Zoldyck. Native payload
+    // CANNOT_CRIT/NO_DONE_PCT flags prevent a second crit/general damage bonus;
+    // background depth and the marked-recipient exclusion prevent proc recursion.
+    spell_cast::cast_triggered_with_effect0_amount(
+        world, caster, DAMAGE, Some(target), depth, amount * fraction,
+    );
 }
