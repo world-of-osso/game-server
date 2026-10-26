@@ -24,7 +24,7 @@ Verified: 2026-10-26. Spec64 uses the literal pinned76f8118 APL and native70448 
 | Rapid Refreezing native tick clock and qualified Spike-only source | RED8455eb05e5/351688fab3 → GREENf19726f012; costed controls retained | ca856c659 |
 | Ray execution-time10s Splinterstorm window; Frost Overflowing Energy feedback | RED1f25b0f870/1b8be9a776 → GREEN208adb8ca9;27Frost/2CI/15costed controls | ca48fe12e |
 
-Latest confirmed measurement, from train208adb8ca9:153,092.12 ST and232,077.22 three-target DPS (78.0463%/77.7192% of reference). Against Rapid checkpoint152,167.13/232,622.16, the combined-source change is+924.99ST/−544.94three-target DPS; this does not isolate either fix. The ±10% goal remains open. Remeasure after the separately owned shared precombat equipment-proc gate and ordinary category133 spell-GCD haste fixes land.
+Latest confirmed measurement, from train208adb8ca9:153,092.12 ST and232,077.22 three-target DPS (78.0463%/77.7192% of reference). Against Rapid checkpoint152,167.13/232,622.16, the combined-source change is+924.99ST/−544.94three-target DPS; this does not isolate either fix. The ±10% goal remains open. The separately owned shared precombat equipment-proc gate and ordinary category133 spell-GCD haste fixes are now on master. The parent's combined remeasurement3f737611d8 includes64; its result is pending.
 
 ## Investigation traps and remaining work
 
@@ -32,9 +32,19 @@ Latest confirmed measurement, from train208adb8ca9:153,092.12 ST and232,077.22 t
 - After the third landing, actual remaining gaps rank ST Shatter23.6k, Splinter16.3k, Spike10.3k; three-target Shatter42.0k, Controlled Instincts20.0k, Orb18.7k and Splinter16.7k. The raw spell-ID report must be reconciled as above.
 - Deep Shatter and post-consumption Brain Freeze are now qualified above. Their original2RED193e699b7e compared plain/selected critical17,865 and plain/earned Flurry59,618.
 - The Glaciate test uses `full_recharge_time`, not admission `remains`, which is zero while another charge is usable. Native modified Shatter cap is6, not raw4: selected Heart of Ice/Polished Focus modifiers make the qualified reduction0.6s and Force of Will count3Splinters.
-- Orb-tick Fingers and Overflowing Energy are now qualified above. Shared precombat equipment-proc admission and ordinary spell-GCD haste are being fixed by Survival and Arcane owners; do not duplicate them or replace missing relationships with coefficient tuning.
+- Orb-tick Fingers and Overflowing Energy are now qualified above. Shared precombat equipment-proc admission and ordinary spell-GCD haste are now on master; their joint remeasurement remains pending. Do not duplicate those fixes or replace missing relationships with coefficient tuning.
 - Requested periodic-deadline probe5ecd5357cb on6f842e121 ran25GREEN controls but failed the two unimplemented Overflowing Energy assertions. The train skipped its measurement; there is no ST/three-target delta and no isolated proof of a periodic-rule regression.
 - Shared flask and augment-rune bindings belong to the shared-consumables owner, not this investigation.
+
+## Per-hit factor investigation — 2026-10-26
+
+Native probesaf81a99ba1/89a0ed8fa1 passed three diagnostic cases. They are not an isolated remeasurement of208adb8ca9: their shared probe tree also contained unlanded Loa/Rite stat-item work.
+
+- Controlled actual Lance remaining-Freezing observations: ordinary6→0; Fingers6→6; Fingers0→0; Thermal12→0; Fingers+Thermal3→3. The selected profile has no Glacial Shatter1280780; actual Spike6→9 does not consume Freezing. These match `sc_mage.cpp4445–4473/7129–7169`; do not import the old Winter's Chill formula. The initial observer stopped at the parent Lance before its nested Shatter; the follow-up capture retains both.
+- The exact300s literal replay captured117ST-primary Shatters:85paid6 and32paid12, mean7.6410. Three-target primary captured125:94paid6,2paid9,29paid12, mean7.44. The secondary capture follows only the initial secondary entity, not its later replacement waves; its11hits do not mean cleave disappeared.
+- Applied damage products agree with the product of attributed native modifiers within2.2e−7. Observed sources include Frost Mage19%, Lonely Winter3%, Polished Focus20%, MID2 four-piece5%, Permafrost10%, variable mastery/Hand, Improved Shatter50% critical-chance scaling, Deep Shatter and Charm of Aegwynn. Native Shatter coefficients0.9154/0.273 match pinned generated data. No missing fixed Frost multiplier was established; do not tune a coefficient.
+- This is not a cast-count-only conclusion. On the older208adb8ca9 baseline, applying reference average damage to native hit counts still leaves8.27kST/11.37kthree-target Shatter DPS and4.57kthree-target Orb DPS unexplained by hit count alone. Critical chance, current stat values and paid-stack distribution must remain separate from fixed multiplier admission. The new replay's expected primary Shatter critical chances average58.11%ST/58.61%three-target, not the reference's65.30%observed ST rate.
+- Ray has a separate source-qualified rounding candidate: `action.cpp4297–4314` rounds tick time;4397–4421 rebuilds hasted duration as rounded period × original tick count. Native duration and period are independently truncated. Test-onlybfa5122cd/probe2d0ea30702 isolates constant haste, keeps static equipment/food/flask/rune values and checks native4000ms/500ms gives8positive damage events rather than an expiry partial ninth. No shared timer implementation has changed; native RED is pending.
 
 ## Sources
 
