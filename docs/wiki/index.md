@@ -9,12 +9,14 @@
 - [Shared pet prerequisites](systems/spell-casting.md#shared-pet-prerequisites--2026-10-26) — native runtime storage, effect148 values and destination85; protected probes pending.
 - [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counter-only and six shared lifecycle cases GREEN; numerical parity remains open.
 - [Arcane literal fixture](systems/simc-apl.md#arcane-fixture-62) — supplied profile rows and native class readiness; ST controller regression passes, numerical parity remains separate.
+- [Native Loa/Rite stat callbacks](systems/character-stats.md#native-loa-and-rite-stat-callbacks--2026-10-26) — native gem metadata, linked rank amount, combat admission and five-profile RED→GREEN; landed44c2b6c5d.
+- [Ret Purpose and tier supply](systems/ret-divine-purpose.md) — native Aurora Wake grant, chance producer and distinct Arbiter consumption; end-to-end RED→GREEN, full integration pending.
 - [Ret Judgment target uses](systems/ret-judgment.md) — source-qualified native producer/consumer, flat damage magnitude and independently expiring uses; native RED observed, GREEN/measurement pending.
 - [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counters do not scale ticks or grow on refresh;265/267 actual-cast/tick RED→GREEN.
 - [Warlock periodic shard funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) — downstream Destruction-only funding, actual critical context and shared native pool/overflow; Affliction remains separate.
 - [Native target DoT duration](systems/simc-apl.md#native-target-dot-duration) — owned active state and native fresh duration, independent of refreshed lifetime.
 - [Subtlety Lingering Shadow](systems/spell-casting.md#subtlety-lingering-shadow--2026-10-25) — native Dance-expiry counter, periodic decay and per-recipient residual; native RED→GREEN, numerical parity open.
-- [Feral literal fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25) — native Cat/Prowl, periodic facts, Growth/Burst/Rampancy, single-payload Unseen and Convoke landed; both measured scenarios within±10%; Stalking margin fix remains native-gated.
+- [Feral literal fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25) — native Cat/Prowl, periodic facts, Growth/Burst/Rampancy, single-payload Unseen and Convoke landed; Stalking's native two-use chain landed; both measured scenarios within±10% with margin, remaining mechanical gaps listed separately; Feral paused.
 - [Downstream spell scripts](systems/spell-script-crate.md) — combat-owned registry, ordered downstream policy slices and first five leaf modules; remaining implementations stay in combat.
 - [Frost Mage DPS parity](investigations/frost-mage-dps-parity.md) — native Freezing/Shatter, Splinter copies, qualified proc clocks, measured gaps and pending Overflowing Energy feedback.
 - [Elemental literal fixture](systems/simc-apl.md#elemental-fixture-262) — exact profile rows, native Maelstrom/spell admission and named-action target counts; numerical parity remains separate.

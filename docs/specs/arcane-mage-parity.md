@@ -14,6 +14,7 @@ Spec62 follows the pinned SimC behavior and native-value rules in [DPS parity](d
 - [x] Arcane Touch, Surge, Barrage and Orb producers use the shared Spellslinger path with native counts, payload, doubling and stagger. Infused Splinters rolls native Salvo from actual Arcane Splinter impacts.
 - [x] Configure Clearcasting, Salvo and Overpowered reaction clocks before acquisition. Predict eligible guaranteed acquisitions, not random ones (`sc_mage.cpp1860,7254–7255,7388–7389`).
 - [x] Potion operands use shared configured native potion facts, not a local name matcher.
+- [x] Actual Barrage hits feed selected Overflowing Energy: noncritical hits earn native stacks and critical hits clear them after the hit batch. Other Arcane spells do not change that buff (`sc_mage.cpp2693/1897–1898`).
 
 ## How it works
 
@@ -35,7 +36,7 @@ Spec62 follows the pinned SimC behavior and native-value rules in [DPS parity](d
 
 - [x] Blast and Barrage apply one native charge damage modifier frozen before charge gain/spend. Savant augments only its per-charge term; Prodigious multiplies only that mastery contribution (`sc_mage.cpp2076–2083`).
 - [ ] Reach ±10% of pinned ST and3T DPS.
-- [ ] Qualify shared ordinary spell GCD haste across all40 native spec representatives before qualifying channel chaining. Category133 spells without melee/ranged defense or ability/ranged-slot attributes use ordinary spell haste before aura417, within the native750–1500ms bounds (TC a352b1fa `Spell.cpp9209–9224`; SimC76f8118 `action.cpp648–666,1285–1315`).
+- [x] Qualify shared ordinary spell GCD haste across all40 native spec representatives before qualifying channel chaining. Category133 spells without melee/ranged defense or ability/ranged-slot attributes use ordinary spell haste before aura417, within the native750–1500ms bounds (TC a352b1fa `Spell.cpp9209–9224`; SimC76f8118 `action.cpp648–666,1285–1315`).
 
 ## Out of scope
 
