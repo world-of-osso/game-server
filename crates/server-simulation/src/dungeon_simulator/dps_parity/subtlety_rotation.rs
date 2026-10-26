@@ -108,7 +108,7 @@ fn load_program(profile: &Profile) -> Result<Program, String> {
             Ok((list, value.trim_start_matches('/')))
         })
         .collect::<Result<Vec<_>, String>>()?;
-    // SimC76f8118 apl_rogue.cpp259–349: retain every source row and predicate.
+    // SimC76f8118 apl_rogue.cpp198–270: retain every source row and predicate.
     Program::parse(&rows)
 }
 
@@ -271,9 +271,21 @@ impl Facts for SubtletyFacts<'_> {
         if name == "priority_rotation" {
             return Ok(0.0);
         }
-        self.rogue.value(name)
+        self.rogue.value(native_operand(name))
     }
 }
+
+fn native_operand(name: &str) -> &str {
+    // SimC76f8118 player.cpp11867–11895 recognizes any time_to_ token whose
+    // third underscore-delimited part contains "die", including the literal
+    // apl_rogue.cpp233 target.time_to_die.remains token. Keep the row unchanged.
+    if name == "target.time_to_die.remains" {
+        "target.time_to_die"
+    } else {
+        name
+    }
+}
+
 impl ActionFacts for SubtletyFacts<'_> {
     fn primary_resource(&self) -> Result<String, String> {
         // SimC76f8118 sc_rogue.cpp1221: Rogue pooling uses Energy.
@@ -301,7 +313,7 @@ impl ActionFacts for SubtletyFacts<'_> {
         if name == "priority_rotation" {
             self.value(name)
         } else {
-            self.rogue.value_for(action, name)
+            self.rogue.value_for(action, native_operand(name))
         }
     }
 }
