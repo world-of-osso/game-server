@@ -8,6 +8,14 @@ Native RED4db1ecbdad observes identical31098 Bolt damage for zero and one real i
 
 Sources: pinned SimC76f8118 `sc_shaman.cpp13212–13220`; [contract](../../specs/dps-parity.md#enhancement-fixture-driver), [dynamic amount](../../../crates/server-combat/src/spell_cast/scripts/enhancement_elemental_weapons.rs), [imbue callbacks](../../../crates/server-combat/src/spell_cast/scripts/enhancement_imbues.rs), [native damage test](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_elemental_weapons_tests.rs).
 
+## Thunder Capacitor paid-stack refund — 2026-10-26
+
+Selected1262635 rolls its native effect1 percentage only after actual MW payment by normal/Thorim LB, CL or Tempest. The spending seam supplies the actual consumed count to the existing native counter/modifier generator. Arc/Ride backgrounds never reach that payment hook; zero spends and other spells are excluded. No damage values, proc timer or chance are changed.
+
+Native RED6260f1c7f7 samples32 genuinely admitted instant Bolts at GCD-ready boundaries: each5–9 MW balance becomes0 despite selected native20%. Supercharge is unselected. A future observed refund must include a real consumed-counter removal event, not skipped payment. The earning-test helper now counts the native admitted amount, because refunded stacks make a net counter delta invalid. GREEN and integrated measurement remain pending.
+
+Sources: pinned SimC76f8118 `sc_shaman.cpp6687–6694,7462–7469,9978–9985`; [contract](../../specs/dps-parity.md#enhancement-fixture-driver), [refund policy](../../../crates/server-combat/src/spell_cast/scripts/enhancement_thunder_capacitor.rs), [native paid-cast case](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_thunder_capacitor_tests.rs).
+
 ## Garrote stored literal multiplier — 2026-10-26
 
 Garrote already freezes its native Improved Garrote bonus in `SpellInfo.cast_damage_multiplier` and the applied bleed amount. The downstream703 declaration in `PersistentCastMultiplier` makes `periodic_snapshot::capture_multiplier` copy that same factor into each periodic effect's existing `persistent_multiplier` field on application and refresh. It does not change damage or infer a factor from tick amounts. The existing Feral fresh/live producer remains unchanged; this declaration qualifies stored Garrote metadata only.

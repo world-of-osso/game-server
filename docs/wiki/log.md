@@ -8,6 +8,10 @@
 
 [Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now copies the owned pre-hit bank through native admission, with native cap/threshold, stable bank ordering and separate new/existing target clocks. Actual Fire Blast RED0-of-1 recipients now passes with Ignition and Controlled Destruction in77265cb9e3. The invalid existing-target fixture is removed, not weakened; separate real-clock qualification is deferred until after remeasurement. The three-case landing and measurement remain pending. No direct-damage or stat scalar changed.
 
+## 2026-10-26 — Thunder Capacitor paid-stack refund
+
+[Thunder Capacitor](systems/auras.md#thunder-capacitor-paid-stack-refund--2026-10-26) now uses the actual consumed count after normal/Thorim lightning payment. Native6260f1c7f7 records32 real paid casts with no selected20% refund. Native values stay unchanged; GREEN and integrated measurement remain pending.
+
 ## 2026-10-26 — Fire Ignition contribution
 
 [Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now applies selected native Ignition's percentage only to each new Flamestrike contribution. Actual noncritical Flamestrike's unchanged tick/damage ratio passed RED→GREEN atfdef43f47 (train47ab06258e). ST178387.61 is unchanged;3T308050.16 remains below band. Direct damage and existing unpaid bank are unchanged.

@@ -77,6 +77,7 @@ mod enhancement_stormblast;
 pub(super) use enhancement_stormblast::after_weapon_damage as enhancement_weapon_damage;
 mod enhancement_stormwell;
 mod enhancement_strikes;
+mod enhancement_thunder_capacitor;
 mod enhancement_tier;
 mod enhancement_unleashed;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
