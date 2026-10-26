@@ -2,6 +2,7 @@
 - [Equipment proc eligibility](systems/character-stats.md#equipment-proc-eligibility--2026-10-25) — native idle Venomcursed999→correct permanent606 RED/GREEN; shared combat-reference gate passes four native groups; Ret/WW test-control RED→GREEN and four independently reproduced WW baseline failures are recorded.
 - [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counter-only RED→GREEN; shared producer/collapse lifecycle implemented, native qualification pending.
 - [Arcane literal fixture](systems/simc-apl.md#arcane-fixture-62) — supplied profile rows and native class readiness; ST controller regression passes, numerical parity remains separate.
+- [Native Loa/Rite stat callbacks](systems/character-stats.md#native-loa-and-rite-stat-callbacks--2026-10-26) — native gem metadata, linked rank amount, combat admission and five-profile RED→GREEN; landed44c2b6c5d.
 - [Ret Purpose and tier supply](systems/ret-divine-purpose.md) — native Aurora Wake grant, chance producer and distinct Arbiter consumption; end-to-end RED→GREEN, full integration pending.
 - [Ret Judgment target uses](systems/ret-judgment.md) — source-qualified native producer/consumer, flat damage magnitude and independently expiring uses; native RED observed, GREEN/measurement pending.
 - [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counters do not scale ticks or grow on refresh;265/267 actual-cast/tick RED→GREEN.

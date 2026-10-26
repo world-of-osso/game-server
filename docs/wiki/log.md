@@ -1,3 +1,7 @@
+## 2026-10-26 — Native Loa and Rite stat callbacks
+
+[Native stat callbacks](systems/character-stats.md#native-loa-and-rite-stat-callbacks--2026-10-26) use equipped gem metadata, linked rank amounts and combat admission. Native RED `f282665373` → GREEN `412af0a123`; the five-profile gate passed again before landing `44c2b6c5d`. Other-spec numerical remeasurement remains separate.
+
 ## 2026-10-25 — Equipment procs before combat
 
 [Equipment proc eligibility](systems/character-stats.md#equipment-proc-eligibility--2026-10-25) records the native idle Venomcursed RED, exact permanent Survival crit606 reconciliation and shared CombatRefs gate. Workspace check and native idle606, Survival6/Venomcursed1/MM19/Assassination22 pass. Train283a28a30a did not land because Ret/WW inherited its255/player fixture. Corrected per-spec probes pass Ret107/108 and WW52/57. Plain-master controls reproduce four WW baseline failures. Minimal test-only readiness/equipment isolation fixesd8c535677 pass the two remaining exact controls ina6c3a5d1b9/e2dabf1ecb after native RED63296cfcd5/97447efaec. Final four-group landing gate and all-spec remeasurement remain pending.

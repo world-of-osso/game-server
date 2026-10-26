@@ -94,6 +94,18 @@ The equipment-source candidate gate in `auras/procs.rs` now requires a real, non
 
 Sources: [native proc candidate gate](../../../crates/server-combat/src/auras/procs.rs), [idle native regression](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/survival_stat_tests.rs), [real-combat Venomcursed control](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/venomcursed_tests.rs), [contract](../../specs/dps-parity.md#equipment). See also [[simc-apl]].
 
+### Native Loa and Rite stat callbacks — 2026-10-26
+
+`midnight_stat_items.rs` registers production item callbacks, not parity-only stat overlays. Loa eligibility reads equipped gem descriptions from native ItemSparse.ItemNameDescriptionID. Capybara uses its equipped driver's second effect; Peridot's Akilzon buff retains its own item-scaled effects. Other Loa colors retain their selection weight but remain explicitly unqualified.
+
+Rite discovers its rating children through native DUMMY trigger effects and uses the scaled BP0 already supplied by the linked equipped rank. Both weapon copies share the native Cast-source child. Selection reads current ratings through the existing native rating-mask helper. Stat masks, amounts, duration and refresh remain native; no spell-ID stat-value overrides are used.
+
+The linked Cast-source callback applies the same combat-only admission as equipment callbacks, before chance/recovery changes. The aura-clone application API preserves source item level and native amount snapshots.
+
+Native family REDf282665373→GREEN412af0a123; landed44c2b6c5d viae320506b72 after the five-profile gate passed again. Ret/WW use genuine followers; Arms/Fire/Fury use genuine players. The SQLite gem-metadata test also passes. Other-spec numerical remeasurement is separate.
+
+Sources: [callback module](../../../crates/server-spell-scripts/src/modules/midnight_stat_items.rs), [native probes](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/midnight_stat_items_tests.rs), [contract](../../specs/dps-parity.md#equipment). Pinned `unique_gear_midnight.cpp614–671/995–1122`, `player.hpp827`, `action_callback.cpp79–82`. See also [[ret-divine-purpose]].
+
 ### Shared profile effects — 2026-10-25
 
 The parity fixture installs declared consumables and expansion effects in `dps_parity/profile_effects.rs`. Numeric Omnium tokens identify native `TraitNodeEntry` rows, not class nodes. The fixture's `ReferenceRace` supplies native base-stat race and racial knowledge without adding `Player` identity to followers. Native aura effect202 admits owner racial effects such as Dwarf59224.
