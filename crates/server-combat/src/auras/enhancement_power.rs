@@ -8,7 +8,7 @@ use crate::class_progression::KnownSpells;
 const UNLIMITED_POWER: u32 = 454391;
 const HASTE: u32 = 454394;
 
-pub(crate) fn grant_for_spending(world: &mut World, caster: Entity, spent: u8) {
+pub fn grant_for_spending(world: &mut World, caster: Entity, spent: u8) {
     if spent == 0
         || !world
             .get::<KnownSpells>(caster)
