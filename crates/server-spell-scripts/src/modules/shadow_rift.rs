@@ -1,6 +1,6 @@
 //! SimC76f8118 sc_priest_shadow.cpp1491–1514/sc_priest.cpp1606–1683/3543–3562.
 //! Native Torrent starts a hasted Rift driver at its actual hostile primary.
-use super::{combat, shadow_void_blast};
+use super::{combat, shadow_void_blast, shadow_voidheart};
 use bevy::prelude::*;
 use combat::auras::scripts::{AuraScript, AuraScripts};
 use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
@@ -76,6 +76,7 @@ fn pulse(world: &mut World, unit: Entity, _: &AuraInstance, index: u8) {
 
 fn clear_rift(world: &mut World, unit: Entity, _: &AuraInstance, _: RemoveReason) {
     shadow_void_blast::expire_override(world, unit);
+    shadow_voidheart::replace_with_touch_tail(world, unit);
     world.entity_mut(unit).remove::<Rift>();
 }
 
@@ -84,15 +85,17 @@ fn finish_channel(world: &mut World, unit: Entity, aura: &AuraInstance, _: Remov
     if unit != aura.caster {
         return;
     }
-    let duration = world.get::<ActiveAuras>(unit).and_then(|auras| {
-        auras
-            .iter()
-            .find(|aura| aura.caster == unit && aura.spell_id == DRIVER)
-            .map(|aura| aura.duration_ms)
-    });
-    if let Some(duration) = duration {
-        // SimC1491–1496: channel end restores full remaining lifetime, not tick phase.
-        auras::set_owned_duration(world, unit, unit, DRIVER, duration);
+    // SimC1491–1501 restores each buff's own native duration, not tick phase.
+    for spell in [DRIVER, shadow_voidheart::BUFF] {
+        let duration = world.get::<ActiveAuras>(unit).and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.caster == unit && aura.spell_id == spell)
+                .map(|aura| aura.duration_ms)
+        });
+        if let Some(duration) = duration {
+            auras::set_owned_duration(world, unit, unit, spell, duration);
+        }
     }
 }
 
