@@ -950,3 +950,7 @@ Category133 ordinary spells apply native spell haste before the independent aura
 
 - Landed owned Corruption146739 or Wither445474 ticks with selected108558 advance an independent uniform-initial/rollover threshold stream. Pinned base0.130 is normalized by active owned dots, native Creeping Death and selected Sataiel's Volition. This does not modify Wither stacks or damage.
 - Native264571 supplies stack cap, lifetime and cast-time modifiers. An admitted instant Shadow Bolt consumes one use; actual Drain Soul and Malefic Grasp executions consume one use. The additive foreground hook preserves native Shadow Bolt shard funding.
+
+### Shadow Idol of N'Zoth
+
+Selected Idol of N'Zoth tracks actual Madness executions and Mind Flay ticks per owned target. Its native thresholds trigger Horrific Vision and Vision of N'Zoth, their damage, and their native periodic Insanity buffs. The target counter rolls over at the native upper threshold.
