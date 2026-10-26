@@ -156,9 +156,12 @@ fn matching<'a>(
 // Tidal Waves/Backdraft/Surge of Light stacks are also next-spell uses.
 // SimC76f8118 sc_evoker.cpp6485/6595: Mass Disintegrate stacks are uses,
 // not a multiplier on its native additional-target amount.
+// SimC76f8118 sc_mage.cpp1852–1853/3242: Clearcasting stacks are
+// independent uses too: one Missiles spends one, without multiplying its -100% cost.
 // Native1265871 suppresses points stacking (effect attribute0x40); tier uses
 // do not multiply its ordinary damage modifier (sc_evoker.cpp10850–10856).
-const STACKED_NEXT_SPELL_USES: &[u32] = &[53390, 117828, 116768, 325202, 114255, 436336, 1265871];
+// One spell ID per line in the union-merged list file, so concurrent additions never conflict.
+const STACKED_NEXT_SPELL_USES: &[u32] = &include!("stacked_next_spell_uses.in");
 
 fn stacked_amount(aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
     let stacks = if STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) {
@@ -179,7 +182,7 @@ fn add_modifier((flat, mult): (f32, f32), amount: f32, percent: bool) -> (f32, f
 
 /// TC Spell.cpp8569 retains launch-target damage/healing before impact.
 /// Retain consumed modifier values without retaining or reusing their aura charge.
-pub(crate) fn snapshot_charged_modifiers(
+pub fn snapshot_charged_modifiers(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
@@ -199,7 +202,10 @@ pub(crate) fn snapshot_charged_modifiers(
                 aura_spell_id: aura.spell_id,
                 op: effect.misc_values[0],
                 percent: is_pct(effect.aura_type),
-                amount: stacked_amount(aura, effect),
+                amount: crate::spell_cast::scripts::arcane_charge_modifier_amount(
+                    world, caster, aura, effect,
+                )
+                .unwrap_or_else(|| stacked_amount(aura, effect)),
             })
         })
         .collect()

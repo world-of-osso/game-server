@@ -1,5 +1,5 @@
-//! SimC76f8118 sc_shaman.cpp556–629/11764/11830–11845/13057–13098:
-//! actual MW consumption draws independent spaced Tempest and Storm Unleashed decks.
+//! SimC76f8118 sc_shaman.cpp556–629/11764/11809–11845/13057–13110:
+//! actual MW consumption draws independent spaced Tempest, Doom and Storm Unleashed decks.
 use std::collections::BTreeMap;
 
 use bevy::prelude::*;
@@ -13,7 +13,7 @@ const MAX_DRAW: usize = 10;
 
 struct SpendingProc {
     talent: u32,
-    buff: u32,
+    cast_spell: u32,
     cards: usize,
     successes: usize,
     strike_consumer: Option<u32>,
@@ -23,15 +23,22 @@ struct SpendingProc {
 const PROCS: &[SpendingProc] = &[
     SpendingProc {
         talent: 454009,
-        buff: 454015,
+        cast_spell: 454015,
         cards: 100,
         successes: 2,
         // Tempest's existing lightning/Thorim hooks order its consumption before spending.
         strike_consumer: None,
     },
     SpendingProc {
+        talent: 114051,
+        cast_spell: 384352,
+        cards: 600,
+        successes: 3,
+        strike_consumer: None,
+    },
+    SpendingProc {
         talent: 1262713,
-        buff: 1262830,
+        cast_spell: 1262830,
         cards: 250,
         successes: 5,
         strike_consumer: Some(187874),
@@ -94,6 +101,7 @@ pub(super) fn grant_for_spending(world: &mut World, caster: Entity, spent: u8) {
     }
     let selected: Vec<&SpendingProc> = PROCS
         .iter()
+        .filter(|proc| super::enhancement_doom::can_draw(world, caster, proc.talent))
         .filter(|proc| {
             world
                 .get::<KnownSpells>(caster)
@@ -108,7 +116,7 @@ pub(super) fn grant_for_spending(world: &mut World, caster: Entity, spent: u8) {
     }
     for proc in selected {
         if draw_spent_stacks(world, caster, proc, spent) {
-            spell_cast::cast_triggered(world, caster, proc.buff, Some(caster), 1);
+            spell_cast::cast_triggered(world, caster, proc.cast_spell, Some(caster), 1);
         }
     }
 }
@@ -134,7 +142,7 @@ pub(super) fn consume_for_strike(world: &mut World, ctx: &EffectCtx) {
         let instance = world.get::<ActiveAuras>(ctx.caster).and_then(|auras| {
             auras
                 .iter()
-                .find(|aura| aura.spell_id == proc.buff && aura.caster == ctx.caster)
+                .find(|aura| aura.spell_id == proc.cast_spell && aura.caster == ctx.caster)
                 .map(|aura| aura.instance_id)
         });
         if let Some(instance) = instance {
@@ -166,5 +174,10 @@ fn enhancement_tempest_deck_preserves_success_count_and_spacing_across_refills()
 
 #[test]
 fn enhancement_storm_unleashed_deck_preserves_success_count_and_spacing_across_refills() {
+    assert_deck_spacing(&PROCS[2]);
+}
+
+#[test]
+fn enhancement_doom_deck_preserves_success_count_and_spacing_across_refills() {
     assert_deck_spacing(&PROCS[1]);
 }

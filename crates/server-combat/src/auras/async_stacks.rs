@@ -9,12 +9,14 @@ use crate::spell_info::SpellInfo;
 const ATTR15_ASYNCHRONOUS_STACKING_AURA: u32 = 0x0000_0400;
 
 pub(super) fn initial_expirations(
+    world: &World,
     spell: &SpellInfo,
     max_stacks: u8,
     stacks: u8,
     expires_at: Option<f64>,
 ) -> Vec<f64> {
-    let asynchronous = super::attributes(spell, 15) & ATTR15_ASYNCHRONOUS_STACKING_AURA != 0;
+    let asynchronous = super::attributes(spell, 15) & ATTR15_ASYNCHRONOUS_STACKING_AURA != 0
+        || crate::spell_cast::script_registry::asynchronous_aura(world, spell.id);
     if !asynchronous || max_stacks <= 1 {
         return Vec::new();
     }

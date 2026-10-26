@@ -41,6 +41,7 @@
 //! - `SuccessfulCastRelationships`: after foreground special/resource consumers.
 //! - `GuaranteesCrit`, `IgnoresCooldown`, `SnapshotsModifier`, `ArmorIgnoredSpells`:
 //!   pure native-readiness, launch snapshot and damage classification predicates.
+//! - `PersistentCastMultiplier`: spell IDs whose existing cast factor is stored as periodic metadata.
 //! - `ResolvedDamage`: after actual direct/periodic damage, before Explosive tick callbacks.
 //! - `AfterDirectDamageBeforeItems`: after Ret direct damage, before item scripts.
 //! - `LandedDamagePolicy`: actual white/spell damage at the original Havoc policy boundary.
@@ -76,6 +77,7 @@
 //! - `CastHitProcChance` and `RollCastHitProc`: chance snapshot before consumption, roll after cast.
 //! - `AfterQueuedTriggers`: fixed update after queued hits, before power/rune sync.
 //! - `AfterSpellPayment`: after generic payment callbacks, before gargoyle empowerment.
+//! - `AfterAuraApplication`: after successful aura storage and native apply/refresh callbacks.
 //! New stages own distinct callback/lookup aliases, even when signatures coincide.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
@@ -93,19 +95,24 @@ pub type TargetPlanLookup = fn(u32) -> Option<(Relation, TargetPlanHook)>;
 pub type PeriodicPrimaryDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, f32, bool);
 pub type SpellResidualHook = fn(&mut World, &EffectCtx<'_>, Entity, f32);
 pub type TargetDamageMultiplierHook = fn(&World, Entity, Entity, &SpellInfo) -> f32;
+pub type AuraApplicationHook = fn(&mut World, Entity, &crate::auras::AuraInstance);
 pub type AuraRedirectHook = fn(&mut World, Entity, Entity, u32, u8) -> bool;
 
 pub type AfterCastLookup = fn(u32) -> Option<AfterCastHook>;
 pub type OnCastHook = fn(&mut World, Entity, u32, u8);
 pub type AfterPaymentHook = fn(&mut World, Entity, &[(CostPool, f32)]);
+pub type PowerCostHook = fn(&World, Entity, &SpellInfo, CostPool, f32) -> f32;
 pub type HitHook = fn(&mut World, Entity, Entity, u8);
 pub type EffectHitLookup = fn(u32, u8) -> Option<HitHook>;
+pub type EffectHandlerLookup = fn(u32, u8) -> Option<super::effects::EffectHandler>;
+pub type TargetFilterHook = fn(&World, Entity, &SpellInfo, u8, Option<Entity>, &mut Vec<Entity>);
 pub type HitLookup = fn(u32) -> Option<HitHook>;
 pub type ContextHitHook = fn(&mut World, &EffectCtx<'_>, Entity);
 pub type ContextHitLookup = fn(u32) -> Option<ContextHitHook>;
 pub type AreaTargetFilter = fn(&World, &SpellInfo, Option<Entity>, &mut Vec<Entity>);
 pub type AreaFilterLookup = fn(u32, u8) -> Option<AreaTargetFilter>;
 pub type CheckTargetHook = fn(&World, Entity, u32, Entity) -> Result<(), super::CastFailure>;
+pub type ActualDamageMultiplierHook = fn(&mut World, &EffectCtx<'_>, Entity) -> f32;
 pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 pub type DamageAmountLookup = fn(u32) -> Option<DamageAmountHook>;
 pub type AutoRepeatHook = fn(&mut World, Entity, Entity);
@@ -116,6 +123,7 @@ pub type DotMasteryMultiplierHook = fn(&World, Entity, Entity, u32) -> f32;
 pub type PeriodicDamageFinishedHook = fn(&mut World, &EffectCtx<'_>);
 pub type ActionHook = fn(&mut World, Entity, u32);
 pub type WhiteHitHook = fn(&mut World, Entity, bool);
+pub type WhiteImpactHook = fn(&mut World, Entity);
 pub type DirectDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool);
 pub type OwnsProcLookup = fn(u32) -> bool;
 pub type EffectiveResourceValueHook =
@@ -174,22 +182,40 @@ pub enum SpellScriptHook {
     AuraRollAfterCast(AfterCastLookup),
     OnCast(OnCastHook),
     AfterPayment(AfterPaymentHook),
+    PowerCost(PowerCostHook),
     AfterResourceValues(AfterCastLookup),
     TargetPlan(TargetPlanLookup),
     PeriodicPrimaryDamage(PeriodicPrimaryDamageHook),
+    CounterOnlyDotStacks(&'static [u32]),
+    /// Source-owned refreshes retain the already scheduled periodic deadline.
+    PreservePeriodicPhase(&'static [u32]),
     TargetDamageMultiplier(TargetDamageMultiplierHook),
     AfterSpenderStacks(AfterCastHook),
     AuraRedirect(AuraRedirectHook),
+    /// All successful native aura applications, including refresh/replacement.
+    AfterAuraApplication(AuraApplicationHook),
     EffectHit(EffectHitLookup),
+    EffectHandler(EffectHandlerLookup),
+    TargetFilter(TargetFilterHook),
     Hit(HitLookup),
     ContextHit(ContextHitLookup),
     AreaFilter(AreaFilterLookup),
     CheckTarget(CheckTargetHook),
     DamageAmount(DamageAmountLookup),
+    ActualDamageMultiplier(ActualDamageMultiplierHook),
+    ExpectedDamageMultiplier(TargetDamageMultiplierHook),
     AutoRepeat(AutoRepeatHook),
     CriticalChance(CriticalChanceHook),
     EarlyAuraRegistration(AuraRegistrationHook),
     ConsumedEffectValues(&'static [(u32, u8)]),
+    /// Explicit source-script override of synchronous native stacking.
+    AsynchronousAuras(&'static [u32]),
+    /// Stored target uses do not multiply an incoming damage effect's magnitude.
+    NonStackingIncomingAuras(&'static [u32]),
+    /// Source scripts that consume the existing frozen effective-resource snapshot.
+    ResourceContext(&'static [u32]),
+    /// Payment-only consumers do not require the hostile primary among native self-aura targets.
+    ResourceOnlyContext(&'static [u32]),
     LaunchDelay(LaunchDelayLookup),
     DotMasteryMultiplier(DotMasteryMultiplierHook),
     CastTimeProcs(&'static [u32]),
@@ -199,6 +225,7 @@ pub enum SpellScriptHook {
     AfterCounterLaunch(ActionHook),
     ImpactProcDamage(ContextHitHook),
     AfterWhiteHit(WhiteHitHook),
+    AfterWhiteImpact(WhiteImpactHook),
     ReplacementDirectDamage(DirectDamageHook),
     OwnsPolicyProc(OwnsProcLookup),
     ResourceValueAfterCast(AfterCastLookup),
@@ -212,11 +239,15 @@ pub enum SpellScriptHook {
     GuaranteesCrit(CastPredicate),
     IgnoresCooldown(CastPredicate),
     SnapshotsModifier(OwnsProcLookup),
+    /// These spells retain their existing cast damage factor as stored periodic metadata.
+    PersistentCastMultiplier(&'static [u32]),
     ArmorIgnoredSpells(&'static [u32]),
     ResolvedDamage(ResolvedDamageHook),
     AfterDirectDamageBeforeItems(PeriodicDamageFinishedHook),
     LandedDamagePolicy(LandedDamageHook),
     AbilityUseAvailable(AbilityUseLookup),
+    /// Sourced foreground readiness, checked before knowledge aliases and cast admission.
+    ActionAvailable(AbilityUseLookup),
     ChannelPeriodic(ChannelPeriodicLookup),
     BeforeNativeOnCast(BeforeNativeOnCastHook),
     PrepareStoredDamage(PrepareStoredDamageHook),
@@ -268,6 +299,29 @@ impl SpellScriptRegistry {
         self.modules.iter().flat_map(|module| module.iter())
     }
 
+    pub fn effect_handler(self, spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+        self.hooks().find_map(|hook| match hook {
+            SpellScriptHook::EffectHandler(lookup) => lookup(spell, index),
+            _ => None,
+        })
+    }
+
+    pub fn filter_targets(
+        self,
+        world: &World,
+        caster: Entity,
+        spell: &SpellInfo,
+        effect: u8,
+        primary: Option<Entity>,
+        units: &mut Vec<Entity>,
+    ) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::TargetFilter(run) = hook {
+                run(world, caster, spell, effect, primary, units);
+            }
+        }
+    }
+
     pub fn effect_hit(self, spell: u32, index: u8) -> Option<HitHook> {
         self.hooks().find_map(|hook| match hook {
             SpellScriptHook::EffectHit(lookup) => lookup(spell, index),
@@ -281,6 +335,20 @@ impl SpellScriptRegistry {
                 register(scripts);
             }
         }
+    }
+
+    pub fn preserves_periodic_phase(self, spell: u32) -> bool {
+        self.hooks().any(|hook| match hook {
+            SpellScriptHook::PreservePeriodicPhase(spells) => spells.contains(&spell),
+            _ => false,
+        })
+    }
+
+    pub fn counter_only_dot_stacks(self, spell: u32) -> bool {
+        self.hooks().any(|hook| match hook {
+            SpellScriptHook::CounterOnlyDotStacks(spells) => spells.contains(&spell),
+            _ => false,
+        })
     }
 
     pub fn consumes_effect_value(self, spell: u32, index: u8) -> bool {
@@ -365,6 +433,76 @@ impl Default for SpellScriptRegistry {
         #[cfg(not(test))]
         Self::new(&[])
     }
+}
+
+pub(crate) fn requires_resource_context(world: &World, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::ResourceContext(spells)
+            | SpellScriptHook::ResourceOnlyContext(spells) => spells.contains(&spell),
+            _ => false,
+        })
+}
+
+pub(crate) fn requires_target_context(world: &World, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::ResourceContext(spells) => spells.contains(&spell),
+            _ => false,
+        })
+}
+
+pub(crate) fn asynchronous_aura(world: &World, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::AsynchronousAuras(spells) => spells.contains(&spell),
+            _ => false,
+        })
+}
+
+pub(crate) fn incoming_aura_ignores_stacks(world: &World, spell: u32) -> bool {
+    world
+        .get_resource::<SpellScriptRegistry>()
+        .is_some_and(|registry| {
+            registry.hooks().any(|hook| match hook {
+                SpellScriptHook::NonStackingIncomingAuras(spells) => spells.contains(&spell),
+                _ => false,
+            })
+        })
+}
+
+/// Actual unresolved spell damage only; prediction never calls sampling hooks.
+pub fn actual_damage_multiplier(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) -> f32 {
+    let mut multiplier = 1.0;
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::ActualDamageMultiplier(run) = hook {
+            multiplier *= run(world, ctx, target);
+        }
+    }
+    multiplier
+}
+
+/// Pure expected multipliers for the existing read-only damage snapshot API.
+pub fn expected_damage_multiplier(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .map(|hook| match hook {
+            SpellScriptHook::ExpectedDamageMultiplier(run) => run(world, caster, target, spell),
+            _ => 1.0,
+        })
+        .product()
 }
 
 pub fn policies(world: &World) -> impl Iterator<Item = &'static Policy> + use<> {
@@ -613,6 +751,16 @@ pub fn impact_proc_damage(world: &mut World, ctx: &EffectCtx<'_>, target: Entity
     }
 }
 
+/// Every resolved white impact, including avoided or immune outcomes.
+/// Existing landed-hit producers retain their separate stage.
+pub fn after_white_impact(world: &mut World, caster: Entity) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterWhiteImpact(run) = hook {
+            run(world, caster);
+        }
+    }
+}
+
 pub fn after_white_hit(world: &mut World, caster: Entity, critical: bool) {
     for hook in world.resource::<SpellScriptRegistry>().hooks() {
         if let SpellScriptHook::AfterWhiteHit(run) = hook {
@@ -653,6 +801,24 @@ pub fn triggered_resource_producer(world: &mut World, caster: Entity, spell: &Sp
             run(world, caster, spell);
         }
     }
+}
+
+/// Source-script cost adjustments run after native aura modifiers, before payment.
+/// Without a registered callback, the native cost is unchanged.
+pub fn power_cost(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    pool: CostPool,
+    amount: f32,
+) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .fold(amount, |cost, hook| match hook {
+            SpellScriptHook::PowerCost(run) => run(world, caster, spell, pool, cost),
+            _ => cost,
+        })
 }
 
 pub fn effective_resource_value(
@@ -735,6 +901,17 @@ pub fn snapshots_modifier(world: &World, spell: u32) -> bool {
         })
 }
 
+pub fn uses_persistent_cast_multiplier(world: &World, spell: u32) -> bool {
+    world
+        .get_resource::<SpellScriptRegistry>()
+        .is_some_and(|registry| {
+            registry.hooks().any(|hook| match hook {
+                SpellScriptHook::PersistentCastMultiplier(spells) => spells.contains(&spell),
+                _ => false,
+            })
+        })
+}
+
 pub fn ignores_armor(world: &World, spell: u32) -> bool {
     world
         .resource::<SpellScriptRegistry>()
@@ -767,6 +944,18 @@ pub fn after_direct_damage_before_items(world: &mut World, ctx: &EffectCtx<'_>) 
     }
 }
 
+pub fn after_aura_application(
+    world: &mut World,
+    target: Entity,
+    aura: &crate::auras::AuraInstance,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterAuraApplication(run) = hook {
+            run(world, target, aura);
+        }
+    }
+}
+
 pub fn landed_damage_policies(
     world: &mut World,
     caster: Entity,
@@ -780,6 +969,16 @@ pub fn landed_damage_policies(
             run(world, caster, target, spell, amount, periodic);
         }
     }
+}
+
+pub fn action_available(world: &World, caster: Entity, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .all(|hook| match hook {
+            SpellScriptHook::ActionAvailable(test) => test(world, caster, spell),
+            _ => true,
+        })
 }
 
 pub fn ability_use_available(world: &World, caster: Entity, spell: u32) -> bool {
@@ -1167,3 +1366,7 @@ use crate as combat;
 #[cfg(test)]
 #[path = "../../../server-spell-scripts/src/modules.rs"]
 mod fixtures;
+// Native unit fixtures compile the same helper against their own combat types.
+#[cfg(test)]
+#[path = "../../../server-spell-scripts/src/bombardments.rs"]
+pub mod bombardments;

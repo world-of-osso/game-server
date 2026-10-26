@@ -27,6 +27,13 @@ pub(super) fn advance(world: &mut World) {
 }
 
 fn advance_actor(world: &mut World, actor: Entity, delta: f32) {
+    // A charge can finish inside melee reach facing along its short travel,
+    // away from the opponent. The fixture still owns the actor's melee intent.
+    // Do not override active forced movement or turn an active channel.
+    if forced_movement(world, actor) {
+        return;
+    }
+    face_melee_intent(world, actor);
     let step = read_walk_step(world, actor, delta);
     if step.is_none() && world.get::<ReturningToMelee>(actor).is_none() {
         return;
@@ -59,12 +66,29 @@ fn set_return_walking(world: &mut World, actor: Entity, walking: bool) {
     }
 }
 
-fn read_walk_step(world: &World, actor: Entity, delta: f32) -> Option<WalkStep> {
-    if world
+fn face_melee_intent(world: &mut World, actor: Entity) {
+    if world.get::<shared::casting::CastState>(actor).is_some() {
+        return;
+    }
+    let target = world
+        .get::<crate::combat::AutoAttack>(actor)
+        .map(|attack| attack.victim);
+    if let Some(target) = target.filter(|target| world.get_entity(*target).is_ok()) {
+        super::face_actor_toward_primary(world, actor, target);
+    }
+}
+
+fn forced_movement(world: &World, actor: Entity) -> bool {
+    world
         .get::<MovementControl>(actor)
         .is_some_and(|control| control.controlled)
-        || !movement::can_move(world, actor)
-    {
+        || world
+            .get::<crate::spell_cast::ChargeMovement>(actor)
+            .is_some()
+}
+
+fn read_walk_step(world: &World, actor: Entity, delta: f32) -> Option<WalkStep> {
+    if forced_movement(world, actor) || !movement::can_move(world, actor) {
         return None;
     }
     let target = world.get::<crate::combat::AutoAttack>(actor)?.victim;

@@ -52,6 +52,8 @@ fn arms_literal_reference_executes_stance_and_rend_on_three_targets() {
 fn arms_literal_reference_earns_heroic_without_starving_mortal_strike() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(71, 1).unwrap();
+    let started = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started);
     engage(&mut run);
     for _ in 0..1800 {
         drive_player(&mut run).unwrap();
@@ -94,6 +96,15 @@ fn cast_arms_execute_at_rage(rage: f32, sudden_death: bool) -> (f64, f64) {
     use super::literal_rotation::execution::{Execution, execute};
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_arms_execute(rage, sudden_death);
+    // Isolate paid/free Rage scaling from paid-only Tactician RNG and SD's
+    // Onslaught target modifier. Native Execute retains its5% variance;
+    // those separate mechanics have their own native regressions.
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| matches!(aura.spell_id, 184783 | 444780),
+    );
     let target = run.targets[0];
     execute(
         run.app.world_mut(),

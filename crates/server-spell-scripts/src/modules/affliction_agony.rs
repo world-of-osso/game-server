@@ -76,7 +76,7 @@ fn landed_tick(world: &mut World, ctx: &EffectCtx<'_>) {
     }
 }
 
-fn creeping_normalization(world: &World, caster: Entity) -> f64 {
+pub(super) fn creeping_normalization(world: &World, caster: Entity) -> f64 {
     let Some(aura) = world
         .get::<ActiveAuras>(caster)
         .and_then(|auras| auras.iter().find(|aura| aura.spell_id == CREEPING_DEATH))
@@ -103,7 +103,7 @@ fn creeping_normalization(world: &World, caster: Entity) -> f64 {
     1.0 + f64::from(percent.max(first_rank)) / 100.0
 }
 
-fn advance_progress(progress: f64, increment: f64) -> (f64, bool) {
+pub(super) fn advance_progress(progress: f64, increment: f64) -> (f64, bool) {
     let total = progress + increment;
     let proc = total >= 1.0;
     (if proc { total - 1.0 } else { total }, proc)

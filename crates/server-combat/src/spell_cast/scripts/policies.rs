@@ -1,5 +1,6 @@
 //! Explicit missing-script policies; native spell records still own payloads.
 pub(super) mod pet_sets;
+mod pet_wrath;
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, PowerType};
 use std::collections::HashSet;
@@ -696,7 +697,9 @@ fn producers(world: &World, parent: u32) -> impl Iterator<Item = &'static Policy
             return parents.contains(&parent);
         }
         matches!(policy.relationship,
-        Relationship::OwnedPetSpellAfterCast { parent: trigger, .. }
+        Relationship::OwnedPetWrathAfterCast { parent: trigger }
+        | Relationship::ReduceCooldownAfterCast { parent: trigger, .. }
+        | Relationship::OwnedPetSpellAfterCast { parent: trigger, .. }
         | Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
         | Relationship::ApplySelfAuraAfterCast { parent: trigger, .. }
         | Relationship::ConsumeSelfAuraAfterCast { parent: trigger, .. }
@@ -750,6 +753,19 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             continue;
         }
         match policy.relationship {
+            Relationship::OwnedPetWrathAfterCast { .. } => {
+                pet_wrath::after_cast(world, caster, spell)
+            }
+            Relationship::ReduceCooldownAfterCast {
+                cooldown,
+                milliseconds_effect,
+                ..
+            } => {
+                let milliseconds =
+                    super::script_effect_value(world, caster, policy.talent, milliseconds_effect);
+                let seconds = f64::from(milliseconds) / 1000.0;
+                super::reduce_cooldown(world, caster, cooldown, seconds);
+            }
             Relationship::OwnedPetSpellAfterCast { payload, .. } => {
                 cast_owned_pet_payload(world, caster, spell, payload);
             }
@@ -965,14 +981,17 @@ pub(in crate::spell_cast) fn snapshot(
         .collect::<Vec<_>>();
     let rogue_context = super::rogue_hero::needs_context(world, caster, spell)
         || super::rogue_children::needs_context(world, caster, spell.id);
+    let source_context =
+        rogue_context || script_registry::requires_resource_context(world, spell.id);
     if spell.cast_parent_owns_modifier_charges
-        || (!rogue_context
+        || (!source_context
             && !consumers(world, &resources, spell.id)
                 .any(|policy| selected(world, caster, policy)))
     {
         return None;
     }
     let needs_hit_targets = rogue_context
+        || script_registry::requires_target_context(world, spell.id)
         || consumers(world, &resources, spell.id).any(|policy| {
             selected(world, caster, policy)
                 && !matches!(
@@ -985,7 +1004,11 @@ pub(in crate::spell_cast) fn snapshot(
     } else {
         Vec::new()
     };
-    Some(Box::new(CastPolicyContext { resources, targets }))
+    Some(Box::new(CastPolicyContext {
+        resources,
+        free_spender: false,
+        targets,
+    }))
 }
 
 fn capture_primary_targets(

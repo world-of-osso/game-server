@@ -44,7 +44,7 @@ pub(crate) fn tick_damage(world: &World, caster: Entity, target: Entity, _amount
 
 /// Damage is resolved first. Immune ticks never call this; a fully absorbed
 /// landed tick still advances. A lethal tick may already have removed its aura.
-pub(super) fn advance_stack(world: &mut World, target: Entity, instance: u32) {
+pub fn advance_stack(world: &mut World, target: Entity, instance: u32) {
     let Some(mut auras) = world.get_mut::<ActiveAuras>(target) else {
         return;
     };

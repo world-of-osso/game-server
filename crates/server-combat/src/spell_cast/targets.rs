@@ -105,7 +105,7 @@ enum Selector {
     DestRandom,
     ///74: explicit-object-centered CalcRadius(nullptr), not the current critter.
     DestTargetRandom,
-    /// Destination moved forward (78) or backward (79) by this slot's DB2 radius.
+    /// Destination moved forward78/back79/front-left85 by this slot's DB2 radius.
     DestOffset(f32),
     /// 55 DEST_CASTER_FRONT_LEAP: radius of this target slot, collision checked on execution.
     ForwardLeap,
@@ -178,6 +178,7 @@ fn selector(id: u32) -> Option<Selector> {
         148 => Selector::DestTowardsCaster,
         78 => Selector::DestOffset(0.0),
         79 => Selector::DestOffset(std::f32::consts::PI),
+        85 => Selector::DestOffset(std::f32::consts::FRAC_PI_4),
         72 => Selector::CasterRandom,
         73 => Selector::CasterRadius,
         74 => Selector::DestTargetRandom,
@@ -629,13 +630,12 @@ pub(super) fn select_targets_and_destination(
                 center = Some(random_destination(origin, effect, slot));
             }
             Selector::DestOffset(angle) => {
-                center = center.map(|point| {
-                    offset_destination(
-                        point,
-                        orientation(world, caster) + angle,
-                        radius(effect, slot),
-                    )
-                });
+                // TC Spell.cpp1692–1696 CheckDst supplies caster origin.
+                center = Some(offset_destination(
+                    center.unwrap_or(caster_pos),
+                    orientation(world, caster) + angle,
+                    radius(effect, slot),
+                ));
             }
             Selector::ChannelDestination => {
                 center = channel_destination(world, caster).map(|dest| dest.position);
@@ -1443,17 +1443,26 @@ fn effect_dest_slot(
             let angle = (-delta.z).atan2(delta.x);
             Some(offset_destination(origin, angle, radius(effect, slot)))
         }
-        Selector::DestOffset(angle) => dest.map(|dest: Dest| {
-            offset_destination(
-                dest.position,
-                if effect.implicit_targets.contains(&148) {
-                    orientation(world, caster) + angle
-                } else {
-                    dest.orientation + angle
-                },
+        Selector::DestOffset(angle) => {
+            // TC Spell.cpp1690–1738: CheckDst, then native radius/direction.
+            let origin = dest
+                .map(|dest| dest.position)
+                .or_else(|| position(world, caster))?;
+            let direction = if effect
+                .implicit_targets
+                .iter()
+                .any(|&id| matches!(id, 85 | 148))
+            {
+                orientation(world, caster)
+            } else {
+                dest.map_or_else(|| orientation(world, caster), |dest| dest.orientation)
+            };
+            Some(offset_destination(
+                origin,
+                direction + angle,
                 radius(effect, slot),
-            )
-        }),
+            ))
+        }
         Selector::CenterExplicit(_) => explicit.and_then(|target| position(world, target)),
         Selector::DestTargetOffset(angle) => {
             explicit.and_then(|target| target_offset(world, target, radius(effect, slot), angle))

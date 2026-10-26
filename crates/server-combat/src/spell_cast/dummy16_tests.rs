@@ -301,11 +301,31 @@ fn dummy16_judgment_known_rank_generates_power_against_immune_primary() {
     }
 }
 
+fn apply_blast_charges(h: &mut Harness, charges: f32) {
+    h.set_power(PowerType::ArcaneCharges, charges);
+    // This bare fixture omits the class passive that produces36032. Supply
+    // its authored Blast damage/time/cost effects, not legacy script scaling.
+    // SimC76f8118 sc_mage.cpp2076–2100/2850–2855 applies each term once.
+    const BLAST_CHARGE_EFFECTS: u32 = 1 | (1 << 3) | (1 << 4);
+    for _ in 0..charges as u8 {
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: h.caster,
+                target: h.caster,
+                spell_id: 36032,
+                effect_mask: BLAST_CHARGE_EFFECTS,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
+}
+
 #[test]
 fn dummy16_arcane_blast_snapshots_pre_gain_charge_damage_and_cost() {
     for charges in [0.0, 2.0, 4.0] {
         let mut h = fixture(&[30451, 36032], &[30451], 8);
-        h.set_power(PowerType::ArcaneCharges, charges);
+        apply_blast_charges(&mut h, charges);
         let spell = world_db().unwrap().store.get(30451).unwrap();
         let base = super::effects::scaled_amount(h.app.world(), h.caster, spell, &spell.effects[0]);
         let before = h.app.world().get::<Mana>(h.caster).unwrap().current;
@@ -315,6 +335,12 @@ fn dummy16_arcane_blast_snapshots_pre_gain_charge_damage_and_cost() {
         assert_eq!(spent, 275.0 * (1.0 + charges));
         assert_eq!(h.power(PowerType::ArcaneCharges), (charges + 1.0).min(4.0));
         h.set_power(PowerType::ArcaneCharges, 0.0);
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            h.caster,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 36032,
+        );
         h.advance(10);
         let damage: Vec<_> = h
             .inbox
@@ -334,7 +360,7 @@ fn dummy16_arcane_blast_snapshots_pre_gain_charge_damage_and_cost() {
 fn dummy16_arcane_blast_charge_cast_time_and_unaffordable_cast_boundary() {
     for charges in [0.0, 2.0, 4.0] {
         let mut h = fixture(&[30451, 36032], &[30451], 8);
-        h.set_power(PowerType::ArcaneCharges, charges);
+        apply_blast_charges(&mut h, charges);
         h.cast_and_deliver(30451, Some(h.npc));
         assert!(h.inbox.failed.is_empty());
         let cast = h
@@ -345,7 +371,7 @@ fn dummy16_arcane_blast_charge_cast_time_and_unaffordable_cast_boundary() {
         assert!((cast.duration - 2.25 * (1.0 - 0.08 * charges)).abs() < 0.001);
     }
     let mut h = fixture(&[30451, 36032], &[30451], 8);
-    h.set_power(PowerType::ArcaneCharges, 4.0);
+    apply_blast_charges(&mut h, 4.0);
     h.app.world_mut().get_mut::<Mana>(h.caster).unwrap().current = 1000.0;
     h.cast_and_deliver(30451, Some(h.npc));
     assert_eq!(h.inbox.failed.len(), 1);

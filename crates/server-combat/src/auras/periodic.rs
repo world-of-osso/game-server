@@ -1,7 +1,7 @@
-//! Periodic aura effects. Each effect with a period ticks at
-//! `applied + k × period` while `≤ expiry`, so a 16 s aura with a 2 s period
-//! ticks 8 times; a refresh keeps the tick phase. Damage/healing also pay the
-//! elapsed fraction of a final incomplete interval at natural expiry.
+//! Periodic aura effects. The pending tick keeps its deadline; after it executes,
+//! the next interval uses live Period modifiers. Refresh keeps the tick phase.
+//! With no modifier changes a16s aura/2s period ticks8times. Damage/healing also
+//! pay the elapsed fraction of a final incomplete interval at natural expiry.
 //!
 //! Tick sources: the aura caster deals the tick. PERIODIC_TRIGGER_SPELL casts
 //! `EffectTriggerSpell` from the caster at the aura's unit, as a triggered
@@ -98,8 +98,9 @@ fn next_due_tick(effect: &super::AuraEffectState, expiry: f64, now: f64) -> Opti
     (fraction > TIME_EPSILON).then_some((scheduled_at, fraction as f32))
 }
 
-/// Ticks due by `now` of every aura on `unit`, or of aura instance `only`.
+/// One due tick per effect, so its effects can change the next scheduled interval.
 fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Vec<Tick> {
+    let scripts = *world.resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return Vec::new();
     };
@@ -111,13 +112,17 @@ fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Ve
         .filter(|aura| only.is_none_or(|instance| aura.instance_id == instance))
     {
         let expiry = aura.expires_at.unwrap_or(f64::INFINITY);
-        let stacks = aura.stack_multiplier();
+        let stacks = if scripts.counter_only_dot_stacks(aura.spell_id) {
+            1.0
+        } else {
+            aura.stack_multiplier()
+        };
         for effect in aura
             .effects
             .iter_mut()
             .filter(|effect| effect.period_ms > 0)
         {
-            while let Some((scheduled_at, fraction)) = next_due_tick(effect, expiry, now) {
+            if let Some((scheduled_at, fraction)) = next_due_tick(effect, expiry, now) {
                 effect.pay_periodic_tick();
                 ticks.push(Tick {
                     instance_id: aura.instance_id,
@@ -212,14 +217,22 @@ pub fn paid_periodic_ticks(world: &World, caster: Entity, target: Entity, spell:
 
 /// Run every tick due on `unit` up to `now`.
 pub(super) fn run_due_ticks(world: &mut World, unit: Entity, now: f64) {
-    let ticks = due_ticks(world, unit, now, None);
-    run_ticks(world, unit, ticks);
+    run_matching_ticks(world, unit, now, None);
 }
 
 /// Run the ticks of aura `instance_id` on `unit` due by `until`.
 pub(super) fn run_ticks_until(world: &mut World, unit: Entity, instance_id: u32, until: f64) {
-    let ticks = due_ticks(world, unit, until, Some(instance_id));
-    run_ticks(world, unit, ticks);
+    run_matching_ticks(world, unit, until, Some(instance_id));
+}
+
+fn run_matching_ticks(world: &mut World, unit: Entity, until: f64, only: Option<u32>) {
+    loop {
+        let ticks = due_ticks(world, unit, until, only);
+        if ticks.is_empty() {
+            return;
+        }
+        run_ticks(world, unit, ticks);
+    }
 }
 
 fn run_ticks(world: &mut World, unit: Entity, ticks: Vec<Tick>) {
@@ -241,10 +254,60 @@ fn run_ticks(world: &mut World, unit: Entity, ticks: Vec<Tick>) {
             continue;
         };
         spell.cast_periodic_fraction = Some(tick.fraction);
+        spell.cast_periodic_ordinal = Some(tick.ordinal);
         spell.cast_primary_target = tick.cast_primary_target;
         run_tick(world, unit, &spell, &tick);
+        schedule_next_tick(world, unit, &mut spell, &tick);
         end_aura_at_full_health(world, unit, &tick);
     }
+}
+
+fn read_periodic_effect<'a>(
+    world: &'a World,
+    unit: Entity,
+    tick: &Tick,
+) -> Option<(Entity, &'a super::AuraEffectState)> {
+    let aura = world.get::<ActiveAuras>(unit)?.get(tick.instance_id)?;
+    let effect = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == tick.effect_index)?;
+    Some((aura.caster, effect))
+}
+
+fn schedule_next_tick(world: &mut World, unit: Entity, spell: &mut SpellInfo, tick: &Tick) {
+    if tick.fraction < 1.0 {
+        return; // SimC dot.cpp1154–1170: a final partial tick has no next schedule.
+    }
+    // A tick can remove its own aura; SimC dot.cpp1128–1131 stops in that case.
+    let Some((caster, effect)) = read_periodic_effect(world, unit, tick) else {
+        return;
+    };
+    // SimC76f8118 sc_warlock_actions.cpp2145–2163/2294–2311 retains
+    // the admitted channel's Period modifier after its proc use is consumed.
+    // Live uncharged Period modifiers still update the next interval normally.
+    spell.cast_charge_mods = effect.periodic_cast_charge_mods.clone();
+    let (_, period) = super::periodic_timing_with_haste(
+        world,
+        caster,
+        spell,
+        effect.periodic_base_ms,
+        effect.periodic_haste_multiplier,
+    );
+    let mut auras = world
+        .get_mut::<ActiveAuras>(unit)
+        .expect("retained periodic unit");
+    let aura = auras
+        .bypass_change_detection()
+        .get_mut(tick.instance_id)
+        .expect("retained periodic aura");
+    let effect = aura
+        .effects
+        .iter_mut()
+        .find(|effect| effect.index == tick.effect_index)
+        .expect("retained periodic effect");
+    // Keep paid ordinals/async deadlines. Only the next interval and its origin change.
+    effect.schedule_after_tick(tick.scheduled_at, period);
 }
 
 fn end_aura_at_full_health(world: &mut World, unit: Entity, tick: &Tick) -> bool {

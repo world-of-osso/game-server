@@ -26,6 +26,9 @@ pub fn resolve_actor_action(
     actor: Entity,
     requested: u32,
 ) -> Result<u32, CastFailure> {
+    if !super::script_registry::action_available(world, actor, requested) {
+        return Err(CastFailure::NotKnown);
+    }
     let known = world
         .get::<KnownSpells>(actor)
         .ok_or_else(|| CastFailure::Unsupported("native action actor lacks KnownSpells".into()))?;

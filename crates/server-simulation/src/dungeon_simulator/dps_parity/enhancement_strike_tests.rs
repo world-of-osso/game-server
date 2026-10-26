@@ -64,7 +64,7 @@ use crate::auras::ActiveAuras;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
-fn cast(run: &mut Run, spell: u32, target: Entity) {
+fn launch(run: &mut Run, spell: u32, target: Entity) {
     for _ in 0..1200 {
         match crate::spell_cast::creature_cast(
             run.app.world_mut(),
@@ -73,10 +73,7 @@ fn cast(run: &mut Run, spell: u32, target: Entity) {
             Some(target),
             false,
         ) {
-            Ok(()) => {
-                preparation::finish_pending_setup(run).unwrap();
-                return;
-            }
+            Ok(()) => return,
             Err(
                 crate::spell_cast::CastFailure::OnGlobalCooldown
                 | crate::spell_cast::CastFailure::InProgress,
@@ -85,6 +82,11 @@ fn cast(run: &mut Run, spell: u32, target: Entity) {
         }
     }
     panic!("native strike fixture {spell} did not become ready");
+}
+
+fn cast(run: &mut Run, spell: u32, target: Entity) {
+    launch(run, spell, target);
+    preparation::finish_pending_setup(run).unwrap();
 }
 
 fn stacks(run: &Run) -> u8 {
@@ -129,15 +131,18 @@ fn enhancement_stormstrike_triggers_one_native_crash_lightning_payload() {
     let buff = if storm_unleashed { 1252415 } else { 187878 };
     assert!(crate::auras::has_aura(run.app.world(), run.actor, buff));
     let before = damage_count(&run, 195592);
-    cast(&mut run, 17364, target);
-    assert!(
-        damage_count(&run, 32175) > 0,
-        "actual Stormstrike hit prerequisite"
-    );
+    launch(&mut run, 17364, target);
+    // SimC76f8118 sc_shaman.cpp5597–5598/4536–4598: this root owns one
+    // immediate payload; later Stormflurry executions own their own payloads.
     assert_eq!(
         damage_count(&run, 195592) - before,
         1,
         "one crash payload per landed root, not per weapon hand"
+    );
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        damage_count(&run, 32175) > 0,
+        "actual Stormstrike hit prerequisite"
     );
 }
 

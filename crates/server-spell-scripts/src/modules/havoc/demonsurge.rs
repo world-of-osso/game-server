@@ -18,12 +18,27 @@ struct DemonsurgeUses(BTreeSet<u32>);
 
 fn ability(spell: u32) -> u32 {
     match spell {
-        452486 => 210152,
-        452487 => 201427,
-        456640 => 258920,
+        452487 | 456640 => 258920,
         198013 => 452497,
         204596 => 452490,
         spell => spell,
+    }
+}
+
+pub(super) fn after_cast(spell: u32) -> Option<combat::spell_cast::scripts::AfterCastHook> {
+    matches!(spell, 452487 | 456640).then_some(cast_consuming_fire_payload)
+}
+
+fn cast_consuming_fire_payload(
+    world: &mut World,
+    caster: Entity,
+    _spell: &combat::spell_info::SpellInfo,
+) {
+    // SimC76f8118 sc_demon_hunter.cpp4784–4839 uses Immolation's native
+    // payload and spends CONSUMING_FIRE, never Annihilation. The native
+    // override endpoints are dummy records with no authored trigger edge.
+    if super::has_talent(world, caster, TALENT) {
+        combat::spell_cast::cast_triggered(world, caster, 258920, Some(caster), 1);
     }
 }
 
