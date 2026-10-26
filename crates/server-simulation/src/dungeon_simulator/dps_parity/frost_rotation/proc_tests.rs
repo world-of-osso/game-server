@@ -116,3 +116,130 @@ fn frost_critical_white_swings_earn_killing_machine() {
         "real critical white swings must roll Killing Machine PRD"
     );
 }
+
+fn earn_rime(run: &mut Run) {
+    for _ in 0..24 {
+        cast(run, 49020);
+        cast(run, 49020);
+        cast(run, 49143);
+        if auras::has_aura(run.app.world(), run.actor, 59052) {
+            return;
+        }
+    }
+    panic!("ordinary native Frost Strikes never earned Rime");
+}
+
+fn erw_full_recharge(run: &Run) -> f64 {
+    let bindings = super::bindings::build();
+    NativeFacts::new(
+        run.app.world(),
+        run.actor,
+        &bindings,
+        Encounter::Fixture {
+            started_at: 0.0,
+            duration: 300.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        },
+        1,
+    )
+    .value("cooldown.empower_rune_weapon.full_recharge_time")
+    .unwrap()
+}
+
+#[test]
+#[ignore = "native251 earned Rime must be spent by one ordinary Howling Blast"]
+fn frost_howling_blast_spends_earned_rime() {
+    let _seed = crate::random::seed_scope(251);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    earn_rime(&mut run);
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 49184, Some(target), false)
+        .expect("earned Rime admits HB without waiting for resources");
+    run.app.update();
+    assert!(
+        !auras::has_aura(run.app.world(), run.actor, 59052),
+        "one actual HB must spend its earned Rime, not leave fifteen seconds of free casts"
+    );
+}
+
+#[test]
+#[ignore = "native251 Rime HB applies Frostbound Will's native recharge adjustment"]
+fn frost_rime_howling_blast_reduces_empower_recharge() {
+    let _seed = crate::random::seed_scope(251);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    earn_rime(&mut run);
+    let milliseconds = run
+        .app
+        .world()
+        .get::<ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1238680)
+        .expect("selected native Frostbound Will")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    assert!(milliseconds < 0.0);
+    cast(&mut run, 47568);
+    let before = erw_full_recharge(&run);
+    assert!(before > f64::from(-milliseconds) / 1000.0);
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 49184, Some(target), false)
+        .unwrap();
+    let after = erw_full_recharge(&run);
+    let expected = before + f64::from(milliseconds) / 1000.0;
+    assert!(
+        (after - expected).abs() < 0.002,
+        "native Rime HB recharge {before} -> {after}, expected {expected}"
+    );
+}
+
+#[test]
+#[ignore = "native251 configured Shattered Sun2 flask supplies derived crit"]
+fn frost_shattered_sun_flask_grants_native_crit() {
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    let actor = run.actor;
+    let amount = run
+        .app
+        .world()
+        .get::<ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1235111)
+        .expect("native Shattered Sun2 aura")
+        .effects
+        .iter()
+        .find(|effect| effect.aura_type == 189)
+        .unwrap()
+        .amount;
+    let before = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .ratings
+        .crit;
+    auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1235111 && aura.caster == actor,
+    );
+    run.app.update();
+    let after = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .ratings
+        .crit;
+    assert!(amount > 0.0);
+    assert!(
+        (before - after - amount).abs() < 0.01,
+        "flask's native crit {amount}: {before} -> {after}"
+    );
+}
