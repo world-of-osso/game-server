@@ -80,3 +80,59 @@ fn survival_literal_actions_and_pet_damage_actual_primary() {
         "the native summoned pet must attack the actual primary: {pet}"
     );
 }
+
+#[test]
+#[ignore = "requires private spec255 player inputs and native world DB"]
+fn survival_literal_takedown_uses_native_hostile_primary() {
+    let mut run = prepare_measurement(255, 1).unwrap();
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1250646)
+        .unwrap()
+        .clone();
+    let self_ready = crate::spell_cast::read_native_cast_start(
+        run.app.world_mut(),
+        run.actor,
+        &spell,
+        run.actor,
+    );
+    let enemy_ready = crate::spell_cast::read_native_cast_start(
+        run.app.world_mut(),
+        run.actor,
+        &spell,
+        run.targets[0],
+    );
+    eprintln!("SURVIVAL_TAKEDOWN_READINESS self={self_ready:?} enemy={enemy_ready:?}");
+    assert!(
+        enemy_ready.is_ok(),
+        "native Takedown must admit its actual enemy: {enemy_ready:?}"
+    );
+    engage(&mut run);
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
+    let mut observed_buff = false;
+    for _ in 0..200 {
+        run.app.update();
+        drive_player(&mut run).unwrap();
+        observed_buff |= crate::auras::has_aura(run.app.world(), run.actor, 1250646);
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1250646)
+                && event.kind == CombatLogKind::CastSuccess),
+        "literal Takedown must preserve the enemy cast unit despite its self aura effects"
+    );
+    assert!(
+        observed_buff,
+        "the same enemy-targeted cast must buff its actual owner"
+    );
+}
