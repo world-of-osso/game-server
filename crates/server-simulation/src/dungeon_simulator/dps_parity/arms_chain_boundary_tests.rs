@@ -27,7 +27,10 @@ fn arms_sweeping_strikes_adds_one_to_native_zero_base_chain_targets() {
             crate::spell_cast::targets::Relation::Enemy,
         )
     };
-    assert!(secondaries(&mut run).is_empty(), "no unearned extra targets");
+    assert!(
+        secondaries(&mut run).is_empty(),
+        "no unearned extra targets"
+    );
     execute(
         run.app.world_mut(),
         actor,
@@ -35,8 +38,11 @@ fn arms_sweeping_strikes_adds_one_to_native_zero_base_chain_targets() {
     )
     .unwrap();
     let recipients = secondaries(&mut run);
-    assert_eq!(recipients.len(), 1, "native +1 adds one secondary to the existing explicit primary");
+    assert_eq!(
+        recipients.len(),
+        1,
+        "native +1 adds one secondary to the existing explicit primary"
+    );
     assert!(run.targets.contains(&recipients[0]));
     assert_ne!(recipients[0], primary);
 }
-

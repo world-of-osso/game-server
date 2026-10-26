@@ -54,7 +54,10 @@ fn arms_sudden_death_resets_the_active_execute_variant() {
                 .unwrap()
                 .remaining_cooldown_ms(&spell, crate::spell_cast::history_now(world))
         };
-        assert!(remaining(&run) > 0, "ordinary Execute starts its native cooldown");
+        assert!(
+            remaining(&run) > 0,
+            "ordinary Execute starts its native cooldown"
+        );
         // Restore the selected passive only after admission so unrelated
         // foreground RPPM cannot reset the cooldown under test.
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 29725, Some(actor), 1);

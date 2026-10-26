@@ -47,12 +47,17 @@ fn arms_reap_cleave_requires_native_three_target_threshold() {
             })
             .count();
         if target_count == 2 {
-            assert_eq!(hits, 0, "Cleave below native3-target threshold never rolls Reap");
+            assert_eq!(
+                hits, 0,
+                "Cleave below native3-target threshold never rolls Reap"
+            );
         } else {
-            assert!(hits > 0, "actual3-target Cleaves must roll native Reap's20% chance");
+            assert!(
+                hits > 0,
+                "actual3-target Cleaves must roll native Reap's20% chance"
+            );
             assert_eq!(hits % 3, 0, "each Reap dispatch hits the native pack once");
             assert!(hits <= 40 * 3, "at most one proc per Cleave execution");
         }
     }
 }
-
