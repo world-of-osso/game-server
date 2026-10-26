@@ -32,6 +32,15 @@ struct GuardianPolicy {
 // SimC76f8118 pets.cpp19/705/867/1510–1548: bindings and inheritance
 // belong to the actual root/creature pair, including the alternative Tyrant.
 const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
+    // SimC76f8118 sc_hunter.cpp1935: Dire Beast inherits live owner AP1.0.
+    GuardianPolicy {
+        summons: &[219199],
+        entry: 110063,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(1.0),
+    },
     // SimC76f8118 sc_hunter.cpp2043–2047: Bear inherits live owner AP0.6.
     // Rend is explicitly launched on summon, not an autonomous guardian cast.
     GuardianPolicy {

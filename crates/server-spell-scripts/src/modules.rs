@@ -127,6 +127,7 @@ register_modules! {
     hot_streak: (1000, "modules/hot_streak.rs"),
     hunter_bear: (2532, "modules/hunter_bear.rs"),
     hunter_command_wildspeaker: (2530, "modules/hunter_wildspeaker.rs"),
+    hunter_dire_command: (2536, "modules/hunter_dire_command.rs"),
     hunter_howl: (2530, "modules/hunter_howl.rs"),
     hunter_howl_recovery: (2531, "modules/hunter_howl_recovery.rs"),
     hunter_wild_hunt: (2534, "modules/hunter_wild_hunt.rs"),
