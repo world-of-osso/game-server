@@ -200,6 +200,8 @@ pub enum SpellScriptHook {
     ConsumedEffectValues(&'static [(u32, u8)]),
     /// Explicit source-script override of synchronous native stacking.
     AsynchronousAuras(&'static [u32]),
+    /// Source scripts that consume the existing frozen effective-resource snapshot.
+    ResourceContext(&'static [u32]),
     LaunchDelay(LaunchDelayLookup),
     DotMasteryMultiplier(DotMasteryMultiplierHook),
     CastTimeProcs(&'static [u32]),
@@ -407,6 +409,16 @@ impl Default for SpellScriptRegistry {
         #[cfg(not(test))]
         Self::new(&[])
     }
+}
+
+pub(crate) fn requires_resource_context(world: &World, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::ResourceContext(spells) => spells.contains(&spell),
+            _ => false,
+        })
 }
 
 pub(crate) fn asynchronous_aura(world: &World, spell: u32) -> bool {
