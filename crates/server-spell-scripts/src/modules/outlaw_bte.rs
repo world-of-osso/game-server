@@ -74,7 +74,7 @@ fn consume_gravedigger(world: &mut World, caster: Entity) {
     let now = spell_cast::now(world);
     let remaining = world.get::<spell_cast::SpellHistory>(caster)
         .map_or(0, |history| history.remaining_cooldown_ms(&spell, now));
-    spell_cast::scripts::reduce_cooldown(world, caster, BTE, f64::from(remaining) / 1000.0);
+    spell_cast::scripts::reduce_cooldown(world, caster, BTE, remaining as f64 / 1000.0);
     let threshold = world.resource::<SpellStore>().get(PALMED).expect("native Palmed Bullets")
         .effects.iter().find(|effect| effect.index == 0).expect("native Palmed threshold").misc_values[1];
     if let Some(instance) = world.get::<ActiveAuras>(caster).and_then(|auras| {
