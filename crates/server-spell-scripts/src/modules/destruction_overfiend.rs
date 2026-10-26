@@ -24,6 +24,8 @@ const CHAOS_INCARNATE: u32 = 387275;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EffectHandler(effect_handler),
     SpellScriptHook::SummonInitialized(apply_spawned_owner_buff),
+    SpellScriptHook::OwnsPolicyProc(owns_avatar_proc),
+    SpellScriptHook::AuraRollAfterCast(soul_fire_hook),
     SpellScriptHook::DamageAmount(damage_lookup),
     SpellScriptHook::CriticalChance(guaranteed_crit),
     SpellScriptHook::ActualDamageMultiplier(roll_mastery),
@@ -38,6 +40,33 @@ fn read_owner(world: &World, actor: Entity) -> Option<Entity> {
         .get::<ActiveSpec>(summon.owner)
         .is_some_and(|spec| spec.0 == 267);
     (actual && destruction).then_some(summon.owner)
+}
+
+fn owns_avatar_proc(spell: u32) -> bool {
+    spell == AVATAR
+}
+
+fn soul_fire_hook(spell: u32) -> Option<combat::spell_cast::scripts::AfterCastHook> {
+    (spell == 6353).then_some(summon_from_soul_fire)
+}
+
+fn summon_from_soul_fire(world: &mut World, caster: Entity, _: &SpellInfo) {
+    let selected = world.get::<TraitLoadout>(caster).is_some_and(|traits| {
+        traits
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == AVATAR)
+    });
+    let destruction = world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 267);
+    // SimC76f8118 actions5124–5136: actual Soul Fire execution summons one
+    // Overfiend. Native Avatar's broad proc mask also admits unrelated casts.
+    if selected
+        && destruction
+        && !combat::spell_cast::try_cast_triggered(world, caster, SUMMON, Some(caster), 1)
+    {
+        warn!(?caster, "native Soul Fire Overfiend summon refused");
+    }
 }
 
 fn effect_handler(spell: u32, index: u8) -> Option<EffectHandler> {

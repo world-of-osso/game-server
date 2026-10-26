@@ -490,7 +490,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Native Overfiend guardian
 
 - Actual434587 summons217429 with live owner SP1.0 and native repeated434589. Its spell coefficient borrows native116858 effect0 times native Avatar1245089 effect0; guarantee its critical outcome separately from live owner spell-crit scaling and the sourced owner-mastery range (SimC76f8118 pets2358–2407).
-- Actual creation grants native457578 to the existing owner through `SummonInitialized`, not an unreachable per-unit summon wrapper. Preserve native aura duration/period/raw energize, actor expiry and catalog values (actions4190–4205/init851–855). No synthetic bolts, resource grants or new timer state.
+- Actual ordinary Soul Fire execution summons one Overfiend; the native Avatar proc hint is too broad and must not summon on unrelated casts. The separate Dimensional Rift deck producer is not yet qualified. Actual creation grants native457578 to the existing owner through `SummonInitialized`, not an unreachable per-unit summon wrapper. Preserve native aura duration/period/raw energize, actor expiry and catalog values (actions4190–4205/init851–855). No synthetic bolts, resource grants or new timer state.
 
 ### Shared Hellcaller Wither counters
 
