@@ -3,6 +3,7 @@
 // each add a module line do not conflict; a duplicate line fails to compile (E0428).
 mod active_enemy_tests;
 #[cfg(test)] mod arcane_tests;
+mod affliction_darkglare_tests;
 mod affliction_grasp_tests;
 mod affliction_nathreza_tests;
 mod affliction_tests;
