@@ -5,7 +5,7 @@ use shared::components::ActiveSpec;
 use super::combat;
 use combat::spell_cast::effects::EffectCtx;
 use combat::spell_cast::script_registry::{
-    EnemyContextHitHook, Policy, Relationship, SpellScriptHook,
+    ContextHitHook, EnemyContextHitHook, Policy, Relationship, SpellScriptHook,
 };
 use combat::spell_cast::scripts::{AfterCastHook, reduce_cooldown, script_effect_value};
 use combat::spell_info::SpellInfo;
@@ -16,6 +16,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::PeriodicPrimaryDamage(scintillation_tick),
     SpellScriptHook::AfterResourceValues(deep_breath_hook),
     SpellScriptHook::EnemyContextHit(surge_hit_hook),
+    SpellScriptHook::ContextHit(breath_impact_hook),
     SpellScriptHook::ResourceContext(&[356995]),
     SpellScriptHook::CaptureConsumedDamageModifier(snapshot_mass_disintegrate),
 ];
@@ -46,6 +47,32 @@ fn snapshot_mass_disintegrate(
     spell.cast_damage_multiplier = Some(spell.cast_damage_multiplier.unwrap_or(1.0) * multiplier);
     // The existing successful-cast policy owns stack spending, not a completion token.
     None
+}
+
+fn breath_impact_hook(spell: u32) -> Option<ContextHitHook> {
+    (spell == 353759).then_some(melt_armor)
+}
+
+fn melt_armor(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    let devastation = world
+        .get::<ActiveSpec>(ctx.caster)
+        .is_some_and(|spec| spec.0 == 1467);
+    if !devastation || !combat::auras::has_aura(world, ctx.caster, 433871) {
+        return;
+    }
+    // SIMC_DEVASTATION_MANEUVERABILITY_MELT_ARMOR: sc_evoker.cpp6219–6222/
+    // 6252–6253/5712–5728. Native Deep Breath recipients own the periodic payload.
+    let depth = ctx.depth + 1;
+    let Some(mut child) = combat::spell_cast::load_triggered_spell(world, 441172, depth) else {
+        return;
+    };
+    if !combat::auras::has_aura(world, ctx.caster, 441176) {
+        // sc_evoker.cpp6169–6173: only selected Melt Armor enables its debuff.
+        child.effects.retain(|effect| effect.index == 0);
+    }
+    if !combat::spell_cast::launch_triggered_spell(world, ctx.caster, &child, Some(target), depth) {
+        warn!(caster = ?ctx.caster, ?target, "Native Melt Armor payload refused");
+    }
 }
 
 fn surge_hit_hook(spell: u32) -> Option<EnemyContextHitHook> {
@@ -177,6 +204,13 @@ fn causality_tick(
 }
 
 const POLICIES: &[Policy] = &[
+    // sc_evoker.cpp5718/8888–8891: overlapping Maneuverability burns extend.
+    Policy {
+        name: "SIMC_DEVASTATION_MELT_ARMOR_REAPPLICATION_EXTEND",
+        spec: 1467,
+        talent: 433871,
+        relationship: Relationship::ReapplicationExtend { payload: 441172 },
+    },
     // SimC76f8118 sc_evoker.cpp6584–6595: one successful Disintegrate
     // spends one earned Mass Disintegrate use, not one per secondary recipient.
     Policy {
