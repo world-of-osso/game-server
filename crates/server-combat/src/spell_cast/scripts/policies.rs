@@ -1003,7 +1003,11 @@ pub(in crate::spell_cast) fn snapshot(
     } else {
         Vec::new()
     };
-    Some(Box::new(CastPolicyContext { resources, targets }))
+    Some(Box::new(CastPolicyContext {
+        resources,
+        free_spender: false,
+        targets,
+    }))
 }
 
 fn capture_primary_targets(

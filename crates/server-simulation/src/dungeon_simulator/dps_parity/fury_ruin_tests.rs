@@ -60,7 +60,9 @@ fn fury_rampage_requires_selected_rampaging_ruin_even_with_whirlwind() {
             .collect();
         for weapon_hit in [184707, 184709, 201364, 201363] {
             assert!(
-                damage.iter().any(|event| event.spell_id == Some(weapon_hit)),
+                damage
+                    .iter()
+                    .any(|event| event.spell_id == Some(weapon_hit)),
                 "the real Rampage sequence must retain native weapon hit{weapon_hit}"
             );
         }
