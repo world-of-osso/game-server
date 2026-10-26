@@ -14,7 +14,7 @@
 [Arcane62](systems/simc-apl.md#arcane-fixture-62) executes supplied profile rows through shared literal control with native class admission and no concurrent AssistedCombat. The300s ST controller regression passes; numerical parity remains open.
 ## 2026-10-26 — Fire native Arcane Phoenix
 
-[Fire Phoenix](systems/simc-apl.md#fire-fixture-adapter) uses authentic summon reachability, native action values, Codex ordering and Ashes stack production. Summon/action RED is observed; GREEN and numerical parity remain train-gated.
+[Fire Phoenix](systems/simc-apl.md#fire-fixture-adapter) uses authentic summon reachability, native action values, Codex ordering and Ashes stack production. Summon/action and recharge tests passed3RED→3GREEN atf73f366ad; numerical parity remains open.
 
 ## 2026-10-25 — Shared Hellcaller Wither counters
 
@@ -4672,4 +4672,5 @@ Documented the first compile-boundary slice in [spell-script-crate](systems/spel
 
 - 2026-10-25: Added Affliction native Nightfall tick threshold/consumer documentation; REDa00f81dc4b proved actual Wither ticks never earned the selected buff; GREEN/measurement pending.
 
+- 2026-10-26: Documented [Ret Judgment target uses](systems/ret-judgment.md): ordinary native Judgment RED6a9c30b6f8 produced no197277; downstream producer/consumer and flat incoming magnitude implemented. Probee4384f8211 reached the first successful consumption; an extra timer-cancellation assertion contradicted pinned buff.cpp2246–2289 and was removed without changing generic timers. Corrected GREEN and numerical acceptance pending.
 - 2026-10-26: Documented ordinary native spell GCD haste ordering, native eligibility/bounds and40-spec clock test scope; full-profile DPS qualification remains separate.

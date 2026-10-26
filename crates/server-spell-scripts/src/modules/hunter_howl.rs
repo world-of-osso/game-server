@@ -129,7 +129,7 @@ fn consume_beasts(world: &mut World, caster: Entity, primary: Entity) {
         if index == 1 {
             spell_cast::cast_triggered(world, caster, 471936, Some(primary), 1);
             spell_cast::cast_triggered(world, caster, 471938, Some(primary), 1);
-        } else if !summon_beast(world, caster, SUMMON[index]) {
+        } else if !summon_beast(world, caster, SUMMON[index], primary) {
             continue;
         }
         auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
@@ -155,7 +155,7 @@ fn start_earned_stampede(world: &mut World, caster: Entity, primary: Entity) {
     apply_self(world, caster, STAMPEDE_TRIGGER);
 }
 
-fn summon_beast(world: &mut World, caster: Entity, spell: u32) -> bool {
+fn summon_beast(world: &mut World, caster: Entity, spell: u32, primary: Entity) -> bool {
     use combat::spell_cast::summon::SummonedCreature;
     let owned = |world: &mut World| -> Vec<Entity> {
         world
@@ -166,7 +166,9 @@ fn summon_beast(world: &mut World, caster: Entity, spell: u32) -> bool {
             .collect()
     };
     let before = owned(world);
-    spell_cast::cast_triggered(world, caster, spell, Some(caster), 1);
+    // The native summon still chooses its caster-relative destination. Retain
+    // the consuming Kill Command's hostile primary for the beast's first action.
+    spell_cast::cast_triggered(world, caster, spell, Some(primary), 1);
     let created = owned(world).iter().any(|unit| !before.contains(unit));
     if !created {
         warn!(
