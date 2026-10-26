@@ -104,6 +104,7 @@ fn shatter_owned_freezing(world: &mut World, ctx: &EffectCtx, target: Entity) {
     if shatter_stacks > 0 {
         launch_shatter(world, ctx, target, shatter_stacks);
     }
+    pay_lance_followups(world, ctx, target, shatter_stacks);
     if let Some((instance, _, duration)) = owned {
         if !fingers {
             for _ in 0..shatter_stacks {
@@ -111,6 +112,34 @@ fn shatter_owned_freezing(world: &mut World, ctx: &EffectCtx, target: Entity) {
             }
         }
         auras::set_owned_duration(world, ctx.caster, target, FREEZING, duration);
+    }
+}
+
+fn pay_lance_followups(world: &mut World, ctx: &EffectCtx, target: Entity, stacks: u8) {
+    // SimC76f8118 sc_mage.cpp4471–4481: primary shattered stacks earn
+    // native Force of Will conjures; all paid stacks reduce actual Ray recharge.
+    const FORCE_OF_WILL: u32 = 444719;
+    const GLACIATE: u32 = 1247798;
+    if ctx.spell.cast_primary_target == Some(target)
+        && auras::has_aura(world, ctx.caster, FORCE_OF_WILL)
+    {
+        let per_splinter = script_effect_value(world, ctx.caster, FORCE_OF_WILL, 2) as u32;
+        assert!(per_splinter > 0, "native Force of Will stacks per Splinter");
+        combat::spell_cast::scripts::conjure_spellslinger(
+            world,
+            ctx.caster,
+            target,
+            u32::from(stacks) / per_splinter,
+        );
+    }
+    if auras::has_aura(world, ctx.caster, GLACIATE) {
+        let milliseconds = script_effect_value(world, ctx.caster, GLACIATE, 1) * f32::from(stacks);
+        combat::spell_cast::scripts::reduce_cooldown(
+            world,
+            ctx.caster,
+            205021,
+            f64::from(milliseconds) / 1000.0,
+        );
     }
 }
 

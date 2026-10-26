@@ -81,6 +81,7 @@ pub(super) use policies::{
     snapshot as snapshot_hit_policies,
 };
 pub(crate) use policies::{extends_reapplication, register_lifecycle_policies};
+pub use spellslinger::conjure_count as conjure_spellslinger;
 
 pub(crate) fn filter_secondary_targets(
     world: &World,
