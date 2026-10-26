@@ -77,6 +77,25 @@
 //! - `CastHitProcChance` and `RollCastHitProc`: chance snapshot before consumption, roll after cast.
 //! - `AfterQueuedTriggers`: fixed update after queued hits, before power/rune sync.
 //! - `AfterSpellPayment`: after generic payment callbacks, before gargoyle empowerment.
+//! - `BeforeDamageSnapshot`: before consumed-modifier capture, preserving pet-set multiplier order.
+//! - `BeforeExecutionCounterLaunch`: after Frost launch completion, before execution counters.
+//! - `PolicyTailCast`, `PolicyTailHit`: first additional relationship handler after generic
+//!   policy traversal, preserving the original first-hit/target guard and cast ordering.
+//! - `ProcCharges`: transform the authored charge count at native aura creation.
+//! - `ExtraComboPoints`: additional authored points at the positive root self-energize slot.
+//! - `NamedHealingMultiplier`: factors before the persistent-healing multiplier.
+//! - `EffectEnabled`: additive vetoes after other native effect filters, before guardians.
+//! - `WeaponAuraRegistration`: after Rogue proc registration, before Spirit Wolf.
+//! - `CheckNativeSpell`: at the original additional spell-admission check.
+//! - `AfterResolvedHits`: after actual cast hits, before resolving-frame teardown.
+//! - `SnapshotNativeAuraAmount`: at the original Rod aura-amount snapshot position.
+//! - `AfterCastUpdate`: original delayed-weapon scheduler, ordered after advance_casts.
+//! - `ConsumeCastModifiers`: successful foreground consumption at the original MW slot.
+//! - `AfterWeaponLaunch`: tier then linked weapon payloads after Glory of the Dawn.
+//! - `AfterPolicyCast`: first additional cast handler after generic relationship handlers.
+//! - `BeforeMeleeComboDamage`: actual direct damage before melee/combo feedback.
+//! - `BeforePeriodicItemDamage`: periodic relationship completion before item callbacks.
+//! - `ConjureCount`: explicit source-qualified extra-projectile requests, without a second cast.
 //! - `AfterAuraApplication`: after successful aura storage and native apply/refresh callbacks.
 //! - `SummonInitialized`: after guardian initialization, receiving the actual spawned actor.
 //! New stages own distinct callback/lookup aliases, even when signatures coincide.
@@ -163,6 +182,12 @@ pub type FinishConsumedDamageModifierHook =
     fn(&mut World, Entity, &SpellInfo, Option<u32>, u8, bool);
 pub type BeforeJudgmentOnCastHook = fn(&mut World, Entity, u32, u8);
 pub type BeforeLateAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
+pub type BeforeDamageSnapshotHook = fn(&World, Entity, &mut SpellInfo);
+pub type BeforeExecutionCounterLaunchHook = fn(&mut World, Entity, &SpellInfo);
+pub type PolicyTailCastHook = fn(&mut World, Entity, &SpellInfo);
+pub type PolicyTailCastLookup = fn(u32) -> Option<PolicyTailCastHook>;
+pub type PolicyTailHitHook = fn(&mut World, &EffectCtx<'_>);
+pub type PolicyTailHitLookup = fn(u32) -> Option<PolicyTailHitHook>;
 pub type AfterQueuedTriggersHook = fn(&mut World);
 pub type AfterSpellPaymentHook = fn(&mut World, Entity, &SpellInfo, &[(CostPool, f32)]);
 pub type FireAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
@@ -178,6 +203,49 @@ pub type MidAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type HealingMultiplierHook = fn(&World, Entity, &SpellInfo, bool) -> f32;
 pub type SnapshotHealingAuraHook =
     fn(&World, Entity, &SpellInfo, &crate::spell_info::SpellEffect, f32) -> f32;
+
+pub type ProcChargesHook = fn(&World, Entity, &SpellInfo, f32) -> f32;
+pub type ExtraComboPointsHook = fn(&World, Entity, &SpellInfo) -> f32;
+pub type NamedHealingMultiplierHook = fn(&World, Entity, &SpellInfo) -> f32;
+pub type EffectEnabledHook = fn(&World, Entity, u32, u8) -> bool;
+
+pub type WeaponAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
+pub type CheckNativeSpellHook = fn(&World, Entity, &SpellInfo) -> Result<(), super::CastFailure>;
+pub type AfterResolvedHitsHook = fn(&mut World, &EffectCtx<'_>);
+pub type SnapshotNativeAuraAmountHook = fn(&World, &SpellInfo, u8, f32) -> f32;
+pub type AfterCastUpdateHook = fn(&mut World);
+pub type ConsumeCastModifiersHook = fn(&mut World, Entity, &SpellInfo);
+pub type AfterWeaponLaunchHook = fn(&mut World, Entity, &SpellInfo, u8);
+
+pub type PolicyContextRequiredHook = fn(&World, Entity, &SpellInfo) -> bool;
+pub type PreparePolicySpellHook = fn(&World, Entity, &mut SpellInfo);
+pub type BeforePolicyPrimaryHitHook = fn(&mut World, &EffectCtx<'_>, Entity);
+pub type RogueAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
+pub type BeforeEnemyContextHitHook = fn(&mut World, &EffectCtx<'_>, Entity);
+pub type BeforeEnemyContextHitLookup = fn(u32) -> Option<BeforeEnemyContextHitHook>;
+pub type HealthChangeObservedHook = fn(&mut World, &shared::protocol::CombatLogEvent);
+pub type SupportAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
+pub type NamedAuraFields = &'static [(u32, u8)];
+pub type SnapshotLaunchAurasHook = fn(&World, Entity, &mut SpellInfo);
+pub type TriggeredChildDamageMultiplierHook = fn(&World, Entity, &SpellInfo, u32) -> Option<f32>;
+pub type ProcAfterCastLookup = fn(u32) -> Option<AfterCastHook>;
+pub type SupplyAfterCastLookup = fn(u32) -> Option<AfterCastHook>;
+pub type ResolvePendingScriptEventsHook = fn(&mut World);
+pub type AfterLaunchProcSupplyHook = fn(&mut World, Entity, &SpellInfo);
+
+pub type ConjureFromSpellHook = fn(&mut World, Entity, &SpellInfo, Entity, u32);
+pub type BeforeScriptOnCastHook = fn(&mut World, Entity, u32, u8);
+pub type AfterWeaponDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, f32);
+pub type NativeWeaponMultiplierHook = fn(&World, Entity, &SpellInfo, u32) -> Option<f32>;
+pub type AfterNativeLaunchHook = fn(&mut World, Entity, &SpellInfo);
+pub type AfterNativeCastUpdateHook = fn(&mut World);
+pub type AfterChainResolvedHook = fn(&mut World, &EffectCtx<'_>);
+pub type BeforePendingScriptEventsHook = fn(&mut World);
+pub type ConjureCountHook = fn(&mut World, Entity, Entity, u32);
+pub type AfterPolicyCastHook = fn(&mut World, Entity, &SpellInfo);
+pub type AfterPolicyCastLookup = fn(u32) -> Option<AfterPolicyCastHook>;
+pub type BeforeMeleeComboDamageHook = fn(&mut World, &EffectCtx<'_>);
+pub type BeforePeriodicItemDamageHook = fn(&mut World, &EffectCtx<'_>, Entity);
 
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
@@ -275,6 +343,10 @@ pub enum SpellScriptHook {
     FinishConsumedDamageModifier(FinishConsumedDamageModifierHook),
     BeforeJudgmentOnCast(BeforeJudgmentOnCastHook),
     BeforeLateAuraRegistration(BeforeLateAuraRegistrationHook),
+    BeforeDamageSnapshot(BeforeDamageSnapshotHook),
+    BeforeExecutionCounterLaunch(BeforeExecutionCounterLaunchHook),
+    PolicyTailCast(PolicyTailCastLookup),
+    PolicyTailHit(PolicyTailHitLookup),
     AfterQueuedTriggers(AfterQueuedTriggersHook),
     AfterSpellPayment(AfterSpellPaymentHook),
     FireAuraRegistration(FireAuraRegistrationHook),
@@ -289,6 +361,43 @@ pub enum SpellScriptHook {
     MidAuraRegistration(MidAuraRegistrationHook),
     HealingMultiplier(HealingMultiplierHook),
     SnapshotHealingAura(SnapshotHealingAuraHook),
+    ProcCharges(ProcChargesHook),
+    ExtraComboPoints(ExtraComboPointsHook),
+    NamedHealingMultiplier(NamedHealingMultiplierHook),
+    EffectEnabled(EffectEnabledHook),
+    WeaponAuraRegistration(WeaponAuraRegistrationHook),
+    CheckNativeSpell(CheckNativeSpellHook),
+    AfterResolvedHits(AfterResolvedHitsHook),
+    SnapshotNativeAuraAmount(SnapshotNativeAuraAmountHook),
+    AfterCastUpdate(AfterCastUpdateHook),
+    ConsumeCastModifiers(ConsumeCastModifiersHook),
+    AfterWeaponLaunch(AfterWeaponLaunchHook),
+    PolicyContextRequired(PolicyContextRequiredHook),
+    PreparePolicySpell(PreparePolicySpellHook),
+    BeforePolicyPrimaryHit(BeforePolicyPrimaryHitHook),
+    RogueAuraRegistration(RogueAuraRegistrationHook),
+    BeforeEnemyContextHit(BeforeEnemyContextHitLookup),
+    HealthChangeObserved(HealthChangeObservedHook),
+    SupportAuraRegistration(SupportAuraRegistrationHook),
+    NamedAuraFields(NamedAuraFields),
+    SnapshotLaunchAuras(SnapshotLaunchAurasHook),
+    TriggeredChildDamageMultiplier(TriggeredChildDamageMultiplierHook),
+    ProcAfterCast(ProcAfterCastLookup),
+    SupplyAfterCast(SupplyAfterCastLookup),
+    ResolvePendingScriptEvents(ResolvePendingScriptEventsHook),
+    AfterLaunchProcSupply(AfterLaunchProcSupplyHook),
+    ConjureCount(ConjureCountHook),
+    ConjureFromSpell(ConjureFromSpellHook),
+    BeforeScriptOnCast(BeforeScriptOnCastHook),
+    AfterWeaponDamage(AfterWeaponDamageHook),
+    NativeWeaponMultiplier(NativeWeaponMultiplierHook),
+    AfterNativeLaunch(AfterNativeLaunchHook),
+    AfterNativeCastUpdate(AfterNativeCastUpdateHook),
+    AfterChainResolved(AfterChainResolvedHook),
+    BeforePendingScriptEvents(BeforePendingScriptEventsHook),
+    AfterPolicyCast(AfterPolicyCastLookup),
+    BeforeMeleeComboDamage(BeforeMeleeComboDamageHook),
+    BeforePeriodicItemDamage(BeforePeriodicItemDamageHook),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -351,11 +460,42 @@ impl SpellScriptRegistry {
         }
     }
 
+    pub fn register_rogue_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::RogueAuraRegistration(register) = hook {
+                register(scripts);
+            }
+        }
+    }
+
+    pub fn register_support_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::SupportAuraRegistration(register) = hook {
+                register(scripts);
+            }
+        }
+    }
+
+    pub fn consumes_named_aura_field(self, spell: u32, index: u8) -> bool {
+        self.hooks().any(|hook| match hook {
+            SpellScriptHook::NamedAuraFields(values) => values.contains(&(spell, index)),
+            _ => false,
+        })
+    }
+
     pub fn preserves_periodic_phase(self, spell: u32) -> bool {
         self.hooks().any(|hook| match hook {
             SpellScriptHook::PreservePeriodicPhase(spells) => spells.contains(&spell),
             _ => false,
         })
+    }
+
+    pub fn register_weapon_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::WeaponAuraRegistration(register) = hook {
+                register(scripts);
+            }
+        }
     }
 
     pub fn counter_only_dot_stacks(self, spell: u32) -> bool {
@@ -1386,11 +1526,384 @@ pub fn after_spell_payment(
     }
 }
 
+pub fn before_damage_snapshot(world: &World, caster: Entity, spell: &mut SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforeDamageSnapshot(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn before_execution_counter_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforeExecutionCounterLaunch(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn policy_tail_cast(world: &World, spell: u32) -> Option<PolicyTailCastHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::PolicyTailCast(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn policy_tail_hit(world: &World, spell: u32) -> Option<PolicyTailHitHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::PolicyTailHit(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn proc_charges(world: &World, caster: Entity, spell: &SpellInfo, native: f32) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .fold(native, |amount, hook| match hook {
+            SpellScriptHook::ProcCharges(run) => run(world, caster, spell, amount),
+            _ => amount,
+        })
+}
+
+pub fn extra_combo_points(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(|hook| match hook {
+            SpellScriptHook::ExtraComboPoints(run) => Some(run(world, caster, spell)),
+            _ => None,
+        })
+        .sum()
+}
+
+pub fn named_healing_multiplier(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(|hook| match hook {
+            SpellScriptHook::NamedHealingMultiplier(run) => Some(run(world, caster, spell)),
+            _ => None,
+        })
+        .product()
+}
+
+pub fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .all(|hook| match hook {
+            SpellScriptHook::EffectEnabled(run) => run(world, caster, spell, index),
+            _ => true,
+        })
+}
+
+pub fn check_native_spell(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), super::CastFailure> {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::CheckNativeSpell(run) = hook {
+            run(world, caster, spell)?;
+        }
+    }
+    Ok(())
+}
+
+pub fn after_resolved_hits(world: &mut World, ctx: &EffectCtx<'_>) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterResolvedHits(run) = hook {
+            run(world, ctx);
+        }
+    }
+}
+
+pub fn snapshot_native_aura_amount(
+    world: &World,
+    spell: &SpellInfo,
+    index: u8,
+    native: f32,
+) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .fold(native, |amount, hook| match hook {
+            SpellScriptHook::SnapshotNativeAuraAmount(run) => run(world, spell, index, amount),
+            _ => amount,
+        })
+}
+
+pub fn after_cast_update(world: &mut World) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterCastUpdate(run) = hook {
+            run(world);
+        }
+    }
+}
+
+pub fn consume_cast_modifiers(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::ConsumeCastModifiers(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn after_weapon_launch(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterWeaponLaunch(run) = hook {
+            run(world, caster, spell, depth);
+        }
+    }
+}
+
+pub fn after_policy_cast(world: &World, spell: u32) -> Option<AfterPolicyCastHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::AfterPolicyCast(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn before_melee_combo_damage(world: &mut World, ctx: &EffectCtx<'_>) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforeMeleeComboDamage(run) = hook {
+            run(world, ctx);
+        }
+    }
+}
+
+pub fn before_periodic_item_damage(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforePeriodicItemDamage(run) = hook {
+            run(world, ctx, target);
+        }
+    }
+}
+
+pub fn conjure_count(world: &mut World, caster: Entity, target: Entity, count: u32) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::ConjureCount(run) = hook {
+            run(world, caster, target, count);
+        }
+    }
+}
+
+/// Source scripts can require the existing paid-resource and primary snapshot.
+pub fn policy_context_required(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::PolicyContextRequired(run) => run(world, caster, spell),
+            _ => false,
+        })
+}
+
+/// Script snapshots follow captured policy context and precede ordinary aura preparation.
+pub fn prepare_policy_spell(world: &World, caster: Entity, spell: &mut SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::PreparePolicySpell(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+/// The policy dispatcher has already checked the original primary before this slot.
+pub fn before_policy_primary_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforePolicyPrimaryHit(run) = hook {
+            run(world, ctx, target);
+        }
+    }
+}
+
+/// First native enemy-hit callback, before ordinary registered enemy impact lookups.
+pub fn before_enemy_context_hit(world: &World, spell: u32) -> Option<BeforeEnemyContextHitHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::BeforeEnemyContextHit(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+/// Health history observes the emitted event after meters and arena bookkeeping.
+pub fn health_change_observed(world: &mut World, event: &shared::protocol::CombatLogEvent) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::HealthChangeObserved(run) = hook {
+            run(world, event);
+        }
+    }
+}
+
+/// Admission-time proc markers, before payment and missile flight.
+pub fn snapshot_launch_auras(world: &World, caster: Entity, spell: &mut SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::SnapshotLaunchAuras(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+/// First authored scalar for a triggered child, retaining the parent's snapshot.
+pub fn triggered_child_damage_multiplier(
+    world: &World,
+    caster: Entity,
+    parent: &SpellInfo,
+    child: u32,
+) -> Option<f32> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::TriggeredChildDamageMultiplier(run) => {
+                run(world, caster, parent, child)
+            }
+            _ => None,
+        })
+}
+
+/// Execution proc consumers run after native handlers and before supply producers.
+pub fn proc_after_cast(world: &World, spell: u32) -> impl Iterator<Item = AfterCastHook> + use<> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(move |hook| match hook {
+            SpellScriptHook::ProcAfterCast(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+/// Supply producers run before generic successful-cast policy relationships.
+pub fn supply_after_cast(world: &World, spell: u32) -> impl Iterator<Item = AfterCastHook> + use<> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(move |hook| match hook {
+            SpellScriptHook::SupplyAfterCast(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+/// Resolve script-owned delays after queued triggers and before their cleanup.
+pub fn resolve_pending_script_events(world: &mut World) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::ResolvePendingScriptEvents(run) = hook {
+            run(world);
+        }
+    }
+}
+
+/// Launch supply follows modifier consumption and precedes execution counters.
+pub fn after_launch_proc_supply(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterLaunchProcSupply(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+/// Source-preserving explicit conjures from an upstream native caller.
+pub fn conjure_from_spell(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+    count: u32,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::ConjureFromSpell(run) = hook {
+            run(world, caster, spell, target, count);
+        }
+    }
+}
+
+/// Native root snapshot before the ordinary on-cast registry.
+pub fn before_script_on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforeScriptOnCast(run) = hook {
+            run(world, caster, spell, depth);
+        }
+    }
+}
+
+/// Actual weapon impact at the original pre-policy position.
+pub fn after_weapon_damage(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, amount: f32) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterWeaponDamage(run) = hook {
+            run(world, ctx, target, amount);
+        }
+    }
+}
+
+pub fn native_weapon_multiplier(
+    world: &World,
+    caster: Entity,
+    parent: &SpellInfo,
+    child: u32,
+) -> Option<f32> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::NativeWeaponMultiplier(run) => run(world, caster, parent, child),
+            _ => None,
+        })
+}
+
+/// Native repeated launch after the upstream Arcane launch callback.
+pub fn after_native_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterNativeLaunch(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+/// Independent scheduler retains its own after-advance_casts system boundary.
+pub fn after_native_cast_update(world: &mut World) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterNativeCastUpdate(run) = hook {
+            run(world);
+        }
+    }
+}
+
+/// Actual chain recipients are still captured before the resolving frame is removed.
+pub fn after_chain_resolved(world: &mut World, ctx: &EffectCtx<'_>) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterChainResolved(run) = hook {
+            run(world, ctx);
+        }
+    }
+}
+
+/// Retain native discharge resolution before Frost and generic queued events.
+pub fn before_pending_script_events(world: &mut World) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforePendingScriptEvents(run) = hook {
+            run(world);
+        }
+    }
+}
+
 #[cfg(test)]
 use crate as combat;
 #[cfg(test)]
 #[path = "../../../server-spell-scripts/src/modules.rs"]
 mod fixtures;
+
 // Native unit fixtures compile the same helper against their own combat types.
 #[cfg(test)]
 #[path = "../../../server-spell-scripts/src/bombardments.rs"]

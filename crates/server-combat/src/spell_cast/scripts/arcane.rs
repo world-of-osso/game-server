@@ -204,7 +204,7 @@ fn launch_orb(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
         // sc_mage.cpp2668–2675: Splintering Orbs limits total conjures by
         // native count-per-impact, not by inventing an AoE damage coefficient.
         if count > 0 && index < (maximum / count) as usize {
-            super::spellslinger::conjure_from_spell(world, caster, spell, recipient, count);
+            super::script_registry::conjure_from_spell(world, caster, spell, recipient, count);
         }
         queued_triggers::schedule_full_trigger(world, &ctx, recipient, 153640, 0);
         for index in 1..=extra {
@@ -328,7 +328,7 @@ fn roll_clearcasting(world: &mut World, caster: Entity) {
 
 fn conjure_at_primary(world: &mut World, caster: Entity, spell: &SpellInfo, count: u32) {
     if let Some(target) = spell.cast_primary_target {
-        super::spellslinger::conjure_from_spell(world, caster, spell, target, count);
+        super::script_registry::conjure_from_spell(world, caster, spell, target, count);
     }
 }
 
