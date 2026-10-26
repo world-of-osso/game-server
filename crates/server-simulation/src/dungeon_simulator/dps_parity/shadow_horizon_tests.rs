@@ -65,6 +65,20 @@ fn rift_expiry(run: &Run) -> f64 {
         .unwrap()
 }
 
+fn earn_insight(run: &mut Run) {
+    // Native375981 supplies a real free/instant use; do not manufacture charges.
+    for _ in 0..4000 {
+        if crate::auras::has_aura(run.app.world(), run.actor, 375981) {
+            return;
+        }
+        if !crate::auras::has_aura(run.app.world(), run.targets[0], 589) {
+            cast_and_finish(run, 589);
+        }
+        run.app.update();
+    }
+    panic!("ordinary positive Pain ticks must earn native Insight");
+}
+
 #[test]
 #[ignore = "requires native258 Player/profile/traits"]
 fn shadow_horizon_ordinary_void_blast_extends_actual_rift_only_to_native_cap() {
@@ -78,8 +92,9 @@ fn shadow_horizon_ordinary_void_blast_extends_actual_rift_only_to_native_cap() {
     let extension = f64::from(native(2));
     assert_eq!(cap, 3);
     assert_eq!(extension, 1.0);
-    // Earn ordinary profile Power Infusion so four real casts fit the finite
-    // Rift window. Do not reset charges, assign haste or lengthen a test aura.
+    // One real Insight use plus ordinary PI fits four casts at native recharge.
+    // PI alone completed1/2/3 at3.6/7.5/11.4; fourth missed the finite window.
+    earn_insight(&mut run);
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
@@ -89,6 +104,10 @@ fn shadow_horizon_ordinary_void_blast_extends_actual_rift_only_to_native_cap() {
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 10060));
     cast_and_finish(&mut run, 263165);
     let original_expiry = rift_expiry(&run);
+    eprintln!(
+        "HORIZON actual Rift expiry{original_expiry} at{}",
+        crate::spell_cast::now(run.app.world())
+    );
     for cast in 1..=cap + 1 {
         cast_and_finish(&mut run, 450983);
         eprintln!(
