@@ -1,3 +1,4 @@
+- [Survival native producers](systems/spell-casting.md#survival-native-producers--2026-10-26) — Tip/Swipe/Wildfire landed with35 real controls; shared Sentinel has3 genuine native REDs and a pending landing gate; numerical parity remains open.
 - [Destruction guaranteed-crit damage](systems/spell-casting.md#destruction-guaranteed-crit-damage--2026-10-26) — live crit chance supplies the selected Conflagrate/Shadowburn multiplier; native RED recorded, GREEN pending.
 - [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counter-only RED→GREEN; shared producer/collapse lifecycle native6GREEN on265/267; numerical parity remains open.
 - [Equipment proc eligibility](systems/character-stats.md#equipment-proc-eligibility--2026-10-25) — native idle Venomcursed999→correct permanent606 RED/GREEN; shared combat-reference gate passes four native groups; Ret/WW test-control RED→GREEN and four independently reproduced WW baseline failures are recorded.
