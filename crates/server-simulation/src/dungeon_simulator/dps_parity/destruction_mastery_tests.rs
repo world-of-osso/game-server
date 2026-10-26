@@ -117,10 +117,14 @@ fn destruction_mastery_prediction_uses_mean_without_advancing_native_rng() {
     use server::simc_apl::Facts;
     let mut run = prepare_literal(267, 1).unwrap();
     let bindings = crate::simc_apl_native::Bindings {
-        actions: [("conflagrate".into(), CONFLAGRATE)].into(),
+        actions: [
+            ("conflagrate".into(), CONFLAGRATE),
+            ("chaos_bolt".into(), 116858),
+        ]
+        .into(),
         ..Default::default()
     };
-    let forecast = |run: &Run| {
+    let forecast = |run: &Run, alias: &str| {
         crate::simc_apl_native::NativeFacts::new(
             run.app.world(),
             run.actor,
@@ -133,18 +137,33 @@ fn destruction_mastery_prediction_uses_mean_without_advancing_native_rng() {
             1,
         )
         .with_targets(Some(run.targets[0]), &run.targets)
-        .value("action.conflagrate.damage")
+        .value(&format!("action.{alias}.damage"))
         .unwrap()
     };
     let next_without_forecast = {
         let _seed = crate::random::seed_scope(70448);
         crate::random::random::<f32>()
     };
-    let with_mastery = {
+    let incarnate_lower = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(387275)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .base_points;
+    let cases = [
+        ("conflagrate", 0.5),
+        ("chaos_bolt", f64::from(incarnate_lower) / 100.0),
+    ];
+    let with_mastery = cases.map(|(alias, lower)| {
         let _seed = crate::random::seed_scope(70448);
-        let first = forecast(&run);
+        let first = forecast(&run, alias);
         assert_eq!(
-            forecast(&run),
+            forecast(&run, alias),
             first,
             "the expected snapshot must be deterministic"
         );
@@ -153,8 +172,8 @@ fn destruction_mastery_prediction_uses_mean_without_advancing_native_rng() {
             next_without_forecast,
             "read-only damage facts cannot consume native combat RNG"
         );
-        first
-    };
+        (alias, lower, first)
+    });
     let mastery = f64::from(
         run.app
             .world()
@@ -170,10 +189,13 @@ fn destruction_mastery_prediction_uses_mean_without_advancing_native_rng() {
         RemoveReason::Dispelled,
         |aura| aura.spell_id == MASTERY,
     );
-    let without_mastery = forecast(&run);
-    let expected = without_mastery * (1.0 + 0.75 * mastery);
-    assert!(
-        (with_mastery - expected).abs() <= 1.0,
-        "native mastery mean: control{without_mastery}, forecast{with_mastery}, expected{expected}"
-    );
+    for (alias, lower, empowered) in with_mastery {
+        let control = forecast(&run, alias);
+        let mean = (lower + 1.0) / 2.0;
+        let expected = control * (1.0 + mean * mastery);
+        assert!(
+            (empowered - expected).abs() <= 1.0,
+            "native{alias} mastery mean: control{control}, forecast{empowered}, expected{expected}"
+        );
+    }
 }

@@ -1244,6 +1244,8 @@ fn expected_school_damage(
 ) -> f32 {
     let amount = scaled_amount(world, ctx.caster, ctx.spell, effect)
         + super::scripts::empower_damage_bonus(world, ctx.caster, ctx.spell);
+    let amount = amount
+        * super::script_registry::expected_damage_multiplier(world, ctx.caster, target, ctx.spell);
     let critical = critical_damage_amount(
         world,
         ctx.caster,
@@ -1813,8 +1815,11 @@ fn deal_damage_and_report(
     world: &mut World,
     ctx: &EffectCtx,
     target: Entity,
-    damage: DamageInput,
+    mut damage: DamageInput,
 ) -> f32 {
+    if !damage.resolved_source {
+        damage.amount *= super::script_registry::actual_damage_multiplier(world, ctx, target);
+    }
     deal_source_damage_and_report(world, ctx, target, damage, None)
 }
 
