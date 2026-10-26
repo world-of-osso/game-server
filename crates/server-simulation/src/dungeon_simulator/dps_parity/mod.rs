@@ -759,7 +759,7 @@ fn dps_parity_native_bis_dummy_records_300s() {
     let report = result.unwrap_or_else(|error| panic!("native spec{spec}: {error}"));
     assert!((report["simulated_seconds"].as_f64().unwrap() - 300.0).abs() < 0.001);
     assert!(
-        report["combat"]["total_damage"].as_u64().unwrap() > 0,
+        report["combat"]["total_damage"].as_f64().unwrap() > 0.0,
         "actual production kit must deal damage; full report {}",
         file.display()
     );
@@ -828,15 +828,15 @@ fn dps_parity_native_bis_dummy_records_300s() {
             "owner uses native player initialization"
         );
         let owner = samples[0]["owner"]["entity"].as_u64().unwrap();
-        let owner_damage: u64 = report["combat"]["actions"]
+        let owner_damage: f64 = report["combat"]["actions"]
             .as_array()
             .unwrap()
             .iter()
             .filter(|action| action["actor"].as_u64() == Some(owner))
-            .map(|action| action["damage"].as_u64().unwrap())
+            .map(|action| action["damage"].as_f64().unwrap())
             .sum();
         assert_eq!(
-            owner_damage, 0,
+            owner_damage, 0.0,
             "out-of-range controller must not contribute damage"
         );
     }
