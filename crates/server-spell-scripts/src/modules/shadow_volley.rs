@@ -2,8 +2,8 @@
 //! Earned native action overrides own permission; no learned-spell grants.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{self, ActiveAuras, AuraApplication, AuraInstance, AuraSource, RemoveReason};
 use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::auras::{self, ActiveAuras, AuraApplication, AuraInstance, AuraSource, RemoveReason};
 use combat::class_progression::TraitLoadout;
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
 use combat::spell_info::SpellInfo;
@@ -26,9 +26,14 @@ const FOUR_PIECE: u32 = 1296580;
 struct TierUses(u8);
 
 fn stacks(world: &World, caster: Entity, spell: u32) -> u8 {
-    world.get::<ActiveAuras>(caster).and_then(|auras| {
-        auras.iter().find(|aura| aura.caster == caster && aura.spell_id == spell)
-    }).map_or(0, |aura| aura.stacks)
+    world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.caster == caster && aura.spell_id == spell)
+        })
+        .map_or(0, |aura| aura.stacks)
 }
 
 // Readiness is tested on the requested action before332 can alias Voidform
@@ -53,24 +58,40 @@ fn after_cast(spell: u32) -> Option<spell_cast::scripts::AfterCastHook> {
 
 fn grant(world: &mut World, caster: Entity, spell: u32, count: u8) {
     for _ in 0..count {
-        auras::apply_aura(world, &AuraApplication {
-            caster, target: caster, spell_id: spell, effect_mask: 3, source: AuraSource::Cast,
-        });
+        auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster,
+                target: caster,
+                spell_id: spell,
+                effect_mask: 3,
+                source: AuraSource::Cast,
+            },
+        );
     }
 }
 
 fn enter_voidform(world: &mut World, caster: Entity, _: &SpellInfo) {
     // SimC1384–1393: Voidform aura precedes its E2 ordinary uses.
-    auras::apply_aura(world, &AuraApplication {
-        caster, target: caster, spell_id: VOIDFORM_BUFF, effect_mask: 3, source: AuraSource::Cast,
-    });
+    auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster,
+            target: caster,
+            spell_id: VOIDFORM_BUFF,
+            effect_mask: 3,
+            source: AuraSource::Cast,
+        },
+    );
     let uses = spell_cast::scripts::script_effect_value(world, caster, VOIDFORM, 2) as u8;
     grant(world, caster, USES, uses);
 }
 
 fn spend(world: &mut World, caster: Entity, spell: u32) {
     let instance = world.get::<ActiveAuras>(caster).and_then(|auras| {
-        auras.iter().find(|aura| aura.caster == caster && aura.spell_id == spell)
+        auras
+            .iter()
+            .find(|aura| aura.caster == caster && aura.spell_id == spell)
             .map(|aura| aura.instance_id)
     });
     if let Some(instance) = instance {
@@ -95,7 +116,11 @@ fn earn_tier_use(world: &mut World, caster: Entity, _: &SpellInfo) {
     if combat::random::random::<f32>() * 100.0 >= chance {
         return;
     }
-    let pool = if auras::has_aura(world, caster, VOIDFORM_BUFF) { USES } else { CRUSHING_VOID };
+    let pool = if auras::has_aura(world, caster, VOIDFORM_BUFF) {
+        USES
+    } else {
+        CRUSHING_VOID
+    };
     let before = stacks(world, caster, pool);
     grant(world, caster, pool, 1);
     if stacks(world, caster, pool) > before {
@@ -108,15 +133,21 @@ fn earn_tier_use(world: &mut World, caster: Entity, _: &SpellInfo) {
 fn register(scripts: &mut AuraScripts) {
     // SimC1057–1058 consumes on Volley, never an unrelated successful spell.
     scripts.0.entry(CRUSHING_VOID).or_default().check_proc = Some(|_, _, _| false);
-    scripts.0.insert(VOIDFORM_BUFF, AuraScript {
-        on_remove: Some(leave_voidform), ..Default::default()
-    });
+    scripts.0.insert(
+        VOIDFORM_BUFF,
+        AuraScript {
+            on_remove: Some(leave_voidform),
+            ..Default::default()
+        },
+    );
 }
 
 fn crushing_selected(world: &World, caster: Entity) -> bool {
     // sc_priest_shadow.cpp2451 selects Crushing Void; native70448 talent1279354.
     world.get::<TraitLoadout>(caster).is_some_and(|traits| {
-        traits.active_talent_spells().any(|spell| spell.spell_id == 1279354)
+        traits
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 1279354)
     })
 }
 
@@ -129,8 +160,9 @@ fn leave_voidform(world: &mut World, caster: Entity, _: &AuraInstance, _: Remove
         grant(world, caster, CRUSHING_VOID, 1);
     }
     if transfer > 0 {
-        auras::remove_auras(world, caster, RemoveReason::Cancelled,
-            |aura| aura.spell_id == USES && aura.caster == caster);
+        auras::remove_auras(world, caster, RemoveReason::Cancelled, |aura| {
+            aura.spell_id == USES && aura.caster == caster
+        });
         grant(world, caster, CRUSHING_VOID, transfer);
     }
 }
