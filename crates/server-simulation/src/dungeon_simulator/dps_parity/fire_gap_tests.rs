@@ -374,19 +374,24 @@ fn fire_hero_recent_heating_up_survives_a_noncritical_fireball() {
     let target = run.targets[0];
     let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
     health.current = health.max * 0.5;
-    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 108853, Some(target), 1);
-    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 133, Some(target), 1);
-    let snapshot = |run: &Run| {
-        let world = run.app.world();
-        let heating = world.get::<ActiveAuras>(run.actor).unwrap().iter()
-            .find(|aura| aura.spell_id == 48107)
-            .map(|aura| (aura.duration_ms, aura.expires_at, aura.stacks));
-        (crate::auras::aura_now(world), heating)
-    };
-    eprintln!("Heating Up before frames: {:?}", snapshot(&run));
-    for tick in 0..6 {
+    // Use ordinary depth0 producers. Full triggered depth1 damage does not
+    // enter native Hot Streak, so it cannot qualify the grace boundary.
+    start_native(&mut run, 133, target);
+    assert!(run.app.world().get::<shared::casting::CastState>(run.actor).is_some());
+    for _ in 0..200 {
+        if run.app.world().get::<shared::casting::CastState>(run.actor).is_none() {
+            break;
+        }
         run.app.update();
-        eprintln!("Heating Up frame{tick}: {:?}", snapshot(&run));
+    }
+    assert!(run.app.world().get::<shared::casting::CastState>(run.actor).is_none());
+    assert!(!run.app.world().resource::<ObservedCombatEvents>().0.iter().any(|event| {
+        event.spell_id == Some(133) && event.kind == CombatLogKind::Damage
+    }), "ordinary Fireball must still be in flight before Fire Blast");
+    start_native(&mut run, 108853, target);
+    assert_eq!(stacks(&run, 48107), 1, "ordinary Fire Blast really earned Heating Up");
+    for _ in 0..6 {
+        run.app.update();
     }
     let hits: Vec<_> = run
         .app
