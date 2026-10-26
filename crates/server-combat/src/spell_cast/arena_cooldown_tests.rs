@@ -145,6 +145,7 @@ fn arena_entry_cooldown_reset_uses_authored_durations_and_preserves_charges_gcd_
                 recovery_ms: 15_000.0,
                 ready_at: 15.0,
             }]),
+            started_at: 0.0,
             fully_ready_at: 15.0,
         },
     );

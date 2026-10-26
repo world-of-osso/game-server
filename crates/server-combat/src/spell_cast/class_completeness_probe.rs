@@ -164,7 +164,9 @@ fn choose_case_target(h: &mut Harness, spell: &crate::spell_info::SpellInfo) -> 
         .any(|effect| matches!(effect.effect, 18 | 172));
     let relation = super::scripts::target_plan(h.app.world(), spell.id)
         .map(|(relation, _)| relation)
-        .or_else(|| super::targets::explicit_requirement(super::handled_effects(spell)))
+        .or_else(|| {
+            super::targets::explicit_requirement(super::handled_effects(h.app.world(), spell))
+        })
         .or_else(|| resurrects.then_some(super::targets::Relation::Ally));
     let hostile = relation == Some(super::targets::Relation::Enemy)
         || (relation == Some(super::targets::Relation::Any)

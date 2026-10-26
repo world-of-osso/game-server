@@ -6,7 +6,7 @@
 
 - [ ] Preserve policy traversal, first-match lookup, additive hook order, cast depth, resource payment, RNG, targets and native payloads.
 - [ ] Install the same registry in the server and transport-free simulation, including native fixture harnesses and cached simulation apps.
-- [ ] Permit an existing module's policies and hooks to change without editing combat or a central policy table.
+- [ ] Permit an existing module's policies and hooks to change without editing combat or a central policy table. A new downstream module needs only its file and one alphabetical registration line; registration must not reorder existing policy traversal.
 - [ ] Keep combat independent of the downstream crate in the production dependency graph.
 - [ ] Measure a moved-file touch using warm `cargo test --locked -p server-simulation --lib --no-run -j2` before and after the move; keep the same worktree-local target directory.
 
