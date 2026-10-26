@@ -422,6 +422,16 @@ fn demonology_implosion_consumes_actual_imps_and_deals_native_damage() {
 fn demonology_imp_lord_executes_real_greater_felbolts() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(266, 1).unwrap();
+    // Exact profile starts at zero shards; earn the native summon cost.
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        686,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("ordinary Shadow Bolt must fund the summon");
+    preparation::finish_pending_setup(&mut run).unwrap();
     engage(&mut run);
     run.app
         .world_mut()
