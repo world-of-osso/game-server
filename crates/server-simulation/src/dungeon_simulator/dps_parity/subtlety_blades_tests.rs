@@ -62,7 +62,7 @@ fn subtlety_blades_actual_backstab_produces_one_native_shadow_hit_only_during_bu
         assert_eq!(
             hits(279043),
             usize::from(active),
-            "earned Shadow Blades emits one nonrecursive native hit"
+            "earned Shadow Blades emits one nonrecursive native hit; events: {events:?}"
         );
     }
 }
