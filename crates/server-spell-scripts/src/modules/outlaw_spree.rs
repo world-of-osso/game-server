@@ -42,7 +42,9 @@ fn tick(world: &mut World, unit: Entity, aura: &AuraInstance, effect: u8) {
         return;
     }
     let initial = {
-        let mut ticks = world.get_mut::<SpreeTicks>(unit).expect("active native Spree ticks");
+        let mut ticks = world
+            .get_mut::<SpreeTicks>(unit)
+            .expect("active native Spree ticks");
         let initial = ticks.0 == 0;
         ticks.0 += 1;
         initial
@@ -61,7 +63,10 @@ fn tick(world: &mut World, unit: Entity, aura: &AuraInstance, effect: u8) {
 
 fn choose_target(world: &mut World, caster: Entity) -> Option<Entity> {
     let center = targets::position(world, caster)?;
-    let spell = world.resource::<SpellStore>().get(KILLING_SPREE).expect("native Killing Spree");
+    let spell = world
+        .resource::<SpellStore>()
+        .get(KILLING_SPREE)
+        .expect("native Killing Spree");
     let (_, radius) = targets::spell_range(spell, true);
     let enemies = targets::area_units(world, caster, center, radius, targets::Relation::Enemy, 0);
     if enemies.is_empty() {
