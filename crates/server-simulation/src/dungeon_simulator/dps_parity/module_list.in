@@ -4,6 +4,7 @@
 mod active_enemy_tests;
 mod affliction_tests;
 mod arms_chain_boundary_tests;
+mod arms_cooldown_tests;
 mod arms_massacre_sudden_death_tests;
 mod arms_reap_cleave_tests;
 mod arms_reap_tests;
