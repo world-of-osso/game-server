@@ -1506,11 +1506,29 @@ fn fire_ignite_fire_blast_spreads_existing_native_tick_to_other_enemies() {
     }
     let source = tick(&run, primary).expect("first actual Fire Blast earned native Ignite");
     assert!(source > 0.0);
+    assert!(
+        run.targets[1..]
+            .iter()
+            .all(|target| tick(&run, *target).is_none()),
+        "the first Fire Blast has no pre-existing Ignite to spread"
+    );
+    // sc_mage.cpp2240–2242: the native mastery effect5 cap includes
+    // selected Ignition's modifier; this profile admits one secondary.
+    let cap = crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 12846, 4)
+        as usize;
+    assert!(cap > 0, "selected native Ignition enables spread");
     start_native(&mut run, 108853, primary);
     run.app.update();
-    for target in &run.targets[1..] {
-        let copied = tick(&run, *target)
-            .expect("next actual Fire Blast spreads its pre-existing owned Ignite");
+    let copied: Vec<_> = run.targets[1..]
+        .iter()
+        .filter_map(|target| tick(&run, *target))
+        .collect();
+    assert_eq!(
+        copied.len(),
+        cap.min(run.targets.len() - 1),
+        "next actual Fire Blast spreads its pre-existing owned Ignite to the native cap"
+    );
+    for copied in copied {
         assert!(
             (copied / source - 1.0).abs() < 0.001,
             "spread copies the prior native tick, before the new Fire Blast contribution: {source} -> {copied}"
