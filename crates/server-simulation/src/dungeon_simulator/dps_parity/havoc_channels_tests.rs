@@ -38,6 +38,31 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_felblade_starts_autoattack_on_attackable_neutral_dummy() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(
+        run.app
+            .world()
+            .get::<crate::combat::AutoAttack>(actor)
+            .is_none()
+    );
+    cast(&mut run, 232893, false);
+    advance(&mut run, 5);
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::combat::AutoAttack>(actor)
+            .map(|attack| attack.victim),
+        Some(target),
+        "native Felblade charge must start an autoattack against its attackable dummy"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_font_of_venomous_rage_channels_native_primary_and_secondary_damage() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 3).unwrap();
