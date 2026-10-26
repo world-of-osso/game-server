@@ -1,3 +1,7 @@
+## 2026-10-25 — Reentrant native factor capture
+
+[Native observations](systems/server-crates.md#reentrant-native-factor-observations): recipient component inserts can flush a queued same-ID Sunrise Tempest while its parent damage is still committing. Capture detaches each calculated hit before those mutations; root/echo/secondary effectiveness remains native. Strict native RED reproduced; GREEN gate pending.
+
 ## 2026-10-25 — Marksmanship Salvo producer
 
 [Marksmanship](systems/spell-casting.md#marksmanship-native-relationships--2026-10-25): selected Salvo launches native capped background Explosive Shots from actual Volley recipients, with native Volley-duration internal recovery and no foreground producers.

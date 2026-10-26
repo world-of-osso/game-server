@@ -1942,6 +1942,8 @@ fn deal_source_damage_and_report(
     };
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_mitigated(world, ctx, target, amount);
+    #[cfg(any(test, feature = "test-support"))]
+    let captured_hit = factor_capture::take_hit(world, ctx, target, &damage);
     let (amount, absorbed) = crate::auras::absorb_damage(world, target, school, amount);
     let amount = crate::auras::damage_transfer::route(world, ctx.caster, target, school, amount);
     let (caster_scaling, target_scaling) = (
@@ -2021,7 +2023,7 @@ fn deal_source_damage_and_report(
     event.crit = crit;
     event.periodic = periodic;
     #[cfg(any(test, feature = "test-support"))]
-    factor_capture::finish(world, ctx, target, &damage, &event);
+    factor_capture::finish(world, ctx, target, captured_hit, &event);
     log_event(world, event);
     super::script_registry::landed_damage_policies(
         world,
