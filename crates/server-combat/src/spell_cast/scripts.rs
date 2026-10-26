@@ -130,6 +130,10 @@ mod ret_tier;
 pub(super) use ret_tier::after_foreground_spender;
 pub(crate) use ret_tier::owns_arbiter_charge;
 pub(super) use script_registry::{consume_resource_value_sources, effective_resource_value};
+mod rogue_children;
+mod rogue_hero;
+pub(crate) use rogue_children::register as register_rogue_children;
+pub(super) use rogue_hero::prepare as prepare_rogue_hero;
 mod scourge_strike;
 mod soul_of_the_forest;
 mod swiftmend;
@@ -237,6 +241,7 @@ pub(super) fn after_direct_damage(
 ) {
     spellslinger::after_direct_damage(world, ctx);
     windwalker_flurry::after_direct_damage(world, ctx, critical);
+    crate::auras::rogue::after_builder_hit(world, ctx, critical);
     script_registry::replacement_direct_damage(world, ctx, target, critical);
     policies::after_damage(world, ctx);
     script_registry::impact_proc_damage(world, ctx, target);
@@ -1722,6 +1727,9 @@ pub(super) fn on_hit_with_context(world: &World, spell_id: u32) -> Option<Contex
 
 /// Damage-only impact scripts do not receive caster buffs or other aura recipients.
 pub(super) fn on_enemy_damage_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
+    if crate::auras::rogue::LETHAL_POISON_HITS.contains(&spell_id) {
+        return Some(rogue_children::poison_hit);
+    }
     match spell_id {
         20271 | 406957 | 24275 | 1279408 => Some(ret_damage::judgment_mastery),
         _ => None,

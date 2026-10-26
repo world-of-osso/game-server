@@ -291,6 +291,11 @@ fn used_modifier(spell: &SpellInfo, aura: u32) -> bool {
 
 /// Ordinary native readiness and cooldown storage share this same sourced window.
 fn ignores_cooldown(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    // SimC76f8118 sc_rogue.cpp4604–4609: Improved Garrote has zero
+    // recovery even on the first actual-stealth cast, before its exit buff.
+    if combat::auras::rogue::improved_garrote_active(world, caster, spell.id) {
+        return true;
+    }
     RULES
         .iter()
         .filter(|rule| rule.cast == spell.id && selected(world, caster, rule))

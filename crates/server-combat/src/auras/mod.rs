@@ -42,6 +42,7 @@ pub(crate) mod forecast;
 pub mod handlers;
 pub(crate) mod health_pct_trigger;
 mod ignite;
+mod incoming_spell_masks;
 pub mod invisibility;
 mod item_requirements;
 mod light_of_titans;
@@ -69,7 +70,7 @@ pub(crate) use ret_crusade::after_spender as add_ret_crusade_spender_stacks;
 mod ret_sentence;
 pub(crate) use ret_sentence::track_cast as track_ret_sentence_cast;
 pub(crate) mod reward_mods;
-pub(crate) mod rogue;
+pub mod rogue;
 #[cfg(test)]
 mod rolling_periodic_tests;
 pub mod scripts;
