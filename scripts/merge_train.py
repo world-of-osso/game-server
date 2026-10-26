@@ -518,8 +518,10 @@ def eligible_queue():
     paths = sorted(QUEUE.glob("*.json"))
     if not SOLO.exists():
         return paths
-    owner = SOLO.read_text().strip()
-    return [p for p in paths if json.loads(p.read_text()).get("owner", "").startswith(owner)]
+    # One owner prefix or entry id per line (an urgent revert can join the window).
+    allowed = tuple(SOLO.read_text().split())
+    return [p for p in paths if p.stem in allowed
+            or json.loads(p.read_text()).get("owner", "").startswith(allowed)]
 
 
 def take_queue():
