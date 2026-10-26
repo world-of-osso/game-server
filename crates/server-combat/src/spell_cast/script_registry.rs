@@ -177,6 +177,7 @@ pub enum SpellScriptHook {
     AfterResourceValues(AfterCastLookup),
     TargetPlan(TargetPlanLookup),
     PeriodicPrimaryDamage(PeriodicPrimaryDamageHook),
+    CounterOnlyDotStacks(&'static [u32]),
     TargetDamageMultiplier(TargetDamageMultiplierHook),
     AfterSpenderStacks(AfterCastHook),
     AuraRedirect(AuraRedirectHook),
@@ -190,6 +191,8 @@ pub enum SpellScriptHook {
     CriticalChance(CriticalChanceHook),
     EarlyAuraRegistration(AuraRegistrationHook),
     ConsumedEffectValues(&'static [(u32, u8)]),
+    /// Explicit source-script override of synchronous native stacking.
+    AsynchronousAuras(&'static [u32]),
     LaunchDelay(LaunchDelayLookup),
     DotMasteryMultiplier(DotMasteryMultiplierHook),
     CastTimeProcs(&'static [u32]),
@@ -217,6 +220,8 @@ pub enum SpellScriptHook {
     AfterDirectDamageBeforeItems(PeriodicDamageFinishedHook),
     LandedDamagePolicy(LandedDamageHook),
     AbilityUseAvailable(AbilityUseLookup),
+    /// Sourced foreground readiness, checked before knowledge aliases and cast admission.
+    ActionAvailable(AbilityUseLookup),
     ChannelPeriodic(ChannelPeriodicLookup),
     BeforeNativeOnCast(BeforeNativeOnCastHook),
     PrepareStoredDamage(PrepareStoredDamageHook),
@@ -281,6 +286,13 @@ impl SpellScriptRegistry {
                 register(scripts);
             }
         }
+    }
+
+    pub fn counter_only_dot_stacks(self, spell: u32) -> bool {
+        self.hooks().any(|hook| match hook {
+            SpellScriptHook::CounterOnlyDotStacks(spells) => spells.contains(&spell),
+            _ => false,
+        })
     }
 
     pub fn consumes_effect_value(self, spell: u32, index: u8) -> bool {
@@ -365,6 +377,16 @@ impl Default for SpellScriptRegistry {
         #[cfg(not(test))]
         Self::new(&[])
     }
+}
+
+pub(crate) fn asynchronous_aura(world: &World, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::AsynchronousAuras(spells) => spells.contains(&spell),
+            _ => false,
+        })
 }
 
 pub fn policies(world: &World) -> impl Iterator<Item = &'static Policy> + use<> {
@@ -780,6 +802,16 @@ pub fn landed_damage_policies(
             run(world, caster, target, spell, amount, periodic);
         }
     }
+}
+
+pub fn action_available(world: &World, caster: Entity, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .all(|hook| match hook {
+            SpellScriptHook::ActionAvailable(test) => test(world, caster, spell),
+            _ => true,
+        })
 }
 
 pub fn ability_use_available(world: &World, caster: Entity, spell: u32) -> bool {
