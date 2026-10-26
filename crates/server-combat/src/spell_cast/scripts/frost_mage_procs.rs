@@ -20,7 +20,11 @@ pub(super) fn owns_proc(spell: u32) -> bool {
     matches!(spell, FINGERS | THERMAL | BRAIN_FREEZE)
 }
 
-pub(super) fn snapshot_launch_auras(world: &World, caster: Entity, spell: &mut SpellInfo) {
+pub(in crate::spell_cast) fn snapshot_launch_auras(
+    world: &World,
+    caster: Entity,
+    spell: &mut SpellInfo,
+) {
     if !is_frost(world, caster) {
         return;
     }
