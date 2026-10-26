@@ -217,6 +217,8 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Fire literal fixture
 
+- Actual Heating Up→Hot Streak conversion grants selected native Brainstorm461531 (`sc_mage.cpp2154–2157,6509–6512`). Heating Up alone and wasted critical hits with Hot Streak already active do not grant it; native data owns its Intellect amount, stack cap and duration.
+
 - Fiery Rush's native permanent payload ends when its owner's Combustion ends (`sc_mage.cpp1453–1457`); its recovery-rate benefit must not persist between Combustion windows.
 
 - An owned Controlled Destruction target stack multiplies only new Ignite contributions with its native per-stack amount (`sc_mage.cpp1945–1946`). Never rescale the unpaid existing bank or read another caster's target stacks.
