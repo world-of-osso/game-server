@@ -1220,6 +1220,29 @@ fn fire_execute_scald_amplifies_actual_selected_fireball_and_scorch() {
     }
 }
 
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_execute_real_ignite_ticks_earn_selected_heat_shimmer() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    for _ in 0..20 {
+        start_native(&mut run, 108853, target);
+        for _ in 0..220 {
+            run.app.update();
+        }
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
+        && event.spell_id == Some(12654) && event.kind == CombatLogKind::Damage
+        && event.amount > 0), "actual earned Ignite tick precondition");
+    assert!(events.iter().any(|event| event.target == Some(actor.to_bits())
+        && event.spell_id == Some(458964)
+        && matches!(event.kind, CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed)),
+        "selected native Heat Shimmer must proc from actual Ignite ticks while Scorch is not casting");
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {
