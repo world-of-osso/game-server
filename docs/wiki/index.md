@@ -1027,6 +1027,7 @@ External resources, tooling, data sources, development workflow.
 - [Class spell batch18](systems/spell-casting.md#eighteenth-batch-native-leech-and-reapplication) — shared native leech, named Madness/Ignore Pain reapplication, improved Backdraft uses and Obliterate branches;163 remaining Dummy roots/103 reviewed/60 underived, [all40/proof](../spell-dummy18-coverage.md); retained area/marker/redirect/source gaps.
 - [Quest GO/spell objectives](systems/game-objects.md#quest-objects-2026-10-11) — authored locks, goober use, chest quest-item loot and personal/group spell-credit events; real-data turn-in tests and retained Retail gaps.
 
+- [Arcane charge cost and cast time](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers) — actual native admission/cast-bar REDs prove duplicate36032 folds; ordinary aura modifiers replace legacy per-spell scaling.
 - [Class spell batch16](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers) — nine low-count rank/charge/heal contracts;163 remaining Dummy roots,98/65 reviewed/underived unchanged; [all40/proof](../spell-dummy16-coverage.md). No guardian edits or invented marker closures.
 - [Toy-effects12 non-summon cosmetics](systems/toys.md#toy-effects12-non-summon-cosmetics-2026-10-11) — ranked dummy handlers; source-bound sob, ghost, fist and water art; [coverage](../toy-effects12-coverage.md), retained underivable scripts/rendering.
 
