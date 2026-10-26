@@ -51,6 +51,7 @@ register_modules! {
     arcane_feedback: (620, "modules/arcane_feedback.rs"),
     arms_mortal_wounds: (715, "modules/arms_mortal_wounds.rs"),
     arms_paid_cooldowns: (712, "modules/arms_paid_cooldowns.rs"),
+    arms_tactical_edge: (716, "modules/arms_tactical_edge.rs"),
     arms_tactician: (713, "modules/arms_tactician.rs"),
     assassination_doomblade: (2594, "modules/assassination_doomblade.rs"),
     assassination_focus: (2592, "modules/assassination_focus.rs"),
