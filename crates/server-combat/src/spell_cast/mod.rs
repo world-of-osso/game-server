@@ -66,6 +66,7 @@ mod census_tail_tests;
 #[cfg(test)]
 mod census_three_tests;
 pub(crate) mod charge;
+pub use charge::ChargeMovement;
 mod charge_consumption;
 #[cfg(test)]
 mod charge_rate_tests;
