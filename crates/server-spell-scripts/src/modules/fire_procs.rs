@@ -1,9 +1,20 @@
 //! Fire's sourced Hot Streak producers; all payloads and amounts remain native.
 use bevy::prelude::*;
 
-use crate::auras::{self, AuraInstance};
-use crate::class_progression::KnownSpells;
-use crate::spell_info::SpellInfo;
+use super::combat;
+use combat::auras::{self, AuraInstance};
+use combat::class_progression::KnownSpells;
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_cast::scripts::{reduce_cooldown, script_effect_value};
+use combat::spell_cast::{self, effects::EffectCtx, queued_triggers};
+use combat::spell_info::SpellInfo;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::FireAuraRegistration(register),
+    SpellScriptHook::BeforeProcLaunch(before_hot_streak_launch),
+    SpellScriptHook::AfterFireDirectHit(fire_feedback_hit),
+    SpellScriptHook::AfterFireOutcomeHit(fire_meteorite_hit),
+];
 
 const COMBUSTION: u32 = 190319;
 const FIRED_UP_TALENT: u32 = 1257343;
@@ -19,6 +30,13 @@ const CASCADE: u32 = 449314;
 const MEMORY: u32 = 449619;
 const HYPERTHERMIA: u32 = 383874;
 const HYPERTHERMIA_DAMAGE: u32 = 1242220;
+const OVERFLOWING_TALENT: u32 = 390218;
+const OVERFLOWING: u32 = 394195;
+const FEVERED_TALENT: u32 = 383810;
+const FEVERED: u32 = 383811;
+const CONTROLLED_TALENT: u32 = 383669;
+const CONTROLLED: u32 = 453268;
+const MAGE_FAMILY: u32 = 3;
 
 #[derive(Component, Default)]
 struct FireProcState {
@@ -58,10 +76,10 @@ pub(crate) fn before_hot_streak_launch(world: &mut World, caster: Entity, spell:
 /// Hyperthermia's damage stack follows every completed Hot Streak-class spell.
 pub(super) fn after_hot_streak_cast(world: &mut World, caster: Entity, spent_hot_streak: bool) {
     if spent_hot_streak && selected(world, caster, CASCADE_TALENT) {
-        super::super::cast_triggered(world, caster, CASCADE, Some(caster), 1);
+        spell_cast::cast_triggered(world, caster, CASCADE, Some(caster), 1);
     }
     if auras::has_aura(world, caster, HYPERTHERMIA) {
-        super::super::cast_triggered(world, caster, HYPERTHERMIA_DAMAGE, Some(caster), 1);
+        spell_cast::cast_triggered(world, caster, HYPERTHERMIA_DAMAGE, Some(caster), 1);
     }
 }
 
@@ -77,9 +95,9 @@ fn roll_fired_up(world: &mut World, caster: Entity) {
     let chance = if combustion {
         COMBUSTION_CHANCE.get(count).copied().unwrap_or(0.0)
     } else {
-        super::script_effect_value(world, caster, FIRED_UP_TALENT, 0)
+        script_effect_value(world, caster, FIRED_UP_TALENT, 0)
     };
-    if crate::random::random::<f32>() * 100.0 >= chance {
+    if combat::random::random::<f32>() * 100.0 >= chance {
         return;
     }
     apply_fired_up(world, caster);
@@ -94,11 +112,10 @@ fn roll_fired_up(world: &mut World, caster: Entity) {
 fn apply_fired_up(world: &mut World, caster: Entity) {
     // sc_mage.cpp7216–7224: native modified effect2 is milliseconds and
     // effect3 extends the existing Combustion without resetting its clock.
-    super::super::cast_triggered(world, caster, FIRED_UP, Some(caster), 1);
-    let reduction_ms = super::script_effect_value(world, caster, FIRED_UP_TALENT, 1);
-    super::reduce_cooldown(world, caster, 108853, f64::from(reduction_ms) / 1000.0);
-    let extension_ms =
-        super::script_effect_value(world, caster, FIRED_UP_TALENT, 2).max(0.0) as u32;
+    spell_cast::cast_triggered(world, caster, FIRED_UP, Some(caster), 1);
+    let reduction_ms = script_effect_value(world, caster, FIRED_UP_TALENT, 1);
+    reduce_cooldown(world, caster, 108853, f64::from(reduction_ms) / 1000.0);
+    let extension_ms = script_effect_value(world, caster, FIRED_UP_TALENT, 2).max(0.0) as u32;
     auras::extend_owned_duration(world, caster, caster, &[COMBUSTION], extension_ms);
 }
 
@@ -108,9 +125,8 @@ fn roll_spellfire_sphere(world: &mut World, caster: Entity) {
     }
     // SimC76f8118 sc_mage.cpp6633–6636/7310–7320: Fire uses effect2,
     // with the pinned11-attempt PRD cap, not an independent fixed-chance roll.
-    let probability =
-        f64::from(super::script_effect_value(world, caster, SPHERES_TALENT, 1)) / 100.0;
-    let constant = crate::random::capped_accumulated_proc_constant(probability, SPHERE_CAP);
+    let probability = f64::from(script_effect_value(world, caster, SPHERES_TALENT, 1)) / 100.0;
+    let constant = combat::random::capped_accumulated_proc_constant(probability, SPHERE_CAP);
     let mut state = world.get_mut::<FireProcState>(caster).unwrap();
     state.sphere_attempts += 1;
     let chance = if state.sphere_attempts >= SPHERE_CAP {
@@ -118,25 +134,21 @@ fn roll_spellfire_sphere(world: &mut World, caster: Entity) {
     } else {
         constant * f64::from(state.sphere_attempts)
     };
-    if crate::random::random::<f64>() >= chance {
+    if combat::random::random::<f64>() >= chance {
         return;
     }
     state.sphere_attempts = 0;
-    super::super::cast_triggered(world, caster, SPHERE, Some(caster), 1);
+    spell_cast::cast_triggered(world, caster, SPHERE, Some(caster), 1);
     // SimC76f8118 sc_mage.cpp7316–7319: the same Sphere success produces
     // selected Glorious Incandescence; it has no second independent roll.
     if selected(world, caster, GLORIOUS_TALENT) {
-        super::super::cast_triggered(world, caster, GLORIOUS, Some(caster), 1);
+        spell_cast::cast_triggered(world, caster, GLORIOUS, Some(caster), 1);
     }
 }
 
 /// SimC76f8118 sc_mage.cpp4577–4580/2003–2012: a Fire Blast hit with
 /// Glorious launches the native count, staggered75ms; native449560 supplies travel.
-pub(crate) fn fire_meteorite_hit(
-    world: &mut World,
-    ctx: &super::super::effects::EffectCtx,
-    target: Entity,
-) {
+pub(crate) fn fire_meteorite_hit(world: &mut World, ctx: &EffectCtx, target: Entity) {
     if ctx.spell.id != 108853
         || !auras::has_aura(world, ctx.caster, GLORIOUS)
         || !selected(world, ctx.caster, GLORIOUS_TALENT)
@@ -146,12 +158,12 @@ pub(crate) fn fire_meteorite_hit(
     let Some(position) = world.get::<shared::components::Position>(target).copied() else {
         return;
     };
-    let count = super::script_effect_value(world, ctx.caster, GLORIOUS_TALENT, 0).max(0.0) as u32;
+    let count = script_effect_value(world, ctx.caster, GLORIOUS_TALENT, 0).max(0.0) as u32;
     for ordinal in 0..count {
-        super::super::queued_triggers::schedule_destination_trigger(
+        queued_triggers::schedule_destination_trigger(
             world,
             ctx,
-            super::super::queued_triggers::DestinationTrigger {
+            queued_triggers::DestinationTrigger {
                 target,
                 spell_id: METEORITE_MISSILE,
                 delay_ms: ordinal * 75,
@@ -159,6 +171,47 @@ pub(crate) fn fire_meteorite_hit(
             },
         );
     }
+}
+
+/// SimC76f8118 sc_mage.cpp1890–1901: real direct Mage hits update
+/// crit feedback after their hit batch, not before later targets roll damage.
+pub(crate) fn fire_feedback_hit(world: &mut World, ctx: &EffectCtx, target: Entity, crit: bool) {
+    let mage_spell = ctx
+        .spell
+        .class_options
+        .as_ref()
+        .is_some_and(|options| options.spell_class_set == MAGE_FAMILY);
+    if !mage_spell {
+        return;
+    }
+    // sc_mage.cpp3819: Fire's Overflowing Energy eligibility is Fireball
+    // (including the selected Frostfire replacement), not every Hot Streak producer.
+    if matches!(ctx.spell.id, 133 | 431044) && selected(world, ctx.caster, OVERFLOWING_TALENT) {
+        queued_triggers::schedule_buff_outcome(world, ctx.caster, OVERFLOWING, !crit);
+    }
+    if selected(world, ctx.caster, FEVERED_TALENT) {
+        queued_triggers::schedule_buff_outcome(world, ctx.caster, FEVERED, crit);
+    }
+    apply_controlled_destruction(world, ctx, target);
+}
+
+fn apply_controlled_destruction(world: &mut World, ctx: &EffectCtx, target: Entity) {
+    if !matches!(ctx.spell.id, 133 | 431044 | 11366 | 2120 | 1254851)
+        || !selected(world, ctx.caster, CONTROLLED_TALENT)
+    {
+        return;
+    }
+    // sc_mage.cpp2457/3843/5648–5650: one owned target stack per hit;
+    // the native talent supplies the percent, scaled by the sourced one-tenth rule.
+    let percent = script_effect_value(world, ctx.caster, CONTROLLED_TALENT, 0) * 0.1;
+    spell_cast::cast_triggered_with_effect0_amount(
+        world,
+        ctx.caster,
+        CONTROLLED,
+        Some(target),
+        1,
+        percent,
+    );
 }
 
 pub(crate) fn register(scripts: &mut auras::scripts::AuraScripts) {
@@ -218,8 +271,8 @@ fn start_hyperthermia(world: &mut World, caster: Entity, _aura: &AuraInstance) {
     }
     // SimC76f8118 sc_mage.cpp1268–1275: Memory starts at the end of the
     // Phoenix/Combustion lifetime, even without an active Phoenix action.
-    let milliseconds = super::script_effect_value(world, caster, MEMORY, 1).max(0.0) as u32;
-    super::super::cast_triggered(world, caster, HYPERTHERMIA, Some(caster), 1);
+    let milliseconds = script_effect_value(world, caster, MEMORY, 1).max(0.0) as u32;
+    spell_cast::cast_triggered(world, caster, HYPERTHERMIA, Some(caster), 1);
     auras::set_owned_duration(world, caster, caster, HYPERTHERMIA, milliseconds);
 }
 

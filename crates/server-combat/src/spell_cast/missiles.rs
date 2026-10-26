@@ -44,7 +44,7 @@ impl PendingSpellHits {
     }
 
     #[cfg(any(test, feature = "test-support"))]
-    pub(super) fn count_matching(&self, caster: Entity, eligible: fn(u32) -> bool) -> usize {
+    pub(super) fn count_matching(&self, caster: Entity, eligible: impl Fn(u32) -> bool) -> usize {
         self.0
             .iter()
             .filter(|hit| hit.caster == caster && eligible(hit.spell.id))

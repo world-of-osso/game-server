@@ -31,6 +31,7 @@ const SIMC_UNSET_PROC_DEFAULT_DRIVERS: &[u32] = &[
 
 #[derive(Clone, Default)]
 struct Buffs {
+    spells: BTreeSet<u32>,
     stats: BTreeSet<&'static str>,
     duration: f64,
     damage: bool,
@@ -38,6 +39,7 @@ struct Buffs {
 
 impl Buffs {
     fn merge(&mut self, other: &Self) {
+        self.spells.extend(&other.spells);
         self.stats.extend(&other.stats);
         self.duration = self.duration.max(other.duration);
         self.damage |= other.damage;
@@ -53,6 +55,7 @@ pub(super) struct Cooldown {
 #[derive(Default)]
 pub(super) struct Metadata {
     drivers: BTreeSet<u32>,
+    pub buff_spells: BTreeSet<u32>,
     pub stats: BTreeSet<&'static str>,
     pub duration: f64,
     pub cast_time: f64,
@@ -72,6 +75,7 @@ impl Metadata {
         {
             metadata.drivers.insert(effect.spell_id);
             let buffs = read_buffs(store, effect.spell_id, &mut active, &mut completed)?;
+            metadata.buff_spells.extend(&buffs.spells);
             metadata.stats.extend(&buffs.stats);
             metadata.duration = metadata.duration.max(buffs.duration);
             metadata.use_buff |= effect.trigger == ON_USE && !buffs.stats.is_empty();
@@ -170,7 +174,9 @@ fn direct_buffs(spell: &SpellInfo) -> Buffs {
             .and_then(|misc| misc.duration)
             .map_or(0.0, |row| f64::from(row.duration_ms.max(0)) / 1000.0)
     };
+    let spells = if stats.is_empty() { BTreeSet::new() } else { BTreeSet::from([spell.id]) };
     Buffs {
+        spells,
         stats,
         duration,
         damage: spell.effects.iter().any(is_damage_effect),
