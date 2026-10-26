@@ -266,13 +266,8 @@ pub(crate) fn modify_percent(
     base * mult
 }
 
-fn frozen_modifier_totals(
-    world: &World,
-    caster: Entity,
-    spell: &SpellInfo,
-    op: SpellModOp,
-) -> (f32, f32) {
-    spell
+fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp) -> (f32, f32) {
+    let frozen = spell
         .cast_charge_mods
         .iter()
         .flatten()
@@ -292,7 +287,25 @@ fn frozen_modifier_totals(
                 },
             );
             add_modifier(sum, modifier.amount, modifier.percent)
-        })
+        });
+    live_modifiers(world, caster, spell, op).fold(frozen, |sum, (aura, effect)| {
+        let amount = stacked_amount(aura, effect);
+        let percent = is_pct(effect.aura_type);
+        #[cfg(any(test, feature = "test-support"))]
+        crate::spell_cast::effects::factor_capture::record_modifier(
+            world,
+            caster,
+            spell,
+            crate::spell_cast::effects::factor_capture::ModifierSource {
+                op: op as u8,
+                aura_spell_id: aura.spell_id,
+                effect_index: Some(effect.index),
+                amount,
+                percent,
+            },
+        );
+        add_modifier(sum, amount, percent)
+    })
 }
 
 fn live_modifiers<'a>(
@@ -325,28 +338,6 @@ fn live_modifiers<'a>(
         .flat_map(move |auras| matching(auras, spell, op))
         .filter(move |(aura, _)| aura.passive && aura.charges == 0 && Some(aura.caster) == owner);
     local.chain(inherited)
-}
-
-fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp) -> (f32, f32) {
-    let frozen = frozen_modifier_totals(world, caster, spell, op);
-    live_modifiers(world, caster, spell, op).fold(frozen, |sum, (aura, effect)| {
-        let amount = stacked_amount(aura, effect);
-        let percent = is_pct(effect.aura_type);
-        #[cfg(any(test, feature = "test-support"))]
-        crate::spell_cast::effects::factor_capture::record_modifier(
-            world,
-            caster,
-            spell,
-            crate::spell_cast::effects::factor_capture::ModifierSource {
-                op: op as u8,
-                aura_spell_id: aura.spell_id,
-                effect_index: Some(effect.index),
-                amount,
-                percent,
-            },
-        );
-        add_modifier(sum, amount, percent)
-    })
 }
 
 // An explicit native proc mask can restrict charge use more narrowly than the
