@@ -80,7 +80,7 @@ fn expected_charge_bonus(run: &Run, spell: u32) -> f32 {
         / 100.0
 }
 
-fn sample_charge_hit(spell: u32, charges: f32) -> (f32, f32) {
+fn sample_charge_hit(spell: u32, charges: f32) -> (f32, f32, f32) {
     let mut run = prepare_literal(62, 1).unwrap();
     crate::spell_cast::powers::change_power(
         run.app.world_mut(),
@@ -94,40 +94,6 @@ fn sample_charge_hit(spell: u32, charges: f32) -> (f32, f32) {
         "real power change must also exercise native36032"
     );
     let per_charge = expected_charge_bonus(&run, spell);
-    let before_stats = format!(
-        "{:?}",
-        run.app
-            .world()
-            .get::<crate::stats::CharacterStats>(run.actor)
-    );
-    let before_auras = run
-        .app
-        .world()
-        .get::<ActiveAuras>(run.actor)
-        .unwrap()
-        .iter()
-        .filter(|aura| {
-            [36032, 190740, 384612].contains(&aura.spell_id)
-                || aura.effects.iter().any(|effect| effect.aura_type == 189)
-        })
-        .map(|aura| {
-            (
-                aura.spell_id,
-                aura.stacks,
-                aura.effects
-                    .iter()
-                    .map(|effect| {
-                        (
-                            effect.index,
-                            effect.aura_type,
-                            effect.amount,
-                            effect.misc_values,
-                        )
-                    })
-                    .collect::<Vec<_>>(),
-            )
-        })
-        .collect::<Vec<_>>();
     run.app.insert_resource(
         crate::spell_cast::effects::factor_capture::FactorCapture::new(
             run.actor,
@@ -163,17 +129,20 @@ fn sample_charge_hit(spell: u32, charges: f32) -> (f32, f32) {
         "one actual native{spell} impact at{charges} charges"
     );
     let damage = normalize_charge_hit_rolls(&run, spell, hits[0].amount);
-    eprintln!(
-        "CHARGE_STATE spell={spell} charges={charges} normalized={damage} bonus={per_charge} BEFORE_STATS={before_stats} BEFORE_AURAS={before_auras:?} AFTER_STATS={:?} TRACE={}",
-        run.app
-            .world()
-            .get::<crate::stats::CharacterStats>(run.actor),
-        run.app
-            .world()
-            .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
-            .export()
-    );
-    (damage, per_charge)
+    let trace = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+        .export();
+    let result = trace["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "result" && event["spell_id"] == spell)
+        .expect("actual charge-hit result");
+    let versatility = result["factors"]["versatility"].as_f64().unwrap() as f32;
+    assert!(versatility > 0.0, "native charge-hit versatility: {trace}");
+    (damage, per_charge, versatility)
 }
 
 fn normalize_charge_hit_rolls(run: &Run, spell: u32, amount: i32) -> f32 {
@@ -210,16 +179,19 @@ fn normalize_charge_hit_rolls(run: &Run, spell: u32, amount: i32) -> f32 {
 }
 
 fn assert_charge_hit_formula(spell: u32) {
-    let (base, per_charge) = sample_charge_hit(spell, 0.0);
+    let (base, per_charge, base_versatility) = sample_charge_hit(spell, 0.0);
     assert!(base > 0.0);
     for charges in [2.0, 4.0] {
-        let (damage, charged_bonus) = sample_charge_hit(spell, charges);
+        let (damage, charged_bonus, charged_versatility) = sample_charge_hit(spell, charges);
 
         assert_eq!(
             charged_bonus, per_charge,
             "same native mastery/talent values"
         );
-        let expected = base * (1.0 + charges * per_charge);
+        // SimC76f8118 action.cpp4345–4347 snapshots versatility separately.
+        // Native gear procs can change it between launch and impact; compare
+        // the charge term with each hit's actual observed versatility product.
+        let expected = base * (1.0 + charges * per_charge) * charged_versatility / base_versatility;
         assert!(
             (damage - expected).abs() <= expected * 0.005 + 2.0,
             "native{spell}, charges={charges}, base={base}, per_charge={per_charge}, expected={expected}, actual={damage}"
