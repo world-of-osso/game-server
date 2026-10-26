@@ -20,7 +20,7 @@ impl HavocFacts<'_> {
             _ => return Err(format!("unknown Havoc Demonsurge action {action}")),
         };
         Ok(
-            if crate::spell_cast::scripts::havoc_demonsurge_available(self.world, self.actor, spell)
+            if crate::spell_cast::script_registry::ability_use_available(self.world, self.actor, spell)
             {
                 1.0
             } else {
