@@ -79,15 +79,29 @@ fn sample_flay_source(run: &mut Run) -> f64 {
         .as_array()
         .unwrap()
         .iter()
-        .find(|row| row["event"] == "result")
+        .find(|row| row["event"] == "result" && row["spell_id"] == actual)
         .expect("actual native Flay damage");
     assert!(result["factors"]["actual_amount"].as_f64().unwrap() > 0.0);
-    result["factors"]["source_product"].as_f64().unwrap()
+    let amount = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["event"] == "periodic_amount" && row["spell_id"] == actual)
+        .expect("actual native Flay periodic factors");
+    let mastery = amount["applied_multipliers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["factor"] == "shadow_weaving")
+        .expect("actual native Shadow Weaving factor")["value"]
+        .as_f64()
+        .unwrap();
+    result["factors"]["source_product"].as_f64().unwrap() / mastery
 }
 
 #[test]
 #[ignore = "requires native258 Player/profile/traits"]
-fn shadow_ire_real_three_dot_window_boosts_actual_flay_then_naturally_expires() {
+fn diag_ire_real_three_dot_window_boosts_actual_flay_then_naturally_expires() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(258, 1).unwrap();
     engage(&mut run);
