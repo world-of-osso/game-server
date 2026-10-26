@@ -72,6 +72,7 @@ mod frost_mage_proc_tests;
 mod fixture_return_tests;
 mod frost_mage_rapid_refreezing_tests;
 mod frost_mage_shatter_followups_tests;
+mod frost_mage_splinterstorm_tests;
 mod frost_mage_supply_tests;
 mod frost_mage_tests;
 mod gear_profile_tests;
