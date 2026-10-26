@@ -218,8 +218,8 @@ fn fire_batch_mid2_four_piece_modifies_pyroclasm_payload_not_talent_chance() {
     );
     assert_eq!(
         amount(269651),
-        255.0,
-        "buff label5947 gets230+25 native damage points"
+        275.0,
+        "buff label5947 gets230+20 Sunfury+25 MID2 native damage points"
     );
 }
 
@@ -376,8 +376,17 @@ fn fire_hero_recent_heating_up_survives_a_noncritical_fireball() {
     health.current = health.max * 0.5;
     crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 108853, Some(target), 1);
     crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 133, Some(target), 1);
-    for _ in 0..6 {
+    let snapshot = |run: &Run| {
+        let world = run.app.world();
+        let heating = world.get::<ActiveAuras>(run.actor).unwrap().iter()
+            .find(|aura| aura.spell_id == 48107)
+            .map(|aura| (aura.duration_ms, aura.expires_at, aura.stacks));
+        (crate::auras::aura_now(world), heating)
+    };
+    eprintln!("Heating Up before frames: {:?}", snapshot(&run));
+    for tick in 0..6 {
         run.app.update();
+        eprintln!("Heating Up frame{tick}: {:?}", snapshot(&run));
     }
     let hits: Vec<_> = run
         .app
