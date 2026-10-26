@@ -3,11 +3,31 @@ use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
+#[derive(Resource, Default)]
+struct VanishRemovals(Vec<crate::auras::RemoveReason>);
+
+fn observe_vanish_removal(
+    world: &mut World,
+    _unit: Entity,
+    _aura: &crate::auras::AuraInstance,
+    reason: crate::auras::RemoveReason,
+) {
+    world.resource_mut::<VanishRemovals>().0.push(reason);
+}
+
 #[test]
 #[ignore = "requires prepared259 private native DB and player actor"]
 fn rogue_vanish_native_cast_suspends_weapons_expires_to_stealth_and_earns_garrote_window() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(259, 1).unwrap();
+    run.app.init_resource::<VanishRemovals>();
+    run.app
+        .world_mut()
+        .resource_mut::<crate::auras::scripts::AuraScripts>()
+        .0
+        .entry(11327)
+        .or_default()
+        .on_remove = Some(observe_vanish_removal);
     engage(&mut run);
     let actor = run.actor;
     let target = run.targets[0];
@@ -76,6 +96,11 @@ fn rogue_vanish_native_cast_suspends_weapons_expires_to_stealth_and_earns_garrot
         "Vanish cancels weapons; natural expiry must not restart them"
     );
     assert!(!crate::auras::has_aura(run.app.world(), actor, 11327));
+    assert_eq!(
+        run.app.world().resource::<VanishRemovals>().0,
+        [crate::auras::RemoveReason::Expired],
+        "the actual Vanish must end naturally, not from unrelated periodic damage"
+    );
     assert!(
         crate::auras::has_aura(run.app.world(), actor, 1784),
         "natural Vanish expiry grants actual Stealth, rather than breaking concealment"

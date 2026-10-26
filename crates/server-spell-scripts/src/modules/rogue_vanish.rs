@@ -77,7 +77,11 @@ fn after_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
 }
 
 fn register(scripts: &mut AuraScripts) {
-    scripts.0.entry(VANISH_BUFF).or_default().on_remove = Some(expire_to_stealth);
+    scripts
+        .0
+        .entry(VANISH_BUFF)
+        .or_default()
+        .before_remove_reactions = Some(expire_to_stealth);
 }
 
 fn expire_to_stealth(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
