@@ -238,6 +238,14 @@ const GUARDIAN_POWERS: &[GuardianPowerPolicy] = &[GuardianPowerPolicy {
     cast_threshold: 125.0,
 }];
 
+/// Source-defined guardian bases also govern later native maximum-power folds.
+pub(super) fn power_base(entry: u32, power: PowerType) -> Option<f32> {
+    GUARDIAN_POWERS
+        .iter()
+        .find(|policy| policy.entry == entry && policy.power == power)
+        .map(|policy| policy.maximum)
+}
+
 /// SimC76f8118 pets1513: Antoran Armaments selects the alternative native root effect.
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
     if spell != SUMMON_DEMONIC_TYRANT || !matches!(index, 0 | 3) {

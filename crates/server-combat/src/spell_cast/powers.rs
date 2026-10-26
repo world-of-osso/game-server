@@ -455,17 +455,31 @@ pub(crate) fn apply_max_power_percent_changes(
 /// (TOTAL_VALUE flat), rounded; `SetMaxPower` clamps the current value.
 pub(super) fn update_max_powers(
     table: Option<Res<PowerTypeTable>>,
-    mut units: Query<(&mut PowerPools, &crate::auras::AuraStatMods), Without<GridDormant>>,
+    mut units: Query<
+        (
+            &mut PowerPools,
+            &crate::auras::AuraStatMods,
+            Option<&super::guardian::GuardianActor>,
+            Option<&Npc>,
+        ),
+        Without<GridDormant>,
+    >,
 ) {
     let Some(table) = table else {
         return;
     };
-    for (mut pools, mods) in &mut units {
+    for (mut pools, mods, guardian, npc) in &mut units {
         for pool in pools.bypass_change_detection().pools.iter_mut() {
             let Some(info) = table.get(pool.power) else {
                 continue;
             };
-            let max = ((info.max_base_power as f32 + mods.max_power_flat(pool.power as i32))
+            // SimC76f8118 pets.cpp1680–1705: Imp Lord's200 base remains
+            // authoritative after spawn; a generic100 fold strands its125 gate.
+            let native_base = guardian
+                .and(npc)
+                .and_then(|npc| super::guardian::power_base(npc.template_id, pool.power))
+                .unwrap_or(info.max_base_power as f32);
+            let max = ((native_base + mods.max_power_flat(pool.power as i32))
                 * mods.max_power_multiplier(pool.power as i32))
             .round();
             if pool.max != max {

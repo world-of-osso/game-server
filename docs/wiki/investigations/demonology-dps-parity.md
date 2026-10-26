@@ -72,7 +72,7 @@ Pinned `player.cpp15268–15324` delegates passive spell/power/effect reads to t
 
 ## Dominion and guardian execution
 
-The source-policy table also binds native Dreadbite271971, Greater Felbolt1277116 and the four Dominion actions. Dreadstalker AP inheritance1.06769 and Imp Lord SP2.75 are validated in pinned `pets.cpp`; the unvalidated Dreadstalker SP1.3 and Imp Lord AP1.375 are not imported. A fresh Imp Lord starts with200 Energy and waits for125 before casting. Native SpellPower retains the40-Energy cost; native regeneration remains in control.
+The source-policy table also binds native Dreadbite271971, Greater Felbolt1277116 and the four Dominion actions. Dreadstalker AP inheritance1.06769 and Imp Lord SP2.75 are validated in pinned `pets.cpp`; the unvalidated Dreadstalker SP1.3 and Imp Lord AP1.375 are not imported. A fresh Imp Lord starts with200 Energy and waits for125 before casting. Native SpellPower retains the40-Energy cost; native regeneration remains in control. A funded ordinary-summon probe found the generic `update_max_powers` fold replaced the initialized200 with100 and clamped the current pool, so the125 gate could never open despite ready admission. That fold now reads the same sourced guardian base as initialization. GREEN qualification is pending.
 
 `stacking_summons` records the missing Tyrant/HoG/Ruination counter relationships. Native1276166 owns the cumulative limit and duration. Native1276318 owns Dominion III's shard refund. The four summon choices follow the pinned uniform roll and unique-demon redirects. Soul Barrage's missing impact relationship uses native1292391 and the parent effect's target count and range. No spell coefficients or canonical data are changed.
 
