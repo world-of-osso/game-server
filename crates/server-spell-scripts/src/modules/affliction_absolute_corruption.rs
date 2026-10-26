@@ -34,13 +34,8 @@ fn preserve_absolute_lifetime(world: &mut World, target: Entity, aura: &AuraInst
     // SimC76f8118 actions759–762/1072–1077 models permanent DoTs as twice
     // the expected fight length. Native runtime permanence needs no fixture
     // clock; keep this actual instance's native stacks and periodic deadline.
-    let applied = auras::make_owned_counter_permanent(
-        world,
-        aura.caster,
-        target,
-        aura.spell_id,
-        aura.max_stacks,
-    );
+    // Corruption's native max_stacks=0 means nonstacking, not a counter cap.
+    let applied = auras::make_owned_aura_permanent(world, aura.caster, target, aura.spell_id);
     if !applied {
         warn!(
             ?target,

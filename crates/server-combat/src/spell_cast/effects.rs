@@ -327,7 +327,7 @@ pub fn log_unhandled(world: &mut World, spell_id: u32, effect_id: u32) {
 }
 
 /// `(spell power, attack power)` of `unit`; `healing` selects its healing power.
-pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
+pub fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
     // SimC76f8118 sc_shaman.cpp4391: actual Ancestors inherit100% live owner SP.
     if let Some(owner) = super::scripts::elemental_ancestors::owner(world, unit) {
         let stats = world
@@ -844,7 +844,7 @@ fn with_variance(amount: f32, variance: f32) -> f32 {
 }
 
 /// 1 + the caster's versatility (players only).
-pub(crate) fn versatility_multiplier(world: &World, caster: Entity) -> f32 {
+pub fn versatility_multiplier(world: &World, caster: Entity) -> f32 {
     world
         .get::<CharacterStats>(caster)
         .map_or(1.0, |stats| 1.0 + stats.versatility_pct / 100.0)
@@ -1482,15 +1482,15 @@ pub(crate) fn deal_effect_damage(
     deal_damage_and_report(world, ctx, target, damage);
 }
 
-pub(super) struct DamageInput<'a> {
-    pub(super) amount: f32,
-    pub(super) crit: bool,
-    pub(super) periodic: bool,
-    pub(super) resolved_source: bool,
+pub struct DamageInput<'a> {
+    pub amount: f32,
+    pub crit: bool,
+    pub periodic: bool,
+    pub resolved_source: bool,
     /// Authored effect for native damage; script/copy amounts carry no effect selector.
-    pub(super) effect: Option<&'a SpellEffect>,
+    pub effect: Option<&'a SpellEffect>,
     /// DAMAGE_SHIELD attributes damage to its owner but bonuses to its aura caster.
-    pub(super) bonus_caster: Entity,
+    pub bonus_caster: Entity,
 }
 
 /// TC Unit::DealMeleeDamage: shield owner damages the attacker; the original
@@ -1768,7 +1768,7 @@ fn cast_damage_multiplier(spell: &SpellInfo) -> f32 {
 }
 
 /// Source amount followed by the native recipient reduction and authored cast multiplier.
-pub(super) fn damage_before_mitigation(
+pub fn damage_before_mitigation(
     world: &World,
     ctx: &EffectCtx,
     target: Entity,
@@ -2273,12 +2273,7 @@ pub fn apply_heal(
 
 /// A named transfer already computed from effective healing; no second spell-power,
 /// healing multiplier or crit roll on the copied amount.
-pub(in crate::spell_cast) fn apply_fixed_heal(
-    world: &mut World,
-    ctx: &EffectCtx,
-    target: Entity,
-    amount: f32,
-) {
+pub fn apply_fixed_heal(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32) {
     apply_resolved_heal(world, ctx, target, amount.max(0.0).round(), false, false);
 }
 

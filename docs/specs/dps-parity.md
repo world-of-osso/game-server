@@ -94,6 +94,8 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Beast Mastery literal fixture
 
+- Selected Wildspeaker1232739 applies native1235388 to existing DireCritters when owner Bestial Wrath succeeds. New DireCritters joining an active owner BW inherit only its remaining time, before summon-time Rend executes; stable pets keep their separate native Wrath path (SimC76f8118 hunter1866–1867,6729–6736).
+
 - Selected Fury of the Wyvern472550 extends an existing earned Cry471881 after successful BM Kill Command34026, including the consuming command. Native effect2 supplies each extension and effect4 the total budget. Actual Cry removal resets the budget; white-impact stack growth does not (SimC76f8118 hunter6626–6630,8279–8287).
 
 - Selected Pack Mentality472358 reduces already-running Barbed217200 and Wildfire259495 recovery once per actually consumed Howl beast. Native effects2/3 supply the times; simultaneous Wyvern/Boar consumption pays both reductions before Stampede begins. Unused clocks remain inactive (SimC76f8118 hunter3808–3811).
@@ -458,6 +460,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Shared pet prerequisites
 
 - Headless native Player actors must have runtime-only native pet storage before a real summon. Do not fabricate an authenticated character, follower identity, actor or resource grant. Hunter default-record provisioning reuses that same storage.
+- Generic implicit27 TARGET_UNIT_MASTER selects the actual native controlled-pet or temporary-summon owner in the same map, independently of the supplied explicit target. Never substitute the caster, controller actor or a resource grant (TC a352b1fa Spell.cpp1753–1755).
 - Generic effect148 must forward its actual hit destination/unit, native costs and value to every child effect on the per-cast clone. Do not mutate catalog data (TC a352b1fa SpellEffects.cpp725–788).
 - Generic implicit85 is DEST_DEST_FRONT_LEFT: use native radius/direction, native caster origin when no destination is supplied, and existing collision/allowed-Z handling. Do not use spell-ID branches (TC a352b1fa Spell.cpp1690–1738).
 - Qualify the native267 summon regressions and protected255/254/253/265 probes before landing shared behavior. Pet attack lists, coefficients and class producers remain separate work.
@@ -479,11 +482,17 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Generic DoT facts for an active permanent aura are not refreshable and have unbounded remains/duration, before finite fresh-duration/Pandemic validation. Missing/finite DoTs and buff/debuff sentinel semantics stay unchanged. Do not suppress literal casts in the adapter to hide an expiring aura.
 - Qualify the actual literal ST and recurring30s-add-wave ordering. Gate265 ST/3T and267, plus actual finite-DoT refreshability from103 or258. Count explosion hits separately from explosion actions; do not tune damage or target counts to repair excess paid Seed refreshes.
 
+### Native Infernal guardian
+
+- Actual111685 summons89 with live owner-SP shares2.2275 for SP and AP (SimC76f8118 `sc_warlock_pets.cpp2050–2119`). Native264364→264365 energizes the existing owner through target27; native19483→20153 emits its authored periodic area damage. Preserve native costs, coefficients, targets, clocks and actor expiry.
+- Immediately after actual guardian initialization, the generic `SummonInitialized` callback receives that actor. The downstream Infernal leaf initializes existing action clocks once: a nonnegative normal arise delay(mean1s,stddev0.1s) starts Embers; Immolation starts after another uniform0–0.75s, without an Immolation zero tick. No per-unit summon wrapper, actor-query loop, synthetic ticks or new timer state. Unregistered guardians retain existing behavior; qualify BM Bear,265 guardians and DK Rune Weapon.
+
 ### Shared Hellcaller Wither counters
 
 - Native Wither445474 keeps its actual counter stacks, but its periodic damage ignores that count. An ordinary recast preserves earned stacks without adding a refresh stack; explicit native stack applications retain normal counter advancement. Preserve native coefficients, tick phase and lifetime. Both265 and267 share this rule (SimC76f8118 `sc_warlock_actions.cpp1066,1174–1186`).
 - Wither's counter is not an ordinary damage-stack multiplier. Other stacking DoTs keep their existing behavior; Blackened Soul producers/collapse are separate relationships.
 - Shared265/267 Hellcaller producers must use actual Chaos Bolt/Shadowburn impacts and actual UA applications, including refresh, Fatal Echoes and seed-applied UA. Do not replace UA's independently owned expiry callbacks. Grant native Malevolence stacks/buff/damage only to its caster's active Withers; preserve each Wither lifetime and tick phase.
+- Selected Devil Fruit1266805 attempts its native RPPM on actual owned Wither ticks and applies Malevolence442726 with the talent's native effect0 lifetime, without executing the button's damage/stack producers. Both earned procs and the actual button extend existing Malevolence; preserve native buff effects and ordinary button duration (SimC76f8118 actions1154–1159; init968–971,1475).
 - Check Seeds gates on gains and Wither ticks. Blackened uses a permanent runtime counter with the native tick period, decrements Wither before damage/Mark of Xavius, consumes its separate collapse budget, and stops at Wither1 or missing Wither. Preserve source PRD/weighted-threshold behavior and native spec-specific payout buffs; do not tune damage or duplicate shard mechanics (SimC76f8118 actions1119–1149,1208–1317,1544–1565,4328–4331,4807–4810,5534–5611; init1441–1480).
 
 ### Destruction main-pet engagement
