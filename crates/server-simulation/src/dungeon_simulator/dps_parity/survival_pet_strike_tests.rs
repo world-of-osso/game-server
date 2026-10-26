@@ -17,6 +17,7 @@ fn assert_owned_tip_strike(seed: u64) {
     // SimC76f8118 sc_hunter.cpp1367–1372: earned Tip consumption orders
     // the real main pet, preserving that pet as the native damage source.
     let mut run = prepare_literal(255, 1).unwrap();
+    run.app.world_mut().init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
     hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
     cast(&mut run, 883, true);
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
