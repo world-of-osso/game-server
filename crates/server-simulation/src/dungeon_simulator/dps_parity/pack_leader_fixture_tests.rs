@@ -17,10 +17,21 @@ fn native_pack_leader_fixture_validates_255_identity_traits_and_pet() {
         .map(|spell| spell.spell_id)
         .collect();
     assert!(spells.contains(&471876), "native selected Howl: {spells:?}");
-    assert!(!spells.contains(&1253599), "Sentinel must not remain selected");
+    assert!(
+        !spells.contains(&1253599),
+        "Sentinel must not remain selected"
+    );
     assert!(crate::auras::has_aura(world, run.actor, 471876));
     let pet = crate::hunter_pet::summoned_pet(world, run.actor)
         .expect("ordinary precombat Call Pet supplies the native Kill Command pet");
-    assert_eq!(world.get::<crate::hunter_pet::HunterPet>(pet).unwrap().owner, run.actor);
-    eprintln!("SURVIVAL_PACK_LEADER_NATIVE_VALIDATED class=3 spec=255 hero=43 howl=471876 pet={pet:?}");
+    assert_eq!(
+        world
+            .get::<crate::hunter_pet::HunterPet>(pet)
+            .unwrap()
+            .owner,
+        run.actor
+    );
+    eprintln!(
+        "SURVIVAL_PACK_LEADER_NATIVE_VALIDATED class=3 spec=255 hero=43 howl=471876 pet={pet:?}"
+    );
 }

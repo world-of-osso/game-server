@@ -24,11 +24,7 @@ fn cast_and_observe_critical(run: &mut Run, spell: u32) -> bool {
     for _ in 0..20 {
         run.app.update();
     }
-    let hits = run
-        .app
-        .world()
-        .resource::<ObservedCombatEvents>()
-        .0[first..]
+    let hits = run.app.world().resource::<ObservedCombatEvents>().0[first..]
         .iter()
         .filter(|event| {
             event.source == Some(run.actor.to_bits())
@@ -80,7 +76,11 @@ fn arcane_feedback_native_barrage_earns_and_clears_overflowing_energy() {
             // sc_mage.cpp2693/2854–2866: Blast is not eligible, even with
             // the same selected class talent and an earned active buff.
             cast_and_observe_critical(&mut run, 30451);
-            assert_eq!(overflowing_stacks(&run), expected, "Blast must preserve the earned buff");
+            assert_eq!(
+                overflowing_stacks(&run),
+                expected,
+                "Blast must preserve the earned buff"
+            );
         }
         if saw_gain && saw_clear {
             return;

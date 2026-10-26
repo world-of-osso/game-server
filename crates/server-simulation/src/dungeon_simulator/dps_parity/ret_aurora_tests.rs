@@ -28,7 +28,10 @@ pub(super) fn unselect_aurora(run: &mut Run) {
     for _ in 0..4 {
         run.app.update();
     }
-    assert!(!has(run, AURORA), "native reconciliation removes unselected Aurora");
+    assert!(
+        !has(run, AURORA),
+        "native reconciliation removes unselected Aurora"
+    );
 }
 
 #[test]
