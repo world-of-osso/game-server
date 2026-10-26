@@ -12,6 +12,7 @@ const CALAMITY_BUFF: u32 = 1261125;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(register),
+    SpellScriptHook::AfterAuraApplication(after_application),
     SpellScriptHook::ConsumedEffectValues(&[(FATAL_ECHOES, 0)]),
 ];
 
@@ -59,6 +60,14 @@ fn roll_echo(world: &mut World, caster: Entity) -> bool {
     success
 }
 
+// SimC76f8118 sc_warlock_actions.cpp1547–1550: only an actual owned UA
+// overlap earns Cascading Calamity, not the first application on a recipient.
+fn after_application(world: &mut World, _target: Entity, aura: &AuraInstance) {
+    if aura.spell_id == UNSTABLE_AFFLICTION && aura.stacks > 1 {
+        grant_calamity(world, aura.caster);
+    }
+}
+
 fn grant_calamity(world: &mut World, caster: Entity) {
     if combat::auras::has_aura(world, caster, CASCADING_CALAMITY) {
         combat::spell_cast::cast_triggered(world, caster, CALAMITY_BUFF, Some(caster), 1);
@@ -101,6 +110,9 @@ fn schedule_echo(world: &mut World, target: Entity, aura: &AuraInstance) {
         UNSTABLE_AFFLICTION,
         1,
     );
-    // Fatal Echoes also earns this buff when no previous UA remains.
-    grant_calamity(world, aura.caster);
+    // Final-stack Fatal Echoes earns this even with no previous UA. Overlap
+    // echoes earn it through their real subsequent application instead.
+    if aura.stacks == 0 {
+        grant_calamity(world, aura.caster);
+    }
 }
