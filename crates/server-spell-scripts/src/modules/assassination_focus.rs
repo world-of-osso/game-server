@@ -6,17 +6,30 @@ use combat::auras::ActiveAuras;
 use combat::spell_cast::{
     self,
     effects::EffectCtx,
-    script_registry::SpellScriptHook,
+    script_registry::{self, DamageAmountHook, SpellScriptHook},
     targets,
 };
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DamageAmount(payload_amount),
     SpellScriptHook::ResolvedDamage(after_spell),
     SpellScriptHook::LandedDamagePolicy(after_white),
 ];
 const TALENT: u32 = 457055;
 const MARK: u32 = 457129;
 const DAMAGE: u32 = 457236;
+
+fn payload_amount(spell: u32) -> Option<DamageAmountHook> {
+    (spell == DAMAGE).then_some(apply_target_modifier)
+}
+
+fn apply_target_modifier(world: &World, caster: Entity, target: Entity, amount: f32) -> f32 {
+    // sc_rogue.cpp2346–2350: scripted Zoldyck applies even when the payload
+    // ignores ordinary percent-done modifiers. Native labels/health own eligibility.
+    let spell = world.resource::<combat::spell_info::SpellStore>().get(DAMAGE)
+        .expect("native Singular Focus payload");
+    amount * script_registry::target_damage_multiplier(world, caster, target, spell)
+}
 
 fn after_spell(world: &mut World, ctx: &EffectCtx, target: Entity, _crit: bool, amount: f32) {
     copy_to_mark(world, ctx.caster, target, amount, ctx.depth + 1);
