@@ -74,6 +74,7 @@ pub(crate) use enhancement_rod::snapshot_rod_amount;
 mod enhancement_spending;
 mod enhancement_stormblast;
 pub(super) use enhancement_stormblast::after_weapon_damage as enhancement_weapon_damage;
+mod enhancement_stormwell;
 mod enhancement_strikes;
 mod enhancement_tier;
 mod enhancement_unleashed;

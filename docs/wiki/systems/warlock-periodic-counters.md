@@ -24,7 +24,7 @@ Blackened445731 uses the native1000ms periodic driver with runtime permanent/max
 
 Pinned behavior is in `sc_warlock_actions.cpp1119–1149,1208–1317,1544–1565,4328–4331,4807–4810,5534–5611`, `sc_warlock_init.cpp1441–1480`, and `proc_rng.cpp221–276`. The23% collapse,15% Bleakheart PRD and0.240 threshold increment are pinned RNG-model settings, not damage adjustments.
 
-Native lifecycle RED is recorded in train `a203eec969` and `97012b5fc8`: UA and CB leave Wither1 unchanged, and collapse gates fail. The no-owned-Wither control passes. The Malevolence test initially used a damage-modified dummy amount; it now reads the raw native base value, as the source does. Probe `c77810573a` passes five lifecycle cases. Its Malevolence case incorrectly cast raw talent430014; it now uses the same native action resolution as the real driver and casts442726. Full lifecycle GREEN and DPS qualification remain pending.
+Native lifecycle RED is recorded in train `a203eec969` and `97012b5fc8`: UA and CB leave Wither1 unchanged, and collapse gates fail. The no-owned-Wither control passes. The Malevolence test initially used a damage-modified dummy amount; it now reads the raw native base value, as the source does. Probe `c77810573a` passes five lifecycle cases. Its Malevolence case incorrectly cast raw talent430014; it now uses the same native action resolution as the real driver and casts442726. Train `687ff619cf` lands `b6937d3bf310` with all six native lifecycle cases GREEN. The separate265-led `1636dfe495` also passes all six; three independently owned Affliction Calamity/Wrath cases remain RED. Three-seed267 means are94930.81ST and123087.79three-target (48.65%/47.94% of reference), not numerical parity.
 
 ## Sources
 

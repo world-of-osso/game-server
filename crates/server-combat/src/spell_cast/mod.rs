@@ -332,6 +332,7 @@ mod toy_foam_sword;
 pub(crate) mod toy_scripts;
 mod toy_weather;
 mod toy_wormhole;
+mod trigger_missile_value;
 
 mod elemental_overload;
 pub mod queued_triggers;
@@ -2469,6 +2470,7 @@ pub fn applicable_costs(
         };
         // TC CalcPowerCost retains native negative generation, but modifiers
         // cannot turn an originally positive cost into a grant or vice versa.
+        let modified = script_registry::power_cost(world, caster, spell, pool, modified);
         let amount = preserve_cost_sign(initial, modified);
         // OptionalCost is additional raw spend, never an admission requirement.
         let additional = resources::additional_optional_cost(world, caster, spell, cost.power_type);
@@ -3279,9 +3281,18 @@ fn resolve_effects(
         }
         // TC EffectTriggerMissileSpell's HIT mode: destination effects have no
         // hit units, but still cast their child once with the parent's destination.
-        if effect.effect == effects::EFFECT_TRIGGER_MISSILE && units.is_empty() {
-            effects::trigger_missile_at_destination(world, &ctx, effect);
-            continue;
+        if units.is_empty() {
+            match effect.effect {
+                effects::EFFECT_TRIGGER_MISSILE => {
+                    effects::trigger_missile_at_destination(world, &ctx, effect);
+                    continue;
+                }
+                effects::EFFECT_TRIGGER_MISSILE_WITH_VALUE => {
+                    trigger_missile_value::at_destination(world, &ctx, effect);
+                    continue;
+                }
+                _ => {}
+            }
         }
         // TC EffectSendEvent HANDLE_HIT runs targetless events once, not once per frame.
         // Unit-targeted events use the normal hit/immunity boundary below.

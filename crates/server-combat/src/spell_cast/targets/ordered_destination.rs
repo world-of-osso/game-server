@@ -101,6 +101,15 @@ pub(super) fn select_slot(
             let destination = destination.ok_or(super::super::CastFailure::InvalidTarget)?;
             move_destination(world, caster, start, destination, 148).map(Some)
         }
+        85 => {
+            // TC CheckDst uses the caster, not an unrelated explicit unit.
+            let start = previous
+                .map(|dest| dest.position)
+                .or_else(|| position(world, caster))
+                .ok_or(super::super::CastFailure::InvalidTarget)?;
+            let destination = destination.ok_or(super::super::CastFailure::InvalidTarget)?;
+            move_destination(world, caster, start, destination, 85).map(Some)
+        }
         62 | 138 => ground_destination(world, caster, effect, destination),
         _ => Ok(destination),
     }
