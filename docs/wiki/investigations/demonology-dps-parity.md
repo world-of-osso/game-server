@@ -46,11 +46,17 @@ The shared cooldown query implements pinned `cooldown.cpp603–615` expected-rem
 
 Pinned `pets.cpp701/875–882` disables regeneration for actual Wild Imps. The normal player-controlled power path otherwise grants native Energy regeneration, which can prevent exhaustion and the associated Core grant. Actual104317/55659 guardian initialization now records the source's no-regeneration policy; both runtime regeneration and APL potential-regeneration facts use it. Native pool size and Fel Firebolt costs are unchanged. Train qualification is pending.
 
+## Literal minion attack commands
+
+The first full300s literal measurements still had zero Felguard and guardian output. Lantha's actual `CombatTarget` remained absent throughout combat. The direct Tyrant fixture had manually set that target, so its damage proof did not cover the controller boundary. The failed qualification still wrote diagnostic17098.57 ST/19645.99 three-target DPS; these are not certified parity results.
+
+During combat, the Demonology adapter now retains the supplied primary enemy on the actual actor and orders its existing configured pet through normal `order_companion_pet`, matching the established BM adapter path. Guardians read that owner target normally. It does not inject owner melee, change native spell casting targets, issue precombat attacks or turn a `target_if` recipient into the default primary. The literal regression now requires real output from both a guardian and the configured Felguard; GREEN qualification is pending.
+
 ## Guardian secondary stats
 
 Actual native Fel Firebolt used2000ms despite the owner's19.45591% haste; the source expectation is1674ms. Executing `GuardianActor` units now resolve their actual `SummonedCreature` owner for spell haste, with one timing reader shared by cast/GCD/channel/duration calculations. Spell-specific modifiers remain on the guardian. Native pool/stat identities are not copied or changed. GREEN qualification is pending.
 
-Actual Burning Cleave separately observed zero critical chance against the owner's35.065216%. That remains open until the shared owner-critical-chance helper lands; the follow-up must extend that helper rather than create a second critical-chance path.
+Actual Burning Cleave separately observed zero critical chance against the owner's35.065216%. The landed `combat::read_pet_owner_critical_chance` helper now also resolves executing guardians through the same owner reader used for haste. Both native swings and spell critical-chance calculations consume that one helper. Existing Hunter qualification and spell-specific modifiers are retained. GREEN qualification is pending.
 
 ## Dominion and guardian execution
 

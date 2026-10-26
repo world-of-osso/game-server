@@ -5,10 +5,24 @@ use bevy::prelude::*;
 use rand::seq::SliceRandom;
 use shared::components::{ActiveSpec, Position};
 
-use crate::auras::ActiveAuras;
-use crate::class_progression::TraitLoadout;
-use crate::random as rand;
-use crate::spell_info::SpellStore;
+use super::combat;
+use combat::auras::ActiveAuras;
+use combat::class_progression::TraitLoadout;
+use combat::random as rand;
+use combat::spell_cast;
+use combat::spell_cast::script_registry::{SpellScriptHook, HitHook};
+use combat::spell_info::SpellStore;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::EffectHit(effect_hit),
+    SpellScriptHook::ConsumedEffectValues(&[(SLAM, 2)]),
+    SpellScriptHook::LaunchDelay(launch_delay),
+    SpellScriptHook::DotMasteryMultiplier(weaving_multiplier),
+];
+
+fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
+    (spell == SLAM && index == 0).then_some(slam_impact)
+}
 
 pub(super) const SLAM: u32 = 1227280;
 const DAMAGE: u32 = 1227621;
@@ -27,8 +41,8 @@ const WEAVING_PAYLOADS: &[u32] = &[
 
 /// SimC sc_priest_shadow.cpp1819–1826 explicitly authors500ms, absent in data.
 /// Keep the override in script policy, not in fabricated native spell records.
-pub(in crate::spell_cast) fn launch_delay(spell: u32, native: f32) -> f32 {
-    if spell == SLAM { 0.5 } else { native }
+fn launch_delay(spell: u32) -> Option<f32> {
+    (spell == SLAM).then_some(0.5)
 }
 
 pub(super) fn slam_impact(world: &mut World, caster: Entity, primary: Entity, depth: u8) {
@@ -37,17 +51,17 @@ pub(super) fn slam_impact(world: &mut World, caster: Entity, primary: Entity, de
         return;
     };
     let plan =
-        match super::super::plan_triggered_spell(world, caster, &damage, Some(primary), depth) {
+        match spell_cast::plan_triggered_spell(world, caster, &damage, Some(primary), depth) {
             Ok(plan) => plan,
             Err(reason) => {
                 warn!(?reason, "Tentacle Slam native area selection failed");
                 return;
             }
         };
-    let units = super::super::selected_units(&plan);
+    let units = spell_cast::selected_units(&plan);
     apply_slam_dots(world, caster, units, depth);
     // sc_priest_shadow.cpp1853–1869: VT before damage, then weak Madness.
-    super::super::launch_triggered_spell(world, caster, &damage, Some(primary), depth);
+    spell_cast::launch_triggered_spell(world, caster, &damage, Some(primary), depth);
     cast_maddening_tentacles(world, caster, primary, depth);
 }
 
@@ -55,8 +69,8 @@ fn load_slam_damage(
     world: &World,
     primary: Entity,
     depth: u8,
-) -> Option<crate::spell_info::SpellInfo> {
-    let mut damage = super::super::load_triggered_spell(world, DAMAGE, depth)?;
+) -> Option<combat::spell_info::SpellInfo> {
+    let mut damage = spell_cast::load_triggered_spell(world, DAMAGE, depth)?;
     let Some(position) = world.get::<Position>(primary) else {
         warn!(?primary, "Tentacle Slam primary position unavailable");
         return None;
@@ -83,12 +97,12 @@ fn apply_slam_dots(world: &mut World, caster: Entity, mut units: Vec<Entity>, de
         units.truncate(cap);
     }
     for target in units {
-        super::super::cast_triggered(world, caster, VT, Some(target), depth);
+        spell_cast::cast_triggered(world, caster, VT, Some(target), depth);
     }
 }
 
 fn owns_dot(world: &World, caster: Entity, target: Entity, spell: u32) -> bool {
-    let now = super::super::now(world);
+    let now = spell_cast::now(world);
     world.get::<ActiveAuras>(target).is_some_and(|auras| {
         auras.iter().any(|aura| {
             let owned = aura.caster == caster && aura.spell_id == spell;
@@ -107,13 +121,13 @@ fn cast_maddening_tentacles(world: &mut World, caster: Entity, primary: Entity, 
         warn!(?caster, "Maddening Tentacles native effect unavailable");
         return;
     };
-    let Some(mut child) = super::super::load_triggered_spell(world, MADNESS, depth) else {
+    let Some(mut child) = spell_cast::load_triggered_spell(world, MADNESS, depth) else {
         return;
     };
     // sc_priest_shadow.cpp1272–1275: a background Madness at talent E0 percent.
     // Native rolling-periodic refresh retains unpaid damage from the previous DoT.
     child.cast_damage_multiplier = Some(percent / 100.0);
-    super::super::launch_triggered_spell(world, caster, &child, Some(primary), depth);
+    spell_cast::launch_triggered_spell(world, caster, &child, Some(primary), depth);
 }
 
 fn selected(world: &World, caster: Entity, talent: u32) -> bool {
@@ -134,7 +148,7 @@ fn owned_effect_amount(world: &World, caster: Entity, spell: u32, index: u8) -> 
 }
 
 /// SimC76f8118 sc_priest.cpp4285–4341: live target DoTs, not a flat school bonus.
-pub(in crate::spell_cast) fn weaving_multiplier(
+fn weaving_multiplier(
     world: &World,
     caster: Entity,
     target: Entity,
@@ -154,7 +168,7 @@ pub(in crate::spell_cast) fn weaving_multiplier(
 }
 
 fn weaving_dots(world: &World, caster: Entity, target: Entity, spell: u32) -> f32 {
-    let voidform = crate::auras::has_aura(world, caster, VOIDFORM);
+    let voidform = combat::auras::has_aura(world, caster, VOIDFORM);
     let madness = spell == MADNESS || owns_dot(world, caster, target, MADNESS);
     // An initial DoT hit benefits before its own aura has been installed.
     let dots = if voidform {
@@ -165,7 +179,7 @@ fn weaving_dots(world: &World, caster: Entity, target: Entity, spell: u32) -> f3
             .count() as f32
     };
     let extra = if (voidform || madness) && selected(world, caster, MADNESS_WEAVING) {
-        super::script_effect_value(world, caster, MADNESS_WEAVING, 0) / 100.0
+        spell_cast::scripts::script_effect_value(world, caster, MADNESS_WEAVING, 0) / 100.0
     } else {
         0.0
     };

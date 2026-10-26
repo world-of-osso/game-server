@@ -46,6 +46,7 @@ pub mod invisibility;
 mod item_requirements;
 mod light_of_titans;
 mod linked;
+mod linked_owners;
 pub(crate) mod linked_summon;
 pub(crate) mod mastery;
 mod mechanic_duration;
@@ -79,6 +80,7 @@ pub mod stat_mods;
 pub(crate) mod stealth;
 pub mod summon_damage;
 mod unit_state;
+mod venomcursed;
 mod warrior_stats;
 pub(crate) mod world_state;
 #[cfg(test)]
@@ -279,12 +281,7 @@ impl AuraEffectState {
 
 /// Source-qualified initial phase on a newly applied native periodic effect.
 /// Later ticks retain the same native interval and ordinal clock.
-pub(crate) fn randomize_initial_periodic_phase(
-    world: &mut World,
-    unit: Entity,
-    instance: u32,
-    index: u8,
-) {
+pub fn randomize_initial_periodic_phase(world: &mut World, unit: Entity, instance: u32, index: u8) {
     let now = aura_now(world);
     let mut auras = world
         .get_mut::<ActiveAuras>(unit)
@@ -792,7 +789,7 @@ fn build_effect(
     } else {
         amount
     };
-    let amount = scripts::snapshot_periodic_amount(world, caster, spell, effect, amount);
+    let amount = scripts::snapshot_aura_amount(world, caster, spell, effect, amount);
     let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
     let base_period_ms = periodic_base_interval_ms(spell, effect);
     let period_ms = periodic_interval_ms(world, caster, spell, base_period_ms);

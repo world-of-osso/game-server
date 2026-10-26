@@ -66,13 +66,18 @@ impl Rotation {
                 // SimC76f8118 buff.cpp481–500: .react tracks the actual debuff
                 // owner before acquisition, including replacement-wave entities.
                 // Exact254.reference.single.json player fields; player.cpp1017–1020.
-                reaction::configure(world, target, reaction::ReactionSettings {
-                    mean: 0.25,
-                    stddev: 0.05,
-                    offset: 0.1,
-                    nu: 0.15,
-                    maximum: 1.4,
-                }, &[1253601])?;
+                reaction::configure(
+                    world,
+                    target,
+                    reaction::ReactionSettings {
+                        mean: 0.25,
+                        stddev: 0.05,
+                        offset: 0.1,
+                        nu: 0.15,
+                        maximum: 1.4,
+                    },
+                    &[1253601],
+                )?;
             }
         }
         Ok(())

@@ -666,10 +666,15 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     commands: Commands<'w, 's>,
 }
 
-/// Live owner crit for a native Hunter pet (SimC76f8118 pet.cpp217–220).
+/// Live owner crit for native Hunter pets and executing guardians.
+/// SimC76f8118 pet.cpp217–220: the shared source serves swings and spells.
 pub fn read_pet_owner_critical_chance(world: &World, unit: Entity) -> Option<f32> {
-    world.get::<crate::hunter_pet_stats::HunterInheritedStats>(unit)?;
-    let owner = world.get::<crate::hunter_pet::HunterPet>(unit)?.owner;
+    let owner = if let Some(owner) = crate::spell_cast::guardian::stat_owner(world, unit) {
+        owner
+    } else {
+        world.get::<crate::hunter_pet_stats::HunterInheritedStats>(unit)?;
+        world.get::<crate::hunter_pet::HunterPet>(unit)?.owner
+    };
     Some(
         world
             .get::<CharacterStats>(owner)
@@ -2533,6 +2538,9 @@ fn record_swing_events(world: &mut World, attacker: Entity, target: Entity, outc
     };
     reward_swing_rage(world, attacker, target, rage_secs, damage);
     crate::spell_cast::log_event(world, swing_log_event(attacker, target, &outcome));
+    crate::spell_cast::scripts::apply_havoc_damage_policies(
+        world, attacker, target, None, damage, false,
+    );
     if outcome.npc_died || outcome.player_died {
         world.entity_mut(target).insert(KillingBlow(Some(attacker)));
         crate::auras::remove_on_death(world, target);
