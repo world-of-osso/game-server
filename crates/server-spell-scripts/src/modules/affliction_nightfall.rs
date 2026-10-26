@@ -3,7 +3,7 @@ use super::combat;
 use bevy::prelude::*;
 use combat::auras::ActiveAuras;
 use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook};
-use combat::spell_info::SpellInfo;
+use combat::spell_info::{ChargedSpellModifier, SpellInfo};
 use shared::components::ActiveSpec;
 
 const TALENT: u32 = 108558;
@@ -15,6 +15,7 @@ const INCREMENT_MAX: f64 = 0.130;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::PeriodicDamageFinished(landed_tick),
     SpellScriptHook::AfterForegroundSpecial(consume_earned_use),
+    SpellScriptHook::LaunchDamageModifier(snapshot_bolt_bonus),
     SpellScriptHook::CastTimeProcs(&[BUFF]),
     SpellScriptHook::PreserveUnadmittedProcs(&[BUFF]),
 ];
@@ -97,6 +98,30 @@ fn sataiel_multiplier(world: &World, caster: Entity) -> f64 {
     }
     let percent = combat::spell_cast::scripts::script_effect_value(world, caster, SATAIEL, 0);
     1.0 + f64::from(percent) / 100.0
+}
+
+// SimC76f8118 actions902–908: the instant Bolt's one native bonus survives
+// spending its admitted use before impact. Mid-hardcast gains do not qualify.
+fn snapshot_bolt_bonus(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Option<ChargedSpellModifier> {
+    if spell.id != 686 || spell.cast_was_hardcast {
+        return None;
+    }
+    let aura = world.get::<ActiveAuras>(caster)?.iter().find(|aura| {
+        aura.caster == caster
+            && aura.spell_id == BUFF
+            && spell.cast_proc_mods.contains(&aura.instance_id)
+    })?;
+    let amount = aura.effects.iter().find(|effect| effect.index == 1)?.amount;
+    Some(ChargedSpellModifier {
+        aura_spell_id: BUFF,
+        op: combat::auras::SpellModOp::HealingAndDamage as i32,
+        percent: true,
+        amount,
+    })
 }
 
 fn consume_earned_use(world: &mut World, caster: Entity, spell: &SpellInfo) {
