@@ -1,6 +1,6 @@
 # Zatha'tek, Breath of Corruption
 
-Equipped weapon271093 follows pinned SimC76f8118 `unique_gear_midnight.cpp5233–5280`, with native70448 values. Source: `crates/server-spell-scripts/src/modules/zathatek_breath.rs`. See [aura/item relationships](../wiki/systems/auras.md#zathatek-weapon-proc) for implementation details.
+Equipped weapon271093 follows pinned SimC76f8118 `unique_gear_midnight.cpp5233–5280`, with native70448 values. Source: `crates/server-spell-scripts/src/modules/zathatek_breath.rs`. See [weapon relationship](../wiki/systems/zathatek-weapon.md) for implementation details.
 
 ## What it must do
 
@@ -11,7 +11,7 @@ Equipped weapon271093 follows pinned SimC76f8118 `unique_gear_midnight.cpp5233�
 
 ## How it works
 
-- [Aura/item relationships](../wiki/systems/auras.md#zathatek-weapon-proc).
+- [Weapon relationship](../wiki/systems/zathatek-weapon.md).
 - [DPS parity contract](dps-parity.md).
 
 ## Implementation inventory
