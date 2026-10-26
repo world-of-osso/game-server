@@ -39,8 +39,10 @@ const fn order_modules<const N: usize>(
 
 register_modules! {
     affliction_agony: (2650, "modules/affliction_agony.rs"),
+    affliction_grasp: (2654, "modules/affliction_grasp.rs"),
     affliction_instability: (2651, "modules/affliction_instability.rs"),
     affliction_nightfall: (2652, "modules/affliction_nightfall.rs"),
+    affliction_ua: (2653, "modules/affliction_ua.rs"),
     after_cast_auras: (100, "modules/after_cast_auras.rs"),
     assassination_doomblade: (2594, "modules/assassination_doomblade.rs"),
     assassination_focus: (2592, "modules/assassination_focus.rs"),
@@ -86,6 +88,7 @@ register_modules! {
     havoc_recovery: (5772, "modules/havoc/recovery.rs"),
     hellcaller_wither: (2665, "modules/hellcaller_wither.rs"),
     hot_streak: (1000, "modules/hot_streak.rs"),
+    hunter_howl: (2530, "modules/hunter_howl.rs"),
     impact_procs: (330, "modules/impact_procs.rs"),
     lava_surge: (300, "modules/lava_surge.rs"),
     marksmanship: (380, "modules/marksmanship.rs"),

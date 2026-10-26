@@ -57,6 +57,7 @@ macro_rules! spec_drivers {
 }
 
 spec_drivers! {
+    62 => arcane_rotation,
     63 => fire_rotation,
     64 => frost_mage_rotation,
     70 => ret_rotation,
