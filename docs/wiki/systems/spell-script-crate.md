@@ -96,6 +96,12 @@ Maelstrom Weapon, native weapon imbues, Doom Winds pulses, Thorim selection, spa
 
 Spellslinger's Arcane/Frost source tables, delayed per-conjure rolls, Ray tick window and actual Orb recharge adjustment live downstream. The conjure cast handler remains after all generic relationship cast handlers and before ground-field handlers. Splinter direct damage still adjusts Orb before melee/combo feedback; Ray ticks still conjure after periodic relationships and before item feedback. This source-execution module is separate from the already-moved Splinter impact module.
 
+## Frost launch procs and delayed supply
+
+`modules/frost_runtime/` owns Frost launch-aura snapshots, Flurry's inherited child scalar, Ice Lance's native payload, Orb and cast proc producers, Augury's PRD state, and delayed Brain Freeze/Splinter callbacks. Native after-cast handling still precedes proc consumption, supply generation and generic cast policies. Launch supply remains before execution counters; delayed callbacks retain their original queued-trigger position and current-target rule. Each new stage has its own alias. The existing Spellslinger impact module is unchanged.
+
+A warm `server-simulation --no-run` touch of the moved supply source rebuilt combat, scripts and simulation in87.72s before extraction (including a package-cache wait), then only scripts and simulation in5.45s after extraction. These are compile observations, not gameplay acceptance; native Frost and registry gates run in the merge train.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.

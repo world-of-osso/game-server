@@ -4640,3 +4640,7 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 Documented the first compile-boundary slice in [spell-script-crate](systems/spell-script-crate.md): all relationship-policy rows and five complete hook modules move downstream; the remaining implementations stay in combat. Dispatch order has one code-level contract.
 
 - 2026-10-25: Documented Affliction265 literal fixture and native Agony shard funding; controller RED9774→GREENfa58; funding RED4b2dc (15landed ticks,0raw shards), GREEN/measure pending.
+
+## 2026-10-26 — Frost runtime compile boundary
+
+- Updated [spell-script crate](systems/spell-script-crate.md#frost-launch-procs-and-delayed-supply) with downstream launch/proc/supply ownership, preserved callback order, compile-touch observations and train-only native gates.
