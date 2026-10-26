@@ -59,7 +59,10 @@ pub(super) fn apply_damage(
                 .expect("native Inflame requires effect1")
                 .amount
         });
-    let amount = calculate_tick_amount(effect.amount, event, ticks, inflame);
+    let target_multiplier = event.target.map_or(1.0, |target| {
+        controlled_destruction_multiplier(world, unit, target)
+    });
+    let amount = calculate_tick_amount(effect.amount, event, ticks, inflame) * target_multiplier;
     crate::spell_cast::cast_triggered_with_effect0_amount(
         world,
         unit,
@@ -68,6 +71,28 @@ pub(super) fn apply_damage(
         1,
         amount,
     );
+}
+
+fn controlled_destruction_multiplier(world: &World, caster: Entity, target: Entity) -> f32 {
+    // SimC76f8118 sc_mage.cpp1945–1946: only this caster's earned target
+    // debuff scales new Ignite contributions; the unpaid old bank is not rescaled.
+    let percent = world
+        .get::<ActiveAuras>(target)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 453268 && aura.caster == caster)
+        })
+        .map_or(0.0, |aura| {
+            let amount = aura
+                .effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .expect("native Controlled Destruction requires effect1")
+                .amount;
+            amount * f32::from(aura.stacks)
+        });
+    1.0 + percent / 100.0
 }
 
 /// FIRE_INTENSIFYING_FLAME_SIMC_TICK_BRIDGE, SimC76f8118 sc_mage.cpp2502–2567.
