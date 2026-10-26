@@ -125,6 +125,7 @@ mod hunter_howl_cycle_tests;
 mod hunter_howl_recovery_tests;
 mod hunter_howl_tests;
 mod hunter_mark_mask_tests;
+mod hunter_pack_mentality_tests;
 mod hunter_salvo_tests;
 #[cfg(test)]
 mod hunter_melee_tests;
