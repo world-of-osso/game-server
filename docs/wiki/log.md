@@ -38,7 +38,7 @@
 
 ## 2026-10-26 — Thunder Capacitor paid-stack refund
 
-[Thunder Capacitor](systems/auras.md#thunder-capacitor-paid-stack-refund--2026-10-26) now uses the actual consumed count after normal/Thorim lightning payment. Native6260f1c7f7→focused6516987437 proves real5→5 refund after payment plus5 native generation cases. Full57e5ee7aa1 passes30/31; diagnostic7df90ef94d identifies a capped linked-mode control, now using bounded real lightning payment until actual capacity exists after native refunds. Native values stay unchanged; final qualification and integrated measurement remain pending.
+[Thunder Capacitor](systems/auras.md#thunder-capacitor-paid-stack-refund--2026-10-26) now uses the actual consumed count after normal/Thorim lightning payment. Native6260f1c7f7→focused6516987437 proves real5→5 refund after payment plus5 native generation cases. Full57e5ee7aa1 passes30/31; diagnostic7df90ef94d identifies a capped linked-mode control, now using bounded real lightning payment until actual capacity exists after native refunds. Final82ad5016b2 passes all31 native cases and3 decks; landed8f4e67fed6ec59a2994e3803d745b602ad1716d9. Integrated ST164270.12/3T335864.22 (85.073%/83.913%) remain below parity; prior isolated numbers cover a different tree, not this landing's isolated uplift. Native values stay unchanged.
 
 ## 2026-10-26 — Fire Ignition contribution
 
