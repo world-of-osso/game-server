@@ -21,4 +21,6 @@
     260286,
     // Native470532s1/s2 EX_SUPPRESS_STACKING64; SimC parse_effects.cpp716–719.
     470532,
+    // SimC76f8118 sc_shaman.cpp12914–12924: Flowing stacks count builder uses.
+    1300219,
 ]
