@@ -80,6 +80,7 @@ pub mod stat_mods;
 pub(crate) mod stealth;
 pub mod summon_damage;
 mod unit_state;
+mod venomcursed;
 mod warrior_stats;
 pub(crate) mod world_state;
 #[cfg(test)]
