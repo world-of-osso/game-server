@@ -226,8 +226,15 @@ fn dps_parity_ret_storm_gap_selected_sunrise_launches_real_echo() {
     let amounts = events
         .iter()
         .filter(|event| event["event"] == "direct_amount" && event["spell_id"] == STORM);
+    let tempest_scale = f64::from(crate::spell_cast::scripts::script_effect_value(
+        run.app.world(),
+        run.actor,
+        383396,
+        0,
+    )) / 100.0;
     let mut root_hits = 0;
     let mut echo_hits = 0;
+    let mut tempest_hits = 0;
     for event in amounts {
         let scale = event["applied_multipliers"]
             .as_array()
@@ -237,20 +244,30 @@ fn dps_parity_ret_storm_gap_selected_sunrise_launches_real_echo() {
             .unwrap()["value"]
             .as_f64()
             .unwrap();
-        if event["native_depth"].as_u64().unwrap() == 0 {
-            assert_eq!(scale, 1.0, "root amount must remain native");
-            root_hits += 1;
-        } else {
-            assert_eq!(scale, 0.5, "actual echo damage must use live native50%");
-            echo_hits += 1;
+        // SimC76f8118 Ret495–532: Sunrise's Tempest is also53385,
+        // but is a separate secondary child, not another50% Sunrise echo.
+        match event["native_depth"].as_u64().unwrap() {
+            0 => {
+                assert_eq!(scale, 1.0, "root amount must remain native");
+                root_hits += 1;
+            }
+            1 => {
+                assert_eq!(scale, 0.5, "actual echo damage must use live native50%");
+                echo_hits += 1;
+            }
+            2 => {
+                assert!((scale - tempest_scale).abs() < 1e-6);
+                tempest_hits += 1;
+            }
+            depth => panic!("unexpected Storm child depth{depth}: {event}"),
         }
     }
     assert!(
-        root_hits > 0 && echo_hits > 0,
-        "real root and echo damage required: {capture}"
+        root_hits > 0 && echo_hits > 0 && tempest_hits > 0,
+        "real root, echo and same-ID Tempest damage required: {capture}"
     );
     println!(
-        "STORM_ECHO_PROOF root_hits={root_hits} echo_hits={echo_hits} paid={paid} launches={}",
+        "STORM_ECHO_PROOF root_hits={root_hits} echo_hits={echo_hits} tempest_hits={tempest_hits} paid={paid} launches={}",
         targets.len()
     );
 }
