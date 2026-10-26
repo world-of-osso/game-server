@@ -506,3 +506,7 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 
 - Only landed Agony980 ticks from Affliction265 advance its owner's threshold-RNG shard progress, with uniform initial state and rollover. Pinned increment0.370 scales by active owned Agonies to the power−2/3 and native Creeping Death timing normalization, including the pinned rank2 bug. Losing the last owned Agony resets progress.
 - Each threshold crossing pays native17941 effect0 through ordinary energize handling (one displayed Soul Shard); no fragment-per-tick Destruction policy applies to Affliction.
+
+### Affliction Malefic Grasp sourced action
+
+- `simc_apl:` selected Malefic Grasp1261149 resolves to native channel1261153 under the same sourced known-parent projection as Demoniac. Native70448 has no visible-action link. Unknown/unselected talents do not grant the channel; costs and actual channel damage stay native.
