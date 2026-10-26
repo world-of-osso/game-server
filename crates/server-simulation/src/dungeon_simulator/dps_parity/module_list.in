@@ -10,6 +10,7 @@ mod affliction_empowerment_tests;
 mod affliction_grasp_tests;
 mod affliction_nathreza_tests;
 mod affliction_nightfall_tests;
+mod affliction_presence_tests;
 mod affliction_procs_tests;
 mod affliction_targets_tests;
 mod affliction_tests;
