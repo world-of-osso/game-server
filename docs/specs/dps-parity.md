@@ -271,6 +271,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
+- Selected Exergy206476 grants native208628 before Hunt370965 and Vengeful Retreat198793 execute. Refresh adds the native buff duration to its remaining time, capped at30s (SimC76f8118 sc_demon_hunter.cpp2822–2841,5501–5504,8539–8541,10010–10013).
+
 - Native Chaos Strike199547 and Annihilation201428 off-hand execution roll the same197125 Fury refund passive. No refund occurs at the parent's earlier dummy hit. The real passive supplies its chance, Critical Chaos modifiers and500ms internal cooldown;193840 supplies the Fury payload (SimC76f8118 sc_demon_hunter.cpp7472–7510,7673–7685). Do not omit the transformed spender's refund.
 - Selected Relentless Onslaught389977 rolls its native effect chance on actual landed off-hand hits. Its delayed callback uses that off-hand effect's native delay, selects Chaos Strike or Annihilation from live Meta at execution, then starts the native talent ICD. Copies use real free triggered casts and native weapon children; the live ICD prevents their off-hand hits from recursively producing copies (SimC76f8118 sc_demon_hunter.cpp7422–7446,7462–7473,7524–7532). The shared native queue retains its entity-lifetime and depth checks.
 
