@@ -2,9 +2,18 @@
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
-use crate::auras::{self, ActiveAuras, AuraApplication, AuraSource};
-use crate::spell_cast::{self, PlannedEffect, TargetPlan, effects::EffectCtx, targets};
-use crate::spell_info::{SpellEffect, SpellInfo};
+use super::combat;
+use combat::auras::{self, ActiveAuras, AuraApplication, AuraSource};
+use combat::spell_cast::script_registry::{SpellScriptHook, TargetPlanHook};
+use combat::spell_cast::scripts::script_effect_value;
+use combat::spell_cast::{self, PlannedEffect, TargetPlan, effects::EffectCtx, targets};
+use combat::spell_info::{SpellEffect, SpellInfo};
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::BeforeDirectDamagePolicies(after_damage),
+    SpellScriptHook::AfterPeriodicDamagePolicies(after_periodic_damage),
+    SpellScriptHook::TargetPlan(target_plan_hook),
+];
 
 const SHATTER: u32 = 1246769;
 const FREEZING: u32 = 1221389;
@@ -47,7 +56,7 @@ pub(super) fn after_damage(world: &mut World, ctx: &EffectCtx, target: Entity, c
         _ => None,
     };
     if let Some(effect) = effect {
-        let count = super::script_effect_value(world, ctx.caster, SHATTER, effect) as u8;
+        let count = script_effect_value(world, ctx.caster, SHATTER, effect) as u8;
         apply_freezing(world, ctx.caster, target, count);
         apply_critical_freezing(world, ctx, target, critical);
     }
@@ -63,7 +72,7 @@ fn apply_critical_freezing(world: &mut World, ctx: &EffectCtx, target: Entity, c
         && matches!(ctx.spell.id, 228597 | 228600)
         && auras::has_aura(world, ctx.caster, FROSTBITE)
     {
-        let count = super::script_effect_value(world, ctx.caster, FROSTBITE, 0) as u8;
+        let count = script_effect_value(world, ctx.caster, FROSTBITE, 0) as u8;
         apply_freezing(world, ctx.caster, target, count);
     }
 }
@@ -87,7 +96,7 @@ fn shatter_owned_freezing(world: &mut World, ctx: &EffectCtx, target: Entity) {
     };
     // sc_mage.cpp4428/7129–7181: one payload scaled by the actual owned
     // stacks consumed, followed by removal and refresh of remaining Freezing.
-    let limit = super::script_effect_value(world, ctx.caster, SHATTER, 3) as u8;
+    let limit = script_effect_value(world, ctx.caster, SHATTER, 3) as u8;
     let consumed = stacks.min(limit);
     if consumed == 0 {
         return;
@@ -104,7 +113,7 @@ fn shatter_owned_freezing(world: &mut World, ctx: &EffectCtx, target: Entity) {
     auras::set_owned_duration(world, ctx.caster, target, FREEZING, duration);
 }
 
-pub(super) fn target_plan_hook(spell: u32) -> Option<(targets::Relation, super::TargetPlanHook)> {
+pub(super) fn target_plan_hook(spell: u32) -> Option<(targets::Relation, TargetPlanHook)> {
     (spell == SHATTER_DAMAGE).then_some((targets::Relation::Enemy, shatter_plan))
 }
 
@@ -139,7 +148,7 @@ fn plan_shatter_effect(
     if effect.index == 1 {
         units.retain(|unit| Some(*unit) != explicit);
     }
-    let cap = super::script_effect_value(world, caster, FROSTBITE, 1);
+    let cap = script_effect_value(world, caster, FROSTBITE, 1);
     let total_targets = units.len() + 1;
     let multiplier = if effect.index == 1 && cap > 0.0 && total_targets as f32 > cap {
         (cap / total_targets.min(20) as f32).sqrt()

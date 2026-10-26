@@ -122,7 +122,7 @@ pub(crate) fn consume(world: &mut World, caster: Entity, spell: &SpellInfo) {
         retain_stacks(world, caster, remaining);
     }
     reduce_tempo_recharge(world, caster, spent);
-    super::enhancement_tempest::grant_for_spending(world, caster, spent);
+    super::enhancement_spending::grant_for_spending(world, caster, spent);
 }
 
 fn reduce_tempo_recharge(world: &mut World, caster: Entity, spent: u8) {

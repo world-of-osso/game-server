@@ -8,7 +8,7 @@ use crate::simc_apl_native::{Bindings, NativeFacts};
 use crate::stats::{EquippedItemModifiers, EquippedItems, NativeItemInstances};
 use bevy::prelude::*;
 use metadata::Metadata;
-use server::simc_apl::Action;
+use server::simc_apl::{Action, Facts};
 use shared::item_data::ItemDefinitionSource;
 use shared::protocol::EquipmentSlot;
 use std::collections::{BTreeMap, BTreeSet};
@@ -86,6 +86,9 @@ impl Equipment {
             bindings.actions.remove(name);
             if let Some(item) = entry.on_use {
                 bindings.actions.insert(name.into(), item.on_use.spell_id);
+            }
+            for &spell in &entry.metadata.buff_spells {
+                bindings.buffs.insert(item_proc_alias(entry.item_id, spell), spell);
             }
             slots.insert(name.into(), entry);
         }
@@ -256,6 +259,7 @@ impl Equipment {
                 .fold(0.0, f64::max)),
             "cooldown.remains" | "cooldown.ready" => read_cooldown(item, field, native),
             "proc.any_dps.duration" => Ok(item.metadata.duration),
+            "proc.any_dps.up" | "proc.any_dps.remains" => read_proc_state(item, field, native),
             // SimC76f8118 unique_gear.cpp4307–4311: has_ selects the same
             // stat-buff existence expression, including both APL spellings.
             _ if field.starts_with("has_buff.") || field.starts_with("has_stat.") => {
@@ -438,4 +442,18 @@ fn read_modifiers(
         .find(|(found, _)| *found == slot)
         .map(|(_, properties)| properties)
         .ok_or_else(|| format!("native instance modifiers for {slot:?} absent"))
+}
+
+fn item_proc_alias(item: u32, spell: u32) -> String {
+    format!("native_item_{item}_proc_{spell}")
+}
+
+fn read_proc_state(item: &Slot, field: &str, native: &NativeFacts<'_>) -> Result<f64, String> {
+    // SimC76f8118 unique_gear.cpp3776–3788: a multi-buff trinket proxy
+    // takes the maximum of its matching buffs; no matching native buff is zero.
+    let property = field.strip_prefix("proc.any_dps.").expect("registered item proc fact");
+    item.metadata.buff_spells.iter().try_fold(0.0_f64, |maximum, &spell| {
+        let alias = item_proc_alias(item.item_id, spell);
+        native.value(&format!("buff.{alias}.{property}")).map(|value| maximum.max(value))
+    })
 }

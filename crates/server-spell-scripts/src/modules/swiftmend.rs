@@ -2,7 +2,15 @@
 //! Native392410 overrides consumption; consumed-HoT bonus healing is outside scope.
 use bevy::prelude::*;
 
-use crate::auras::{ActiveAuras, RemoveReason, has_aura, remove_instance};
+use super::combat;
+use combat::auras::{ActiveAuras, RemoveReason, has_aura, remove_instance};
+use combat::spell_cast::script_registry::{HitHook, SpellScriptHook};
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::Hit(hit_hook)];
+
+fn hit_hook(spell: u32) -> Option<HitHook> {
+    (spell == SWIFTMEND).then_some(hit)
+}
 
 pub(super) const SWIFTMEND: u32 = 18562;
 const VERDANT_INFUSION: u32 = 392410;
