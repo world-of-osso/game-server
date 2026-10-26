@@ -1,5 +1,17 @@
 # Auras
 
+## Tempest-owned Enhancement buffs — 2026-10-26
+
+Tempest's existing execution seam grants selected native Storm Swell455089 and Arc Discharge470532 for263. The generic455088 every-spell proc is suppressed only for Enhancement. Elemental262 retains its existing policy.
+
+Arc consumes one use after the final actual Chain/Ride chain impact and uses that recipient as the extra chain's primary325–425ms later. Its native400ms proc timer allows the pinned late self-trigger. Caster-owned pending events load native payloads and snapshot current modifiers at dispatch: ordinary Arc benefits from MW without spending, Ride Arc excludes MW. Native470532s1/s2 attributes64 suppress magnitude stacking; native cap/duration/masks remain unchanged.
+
+Native11ab1f1e5e records both REDs: ordinary Bolt grants false Storm Swell, and an actually earned/cast Tempest never grants Arc. Gatebea9845e9b passes both corrected cases, including3→3 Arc hits from the final recipient after0.4s, but rejects29/30 overall on the old Magic-Unleashed control. No landing or measurement yet.
+
+Diagnostic4b0ca7de9a proves the control's earlier Melee hit left3 Windfury events with only1 Flametongue callback processed; the next Magic window then received3 deferred Flametongue callbacks. [The aura event pump](../../../crates/server-combat/src/auras/procs.rs) takes one batch per tick, not a recursive drain. The Melee-positive and Magic-negative scenarios now use independent fresh native runs, preserving all assertions, chances and proc behavior. Full corrected qualification remains pending.
+
+Sources: pinned SimC76f8118 `sc_shaman.cpp6587–6597,6631–6643,6709–6714,9994–10007,12437–12484`; [contract](../../specs/dps-parity.md#enhancement-fixture-driver), [policy](../../../crates/server-combat/src/spell_cast/scripts/enhancement_tempest_buffs.rs), [native lifecycle cases](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_tempest_buffs_tests.rs).
+
 ## Elemental Weapons dynamic amount — 2026-10-26
 
 The selected384355 talent supplies408390's zero-placeholder amounts from its native effect0 ×0.1 per actual Windfury/Flametongue hand. Existing imbue apply/remove hooks update the native direct/periodic effects without changing their operations or masks. Zero hands or talent removal removes the derived modifier. Stormblast's explicit exception reads the same percent; its native child still excludes broad caster modifiers.
