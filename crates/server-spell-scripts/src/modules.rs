@@ -181,6 +181,7 @@ register_modules! {
     ret_toll: (280, "modules/ret_toll.rs"),
     retribution: (60, "modules/retribution.rs"),
     rogue: (70, "modules/rogue.rs"),
+    rogue_ruthlessness: (2609, "modules/rogue_ruthlessness.rs"),
     rogue_supercharger: (2604, "modules/rogue_supercharger.rs"),
     rogue_vanish: (2595, "modules/rogue_vanish.rs"),
     secondary_copies: (360, "modules/secondary_copies.rs"),
