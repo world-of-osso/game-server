@@ -75,6 +75,7 @@ mod hunter_melee_tests;
 #[cfg(test)]
 mod hunter_stomp_tests;
 mod inputs;
+mod item_proc_state_tests;
 mod literal_ranged_attack_tests;
 pub(crate) mod literal_rotation;
 mod marksmanship_fact_tests;
