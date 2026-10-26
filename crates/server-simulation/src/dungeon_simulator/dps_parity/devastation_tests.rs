@@ -190,6 +190,81 @@ fn devastation_strafing_run_earns_one_additional_deep_breath_without_restarting_
     );
 }
 
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_scintillation_native_channel_ticks_launch_damage_children() {
+    for selected in [false, true] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(1467, 3).unwrap();
+        engage(&mut run);
+        let primary = run.targets[1];
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 370821));
+        if !selected {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 370821,
+            );
+        }
+        crate::spell_cast::creature_cast_empowered_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            357208,
+            crate::spell_cast::CastTargets {
+                unit: run.actor,
+                primary: Some(primary),
+                destination: None,
+            },
+            1,
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            356995,
+            crate::spell_cast::CastTargets {
+                unit: primary,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..20 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events.iter().any(|event| event.spell_id == Some(356995)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0),
+            "Scintillation must be tested after an actual native Disintegrate tick"
+        );
+        // SimC76f8118 sc_evoker.cpp6669–6677: each tick rolls native chance
+        // and launches a rank-one Surge child at its actual tick recipient.
+        let hits = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(359077)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .count();
+        assert_eq!(
+            hits > 0,
+            selected,
+            "only selected native Scintillation may produce actual Surge damage: selected={selected}, hits={hits}"
+        );
+    }
+}
+
 fn cast_reference_empowers(run: &mut Run, primary: Entity) {
     for (spell, unit) in [(357208, run.actor), (359073, primary)] {
         crate::spell_cast::creature_cast_empowered_with_targets(
