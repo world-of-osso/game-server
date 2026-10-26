@@ -988,6 +988,10 @@ fn devastation_unbound_flame_earned_native_uses_damage_the_pack_and_consume_one(
                     "actual Unbound Flame use{used} must damage native pack recipient {target:?}"
                 );
             }
+            assert!(
+                crate::auras::has_aura(run.app.world(), run.actor, 359618),
+                "actual Unbound Flame must grant its native Essence Burst child"
+            );
             assert_eq!(
                 stacks(&run),
                 initial - used,
