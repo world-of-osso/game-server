@@ -58,11 +58,12 @@ fn shadow_voidheart_real_torrent_earns_native_bonus_full_tail_and_touch_expiry()
         }
         run.app.update();
     }
-    assert!(run
-        .app
-        .world()
-        .get::<shared::casting::CastState>(run.actor)
-        .is_none());
+    assert!(
+        run.app
+            .world()
+            .get::<shared::casting::CastState>(run.actor)
+            .is_none()
+    );
     let now = crate::spell_cast::now(run.app.world());
     let expiry = owned(&run, 449887).unwrap().expires_at.unwrap();
     let expected = now + f64::from(duration) / 1000.0;

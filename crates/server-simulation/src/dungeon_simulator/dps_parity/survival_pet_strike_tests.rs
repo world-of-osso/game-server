@@ -4,7 +4,8 @@ use super::*;
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 
 fn owned_strike_outcomes(run: &Run, pet: Entity, start: usize) -> Vec<&CombatLogEvent> {
-    run.app.world()
+    run.app
+        .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0[start..]
         .iter()
@@ -25,7 +26,10 @@ fn survival_native_tip_impact_commands_owned_pet_strike_as_one() {
     for seed in 0..32 {
         positive += usize::from(assert_owned_tip_strike(seed));
     }
-    assert!(positive > 0, "native owned strikes never dealt positive damage");
+    assert!(
+        positive > 0,
+        "native owned strikes never dealt positive damage"
+    );
 }
 
 fn assert_owned_tip_strike(seed: u64) -> bool {
@@ -50,7 +54,11 @@ fn assert_owned_tip_strike(seed: u64) -> bool {
     // Native97ad4bea8b seed9 proves a genuine owned strike can be dodged.
     // Count the actual attack outcome, not a fabricated guaranteed hit.
     let strikes = owned_strike_outcomes(&run, pet, 0);
-    assert_eq!(strikes.len(), 1, "seed{seed}: expected one real owned strike outcome: {events:#?}");
+    assert_eq!(
+        strikes.len(),
+        1,
+        "seed{seed}: expected one real owned strike outcome: {events:#?}"
+    );
     strikes[0].kind == CombatLogKind::Damage && strikes[0].amount > 0
 }
 

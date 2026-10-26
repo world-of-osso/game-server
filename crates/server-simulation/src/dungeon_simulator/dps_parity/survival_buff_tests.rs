@@ -28,9 +28,17 @@ fn survival_native_real_raptor_and_swipe_casts_earn_mongoose_fury_stacks() {
     let mut run = player();
     assert_eq!(owned_stacks(&run, 259388), 0);
     cast(&mut run, 186270, false);
-    assert_eq!(owned_stacks(&run, 259388), 1, "actual Raptor earned no native Mongoose Fury");
+    assert_eq!(
+        owned_stacks(&run, 259388),
+        1,
+        "actual Raptor earned no native Mongoose Fury"
+    );
     cast(&mut run, 186270, false);
-    assert_eq!(owned_stacks(&run, 259388), 2, "actual Swipe did not add a native Mongoose Fury stack");
+    assert_eq!(
+        owned_stacks(&run, 259388),
+        2,
+        "actual Swipe did not add a native Mongoose Fury stack"
+    );
 }
 
 #[test]
@@ -42,8 +50,15 @@ fn survival_native_real_tip_consumption_earns_selected_stargazer_stack() {
     assert_eq!(owned_stacks(&run, 1253750), 0);
     cast(&mut run, 259489, false);
     let before = owned_stacks(&run, 260286);
-    assert!(before > 0, "prerequisite: actual Kill Command earned no Tip");
+    assert!(
+        before > 0,
+        "prerequisite: actual Kill Command earned no Tip"
+    );
     cast(&mut run, 186270, false);
     assert_eq!(owned_stacks(&run, 260286), before - 1);
-    assert_eq!(owned_stacks(&run, 1253750), 1, "actual Tip consumption earned no native Stargazer");
+    assert_eq!(
+        owned_stacks(&run, 1253750),
+        1,
+        "actual Tip consumption earned no native Stargazer"
+    );
 }
