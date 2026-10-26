@@ -93,6 +93,12 @@ enum Landing {
 /// Resolve launch-mode effects, then `plan` now if the spell has no travel time,
 /// else schedule each hit.
 pub fn launch(world: &mut World, caster: Entity, spell: &SpellInfo, plan: TargetPlan, depth: u8) {
+    // TC Spell.cpp:3415–3428: harmful unit casts notify the caster's pet.
+    if let Some(target) = spell.cast_primary_target
+        && super::starts_combat(world, caster, target, spell)
+    {
+        crate::pet_control::owner_attacked(world, caster, target);
+    }
     // SimC76f8118 sc_shaman.cpp3316–3351 schedules overloads before parent travel.
     let mut first = true;
     for target in super::hit_units(&plan) {
