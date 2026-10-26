@@ -1366,3 +1366,7 @@ use crate as combat;
 #[cfg(test)]
 #[path = "../../../server-spell-scripts/src/modules.rs"]
 mod fixtures;
+// Native unit fixtures compile the same helper against their own combat types.
+#[cfg(test)]
+#[path = "../../../server-spell-scripts/src/bombardments.rs"]
+pub mod bombardments;

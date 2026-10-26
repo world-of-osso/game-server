@@ -11,6 +11,11 @@ Native11ab1f1e5e records both REDs: ordinary Bolt grants false Storm Swell, and 
 Diagnostic4b0ca7de9a proves the control's earlier Melee hit left3 Windfury events with only1 Flametongue callback processed; the next Magic window then received3 deferred Flametongue callbacks. [The aura event pump](../../../crates/server-combat/src/auras/procs.rs) takes one batch per tick, not a recursive drain. The Melee-positive and Magic-negative scenarios now use independent fresh native runs, preserving all assertions, chances and proc behavior. The corrected control passes in finald939eadb13.
 
 Sources: pinned SimC76f8118 `sc_shaman.cpp6587–6597,6631–6643,6709–6714,9994–10007,12437–12484`; [contract](../../specs/dps-parity.md#enhancement-fixture-driver), [policy](../../../crates/server-combat/src/spell_cast/scripts/enhancement_tempest_buffs.rs), [native lifecycle cases](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_tempest_buffs_tests.rs).
+## Devastation Dragonrage-earned windows — 2026-10-26
+
+[Native Rising Fury](../../../crates/server-spell-scripts/src/modules/evoker_rising_fury.rs) registers Dragonrage apply/remove and Fury periodic callbacks. Native1271783 supplies stack cap, period and per-stack haste. Growth checks actual Dragonrage presence; rank3 removal converts the infinite buff to its earned finite grace without changing its periodic phase, so grace cannot grow stacks. The reverse Unbound Flame window starts at its native cap. Successful1292321 casts consume one owned use after launch; native children retain damage and Essence Burst.
+
+The exact legal pinned3T oracle uses Patchwerk with one permanent target and replacement adds (30s duration/cooldown). Its Dragonrage/Fury/Unbound entries are absent. `raid_event.cpp2404–2422/3121–3135` keeps `adds.in` positive while active; the literal three-target Dragonrage condition therefore never opens. Do not change shared add facts to force that cooldown. The ST oracle does use these windows. [Contract and remaining qualifications](../../specs/devastation-parity.md); source relationships are `sc_evoker.cpp10571–10633/7436–7475`.
 
 ## Elemental Weapons dynamic amount — 2026-10-26
 

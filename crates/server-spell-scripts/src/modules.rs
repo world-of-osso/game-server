@@ -85,6 +85,7 @@ register_modules! {
     empower_evoker: (1000, "modules/empower_evoker.rs"),
     enhancement_armor: (2630, "modules/enhancement_armor.rs"),
     essence_burst: (140, "modules/essence_burst.rs"),
+    evoker_bombardments: (1000, "modules/evoker_bombardments.rs"),
     evoker_burnout: (1000, "modules/evoker_burnout.rs"),
     evoker_rising_fury: (1000, "modules/evoker_rising_fury.rs"),
     evoker_tier: (160, "modules/evoker_tier.rs"),
