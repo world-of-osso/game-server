@@ -43,6 +43,7 @@ GATHER_SECONDS = 300
 ISOLATED_PER_CYCLE = 3
 # Global concurrent spec measurements; each spec can run both target counts in parallel.
 MEASURE_PARALLEL = 8
+MEASURE_SEEDS = "70448,1,2,3,4,5,6,7,8,9"
 ASSISTED_DB2 = "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21/native-player-inputs/assisted-70448/"
 RUNNER = "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER"
 
@@ -694,7 +695,8 @@ def measure_spec(entry, measurement, executable, target, log, tree, previous=Non
                "--world-db", measurement["world_db"], "--output", measurement["output"]]
     with timed(log, "measure", tree, entry=entry["id"], spec=measurement["spec"]):
         out = subprocess.run(command, cwd=TREE,
-                             env=base_env() | entry.get("env", {}) | {"CARGO_TARGET_DIR": str(target)},
+                             env=base_env() | {"DPS_PARITY_SEEDS": MEASURE_SEEDS} | entry.get("env", {})
+                             | {"CARGO_TARGET_DIR": str(target)},
                              text=True, capture_output=True, check=False)
     return [line for line in out.stdout.splitlines() if "NATIVE_DPS" in line or "FAILED" in line]
 
