@@ -93,6 +93,79 @@ fn havoc_font_of_venomous_rage_channels_native_primary_and_secondary_damage() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_relentless_onslaught_delays_real_free_copies_and_starts_native_icd_at_copy() {
+    let mut total_copies = 0;
+    let mut offhand_hits = 0;
+    for seed in [70_448, 1, 2, 3, 4, 5, 6, 7] {
+        let _seed = crate::random::seed_scope(seed);
+        let mut run = prepare_literal(577, 1).unwrap();
+        havoc_tests::earn_havoc_fury(&mut run, 160.0);
+        cast(&mut run, 191427, false);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        run.app
+            .world_mut()
+            .init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
+        let cooldown = run
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(389977)
+            .unwrap()
+            .aura_options
+            .as_ref()
+            .unwrap()
+            .proc_category_recovery_ms as f64
+            / 1000.0;
+        let mut observed_copies = 0;
+        for _ in 0..5 {
+            havoc_tests::earn_havoc_fury(&mut run, 40.0);
+            cast(&mut run, 201427, false);
+            for _ in 0..75 {
+                run.app.update();
+                let copies = run
+                    .app
+                    .world()
+                    .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+                    .0
+                    .iter()
+                    .filter(|&&(caster, spell, target)| {
+                        caster == run.actor && spell == 201427 && target == Some(run.targets[0])
+                    })
+                    .count();
+                if copies > observed_copies {
+                    let aura = run
+                        .app
+                        .world()
+                        .get::<crate::auras::ActiveAuras>(run.actor)
+                        .unwrap()
+                        .iter()
+                        .find(|aura| aura.caster == run.actor && aura.spell_id == 389977)
+                        .unwrap();
+                    let remaining =
+                        aura.proc.next_ready_at - crate::auras::aura_now(run.app.world());
+                    assert!(
+                        (remaining - cooldown).abs() < 0.025,
+                        "native Onslaught ICD starts at actual delayed copy execution, not the earlier off-hand hit: {remaining} versus {cooldown}"
+                    );
+                    observed_copies = copies;
+                }
+            }
+        }
+        total_copies += observed_copies;
+        offhand_hits += damage(&run, Some(201428)).len();
+    }
+    assert!(
+        total_copies > 0,
+        "forty real native Annihilations must be eligible for selected Relentless Onslaught copies"
+    );
+    assert!(
+        offhand_hits > 40,
+        "free copies must deliver actual native off-hand damage, not only report a launch"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_annihilation_offhand_execution_can_refund_native_fury() {
     let mut refunds = 0;
     for seed in [70_448, 1, 2] {
