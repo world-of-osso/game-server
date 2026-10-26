@@ -62,7 +62,6 @@ fn ret_judgment_native_impacts_grant_uses_with_one_flat_damage_bonus() {
     // Establish actual unmarked damage before the Judgment producers.
     let unmarked = capture_verdict(&mut run);
     assert_eq!(mark_stacks(&run), 0);
-    let mut first_expiry = None;
     for expected in [1, 2] {
         ret_tier_tests::cast_finisher(&mut run, JUDGMENT);
         for _ in 0..20 {
@@ -73,17 +72,6 @@ fn ret_judgment_native_impacts_grant_uses_with_one_flat_damage_bonus() {
             expected,
             "successful ordinary Judgment must grant a native owned target use"
         );
-        if expected == 1 {
-            first_expiry = run
-                .app
-                .world()
-                .get::<ActiveAuras>(run.targets[0])
-                .unwrap()
-                .iter()
-                .find(|aura| aura.spell_id == MARK && aura.caster == run.actor)
-                .unwrap()
-                .expires_at;
-        }
         assert!(
             !crate::auras::has_aura(run.app.world(), run.actor, MARK),
             "the target debuff never belongs on its caster"
@@ -107,22 +95,5 @@ fn ret_judgment_native_impacts_grant_uses_with_one_flat_damage_bonus() {
             remaining,
             "each successful affected Verdict spends exactly one target use"
         );
-        if remaining == 1 {
-            literal_rotation::execution::execute(
-                run.app.world_mut(),
-                run.actor,
-                literal_rotation::execution::Execution::AutoAttack(run.targets[0]),
-            )
-            .expect("ordinary swings fund the next Verdict while time advances");
-            let spent_deadline = first_expiry.expect("native Judgment duration") + 0.05;
-            while crate::spell_cast::now(run.app.world()) <= spent_deadline {
-                run.app.update();
-            }
-            assert_eq!(
-                mark_stacks(&run),
-                1,
-                "the consumed oldest use's deadline must not expire a newer use"
-            );
-        }
     }
 }

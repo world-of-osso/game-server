@@ -8,9 +8,11 @@ Ret's197277 target debuff is a pool of independently expiring uses, not a damage
 
 A successful affected impact consumes one owned use. Tempest and Sunrise Storm receive the bonus without consuming uses. The registry's `NonStackingIncomingAuras` metadata keeps incoming damage magnitude independent of the remaining use count. Other auras retain their existing stack scaling.
 
+Preserve the pinned timer semantics: `buff.cpp2246–2289` decrements the count without cancelling asynchronous expiration events. Do not add timer cancellation when consuming a use; `expiration_t`275–279 can subsequently decrement the remaining pool.
+
 ## Qualification
 
-Native RED6a9c30b6f8 observed zero target uses after an ordinary Judgment. GREENe4384f8211 is pending, including two real Judgment casts, native Verdict damage/consumption and the consumed-oldest-deadline boundary. Full Ret gates and three-seed numerical acceptance remain open.
+Native RED6a9c30b6f8 observed zero target uses after an ordinary Judgment. Probee4384f8211 passed two native Judgment applications, the flat bonus and first consumption, then rejected an extra timer-cancellation expectation that contradicted the pin. The corrected test retains two real Judgments and two naturally funded Verdicts; its GREEN is pending. Full Ret gates and three-seed numerical acceptance remain open.
 
 ## Sources
 
