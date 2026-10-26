@@ -148,9 +148,17 @@ def check(log):
         return False
     if cargo(log, "fmt") != 0:
         return False
+    # cargo fmt does not follow include!(), so the modules declared in the union-merged
+    # module_list.in are formatted directly.
+    included = sorted(str(p) for p in (TREE / PARITY_DIR).glob("*.rs"))
+    if subprocess.run(["rustfmt", "--edition", "2024", *included], cwd=TREE, check=False).returncode != 0:
+        return False
     if git("status", "--porcelain", "--untracked-files=no").stdout.strip():
         git("commit", "-qam", "merge train: cargo fmt")
     return True
+
+
+PARITY_DIR = "crates/server-simulation/src/dungeon_simulator/dps_parity"
 
 
 class MasterBroken(Exception):
