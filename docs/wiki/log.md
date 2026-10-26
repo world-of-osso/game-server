@@ -1,3 +1,7 @@
+## 2026-10-26 — Devastation Dragonrage windows
+
+[Native earned windows](systems/auras.md#devastation-dragonrage-earned-windows--2026-10-26) now grow Fury on native periodic ticks, freeze earned stacks during finite grace, and spend one Unbound use after each actual cast. Native selected/absent and1T/3T behavior tests pass. The pinned replacement-add3T oracle also has no Dragonrage casts; shared add facts require no change. Numerical parity remains open.
+
 ## 2026-10-26 — Merged Mage feedback grants
 
 [Feedback grants](systems/spell-casting.md#merged-feedback-grants-are-not-casts--2026-10-26) distinguish native aura application from a full triggered spell. Paired native ST trace2ef3293ef0 reproduces the cast-supply loss; RED579171b891 identifies an unrelated+78haste from the old queued grant. The generic queue now applies native auras directly; three-Mage GREEN/measurements remain pending.

@@ -1,5 +1,11 @@
 # Auras
 
+## Devastation Dragonrage-earned windows — 2026-10-26
+
+[Native Rising Fury](../../../crates/server-spell-scripts/src/modules/evoker_rising_fury.rs) registers Dragonrage apply/remove and Fury periodic callbacks. Native1271783 supplies stack cap, period and per-stack haste. Growth checks actual Dragonrage presence; rank3 removal converts the infinite buff to its earned finite grace without changing its periodic phase, so grace cannot grow stacks. The reverse Unbound Flame window starts at its native cap. Successful1292321 casts consume one owned use after launch; native children retain damage and Essence Burst.
+
+The exact legal pinned3T oracle uses Patchwerk with one permanent target and replacement adds (30s duration/cooldown). Its Dragonrage/Fury/Unbound entries are absent. `raid_event.cpp2404–2422/3121–3135` keeps `adds.in` positive while active; the literal three-target Dragonrage condition therefore never opens. Do not change shared add facts to force that cooldown. The ST oracle does use these windows. [Contract and remaining qualifications](../../specs/devastation-parity.md); source relationships are `sc_evoker.cpp10571–10633/7436–7475`.
+
 ## Elemental Weapons dynamic amount — 2026-10-26
 
 The selected384355 talent supplies408390's zero-placeholder amounts from its native effect0 ×0.1 per actual Windfury/Flametongue hand. Existing imbue apply/remove hooks update the native direct/periodic effects without changing their operations or masks. Zero hands or talent removal removes the derived modifier. Stormblast's explicit exception reads the same percent; its native child still excludes broad caster modifiers.
