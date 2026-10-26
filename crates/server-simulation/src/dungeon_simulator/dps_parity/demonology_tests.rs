@@ -361,6 +361,62 @@ fn demonology_guardian_owner_passive_increases_fel_firebolt_crit() {
     );
 }
 
+#[test]
+#[ignore = "requires private266 inputs; actual Implosion retirement and native explosion"]
+fn demonology_implosion_consumes_actual_imps_and_deals_native_damage() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    for _ in 0..6 {
+        summon_native_guardian(&mut run, 104317);
+    }
+    let imps: Vec<_> = run
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(run.app.world())
+        .filter(|(_, summon)| summon.owner == run.actor && summon.spell_id == 104317)
+        .map(|(entity, _)| entity)
+        .collect();
+    assert_eq!(
+        imps.len(),
+        6,
+        "native summon roots must create actual Imp actors"
+    );
+    engage(&mut run);
+    // SimC76f8118 sc_warlock_actions.cpp2980–3170 launches actual Imps,
+    // emits native196278 and dismisses the participating actor after impact.
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        196277,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("selected native Implosion must be admitted with real owned Imps");
+    for _ in 0..100 {
+        run.app.update();
+    }
+    assert!(
+        imps.iter()
+            .any(|imp| run.app.world().get_entity(*imp).is_err()),
+        "actual selected Wild Imps must retire after their Implosion impacts"
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(196278)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0
+        }),
+        "actual Implosion must deal native explosion damage to its selected enemy"
+    );
+}
+
 fn summon_native_guardian(run: &mut Run, root: u32) -> Entity {
     crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, root, Some(run.actor), true)
         .expect("native triggered guardian summon must be admitted");
