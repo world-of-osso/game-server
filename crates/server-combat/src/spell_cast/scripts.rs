@@ -229,6 +229,7 @@ pub(crate) fn periodic_trigger(
     index: u8,
 ) -> Option<crate::auras::scripts::PeriodicHook> {
     match (spell, index) {
+        (crate::consumables::LIQUID_LUSTER, 0) => Some(crate::consumables::tick_liquid_luster),
         (unbroken_rhythm::ROOT, 0) => Some(unbroken_rhythm::cast_tick),
         _ => None,
     }

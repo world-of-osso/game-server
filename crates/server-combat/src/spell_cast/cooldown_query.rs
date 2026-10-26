@@ -5,6 +5,7 @@ struct Cooldown {
     remains: f64,
     duration: f64,
     charges: f64,
+    max_charges: f64,
     fractional: f64,
     full_recharge: f64,
     started_at: Option<f64>,
@@ -54,6 +55,7 @@ fn ordinary_cooldown(world: &World, caster: Entity, spell: &SpellInfo) -> Cooldo
         remains,
         duration,
         charges,
+        max_charges: 1.0,
         fractional,
         full_recharge: remains,
         started_at,
@@ -74,6 +76,7 @@ fn read_cooldown(world: &World, caster: Entity, spell: &SpellInfo) -> Cooldown {
     };
     let snapshot = state.snapshot(now);
     result.charges = f64::from(snapshot.current);
+    result.max_charges = f64::from(snapshot.max);
     result.duration = f64::from(snapshot.recharge_ms) / 1000.0;
     let next = (state.next_ready_at() - now).max(0.0);
     if snapshot.current == 0 {
@@ -124,6 +127,8 @@ pub(crate) fn cooldown_value(
         "remains_expected" | "remains_guess" => expected_remains(&state, history_now(world)),
         "duration" => Ok(state.duration),
         "charges" => Ok(state.charges),
+        // SimC76f8118 action.cpp3496–3500/cooldown.cpp598–599: capacity, not remaining uses.
+        "max_charges" => Ok(state.max_charges),
         "charges_fractional" => Ok(state.fractional),
         "full_recharge_time" => Ok(state.full_recharge),
         "up" | "ready" => Ok(if state.remains == 0.0 && state.charges > 0.0 {
