@@ -30,6 +30,17 @@ fn read_garrote_factors(
     ["pmultiplier", "dot.garrote.pmultiplier"].map(|name| facts.value_for(&action, name).unwrap())
 }
 
+fn cast_garrote(run: &mut Run, target: Entity) {
+    let actor = run.actor;
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::Spell(703, target, Some(target)),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(run).unwrap();
+}
+
 #[test]
 #[ignore = "requires prepared259 private native DB and player actor"]
 fn assassination_garrote_snapshot_preserves_empowerment_after_window_and_scopes_real_targets() {
@@ -49,13 +60,8 @@ fn assassination_garrote_snapshot_preserves_empowerment_after_window_and_scopes_
             .unwrap();
     let absent_factors = read_garrote_factors(&run, &bindings, &equipment, absent);
     engage(&mut run);
-    literal_rotation::execution::execute(
-        run.app.world_mut(),
-        actor,
-        literal_rotation::execution::Execution::Spell(703, strong, Some(strong)),
-    )
-    .unwrap();
-    preparation::finish_pending_setup(&mut run).unwrap();
+    cast_garrote(&mut run, strong);
+    cast_garrote(&mut run, ordinary);
     let bonus = run
         .app
         .world()
@@ -85,17 +91,12 @@ fn assassination_garrote_snapshot_preserves_empowerment_after_window_and_scopes_
         absent_factors, [0.0; 2],
         "an absent target-owned bleed has no snapshot"
     );
-    literal_rotation::execution::execute(
-        run.app.world_mut(),
-        actor,
-        literal_rotation::execution::Execution::Spell(703, ordinary, Some(ordinary)),
-    )
-    .unwrap();
-    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), ordinary, 703));
+    cast_garrote(&mut run, ordinary);
     assert_eq!(
         read_garrote_factors(&run, &bindings, &equipment, ordinary),
         [1.0; 2],
-        "an ordinary cast records its own unempowered factor"
+        "an ordinary refresh replaces that bleed's earlier empowered factor"
     );
     assert_eq!(
         read_garrote_factors(&run, &bindings, &equipment, strong),
