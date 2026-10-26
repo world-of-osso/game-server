@@ -167,12 +167,6 @@ fn affliction_nightfall_gained_during_real_hardcast_is_retained_without_bonus() 
 }
 
 fn start_grasp_duration(run: &mut Run) -> f32 {
-    let haste_before = run
-        .app
-        .world()
-        .get::<crate::stats::CharacterStats>(run.actor)
-        .unwrap()
-        .haste_pct;
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
         run.actor,
@@ -181,34 +175,11 @@ fn start_grasp_duration(run: &mut Run) -> f32 {
         false,
     )
     .unwrap();
-    let duration = run
-        .app
+    run.app
         .world()
         .get::<shared::casting::CastState>(run.actor)
         .expect("actual Grasp retains its nonzero channel duration")
-        .duration;
-    let world = run.app.world();
-    let haste_after = world
-        .get::<crate::stats::CharacterStats>(run.actor)
-        .unwrap()
-        .haste_pct;
-    let periods = world
-        .get::<crate::auras::ActiveAuras>(run.targets[0])
-        .map(|auras| {
-            auras
-                .iter()
-                .filter(|aura| aura.spell_id == 1261153 && aura.caster == run.actor)
-                .flat_map(|aura| {
-                    aura.effects
-                        .iter()
-                        .map(|effect| (effect.index, effect.period_ms))
-                })
-                .collect::<Vec<_>>()
-        });
-    eprintln!(
-        "Grasp clock: span={duration}s haste_before={haste_before}% haste_after={haste_after}% periods={periods:?}"
-    );
-    duration
+        .duration
 }
 
 #[test]
@@ -216,6 +187,9 @@ fn start_grasp_duration(run: &mut Run) -> f32 {
 fn affliction_nightfall_channel_uses_do_not_multiply_duration_reduction() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_nightfall();
+    // Trace6680c9ea33: native haste changes33.288498→33.91441% between casts.
+    // Compare native use snapshots at constant haste, retaining static gear values.
+    super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
     crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 205180, Some(run.actor), 0);
     let unbuffed = start_grasp_duration(&mut run);
     finish_bolt(&mut run);
