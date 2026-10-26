@@ -418,24 +418,53 @@ fn dps_parity_single_spell_fists_of_fury_three_ticks_keep_child_ids() {
         spell: 113656,
         damage_spell: 117418,
         action: "fists_of_fury",
-        ticks: 3,
+        // The native MID2 two-piece emits a separate half-strength child at execution.
+        // Capture that child plus three actual scheduled/initial periodic emissions.
+        ticks: 4,
     };
-    let mut receipt =
-        capture_cast(&mut run, &probe).expect("one FoF channel produces three real child hits");
+    let mut receipt = capture_cast(&mut run, &probe)
+        .expect("one native tier child plus three real FoF periodic hits");
     receipt["priming"] = json!({"spells": [100780, 100780], "policy": "actual shared native execution; no granted Chi or buff stacks"});
     let output =
         std::path::PathBuf::from(std::env::var_os("DPS_SPELL_OUTPUT").expect("DPS_SPELL_OUTPUT"))
             .with_file_name("269.fists_of_fury.three_ticks.json");
     std::fs::write(output, serde_json::to_vec_pretty(&receipt).unwrap()).unwrap();
     assert_eq!(receipt["casts"], 1);
-    assert_eq!(receipt["captured_hits"], 3);
-    let amounts = receipt["events"]
+    assert_eq!(receipt["captured_hits"], 4);
+    let all_amounts = receipt["events"]
         .as_array()
         .unwrap()
         .iter()
         .filter(|event| event["event"] == "direct_amount" && event["spell_id"] == 117418)
         .collect::<Vec<_>>();
+    let amounts = all_amounts
+        .iter()
+        .copied()
+        .filter(|event| event["native_emission_origin"]["kind"] == "periodic_dummy_trigger")
+        .collect::<Vec<_>>();
     assert_eq!(amounts.len(), 3);
+    let tier = all_amounts
+        .iter()
+        .copied()
+        .filter(|event| event["native_emission_origin"].is_null())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        tier.len(),
+        1,
+        "the equipped MID2 child is independent of periodic emissions"
+    );
+    let tier_scale = tier[0]["applied_multipliers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["factor"] == "cast_effectiveness")
+        .unwrap()["value"]
+        .as_f64()
+        .unwrap();
+    assert!(
+        (tier_scale - 0.5).abs() < 0.00001,
+        "native MID2 execution child retains half effectiveness"
+    );
     for amount in &amounts {
         let origin = &amount["native_emission_origin"];
         assert_eq!(origin["kind"], "periodic_dummy_trigger");
