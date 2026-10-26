@@ -138,7 +138,7 @@ impl Rotation {
 pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {
     // SimC76f8118 sc_hunter.cpp1052: summon_pet defaults to duck. Literal
     // capture suppresses follower AI, so provision its existing native stable policy here.
-    crate::hunter_pet::provision_follower_duck(run.app.world_mut(), run.actor)?;
+    super::hunter_fixture::provision_pet(run.app.world_mut(), run.actor)?;
     let encounter = crate::simc_apl_native::Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
         duration: 300.0,
