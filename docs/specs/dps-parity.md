@@ -89,6 +89,8 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 ### Beast Mastery literal fixture
 
+- Selected Pack Mentality472358 reduces already-running Barbed217200 and Wildfire259495 recovery once per actually consumed Howl beast. Native effects2/3 supply the times; simultaneous Wyvern/Boar consumption pays both reductions before Stampede begins. Unused clocks remain inactive (SimC76f8118 hunter3808–3811).
+
 - Each actual main-pet, companion or stable Nature's Ally white impact adds one stack to that owner's already active Wyvern Cry471881, including avoided outcomes. Preserve the native cap and the existing expiration; white impacts cannot create inactive Cry. Keep landed-hit producers and ordinary proc masks unchanged (SimC76f8118 hunter2974–3010).
 
 - Ordinary main-pet Bite, Claw and Smack use native62762 Wild Hunt damage and cost bonuses only above its authored Focus threshold. Capture damage effectiveness before payment; at the threshold or below, ordinary cost applies. Free background basics and non-main stable bodies do not receive this main-action behavior (SimC76f8118 hunter3046–3079).
