@@ -1185,6 +1185,8 @@ mod refresh_context_tests;
 #[cfg(test)]
 mod target_context_tests;
 #[cfg(test)]
+mod target_distance_tests;
+#[cfg(test)]
 mod target_tests;
 #[cfg(test)]
 mod tests;
