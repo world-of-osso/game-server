@@ -85,6 +85,7 @@ register_modules! {
     elemental: (1000, "modules/elemental.rs"),
     elemental_ascendance: (220, "modules/elemental_ascendance.rs"),
     elemental_communication: (2620, "modules/elemental_communication.rs"),
+    elemental_fusion: (2621, "modules/elemental_fusion.rs"),
     empower_evoker: (1000, "modules/empower_evoker.rs"),
     enhancement_armor: (2630, "modules/enhancement_armor.rs"),
     essence_burst: (140, "modules/essence_burst.rs"),
