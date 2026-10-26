@@ -4648,3 +4648,7 @@ Documented the first compile-boundary slice in [spell-script-crate](systems/spel
 ## 2026-10-26 — Holy script compile boundary
 
 - Updated [spell-script crate](systems/spell-script-crate.md#holy-words-and-prayer-runtime) with Holy/Prayer ownership and preserved support-aura registration, target planning and native charge/jump semantics.
+
+## 2026-10-26 — Shared Evoker flame compile boundary
+
+- Updated [spell-script crate](systems/spell-script-crate.md#shared-evoker-flames) for downstream Living/Chrono Flame state and shared effect helpers. Devastation and native Chrono/Living gates remain required.
