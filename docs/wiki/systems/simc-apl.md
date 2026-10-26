@@ -2,6 +2,10 @@
 
 `server::simc_apl` supplies shared expressions, variables and source-ordered call lists. `crate::simc_apl_native` supplies shared native gameplay facts for explicit parity fixtures; spec adapters add only spec predicates plus action/target bindings and castability. Neither layer invents missing combat data.
 
+## Native target DoT duration
+
+`NativeFacts::target_aura` implements the [target-owned duration contract](../../specs/dps-parity.md#shared-literal-snapshot-operands) with `read_owned_auras` and `fresh_duration_ms`. It does not use the stored refreshed lifetime, which can contain pandemic carry. The native Wither fixture covers inactive, active and removed states independently of the specialization driver; Assassination, Outlaw and Elemental literal controls also pass. Source: pinned `dot.cpp448–455` and `dps_parity/dot_duration_tests.rs`.
+
 ## Capability / proof matrix
 
 | Capability | Representation / boundary | Proof |
