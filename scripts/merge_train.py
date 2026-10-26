@@ -110,8 +110,7 @@ def submit(args):
              "land": args.land, "red": args.red and subprocess.run(
                  ["git", "rev-parse", "--verify", f"{args.red}^{{commit}}"], text=True,
                  capture_output=True, check=True).stdout.strip(), "env": dict(pair.split("=", 1) for pair in args.env), "tests": [shlex.split(test) for test in args.test],
-             "measure": [parse_measure(m) for m in args.measure], "isolated": args.isolated,
-             "submitted": time.time()}
+             "measure": [parse_measure(m) for m in args.measure], "submitted": time.time()}
     QUEUE.mkdir(parents=True, exist_ok=True)
     (QUEUE / f"{entry['id']}.json").write_text(json.dumps(entry, indent=2))
     print(entry["id"])
@@ -648,9 +647,9 @@ def run_probes(probes, gated, log):
         else:
             twins[entry["id"]] = twin
     # Probes share one tree, so a shared probe's numbers include the other probes' changes.
-    # Measure-only entries (baselines, remeasures) and --isolated ones get a tree of their own.
-    # Isolation only changes measurements, so --isolated without --measure stays shared.
-    isolated = [e for e in probes if e["measure"] and (e.get("isolated") or not e["tests"])]
+    # Measure-only entries (baselines, remeasures) get a tree of their own. Probes with tests stay
+    # shared: their verdict is pass/fail, and the landing measurement on master is the real number.
+    isolated = [e for e in probes if e["measure"] and not e["tests"]]
     shared = [e for e in probes if e not in isolated]
     # Each isolated tree costs a check, a test build and a parity build; past a few per cycle they
     # dominated it (cycle-20261026T151410: 8 trees, 40+ min). The rest wait for the next cycle.
@@ -842,9 +841,6 @@ def main():
     s.add_argument("--land", action="store_true", help="push to master when green")
     s.add_argument("--red", help="commit with the tests but without the fix; its tests must fail "
                                  "in the same cycle before the entry lands (replaces a separate RED probe)")
-    s.add_argument("--isolated", action="store_true",
-                   help="probe in a tree of its own, so its measurement excludes other probes' changes "
-                        "(costs one extra build; measure-only entries are always isolated)")
     s.set_defaults(func=submit)
     w = sub.add_parser("wait")
     w.add_argument("id")
