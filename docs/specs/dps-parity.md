@@ -397,6 +397,11 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - [x] Selected Unhinged386628 dispatches Arms71 Mortal Strike12294 or Fury72's live native Bloodthirst23881 variant on odd Bladestorm227847/446035 effect0 ticks, including catch-up ticks and excluding tick0, using the actual selected hostile target and native effect1 damage multiplier. Preserve ordinary parent pulses (`sc_warrior.cpp3257–3275,3313–3335`).
 - Frenzy335077 grants one335082 stack per final Rampage201363 execution, not per impact or arbitrary melee event. Its native passive effect0 supplies each stack's value (`sc_warrior.cpp5581–5588,8411,9616`). Source-owned proc policies must prevent the broad native proc hint from independently firing the same aura or consuming its ICD.
 
+### Destruction Echo of Sargeras
+
+- Selected Embers1265770 advances source PRD only on real Incinerate29722 (including FnB) and Infernal Bolt434506 hits, using native label-modified chance. Selected1265774 actual Chaos Bolt/Shadowburn hits and ordinary in-combat Rain of Fire execution share its native internal cooldown. Pinned `bugs=true` uses full native Echo payload for spenders (SimC76f8118 actions450–455,4337,4605,4813,5614–5649,6039–6042; init1428–1434).
+- Native1265884 primary/secondary effects hit each recipient once; actual primary is excluded from its secondary effect. Preserve their native coefficients. Earn native1265939 through Echo and selectedII, and1305711 only from actual Echo impacts with genuine ItemSet-owned1296572. Do not replace authored label values or use the broad tier proc hint. ST/3T qualification does not certify the above-eight-target reduction.
+
 ### Destruction Chaotic Energies
 
 - Native77220 mastery affects only the pinned `affected_by.chaotic_energies` action set. Actual unresolved direct hits and periodic updates sample1+mastery×U(0.5,1). The source-marked Chaos Bolt, Shadowburn and Rain of Fire payload instead use selected native387275 effect0 as the lower fraction. Read native mastery values; do not adjust damage coefficients (SimC76f8118 `sc_warlock_actions.cpp480–489` and each action's explicit flags).
