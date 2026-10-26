@@ -151,18 +151,28 @@ fn arcane_damage_after_precise_launch_expiry(precise: bool) -> (f64, f64) {
         .world()
         .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
         .export();
-    let observed = receipt["events"]
+    let event = |kind: &str| {
+        receipt["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["event"] == kind && event["spell_id"] == 185358)
+            .expect("actual Arcane Shot projectile hit")
+    };
+    let observed = event("result")["factors"]["native_spell_mod_product"]
+        .as_f64()
+        .expect("actual native damage spell-mod product");
+    // Gear procs change live modifiers during flight AND after the impact.
+    // Normalize by the other native modifiers actually applied at this hit,
+    // rather than a different frame's stats, damage variance or crit outcome.
+    let other_modifiers: f64 = event("direct_amount")["applied_modifiers"]
         .as_array()
         .unwrap()
         .iter()
-        .find(|event| event["event"] == "result" && event["spell_id"] == 185358)
-        .expect("actual Arcane Shot projectile hit")["factors"]["native_spell_mod_product"]
-        .as_f64()
-        .expect("actual native damage spell-mod product");
-    // Gear procs can change Mastery/Versatility during flight, and Precise
-    // consumption changes RNG ordering. Compare only the consumed modifier,
-    // not total damage products from two independently changing fixtures.
-    (observed / live_modifier(&run), expected)
+        .filter(|modifier| modifier["op"] == 0 && modifier["source_spell_id"] != 260242)
+        .map(|modifier| 1.0 + modifier["value"].as_f64().unwrap() / 100.0)
+        .product();
+    (observed / other_modifiers, expected)
 }
 
 #[test]
