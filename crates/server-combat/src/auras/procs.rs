@@ -312,12 +312,18 @@ fn handle_side(
         .as_ref()
         .is_some_and(|spell| attributes3(spell) & SPELL_ATTR3_NOT_A_PROC != 0);
     let standing = crate::stand_state::stand_state(world, unit).is_stand();
+    // SimC76f8118 action_callback.cpp79–82: item callbacks require actual combat.
+    // Reject idle equipment reconciliation before touching proc chance or recovery.
+    let in_combat = crate::combat_refs::active_opponents(world, unit)
+        .next()
+        .is_some();
     let candidates: Vec<u32> = world
         .get::<ActiveAuras>(unit)
         .map(|auras| {
             auras
                 .iter()
                 .filter(|aura| pinned_candidates.contains(&aura.instance_id))
+                .filter(|aura| in_combat || !matches!(aura.source, super::AuraSource::Equipment(_)))
                 .filter(|aura| standing || procs_while_sitting(world, aura))
                 .filter(|aura| {
                     event.can_proc || triggered_can_proc(world, aura, event, event_not_a_proc)
