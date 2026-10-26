@@ -148,6 +148,7 @@ fn trigger_obliteration(world: &mut World, caster: Entity) {
     if auras::has_aura(world, caster, KILLING_MACHINE) {
         trigger_native_buff(world, caster, KILLING_MACHINE);
         // sc_death_knight.cpp13356–13364: guaranteed producers predict KM now.
+        #[cfg(any(test, feature = "test-support"))]
         combat::simc_apl_native::reaction::predict(world, caster, 51124);
     }
     let chance = spell_cast::scripts::script_effect_value(world, caster, OBLITERATION, 1);

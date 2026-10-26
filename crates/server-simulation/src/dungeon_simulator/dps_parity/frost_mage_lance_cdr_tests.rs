@@ -47,7 +47,7 @@ fn frost_mage_native_paid_lance_reduces_ray_and_earns_force_of_will_splinters() 
     };
     let cooldown = |run: &Run| {
         NativeFacts::new(run.app.world(), run.actor, &bindings, encounter, 1)
-            .value("cooldown.ray.remains")
+            .value("cooldown.ray.full_recharge_time")
             .unwrap()
     };
     let before = cooldown(&run);
