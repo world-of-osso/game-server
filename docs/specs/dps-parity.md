@@ -127,7 +127,7 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 - [x] Native trigger effects whose resolved recipient is self must forward the immutable selected primary when their child requires an explicit enemy. Preserve queued effect64 delays/costs and immediate effect32 dispatch; self/friendly children retain native recipients. Native201427 must damage the selected enemy through both227518 and delayed201428 even after the live combat target changes.
 
-- [x] Native execution preserves the selected action primary separately from the spell's cast unit. A self-target spell must keep its native self cast while forwarding the actual selected hostile primary to child relationships. Preserve that context across queued requests, cast bars and missile snapshots; an absent or unknown context must not select a substitute. Resolve caster-only targeting from the actual native endpoint after action replacement, not only the requested base action; ground destinations retain their declared targeting. Apply the same contract to Player and NPC actors without spell-ID branches, damage multipliers or mutable-target fallbacks. [Proof](../handoffs/hostile-primary-proof-ledger.md).
+- [x] Native execution preserves the selected action primary separately from the spell's cast unit. A self-target spell must keep its native self cast while forwarding the actual selected hostile primary to child relationships. Preserve that context across queued requests, cast bars, missile snapshots and periodic aura application/refresh/tick snapshots; an absent or unknown context must not select a substitute. Resolve caster-only targeting from the actual native endpoint after action replacement, not only the requested base action; ground destinations retain their declared targeting. Apply the same contract to Player and NPC actors without spell-ID branches, damage multipliers or mutable-target fallbacks. [Proof](../handoffs/hostile-primary-proof-ledger.md).
 
 ### Frost literal rotation
 
@@ -312,6 +312,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - [x] Ordinary native action/item readiness precedes its `if` expression. Unavailable actions do not bind unreachable item/buff conditions; unsupported operands on an available action remain explicit errors (SimC76f8118 `action.cpp2578–2583,2619–2620`).
 - [x] `line_cd` belongs to the exact literal source row, independently of spell cooldowns, targets, and identical neighboring rows. Only a successful execution starts it.
 - [x] `action.<alias>.channeling` reads the actual matching native channel. `cancel_action` can cancel during casting/GCD. At native channel ticks, `interrupt_if`/`interrupt` requires a genuinely ready higher-priority action; `interrupt_immediate` bypasses only the GCD guard, and `interrupt_global` selects root versus current-list priority scope. `chain` rechecks the same source row at the penultimate tick and recasts only without a higher-priority ready action. Readiness probes do not mutate powers, casts or recovery clocks (SimC76f8118 `dot.cpp707–735,815–869,980–994`).
+
+- Empower recovery tests must read actual native charge recovery when the spell has a charge category; an expired ordinary spell throttle cannot prove a cooldown reduction.
 
 - Native channel decision ticks use the same modified, hasted interval as the real periodic aura, not the raw DB2 period beside a hasted duration (SimC76f8118 `action.cpp4390–4420`).
 
