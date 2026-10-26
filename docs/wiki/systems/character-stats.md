@@ -114,6 +114,16 @@ Native family REDf282665373→GREEN412af0a123; landed44c2b6c5d viae320506b72 aft
 
 Sources: [callback module](../../../crates/server-spell-scripts/src/modules/midnight_stat_items.rs), [native probes](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/midnight_stat_items_tests.rs), [contract](../../specs/dps-parity.md#equipment). Pinned `unique_gear_midnight.cpp614–671/995–1122`, `player.hpp827`, `action_callback.cpp79–82`. See also [[ret-divine-purpose]].
 
+### Hunter's Ritual Stone — 2026-10-26
+
+`midnight_stat_items.rs` finds the equipped root through its native linked effect to1295897. The linked DUMMY BP0 is50 and is not a rating value: the callback reads the equipped root's item-scaled second spell effect, then applies it to the selected child's native rating aura while retaining root item level. Native child masks and duration remain unchanged.
+
+Native DUMMY has no child trigger edges. Pinned SimC supplies the explicit four-child relationship; `unique_gear_midnight.cpp1385–1428` supplies uniform choice and one shared callback. This does not fabricate DBC edges or modify native proc timing. Combat admission is shared with Loa/Rite.
+
+Current profiles (verified:2026-10-26) equip native bonus13771 on62/63/64/72/261/263/265/266/267/577, one off-hand copy each. Native Fire63 RED `d41cfc4d1c` passed root/link/scaling/no-precombat/actual-damage prerequisites and observed no rating child in300s. Fire GREEN sees all four native children at amount67/item-level331; retained Loa/Rite gates pass. The idle assertion runs before native pre-pull driver execution: Arcane's actual pre-pull Blast/Surge may legitimately establish combat and earn stats before the later fixture `engage()` call. Prep-earned buffs require real native combat references and are not cleared or suppressed. All ten profile controls and numerical remeasurement remain pending.
+
+[Contract](../../specs/dps-parity.md#equipment), [callback](../../../crates/server-spell-scripts/src/modules/midnight_stat_items.rs), [native probes](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/midnight_stat_items_tests.rs). See also [[spell-casting]].
+
 ### Shared profile effects — 2026-10-25
 
 The parity fixture installs declared consumables and expansion effects in `dps_parity/profile_effects.rs`. Numeric Omnium tokens identify native `TraitNodeEntry` rows, not class nodes. The fixture's `ReferenceRace` supplies native base-stat race and racial knowledge without adding `Player` identity to followers. Native aura effect202 admits owner racial effects such as Dwarf59224.

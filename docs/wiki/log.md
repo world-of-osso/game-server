@@ -1,6 +1,10 @@
 ## 2026-10-26 — Independent Destruction Echo
 
 [Echo](systems/spell-casting.md#destruction-echo--2026-10-26) producer/payload native REDs become two GREEN cases in309398a397. Its value assertion used raw per-rank4, but selected rank2 and pinned reference both require8%. Corrected only the expectation; native values, coefficients and allocations unchanged. Selected-rank gate/landing pending; above8-target reduction unqualified.
+## 2026-10-26 — Absolute Corruption lifetime
+
+[Absolute lifetime](systems/warlock-periodic-counters.md#absolute-corruption-lifetime) explains repeated paid Seeds and Wither on replacement add waves: selected196103 lacked permanent445474 runtime state. Exact literal ST/wave60s NativeRED618ca30eeb recorded. Own lifecycle leaf and generic DoT-only unbounded facts preserve native effects/counters/ticks and leave buff/finite semantics unchanged;265/267 plus103finite-refresh gates pending. No damage/target-count fit or catalog/fixture-clock edits.
+
 ## 2026-10-26 — Tempest-owned Enhancement buffs
 
 [Tempest buffs](systems/auras.md#tempest-owned-enhancement-buffs--2026-10-26) replace263's every-spell Storm Swell grant and supply Arc's native-use/ICD-gated delayed chain from the final actual recipient. Native11ab1f1e5e→finald939eadb13 passes all30 native cases and3 decks, including final-recipient Arc after0.4s and the independently isolated Magic/Melee controls. Landed26ee488ac36ddc7b55d88f110035a1d0d60e318f. Integrated ST158810.65/3T335321.69 (82.246%/83.778%) remain below parity; no isolated-uplift claim.262 and native values remain unchanged.
@@ -12,13 +16,14 @@
 [Arcane charge folds](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers) retain native aura timing/cost modifiers and remove the duplicate batch16 consumers. Native RED8fee037a92 proves real ordinary Mana admission and cast-bar failures; sparse dummy16 controls now supply the same authored effects without changing assertions. Landing proof covers the real cast bar and existing Arcane/dummy16 controls; the tight Mana admission test is retained unchanged on a separate follow-up branch for source-backed rounding/order investigation. GREEN and paired measurement remain train-gated.
 ## 2026-10-26 — Explicit non-demon guardian SP
 
-[Guardian spell power](systems/spell-casting.md#explicit-non-demon-guardian-spell-power--2026-10-26) now reads explicit SP policies without changing native identity, demon scaling or owner RAP. Native Yogg RED8bf69a675f reaches an owned type15 Thing but no positive Spike; actual Spike, guardian units and native BM/265/267 cases now pass; landing remains pending.
+[Guardian spell power](systems/spell-casting.md#explicit-non-demon-guardian-spell-power--2026-10-26) now reads explicit SP policies without changing native identity, demon scaling or owner RAP. Native Yogg RED8bf69a675f reaches an owned type15 Thing but no positive Spike; actual Spike, guardian units and native BM/265/267 cases pass; landed with the [combined Shadow update](systems/spell-casting.md#earned-shadow-rift-extensions--2026-10-26) in513fe59afac.
 ## 2026-10-26 — Haunting Shadows impact extensions
 
 [Haunting Shadows](systems/spell-casting.md#haunting-shadows-impact-extensions--2026-10-26) uses the existing owned-duration operation for native apparition payload impacts. Actual-hit RED901d805102 proves the missing1000ms; native GREEN and landing remain pending.
 ## 2026-10-26 — Devastation Dragonrage windows
 
 [Native earned windows](systems/auras.md#devastation-dragonrage-earned-windows--2026-10-26) now grow Fury on native periodic ticks, freeze earned stacks during finite grace, and spend one Unbound use after each actual cast. Native selected/absent and1T/3T behavior tests pass. The pinned replacement-add3T oracle also has no Dragonrage casts; shared add facts require no change. Numerical parity remains open.
+[Haunting Shadows](systems/spell-casting.md#haunting-shadows-impact-extensions--2026-10-26) uses the existing owned-duration operation for native apparition payload impacts. Actual-hit RED901d805102→GREEN, landed2cac634596 with the [combined Shadow update](systems/spell-casting.md#earned-shadow-rift-extensions--2026-10-26) in513fe59afac.
 
 ## 2026-10-26 — Merged Mage feedback grants
 
@@ -45,9 +50,13 @@
 ## 2026-10-26 — Mage Inspired Intellect source
 
 [Mage intellect](systems/character-stats.md#mage-inspired-intellect--2026-10-26) identifies the missing native2-point enhancement to Arcane Intellect, not a universal stat deficit. Base/gear/enchant/gem/food/rune totals reconcile; duplicate weapon Intellect rows explain the reference JSON gear-map undercount. Fire native RED is observed; Frost64/Affliction265 real-player gates remain pending.
+## 2026-10-26 — Hunter's Ritual Stone native dispatch
+
+[Stone callbacks](systems/character-stats.md#hunters-ritual-stone--2026-10-26) use the discovered linked equipment root and its scaled second effect, not dummy BP0. The explicit source four-child relationship is approved; native Fire RED `d41cfc4d1c` observed no child after real300s combat. All ten equipping-profile controls and retained shared gates remain pending.
+
 ## 2026-10-26 — Aurora integrated; Hammer Sunrise qualification
 
-[Ret Purpose supply](systems/ret-divine-purpose.md#qualification) records landed 116-case integration and the final numerical boundary. [HoW Second Sunrise](systems/spell-casting.md#how-primary-impact-extension--2026-10-26) has corrected native RED evidence and a successful-primary producer using shared native values/ICD. Critical echo payloads retain native Sun Sear. GREEN integration and numerical qualification remain pending.
+[Ret Purpose supply](systems/ret-divine-purpose.md#qualification) records landed 116-case integration and the final numerical boundary. [HoW Second Sunrise](systems/spell-casting.md#how-primary-impact-extension--2026-10-26) has corrected native RED evidence and a successful-primary producer using shared native values/ICD. Critical echo payloads retain native Sun Sear. Native producer/controls pass; retained gate and strict cutoff diagnostic landed `b01577f7d`. The linked HoW qualification records final three-seed numerical acceptance.
 
 ## 2026-10-26 — Native Loa and Rite stat callbacks
 

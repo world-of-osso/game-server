@@ -161,6 +161,8 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Equipment
 
+- Hunter's Ritual Stone discovers its native equipped1297382→1295897 linked proc. The source-qualified four-child selection relationship is explicit1295898/1295899/1295900/1295901 because native DUMMY has Trigger0 (`unique_gear_midnight.cpp1385–1428`). Choose uniformly and retain native callback deduplication; take rating amount from the equipped root's scaled effect2, not the linked dummy BP0. Children retain the equipped root's item-level snapshot; masks, duration and native proc timing remain authoritative. No stat grant while actually out of combat or fabricated DBC edges; real hostile pre-pull casts can earn combat procs. Native RED→GREEN gates every equipping profile before landing.
+
 - Shared named/slot on-use item selection binds native enemy/any-unit spells to the selected primary by default; ally/self payloads retain the actor. Preserve explicit target contexts, native admission, item level and cooldowns. An absent hostile primary is unavailable, never a self-target substitute (SimC76f8118 player.cpp10056–10068).
 
 - Font of Venomous Rage1297908's actual item-use channel snapshots native1297911 effect0 divided by its native base tick count (including the authored initial tick). Each channel damage tick launches native1307222 at the retained primary, with native1297911 effect1 per tick; its area excludes that primary and follows pinned reduced-AoE8 semantics. Native item level, role expression, channel timing and damage pipeline remain authoritative (SimC76f8118 unique_gear_midnight.cpp3803–3859).
@@ -468,6 +470,12 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Reapplication extends the aura but must not move its original periodic explosion deadline. The declarative `PreservePeriodicPhase` registry policy retains that native deadline; Seed registers only27243. Without selected Sow196226, one paid cast applies one Seed, not one to each raw area recipient (`actions1800–1802`). A real27285 impact chains an owned Seed and applies background native Wither445474 for selected445465, otherwise Corruption146739, without the initial direct Wither payload or a new cost (`sc_warlock_actions.cpp1710–1773`). Preserve shared Wither counters and tick phase; do not register or replace UA1259790 lifecycle callbacks.
 - The primary prefers the original target without its caster's Seed; otherwise it selects an unseeded candidate and uses the original only if none remain. The read-only sibling helper `warlock_seed::selected_primary(world,caster)` returns that actual selection for the same successful Seed execution, before projectile/explosion. Other owned leaves reuse it without another target draw. Pinned265 bugs mode ignores seeds in flight (`actions1836–1892`). This helper does not apply UA.
 - Qualify actual threshold, expiry, refresh/original-deadline and recipient ownership, with native265 Seed and267 shared-Wither controls. Native paid-recast redirection needs its own RED→GREEN. Selected-Sow effectiveness, death/dispel and MID2 seed-applied-UA relationships remain separately qualified; do not infer them from a zero-damage periodic tick.
+
+### Absolute Corruption lifetime
+
+- Selected196103 on actual Affliction265 makes owned Corruption146739 and Wither445474 permanent, including background Seed applications and reapplications. Preserve native effects, counters and periodic phase; do not change catalog duration or read fixture fight clocks. Pinned SimC models permanence as twice the expected fight length (`actions759–762/1072–1077`).
+- Generic DoT facts for an active permanent aura are not refreshable and have unbounded remains/duration, before finite fresh-duration/Pandemic validation. Missing/finite DoTs and buff/debuff sentinel semantics stay unchanged. Do not suppress literal casts in the adapter to hide an expiring aura.
+- Qualify the actual literal ST and recurring30s-add-wave ordering. Gate265 ST/3T and267, plus actual finite-DoT refreshability from103 or258. Count explosion hits separately from explosion actions; do not tune damage or target counts to repair excess paid Seed refreshes.
 
 ### Shared Hellcaller Wither counters
 
