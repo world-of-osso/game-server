@@ -2070,7 +2070,14 @@ pub fn damage_taken_multiplier(
             .iter()
             .filter(|aura| aura.caster == attacker)
             .flat_map(|aura| {
-                let stacks = aura.stack_multiplier();
+                let stacks = if crate::spell_cast::script_registry::incoming_aura_ignores_stacks(
+                    world,
+                    aura.spell_id,
+                ) {
+                    1.0
+                } else {
+                    aura.stack_multiplier()
+                };
                 aura.effects
                     .iter()
                     .filter(|effect| match effect.aura_type {

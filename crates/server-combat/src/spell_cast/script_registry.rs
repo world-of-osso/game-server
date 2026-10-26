@@ -205,6 +205,8 @@ pub enum SpellScriptHook {
     ConsumedEffectValues(&'static [(u32, u8)]),
     /// Explicit source-script override of synchronous native stacking.
     AsynchronousAuras(&'static [u32]),
+    /// Stored target uses do not multiply an incoming damage effect's magnitude.
+    NonStackingIncomingAuras(&'static [u32]),
     /// Source scripts that consume the existing frozen effective-resource snapshot.
     ResourceContext(&'static [u32]),
     LaunchDelay(LaunchDelayLookup),
@@ -435,6 +437,17 @@ pub(crate) fn asynchronous_aura(world: &World, spell: u32) -> bool {
         .any(|hook| match hook {
             SpellScriptHook::AsynchronousAuras(spells) => spells.contains(&spell),
             _ => false,
+        })
+}
+
+pub(crate) fn incoming_aura_ignores_stacks(world: &World, spell: u32) -> bool {
+    world
+        .get_resource::<SpellScriptRegistry>()
+        .is_some_and(|registry| {
+            registry.hooks().any(|hook| match hook {
+                SpellScriptHook::NonStackingIncomingAuras(spells) => spells.contains(&spell),
+                _ => false,
+            })
         })
 }
 

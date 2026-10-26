@@ -93,6 +93,57 @@ fn havoc_font_of_venomous_rage_channels_native_primary_and_secondary_damage() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_tactical_retreat_native_damage_execution_earns_periodic_fury() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    engage(&mut run);
+    cast(&mut run, 198793, true);
+    advance(&mut run, 80);
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(events.iter().any(|event| event.kind == CombatLogKind::CastSuccess && event.spell_id == Some(198793)), "ordinary native Retreat must execute first");
+    assert!(
+        events
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Energize
+                && event.spell_id == Some(389890)
+                && event.amount > 0),
+        "selected native Tactical Retreat must grant real periodic Fury"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_student_of_suffering_native_beam_earns_buff_and_fury_ticks() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 30.0);
+    cast(&mut run, 198013, false);
+    advance(&mut run, 80);
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 453239),
+        "actual beam must produce selected native Student buff"
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Energize
+                && event.spell_id == Some(453236)
+                && event.amount > 0),
+        "native Student periodic child must fund Fury"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_consuming_fire_keeps_immolation_payload_and_its_own_demonsurge_use() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 3).unwrap();
