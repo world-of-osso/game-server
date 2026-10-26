@@ -3,6 +3,7 @@ use super::*;
 use shared::{components::PowerType, protocol::CombatLogKind};
 
 fn cast_storm(initial_points: f32) -> Run {
+    let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(261, 3).unwrap();
     engage(&mut run);
     crate::auras::apply_aura(
@@ -36,6 +37,28 @@ fn cast_storm(initial_points: f32) -> Run {
         literal_rotation::execution::Execution::Spell(197835, run.targets[0], Some(run.targets[0])),
     )
     .unwrap();
+    // Native Storm has missile travel. Stop at its actual impact boundary,
+    // not the later GCD boundary where white hits can earn new storage.
+    for _ in 0..12 {
+        run.app.update();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let hits = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(197835)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .count();
+        if hits == 3 {
+            break;
+        }
+    }
     run
 }
 
