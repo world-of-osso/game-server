@@ -111,7 +111,9 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, foreground
         apply_self(world, caster, INCOMING);
         advance_beast(world, caster);
     }
-    if spell.id == 34026
+    // SimC76f8118 sc_hunter.cpp6604 shares Howl consumption between
+    // the specialization-specific native Kill Command roots.
+    if matches!(spell.id, 34026 | 259489)
         && let Some(primary) = spell.cast_primary_target
     {
         consume_beasts(world, caster, primary);
