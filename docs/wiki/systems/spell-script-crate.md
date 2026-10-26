@@ -110,6 +110,10 @@ A warm `server-simulation --no-run` touch of the moved supply source rebuilt com
 
 `modules/evoker_flames.rs` and its Chrono leaf own Living Flame's ally/enemy children and Energizing Flame refund, plus Chrono's per-caster effective health history, native child validation and capped repeat. Health history observes each combat-log event at the original post-meter/arena slot. Effect-hit and target-validation lookup retain their original behavior. Combat exposes its existing power, versatility and fixed-heal helpers; no damage or healing calculation is duplicated.
 
+## Bounded native projectile scripts
+
+`hunter_bounces.rs` owns shared Hunter bounce policy data, native target round-robin order, delays and ramp scalars. `shadow_bolts.rs` owns Voidform's initial Volley, Volley's primary/caster plan and native50ms bolt queue. `unholy_eruption.rs` owns Scourge Strike's owned periodic snapshot reads, native pre-mitigation calculation and missing-only Virulent Plague application. They use the existing effect-handler, effect-hit and target-plan slots; already-moved spec modules are unchanged. The generic `DamageInput` and pre-mitigation helper remain in combat.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.

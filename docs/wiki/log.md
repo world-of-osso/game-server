@@ -4657,3 +4657,7 @@ Documented the first compile-boundary slice in [spell-script-crate](systems/spel
 
 - Updated [spell-script crate](systems/spell-script-crate.md#shared-evoker-flames) for downstream Living/Chrono Flame state and shared effect helpers. Devastation and native Chrono/Living gates remain required.
 - 2026-10-25: Added Affliction native Nightfall tick threshold/consumer documentation; REDa00f81dc4b proved actual Wither ticks never earned the selected buff; GREEN/measurement pending.
+
+## 2026-10-26 — Bounded projectile script compile boundaries
+
+- Updated [spell-script crate](systems/spell-script-crate.md#bounded-native-projectile-scripts) for downstream Hunter bounce, Shadow Volley and Scourge eruption ownership without changing native queues, recipients or pre-mitigation calculation.
