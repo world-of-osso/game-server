@@ -93,6 +93,39 @@ fn havoc_font_of_venomous_rage_channels_native_primary_and_secondary_damage() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_blind_fury_native_channel_regenerates_fury_without_weapon_hits() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 30.0);
+    crate::combat::attack_stop(run.app.world_mut(), run.actor);
+    cast(&mut run, 198013, false);
+    let fury = |run: &Run| {
+        crate::spell_cast::powers::power_value(
+            run.app.world(),
+            run.actor,
+            shared::components::PowerType::Fury,
+        )
+        .unwrap()
+        .0
+    };
+    let before = fury(&run);
+    advance(&mut run, 8);
+    assert!(
+        run.app
+            .world()
+            .get::<shared::casting::CastState>(run.actor)
+            .is_some(),
+        "sample the real active channel before Student's first2s tick"
+    );
+    assert!(
+        fury(&run) > before,
+        "selected Blind Fury must regenerate through native aura85 while no weapon attacks run: before{before} after{}",
+        fury(&run)
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_eternal_hunt_real_hunt_empowers_beam_and_completed_beam_resets_dance() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
