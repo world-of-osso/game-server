@@ -1,8 +1,16 @@
 - 2026-10-26: Recovered [Overfiend lifecycle](systems/spell-casting.md#native-overfiend-lifecycle--2026-10-26), replacing unreachable summon wrapper with the actual-actor callback; qualification pending.
 - 2026-10-26: Absolute landed8f4e67fed6; identified nonstacking Corruption0 passed to positive-counter API and replaced that caller with duration-only permanence. Native GREEN pending.
+## 2026-10-26 — Arcane Familiar Intellect grant
+
+[Selected Familiar](systems/spell-casting.md#arcane-familiar-on-intellect-2026-10-26) now receives native210126 on actual Arcane Intellect. Native RED4178eeb663 reached real precombat and selected205022 but found no aura; GREEN remains pending. Periodic225119 attacks are not part of this slice.
+
 ## 2026-10-26 — Proc-mask-qualified charged modifiers
 
 [Modifier charge consumption](systems/spell-casting.md#native-proc-mask-qualified-modifier-charges-2026-10-26) now qualifies consumers against explicit native proc masks. Arcane's real consecutive paid-cast regression is paired with its tests-only RED commit in one train cycle; native qualification and seven-spec same-master comparisons remain pending. The generic rule shares the existing family matcher and changes no native values.
+## 2026-10-26 — Midnight equipped item damage
+
+[Item payloads](systems/midnight-item-damage.md) use the native driver's class−9 budget and role, preserve the Acidbrood missile, and wire Void's missing action. Actual64/62/263 equipper REDs validate positive6884/5163budgets but zero Acidbrood damage and no Void hits. Native proc children retain casting-item context; Ret stat-item code stays separate. GREEN/measurement remain pending.
+[Modifier charge consumption](systems/spell-casting.md#native-proc-mask-qualified-modifier-charges-2026-10-26) landed1b6a6115 via d331ebfe39. Arcane's real paid-cast RED→GREEN and30Arcane/3proc-family/7charge-snapshot/15dummy16 controls pass. Integrated62 ST149932.62(84.38%)/3T258935.87(78.31%) remain below parity. The original control baseline had a push race and the wrong Ret DB; corrected same-master seven-spec comparisons remain pending. The generic rule shares the native family matcher and changes no native values.
 
 ## 2026-10-26 — Independent Destruction Echo
 
@@ -55,6 +63,10 @@
 ## 2026-10-26 — Fire Ignition contribution
 
 [Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now applies selected native Ignition's percentage only to each new Flamestrike contribution. Actual noncritical Flamestrike's unchanged tick/damage ratio passed RED→GREEN atfdef43f47 (train47ab06258e). ST178387.61 is unchanged;3T308050.16 remains below band. Direct damage and existing unpaid bank are unchanged.
+
+## 2026-10-26 — Survival Spirit Bond
+
+[Spirit Bond](systems/spell-casting.md#survival-native-producers--2026-10-26) native mastery payload was42.1175 instead of84.235; the authored459722 dependency produces84.235 in the integrated test. The combined gate failed a separate Swipe test, so Spirit is submitted independently; landing and numerical measurement remain pending.
 
 ## 2026-10-26 — Fire Molten Fury execute
 
@@ -113,7 +125,7 @@
 [Warlock funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) uses the downstream critical-aware periodic callback and existing native power pipeline, qualified only on Destruction. [Target DoT duration](systems/simc-apl.md#native-target-dot-duration) reads active owned native state without pandemic carry; both have native GREEN and cross-spec controls. Numerical267 acceptance remains separate.
 ## 2026-10-26 — Channel duration modifier separation
 
-[Channel snapshots](systems/spell-casting.md#channel-duration-and-charged-modifier-snapshots) separate execute-time modifiers from duration and retain the pre-consumption charged-modifier snapshot for span/period consistency. Native Grasp RED417d517a80 loses its channel state; trace4145dd6cd2 additionally proves charged Period loss on rebase. Generic fixes pass72native cases, including12ticks across three casts, per-cast native haste snapshots, instant Bolt, seven channel families and the existing fractional-deadline control. SimC is authoritative; cached TC explicitly differs. Landing/measurement remain separate.
+[Channel snapshots](systems/spell-casting.md#channel-duration-and-charged-modifier-snapshots) separate execute-time modifiers from duration and retain the pre-consumption charged-modifier snapshot for span/period consistency. Native Grasp RED417d517a80 loses its channel state; trace4145dd6cd2 additionally proves charged Period loss on rebase. Generic fixes pass72native cases, including12ticks across three casts, per-cast native haste snapshots, instant Bolt, seven channel families and the existing fractional-deadline control. SimC is authoritative; cached TC explicitly differs. Plain landing3bc2989ded passes39cases and lands513fe59af; the identical-input265seed70448 Grasp runaway drops7casts/476ticks→17/63. [Frost](investigations/frost-mage-dps-parity.md) owns its still-below90% first measurement.
 
 ## 2026-10-26 — Shared hasted channel rounding
 
@@ -4799,5 +4811,6 @@ Documented the first compile-boundary slice in [spell-script-crate](systems/spel
 - 2026-10-26: Integrated current master into the pending spell-script compile split; moved its new linked Enhancement helpers and retained Arcane source-spell conjure metadata. See [spell-script crate](systems/spell-script-crate.md#master-integration-linked-enhancement-helpers).
 - 2026-10-26: Documented [Survival native producers](systems/spell-casting.md#survival-native-producers--2026-10-26): Tip/Swipe/Wildfire landed455a8ad19 with35 real controls and partitioned hero inputs; obsolete primary-only bridge documentation now links to the native pack path. Sentinel0ac1974a11 has3 genuine owned-mark REDs; queued Tip producer/shared mark/Storm/recharge gatebdb0b13806 remains pending. Numerical parity and owned-pet Strike as One remain open.
 - 2026-10-26: [Shared Survival Sentinel](systems/spell-casting.md#survival-native-producers--2026-10-26) landed4c9083c0c0 throughbdb0b13806,3 genuine mark REDs→GREEN and all38 controls PASS. Canonical three-seed means78418.654ST/140699.957three-target are39.50%/44.16% of reference, not parity. Next native strike producer reuses the living owned pet,1251717 ICD and1251779 payload; GREEN and specific real-crit Sic 'Em RED are pending.
+- 2026-10-26: Added [native Pandemic duration carry](systems/auras.md#native-pandemic-duration-carry--2026-10-26): actual Agony REDfe4067cd18 loses4.5s on refresh; native-attribute dispatch replaces the Rip/Rake whitelist, retaining explicit Extend and rolling precedence. Probe165ebb927a passes102 native cases, including the charged-Grasp and identical Rip/Rake controls; its sole Feral-kit failure is also present on master(c0ae0fb343) and the lead approved excluding only that case. Merged five-spec landing and DPS gates remain pending.
 - 2026-10-26: [Owned Survival strikes](systems/spell-casting.md#survival-native-producers--2026-10-26) landed5a8c96626d via b0f0f0b804: all41 native controls pass, including actual main-pet crit→Sic-Em. Source1251717 uses actual aura.instance_id and700ms policy ownership. Canonical means88726.483ST/145807.187three-target are44.70%/45.76% reference. Parent orders Mongoose259388/Stargazer1253750 next; real-cast RED12233749ba pending, no stat changes.
 - 2026-10-26: [Earned Mongoose/Stargazer](systems/spell-casting.md#survival-native-producers--2026-10-26) has2 genuine native REDs in12233749ba: actual Raptor and actual Tip consumption produce0 stacks. New full-effect applications preserve native caps/selected labels and asynchronous Stargazer lifetime; damage factors/stats remain native. GREEN and canonical remeasurement remain pending.

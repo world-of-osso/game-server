@@ -1,3 +1,4 @@
+- [Native Pandemic duration carry](systems/auras.md#native-pandemic-duration-carry--2026-10-26) — native Agony, Rip/Rake and charged Grasp carry pass; attribute dispatch replaces the ID route, merged five-spec landing/DPS qualification pending.
 - [Overfiend actual lifecycle](systems/spell-casting.md#native-overfiend-lifecycle--2026-10-26) — own native bolts/coefficient borrowing and actual-actor owner buff; RED retained, GREEN pending.
 - [Absolute nonstacking Corruption](systems/warlock-periodic-counters.md#absolute-corruption-lifetime) — duration-only permanence preserves native maximum0; exact native regression2086230ee4, GREEN pending.
 - [Actual Infernal initialization](systems/spell-casting.md#native-infernal-initialization--2026-10-26) — actual-actor callback replaces unreachable wrapper; native timing RED, protected gates pending.
@@ -37,6 +38,7 @@
 - [Subtlety Lingering Shadow](systems/spell-casting.md#subtlety-lingering-shadow--2026-10-25) — native Dance-expiry counter, periodic decay and per-recipient residual; native RED→GREEN, numerical parity open.
 - [Feral literal fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25) — native Cat/Prowl, periodic facts, Growth/Burst/Rampancy, single-payload Unseen and Convoke landed; Stalking's native two-use chain landed; both measured scenarios within±10% with margin, remaining mechanical gaps listed separately; Feral paused.
 - [Downstream spell scripts](systems/spell-script-crate.md) — combat-owned registry, ordered downstream policy slices and first five leaf modules; remaining implementations stay in combat.
+- [Midnight equipped item damage](systems/midnight-item-damage.md) — native driver budgets, Acidbrood missile and Void callback; three actual-equipped REDs, GREEN pending.
 - [Frost Mage DPS parity](investigations/frost-mage-dps-parity.md) — native Freezing/Shatter, Splinter copies, qualified proc clocks and Overflowing Energy, measured gaps and shared-gate dependencies.
 - [Elemental literal fixture](systems/simc-apl.md#elemental-fixture-262) — exact profile rows, native Maelstrom/spell admission and named-action target counts; numerical parity remains separate.
 - [Form combat clocks](systems/auras.md#form-combat-clocks--2026-10-23) — all7authored timing rows, native Cat/Bear timed RED and unshifted control; generic cadence/weapon terms retained; reconciliation qualification pending.
