@@ -37,8 +37,8 @@ fn native_chaos_and_physical_hits(remove_armor: bool) -> (i32, i32) {
         crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, spell, Some(target), 1);
     }
     let hits = (damage_total(&run, 393054), damage_total(&run, 198813));
-    let factors = run.app.world().resource::<FactorCapture>().export();
-    println!("HAVOC_ARMOR_FACTORS armorless={remove_armor} {factors}");
+    enhancement_armor_tests::assert_armor_response(&run, &[393054], false);
+    enhancement_armor_tests::assert_armor_response(&run, &[198813], !remove_armor);
     println!("HAVOC_ARMOR armorless={remove_armor} chaos_physical={hits:?}");
     assert!(
         hits.0 > 0 && hits.1 > 0,
@@ -52,10 +52,8 @@ fn native_chaos_and_physical_hits(remove_armor: bool) -> (i32, i32) {
 fn havoc_chaos_native_child_ignores_armor_but_physical_damage_retains_it() {
     let armored = native_chaos_and_physical_hits(false);
     let unarmored = native_chaos_and_physical_hits(true);
-    assert_eq!(
-        armored.0, unarmored.0,
-        "native Chaos393054 must ignore armor, SimC76f8118 action.cpp1686–1690"
-    );
+    // SimC76f8118 action.cpp1686–1690: each actual Chaos hit retains its
+    // own native pre-mitigation amount, even if the control cast procs gear.
     assert!(
         armored.1 < unarmored.1,
         "native pure Physical198813 must still take armor mitigation"

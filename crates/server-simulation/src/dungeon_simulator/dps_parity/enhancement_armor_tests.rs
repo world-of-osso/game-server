@@ -59,6 +59,63 @@ pub(super) fn apply_armor_control(run: &mut Run, armorless: bool) {
     }
 }
 
+pub(super) fn assert_armor_response(run: &Run, spells: &[u32], reduces_damage: bool) {
+    let capture = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+        .export();
+    let events = capture["events"].as_array().expect("native factor events");
+    for spell in spells {
+        let hits: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event["event"] == "result" && event["spell_id"].as_u64() == Some(u64::from(*spell))
+            })
+            .collect();
+        assert!(
+            !hits.is_empty(),
+            "actual native spell{spell} must produce damage"
+        );
+        for hit in hits {
+            assert_hit_armor_response(hit, reduces_damage);
+        }
+    }
+}
+
+fn assert_hit_armor_response(hit: &Value, reduces_damage: bool) {
+    let factors = &hit["factors"];
+    let input = factors["native_rounded_amount"]
+        .as_f64()
+        .expect("native pre-mitigation amount");
+    let actual = factors["actual_amount"]
+        .as_f64()
+        .expect("actual native damage");
+    assert_eq!(
+        factors["blocked_amount"], 0,
+        "armor control has no shield block"
+    );
+    assert_eq!(
+        factors["absorbed_amount"], 0,
+        "armor control has no absorbs"
+    );
+    println!(
+        "NATIVE_ARMOR spell={} input={input} actual={actual} reduces={reduces_damage}",
+        hit["spell_id"]
+    );
+    if reduces_damage {
+        assert!(
+            actual < input,
+            "native Physical damage must lose damage to armor"
+        );
+    } else {
+        assert_eq!(
+            actual, input,
+            "native damage must retain its own rolled amount without armor loss"
+        );
+    }
+}
+
 fn damage_spells(root: u32) -> &'static [u32] {
     match root {
         384352 => &[469270],
@@ -106,13 +163,10 @@ fn actual_damage(root: u32, armorless: bool) -> Vec<(u32, i32)> {
     let _damage_seed = crate::random::seed_scope(818181);
     enhancement_generation_tests::cast(&mut run, root, selected);
     let damage = collect_damage(&run, root, before);
-    println!(
-        "ENHANCEMENT_ARMOR_FACTORS armorless={armorless} {}",
-        run.app
-            .world()
-            .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
-            .export()
-    );
+    // The control cast can proc real stat gear. Compare each actual hit with
+    // its own native pre-mitigation roll, not a different cast's Mastery/Vers.
+    let reduces_damage = root == 17364 && !armorless;
+    assert_armor_response(&run, damage_spells(root), reduces_damage);
     assert!(
         !damage.is_empty(),
         "actual native root{root} must deal damage"
@@ -149,7 +203,8 @@ fn enhancement_actual_physical_stormstrike_is_reduced_by_target_armor() {
 #[ignore = "native263 reference inputs and private world database"]
 fn enhancement_actual_doom_hybrid_damage_ignores_target_physical_armor() {
     // SimC76f8118 action.cpp1686–1689: only purePhysical reads armor; Doom469270 isStormstrike9.
-    assert_eq!(actual_damage(384352, false), actual_damage(384352, true));
+    actual_damage(384352, false);
+    actual_damage(384352, true);
 }
 
 #[test]
