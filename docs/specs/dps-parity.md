@@ -248,6 +248,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
+- Selected Shattered Destiny388116 accumulates native base Fury for genuinely paid literal Havoc actions only while owned162264 is live. Each native effect1 threshold extends Meta by native effect0 milliseconds; preserve the remainder across casts and exclude free/background copies and pre-Meta spending. The existing frozen resource context establishes positive payment (SimC76f8118 sc_demon_hunter.cpp2529–2555).
+
 - Selected Blind Fury203550 supplies its native effect2 amount to Eye/Gaze's existing aura85 Fury regeneration effect. The ordinary native per-five-second regeneration path supplies Fury only during that actual channel, with no weapon-hit dependency or adapter credit (SimC76f8118 sc_demon_hunter.cpp9986–9993).
 
 - Hard Meta191427 adds native162264's duration to live Havoc transformation instead of discarding Demonic time. The ordinary native reapplication path retains aura effects and phase (SimC76f8118 sc_demon_hunter.cpp4984–4985).
