@@ -719,22 +719,37 @@ fn bite_ordered_from_the_bar_is_cast_by_the_wolf_at_the_target() {
         ..beside
     });
     p.order(pet_action_button(BITE, ACT_ENABLED), Some(kobold), None);
+    let before = crate::spell_cast::powers::power_value(p.h.app.world(), p.pet, PowerType::Focus)
+        .unwrap()
+        .0;
+    let started = crate::spell_cast::now(p.h.app.world());
+    let owner_rate = crate::spell_cast::powers::potential_power_regen(
+        p.h.app.world(),
+        p.h.caster,
+        PowerType::Focus,
+    )
+    .unwrap();
     p.advance(2);
+    let elapsed = (crate::spell_cast::now(p.h.app.world()) - started) as f32;
     // Bite rolls to hit like melee: the order is proven by the cast; damage only when it lands.
     assert_eq!(p.spell_casts(BITE, kobold), 1, "{:?}", p.h.inbox.log);
     if let [bite] = p.spell_damage(BITE, kobold)[..] {
-        // 0.75 × the wolf's attack power (22% of its owner's 100), less the kobold's armor.
+        // Native Bite uses the wolf's inherited attack power, less target armor.
         assert!(bite > 0, "Bite did {bite} damage");
         assert!(p.h.health(kobold) <= 5_000.0 - bite as f32);
     }
-    // Bite costs 25 Focus.
-    assert_eq!(p.focus(), 75);
+    // Bite paid25 Focus before this observation; the next frames regenerate
+    // continuously at owner rate ×1.25 (SimC76f8118 sc_hunter.cpp2355–2360).
+    let after = crate::spell_cast::powers::power_value(p.h.app.world(), p.pet, PowerType::Focus)
+        .unwrap()
+        .0;
+    assert!((after - before - owner_rate * 1.25 * elapsed).abs() < 0.001);
     // The wolf goes after the unit it bit (`_AttackStart`).
     assert_eq!(p.pet_victim(), Some(kobold));
 }
 
 #[test]
-fn called_wolf_focus_regenerates_in_four_second_steps_without_resetting_at_full() {
+fn called_wolf_focus_inherits_continuous_owner_regen_even_after_a_full_pool() {
     let mut p = hunter_with_wolf().expect("native hunter/wolf catalog");
     let kobold = p.h.npc;
     let beside = p.position(p.pet);
@@ -750,31 +765,25 @@ fn called_wolf_focus_regenerates_in_four_second_steps_without_resetting_at_full(
             .unwrap()
             .0
     };
-    // TC a352b1fa Pet.cpp64,671-687 / CreatureData.h423 / Creature.cpp964-998:
-    // spawn-anchored 4-second timer, +24 whole Focus, even in combat.
-    for _ in 0..60 {
-        assert_eq!(focus(&p), 75.0, "no fractional player-style regeneration");
-        p.advance(1);
-    }
-    let mut first_tick = false;
-    for _ in 0..20 {
-        p.advance(1);
-        if focus(&p) != 75.0 {
-            assert_eq!(focus(&p), 99.0);
-            first_tick = true;
-            break;
-        }
-    }
-    assert!(first_tick, "first +24 tick within four seconds of spawn");
-    for _ in 0..79 {
-        p.advance(1);
-        assert_eq!(focus(&p), 99.0);
-    }
-    p.advance(1);
-    assert_eq!(focus(&p), 100.0, "next tick clamps to maximum");
+    // SimC76f8118 sc_hunter.cpp2355–2360: continuous owner rate ×1.25,
+    // independent of whether the owner or pet was previously at its resource cap.
+    let owner_rate = crate::spell_cast::powers::potential_power_regen(
+        p.h.app.world(),
+        p.h.caster,
+        PowerType::Focus,
+    )
+    .unwrap();
+    assert!(owner_rate > 0.0);
+    let pet_rate = owner_rate * 1.25;
+    let before = focus(&p);
+    let started = crate::spell_cast::now(p.h.app.world());
+    p.advance(20);
+    let elapsed = (crate::spell_cast::now(p.h.app.world()) - started) as f32;
+    let expected = (before + pet_rate * elapsed).min(100.0);
+    assert!((focus(&p) - expected).abs() < 0.001);
 
-    // A full pool does not pause/reset the timer. Spend three seconds into its
-    // next interval: the next +24 is one second later, not four after spending.
+    p.advance(80);
+    assert_eq!(focus(&p), 100.0, "continuous gain clamps at the native cap");
     p.advance(60);
     let beside = p.position(p.pet);
     p.h.app.world_mut().entity_mut(kobold).insert(Position {
@@ -784,11 +793,16 @@ fn called_wolf_focus_regenerates_in_four_second_steps_without_resetting_at_full(
     p.order(pet_action_button(BITE, ACT_DISABLED), Some(kobold), None);
     p.command(COMMAND_FOLLOW);
     assert_eq!(p.spell_casts(BITE, kobold), 2);
-    assert_eq!(focus(&p), 75.0);
-    p.advance(13);
-    assert_eq!(focus(&p), 75.0);
+    let before = focus(&p);
+    let started = crate::spell_cast::now(p.h.app.world());
     p.advance(1);
-    assert_eq!(focus(&p), 99.0, "full-pool timer phase survives spending");
+    let elapsed = (crate::spell_cast::now(p.h.app.world()) - started) as f32;
+    let gained = focus(&p) - before;
+    assert!((gained - pet_rate * elapsed).abs() < 0.001);
+    assert!(
+        gained > 0.0,
+        "a full pool cannot defer the next fractional gain"
+    );
 }
 
 #[test]
