@@ -66,6 +66,7 @@ spec_drivers! {
     251 => frost_rotation,
     253 => beast_mastery_rotation,
     254 => marksmanship_rotation,
+    255 => survival_rotation,
     258 => shadow_rotation,
     259 => assassination_rotation,
     260 => outlaw_rotation,

@@ -51,6 +51,7 @@ fn apply_hot_streak_outcome(world: &mut World, caster: Entity, crit: bool, guara
     #[cfg(any(test, feature = "test-support"))]
     let reacted =
         crate::simc_apl_native::reaction::has_observed_reaction(world, caster, HEATING_UP);
+    let now = crate::auras::aura_now(world);
     let heating_up = world
         .get::<ActiveAuras>(caster)
         .and_then(|auras| {
@@ -58,7 +59,19 @@ fn apply_hot_streak_outcome(world: &mut World, caster: Entity, crit: bool, guara
                 .iter()
                 .find(|aura| aura.spell_id == HEATING_UP && aura.caster == caster)
         })
-        .map(|aura| aura.instance_id);
+        .map(|aura| {
+            let protected = aura.expires_at.is_some_and(|expiry| {
+                let applied_at = expiry - f64::from(aura.duration_ms) / 1000.0;
+                now - applied_at <= 0.2
+            });
+            (aura.instance_id, protected)
+        });
+    // SimC76f8118 sc_mage.cpp2196–2210: an ordinary noncritical hit
+    // cannot remove Heating Up during its first200ms.
+    if !crit && heating_up.is_some_and(|(_, protected)| protected) {
+        return;
+    }
+    let heating_up = heating_up.map(|(instance, _)| instance);
     if let Some(instance) = heating_up {
         remove_instance(world, caster, instance, RemoveReason::Consumed);
     }
