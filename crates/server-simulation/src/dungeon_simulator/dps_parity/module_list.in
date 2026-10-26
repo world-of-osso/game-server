@@ -13,6 +13,7 @@ mod affliction_nathreza_tests;
 mod affliction_nightfall_tests;
 mod affliction_presence_tests;
 mod affliction_procs_tests;
+mod affliction_shared_agony_tests;
 mod affliction_targets_tests;
 mod affliction_tests;
 mod affliction_ua_tests;

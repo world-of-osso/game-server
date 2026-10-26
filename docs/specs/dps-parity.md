@@ -801,6 +801,10 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 - Precombat summons the profile-selected pet and executes its first eligible harmful precast. Darkglare activity and remaining lifetime come from real owned summons; Malefic Grasp requires that actual pet. Channel chaining and interruptions use shared native channel decisions.
 - The fixture does not grant shards, buffs or reference damage. Numeric ST/3T parity remains separately measurement-gated.
 
+### Affliction native Shared Agony
+
+- Selected1259825 makes a successful Agony root cast one real native980 background twin on a different living enemy inside its authored radius. Randomize ties, then prefer the shortest remaining owned Agony; foreign applications do not count. The twin pays no second cost and cannot recursively create twins (`sc_warlock_actions.cpp1419–1450`, `sc_warlock.cpp1274–1320`). Native application, stacks and periodic shard funding remain unchanged.
+
 ### Affliction native Agony funding
 
 - Only landed Agony980 ticks from Affliction265 advance its owner's threshold-RNG shard progress, with uniform initial state and rollover. Pinned increment0.370 scales by active owned Agonies to the power−2/3 and native Creeping Death timing normalization, including the pinned rank2 bug. Losing the last owned Agony resets progress.
