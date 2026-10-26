@@ -1,6 +1,6 @@
 //! SimC76f8118 Sentinel target marks, Lunar Storm and native residual bridges.
 use super::combat;
-use super::marksmanship::selected;
+use super::cast_relationships::has_talent as selected;
 use combat::auras::{self, ActiveAuras, RemoveReason};
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_cast::scripts::{reduce_cooldown, script_effect_value};
@@ -14,6 +14,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 use bevy::prelude::*;
 
 const AIMED: u32 = 19434;
+const WILDFIRE_BOMB: u32 = 259495;
+const WILDFIRE_DAMAGE: u32 = 265157;
 const RAPID_TICK: u32 = 257045;
 const SENTINEL: u32 = 1253599;
 const MARK: u32 = 1253601;
@@ -34,11 +36,14 @@ const PRECISE_SHOTS: u32 = 260242;
 const ARMOR_IGNORED: &[u32] = &[BLOOD_DAMAGE];
 
 pub(super) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    // sc_hunter.cpp6910–6911: Feathered Frenzy forces a real mark before
-    // Trueshot's successful-cast effects, keeping the selected hostile primary.
-    if spell.id == 288613
-        && selected(world, caster, FEATHERED_FRENZY)
-        && let Some(target) = spell.cast_primary_target
+    // sc_hunter.cpp6910–6911/6400–6401: the selected Trueshot/Takedown
+    // producer force-marks its actual hostile primary before cast relationships.
+    let forces_mark = match spell.id {
+        288613 => selected(world, caster, FEATHERED_FRENZY),
+        1250646 => selected(world, caster, LUNAR_CALLING),
+        _ => false,
+    };
+    if forces_mark && let Some(target) = spell.cast_primary_target
     {
         grant_mark(world, caster, target);
     }
@@ -49,8 +54,10 @@ fn after_damage(world: &mut World, ctx: &EffectCtx, target: Entity, critical: bo
         return;
     }
     trigger_blood_damage(world, ctx, target);
-    if ctx.spell.id == AIMED {
+    if matches!(ctx.spell.id, AIMED | WILDFIRE_DAMAGE) {
         consume_mark(world, ctx, target);
+    }
+    if ctx.spell.id == AIMED {
         schedule_blood_mark(world, ctx, target, critical);
     }
     if ctx.spell.id == RAPID_TICK && selected(world, ctx.caster, ARMAMENTS) {
@@ -94,7 +101,8 @@ fn consume_mark(world: &mut World, ctx: &EffectCtx, target: Entity) {
     if !selected(world, ctx.caster, SENTINEL) {
         return;
     }
-    // sc_hunter.cpp5422–5428: consume only an actual owned mark on impact.
+    // sc_hunter.cpp5422–5428/7104–7107: consume only an actual owned
+    // mark at Aimed Shot or Wildfire explosion impact.
     let removed = auras::remove_auras(world, target, RemoveReason::Consumed, |aura| {
         aura.caster == ctx.caster && aura.spell_id == MARK
     });
@@ -154,10 +162,13 @@ fn grant_mark(world: &mut World, caster: Entity, target: Entity) {
         warn!(?caster, ?target, "Native Sentinel mark refused");
         return;
     }
-    // sc_hunter.cpp3666/3709: a real mark immediately reduces Aimed's
-    // running recovery by Moon's Blessing effect2, without restoring charges.
+    // sc_hunter.cpp3666–3667/3709–3710: a real mark reduces both native
+    // running recoveries by their distinct Moon's Blessing effects; never start one.
     if selected(world, caster, MOONS_BLESSING) {
         let seconds = f64::from(script_effect_value(world, caster, MOONS_BLESSING, 1)) / 1000.0;
         reduce_cooldown(world, caster, AIMED, seconds);
+        let bomb_seconds =
+            f64::from(script_effect_value(world, caster, MOONS_BLESSING, 2)) / 1000.0;
+        reduce_cooldown(world, caster, WILDFIRE_BOMB, bomb_seconds);
     }
 }
