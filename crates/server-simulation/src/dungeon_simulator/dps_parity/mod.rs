@@ -68,6 +68,7 @@ spec_drivers! {
     258 => shadow_rotation,
     259 => assassination_rotation,
     260 => outlaw_rotation,
+    261 => subtlety_rotation,
     262 => elemental_rotation,
     263 => enhancement_rotation,
     265 => affliction_rotation,
