@@ -2558,8 +2558,18 @@ fn execute_and_channel(
     spell: &SpellInfo,
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
+    // Resource-sized native channels must retain the same prepayment duration
+    // as their aura. SimC76f8118 sc_rogue.cpp4784–4795 freezes Killing Spree CP.
+    let channel = if is_channeled(spell) {
+        let costs = spell_costs(world, caster, spell)?;
+        Some(resources::snapshot(world, caster, spell, &costs))
+    } else {
+        None
+    };
     execute_cast_with_primary(world, caster, spell, target, spell.cast_primary_target)?;
-    start_channel(world, caster, spell, target);
+    if let Some(channel) = channel {
+        start_channel(world, caster, &channel, target);
+    }
     Ok(())
 }
 

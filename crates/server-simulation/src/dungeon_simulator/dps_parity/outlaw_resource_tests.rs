@@ -128,6 +128,18 @@ fn outlaw_killing_spree_emits_both_hands_for_effective_point_ticks() {
             .world()
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
+        let returns = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(1235074)
+                    && event.kind == CombatLogKind::Energize
+            })
+            .count();
+        assert_eq!(
+            returns, points,
+            "native Spree returns points only after tick-zero"
+        );
         for spell in [57841, 57842] {
             let attempts: Vec<_> = events
                 .iter()
