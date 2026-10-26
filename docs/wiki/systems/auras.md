@@ -1,5 +1,13 @@
 # Auras
 
+## Garrote stored literal multiplier — 2026-10-26
+
+Garrote already freezes its native Improved Garrote bonus in `SpellInfo.cast_damage_multiplier` and the applied bleed amount. The downstream703 declaration in `PersistentCastMultiplier` makes `periodic_snapshot::capture_multiplier` copy that same factor into each periodic effect's existing `persistent_multiplier` field on application and refresh. It does not change damage or infer a factor from tick amounts. The existing Feral fresh/live producer remains unchanged; this declaration qualifies stored Garrote metadata only.
+
+`RogueFacts` no longer substitutes1.0. Shared `NativeFacts` reads the selected action target's owned aura: absent means0, an actual application supplies its stored factor, and missing qualification is an explicit error. A real empowered bleed therefore remains distinguishable after the stealth window ends, and an ordinary refresh replaces only its actual target's factor. Native RED529a58341f records1.0 instead of1.5 after actual Garrote/window expiry.
+
+Sources: [contract](../../specs/rogue-parity.md#stealth-and-bleed-children), [declaration](../../../crates/server-spell-scripts/src/modules/assassination_garrote.rs), [capture](../../../crates/server-combat/src/auras/periodic_snapshot.rs), [target-aware read](../../../crates/server-combat/src/simc_apl_native/periodic.rs), [Rogue binding](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/assassination_rotation.rs), [native case](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/assassination_garrote_snapshot_tests.rs). Pinned SimC76f8118 `sc_rogue.cpp4551–4561` defines the persistent factor; `dot.cpp568–573` defines the absent state.
+
 ## Vanish removal ordering — 2026-10-26
 
 `AuraScript.before_remove_reactions` runs after detachment and before generic removal reactions. It defaults to `None`; only native Vanish11327 registers it. On natural expiry, the script grants native Stealth1784 before the last-stealth check, so expiry does not prematurely grant the post-stealth Improved Garrote window. A harmful early break does not grant new Stealth.

@@ -73,6 +73,8 @@ pub struct ChargedSpellModifier {
 pub struct CastPolicyContext {
     /// Effective launch values, retained independently of later resource changes.
     pub resources: Vec<(PowerType, f32)>,
+    /// Explicit source-free spender: effective values do not imply payment.
+    pub free_spender: bool,
     pub targets: Vec<Entity>,
 }
 
