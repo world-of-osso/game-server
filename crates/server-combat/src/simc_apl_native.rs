@@ -342,6 +342,17 @@ impl<'a> NativeFacts<'a> {
             .collect()
     }
 
+    /// Item proxies observe this actor's own proc, not a foreign caster's same-ID aura.
+    pub fn owned_buff_property(&self, spell: u32, property: &str) -> Result<f64, String> {
+        self.spell(spell)?;
+        let active = self.read_owned_auras(self.actor, spell);
+        match property {
+            "up" => Ok(bool_value(!active.is_empty())),
+            "remains" => Ok(buff_remaining(&active, crate::spell_cast::now(self.world))),
+            _ => Err(format!("unknown native owned-buff property {property}")),
+        }
+    }
+
     fn active_dot(&self, alias: &str) -> Result<f64, String> {
         let spell = bound_spell(&self.bindings.buffs, alias, "dot")?;
         self.spell(spell)?;
