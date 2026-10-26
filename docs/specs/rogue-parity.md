@@ -1,6 +1,6 @@
 # Native Rogue parity mechanics
 
-Assassination259 combat and the shared Rogue attack-speed path follow pinned SimC76f8118 behavior with native values under the [DPS parity contract](dps-parity.md). Runtime code lives in `crates/server-combat/src/auras/rogue.rs` and `spell_cast/scripts/rogue_{children,hero}.rs`. Shared coating and Venomous Wounds requirements remain in the parent contract; [auras](../wiki/systems/auras.md) and [casting](../wiki/systems/spell-casting.md) describe the native runtime.
+Assassination259 combat and the shared Rogue attack-speed and Vanish paths follow pinned SimC76f8118 behavior with native values under the [DPS parity contract](dps-parity.md). Runtime code lives in `crates/server-combat/src/auras/rogue.rs` and `spell_cast/scripts/rogue_{children,hero}.rs`. Shared coating and Venomous Wounds requirements remain in the parent contract; [auras](../wiki/systems/auras.md) and [casting](../wiki/systems/spell-casting.md) describe the native runtime.
 
 ## What it must do
 
@@ -26,6 +26,12 @@ Assassination259 combat and the shared Rogue attack-speed path follow pinned Sim
 - [x] Selected457054 dispatches native457193 once per landed white swing against its actual victim while that victim has the caster's own active457129 mark. Retargeting to an unmarked victim must not dispatch against another target's mark. Native payload data supplies damage. Source: `sc_rogue.cpp3411–3419,10282,10615–10618`.
 
 - [x] Selected457055 copies its native effect0 fraction of actual off-mark direct, periodic and white damage to the caster's live457129 mark through457236. Damage to the marked victim does not self-copy. Preserve the source's resolved crit, with no second crit/general damage bonus, while applying the payload's own native labelled Mastery and marked-target Zoldyck. Source: `sc_rogue.cpp1971–1995,2340–2350,6618–6631,11568–11605`.
+
+### Shared Vanish
+
+- [x] Successful native1856 grants11327 stealth. Preserve native cancellation/AttackStopped publication and suspend both weapon timers. The next admitted harmful melee-start cast resumes elapsed timers against its actual hostile primary and publishes the native AttackStart; an explicit native attack request retains its own new timers.
+- [x] Natural11327 expiry grants native1784 before the last-stealth check. A harmful break does not grant new Stealth. Leaving that earned Stealth grants the existing Improved Garrote window. Source: `sc_rogue.cpp6103–6125,7419–7444,3381–3385`.
+- [x] The shared queued attack-start entry point retains its original state-update/publication order. Its immediate helper shares only the existing native state/packet contract; no non-Vanish gameplay behavior changes.
 
 ### Shared auto-attack speed
 
@@ -60,6 +66,7 @@ Paths below are under `crates/server-simulation/src/dungeon_simulator/dps_parity
 - `assassination_poison_mechanics_tests.rs` — earned ramp and Amplifying consumption.
 - `assassination_hero_tests.rs` — real stealth exit/spread, native children and mark cycles.
 - `assassination_seal_fate_tests.rs` — real builder crits and Poisoned Knife exclusion.
+- `rogue_vanish_tests.rs` — actual Vanish, suspended white swings, natural Stealth, next Garrote/window and resumed weapons.
 - `rogue_swift_slasher_tests.rs` — real259/260 swing clocks.
 - `rogue_finisher_tests.rs` — unchanged Outlaw SnD start/extension regression.
 

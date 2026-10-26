@@ -101,6 +101,7 @@ register_modules! {
     ret_toll: (280, "modules/ret_toll.rs"),
     retribution: (60, "modules/retribution.rs"),
     rogue: (70, "modules/rogue.rs"),
+    rogue_vanish: (2595, "modules/rogue_vanish.rs"),
     secondary_copies: (360, "modules/secondary_copies.rs"),
     shadow_link: (2581, "modules/shadow_link.rs"),
     shadow_priest: (290, "modules/shadow_priest.rs"),
