@@ -26,10 +26,9 @@ fn feral_paid_bites_produce_delayed_unseen_slash_and_native_bleed() {
             run.app.update();
         }
         feral_growth_tests::cast_native_spell_after_regeneration(&mut run, 22568);
-        assert_eq!(
-            power(&run, PowerType::ComboPoints),
-            0.0,
-            "real Bite pays its earned points"
+        assert!(
+            power(&run, PowerType::ComboPoints) < 5.0,
+            "real Bite pays its earned points; native follow-up procs may already earn new points"
         );
         for _ in 0..120 {
             run.app.update();
