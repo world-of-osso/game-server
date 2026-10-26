@@ -75,6 +75,23 @@ pub(super) fn snapshot<'s>(
     Cow::Owned(spell)
 }
 
+/// Decode the extra-Energy factor retained by this actual native Bite launch.
+/// SimC76f8118 sc_druid.cpp4374–4398 passes this fraction (not1+Saber
+/// damage effectiveness) to Unseen attacks. Reading cannot spend or grant Energy.
+pub fn read_extra_energy_modifier(world: &World, caster: Entity, spell: &SpellInfo) -> Option<f32> {
+    if spell.id != FEROCIOUS_BITE {
+        return None;
+    }
+    let effectiveness = spell.cast_damage_multiplier?;
+    let saber = read_aura_multiplier(world, caster, SABER_JAWS, 0);
+    let extra = (effectiveness - 1.0) / saber;
+    assert!(
+        extra.is_finite() && (0.0..=1.000001).contains(&extra),
+        "native Bite snapshot must retain a valid extra-Energy fraction"
+    );
+    Some(extra.min(1.0))
+}
+
 /// EffectPowerBurn clamps this cap to actual remaining power; no power is granted.
 pub(super) fn burn_limit(
     world: &World,
