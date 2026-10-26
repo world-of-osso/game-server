@@ -6,8 +6,9 @@
 
 - [ ] Preserve policy traversal, first-match lookup, additive hook order, cast depth, resource payment, RNG, targets and native payloads.
 - [ ] Install the same registry in the server and transport-free simulation, including native fixture harnesses and cached simulation apps.
-- [ ] Permit an existing module's policies and hooks to change without editing combat or a central policy table.
+- [ ] Permit an existing module's policies and hooks to change without editing combat or a central policy table. A new downstream module needs only its file and one alphabetical registration line; registration must not reorder existing policy traversal.
 - [ ] Keep combat independent of the downstream crate in the production dependency graph.
+- [ ] Keep new dispatch-stage callback/lookup signatures independent, even when their current signatures match.
 - [ ] Measure a moved-file touch using warm `cargo test --locked -p server-simulation --lib --no-run -j2` before and after the move; keep the same worktree-local target directory.
 
 ## How it works
@@ -30,7 +31,7 @@
 
 ## Known gaps (current cycle)
 
-- [ ] Move the remaining spell script implementations in later slices; this slice moves all 37 relationship-policy rows and five complete leaf modules.
+- [ ] Move the remaining spell script implementations in later slices. Downstream modules now include all 37 relationship-policy rows, five original leaf modules, Essence Burst, Demonic, Divine Resonance, Evoker tier, Giantkiller and MM Explosive; typed dispatch preserves their original target-selection, damage, and after-resource boundaries.
 
 ## Out of scope
 

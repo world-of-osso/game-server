@@ -448,8 +448,11 @@ fn hit_delays(
     let units = super::selected_units(plan);
     let misc = spell.misc.as_ref();
     let speed = misc.map_or(0.0, |misc| misc.speed);
-    let launch_delay =
-        super::scripts::scripted_launch_delay(spell.id, misc.map_or(0.0, |misc| misc.launch_delay));
+    let launch_delay = super::script_registry::launch_delay(
+        world,
+        spell.id,
+        misc.map_or(0.0, |misc| misc.launch_delay),
+    );
     let speed_is_delay = attributes(spell, 9) & SPELL_ATTR9_MISSILE_SPEED_IS_DELAY_IN_SEC != 0;
     if is_channeled(spell) || (speed <= 0.0 && launch_delay <= 0.0 && !speed_is_delay) {
         return (units.into_iter().map(|unit| (unit, 0)).collect(), None);
@@ -523,7 +526,8 @@ pub(super) fn destination_delay_ms(
         return 0;
     }
     let distance = position(world, caster).map_or(0.0, |origin| origin.distance(destination));
-    let launch = super::scripts::scripted_launch_delay(
+    let launch = super::script_registry::launch_delay(
+        world,
         spell.id,
         spell.misc.as_ref().map_or(0.0, |misc| misc.launch_delay),
     );

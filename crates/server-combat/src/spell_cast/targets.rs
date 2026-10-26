@@ -211,6 +211,21 @@ fn selector(id: u32) -> Option<Selector> {
     })
 }
 
+/// Native caster-only endpoints keep the caster as their cast unit after
+/// replacement (SimC76f8118 sc_evoker.cpp6323–6327; native433874 UNIT_CASTER).
+/// A ground destination or any other selector retains its declared targeting.
+pub fn targets_caster_only(spell: &SpellInfo) -> bool {
+    let mut selectors = spell
+        .effects
+        .iter()
+        .flat_map(|effect| effect.implicit_targets)
+        .filter(|&id| id != 0);
+    let first_is_caster = selectors
+        .next()
+        .is_some_and(|id| matches!(selector(id), Some(Selector::Caster)));
+    first_is_caster && selectors.all(|id| matches!(selector(id), Some(Selector::Caster)))
+}
+
 /// First implicit target ID of `effect` that has no selector.
 pub fn unsupported_target(effect: &SpellEffect) -> Option<u32> {
     effect.implicit_targets.iter().copied().find(|&id| {
@@ -427,7 +442,7 @@ fn radius_slot(effect: &SpellEffect, slot: usize) -> usize {
     usize::from(slot == 1 && effect.radius[1].is_some())
 }
 
-pub(super) fn radius(effect: &SpellEffect, slot: usize) -> f32 {
+pub fn radius(effect: &SpellEffect, slot: usize) -> f32 {
     effect.radius[radius_slot(effect, slot)].map_or(0.0, |radius| {
         if radius.radius > 0.0 {
             radius.radius
@@ -1609,7 +1624,7 @@ pub fn effect_radius(effect: &SpellEffect) -> f32 {
 
 /// Living units within `radius` of `center` matching `relation`, nearest
 /// first, capped by `max_targets` (0 = no cap).
-pub(crate) fn area_units(
+pub fn area_units(
     world: &mut World,
     caster: Entity,
     center: Vec3,

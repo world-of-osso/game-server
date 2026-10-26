@@ -12,25 +12,66 @@ const FADE_CAP: u32 = 21;
 struct FadeAttempts(u32);
 
 pub(crate) fn on_natural_fade(world: &mut World, owner: Entity) {
+    let Some(chance) = read_native_chance(world, owner, 0) else {
+        return;
+    };
+    if roll_energy_fade(world, owner, chance) {
+        crate::spell_cast::cast_triggered(world, owner, CORE_BUFF, Some(owner), 0);
+    }
+}
+
+struct DemiseCorePolicy {
+    roots: &'static [u32],
+    entry: u32,
+    chance_effect: u8,
+}
+// SimC76f8118 pets.cpp1233–1257: each actual Dreadstalker demise rolls
+// native267102 effect1, unlike the Imp's accumulated natural-fade distribution.
+const DEMISE_CORES: &[DemiseCorePolicy] = &[DemiseCorePolicy {
+    roots: &[193331, 193332],
+    entry: 98035,
+    chance_effect: 1,
+}];
+
+pub(crate) fn on_demise(world: &mut World, actor: Entity) {
+    let Some(summon) = world.get::<crate::spell_cast::summon::SummonedCreature>(actor) else {
+        return;
+    };
+    let Some(npc) = world.get::<shared::components::Npc>(actor) else {
+        return;
+    };
+    let Some(policy) = DEMISE_CORES
+        .iter()
+        .find(|policy| policy.entry == npc.template_id && policy.roots.contains(&summon.spell_id))
+    else {
+        return;
+    };
+    let owner = summon.owner;
+    let Some(chance) = read_native_chance(world, owner, policy.chance_effect) else {
+        return;
+    };
+    if crate::random::thread_rng().gen_bool(chance) {
+        crate::spell_cast::cast_triggered(world, owner, CORE_BUFF, Some(owner), 0);
+    }
+}
+
+fn read_native_chance(world: &World, owner: Entity, index: u8) -> Option<f64> {
     if !world
         .get::<crate::class_progression::KnownSpells>(owner)
         .is_some_and(|known| known.contains(DEMONIAC))
     {
-        return;
+        return None;
     }
-    let chance = world
+    let spell = world
         .resource::<crate::spell_info::SpellStore>()
         .get(CORE_CHANCE)
-        .expect("Demoniac requires native Core chance metadata")
+        .expect("Demoniac requires native Core chance metadata");
+    let effect = spell
         .effects
         .iter()
-        .find(|effect| effect.index == 0)
-        .unwrap()
-        .base_points as f64
-        / 100.0;
-    if roll_energy_fade(world, owner, chance) {
-        crate::spell_cast::cast_triggered(world, owner, CORE_BUFF, Some(owner), 0);
-    }
+        .find(|effect| effect.index == index)
+        .expect("native267102 requires its source-qualified Core chance effect");
+    Some(f64::from(effect.base_points) / 100.0)
 }
 
 fn roll_energy_fade(world: &mut World, owner: Entity, chance: f64) -> bool {

@@ -42,10 +42,12 @@ pub(crate) mod forecast;
 pub mod handlers;
 pub(crate) mod health_pct_trigger;
 mod ignite;
+mod incoming_spell_masks;
 pub mod invisibility;
 mod item_requirements;
 mod light_of_titans;
 mod linked;
+mod linked_owners;
 pub(crate) mod linked_summon;
 pub(crate) mod mastery;
 mod mechanic_duration;
@@ -55,10 +57,12 @@ mod natures_guardian;
 #[cfg(any(test, feature = "test-support"))]
 pub mod observations;
 mod periodic;
+pub(crate) mod periodic_snapshot;
 #[cfg(test)]
 mod point_mod_tests;
 mod point_mods;
 pub(crate) mod power_amount_trigger;
+pub(crate) mod precombat;
 #[cfg(test)]
 mod proc_mask_tests;
 pub mod procs;
@@ -66,9 +70,9 @@ mod refresh;
 mod ret_crusade;
 pub(crate) use ret_crusade::after_spender as add_ret_crusade_spender_stacks;
 mod ret_sentence;
-pub(crate) use ret_sentence::track_cast as track_ret_sentence_cast;
+pub use ret_sentence::track_cast as track_ret_sentence_cast;
 pub(crate) mod reward_mods;
-pub(crate) mod rogue;
+pub mod rogue;
 #[cfg(test)]
 mod rolling_periodic_tests;
 pub mod scripts;
@@ -79,6 +83,7 @@ pub mod stat_mods;
 pub(crate) mod stealth;
 pub mod summon_damage;
 mod unit_state;
+mod venomcursed;
 mod warrior_stats;
 pub(crate) mod world_state;
 #[cfg(test)]
@@ -244,6 +249,8 @@ pub struct AuraEffectState {
     /// caster's Points mods, plus SP/AP coefficients for damage, heal and
     /// absorb types (`handlers::scales_with_power`).
     pub amount: f32,
+    /// Qualified factor captured at application, not reconstructed from damage.
+    pub persistent_multiplier: Option<f32>,
     pub misc_values: [i32; 2],
     pub period_ms: u32,
     pub trigger_spell: u32,
@@ -279,12 +286,7 @@ impl AuraEffectState {
 
 /// Source-qualified initial phase on a newly applied native periodic effect.
 /// Later ticks retain the same native interval and ordinal clock.
-pub(crate) fn randomize_initial_periodic_phase(
-    world: &mut World,
-    unit: Entity,
-    instance: u32,
-    index: u8,
-) {
+pub fn randomize_initial_periodic_phase(world: &mut World, unit: Entity, instance: u32, index: u8) {
     let now = aura_now(world);
     let mut auras = world
         .get_mut::<ActiveAuras>(unit)
@@ -357,7 +359,7 @@ impl AuraInstance {
             .map_or(0, |at| ((at - now).max(0.0) * 1000.0).round() as u32)
     }
 
-    pub(crate) fn stack_multiplier(&self) -> f32 {
+    pub fn stack_multiplier(&self) -> f32 {
         if ret_crusade::ignores_effect_stacks(self.spell_id) {
             1.0
         } else {
@@ -792,7 +794,7 @@ fn build_effect(
     } else {
         amount
     };
-    let amount = scripts::snapshot_periodic_amount(world, caster, spell, effect, amount);
+    let amount = scripts::snapshot_aura_amount(world, caster, spell, effect, amount);
     let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
     let base_period_ms = periodic_base_interval_ms(spell, effect);
     let period_ms = periodic_interval_ms(world, caster, spell, base_period_ms);
@@ -802,6 +804,7 @@ fn build_effect(
         immunity: effect.immunity.clone(),
         aura_type: effect.aura,
         amount,
+        persistent_multiplier: periodic_snapshot::multiplier(world, caster, spell, effect),
         misc_values: effect.misc_values,
         period_ms,
         trigger_spell: effect.trigger_spell,
@@ -817,7 +820,7 @@ fn build_effect(
 }
 
 /// Fresh native stack limit, including the caster's MaxAuraStacks modifiers.
-pub(crate) fn fresh_max_stacks(world: &World, caster: Entity, spell: &SpellInfo) -> u8 {
+pub fn fresh_max_stacks(world: &World, caster: Entity, spell: &SpellInfo) -> u8 {
     if let Some(maximum) = ret_crusade::maximum_stacks(world, caster, spell) {
         return maximum;
     }
@@ -1119,12 +1122,7 @@ pub(super) fn reduce_cast_pushback(world: &mut World, target: Entity) {
 /// `Aura::SetStackAmount` on the unit's own cast, then refresh derived stats/views.
 /// A non-stacking aura has a single stack; zero removes it in TC and is not a
 /// stack assignment. Callers needing removal use remove_instance instead.
-pub(crate) fn set_self_cast_stacks(
-    world: &mut World,
-    unit: Entity,
-    spell_id: u32,
-    stacks: u8,
-) -> bool {
+pub fn set_self_cast_stacks(world: &mut World, unit: Entity, spell_id: u32, stacks: u8) -> bool {
     assert!(stacks > 0, "zero aura stack assignment requires removal");
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return false;
@@ -1742,7 +1740,7 @@ pub fn spend_charge(world: &mut World, unit: Entity, instance_id: u32) {
 }
 
 /// TC Aura::ModStackAmount(-1), SpellAuras.cpp:1093–1128: no timer refresh on loss.
-pub(crate) fn spend_stack(world: &mut World, unit: Entity, instance_id: u32) {
+pub fn spend_stack(world: &mut World, unit: Entity, instance_id: u32) {
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return;
     };

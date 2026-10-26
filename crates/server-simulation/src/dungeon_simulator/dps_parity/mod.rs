@@ -62,13 +62,20 @@ spec_drivers! {
     70 => ret_rotation,
     71 => arms_rotation,
     72 => fury_rotation,
+    103 => feral_rotation,
+    251 => frost_rotation,
     253 => beast_mastery_rotation,
     254 => marksmanship_rotation,
+    255 => survival_rotation,
     258 => shadow_rotation,
     259 => assassination_rotation,
     260 => outlaw_rotation,
+    261 => subtlety_rotation,
     262 => elemental_rotation,
     263 => enhancement_rotation,
+    265 => affliction_rotation,
+    266 => demonology_rotation,
+    267 => destruction_rotation,
     269 => windwalker_rotation,
     577 => havoc_rotation,
     1467 => devastation_rotation,
@@ -288,7 +295,7 @@ fn literal_spec_selection_applies_to_player_and_follower() {
 #[test]
 fn literal_follower_only_specs_explicitly_preserve_their_actor_restriction() {
     use crate::followers::simulator::ParityActor;
-    for spec_id in [70, 269] {
+    for spec_id in [70, 266, 269] {
         assert!(measurement_driver(spec_id, &ParityActor::Follower).is_some());
         assert!(measurement_driver(spec_id, &ParityActor::Player { race: 1 }).is_none());
     }
@@ -327,10 +334,12 @@ fn spawn_reference(
 ) -> Result<Run, String> {
     let spec_id = profile.spec_id;
     let mut app = super::runtime::build_app();
+    app.add_systems(Last, melee_return::advance);
     inputs::install_reference_catalogs(&mut app)?;
     let copy = super::runtime::create_copy(&mut app);
     // Origin-centered parity fixtures have no frozen dungeon geometry.
     app.world_mut().remove_resource::<super::Space>();
+    crate::simc_apl_native::install_open_arena(app.world_mut());
     let level = profile
         .level
         .parse()
@@ -397,7 +406,26 @@ fn engage_fixture_opponents(run: &mut Run) {
     }
 }
 
+// SimC76f8118 sc_demon_hunter.cpp3927–3938 models Eye Beam as target AoE.
+// The native fixture pack is at +X; player Rotation.y=0 instead faces +Z.
+// Establish encounter facing, not a replacement cone or target list.
+fn face_actor_toward_primary(world: &mut World, actor: Entity, primary: Entity) {
+    use shared::components::{Position, Rotation};
+    let from = *world
+        .get::<Position>(actor)
+        .expect("fixture actor position");
+    let to = *world
+        .get::<Position>(primary)
+        .expect("fixture primary position");
+    let orientation = (from.z - to.z).atan2(to.x - from.x);
+    world
+        .get_mut::<Rotation>(actor)
+        .expect("fixture actor rotation")
+        .y = orientation + std::f32::consts::FRAC_PI_2;
+}
+
 fn engage(run: &mut Run) {
+    face_actor_toward_primary(run.app.world_mut(), run.actor, run.targets[0]);
     for &target in &run.targets {
         face_dummy_away_from_actor(run.app.world_mut(), run.actor, target);
     }
