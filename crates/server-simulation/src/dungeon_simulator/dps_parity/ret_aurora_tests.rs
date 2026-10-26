@@ -7,7 +7,7 @@ use shared::protocol::CombatLogKind;
 
 const AURORA: u32 = 439760;
 
-pub(super) fn unselect_aurora(run: &mut Run) {
+pub(super) fn unselect_ret_talent(run: &mut Run, talent: u32) {
     let (_, mut traits) = read_reference(70).unwrap();
     let classes = run.app.world().resource::<crate::spell_info::ClassSpells>();
     let tree = &classes
@@ -22,15 +22,15 @@ pub(super) fn unselect_aurora(run: &mut Run) {
             .entry(allocated.entry_id)
             .unwrap()
             .spell_id
-            != AURORA
+            != talent
     });
     inputs::install_traits(run.app.world_mut(), run.actor, &traits).unwrap();
     for _ in 0..4 {
         run.app.update();
     }
     assert!(
-        !has(run, AURORA),
-        "native reconciliation removes unselected Aurora"
+        !has(run, talent),
+        "native reconciliation removes unselected talent{talent}"
     );
 }
 
@@ -39,7 +39,7 @@ pub(super) fn unselect_aurora(run: &mut Run) {
 fn ret_aurora_native_unselected_wake_does_not_grant_purpose() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = native_ret(4);
-    unselect_aurora(&mut run);
+    unselect_ret_talent(&mut run, AURORA);
     cast_finisher(&mut run, 255937);
     assert!(ret_purpose_tests::current_holy_power(&run) >= 3.0);
     assert!(!has(&run, 408458));

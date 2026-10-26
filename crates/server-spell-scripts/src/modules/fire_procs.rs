@@ -18,6 +18,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SnapshotsModifier(is_heat_shimmer),
     SpellScriptHook::LaunchDamageModifier(heat_shimmer_crit_modifier),
     SpellScriptHook::NativeAfterCast(scorch_after_cast),
+    SpellScriptHook::AfterFireOutcomeHit(spread_fire_blast_ignite),
     SpellScriptHook::AfterFireOutcomeHit(fire_meteorite_hit),
     SpellScriptHook::OnCast(on_fire_cast),
     SpellScriptHook::TargetDamageMultiplier(meteor_primary_multiplier),
@@ -181,6 +182,12 @@ pub(crate) fn fire_meteorite_hit(world: &mut World, ctx: &EffectCtx, target: Ent
     }
     let count = script_effect_value(world, ctx.caster, GLORIOUS_TALENT, 0).max(0.0) as u32;
     schedule_meteorites(world, ctx, target, count);
+}
+
+fn spread_fire_blast_ignite(world: &mut World, ctx: &EffectCtx, target: Entity) {
+    if ctx.spell.id == 108853 {
+        auras::spread_ignite(world, ctx.caster, target, ctx.spell);
+    }
 }
 
 fn schedule_meteorites(world: &mut World, ctx: &EffectCtx, target: Entity, count: u32) {

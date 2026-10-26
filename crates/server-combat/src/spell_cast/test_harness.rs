@@ -46,6 +46,23 @@ pub struct ObservedCombatEvents(pub Vec<CombatLogEvent>);
 #[derive(Resource, Default)]
 pub struct ObservedTriggeredCasts(pub Vec<(Entity, u32, Option<Entity>)>);
 
+/// Native travel discarded because the target changed alive/world state before landing.
+#[derive(Debug)]
+pub struct DiscardedSpellHit {
+    pub caster: Entity,
+    pub spell_id: u32,
+    pub target: Entity,
+    pub launched_at: f64,
+    pub due_at: f64,
+    pub discarded_at: f64,
+    pub alive_at_launch: bool,
+    pub exists_now: bool,
+    pub alive_now: bool,
+}
+
+#[derive(Resource, Default)]
+pub struct ObservedDiscardedSpellHits(pub Vec<DiscardedSpellHit>);
+
 /// Actual impact-resolution TargetInfo order, including misses; read-only opt-in.
 #[derive(Resource, Default)]
 pub struct ObservedSelectedTargets(pub Vec<(Entity, u32, Vec<Entity>)>);
