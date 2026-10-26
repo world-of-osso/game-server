@@ -55,7 +55,7 @@ pub(super) fn after_white_hit(world: &mut World, caster: Entity, critical: bool)
     world
         .entity_mut(caster)
         .insert(KillingMachineAttempts(attempts));
-    let chance = random::accumulated_proc_constant(probability) * f64::from(attempts);
+    let chance = random::accumulated_proc_constant(probability, 0) * f64::from(attempts);
     if random::random::<f64>() >= chance {
         return;
     }
