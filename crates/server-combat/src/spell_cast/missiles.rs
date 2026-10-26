@@ -92,13 +92,7 @@ enum Landing {
 
 /// Resolve launch-mode effects, then `plan` now if the spell has no travel time,
 /// else schedule each hit.
-pub fn launch(
-    world: &mut World,
-    caster: Entity,
-    spell: &SpellInfo,
-    plan: TargetPlan,
-    depth: u8,
-) {
+pub fn launch(world: &mut World, caster: Entity, spell: &SpellInfo, plan: TargetPlan, depth: u8) {
     // SimC76f8118 sc_shaman.cpp3316–3351 schedules overloads before parent travel.
     let mut first = true;
     for target in super::hit_units(&plan) {
