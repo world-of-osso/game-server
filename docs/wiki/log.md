@@ -1,3 +1,6 @@
+## 2026-10-26 — Independent Destruction Echo
+
+[Echo](systems/spell-casting.md#destruction-echo--2026-10-26) producer/payload native REDs become two GREEN cases in309398a397. Its value assertion used raw per-rank4, but selected rank2 and pinned reference both require8%. Corrected only the expectation; native values, coefficients and allocations unchanged. Selected-rank gate/landing pending; above8-target reduction unqualified.
 ## 2026-10-26 — Tempest-owned Enhancement buffs
 
 [Tempest buffs](systems/auras.md#tempest-owned-enhancement-buffs--2026-10-26) replace263's every-spell Storm Swell grant and supply Arc's native-use/ICD-gated delayed chain from the final actual recipient. Native11ab1f1e5e→finald939eadb13 passes all30 native cases and3 decks, including final-recipient Arc after0.4s and the independently isolated Magic/Melee controls. Landed26ee488ac36ddc7b55d88f110035a1d0d60e318f. Integrated ST158810.65/3T335321.69 (82.246%/83.778%) remain below parity; no isolated-uplift claim.262 and native values remain unchanged.
