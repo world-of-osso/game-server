@@ -26,6 +26,9 @@ fn survival_literal_actions_and_pet_damage_actual_primary() {
     let mut run = prepare_measurement(255, 1).expect("native Survival player fixture");
     assert!(run.spec_driver.is_some(), "Survival cannot use AssistedCombat");
     engage(&mut run);
+    // Match advance_combat: target.time_to_die reads actual fixture lifetimes.
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
     for _ in 0..200 {
         run.app.update();
         drive_player(&mut run).expect("literal Survival decision");
