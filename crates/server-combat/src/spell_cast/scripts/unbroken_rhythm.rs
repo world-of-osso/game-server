@@ -49,7 +49,7 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: u32) {
             }
         }
         // SimC944/parse_effects.cpp1593–1606 consumes after RSK-family damage.
-        185099 | 468179 => consume_owned_rhythm(world, caster),
+        185099 | 468179 | super::glory_of_the_dawn::DAMAGE => consume_owned_rhythm(world, caster),
         _ => {}
     }
 }
