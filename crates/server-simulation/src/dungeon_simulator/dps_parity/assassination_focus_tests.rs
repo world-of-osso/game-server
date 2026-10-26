@@ -26,16 +26,6 @@ fn assert_native_payload_modifiers(health_fraction: f32) {
     let marked = run.targets[0];
     let secondary = run.targets[1];
     let fraction = native_percent(&run, 457055, 0);
-    // sc_rogue.cpp1797/1971–1995/2340–2350: the residual's own
-    // label3936 receives native Mastery/Implacable and target-health Zoldyck.
-    // Native1265386 effect3 independently modifies that same payload label.
-    let mastery = 1.0 + native_percent(&run, 76803, 3);
-    let implacable = 1.0 + native_percent(&run, 1265386, 3);
-    let execute = if health_fraction < native_percent(&run, 381798, 1) {
-        1.0 + native_percent(&run, 381798, 0)
-    } else {
-        1.0
-    };
     engage(&mut run);
     literal_rotation::execution::execute(
         run.app.world_mut(),
@@ -53,6 +43,16 @@ fn assert_native_payload_modifiers(health_fraction: f32) {
             .unwrap();
         health.current = health.max * health_fraction;
     }
+    // sc_rogue.cpp1797/1971–1995/2340–2350: the residual's own
+    // label3936 receives native Mastery/Implacable and target-health Zoldyck.
+    // Read after the opener: combat-earned rating procs can change Mastery.
+    let mastery = 1.0 + native_percent(&run, 76803, 3);
+    let implacable = 1.0 + native_percent(&run, 1265386, 3);
+    let execute = if health_fraction < native_percent(&run, 381798, 1) {
+        1.0 + native_percent(&run, 381798, 0)
+    } else {
+        1.0
+    };
     run.app
         .world_mut()
         .resource_mut::<ObservedCombatEvents>()
