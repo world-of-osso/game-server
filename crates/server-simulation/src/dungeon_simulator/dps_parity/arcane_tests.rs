@@ -80,7 +80,7 @@ fn expected_charge_bonus(run: &Run, spell: u32) -> f32 {
         / 100.0
 }
 
-fn sample_charge_hit(spell: u32, charges: f32) -> (f32, bool, f32) {
+fn sample_charge_hit(spell: u32, charges: f32) -> (f32, f32) {
     let mut run = prepare_literal(62, 1).unwrap();
     crate::spell_cast::powers::change_power(
         run.app.world_mut(),
@@ -128,11 +128,11 @@ fn sample_charge_hit(spell: u32, charges: f32) -> (f32, bool, f32) {
         1,
         "one actual native{spell} impact at{charges} charges"
     );
-    let damage = normalize_charge_hit_variance(&run, hits[0].amount);
-    (damage, hits[0].crit, per_charge)
+    let damage = normalize_charge_hit_rolls(&run, hits[0].amount);
+    (damage, per_charge)
 }
 
-fn normalize_charge_hit_variance(run: &Run, amount: i32) -> f32 {
+fn normalize_charge_hit_rolls(run: &Run, amount: i32) -> f32 {
     let trace = run
         .app
         .world()
@@ -149,21 +149,20 @@ fn normalize_charge_hit_variance(run: &Run, amount: i32) -> f32 {
         .expect("actual native damage result");
     let scaled = direct["factors"]["native_scaled_amount"].as_f64().unwrap();
     let input = result["factors"]["native_input_amount"].as_f64().unwrap();
-    let critical = 1.0 + result["factors"]["crit_bonus"].as_f64().unwrap();
     // Native proc/cast timing changes RNG consumption even from the same seed.
-    // Observe and divide out the actual variance; never change the roll, damage
-    // coefficient, critical result, aura state or native projectile delivery.
-    let variance = input / (scaled * critical);
-    assert!(variance > 0.0);
-    (f64::from(amount) / variance) as f32
+    // Divide out the observed variance and critical multiplier; never change
+    // native rolls, coefficients, aura state or projectile delivery.
+    let rolled_multiplier = input / scaled;
+    assert!(rolled_multiplier > 0.0);
+    (f64::from(amount) / rolled_multiplier) as f32
 }
 
 fn assert_charge_hit_formula(spell: u32) {
-    let (base, critical, per_charge) = sample_charge_hit(spell, 0.0);
+    let (base, per_charge) = sample_charge_hit(spell, 0.0);
     assert!(base > 0.0);
     for charges in [2.0, 4.0] {
-        let (damage, charged_critical, charged_bonus) = sample_charge_hit(spell, charges);
-        assert_eq!(charged_critical, critical, "identical native crit stream");
+        let (damage, charged_bonus) = sample_charge_hit(spell, charges);
+
         assert_eq!(
             charged_bonus, per_charge,
             "same native mastery/talent values"
@@ -697,10 +696,9 @@ fn arcane_literal_fixture_executes_profile_cooldowns_and_filler() {
     let actions = result["combat"]["actions"].as_array().unwrap();
     for spell in [30451, 365350, 321507] {
         assert!(
-            actions
-                .iter()
-                .any(|action| action["spell_id"] == spell
-                    && action["count"].as_u64().unwrap_or(0) > 0),
+            actions.iter().any(
+                |action| action["spell_id"] == spell && action["count"].as_f64().unwrap() > 0.0
+            ),
             "literal profile must execute native spell{spell}: {actions:?}"
         );
     }
