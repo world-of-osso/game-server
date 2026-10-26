@@ -100,6 +100,7 @@ pub type AuraRedirectHook = fn(&mut World, Entity, Entity, u32, u8) -> bool;
 pub type AfterCastLookup = fn(u32) -> Option<AfterCastHook>;
 pub type OnCastHook = fn(&mut World, Entity, u32, u8);
 pub type AfterPaymentHook = fn(&mut World, Entity, &[(CostPool, f32)]);
+pub type PowerCostHook = fn(&World, Entity, &SpellInfo, CostPool, f32) -> f32;
 pub type HitHook = fn(&mut World, Entity, Entity, u8);
 pub type EffectHitLookup = fn(u32, u8) -> Option<HitHook>;
 pub type EffectHandlerLookup = fn(u32, u8) -> Option<super::effects::EffectHandler>;
@@ -179,6 +180,7 @@ pub enum SpellScriptHook {
     AuraRollAfterCast(AfterCastLookup),
     OnCast(OnCastHook),
     AfterPayment(AfterPaymentHook),
+    PowerCost(PowerCostHook),
     AfterResourceValues(AfterCastLookup),
     TargetPlan(TargetPlanLookup),
     PeriodicPrimaryDamage(PeriodicPrimaryDamageHook),
@@ -749,6 +751,24 @@ pub fn triggered_resource_producer(world: &mut World, caster: Entity, spell: &Sp
             run(world, caster, spell);
         }
     }
+}
+
+/// Source-script cost adjustments run after native aura modifiers, before payment.
+/// Without a registered callback, the native cost is unchanged.
+pub fn power_cost(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    pool: CostPool,
+    amount: f32,
+) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .fold(amount, |cost, hook| match hook {
+            SpellScriptHook::PowerCost(run) => run(world, caster, spell, pool, cost),
+            _ => cost,
+        })
 }
 
 pub fn effective_resource_value(
