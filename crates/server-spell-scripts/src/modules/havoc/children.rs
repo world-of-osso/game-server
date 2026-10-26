@@ -42,6 +42,8 @@ fn cast_felblade_child(world: &mut World, caster: Entity, spell: &SpellInfo) {
 }
 
 fn after_damage(world: &mut World, ctx: &EffectCtx, target: Entity, _crit: bool, amount: f32) {
+    // SimC7524–7551 rolls Onslaught before the eligible Essence Break child.
+    super::havoc_onslaught::roll_from_offhand(world, ctx, target, amount);
     if amount <= 0.0 || !has_talent(world, ctx.caster, ESSENCE_BREAK) {
         return;
     }

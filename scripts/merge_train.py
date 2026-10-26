@@ -16,6 +16,7 @@ executable. `--probe` entries (e.g. a RED proof) are built and tested but never 
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
@@ -24,6 +25,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import tomllib
 import uuid
@@ -39,6 +41,7 @@ AGENT_RUN = Path("/home/osso/Projects/world-of-osso/game-engine/scripts/agent/ag
 # Collect submissions for a while so one build covers several agents.
 GATHER_SECONDS = 300
 ISOLATED_PER_CYCLE = 3
+# Global concurrent spec measurements; each spec can run both target counts in parallel.
 MEASURE_PARALLEL = 8
 ASSISTED_DB2 = "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21/native-player-inputs/assisted-70448/"
 RUNNER = "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER"
@@ -46,6 +49,30 @@ RUNNER = "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER"
 
 def git(*args, check=True):
     return subprocess.run(["git", *args], cwd=TREE, text=True, capture_output=True, check=check)
+
+
+TIMING_LOCK = threading.Lock()
+
+
+def tree_id():
+    return git("rev-parse", "HEAD^{tree}").stdout.strip()
+
+
+def timing_event(log, phase, event, tree, **details):
+    record = {"phase": phase, "event": event, "monotonic": time.monotonic(),
+              "tree": tree, **details}
+    with TIMING_LOCK, log.open("a") as out:
+        out.write(f"TIMING {json.dumps(record, sort_keys=True)}\n")
+
+
+@contextmanager
+def timed(log, phase, tree, **details):
+    details = {"span": uuid.uuid4().hex, **details}
+    timing_event(log, phase, "start", tree, **details)
+    try:
+        yield
+    finally:
+        timing_event(log, phase, "end", tree, **details)
 
 
 def base_env():
@@ -103,9 +130,159 @@ def parse_measure(text):
     return fields
 
 
+MODULE_LINE = re.compile(r'\bmod\s+(\w+)\s*;')
+INLINE_MODULE = re.compile(r'\bmod\s+(\w+)\s*\{|[{}]')
+PATH_ATTRIBUTE = re.compile(r'#\s*\[\s*path\s*=\s*"([^"]+)"\s*\]')
+RAW_LITERAL = re.compile(r'(?:br|r)(\#*)"')
+CHAR_LITERAL = re.compile(r"'(?:\\\\.|[^'\\\\])'")
+
+
+def mask_rust_noncode(source):
+    """Blank comments and literals while preserving positions and newlines."""
+    output = list(source)
+    index = 0
+    block_depth = 0
+    end_literal = None
+    while index < len(source):
+        start = index
+        if block_depth:
+            if source.startswith("/*", index):
+                block_depth += 1
+                index += 2
+            elif source.startswith("*/", index):
+                block_depth -= 1
+                index += 2
+            else:
+                index += 1
+        elif end_literal is not None:
+            if source.startswith(end_literal, index):
+                index += len(end_literal)
+                end_literal = None
+            elif end_literal == '"' and source[index] == "\\":
+                index += min(2, len(source) - index)
+            else:
+                index += 1
+        elif source.startswith("//", index):
+            newline = source.find("\n", index)
+            index = len(source) if newline < 0 else newline
+        elif source.startswith("/*", index):
+            block_depth = 1
+            index += 2
+        elif (raw := RAW_LITERAL.match(source, index)):
+            end_literal = '"' + raw.group(1)
+            index += len(raw.group())
+        elif source[index] == '"':
+            end_literal = '"'
+            index += 1
+        elif (char := CHAR_LITERAL.match(source, index)):
+            index += len(char.group())
+        else:
+            index += 1
+            continue
+        for position in range(start, index):
+            if output[position] != "\n":
+                output[position] = " "
+    return "".join(output)
+
+
+def added_module_lines(commit):
+    """Return (path, line, column, name) for declarations added since master."""
+    revision = f"origin/master...{commit}"
+    paths = git("diff", "--name-only", "-z", "--diff-filter=ACMRT", revision,
+                "--", "*.rs", "*.in").stdout.split("\0")
+    found = []
+    for path in filter(None, paths):
+        source = git("show", f"{commit}:{path}").stdout
+        code_lines = mask_rust_noncode(source).splitlines()
+        diff = git("diff", "--no-ext-diff", "--no-renames", "--unified=0", revision,
+                   "--", path).stdout
+        line_number = 0
+        for line in diff.splitlines():
+            hunk = re.match(r"@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
+            if hunk:
+                line_number = int(hunk.group(1))
+            elif line.startswith("+") and not line.startswith("+++"):
+                for declaration in MODULE_LINE.finditer(code_lines[line_number - 1]):
+                    found.append((path, line_number, declaration.start(), declaration.group(1)))
+                line_number += 1
+            elif line.startswith(" "):
+                line_number += 1
+    return found
+
+
+def module_directory(path):
+    source = Path(path)
+    if source.suffix == ".in" or source.name in ("mod.rs", "lib.rs", "main.rs") \
+            or source.parent.name in ("bin", "examples", "tests", "benches"):
+        return source.parent
+    return source.parent / source.stem
+
+
+def module_paths(path, source, number, column, name):
+    """Resolve an external declaration in a file or its inline module."""
+    lines = source.splitlines()
+    depth = 0
+    modules = []
+    code_lines = mask_rust_noncode(source).splitlines()
+    preceding = code_lines[:number - 1] + [code_lines[number - 1][:column]]
+    for line in preceding:
+        for token in INLINE_MODULE.finditer(line):
+            if token.group(1):
+                depth += 1
+                modules.append((depth, token.group(1)))
+            elif token.group() == "{":
+                depth += 1
+            else:
+                if modules and modules[-1][0] == depth:
+                    modules.pop()
+                depth -= 1
+    nested = Path(*(name for _, name in modules))
+    prefix = lines[number - 1][:column]
+    attrs = [re.split(r'[;{}]', prefix)[-1]]
+    for line in reversed(lines[:number - 1]):
+        stripped = line.strip()
+        if stripped.startswith("#[") or stripped.startswith("//") or not stripped:
+            attrs.append(line)
+        else:
+            break
+    explicit = next((match.group(1) for line in attrs if (match := PATH_ATTRIBUTE.search(line))), None)
+    if explicit is not None:
+        parent = module_directory(path) if modules else Path(path).parent
+        return [os.path.normpath(str(parent / nested / explicit))]
+    directory = module_directory(path) / nested
+    return [str(directory / f"{name}.rs"), str(directory / name / "mod.rs")]
+
+
+def missing_added_modules(commit):
+    sources = {}
+    missing = []
+    for path, number, column, name in added_module_lines(commit):
+        if path not in sources:
+            sources[path] = git("show", f"{commit}:{path}").stdout
+        candidates = module_paths(path, sources[path], number, column, name)
+        if not any(git("cat-file", "-e", f"{commit}:{candidate}", check=False).returncode == 0
+                   for candidate in candidates):
+            missing.append(f"{path}:{number}: mod {name}; requires committed " + " or ".join(candidates))
+    return missing
+
+
+def added_module_names(commit):
+    return {name for _, _, _, name in added_module_lines(commit)}
+
+
+def missing_module_names(log, start):
+    with log.open() as source:
+        source.seek(start)
+        text = source.read()
+    return set(re.findall(r'error\[E0583\]: file not found for module [`\']([^`\']+)[`\']', text))
+
+
 def submit(args):
     commit = subprocess.run(["git", "rev-parse", "--verify", f"{args.commit}^{{commit}}"],
                             text=True, capture_output=True, check=True).stdout.strip()
+    missing = missing_added_modules(commit)
+    if missing:
+        raise SystemExit("missing committed Rust module files:\n" + "\n".join(missing))
     entry = {"id": uuid.uuid4().hex[:10], "owner": args.owner, "commit": commit,
              "land": args.land, "red": args.red and subprocess.run(
                  ["git", "rev-parse", "--verify", f"{args.red}^{{commit}}"], text=True,
@@ -170,7 +347,8 @@ def merge(entries, log):
     """Merge entries in order; return those that merged and those that conflicted."""
     merged, conflicted = [], []
     for entry in entries:
-        result = git("merge", "--no-ff", "--no-edit", "-q", entry["commit"], check=False)
+        with timed(log, "merge", tree_id(), entry=entry["id"], commit=entry["commit"]):
+            result = git("merge", "--no-ff", "--no-edit", "-q", entry["commit"], check=False)
         if result.returncode:
             git("merge", "--abort", check=False)
             # Clean against master means it only collides with another queued entry:
@@ -190,19 +368,24 @@ def merge(entries, log):
 def check(log):
     """Compile check. Formatting is applied, not checked: an unformatted entry would
     otherwise cost a bisect, and formatter output is never a behavior change."""
-    if cargo(log, "check", "--locked", "--workspace", "--all-targets") != 0:
+    tree = tree_id()
+    with timed(log, "check", tree, scope="workspace-all-targets"):
+        result = cargo(log, "check", "--locked", "--workspace", "--all-targets")
+    if result != 0:
         return False
     # The workspace check unifies test-support features into every crate; the deployed server
     # binary builds without them (an ungated simc_apl_native call broke it on 2026-10-26).
-    if cargo(log, "check", "--locked", "-p", "server", "--bins") != 0:
+    with timed(log, "check", tree, scope="server-bins"):
+        result = cargo(log, "check", "--locked", "-p", "server", "--bins")
+    if result != 0:
         return False
-    if cargo(log, "fmt") != 0:
-        return False
-    # cargo fmt does not follow include!() or macro-generated #[path] mods, so the modules declared
-    # in the union-merged module_list.in and server-spell-scripts' modules.rs are formatted directly.
-    included = sorted(str(p) for d in (PARITY_DIR, SCRIPT_MODULES_DIR) for p in (TREE / d).glob("*.rs"))
-    if subprocess.run(["rustfmt", "--edition", "2024", *included], cwd=TREE, check=False).returncode != 0:
-        return False
+    with timed(log, "fmt", tree):
+        if cargo(log, "fmt") != 0:
+            return False
+        # Cargo does not discover include!() or macro-generated module declarations.
+        included = sorted(str(p) for d in (PARITY_DIR, SCRIPT_MODULES_DIR) for p in (TREE / d).glob("*.rs"))
+        if subprocess.run(["rustfmt", "--edition", "2024", *included], cwd=TREE, check=False).returncode != 0:
+            return False
     if git("status", "--porcelain", "--untracked-files=no").stdout.strip():
         git("commit", "-qam", "merge train: cargo fmt")
     return True
@@ -223,7 +406,7 @@ def failing_paths(log, start):
         text = f.read()
     # include!()d sources are reported through `..` hops (crates/a/src/../../b/...).
     return {os.path.normpath(p) for p in
-            re.findall(r"(?:-->|Diff in) /?(?:\S*?/game-server-land/)?(crates/\S+?\.rs)", text)}
+            re.findall(r"(?:-->|Diff in) /?(?:\S*?/game-server-land/)?(crates/\S+?\.(?:rs|in))", text)}
 
 
 def touches(entry, paths):
@@ -266,7 +449,10 @@ def build_checked(entries, log):
         raise MasterBroken(f"origin/master itself fails check; see {log}")
     # Entries touching the files the compiler or rustfmt blamed are the likely culprits: admit
     # the rest in one check first, so one broken entry costs ~3 checks instead of a full bisect.
-    suspects = [e for e in merged if touches(e, paths)]
+    modules = missing_module_names(log, checked_from)
+    suspects = [e for e in merged if added_module_names(e["commit"]) & modules]
+    if not suspects:
+        suspects = [e for e in merged if touches(e, paths)]
     if suspects and len(suspects) < len(merged):
         admit([e for e in merged if e not in suspects])
         admit(suspects)
@@ -280,14 +466,15 @@ def build_checked(entries, log):
 TEST_PARALLEL = 8
 
 
-def test_executables(entry, test, entry_log):
+def test_executables(entry, test, entry_log, cycle_log, tree):
     """Build (under Cargo's lock) and list the test executables for one --test.
     Returns [(executable, cwd)] or None when the build fails."""
     cargo_args, _, _ = split_test(test)
-    out = subprocess.run(
-        [str(AGENT_RUN), "merge-train", "cargo", "test", "--locked", "--no-run",
-         "--message-format=json-render-diagnostics", *cargo_args],
-        cwd=TREE, env=base_env() | test_env(entry, test), text=True, capture_output=True, check=False)
+    with timed(cycle_log, "no-run-build", tree, entry=entry["id"], args=cargo_args):
+        out = subprocess.run(
+            [str(AGENT_RUN), "merge-train", "cargo", "test", "--locked", "--no-run",
+             "--message-format=json-render-diagnostics", *cargo_args],
+            cwd=TREE, env=base_env() | test_env(entry, test), text=True, capture_output=True, check=False)
     with entry_log.open("a") as f:
         f.write(f"\n$ cargo test --no-run {shlex.join(cargo_args)}\n{out.stderr}")
     if out.returncode:
@@ -354,7 +541,7 @@ def config_overrides(cargo_args):
     return env, runner
 
 
-def run_executable(entry, test, executable, cwd, entry_log):
+def run_executable(entry, test, executable, cwd, entry_log, cycle_log, tree):
     """Run one test binary outside Cargo, so entries run in parallel without its build lock."""
     env = base_env() | test_env(entry, test)
     runner = shlex.split(env.pop(RUNNER, ""))
@@ -363,8 +550,10 @@ def run_executable(entry, test, executable, cwd, entry_log):
     runner = config_runner or runner
     _, _, test_args = split_test(test)
     command = [*runner, executable, *test_args]
-    out = subprocess.run(command, cwd=cwd, env=env, text=True, stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT, check=False)
+    with timed(cycle_log, "test-execution", tree, entry=entry["id"], args=test_args,
+               executable=executable):
+        out = subprocess.run(command, cwd=cwd, env=env, text=True, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT, check=False)
     with entry_log.open("a") as f:
         f.write(f"\n$ {shlex.join(command)}\n{out.stdout}")
     ran = sum(int(m) for m in re.findall(r"test result: \w+\. (\d+) passed; (?:\d+) failed", out.stdout))
@@ -414,16 +603,17 @@ def foreign_failures_only(entry, failed):
 def run_tests(entries, log):
     # Build every entry's test binaries first (serialized by Cargo), then run them all in parallel.
     jobs, broken = [], set()
+    tree = tree_id()
     for entry in entries:
         entry_log = LOGS / f"{entry['id']}.tests.log"
         entry_log.unlink(missing_ok=True)
         entry["test_log"] = str(entry_log)
         for test in entry["tests"]:
-            found = test_executables(entry, test, entry_log)
+            found = test_executables(entry, test, entry_log, log, tree)
             if found is None:
                 broken.add(entry["id"])
             else:
-                jobs += [(entry, test, exe, cwd, entry_log) for exe, cwd in found]
+                jobs += [(entry, test, exe, cwd, entry_log, log, tree) for exe, cwd in found]
     with ThreadPoolExecutor(TEST_PARALLEL) as pool:
         codes = list(pool.map(lambda job: ((job[0]["id"], tuple(job[1])), run_executable(*job)), jobs))
     by_id = {e["id"]: e for e in entries}
@@ -479,10 +669,11 @@ def push(entries, log):
 
 
 def parity_executable(log):
-    out = subprocess.run(
-        [str(AGENT_RUN), "merge-train", "cargo", "test", "--locked", "-p", "server-simulation",
-         "--lib", "--no-run", "--message-format=json-render-diagnostics"],
-        cwd=TREE, env=base_env(), text=True, capture_output=True, check=False)
+    with timed(log, "parity-build", tree_id()):
+        out = subprocess.run(
+            [str(AGENT_RUN), "merge-train", "cargo", "test", "--locked", "-p", "server-simulation",
+             "--lib", "--no-run", "--message-format=json-render-diagnostics"],
+            cwd=TREE, env=base_env(), text=True, capture_output=True, check=False)
     with log.open("a") as f:
         f.write(out.stderr)
     for line in out.stdout.splitlines():
@@ -494,16 +685,18 @@ def parity_executable(log):
     return None
 
 
-def measure(entry, executable, target):
-    lines = []
-    for m in entry["measure"]:
-        command = [sys.executable, str(TREE / "scripts/dps_parity_measure.py"), "--executable", executable,
-                   "--spec", m["spec"], "--targets", m["targets"], "--actor", m.get("actor", "follower"),
-                   "--world-db", m["world_db"], "--output", m["output"]]
-        out = subprocess.run(command, cwd=TREE, env=base_env() | {"CARGO_TARGET_DIR": str(target)},
+def measure_spec(entry, measurement, executable, target, log, tree, previous=None):
+    if previous is not None:
+        previous.result()
+    command = [sys.executable, str(TREE / "scripts/dps_parity_measure.py"), "--executable", executable,
+               "--spec", measurement["spec"], "--targets", measurement["targets"],
+               "--actor", measurement.get("actor", "follower"),
+               "--world-db", measurement["world_db"], "--output", measurement["output"]]
+    with timed(log, "measure", tree, entry=entry["id"], spec=measurement["spec"]):
+        out = subprocess.run(command, cwd=TREE,
+                             env=base_env() | entry.get("env", {}) | {"CARGO_TARGET_DIR": str(target)},
                              text=True, capture_output=True, check=False)
-        lines += [line for line in out.stdout.splitlines() if "NATIVE_DPS" in line or "FAILED" in line]
-    entry["measurements"] = lines
+    return [line for line in out.stdout.splitlines() if "NATIVE_DPS" in line or "FAILED" in line]
 
 
 def write_results(entries):
@@ -602,22 +795,44 @@ def measure_then_write(entries, log):
     target.mkdir(parents=True)
     copy = target / Path(executable).name
     shutil.copy2(executable, copy)
-    pending = [len(measured)]
+    tree = tree_id()
+    lock = threading.Lock()
+    pending_entries = [len(measured)]
 
-    def finish(entry):
-        try:
-            measure(entry, str(copy), target)
-        except Exception as error:  # a failed measurement must still produce a result
-            entry["measurements"] = [f"FAILED: {error}"]
-        write_results([entry])
-        pending[0] -= 1
-        if pending[0] == 0:
-            shutil.rmtree(target, ignore_errors=True)
+    def schedule(entry):
+        results = [None] * len(entry["measure"])
+        remaining = [len(results)]
+
+        def finish(index, future):
+            try:
+                lines = future.result()
+            except Exception as error:  # a failed measurement must still produce a result
+                lines = error
+            with lock:
+                results[index] = lines
+                remaining[0] -= 1
+                if remaining[0] == 0:
+                    failure = next((result for result in results if isinstance(result, Exception)), None)
+                    entry["measurements"] = ([f"FAILED: {failure}"] if failure is not None
+                                             else [line for result in results for line in result])
+                    write_results([entry])
+                    pending_entries[0] -= 1
+                    if pending_entries[0] == 0:
+                        shutil.rmtree(target, ignore_errors=True)
+            MEASURING.discard(future)
+
+        previous_by_output = {}
+        for index, measurement in enumerate(entry["measure"]):
+            # The parity script writes a spec-level timing file as well as target reports.
+            key = (str(Path(measurement["output"]).resolve()), measurement["spec"])
+            previous = previous_by_output.get(key)
+            future = MEASURER.submit(measure_spec, entry, measurement, str(copy), target, log, tree, previous)
+            previous_by_output[key] = future
+            MEASURING.add(future)
+            future.add_done_callback(lambda done, index=index: finish(index, done))
 
     for entry in measured:
-        future = MEASURER.submit(finish, entry)
-        MEASURING.add(future)
-        future.add_done_callback(MEASURING.discard)
+        schedule(entry)
 
 
 def red_twin(entry):
