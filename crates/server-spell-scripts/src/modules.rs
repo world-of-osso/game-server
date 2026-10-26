@@ -42,6 +42,7 @@ register_modules! {
     affliction_instability: (2651, "modules/affliction_instability.rs"),
     after_cast_auras: (100, "modules/after_cast_auras.rs"),
     assassination_focus: (2592, "modules/assassination_focus.rs"),
+    assassination_kingsbane: (2593, "modules/assassination_kingsbane.rs"),
     assassination_target: (2590, "modules/assassination_target.rs"),
     assassination_white: (2591, "modules/assassination_white.rs"),
     aura_rolls: (110, "modules/aura_rolls.rs"),
