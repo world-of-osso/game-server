@@ -211,6 +211,8 @@ pub enum SpellScriptHook {
     NonStackingIncomingAuras(&'static [u32]),
     /// Source scripts that consume the existing frozen effective-resource snapshot.
     ResourceContext(&'static [u32]),
+    /// Payment-only consumers do not require the hostile primary among native self-aura targets.
+    ResourceOnlyContext(&'static [u32]),
     LaunchDelay(LaunchDelayLookup),
     DotMasteryMultiplier(DotMasteryMultiplierHook),
     CastTimeProcs(&'static [u32]),
@@ -423,6 +425,17 @@ impl Default for SpellScriptRegistry {
 }
 
 pub(crate) fn requires_resource_context(world: &World, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::ResourceContext(spells)
+            | SpellScriptHook::ResourceOnlyContext(spells) => spells.contains(&spell),
+            _ => false,
+        })
+}
+
+pub(crate) fn requires_target_context(world: &World, spell: u32) -> bool {
     world
         .resource::<SpellScriptRegistry>()
         .hooks()

@@ -12,7 +12,7 @@ const META: u32 = 162264;
 // copies retain no payment context and cannot manufacture a spender extension.
 const SPENDERS: &[u32] = &[162794, 201427, 188499, 210152, 198013, 452497, 185123];
 pub(super) const HOOKS: &[SpellScriptHook] = &[
-    SpellScriptHook::ResourceContext(SPENDERS),
+    SpellScriptHook::ResourceOnlyContext(SPENDERS),
     SpellScriptHook::AfterForegroundSpecial(extend_from_paid_fury),
 ];
 
