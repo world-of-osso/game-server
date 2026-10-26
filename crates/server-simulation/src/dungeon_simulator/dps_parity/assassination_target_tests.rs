@@ -1,6 +1,7 @@
 //! Native target-dependent Assassination damage, not reference coefficient substitutions.
 use super::*;
 use shared::components::Health;
+use shared::protocol::CombatLogKind;
 
 struct PoisonSample {
     damage: f32,
@@ -39,11 +40,36 @@ fn sample_native_poison(debuff: Option<u32>, health_fraction: f32) -> PoisonSamp
         health.max = 1_000_000.0;
         health.current = health.max * health_fraction;
     }
-    let before = run.app.world().get::<Health>(target).unwrap().current;
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
     // Reset only the impact RNG, so both native outcomes have the same crit/variance.
     let _impact_seed = crate::random::seed_scope(259);
-    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 315585, Some(target), 1);
-    let damage = before - run.app.world().get::<Health>(target).unwrap().current;
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        actor,
+        315585,
+        Some(target),
+        1
+    ));
+    // Native training dummies report damage but deliberately lose no Health.
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let damage = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(315585)
+                && event.kind == CombatLogKind::Damage
+        })
+        .map(|event| event.amount as f32)
+        .sum::<f32>();
     assert!(
         damage > 0.0,
         "native poison must actually damage its recipient"
