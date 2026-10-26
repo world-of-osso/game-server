@@ -1272,6 +1272,29 @@ pub fn set_owned_stacks(
     true
 }
 
+/// Make an existing owned aura permanent without changing its native stack rules.
+pub fn make_owned_aura_permanent(
+    world: &mut World,
+    caster: Entity,
+    unit: Entity,
+    spell_id: u32,
+) -> bool {
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
+        return false;
+    };
+    let Some(aura) = auras
+        .auras
+        .iter_mut()
+        .find(|aura| aura.spell_id == spell_id && aura.caster == caster)
+    else {
+        return false;
+    };
+    aura.duration_ms = 0;
+    aura.expires_at = None;
+    auras.dirty = true;
+    true
+}
+
 /// Configure a script-owned permanent counter; preserve its periodic deadline.
 /// This changes the runtime instance, never the native catalog definition.
 pub fn make_owned_counter_permanent(
