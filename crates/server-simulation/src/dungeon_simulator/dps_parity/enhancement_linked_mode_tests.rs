@@ -13,6 +13,34 @@ fn weapon_stacks(run: &Run) -> u8 {
         .map_or(0, |aura| aura.stacks)
 }
 
+fn create_periodic_capacity(run: &mut Run, cap: u8) {
+    for _ in 0..1200 {
+        if weapon_stacks(run) < cap {
+            return;
+        }
+        match crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            188196,
+            Some(run.targets[0]),
+            false,
+        ) {
+            Ok(()) => {
+                if weapon_stacks(run) < cap {
+                    return;
+                }
+            }
+            Err(
+                crate::spell_cast::CastFailure::OnGlobalCooldown
+                | crate::spell_cast::CastFailure::InProgress,
+            ) => {}
+            Err(reason) => panic!("native linked-mode capacity cast: {reason:?}"),
+        }
+        run.app.update();
+    }
+    panic!("real paid lightning must create room after native refunds");
+}
+
 #[test]
 #[ignore = "native263 reference inputs and private world database"]
 fn enhancement_linked_modes_keep_earning_maelstrom_until_the_last_real_mode_ends() {
@@ -43,8 +71,18 @@ fn enhancement_linked_modes_keep_earning_maelstrom_until_the_last_real_mode_ends
         .world_mut()
         .entity_mut(actor)
         .remove::<crate::combat::AutoAttack>();
-    let target = run.targets[0];
-    cast(&mut run, 188196, target);
+    let cap = run
+        .app
+        .world()
+        .get::<ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 344179)
+        .expect("overlapping native modes must fund the MW counter")
+        .max_stacks;
+    // A real Bolt may refund its paid stacks. Create actual room without changing that chance.
+    // Sample accepted casts directly; waiting another full GCD hides the available overlap window.
+    create_periodic_capacity(&mut run, cap);
     assert!(
         run.app
             .world()
@@ -52,31 +90,13 @@ fn enhancement_linked_modes_keep_earning_maelstrom_until_the_last_real_mode_ends
             .is_none()
     );
     let before = weapon_stacks(&run);
+    assert!(
+        before < cap,
+        "real paid lightning must leave room for native Static ticks: before={before}, cap={cap}"
+    );
     for _ in 0..40 {
         run.app.update();
     }
-    let active = run.app.world().get::<ActiveAuras>(actor).unwrap();
-    let cap = active
-        .iter()
-        .find(|aura| aura.spell_id == 344179)
-        .map(|aura| aura.max_stacks);
-    let producer = active
-        .iter()
-        .find(|aura| aura.spell_id == 384437)
-        .map(|aura| {
-            (
-                aura.expires_at,
-                aura.effects
-                    .iter()
-                    .map(|effect| (effect.index, effect.amount, effect.period_ms))
-                    .collect::<Vec<_>>(),
-            )
-        });
-    println!(
-        "LINKED_STATIC before={before} after={} cap={cap:?} now={} producer={producer:?}",
-        weapon_stacks(&run),
-        crate::spell_cast::now(run.app.world())
-    );
     assert!(
         weapon_stacks(&run) > before,
         "retained native Static ticks must still fund real MW without melee"
