@@ -198,9 +198,9 @@ mod momentum_tests;
 #[cfg(test)]
 mod source_children_tests;
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod teachings_tests;
+#[cfg(test)]
+mod tests;
 #[cfg(test)]
 mod unbroken_rhythm_tests;
 #[cfg(test)]
