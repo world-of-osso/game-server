@@ -259,20 +259,14 @@ pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
         || (spell_id == crate::spell_cast::blooming_infusion::BLOOMING_INFUSION
             && effect_index == 0)
         || (spell_id == crate::spell_cast::control_dream::CONTROL_OF_THE_DREAM && effect_index == 0)
-        || (spell_id == 109186 && effect_index == 0)
-        || (spell_id == 200183 && effect_index == 0)
-        || (spell_id == 390994 && effect_index == 1)
         || (spell_id == PROTECTIVE_GROWTH && effect_index == 0)
         || (spell_id == LINGERING_HEALING && effect_index == 1)
         || (spell_id == FOUNT_OF_STRENGTH && effect_index == 2)
-        || (spell_id == 431442 && matches!(effect_index, 0..=2))
-        || (spell_id == 1260647 && effect_index == 0)
         || (spell_id == BREATH_OF_FIRE_BURN && effect_index == 1)
         || (spell_id == 740 && effect_index == 5)
         || (spell_id == 190456 && matches!(effect_index, 1 | 3))
         || (spell_id == 31850 && effect_index == 1)
         || (spell_id == 47788 && effect_index == 2)
-        || (spell_id == crate::spell_cast::scripts::prayer_of_mending::WARD && effect_index == 0)
         || (spell_id == 288733 && effect_index == 1)
         || (spell_id == crate::spell_cast::toy_coyote::HAT && effect_index == 0)
 }
@@ -440,11 +434,11 @@ pub(super) fn register_class_scripts(
     );
     crate::spell_cast::toy_coyote::register(&mut scripts);
     super::abundance::register(&mut scripts);
-    crate::spell_cast::scripts::holy_priest::register(&mut scripts);
-    crate::spell_cast::scripts::prayer_of_mending::register(&mut scripts);
+    registry.register_support_auras(&mut scripts);
     super::earthen_rage::register(&mut scripts);
+    registry.register_rogue_auras(&mut scripts);
     super::rogue::register(&mut scripts);
-    crate::spell_cast::scripts::register_enhancement(&mut scripts);
+    registry.register_weapon_auras(&mut scripts);
     super::spirit_wolf::register(&mut scripts);
     super::natures_guardian::register(&mut scripts);
     super::ret_sentence::register(&mut scripts);
