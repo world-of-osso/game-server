@@ -5,18 +5,10 @@ use super::script_registry;
 use crate::random as rand;
 
 mod bouncing_projectiles;
-mod cast_relationships;
-mod marksmanship;
-mod marksmanship_sentinel;
-pub(crate) use cast_relationships::register as register_cast_relationships;
-pub(super) use cast_relationships::{
-    after_cast as apply_cast_relationships, guarantees_crit as relationship_guarantees_crit,
+pub(super) use script_registry::{
+    guarantees_crit as relationship_guarantees_crit,
     ignores_cooldown as relationship_ignores_cooldown,
-};
-pub(super) use marksmanship::apply_residual as apply_marksman_residual;
-pub(crate) use marksmanship::{begin_rapid_tick, finish_rapid};
-pub(super) use marksmanship_sentinel::{
-    after_damage as apply_sentinel_damage, ignores_armor as sentinel_ignores_armor,
+    successful_cast_relationships as apply_cast_relationships,
 };
 mod batch10;
 mod batch11;
@@ -38,20 +30,13 @@ mod batch6;
 mod batch7;
 mod batch8;
 mod batch9;
-mod execution_counters;
-mod foreground_procs;
 mod frost;
 mod frost_mage;
-mod impact_procs;
 mod periodic_attacks;
-mod secondary_copies;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
-pub(crate) use secondary_copies::after_melee as after_melee_residual;
-pub(super) use secondary_copies::after_spell as after_spell_residual;
-pub(super) fn after_foreground_special(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    foreground_procs::after_foreground_special(world, caster, spell);
-    execution_counters::consume_after_foreground_cast(world, caster, spell.id);
-}
+pub(super) use script_registry::after_foreground_special;
+pub(crate) use script_registry::melee_residual as after_melee_residual;
+pub(super) use script_registry::spell_residual as after_spell_residual;
 mod chrono_flame;
 mod clearcasting;
 mod echo_policies;
@@ -119,17 +104,9 @@ pub(super) fn apply_periodic_damage_policies(
 }
 
 pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
-    policies::owns_policy_proc(world, spell)
-        || melee_reset::owns_proc(spell)
-        || resource_values::owns_proc(spell)
-        || frost::owns_proc(spell)
+    policies::owns_policy_proc(world, spell) || frost::owns_proc(spell)
 }
 mod fire_procs;
-mod havoc;
-pub(crate) use havoc::{apply_havoc_damage_policies, is_eye_beam_channel, register_havoc};
-pub use havoc::{
-    arm_demonic as arm_havoc_demonic, before_cast as before_havoc_cast, havoc_demonsurge_available,
-};
 pub(crate) mod holy_priest;
 mod hot_streak;
 pub(crate) use fire_procs::register as register_fire_procs;
@@ -139,7 +116,6 @@ pub(super) use hot_streak::{
     flamestrike_hot_streak_chance, pyroclasm_damage_modifier, record_fire_hit,
     roll_flamestrike_hot_streak,
 };
-mod melee_reset;
 mod midnight_items;
 pub(crate) mod prayer_of_mending;
 mod protection_items;
@@ -155,10 +131,11 @@ pub(super) use ret_empyrean::schedule_empyrean_legacy;
 mod ret_tier;
 pub(super) use ret_tier::after_foreground_spender;
 pub(crate) use ret_tier::owns_arbiter_charge;
-mod resource_values;
-pub(super) use resource_values::{
-    consume_sources as consume_resource_value_sources, effective_value as effective_resource_value,
-};
+pub(super) use script_registry::{consume_resource_value_sources, effective_resource_value};
+mod rogue_children;
+mod rogue_hero;
+pub(crate) use rogue_children::register as register_rogue_children;
+pub(super) use rogue_hero::prepare as prepare_rogue_hero;
 mod scourge_strike;
 mod soul_of_the_forest;
 mod swiftmend;
@@ -181,7 +158,7 @@ pub(crate) fn after_melee_hit(
     critical: bool,
 ) {
     windwalker_flurry::after_melee_hit(world, caster, hand, critical);
-    melee_reset::roll_white_hit(world, caster, critical);
+    script_registry::after_white_hit(world, caster, critical);
     frost::after_white_hit(world, caster, critical);
 }
 mod xuens_battlegear;
@@ -225,7 +202,7 @@ pub(super) fn finish_scripted_launch(
     elemental::after_launch(world, caster, spell, consumed, depth, foreground);
     frost::after_launch(world, caster, spell, foreground);
     policies::pet_sets::finish_cobra(world, caster, spell);
-    execution_counters::after_launch(world, caster, spell.id);
+    script_registry::after_counter_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
     enhancement_tier::after_launch(world, caster, spell, depth);
     enhancement_strikes::cast_ride_the_lightning(world, caster, spell, depth);
@@ -267,11 +244,12 @@ pub(super) fn after_direct_damage(
     frost_mage::after_damage(world, ctx, target, critical);
     spellslinger::after_direct_damage(world, ctx);
     windwalker_flurry::after_direct_damage(world, ctx, critical);
-    melee_reset::roll_replacement_hit(world, ctx, target, critical);
+    crate::auras::rogue::after_builder_hit(world, ctx, critical);
+    script_registry::replacement_direct_damage(world, ctx, target, critical);
     policies::after_damage(world, ctx);
-    impact_procs::after_damage(world, ctx, target);
+    script_registry::impact_proc_damage(world, ctx, target);
     ret_damage::after_direct_damage(world, ctx, target, critical);
-    marksmanship::roll_auto_lock(world, ctx);
+    script_registry::after_direct_damage_before_items(world, ctx);
     // SimC76f8118 unique_gear_midnight.cpp6351–6355: perfected Guillotine impacts apply Venomfang.
     if ctx.spell.id == 1306624 {
         midnight_items::apply_perfected_venom(world, ctx.caster, target);
@@ -338,8 +316,8 @@ pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::Ef
 
 pub(super) use batch12::empower_gargoyles;
 pub(super) use batch13::refund_execute;
-pub(crate) use batch13::{HAUNT, RAPID_FIRE, cast_rapid_fire_tick, reset_haunt_on_death};
-pub(crate) use batch14::{DEATHMARK, EYE_BEAM, cast_eye_beam_tick, deathmark_energy};
+pub(crate) use batch13::{HAUNT, reset_haunt_on_death};
+pub(crate) use batch14::{DEATHMARK, deathmark_energy};
 pub(super) use batch15::heal_beacon;
 pub(crate) use batch15::{replace_beacon, snapshot_combustion};
 pub(super) use batch16::{blast_cast_time, blast_multiplier, mana_cost};
@@ -369,9 +347,9 @@ use crate::spell_info::SpellInfo;
 
 /// Frostbolt: its effects are TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE) only.
 /// Sourced consumers retain native modifier amounts through projectile impact.
-pub(crate) fn snapshots_modifier(id: u32) -> bool {
+pub(crate) fn snapshots_modifier(world: &World, id: u32) -> bool {
     maelstrom_weapon::snapshots_modifier(id)
-        || cast_relationships::snapshots_modifier(id)
+        || script_registry::snapshots_modifier(world, id)
         || frost::snapshots_modifier(id)
 }
 
@@ -660,7 +638,6 @@ pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32)
     match spell_id {
         FIREBALL | hot_streak::PYROBLAST => firestarter_crit(world, caster, target),
         batch17::REGROWTH => batch17::regrowth_crit(world, caster, target),
-        batch14::EYE_BEAM_DAMAGE => batch14::eye_beam_crit(world, caster),
         batch3::SHRED if batch11::shred_stealth_bonus(world, caster) => {
             let spell = world
                 .resource::<crate::spell_info::SpellStore>()
@@ -846,7 +823,7 @@ pub fn after_cast(world: &World, spell_id: u32) -> impl Iterator<Item = AfterCas
         .chain(spellslinger::after_cast_hook(spell_id))
         .chain(batch9::after_cast_hook(spell_id))
         .chain(script_registry::aura_roll_after_cast(world, spell_id))
-        .chain(resource_values::after_cast_hook(spell_id))
+        .chain(script_registry::resource_value_after_cast(world, spell_id))
         .chain(script_registry::after_resource_values(world, spell_id))
 }
 
@@ -992,9 +969,6 @@ use script_registry::TargetPlanHook;
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
     if let Some(hook) = script_registry::target_plan(world, spell_id) {
-        return Some(hook);
-    }
-    if let Some(hook) = marksmanship::target_plan(spell_id) {
         return Some(hook);
     }
     if let Some(hook) = policies::target_plan_hook(world, spell_id) {
@@ -1759,6 +1733,9 @@ pub(super) fn on_hit_with_context(world: &World, spell_id: u32) -> Option<Contex
 
 /// Damage-only impact scripts do not receive caster buffs or other aura recipients.
 pub(super) fn on_enemy_damage_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
+    if crate::auras::rogue::LETHAL_POISON_HITS.contains(&spell_id) {
+        return Some(rogue_children::poison_hit);
+    }
     match spell_id {
         20271 | 406957 | 24275 | 1279408 => Some(ret_damage::judgment_mastery),
         _ => None,
