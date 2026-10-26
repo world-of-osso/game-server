@@ -36,7 +36,7 @@
 [Warrior execution](systems/spell-casting.md#native-warrior-execution-relationships--2026-10-25): native timer ownership, actor-wide PRD, execution-count/valued rewards, captured periodic ordinals and paid-resource cooldown reductions. The Deep Wounds reapplication policy is explicit; other native per-tick contracts remain unchanged. Source qualification is distinct from runtime acceptance. Fury's source-only50622 slot now owns its native off-hand area once per landed main-hand tick, rather than losing it in the per-unit effect64 launcher.
 ## 2026-10-25 — Fire native binding and proc relationships
 
-[Fire63](systems/simc-apl.md#fire-fixture-adapter): selected Flamestrike, Meteor travel and Pyroclasm, native hero/Fired Up producers and capped opening spheres. MID2's label modifies the Pyroclasm payload, not its chance. Native data still supplies payloads; numerical acceptance remains separate.
+[Fire63](systems/simc-apl.md#fire-fixture-adapter): selected Flamestrike, Meteor travel and Pyroclasm, native hero/Fired Up producers and capped opening spheres. MID2's label modifies the Pyroclasm payload, not its chance. Follow-up relationships cover critical feedback, owned target stacks, Inflame, Pyrocosm and single-area Meteor/Deep Impact. The fixture installs production area-field data for Burn. Native data still supplies payloads; numerical acceptance remains separate.
 
 ## 2026-10-25 — Havoc literal fixture and Demonic
 
