@@ -55,7 +55,13 @@ fn native_apl_target_distance_reads_selected_live_positions() {
 #[test]
 fn native_apl_target_distance_does_not_invent_missing_positions() {
     let mut world = World::new();
-    let actor = world.spawn(Position::default()).id();
+    let actor = world
+        .spawn(Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        })
+        .id();
     let target = world.spawn_empty().id();
     let bindings = Bindings::default();
     let read = |world: &World| {
@@ -70,7 +76,11 @@ fn native_apl_target_distance_does_not_invent_missing_positions() {
         .value("target.distance")
     };
     assert!(read(&world).unwrap_err().contains("POSITION_UNAVAILABLE"));
-    world.entity_mut(target).insert(Position::default());
+    world.entity_mut(target).insert(Position {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    });
     assert_eq!(read(&world).unwrap(), 0.0);
     world.entity_mut(actor).remove::<Position>();
     assert!(read(&world).unwrap_err().contains("POSITION_UNAVAILABLE"));
