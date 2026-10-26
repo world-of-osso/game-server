@@ -8,7 +8,7 @@ const GRASP: u32 = 1261153;
 const AGONY: u32 = 980;
 const AGONY_CHILD: u32 = 1261166;
 const PERIODIC_DAMAGE: u32 = 3;
-// SimC76f8118 sc_warlock_actions.cpp2036–2042: pinned bugs=1 compensates
+// SimC76f8118 sc_warlock_actions.cpp2036–2044: pinned bugs=1 compensates
 // for the Agony child's missing direct-damage whitelists, not its coefficient.
 const AGONY_CHILD_BUG_MULTIPLIER: f32 = 1.95;
 const DOT_CHILDREN: &[(u32, u32, bool)] = &[
