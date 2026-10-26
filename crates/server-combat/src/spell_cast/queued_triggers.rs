@@ -13,6 +13,7 @@ enum QueuedCastKind {
     CostedTrigger,
     NormalForce,
     FullTrigger,
+    RemoveOwnedAura,
     ScaledFullTrigger(f32),
 }
 
@@ -135,6 +136,31 @@ pub fn schedule_full_trigger(
         spell_id,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
+    };
+    world
+        .resource_mut::<PendingTriggers>()
+        .0
+        .entry(due_ms)
+        .or_default()
+        .push_back(trigger);
+}
+
+/// SimC76f8118 sc_mage.cpp5585–5605/7272–7293: apply or clear a
+/// feedback buff after the current hit batch, retaining native aura payloads.
+pub(super) fn schedule_buff_outcome(world: &mut World, caster: Entity, spell_id: u32, grant: bool) {
+    let due_ms = now_ms(world);
+    let trigger = QueuedTrigger {
+        kind: if grant {
+            QueuedCastKind::FullTrigger
+        } else {
+            QueuedCastKind::RemoveOwnedAura
+        },
+        caster,
+        target: caster,
+        destination: None,
+        spell_id,
+        depth: 1,
+        item_level: None,
     };
     world
         .resource_mut::<PendingTriggers>()
@@ -290,6 +316,14 @@ pub(crate) fn resolve_due(world: &mut World) {
                 ) {
                     warn!(spell = trigger.spell_id, "Delayed scaled spell refused");
                 }
+            }
+            QueuedCastKind::RemoveOwnedAura => {
+                crate::auras::remove_auras(
+                    world,
+                    trigger.target,
+                    crate::auras::RemoveReason::Consumed,
+                    |aura| aura.spell_id == trigger.spell_id && aura.caster == trigger.caster,
+                );
             }
             QueuedCastKind::NormalForce => {
                 if let Err(failure) = super::creature::creature_cast(
