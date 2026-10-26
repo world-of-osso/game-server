@@ -688,6 +688,11 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 - Spec252 runs the exact exported76f8118 Unholy action rows through shared Program/Driver/Prepared/Equipment with native player identity. Bind rune/Runic Power, disease and pet state to native70448 values; ordered precombat executes native Raise Dead. Numerical parity is separately measurement-gated.
 
 
+### Affliction native target talents
+
+- Selected386976 Withering Bolt multiplies native Shadow Bolt686, Shadowbolt Volley453176, Grasp1261153 and Drain Soul198590 by its native percentage per distinct owned Agony980, Corruption146739, Wither445474, Seed27243 and UA1259790, up to its native effect1 cap. UA stacks count as one DoT; foreign/expired auras do not count (`sc_warlock.cpp248–264`, actions817–818/915–916/2223–2224/2368–2369).
+- Selected1312998 Impetuous Wrath uses native effects0/1 for Shadow Bolt, Grasp and Drain Soul, or2/3 for Dark Harvest1257065, choosing the enhanced effect only for the caster's own active Haunt. It does not affect Volley. Removing the passive removes its factor (`actions918–919/2226–2227/2371–2372/2452–2453`). Native coefficients and other modifier stages remain unchanged.
+
 ### Affliction native Darkglare inheritance
 
 - Native205180/103673 Darkglare inherits full live owner spell power through the existing guardian policy, as base `warlock_pet_t` specifies and Darkglare retains (`sc_warlock_pets.cpp19/2424–2430`). Native205231 supplies damage coefficients and cast time; other guardian policy entries are unchanged.
