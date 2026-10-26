@@ -77,6 +77,9 @@ mod enhancement_stormblast;
 pub(super) use enhancement_stormblast::after_weapon_damage as enhancement_weapon_damage;
 mod enhancement_stormwell;
 mod enhancement_strikes;
+mod enhancement_tempest_buffs;
+pub(super) use enhancement_tempest_buffs::after_chain as after_enhancement_chain;
+pub(super) use enhancement_tempest_buffs::resolve_due as resolve_enhancement_discharges;
 mod enhancement_thunder_capacitor;
 mod enhancement_tier;
 mod enhancement_unleashed;
@@ -91,6 +94,7 @@ pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScri
     enhancement_modes::register(scripts);
     enhancement_stormblast::register(scripts);
     enhancement_strikes::register(scripts);
+    enhancement_tempest_buffs::register(scripts);
     enhancement_tier::register(scripts);
 }
 mod policies;

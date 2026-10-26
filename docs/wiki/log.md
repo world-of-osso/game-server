@@ -1,3 +1,7 @@
+## 2026-10-26 — Tempest-owned Enhancement buffs
+
+[Tempest buffs](systems/auras.md#tempest-owned-enhancement-buffs--2026-10-26) replace263's every-spell Storm Swell grant and supply Arc's native-use/ICD-gated delayed chain from the final actual recipient. Native11ab1f1e5e records ordinary-Bolt false-Swell and real-Tempest missing-Arc REDs; both corrected cases pass inbea9845e9b. Full qualification remains blocked by a proven deferred-callback contamination in the old Unleashed control; that fixture now separates its native scenarios. No landing or measurement yet;262 and native values remain unchanged.
+
 ## 2026-10-26 — Merged Mage feedback grants
 
 [Feedback grants](systems/spell-casting.md#merged-feedback-grants-are-not-casts--2026-10-26) distinguish native aura application from a full triggered spell. Paired native ST trace2ef3293ef0 reproduces the cast-supply loss; RED579171b891 identifies an unrelated+78haste from the old queued grant. The generic queue now applies native auras directly; three-Mage GREEN/measurements remain pending.
