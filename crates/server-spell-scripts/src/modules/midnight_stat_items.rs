@@ -1,9 +1,9 @@
-//! SimC76f8118 unique_gear_midnight.cpp614–671/995–1122: native stat-child dispatch.
+//! SimC76f8118 unique_gear_midnight.cpp614–671/995–1122/1385–1428: native stat-child dispatch.
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::procs::AuraEvent;
 use combat::auras::scripts::{AuraScripts, ProcHook};
-use combat::auras::{self, AuraApplication, AuraInstance, AuraSource};
+use combat::auras::{self, ActiveAuras, AuraApplication, AuraInstance, AuraSource};
 use combat::random::{self, Rng};
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_info::SpellStore;
@@ -12,6 +12,9 @@ use std::collections::BTreeSet;
 
 const LOA: u32 = 1251904;
 const RITE: u32 = 1297654;
+const RITUAL_STONE: u32 = 1295897;
+// Pinned cpp1395/1421–1423 supplies this behavior; native DUMMY has Trigger0.
+const RITUAL_CHILDREN: &[u32] = &[1295898, 1295899, 1295900, 1295901];
 const CAPYBARA: u32 = 1252524;
 const AKILZON: u32 = 1252818;
 const PERIDOT: u32 = 14262;
@@ -21,7 +24,11 @@ const RATING_AURA: u32 = 189;
 const RITE_FAVORS_HIGHEST: f32 = 0.6; // Pinned player.hpp827; not a stat amount.
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::LateAuraRegistration(register)];
-const CALLBACKS: &[(u32, ProcHook)] = &[(LOA, proc_loa), (RITE, proc_rite)];
+const CALLBACKS: &[(u32, ProcHook)] = &[
+    (LOA, proc_loa),
+    (RITE, proc_rite),
+    (RITUAL_STONE, proc_ritual_stone),
+];
 
 fn register(scripts: &mut AuraScripts) {
     for &(id, callback) in CALLBACKS {
@@ -32,7 +39,7 @@ fn register(scripts: &mut AuraScripts) {
 }
 
 fn item_callback_in_combat(world: &World, aura: &AuraInstance, _: &AuraEvent) -> bool {
-    // action_callback.cpp79–82: the linked Cast-source Rite driver is still an item callback.
+    // action_callback.cpp79–82: linked Cast-source drivers are still item callbacks.
     combat::combat_refs::active_opponents(world, aura.caster)
         .next()
         .is_some()
@@ -50,7 +57,7 @@ fn read_amount(driver: &AuraInstance, index: u8) -> f32 {
 fn apply_stat_buff(
     world: &mut World,
     unit: Entity,
-    driver: &AuraInstance,
+    source: &AuraInstance,
     id: u32,
     amount: Option<f32>,
 ) {
@@ -59,7 +66,7 @@ fn apply_stat_buff(
         .get(id)
         .expect("native item stat child")
         .clone();
-    buff.cast_item_level = driver.cast_item_level;
+    buff.cast_item_level = source.cast_item_level;
     if let Some(amount) = amount {
         buff.effects
             .iter_mut()
@@ -190,6 +197,47 @@ fn roll_rite_child(world: &World, unit: Entity, driver: &AuraInstance) -> u32 {
         .into_iter()
         .find(|&id| read_rating_mask(world, id) & highest != 0)
         .expect("native Rite retains the highest-secondary child")
+}
+
+fn find_linked_equipment_root(world: &World, unit: Entity, proc_spell: u32) -> AuraInstance {
+    world
+        .get::<ActiveAuras>(unit)
+        .expect("native equipped item auras")
+        .iter()
+        .find(|root| {
+            root.caster == unit
+                && matches!(root.source, AuraSource::Equipment(_))
+                && root
+                    .effects
+                    .iter()
+                    .any(|effect| effect.aura_type == 285 && effect.trigger_spell == proc_spell)
+        })
+        .expect("native stat proc retains its linked equipment root")
+        .clone()
+}
+
+fn read_ritual_amount(world: &World, unit: Entity, root: &AuraInstance) -> f32 {
+    // cpp1392: the equipped ROOT's second effect, not the linked DUMMY BP0.
+    let mut native = world
+        .resource::<SpellStore>()
+        .get(root.spell_id)
+        .expect("native Ritual Stone root spell")
+        .clone();
+    native.cast_item_level = Some(root.cast_item_level.expect("native equipped item level"));
+    let effect = native
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("native Ritual Stone root retains its stat amount effect");
+    combat::spell_cast::effects::modded_base_points(world, unit, &native, effect)
+}
+
+fn proc_ritual_stone(world: &mut World, unit: Entity, driver: &AuraInstance, _: Option<Entity>) {
+    let root = find_linked_equipment_root(world, unit, driver.spell_id);
+    let amount = read_ritual_amount(world, unit, &root);
+    // cpp1408–1428: one linked native callback, uniform among all four buffs.
+    let child = RITUAL_CHILDREN[random::thread_rng().gen_range(0..RITUAL_CHILDREN.len())];
+    apply_stat_buff(world, unit, &root, child, Some(amount));
 }
 
 fn proc_rite(world: &mut World, unit: Entity, driver: &AuraInstance, _: Option<Entity>) {

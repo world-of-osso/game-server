@@ -149,7 +149,7 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Equipment
 
-- Hunter's Ritual Stone discovers its native equipped1297382→1295897 linked proc. The source-qualified four-child selection relationship is explicit1295898/1295899/1295900/1295901 because native DUMMY has Trigger0 (`unique_gear_midnight.cpp1385–1428`). Choose uniformly and retain native callback deduplication; take rating amount from the equipped root's scaled effect2, not the linked dummy BP0. Child masks, duration, item scaling and native proc timing remain authoritative. No precombat stat grant or fabricated DBC edges. Native RED→GREEN gates every equipping profile before landing.
+- Hunter's Ritual Stone discovers its native equipped1297382→1295897 linked proc. The source-qualified four-child selection relationship is explicit1295898/1295899/1295900/1295901 because native DUMMY has Trigger0 (`unique_gear_midnight.cpp1385–1428`). Choose uniformly and retain native callback deduplication; take rating amount from the equipped root's scaled effect2, not the linked dummy BP0. Children retain the equipped root's item-level snapshot; masks, duration and native proc timing remain authoritative. No precombat stat grant or fabricated DBC edges. Native RED→GREEN gates every equipping profile before landing.
 
 - Shared named/slot on-use item selection binds native enemy/any-unit spells to the selected primary by default; ally/self payloads retain the actor. Preserve explicit target contexts, native admission, item level and cooldowns. An absent hostile primary is unavailable, never a self-target substitute (SimC76f8118 player.cpp10056–10068).
 
