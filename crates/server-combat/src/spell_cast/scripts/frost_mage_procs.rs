@@ -4,7 +4,7 @@ use shared::components::ActiveSpec;
 
 use crate::auras::{self, ActiveAuras, AuraApplication, AuraSource};
 use crate::spell_cast::{self, effects::EffectCtx};
-use crate::spell_info::{SpellInfo, SpellStore};
+use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 
 pub(super) const FINGERS: u32 = 44544;
 pub(super) const THERMAL: u32 = 1247730;
@@ -46,7 +46,12 @@ pub(in crate::spell_cast) fn snapshot_launch_auras(
         });
 }
 
-pub(super) fn launch_lance_payload(world: &mut World, ctx: &EffectCtx, target: Entity) {
+pub(super) fn launch_lance_payload(
+    world: &mut World,
+    ctx: &EffectCtx,
+    _effect: &SpellEffect,
+    target: Entity,
+) {
     let Some(mut payload) = spell_cast::load_triggered_spell(world, 228598, ctx.depth + 1) else {
         return;
     };

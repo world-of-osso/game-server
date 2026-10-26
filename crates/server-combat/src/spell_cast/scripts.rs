@@ -313,6 +313,9 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
 }
 /// Native per-unit scripts replace the default effect handler before dispatch.
 pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+    if (spell, index) == (30455, 0) {
+        return Some(frost_mage_procs::launch_lance_payload);
+    }
     if let Some(hook) = bouncing_projectiles::hook(spell, index) {
         return Some(hook);
     }
@@ -1728,9 +1731,6 @@ pub type HitHook = fn(&mut World, Entity, Entity, u8);
 pub(super) type ContextHitHook = fn(&mut World, &super::effects::EffectCtx, Entity);
 
 pub(super) fn on_hit_with_context(world: &World, spell_id: u32) -> Option<ContextHitHook> {
-    if spell_id == 30455 {
-        return Some(frost_mage_procs::launch_lance_payload);
-    }
     if let Some(hook) = policies::hit_hook(world, spell_id) {
         return Some(hook);
     }

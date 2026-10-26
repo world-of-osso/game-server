@@ -423,6 +423,14 @@ fn frost_mage_native_impacts_build_freezing_and_lance_pays_owned_shatter() {
         before >= 4,
         "actual Frostbolt/Flurry impacts must earn native owned Freezing"
     );
+    // This case isolates owned-debuff payment. Earned Fingers has a separate
+    // real Orb/flight test and intentionally does not consume target stacks.
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 44544,
+    );
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
