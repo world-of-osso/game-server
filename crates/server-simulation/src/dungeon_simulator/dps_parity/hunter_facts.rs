@@ -83,4 +83,3 @@ impl ActionFacts for HunterFacts<'_> {
         }
     }
 }
-
