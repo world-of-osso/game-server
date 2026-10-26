@@ -204,7 +204,19 @@ fn instant_spell_resolves_same_tick_spending_cost_and_starting_gcd_and_cooldown(
     h.set_power(PowerType::Rage, 500.0);
     h.cast_and_deliver(MORTAL_STRIKE, Some(h.npc));
     // AP coefficient 5.2012 × attack power 100 = 520, ± 2.5% variance.
-    assert!(varied(520.12).contains(&(5000.0 - h.health(h.npc))));
+    let health_delta = 5000.0 - h.health(h.npc);
+    assert!(
+        varied(520.12).contains(&health_delta),
+        "native MS health_delta={health_delta}, spec={:?}, auras={:?}, events={:?}",
+        h.app
+            .world()
+            .get::<shared::components::ActiveSpec>(h.caster),
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .map(|auras| auras.iter().map(|aura| aura.spell_id).collect::<Vec<_>>()),
+        h.inbox.log
+    );
     assert_eq!(h.power(PowerType::Rage), 200.0, "30 rage = 300 raw spent");
     assert!(h.app.world().get::<CastState>(h.caster).is_none());
     h.advance(2);
