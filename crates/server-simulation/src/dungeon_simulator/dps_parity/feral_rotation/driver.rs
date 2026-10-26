@@ -45,6 +45,20 @@ impl Rotation {
         encounter: Encounter,
     ) -> Result<Self, String> {
         validate_fixture(world, actor, profile, encounter)?;
+        // Exact103.reference.single.json player reaction fields; buff.cpp2697–2703
+        // observes the native acquisition, not the later AoE decision query.
+        crate::simc_apl_native::reaction::configure(
+            world,
+            actor,
+            crate::simc_apl_native::reaction::ReactionSettings {
+                mean: 0.25,
+                stddev: 0.05,
+                offset: 0.1,
+                nu: 0.15,
+                maximum: 1.4,
+            },
+            &[135700],
+        )?;
         let mut bindings = bindings::build(world, actor)?;
         let equipment = Equipment::load(world, actor, &mut bindings)?;
         let rotation = Self {

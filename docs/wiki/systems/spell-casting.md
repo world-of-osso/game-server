@@ -1161,6 +1161,14 @@ Backstab53 unconditional `$<mult>` joins variable339: `(max(0,min(player_level-1
 
 Named gap `FERAL_SPIRIT_INTRINSIC_AP_SOURCE`: archive pet_levelstats has2715 rows and zero29264. TC substitutes explicitly fake Strength22; this implementation does not. Intrinsic AP, armor/stamina shares, healing/AI/chase and full legal-loadout parity remain unsupported. Native centered training-dummy RED at89645435 reaches ownerAP100→10000 with damage10→10 and power(0,0); Merged afc0e5e5/protocol62865c23 controls24/24 pass (55.15s tests), check102.286s/fmt/readability clean. Live power asserts31→3100 SP/AP; ordinary dummy stays0/0. Independent/full-stat/legal-loadout acceptance remains open. Sources and proof ledger: data/class-completeness6-2026-10-12/guardian-{owner-power-source,owner-power-proof-ledger,wolf-pet-levelstats-source}.json.
 
+## Warlock periodic shard funding — 2026-10-25
+
+The [Destruction contract](../../specs/dps-parity.md#destruction-periodic-shard-funding) runs in the downstream [destruction_periodic module](../../../crates/server-spell-scripts/src/modules/destruction_periodic.rs). Its specialization-qualified callback passes the original periodic context to `energize_unit`, preserving the shared raw pool, source attribution and overflow. Affliction uses its separate Agony module; sharing Wither does not share Destruction funding.
+
+`PeriodicPrimaryDamageHook` carries the actual critical outcome from damage resolution. Nonperiodic residual dispatch keeps its independent four-argument `SpellResidualHook`; reusing the periodic alias broke the combined migration build. Native funding, critical-roll and Affliction-exclusion tests pass, alongside MM periodic and Demonology owner-stat controls. Full267 DPS remained blocked on named action charge operands at this landing.
+
+Sources: the linked contract/module, `script_registry.rs`, and `destruction_periodic_tests.rs`/`destruction_tests.rs` under `dps_parity`.
+
 ## Census effect77 — 2026-10-20
 
 Pinned TC a352b1fa `spell_dk_subduing_grasp` binds Gorefiend's Grasp108199E1 to caster-owned454822→454824 via limited IGNORE_CAST_IN_PROGRESS, not FULL_MASK. E0 pull remains unmatched and unhandled; no whole-spell census promotion. Native learned-own/absent/foreign talent cases: corrected ignored RED1FAIL/2PASS→GREEN3PASS20.71s before enabling. See [all44 root mappings and exact per-spec deltas](../../diagnostics/census-e77-70448.md).
