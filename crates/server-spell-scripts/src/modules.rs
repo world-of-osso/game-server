@@ -44,6 +44,7 @@ register_modules! {
     affliction_nathreza: (2655, "modules/affliction_nathreza.rs"),
     affliction_nightfall: (2652, "modules/affliction_nightfall.rs"),
     affliction_ua: (2653, "modules/affliction_ua.rs"),
+    affliction_wrath: (2656, "modules/affliction_wrath.rs"),
     after_cast_auras: (100, "modules/after_cast_auras.rs"),
     arms_mortal_wounds: (715, "modules/arms_mortal_wounds.rs"),
     arms_paid_cooldowns: (712, "modules/arms_paid_cooldowns.rs"),
